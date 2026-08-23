@@ -32,8 +32,8 @@ import {
 
 const describeWithDb: typeof describe = process.env.DATABASE_URL
   ? describe
-  : ((name: string, fn: Parameters<typeof describe>[1]) =>
-      describe.skip(`${name} (requires DATABASE_URL disposable DB)`, fn)) as typeof describe;
+  : (((name: string, fn: Parameters<typeof describe>[1]) =>
+      describe.skip(`${name} (requires DATABASE_URL disposable DB)`, fn)) as typeof describe);
 
 const created = {
   userIds: [] as number[],
@@ -55,16 +55,14 @@ function selectLaunchProducts<T extends { productKey: string }>(products: readon
 
 describe('S4 Launch Access catalog selection invariant', () => {
   it('selects the three required products without treating unrelated disposable plans as a failure', () => {
-    expect(selectLaunchProducts([
-      { productKey: 'performance-publication-fixture' },
-      { productKey: 'developer_launch_access' },
-      { productKey: 'agency_launch_access' },
-      { productKey: 'agent_launch_access' },
-    ]).map(product => product.productKey)).toEqual([
-      'agency_launch_access',
-      'agent_launch_access',
-      'developer_launch_access',
-    ]);
+    expect(
+      selectLaunchProducts([
+        { productKey: 'performance-publication-fixture' },
+        { productKey: 'developer_launch_access' },
+        { productKey: 'agency_launch_access' },
+        { productKey: 'agent_launch_access' },
+      ]).map(product => product.productKey),
+    ).toEqual(['agency_launch_access', 'agent_launch_access', 'developer_launch_access']);
   });
 });
 
@@ -184,16 +182,30 @@ async function cleanup() {
   if (agencyIds.length) {
     await db
       .delete(billingAuditEvents)
-      .where(and(eq(billingAuditEvents.ownerType, 'agency'), inArray(billingAuditEvents.ownerId, agencyIds)));
+      .where(
+        and(
+          eq(billingAuditEvents.ownerType, 'agency'),
+          inArray(billingAuditEvents.ownerId, agencyIds),
+        ),
+      );
     await db
       .delete(billingPaymentDocuments)
-      .where(and(eq(billingPaymentDocuments.ownerType, 'agency'), inArray(billingPaymentDocuments.ownerId, agencyIds)));
+      .where(
+        and(
+          eq(billingPaymentDocuments.ownerType, 'agency'),
+          inArray(billingPaymentDocuments.ownerId, agencyIds),
+        ),
+      );
     await db
       .delete(billingPayments)
-      .where(and(eq(billingPayments.ownerType, 'agency'), inArray(billingPayments.ownerId, agencyIds)));
+      .where(
+        and(eq(billingPayments.ownerType, 'agency'), inArray(billingPayments.ownerId, agencyIds)),
+      );
     await db
       .delete(billingInvoices)
-      .where(and(eq(billingInvoices.ownerType, 'agency'), inArray(billingInvoices.ownerId, agencyIds)));
+      .where(
+        and(eq(billingInvoices.ownerType, 'agency'), inArray(billingInvoices.ownerId, agencyIds)),
+      );
     await db
       .delete(subscriptions)
       .where(and(eq(subscriptions.ownerType, 'agency'), inArray(subscriptions.ownerId, agencyIds)));
@@ -202,7 +214,10 @@ async function cleanup() {
     await db
       .delete(billingAuditEvents)
       .where(
-        and(eq(billingAuditEvents.ownerType, 'developer'), inArray(billingAuditEvents.ownerId, developerIds)),
+        and(
+          eq(billingAuditEvents.ownerType, 'developer'),
+          inArray(billingAuditEvents.ownerId, developerIds),
+        ),
       );
     await db
       .delete(billingPaymentDocuments)
@@ -214,13 +229,25 @@ async function cleanup() {
       );
     await db
       .delete(billingPayments)
-      .where(and(eq(billingPayments.ownerType, 'developer'), inArray(billingPayments.ownerId, developerIds)));
+      .where(
+        and(
+          eq(billingPayments.ownerType, 'developer'),
+          inArray(billingPayments.ownerId, developerIds),
+        ),
+      );
     await db
       .delete(billingInvoices)
-      .where(and(eq(billingInvoices.ownerType, 'developer'), inArray(billingInvoices.ownerId, developerIds)));
+      .where(
+        and(
+          eq(billingInvoices.ownerType, 'developer'),
+          inArray(billingInvoices.ownerId, developerIds),
+        ),
+      );
     await db
       .delete(subscriptions)
-      .where(and(eq(subscriptions.ownerType, 'developer'), inArray(subscriptions.ownerId, developerIds)));
+      .where(
+        and(eq(subscriptions.ownerType, 'developer'), inArray(subscriptions.ownerId, developerIds)),
+      );
     for (const context of created.developerContexts) {
       await deleteDeveloperTestContext(context);
     }
@@ -228,16 +255,30 @@ async function cleanup() {
   if (userIds.length) {
     await db
       .delete(billingAuditEvents)
-      .where(and(eq(billingAuditEvents.ownerType, 'agent'), inArray(billingAuditEvents.ownerId, userIds)));
+      .where(
+        and(
+          eq(billingAuditEvents.ownerType, 'agent'),
+          inArray(billingAuditEvents.ownerId, userIds),
+        ),
+      );
     await db
       .delete(billingPaymentDocuments)
-      .where(and(eq(billingPaymentDocuments.ownerType, 'agent'), inArray(billingPaymentDocuments.ownerId, userIds)));
+      .where(
+        and(
+          eq(billingPaymentDocuments.ownerType, 'agent'),
+          inArray(billingPaymentDocuments.ownerId, userIds),
+        ),
+      );
     await db
       .delete(billingPayments)
-      .where(and(eq(billingPayments.ownerType, 'agent'), inArray(billingPayments.ownerId, userIds)));
+      .where(
+        and(eq(billingPayments.ownerType, 'agent'), inArray(billingPayments.ownerId, userIds)),
+      );
     await db
       .delete(billingInvoices)
-      .where(and(eq(billingInvoices.ownerType, 'agent'), inArray(billingInvoices.ownerId, userIds)));
+      .where(
+        and(eq(billingInvoices.ownerType, 'agent'), inArray(billingInvoices.ownerId, userIds)),
+      );
     await db
       .delete(subscriptions)
       .where(and(eq(subscriptions.ownerType, 'agent'), inArray(subscriptions.ownerId, userIds)));
@@ -253,7 +294,10 @@ async function cleanup() {
 describeWithDb('S4 paid Launch Access disposable runtime', () => {
   beforeAll(() => {
     rememberEnvironment('BILLING_PROOF_STORAGE_ADAPTER', 'local');
-    rememberEnvironment('BILLING_PRIVATE_STORAGE_DIR', `/tmp/property-listify-s4-launch-${process.pid}`);
+    rememberEnvironment(
+      'BILLING_PRIVATE_STORAGE_DIR',
+      `/tmp/property-listify-s4-launch-${process.pid}`,
+    );
     rememberEnvironment('BILLING_EFT_ACCOUNT_NAME', 'LOCAL TEST EFT ACCOUNT - NOT PAYABLE');
     rememberEnvironment('BILLING_EFT_BANK_NAME', 'Local Test Bank');
     rememberEnvironment('BILLING_EFT_BRANCH_CODE', '000000');
@@ -291,21 +335,31 @@ describeWithDb('S4 paid Launch Access disposable runtime', () => {
       'agent_launch_access',
       'developer_launch_access',
     ]);
-    expect(launchProducts.map(product => product.pricing.basePrice?.amountMinor)).toEqual([
-      49900,
-      99900,
-      149900,
-    ]);
+    expect(
+      Object.fromEntries(
+        launchProducts.map(product => [product.productKey, product.pricing.basePrice?.amountMinor]),
+      ),
+    ).toEqual({
+      agent_launch_access: 49900,
+      agency_launch_access: 99900,
+      developer_launch_access: 149900,
+    });
     expect(launchProducts.every(product => product.term.kind === 'paid_launch_access')).toBe(true);
     expect(launchProducts.every(product => product.term.durationDays === 90)).toBe(true);
     expect(launchProducts.every(product => product.pricing.billingInterval === 'once')).toBe(true);
-    expect(launchProducts.find(product => product.productKey === 'agent_launch_access')?.limits).toEqual({
+    expect(
+      launchProducts.find(product => product.productKey === 'agent_launch_access')?.limits,
+    ).toEqual({
       max_active_listings: 50,
     });
-    expect(launchProducts.find(product => product.productKey === 'agency_launch_access')?.limits).toEqual({
+    expect(
+      launchProducts.find(product => product.productKey === 'agency_launch_access')?.limits,
+    ).toEqual({
       max_active_listings: 500,
     });
-    expect(launchProducts.find(product => product.productKey === 'developer_launch_access')?.limits).toMatchObject({
+    expect(
+      launchProducts.find(product => product.productKey === 'developer_launch_access')?.limits,
+    ).toMatchObject({
       unlimited_development_portfolio: true,
     });
   });
@@ -329,10 +383,7 @@ describeWithDb('S4 paid Launch Access disposable runtime', () => {
       label: 's4-developer-primary',
       role: 'property_developer',
     });
-    const developerOrganisationId = await insertDeveloper(
-      developerUserId,
-      's4-developer-primary',
-    );
+    const developerOrganisationId = await insertDeveloper(developerUserId, 's4-developer-primary');
     const otherDeveloperUserId = await insertUser({
       label: 's4-developer-other',
       role: 'property_developer',
@@ -485,12 +536,24 @@ describeWithDb('S4 paid Launch Access disposable runtime', () => {
       const invoiceCountBeforeExpiry = await ownerInvoiceCount(input.ownerType, input.ownerId);
       await db
         .update(subscriptions)
-        .set({ currentPeriodEnd: new Date(Date.now() - 1000).toISOString().slice(0, 19).replace('T', ' ') })
-        .where(and(eq(subscriptions.ownerType, input.ownerType), eq(subscriptions.ownerId, input.ownerId)));
+        .set({
+          currentPeriodEnd: new Date(Date.now() - 1000)
+            .toISOString()
+            .slice(0, 19)
+            .replace('T', ' '),
+        })
+        .where(
+          and(
+            eq(subscriptions.ownerType, input.ownerType),
+            eq(subscriptions.ownerId, input.ownerId),
+          ),
+        );
       const expired = await getPlanAccessProjectionForUserId(input.userId);
       expect(expired?.subscription?.status).toBe('expired');
       expect(isSubscriptionEntitled(expired?.subscription?.status)).toBe(false);
-      expect(await ownerInvoiceCount(input.ownerType, input.ownerId)).toBe(invoiceCountBeforeExpiry);
+      expect(await ownerInvoiceCount(input.ownerType, input.ownerId)).toBe(
+        invoiceCountBeforeExpiry,
+      );
     };
 
     await runOwner({
