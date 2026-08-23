@@ -271,7 +271,9 @@ export default function CityPage({
             description={`Browse available property and local market pages across ${city.name}.`}
           />
         }
-        recommendedAgents={<RecommendedAgents locationType="city" locationId={city.id} />}
+        recommendedAgents={
+          <RecommendedAgents locationType="city" locationId={city.id} areaLabel={city.name} />
+        }
         developerShowcase={
           topDevelopers && topDevelopers.length > 0 ? (
             <TopDevelopersCarousel developers={topDevelopers} locationName={city.name} />

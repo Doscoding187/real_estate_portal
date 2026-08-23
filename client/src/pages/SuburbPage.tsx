@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useRoute, useLocation } from 'wouter';
 import { trpc } from '@/lib/trpc';
 import { LocationPageLayout } from '@/components/location/LocationPageLayout';
+import { RecommendedAgents } from '@/components/location/RecommendedAgents';
 import { LocationHeroSection } from '@/components/location/LocationHeroSection';
 import { SearchStage } from '@/components/location/SearchStage';
 import { LocationPropertyTypeExplorer as PropertyTypeExplorer } from '@/components/location/LocationPropertyTypeExplorer';
@@ -161,6 +162,9 @@ export default function SuburbPage({
       <LocationPageLayout
         locationName={suburb.name}
         locationSlug={`${provinceSlug}/${citySlug}/${suburbSlug}`}
+        recommendedAgents={
+          <RecommendedAgents locationType="suburb" locationId={suburb.id} areaLabel={suburb.name} />
+        }
         banner={
           <LocationHeroSection
             locationName={suburb.name}

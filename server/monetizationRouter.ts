@@ -8,6 +8,8 @@
 import { router, publicProcedure, protectedProcedure } from './_core/trpc';
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
+import { getDb } from './db-connection';
+import { findAgentsServingLocation } from './services/agentPublicProfileService';
 
 const notImplementedError = () => {
   throw new TRPCError({
@@ -78,11 +80,16 @@ export const monetizationRouter = router({
         locationId: z.number(),
       }),
     )
-    .query(async () => {
-      // Return empty array instead of throwing
-      console.debug(
-        '[monetizationRouter] getRecommendedAgents called but disabled (no locationTargeting table)',
-      );
-      return [];
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) {
+        return [];
+      }
+      try {
+        return await findAgentsServingLocation(db, input.locationType, input.locationId);
+      } catch (error) {
+        console.error('[monetizationRouter] getRecommendedAgents failed closed', error);
+        return [];
+      }
     }),
 });
