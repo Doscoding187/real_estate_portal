@@ -75,8 +75,14 @@ export default function DevelopmentOversight() {
 
   // Mutations
   const approveMutation = trpc.admin.adminApproveDevelopment.useMutation({
-    onSuccess: () => {
-      toast.success('Development approved and published successfully');
+    onSuccess: result => {
+      if (result?.published) {
+        toast.success('Development approved and published successfully');
+      } else {
+        toast.warning(
+          'Development approved privately. The developer needs active Launch Access before it can publish.',
+        );
+      }
       refetch();
       closeDialog();
     },
@@ -373,6 +379,12 @@ function DevelopmentReviewContent({
   });
   const [showHistory, setShowHistory] = useState(false);
 
+  // Review-time unit inventory: the sellable stock under approval.
+  const { data: reviewUnitTypes } = trpc.admin.adminGetReviewUnitTypes.useQuery(
+    { developmentId: development.id },
+    { enabled: Number.isFinite(development.id) },
+  );
+
   // Fetch history when enabled
   const { data: auditLogs, isLoading: isLoadingHistory } =
     trpc.admin.getDevelopmentAuditLogs.useQuery(
@@ -381,7 +393,7 @@ function DevelopmentReviewContent({
     );
 
   // Safe JSON parsing with useMemo
-  const { images, amenities, coverImage } = useMemo(() => {
+  const { images, amenities, highlights, coverImage } = useMemo(() => {
     const parseJson = (val: any) => {
       if (typeof val === 'string') {
         try {
@@ -398,6 +410,7 @@ function DevelopmentReviewContent({
     return {
       images: parsedImages,
       amenities: parsedAmenities,
+      highlights: parseJson(development.highlights),
       coverImage: parsedImages.length > 0 ? parsedImages[0] : null,
     };
   }, [development]);
@@ -424,6 +437,85 @@ function DevelopmentReviewContent({
             </Badge>
           </div>
         </div>
+      </div>
+
+      {/* Gallery */}
+      {images.length > 0 && (
+        <div>
+          <h4 className="font-semibold mb-2 text-sm text-slate-700 uppercase tracking-wide">
+            Media ({images.length})
+          </h4>
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {images.slice(0, 8).map((image: any, idx: number) => (
+              <img
+                key={idx}
+                src={typeof image === 'string' ? image : image?.url}
+                alt={`Media ${idx + 1}`}
+                className="h-20 w-28 rounded-md border border-slate-200 object-cover flex-shrink-0"
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Highlights (readiness requires at least three) */}
+      <div>
+        <h4 className="font-semibold mb-2 text-sm text-slate-700 uppercase tracking-wide">
+          Highlights ({highlights.length})
+        </h4>
+        <ul className="list-disc pl-5 text-sm text-slate-600 space-y-1">
+          {highlights.map((highlight: string, idx: number) => (
+            <li key={idx}>{highlight}</li>
+          ))}
+          {highlights.length === 0 && (
+            <span className="text-sm text-slate-500 italic">No highlights provided.</span>
+          )}
+        </ul>
+      </div>
+
+      {/* Unit inventory under review */}
+      <div>
+        <h4 className="font-semibold mb-2 text-sm text-slate-700 uppercase tracking-wide">
+          Unit inventory ({reviewUnitTypes?.length ?? development.totalUnits ?? 0})
+        </h4>
+        {reviewUnitTypes && reviewUnitTypes.length > 0 ? (
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-slate-50/50">
+                <TableHead>Unit type</TableHead>
+                <TableHead>Beds / Baths</TableHead>
+                <TableHead>Price</TableHead>
+                <TableHead>Total</TableHead>
+                <TableHead>Available</TableHead>
+                <TableHead>Reserved</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {reviewUnitTypes.map(unit => {
+                const priceFrom = unit.basePriceFrom ?? unit.monthlyRentFrom;
+                const priceTo = unit.basePriceTo ?? unit.monthlyRentTo;
+                return (
+                  <TableRow key={unit.id}>
+                    <TableCell className="font-medium">{unit.name}</TableCell>
+                    <TableCell>
+                      {unit.bedrooms ?? '—'} / {unit.bathrooms ?? '—'}
+                    </TableCell>
+                    <TableCell>
+                      {priceFrom != null
+                        ? `R${Number(priceFrom).toLocaleString('en-ZA')}${priceTo ? ` – R${Number(priceTo).toLocaleString('en-ZA')}` : ''}`
+                        : '—'}
+                    </TableCell>
+                    <TableCell>{unit.totalUnits ?? 0}</TableCell>
+                    <TableCell>{unit.availableUnits ?? 0}</TableCell>
+                    <TableCell>{unit.reservedUnits ?? 0}</TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        ) : (
+          <p className="text-sm text-slate-500 italic">No unit types recorded.</p>
+        )}
       </div>
 
       {/* Description */}
