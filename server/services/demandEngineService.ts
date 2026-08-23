@@ -12,6 +12,7 @@ import {
 } from '../../drizzle/schema';
 import { getDb } from '../db';
 import { getPlanAccessProjectionForUserId, type EntitlementMap } from './planAccessService';
+import { listCurrentActiveMembershipAgentIds } from './agencyMembershipService';
 import { getRuntimeSchemaCapabilities, warnSchemaCapabilityOnce } from './runtimeSchemaCapabilities';
 
 type DemandOwnerType = 'agent' | 'agency' | 'developer' | 'private';
@@ -369,7 +370,7 @@ export async function captureDemandLeadFromCampaign(
     })
     .from(agents)
     .where(inArray(agents.id, agentIds));
-  const agentRows = agentRowsRaw.map(row => ({
+  const rawAgentRows = agentRowsRaw.map(row => ({
     id: Number(row.id),
     userId: row.userId ? Number(row.userId) : null,
     agencyId: row.agencyId ? Number(row.agencyId) : null,
@@ -378,6 +379,20 @@ export async function captureDemandLeadFromCampaign(
     firstName: row.firstName || null,
     lastName: row.lastName || null,
   }));
+
+  // Routing currency: agency-affiliated agents must hold a current canonical
+  // membership to receive demand leads. Independent agents (no agency) are
+  // unaffected.
+  const affiliatedAgentIds = rawAgentRows
+    .filter(row => row.agencyId !== null)
+    .map(row => row.id);
+  const currentMembershipAgentIds = await listCurrentActiveMembershipAgentIds(
+    db,
+    affiliatedAgentIds,
+  );
+  const agentRows = rawAgentRows.filter(
+    row => row.agencyId === null || currentMembershipAgentIds.has(row.id),
+  );
   const agentById = new Map<number, (typeof agentRows)[number]>(
     agentRows.map(row => [row.id, row]),
   );

@@ -69,7 +69,12 @@ import {
   setSubscriptionPlanForOwner,
 } from './services/planAccessService';
 import { getManualEftBillingAmount } from './services/billingFoundationService';
-import { maintainAgencyAgentMembership } from './services/agencyMembershipService';
+import {
+  isCurrentActiveAgencyMembership,
+  listCurrentActiveMembershipAgentIds,
+  listCurrentAgencyMembershipsForAgent,
+  maintainAgencyAgentMembership,
+} from './services/agencyMembershipService';
 import { getCommercialProductKey, getConfiguredLaunchFeeMinor, resolveCommercialTerm } from './services/commercialTerm';
 import {
   endCanonicalAgencyMembership,
@@ -772,6 +777,17 @@ async function requireAgencyAgent(
     throw new TRPCError({
       code: 'FORBIDDEN',
       message: 'Agent is not an approved member of your agency',
+    });
+  }
+
+  // Canonical currency: an approved profile alone is not enough — the agent
+  // must hold a current active membership so suspended/left affiliations can
+  // never receive assignments through stale profile state.
+  const currentMemberships = await listCurrentAgencyMembershipsForAgent(db, agentId);
+  if (currentMemberships.length === 0) {
+    throw new TRPCError({
+      code: 'FORBIDDEN',
+      message: 'This agent does not have a current agency membership and cannot be assigned work',
     });
   }
 
@@ -3236,6 +3252,18 @@ async function getAgencyTeamMembers(db: AgencyDb, agencyId: number) {
     .where(eq(users.agencyId, agencyId))
     .orderBy(desc(users.createdAt));
 
+  // One canonical-membership lookup for the whole agency: the roster derives
+  // its lifecycle truth from agency_agent_memberships rather than the legacy
+  // users.role / agents.status heuristics.
+  const membershipRows = await db
+    .select()
+    .from(agencyAgentMemberships)
+    .where(eq(agencyAgentMemberships.agencyId, agencyId));
+  const membershipByAgentId = new Map<number, typeof agencyAgentMemberships.$inferSelect>();
+  for (const row of membershipRows) {
+    membershipByAgentId.set(Number(row.agentId), row);
+  }
+
   return Promise.all(
     rows.map(async ({ user, agent }) => {
       const workload = await getAgencyMemberWorkload({
@@ -3244,10 +3272,26 @@ async function getAgencyTeamMembers(db: AgencyDb, agencyId: number) {
         userId: user.id,
         agentId: agent?.id || null,
       });
-      const membershipStatus = membershipStatusForRow({
-        userRole: user.role,
-        agentStatus: agent?.status,
-      });
+
+      const canonicalMembership = agent ? membershipByAgentId.get(Number(agent.id)) : undefined;
+      const isCurrent = canonicalMembership
+        ? isCurrentActiveAgencyMembership(canonicalMembership)
+        : null;
+
+      // Status precedence: the canonical membership row decides when one
+      // exists; legacy users.role/agents.status only covers members whose
+      // profile predates the membership authority (source reflects that).
+      const membershipStatus =
+        canonicalMembership && !isCurrent
+          ? canonicalMembership.status === 'invited'
+            ? 'invited'
+            : canonicalMembership.status === 'suspended'
+              ? 'suspended'
+              : 'inactive'
+          : membershipStatusForRow({
+              userRole: user.role,
+              agentStatus: agent?.status,
+            });
 
       return {
         id: user.id,
@@ -3264,15 +3308,28 @@ async function getAgencyTeamMembers(db: AgencyDb, agencyId: number) {
         membership: {
           status: membershipStatus,
           role: user.role,
+          membershipRole: canonicalMembership?.role ?? null,
+          governanceMode: canonicalMembership?.governanceMode ?? null,
+          effectiveFrom: canonicalMembership?.effectiveFrom ?? null,
+          effectiveTo: canonicalMembership?.effectiveTo ?? null,
           agencyId,
-          source: 'users.agencyId/role',
+          source: canonicalMembership
+            ? 'agency_agent_memberships'
+            : agent
+              ? 'none'
+              : 'legacy_user_role',
           team: null,
           branch: null,
         },
         permissions: {
-          canReceiveLeadAssignments: membershipStatus === 'active' && Boolean(agent?.id),
+          canReceiveLeadAssignments:
+            membershipStatus === 'active' &&
+            Boolean(agent?.id) &&
+            (canonicalMembership === undefined || isCurrent === true),
           canManageAgency: user.role === 'agency_admin' && membershipStatus === 'active',
-          canAccessWorkspace: membershipStatus === 'active',
+          canAccessWorkspace:
+            membershipStatus === 'active' &&
+            (canonicalMembership === undefined || isCurrent === true),
         },
         workload,
         agentProfile: agent
@@ -3470,6 +3527,25 @@ export const agencyRouter = router({
       .from(users)
       .where(and(eq(users.agencyId, user.agencyId), eq(users.isSubaccount, 1)));
 
+    // Team truth counts CURRENT canonical memberships (agent → user), not
+    // the isSubaccount population which retains suspended and removed
+    // members.
+    const agencyMembershipRows = await db
+      .select({ agentId: agencyAgentMemberships.agentId, status: agencyAgentMemberships.status })
+      .from(agencyAgentMemberships)
+      .where(eq(agencyAgentMemberships.agencyId, user.agencyId));
+    const activeMembershipUserIds = new Set<number>();
+    for (const row of agencyMembershipRows) {
+      if (!isCurrentActiveAgencyMembership(row)) continue;
+      const [linked] = await db
+        .select({ userId: agents.userId })
+        .from(agents)
+        .where(eq(agents.id, row.agentId))
+        .limit(1);
+      const linkedUserId = linked?.userId ? Number(linked.userId) : null;
+      if (linkedUserId) activeMembershipUserIds.add(linkedUserId);
+    }
+
     const pendingInvitations = await db
       .select({ id: invitations.id })
       .from(invitations)
@@ -3481,7 +3557,7 @@ export const agencyRouter = router({
     const brandingConfigured = Boolean(
       branding?.companyName && branding?.primaryColor && branding?.secondaryColor,
     );
-    const teamReady = teamMembers.length > 0 || pendingInvitations.length > 0;
+    const teamReady = activeMembershipUserIds.size > 0 || pendingInvitations.length > 0;
     const accessState = await getAgencyAccessStateForUser(db, {
       user,
       agency,
@@ -3532,7 +3608,7 @@ export const agencyRouter = router({
       dashboardUnlocked,
       fullFeaturesUnlocked,
       recommendedNextStep,
-      teamMembersCount: teamMembers.length,
+      teamMembersCount: activeMembershipUserIds.size,
       invitationsCount: pendingInvitations.length,
       accessState,
       agency: {
@@ -7546,7 +7622,15 @@ export const agencyRouter = router({
       .where(and(eq(agents.agencyId, user.agencyId), eq(agents.status, 'approved')))
       .orderBy(agents.displayName);
 
-    return rows.map(agent => ({
+    // Only agents with a current canonical membership may receive
+    // assignments; this is the same currency the assignment validators use.
+    const currentMembershipAgentIds = await listCurrentActiveMembershipAgentIds(
+      db,
+      rows.map(agent => Number(agent.id)),
+    );
+    const assignableRows = rows.filter(agent => currentMembershipAgentIds.has(Number(agent.id)));
+
+    return assignableRows.map(agent => ({
       id: agent.id,
       userId: agent.userId,
       name:
