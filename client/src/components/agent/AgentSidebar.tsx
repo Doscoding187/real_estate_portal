@@ -40,7 +40,6 @@ const OPERATE_LINKS = [
 
 const GROW_LINKS = [
   { label: 'Analytics', href: '/agent/analytics', icon: BarChart3 },
-  { label: 'Earnings', href: '/agent/earnings', icon: DollarSign },
   { label: 'Referrals', href: '/agent/referrals', icon: Share2 },
   { label: 'Marketing Hub', href: '/agent/marketing', icon: Megaphone },
 ] as const;

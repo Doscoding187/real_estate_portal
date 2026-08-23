@@ -90,15 +90,6 @@ const AGENT_CAPABILITIES: readonly AgentCapability[] = [
     icon: BarChart3,
     matches: ['analytic', 'report'],
   },
-  {
-    label: 'Commission & revenue',
-    title: 'Keep sight of the commercial outcome.',
-    description:
-      'Track supported commission and revenue information alongside the work that produces it.',
-    href: '/agent/earnings',
-    icon: CircleDollarSign,
-    matches: ['commission', 'revenue'],
-  },
 ];
 
 const JOURNEY_STEPS = [
@@ -565,7 +556,7 @@ export default function AgentProductLandingPage() {
                   icon: BarChart3,
                   eyebrow: 'Common challenge',
                   title: 'See the business picture',
-                  text: 'Where supported, activity, analytics, commission and revenue views help you understand more than whether a listing is online.',
+                  text: 'Where supported, activity and analytics views help you understand more than whether a listing is online.',
                 },
               ].map(item => {
                 const Icon = item.icon;
@@ -721,7 +712,7 @@ export default function AgentProductLandingPage() {
                   title="See more of what is happening across your work."
                 >
                   A listing being online is only the beginning. The supported Agent workspace also
-                  includes visibility into activity and the commercial work around your inventory.
+                  includes visibility into activity across your inventory and pipeline.
                 </SectionIntro>
                 <div className="mt-8 grid gap-4 sm:grid-cols-2">
                   <a
@@ -737,16 +728,15 @@ export default function AgentProductLandingPage() {
                     </p>
                   </a>
                   <a
-                    href="/agent/earnings"
+                    href="/agent/leads"
                     className="flex h-full flex-col rounded-2xl border border-slate-200 bg-slate-50 p-6 transition hover:border-blue-200 hover:bg-white"
                   >
                     <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-emerald-700 shadow-sm">
-                      <CircleDollarSign className="h-5 w-5" aria-hidden="true" />
+                      <Workflow className="h-5 w-5" aria-hidden="true" />
                     </span>
-                    <h3 className="mt-4 font-bold text-slate-950">Commission and revenue</h3>
+                    <h3 className="mt-4 font-bold text-slate-950">Lead pipeline</h3>
                     <p className="mt-3 flex-1 text-sm leading-7 text-slate-600">
-                      Track supported commission and revenue information; Property Listify does not
-                      guarantee earnings.
+                      Work every enquiry with stages, notes, follow-ups and viewing scheduling.
                     </p>
                   </a>
                 </div>
@@ -754,20 +744,20 @@ export default function AgentProductLandingPage() {
               <div className="rounded-[30px] border border-blue-100 bg-blue-50/70 p-7 text-slate-950 shadow-[0_24px_65px_rgba(0,92,168,0.08)]">
                 <div className="flex items-center gap-4">
                   <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-[var(--brand-blue)] shadow-sm">
-                    <CircleDollarSign className="h-5 w-5" aria-hidden="true" />
+                    <BarChart3 className="h-5 w-5" aria-hidden="true" />
                   </span>
                   <div>
                     <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--brand-blue)]">
                       Supported workspace
                     </p>
-                    <h3 className="mt-1 text-xl font-bold">Keep the commercial picture nearby.</h3>
+                    <h3 className="mt-1 text-xl font-bold">Keep the working picture nearby.</h3>
                   </div>
                 </div>
                 <div className="mt-8 space-y-3">
                   {[
                     'Activity across your work',
-                    'Commission tracking where enabled',
-                    'Revenue dashboard where enabled',
+                    'Listing and enquiry reporting',
+                    'Pipeline and follow-up visibility',
                   ].map(item => (
                     <div
                       key={item}

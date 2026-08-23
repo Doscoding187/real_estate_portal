@@ -52,9 +52,10 @@ describe('commercial monetization S4 paid Launch Access contract', () => {
     expect(CANONICAL_AGENT_LAUNCH_ACCESS.limits).toEqual({ max_active_listings: 50 });
     expect(CANONICAL_AGENT_LAUNCH_ACCESS.entitlements).toEqual({
       max_active_listings: 50,
-      has_commission_tracking: true,
-      has_revenue_dashboard: true,
+      has_commission_tracking: false,
+      has_revenue_dashboard: false,
     });
+    expect(CANONICAL_AGENT_LAUNCH_ACCESS.features).not.toContain('Commission tracking');
     expect(CANONICAL_AGENCY_LAUNCH_ACCESS.limits).toEqual({ max_active_listings: 500 });
     expect(CANONICAL_AGENCY_LAUNCH_ACCESS.entitlements).toEqual({
       max_active_listings: 500,

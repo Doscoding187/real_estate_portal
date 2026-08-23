@@ -474,8 +474,8 @@ describeWithDb('S4 paid Launch Access disposable runtime', () => {
       expectedAmount: 49900,
       expectedLimit: 50,
       expectedFlags: {
-        has_commission_tracking: true,
-        has_revenue_dashboard: true,
+        has_commission_tracking: false,
+        has_revenue_dashboard: false,
       },
     });
     await runOwner({

@@ -1014,12 +1014,6 @@ export default function AgentSettings() {
                                   {featureFlags?.hasAiInsights ? 'Enabled' : 'Disabled'}
                                 </span>
                               </div>
-                              <div>
-                                Revenue dashboard:{' '}
-                                <span className="font-medium">
-                                  {featureFlags?.hasRevenueDashboard ? 'Enabled' : 'Disabled'}
-                                </span>
-                              </div>
                             </div>
                           </div>
                         </div>
