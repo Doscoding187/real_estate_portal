@@ -1,15 +1,6 @@
 import { and, desc, eq, inArray, ne, sql } from 'drizzle-orm';
 
-import {
-  agencyAgentMemberships,
-  agencies,
-  agents,
-  cities,
-  listings,
-  provinces,
-  properties,
-  suburbs,
-} from '../../drizzle/schema';
+import { agencyAgentMemberships, agencies, agents, cities, listings, provinces, properties, suburbs, subscriptions } from '../../drizzle/schema';
 import { slugify } from '../_core/utils/slug';
 import { resolvePublicPropertyEligibilities } from './publicPropertyEligibilityService';
 import { toPublicPropertyDetailDto } from './publicPropertyDto';
@@ -406,6 +397,155 @@ export async function resolveCanonicalAgentAreas(
       url: `/${provinceMatches[0].slug}`,
     };
   });
+}
+
+export type AgentAreaRecommendationDto = {
+  id: number;
+  slug: string;
+  firstName: string;
+  lastName: string;
+  profileImage: string | null;
+  agencyName: string | null;
+  agencyLogoUrl: string | null;
+  isVerified: boolean;
+};
+
+type AgentAreaRecommendationRow = {
+  id: number;
+  userId: number | null;
+  slug: string | null;
+  firstName: string | null;
+  lastName: string | null;
+  profileImage: string | null;
+  isVerified: number;
+  areasServed: string | null;
+  agencyName: string | null;
+  agencyLogo: string | null;
+  agencyVerified: number | null;
+};
+
+async function loadPersonallyEntitledAgentUserIds(
+  db: any,
+  userIds: number[],
+): Promise<Set<number>> {
+  if (userIds.length === 0) return new Set();
+  const rows: Array<{ ownerId: number; status: string; currentPeriodEnd: string | Date | null }> =
+    await db
+      .select({
+        ownerId: subscriptions.ownerId,
+        status: subscriptions.status,
+        currentPeriodEnd: subscriptions.currentPeriodEnd,
+      })
+      .from(subscriptions)
+      .where(
+        and(inArray(subscriptions.ownerId, userIds), eq(subscriptions.ownerType, 'agent')),
+      );
+  const now = Date.now();
+  const entitled = new Set<number>();
+  for (const row of rows) {
+    if (row.status !== 'active' && row.status !== 'grace_period') continue;
+    const periodEnd = row.currentPeriodEnd ? new Date(row.currentPeriodEnd).getTime() : null;
+    if (periodEnd !== null && (!Number.isFinite(periodEnd) || periodEnd <= now)) continue;
+    entitled.add(Number(row.ownerId));
+  }
+  return entitled;
+}
+
+/**
+ * Approved agents whose declared service area exactly matches a canonical
+ * location name and who remain commercially receivable: an active personal
+ * agent entitlement, or affiliation with a verified agency.
+ *
+ * Mirrors the lead-custody eligibility truth. Matching reproduces the
+ * fail-closed canonical-area rule by exact case-insensitive entry equality;
+ * no partial or invented matches are returned.
+ */
+export async function findAgentsServingLocation(
+  db: any,
+  locationType: 'province' | 'city' | 'suburb',
+  locationId: number,
+): Promise<AgentAreaRecommendationDto[]> {
+  const id = Number(locationId);
+  if (!Number.isSafeInteger(id) || id <= 0) return [];
+
+  let locationName: string | null = null;
+  if (locationType === 'suburb') {
+    const [row] = await db
+      .select({ name: suburbs.name })
+      .from(suburbs)
+      .where(and(eq(suburbs.id, id), ne(suburbs.status, 'retired')))
+      .limit(1);
+    locationName = row?.name ?? null;
+  } else if (locationType === 'city') {
+    const [row] = await db
+      .select({ name: cities.name })
+      .from(cities)
+      .where(and(eq(cities.id, id), ne(cities.status, 'retired')))
+      .limit(1);
+    locationName = row?.name ?? null;
+  } else {
+    const [row] = await db
+      .select({ name: provinces.name })
+      .from(provinces)
+      .where(and(eq(provinces.id, id), ne(provinces.status, 'retired')))
+      .limit(1);
+    locationName = row?.name ?? null;
+  }
+
+  const loweredName = String(locationName || '').trim().toLowerCase();
+  if (!loweredName) return [];
+
+  const candidates: AgentAreaRecommendationRow[] = await db
+    .select({
+      id: agents.id,
+      userId: agents.userId,
+      slug: agents.slug,
+      firstName: agents.firstName,
+      lastName: agents.lastName,
+      profileImage: agents.profileImage,
+      isVerified: agents.isVerified,
+      areasServed: agents.areasServed,
+      agencyName: agencies.name,
+      agencyLogo: agencies.logo,
+      agencyVerified: agencies.isVerified,
+    })
+    .from(agents)
+    .leftJoin(agencies, eq(agents.agencyId, agencies.id))
+    .where(
+      and(
+        APPROVED_AGENT,
+        sql`LOWER(${agents.areasServed}) LIKE ${`%${loweredName}%`}`,
+      ),
+    )
+    .orderBy(desc(agents.isFeatured), desc(agents.updatedAt))
+    .limit(200);
+
+  const exactClaimAgents = candidates.filter(agent =>
+    splitTextList(agent.areasServed).some(entry => entry.toLowerCase() === loweredName),
+  );
+
+  const personallyEntitled = await loadPersonallyEntitledAgentUserIds(
+    db,
+    exactClaimAgents.map(agent => Number(agent.userId)).filter(userId => userId > 0),
+  );
+
+  return exactClaimAgents
+    .filter(
+      agent =>
+        personallyEntitled.has(Number(agent.userId)) ||
+        Number(agent.agencyVerified || 0) === 1,
+    )
+    .slice(0, 8)
+    .map(agent => ({
+      id: Number(agent.id),
+      slug: buildAgentPublicSlug({ id: Number(agent.id), slug: agent.slug }),
+      firstName: agent.firstName || '',
+      lastName: agent.lastName || '',
+      profileImage: agent.profileImage ?? null,
+      agencyName: Number(agent.agencyVerified || 0) === 1 ? agent.agencyName ?? null : null,
+      agencyLogoUrl: Number(agent.agencyVerified || 0) === 1 ? agent.agencyLogo ?? null : null,
+      isVerified: Number(agent.isVerified || 0) === 1,
+    }));
 }
 
 /**

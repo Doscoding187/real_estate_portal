@@ -762,9 +762,11 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
   };
   const agentProfileHref =
     contactMode === 'agent'
-      ? publicIdentity?.agentId
-        ? `/agent/profile/${publicIdentity.agentId}`
-        : null
+      ? publicIdentity?.agentSlug
+        ? `/agents/${publicIdentity.agentSlug}`
+        : publicIdentity?.agentId
+          ? `/agent/profile/${publicIdentity.agentId}`
+          : null
       : null;
 
   return (
@@ -1356,13 +1358,12 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
                         </div>
 
                         {agentProfileHref && (
-                          <Button
-                            variant="outline"
-                            className="h-11 w-full border-slate-200 text-slate-700 hover:bg-slate-50"
-                            onClick={() => setLocation(agentProfileHref)}
+                          <a
+                            href={agentProfileHref}
+                            className="flex h-11 w-full items-center justify-center rounded-md border border-slate-200 bg-white text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
                           >
                             View agent profile
-                          </Button>
+                          </a>
                         )}
                       </>
                     ) : (

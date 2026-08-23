@@ -28,6 +28,7 @@ export type AgentEntitlementsSnapshot = {
 
 export type AgentOnboardingStatus = {
   packageSelected: boolean;
+  approvalStatus: 'pending' | 'approved' | 'rejected' | 'suspended';
   onboardingStep: number;
   onboardingComplete: boolean;
   dashboardUnlocked: boolean;
@@ -68,11 +69,8 @@ export function useAgentOnboardingStatus(options: UseAgentOnboardingStatusOption
         const result = await apiFetch<AgentOnboardingStatus>('/agent/onboarding-status');
         if (cancelled) return;
 
-        if (!result.packageSelected) {
-          setLocation('/agent/select-package');
-          return;
-        }
-
+        // Professional identity work is available before activation. Paid
+        // capability remains gated server-side and via fullFeaturesUnlocked.
         if (requireDashboardUnlocked && !result.dashboardUnlocked) {
           setLocation('/agent/setup');
           return;
@@ -81,7 +79,7 @@ export function useAgentOnboardingStatus(options: UseAgentOnboardingStatusOption
         setStatus(result);
       } catch {
         if (!cancelled) {
-          setLocation('/agent/select-package');
+          setLocation('/agent/setup');
         }
       } finally {
         if (!cancelled) {

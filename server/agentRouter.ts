@@ -47,6 +47,7 @@ import {
 } from './services/agentPublicProfileService';
 import { recordAgentOsEvent } from './services/agentOsEventService';
 import { getAgentEntitlementsForUserId } from './services/agentEntitlementService';
+import { loadAgentPresenceSummary } from './services/agentPresenceSummaryService';
 import { agentOnboardingService } from './services/agentOnboardingService';
 
 import {
@@ -664,6 +665,15 @@ export const agentRouter = router({
             weeklyEventTypes.has('agent_showing_completed')),
       },
     };
+  }),
+
+  getPresenceSummary: agentProcedure.query(async ({ ctx }) => {
+    const db = await getDb();
+    if (!db) {
+      throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+    }
+    const userId = requireUser(ctx).id;
+    return loadAgentPresenceSummary(db, userId);
   }),
 
   /**

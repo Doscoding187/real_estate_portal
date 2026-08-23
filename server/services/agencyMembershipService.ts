@@ -1,5 +1,6 @@
-import { and, eq, sql } from 'drizzle-orm';
-import { agencyAgentMemberships } from '../../drizzle/schema';
+import { and, eq, inArray, ne, sql } from 'drizzle-orm';
+import { agencyAgentMemberships, agents, users } from '../../drizzle/schema';
+import { getDb } from '../db';
 
 export type AgencyMembershipRow = typeof agencyAgentMemberships.$inferSelect;
 
@@ -57,6 +58,28 @@ function toDbTimestamp(value: Date): string {
   return value.toISOString().slice(0, 19).replace('T', ' ');
 }
 
+
+export type AgencyMembershipDb = NonNullable<Awaited<ReturnType<typeof getDb>>>;
+
+export type CanonicalMembershipRole = 'agent' | 'team_lead' | 'manager';
+
+export interface EstablishCanonicalAgencyMembershipInput {
+  db: AgencyMembershipDb;
+  agencyId: number;
+  agentId: number;
+  actorUserId: number;
+  role?: CanonicalMembershipRole;
+}
+
+export interface EndCanonicalAgencyMembershipInput {
+  db: AgencyMembershipDb;
+  agencyId: number;
+  agentId: number;
+  terminalStatus: 'suspended' | 'left';
+  actorUserId: number;
+}
+
+
 /**
  * Maintain the authoritative membership row for an agency↔agent pair.
  *
@@ -104,7 +127,10 @@ export async function maintainAgencyAgentMembership(
       ? {
           status: input.status as AgencyMembershipLifecycleStatus,
           updatedBy: input.actorUserId ?? null,
-          effectiveFrom: sql`IF(${agencyAgentMemberships.effectiveFrom} IS NOT NULL AND (${agencyAgentMemberships.effectiveTo} IS NULL OR ${agencyAgentMemberships.effectiveTo} > ${nowTs}), ${agencyAgentMemberships.effectiveFrom}, ${nowTs})`,
+          // Reactivation preserves the original tenure start when present
+          // (matching main's established semantics) and always clears any
+          // prior closure.
+          effectiveFrom: sql`COALESCE(${agencyAgentMemberships.effectiveFrom}, ${nowTs})`,
           effectiveTo: sql`NULL`,
         }
       : {
@@ -117,4 +143,169 @@ export async function maintainAgencyAgentMembership(
     .insert(agencyAgentMemberships)
     .values(insertValues)
     .onDuplicateKeyUpdate({ set: duplicateSet });
+}
+
+export async function closeCompetingCanonicalMemberships(input: {
+  db: AgencyMembershipDb;
+  agentId: number;
+  keepAgencyId: number;
+  actorUserId: number;
+}): Promise<void> {
+  await input.db
+    .update(agencyAgentMemberships)
+    .set({
+      status: 'left',
+      effectiveTo: new Date(),
+      updatedBy: input.actorUserId,
+      updatedAt: new Date(),
+    })
+    .where(
+      and(
+        eq(agencyAgentMemberships.agentId, input.agentId),
+        ne(agencyAgentMemberships.agencyId, input.keepAgencyId),
+        inArray(agencyAgentMemberships.status, ['invited', 'active']),
+      ),
+    );
+}
+
+function getNameParts(user: typeof users.$inferSelect, fallbackEmail: string) {
+  const fromName = String(user.name || '')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+  const emailStem = fallbackEmail.split('@')[0]?.replace(/[._-]+/g, ' ') || 'Agency agent';
+  const fromEmail = emailStem.split(/\s+/).filter(Boolean);
+  const parts = [String(user.firstName || '').trim(), String(user.lastName || '').trim()].filter(
+    Boolean,
+  );
+
+  if (parts.length >= 2) {
+    return { firstName: parts[0], lastName: parts.slice(1).join(' ') };
+  }
+
+  const source = fromName.length >= 2 ? fromName : fromEmail;
+  return {
+    firstName: parts[0] || source[0] || 'Agency',
+    lastName: parts[1] || source.slice(1).join(' ') || 'Agent',
+  };
+}
+
+/**
+ * Establish an active canonical affiliation for an agent, closing any
+ * competing open memberships in other agencies first (single-affiliation
+ * invariant), then delegating to the atomic unique-pair maintenance.
+ */
+export async function establishCanonicalAgencyMembership(
+  input: EstablishCanonicalAgencyMembershipInput & { status?: AgencyMembershipLifecycleStatus },
+): Promise<{ state: 'created' | 'reactivated' | 'maintained' }> {
+  const role = input.role ?? 'agent';
+  await closeCompetingCanonicalMemberships({
+    db: input.db,
+    agentId: input.agentId,
+    keepAgencyId: input.agencyId,
+    actorUserId: input.actorUserId,
+  });
+
+  const [existing] = await input.db
+    .select({ id: agencyAgentMemberships.id })
+    .from(agencyAgentMemberships)
+    .where(
+      and(
+        eq(agencyAgentMemberships.agencyId, input.agencyId),
+        eq(agencyAgentMemberships.agentId, input.agentId),
+      ),
+    )
+    .limit(1);
+
+  await maintainAgencyAgentMembership(input.db, {
+    agencyId: input.agencyId,
+    agentId: input.agentId,
+    status: 'active',
+    role,
+    actorUserId: input.actorUserId,
+  });
+
+  return { state: existing ? 'reactivated' : 'created' };
+}
+
+
+export async function endCanonicalAgencyMembership(input: EndCanonicalAgencyMembershipInput): Promise<boolean> {
+  await maintainAgencyAgentMembership(input.db, {
+    agencyId: input.agencyId,
+    agentId: input.agentId,
+    status: input.terminalStatus,
+    actorUserId: input.actorUserId,
+  });
+  return true;
+}
+
+
+export async function ensureApprovedAgencyAgentProfile(input: {
+  db: AgencyMembershipDb;
+  user: typeof users.$inferSelect;
+  agencyId: number;
+  actorUserId: number;
+}): Promise<number> {
+  const { db, user, agencyId, actorUserId } = input;
+  const [existingAgent] = await db
+    .select()
+    .from(agents)
+    .where(eq(agents.userId, user.id))
+    .limit(1);
+
+  if (existingAgent) {
+    if (existingAgent.agencyId !== agencyId || existingAgent.status !== 'approved') {
+      await db
+        .update(agents)
+        .set({
+          agencyId,
+          status: 'approved',
+          approvedBy: actorUserId,
+          approvedAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(eq(agents.id, existingAgent.id));
+    }
+    // Approved affiliation implies a maintained canonical membership row.
+    await maintainAgencyAgentMembership(db as DatabaseHandle, {
+      agencyId,
+      agentId: existingAgent.id,
+      status: 'active',
+      actorUserId,
+    });
+    return existingAgent.id;
+  }
+
+  const { firstName, lastName } = getNameParts(user, user.email || 'agent@example.com');
+  const displayName =
+    String(user.name || '').trim() || [firstName, lastName].filter(Boolean).join(' ').trim();
+
+  const [result] = await db.insert(agents).values({
+    userId: user.id,
+    agencyId,
+    firstName,
+    lastName,
+    displayName,
+    email: user.email,
+    phone: user.phone,
+    role: 'agent',
+    isVerified: 0,
+    isFeatured: 0,
+    status: 'approved',
+    approvedBy: actorUserId,
+    approvedAt: new Date(),
+    profileCompletionScore: 35,
+  });
+
+  const agentId = Number(result.insertId || 0);
+  if (agentId) {
+    // Approved affiliation implies a maintained canonical membership row.
+    await maintainAgencyAgentMembership(db as DatabaseHandle, {
+      agencyId,
+      agentId,
+      status: 'active',
+      actorUserId,
+    });
+  }
+  return agentId;
 }

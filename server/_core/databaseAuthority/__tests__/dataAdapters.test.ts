@@ -184,7 +184,7 @@ describe('bounded Database Authority data adapters', () => {
     ).toBe(true);
     expect(SEARCH_TO_LEAD_SCENARIO_VERSION).toBe('search-to-lead-v1');
     expect(SEARCH_TO_LEAD_SCENARIO_DIGEST).toMatch(/^[a-f0-9]{64}$/);
-    expect(CANONICAL_COMMERCIAL_VERSION).toBe('canonical-commercial-v1');
+    expect(CANONICAL_COMMERCIAL_VERSION).toBe('canonical-commercial-v2');
     expect(CANONICAL_COMMERCIAL_DIGEST).toMatch(/^[a-f0-9]{64}$/);
     expect(CANONICAL_DEVELOPER_LAUNCH_ACCESS).toMatchObject({
       name: 'developer_launch_access',

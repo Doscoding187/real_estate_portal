@@ -247,7 +247,15 @@ describeWithDb('canonical membership maintenance (atomic unique-pair authority)'
     )[0];
     expect(row.effectiveTo).toBe(firstClosure);
 
-    // Reactivation starts a fresh window and clears closure.
+    // Reactivation clears closure while preserving the original tenure start.
+    const originalStart = (
+      await db
+        .select()
+        .from(agencyAgentMemberships)
+        .where(eq(agencyAgentMemberships.agentId, agentId))
+        .limit(1)
+    )[0].effectiveFrom;
+
     await maintainAgencyAgentMembership(db, { agencyId, agentId, status: 'active' });
     row = (
       await db
@@ -258,10 +266,42 @@ describeWithDb('canonical membership maintenance (atomic unique-pair authority)'
     )[0];
     expect(row.status).toBe('active');
     expect(row.effectiveTo).toBeNull();
-    expect(new Date(row.effectiveFrom as unknown as string).getTime()).toBeGreaterThan(
-      new Date(firstClosure as unknown as string).getTime(),
-    );
+    expect(row.effectiveFrom).toBe(originalStart);
     expect(await listCurrentAgencyMembershipsForAgent(db, agentId)).toHaveLength(1);
+  });
+
+  it('establishing a new affiliation closes competing current memberships', async () => {
+    const { establishCanonicalAgencyMembership } = await import('../services/agencyMembershipService');
+    const agencyA = await insertAgency('CompeteA');
+    const agencyB = await insertAgency('CompeteB');
+    const agentUserId = await insertUser('Nomad', 'agent');
+    const agentId = await insertAgentProfile(agentUserId, null);
+
+    await maintainAgencyAgentMembership(db, { agencyId: agencyA, agentId, status: 'active' });
+    expect(await listCurrentAgencyMembershipsForAgent(db, agentId)).toHaveLength(1);
+
+    await establishCanonicalAgencyMembership({
+      db,
+      agencyId: agencyB,
+      agentId,
+      actorUserId: agentUserId,
+    });
+
+    const rows = await db
+      .select()
+      .from(agencyAgentMemberships)
+      .where(eq(agencyAgentMemberships.agentId, agentId));
+    expect(rows).toHaveLength(2);
+
+    const aRow = rows.find(r => Number(r.agencyId) === agencyA)!;
+    const bRow = rows.find(r => Number(r.agencyId) === agencyB)!;
+    expect(aRow.status).toBe('left');
+    expect(aRow.effectiveTo).not.toBeNull();
+    expect(bRow.status).toBe('active');
+    expect(bRow.effectiveTo).toBeNull();
+
+    const currents = await listCurrentAgencyMembershipsForAgent(db, agentId);
+    expect(currents.map(m => Number(m.agencyId))).toEqual([agencyB]);
   });
 
   it('converges racing maintenance calls onto a single canonical row', async () => {
