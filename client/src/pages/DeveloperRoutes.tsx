@@ -1,8 +1,10 @@
 import { Route, Switch, Redirect, Link } from 'wouter';
+import { useMemo } from 'react';
 import { DeveloperLayout } from '@/components/developer/DeveloperLayout';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { usePublisherContext } from '@/hooks/usePublisherContext';
 import { useDeveloperOnboardingStatus } from '@/hooks/useDeveloperOnboardingStatus';
+import { getAccountAuthHref } from '@/lib/publicNavigation';
 
 // Import content components
 import Overview from '@/components/developer/Overview';
@@ -75,9 +77,29 @@ export function DeveloperRouteBoundary() {
 }
 
 export default function DeveloperRoutes() {
-  const { user, loading: authLoading } = useAuth({ redirectOnUnauthenticated: true });
+  // Commercial entry routes keep the prospect's intent through registration;
+  // every other deep link returns to its original destination after sign-in.
+  const authRedirectPath = useMemo(() => {
+    if (typeof window === 'undefined') return undefined;
+    const currentPath = `${window.location.pathname}${window.location.search || ''}`;
+    const isCommercialEntry =
+      currentPath.startsWith('/developer/plans') ||
+      currentPath.startsWith('/developer/subscription');
+    return isCommercialEntry
+      ? getAccountAuthHref('register', currentPath, { registerRole: 'property_developer' })
+      : getAccountAuthHref('signin', currentPath);
+  }, []);
+  const { user, loading: authLoading } = useAuth({
+    redirectOnUnauthenticated: true,
+    redirectPath: authRedirectPath,
+  });
   const { context: publisherContext } = usePublisherContext();
-  const { status, isLoading: statusLoading } = useDeveloperOnboardingStatus();
+  const {
+    status,
+    isLoading: statusLoading,
+    isError: statusError,
+    refetch: refetchStatus,
+  } = useDeveloperOnboardingStatus();
   const isSuperAdmin = user?.role === 'super_admin';
   const isDeveloper = user?.role === 'property_developer';
   const hasPublisherContext = !!publisherContext?.cataloguePublisherId;
@@ -112,6 +134,32 @@ export default function DeveloperRoutes() {
               Go to Brand Selector
             </a>
           </Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (isDeveloper && statusError) {
+    // A failed onboarding-status query is an infrastructure problem, not proof
+    // that the developer has no organisation. Never bounce an established
+    // developer into setup because of a transient API failure.
+    return (
+      <div className="min-h-screen bg-[#F4F7FA] flex items-center justify-center p-6">
+        <div className="max-w-md w-full bg-white rounded-2xl shadow-soft border border-slate-100 p-8 text-center">
+          <h1 className="text-2xl font-semibold text-slate-900 mb-2">
+            Unable to verify your developer account state
+          </h1>
+          <p className="text-slate-600 mb-6">
+            We could not load your onboarding status. Your organisation and its information are
+            safe. Please retry in a moment.
+          </p>
+          <button
+            type="button"
+            onClick={() => refetchStatus()}
+            className="inline-flex items-center justify-center rounded-xl bg-blue-600 text-white px-4 py-2 font-medium hover:bg-blue-700 transition-colors"
+          >
+            Retry
+          </button>
         </div>
       </div>
     );

@@ -137,7 +137,7 @@ export default function GetStarted() {
       role: selectedRole || undefined,
       durationMs: Date.now() - loadTimeRef.current,
     });
-    setLocation('/advertise#pricing-plans');
+    setLocation('/advertise#pricing-preview');
   };
 
   return (

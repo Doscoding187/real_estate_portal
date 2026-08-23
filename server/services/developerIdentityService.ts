@@ -85,7 +85,11 @@ function slugify(value: string): string {
   return slug || 'publisher';
 }
 
-async function uniquePublisherSlug(database: any, source: string, excludeId?: number): Promise<string> {
+async function uniquePublisherSlug(
+  database: any,
+  source: string,
+  excludeId?: number,
+): Promise<string> {
   const base = slugify(source);
   for (let suffix = 0; suffix < 1000; suffix += 1) {
     const candidate = suffix === 0 ? base : `${base}-${suffix + 1}`;
@@ -98,7 +102,10 @@ async function uniquePublisherSlug(database: any, source: string, excludeId?: nu
       .limit(1);
     if (!existing) return candidate;
   }
-  throw new TRPCError({ code: 'CONFLICT', message: 'A unique public publisher slug is unavailable.' });
+  throw new TRPCError({
+    code: 'CONFLICT',
+    message: 'A unique public publisher slug is unavailable.',
+  });
 }
 
 async function uniqueOrganisationSlug(database: any, source: string): Promise<string> {
@@ -139,7 +146,11 @@ function identityFromRows(
 
 async function loadIdentityForMembership(database: any, membershipId: number) {
   const rows = await database
-    .select({ organisation: developerOrganisations, membership: developerOrganisationMemberships, publisher: cataloguePublishers })
+    .select({
+      organisation: developerOrganisations,
+      membership: developerOrganisationMemberships,
+      publisher: cataloguePublishers,
+    })
     .from(developerOrganisationMemberships)
     .innerJoin(
       developerOrganisations,
@@ -169,7 +180,10 @@ export async function createDeveloperOrganisation(input: CreateDeveloperOrganisa
 
   const name = input.name.trim();
   if (name.length < 2) {
-    throw new TRPCError({ code: 'BAD_REQUEST', message: 'Organisation name must be at least 2 characters.' });
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'Organisation name must be at least 2 characters.',
+    });
   }
 
   return database.transaction(async (tx: any) => {
@@ -203,7 +217,8 @@ export async function createDeveloperOrganisation(input: CreateDeveloperOrganisa
     if (existingMemberships.length > 1) {
       throw new TRPCError({
         code: 'CONFLICT',
-        message: 'Multiple active developer organisations require an explicit organisation context.',
+        message:
+          'Multiple active developer organisations require an explicit organisation context.',
       });
     }
 
@@ -254,7 +269,7 @@ export async function createDeveloperOrganisation(input: CreateDeveloperOrganisa
       about: input.description ?? null,
       foundedYear: input.establishedYear ?? null,
       headOfficeLocation:
-        input.city && input.province ? `${input.city}, ${input.province}` : input.city ?? null,
+        input.city && input.province ? `${input.city}, ${input.province}` : (input.city ?? null),
       operatingProvinces: input.province ? [input.province] : [],
       propertyFocus: input.specializations ?? [],
       websiteUrl: input.website ?? null,
@@ -307,6 +322,153 @@ export async function requireDeveloperIdentityByUserId(userId: number): Promise<
     });
   }
   return identity;
+}
+
+export interface ResubmitDeveloperOrganisationInput {
+  organisationId: number;
+  name?: string | null;
+  description?: string | null;
+  logo?: string | null;
+  website?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  address?: string | null;
+  city?: string | null;
+  province?: string | null;
+  category?: 'residential' | 'commercial' | 'mixed_use' | 'industrial';
+  establishedYear?: number | null;
+  specializations?: string[] | null;
+}
+
+/**
+ * Apply a rejected developer organisation's corrections and return the
+ * identity to identity review. This is the only developer-owned transition
+ * out of `rejected`; `pending` and `approved` organisations are immutable
+ * through this path so identity approval stays a Property Listify decision.
+ */
+export async function resubmitRejectedDeveloperOrganisation(
+  input: ResubmitDeveloperOrganisationInput,
+): Promise<DeveloperIdentity> {
+  const database = await getDb();
+  if (!database) throw new Error('Database not available');
+
+  if (input.name !== undefined && input.name !== null && input.name.trim().length < 2) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'Organisation name must be at least 2 characters.',
+    });
+  }
+
+  return database.transaction(async (tx: any) => {
+    const [organisation] = await tx
+      .select()
+      .from(developerOrganisations)
+      .where(eq(developerOrganisations.id, input.organisationId))
+      .for('update')
+      .limit(1);
+
+    if (!organisation) {
+      throw new TRPCError({ code: 'NOT_FOUND', message: 'Developer organisation not found.' });
+    }
+    if (organisation.status !== 'rejected') {
+      throw new TRPCError({
+        code: 'CONFLICT',
+        message:
+          organisation.status === 'pending'
+            ? 'Your developer organisation is already pending review.'
+            : 'Your developer organisation is already approved.',
+      });
+    }
+
+    const organisationValues: Record<string, unknown> = {};
+    for (const key of [
+      'name',
+      'description',
+      'logo',
+      'website',
+      'email',
+      'phone',
+      'address',
+      'city',
+      'province',
+      'category',
+      'establishedYear',
+      'specializations',
+    ] as const) {
+      if (input[key] === undefined) continue;
+      // Category is a non-null enum column: an absent/empty submission must
+      // retain the existing value rather than attempt to write null.
+      if (key === 'category' && !input.category) continue;
+      organisationValues[key] = input[key];
+    }
+    // Identity review re-runs on the corrected submission.
+    organisationValues.status = 'pending';
+    organisationValues.rejectionReason = null;
+
+    await tx
+      .update(developerOrganisations)
+      .set(organisationValues as any)
+      .where(eq(developerOrganisations.id, input.organisationId));
+
+    const publisherValues: Record<string, unknown> = {};
+    if (input.name !== undefined && input.name !== null) publisherValues.name = input.name.trim();
+    if (input.logo !== undefined) publisherValues.logoUrl = input.logo;
+    if (input.description !== undefined) publisherValues.about = input.description;
+    if (input.website !== undefined) publisherValues.websiteUrl = input.website;
+    if (input.email !== undefined) publisherValues.publicContactEmail = input.email;
+    if (input.establishedYear !== undefined) publisherValues.foundedYear = input.establishedYear;
+    if (input.city !== undefined || input.province !== undefined) {
+      const city = input.city !== undefined ? input.city : organisation.city;
+      const province = input.province !== undefined ? input.province : organisation.province;
+      publisherValues.headOfficeLocation =
+        city && province ? `${city}, ${province}` : (city ?? null);
+    }
+    if (input.province !== undefined) {
+      publisherValues.operatingProvinces = input.province ? [input.province] : [];
+    }
+    if (input.specializations !== undefined) {
+      publisherValues.propertyFocus = input.specializations ?? [];
+    }
+    if (Object.keys(publisherValues).length) {
+      await tx
+        .update(cataloguePublishers)
+        .set(publisherValues as any)
+        .where(
+          and(
+            eq(cataloguePublishers.developerOrganisationId, input.organisationId),
+            eq(cataloguePublishers.authorityKind, 'developer_first_party'),
+          ),
+        );
+    }
+
+    const memberships = await tx
+      .select({ id: developerOrganisationMemberships.id })
+      .from(developerOrganisationMemberships)
+      .where(
+        and(
+          eq(developerOrganisationMemberships.organisationId, input.organisationId),
+          eq(developerOrganisationMemberships.status, 'active'),
+        ),
+      )
+      .orderBy(asc(developerOrganisationMemberships.id))
+      .limit(1);
+
+    if (!memberships[0]) {
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Developer organisation has no active owner membership.',
+      });
+    }
+
+    const identity = await loadIdentityForMembership(tx, memberships[0].id);
+    if (!identity) {
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Resubmitted developer organisation lost its coherent first-party publisher.',
+      });
+    }
+    return identity;
+  });
 }
 
 export async function getPublisherById(id: number) {
@@ -406,15 +568,24 @@ export async function listCataloguePublishers(filters: PublisherFilters = {}) {
   const database = await getDb();
   if (!database) return [];
   const conditions: any[] = [];
-  if (filters.isVisible !== undefined) conditions.push(eq(cataloguePublishers.isVisible, filters.isVisible ? 1 : 0));
-  if (filters.authorityKind) conditions.push(eq(cataloguePublishers.authorityKind, filters.authorityKind));
+  if (filters.isVisible !== undefined)
+    conditions.push(eq(cataloguePublishers.isVisible, filters.isVisible ? 1 : 0));
+  if (filters.authorityKind)
+    conditions.push(eq(cataloguePublishers.authorityKind, filters.authorityKind));
   if (filters.brandTier) conditions.push(eq(cataloguePublishers.brandTier, filters.brandTier));
   if (filters.isSubscriber !== undefined) {
-    conditions.push(eq(cataloguePublishers.authorityKind, filters.isSubscriber ? 'developer_first_party' : 'platform_reference'));
+    conditions.push(
+      eq(
+        cataloguePublishers.authorityKind,
+        filters.isSubscriber ? 'developer_first_party' : 'platform_reference',
+      ),
+    );
   }
   if (filters.search?.trim()) {
     const term = `%${filters.search.trim()}%`;
-    conditions.push(or(like(cataloguePublishers.name, term), like(cataloguePublishers.headOfficeLocation, term)));
+    conditions.push(
+      or(like(cataloguePublishers.name, term), like(cataloguePublishers.headOfficeLocation, term)),
+    );
   }
   const publishers = await database
     .select()
@@ -430,7 +601,9 @@ export async function listCataloguePublishers(filters: PublisherFilters = {}) {
     .from(developments)
     .where(inArray(developments.cataloguePublisherId, ids))
     .groupBy(developments.cataloguePublisherId);
-  const countByPublisher = new Map(developmentCounts.map(row => [Number(row.publisherId), Number(row.count)]));
+  const countByPublisher = new Map(
+    developmentCounts.map(row => [Number(row.publisherId), Number(row.count)]),
+  );
   return publishers.map(publisher => ({
     ...publisher,
     brandName: publisher.name,
@@ -449,7 +622,8 @@ export async function listPublicCataloguePublishers(filters: PublisherFilters = 
     publicPublisherAuthorityCondition(),
   ];
   if (filters.brandTier) conditions.push(eq(cataloguePublishers.brandTier, filters.brandTier));
-  if (filters.authorityKind) conditions.push(eq(cataloguePublishers.authorityKind, filters.authorityKind));
+  if (filters.authorityKind)
+    conditions.push(eq(cataloguePublishers.authorityKind, filters.authorityKind));
   if (filters.isSubscriber !== undefined) {
     conditions.push(
       eq(
@@ -460,7 +634,9 @@ export async function listPublicCataloguePublishers(filters: PublisherFilters = 
   }
   if (filters.search?.trim()) {
     const term = `%${filters.search.trim()}%`;
-    conditions.push(or(like(cataloguePublishers.name, term), like(cataloguePublishers.headOfficeLocation, term)));
+    conditions.push(
+      or(like(cataloguePublishers.name, term), like(cataloguePublishers.headOfficeLocation, term)),
+    );
   }
 
   const rows = await database
@@ -515,8 +691,13 @@ export async function updateCataloguePublisher(id: number, input: UpdateCatalogu
   if (input.brandTier !== undefined) values.brandTier = input.brandTier;
   if (input.sourceAttribution !== undefined) values.sourceAttribution = input.sourceAttribution;
   if (input.isVisible !== undefined) values.isVisible = input.isVisible ? 1 : 0;
-  if (input.isContactVerified !== undefined) values.isContactVerified = input.isContactVerified ? 1 : 0;
-  if (Object.keys(values).length) await database.update(cataloguePublishers).set(values as any).where(eq(cataloguePublishers.id, id));
+  if (input.isContactVerified !== undefined)
+    values.isContactVerified = input.isContactVerified ? 1 : 0;
+  if (Object.keys(values).length)
+    await database
+      .update(cataloguePublishers)
+      .set(values as any)
+      .where(eq(cataloguePublishers.id, id));
   return getPublisherById(id);
 }
 
@@ -561,17 +742,17 @@ export async function getPublisherLeadStats(publisherId: number) {
   };
 }
 
-export async function assertPublisherForOrganisation(
-  publisherId: number,
-  organisationId: number,
-) {
+export async function assertPublisherForOrganisation(publisherId: number, organisationId: number) {
   const publisher = await getPublisherById(publisherId);
   if (
     !publisher ||
     publisher.authorityKind !== 'developer_first_party' ||
     Number(publisher.developerOrganisationId) !== Number(organisationId)
   ) {
-    throw new TRPCError({ code: 'FORBIDDEN', message: 'Publisher is not owned by this organisation.' });
+    throw new TRPCError({
+      code: 'FORBIDDEN',
+      message: 'Publisher is not owned by this organisation.',
+    });
   }
   return publisher;
 }
@@ -586,6 +767,7 @@ export async function assertPublisherReadable(publisherId: number) {
 
 export const developerIdentityService = {
   createDeveloperOrganisation,
+  resubmitRejectedDeveloperOrganisation,
   getDeveloperByUserId,
   requireDeveloperIdentityByUserId,
   getPublisherById,

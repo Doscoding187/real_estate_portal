@@ -57,7 +57,7 @@ const developerProduct = {
   promotion: { status: 'not_configured', offer: null },
   action: {
     mode: 'request_invoice',
-    target: { kind: 'route', value: '/contact' },
+    target: { kind: 'route', value: '/developer/plans' },
     requiresAuthentication: false,
   },
 } as unknown as CommercialProduct;
@@ -108,7 +108,7 @@ describe('public Developer product landing page', () => {
     );
   });
 
-  it('renders canonical Developer Launch Access truth and assisted actions', () => {
+  it('renders canonical Developer Launch Access truth and the self-serve invoice handoff', () => {
     render(<DeveloperProductLandingPage />);
 
     expect(screen.getAllByText('Developer Launch Access').length).toBeGreaterThan(0);
@@ -121,10 +121,13 @@ describe('public Developer product landing page', () => {
     ).toBeInTheDocument();
     expect(screen.getByText(/Manual EFT · finance-verified activation/i)).toBeInTheDocument();
     expect(screen.getAllByText(/No automatic renewal/i).length).toBeGreaterThan(0);
-    expect(screen.getByRole('link', { name: /Request Launch Access invoice/i })).toHaveAttribute(
-      'href',
-      '/contact',
-    );
+    const launchCard = screen.getByTestId('developer-launch-access-card');
+    expect(
+      within(launchCard).getByRole('link', { name: /Request Launch Access invoice/i }),
+    ).toHaveAttribute('href', '/developer/plans');
+    expect(
+      screen.getByText(/complete your company profile, then request your Launch Access invoice/i),
+    ).toBeInTheDocument();
     expect(
       screen.getAllByRole('link', { name: /Contact Property Listify/i }).length,
     ).toBeGreaterThan(0);

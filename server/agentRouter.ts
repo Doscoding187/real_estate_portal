@@ -37,7 +37,14 @@ import { EmailService } from './_core/emailService';
 import { ENV } from './_core/env';
 import { nowAsDbTimestamp, toDbTimestampRequired } from './utils/dbTypeUtils';
 import { requireUser } from './_core/requireUser';
-import { slugify } from './_core/utils/slug';
+import {
+  buildAgentPublicSlug,
+  findApprovedAgentIdBySlug,
+  findApprovedAgentWebPresenceBySlug,
+  listApprovedAgentsForDiscovery,
+  listPublicInventoryForAgent,
+  resolveCanonicalAgentAreas,
+} from './services/agentPublicProfileService';
 import { recordAgentOsEvent } from './services/agentOsEventService';
 import { getAgentEntitlementsForUserId } from './services/agentEntitlementService';
 import { agentOnboardingService } from './services/agentOnboardingService';
@@ -94,24 +101,6 @@ const NOTIFICATION_TYPES = [
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 const LIVE_AGENT_LISTING_STATUSES = ['available', 'published'] as const;
 const TERMINAL_FOLLOW_UP_STATUSES = ['converted', 'closed', 'lost'] as const;
-
-function buildAgentPublicSlug(agent: {
-  id: number;
-  slug?: string | null;
-  displayName?: string | null;
-  firstName?: string | null;
-  lastName?: string | null;
-}) {
-  if (agent.slug) return agent.slug;
-  const label = agent.displayName || `${agent.firstName || ''} ${agent.lastName || ''}`.trim();
-  const base = slugify(label) || 'agent';
-  return `${base}-${agent.id}`;
-}
-
-function extractTrailingId(slug: string) {
-  const match = slug.match(/-(\d+)$/);
-  return match ? Number(match[1]) : null;
-}
 
 function parseTextList(value?: string | null) {
   if (!value) return [];
@@ -436,16 +425,7 @@ export const agentRouter = router({
   list: publicProcedure.query(async () => {
     const db = await getDb();
 
-    const records = await db
-      .select()
-      .from(agents)
-      .where(eq(agents.status, 'approved'))
-      .orderBy(desc(agents.isFeatured), desc(agents.updatedAt));
-
-    return records.map(record => ({
-      ...record,
-      slug: buildAgentPublicSlug(record),
-    }));
+    return listApprovedAgentsForDiscovery(db);
   }),
 
   getPublicProfileBySlug: publicProcedure
@@ -453,37 +433,26 @@ export const agentRouter = router({
     .query(async ({ input }) => {
       const db = await getDb();
 
-      const [exactMatch] = await db
-        .select()
-        .from(agents)
-        .where(and(eq(agents.slug, input.slug), eq(agents.status, 'approved')))
-        .limit(1);
+      const profile = await findApprovedAgentWebPresenceBySlug(db, input.slug);
+      if (!profile) return null;
 
-      if (exactMatch) {
-        return {
-          ...exactMatch,
-          slug: buildAgentPublicSlug(exactMatch),
-        };
-      }
-
-      const fallbackId = extractTrailingId(input.slug);
-      if (!fallbackId) return null;
-
-      const [fallbackRecord] = await db
-        .select()
-        .from(agents)
-        .where(and(eq(agents.id, fallbackId), eq(agents.status, 'approved')))
-        .limit(1);
-
-      if (!fallbackRecord) return null;
-
-      const fallbackSlug = buildAgentPublicSlug(fallbackRecord);
-      if (fallbackSlug !== input.slug) return null;
+      const canonicalAreas = await resolveCanonicalAgentAreas(db, profile.areasServed);
 
       return {
-        ...fallbackRecord,
-        slug: fallbackSlug,
+        ...profile,
+        canonicalAreas,
       };
+    }),
+
+  getPublicInventoryForAgent: publicProcedure
+    .input(z.object({ slug: z.string().min(3) }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+
+      const agentId = await findApprovedAgentIdBySlug(db, input.slug);
+      if (!agentId) return [];
+
+      return listPublicInventoryForAgent(db, agentId);
     }),
 
   getPublicProfileRouteById: publicProcedure

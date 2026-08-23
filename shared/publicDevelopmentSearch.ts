@@ -12,10 +12,7 @@ export type PublicDevelopmentSearchDevelopmentType =
 
 export type PublicDevelopmentSearchStatus = 'launching-soon' | 'selling' | 'sold-out';
 
-export type PublicDevelopmentSearchAvailabilityState =
-  | 'available'
-  | 'sold_out'
-  | 'not_stated';
+export type PublicDevelopmentSearchAvailabilityState = 'available' | 'sold_out' | 'not_stated';
 
 export interface PublicDevelopmentSearchUnit {
   id?: string | null;
@@ -111,6 +108,13 @@ export interface PublicDevelopmentDetail extends PublicDevelopmentSearchItem {
   isPublished: number;
   approvalStatus: 'draft' | 'pending' | 'approved' | 'rejected' | null;
   cataloguePublisherId: number;
+  /**
+   * Number of publicly eligible developments published by this developer
+   * organisation (including this one). Null when no governed publisher
+   * identity resolves. This is the development → Developer Digital Presence
+   * portfolio bridge; compute it only from the public eligibility authority.
+   */
+  publisherPublishedDevelopmentCount: number | null;
   unitTypes: PublicDevelopmentDetailUnit[];
   salesMetrics: {
     totalUnits: number;
@@ -237,10 +241,7 @@ export function projectPublicDevelopmentFacts(
   development: PublicDevelopmentProjectionDevelopment,
   units: readonly PublicDevelopmentProjectionUnit[],
 ): PublicDevelopmentSearchItem | null {
-  if (
-    development.transactionType !== 'for_sale' &&
-    development.transactionType !== 'for_rent'
-  ) {
+  if (development.transactionType !== 'for_sale' && development.transactionType !== 'for_rent') {
     return null;
   }
 
@@ -262,19 +263,15 @@ export function projectPublicDevelopmentFacts(
     const priceFromNumber = projectionFiniteNumber(priceFromValue);
     const priceToNumber = projectionFiniteNumber(priceToValue);
     const priceFrom = priceFromNumber !== null && priceFromNumber > 0 ? priceFromNumber : null;
-    const priceTo =
-      priceToNumber !== null && priceToNumber > 0 ? priceToNumber : priceFrom;
+    const priceTo = priceToNumber !== null && priceToNumber > 0 ? priceToNumber : priceFrom;
 
     const totalRaw = projectionFiniteNumber(unit.totalUnits);
     const availableRaw = projectionFiniteNumber(unit.availableUnits);
     const reservedRaw = projectionFiniteNumber(unit.reservedUnits);
     const inventoryKnown = totalRaw !== null && availableRaw !== null;
-    const totalUnits =
-      totalRaw === null ? null : Math.round(Math.max(0, totalRaw));
+    const totalUnits = totalRaw === null ? null : Math.round(Math.max(0, totalRaw));
     const reservedUnits =
-      totalUnits === null
-        ? null
-        : Math.min(Math.round(Math.max(0, reservedRaw ?? 0)), totalUnits);
+      totalUnits === null ? null : Math.min(Math.round(Math.max(0, reservedRaw ?? 0)), totalUnits);
     const availableUnits =
       availableRaw === null || totalUnits === null
         ? null
@@ -305,13 +302,12 @@ export function projectPublicDevelopmentFacts(
   });
 
   const publicUnits = projectedUnits.map(({ __inventoryKnown: _inventoryKnown, ...unit }) => unit);
-  const pricedUnits = publicUnits.filter(
-    unit => unit.priceFrom !== null && unit.priceFrom > 0,
-  );
+  const pricedUnits = publicUnits.filter(unit => unit.priceFrom !== null && unit.priceFrom > 0);
   const bedroomValues = publicUnits
     .map(unit => unit.bedrooms)
     .filter((value): value is number => value !== null && value >= 0);
-  const inventoryKnown = projectedUnits.length > 0 && projectedUnits.every(unit => unit.__inventoryKnown);
+  const inventoryKnown =
+    projectedUnits.length > 0 && projectedUnits.every(unit => unit.__inventoryKnown);
   const availableUnits = inventoryKnown
     ? projectedUnits.reduce((sum, unit) => sum + (unit.availableUnits ?? 0), 0)
     : null;
@@ -359,9 +355,7 @@ export function projectPublicDevelopmentFacts(
       foundedYear: development.publisherFoundedYear ?? null,
       headOfficeLocation: development.publisherHeadOfficeLocation?.trim() || null,
     },
-    priceFrom: pricedUnits.length
-      ? Math.min(...pricedUnits.map(unit => unit.priceFrom!))
-      : null,
+    priceFrom: pricedUnits.length ? Math.min(...pricedUnits.map(unit => unit.priceFrom!)) : null,
     priceTo: pricedUnits.length
       ? Math.max(...pricedUnits.map(unit => unit.priceTo ?? unit.priceFrom!))
       : null,
@@ -464,11 +458,17 @@ export function sortPublicDevelopmentSearchItems(
 ): PublicDevelopmentSearchItem[] {
   return [...items].sort((left, right) => {
     if (sortOption === 'price_asc') {
-      return compareNullableNumbers(left.priceFrom, right.priceFrom, 'asc') || compareStableId(left, right);
+      return (
+        compareNullableNumbers(left.priceFrom, right.priceFrom, 'asc') ||
+        compareStableId(left, right)
+      );
     }
 
     if (sortOption === 'price_desc') {
-      return compareNullableNumbers(left.priceFrom, right.priceFrom, 'desc') || compareStableId(left, right);
+      return (
+        compareNullableNumbers(left.priceFrom, right.priceFrom, 'desc') ||
+        compareStableId(left, right)
+      );
     }
 
     if (sortOption === 'date_asc') {
@@ -481,7 +481,8 @@ export function sortPublicDevelopmentSearchItems(
 
     return (
       Number(right.isFeatured) - Number(left.isFeatured) ||
-      Number(right.availabilityState === 'available') - Number(left.availabilityState === 'available') ||
+      Number(right.availabilityState === 'available') -
+        Number(left.availabilityState === 'available') ||
       timestamp(right.createdAt) - timestamp(left.createdAt) ||
       compareStableId(left, right)
     );
