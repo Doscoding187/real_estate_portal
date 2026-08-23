@@ -117,7 +117,10 @@ function candidateDefinition(
     canonicalContext: contextForDefinition(definition),
     productionActivation: false,
     candidateStatus: 'candidate',
-    supportedJourneys: ['buy', 'rent'],
+    // Each member has an exact canonical locality boundary, which Land executes
+    // against parcel geography. This is explicit journey authorization, not a
+    // derived consequence of ordinary Buy support.
+    supportedJourneys: ['buy', 'rent', 'plot_land'],
     lifecycle: 'preview',
     boundary: { kind: 'canonical_members' },
   };

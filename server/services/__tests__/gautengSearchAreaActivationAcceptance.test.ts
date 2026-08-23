@@ -162,7 +162,7 @@ describe('Gauteng Search Area activation acceptance', () => {
     expect(definitions.every(definition => definition.candidateStatus === 'candidate')).toBe(true);
     expect(definitions.every(definition => definition.productionActivation === false)).toBe(true);
     expect(
-      definitions.every(definition => definition.supportedJourneys.join(',') === 'buy,rent'),
+      definitions.every(definition => definition.supportedJourneys.join(',') === 'buy,rent,plot_land'),
     ).toBe(true);
 
     const slugs = definitions.map(definition => definition.publicSlug);
@@ -181,7 +181,7 @@ describe('Gauteng Search Area activation acceptance', () => {
     expect(controlledSummaries.every(summary => summary.availability === 'preview')).toBe(true);
   });
 
-  it('resolves all 61 governed memberships for Buy and Rent and compiles deterministic OR boundaries', async () => {
+  it('resolves all 61 governed memberships for Buy, Rent and explicitly-authorized Land and compiles deterministic OR boundaries', async () => {
     const allMembers = definitions.flatMap(definition => definition.members ?? []);
     expect(allMembers).toHaveLength(61);
     expect(allMembers.filter(member => member.resolutionState === 'projection_ready')).toHaveLength(
@@ -198,16 +198,21 @@ describe('Gauteng Search Area activation acceptance', () => {
 
       const buy = await resolveAcceptanceArea(authority, definition.searchAreaId, 'buy');
       const rent = await resolveAcceptanceArea(authority, definition.searchAreaId, 'rent');
+      const land = await resolveAcceptanceArea(authority, definition.searchAreaId, 'plot_land');
       expect(buy.status).toBe('preview');
       expect(rent.status).toBe('preview');
-      if (buy.status !== 'preview' || rent.status !== 'preview') continue;
+      expect(land.status).toBe('preview');
+      if (buy.status !== 'preview' || rent.status !== 'preview' || land.status !== 'preview') continue;
 
       expect(buy.definition.members).toEqual(rent.definition.members);
+      expect(buy.definition.members).toEqual(land.definition.members);
       const buyBoundary = buildSearchAreaQueryBoundary(buy);
       const rentBoundary = buildSearchAreaQueryBoundary(rent);
+      const landBoundary = buildSearchAreaQueryBoundary(land);
       expect(buyBoundary).not.toBeNull();
       expect(rentBoundary).toEqual(buyBoundary);
-      if (!buyBoundary || !rentBoundary) continue;
+      expect(landBoundary).toEqual(buyBoundary);
+      if (!buyBoundary || !rentBoundary || !landBoundary) continue;
 
       const members = getSearchAreaQueryMembers(buyBoundary);
       expect(members).toHaveLength(definition.members!.length);
