@@ -275,13 +275,16 @@ export default function Login() {
 
     if (mode === 'register' || mode === 'signup') {
       setSignInOpen(false);
-      const requestedRole = roles.find(role => role.role === searchParams.get('role'));
-      const defaultRole = requestedRole?.role
-        ? requestedRole
-        : roles.find(role => role.role === 'visitor');
-      if (defaultRole) {
-        registerForm.reset({ ...registerForm.getValues(), role: defaultRole.role });
-        setSelectedRole(defaultRole);
+      // Preselect only available role cards; unknown or unavailable roles
+      // fall back to the visitor entry.
+      const requestedRoleKey = searchParams.get('role');
+      const requestedRoleCard = requestedRoleKey
+        ? roles.find(role => role.available && role.role === requestedRoleKey)
+        : undefined;
+      const selectedRoleCard = requestedRoleCard ?? roles.find(role => role.role === 'visitor');
+      if (selectedRoleCard?.role) {
+        registerForm.reset({ ...registerForm.getValues(), role: selectedRoleCard.role });
+        setSelectedRole(selectedRoleCard);
       }
     }
   }, [registerForm, searchParams]);

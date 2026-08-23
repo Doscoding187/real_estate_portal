@@ -97,6 +97,121 @@ describe('RequireRole', () => {
     });
   });
 
+  test('routes unauthenticated agency setup visitors into contextual agency registration', async () => {
+    Object.defineProperty(window, 'location', {
+      value: {
+        pathname: '/agency/setup',
+        search: '',
+        hash: '',
+      },
+      writable: true,
+    });
+
+    const setLocation = vi.fn();
+    mockUseAuth.mockReturnValue({
+      isAuthenticated: false,
+      user: null,
+      loading: false,
+    });
+
+    mockUseLocation.mockReturnValue([null, setLocation]);
+
+    render(
+      <RequireRole role="agency_admin" unauthenticatedAuthEntry="register">
+        <div data-testid="protected">Protected Content</div>
+      </RequireRole>,
+    );
+
+    await waitFor(() => {
+      expect(setLocation).toHaveBeenCalledWith(
+        '/login?mode=register&next=%2Fagency%2Fsetup&role=agency_admin',
+      );
+    });
+  });
+
+  test('keeps the default context-free login bounce when no auth entry is configured', async () => {
+    Object.defineProperty(window, 'location', {
+      value: {
+        pathname: '/agency/overview',
+        search: '',
+        hash: '',
+      },
+      writable: true,
+    });
+
+    const setLocation = vi.fn();
+    mockUseAuth.mockReturnValue({
+      isAuthenticated: false,
+      user: null,
+      loading: false,
+    });
+
+    mockUseLocation.mockReturnValue([null, setLocation]);
+
+    renderWithAuth({}, 'agency_admin');
+
+    await waitFor(() => {
+      expect(setLocation).toHaveBeenCalledWith('/login');
+    });
+  });
+
+  test('shows an assisted-entry fallback instead of redirecting a signed-in non-agency user', async () => {
+    Object.defineProperty(window, 'location', {
+      value: {
+        pathname: '/agency/setup',
+        search: '',
+        hash: '',
+      },
+      writable: true,
+    });
+
+    const setLocation = vi.fn();
+    mockUseAuth.mockReturnValue({
+      isAuthenticated: true,
+      user: { role: 'agent' },
+      loading: false,
+    });
+
+    mockUseLocation.mockReturnValue([null, setLocation]);
+
+    render(
+      <RequireRole
+        role="agency_admin"
+        roleMismatchFallback={<div data-testid="agency-assisted-entry">Assisted entry</div>}
+      >
+        <div data-testid="protected">Protected Content</div>
+      </RequireRole>,
+    );
+
+    expect(await screen.findByTestId('agency-assisted-entry')).toBeInTheDocument();
+    expect(screen.queryByTestId('protected')).not.toBeInTheDocument();
+    await new Promise(resolve => setTimeout(resolve, 50));
+    expect(setLocation).not.toHaveBeenCalled();
+  });
+
+  test('still renders protected children for the matching role when a fallback is configured', async () => {
+    const setLocation = vi.fn();
+    mockUseAuth.mockReturnValue({
+      isAuthenticated: true,
+      user: { role: 'agency_admin' },
+      loading: false,
+    });
+
+    mockUseLocation.mockReturnValue([null, setLocation]);
+
+    render(
+      <RequireRole
+        role="agency_admin"
+        roleMismatchFallback={<div data-testid="agency-assisted-entry">Assisted entry</div>}
+      >
+        <div data-testid="protected">Protected Content</div>
+      </RequireRole>,
+    );
+
+    expect(await screen.findByTestId('protected')).toBeInTheDocument();
+    expect(screen.queryByTestId('agency-assisted-entry')).not.toBeInTheDocument();
+  });
+
   test('redirects to role home when user does not have required role', async () => {
     const setLocation = vi.fn();
     mockUseAuth.mockReturnValue({
