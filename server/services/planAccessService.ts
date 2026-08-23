@@ -274,6 +274,14 @@ async function getStarterPlan(db: DbHandle, ownerType: SubscriptionOwnerType) {
   return segmentFallback || null;
 }
 
+/**
+ * Resolve the canonical subscription backing an agency principal's access
+ * projection. This lookup deliberately no longer provisions anything: free
+ * trials are retired for the agency launch path, and a read must never mint
+ * entitlement. Agencies without a subscription simply project as having no
+ * commercial state until onboarding or billing creates one through its
+ * owning transaction.
+ */
 async function ensureDefaultSubscriptionForUser(user: UserRow): Promise<SubscriptionRow | null> {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
@@ -287,39 +295,7 @@ async function ensureDefaultSubscriptionForUser(user: UserRow): Promise<Subscrip
     .where(and(eq(subscriptions.ownerType, ownerType), eq(subscriptions.ownerId, ownerId)))
     .limit(1);
 
-  if (existing) return existing;
-
-  const fallbackPlan = await getStarterPlan(db, ownerType);
-  if (!fallbackPlan) return null;
-
-  const trialDays = Math.max(1, Number(fallbackPlan.trialDays || 30));
-  const fallbackTrialEnd = new Date(Date.now() + trialDays * MS_PER_DAY)
-    .toISOString()
-    .slice(0, 19)
-    .replace('T', ' ');
-  const trialEndsAt = fallbackTrialEnd;
-  const status: SubscriptionStatus = 'trial';
-
-  await db.insert(subscriptions).values({
-    ownerType,
-    ownerId,
-    planId: fallbackPlan.id,
-    status,
-    trialEndsAt,
-    billingCycleAnchor: trialEndsAt,
-    metadata: {
-      source: 'plan_access_service_default',
-      owner_role: user.role,
-    },
-  });
-
-  const [created] = await db
-    .select()
-    .from(subscriptions)
-    .where(and(eq(subscriptions.ownerType, ownerType), eq(subscriptions.ownerId, ownerId)))
-    .limit(1);
-
-  return created || null;
+  return existing || null;
 }
 
 async function fetchEntitlementsForPlan(planId: number): Promise<EntitlementMap> {
