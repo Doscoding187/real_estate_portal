@@ -1,7 +1,9 @@
 import { TRPCError } from '@trpc/server';
-import { eq, inArray, sql } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 import { getDb } from '../db';
 import {
+  agencies,
+  agents,
   cataloguePublishers,
   commercialLeadContexts,
   developerOrganisations,
@@ -9,7 +11,9 @@ import {
   developmentSupersessions,
   developments,
   leads,
+  notifications,
   properties,
+  subscriptions,
   unitTypes,
 } from '../../drizzle/schema';
 import { cataloguePublisherService } from './cataloguePublisherService';
@@ -35,6 +39,8 @@ import {
 } from './publicLeadCustodyService';
 import { evaluatePublicDevelopmentEligibility } from './publicDevelopmentEligibility';
 import { getDeveloperPublicationAccess } from './developerPublicationAccess';
+import { EmailService } from '../_core/emailService';
+import { isPaidSubscriptionRowEntitled } from './planAccessService';
 import { resolvePublicPropertyEligibility } from './publicPropertyEligibilityService';
 import { resolvePublicLandLeadCustody } from './landPublicService';
 import { resolvePublicCommercialOfficeLeadCustody } from './commercialOfficeService';
@@ -408,6 +414,116 @@ function mapCustodyResolution(
   };
 }
 
+async function isRecipientCommerciallyDeliverable(
+  agentId: number | null | undefined,
+  agencyId: number | null | undefined,
+): Promise<{ eligible: boolean; reason: string }> {
+  const database = await getDb();
+  if (!database) return { eligible: false, reason: 'Enquiry delivery is temporarily unavailable.' };
+
+  if (agentId) {
+    const [agent] = await database
+      .select({
+        status: agents.status,
+        userId: agents.userId,
+        isVerified: agents.isVerified,
+      })
+      .from(agents)
+      .where(eq(agents.id, agentId))
+      .limit(1);
+    if (!agent || agent.status !== 'approved') {
+      return { eligible: false, reason: 'The assigned listing agent is not an approved recipient.' };
+    }
+    let entitled = false;
+    if (agent.userId) {
+      const [subscription] = await database
+        .select({ status: subscriptions.status, currentPeriodEnd: subscriptions.currentPeriodEnd })
+        .from(subscriptions)
+        .where(
+          and(eq(subscriptions.ownerType, 'agent'), eq(subscriptions.ownerId, agent.userId)),
+        )
+        .limit(1);
+      entitled = isPaidSubscriptionRowEntitled(
+        subscription ?? { status: null, currentPeriodEnd: null },
+      );
+    }
+    const badged = Number(agent.isVerified || 0) === 1;
+    return badged || entitled
+      ? { eligible: true, reason: '' }
+      : { eligible: false, reason: 'The assigned listing agent is not an eligible active recipient.' };
+  }
+
+  if (agencyId) {
+    const [agency] = await database
+      .select({ isVerified: agencies.isVerified })
+      .from(agencies)
+      .where(eq(agencies.id, agencyId))
+      .limit(1);
+    if (!agency || Number(agency.isVerified || 0) !== 1) {
+      return { eligible: false, reason: 'The owning agency is not an active verified organization.' };
+    }
+    return { eligible: true, reason: '' };
+  }
+
+  return { eligible: false, reason: 'The marketing authority has no deliverable recipient.' };
+}
+
+async function notifyAgentOfNewLead(
+  database: NonNullable<Awaited<ReturnType<typeof getDb>>>,
+  input: {
+    agentId: number;
+    leadId: number;
+    leadName: string;
+    leadEmail: string;
+    message?: string | null;
+    propertyId?: number | null;
+  },
+): Promise<void> {
+  const [agent] = await database
+    .select({
+      userId: agents.userId,
+      email: agents.email,
+      displayName: agents.displayName,
+      firstName: agents.firstName,
+    })
+    .from(agents)
+    .where(eq(agents.id, input.agentId))
+    .limit(1);
+  if (!agent?.userId) return;
+
+  let propertyTitle = 'your listing';
+  if (input.propertyId) {
+    const [property] = await database
+      .select({ title: properties.title })
+      .from(properties)
+      .where(eq(properties.id, input.propertyId))
+      .limit(1);
+    if (property?.title) propertyTitle = property.title;
+  }
+
+  const agentName =
+    agent.displayName || [agent.firstName].filter(Boolean).join(' ') || 'there';
+
+  await database.insert(notifications).values({
+    userId: agent.userId,
+    type: 'lead_assigned',
+    title: `New enquiry from ${input.leadName}`,
+    content: `${input.leadName} enquired about ${propertyTitle}. Respond while the interest is warm.`,
+    data: JSON.stringify({ leadId: input.leadId, propertyId: input.propertyId ?? null, actionUrl: '/agent/leads' }),
+    isRead: 0,
+  });
+
+  await EmailService.sendNewLeadNotificationEmail(
+    agent.email || '',
+    agentName,
+    input.leadName,
+    input.leadEmail,
+    propertyTitle,
+    '',
+    input.message || undefined,
+  );
+}
+
 export async function resolveLeadOwnership(
   input: PublicLeadCaptureInput,
 ): Promise<ResolvedLeadOwnership> {
@@ -425,12 +541,23 @@ export async function resolveLeadOwnership(
       const commercial = await resolvePublicCommercialOfficeLeadCustody({ listingId, commercialAvailabilityId });
       if (!commercial) throw new TRPCError({ code: 'NOT_FOUND', message: 'Commercial Office space is not available for public enquiries.' });
       const agentId = positiveId(commercial.agentId); const agencyId = positiveId(commercial.agencyId); const recipientId = agentId ?? agencyId;
-      return { listingId, agentId, agencyId, supplyOrigin: 'customer_managed', leadCustody: recipientId ? 'verified_customer_recipient' : 'attention_required', recipientType: recipientId ? (agentId ? 'agent' : 'agency') : 'manual', recipientId: recipientId ?? null, leadDeliveryMethod: recipientId ? 'crm_export' : 'manual', reason: recipientId ? null : 'The Commercial marketing listing has no deliverable supplier recipient.', commercialContext: { commercialAssetId: commercial.commercialAssetId, commercialSpaceId: commercial.commercialSpaceId, commercialAvailabilityId: commercial.commercialAvailabilityId } };
+      const commercialEligibility = await isRecipientCommerciallyDeliverable(agentId || null, agencyId || null);
+      if (!recipientId || !commercialEligibility.eligible) {
+        return { listingId, agentId: undefined, agencyId: undefined, supplyOrigin: 'customer_managed', leadCustody: 'attention_required', recipientType: 'manual', recipientId: null, leadDeliveryMethod: 'manual', reason: !recipientId ? 'The Commercial marketing listing has no deliverable supplier recipient.' : commercialEligibility.reason, commercialContext: { commercialAssetId: commercial.commercialAssetId, commercialSpaceId: commercial.commercialSpaceId, commercialAvailabilityId: commercial.commercialAvailabilityId } };
+      }
+      return { listingId, agentId: agentId ?? undefined, agencyId: agencyId ?? undefined, supplyOrigin: 'customer_managed', leadCustody: 'verified_customer_recipient', recipientType: agentId ? 'agent' : 'agency', recipientId, leadDeliveryMethod: 'crm_export', reason: null, commercialContext: { commercialAssetId: commercial.commercialAssetId, commercialSpaceId: commercial.commercialSpaceId, commercialAvailabilityId: commercial.commercialAvailabilityId } };
     }
     const land = await resolvePublicLandLeadCustody(listingId);
     if (!land) throw new TRPCError({ code: 'NOT_FOUND', message: 'Listing not available for public enquiries.' });
     const agentId = positiveId(land.agentId); const agencyId = positiveId(land.agencyId); const recipientId = agentId ?? agencyId;
-    return { listingId, agentId, agencyId, supplyOrigin: 'customer_managed', leadCustody: recipientId ? 'verified_customer_recipient' : 'attention_required', recipientType: recipientId ? (agentId ? 'agent' : 'agency') : 'manual', recipientId: recipientId ?? null, leadDeliveryMethod: recipientId ? 'crm_export' : 'manual', reason: recipientId ? null : 'The approved Land authority has no deliverable marketing recipient.' };
+    if (!recipientId) {
+      return { listingId, agentId: undefined, agencyId: undefined, supplyOrigin: 'customer_managed', leadCustody: 'attention_required', recipientType: 'manual', recipientId: null, leadDeliveryMethod: 'manual', reason: 'The approved Land authority has no deliverable marketing recipient.' };
+    }
+    const landEligibility = await isRecipientCommerciallyDeliverable(agentId, agencyId);
+    if (!landEligibility.eligible) {
+      return { listingId, agentId: undefined, agencyId: undefined, supplyOrigin: 'customer_managed', leadCustody: 'attention_required', recipientType: 'manual', recipientId: null, leadDeliveryMethod: 'manual', reason: landEligibility.reason };
+    }
+    return { listingId, agentId: agentId ?? undefined, agencyId: agencyId ?? undefined, supplyOrigin: 'customer_managed', leadCustody: 'verified_customer_recipient', recipientType: agentId ? 'agent' : 'agency', recipientId, leadDeliveryMethod: 'crm_export', reason: null };
   }
   const targetKind: 'property' | 'development' | 'brand' = propertyId
     ? 'property'
@@ -993,6 +1120,16 @@ export async function capturePublicLead(
       utmMedium: input.utmMedium,
       utmCampaign: input.utmCampaign,
     }),
+    resolved.agentId
+      ? notifyAgentOfNewLead(database, {
+          agentId: resolved.agentId,
+          leadId,
+          leadName: input.name,
+          leadEmail: input.email,
+          message: input.message ?? null,
+          propertyId: resolved.propertyId ?? null,
+        })
+      : Promise.resolve(),
   ]);
   optionalSideEffects.forEach((result, index) => {
     if (result.status === 'rejected') {

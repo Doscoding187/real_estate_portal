@@ -1,5 +1,6 @@
 import { and, desc, eq, gte, inArray, lte, sql } from 'drizzle-orm';
 import {
+  agencies,
   agents,
   demandCampaigns,
   demandLeads,
@@ -11,7 +12,11 @@ import {
   properties,
 } from '../../drizzle/schema';
 import { getDb } from '../db';
-import { getPlanAccessProjectionForUserId, type EntitlementMap } from './planAccessService';
+import {
+  getPlanAccessProjectionForUserId,
+  isPaidSubscriptionRowEntitled,
+  type EntitlementMap,
+} from './planAccessService';
 import { getRuntimeSchemaCapabilities, warnSchemaCapabilityOnce } from './runtimeSchemaCapabilities';
 
 type DemandOwnerType = 'agent' | 'agency' | 'developer' | 'private';
@@ -362,17 +367,22 @@ export async function captureDemandLeadFromCampaign(
       id: agents.id,
       userId: agents.userId,
       agencyId: agents.agencyId,
+      status: agents.status,
       profileCompletionScore: agents.profileCompletionScore,
       displayName: agents.displayName,
       firstName: agents.firstName,
       lastName: agents.lastName,
+      agencyVerified: agencies.isVerified,
     })
     .from(agents)
+    .leftJoin(agencies, eq(agents.agencyId, agencies.id))
     .where(inArray(agents.id, agentIds));
   const agentRows = agentRowsRaw.map(row => ({
     id: Number(row.id),
     userId: row.userId ? Number(row.userId) : null,
     agencyId: row.agencyId ? Number(row.agencyId) : null,
+    status: row.status || null,
+    agencyVerified: row.agencyVerified == null ? null : Number(row.agencyVerified),
     profileCompletionScore: Number(row.profileCompletionScore || 0),
     displayName: row.displayName || null,
     firstName: row.firstName || null,
@@ -405,15 +415,20 @@ export async function captureDemandLeadFromCampaign(
 
   const routingConfigByAgentId = new Map<
     number,
-    { tierWeight: number; maxRecipientsPerLead: number }
+    { tierWeight: number; maxRecipientsPerLead: number; eligible: boolean }
   >();
   await Promise.all(
     agentRows.map(async row => {
       let tierWeight = 1;
       let maxRecipientsPerLead = 3;
+      let personallyEntitled = false;
       try {
         if (row.userId) {
           const planAccess = await getPlanAccessProjectionForUserId(Number(row.userId));
+          personallyEntitled = isPaidSubscriptionRowEntitled({
+            status: planAccess?.subscription?.status ?? null,
+            currentPeriodEnd: planAccess?.subscription?.currentPeriodEnd ?? null,
+          });
           tierWeight = resolveTierWeight(planAccess?.entitlements, planAccess?.currentPlan?.name || null);
           maxRecipientsPerLead = resolveMaxRecipientsPerLead(planAccess?.entitlements, tierWeight);
         }
@@ -422,9 +437,17 @@ export async function captureDemandLeadFromCampaign(
         maxRecipientsPerLead = 3;
       }
 
+      // Commercial-activity gate: only approved agents who remain receivable
+      // (active paid entitlement, or affiliation with a verified agency) may
+      // receive demand-routed leads. Mirrors lead-custody eligibility truth.
+      const eligible =
+        row.status === 'approved' &&
+        (personallyEntitled || Number(row.agencyVerified || 0) === 1);
+
       routingConfigByAgentId.set(Number(row.id), {
         tierWeight,
         maxRecipientsPerLead,
+        eligible,
       });
     }),
   );
@@ -450,7 +473,8 @@ export async function captureDemandLeadFromCampaign(
     const agent = agentById.get(agentId);
     if (!agent) continue;
 
-    const routing = routingConfigByAgentId.get(agentId) || { tierWeight: 1, maxRecipientsPerLead: 3 };
+    const routing = routingConfigByAgentId.get(agentId);
+    if (!routing?.eligible) continue;
     const tierWeight = routing.tierWeight;
     const maxRecipientsPerLead = clampRecipientCount(routing.maxRecipientsPerLead);
     const qualityMultiplier = computeQualityMultiplier(agent.profileCompletionScore || 0);

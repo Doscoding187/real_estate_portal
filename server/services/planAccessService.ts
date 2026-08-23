@@ -167,6 +167,22 @@ export function isPaidSubscriptionEntitled(status: SubscriptionStatus | null | u
   return status === 'active' || status === 'grace_period';
 }
 
+/**
+ * Pure, write-free row-level commercial entitlement test. This is the single
+ * canonical predicate for "is this paid term currently usable" across read
+ * paths (public visibility, serving-area presence, routing eligibility). It
+ * deliberately performs no database writes; the mutating lifecycle sweep
+ * remains in getPlanAccessProjectionForUserId for authenticated contexts.
+ */
+export function isPaidSubscriptionRowEntitled(
+  row: { status: string | null | undefined; currentPeriodEnd: string | Date | null | undefined },
+  now: Date = new Date(),
+): boolean {
+  if (!isPaidSubscriptionEntitled(row.status as SubscriptionStatus)) return false;
+  const end = row.currentPeriodEnd ? new Date(row.currentPeriodEnd).getTime() : null;
+  return end === null || (Number.isFinite(end) && end > now.getTime());
+}
+
 function deriveTrialState(
   status: SubscriptionStatus | null,
   trialEndsAt: string | null,

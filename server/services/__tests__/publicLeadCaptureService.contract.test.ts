@@ -212,7 +212,12 @@ describe('publicLeadCaptureService contract', () => {
   });
 
   it('persists the canonical listing source for a public Land enquiry and derives custody server-side', async () => {
-    const database = makeFakeDatabase({ selectResults: [[]], insertId: 902 });
+    // First select feeds the commercial-deliverability check (approved agent
+    // carrying the evidence badge); subsequent selects drive idempotency.
+    const database = makeFakeDatabase({
+      selectResults: [[], [{ status: 'approved', userId: 70, isVerified: 1 }]],
+      insertId: 902,
+    });
     mockGetDb.mockResolvedValue(database);
 
     await capturePublicLead(baseInput({ listingId: 701, agencyId: 999, agentId: 998 }));
