@@ -37,6 +37,45 @@ describe('publicLeadCustodyService contract', () => {
     });
   });
 
+  it('routes an approved solo agent with an active paid entitlement to a verified recipient', () => {
+    expect(
+      resolvePublicPropertyCustody({
+        propertyAgentId: 34,
+        directAgent: { ...activeAgent, id: 34, isVerified: 0, hasActivePaidEntitlement: true },
+      }),
+    ).toMatchObject({
+      supplyOrigin: 'customer_managed',
+      leadCustody: 'verified_customer_recipient',
+      recipientType: 'agent',
+      recipientId: 34,
+      agentId: 34,
+    });
+  });
+
+  it('holds an approved solo agent without commercial entitlement for attention', () => {
+    const resolution = resolvePublicPropertyCustody({
+      propertyAgentId: 35,
+      directAgent: { ...activeAgent, id: 35, isVerified: 0 },
+    });
+    expect(resolution).toMatchObject({ leadCustody: 'attention_required', recipientType: 'manual' });
+    expect(resolution.reason).toContain('not an eligible active recipient');
+  });
+
+  it('does not let a paid entitlement bypass profile approval', () => {
+    expect(
+      resolvePublicPropertyCustody({
+        propertyAgentId: 36,
+        directAgent: {
+          ...activeAgent,
+          id: 36,
+          status: 'pending',
+          isVerified: 0,
+          hasActivePaidEntitlement: true,
+        },
+      }),
+    ).toMatchObject({ leadCustody: 'attention_required', recipientType: 'manual' });
+  });
+
   it('preserves assigned agent and verified agency attribution together', () => {
     expect(
       resolvePublicPropertyCustody({

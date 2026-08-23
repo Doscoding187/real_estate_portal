@@ -41,7 +41,6 @@ export type ListingPublicationFailureCode =
   | 'agency_branding_incomplete'
   | 'individual_agent_email_unverified'
   | 'individual_agent_unapproved'
-  | 'individual_agent_unverified'
   | 'individual_agent_profile_incomplete'
   | 'listing_capacity_exhausted';
 
@@ -419,12 +418,6 @@ export async function assertListingPublicationEntitled(
     throw new ListingPublicationEntitlementError(
       'individual_agent_unapproved',
       'The agent profile must be approved before publishing listings.',
-    );
-  }
-  if (Number(agent.isVerified || 0) !== 1) {
-    throw new ListingPublicationEntitlementError(
-      'individual_agent_unverified',
-      'The agent profile must be verified before publishing listings.',
     );
   }
   if (user.emailVerified !== 1) {

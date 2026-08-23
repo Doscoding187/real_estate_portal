@@ -333,7 +333,7 @@ export const defaultContent: AdvertisePageContent = {
       id: 'faq-4',
       question: 'What makes your platform different from other property portals?',
       answer:
-        "We combine AI-driven visibility with verified lead quality. Our recommendation engine ensures your properties reach the right audience, while our verification process filters out low-quality inquiries. Plus, our Explore feed offers unique short-form video advertising that traditional portals don't provide.",
+        "We combine Structured, quality-gated listings with verified lead quality. Our recommendation engine help your properties participate in Property Listify discovery, while our verification process filters out low-quality inquiries. Plus, our Explore feed offers unique short-form video advertising that traditional portals don't provide.",
       order: 4,
     },
     {
@@ -347,21 +347,21 @@ export const defaultContent: AdvertisePageContent = {
       id: 'faq-6',
       question: 'Can I manage multiple properties or developments?',
       answer:
-        'Yes! Our platform is built for scale. Agents can manage unlimited listings, developers can showcase multiple developments with unit-level detail, and agencies can collaborate with team members. All plans include bulk upload tools, media management, and centralized lead tracking.',
+        'Yes! Our platform is built for scale. Agents on Launch Access can manage up to 50 active listings, developers can showcase multiple developments with unit-level detail, and agencies can collaborate with team members. All plans include bulk upload tools, media management, and centralized lead tracking.',
       order: 6,
     },
     {
       id: 'faq-7',
       question: 'What kind of analytics and reporting do you provide?',
       answer:
-        'Our dashboard provides comprehensive analytics including views, engagement rates, lead conversion metrics, and ROI tracking. Premium plans include advanced insights like audience demographics, competitor benchmarking, and predictive analytics to optimize your advertising strategy.',
+        'Your workspace provides supported analytics including listing activity, enquiry flow, and pipeline performance for your inventory during the access term.',
       order: 7,
     },
     {
       id: 'faq-8',
       question: 'Is there a contract or can I cancel anytime?',
       answer:
-        'We offer flexible month-to-month plans with no long-term contracts. You can upgrade, downgrade, or cancel anytime. For annual commitments, we provide significant discounts (up to 20% off). Enterprise partners can discuss custom terms with our sales team.',
+        'Agent Launch Access is a once-off 90-day term with no automatic renewal. Before the term ends you will be offered the standard Property Listify Agent plan available at that time.',
       order: 8,
     },
   ],

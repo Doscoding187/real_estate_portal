@@ -128,9 +128,11 @@ export function getCommercialActionPresentation(
     case 'request_invoice':
       return {
         label:
-          product.term.kind === 'paid_launch_access'
-            ? 'Request Launch Access invoice'
-            : 'Request invoice',
+          product.audience === 'agent'
+            ? 'Get Agent Launch Access'
+            : product.term.kind === 'paid_launch_access'
+              ? 'Request Launch Access invoice'
+              : 'Request invoice',
         href: routeTarget || '/contact',
         disabled: false,
       };

@@ -221,7 +221,7 @@ describe('listing publication entitlement service', () => {
     ).rejects.toMatchObject({ reason: 'listing_capacity_exhausted' });
   });
 
-  it('denies independent agents whose canonical profile is unapproved or unverified', async () => {
+  it('denies unapproved agents and publishes approved agents regardless of the badge flag', async () => {
     await expect(
       assertListingPublicationEntitled(
         independentAgentDb({ agent: { status: 'pending', isVerified: 1 } }),
@@ -234,7 +234,7 @@ describe('listing publication entitlement service', () => {
         independentAgentDb({ agent: { status: 'approved', isVerified: 0 } }),
         { listingId: 12, operation: 'submit', at },
       ),
-    ).rejects.toMatchObject({ reason: 'individual_agent_unverified' });
+    ).resolves.toMatchObject({ kind: 'independent_agent', userId: 200 });
   });
 
   it('accepts a valid agency grace period', async () => {

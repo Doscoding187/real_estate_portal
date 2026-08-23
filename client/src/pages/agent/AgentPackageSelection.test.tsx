@@ -159,7 +159,7 @@ describe('Agent paid Launch Access conversion', () => {
     render(<AgentPackageSelection />);
 
     const requestButton = await screen.findByRole('button', {
-      name: /Request Launch Access invoice/i,
+      name: /Get Agent Launch Access/i,
     });
     fireEvent.click(requestButton);
 
