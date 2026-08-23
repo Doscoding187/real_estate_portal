@@ -26,6 +26,7 @@ import {
   favorites,
   savedSearches,
   agents,
+  subscriptions,
   agencies,
   leads,
   listings,
@@ -2042,7 +2043,7 @@ export async function getPlatformAnalytics() {
       (SELECT COUNT(*) FROM ${listings}) as propertyCount,
       (SELECT COUNT(*) FROM ${listings} WHERE ${listings.status} IN ('pending_review', 'approved', 'published')) as activePropertyCount,
       (SELECT COUNT(*) FROM ${agents}) as agentCount,
-      (SELECT COUNT(*) FROM ${agencies} WHERE ${agencies.subscriptionPlan} != 'free') as paidSubsCount,
+      (SELECT COUNT(*) FROM ${subscriptions} WHERE ${subscriptions.ownerType} = 'agency' AND ${subscriptions.status} IN ('active', 'grace_period')) as paidSubsCount,
       (SELECT COUNT(*) FROM ${cataloguePublishers} WHERE ${cataloguePublishers.authorityKind} = 'developer_first_party') as developerCount
   `);
 
