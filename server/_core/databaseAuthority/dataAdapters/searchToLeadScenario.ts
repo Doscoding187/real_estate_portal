@@ -21,6 +21,24 @@ import { CANONICAL_DEVELOPER_LAUNCH_ACCESS } from './canonicalCommercial';
 export const SEARCH_TO_LEAD_SCENARIO_VERSION = 'search-to-lead-v1' as const;
 export const SEARCH_TO_LEAD_SCENARIO_CAPTURE_REQUEST_ID = 'dba-search-to-lead-v1-property-enquiry';
 
+function truthfulDirectAcknowledgement(lead: {
+  duplicate?: boolean;
+  message?: string | null;
+}): boolean {
+  return lead.duplicate
+    ? lead.message === 'This enquiry has already been received by the responsible team.'
+    : lead.message === 'Your enquiry has been recorded and sent to the responsible team.';
+}
+
+function truthfulPlatformAcknowledgement(lead: {
+  duplicate?: boolean;
+  message?: string | null;
+}): boolean {
+  return lead.duplicate
+    ? lead.message === 'This enquiry has already been received by Property Listify operations.'
+    : lead.message === 'Your enquiry has been recorded. Property Listify will review the request.';
+}
+
 const SCENARIO_IDS = Object.freeze({
   developerUser: 990001,
   agentUser: 990002,
@@ -1992,7 +2010,7 @@ async function runContainedApplicationVerification(
           lead.leadCustody !== 'platform_managed' ||
           lead.deliveryStatus !== 'attention_required' ||
           lead.deliveryMethod !== 'manual' ||
-          lead.message !== 'Your enquiry has been recorded. Property Listify will review the request.'
+          !truthfulPlatformAcknowledgement(lead)
         ) {
           throw new Error('Search-to-Lead scenario platform acknowledgement is not truthful.');
         }
@@ -2000,7 +2018,7 @@ async function runContainedApplicationVerification(
         lead.leadCustody !== 'verified_customer_recipient' ||
         lead.deliveryStatus !== 'delivered' ||
         lead.deliveryMethod !== 'crm_export' ||
-        lead.message !== 'Your enquiry has been recorded and sent to the responsible team.'
+        !truthfulDirectAcknowledgement(lead)
       ) {
         throw new Error(`Search-to-Lead scenario direct acknowledgement is not truthful for ${scenarioName}.`);
       }
@@ -2063,7 +2081,7 @@ async function runContainedApplicationVerification(
       developmentLead.recipientId !== SCENARIO_IDS.developerOrganisation ||
       developmentLead.deliveryStatus !== 'delivered' ||
       developmentLead.deliveryMethod !== 'crm_export' ||
-      developmentLead.message !== 'Your enquiry has been recorded and sent to the responsible team.'
+      !truthfulDirectAcknowledgement(developmentLead)
     ) {
       throw new Error('Search-to-Lead scenario developer custody/acknowledgement is not truthful.');
     }
@@ -2197,7 +2215,7 @@ async function runContainedApplicationVerification(
       rentalLead.recipientId !== SCENARIO_IDS.agent ||
       rentalLead.deliveryStatus !== 'delivered' ||
       rentalLead.deliveryMethod !== 'crm_export' ||
-      rentalLead.message !== 'Your enquiry has been recorded and sent to the responsible team.'
+      !truthfulDirectAcknowledgement(rentalLead)
     ) {
       throw new Error('Search-to-Lead scenario rental custody/acknowledgement is not truthful.');
     }
