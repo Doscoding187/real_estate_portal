@@ -264,7 +264,7 @@ function Router() {
           <Route path="/favorites" component={Favorites} />
           <Route path="/agents" component={Agents} />
           <Route path="/agent/dashboard">
-            <RequireRole role="agent">
+            <RequireRole role="agent" unauthenticatedAuthEntry="signin">
               <AgentDashboard />
             </RequireRole>
           </Route>
@@ -323,12 +323,12 @@ function Router() {
             </RequireRole>
           </Route>
           <Route path="/agent/select-package">
-            <RequireRole role="agent">
+            <RequireRole role="agent" unauthenticatedAuthEntry="signin">
               <AgentPackageSelection />
             </RequireRole>
           </Route>
           <Route path="/agent/setup">
-            <RequireRole role="agent">
+            <RequireRole role="agent" unauthenticatedAuthEntry="signin">
               <AgentSetup />
             </RequireRole>
           </Route>

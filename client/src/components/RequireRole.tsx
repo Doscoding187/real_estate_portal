@@ -63,21 +63,19 @@ export const RequireRole = ({
     if (loading) return;
     if (error && !isUnauthorizedError) return;
 
-    if (!isAuthenticated) {
-      if (window.location.pathname !== '/login') {
-        const currentPath = `${window.location.pathname}${window.location.search || ''}${window.location.hash || ''}`;
-        let loginPath = '/login';
-        if (window.location.pathname === '/agent/select-package') {
-          loginPath = getAccountAuthHref('signin', currentPath);
-        } else if (unauthenticatedAuthEntry) {
-          loginPath = getAccountAuthHref(unauthenticatedAuthEntry, currentPath, {
-            registerRole: requiredRole ?? undefined,
-          });
+      if (!isAuthenticated) {
+        if (window.location.pathname !== '/login') {
+          const currentPath = `${window.location.pathname}${window.location.search || ''}${window.location.hash || ''}`;
+          let loginPath = '/login';
+          if (unauthenticatedAuthEntry) {
+            loginPath = getAccountAuthHref(unauthenticatedAuthEntry, currentPath, {
+              registerRole: requiredRole ?? undefined,
+            });
+          }
+          setLocation(loginPath);
         }
-        setLocation(loginPath);
+        return;
       }
-      return;
-    }
 
     if (actualRole !== requiredRole && !roleMismatchFallback) {
       const fallbackPath = getRoleHomePath(actualRole);
