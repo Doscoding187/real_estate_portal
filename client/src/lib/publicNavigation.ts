@@ -1147,6 +1147,8 @@ export function getAccountAuthHref(
     params.set('next', safeNextPath);
   }
 
+  // Registration role preselection only applies to register mode; sign-in
+  // always uses the account's stored role.
   const registerRole =
     mode === 'register' && options?.registerRole && REGISTER_ROLE_VALUES.has(options.registerRole)
       ? options.registerRole
