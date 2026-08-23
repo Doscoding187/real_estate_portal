@@ -158,6 +158,9 @@ describeWithDb('independent agent launch journey (publish → receive)', () => {
       areasServed: 'Sandton',
       slug: `amina-journey-${suffix}`.replace(/[^a-z0-9-]/g, '-'),
       bio: 'Launch journey fixture agent.',
+      profileImage: 'https://cdn.example.com/journey-agent.jpg',
+      focus: 'both',
+      propertyTypes: 'house, apartment',
       profileCompletionScore: 85,
     } as any);
     created.agentId = insertId(agentResult);
