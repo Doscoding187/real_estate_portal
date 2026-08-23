@@ -22,6 +22,10 @@ interface PublicSearchInputLike {
   propertyType?: string;
   minPrice?: number;
   maxPrice?: number;
+  minBedrooms?: number;
+  maxBedrooms?: number;
+  minBathrooms?: number;
+  maxBathrooms?: number;
   minArea?: number;
   maxArea?: number;
   minFloorSize?: number;
@@ -85,6 +89,19 @@ export function validatePublicSearchInput(
       return {
         path,
         message: 'Minimum size must be less than or equal to maximum size.',
+      };
+    }
+  }
+
+  const occupancyRanges: Array<[string, number | undefined, number | undefined]> = [
+    ['minBedrooms', input.minBedrooms, input.maxBedrooms],
+    ['minBathrooms', input.minBathrooms, input.maxBathrooms],
+  ];
+  for (const [path, minimum, maximum] of occupancyRanges) {
+    if (minimum !== undefined && maximum !== undefined && minimum > maximum) {
+      return {
+        path,
+        message: 'Minimum value must be less than or equal to maximum value.',
       };
     }
   }

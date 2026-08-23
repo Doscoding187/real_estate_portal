@@ -189,10 +189,9 @@ export function ListingNavbar({
     const preserveSearchArea = defaultSearchArea && selectedLocations.length === 0;
     // A consumer who refined results (price, bedrooms, source, ...) and then
     // searches a new location from the navbar keeps those refinements instead
-    // of silently losing them. Buy-only this phase; rent preservation is part
-    // of the Rent journey convergence.
-    const preservedRefinements =
-      listingType === 'sale' ? extractActiveSearchRefinementFilters(window.location.search) : {};
+    // of silently losing them. Each journey's contract sanitizes the carried
+    // values, so rent-only keys never leak into Buy URLs and vice versa.
+    const preservedRefinements = extractActiveSearchRefinementFilters(window.location.search);
     const url = buildPropertySearchUrl({
       transactionType: listingType === 'rent' ? 'to-rent' : 'for-sale',
       selectedLocations: selectedLocations as LocationNode[],
@@ -244,8 +243,7 @@ export function ListingNavbar({
     );
     setSelectedLocations(nextLocations);
     if (listingType) {
-      const preservedRefinements =
-        listingType === 'sale' ? extractActiveSearchRefinementFilters(window.location.search) : {};
+      const preservedRefinements = extractActiveSearchRefinementFilters(window.location.search);
       setLocation(
         buildPropertySearchUrl({
           transactionType: listingType === 'rent' ? 'to-rent' : 'for-sale',
