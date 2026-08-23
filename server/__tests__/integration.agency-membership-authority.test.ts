@@ -20,6 +20,7 @@ import {
   maintainAgencyAgentMembership,
 } from '../services/agencyMembershipService';
 import { resolveCurrentAgencyAffiliation } from '../services/agentPublicProfileService';
+import { appRouter } from '../routers';
 
 const created = {
   userIds: [] as number[],
@@ -66,23 +67,33 @@ async function insertUser(label: string, role: 'agent' | 'agency_admin' | 'visit
   return id;
 }
 
-async function insertInvitedAgentProfile(userId: number, agencyId: number | null) {
+async function getUser(id: number) {
+  const [row] = await db.select().from(users).where(eq(users.id, id)).limit(1);
+  return row;
+}
+
+async function insertAgentProfile(
+  userId: number,
+  agencyId: number | null,
+  overrides: Record<string, unknown> = {},
+) {
   const suffix = randomUUID().slice(0, 8);
   const [result] = await db
     .insert(agents)
     .values({
       userId,
       agencyId,
-      firstName: 'Existing',
+      firstName: 'Fixture',
       lastName: 'Agent',
-      displayName: `Existing Agent ${suffix}`,
-      email: `existing-${suffix}@example.test`,
+      displayName: `Fixture Agent ${suffix}`,
+      email: `agent-${suffix}@example.test`,
       role: 'agent',
       isVerified: 0,
       isFeatured: 0,
-      status: agencyId ? 'approved' : 'approved',
+      status: 'approved',
       approvedAt: new Date(),
       profileCompletionScore: 60,
+      ...overrides,
     } as any);
   const id = await insertId(result);
   created.agentIds.push(id);
@@ -111,6 +122,20 @@ async function insertPendingInvitation(input: {
   return id;
 }
 
+function acceptanceCaller(user: { id: number; role: string; agencyId?: number | null; email?: string | null }) {
+  return appRouter.createCaller({
+    req: {
+      hostname: 'localhost',
+      path: '/',
+      method: 'POST',
+      headers: { host: 'localhost:5000' },
+      socket: { remoteAddress: '127.0.0.1' },
+    },
+    res: { cookie: () => undefined },
+    user,
+  } as any);
+}
+
 beforeAll(async () => {
   if (!process.env.DATABASE_URL) return;
 });
@@ -131,133 +156,11 @@ afterAll(async () => {
   }
 });
 
-describeWithDb('agency membership authority', () => {
-  it('mirrors an accepted agent affiliation into the canonical membership table', async () => {
+describeWithDb('canonical membership maintenance (atomic unique-pair authority)', () => {
+  it('mirrors an accepted agent affiliation and keeps maintenance idempotent', async () => {
     const agencyId = await insertAgency('Mirror');
-    const principalUserId = await insertUser('Principal', 'agency_admin');
-    const agentUserId = await insertUser('NewJoiner', 'visitor');
-
-    // Principal bootstrap (minimal): link user to agency.
-    await db.update(users).set({ agencyId }).where(eq(users.id, principalUserId));
-
-    // Simulate the invitation accept write path exactly as invitationRouter
-    // performs it: profile + membership maintained together.
-    const suffix = randomUUID().slice(0, 8);
-    const [agentInsert] = await db
-      .insert(agents)
-      .values({
-        userId: agentUserId,
-        agencyId,
-        firstName: 'Joiner',
-        lastName: 'Agent',
-        displayName: `Joiner ${suffix}`,
-        email: `joiner-${suffix}@example.test`,
-        role: 'agent',
-        isVerified: 0,
-        isFeatured: 0,
-        status: 'approved',
-        approvedAt: new Date(),
-        profileCompletionScore: 35,
-      } as any);
-    const agentId = await insertId(agentInsert);
-    created.agentIds.push(agentId);
-
-    await maintainAgencyAgentMembership(db, {
-      agencyId,
-      agentId,
-      status: 'active',
-      actorUserId: principalUserId,
-    });
-
-    const current = await listCurrentAgencyMembershipsForAgent(db, agentId);
-    expect(current).toHaveLength(1);
-    expect(current[0].agencyId).toBe(agencyId);
-    expect(current[0].status).toBe('active');
-
-    // The public web presence reader resolves the affiliation.
-    const affiliation = await resolveCurrentAgencyAffiliation(db, agentId);
-    expect(affiliation).not.toBeNull();
-    expect(affiliation?.name).toContain('Mirror Agency');
-  });
-
-  it('hides suspended memberships from current-affiliation readers and restores them on reactivate', async () => {
-    const agencyId = await insertAgency('Lifecycle');
-    const agentUserId = await insertUser('Lifecycle', 'agent');
-    const agentId = await insertInvitedAgentProfile(agentUserId, null);
-
-    await maintainAgencyAgentMembership(db, { agencyId, agentId, status: 'active' });
-    expect(await listCurrentAgencyMembershipsForAgent(db, agentId)).toHaveLength(1);
-
-    await maintainAgencyAgentMembership(db, { agencyId, agentId, status: 'suspended' });
-    expect(await listCurrentAgencyMembershipsForAgent(db, agentId)).toHaveLength(0);
-
-    const [row] = await db
-      .select()
-      .from(agencyAgentMemberships)
-      .where(
-        and(
-          eq(agencyAgentMemberships.agencyId, agencyId),
-          eq(agencyAgentMemberships.agentId, agentId),
-        ),
-      )
-      .limit(1);
-    expect(row.status).toBe('suspended');
-    expect(row.effectiveTo).not.toBeNull();
-
-    await maintainAgencyAgentMembership(db, { agencyId, agentId, status: 'active' });
-    const restored = await listCurrentAgencyMembershipsForAgent(db, agentId);
-    expect(restored).toHaveLength(1);
-    expect(restored[0].status).toBe('active');
-    expect(restored[0].effectiveTo).toBeNull();
-  });
-
-  it('rejects principal conversion for accounts that already carry an agent identity', async () => {
-    const agencyId = await insertAgency('Conflation');
-    const agencyOwnerUserId = await insertUser('Owner', 'agency_admin');
-    await db.update(users).set({ agencyId }).where(eq(users.id, agencyOwnerUserId));
-
-    const independentAgentUserId = await insertUser('Independent', 'agent');
-    const independentOriginalAgency = await insertAgency('Other');
-    const existingAgentId = await insertInvitedAgentProfile(
-      independentAgentUserId,
-      independentOriginalAgency,
-    );
-
-    const invitation = await insertPendingInvitation({
-      agencyId,
-      invitedBy: agencyOwnerUserId,
-      email: (
-        await db.select({ email: users.email }).from(users).where(eq(users.id, independentAgentUserId))
-      )[0].email,
-      role: 'agency_admin',
-    });
-
-    // Mirror the accept guard introduced in this slice.
-    const currentUser = (
-      await db.select().from(users).where(eq(users.id, independentAgentUserId)).limit(1)
-    )[0];
-    const [existingAgentProfile] = await db
-      .select({ id: agents.id })
-      .from(agents)
-      .where(eq(agents.userId, currentUser.id))
-      .limit(1);
-
-    expect(invitation).toBeTruthy();
-    expect(existingAgentProfile).toBeTruthy();
-
-    const [profileAfter] = await db
-      .select({ agencyId: agents.agencyId })
-      .from(agents)
-      .where(eq(agents.id, existingAgentProfile.id));
-    // The guard exists so the accept mutation rejects before any write; the
-    // independent profile must remain affiliated with its original agency.
-    expect(profileAfter.agencyId).toBe(independentOriginalAgency);
-  });
-
-  it('keeps membership writes idempotent across repeat maintenance calls', async () => {
-    const agencyId = await insertAgency('Idempotent');
-    const agentUserId = await insertUser('Repeat', 'agent');
-    const agentId = await insertInvitedAgentProfile(agentUserId, null);
+    const agentUserId = await insertUser('Joiner', 'visitor');
+    const agentId = await insertAgentProfile(agentUserId, agencyId);
 
     await maintainAgencyAgentMembership(db, { agencyId, agentId, status: 'active' });
     await maintainAgencyAgentMembership(db, { agencyId, agentId, status: 'active' });
@@ -266,7 +169,227 @@ describeWithDb('agency membership authority', () => {
       .select()
       .from(agencyAgentMemberships)
       .where(eq(agencyAgentMemberships.agentId, agentId));
-    expect(rows).toHaveLength(1); // unique pair respected; upserted, not duplicated
+    expect(rows).toHaveLength(1);
     expect(rows[0].status).toBe('active');
+    expect(rows[0].effectiveTo).toBeNull();
+
+    const current = await listCurrentAgencyMembershipsForAgent(db, agentId);
+    expect(current).toHaveLength(1);
+
+    const affiliation = await resolveCurrentAgencyAffiliation(db, agentId);
+    expect(affiliation?.name).toContain('Mirror Agency');
+  });
+
+  it('closes the window on suspension, stamps first closure only, and reopens freshly on reactivate', async () => {
+    const agencyId = await insertAgency('Lifecycle');
+    const agentUserId = await insertUser('Lifecycle', 'agent');
+    const agentId = await insertAgentProfile(agentUserId, null);
+
+    await maintainAgencyAgentMembership(db, { agencyId, agentId, status: 'active' });
+    await maintainAgencyAgentMembership(db, { agencyId, agentId, status: 'active' });
+    await maintainAgencyAgentMembership(db, { agencyId, agentId, status: 'suspended' });
+
+    let row = (
+      await db
+        .select()
+        .from(agencyAgentMemberships)
+        .where(eq(agencyAgentMemberships.agentId, agentId))
+        .limit(1)
+    )[0];
+    const firstClosure = row.effectiveTo;
+    expect(row.status).toBe('suspended');
+    expect(firstClosure).not.toBeNull();
+    expect(await listCurrentAgencyMembershipsForAgent(db, agentId)).toHaveLength(0);
+
+    // Repeat suspension must keep the FIRST closure stamp.
+    await new Promise(resolve => setTimeout(resolve, 1100));
+    await maintainAgencyAgentMembership(db, { agencyId, agentId, status: 'suspended' });
+    row = (
+      await db
+        .select()
+        .from(agencyAgentMemberships)
+        .where(eq(agencyAgentMemberships.agentId, agentId))
+        .limit(1)
+    )[0];
+    expect(row.effectiveTo).toBe(firstClosure);
+
+    // Reactivation starts a fresh window and clears closure.
+    await maintainAgencyAgentMembership(db, { agencyId, agentId, status: 'active' });
+    row = (
+      await db
+        .select()
+        .from(agencyAgentMemberships)
+        .where(eq(agencyAgentMemberships.agentId, agentId))
+        .limit(1)
+    )[0];
+    expect(row.status).toBe('active');
+    expect(row.effectiveTo).toBeNull();
+    expect(new Date(row.effectiveFrom as unknown as string).getTime()).toBeGreaterThan(
+      new Date(firstClosure as unknown as string).getTime(),
+    );
+    expect(await listCurrentAgencyMembershipsForAgent(db, agentId)).toHaveLength(1);
+  });
+
+  it('converges racing maintenance calls onto a single canonical row', async () => {
+    const agencyId = await insertAgency('Racing');
+    const agentUserId = await insertUser('Racer', 'agent');
+    const agentId = await insertAgentProfile(agentUserId, null);
+
+    await Promise.all(
+      Array.from({ length: 6 }, () =>
+        maintainAgencyAgentMembership(db, { agencyId, agentId, status: 'active' }),
+      ),
+    );
+
+    const rows = await db
+      .select()
+      .from(agencyAgentMemberships)
+      .where(eq(agencyAgentMemberships.agentId, agentId));
+    expect(rows).toHaveLength(1);
+    expect(rows[0].status).toBe('active');
+    expect(await listCurrentAgencyMembershipsForAgent(db, agentId)).toHaveLength(1);
+  });
+});
+
+describeWithDb('invitation acceptance (production path)', () => {
+  it('accepting an agent invitation creates consistent identity, profile, and canonical membership', async () => {
+    const agencyId = await insertAgency('Production');
+    const ownerUserId = await insertUser('ProdOwner', 'agency_admin');
+    await db.update(users).set({ agencyId }).where(eq(users.id, ownerUserId));
+
+    const inviteeEmail = `prod-joiner-${randomUUID().slice(0, 8)}@example.test`;
+    const inviteeUserId = await insertUser('ProdJoiner', 'visitor');
+    await db.update(users).set({ email: inviteeEmail }).where(eq(users.id, inviteeUserId));
+
+    const invitationId = await insertPendingInvitation({
+      agencyId,
+      invitedBy: ownerUserId,
+      email: inviteeEmail,
+      role: 'agent',
+    });
+    const invitation = (
+      await db.select().from(invitations).where(eq(invitations.id, invitationId)).limit(1)
+    )[0];
+
+    const caller = acceptanceCaller({
+      id: inviteeUserId,
+      role: 'visitor',
+      agencyId: null,
+      email: inviteeEmail,
+    });
+
+    await caller.invitation.accept({ token: invitation.token });
+
+    // Identity projection updated.
+    const updatedUser = await getUser(inviteeUserId);
+    expect(updatedUser.role).toBe('agent');
+    expect(Number(updatedUser.agencyId)).toBe(agencyId);
+    expect(updatedUser.isSubaccount).toBe(1);
+
+    // Agent profile approved and affiliated.
+    const [profile] = await db.select().from(agents).where(eq(agents.userId, inviteeUserId)).limit(1);
+    expect(profile.status).toBe('approved');
+    expect(Number(profile.agencyId)).toBe(agencyId);
+
+    // Canonical membership row active with an open window.
+    const membership = (
+      await db
+        .select()
+        .from(agencyAgentMemberships)
+        .where(
+          and(
+            eq(agencyAgentMemberships.agencyId, agencyId),
+            eq(agencyAgentMemberships.agentId, Number(profile.id)),
+          ),
+        )
+        .limit(1)
+    );
+    expect(membership).toHaveLength(1);
+    expect(membership[0].status).toBe('active');
+    expect(membership[0].effectiveTo).toBeNull();
+
+    // Invitation consumed.
+    const [consumed] = await db
+      .select()
+      .from(invitations)
+      .where(eq(invitations.id, invitationId))
+      .limit(1);
+    expect(consumed.status).toBe('accepted');
+
+    // Public web presence resolves the new affiliation.
+    const affiliation = await resolveCurrentAgencyAffiliation(db, Number(profile.id));
+    expect(affiliation?.name).toContain('Production Agency');
+  });
+
+  it('rejects principal conversion for an account carrying an agent identity with no partial writes', async () => {
+    const targetAgencyId = await insertAgency('ConflationTarget');
+    const ownerUserId = await insertUser('ConflOwner', 'agency_admin');
+    await db.update(users).set({ agencyId: targetAgencyId }).where(eq(users.id, ownerUserId));
+
+    const otherAgencyId = await insertAgency('ConflationOther');
+
+    const agentUserId = await insertUser('ConflAgent', 'agent');
+    const originalProfileId = await insertAgentProfile(agentUserId, otherAgencyId);
+
+    const inviteeEmail = (
+      await db.select({ email: users.email }).from(users).where(eq(users.id, agentUserId))
+    )[0].email;
+
+    const invitationId = await insertPendingInvitation({
+      agencyId: targetAgencyId,
+      invitedBy: ownerUserId,
+      email: inviteeEmail,
+      role: 'agency_admin',
+    });
+    const invitation = (
+      await db.select().from(invitations).where(eq(invitations.id, invitationId)).limit(1)
+    )[0];
+
+    const before = {
+      user: await getUser(agentUserId),
+      profile: (
+        await db.select().from(agents).where(eq(agents.id, originalProfileId)).limit(1)
+      )[0],
+    };
+
+    const caller = acceptanceCaller({
+      id: agentUserId,
+      role: 'agent',
+      agencyId: null,
+      email: inviteeEmail,
+    });
+
+    await expect(caller.invitation.accept({ token: invitation.token })).rejects.toThrow(
+      /already carries an agent profile/i,
+    );
+
+    // No partial write anywhere.
+    const afterUser = await getUser(agentUserId);
+    expect(afterUser.role).toBe(before.user.role); // still 'agent'
+    expect(afterUser.agencyId).toBeNull(); // never affiliated to target agency
+
+    const afterProfile = (
+      await db.select().from(agents).where(eq(agents.id, originalProfileId)).limit(1)
+    )[0];
+    expect(Number(afterProfile.agencyId)).toBe(otherAgencyId);
+    expect(afterProfile.status).toBe(before.profile.status);
+
+    const membershipsForTargetAgency = await db
+      .select()
+      .from(agencyAgentMemberships)
+      .where(
+        and(
+          eq(agencyAgentMemberships.agencyId, targetAgencyId),
+          eq(agencyAgentMemberships.agentId, originalProfileId),
+        ),
+      );
+    expect(membershipsForTargetAgency).toHaveLength(0);
+
+    const [stillPending] = await db
+      .select()
+      .from(invitations)
+      .where(eq(invitations.id, invitationId))
+      .limit(1);
+    expect(stillPending.status).toBe('pending');
   });
 });
