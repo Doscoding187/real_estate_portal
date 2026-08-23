@@ -3132,6 +3132,11 @@ async function approveDevelopment(
   if (!db) throw new Error('Database not available');
 
   await completeReview(db, id, adminId, 'approved', { complianceChecks });
+
+  // Return the post-review row so callers can distinguish
+  // approve-and-publish from approved-private (Launch Access lapse).
+  const [row] = await db.select().from(developments).where(eq(developments.id, id)).limit(1);
+  return row;
 }
 
 async function rejectDevelopment(id: number, adminId: number, reason: string) {
