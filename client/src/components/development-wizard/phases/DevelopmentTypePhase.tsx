@@ -72,6 +72,14 @@ export function DevelopmentTypePhase() {
   }, [developmentData?.transactionType]);
 
   const handleTxSelect = (type: string) => {
+    // Disabled workflows are refused before any workflow-lock or reset logic:
+    // a disabled option must never trigger the reset confirmation path.
+    const option = TRANSACTION_TYPES.find(o => o.value === type);
+    if (option?.enabled === false) {
+      toast.info(`${option.label} workflow is coming soon!`);
+      return;
+    }
+
     // LOCK LOGIC: If workflow is active, prevent silent change
     if (workflowId) {
       if (type !== developmentData?.transactionType) {
@@ -81,11 +89,6 @@ export function DevelopmentTypePhase() {
       return;
     }
 
-    const option = TRANSACTION_TYPES.find(o => o.value === type);
-    if (option?.enabled === false) {
-      toast.info(`${option.label} workflow is coming soon!`);
-      return;
-    }
     setSelectedTxType(type);
   };
 

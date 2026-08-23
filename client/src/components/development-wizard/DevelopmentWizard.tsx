@@ -430,11 +430,7 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
     // The exit dialog promises a saved draft, so perform the same real server
     // save as the explicit Save Draft action. The autosave hook is disabled
     // and its saveNow() is a no-op.
-    try {
-      if (isHydrated) await handleManualSaveDraft();
-    } catch {
-      // Save failures already surface via toast + apiError; still allow exit.
-    } finally {
+    if (!isHydrated) {
       reset();
       setLocation(
         shouldUsePublisherApi
@@ -443,7 +439,26 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
             ? '/admin/overview'
             : '/developer',
       );
+      return;
     }
+
+    try {
+      await handleManualSaveDraft();
+    } catch {
+      // Persistence failed: keep the wizard open with its state intact so the
+      // developer can retry instead of silently losing their work. The failure
+      // is already surfaced via toast + apiError by handleManualSaveDraft.
+      return;
+    }
+
+    reset();
+    setLocation(
+      shouldUsePublisherApi
+        ? '/admin/publisher'
+        : isSuperAdmin
+          ? '/admin/overview'
+          : '/developer',
+    );
   };
 
   // Lifecycle truth for edit mode: tell the developer what their edits will
