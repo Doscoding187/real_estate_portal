@@ -38,7 +38,8 @@ describe('public Developments search authority', () => {
     expect(router).toContain("transactionType: z.enum(['for_sale', 'for_rent']).optional()");
     expect(page).toContain(
       '      transactionType:\n' +
-        "        intent.filters.transactionType === 'for_sale' || intent.filters.transactionType === 'for_rent'\n" +
+        "        intent.filters.transactionType === 'for_sale' ||\n" +
+        "        intent.filters.transactionType === 'for_rent'\n" +
         '          ? intent.filters.transactionType\n' +
         '          : undefined,',
     );

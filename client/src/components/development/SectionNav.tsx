@@ -3,7 +3,7 @@ import { cn } from '@/lib/utils';
 
 const sections = [
   { id: 'overview', label: 'Overview' },
-  { id: 'units', label: 'Units' },
+  { id: 'available-units', label: 'Units' },
   { id: 'amenities', label: 'Amenities' },
   { id: 'developer', label: 'Developer' },
   { id: 'location', label: 'Location' },
