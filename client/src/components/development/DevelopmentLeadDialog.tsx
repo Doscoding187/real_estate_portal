@@ -123,7 +123,9 @@ function getModeCopy(
           ? 'Share your details with Property Listify to register interest in this sold-out development. The request will be reviewed with the correct unit context.'
           : 'Share your details with Property Listify. This enquiry is managed as a platform reference and is not a direct message to an external developer.',
         submitLabel: isSoldOut ? 'Register Interest' : 'Send Enquiry',
-        successMessage: isSoldOut ? 'Your interest has been registered.' : 'Your enquiry has been submitted.',
+        successMessage: isSoldOut
+          ? 'Your interest has been registered.'
+          : 'Your enquiry has been submitted.',
       };
     }
 
@@ -201,6 +203,9 @@ export function DevelopmentLeadDialog({
     phone: '',
     message: '',
   });
+  // Honeypot: real buyers never see or fill this field; bots that do are
+  // silently ignored by the capture authority.
+  const [honeypotWebsite, setHoneypotWebsite] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [consentAccepted, setConsentAccepted] = useState(false);
   const [captureRequestId, setCaptureRequestId] = useState(() => createLeadCaptureRequestId());
@@ -276,7 +281,7 @@ export function DevelopmentLeadDialog({
         ? `I would like to register my interest in ${subject}. Please review my request with the available development and unit information.`
         : isPlatformReference
           ? `I am interested in ${subject}. Please review my enquiry with the latest available pricing, availability, and next steps.`
-      : `I am interested in ${subject}. Please contact me with pricing, availability, and next steps.`;
+          : `I am interested in ${subject}. Please contact me with pricing, availability, and next steps.`;
   }, [
     affordabilityData?.availableDeposit,
     affordabilityData?.maxAffordable,
@@ -365,6 +370,7 @@ export function DevelopmentLeadDialog({
       email: form.email.trim(),
       phone: form.phone.trim(),
       message: form.message.trim() || generatedMessage,
+      website: honeypotWebsite || undefined,
       leadType: mode === 'viewing' ? 'viewing_request' : 'inquiry',
       leadSource: copy.leadSource,
       sourceSurface: ctaLocation || 'development_detail',
@@ -422,9 +428,7 @@ export function DevelopmentLeadDialog({
                       Unit: {unitContext.unitName}
                     </p>
                   ) : null}
-                  <p className="text-xs leading-5 text-slate-300">
-                    {custodyDescription}
-                  </p>
+                  <p className="text-xs leading-5 text-slate-300">{custodyDescription}</p>
                 </div>
               </div>
 
@@ -612,6 +616,20 @@ export function DevelopmentLeadDialog({
                 </Label>
               </div>
               {errors.consent && <p className="text-xs text-red-500">{errors.consent}</p>}
+
+              {/* Honeypot field: hidden from real users, irresistible to bots. */}
+              <div aria-hidden="true" className="absolute -left-[9999px] h-0 w-0 overflow-hidden">
+                <label htmlFor="development-lead-website">Website</label>
+                <input
+                  id="development-lead-website"
+                  type="text"
+                  name="website"
+                  tabIndex={-1}
+                  autoComplete="off"
+                  value={honeypotWebsite}
+                  onChange={event => setHoneypotWebsite(event.target.value)}
+                />
+              </div>
 
               <Button
                 className="w-full bg-orange-500 text-white hover:bg-orange-600"
