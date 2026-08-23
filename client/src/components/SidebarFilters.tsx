@@ -12,6 +12,8 @@ import {
 } from '@/components/ui/accordion';
 import { formatCurrency } from '@/lib/utils';
 import { SearchFilters } from '@/lib/urlUtils';
+import { BUY_FILTER_PRICE_CEILING } from '@shared/buySearchContract';
+import { PUBLIC_PROPERTY_TYPES } from '@shared/property-taxonomy';
 import { SearchResults } from '@shared/types';
 
 interface SidebarFiltersProps {
@@ -60,7 +62,11 @@ const LISTING_SOURCE_OPTIONS = [
   },
 ] as const;
 
-const FALLBACK_PROPERTY_TYPES = [
+// Presentation order and labels are owned here; the VALUE vocabulary is
+// pinned to the shared taxonomy authority by SidebarFilters.taxonomy.test.ts.
+// Any value added below must exist in PUBLIC_PROPERTY_TYPES (or be added to
+// that authority first).
+export const FALLBACK_PROPERTY_TYPES = [
   { value: 'house', label: 'Houses' },
   { value: 'apartment', label: 'Apartments / Flats' },
   { value: 'villa', label: 'Villas' },
@@ -71,7 +77,7 @@ const FALLBACK_PROPERTY_TYPES = [
   { value: 'plot', label: 'Land / Plots' },
 ] as const;
 
-const PROPERTY_TYPE_CATEGORIES = {
+export const PROPERTY_TYPE_CATEGORIES = {
   residential: ['house', 'apartment', 'villa', 'townhouse', 'cluster_home', 'farm'],
   commercial: ['commercial'],
   land: ['plot'],
@@ -79,7 +85,7 @@ const PROPERTY_TYPE_CATEGORIES = {
 
 type PropertyTypeCategory = keyof typeof PROPERTY_TYPE_CATEGORIES;
 
-const PROPERTY_TYPE_LABELS: Record<string, string> = {
+export const PROPERTY_TYPE_LABELS: Record<string, string> = {
   house: 'Houses',
   apartment: 'Apartments / Flats',
   villa: 'Villas',
@@ -135,7 +141,7 @@ export function SidebarFilters({
   // Local state for sliders to avoid excessive re-renders/fetches while dragging
   const [priceRange, setPriceRange] = useState<[number, number]>([
     filters.minPrice || 0,
-    filters.maxPrice || 50000000,
+    filters.maxPrice || BUY_FILTER_PRICE_CEILING,
   ]);
   const [pendingSuburbs, setPendingSuburbs] = useState<string[]>(selectedSuburbs);
   const [propertyTypeCategory, setPropertyTypeCategory] = useState<PropertyTypeCategory>(
@@ -148,7 +154,7 @@ export function SidebarFilters({
   // Sync local state with props when they change externally
   useEffect(() => {
     if (filters.minPrice !== undefined || filters.maxPrice !== undefined) {
-      setPriceRange([filters.minPrice || 0, filters.maxPrice || 50000000]);
+      setPriceRange([filters.minPrice || 0, filters.maxPrice || BUY_FILTER_PRICE_CEILING]);
     }
   }, [filters.minPrice, filters.maxPrice]);
 
@@ -413,9 +419,9 @@ export function SidebarFilters({
                 </span>
               </div>
               <Slider
-                defaultValue={[0, 50000000]}
+                defaultValue={[0, BUY_FILTER_PRICE_CEILING]}
                 value={[priceRange[0], priceRange[1]]}
-                max={50000000}
+                max={BUY_FILTER_PRICE_CEILING}
                 step={5000}
                 min={0}
                 onValueChange={handlePriceChange}
