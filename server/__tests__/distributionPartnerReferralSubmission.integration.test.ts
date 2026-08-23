@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterAll, describe, expect, it } from 'vitest';
 import { randomUUID } from 'node:crypto';
 import { eq, inArray } from 'drizzle-orm';
 import { TRPCError } from '@trpc/server';
@@ -296,7 +296,14 @@ async function insertAssessment(input: {
 }
 
 describeWithDb('distribution.partner.submitReferral integration', () => {
-  afterEach(async () => {
+  // Fixture cleanup runs once per file, not per test. Every entity is created
+  // with a unique suffix, so no test depends on a previous test's deletion for
+  // isolation. Per-test delete cascades take next-key/gap locks on the shared
+  // auto-increment keyspaces (users, catalogue_publishers, developments) while
+  // sibling worker files insert their own fixtures into the same gaps; under
+  // the parallel disposable-DB runner this produced intermittent
+  // ER_LOCK_DEADLOCK failures whose victim statement varied between runs.
+  afterAll(async () => {
     const db = await getDb();
     if (!db) return;
 
