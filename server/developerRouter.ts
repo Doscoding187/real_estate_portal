@@ -523,7 +523,15 @@ export const developerRouter = router({
             address: input.address ?? null,
             city: input.city,
             province: input.province,
-            category: (input.category as any) || 'residential',
+            // An absent category retains the organisation's existing one;
+            // resubmission must never silently rewrite it to a default.
+            category:
+              input.category === 'residential' ||
+              input.category === 'commercial' ||
+              input.category === 'mixed_use' ||
+              input.category === 'industrial'
+                ? input.category
+                : undefined,
             establishedYear: input.establishedYear ?? null,
             specializations: input.specializations ?? [],
           });

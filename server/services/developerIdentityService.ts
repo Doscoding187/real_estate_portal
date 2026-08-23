@@ -395,9 +395,11 @@ export async function resubmitRejectedDeveloperOrganisation(
       'establishedYear',
       'specializations',
     ] as const) {
-      if (input[key] !== undefined) {
-        organisationValues[key] = input[key];
-      }
+      if (input[key] === undefined) continue;
+      // Category is a non-null enum column: an absent/empty submission must
+      // retain the existing value rather than attempt to write null.
+      if (key === 'category' && !input.category) continue;
+      organisationValues[key] = input[key];
     }
     // Identity review re-runs on the corrected submission.
     organisationValues.status = 'pending';

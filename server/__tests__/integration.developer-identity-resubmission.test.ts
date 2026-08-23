@@ -178,4 +178,39 @@ describeWithDb('developer identity resubmission authority', () => {
       .where(eq(developerOrganisations.id, identity.organisationId));
     expect(organisation.status).toBe('approved');
   });
+
+  it('retains the existing organisation category when resubmission omits it', async () => {
+    const userId = await insertDeveloperUser();
+    const suffix = uniqueSuffix();
+    const identity = await developerIdentityService.createDeveloperOrganisation({
+      name: `Industrial Resubmit ${suffix}`,
+      email: `industrial-resubmit-${suffix}@example.com`,
+      city: 'Johannesburg',
+      province: 'Gauteng',
+      category: 'industrial',
+      createdByUserId: userId,
+    });
+    createdOrganisationIds.push(identity.organisationId);
+    expect(identity.category).toBe('industrial');
+
+    await rejectOrganisation(identity.organisationId, 'Proof of representation missing.');
+
+    // The wizard historically omitted category from its payload; resubmission
+    // must retain it rather than silently defaulting back to residential.
+    await developerIdentityService.resubmitRejectedDeveloperOrganisation({
+      organisationId: identity.organisationId,
+      name: `Industrial Resubmit ${suffix}`,
+      email: `industrial-resubmit-${suffix}@example.com`,
+      city: 'Johannesburg',
+      province: 'Gauteng',
+    });
+
+    const db = await database();
+    const [organisation] = await db
+      .select()
+      .from(developerOrganisations)
+      .where(eq(developerOrganisations.id, identity.organisationId));
+    expect(organisation.status).toBe('pending');
+    expect(organisation.category).toBe('industrial');
+  });
 });

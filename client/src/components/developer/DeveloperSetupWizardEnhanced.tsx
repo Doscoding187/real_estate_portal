@@ -365,6 +365,7 @@ export default function DeveloperSetupWizardEnhanced() {
 
       await createProfile.mutateAsync({
         name: data.name,
+        category: data.category || null,
         specializations: data.specializations as any,
         establishedYear: data.establishedYear ? Number(data.establishedYear) : null,
         description: data.description || null,
