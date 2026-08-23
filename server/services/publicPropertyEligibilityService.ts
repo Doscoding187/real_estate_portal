@@ -15,7 +15,7 @@ import {
   resolveApprovedPublicProperties,
   type ApprovedPublicPropertyResolution,
 } from './approvedPublicPropertyService';
-import { isPaidSubscriptionEntitled } from './planAccessService';
+import { isPaidSubscriptionRowEntitled } from './planAccessService';
 import {
   resolvePublicPropertyCustody,
   type PublicAgentOwnershipCandidate,
@@ -432,12 +432,10 @@ async function loadAgentPaidEntitledUserIds(
         and(inArray(subscriptions.ownerId, [...batchIds]), eq(subscriptions.ownerType, 'agent')),
       ),
   );
-  const now = Date.now();
+  const now = new Date();
   const entitled = new Set<number>();
   for (const row of rows) {
-    if (!isPaidSubscriptionEntitled(row.status as never)) continue;
-    const periodEnd = row.currentPeriodEnd ? new Date(row.currentPeriodEnd).getTime() : null;
-    if (periodEnd !== null && (!Number.isFinite(periodEnd) || periodEnd <= now)) continue;
+    if (!isPaidSubscriptionRowEntitled(row, now)) continue;
     entitled.add(Number(row.ownerId));
   }
   return entitled;

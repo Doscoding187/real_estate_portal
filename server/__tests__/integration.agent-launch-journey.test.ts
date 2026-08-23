@@ -294,5 +294,16 @@ describeWithDb('independent agent launch journey (publish → receive)', () => {
       agencyId: null,
     });
     expect(['delivered', 'pending']).toContain(storedLead.deliveryStatus);
+
+    // Continuity loop: the enquiry must raise agent awareness immediately.
+    const [notification] = await db.execute(
+      (await import('drizzle-orm')).sql`
+        select n.type, n.title
+        from notifications n
+        where n.user_id = ${created.userId}
+          and n.type = 'lead_assigned'
+        order by n.id desc limit 1`,
+    ).then((r: any) => (Array.isArray(r) ? r[0] : (r?.rows ?? [])[0]));
+    expect(notification?.type).toBe('lead_assigned');
   }, 60_000);
 });

@@ -2,6 +2,7 @@ import { and, desc, eq, inArray, ne, sql } from 'drizzle-orm';
 
 import { agencyAgentMemberships, agencies, agents, cities, listings, provinces, properties, suburbs, subscriptions } from '../../drizzle/schema';
 import { slugify } from '../_core/utils/slug';
+import { isPaidSubscriptionRowEntitled } from './planAccessService';
 import { resolvePublicPropertyEligibilities } from './publicPropertyEligibilityService';
 import { toPublicPropertyDetailDto } from './publicPropertyDto';
 import { isCurrentActiveAgencyMembership } from './agencyMembershipService';
@@ -440,12 +441,10 @@ async function loadPersonallyEntitledAgentUserIds(
       .where(
         and(inArray(subscriptions.ownerId, userIds), eq(subscriptions.ownerType, 'agent')),
       );
-  const now = Date.now();
+  const now = new Date();
   const entitled = new Set<number>();
   for (const row of rows) {
-    if (row.status !== 'active' && row.status !== 'grace_period') continue;
-    const periodEnd = row.currentPeriodEnd ? new Date(row.currentPeriodEnd).getTime() : null;
-    if (periodEnd !== null && (!Number.isFinite(periodEnd) || periodEnd <= now)) continue;
+    if (!isPaidSubscriptionRowEntitled(row, now)) continue;
     entitled.add(Number(row.ownerId));
   }
   return entitled;

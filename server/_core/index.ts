@@ -15,6 +15,7 @@ import { initializeCache, shutdownCache } from './cache/redis';
 import { registerHealthEndpoint, registerVersionEndpoint } from './health';
 import { getDistributionSchemaReadinessSnapshot } from '../services/runtimeSchemaCapabilities';
 import { savedSearchDeliveryScheduler } from '../services/savedSearchDeliveryScheduler';
+import { commercialTermNoticeScheduler } from '../services/commercialTermNoticeScheduler';
 import sitemapRouter from '../routes/sitemap';
 import developmentSupersessionRedirectRouter from '../routes/developmentSupersessionRedirect';
 import agentOnboardingRouter from '../routes/agentOnboarding';
@@ -258,6 +259,7 @@ async function startServer() {
   console.log('[Server] Optional routers loaded');
 
   const savedSearchSchedulerStatus = await savedSearchDeliveryScheduler.start();
+  await commercialTermNoticeScheduler.start();
   console.log('[SavedSearchScheduler] Startup status', savedSearchSchedulerStatus);
 
   if (process.env.NODE_ENV === 'development' && process.env.SKIP_FRONTEND !== 'true') {
