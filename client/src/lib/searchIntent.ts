@@ -11,6 +11,11 @@ import {
   sanitizeBuySearchFilters,
 } from '../../../shared/buySearchContract';
 import {
+  RENT_TRANSACTION_TYPE,
+  parseRentSearchParams,
+  sanitizeRentSearchFilters,
+} from '../../../shared/rentSearchContract';
+import {
   appendTransactionalResultState,
   parseTransactionalResultState,
   SEARCH_RESULT_PAGE_PARAM,
@@ -573,7 +578,11 @@ export function resolveSearchIntent(
   }
 
   const filters: Record<string, any> =
-    transactionType === BUY_TRANSACTION_TYPE ? parseBuySearchParams(searchParams) : {};
+    transactionType === BUY_TRANSACTION_TYPE
+      ? parseBuySearchParams(searchParams)
+      : transactionType === RENT_TRANSACTION_TYPE
+        ? parseRentSearchParams(searchParams)
+        : {};
 
   if (transactionType && transactionType !== BUY_TRANSACTION_TYPE) {
     if (locations.length > 0) filters.locations = locations;
@@ -683,7 +692,11 @@ export function generateIntentUrl(intent: SearchIntent): string {
         })();
 
   const serializableFilters =
-    transactionType === BUY_TRANSACTION_TYPE ? sanitizeBuySearchFilters(filters) : filters;
+    transactionType === BUY_TRANSACTION_TYPE
+      ? sanitizeBuySearchFilters(filters)
+      : transactionType === RENT_TRANSACTION_TYPE
+        ? sanitizeRentSearchFilters(filters)
+        : filters;
 
   const normalizedLocationIds = Array.from(
     new Set(

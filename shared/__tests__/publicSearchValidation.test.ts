@@ -108,4 +108,34 @@ describe('public Search Area request validation', () => {
       }),
     ).toMatchObject({ path: 'locationIds' });
   });
+
+  it('rejects inverted bedroom and bathroom ranges', () => {
+    expect(
+      validatePublicSearchInput({
+        listingType: 'rent',
+        minBedrooms: 4,
+        maxBedrooms: 2,
+      }),
+    ).toMatchObject({ path: 'minBedrooms' });
+
+    expect(
+      validatePublicSearchInput({
+        listingType: 'rent',
+        minBathrooms: 3,
+        maxBathrooms: 1,
+      }),
+    ).toMatchObject({ path: 'minBathrooms' });
+  });
+
+  it('accepts coherent bedroom and bathroom ranges', () => {
+    expect(
+      validatePublicSearchInput({
+        listingType: 'rent',
+        minBedrooms: 2,
+        maxBedrooms: 4,
+        minBathrooms: 1,
+        maxBathrooms: 2,
+      }),
+    ).toBeUndefined();
+  });
 });
