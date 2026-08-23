@@ -3372,6 +3372,27 @@ async function getAgencyAccessStateForUser(
   return base;
 }
 
+/**
+ * Overlay the canonical subscription status onto a public agency row.
+ * The retired agencies.subscriptionStatus column is no longer synced for
+ * Launch Access products, so public consumers must see the subscriptions
+ * authority's answer instead of stale shadow data.
+ */
+async function withCanonicalAgencySubscriptionStatus<
+  T extends { id: number; subscriptionStatus: string | null },
+>(db: NonNullable<Awaited<ReturnType<typeof getDb>>>, agency: T): Promise<T> {
+  const [subscription] = await db
+    .select({ status: subscriptions.status })
+    .from(subscriptions)
+    .where(and(eq(subscriptions.ownerType, 'agency'), eq(subscriptions.ownerId, agency.id)))
+    .limit(1);
+
+  return {
+    ...agency,
+    subscriptionStatus: subscription?.status ?? 'not_started',
+  };
+}
+
 export const agencyRouter = router({
   getOnboardingStatus: agencyAdminProcedure.query(async ({ ctx }) => {
     const db = await getDb();
@@ -3934,8 +3955,11 @@ export const agencyRouter = router({
       address: input.address || null,
       city: input.city || null,
       province: input.province || null,
+      // A manually created agency has no canonical commercial state yet.
+      // Claiming a retired 'trial' here contradicted the subscriptions
+      // authority; pending_payment honestly reports outstanding activation.
       subscriptionPlan: 'free',
-      subscriptionStatus: 'trial',
+      subscriptionStatus: 'pending_payment',
       isVerified: 0,
     });
 
@@ -4014,7 +4038,10 @@ export const agencyRouter = router({
   }),
 
   /**
-   * Get agency by ID (Public - for display)
+   * Get agency by ID (Public - for display). The commercial status is
+   * derived from the canonical subscriptions authority rather than the
+   * retired agencies billing columns, which are no longer kept in sync for
+   * Launch Access products.
    */
   getById: publicProcedure.input(z.object({ id: z.number() })).query(async ({ input }) => {
     const db = await getDb();
@@ -4028,11 +4055,12 @@ export const agencyRouter = router({
       throw new Error('Agency not found');
     }
 
-    return agency;
+    return withCanonicalAgencySubscriptionStatus(db, agency);
   }),
 
   /**
-   * Get agency by slug (Public - for display)
+   * Get agency by slug (Public - for display). Commercial status is derived
+   * from the canonical subscriptions authority (see getById).
    */
   getBySlug: publicProcedure.input(z.object({ slug: z.string() })).query(async ({ input }) => {
     const db = await getDb();
@@ -4046,7 +4074,7 @@ export const agencyRouter = router({
       throw new Error('Agency not found');
     }
 
-    return agency;
+    return withCanonicalAgencySubscriptionStatus(db, agency);
   }),
 
   /**

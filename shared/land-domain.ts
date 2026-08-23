@@ -9,6 +9,25 @@ export const LAND_CLASSIFICATIONS = [
 ] as const;
 export type LandClassification = (typeof LAND_CLASSIFICATIONS)[number];
 
+/** Classifications with a complete authoring → publication → public-search contract. */
+export const LAND_PUBLIC_CLASSIFICATIONS = [
+  'residential_stand',
+  'development_land',
+  'commercial_industrial_land',
+  'agricultural_vacant_land',
+] as const satisfies readonly LandClassification[];
+export type LandPublicClassification = (typeof LAND_PUBLIC_CLASSIFICATIONS)[number];
+
+export const LAND_CLASSIFICATION_LABELS: Record<LandClassification, string> = {
+  residential_stand: 'Residential Stand',
+  development_land: 'Development Land',
+  commercial_industrial_land: 'Commercial / Industrial Land',
+  agricultural_vacant_land: 'Agricultural Land',
+  smallholding: 'Smallholding',
+  farm: 'Farm',
+  other_land: 'Other Land',
+};
+
 export const LAND_CLAIM_CODES = [
   'land_extent', 'intended_use', 'access', 'road_frontage', 'water', 'electricity',
   'sanitation', 'zoning_land_use', 'restrictions_servitudes', 'development_context',

@@ -210,5 +210,25 @@ describeWithDb('developer public profile integration', () => {
     // never inflate a developer's published portfolio.
     expect(detail?.publisherPublishedDevelopmentCount).toBe(1);
     expect(detail?.publisher?.slug).toBe(developerContext.publisher.slug);
+
+    // Public unit boundary: developer-private fields never cross to an
+    // anonymous caller, and impossible inventory is clamped like the shared
+    // projection.
+    const [leakProbe] = await db!
+      .update(unitTypes)
+      .set({ internalNotes: 'INTERNAL ONLY', reservedUnits: 99 })
+      .where(eq(unitTypes.id, unitTypeId));
+    void leakProbe;
+
+    const leaked = await caller.getPublicDevelopmentBySlug({
+      slugOrId: `presence-published-${suffix}`,
+    });
+    const firstUnit = leaked?.unitTypes?.[0];
+    expect(firstUnit).toBeTruthy();
+    expect((firstUnit as Record<string, unknown>).internalNotes).toBeUndefined();
+    expect((firstUnit as Record<string, unknown>).specOverrides).toBeUndefined();
+    expect(Number(firstUnit?.reservedUnits)).toBeLessThanOrEqual(
+      Number(firstUnit?.totalUnits ?? 0),
+    );
   });
 });

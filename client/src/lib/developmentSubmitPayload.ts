@@ -545,18 +545,23 @@ export function buildDevelopmentSubmitPayload(input: DevelopmentSubmitPayloadInp
   const auctionRange = getAuctionRange(unitTypes, isLand);
   const images = extractSubmitImages(submitSource);
   const videos = extractSubmitVideoUrls(submitSource);
-  const floorPlans = extractSubmitFloorPlanUrls(submitSource);
+  // The wizard does not yet manage development-level floor plans (unit-level
+  // floor plans live in unit baseMedia). Only send the bucket when the wizard
+  // actually holds one, otherwise omit it so updateDevelopment preserves any
+  // existing column value instead of wiping it to an empty array.
+  const wizardManagesFloorPlans = Array.isArray((submitSource as any)?.media?.floorPlans);
+  const floorPlans = wizardManagesFloorPlans ? extractSubmitFloorPlanUrls(submitSource) : undefined;
   const brochures = extractSubmitDocumentUrls(submitSource);
   const mediaPayload = hasSubmitMediaSource(submitSource)
     ? {
         images,
         videos,
-        floorPlans,
+        ...(floorPlans !== undefined ? { floorPlans } : {}),
         brochures,
         media: {
           photos: images,
           videos: videos.map(url => ({ url })),
-          floorPlans: floorPlans.map(url => ({ url })),
+          ...(floorPlans !== undefined ? { floorPlans: floorPlans.map(url => ({ url })) } : {}),
           brochures: brochures.map(url => ({ url })),
         },
       }
@@ -729,9 +734,7 @@ function getNormalizedSnapshotTransactionType(snapshot: Record<string, any> | un
 
 function getUnitIds(units: unknown[]) {
   return new Set(
-    units
-      .map((unit: any) => (typeof unit?.id === 'string' ? unit.id.trim() : ''))
-      .filter(Boolean),
+    units.map((unit: any) => (typeof unit?.id === 'string' ? unit.id.trim() : '')).filter(Boolean),
   );
 }
 
@@ -745,15 +748,23 @@ function assertPartialUnitTypesTransactionSwitchIsComplete(
     options.previousCanonicalSnapshot,
   );
   const nextTransactionType = getNormalizedSnapshotTransactionType(payload);
-  if (!previousTransactionType || !nextTransactionType || previousTransactionType === nextTransactionType) {
+  if (
+    !previousTransactionType ||
+    !nextTransactionType ||
+    previousTransactionType === nextTransactionType
+  ) {
     return;
   }
 
   const previousUnits = resolveSubmitUnitTypes(options.previousCanonicalSnapshot ?? {});
   if (previousUnits.length === 0) return;
 
-  const nextUnitIds = getUnitIds(payload.unitTypes ?? payload.stepData?.unit_types?.unitTypes ?? []);
-  const missingUnitIds = Array.from(getUnitIds(previousUnits)).filter(unitId => !nextUnitIds.has(unitId));
+  const nextUnitIds = getUnitIds(
+    payload.unitTypes ?? payload.stepData?.unit_types?.unitTypes ?? [],
+  );
+  const missingUnitIds = Array.from(getUnitIds(previousUnits)).filter(
+    unitId => !nextUnitIds.has(unitId),
+  );
   if (missingUnitIds.length === 0) return;
 
   throw new Error(

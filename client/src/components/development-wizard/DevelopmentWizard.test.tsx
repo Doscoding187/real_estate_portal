@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const testState = vi.hoisted(() => {
   const wizardState = {
@@ -49,6 +49,8 @@ const testState = vi.hoisted(() => {
     setListingIdentity: wizardState.setListingIdentity,
     useDevelopmentWizardMock,
     wizardState,
+    getDevelopmentQueryResult: { current: null as unknown },
+    searchParams: { current: '' },
   };
 });
 
@@ -99,7 +101,13 @@ vi.mock('@/lib/trpc', () => ({
     developer: {
       saveDraft: { useMutation: () => ({ isPending: false, mutateAsync: testState.mutateAsync }) },
       getDraft: { useQuery: () => ({ data: null, error: null, isLoading: false }) },
-      getDevelopment: { useQuery: () => ({ data: null, error: null, isLoading: false }) },
+      getDevelopment: {
+        useQuery: () =>
+          typeof testState.getDevelopmentQueryResult.current === 'object' &&
+          testState.getDevelopmentQueryResult.current !== null
+            ? (testState.getDevelopmentQueryResult.current as Record<string, unknown>)
+            : { data: null, error: null, isLoading: false },
+      },
     },
     superAdminPublisher: {
       saveDraft: { useMutation: () => ({ isPending: false, mutateAsync: testState.mutateAsync }) },
@@ -111,6 +119,7 @@ vi.mock('@/lib/trpc', () => ({
 
 vi.mock('wouter', () => ({
   useLocation: () => ['/developer/create-development', testState.setLocation],
+  useSearch: () => testState.searchParams.current,
 }));
 
 vi.mock('sonner', () => ({
@@ -161,5 +170,70 @@ describe('DevelopmentWizard publisher context initialization', () => {
 
     expect(screen.getByText('Development type setup')).toBeInTheDocument();
     expect(testState.setListingIdentity).not.toHaveBeenCalled();
+  });
+});
+
+describe('DevelopmentWizard edit-mode lifecycle truth', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    testState.authUser = { id: 2, role: 'property_developer' };
+    testState.publisherContext = null;
+    // The wizard parses mode params from window.location.search directly.
+    window.history.replaceState({}, '', '/developer/create-development?id=77');
+  });
+
+  afterEach(() => {
+    testState.getDevelopmentQueryResult.current = null;
+    window.history.replaceState({}, '', '/developer/create-development');
+  });
+
+  it('explains that an in-review development cannot be resubmitted until the review completes', async () => {
+    testState.getDevelopmentQueryResult.current = {
+      data: { approvalStatus: 'pending', isPublished: 0, rejectionNote: null },
+      error: null,
+      isLoading: false,
+    };
+
+    render(<DevelopmentWizard />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Under review\./)).toBeInTheDocument();
+      expect(screen.getByText(/submitting again is blocked/i)).toBeInTheDocument();
+    });
+    expect(screen.queryByText(/Reviewer feedback:/i)).not.toBeInTheDocument();
+  });
+
+  it('warns that submitting changes to a live development unpublishes it', async () => {
+    testState.getDevelopmentQueryResult.current = {
+      data: { approvalStatus: 'approved', isPublished: 1, rejectionNote: null },
+      error: null,
+      isLoading: false,
+    };
+
+    render(<DevelopmentWizard />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/This development is live\./)).toBeInTheDocument();
+      expect(screen.getByText(/back to review until the update is approved/i)).toBeInTheDocument();
+    });
+  });
+
+  it('surfaces reviewer feedback inside the editor so correction needs no detour', async () => {
+    testState.getDevelopmentQueryResult.current = {
+      data: {
+        approvalStatus: 'draft',
+        isPublished: 0,
+        rejectionNote: 'Add at least three development highlights.',
+      },
+      error: null,
+      isLoading: false,
+    };
+
+    render(<DevelopmentWizard />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Reviewer feedback:/i)).toBeInTheDocument();
+      expect(screen.getByText(/Add at least three development highlights\./)).toBeInTheDocument();
+    });
   });
 });

@@ -83,7 +83,7 @@ export const SANDTON_SEARCH_AREA_PREVIEW: SearchAreaDefinition = {
   parentCanonicalLocationId: 'city:12',
   anchorCanonicalLocationId: 'suburb:34',
   memberCanonicalLocationIds: ['suburb:34'],
-  supportedJourneys: ['buy', 'rent'],
+  supportedJourneys: ['buy', 'rent', 'plot_land'],
   lifecycle: 'preview',
   boundary: {
     kind: 'canonical_members',
