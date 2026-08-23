@@ -35,5 +35,7 @@ export function useDeveloperOnboardingStatus() {
     status: statusQuery.data ?? null,
     isLoading: authLoading || statusQuery.isLoading,
     error: statusQuery.error ?? null,
+    isError: statusQuery.isError,
+    refetch: statusQuery.refetch,
   };
 }

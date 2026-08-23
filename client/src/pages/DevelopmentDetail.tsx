@@ -1125,6 +1125,10 @@ export default function DevelopmentDetail() {
     developerDescription: publisher.description ?? null,
     developerWebsite: publisher.websiteUrl ?? null,
     developerSlug: isPlatformReference ? null : publisher.slug ?? null,
+    developerPublishedDevelopmentCount:
+      !isPlatformReference && dev.publisherPublishedDevelopmentCount != null
+        ? Number(dev.publisherPublishedDevelopmentCount)
+        : null,
 
     location: `${publicFacts.suburb ? `${publicFacts.suburb}, ` : ''}${publicFacts.city}`,
     address: dev.address || '',
@@ -1288,9 +1292,10 @@ export default function DevelopmentDetail() {
 
   // Related projects remain outside this canonical detail read until a
   // publisher-scoped public summary query exists. Do not call the legacy
-  // listPublicDevelopments projection from the detail page.
+  // listPublicDevelopments projection from the detail page. The portfolio
+  // count, however, is part of the canonical read's presence bridge.
   const relatedPublicDevelopments: any[] = [];
-  const developerProjectCount = null;
+  const developerProjectCount: number | null = development.developerPublishedDevelopmentCount;
 
   return (
     <>

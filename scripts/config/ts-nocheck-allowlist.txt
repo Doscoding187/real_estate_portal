@@ -7,7 +7,6 @@ client/src/components/advertise/PreviewCarousel.tsx
 client/src/components/agent/AgentSetupWizard.tsx
 client/src/components/agent/LeadPipeline.tsx
 client/src/components/analytics/PropertyPriceHeatmap.tsx
-client/src/components/developer/ActivityFeed.tsx
 client/src/components/developer/AffordabilityCalculatorWidget.tsx
 client/src/components/developer/AnalyticsPanel.tsx
 client/src/components/developer/BillingPanel.tsx
