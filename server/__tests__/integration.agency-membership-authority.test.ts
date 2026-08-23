@@ -1,4 +1,13 @@
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+
+// server/_core/env snapshots cookieSecret from process.env at module load,
+// and this suite's modules (db -> env) load before any hook can run.
+// Seed a deterministic test secret before those imports execute.
+const priorJwtSecret = vi.hoisted(() => {
+  const prior = process.env.JWT_SECRET;
+  if (!prior) process.env.JWT_SECRET = 'agency-membership-authority-test-secret';
+  return prior;
+});
 import { randomUUID } from 'node:crypto';
 import { and, eq } from 'drizzle-orm';
 
@@ -20,7 +29,6 @@ import {
   maintainAgencyAgentMembership,
 } from '../services/agencyMembershipService';
 import { resolveCurrentAgencyAffiliation } from '../services/agentPublicProfileService';
-import { appRouter } from '../routers';
 
 const created = {
   userIds: [] as number[],
@@ -28,6 +36,42 @@ const created = {
   agentIds: [] as number[],
   invitationIds: [] as number[],
 };
+
+let acceptanceCallerFor: (
+  user: { id: number; role: string; agencyId?: number | null; email?: string | null },
+) => { invitation: { accept: (input: { token: string }) => Promise<unknown> } };
+
+/**
+ * Acceptance mints a fresh session token through the real auth service.
+ * CI provides DATABASE_URL but not JWT_SECRET, and server/_core/env
+ * snapshots cookieSecret at module load — so the secret must exist BEFORE
+ * the router chain is imported. Importing the app router here keeps the
+ * whole production acceptance path real.
+ */
+async function ensureTestAuthEnvironmentAndRouter() {
+  const { appRouter } = await import('../routers');
+  acceptanceCallerFor = user =>
+    appRouter.createCaller({
+      req: {
+        hostname: 'localhost',
+        path: '/',
+        method: 'POST',
+        headers: { host: 'localhost:5000' },
+        socket: { remoteAddress: '127.0.0.1' },
+      },
+      res: { cookie: () => undefined },
+      user,
+    } as any);
+}
+
+function acceptanceCaller(user: {
+  id: number;
+  role: string;
+  agencyId?: number | null;
+  email?: string | null;
+}) {
+  return acceptanceCallerFor!(user);
+}
 
 async function insertId(result: any): Promise<number> {
   return Number(result?.[0]?.insertId ?? result?.insertId ?? 0);
@@ -122,25 +166,15 @@ async function insertPendingInvitation(input: {
   return id;
 }
 
-function acceptanceCaller(user: { id: number; role: string; agencyId?: number | null; email?: string | null }) {
-  return appRouter.createCaller({
-    req: {
-      hostname: 'localhost',
-      path: '/',
-      method: 'POST',
-      headers: { host: 'localhost:5000' },
-      socket: { remoteAddress: '127.0.0.1' },
-    },
-    res: { cookie: () => undefined },
-    user,
-  } as any);
-}
-
 beforeAll(async () => {
   if (!process.env.DATABASE_URL) return;
+  await ensureTestAuthEnvironmentAndRouter();
 });
 
 afterAll(async () => {
+  if (!process.env.DATABASE_URL) return;
+  if (priorJwtSecret === undefined) delete process.env.JWT_SECRET;
+  else process.env.JWT_SECRET = priorJwtSecret;
   if (!process.env.DATABASE_URL) return;
   for (const id of created.invitationIds) {
     await db.delete(invitations).where(eq(invitations.id, id)).catch(() => undefined);
