@@ -28,6 +28,14 @@ export type BuyPropertyType = (typeof BUY_COMPATIBLE_PROPERTY_TYPES)[number];
 export const BUY_LISTING_SOURCES = ['manual', 'development'] as const;
 export type BuyListingSource = (typeof BUY_LISTING_SOURCES)[number];
 
+/**
+ * Inclusive upper bound the Buy budget slider can express. Committing the
+ * untouched slider serializes this value, so it is treated as "no explicit
+ * ceiling" by the contract: R50m+ inventory must not be silently excluded
+ * just because a consumer interacted with the slider's maximum end.
+ */
+export const BUY_FILTER_PRICE_CEILING = 50_000_000;
+
 export const BUY_NUMERIC_FILTER_KEYS = [
   'minPrice',
   'maxPrice',
@@ -107,9 +115,18 @@ export function sanitizeBuySearchFilters(filters: Record<string, unknown>): BuyS
 
   const minPrice = parseNonNegativeNumber(filters.minPrice);
   const maxPrice = parseNonNegativeNumber(filters.maxPrice);
-  if (minPrice === undefined || maxPrice === undefined || minPrice <= maxPrice) {
-    if (minPrice !== undefined) sanitized.minPrice = minPrice;
-    if (maxPrice !== undefined) sanitized.maxPrice = maxPrice;
+  // Explicit slider defaults carry no consumer intent; keeping them in the
+  // canonical state would narrow results (the ceiling would exclude R50m+
+  // inventory) and pollute canonical URLs.
+  const effectiveMinPrice = minPrice === 0 ? undefined : minPrice;
+  const effectiveMaxPrice = maxPrice === BUY_FILTER_PRICE_CEILING ? undefined : maxPrice;
+  if (
+    effectiveMinPrice === undefined ||
+    effectiveMaxPrice === undefined ||
+    effectiveMinPrice <= effectiveMaxPrice
+  ) {
+    if (effectiveMinPrice !== undefined) sanitized.minPrice = effectiveMinPrice;
+    if (effectiveMaxPrice !== undefined) sanitized.maxPrice = effectiveMaxPrice;
   }
 
   const minBedrooms = parseNonNegativeNumber(filters.minBedrooms);

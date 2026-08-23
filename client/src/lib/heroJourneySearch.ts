@@ -7,7 +7,7 @@ import {
   type SearchIntent,
   type SearchIntentValidationCode,
 } from './searchIntent';
-import { isActiveBuyPropertyType, sanitizeBuySearchFilters } from '../../../shared/buySearchContract';
+import { isBuyPropertyType, sanitizeBuySearchFilters } from '../../../shared/buySearchContract';
 import {
   BUY_ACTIVE_PUBLIC_PROPERTY_TYPES,
   RENT_PUBLIC_PROPERTY_TYPES,
@@ -25,13 +25,14 @@ import {
   type SearchScope,
 } from '../../../shared/searchScope';
 
-const BUY_PROPERTY_TYPE_LABELS: Record<(typeof BUY_ACTIVE_PUBLIC_PROPERTY_TYPES)[number], string> = {
-  apartment: 'Apartment',
-  house: 'House',
-  townhouse: 'Townhouse',
-  cluster_home: 'Cluster home',
-  farm: 'Farm',
-};
+const BUY_PROPERTY_TYPE_LABELS: Record<(typeof BUY_ACTIVE_PUBLIC_PROPERTY_TYPES)[number], string> =
+  {
+    apartment: 'Apartment',
+    house: 'House',
+    townhouse: 'Townhouse',
+    cluster_home: 'Cluster home',
+    farm: 'Farm',
+  };
 
 /** Presentation only; canonical active Buy taxonomy owns the selectable values. */
 export const BUY_PROPERTY_TYPE_OPTIONS = BUY_ACTIVE_PUBLIC_PROPERTY_TYPES.map(value => ({
@@ -49,6 +50,7 @@ export interface PropertySearchInput {
   localityRefinementId?: string;
   searchScopeContext?: GeographySearchContext;
   propertyType?: string;
+  listingSource?: string;
   minPrice?: string | number;
   maxPrice?: string | number;
   minBedrooms?: string | number;
@@ -193,7 +195,12 @@ function addSupportedBuyFilters(input: PropertySearchInput, filters: SearchFilte
     .trim()
     .toLowerCase();
   const normalized = sanitizeBuySearchFilters({
-    propertyType: isActiveBuyPropertyType(propertyType) ? propertyType : undefined,
+    // The compatible vocabulary (not the active composer set) is accepted
+    // here: journey re-entry from a historical URL must keep legacy values
+    // such as villa readable, and the sanitizer rejects anything outside the
+    // contract.
+    propertyType: isBuyPropertyType(propertyType) ? propertyType : undefined,
+    listingSource: input.listingSource,
     minPrice: input.minPrice,
     maxPrice: input.maxPrice,
     minBedrooms: input.minBedrooms,
@@ -252,6 +259,7 @@ export function buildPropertySearchUrl({
   localityRefinementId,
   searchScopeContext,
   propertyType,
+  listingSource,
   minPrice,
   maxPrice,
   minBedrooms,
@@ -263,7 +271,14 @@ export function buildPropertySearchUrl({
   const locations = selectedLocations.filter(location => Boolean(location.slug || location.name));
   const filters: SearchFilters = {};
 
-  const filterInput = { propertyType, minPrice, maxPrice, minBedrooms, minBathrooms };
+  const filterInput = {
+    propertyType,
+    listingSource,
+    minPrice,
+    maxPrice,
+    minBedrooms,
+    minBathrooms,
+  };
   if (transactionType === 'for-sale') {
     addSupportedBuyFilters(filterInput, filters);
   } else {
@@ -317,6 +332,53 @@ export function buildBuySearchUrl(input: PropertySearchInput): string {
   return buildPropertySearchUrl({ ...input, transactionType: 'for-sale' });
 }
 
+export interface ActiveSearchRefinementFilters {
+  propertyType?: string;
+  listingSource?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  minBedrooms?: number;
+  minBathrooms?: number;
+}
+
+/**
+ * Reads the refinement filters a consumer has already applied on the current
+ * results URL so journey re-entry (navbar search, location change) can carry
+ * them forward instead of silently discarding active intent. Values are raw;
+ * `buildPropertySearchUrl` sanitizes them through the canonical contract.
+ * Buy-only this phase; the Rent convergence owns extending preservation there.
+ */
+export function extractActiveSearchRefinementFilters(
+  search: string,
+): ActiveSearchRefinementFilters {
+  const params = new URLSearchParams(search);
+  const rawValue = (key: string) => {
+    const value = params.get(key)?.trim();
+    return value ? value : undefined;
+  };
+  const numericValue = (key: string) => {
+    const value = rawValue(key);
+    if (value === undefined) return undefined;
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  };
+
+  const refinements: ActiveSearchRefinementFilters = {};
+  const propertyType = rawValue('propertyType');
+  if (propertyType) refinements.propertyType = propertyType;
+  const listingSource = rawValue('listingSource');
+  if (listingSource) refinements.listingSource = listingSource;
+  const minPrice = numericValue('minPrice');
+  if (minPrice !== undefined) refinements.minPrice = minPrice;
+  const maxPrice = numericValue('maxPrice');
+  if (maxPrice !== undefined) refinements.maxPrice = maxPrice;
+  const minBedrooms = numericValue('minBedrooms');
+  if (minBedrooms !== undefined) refinements.minBedrooms = minBedrooms;
+  const minBathrooms = numericValue('minBathrooms');
+  if (minBathrooms !== undefined) refinements.minBathrooms = minBathrooms;
+  return refinements;
+}
+
 /**
  * Canonical homepage handoff for the gated New Developments journey.
  * The journey is intentionally not visible while its activation flag is off,
@@ -332,8 +394,8 @@ export function buildDevelopmentsSearchUrl({
 }: DevelopmentsSearchInput): string {
   const locations = selectedLocations.filter(location => Boolean(location.slug || location.name));
   const selections = locations.map(addStructuredLocation);
-  const validSelections = selections.filter(
-    (selection): selection is CanonicalSearchLocation => Boolean(selection),
+  const validSelections = selections.filter((selection): selection is CanonicalSearchLocation =>
+    Boolean(selection),
   );
 
   if (validSelections.length !== locations.length || validSelections.length === 0) {
@@ -372,12 +434,16 @@ export function buildDevelopmentsSearchUrl({
   }
 
   const filters: Record<string, unknown> = {};
-  const normalizedType = String(developmentType || '').trim().toLowerCase();
+  const normalizedType = String(developmentType || '')
+    .trim()
+    .toLowerCase();
   if (['residential', 'commercial', 'mixed_use', 'land'].includes(normalizedType)) {
     filters.developmentType = normalizedType;
   }
 
-  const normalizedStatus = String(developmentStatus || '').trim().toLowerCase();
+  const normalizedStatus = String(developmentStatus || '')
+    .trim()
+    .toLowerCase();
   if (['launching-soon', 'selling', 'sold-out'].includes(normalizedStatus)) {
     filters.developmentStatus = normalizedStatus;
   }

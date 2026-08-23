@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  BUY_FILTER_PRICE_CEILING,
   BUY_PROPERTY_TYPES,
   isActiveBuyPropertyType,
   parseBuySearchParams,
@@ -88,5 +89,42 @@ describe('canonical Buy search contract', () => {
       propertyType: 'villa',
       minPrice: 2_500_000,
     });
+  });
+
+  it('treats untouched slider defaults as absent intent so canonical URLs stay clean', () => {
+    expect(sanitizeBuySearchFilters({ minPrice: 0, maxPrice: BUY_FILTER_PRICE_CEILING })).toEqual(
+      {},
+    );
+    expect(
+      parseBuySearchParams(
+        new URLSearchParams(`minPrice=0&maxPrice=${BUY_FILTER_PRICE_CEILING}`),
+      ),
+    ).toEqual({});
+    expect(toBuyPublicSearchFilters({ minPrice: 0, maxPrice: BUY_FILTER_PRICE_CEILING })).toEqual({
+      listingType: 'sale',
+    });
+  });
+
+  it('keeps explicit non-default bounds while dropping only the default-equal side', () => {
+    expect(
+      sanitizeBuySearchFilters({ minPrice: 0, maxPrice: 750_000 }),
+    ).toEqual({ maxPrice: 750_000 });
+    expect(
+      sanitizeBuySearchFilters({ minPrice: 1_500_000, maxPrice: BUY_FILTER_PRICE_CEILING }),
+    ).toEqual({ minPrice: 1_500_000 });
+    expect(
+      sanitizeBuySearchFilters({ minPrice: 1_500_000, maxPrice: BUY_FILTER_PRICE_CEILING + 1 }),
+    ).toEqual({ minPrice: 1_500_000, maxPrice: 50_000_001 });
+  });
+
+  it('never lets the slider ceiling silently exclude above-ceiling inventory', () => {
+    // A consumer who touched the slider maximum expressed "up to the ceiling",
+    // not "exclude everything above it".
+    const filters = toBuyPublicSearchFilters({
+      minPrice: 0,
+      maxPrice: BUY_FILTER_PRICE_CEILING,
+    });
+    expect(filters.maxPrice).toBeUndefined();
+    expect(filters.minPrice).toBeUndefined();
   });
 });

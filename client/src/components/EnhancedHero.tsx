@@ -273,15 +273,6 @@ export function EnhancedHero({
 
   // Filter configuration
   const filterConfig = {
-    buy: {
-      intents: ['Residential', 'Commercial', 'Land & Plots', 'Farms & Smallholdings'],
-      propertyTypes: {
-        Residential: ['House', 'Apartment', 'Townhouse', 'Cluster', 'Penthouse', 'Duplex', 'Villa'],
-        Commercial: ['Office', 'Retail', 'Industrial', 'Warehouse', 'Mixed-Use'],
-        'Land & Plots': ['Residential Stand', 'Commercial Stand', 'Agricultural Land'],
-        'Farms & Smallholdings': ['Farm', 'Smallholding', 'Game Farm', 'Lifestyle Farm'],
-      },
-    },
     rent: {
       intents: ['Residential'],
       propertyTypes: [
@@ -911,7 +902,9 @@ export function EnhancedHero({
                             </Label>
                             <Select
                               value={filters.propertyTypes[0] || ''}
-                              onValueChange={val => handleFilterChange('propertyTypes', [val])}
+                              onValueChange={val =>
+                                handleFilterChange('propertyTypes', val === 'all' ? [] : [val])
+                              }
                             >
                               <SelectTrigger className="h-10 bg-gray-50/50 border-gray-200">
                                 <SelectValue placeholder="Any Type" />
@@ -1075,7 +1068,9 @@ export function EnhancedHero({
                             </Label>
                             <Select
                               value={filters.propertyTypes[0] || ''}
-                              onValueChange={val => handleFilterChange('propertyTypes', [val])}
+                              onValueChange={val =>
+                                handleFilterChange('propertyTypes', val === 'all' ? [] : [val])
+                              }
                             >
                               <SelectTrigger className="h-10 bg-gray-50/50 border-gray-200">
                                 <SelectValue placeholder="Any Type" />
