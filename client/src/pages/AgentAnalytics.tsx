@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'wouter';
 import { AgentAppShell } from '@/components/agent/AgentAppShell';
 import { agentPageStyles } from '@/components/agent/agentPageStyles';
@@ -150,6 +150,12 @@ export default function AgentAnalytics() {
   });
 
   const analyticsLocked = !statusLoading && !status?.fullFeaturesUnlocked;
+
+  const recordSurfaceView = trpc.agent.recordSurfaceView.useMutation();
+  useEffect(() => {
+    recordSurfaceView.mutate({ surface: 'analytics' });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const pipeline = useMemo(
     () =>
