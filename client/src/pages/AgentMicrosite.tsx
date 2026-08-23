@@ -789,6 +789,12 @@ export default function AgentMicrosite() {
             <a href="/agents" className="hover:text-slate-800 transition-colors">
               Agent directory
             </a>
+            <a
+              href="/advertise/sell/agents"
+              className="font-semibold text-[#0F4C75] hover:underline"
+            >
+              Get your own presence
+            </a>
           </div>
         </div>
       </footer>

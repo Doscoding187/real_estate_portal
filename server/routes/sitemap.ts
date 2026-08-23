@@ -2,6 +2,7 @@ import { and, eq, inArray, sql } from 'drizzle-orm';
 import { type Request, type Response, Router } from 'express';
 
 import {
+  agents,
   cities,
   developments,
   cataloguePublishers,
@@ -11,6 +12,10 @@ import {
 } from '../../drizzle/schema';
 import { ENV } from '../_core/env';
 import { getDb } from '../db-connection';
+import {
+  APPROVED_AGENT,
+  buildAgentPublicSlug,
+} from '../services/agentPublicProfileService';
 import { publicDevelopmentEligibilityConditions } from '../services/publicDevelopmentEligibility';
 import { resolvePublicPropertyEligibilityIds } from '../services/publicPropertyEligibilityService';
 
@@ -178,12 +183,48 @@ router.get('/sitemap.xml', (req, res) => {
       '/sitemap-listings.xml',
       '/sitemap-areas.xml',
       '/sitemap-developments.xml',
+      '/sitemap-agents.xml',
       '/sitemap-static.xml',
     ],
     resolveBaseUrl(req),
   );
 
   sendXml(res, xml);
+});
+
+router.get('/sitemap-agents.xml', async (_req, res, next) => {
+  try {
+    const baseUrl = resolveBaseUrl(_req);
+    const db = await getDb();
+    if (!db) {
+      throw new Error('Database not available');
+    }
+
+    const rows = await db
+      .select({
+        id: agents.id,
+        slug: agents.slug,
+        updatedAt: agents.updatedAt,
+      })
+      .from(agents)
+      .where(APPROVED_AGENT);
+
+    const xml = buildUrlSet(
+      rows.map(row => ({
+        loc: toAbsoluteUrl(
+          `/agents/${buildAgentPublicSlug({ id: Number(row.id), slug: row.slug })}`,
+          baseUrl,
+        ),
+        lastmod: row.updatedAt,
+        changefreq: 'weekly',
+        priority: 0.6,
+      })),
+    );
+
+    sendXml(res, xml);
+  } catch (error) {
+    next(error);
+  }
 });
 
 router.get('/sitemap-listings.xml', async (_req, res, next) => {

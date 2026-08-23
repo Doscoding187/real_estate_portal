@@ -1,10 +1,11 @@
-import { inArray } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 
 import {
   agencies,
   agents,
   cataloguePublishers,
   listings,
+  subscriptions,
   users,
 } from '../../drizzle/schema';
 import type { PublicPropertySupplyIdentity } from '../../shared/types';
@@ -14,6 +15,7 @@ import {
   resolveApprovedPublicProperties,
   type ApprovedPublicPropertyResolution,
 } from './approvedPublicPropertyService';
+import { isPaidSubscriptionEntitled } from './planAccessService';
 import {
   resolvePublicPropertyCustody,
   type PublicAgentOwnershipCandidate,
@@ -354,6 +356,7 @@ export function evaluatePublicPropertySupplyEvidence(
         whatsapp: agent.whatsapp || agent.phone,
         email: agent.email,
         agentId: agent.id,
+        agentSlug: agent.slug || undefined,
         agencyId: custody.agencyId || undefined,
       },
     };
@@ -412,6 +415,34 @@ export function evaluatePublicPropertySupplyEvidence(
   );
 }
 
+async function loadAgentPaidEntitledUserIds(
+  database: NonNullable<Awaited<ReturnType<typeof getDb>>>,
+  userIds: number[],
+): Promise<Set<number>> {
+  if (userIds.length === 0) return new Set();
+  const rows = await loadRowsInBoundedBatches(userIds, async batchIds =>
+    database
+      .select({
+        ownerId: subscriptions.ownerId,
+        status: subscriptions.status,
+        currentPeriodEnd: subscriptions.currentPeriodEnd,
+      })
+      .from(subscriptions)
+      .where(
+        and(inArray(subscriptions.ownerId, [...batchIds]), eq(subscriptions.ownerType, 'agent')),
+      ),
+  );
+  const now = Date.now();
+  const entitled = new Set<number>();
+  for (const row of rows) {
+    if (!isPaidSubscriptionEntitled(row.status as never)) continue;
+    const periodEnd = row.currentPeriodEnd ? new Date(row.currentPeriodEnd).getTime() : null;
+    if (periodEnd !== null && (!Number.isFinite(periodEnd) || periodEnd <= now)) continue;
+    entitled.add(Number(row.ownerId));
+  }
+  return entitled;
+}
+
 async function loadDefaultSupplyEvidence(
   approvals: readonly ApprovedPublicPropertyResolution[],
 ): Promise<Map<number, PublicPropertySupplyEvidence>> {
@@ -460,6 +491,11 @@ async function loadDefaultSupplyEvidence(
       .where(inArray(agents.id, [...batchIds])),
   );
 
+  const agentPaidEntitledUserIds = await loadAgentPaidEntitledUserIds(
+    database,
+    distinctPositiveIds(agentRows.map(row => row.userId)),
+  );
+
   const userIds = distinctPositiveIds([
     ...approvals.map(value => value.property.ownerId),
     ...sourceListings.map(row => row.ownerId),
@@ -492,6 +528,7 @@ async function loadDefaultSupplyEvidence(
         agencyId: positiveId(row.agencyId),
         status: row.status || null,
         isVerified: Number(row.isVerified || 0),
+        hasActivePaidEntitlement: agentPaidEntitledUserIds.has(Number(row.userId)),
         userRole: userById.get(Number(row.userId))?.role || null,
       },
     ]),

@@ -78,27 +78,31 @@ function buildOnboardingState(
   const completion = calculateAgentProfileCompletion(agent);
   const packageSelected = Boolean(planAccess.subscription && planAccess.currentPlan);
 
-  let onboardingStep = packageSelected ? Math.max(Number(user.onboardingStep || 0), 1) : 0;
-  if (packageSelected && completion.score >= 25) onboardingStep = Math.max(onboardingStep, 2);
-  if (packageSelected && completion.score >= 50) onboardingStep = Math.max(onboardingStep, 3);
-  if (packageSelected && completion.score >= 80 && completion.hasPhoto && completion.hasAreas) {
+  // Professional identity progression is deliberately independent of the
+  // commercial term: agents build and submit their profile before paying,
+  // while paid capability stays gated by the entitlement authority.
+  let onboardingStep = Math.max(Number(user.onboardingStep || 0), 1);
+  if (completion.score >= 25) onboardingStep = Math.max(onboardingStep, 2);
+  if (completion.score >= 50) onboardingStep = Math.max(onboardingStep, 3);
+  if (completion.score >= 80 && completion.hasPhoto && completion.hasAreas) {
     onboardingStep = Math.max(onboardingStep, 4);
   }
 
-  const onboardingComplete =
-    packageSelected &&
-    (onboardingStep >= 4 || (user.onboardingComplete === 1 && completion.score >= 80));
+  const onboardingComplete = onboardingStep >= 4 || user.onboardingComplete === 1;
 
   return {
     packageSelected,
+    approvalStatus: agent?.status ?? 'pending',
     onboardingStep,
     onboardingComplete,
     profileCompletionScore: completion.score,
     profileCompletionFlags: completion.flags,
-    dashboardUnlocked: packageSelected && onboardingStep >= 3,
-    fullFeaturesUnlocked: onboardingComplete,
+    dashboardUnlocked: onboardingStep >= 3,
+    fullFeaturesUnlocked: onboardingComplete && packageSelected,
     recommendedNextStep: !packageSelected
-      ? 'select_package'
+      ? onboardingStep >= 4
+        ? 'select_package'
+        : 'complete_profile_basics'
       : onboardingComplete
         ? 'dashboard'
         : onboardingStep <= 2
@@ -173,6 +177,7 @@ export class AgentOnboardingService {
     return {
       role: user.role,
       packageSelected: onboardingState.packageSelected,
+      approvalStatus: onboardingState.approvalStatus,
       onboardingComplete: onboardingState.onboardingComplete,
       onboardingStep: onboardingState.onboardingStep,
       dashboardUnlocked: onboardingState.dashboardUnlocked,

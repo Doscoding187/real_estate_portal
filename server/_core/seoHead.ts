@@ -222,6 +222,34 @@ export function resolveSeoPageData(requestUrl: string): SeoPageData {
     );
   }
 
+  if (pathname === '/agents') {
+    return {
+      title: `Find Property Practitioners | ${DEFAULT_SITE_NAME}`,
+      description:
+        'Browse approved property practitioners on Property Listify — view their profiles, service areas and live listings.',
+      canonicalUrl: absoluteUrl('/agents'),
+      robots: 'index, follow',
+      siteName: DEFAULT_SITE_NAME,
+    };
+  }
+
+  if (
+    (pathSegments[0] === 'agents' || pathSegments[0] === 'a') &&
+    pathSegments.length === 2 &&
+    Boolean(pathSegments[1])
+  ) {
+    const canonicalPath =
+      pathSegments[0] === 'a' ? `/agents/${pathSegments[1]}` : pathname;
+    return {
+      title: `Property Practitioner Profile | ${DEFAULT_SITE_NAME}`,
+      description:
+        'View this property practitioner on Property Listify — live listings, service areas and direct contact options.',
+      canonicalUrl: absoluteUrl(canonicalPath),
+      robots: 'index, follow',
+      siteName: DEFAULT_SITE_NAME,
+    };
+  }
+
   return {
     title: DEFAULT_TITLE,
     description: DEFAULT_DESCRIPTION,

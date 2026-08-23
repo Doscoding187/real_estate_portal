@@ -3,18 +3,19 @@ import { useLocation } from 'wouter';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { trpc } from '@/lib/trpc';
 import { Badge } from '@/components/ui/badge';
+import { AgentPresenceProof } from '@/components/agent/AgentPresenceProof';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { apiFetch } from '@/lib/api';
 import {
   ArrowRight,
   Bell,
+  Building2,
   CalendarDays,
   CalendarPlus,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
-  CircleDollarSign,
   FileText,
   Home,
   Lock,
@@ -101,6 +102,7 @@ type AgentDashboardEntitlements = {
 
 type AgentDashboardOnboardingStatus = {
   packageSelected: boolean;
+  approvalStatus: 'pending' | 'approved' | 'rejected' | 'suspended';
   onboardingStep: number;
   onboardingComplete: boolean;
   fullFeaturesUnlocked: boolean;
@@ -188,23 +190,6 @@ function formatPrice(value: number | null | undefined): string {
     currency: 'ZAR',
     maximumFractionDigits: 0,
   }).format(value || 0);
-}
-
-function formatCommission(valueInCents: number | null | undefined): string {
-  return new Intl.NumberFormat('en-ZA', {
-    style: 'currency',
-    currency: 'ZAR',
-    maximumFractionDigits: 0,
-  }).format((valueInCents || 0) / 100);
-}
-
-function formatCompactCommission(valueInCents: number | null | undefined): string {
-  return new Intl.NumberFormat('en-ZA', {
-    style: 'currency',
-    currency: 'ZAR',
-    notation: 'compact',
-    maximumFractionDigits: 1,
-  }).format((valueInCents || 0) / 100);
 }
 
 function formatStatus(value: string | null | undefined): string {
@@ -643,16 +628,12 @@ export function AgentDashboardOverview() {
   const trialDaysRemaining = entitlements?.trialStatusDetail?.daysRemaining;
   const fullFeaturesUnlocked = onboardingStatus?.fullFeaturesUnlocked ?? false;
   const needsProfileCompletion = !fullFeaturesUnlocked;
-  const hasRevenueDashboard = entitlements?.featureFlags?.hasRevenueDashboard ?? false;
   const hasAreaIntelligence = entitlements?.featureFlags?.hasAreaIntelligence ?? false;
-  const hasCommissionTracking = entitlements?.featureFlags?.hasCommissionTracking ?? false;
   const canPublishListings = entitlements?.canPublishListings ?? false;
   const trialExpired = entitlements?.trialExpired ?? false;
   const setupPriorityFlags = profileSetupFlags.slice(0, 3).map(formatSetupFlag);
   const lockedCapabilities = [
-    !hasRevenueDashboard ? 'Revenue dashboard' : null,
     !hasAreaIntelligence ? 'Area intelligence' : null,
-    !hasCommissionTracking ? 'Commission tracking' : null,
     !canPublishListings ? 'Listing publishing' : null,
   ].filter((value): value is string => Boolean(value));
   const guidanceMode: DashboardGuidanceMode | null = needsProfileCompletion
@@ -702,27 +683,14 @@ export function AgentDashboardOverview() {
     window.localStorage.setItem(GUIDANCE_STORAGE_KEY, JSON.stringify(next));
   };
 
-  const commissionGoal = useMemo(() => {
-    const pending = stats?.commissionsPending ?? 0;
-    if (pending <= 0) {
-      return 150_000 * 100;
-    }
-    return Math.max(150_000 * 100, Math.ceil(pending / 0.56 / 100_000) * 100_000);
-  }, [stats?.commissionsPending]);
-
-  const commissionProgress =
-    commissionGoal > 0
-      ? Math.min(100, Math.round(((stats?.commissionsPending ?? 0) / commissionGoal) * 100))
-      : 0;
-
   const heroMetrics = [
     {
-      label: 'Pending Commission',
-      value: formatCompactCommission(stats?.commissionsPending),
-      status: 'Active',
+      label: 'Active Listings',
+      value: statsLoading ? '-' : String(stats?.activeListings ?? 0),
+      status: 'Live',
       statusClassName:
         'border-[color:color-mix(in_oklab,var(--primary)_24%,white)] bg-[color:color-mix(in_oklab,var(--primary)_8%,white)] text-[var(--primary)]',
-      icon: CircleDollarSign,
+      icon: Building2,
       iconShellClassName:
         'bg-[color:color-mix(in_oklab,var(--primary)_10%,white)] text-[var(--primary)]',
     },
@@ -929,30 +897,6 @@ export function AgentDashboardOverview() {
                     </div>
                   )}
                 </div>
-
-                <div className="rounded-[9px] border border-white/14 bg-white/10 px-[14px] py-3">
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="text-sm font-medium text-white/72">
-                      Monthly Commission Goal
-                    </span>
-                    <span className="text-sm font-semibold text-white">
-                      {formatCommission(stats?.commissionsPending)}
-                      <span className="ml-1 font-normal text-white/50">
-                        / {formatCommission(commissionGoal)}
-                      </span>
-                    </span>
-                  </div>
-                  <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/14">
-                    <div
-                      className="h-full rounded-full bg-gradient-to-r from-white/85 via-white to-[#cfe3f3]"
-                      style={{ width: `${commissionProgress}%` }}
-                    />
-                  </div>
-                  <div className="mt-2 flex items-center justify-between text-[11px] text-white/52">
-                    <span>{commissionProgress}% of benchmark goal</span>
-                    <span>{profileCompletionScore}% profile complete</span>
-                  </div>
-                </div>
               </div>
 
               <Button
@@ -968,6 +912,8 @@ export function AgentDashboardOverview() {
               </Button>
             </div>
           </CardShell>
+
+          {onboardingStatus?.approvalStatus === 'approved' && <AgentPresenceProof />}
 
           <CardShell className="px-[22px] py-5">
             <div className="flex items-center justify-between gap-3 border-b border-slate-200 pb-4">
@@ -990,26 +936,22 @@ export function AgentDashboardOverview() {
               </Button>
             </div>
 
-            {!showFeatureBanner && (!fullFeaturesUnlocked || !hasRevenueDashboard) ? (
+            {!showFeatureBanner && !fullFeaturesUnlocked ? (
               <div className="mt-4 rounded-[12px] border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="font-semibold">Advanced insights are still partially locked.</p>
+                    <p className="font-semibold">Finish setup to unlock your full reporting.</p>
                     <p className="mt-1 text-sm text-amber-800">
-                      {!fullFeaturesUnlocked
-                        ? 'Complete the remaining profile steps to unlock the full reporting layer and revenue view.'
-                        : 'Your current access does not include the full revenue dashboard yet.'}
+                      Complete the remaining profile steps to unlock the full reporting layer.
                     </p>
                   </div>
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() =>
-                      setLocation(!fullFeaturesUnlocked ? '/agent/setup' : '/agent/settings')
-                    }
+                    onClick={() => setLocation('/agent/setup')}
                     className="rounded-full border-amber-300 bg-white text-amber-900 hover:bg-amber-100"
                   >
-                    {!fullFeaturesUnlocked ? 'Finish setup' : 'Review plan'}
+                    Finish setup
                   </Button>
                 </div>
               </div>

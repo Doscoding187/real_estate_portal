@@ -27,16 +27,10 @@ export default function AgentEarnings() {
           />
         ) : earningsLocked ? (
           <AgentFeatureLockedState
-            title="Commission tracking is not unlocked yet"
-            description={
-              !status?.fullFeaturesUnlocked
-                ? 'Finish the remaining onboarding steps to unlock commission tracking and earnings insights.'
-                : 'Your current package does not include commission tracking yet.'
-            }
-            actionLabel={!status?.fullFeaturesUnlocked ? 'Finish setup' : 'Review access'}
-            onAction={() =>
-              setLocation(!status?.fullFeaturesUnlocked ? '/agent/setup' : '/agent/settings')
-            }
+            title="Commission tracking is not part of your current plan"
+            description="The current Agent Launch Access product does not include commission or earnings tracking. Your listings, leads and daily pipeline remain fully available."
+            actionLabel="Back to dashboard"
+            onAction={() => setLocation('/agent/dashboard')}
           />
         ) : (
           <>

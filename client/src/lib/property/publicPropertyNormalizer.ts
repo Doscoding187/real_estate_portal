@@ -1812,6 +1812,7 @@ export function normalizePublicPropertyCard(property: PropertyLike): PublicPrope
         whatsapp: agent?.whatsapp || agent?.phone || null,
         email: developerBrand?.publicContactEmail || agent?.email || null,
         agentId: parsePositiveNumber(property.agentId ?? agent?.id),
+        agentSlug: property.agentSlug ?? (agent?.slug as string | undefined) ?? undefined,
         agencyId: parsePositiveNumber(property.agencyId ?? agent?.agencyId),
         cataloguePublisherId: parsePositiveNumber(
           property.cataloguePublisherId ?? developerBrand?.id,

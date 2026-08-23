@@ -520,7 +520,33 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
         {/* Footer Actions */}
         <div className="flex items-center justify-between pt-4 border-t border-slate-100 mt-auto">
           <div className="flex items-center gap-3">
-            {canonicalIdentity ? (
+            {canonicalIdentity && identity?.agentSlug && identity.role === 'agent' ? (
+              <a
+                href={`/agents/${identity.agentSlug}`}
+                className="flex items-center gap-3"
+                aria-label={`View ${canonicalIdentity.name}'s profile`}
+              >
+                <span className="h-8 w-8 shrink-0 overflow-hidden rounded-full border border-slate-200 bg-slate-100">
+                  {canonicalIdentity.image ? (
+                    <img
+                      src={canonicalIdentity.image}
+                      alt={canonicalIdentity.name}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <span className="flex h-full w-full items-center justify-center bg-slate-200 text-xs font-bold text-slate-600">
+                      {canonicalIdentity.name.charAt(0).toUpperCase()}
+                    </span>
+                  )}
+                </span>
+                <span className="min-w-0">
+                  <span className="block truncate text-xs font-medium text-slate-900">
+                    {canonicalIdentity.name}
+                  </span>
+                  <span className="block text-[10px] text-slate-500">{canonicalIdentity.label}</span>
+                </span>
+              </a>
+            ) : canonicalIdentity ? (
               <>
                 <div className="h-8 w-8 overflow-hidden rounded-full border border-slate-200 bg-slate-100">
                   {canonicalIdentity.image ? (

@@ -71,6 +71,10 @@ import {
 import { getManualEftBillingAmount } from './services/billingFoundationService';
 import { getCommercialProductKey, getConfiguredLaunchFeeMinor, resolveCommercialTerm } from './services/commercialTerm';
 import {
+  endCanonicalAgencyMembership,
+  establishCanonicalAgencyMembership,
+} from './services/agencyMembershipService';
+import {
   assertListingPublicationEntitled,
   ListingPublicationEntitlementError,
 } from './services/listingPublicationEntitlementService';
@@ -7746,6 +7750,14 @@ export const agencyRouter = router({
               updatedAt: new Date(),
             })
             .where(eq(agents.id, targetAgent.id));
+
+          await endCanonicalAgencyMembership({
+            db,
+            agencyId,
+            agentId: targetAgent.id,
+            terminalStatus: 'suspended',
+            actorUserId: authUser.id,
+          });
         }
 
         await logAudit({
@@ -7767,6 +7779,16 @@ export const agencyRouter = router({
 
       const nextRole = input.role || (targetUser.role === 'agency_admin' ? 'agency_admin' : 'agent');
       const agentId = await ensureAgentProfileForAgencyMember(db, targetUser, agencyId, authUser.id);
+
+      if (agentId) {
+        await establishCanonicalAgencyMembership({
+          db,
+          agencyId,
+          agentId,
+          actorUserId: authUser.id,
+          role: 'agent',
+        });
+      }
 
       await db
         .update(users)
@@ -7855,6 +7877,14 @@ export const agencyRouter = router({
             updatedAt: new Date(),
           })
           .where(eq(agents.id, targetAgent.id));
+
+        await endCanonicalAgencyMembership({
+          db,
+          agencyId,
+          agentId: targetAgent.id,
+          terminalStatus: 'left',
+          actorUserId: authUser.id,
+        });
       }
 
       await logAudit({

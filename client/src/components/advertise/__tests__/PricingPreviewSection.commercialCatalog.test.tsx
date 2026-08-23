@@ -139,7 +139,8 @@ describe('PricingPreviewSection canonical Launch Access integration', () => {
     expect(prices.some(value => value?.includes('999'))).toBe(true);
     expect(prices.some(value => value?.includes('1,499'))).toBe(true);
     expect(screen.getAllByText('90 days')).toHaveLength(4); // banner plus one card per product
-    expect(screen.getAllByRole('link', { name: 'Request Launch Access invoice' })).toHaveLength(3);
+    expect(screen.getAllByRole('link', { name: 'Get Agent Launch Access' })).toHaveLength(1);
+    expect(screen.getAllByRole('link', { name: 'Request Launch Access invoice' })).toHaveLength(2);
     expect(screen.getAllByText('Active Listings')).toHaveLength(2);
     expect(screen.getByText('500')).toBeInTheDocument();
     expect(screen.getByText('Included')).toBeInTheDocument();

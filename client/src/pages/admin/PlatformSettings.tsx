@@ -100,27 +100,7 @@ export default function PlatformSettings() {
   };
 
   const defaultSettings = {
-    pricing: [
-      {
-        key: 'basic_plan_price',
-        label: 'Basic Plan Monthly Price (ZAR)',
-        type: 'number',
-        default: 499,
-      },
-      {
-        key: 'premium_plan_price',
-        label: 'Premium Plan Monthly Price (ZAR)',
-        type: 'number',
-        default: 999,
-      },
-      {
-        key: 'enterprise_plan_price',
-        label: 'Enterprise Plan Monthly Price (ZAR)',
-        type: 'number',
-        default: 2499,
-      },
-      { key: 'trial_days', label: 'Trial Period (Days)', type: 'number', default: 14 },
-    ],
+    pricing: [],
     features: [
       {
         key: 'featured_listings_enabled',

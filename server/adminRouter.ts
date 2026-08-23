@@ -23,16 +23,12 @@ import {
   auditLogs,
   unitTypes,
   properties,
-  // platformSettings,
-  // commissions,
-  // agencySubscriptions,
-  // invoices,
-  // plans,
-  // TODO: Re-enable when revenue center schema is added
-  // subscriptionTransactions,
-  // advertisingCampaigns,
-  // revenueForecasts,
-  // failedPayments,
+  platformSettings,
+  commissions,
+  agencySubscriptions,
+  invoices,
+  plans,
+  notifications,
   listings,
   listingMedia,
   agents,
@@ -1304,6 +1300,23 @@ export const adminRouter = router({
         })
         .where(eq(agents.id, input.agentId));
 
+      const [approvedAgent] = await db
+        .select({ userId: agents.userId })
+        .from(agents)
+        .where(eq(agents.id, input.agentId))
+        .limit(1);
+      if (approvedAgent?.userId) {
+        await db.insert(notifications).values({
+          userId: approvedAgent.userId,
+          type: 'system_alert',
+          title: 'Profile approved',
+          content:
+            'Your Property Listify agent profile has been approved. Your public presence is now eligible for discovery surfaces.',
+          data: JSON.stringify({ agentId: input.agentId, approvalStatus: 'approved' }),
+          isRead: 0,
+        });
+      }
+
       await logAudit({
         userId: ctx.user.id,
         action: AuditActions.APPROVE_JOIN_REQUEST,
@@ -1338,6 +1351,22 @@ export const adminRouter = router({
           updatedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
         })
         .where(eq(agents.id, input.agentId));
+
+      const [rejectedAgent] = await db
+        .select({ userId: agents.userId })
+        .from(agents)
+        .where(eq(agents.id, input.agentId))
+        .limit(1);
+      if (rejectedAgent?.userId) {
+        await db.insert(notifications).values({
+          userId: rejectedAgent.userId,
+          type: 'system_alert',
+          title: 'Profile needs attention',
+          content: `Your Property Listify agent profile was not approved.${input.reason ? ` Reason: ${input.reason}` : ''}`,
+          data: JSON.stringify({ agentId: input.agentId, approvalStatus: 'rejected' }),
+          isRead: 0,
+        });
+      }
 
       await logAudit({
         userId: ctx.user.id,

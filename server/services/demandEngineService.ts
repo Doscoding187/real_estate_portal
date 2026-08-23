@@ -513,11 +513,6 @@ export async function captureDemandLeadFromCampaign(
     const leadInsertResult = await db.insert(leads).values({
       propertyId: recipient.property.id,
       agentId: recipient.agentId,
-      ownerType: recipient.ownerType,
-      ownerId: recipient.ownerId,
-      assignedAgentId: recipient.agentId,
-      visibilityScope: recipient.ownerType === 'agency' ? 'team' : 'private',
-      governanceMode: recipient.ownerType === 'agency' ? 'affiliated' : 'solo',
       name: input.name,
       email: input.email,
       phone: input.phone || null,
