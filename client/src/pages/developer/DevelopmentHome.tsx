@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { trpc } from '@/lib/trpc';
+import { formatReviewEventStatus } from '@/lib/developerStatusVocabulary';
 import { toast } from 'sonner';
 
 const lifecycleLabels = {
@@ -397,7 +398,9 @@ export default function DevelopmentHome() {
                     key={`${event.status}-${event.submittedAt}-${index}`}
                     className="rounded-md border border-slate-100 px-3 py-2 text-sm"
                   >
-                    <p className="font-medium text-slate-900">{event.status.replace('_', ' ')}</p>
+                    <p className="font-medium text-slate-900">
+                      {formatReviewEventStatus(event.status)}
+                    </p>
                     <p className="text-slate-600">Submitted {formatTimestamp(event.submittedAt)}</p>
                     {event.reviewedAt && (
                       <p className="text-slate-600">Reviewed {formatTimestamp(event.reviewedAt)}</p>

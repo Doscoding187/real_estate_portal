@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
@@ -77,7 +77,6 @@ describe('developer canonical commercial contract', () => {
   it('uses the shared catalog and does not preserve hard-coded developer sellable prices', () => {
     const plansPage = readRepoFile('client/src/pages/DeveloperPlans.tsx');
     const billingPanel = readRepoFile('client/src/components/developer/BillingPanel.tsx');
-    const marketingTools = readRepoFile('client/src/components/developer/MarketingTools.tsx');
     const settings = readRepoFile('client/src/components/developer/SettingsPanel.tsx');
 
     expect(plansPage).toContain("useCommercialCatalog('developer')");
@@ -90,8 +89,12 @@ describe('developer canonical commercial contract', () => {
     expect(billingPanel).not.toContain('Start your free trial');
     expect(billingPanel).not.toContain('Start Free Trial');
     expect(billingPanel).not.toContain('999999');
-    expect(marketingTools).not.toContain('R499');
-    expect(marketingTools).not.toContain('Select Package');
+    // The orphaned MarketingTools surface was removed in DEV-S2; assert it is
+    // not reintroduced as a hard-coded pricing path.
+    const exists = existsSync(
+      path.resolve(process.cwd(), 'client/src/components/developer/MarketingTools.tsx'),
+    );
+    expect(exists).toBe(false);
     expect(settings).toContain("useCommercialCatalog('developer')");
     expect(settings).not.toContain('R2,499.00');
     expect(settings).not.toContain('subscription?.tier');

@@ -17,6 +17,10 @@ const PRIVATE_DEVELOPER_ROUTE_SEGMENTS = new Set([
   'notifications',
   'setup',
   'success',
+  // Reserved: never treat a workspace path segment as a public brand slug,
+  // even when its destination page has not been built yet.
+  'activities',
+  'units',
 ]);
 
 /** True only for a one-segment public developer brand URL. */
