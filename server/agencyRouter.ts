@@ -3930,8 +3930,11 @@ export const agencyRouter = router({
       address: input.address || null,
       city: input.city || null,
       province: input.province || null,
+      // A manually created agency has no canonical commercial state yet.
+      // Claiming a retired 'trial' here contradicted the subscriptions
+      // authority; pending_payment honestly reports outstanding activation.
       subscriptionPlan: 'free',
-      subscriptionStatus: 'trial',
+      subscriptionStatus: 'pending_payment',
       isVerified: 0,
     });
 

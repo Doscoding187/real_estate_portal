@@ -1,5 +1,5 @@
 import { and, eq, inArray } from 'drizzle-orm';
-import { agencies, invitations, users } from '../../drizzle/schema';
+import { agencies, invitations, subscriptions, users } from '../../drizzle/schema';
 import { ENV } from '../_core/env';
 import { EmailService } from '../_core/emailService';
 import { getDb } from '../db';
@@ -29,7 +29,10 @@ function inviterName(user?: Pick<typeof users.$inferSelect, 'name' | 'firstName'
 
 /**
  * Delivers accepted-format invitation links only after canonical paid access
- * is active. Pending onboarding invitations remain safely queued in the
+ * is active. The gate reads the canonical subscriptions table — the single
+ * commercial-access authority — rather than the legacy agencies shadow
+ * column, so activation, expiry and lifecycle overrides decide delivery
+ * consistently. Pending onboarding invitations remain safely queued in the
  * invitations table until finance has approved the payment.
  */
 export async function deliverAgencyInvitations(input: {
@@ -40,13 +43,23 @@ export async function deliverAgencyInvitations(input: {
   if (!db) throw new Error('Database not available');
 
   const [agency] = await db
-    .select({ id: agencies.id, name: agencies.name, subscriptionStatus: agencies.subscriptionStatus })
+    .select({ id: agencies.id, name: agencies.name })
     .from(agencies)
     .where(eq(agencies.id, input.agencyId))
     .limit(1);
 
   if (!agency) throw new Error('Agency not found');
-  if (!ACTIVE_AGENCY_SUBSCRIPTION_STATUSES.has(String(agency.subscriptionStatus || ''))) {
+
+  const [subscription] = await db
+    .select({ status: subscriptions.status })
+    .from(subscriptions)
+    .where(and(eq(subscriptions.ownerType, 'agency'), eq(subscriptions.ownerId, input.agencyId)))
+    .limit(1);
+
+  if (
+    !subscription ||
+    !ACTIVE_AGENCY_SUBSCRIPTION_STATUSES.has(String(subscription.status || ''))
+  ) {
     return { deferred: true, attempted: 0, sent: 0, failed: 0 };
   }
 
