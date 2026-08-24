@@ -399,9 +399,20 @@ describe('migration execution authority', () => {
       '0048_commercial_lease_terms.sql',
       '0049_commercial_lead_contexts.sql',
       '0050_commercial_asset_physical_location.sql',
+      '0051_sl_places.sql',
+      '0052_sl_spaces.sql',
+      '0053_sl_space_availability.sql',
+      '0054_sl_space_specifications.sql',
+      '0055_sl_place_household.sql',
+      '0056_sl_verifications.sql',
+      '0057_sl_lead_contexts.sql',
+      '0058_sl_messages.sql',
+      '0059_sl_moderation_queue.sql',
+      '0060_sl_space_availability_bills.sql',
+      '0061_sl_messages_authorship.sql',
     ]);
     expect(executionManifest.expectedHead).toBe(
-      '0050_commercial_asset_physical_location.sql',
+      '0061_sl_messages_authorship.sql',
     );
     expect(archivedSqlFiles.length).toBeGreaterThan(0);
     expect(activeSqlFiles.some(file => file.includes('_archived'))).toBe(false);

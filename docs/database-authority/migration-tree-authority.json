@@ -247,7 +247,9 @@
       "server/_core/databaseAuthority/dataAdapters/canonicalGeography.ts",
       "server/_core/databaseAuthority/dataAdapters/searchToLeadScenario.ts"
     ],
-    "approvedReadOnlyDiagnostics": ["scripts/print-db-target.ts"],
+    "approvedReadOnlyDiagnostics": [
+      "scripts/print-db-target.ts"
+    ],
     "controlledDataRepairUtilities": [],
     "localTestSeedOrFixtureUtilities": [
       "scripts/run-listing-performance-e2e.ts",
@@ -437,11 +439,22 @@
       "server/scripts/debug-schema.ts"
     ],
     "manualUtilityDocumentation": [
-      { "path": "README.md", "disposition": "corrected" },
-      { "path": "DATABASE_MANAGEMENT_OPTIONS.md", "disposition": "superseded" },
-      { "path": "DATABASE_SETUP_GUIDE.md", "disposition": "superseded" }
+      {
+        "path": "README.md",
+        "disposition": "corrected"
+      },
+      {
+        "path": "DATABASE_MANAGEMENT_OPTIONS.md",
+        "disposition": "superseded"
+      },
+      {
+        "path": "DATABASE_SETUP_GUIDE.md",
+        "disposition": "superseded"
+      }
     ],
-    "historicalDocumentationRoots": [".kiro/**"],
+    "historicalDocumentationRoots": [
+      ".kiro/**"
+    ],
     "historicalDocumentationFiles": [
       "COMPLETE_DELIVERY_SUMMARY.md",
       "EXPLORE_QUICK_REFERENCE.md",
@@ -944,7 +957,9 @@
       "path": "backups/**",
       "classification": "archived historical",
       "purpose": "Backup evidence; never an application migration source.",
-      "approvedFiles": ["backups/cleanup-backup-2026-01-29T20-02-35-220Z.sql"]
+      "approvedFiles": [
+        "backups/cleanup-backup-2026-01-29T20-02-35-220Z.sql"
+      ]
     },
     {
       "path": "docker-compose.local-db.yml",
@@ -981,6 +996,61 @@
       "path": "server/routes/SELECT id, name, userId.sql",
       "classification": "documentation/example",
       "purpose": "SQL query example, not a migration file."
+    },
+    {
+      "path": "server/migrations/0051_sl_places.sql",
+      "classification": "canonical active",
+      "purpose": "Shared Living foundations: additive domain table (Phase 0, founder-approved migration design)."
+    },
+    {
+      "path": "server/migrations/0052_sl_spaces.sql",
+      "classification": "canonical active",
+      "purpose": "Shared Living foundations: additive domain table (Phase 0, founder-approved migration design)."
+    },
+    {
+      "path": "server/migrations/0053_sl_space_availability.sql",
+      "classification": "canonical active",
+      "purpose": "Shared Living foundations: additive domain table (Phase 0, founder-approved migration design)."
+    },
+    {
+      "path": "server/migrations/0054_sl_space_specifications.sql",
+      "classification": "canonical active",
+      "purpose": "Shared Living foundations: additive domain table (Phase 0, founder-approved migration design)."
+    },
+    {
+      "path": "server/migrations/0055_sl_place_household.sql",
+      "classification": "canonical active",
+      "purpose": "Shared Living foundations: additive domain table (Phase 0, founder-approved migration design)."
+    },
+    {
+      "path": "server/migrations/0056_sl_verifications.sql",
+      "classification": "canonical active",
+      "purpose": "Shared Living foundations: additive domain table (Phase 0, founder-approved migration design)."
+    },
+    {
+      "path": "server/migrations/0057_sl_lead_contexts.sql",
+      "classification": "canonical active",
+      "purpose": "Shared Living foundations: additive domain table (Phase 0, founder-approved migration design)."
+    },
+    {
+      "path": "server/migrations/0058_sl_messages.sql",
+      "classification": "canonical active",
+      "purpose": "Shared Living foundations: additive domain table (Phase 0, founder-approved migration design)."
+    },
+    {
+      "path": "server/migrations/0059_sl_moderation_queue.sql",
+      "classification": "canonical active",
+      "purpose": "Shared Living foundations: additive domain table (Phase 0, founder-approved migration design)."
+    },
+    {
+      "path": "server/migrations/0060_sl_space_availability_bills.sql",
+      "classification": "canonical active",
+      "purpose": "Shared Living foundations: bills-included facts on space availability (Phase 1)."
+    },
+    {
+      "path": "server/migrations/0061_sl_messages_authorship.sql",
+      "classification": "canonical active",
+      "purpose": "Shared Living: on-platform thread authorship (consumer/lister/moderator)."
     }
   ],
   "prohibitedPaths": [
@@ -1029,10 +1099,22 @@
     "server/scripts/debug-schema.ts"
   ],
   "operationalDocumentation": [
-    { "path": "MIGRATION_GUIDE.md", "disposition": "updated" },
-    { "path": "DATABASE_SETUP_GUIDE.md", "disposition": "superseded" },
-    { "path": "DATABASE_MANAGEMENT_OPTIONS.md", "disposition": "superseded" },
-    { "path": "server/migrations/README.md", "disposition": "updated" },
+    {
+      "path": "MIGRATION_GUIDE.md",
+      "disposition": "updated"
+    },
+    {
+      "path": "DATABASE_SETUP_GUIDE.md",
+      "disposition": "superseded"
+    },
+    {
+      "path": "DATABASE_MANAGEMENT_OPTIONS.md",
+      "disposition": "superseded"
+    },
+    {
+      "path": "server/migrations/README.md",
+      "disposition": "updated"
+    },
     {
       "path": "docs/database-authority/dba-s4a2-residual-executor-containment.md",
       "disposition": "canonical DBA-S4A2 residual executor containment authority"

@@ -1,4 +1,4 @@
-export type PublicSupplyOrigin = 'customer_managed' | 'platform_curated';
+export type PublicSupplyOrigin = 'customer_managed' | 'platform_curated' | 'shared_living';
 
 export type PublicLeadCustody =
   | 'verified_customer_recipient'

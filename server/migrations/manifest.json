@@ -4,7 +4,7 @@
   "historyTable": "sql_migration_history",
   "attemptTable": "sql_migration_attempts",
   "lockName": "property_listify_manifest_migrations",
-  "expectedHead": "0050_commercial_asset_physical_location.sql",
+  "expectedHead": "0061_sl_messages_authorship.sql",
   "migrations": [
     {
       "sequence": 0,
@@ -527,6 +527,117 @@
       "statementPolicy": "approved-exception",
       "requiredReferenceDataVersion": null,
       "approvalReference": "COMM-S1-commercial-asset-physical-location-2026-08-21-Edward"
+    },
+    {
+      "sequence": 51,
+      "filename": "0051_sl_places.sql",
+      "checksum": "47fe0393ff7d3bf8badbe6b115baf0179641b1319a05468314d0aa6514d2369c",
+      "parent": "0050_commercial_asset_physical_location.sql",
+      "parentChecksum": "20e950381cf082d94b3dca1fcc1b79b0d601f4dea2a65873829a0672f962e4f3",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 52,
+      "filename": "0052_sl_spaces.sql",
+      "checksum": "1885484c640c9f307d2be3e49e086f065a8cb09a1bf6e6afcad1d3ce50ffe313",
+      "parent": "0051_sl_places.sql",
+      "parentChecksum": "47fe0393ff7d3bf8badbe6b115baf0179641b1319a05468314d0aa6514d2369c",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 53,
+      "filename": "0053_sl_space_availability.sql",
+      "checksum": "1980bbf400a5cc15e8d1a16e3d5bfaa51905924cf23416a094d6b971aeb9386f",
+      "parent": "0052_sl_spaces.sql",
+      "parentChecksum": "1885484c640c9f307d2be3e49e086f065a8cb09a1bf6e6afcad1d3ce50ffe313",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 54,
+      "filename": "0054_sl_space_specifications.sql",
+      "checksum": "223b4a5921dd450be14d487843c2fbbc1bd71458f28d6f25341648ffb0ab7211",
+      "parent": "0053_sl_space_availability.sql",
+      "parentChecksum": "1980bbf400a5cc15e8d1a16e3d5bfaa51905924cf23416a094d6b971aeb9386f",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 55,
+      "filename": "0055_sl_place_household.sql",
+      "checksum": "d7de050ba1ab640ac003c58cd99ac3e57982f44d67819cc7892e5ef5e1e4a74e",
+      "parent": "0054_sl_space_specifications.sql",
+      "parentChecksum": "223b4a5921dd450be14d487843c2fbbc1bd71458f28d6f25341648ffb0ab7211",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 56,
+      "filename": "0056_sl_verifications.sql",
+      "checksum": "37cb90eeaacd4179a4848562566437b0f3ddcb6a911adfc6f3ae3babd53fc409",
+      "parent": "0055_sl_place_household.sql",
+      "parentChecksum": "d7de050ba1ab640ac003c58cd99ac3e57982f44d67819cc7892e5ef5e1e4a74e",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 57,
+      "filename": "0057_sl_lead_contexts.sql",
+      "checksum": "d7602b7400cd895f92e3ec0606b931e642f40c8f63907788aa556cc577c64a4a",
+      "parent": "0056_sl_verifications.sql",
+      "parentChecksum": "37cb90eeaacd4179a4848562566437b0f3ddcb6a911adfc6f3ae3babd53fc409",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 58,
+      "filename": "0058_sl_messages.sql",
+      "checksum": "41e231a34a7fa4208e170832a62fec50dd213e7520e955b5b53205edfb5826a8",
+      "parent": "0057_sl_lead_contexts.sql",
+      "parentChecksum": "d7602b7400cd895f92e3ec0606b931e642f40c8f63907788aa556cc577c64a4a",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 59,
+      "filename": "0059_sl_moderation_queue.sql",
+      "checksum": "4fd50ae49db32cca9b12ecf487b24bdf5f4f48fa146ba7259e05ed4722bfc599",
+      "parent": "0058_sl_messages.sql",
+      "parentChecksum": "41e231a34a7fa4208e170832a62fec50dd213e7520e955b5b53205edfb5826a8",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 60,
+      "filename": "0060_sl_space_availability_bills.sql",
+      "checksum": "3b713fa8949d72ca3d3f013eadaed769034eaad32befa685cf776e5ef1a56f16",
+      "parent": "0059_sl_moderation_queue.sql",
+      "parentChecksum": "4fd50ae49db32cca9b12ecf487b24bdf5f4f48fa146ba7259e05ed4722bfc599",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 61,
+      "filename": "0061_sl_messages_authorship.sql",
+      "checksum": "4b07ca2038c51683b573f9ed780a58efd1817e27ea75460364c6f80d14cd4109",
+      "parent": "0060_sl_space_availability_bills.sql",
+      "parentChecksum": "3b713fa8949d72ca3d3f013eadaed769034eaad32befa685cf776e5ef1a56f16",
+      "kind": "exceptional",
+      "statementPolicy": "approved-exception",
+      "requiredReferenceDataVersion": null,
+      "approvalReference": "SL-P1-sl-messages-authorship-2026-08-24-Edward"
     }
   ]
 }
