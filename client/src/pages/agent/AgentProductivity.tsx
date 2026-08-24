@@ -98,8 +98,6 @@ function getNotificationTone(type: string | null | undefined, isRead: boolean) {
   }
 
   switch (type) {
-    case 'offer_received':
-      return 'bg-amber-100 text-amber-700';
     case 'showing_scheduled':
       return 'bg-violet-100 text-violet-700';
     case 'lead_assigned':

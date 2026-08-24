@@ -144,10 +144,7 @@ describe('agent canonical showings authority', () => {
   });
 
   it('uses the canonical showings table for dashboard stats counts', async () => {
-    const execute = vi
-      .fn()
-      .mockResolvedValueOnce([{ count_value: 2 }])
-      .mockResolvedValueOnce([{ count_value: 1 }]);
+    const execute = vi.fn().mockResolvedValueOnce([{ count_value: 2 }]);
 
     mockGetDb.mockResolvedValue(
       createSelectDbMock({
@@ -166,10 +163,9 @@ describe('agent canonical showings authority', () => {
       activeListings: 7,
       newLeadsThisWeek: 4,
       showingsToday: 2,
-      offersInProgress: 1,
       commissionsPending: 125000,
     });
-    expect(execute).toHaveBeenCalledTimes(2);
+    expect(execute).toHaveBeenCalledTimes(1);
   });
 
   it('maps the external scheduled status into canonical storage on update', async () => {

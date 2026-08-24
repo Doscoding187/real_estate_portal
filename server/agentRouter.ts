@@ -9,7 +9,6 @@ import {
   leads,
   showings,
   commissions,
-  offers,
   leadActivities,
   agents,
   propertyImages,
@@ -362,18 +361,6 @@ async function countAgentShowingsInRange(params: {
   return readCountValue(result);
 }
 
-async function countAgentPendingOffers(params: { db: any; agentId: number }) {
-  const result = await params.db.execute(sql`
-    SELECT COUNT(*) AS count_value
-    FROM offers
-    INNER JOIN listings ON offers.listingId = listings.id
-    WHERE listings.agentId = ${params.agentId}
-      AND offers.status = ${'pending'}
-  `);
-
-  return readCountValue(result);
-}
-
 async function listAgentShowings(params: {
   db: any;
   agentId: number;
@@ -496,7 +483,6 @@ export const agentRouter = router({
       activeListings: number;
       newLeadsThisWeek: number;
       showingsToday: number;
-      offersInProgress: number;
       commissionsPending: number;
     }> => {
       const db = await getDb();
@@ -542,7 +528,6 @@ export const agentRouter = router({
         | { total: number | null }
         | undefined;
       let showingsTodayCount = 0;
-      let offersInProgressCount = 0;
 
       if (agentId) {
         [newLeadsResult] = await db
@@ -561,12 +546,6 @@ export const agentRouter = router({
             agentId,
             startIso: today,
             endIso: tomorrow,
-          });
-
-        offersInProgressCount =
-          await countAgentPendingOffers({
-            db,
-            agentId,
           });
 
         [pendingCommissionsResult] = await db
@@ -588,8 +567,6 @@ export const agentRouter = router({
         newLeadsThisWeek:
           newLeadsResult?.count || 0,
         showingsToday: showingsTodayCount,
-        offersInProgress:
-          offersInProgressCount,
         commissionsPending: Number(
           pendingCommissionsResult?.total || 0,
         ),

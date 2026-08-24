@@ -446,7 +446,7 @@ export class EmailService {
             Renew before expiry to keep your listings in discovery and your enquiry pipeline open.
           </p>
           <div style="text-align: center; margin-top: 30px;">
-            <a href="{{ACTION_URL}}"
+            <a href="${ENV.appUrl}/agent/select-package"
                style="background-color: #0f4c81; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
               Review renewal options
             </a>
