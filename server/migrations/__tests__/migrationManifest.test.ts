@@ -172,7 +172,7 @@ describe('canonical migration manifest', () => {
       kind: 'ddl',
       statementPolicy: 'single-ddl',
     });
-    expect(manifest.expectedHead.filename).toBe('0059_sl_moderation_queue.sql');
+    expect(manifest.expectedHead.filename).toBe('0061_sl_messages_authorship.sql');
   });
 
   it('plans the identity-and-custody migration chain from the integrated 0007 head', () => {
@@ -188,11 +188,11 @@ describe('canonical migration manifest', () => {
         checksum: item.checksum,
       })),
       acceptedOldHead: currentIntegratedHead.filename,
-      expectedNewHead: '0059_sl_moderation_queue.sql',
+      expectedNewHead: '0061_sl_messages_authorship.sql',
     });
 
     expect(plan.acceptedOldHead).toBe('0007_paid_launch_access_invoice_term.sql');
-    expect(plan.pending).toHaveLength(52);
+    expect(plan.pending).toHaveLength(54);
     expect(plan.pending.map(item => item.filename)).toEqual([
       '0008_developer_organisations.sql',
       '0009_developer_organisation_memberships.sql',
@@ -246,8 +246,10 @@ describe('canonical migration manifest', () => {
       '0057_sl_lead_contexts.sql',
       '0058_sl_messages.sql',
       '0059_sl_moderation_queue.sql',
+      '0060_sl_space_availability_bills.sql',
+      '0061_sl_messages_authorship.sql',
     ]);
-    expect(plan.expectedNewHead).toBe('0059_sl_moderation_queue.sql');
+    expect(plan.expectedNewHead).toBe('0061_sl_messages_authorship.sql');
   });
 
   it('accepts an isolated 0000 -> 0001 -> 0002 progression in ancestry order', () => {
