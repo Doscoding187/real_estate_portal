@@ -69,8 +69,8 @@ import {
   setSubscriptionPlanForOwner,
 } from './services/planAccessService';
 import { getManualEftBillingAmount } from './services/billingFoundationService';
-import {
-  isCurrentActiveAgencyMembership,
+import { evaluateAgencyPublicationReadiness } from './services/listingPublicationEntitlementService';
+import { isCurrentActiveAgencyMembership,
   listCurrentActiveMembershipAgentIds,
   listCurrentAgencyMembershipsForAgent,
   maintainAgencyAgentMembership,
@@ -1731,6 +1731,12 @@ function deriveListingHealth(row: any, publicationState: string, agencyId: numbe
   if (['draft', 'rejected'].includes(status) && updatedAgeDays !== null && updatedAgeDays >= 14) {
     reasons.push('stale_draft');
   }
+  const submittedAt = row.queueSubmittedAt || row.updatedAt;
+  const reviewAgeDays =
+    status === 'pending_review' && submittedAt ? daysBetweenNow(submittedAt) : null;
+  if (status === 'pending_review' && reviewAgeDays !== null && reviewAgeDays >= 3) {
+    reasons.push('review_aging');
+  }
   if (publicationState === 'publication_mismatch') reasons.push('publication_mismatch');
   if (
     publicationState === 'published' &&
@@ -1751,6 +1757,12 @@ function deriveListingHealth(row: any, publicationState: string, agencyId: numbe
 
 function deriveListingNextAction(row: any, publicationState: string, health: { reasons: string[] }) {
   const status = String(row.status || 'draft');
+  if (
+    health.reasons.includes('review_aging') &&
+    publicationState !== 'public_with_private_pending_edits'
+  ) {
+    return 'Chase review progress with Property Listify';
+  }
   if (health.reasons.includes('assigned_agent_outside_agency')) return 'Reassign outside-agency agent';
   if (health.reasons.includes('assigned_agent_inactive')) return 'Reassign inactive agent';
   if (!row.agentId) return 'Assign listing';
@@ -3481,6 +3493,7 @@ export const agencyRouter = router({
       brandingConfigured: false,
       billingActivated: false,
       teamReady: false,
+      publicationReadiness: null,
       onboardingStep: 0,
       dashboardUnlocked: false,
       fullFeaturesUnlocked: false,
@@ -3598,11 +3611,19 @@ export const agencyRouter = router({
         .where(eq(users.id, user.id));
     }
 
+    // Publication readiness: enumerate the full gate stack (verification,
+    // profile, branding, subscription term, capacity) so the agency sees its
+    // path to live inventory before authoring.
+    const publicationReadiness = await evaluateAgencyPublicationReadiness(db, agency.id, {
+      includeCapacityCount: true,
+    });
+
     return {
       hasAgency: true,
       profileConfigured,
       brandingConfigured,
       billingActivated: accessBillingActivated,
+      publicationReadiness,
       teamReady,
       onboardingStep,
       dashboardUnlocked,

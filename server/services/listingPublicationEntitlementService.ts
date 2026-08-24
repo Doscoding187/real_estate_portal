@@ -69,7 +69,182 @@ export function isSameListingCommercialOwner(
         (right as Extract<ListingCommercialOwner, { kind: 'independent_agent' }>).userId;
 }
 
+export type PublicationBlocker = {
+  reason: ListingPublicationFailureCode;
+  message: string;
+};
+
+export type AgencyPublicationReadiness = {
+  ready: boolean;
+  blockers: PublicationBlocker[];
+  facts: {
+    verified: boolean;
+    profileComplete: boolean;
+    brandingComplete: boolean;
+    subscriptionStatus: string | null;
+    currentPeriodEnd: string | null;
+    daysRemaining: number | null;
+    capacityUsed: number | null;
+    capacityMax: number | null;
+  };
+};
+
 type DbLike = any;
+
+/**
+ * Enumerate EVERYTHING standing between an agency and publishable inventory.
+ *
+ * This is the same authority `assertListingPublicationEntitled` enforces,
+ * evaluated in the same order but collecting every failure instead of
+ * aborting at the first, so agencies can see their full path to live
+ * inventory before authoring work that ends in a rejected submission.
+ */
+export async function evaluateAgencyPublicationReadiness(
+  db: DbLike,
+  agencyId: number,
+  options: {
+    excludeListingIds?: number[];
+    now?: Date;
+    includeCapacityCount?: boolean;
+    /**
+     * Enforcement-parity switch (default true): when earlier blockers already
+     * exist, skip the capacity count so read sequences match the historical
+     * throw-first behaviour. Readiness consumers pass false to enumerate
+     * capacity regardless.
+     */
+    skipCapacityWhenBlocked?: boolean;
+  } = {},
+): Promise<AgencyPublicationReadiness> {
+  const now = options.now ?? new Date();
+  const nowMs = now.getTime();
+  const blockers: PublicationBlocker[] = [];
+  const push = (reason: ListingPublicationFailureCode, message: string) =>
+    blockers.push({ reason, message });
+
+  const [[agency], [branding]] = await Promise.all([
+    db.select().from(agencies).where(eq(agencies.id, agencyId)).limit(1),
+    db.select().from(agencyBranding).where(eq(agencyBranding.agencyId, agencyId)).limit(1),
+  ]);
+
+  if (!agency) {
+    return {
+      ready: false,
+      blockers: [
+        {
+          reason: 'commercial_owner_unresolved',
+          message: 'This listing does not have a resolvable commercial owner.',
+        },
+      ],
+      facts: {
+        verified: false,
+        profileComplete: false,
+        brandingComplete: false,
+        subscriptionStatus: null,
+        currentPeriodEnd: null,
+        daysRemaining: null,
+        capacityUsed: null,
+        capacityMax: null,
+      },
+    };
+  }
+
+  const verified = Number(agency.isVerified || 0) === 1;
+  if (!verified) {
+    push(
+      'agency_unverified',
+      'The agency must be verified before publishing listings.',
+    );
+  }
+
+  const profileComplete = Boolean(agency.name && agency.email && agency.city && agency.province);
+  if (!profileComplete) {
+    push(
+      'agency_profile_incomplete',
+      'Complete the agency profile before submitting listings for publication.',
+    );
+  }
+
+  const brandingComplete = Boolean(
+    branding?.companyName && branding?.primaryColor && branding?.secondaryColor,
+  );
+  if (!brandingComplete) {
+    push(
+      'agency_branding_incomplete',
+      'Complete agency branding before submitting listings for publication.',
+    );
+  }
+
+  const subscriptionWithPlan = await getCanonicalSubscription(db, 'agency', agencyId);
+  const subscriptionFailureForState = subscriptionFailure(subscriptionWithPlan?.subscription, now);
+  if (subscriptionFailureForState) {
+    push(subscriptionFailureForState.reason, subscriptionFailureForState.message);
+  }
+
+  const plan = subscriptionWithPlan?.plan;
+  let capacityMax: number | null = null;
+  if (!plan) {
+    push(
+      'subscription_plan_unresolved',
+      'A valid agency publishing plan is required before this listing can be submitted.',
+    );
+  } else if (plan.segment !== 'agency' || Number(plan.isActive) !== 1) {
+    push(
+      'subscription_plan_ineligible',
+      'The current plan is not eligible for agency listing publication.',
+    );
+  } else {
+    capacityMax = await getPlanMaximumActiveListings(db, plan.id);
+    if (capacityMax <= 0) {
+      push(
+        'listing_capacity_exhausted',
+        'The current agency plan does not include active listing publication.',
+      );
+    }
+  }
+
+  const skipCapacity =
+    (options.skipCapacityWhenBlocked ?? true) && blockers.length > 0;
+  let capacityUsed: number | null = null;
+  if (!skipCapacity && capacityMax !== null && capacityMax > 0 && options.includeCapacityCount !== false) {
+    const owner: ListingCommercialOwner = {
+      kind: 'agency',
+      agencyId,
+      listingId: 0,
+      responsibleAgentId: null,
+    };
+    capacityUsed = await getActiveListingCount(db, owner, options.excludeListingIds ?? []);
+    if (capacityMax !== null && capacityUsed !== null && capacityUsed >= capacityMax) {
+      push(
+        'listing_capacity_exhausted',
+        `The current plan allows ${capacityMax} active listings. Archive an active listing before publishing another.`,
+      );
+    }
+  }
+
+  const currentPeriodEnd = dbTimestamp(subscriptionWithPlan?.subscription.currentPeriodEnd);
+  const daysRemaining =
+    currentPeriodEnd !== null ? Math.max(0, Math.ceil((currentPeriodEnd - nowMs) / 86_400_000)) : null;
+
+  return {
+    ready: blockers.length === 0,
+    blockers,
+    facts: {
+      verified,
+      profileComplete,
+      brandingComplete,
+      subscriptionStatus: subscriptionWithPlan?.subscription.status ?? null,
+      currentPeriodEnd:
+        subscriptionWithPlan?.subscription.currentPeriodEnd != null
+          ? String(subscriptionWithPlan.subscription.currentPeriodEnd)
+          : null,
+      daysRemaining,
+      capacityUsed,
+      capacityMax,
+    },
+  };
+}
+
+
 
 const ACTIVE_CANONICAL_LISTING_STATUSES = ['approved', 'published'] as const;
 
@@ -345,62 +520,20 @@ export async function assertListingPublicationEntitled(
   await lockListingPublicationOwner(db, owner);
 
   if (owner.kind === 'agency') {
-    const [[agency], [branding]] = await Promise.all([
-      db.select().from(agencies).where(eq(agencies.id, owner.agencyId)).limit(1),
-      db.select().from(agencyBranding).where(eq(agencyBranding.agencyId, owner.agencyId)).limit(1),
-    ]);
-
-    if (!agency) {
+    // Same authority, enumerated: collect every blocker, then enforce the
+    // first one exactly as the sequential throws did before. Callers that
+    // need the full picture use evaluateAgencyPublicationReadiness directly.
+    const readiness = await evaluateAgencyPublicationReadiness(db, owner.agencyId, {
+      excludeListingIds: input.excludeListingIds ?? [owner.listingId],
+      now,
+      includeCapacityCount: true,
+    });
+    if (readiness.blockers.length > 0) {
       throw new ListingPublicationEntitlementError(
-        'commercial_owner_unresolved',
-        'This listing does not have a resolvable commercial owner.',
+        readiness.blockers[0].reason,
+        readiness.blockers[0].message,
       );
     }
-    if (Number(agency.isVerified || 0) !== 1) {
-      throw new ListingPublicationEntitlementError(
-        'agency_unverified',
-        'The agency must be verified before publishing listings.',
-      );
-    }
-    if (!(agency.name && agency.email && agency.city && agency.province)) {
-      throw new ListingPublicationEntitlementError(
-        'agency_profile_incomplete',
-        'Complete the agency profile before submitting listings for publication.',
-      );
-    }
-    if (!(branding?.companyName && branding?.primaryColor && branding?.secondaryColor)) {
-      throw new ListingPublicationEntitlementError(
-        'agency_branding_incomplete',
-        'Complete agency branding before submitting listings for publication.',
-      );
-    }
-
-    const subscriptionWithPlan = await getCanonicalSubscription(db, 'agency', owner.agencyId);
-    const failure = subscriptionFailure(subscriptionWithPlan?.subscription, now);
-    if (failure) throw failure;
-
-    const plan = subscriptionWithPlan?.plan;
-    if (!plan) {
-      throw new ListingPublicationEntitlementError(
-        'subscription_plan_unresolved',
-        'A valid agency publishing plan is required before this listing can be submitted.',
-      );
-    }
-    if (plan.segment !== 'agency' || Number(plan.isActive) !== 1) {
-      throw new ListingPublicationEntitlementError(
-        'subscription_plan_ineligible',
-        'The current plan is not eligible for agency listing publication.',
-      );
-    }
-
-    const maxActiveListings = await getPlanMaximumActiveListings(db, plan.id);
-    if (maxActiveListings <= 0) {
-      throw new ListingPublicationEntitlementError(
-        'listing_capacity_exhausted',
-        'The current agency plan does not include active listing publication.',
-      );
-    }
-    await assertActiveListingCapacity(db, owner, maxActiveListings, input.excludeListingIds);
     return owner;
   }
 

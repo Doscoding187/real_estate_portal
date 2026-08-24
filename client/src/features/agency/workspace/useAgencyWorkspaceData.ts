@@ -157,7 +157,7 @@ export function useAgencyWorkspaceData(workspace: WorkspaceId) {
   const listingHealth = useMemo(() => {
     const pending = Math.max(
       stats.pendingListings,
-      listings.filter(listing => listing.status === 'pending').length,
+      listings.filter(listing => listing.status === 'pending_review').length,
     );
     const draftLike = listings.filter(listing =>
       ['draft', 'incomplete', 'rejected'].includes(listing.status || ''),
@@ -165,7 +165,8 @@ export function useAgencyWorkspaceData(workspace: WorkspaceId) {
     const staleRisk = listings.filter(listing => {
       const created = listing.createdAt ? new Date(listing.createdAt) : null;
       if (!created || Number.isNaN(created.getTime())) return false;
-      return (Date.now() - created.getTime()) / 86_400_000 > 21 && listing.status === 'available';
+      return (Date.now() - created.getTime()) / 86_400_000 > 21 &&
+        (listing.status === 'published' || listing.status === 'approved');
     }).length;
 
     return [
