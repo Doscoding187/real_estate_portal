@@ -13,7 +13,6 @@ import {
   normalizePublicHeroJourney,
   PUBLIC_CITY_ENTRY,
   PUBLIC_NAVIGATION_MENUS,
-  isPublicNavigationVisible,
   resolvePublicJourneyReleaseContext,
 } from '@/lib/publicNavigation';
 
