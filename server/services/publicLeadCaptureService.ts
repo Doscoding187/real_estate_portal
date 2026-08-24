@@ -1,6 +1,7 @@
 import { TRPCError } from '@trpc/server';
 import { and, eq, inArray, sql } from 'drizzle-orm';
 import { getDb } from '../db';
+import { slLeadContexts, slMessages } from '../../drizzle/schema';
 import { agencyAgentMemberships } from '../../drizzle/schema';
 import { listCurrentActiveMembershipAgentIds } from './agencyMembershipService';
 import {
@@ -45,6 +46,7 @@ import { EmailService } from '../_core/emailService';
 import { isPaidSubscriptionRowEntitled } from './planAccessService';
 import { resolvePublicPropertyEligibility } from './publicPropertyEligibilityService';
 import { resolvePublicLandLeadCustody } from './landPublicService';
+import { resolveSharedLivingLeadCustody, ensureLeadContextRow } from './sharedLivingEnquiryService';
 import { resolvePublicCommercialOfficeLeadCustody } from './commercialOfficeService';
 import { PUBLIC_LEAD_INPUT_LIMITS } from './publicLeadInputContract';
 
@@ -65,6 +67,9 @@ export interface PublicLeadCaptureInput {
   authenticatedUserId?: number;
   listingId?: number;
   commercialAvailabilityId?: number;
+  /** Shared Living context: enquire against a published place/space pair. */
+  slPlaceId?: number;
+  slSpaceId?: number;
   propertyId?: number;
   developmentId?: number;
   cataloguePublisherId?: number;
@@ -113,6 +118,12 @@ export interface ResolvedLeadOwnership {
   brandLeadStatus?: 'captured' | 'delivered_unsubscribed' | 'delivered_subscriber';
   reason?: string | null;
   commercialContext?: { commercialAssetId: number; commercialSpaceId: number; commercialAvailabilityId: number };
+  sharedLivingContext?: {
+    placeId: number;
+    spaceId: number | null;
+    spaceLabelSnapshot: string;
+    spaceTypeSnapshot: string;
+  };
 }
 
 export interface PublicLeadCaptureResult {
@@ -240,9 +251,13 @@ function isDuplicateKeyError(error: unknown): boolean {
 }
 
 function getPublicTargetCount(input: PublicLeadCaptureInput): number {
-  return [input.listingId, input.propertyId, input.developmentId, input.cataloguePublisherId].filter(
-    value => positiveId(value) !== undefined,
-  ).length;
+  return [
+    input.listingId,
+    input.propertyId,
+    input.developmentId,
+    input.cataloguePublisherId,
+    input.slPlaceId,
+  ].filter(value => positiveId(value) !== undefined).length;
 }
 
 function assertPublicCaptureInput(input: PublicLeadCaptureInput) {
@@ -554,6 +569,31 @@ export async function resolveLeadOwnership(
 ): Promise<ResolvedLeadOwnership> {
   const database = await getDb();
   if (!database) throw new Error('Database not available');
+
+  const slPlaceId = positiveId(input.slPlaceId);
+  if (slPlaceId) {
+    const resolution = await resolveSharedLivingLeadCustody({
+      slPlaceId,
+      slSpaceId: positiveId(input.slSpaceId),
+    });
+    if (!resolution) {
+      throw new TRPCError({ code: 'NOT_FOUND', message: 'Shared Living listing is not available for public enquiries.' });
+    }
+    return {
+      supplyOrigin: 'shared_living',
+      leadCustody: 'platform_managed',
+      recipientType: 'manual',
+      recipientId: null,
+      leadDeliveryMethod: 'manual',
+      reason: null,
+      sharedLivingContext: {
+        placeId: resolution.placeId,
+        spaceId: resolution.spaceId,
+        spaceLabelSnapshot: resolution.spaceLabelSnapshot,
+        spaceTypeSnapshot: resolution.spaceTypeSnapshot,
+      },
+    } as ResolvedLeadOwnership;
+  }
 
   const propertyId = positiveId(input.propertyId);
   const listingId = positiveId(input.listingId);
@@ -982,6 +1022,17 @@ async function recoverExistingLead(
   }
 
   let durableLead = existing;
+  if (positiveId(input.slPlaceId)) {
+    const resolvedSl = await resolveLeadOwnership(input);
+    if (!resolvedSl.sharedLivingContext) throw new TRPCError({ code: 'NOT_FOUND', message: 'Shared Living listing is not available for public enquiries.' });
+    await ensureLeadContextRow({
+      leadId: existing.id,
+      placeId: resolvedSl.sharedLivingContext.placeId,
+      spaceId: resolvedSl.sharedLivingContext.spaceId,
+      spaceLabelSnapshot: resolvedSl.sharedLivingContext.spaceLabelSnapshot,
+      spaceTypeSnapshot: resolvedSl.sharedLivingContext.spaceTypeSnapshot,
+    });
+  }
   if (positiveId(input.commercialAvailabilityId)) {
     const resolvedCommercial = await resolveLeadOwnership(input);
     if (!resolvedCommercial.commercialContext) throw new TRPCError({ code: 'NOT_FOUND', message: 'Commercial Office space is not available for public enquiries.' });
@@ -1095,6 +1146,7 @@ export async function capturePublicLead(
       ...deliverySummary,
     } satisfies LeadInsert);
     if (resolved.commercialContext) await tx.insert(commercialLeadContexts).values({ leadId: Number(insertResult.insertId), listingId: resolved.listingId!, commercialAssetId: resolved.commercialContext.commercialAssetId, commercialSpaceId: resolved.commercialContext.commercialSpaceId, commercialAvailabilityId: resolved.commercialContext.commercialAvailabilityId });
+    if (resolved.sharedLivingContext) await tx.insert(slLeadContexts).values({ leadId: Number(insertResult.insertId), placeId: resolved.sharedLivingContext.placeId, spaceId: resolved.sharedLivingContext.spaceId, spaceLabelSnapshot: resolved.sharedLivingContext.spaceLabelSnapshot, spaceTypeSnapshot: resolved.sharedLivingContext.spaceTypeSnapshot });
     };
     if (resolved.commercialContext && typeof (database as any).transaction === 'function') await (database as any).transaction(persist); else await persist(database);
   } catch (error) {

@@ -408,9 +408,11 @@ describe('migration execution authority', () => {
       '0057_sl_lead_contexts.sql',
       '0058_sl_messages.sql',
       '0059_sl_moderation_queue.sql',
+      '0060_sl_space_availability_bills.sql',
+      '0061_sl_messages_authorship.sql',
     ]);
     expect(executionManifest.expectedHead).toBe(
-      '0059_sl_moderation_queue.sql',
+      '0061_sl_messages_authorship.sql',
     );
     expect(archivedSqlFiles.length).toBeGreaterThan(0);
     expect(activeSqlFiles.some(file => file.includes('_archived'))).toBe(false);
