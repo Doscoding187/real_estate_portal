@@ -326,7 +326,10 @@ function Router() {
             </RequireRole>
           </Route>
           <Route path="/agent/select-package">
-            <RequireRole role="agent" unauthenticatedAuthEntry="signin">
+            {/* Conversion entry: prospects without an account land on the
+                register tab with the agent role preselected; returning agents
+                switch to sign-in on the same surface. */}
+            <RequireRole role="agent" unauthenticatedAuthEntry="register">
               <AgentPackageSelection />
             </RequireRole>
           </Route>
