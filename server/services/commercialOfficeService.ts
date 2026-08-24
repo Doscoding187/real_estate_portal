@@ -770,26 +770,26 @@ export async function resolveCommercialLocationScope(
   const token = classified.token;
   const db = await database();
 
-  const [provinces] = await db
+  const [provinceRow] = await db
     .select({ id: provinces.id })
     .from(provinces)
     .where(eq(provinces.slug, token))
     .limit(1);
-  if (provinces) return { status: 'scope', field: 'provinceId', ids: [provinces.id] };
+  if (provinceRow) return { status: 'scope', field: 'provinceId', ids: [provinceRow.id] };
 
-  const [cities] = await db
+  const [cityRow] = await db
     .select({ id: cities.id })
     .from(cities)
     .where(eq(cities.slug, token))
     .limit(1);
-  if (cities) return { status: 'scope', field: 'cityId', ids: [cities.id] };
+  if (cityRow) return { status: 'scope', field: 'cityId', ids: [cityRow.id] };
 
-  const [suburbs] = await db
+  const [suburbRow] = await db
     .select({ id: suburbs.id })
     .from(suburbs)
     .where(eq(suburbs.slug, token))
     .limit(1);
-  if (suburbs) return { status: 'scope', field: 'suburbId', ids: [suburbs.id] };
+  if (suburbRow) return { status: 'scope', field: 'suburbId', ids: [suburbRow.id] };
 
   return { status: 'empty' };
 }
