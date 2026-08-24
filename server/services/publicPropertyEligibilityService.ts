@@ -15,6 +15,7 @@ import {
   resolveApprovedPublicProperties,
   type ApprovedPublicPropertyResolution,
 } from './approvedPublicPropertyService';
+import { listCurrentActiveMembershipAgentIds } from './agencyMembershipService';
 import { isPaidSubscriptionRowEntitled } from './planAccessService';
 import {
   resolvePublicPropertyCustody,
@@ -494,6 +495,14 @@ async function loadDefaultSupplyEvidence(
     distinctPositiveIds(agentRows.map(row => row.userId)),
   );
 
+  // Canonical membership currency: agency-affiliated agents may only receive
+  // public enquiries while a current membership exists. Independents are not
+  // membership-scoped.
+  const currentMembershipAgentIds = await listCurrentActiveMembershipAgentIds(
+    database,
+    agentRows.map(row => Number(row.id)),
+  );
+
   const userIds = distinctPositiveIds([
     ...approvals.map(value => value.property.ownerId),
     ...sourceListings.map(row => row.ownerId),
@@ -527,6 +536,10 @@ async function loadDefaultSupplyEvidence(
         status: row.status || null,
         isVerified: Number(row.isVerified || 0),
         hasActivePaidEntitlement: agentPaidEntitledUserIds.has(Number(row.userId)),
+        hasCurrentMembership:
+          positiveId(row.agencyId) === null
+            ? true
+            : currentMembershipAgentIds.has(Number(row.id)),
         userRole: userById.get(Number(row.userId))?.role || null,
       },
     ]),

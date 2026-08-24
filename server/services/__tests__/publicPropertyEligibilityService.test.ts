@@ -121,7 +121,7 @@ describe('public property eligibility authority', () => {
   });
 
   it('publishes an assigned agent and verified agency as one identity', () => {
-    const agencyAgent = { ...agent, agencyId: 44 };
+    const agencyAgent = { ...agent, agencyId: 44, hasCurrentMembership: true };
     const result = evaluatePublicPropertySupplyEvidence(
       evidence({
         sourceListing: { id: 9001, ownerId: 70, agentId: 33, agencyId: 44 },
@@ -146,6 +146,25 @@ describe('public property eligibility authority', () => {
         agencyId: 44,
       },
     });
+  });
+
+  it('withholds the public identity when an affiliated agent loses membership currency', () => {
+    const lapsedAgencyAgent = { ...agent, agencyId: 44, hasCurrentMembership: false };
+    const result = evaluatePublicPropertySupplyEvidence(
+      evidence({
+        sourceListing: { id: 9001, ownerId: 70, agentId: 33, agencyId: 44 },
+        propertyOwner: { id: 70, role: 'agent', agencyId: 44 },
+        sourceOwner: { id: 70, role: 'agent', agencyId: 44 },
+        directAgent: lapsedAgencyAgent,
+        sourceAgent: lapsedAgencyAgent,
+        directAgentAgency: agency,
+        sourceAgentAgency: agency,
+        sourceAgency: agency,
+        ownerAgency: agency,
+      }),
+    );
+
+    expect(result.eligible).toBe(false);
   });
 
   it('publishes verified agency inventory without inventing an agent', () => {

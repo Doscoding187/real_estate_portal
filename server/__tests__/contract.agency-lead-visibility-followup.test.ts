@@ -223,6 +223,8 @@ describe('agency lead visibility and follow-up contract', () => {
     expect(router).toContain('recordLeadContactAttempt');
     expect(router).toContain('Record the next action for every active buyer lead.');
     expect(router).toContain('firstResponseOverdueLeads');
-    expect(router).toContain('FIRST_RESPONSE_SLA_MINUTES = 15');
+    // The SLA constant is single-sourced in the shared transition authority;
+    // the router consumes it rather than redeclaring it.
+    expect(router).toContain('FIRST_RESPONSE_SLA_MINUTES');
   });
 });

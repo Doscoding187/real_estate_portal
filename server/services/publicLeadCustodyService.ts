@@ -21,6 +21,12 @@ export interface PublicAgentOwnershipCandidate {
   status: string | null;
   isVerified?: number | null;
   hasActivePaidEntitlement?: boolean;
+  /**
+   * Canonical membership currency (S2 authority): agency-affiliated agents
+   * must hold a current membership to receive public enquiries. Independents
+   * are not membership-scoped and pass by omission.
+   */
+  hasCurrentMembership?: boolean;
   userRole?: string | null;
 }
 
@@ -101,10 +107,16 @@ function positiveId(value: number | null | undefined): number | null {
 function isEligibleAgentRecipient(agent: PublicAgentOwnershipCandidate | null | undefined): boolean {
   const professionallyVerified = Number(agent?.isVerified || 0) === 1;
   const commerciallyEligible = agent?.hasActivePaidEntitlement === true;
+  // Membership currency: a suspended/left affiliation stops public enquiry
+  // delivery even when the legacy profile still looks approved. Independent
+  // agents carry no agencyId and remain routable on the existing criteria.
+  const agencyAffiliated = positiveId(agent?.agencyId) !== null;
+  const membershipCurrent = !agencyAffiliated || agent?.hasCurrentMembership === true;
   return Boolean(
     agent &&
       agent.status === 'approved' &&
       (professionallyVerified || commerciallyEligible) &&
+      membershipCurrent &&
       positiveId(agent.userId) &&
       agent.userRole === 'agent',
   );
