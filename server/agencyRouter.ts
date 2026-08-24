@@ -75,6 +75,14 @@ import { isCurrentActiveAgencyMembership,
   listCurrentAgencyMembershipsForAgent,
   maintainAgencyAgentMembership,
 } from './services/agencyMembershipService';
+import {
+  deriveLeadReadiness,
+  firstResponseOverdueSql,
+  FIRST_RESPONSE_SLA_MINUTES,
+  leadStatusTimestamps,
+  mapStatusToFunnelStage,
+  validateLeadTransition,
+} from './services/leadTransitionService';
 import { getCommercialProductKey, getConfiguredLaunchFeeMinor, resolveCommercialTerm } from './services/commercialTerm';
 import {
   endCanonicalAgencyMembership,
@@ -456,17 +464,6 @@ type AgencyBillingStatus =
   | 'expired'
   | 'unavailable';
 
-const LEAD_TRANSITIONS: Record<LeadStatus, LeadStatus[]> = {
-  new: ['contacted', 'qualified', 'viewing_scheduled', 'lost'],
-  contacted: ['qualified', 'viewing_scheduled', 'lost'],
-  qualified: ['viewing_scheduled', 'offer_sent', 'converted', 'lost'],
-  viewing_scheduled: ['offer_sent', 'converted', 'lost'],
-  offer_sent: ['converted', 'closed', 'lost'],
-  converted: ['closed'],
-  closed: [],
-  lost: [],
-};
-
 const VIEWING_TRANSITIONS: Record<ViewingStatus, ViewingStatus[]> = {
   requested: ['awaiting_confirmation', 'confirmed', 'cancelled', 'rescheduled'],
   awaiting_confirmation: ['confirmed', 'cancelled', 'rescheduled'],
@@ -513,21 +510,10 @@ const ACTIVE_WORK_LEAD_STATUSES = [
   'viewing_scheduled',
   'offer_sent',
 ] as const;
-const FIRST_RESPONSE_SLA_MINUTES = 15;
 const ACTIVE_WORK_LISTING_STATUSES = ['available', 'published'] as const;
 const PENDING_WORK_LISTING_STATUSES = ['pending', 'draft'] as const;
 const ACTIVE_CANONICAL_LISTING_STATUSES = ['approved', 'published'] as const;
 const PENDING_CANONICAL_LISTING_STATUSES = ['draft', 'pending_review', 'rejected'] as const;
-
-function firstResponseOverdueSql() {
-  return sql<number>`CASE
-    WHEN ${leads.status} IN ('new', 'contacted', 'qualified', 'viewing_scheduled', 'offer_sent')
-      AND ${leads.firstRespondedAt} IS NULL
-      AND ${leads.createdAt} <= DATE_SUB(NOW(), INTERVAL ${FIRST_RESPONSE_SLA_MINUTES} MINUTE)
-    THEN 1
-    ELSE 0
-  END`;
-}
 
 function normalizeBillingStatus(value: unknown): AgencyBillingStatus {
   const status = String(value || '')
@@ -561,68 +547,6 @@ function toLeadTemperature(score: unknown): {
     source: 'server-derived',
     thresholds: { hot: 80, warm: 55 },
   };
-}
-
-function deriveLeadReadiness(lead: typeof leads.$inferSelect) {
-  const blockers: string[] = [];
-  const hasAssignee = Boolean(lead.agentId || lead.assignedTo);
-  const hasContact = Boolean(lead.lastContactedAt);
-  const qualificationScore = Number(lead.qualificationScore || 0);
-  const qualificationStatus = String(lead.qualificationStatus || 'pending');
-
-  if (!hasAssignee) blockers.push('Lead must be assigned before offer work.');
-  if (!hasContact) blockers.push('Lead must be contacted before offer work.');
-  if (qualificationScore < 60 && qualificationStatus !== 'qualified') {
-    blockers.push('Qualification must be recorded before offer work.');
-  }
-
-  return {
-    canMoveToOffer: blockers.length === 0,
-    blockers,
-    source: 'server-derived' as const,
-  };
-}
-
-function assertLeadTransitionAllowed(
-  lead: typeof leads.$inferSelect,
-  targetStatus: LeadStatus,
-  options: { lostReason?: string | null } = {},
-) {
-  const currentStatus = (lead.status || 'new') as LeadStatus;
-  if (currentStatus === targetStatus) return;
-
-  const allowed = LEAD_TRANSITIONS[currentStatus] || [];
-  if (!allowed.includes(targetStatus)) {
-    throw new TRPCError({
-      code: 'BAD_REQUEST',
-      message: `Cannot move lead from ${currentStatus} to ${targetStatus}.`,
-    });
-  }
-
-  if (targetStatus === 'lost' && !String(options.lostReason || '').trim()) {
-    throw new TRPCError({
-      code: 'BAD_REQUEST',
-      message: 'A lost reason is required before closing a lead as lost.',
-    });
-  }
-
-  if (targetStatus === 'offer_sent') {
-    const readiness = deriveLeadReadiness(lead);
-    if (!readiness.canMoveToOffer) {
-      throw new TRPCError({
-        code: 'BAD_REQUEST',
-        message: readiness.blockers.join(' '),
-      });
-    }
-  }
-}
-
-function mapStatusToFunnelStage(status: LeadStatus, fallback: string | null | undefined) {
-  if (status === 'qualified') return 'qualification';
-  if (status === 'viewing_scheduled') return 'viewing';
-  if (status === 'offer_sent') return 'offer';
-  if (status === 'converted' || status === 'closed') return 'sale';
-  return fallback || undefined;
 }
 
 function getNextLeadAction(lead: typeof leads.$inferSelect) {
@@ -4490,7 +4414,7 @@ export const agencyRouter = router({
       }
       const agencyId = requireAgencyId(user);
       const lead = await requireAgencyLead(db, user, input.leadId);
-      assertLeadTransitionAllowed(lead, input.status, { lostReason: input.lostReason });
+      validateLeadTransition(lead, input.status, { lostReason: input.lostReason });
       const now = nowAsDbTimestamp();
 
       await db
@@ -4502,19 +4426,7 @@ export const agencyRouter = router({
             input.status === 'lost' || input.status === 'converted' || input.status === 'closed'
               ? null
               : lead.nextAction || getNextLeadAction({ ...lead, status: input.status, nextAction: null } as any),
-          lastContactedAt:
-            input.status === 'contacted' || input.status === 'qualified'
-              ? now
-              : lead.lastContactedAt,
-          firstRespondedAt:
-            (input.status === 'contacted' || input.status === 'qualified') && !lead.firstRespondedAt
-              ? now
-              : lead.firstRespondedAt,
-          convertedAt:
-            input.status === 'converted' || input.status === 'closed' ? now : lead.convertedAt,
-          lostReason:
-            input.status === 'lost' ? input.lostReason || lead.lostReason : lead.lostReason,
-          funnelStage: mapStatusToFunnelStage(input.status, lead.funnelStage) as any,
+          ...leadStatusTimestamps(lead, input.status, now, { lostReason: input.lostReason }),
         })
         .where(and(eq(leads.id, input.leadId), eq(leads.agencyId, user.agencyId)));
 
@@ -4686,6 +4598,19 @@ export const agencyRouter = router({
             }.`
           : 'Lead assignment cleared.',
       });
+
+      // The assignee learns about the assignment the same way public capture
+      // notifies agents — otherwise new work lands silently in their inbox.
+      if (assignedAgent?.userId) {
+        await db.insert(notifications).values({
+          userId: Number(assignedAgent.userId),
+          type: 'lead_assigned',
+          title: 'Lead assigned to you',
+          content: `${user.name || 'An agency admin'} assigned you ${lead.name || 'a new lead'}.`,
+          data: JSON.stringify({ leadId: input.leadId }),
+          isRead: 0,
+        });
+      }
 
       await logAudit({
         userId: user.id,
@@ -5000,7 +4925,7 @@ export const agencyRouter = router({
       const scheduledAt = toDbTimestampRequired(showingDate);
       const now = nowAsDbTimestamp();
 
-      assertLeadTransitionAllowed(lead, 'viewing_scheduled');
+      validateLeadTransition(lead, 'viewing_scheduled');
       let showingId = 0;
       await db.transaction(async tx => {
         const [result] = await tx.insert(showings).values({
@@ -5200,7 +5125,7 @@ export const agencyRouter = router({
       });
       const now = nowAsDbTimestamp();
 
-      assertLeadTransitionAllowed(lead, 'viewing_scheduled');
+      validateLeadTransition(lead, 'viewing_scheduled');
       let viewingId = 0;
       await db.transaction(async tx => {
         const [result] = await tx.insert(showings).values({
