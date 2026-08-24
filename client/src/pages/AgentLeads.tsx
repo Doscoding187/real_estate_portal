@@ -108,8 +108,6 @@ function formatNotificationTone(type: string | null | undefined, isRead: boolean
       return 'bg-blue-100 text-blue-700';
     case 'showing_scheduled':
       return 'bg-violet-100 text-violet-700';
-    case 'offer_received':
-      return 'bg-amber-100 text-amber-700';
     default:
       return 'bg-slate-100 text-slate-700';
   }
@@ -218,7 +216,7 @@ export default function AgentLeads() {
   const recentActivity = useMemo(
     () =>
       notificationsData.filter(item =>
-        ['lead_assigned', 'showing_scheduled', 'offer_received'].includes(String(item.type)),
+        ['lead_assigned', 'showing_scheduled'].includes(String(item.type)),
       ),
     [notificationsData],
   );

@@ -178,9 +178,6 @@ export function NotificationCenter({ className }: NotificationCenterProps) {
                 <DropdownMenuItem onClick={() => setFilterType('lead_assigned')}>
                   Lead Assigned
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setFilterType('offer_received')}>
-                  Offer Received
-                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setFilterType('showing_scheduled')}>
                   Showing Scheduled
                 </DropdownMenuItem>

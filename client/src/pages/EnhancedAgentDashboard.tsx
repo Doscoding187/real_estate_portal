@@ -122,25 +122,11 @@ export default function EnhancedAgentDashboard() {
             <CardContent>
               <div className="text-2xl font-bold">
                 {statsLoading ? '—' : (stats?.showingsToday ?? 0)}
-              </div>
-            </CardContent>
-          </Card>
+          </div>
+        </CardContent>
+      </Card>
 
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                <MessageSquare className="h-4 w-4" />
-                Offers In Progress
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {statsLoading ? '—' : (stats?.offersInProgress ?? 0)}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
+      <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                 <DollarSign className="h-4 w-4" />
