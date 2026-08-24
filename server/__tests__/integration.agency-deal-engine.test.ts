@@ -6,6 +6,7 @@ import { and, eq, inArray, sql } from 'drizzle-orm';
 
 import { agencyRouter } from '../agencyRouter';
 import { getDb } from '../db-connection';
+import { maintainAgencyAgentMembership } from '../services/agencyMembershipService';
 import {
   agencies,
   agencyDealOfferVersions,
@@ -187,6 +188,16 @@ async function seedAgencyFixture(label: string) {
     } as any);
     const agentId = insertId(agentInsert);
     createdState.agentIds.push(agentId);
+
+    // Post-S2 fixtures must represent the real system state: an approved
+    // agency-affiliated agent holds a current canonical membership.
+    await maintainAgencyAgentMembership(db, {
+      agencyId: agency,
+      agentId,
+      status: 'active',
+      actorUserId: userId,
+    });
+
     return agentId;
   }
 

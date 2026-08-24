@@ -54,6 +54,34 @@ export async function listCurrentAgencyMembershipsForAgent(
   return rows.filter(row => isCurrentActiveAgencyMembership(row, evaluatedAt));
 }
 
+/**
+ * Batch form of the currency check for routing/assignment surfaces: returns
+ * the subset of agentIds that currently hold an active membership in any
+ * agency. Agents without agency affiliation are not represented here — the
+ * caller decides how independent professionals are treated.
+ */
+export async function listCurrentActiveMembershipAgentIds(
+  db: DatabaseHandle,
+  agentIds: number[],
+  evaluatedAt: Date = new Date(),
+): Promise<Set<number>> {
+  const uniqueIds = [...new Set(agentIds.filter(id => Number.isSafeInteger(id) && id > 0))];
+  if (uniqueIds.length === 0) return new Set();
+
+  const rows = await db
+    .select()
+    .from(agencyAgentMemberships)
+    .where(inArray(agencyAgentMemberships.agentId, uniqueIds));
+
+  const current = new Set<number>();
+  for (const row of rows) {
+    if (isCurrentActiveAgencyMembership(row, evaluatedAt)) {
+      current.add(Number(row.agentId));
+    }
+  }
+  return current;
+}
+
 function toDbTimestamp(value: Date): string {
   return value.toISOString().slice(0, 19).replace('T', ' ');
 }

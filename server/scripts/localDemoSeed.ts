@@ -781,6 +781,28 @@ async function seedAgencyDashboardData(
   );
   const agentProfileId = Number(agentProfileResult.insertId);
 
+  // Canonical membership authority: demo agents must satisfy the same
+  // currency gates as production (assignment, attribution, routing).
+  const establishDemoMembership = async (
+    targetAgentId: number,
+    targetAgencyId: number,
+    status: 'active' | 'suspended',
+  ) => {
+    await execute(
+      connection,
+      `
+        INSERT INTO agency_agent_memberships
+          (agencyId, agentId, status, governanceMode, role, effectiveFrom, effectiveTo, createdBy, updatedBy)
+        VALUES
+          (?, ?, ?, 'affiliated', 'agent', NOW(), ${status === 'active' ? 'NULL' : 'NOW()'}, ?, ?)
+      `,
+      [targetAgencyId, targetAgentId, status, input.approvedBy, input.approvedBy],
+    );
+  };
+
+
+    await establishDemoMembership(agentProfileId, input.agencyId, 'active');
+
   const inactiveAgentResult = await execute(
     connection,
     `
@@ -799,6 +821,7 @@ async function seedAgencyDashboardData(
     ],
   );
   const inactiveAgentProfileId = Number(inactiveAgentResult.insertId);
+  await establishDemoMembership(inactiveAgentProfileId, input.agencyId, 'suspended');
 
   const activePropertyId = await insertAgencyProperty(connection, {
     agentProfileId,
@@ -906,6 +929,7 @@ async function seedAgencyDashboardData(
     ],
   );
   const otherAgentProfileId = Number(otherAgentResult.insertId);
+  await establishDemoMembership(otherAgentProfileId, otherAgencyId, 'active');
 
   const otherPropertyId = await insertAgencyProperty(connection, {
     agentProfileId: otherAgentProfileId,
