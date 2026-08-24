@@ -2,6 +2,7 @@ import { router } from './_core/trpc';
 import { agentProcedure, publicProcedure } from './_core/trpc';
 import { z } from 'zod';
 import { archiveListing, getDb } from './db';
+import { recordAgentOsEventForAgentId } from './services/agentOsEventService';
 import {
   properties,
   listings,
@@ -675,6 +676,28 @@ export const agentRouter = router({
     const userId = requireUser(ctx).id;
     return loadAgentPresenceSummary(db, userId);
   }),
+
+  recordSurfaceView: agentProcedure
+    .input(z.object({ surface: z.enum(['dashboard', 'analytics']) }))
+    .mutation(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) {
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+      }
+      const [agent] = await db
+        .select({ id: agents.id })
+        .from(agents)
+        .where(eq(agents.userId, requireUser(ctx).id))
+        .limit(1);
+      if (!agent?.id) return { recorded: false };
+
+      await recordAgentOsEventForAgentId({
+        agentId: agent.id,
+        eventType:
+          input.surface === 'dashboard' ? 'agent_dashboard_viewed' : 'agent_analytics_viewed',
+      });
+      return { recorded: true };
+    }),
 
   /**
    * Get leads pipeline for Kanban board

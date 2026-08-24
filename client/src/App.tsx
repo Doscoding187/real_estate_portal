@@ -93,6 +93,7 @@ const SuperAdminDashboard = lazy(() => import('@/pages/admin/SuperAdminDashboard
 const AdminPropertyReview = lazy(() => import('./pages/admin/AdminPropertyReview'));
 const LandReviewWorkspace = lazy(() => import('./pages/admin/LandReviewWorkspace'));
 const PlotsAndLand = lazy(() => import('./pages/PlotsAndLand'));
+const FarmsAndSmallholdings = lazy(() => import('./pages/FarmsAndSmallholdings'));
 const LandDetail = lazy(() => import('./pages/LandDetail'));
 const CommercialOffice = lazy(() => import('./pages/CommercialOffice'));
 const CommercialOfficeDetail = lazy(() => import('./pages/CommercialOfficeDetail'));
@@ -657,6 +658,7 @@ function Router() {
           <Route path="/plots-and-land" component={PlotsAndLand} />
           <Route path="/land/:slug" component={LandDetail} />
           <Route path="/property-to-rent" component={SearchResults} />
+          <Route path="/farms-and-smallholdings" component={FarmsAndSmallholdings} />
 
           <Route path={'/404'} component={NotFound} />
 

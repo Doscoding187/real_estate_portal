@@ -282,7 +282,7 @@ export class EmailService {
           <div style="background-color: #eff6ff; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
             <h2 style="color: #1e40af; margin: 0 0 10px 0;">Viewing Details</h2>
             <p style="margin: 5px 0; color: #374151;"><strong>Property:</strong> ${propertyTitle}</p>
-            <p style="margin: 5px 0; color: #374151;"><strong>Price:</strong> R${propertyPrice}</p>
+            ${propertyPrice ? `<p style="margin: 5px 0; color: #374151;"><strong>Price:</strong> R${propertyPrice}</p>` : ''}
             <p style="margin: 5px 0; color: #374151;"><strong>Scheduled:</strong> ${new Date(
               scheduledAt,
             ).toLocaleString('en-ZA', {
@@ -429,6 +429,37 @@ export class EmailService {
   }
 
   // New email templates for Phase 3 & 4 features
+
+  static async sendLaunchAccessExpiringEmail(
+    agentEmail: string,
+    agentName: string,
+    timeRemaining: string,
+    periodEndDate: string,
+  ): Promise<boolean> {
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #f8fafc; padding: 20px;">
+        <div style="background-color: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+          <h1 style="color: #1f2937; margin-bottom: 20px;">⏳ Your Launch Access expires in ${timeRemaining}</h1>
+          <p style="color: #374151;">Hi ${agentName},</p>
+          <p style="color: #374151;">
+            Your 90-day Agent Launch Access term ends on <strong>${periodEndDate}</strong>.
+            Renew before expiry to keep your listings in discovery and your enquiry pipeline open.
+          </p>
+          <div style="text-align: center; margin-top: 30px;">
+            <a href="{{ACTION_URL}}"
+               style="background-color: #0f4c81; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
+              Review renewal options
+            </a>
+          </div>
+        </div>
+      </div>
+    `;
+    return this.sendEmail({
+      to: agentEmail,
+      subject: `⏳ Property Listify Launch Access expires in ${timeRemaining}`,
+      html,
+    });
+  }
 
   static async sendNewLeadNotificationEmail(
     agentEmail: string,

@@ -1,6 +1,13 @@
 import { trpc } from '@/lib/trpc';
 import { cn } from '@/lib/utils';
-import { Eye, MessageCircle, MousePointerClick, TrendingUp } from 'lucide-react';
+import {
+  Compass,
+  Eye,
+  MessageCircle,
+  MousePointerClick,
+  Share2,
+  TrendingUp,
+} from 'lucide-react';
 
 export function AgentPresenceProof() {
   const { data: summary } = trpc.agent.getPresenceSummary.useQuery(undefined, {
@@ -24,6 +31,8 @@ export function AgentPresenceProof() {
     { icon: MessageCircle, label: 'WhatsApp clicks', value: summary.whatsappClicks },
     { icon: MousePointerClick, label: 'Listing taps', value: summary.listingTaps },
     { icon: TrendingUp, label: 'Contact actions', value: summary.contactActions },
+    { icon: Compass, label: 'Area guide opens', value: summary.areaGuideOpens },
+    { icon: Share2, label: 'Profile shares', value: summary.shares },
   ];
 
   return (
@@ -61,7 +70,7 @@ export function AgentPresenceProof() {
             Profile visits
           </p>
         </div>
-        <div className="ml-auto grid grid-cols-3 gap-4">
+        <div className="ml-auto grid grid-cols-3 gap-4 xl:grid-cols-5">
           {secondary.map(item => (
             <div key={item.label} className="text-right">
               <span className="block text-lg font-semibold text-slate-900">{item.value}</span>

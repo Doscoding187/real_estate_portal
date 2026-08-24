@@ -234,6 +234,13 @@ export default function AgentLeads() {
             onAction={() => {}}
             isLoading
           />
+        ) : leadsLocked && status?.subscriptionStatus === 'expired' ? (
+          <AgentFeatureLockedState
+            title="Your Launch Access term has expired"
+            description="Your leads are safely stored. Renew Launch Access to regain lead management and keep new enquiries flowing."
+            actionLabel="Renew Launch Access"
+            onAction={() => setLocation('/agent/select-package')}
+          />
         ) : leadsLocked ? (
           <AgentFeatureLockedState
             title="Lead management unlocks after contact setup"

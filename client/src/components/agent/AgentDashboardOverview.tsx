@@ -438,6 +438,12 @@ export function AgentDashboardOverview() {
       retry: false,
     },
   );
+  const recordSurfaceView = trpc.agent.recordSurfaceView.useMutation();
+  useEffect(() => {
+    recordSurfaceView.mutate({ surface: 'dashboard' });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
 
   const { data: pipelineData } = trpc.agent.getLeadsPipeline.useQuery(
     { filters: {} },

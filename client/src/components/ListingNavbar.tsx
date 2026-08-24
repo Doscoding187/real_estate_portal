@@ -4,7 +4,10 @@ import { LocationAutosuggest } from './LocationAutosuggest';
 import { Badge } from './ui/badge';
 import { useLocation, useSearch } from 'wouter';
 import { useEffect, useMemo, useState } from 'react';
-import { buildPropertySearchUrl } from '@/lib/heroJourneySearch';
+import {
+  buildPropertySearchUrl,
+  extractActiveSearchRefinementFilters,
+} from '@/lib/heroJourneySearch';
 import { getListingTypeForPath } from '@/lib/searchNavigation';
 import { createCanonicalSearchLocation } from '@/lib/geographySearchHandoff';
 import type { LocationNode } from '@/types/location';
@@ -184,6 +187,11 @@ export function ListingNavbar({
     if (!listingType) return;
 
     const preserveSearchArea = defaultSearchArea && selectedLocations.length === 0;
+    // A consumer who refined results (price, bedrooms, source, ...) and then
+    // searches a new location from the navbar keeps those refinements instead
+    // of silently losing them. Each journey's contract sanitizes the carried
+    // values, so rent-only keys never leak into Buy URLs and vice versa.
+    const preservedRefinements = extractActiveSearchRefinementFilters(window.location.search);
     const url = buildPropertySearchUrl({
       transactionType: listingType === 'rent' ? 'to-rent' : 'for-sale',
       selectedLocations: selectedLocations as LocationNode[],
@@ -191,6 +199,7 @@ export function ListingNavbar({
         ? { kind: 'search_area', searchAreaId: defaultSearchArea.searchAreaId }
         : undefined,
       searchAreaAvailability: preserveSearchArea ? defaultSearchArea.availability : undefined,
+      ...preservedRefinements,
     });
     setLocation(url);
   };
@@ -234,10 +243,12 @@ export function ListingNavbar({
     );
     setSelectedLocations(nextLocations);
     if (listingType) {
+      const preservedRefinements = extractActiveSearchRefinementFilters(window.location.search);
       setLocation(
         buildPropertySearchUrl({
           transactionType: listingType === 'rent' ? 'to-rent' : 'for-sale',
           selectedLocations: nextLocations as LocationNode[],
+          ...preservedRefinements,
         }),
       );
     }

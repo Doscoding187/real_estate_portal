@@ -68,10 +68,13 @@ export function AgentStatusStrip() {
     active: 'Launch Access active',
     pending_payment: 'Invoice issued — payment outstanding',
     payment_under_review: 'Payment proof under review',
+    expired: 'Launch Access expired',
   };
   const commercialLabel =
     paidStates[status.subscriptionStatus ?? ''] ??
     (status.packageSelected ? 'Commercial term in progress' : 'Launch Access not started');
+  const showRenewalCta =
+    !status.packageSelected || status.subscriptionStatus === 'expired';
 
   return (
     <div
@@ -90,12 +93,14 @@ export function AgentStatusStrip() {
       <div className="flex items-center gap-2 whitespace-nowrap">
         <CreditCard className="h-4 w-4 shrink-0" aria-hidden="true" />
         <span className="font-medium">{commercialLabel}</span>
-        {!status.packageSelected && (
+        {showRenewalCta && (
           <Link
             href="/agent/select-package"
             className="rounded-full border border-current px-3 py-1 text-xs font-semibold hover:bg-white/60"
           >
-            Get Launch Access
+            showRenewalCta && status.subscriptionStatus === 'expired'
+              ? 'Renew Launch Access'
+              : 'Get Launch Access'
           </Link>
         )}
       </div>

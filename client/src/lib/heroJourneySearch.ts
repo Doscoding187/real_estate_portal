@@ -7,10 +7,11 @@ import {
   type SearchIntent,
   type SearchIntentValidationCode,
 } from './searchIntent';
-import { isActiveBuyPropertyType, sanitizeBuySearchFilters } from '../../../shared/buySearchContract';
+import { isBuyPropertyType, sanitizeBuySearchFilters } from '../../../shared/buySearchContract';
+import { isRentPropertyType, sanitizeRentSearchFilters } from '../../../shared/rentSearchContract';
 import {
-  BUY_ACTIVE_PUBLIC_PROPERTY_TYPES,
-  RENT_PUBLIC_PROPERTY_TYPES,
+  HOMES_BUY_SELECTABLE_PROPERTY_TYPES,
+  HOMES_RENT_SELECTABLE_PROPERTY_TYPES,
 } from '../../../shared/property-taxonomy';
 import {
   buildTransactionalGeographyHref,
@@ -25,21 +26,26 @@ import {
   type SearchScope,
 } from '../../../shared/searchScope';
 
-const BUY_PROPERTY_TYPE_LABELS: Record<(typeof BUY_ACTIVE_PUBLIC_PROPERTY_TYPES)[number], string> = {
+const BUY_PROPERTY_TYPE_LABELS: Record<
+  (typeof HOMES_BUY_SELECTABLE_PROPERTY_TYPES)[number],
+  string
+> = {
   apartment: 'Apartment',
   house: 'House',
   townhouse: 'Townhouse',
   cluster_home: 'Cluster home',
-  farm: 'Farm',
 };
 
-/** Presentation only; canonical active Buy taxonomy owns the selectable values. */
-export const BUY_PROPERTY_TYPE_OPTIONS = BUY_ACTIVE_PUBLIC_PROPERTY_TYPES.map(value => ({
+/** Presentation only; the Homes selection vocabulary owns the offered values. */
+export const BUY_PROPERTY_TYPE_OPTIONS = HOMES_BUY_SELECTABLE_PROPERTY_TYPES.map(value => ({
   value,
   label: BUY_PROPERTY_TYPE_LABELS[value],
 }));
 
-const RENT_PROPERTY_TYPES = new Set<string>(RENT_PUBLIC_PROPERTY_TYPES);
+export const RENT_PROPERTY_TYPE_OPTIONS = HOMES_RENT_SELECTABLE_PROPERTY_TYPES.map(value => ({
+  value,
+  label: value === 'cluster_home' ? 'Cluster home' : value.charAt(0).toUpperCase() + value.slice(1),
+}));
 
 export interface PropertySearchInput {
   searchQuery?: string;
@@ -49,10 +55,15 @@ export interface PropertySearchInput {
   localityRefinementId?: string;
   searchScopeContext?: GeographySearchContext;
   propertyType?: string;
+  listingSource?: string;
   minPrice?: string | number;
   maxPrice?: string | number;
   minBedrooms?: string | number;
+  maxBedrooms?: string | number;
   minBathrooms?: string | number;
+  maxBathrooms?: string | number;
+  minArea?: string | number;
+  maxArea?: string | number;
 }
 
 export interface DevelopmentsSearchInput {
@@ -193,7 +204,12 @@ function addSupportedBuyFilters(input: PropertySearchInput, filters: SearchFilte
     .trim()
     .toLowerCase();
   const normalized = sanitizeBuySearchFilters({
-    propertyType: isActiveBuyPropertyType(propertyType) ? propertyType : undefined,
+    // The compatible vocabulary (not the active composer set) is accepted
+    // here: journey re-entry from a historical URL must keep legacy values
+    // such as villa readable, and the sanitizer rejects anything outside the
+    // contract.
+    propertyType: isBuyPropertyType(propertyType) ? propertyType : undefined,
+    listingSource: input.listingSource,
     minPrice: input.minPrice,
     maxPrice: input.maxPrice,
     minBedrooms: input.minBedrooms,
@@ -210,18 +226,20 @@ function addSupportedRentFilters(input: PropertySearchInput, filters: SearchFilt
   const propertyType = String(input.propertyType || '')
     .trim()
     .toLowerCase();
-  if (RENT_PROPERTY_TYPES.has(propertyType)) {
-    filters.propertyType = propertyType;
-  }
+  const normalized = sanitizeRentSearchFilters({
+    propertyType: isRentPropertyType(propertyType) ? propertyType : undefined,
+    listingSource: input.listingSource,
+    minPrice: input.minPrice,
+    maxPrice: input.maxPrice,
+    minBedrooms: input.minBedrooms,
+    maxBedrooms: input.maxBedrooms,
+    minBathrooms: input.minBathrooms,
+    maxBathrooms: input.maxBathrooms,
+    minArea: input.minArea,
+    maxArea: input.maxArea,
+  });
 
-  const minPrice = parseNonNegativeNumber(input.minPrice);
-  const maxPrice = parseNonNegativeNumber(input.maxPrice);
-  if (minPrice !== undefined && (maxPrice === undefined || minPrice <= maxPrice)) {
-    filters.minPrice = minPrice;
-  }
-  if (maxPrice !== undefined && (minPrice === undefined || minPrice <= maxPrice)) {
-    filters.maxPrice = maxPrice;
-  }
+  Object.assign(filters, normalized);
 }
 
 function addStructuredLocation(location: LocationNode): CanonicalSearchLocation | undefined {
@@ -252,10 +270,15 @@ export function buildPropertySearchUrl({
   localityRefinementId,
   searchScopeContext,
   propertyType,
+  listingSource,
   minPrice,
   maxPrice,
   minBedrooms,
+  maxBedrooms,
   minBathrooms,
+  maxBathrooms,
+  minArea,
+  maxArea,
 }: PropertySearchInput & { transactionType: 'for-sale' | 'to-rent' }): string {
   const journey = journeyForTransactionType(transactionType);
   if (!journey) return '/';
@@ -263,7 +286,18 @@ export function buildPropertySearchUrl({
   const locations = selectedLocations.filter(location => Boolean(location.slug || location.name));
   const filters: SearchFilters = {};
 
-  const filterInput = { propertyType, minPrice, maxPrice, minBedrooms, minBathrooms };
+  const filterInput = {
+    propertyType,
+    listingSource,
+    minPrice,
+    maxPrice,
+    minBedrooms,
+    maxBedrooms,
+    minBathrooms,
+    maxBathrooms,
+    minArea,
+    maxArea,
+  };
   if (transactionType === 'for-sale') {
     addSupportedBuyFilters(filterInput, filters);
   } else {
@@ -317,6 +351,63 @@ export function buildBuySearchUrl(input: PropertySearchInput): string {
   return buildPropertySearchUrl({ ...input, transactionType: 'for-sale' });
 }
 
+export interface ActiveSearchRefinementFilters {
+  propertyType?: string;
+  listingSource?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  minBedrooms?: number;
+  maxBedrooms?: number;
+  minBathrooms?: number;
+  maxBathrooms?: number;
+  minArea?: number;
+  maxArea?: number;
+}
+
+/**
+ * Reads the refinement filters a consumer has already applied on the current
+ * results URL so journey re-entry (navbar search, location change) can carry
+ * them forward instead of silently discarding active intent. Values are raw;
+ * `buildPropertySearchUrl` sanitizes them through the canonical journey
+ * contract. Rent-only keys are simply absent from Buy URLs, so a single
+ * extractor serves both transactional journeys.
+ */
+export function extractActiveSearchRefinementFilters(
+  search: string,
+): ActiveSearchRefinementFilters {
+  const params = new URLSearchParams(search);
+  const rawValue = (key: string) => {
+    const value = params.get(key)?.trim();
+    return value ? value : undefined;
+  };
+  const numericValue = (key: string) => {
+    const value = rawValue(key);
+    if (value === undefined) return undefined;
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  };
+
+  const refinements: ActiveSearchRefinementFilters = {};
+  const propertyType = rawValue('propertyType');
+  if (propertyType) refinements.propertyType = propertyType;
+  const listingSource = rawValue('listingSource');
+  if (listingSource) refinements.listingSource = listingSource;
+  for (const key of [
+    'minPrice',
+    'maxPrice',
+    'minBedrooms',
+    'maxBedrooms',
+    'minBathrooms',
+    'maxBathrooms',
+    'minArea',
+    'maxArea',
+  ] as const) {
+    const value = numericValue(key);
+    if (value !== undefined) refinements[key] = value;
+  }
+  return refinements;
+}
+
 /**
  * Canonical homepage handoff for the gated New Developments journey.
  * The journey is intentionally not visible while its activation flag is off,
@@ -332,8 +423,8 @@ export function buildDevelopmentsSearchUrl({
 }: DevelopmentsSearchInput): string {
   const locations = selectedLocations.filter(location => Boolean(location.slug || location.name));
   const selections = locations.map(addStructuredLocation);
-  const validSelections = selections.filter(
-    (selection): selection is CanonicalSearchLocation => Boolean(selection),
+  const validSelections = selections.filter((selection): selection is CanonicalSearchLocation =>
+    Boolean(selection),
   );
 
   if (validSelections.length !== locations.length || validSelections.length === 0) {
@@ -372,12 +463,16 @@ export function buildDevelopmentsSearchUrl({
   }
 
   const filters: Record<string, unknown> = {};
-  const normalizedType = String(developmentType || '').trim().toLowerCase();
+  const normalizedType = String(developmentType || '')
+    .trim()
+    .toLowerCase();
   if (['residential', 'commercial', 'mixed_use', 'land'].includes(normalizedType)) {
     filters.developmentType = normalizedType;
   }
 
-  const normalizedStatus = String(developmentStatus || '').trim().toLowerCase();
+  const normalizedStatus = String(developmentStatus || '')
+    .trim()
+    .toLowerCase();
   if (['launching-soon', 'selling', 'sold-out'].includes(normalizedStatus)) {
     filters.developmentStatus = normalizedStatus;
   }

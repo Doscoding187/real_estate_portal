@@ -36,9 +36,9 @@ import {
   buildDevelopmentsSearchUrl,
   BUY_PROPERTY_TYPE_OPTIONS,
   getPriceRangeError,
+  RENT_PROPERTY_TYPE_OPTIONS,
   resolveCanonicalLocationSelection,
 } from '@/lib/heroJourneySearch';
-import { RENT_PUBLIC_PROPERTY_TYPES } from '@shared/property-taxonomy';
 import {
   buildConsumerJourneyUrl,
   getConsumerJourneys,
@@ -273,24 +273,9 @@ export function EnhancedHero({
 
   // Filter configuration
   const filterConfig = {
-    buy: {
-      intents: ['Residential', 'Commercial', 'Land & Plots', 'Farms & Smallholdings'],
-      propertyTypes: {
-        Residential: ['House', 'Apartment', 'Townhouse', 'Cluster', 'Penthouse', 'Duplex', 'Villa'],
-        Commercial: ['Office', 'Retail', 'Industrial', 'Warehouse', 'Mixed-Use'],
-        'Land & Plots': ['Residential Stand', 'Commercial Stand', 'Agricultural Land'],
-        'Farms & Smallholdings': ['Farm', 'Smallholding', 'Game Farm', 'Lifestyle Farm'],
-      },
-    },
     rent: {
       intents: ['Residential'],
-      propertyTypes: [
-        { value: 'house', label: 'House' },
-        { value: 'apartment', label: 'Apartment' },
-        { value: 'townhouse', label: 'Townhouse' },
-        { value: 'cluster_home', label: 'Cluster home' },
-        { value: 'farm', label: 'Farm / smallholding' },
-      ].filter(option => (RENT_PUBLIC_PROPERTY_TYPES as readonly string[]).includes(option.value)),
+      propertyTypes: RENT_PROPERTY_TYPE_OPTIONS,
     },
     developments: {
       types: ['residential', 'commercial', 'mixed_use', 'land'],
@@ -911,14 +896,16 @@ export function EnhancedHero({
                             </Label>
                             <Select
                               value={filters.propertyTypes[0] || ''}
-                              onValueChange={val => handleFilterChange('propertyTypes', [val])}
+                              onValueChange={val =>
+                                handleFilterChange('propertyTypes', val === 'all' ? [] : [val])
+                              }
                             >
                               <SelectTrigger className="h-10 bg-gray-50/50 border-gray-200">
                                 <SelectValue placeholder="Any Type" />
                               </SelectTrigger>
                               <SelectContent>
                                 <SelectItem value="all">Any Type</SelectItem>
-                                {BUY_PROPERTY_TYPE_OPTIONS.filter(option => option.value !== 'farm').map(option => (
+                                {BUY_PROPERTY_TYPE_OPTIONS.map(option => (
                                   <SelectItem key={option.value} value={option.value}>
                                     {option.label}
                                   </SelectItem>
@@ -930,12 +917,6 @@ export function EnhancedHero({
                           {filters.propertyIntent === 'land' && (
                             <p className="md:col-span-2 rounded-lg bg-slate-50 p-3 text-sm text-slate-600">
                               You&apos;ll continue in the Land journey with land classification, extent, and price filters.
-                            </p>
-                          )}
-
-                          {filters.propertyIntent === 'farm' && (
-                            <p className="md:col-span-2 rounded-lg bg-amber-50 p-3 text-sm text-amber-800">
-                              Farm discovery is currently supported through the existing property search while the specialist Farm journey is completed.
                             </p>
                           )}
 
@@ -1075,14 +1056,16 @@ export function EnhancedHero({
                             </Label>
                             <Select
                               value={filters.propertyTypes[0] || ''}
-                              onValueChange={val => handleFilterChange('propertyTypes', [val])}
+                              onValueChange={val =>
+                                handleFilterChange('propertyTypes', val === 'all' ? [] : [val])
+                              }
                             >
                               <SelectTrigger className="h-10 bg-gray-50/50 border-gray-200">
                                 <SelectValue placeholder="Any Type" />
                               </SelectTrigger>
                               <SelectContent>
                                 <SelectItem value="all">Any Type</SelectItem>
-                                {filterConfig.rent.propertyTypes.filter((option: any) => option.value !== 'farm').map((option: any) => (
+                                {filterConfig.rent.propertyTypes.map((option: any) => (
                                   <SelectItem key={option.value} value={option.value}>
                                     {option.label}
                                   </SelectItem>

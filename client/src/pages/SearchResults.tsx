@@ -86,14 +86,18 @@ import { PROVINCE_SLUGS } from '@/lib/locationUtils';
 import { encodeCanonicalLocationId, parseCanonicalLocationId } from '@shared/locationAuthority';
 import type { SearchCardResult } from '@/../../shared/types';
 import type { PublicPropertyType } from '@shared/property-taxonomy';
-import { PUBLIC_PROPERTY_TYPES, RENT_PUBLIC_PROPERTY_TYPES } from '@shared/property-taxonomy';
+import {
+  HOMES_BUY_SELECTABLE_PROPERTY_TYPES,
+  HOMES_RENT_SELECTABLE_PROPERTY_TYPES,
+  PUBLIC_PROPERTY_TYPES,
+} from '@shared/property-taxonomy';
 import { rememberPropertySearchReturn } from '@/lib/searchReturnState';
 import { useComparison } from '@/contexts/ComparisonContext';
 import {
-  BUY_PROPERTY_TYPES,
   sanitizeBuySearchFilters,
   toBuyPublicSearchFilters,
 } from '@/../../shared/buySearchContract';
+import { toRentPublicSearchFilters } from '@/../../shared/rentSearchContract';
 import {
   canAdvancePublicSearchPage,
   getPublicSearchReachablePageCount,
@@ -309,9 +313,12 @@ export default function SearchResults({
       typeof filters.propertyType === 'string'
         ? (filters.propertyType as PublicPropertyType)
         : undefined;
-    const numericFilter = (value: unknown) =>
-      typeof value === 'number' && Number.isFinite(value) ? value : undefined;
     const buyFilters = isBuySearch ? toBuyPublicSearchFilters(filters) : undefined;
+    // The rent contract owns canonical composition (defaults dropped,
+    // contradictory ranges rejected); propertyType intentionally stays on the
+    // raw passthrough below so an unsupported direct Rent URL stays visible to
+    // the server validation boundary rather than silently widening.
+    const rentFilters = isRentSearch ? toRentPublicSearchFilters(filters) : undefined;
 
     return {
       city: filters.city,
@@ -340,19 +347,19 @@ export default function SearchResults({
         : isRentSearch
           ? ('rent' as const)
           : undefined,
-      listingSource: isBuySearch ? buyFilters?.listingSource : filters.listingSource,
-      minPrice: isBuySearch ? buyFilters?.minPrice : numericFilter(filters.minPrice),
-      maxPrice: isBuySearch ? buyFilters?.maxPrice : numericFilter(filters.maxPrice),
-      minBedrooms: isBuySearch ? buyFilters?.minBedrooms : numericFilter(filters.minBedrooms),
-      maxBedrooms: isBuySearch ? undefined : numericFilter(filters.maxBedrooms),
-      minBathrooms: isBuySearch ? buyFilters?.minBathrooms : numericFilter(filters.minBathrooms),
-      maxBathrooms: isBuySearch ? undefined : numericFilter(filters.maxBathrooms),
-      minArea: isBuySearch ? undefined : numericFilter(filters.minArea),
-      maxArea: isBuySearch ? undefined : numericFilter(filters.maxArea),
-      minLat: isBuySearch ? buyFilters?.minLat : numericFilter(filters.minLat),
-      maxLat: isBuySearch ? buyFilters?.maxLat : numericFilter(filters.maxLat),
-      minLng: isBuySearch ? buyFilters?.minLng : numericFilter(filters.minLng),
-      maxLng: isBuySearch ? buyFilters?.maxLng : numericFilter(filters.maxLng),
+      listingSource: isBuySearch ? buyFilters?.listingSource : rentFilters?.listingSource,
+      minPrice: isBuySearch ? buyFilters?.minPrice : rentFilters?.minPrice,
+      maxPrice: isBuySearch ? buyFilters?.maxPrice : rentFilters?.maxPrice,
+      minBedrooms: isBuySearch ? buyFilters?.minBedrooms : rentFilters?.minBedrooms,
+      maxBedrooms: isBuySearch ? undefined : rentFilters?.maxBedrooms,
+      minBathrooms: isBuySearch ? buyFilters?.minBathrooms : rentFilters?.minBathrooms,
+      maxBathrooms: isBuySearch ? undefined : rentFilters?.maxBathrooms,
+      minArea: isBuySearch ? undefined : rentFilters?.minArea,
+      maxArea: isBuySearch ? undefined : rentFilters?.maxArea,
+      minLat: isBuySearch ? buyFilters?.minLat : rentFilters?.minLat,
+      maxLat: isBuySearch ? buyFilters?.maxLat : rentFilters?.maxLat,
+      minLng: isBuySearch ? buyFilters?.minLng : rentFilters?.minLng,
+      maxLng: isBuySearch ? buyFilters?.maxLng : rentFilters?.maxLng,
       sortOption: sortBy,
       page,
       pageSize: limit,
@@ -901,9 +908,9 @@ export default function SearchResults({
                   onSaveSearch={handleSaveSearch}
                   allowedPropertyTypes={
                     isBuySearch
-                      ? BUY_PROPERTY_TYPES
+                      ? HOMES_BUY_SELECTABLE_PROPERTY_TYPES
                       : isRentSearch
-                        ? RENT_PUBLIC_PROPERTY_TYPES
+                        ? HOMES_RENT_SELECTABLE_PROPERTY_TYPES
                         : undefined
                   }
                   listingType={isBuySearch ? 'sale' : isRentSearch ? 'rent' : undefined}
@@ -1168,7 +1175,11 @@ export default function SearchResults({
         onFilterChange={handleFilterChange}
         onSaveSearch={handleSaveSearch}
         allowedPropertyTypes={
-          isBuySearch ? BUY_PROPERTY_TYPES : isRentSearch ? RENT_PUBLIC_PROPERTY_TYPES : undefined
+          isBuySearch
+            ? HOMES_BUY_SELECTABLE_PROPERTY_TYPES
+            : isRentSearch
+              ? HOMES_RENT_SELECTABLE_PROPERTY_TYPES
+              : undefined
         }
         listingType={isBuySearch ? 'sale' : isRentSearch ? 'rent' : undefined}
         // Keep unsupported amenities out of the public Rent contract until
