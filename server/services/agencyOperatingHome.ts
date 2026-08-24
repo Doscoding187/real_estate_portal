@@ -4,6 +4,7 @@ import {
   evaluateAgencyPublicationReadiness,
   type AgencyPublicationReadiness,
 } from './listingPublicationEntitlementService';
+import { getAgencyValueScorecard, type AgencyValueScorecard } from './agencyPerformanceService';
 
 export type AgencyOperatingActionSeverity = 'critical' | 'warning' | 'clear';
 
@@ -44,6 +45,8 @@ export type AgencyOperatingHomeInputs = {
     unassignedCount: number;
   };
   publication: AgencyPublicationReadiness;
+  /** Optional value-visibility block; absent when the agency has no data yet. */
+  performance?: AgencyValueScorecard;
 };
 
 export type AgencyOperatingHome = {
@@ -53,6 +56,7 @@ export type AgencyOperatingHome = {
     leads: AgencyOperatingHomeInputs['leads'];
     listings: AgencyOperatingHomeInputs['listings'];
     publication: AgencyPublicationReadiness['facts'];
+    performance?: AgencyValueScorecard;
   };
   actions: AgencyOperatingAction[];
 };
@@ -219,6 +223,7 @@ export function buildAgencyOperatingHome(
       leads: inputs.leads,
       listings: inputs.listings,
       publication: inputs.publication.facts,
+      ...(inputs.performance ? { performance: inputs.performance } : {}),
     },
     actions,
   };
@@ -308,9 +313,12 @@ export async function getAgencyOperatingHome(input: {
 
   const num = (value: unknown) => Number(value || 0);
 
+  const performance = await getAgencyValueScorecard(database, input.agencyId);
+
   return buildAgencyOperatingHome({
     agencyId: input.agencyId,
     now,
+    performance,
     leads: {
       newToday: num(leadStats?.newToday),
       unassigned: num(leadStats?.unassigned),
