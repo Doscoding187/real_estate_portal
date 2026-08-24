@@ -3,7 +3,7 @@
 | Field | Value |
 | --- | --- |
 | Programme | `A3 — Agent Product Audit & Value Proposition` |
-| Status | All nine area audits drafted; synthesis (A3-B1) and founder decision brief (A3-C1) pending |
+| Status | All nine area audits merged (#507, #510); B1 synthesis drafted; A3-C1 founder brief pending |
 | Owner | Founder — Edward Banda, with product and commercial governance |
 | Predecessor | PR #491 (Agent Launch MVP, A2-S1 + R1–R5), PR #496 (A2-S4) |
 | Relationship to AAE | Aligns with AAE-S0/S1A/S1B; feeds but does not enter AAE-S1C (`AAE_S1C_ENTRY=REQUIRES_FOUNDER_DECISION` unchanged) |
@@ -28,17 +28,18 @@ by the question:
 | Doc | Status | Content |
 | --- | --- | --- |
 | 00 | Approved (PR #505) | Charter: mandate, authority alignment, nine audit areas, evidence rules, output contract, sequencing, boundaries |
-| 10 — A2 Proposition | Draft | Promise-surface inventory, register alignment of every claim, gaps and decision inputs |
-| 20 — A5 Workspace | Draft | Authenticated workspace inventory, morning-open loop analysis, dead-affordance register, decision inputs |
-| 30 — A7 Leads | Draft | Capture/custody/awareness spine audit, direct-contact intent boundary, Q1/Q2 dependence |
-| 40 — A8 Retention | Draft | Commercial-term lifecycle, lapse gates, value-proof delivery gap, renewal posture |
-| 50 — A1 Acquisition | Draft | Entry-point mesh, gate matrix, unmeasured-acquisition finding |
-| 60 — A3 Conversion | Draft | Assisted-EFT funnel audit, post-payment state truth, money-path dead-ends |
-| 70 — A4 Onboarding | Draft | Registration-to-approval journey, OS-event funnel, time-to-outcome limits |
-| 80 — A6 Distribution | Draft | Attribution/reciprocity/microsite inventory, observability verdict, gate matrix |
-| 90 — A9 Expansion | Draft | Entitlement headroom map, agency adjacency ceiling, founder-routed option map |
+| 10 — A2 Proposition | Approved (PR #507) | Promise-surface inventory, register alignment of every claim, gaps and decision inputs |
+| 20 — A5 Workspace | Approved (PR #507) | Authenticated workspace inventory, morning-open loop analysis, dead-affordance register, decision inputs |
+| 30 — A7 Leads | Approved (PR #507) | Capture/custody/awareness spine audit, direct-contact intent boundary, Q1/Q2 dependence |
+| 40 — A8 Retention | Approved (PR #507) | Commercial-term lifecycle, lapse gates, value-proof delivery gap, renewal posture |
+| 50 — A1 Acquisition | Approved (PR #510) | Entry-point mesh, gate matrix, unmeasured-acquisition finding |
+| 60 — A3 Conversion | Approved (PR #510) | Assisted-EFT funnel audit, post-payment state truth, money-path dead-ends |
+| 70 — A4 Onboarding | Approved (PR #510) | Registration-to-approval journey, OS-event funnel, time-to-outcome limits |
+| 80 — A6 Distribution | Approved (PR #510) | Attribution/reciprocity/microsite inventory, observability verdict, gate matrix |
+| 90 — A9 Expansion | Approved (PR #510) | Entitlement headroom map, agency adjacency ceiling, founder-routed option map |
+| 95 — B1 Synthesis | Draft | Consolidated decision map, truth-restoration defect register (D1–D8), cohort-gated question register, founder-reserved items, sequencing recommendation |
 
-All nine areas drafted. Next: synthesis decision map (A3-B1), then the
+All nine areas merged. Synthesis drafted — awaiting founder review; then the
 founder decision brief (A3-C1) for the doc 25 "Agent motion" gate.
 
 ## Boundaries
