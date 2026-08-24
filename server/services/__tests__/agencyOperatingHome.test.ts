@@ -134,6 +134,28 @@ describe('agency operating home', () => {
     expect(reviewAction?.valueLabel).toContain('oldest 6 days');
   });
 
+  it('carries the value scorecard through to the brief when provided', () => {
+    const home = buildAgencyOperatingHome({
+      ...base,
+      performance: {
+        response: {
+          respondedLeads: 6,
+          avgFirstResponseMinutes: 9,
+          withinFifteenMinutesPct: 83,
+          platformAvgFirstResponseMinutes: 24,
+        },
+        engagement: { portfolioViews: 1200, portfolioEnquiries: 34, conversionRate: 2.8 },
+        inventory: { liveListings: 12, avgDaysLive: 41 },
+        pipeline: { totalLeads: 34, leadsWithViewings: 9, viewingConversionPct: 26, convertedLeads: 3 },
+      },
+    });
+
+    expect(home.brief.performance?.response.avgFirstResponseMinutes).toBe(9);
+    expect(home.brief.performance?.engagement.portfolioViews).toBe(1200);
+    // Positive narrative never becomes an attention action.
+    expect(home.actions.map(a => a.code)).not.toContain('value_scorecard');
+  });
+
   it('warns when Launch Access is about to expire', () => {
     const home = buildAgencyOperatingHome({
       ...base,

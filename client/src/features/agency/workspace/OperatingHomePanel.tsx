@@ -57,6 +57,48 @@ export function AgencyOperatingHomePanel() {
         />
       </div>
 
+      {home.brief.performance ? (
+        <div
+          data-testid="value-scorecard"
+          className="rounded-xl border border-blue-200 bg-blue-50 p-4"
+        >
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-700">
+            What Property Listify delivered
+          </p>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <ScoreStat label="Portfolio views" value={home.brief.performance.engagement.portfolioViews} />
+            <ScoreStat label="Enquiries delivered" value={home.brief.performance.engagement.portfolioEnquiries} />
+            <ScoreStat
+              label="Viewing rate"
+              value={
+                home.brief.performance.pipeline.viewingConversionPct !== null
+                  ? `${home.brief.performance.pipeline.viewingConversionPct}%`
+                  : '—'
+              }
+            />
+            <ScoreStat
+              label="Avg first response"
+              value={
+                home.brief.performance.response.avgFirstResponseMinutes !== null
+                  ? `${home.brief.performance.response.avgFirstResponseMinutes} min`
+                  : '—'
+              }
+              detail={
+                home.brief.performance.response.platformAvgFirstResponseMinutes !== null
+                  ? `platform avg ${home.brief.performance.response.platformAvgFirstResponseMinutes} min`
+                  : undefined
+              }
+            />
+          </div>
+          <p className="mt-3 text-xs text-blue-800">
+            Live inventory: {home.brief.performance.inventory.liveListings}
+            {home.brief.performance.inventory.avgDaysLive !== null
+              ? ` · averaging ${home.brief.performance.inventory.avgDaysLive} days live`
+              : ''}
+          </p>
+        </div>
+      ) : null}
+
       <div className="space-y-2">
         {home.actions.length === 0 ? (
           <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-medium text-emerald-900">
@@ -106,3 +148,21 @@ function BriefStat({ label, value }: { label: string; value: number | string }) 
 }
 
 export default AgencyOperatingHomePanel;
+
+function ScoreStat({
+  label,
+  value,
+  detail,
+}: {
+  label: string;
+  value: number | string;
+  detail?: string;
+}) {
+  return (
+    <div className="rounded-lg bg-white p-3 shadow-sm">
+      <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{label}</p>
+      <p className="mt-1 text-lg font-bold text-slate-950">{value}</p>
+      {detail ? <p className="text-[11px] text-slate-500">{detail}</p> : null}
+    </div>
+  );
+}
