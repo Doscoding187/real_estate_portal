@@ -284,11 +284,6 @@ function getNotificationBadge(notificationType: string): {
   className: string;
 } {
   switch (notificationType) {
-    case 'offer_received':
-      return {
-        label: 'Review required',
-        className: 'border-amber-200 bg-amber-50 text-amber-700',
-      };
     case 'showing_scheduled':
       return {
         label: 'Scheduled',
@@ -310,8 +305,6 @@ function getNotificationBadge(notificationType: string): {
 
 function getNotificationIcon(notificationType: string) {
   switch (notificationType) {
-    case 'offer_received':
-      return FileText;
     case 'showing_scheduled':
       return CalendarDays;
     case 'lead_assigned':
@@ -701,14 +694,6 @@ export function AgentDashboardOverview() {
         'bg-[color:color-mix(in_oklab,var(--primary)_10%,white)] text-[var(--primary)]',
     },
     {
-      label: 'Offers in Progress',
-      value: statsLoading ? '-' : String(stats?.offersInProgress ?? 0),
-      status: 'Pending',
-      statusClassName: 'border-amber-200 bg-amber-50 text-amber-700',
-      icon: FileText,
-      iconShellClassName: 'bg-amber-50 text-amber-700',
-    },
-    {
       label: 'Appointments Today',
       value: statsLoading ? '-' : String(stats?.showingsToday ?? todaysShowings.length),
       status: 'Scheduled',
@@ -996,9 +981,7 @@ export function AgentDashboardOverview() {
                             ? 'Unread notifications needing action'
                             : metric.label === 'Appointments Today'
                               ? 'Showings booked for today'
-                              : metric.label === 'Offers in Progress'
-                                ? 'Negotiations still open'
-                                : 'Awaiting payout'}
+                              : 'Currently published inventory'}
                         </p>
                       </div>
                     </div>

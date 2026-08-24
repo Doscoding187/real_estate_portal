@@ -56,46 +56,12 @@ describe('database governance authority', () => {
       'An incomplete or unregistered exception has no architectural authority.',
     );
   });
-  it('uses only canonical listing-owned offer counting for agent stats', () => {
+  it('keeps write-orphaned offer counting out of agent dashboard stats', () => {
     const agentRouter = read('server/agentRouter.ts');
-    const start = agentRouter.indexOf('async function countAgentPendingOffers');
-    const end = agentRouter.indexOf('async function listAgentShowings', start);
 
-    expect(start).toBeGreaterThanOrEqual(0);
-    expect(end).toBeGreaterThan(start);
-
-    const offerCounter = agentRouter.slice(start, end);
-
-    expect(offerCounter).toContain('INNER JOIN listings ON offers.listingId = listings.id');
-    expect(offerCounter).toContain('WHERE listings.agentId = ${params.agentId}');
-    expect(offerCounter).toContain("offers.status = ${'pending'}");
-
-    expect(offerCounter).not.toContain('const strategies');
-    expect(offerCounter).not.toContain('assigned_agent_id');
-    expect(offerCounter).not.toMatch(/FROM offers\s+WHERE agentId/);
-    expect(offerCounter).not.toContain('catch (error)');
-  });
-  it('requires the dashboard smoke fixture to use canonical offer identities', () => {
-    const fixture = read('server/__tests__/agent.dashboard-showings.smoke.test.ts');
-    const normalized = fixture.replace(/\s+/g, ' ');
-
-    expect(normalized).toContain(
-      "import { leads, listings, offers, showings } from '../../drizzle/schema';",
-    );
-    expect(fixture).toContain('createdBuyerUserId');
-    expect(fixture).toContain('createdListingId');
-    expect(fixture).toContain('createdOfferId');
-    expect(fixture).toContain('insert(listings).values');
-    expect(fixture).toContain('insert(offers).values');
-    expect(fixture).toContain('listingId: createdListingId');
-    expect(fixture).toContain('buyerId: createdBuyerUserId');
-    expect(fixture).toContain("amount: '2150000.00'");
-    expect(fixture).toContain('db.delete(offers).where(eq(offers.id, createdOfferId))');
-
-    expect(fixture).not.toContain('createdOfferBuyerName');
-    expect(fixture).not.toContain('INSERT INTO offers');
-    expect(fixture).not.toContain('offerAmount,');
-    expect(fixture).not.toContain('WHERE propertyId = ${createdPropertyId}');
+    expect(agentRouter).not.toContain('countAgentPendingOffers');
+    expect(agentRouter).not.toContain('offersInProgress');
+    expect(agentRouter).not.toContain('FROM offers');
   });
   it('fails closed on canonical platform settings, auth, and plan schemas', () => {
     const dbSource = read('server/db.ts');

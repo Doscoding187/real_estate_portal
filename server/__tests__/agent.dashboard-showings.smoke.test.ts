@@ -3,7 +3,7 @@ import { eq, sql } from 'drizzle-orm';
 
 import { agentRouter } from '../agentRouter';
 import { getDb } from '../db-connection';
-import { leads, listings, offers, showings } from '../../drizzle/schema';
+import { leads, listings, showings } from '../../drizzle/schema';
 
 const describeWithDb = process.env.DATABASE_URL
   ? describe
@@ -21,7 +21,6 @@ describeWithDb('agent dashboard showings smoke', () => {
   let createdLeadId: number | null = null;
   let createdShowingId: number | null = null;
   let createdCommissionId: number | null = null;
-  let createdOfferId: number | null = null;
 
   beforeEach(() => {
     process.env.NODE_ENV = 'test';
@@ -50,11 +49,6 @@ describeWithDb('agent dashboard showings smoke', () => {
   afterEach(async () => {
     const db = await getDb();
     if (!db) return;
-
-    if (createdOfferId) {
-      await db.delete(offers).where(eq(offers.id, createdOfferId));
-      createdOfferId = null;
-    }
 
     if (createdCommissionId) {
       await db.execute(sql`DELETE FROM commissions WHERE id = ${createdCommissionId}`);
@@ -311,14 +305,6 @@ describeWithDb('agent dashboard showings smoke', () => {
     });
     createdShowingId = Number(showingInsert.insertId);
 
-    const [offerInsert] = await db!.insert(offers).values({
-      listingId: createdListingId,
-      buyerId: createdBuyerUserId,
-      amount: '2150000.00',
-      status: 'pending',
-    });
-    createdOfferId = Number(offerInsert.insertId);
-
     const [commissionInsert] = await db!.execute(sql`
       INSERT INTO commissions (
         agentId,
@@ -437,7 +423,6 @@ describeWithDb('agent dashboard showings smoke', () => {
       activeListings: 1,
       newLeadsThisWeek: 1,
       showingsToday: 1,
-      offersInProgress: 1,
       commissionsPending: 45000,
     });
 

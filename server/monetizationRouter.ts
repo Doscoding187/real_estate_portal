@@ -1,8 +1,9 @@
 /**
- * Monetization Router (STUBBED)
+ * Monetization Router
  *
- * Disabled: References locationTargeting which is not exported from schema.
- * All endpoints return 501 Not Implemented until table is properly added via migration.
+ * Live: getRecommendedAgents (public "professionals serving this area"
+ * resolver). Remaining procedures intentionally return 501 Not Implemented;
+ * no monetized placement product is authorized (CRA Commercial Non-Goals).
  */
 
 import { router, publicProcedure, protectedProcedure } from './_core/trpc';
