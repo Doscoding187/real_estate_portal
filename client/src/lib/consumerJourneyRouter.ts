@@ -77,8 +77,10 @@ export const CONSUMER_JOURNEYS: readonly ConsumerJourneyDefinition[] = [
     clearedFields: ['propertyType', 'minBedrooms', 'minBathrooms', 'minPrice', 'maxPrice'],
   },
   {
-    intent: 'rent', key: 'shared_living', label: 'Shared Living', group: 'Specialist Rental', status: 'PLANNED', enabled: false,
-    destination: '/', supportedFields: ['location'], clearedFields: RESIDENTIAL_FIELDS,
+    intent: 'rent', key: 'shared_living', label: 'Shared Living', group: 'Specialist Rental', status: 'PUBLIC_SEARCH_READY', enabled: true,
+    destination: '/shared-living',
+    supportedFields: ['location', 'listingType', 'minPrice', 'maxPrice'],
+    clearedFields: RESIDENTIAL_FIELDS,
   },
 ];
 
@@ -146,6 +148,12 @@ export function buildConsumerJourneyUrl(input: ConsumerJourneySearchInput): stri
 
   if (input.journey === 'residential') {
     return input.intent === 'buy' ? buildBuySearchUrl(input) : buildPropertySearchUrl({ ...input, transactionType: 'to-rent' });
+  }
+
+  if (input.journey === 'shared_living') {
+    const params = farmLocationQuery(input.selectedLocations || [], input.searchScope);
+    if (!params) return `${definition.destination}?searchError=unsupported-location-scope`;
+    return `${definition.destination}?${params.toString()}`;
   }
 
   if (input.journey === 'farm') {

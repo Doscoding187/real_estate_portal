@@ -38,6 +38,7 @@ describe('hero journey authority', () => {
       'buy',
       'rent',
       'developments',
+      'shared_living',
       'plot_land',
       'commercial',
       'find_agent',
@@ -113,9 +114,12 @@ describe('hero journey authority', () => {
       VITE_PUBLIC_JOURNEY_RELEASES: 'shared_living,plot_land,commercial',
     });
 
+    // This manifest names Shared Living explicitly, so it releases with its
+    // own destination; other journeys stay gated by their absence here.
     expect(getPublicHeroJourney('shared_living', hostedRelease)).toMatchObject({
-      homepageVisible: false,
-      homepageEnabled: false,
+      homepageVisible: true,
+      homepageEnabled: true,
+      destination: '/shared-living',
     });
     expect(getPublicHeroJourney('plot_land', hostedRelease)).toMatchObject({
       homepageVisible: true,
