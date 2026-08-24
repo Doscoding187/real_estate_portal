@@ -119,6 +119,13 @@ export interface PublicDevelopmentSearchResult {
   locationMessage?: string;
   locationContext?: PublicDevelopmentSearchLocationContext;
   multiLocationContext?: PublicDevelopmentSearchMultiLocationContext;
+  /**
+   * Developments with no published unit price that a price filter excluded.
+   * Surfaced so the journey can say what a price bound hid instead of letting
+   * "Price on request" inventory vanish silently. Zero when no price filter
+   * is active.
+   */
+  unpricedHiddenCount: number;
 }
 
 type LocationResolution = {
@@ -619,6 +626,7 @@ function emptyResult(
     hasMore: false,
     limit: pageSize,
     offset: page * pageSize,
+    unpricedHiddenCount: 0,
     ...publicLocation,
   };
 }
