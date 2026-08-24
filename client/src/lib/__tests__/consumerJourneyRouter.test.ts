@@ -48,9 +48,22 @@ describe('consumer journey router', () => {
       .toBe('/plots-and-land?locationId=suburb%3A34');
   });
 
-  it('keeps Farm explicitly transitional while routing through the existing contract', () => {
-    expect(resolveConsumerJourney('buy', 'farm')?.status).toBe('TRANSITIONAL');
-    expect(buildConsumerJourneyUrl({ intent: 'buy', journey: 'farm', selectedLocations: [sandton] })).toContain('propertyType=farm');
+  it('routes Farms & Smallholdings to its dedicated specialist journey', () => {
+    expect(resolveConsumerJourney('buy', 'farm')?.status).toBe('E2E_READY');
+    expect(resolveConsumerJourney('rent', 'farm')?.destination).toBe('/farms-and-smallholdings');
+
+    const href = buildConsumerJourneyUrl({ intent: 'buy', journey: 'farm', selectedLocations: [sandton], minSize: 10000 });
+    expect(href).toContain('/farms-and-smallholdings');
+    expect(href).toContain('listingType=sale');
+    expect(href).toContain('locationId=suburb%3A34');
+    expect(href).toContain('minLandSize=10000');
+    expect(href).not.toContain('propertyType=');
+  });
+
+  it('fails closed on unsupported Farm geography instead of widening into a Homes search', () => {
+    expect(buildConsumerJourneyUrl({ intent: 'rent', journey: 'farm' })).toBe(
+      '/farms-and-smallholdings?searchError=unsupported-location-scope',
+    );
   });
 
   it('exposes Commercial only for the executable rental authority', () => {

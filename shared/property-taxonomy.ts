@@ -251,6 +251,27 @@ export const RENT_PUBLIC_PROPERTY_TYPES = [
 
 export type RentPublicPropertyType = (typeof RENT_PUBLIC_PROPERTY_TYPES)[number];
 
+/**
+ * Homes selection vocabularies. Farm composes only through the dedicated
+ * Farms & Smallholdings journey; it remains a readable public value for
+ * historical URLs and inventory, but is never offered as a Homes refinement.
+ * The `satisfies` guards keep these lists compile-time pinned to the public
+ * vocabulary, and the taxonomy contract test pins their exact membership.
+ */
+export const HOMES_BUY_SELECTABLE_PROPERTY_TYPES = [
+  'apartment',
+  'house',
+  'townhouse',
+  'cluster_home',
+] as const satisfies readonly PublicPropertyType[];
+
+export const HOMES_RENT_SELECTABLE_PROPERTY_TYPES = [
+  'apartment',
+  'house',
+  'townhouse',
+  'cluster_home',
+] as const satisfies readonly PublicPropertyType[];
+
 export function getPropertyTypeDefinition(value: unknown): PropertyTypeDefinition | undefined {
   if (typeof value !== 'string') return undefined;
   return Object.prototype.hasOwnProperty.call(PROPERTY_TYPE_DEFINITIONS, value)

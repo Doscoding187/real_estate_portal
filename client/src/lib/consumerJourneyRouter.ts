@@ -34,6 +34,7 @@ export interface ConsumerJourneyDefinition {
 
 const RESIDENTIAL_FIELDS = ['location', 'propertyType', 'minPrice', 'maxPrice', 'minBedrooms', 'minBathrooms'] as const;
 const LAND_FIELDS = ['location', 'classification', 'minPrice', 'maxPrice', 'minSize', 'maxSize'] as const;
+const FARM_FIELDS = ['location', 'listingType', 'minPrice', 'maxPrice', 'minLandSize', 'maxLandSize'] as const;
 
 /**
  * The consumer catalogue is the policy boundary between Buy/Rent intent and
@@ -52,9 +53,9 @@ export const CONSUMER_JOURNEYS: readonly ConsumerJourneyDefinition[] = [
     clearedFields: ['propertyType', 'minBedrooms', 'minBathrooms', 'commercialUseType', 'roomType'],
   },
   {
-    intent: 'buy', key: 'farm', label: 'Farms & Smallholdings', group: 'Land & Rural', status: 'TRANSITIONAL', enabled: true,
-    destination: '/property-for-sale', supportedFields: ['location', 'propertyType', 'minPrice', 'maxPrice'],
-    clearedFields: ['minBedrooms', 'minBathrooms', 'classification', 'minSize', 'maxSize'],
+    intent: 'buy', key: 'farm', label: 'Farms & Smallholdings', group: 'Land & Rural', status: 'E2E_READY', enabled: true,
+    destination: '/farms-and-smallholdings', supportedFields: FARM_FIELDS,
+    clearedFields: ['propertyType', 'minBedrooms', 'minBathrooms', 'classification'],
   },
   {
     intent: 'buy', key: 'commercial', label: 'Commercial Property', group: 'Commercial', status: 'PLANNED', enabled: false,
@@ -66,9 +67,9 @@ export const CONSUMER_JOURNEYS: readonly ConsumerJourneyDefinition[] = [
     clearedFields: ['classification', 'minSize', 'maxSize', 'minBedrooms', 'minBathrooms', 'commercialUseType', 'roomType'],
   },
   {
-    intent: 'rent', key: 'farm', label: 'Farms & Smallholdings', group: 'Specialist Rental', status: 'TRANSITIONAL', enabled: true,
-    destination: '/property-to-rent', supportedFields: ['location', 'propertyType', 'minPrice', 'maxPrice'],
-    clearedFields: ['minBedrooms', 'minBathrooms', 'classification', 'minSize', 'maxSize'],
+    intent: 'rent', key: 'farm', label: 'Farms & Smallholdings', group: 'Specialist Rental', status: 'E2E_READY', enabled: true,
+    destination: '/farms-and-smallholdings', supportedFields: FARM_FIELDS,
+    clearedFields: ['propertyType', 'minBedrooms', 'minBathrooms', 'classification'],
   },
   {
     intent: 'rent', key: 'commercial', label: 'Commercial Property', group: 'Commercial', status: 'PUBLIC_SEARCH_READY', enabled: true,
@@ -126,14 +127,36 @@ function isLandPublicClassification(value: unknown): value is LandPublicClassifi
   return LAND_PUBLIC_CLASSIFICATION_OPTIONS.some(option => option.value === value);
 }
 
+function farmLocationQuery(selectedLocations: readonly LocationNode[], searchScope: ConsumerJourneySearchInput['searchScope']) {
+  if (searchScope?.kind === 'search_area') {
+    return new URLSearchParams({ searchAreaId: searchScope.searchAreaId });
+  }
+  if (selectedLocations.length === 0 || selectedLocations.some(location => location.type === 'area')) return undefined;
+  const ids = selectedLocations.map(location => location.canonicalLocationId || location.id).filter(Boolean);
+  if (ids.length !== selectedLocations.length) return undefined;
+  const params = new URLSearchParams();
+  if (ids.length === 1) params.set('locationId', ids[0]);
+  else ids.forEach(id => params.append('locationIds', id));
+  return params;
+}
+
 export function buildConsumerJourneyUrl(input: ConsumerJourneySearchInput): string {
   const definition = resolveConsumerJourney(input.intent, input.journey);
   if (!definition) return '/';
 
-  if (input.journey === 'residential' || input.journey === 'farm') {
-    const propertyType = input.journey === 'farm' ? 'farm' : input.propertyType;
-    const args = { ...input, propertyType };
-    return input.intent === 'buy' ? buildBuySearchUrl(args) : buildPropertySearchUrl({ ...args, transactionType: 'to-rent' });
+  if (input.journey === 'residential') {
+    return input.intent === 'buy' ? buildBuySearchUrl(input) : buildPropertySearchUrl({ ...input, transactionType: 'to-rent' });
+  }
+
+  if (input.journey === 'farm') {
+    const params = farmLocationQuery(input.selectedLocations || [], input.searchScope);
+    if (!params) return `${definition.destination}?searchError=unsupported-location-scope`;
+    params.set('listingType', input.intent === 'rent' ? 'rent' : 'sale');
+    if (input.minPrice !== undefined && input.minPrice !== '') params.set('minPrice', String(input.minPrice));
+    if (input.maxPrice !== undefined && input.maxPrice !== '') params.set('maxPrice', String(input.maxPrice));
+    if (input.minSize !== undefined && input.minSize !== '') params.set('minLandSize', String(input.minSize));
+    if (input.maxSize !== undefined && input.maxSize !== '') params.set('maxLandSize', String(input.maxSize));
+    return `${definition.destination}?${params.toString()}`;
   }
 
   const selectedLocations = input.selectedLocations || [];

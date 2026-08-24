@@ -86,11 +86,14 @@ import { PROVINCE_SLUGS } from '@/lib/locationUtils';
 import { encodeCanonicalLocationId, parseCanonicalLocationId } from '@shared/locationAuthority';
 import type { SearchCardResult } from '@/../../shared/types';
 import type { PublicPropertyType } from '@shared/property-taxonomy';
-import { PUBLIC_PROPERTY_TYPES, RENT_PUBLIC_PROPERTY_TYPES } from '@shared/property-taxonomy';
+import {
+  HOMES_BUY_SELECTABLE_PROPERTY_TYPES,
+  HOMES_RENT_SELECTABLE_PROPERTY_TYPES,
+  PUBLIC_PROPERTY_TYPES,
+} from '@shared/property-taxonomy';
 import { rememberPropertySearchReturn } from '@/lib/searchReturnState';
 import { useComparison } from '@/contexts/ComparisonContext';
 import {
-  BUY_PROPERTY_TYPES,
   sanitizeBuySearchFilters,
   toBuyPublicSearchFilters,
 } from '@/../../shared/buySearchContract';
@@ -905,9 +908,9 @@ export default function SearchResults({
                   onSaveSearch={handleSaveSearch}
                   allowedPropertyTypes={
                     isBuySearch
-                      ? BUY_PROPERTY_TYPES
+                      ? HOMES_BUY_SELECTABLE_PROPERTY_TYPES
                       : isRentSearch
-                        ? RENT_PUBLIC_PROPERTY_TYPES
+                        ? HOMES_RENT_SELECTABLE_PROPERTY_TYPES
                         : undefined
                   }
                   listingType={isBuySearch ? 'sale' : isRentSearch ? 'rent' : undefined}
@@ -1172,7 +1175,11 @@ export default function SearchResults({
         onFilterChange={handleFilterChange}
         onSaveSearch={handleSaveSearch}
         allowedPropertyTypes={
-          isBuySearch ? BUY_PROPERTY_TYPES : isRentSearch ? RENT_PUBLIC_PROPERTY_TYPES : undefined
+          isBuySearch
+            ? HOMES_BUY_SELECTABLE_PROPERTY_TYPES
+            : isRentSearch
+              ? HOMES_RENT_SELECTABLE_PROPERTY_TYPES
+              : undefined
         }
         listingType={isBuySearch ? 'sale' : isRentSearch ? 'rent' : undefined}
         // Keep unsupported amenities out of the public Rent contract until
