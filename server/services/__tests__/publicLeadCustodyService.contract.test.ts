@@ -80,7 +80,7 @@ describe('publicLeadCustodyService contract', () => {
     expect(
       resolvePublicPropertyCustody({
         propertyAgentId: 33,
-        directAgent: { ...activeAgent, agencyId: 44 },
+        directAgent: { ...activeAgent, agencyId: 44, hasCurrentMembership: true },
         directAgentAgency: verifiedAgency,
       }),
     ).toMatchObject({
@@ -90,6 +90,20 @@ describe('publicLeadCustodyService contract', () => {
       agencyId: 44,
       leadCustody: 'verified_customer_recipient',
     });
+  });
+
+  it('stops public enquiry delivery when an affiliated agent loses membership currency', () => {
+    expect(
+      resolvePublicPropertyCustody({
+        propertyAgentId: 33,
+        directAgent: {
+          ...activeAgent,
+          agencyId: 44,
+          hasCurrentMembership: false,
+        },
+        directAgentAgency: verifiedAgency,
+      }),
+    ).toMatchObject({ leadCustody: 'attention_required', recipientType: 'manual' });
   });
 
   it('holds an inactive direct agent assignment for attention', () => {

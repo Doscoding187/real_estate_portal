@@ -1,6 +1,8 @@
 import { TRPCError } from '@trpc/server';
 import { and, eq, inArray, sql } from 'drizzle-orm';
 import { getDb } from '../db';
+import { agencyAgentMemberships } from '../../drizzle/schema';
+import { listCurrentActiveMembershipAgentIds } from './agencyMembershipService';
 import {
   agencies,
   agents,
@@ -448,9 +450,32 @@ async function isRecipientCommerciallyDeliverable(
       );
     }
     const badged = Number(agent.isVerified || 0) === 1;
-    return badged || entitled
-      ? { eligible: true, reason: '' }
-      : { eligible: false, reason: 'The assigned listing agent is not an eligible active recipient.' };
+    if (!(badged || entitled)) {
+      return {
+        eligible: false,
+        reason: 'The assigned listing agent is not an eligible active recipient.',
+      };
+    }
+
+    // Membership currency mirrors the custody policy: an agency-affiliated
+    // agent whose canonical membership has lapsed stops receiving public
+    // enquiries even while the legacy profile remains approved.
+    const [membership] = await database
+      .select({ id: agencyAgentMemberships.id })
+      .from(agencyAgentMemberships)
+      .where(eq(agencyAgentMemberships.agentId, Number(agentId)))
+      .limit(1);
+    if (membership) {
+      const current = await listCurrentActiveMembershipAgentIds(database, [Number(agentId)]);
+      if (!current.has(Number(agentId))) {
+        return {
+          eligible: false,
+          reason: 'The assigned listing agent no longer holds a current agency membership.',
+        };
+      }
+    }
+
+    return { eligible: true, reason: '' };
   }
 
   if (agencyId) {

@@ -70,6 +70,7 @@ import {
 
 import { ENV } from './_core/env';
 import { isCurrentActiveAgencyMembership } from './services/agencyMembershipService';
+import { firstResponseOverdueSql } from './services/leadTransitionService';
 import { type InferSelectModel, type InferInsertModel } from 'drizzle-orm';
 import { normalizeLocationFields, validateLocationForPublish } from './utils/locationUtils';
 import { locationResolver } from './services/locationResolverService';
@@ -1655,12 +1656,23 @@ export async function getAgencyRecentLeads(agencyId: number, limit: number = 5) 
 
   // leads already imported at top
 
+  // Decorate with the shared first-response currency so client signals stay
+  // truthful even on the recent-leads fallback path.
   return await db
-    .select()
+    .select({
+      lead: leads,
+      firstResponseOverdue: firstResponseOverdueSql(),
+    })
     .from(leads)
     .where(eq(leads.agencyId, agencyId))
     .orderBy(desc(leads.createdAt))
-    .limit(limit);
+    .limit(limit)
+    .then(rows =>
+      rows.map(({ lead, firstResponseOverdue }) => ({
+        ...lead,
+        firstResponseOverdue: Number(firstResponseOverdue) === 1,
+      })),
+    );
 }
 
 export async function getAgencyRecentListings(agencyId: number, limit: number = 5) {

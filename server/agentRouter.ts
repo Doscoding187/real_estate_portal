@@ -47,6 +47,11 @@ import {
   resolveCanonicalAgentAreas,
 } from './services/agentPublicProfileService';
 import { recordAgentOsEvent } from './services/agentOsEventService';
+import {
+  leadStatusTimestamps,
+  validateLeadTransition,
+} from './services/leadTransitionService';
+import { logAudit } from './_core/auditLog';
 import { getAgentEntitlementsForUserId } from './services/agentEntitlementService';
 import { loadAgentPresenceSummary } from './services/agentPresenceSummaryService';
 import { agentOnboardingService } from './services/agentOnboardingService';
@@ -921,14 +926,26 @@ export const agentRouter = router({
           break;
       }
 
-      // Update lead status
+      validateLeadTransition(lead, newStatus as any);
+      const now = nowAsDbTimestamp();
+
       await db
         .update(leads)
         .set({
           status: newStatus,
-          updatedAt: nowAsDbTimestamp(),
+          updatedAt: now,
+          ...leadStatusTimestamps(lead, newStatus as any, now),
         })
         .where(eq(leads.id, input.leadId));
+
+      await logAudit({
+        userId: requireUser(ctx).id,
+        action: 'agent.lead_stage_move',
+        targetType: 'lead',
+        targetId: input.leadId,
+        metadata: { previousStatus: lead.status, nextStatus: newStatus, agentId: agentRecord.id },
+        req: ctx.req,
+      });
 
       // Log activity
       await db.insert(leadActivities).values({
@@ -1592,6 +1609,7 @@ export const agentRouter = router({
           .set({
             nextFollowUp: null,
             lastContactedAt: now,
+            firstRespondedAt: lead.firstRespondedAt || now,
             updatedAt: now,
           })
           .where(
@@ -1648,6 +1666,7 @@ export const agentRouter = router({
           'lost',
         ]),
         notes: z.string().optional(),
+        lostReason: z.string().trim().max(1000).optional(),
       }),
     )
     .mutation(async ({ ctx, input }): Promise<{ success: boolean }> => {
@@ -1671,12 +1690,18 @@ export const agentRouter = router({
         throw new Error('Lead not found or unauthorized');
       }
 
-      // Update lead status
+      // Canonical transition rules, timestamps and lost-reason handling are
+      // identical to the Agency surface so first-response measurement stays
+      // truthful regardless of which app performed the update.
+      validateLeadTransition(lead, input.status, { lostReason: input.lostReason });
+      const now = nowAsDbTimestamp();
+
       await db
         .update(leads)
         .set({
           status: input.status,
-          updatedAt: nowAsDbTimestamp(),
+          updatedAt: now,
+          ...leadStatusTimestamps(lead, input.status, now, { lostReason: input.lostReason }),
         })
         .where(eq(leads.id, input.leadId));
 
@@ -1685,7 +1710,24 @@ export const agentRouter = router({
         leadId: input.leadId,
         userId: requireUser(ctx).id,
         type: 'status_change',
-        description: input.notes || `Status changed to ${input.status}`,
+        description:
+          input.notes ||
+          (input.status === 'lost'
+            ? `Status changed to lost: ${input.lostReason}`
+            : `Status changed to ${input.status}`),
+      });
+
+      await logAudit({
+        userId: requireUser(ctx).id,
+        action: 'agent.lead_status_update',
+        targetType: 'lead',
+        targetId: input.leadId,
+        metadata: {
+          previousStatus: lead.status,
+          nextStatus: input.status,
+          agentId: agentRecord.id,
+        },
+        req: ctx.req,
       });
 
       await recordAgentOsEvent({
