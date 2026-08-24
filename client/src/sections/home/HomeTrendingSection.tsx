@@ -82,9 +82,9 @@ const TAB_COPY: Record<HeroTab, { titleBase: string; subtitleBase: string }> = {
       'View land opportunities suited to building, development, or long-term investment.',
   },
   commercial: {
-    titleBase: 'Commercial property opportunities',
+    titleBase: 'Office space to lease',
     subtitleBase:
-      'Discover office, retail, industrial, and mixed-use opportunities in growth areas.',
+      'Office Leasing continues in the dedicated Commercial journey with verified occupancy costs.',
   },
 };
 
@@ -94,7 +94,7 @@ const MOBILE_FRIENDLY_SUBTITLES: Record<HeroTab, string> = {
   developments: 'Explore published residential and mixed-use developments across South Africa.',
   shared_living: 'Find student accommodation and shared living in prime urban hubs.',
   plot_land: 'View land opportunities suited to building or long-term investment.',
-  commercial: 'Discover office, retail, and industrial projects in growth corridors.',
+  commercial: 'Office leasing with verified occupancy costs and commercial terms.',
 };
 
 export function HomeTrendingSection({
@@ -104,6 +104,11 @@ export function HomeTrendingSection({
 }: HomeTrendingSectionProps) {
   const developmentsJourneyEnabled = isHomepageHeroJourneyEnabled('developments');
   const railLimit = 10;
+  // Commercial consumer intent is owned by the dedicated Office Leasing
+  // journey at /commercial. The legacy trending feed queried the residential
+  // properties table for propertyType='commercial', which presented a second,
+  // contradictory commercial inventory; the homepage now hands off instead.
+  const commercialHandsOff = activeHeroTab === 'commercial';
   const heroContent = {
     title: `${TAB_COPY[activeHeroTab].titleBase} in ${selectedProvince}`,
     subtitle: MOBILE_FRIENDLY_SUBTITLES[activeHeroTab] || TAB_COPY[activeHeroTab].subtitleBase,
@@ -121,10 +126,35 @@ export function HomeTrendingSection({
       province: selectedProvince,
       limit: railLimit,
     },
-    { enabled: activeHeroTab !== 'developments' || developmentsJourneyEnabled },
+    {
+      enabled:
+        !commercialHandsOff && (activeHeroTab !== 'developments' || developmentsJourneyEnabled),
+    },
   );
 
   if (activeHeroTab === 'developments' && !developmentsJourneyEnabled) return null;
+
+  if (commercialHandsOff) {
+    return (
+      <section className="home-section">
+        <div className="home-section-header">
+          <h2 className="home-section-title max-w-[20.5rem] text-[1.125rem] font-bold text-slate-900 sm:max-w-none sm:text-xl md:text-[26px]">
+            Office space to lease
+          </h2>
+          <p className="max-w-[21rem] text-[13px] leading-5 text-slate-600 sm:max-w-2xl sm:text-sm sm:leading-6 md:max-w-2xl md:text-sm md:leading-6">
+            Commercial discovery continues in the dedicated Office Leasing journey, with verified
+            occupancy costs and commercial terms.
+          </p>
+        </div>
+        <a
+          href="/commercial"
+          className="inline-flex items-center rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700"
+        >
+          Browse office space to lease
+        </a>
+      </section>
+    );
+  }
 
   const trendingItems = ((trendingData?.items || []) as TrendingItem[]).slice(0, railLimit);
 
