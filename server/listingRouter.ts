@@ -27,6 +27,7 @@ import { resolvePropertyForListing } from './services/inventoryLinkResolver';
 import { prepareSellerProspectListingConversion } from './services/sellerProspectAccessService';
 import {
   assertListingPublicationEntitled,
+  evaluateAgencyPublicationReadiness,
   ListingPublicationEntitlementError,
 } from './services/listingPublicationEntitlementService';
 import {
@@ -1538,6 +1539,58 @@ export const listingRouter = router({
       });
     }
 
+    // Publication readiness enumeration: surface every canonical blocker
+    // (verification, profile, branding, subscription, capacity) BEFORE the
+    // agency invests authoring effort, instead of failing at submit time.
+    let publication:
+      | {
+          ready: boolean;
+          blockers: Array<{ reason: string; message: string }>;
+          verified: boolean;
+          daysRemaining: number | null;
+          capacity: { used: number; max: number } | null;
+        }
+      | null = null;
+
+    if (currentUser.role === 'agency_admin' && currentUser.agencyId) {
+      const readiness = await evaluateAgencyPublicationReadiness(db, Number(currentUser.agencyId), {
+        includeCapacityCount: true,
+      });
+      publication = {
+        ready: readiness.ready,
+        blockers: readiness.blockers.map(({ reason, message }) => ({ reason, message })),
+        verified: readiness.facts.verified,
+        daysRemaining: readiness.facts.daysRemaining,
+        capacity:
+          readiness.facts.capacityUsed !== null && readiness.facts.capacityMax !== null
+            ? { used: readiness.facts.capacityUsed, max: readiness.facts.capacityMax }
+            : null,
+      };
+
+      if (!readiness.facts.verified) {
+        blockers.push({
+          code: 'agency_unverified',
+          message:
+            'Your agency must be verified by Property Listify before listings can be submitted for publication.',
+          actionLabel: 'Contact Property Listify',
+          actionPath: '/contact',
+        });
+      }
+
+      if (
+        publication.capacity &&
+        publication.capacity.max > 0 &&
+        publication.capacity.used >= publication.capacity.max
+      ) {
+        blockers.push({
+          code: 'listing_capacity_exhausted',
+          message: `Your plan allows ${publication.capacity.max} active listings and the capacity is fully used. Archive an active listing or upgrade before starting another.`,
+          actionLabel: 'Open Billing Workspace',
+          actionPath: '/agency/billing',
+        });
+      }
+    }
+
     return {
       canStartListing: blockers.length === 0,
       blockers,
@@ -1545,6 +1598,7 @@ export const listingRouter = router({
         whatsapp: String(agent?.whatsapp || '').trim(),
         phone: String(agent?.phone || owner?.phone || '').trim(),
       },
+      publication,
     };
   }),
 
