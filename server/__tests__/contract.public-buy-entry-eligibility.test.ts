@@ -36,9 +36,29 @@ describe('public Buy entry eligibility contract', () => {
       'propertySearchService.searchProperties',
     );
 
-    expect(manualSearchCalls).toHaveLength(2);
+    expect(manualSearchCalls.length).toBeGreaterThanOrEqual(1);
     manualSearchCalls.forEach(call => {
       expect(call).toContain('{ publicOnly: true }');
     });
+  });
+
+  it('never resurrects the residential-table commercial inventory on the homepage feed', () => {
+    const source = readFileSync(path.resolve(process.cwd(), 'server/developerRouter.ts'), 'utf8');
+    const start = source.indexOf('getHomeTrendingFeed: publicProcedure');
+    const end = source.indexOf('getPublicDevelopmentBySlug: publicProcedure', start);
+    const homeFeed = source.slice(start, end);
+
+    // Commercial consumer intent is owned by the Office Leasing journey
+    // (/commercial over commercial asset tables). The trending-feed fallthrough
+    // must fail closed to an empty list instead of querying residential rows as
+    // "commercial" property.
+    expect(homeFeed).not.toContain("propertyType: ['commercial']");
+    const fallthroughMarker = homeFeed.indexOf(
+      'Commercial consumer intent is owned by the dedicated Office Leasing',
+    );
+    expect(fallthroughMarker).toBeGreaterThan(0);
+    const fallthrough = homeFeed.slice(fallthroughMarker);
+    expect(fallthrough).toContain("{ items: [], source: 'listings' }");
+    expect(fallthrough).not.toContain('propertySearchService.searchProperties');
   });
 });

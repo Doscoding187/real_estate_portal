@@ -1,7 +1,8 @@
-import { and, desc, eq, inArray } from 'drizzle-orm';
+import { and, desc, eq, gte, inArray, lte } from 'drizzle-orm';
 import {
   agents,
   agencies,
+  cities,
   commercialAssets,
   commercialAvailabilities,
   commercialAvailabilityEconomics,
@@ -11,8 +12,11 @@ import {
   commercialSpaces,
   listingMedia,
   listings,
+  provinces,
+  suburbs,
   users,
 } from '../../drizzle/schema';
+import { parseCanonicalLocationId } from '../../shared/locationAuthority';
 import { getDb } from '../db-connection';
 import * as listingDb from '../db';
 import {
@@ -677,6 +681,7 @@ export async function attachOfficeMarketingMedia(input: {
 
 type SearchInput = {
   location?: string;
+  locationIds?: string[];
   minAreaM2?: number;
   maxAreaM2?: number;
   maxMonthlyBudgetMinor?: number;
@@ -688,7 +693,111 @@ type SearchInput = {
   minParkingBays?: number;
 };
 
-async function publicOfficeRows() {
+/**
+ * Canonical Commercial geography scope.
+ *
+ * - `none`  : no location input supplied; the search runs unscoped.
+ * - `empty` : a scope was supplied but could not be resolved to canonical
+ *             geography; the search fails closed to zero results instead of
+ *             widening or falling back to display-text matching.
+ * - `scope` : resolved canonical ids on exactly one geography level, applied
+ *             as FK equality against commercial_assets.
+ */
+export type CommercialLocationScope =
+  | { status: 'none' }
+  | { status: 'empty' }
+  | { status: 'scope'; field: 'provinceId' | 'cityId' | 'suburbId'; ids: number[] };
+
+const LOCATION_LEVEL_FIELD = {
+  province: 'provinceId',
+  city: 'cityId',
+  suburb: 'suburbId',
+} as const;
+
+function normalizeLocationSlugToken(value: string): string {
+  return value.trim().toLowerCase().replace(/\s+/g, '-');
+}
+
+/**
+ * Pure classification of raw location inputs into a canonical scope request.
+ * Exported for contract tests; the slug lookup itself is database-backed.
+ */
+export function classifyCommercialLocationScope(
+  input: Pick<SearchInput, 'location' | 'locationIds'>,
+): { status: 'none' } | { status: 'slug'; token: string } | { status: 'ids'; level: 'province' | 'city' | 'suburb'; ids: number[] } | { status: 'invalid' } {
+  const rawIds = (input.locationIds || []).map(value => String(value).trim()).filter(Boolean);
+  const rawLocation = typeof input.location === 'string' ? input.location.trim() : '';
+
+  if (rawIds.length) {
+    const parsed = rawIds.map(value => parseCanonicalLocationId(value));
+    if (parsed.some(entry => entry === null)) return { status: 'invalid' };
+    const levels = new Set(parsed.map(entry => entry!.level));
+    if (levels.size !== 1) return { status: 'invalid' };
+    const level = parsed[0]!.level as 'province' | 'city' | 'suburb';
+    const ids = Array.from(new Set(parsed.map(entry => Number(entry!.id)))).filter(
+      id => Number.isSafeInteger(id) && id > 0,
+    );
+    if (!ids.length) return { status: 'invalid' };
+    return { status: 'ids', level, ids };
+  }
+
+  if (!rawLocation) return { status: 'none' };
+  const token = normalizeLocationSlugToken(rawLocation);
+  return token ? { status: 'slug', token } : { status: 'none' };
+}
+
+/**
+ * Resolves the classified scope into concrete asset geography ids using exact
+ * canonical slug identity only. There is deliberately no substring, no
+ * display-name concatenation, and no fallback widening: an unrecognized
+ * location resolves to an empty result set.
+ */
+export async function resolveCommercialLocationScope(
+  input: Pick<SearchInput, 'location' | 'locationIds'>,
+): Promise<CommercialLocationScope> {
+  const classified = classifyCommercialLocationScope(input);
+  if (classified.status === 'none') return { status: 'none' };
+  if (classified.status === 'invalid') return { status: 'empty' };
+
+  if (classified.status === 'ids') {
+    return {
+      status: 'scope',
+      field: LOCATION_LEVEL_FIELD[classified.level],
+      ids: classified.ids,
+    };
+  }
+
+  const token = classified.token;
+  const db = await database();
+
+  const [provinces] = await db
+    .select({ id: provinces.id })
+    .from(provinces)
+    .where(eq(provinces.slug, token))
+    .limit(1);
+  if (provinces) return { status: 'scope', field: 'provinceId', ids: [provinces.id] };
+
+  const [cities] = await db
+    .select({ id: cities.id })
+    .from(cities)
+    .where(eq(cities.slug, token))
+    .limit(1);
+  if (cities) return { status: 'scope', field: 'cityId', ids: [cities.id] };
+
+  const [suburbs] = await db
+    .select({ id: suburbs.id })
+    .from(suburbs)
+    .where(eq(suburbs.slug, token))
+    .limit(1);
+  if (suburbs) return { status: 'scope', field: 'suburbId', ids: [suburbs.id] };
+
+  return { status: 'empty' };
+}
+
+async function publicOfficeRows(
+  scope: CommercialLocationScope = { status: 'none' },
+  areaRange: { minAreaM2?: number; maxAreaM2?: number } = {},
+) {
   const db = await database();
   return db
     .select({
@@ -716,6 +825,15 @@ async function publicOfficeRows() {
         inArray(commercialAvailabilities.availabilityState, positivePublicStates),
         inArray(listings.status, ['approved', 'published']),
         eq(listings.approvalStatus, 'approved'),
+        ...(scope.status === 'scope'
+          ? [inArray(commercialAssets[scope.field], scope.ids)]
+          : []),
+        ...(areaRange.minAreaM2 != null
+          ? [gte(commercialSpaces.rentableAreaM2, String(areaRange.minAreaM2))]
+          : []),
+        ...(areaRange.maxAreaM2 != null
+          ? [lte(commercialSpaces.rentableAreaM2, String(areaRange.maxAreaM2))]
+          : []),
       ),
     )
     .orderBy(desc(listings.publishedAt), desc(listings.createdAt));
@@ -814,18 +932,17 @@ async function publicOfficeDto(row: any) {
 }
 
 export async function searchPublicOffice(input: SearchInput = {}) {
-  const rows = await publicOfficeRows();
+  const scope = await resolveCommercialLocationScope(input);
+  if (scope.status === 'empty') return [];
+  const rows = await publicOfficeRows(scope, {
+    minAreaM2: input.minAreaM2,
+    maxAreaM2: input.maxAreaM2,
+  });
   const dtos = await Promise.all(rows.map(publicOfficeDto));
   return dtos.filter(item => {
-    const location =
-      `${item.asset.name} ${item.asset.address || ''} ${item.asset.city || ''} ${item.asset.suburb || ''} ${item.asset.province || ''}`.toLowerCase();
-    const area = Number(item.space.rentableAreaM2 || 0);
     const specs = new Map<string, any>(
       item.specifications.map((s: any) => [s.specificationCode, s]),
     );
-    if (input.location && !location.includes(input.location.toLowerCase())) return false;
-    if (input.minAreaM2 != null && area < input.minAreaM2) return false;
-    if (input.maxAreaM2 != null && area > input.maxAreaM2) return false;
     if (input.availability === 'now' && item.availability.state !== 'available_confirmed')
       return false;
     if (input.availability === 'future' && item.availability.state !== 'available_upcoming')
