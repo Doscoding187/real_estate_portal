@@ -221,13 +221,14 @@ export const PUBLIC_HERO_JOURNEYS: readonly PublicHeroJourneyDefinition[] = [
     label: 'Shared Living',
     mobileLabel: 'Shared Living',
     kind: 'property-search',
-    // Shared Living has an independent journey identity, but its executable
-    // search contract is not part of the public Buy/Rent runtime yet.
-    // Keep the definition neutral until that journey has its own authority.
-    destination: '/',
-    productHomepageVisible: false,
-    productHomepageEnabled: false,
-    supportedFields: ['location', 'roomType', 'minPrice', 'maxPrice'],
+    // Office-style bounded MVP: the Shared Living spaces marketplace
+    // (rooms, cottages & small places) now owns /shared-living with its
+    // own canonical search authority. Person/housemate discovery remains
+    // a future phase and stays out of this definition.
+    destination: '/shared-living',
+    productHomepageVisible: true,
+    productHomepageEnabled: true,
+    supportedFields: ['location', 'minPrice', 'maxPrice'],
   },
   {
     key: 'plot_land',
@@ -570,7 +571,8 @@ export const PUBLIC_NAVIGATION_MENUS: PublicNavigationMenu[] = [
             footerLabel: 'Explore shared living',
             href: getPublicHeroJourney('shared_living').destination,
             owner: 'shared-living-search',
-            capability: 'DEFERRED',
+            capability: 'LAUNCH_READY',
+            journey: 'shared_living',
           }),
           destination({
             id: 'renters-commercial',

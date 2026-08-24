@@ -234,12 +234,31 @@ describe('public navigation authority', () => {
     ).toBe(true);
   });
 
-  it('keeps Shared Living independent from the Rent transaction route until its contract exists', () => {
+  it('routes Shared Living through its dedicated spaces marketplace once its contract exists', () => {
     expect(normalizePublicHeroJourney('shared_living')).toBe('shared_living');
-    expect(getPublicHeroJourney('shared_living').destination).toBe('/');
+    expect(getPublicHeroJourney('shared_living').destination).toBe('/shared-living');
+
+    const rentersMenu = PUBLIC_NAVIGATION_MENUS.find(menu => menu.id === 'renters');
+    const items = [
+      ...(rentersMenu?.feature ? [rentersMenu.feature] : []),
+      ...(rentersMenu?.groups?.flatMap(group => group.items) ?? []),
+    ];
+    const sharedLivingItem = items.find(item => item.id === 'renters-shared-living');
+    expect(sharedLivingItem).toBeDefined();
+    expect(sharedLivingItem?.href).toBe('/shared-living');
+    expect(sharedLivingItem?.capability).toBe('LAUNCH_READY');
+    // Staged exposure: hidden from hosted builds until named in the release
+    // manifest, exactly like Commercial and Developments before it.
+    const releasedContext = { hostedReleaseControlled: true, supplementalReleasedJourneys: ['shared_living'] };
     expect(
-      PUBLIC_NAVIGATION_MENUS.find(menu => menu.id === 'renters')?.actionItemIds,
-    ).toBeUndefined();
+      isPublicNavigationVisible(sharedLivingItem!, 'desktop', releasedContext),
+    ).toBe(true);
+    expect(
+      isPublicNavigationVisible(sharedLivingItem!, 'desktop', {
+        hostedReleaseControlled: true,
+        supplementalReleasedJourneys: [],
+      }),
+    ).toBe(false);
   });
 
   it('keeps Explore as one canonical public entry rather than a public menu of modes or publishing actions', () => {

@@ -96,6 +96,10 @@ const PlotsAndLand = lazy(() => import('./pages/PlotsAndLand'));
 const FarmsAndSmallholdings = lazy(() => import('./pages/FarmsAndSmallholdings'));
 const LandDetail = lazy(() => import('./pages/LandDetail'));
 const CommercialOffice = lazy(() => import('./pages/CommercialOffice'));
+const SharedLiving = lazy(() => import('./pages/SharedLiving'));
+const SharedLivingDetail = lazy(() => import('./pages/SharedLivingDetail'));
+const SharedLivingThread = lazy(() => import('./pages/SharedLivingThread'));
+const SharedLivingLister = lazy(() => import('./pages/SharedLivingLister'));
 const CommercialOfficeDetail = lazy(() => import('./pages/CommercialOfficeDetail'));
 const CommercialOfficeAuthoringWorkspace = lazy(() => import('./pages/agent/CommercialOfficeAuthoringWorkspace'));
 
@@ -355,6 +359,12 @@ function Router() {
           {/* Canonical Developments Root */}
           <Route path="/new-developments" component={DevelopmentsDemo} />
           <Route path="/commercial" component={CommercialOffice} />
+          <Route path="/shared-living" component={SharedLiving} />
+          <Route path="/shared-living/thread/:token" component={SharedLivingThread} />
+          <Route path="/shared-living/:slug" component={SharedLivingDetail} />
+          <Route path="/shared-living/list">
+            <RequireRole role="agent"><SharedLivingLister /></RequireRole>
+          </Route>
           <Route path="/commercial/:slug" component={CommercialOfficeDetail} />
           {/* Redirect Legacy /developments to /new-developments */}
           <Route

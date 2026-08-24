@@ -104,6 +104,7 @@ export async function searchSharedLivingSpaces(input: SharedLivingSearchInput = 
   const rows = await db
     .select({
       spaceId: slSpaces.id,
+      placeId: slPlaces.id,
       spaceSlug: slSpaces.slug,
       label: slSpaces.label,
       accommodationType: slSpaces.accommodationType,
@@ -111,6 +112,7 @@ export async function searchSharedLivingSpaces(input: SharedLivingSearchInput = 
       rentableAreaM2: slSpaces.rentableAreaM2,
       furnishedState: slSpaces.furnishedState,
       bathroomAccess: slSpaces.bathroomAccess,
+      parkingBays: slSpaces.parkingBays,
       placeKind: slPlaces.placeKind,
       placeSlug: slPlaces.slug,
       description: slPlaces.description,
@@ -201,8 +203,11 @@ function normalizePage(page: unknown): number {
 }
 
 export interface PublicSharedLivingSpace {
+  placeId: number;
+  spaceId: number;
   slug: string;
   href: string;
+  parkingBays: number | null;
   label: string;
   accommodationType: string;
   marketTag: string;
@@ -258,8 +263,11 @@ export function projectPublicSpace(row: RawRow): PublicSharedLivingSpace {
       : null;
 
   return {
+    placeId: Number(row.placeId),
+    spaceId: Number(row.spaceId),
     slug: String(row.spaceSlug),
     href: `/shared-living/${String(row.spaceSlug)}`,
+    parkingBays: row.parkingBays == null ? null : Number(row.parkingBays),
     label: String(row.label),
     accommodationType,
     marketTag: String(row.marketTag),
