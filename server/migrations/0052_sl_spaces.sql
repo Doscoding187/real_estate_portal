@@ -1,0 +1,21 @@
+CREATE TABLE `sl_spaces` (
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `place_id` INT NOT NULL,
+  `slug` VARCHAR(180) NOT NULL,
+  `label` VARCHAR(120) NOT NULL,
+  `accommodation_type` ENUM('private_room','shared_room','en_suite_room','garden_cottage','granny_flat','bachelor_studio','backyard_room','backyard_unit','room_shared_house','room_shared_apartment') NOT NULL,
+  `market_tag` ENUM('room_share','independent_micro','student') NOT NULL DEFAULT 'room_share',
+  `rentable_area_m2` DECIMAL(8,2) NULL,
+  `furnished_state` ENUM('furnished','unfurnished','partial','unknown') NOT NULL DEFAULT 'unknown',
+  `bathroom_access` ENUM('own','shared','unknown') NOT NULL DEFAULT 'unknown',
+  `parking_bays` INT NULL,
+  `status` ENUM('available','occupied','paused','hidden') NOT NULL DEFAULT 'hidden',
+  `sort_order` INT NOT NULL DEFAULT 0,
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_sl_spaces_slug` (`slug`),
+  KEY `idx_sl_spaces_place_status` (`place_id`,`status`),
+  KEY `idx_sl_spaces_type_status` (`accommodation_type`,`status`),
+  CONSTRAINT `fk_sl_spaces_place` FOREIGN KEY (`place_id`) REFERENCES `sl_places` (`id`) ON DELETE CASCADE
+);
