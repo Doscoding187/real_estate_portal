@@ -27,6 +27,7 @@ import {
   savedSearches,
   agents,
   subscriptions,
+  agencyAgentMemberships,
   agencies,
   leads,
   listings,
@@ -68,6 +69,7 @@ import {
 } from '../drizzle/schema';
 
 import { ENV } from './_core/env';
+import { isCurrentActiveAgencyMembership } from './services/agencyMembershipService';
 import { type InferSelectModel, type InferInsertModel } from 'drizzle-orm';
 import { normalizeLocationFields, validateLocationForPublish } from './utils/locationUtils';
 import { locationResolver } from './services/locationResolverService';
@@ -2180,6 +2182,32 @@ export async function createListing(
 
       // Membership is canonical; agent affiliation only preserves legacy agent-owned records.
       const agencyId = ownerAgencyId || agentAgencyId || null;
+
+      // Attribution currency: a member whose canonical membership exists but
+      // is no longer current cannot mint new inventory attributed to the
+      // agency. Members predating the membership authority (no row) pass so
+      // legacy accounts are not locked out of drafting.
+      if ((ownerAgencyId || agentAgencyId) && agent) {
+        const [membershipRow] = await tx
+          .select()
+          .from(agencyAgentMemberships)
+          .where(
+            and(
+              eq(agencyAgentMemberships.agentId, Number(agent.id)),
+              eq(
+                agencyAgentMemberships.agencyId,
+                Number(ownerAgencyId || agentAgencyId),
+              ),
+            ),
+          )
+          .limit(1);
+
+        if (membershipRow && !isCurrentActiveAgencyMembership(membershipRow)) {
+          throw new Error(
+            'Your agency membership is no longer active. New listings cannot be attributed to the agency.',
+          );
+        }
+      }
       const sellerProspectConversion = listingData.sellerProspectConversion;
       const effectiveAgentId = sellerProspectConversion?.assignedAgentId ?? agentId;
 

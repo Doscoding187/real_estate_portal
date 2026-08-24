@@ -29,6 +29,7 @@ import {
   maintainAgencyAgentMembership,
 } from '../services/agencyMembershipService';
 import { resolveCurrentAgencyAffiliation } from '../services/agentPublicProfileService';
+import { createListing } from '../db';
 
 const created = {
   userIds: [] as number[],
@@ -322,6 +323,80 @@ describeWithDb('canonical membership maintenance (atomic unique-pair authority)'
     expect(rows).toHaveLength(1);
     expect(rows[0].status).toBe('active');
     expect(await listCurrentAgencyMembershipsForAgent(db, agentId)).toHaveLength(1);
+  });
+});
+
+describeWithDb('team operations on canonical membership', () => {
+  it('projects roster lifecycle from canonical memberships even when legacy profile state disagrees', async () => {
+    const agencyId = await insertAgency('Roster');
+    const ownerUserId = await insertUser('RosterOwner', 'agency_admin');
+    await db.update(users).set({ agencyId }).where(eq(users.id, ownerUserId));
+
+    const memberUserId = await insertUser('RosterMember', 'agent');
+    const agentId = await insertAgentProfile(memberUserId, agencyId);
+    await db
+      .update(users)
+      .set({ role: 'agent', agencyId, isSubaccount: 1 })
+      .where(eq(users.id, memberUserId));
+
+    await maintainAgencyAgentMembership(db, {
+      agencyId,
+      agentId,
+      status: 'active',
+      actorUserId: ownerUserId,
+    });
+
+    // Simulate drift: profile still approved while the canonical membership
+    // was suspended behind the router's back.
+    await maintainAgencyAgentMembership(db, {
+      agencyId,
+      agentId,
+      status: 'suspended',
+      actorUserId: ownerUserId,
+    });
+
+    const adminCaller = acceptanceCaller({
+      id: ownerUserId,
+      role: 'agency_admin',
+      agencyId,
+      email: (
+        await db.select({ email: users.email }).from(users).where(eq(users.id, ownerUserId))
+      )[0].email,
+    });
+
+    const roster = await adminCaller.agency.listAgents();
+    const member = roster.find((m: { userId: number }) => m.userId === memberUserId);
+    expect(member).toBeDefined();
+    expect(member.membership.status).toBe('suspended');
+    expect(member.membership.source).toBe('agency_agent_memberships');
+    expect(member.permissions.canReceiveLeadAssignments).toBe(false);
+
+    // Assignment dropdown excludes the lapsed member entirely.
+    const assignable = await adminCaller.agency.listAssignableAgents();
+    expect(assignable.map((a: { id: number }) => Number(a.id))).not.toContain(agentId);
+  });
+
+  it('blocks inventory attribution for members whose membership is no longer current', async () => {
+    const agencyId = await insertAgency('Attribution');
+    const memberUserId = await insertUser('AttrMember', 'agent');
+    await db
+      .update(users)
+      .set({ agencyId, isSubaccount: 1 })
+      .where(eq(users.id, memberUserId));
+    const agentId = await insertAgentProfile(memberUserId, agencyId);
+
+    await maintainAgencyAgentMembership(db, { agencyId, agentId, status: 'active' });
+    await maintainAgencyAgentMembership(db, {
+      agencyId,
+      agentId,
+      status: 'suspended',
+      actorUserId: memberUserId,
+    });
+
+    // Suspended member attempts to mint an agency-attributed listing.
+    await expect(
+      createListing({ userId: memberUserId, title: 'Should not exist' } as any),
+    ).rejects.toThrow(/membership is no longer active/i);
   });
 });
 
