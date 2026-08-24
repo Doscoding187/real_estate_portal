@@ -240,7 +240,7 @@ export function DevelopmentCard({
           <div>
             {developer.isFeatured && (
               <Badge className="bg-orange-500 hover:bg-orange-600 text-white text-xs font-semibold mb-1">
-                FEATURED DEALER
+                FEATURED DEVELOPER
               </Badge>
             )}
             <div className="text-sm font-medium text-slate-900">{developer.name}</div>

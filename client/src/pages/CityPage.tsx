@@ -14,7 +14,6 @@ import { PropertyCategories } from '@/components/PropertyCategories';
 
 // Legacy components to be adapted or routed
 import { LocationGrid } from '@/components/location/LocationGrid';
-// import { DevelopmentsSlider } from '@/components/location/DevelopmentsSlider'; // Removed
 import { TabbedListingSection } from '@/components/location/TabbedListingSection';
 import { SimpleDevelopmentCard } from '@/components/SimpleDevelopmentCard';
 import { LocationTrendingFeedSection } from '@/components/location/LocationTrendingFeedSection';

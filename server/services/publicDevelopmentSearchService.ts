@@ -10,6 +10,7 @@ import {
   parseCanonicalLocationId,
 } from '../../shared/locationAuthority';
 import {
+  countUnpricedHiddenByPriceFilter,
   filterPublicDevelopmentSearchItems,
   paginatePublicDevelopmentSearchItems,
   projectPublicDevelopmentFacts,
@@ -712,7 +713,9 @@ export class PublicDevelopmentSearchService {
     const items = rows
       .map(row => itemFromRows(row, unitsByDevelopment.get(Number(row.id)) || []))
       .filter((item): item is PublicDevelopmentSearchItem => Boolean(item));
-    const filtered = filterPublicDevelopmentSearchItems(items, developmentFiltersFromInput(input));
+    const developmentFilters = developmentFiltersFromInput(input);
+    const filtered = filterPublicDevelopmentSearchItems(items, developmentFilters);
+    const unpricedHiddenCount = countUnpricedHiddenByPriceFilter(items, developmentFilters);
     const sortOption = isSearchResultSortOption(input.sortOption)
       ? input.sortOption
       : DEFAULT_SEARCH_RESULT_SORT;
@@ -733,6 +736,7 @@ export class PublicDevelopmentSearchService {
       locationMessage: location.locationMessage,
       locationContext: location.locationContext,
       multiLocationContext: location.multiLocationContext,
+      unpricedHiddenCount,
     };
   }
 }

@@ -190,7 +190,7 @@ export function TopDevelopers() {
                           <button
                             className="w-full flex items-center justify-between p-2 rounded-lg border border-slate-100 hover:bg-slate-50 group transition-colors"
                             onClick={() =>
-                              setLocation(`/developer/${developer.slug}?status=ready-to-move`)
+                              setLocation(`/developer/${developer.slug}`)
                             }
                           >
                             <span className="text-xs text-slate-700 font-medium truncate">
@@ -204,7 +204,7 @@ export function TopDevelopers() {
                           <button
                             className="w-full flex items-center justify-between p-2 rounded-lg border border-slate-100 hover:bg-slate-50 group transition-colors"
                             onClick={() =>
-                              setLocation(`/developer/${developer.slug}?status=under-construction`)
+                              setLocation(`/developer/${developer.slug}`)
                             }
                           >
                             <span className="text-xs text-slate-700 font-medium truncate">
@@ -218,7 +218,7 @@ export function TopDevelopers() {
                           <button
                             className="hidden sm:flex w-full items-center justify-between p-2 rounded-lg border border-slate-100 hover:bg-slate-50 group transition-colors"
                             onClick={() =>
-                              setLocation(`/developer/${developer.slug}?status=new-launch`)
+                              setLocation(`/developer/${developer.slug}`)
                             }
                           >
                             <span className="text-xs text-slate-700 font-medium truncate">

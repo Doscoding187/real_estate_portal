@@ -618,7 +618,9 @@ export async function listPublicDevelopments(options: {
             bedrooms: unitTypes.bedrooms,
             structuralType: unitTypes.structuralType,
             basePriceFrom: unitTypes.basePriceFrom,
+            basePriceTo: unitTypes.basePriceTo,
             monthlyRentFrom: unitTypes.monthlyRentFrom,
+            monthlyRentTo: unitTypes.monthlyRentTo,
             displayOrder: unitTypes.displayOrder,
             developmentType: developments.developmentType,
             transactionType: developments.transactionType,
@@ -635,6 +637,7 @@ export async function listPublicDevelopments(options: {
       bedrooms: number;
       label: string;
       priceFrom: number | null;
+      priceTo: number | null;
     }>
   >();
 
@@ -655,33 +658,60 @@ export async function listPublicDevelopments(options: {
     const kind = mapUnitKind(unit.structuralType, unit.developmentType);
     const label =
       unit.name || (Number(unit.bedrooms) > 0 ? `${Number(unit.bedrooms)} Bed ${kind}` : `${kind}`);
-    const unitPriceFrom =
-      unit.transactionType === 'for_rent' ? unit.monthlyRentFrom : unit.basePriceFrom;
+    // Transaction-driven price facts mirror the public search projection:
+    // rentals quote monthly rent, sales quote the base purchase price.
+    const isRental = unit.transactionType === 'for_rent';
+    const rawFrom = isRental ? unit.monthlyRentFrom : unit.basePriceFrom;
+    const rawTo = isRental ? unit.monthlyRentTo : unit.basePriceTo;
+    const priceFrom = rawFrom != null && Number(rawFrom) > 0 ? Number(rawFrom) : null;
+    const priceTo =
+      rawTo != null && Number(rawTo) > 0
+        ? Number(rawTo)
+        : priceFrom;
     unitsByDevelopment.get(devId)!.push({
       bedrooms: unit.bedrooms != null ? Number(unit.bedrooms) : 0,
       label,
-      priceFrom: unitPriceFrom != null ? Number(unitPriceFrom) : null,
+      priceFrom,
+      priceTo,
     });
   }
 
-  return results.map((d: any) => ({
-    ...d,
-    canonicalRoute: buildDevelopmentRootPath(d),
-    images: parseJsonField(d.images),
-    highlights: parseJsonField(d.highlights),
-    rating: d.rating != null ? Number(d.rating) : null,
-    isFeatured: Number(d.isFeatured || 0) === 1,
-    builderName: d.brandName || d.developerName || null,
-    builderLogoUrl: d.brandLogoUrl || d.developerLogoUrl || null,
-    commissionModel: d.commissionModel || null,
-    referrerCommissionType: d.referrerCommissionType || null,
-    referrerCommissionValue:
-      d.referrerCommissionValue != null ? Number(d.referrerCommissionValue) : null,
-    referrerCommissionAmount:
-      d.defaultCommissionAmount != null ? Number(d.defaultCommissionAmount) : null,
-    configurations: unitsByDevelopment.get(Number(d.id)) || [],
-    unitTypes: unitsByDevelopment.get(Number(d.id)) || [],
-  }));
+  return results.map((d: any) => {
+    const configurations = unitsByDevelopment.get(Number(d.id)) || [];
+    // Prefer unit-derived price facts (same rules as the public search
+    // projection) so every surface quotes the same range for the same
+    // development; legacy denormalized columns are only a fallback when no
+    // active priced unit exists.
+    const pricedFrom = configurations
+      .map(unit => unit.priceFrom)
+      .filter((price): price is number => price != null);
+    const pricedTo = configurations
+      .map(unit => unit.priceTo)
+      .filter((price): price is number => price != null);
+    const derivedPriceFrom = pricedFrom.length ? Math.min(...pricedFrom) : null;
+    const derivedPriceTo = pricedTo.length ? Math.max(...pricedTo) : null;
+
+    return {
+      ...d,
+      canonicalRoute: buildDevelopmentRootPath(d),
+      images: parseJsonField(d.images),
+      highlights: parseJsonField(d.highlights),
+      rating: d.rating != null ? Number(d.rating) : null,
+      isFeatured: Number(d.isFeatured || 0) === 1,
+      builderName: d.brandName || d.developerName || null,
+      builderLogoUrl: d.brandLogoUrl || d.developerLogoUrl || null,
+      commissionModel: d.commissionModel || null,
+      referrerCommissionType: d.referrerCommissionType || null,
+      referrerCommissionValue:
+        d.referrerCommissionValue != null ? Number(d.referrerCommissionValue) : null,
+      referrerCommissionAmount:
+        d.defaultCommissionAmount != null ? Number(d.defaultCommissionAmount) : null,
+      priceFrom: derivedPriceFrom ?? d.priceFrom ?? null,
+      priceTo: derivedPriceTo ?? d.priceTo ?? null,
+      configurations,
+      unitTypes: configurations,
+    };
+  });
 }
 
 /**

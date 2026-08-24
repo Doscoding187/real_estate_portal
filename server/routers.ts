@@ -429,6 +429,27 @@ const appRouterConfig = {
           /** Legacy vocabulary is translated at this procedure boundary. */
           limit: z.number().int().min(1).max(50).optional(),
           offset: z.number().int().min(0).optional(),
+        })
+        .superRefine((input, context) => {
+          // Journey-neutral public-search invariants (contradictory ranges,
+          // mixed geography authorities) apply to Developments exactly as
+          // they do to the Buy/Rent inventory journey.
+          const issue = validatePublicSearchInput(input);
+          if (!issue) return;
+
+          context.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: [issue.path],
+            message: issue.message,
+          });
+
+          if (input.searchAreaId || input.searchAreaIds?.length) {
+            context.addIssue({
+              code: z.ZodIssueCode.custom,
+              path: ['searchAreaId'],
+              message: 'Search Areas are not available for the Developments journey yet.',
+            });
+          }
         }),
       )
       .query(async ({ input }) => {

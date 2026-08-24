@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  countUnpricedHiddenByPriceFilter,
   filterPublicDevelopmentSearchItems,
   paginatePublicDevelopmentSearchItems,
   projectPublicDevelopmentFacts,
@@ -277,5 +278,39 @@ describe('public development search projection contract', () => {
 
     expect(filterPublicDevelopmentSearchItems([item], { availability: 'sold_out' })).toHaveLength(1);
     expect(filterPublicDevelopmentSearchItems([item], { availability: 'available' })).toEqual([]);
+  });
+});
+
+describe('countUnpricedHiddenByPriceFilter', () => {
+  const unpriced = item({ priceFrom: null, priceTo: null });
+  const cheap = item({});
+  const expensive = item({ priceFrom: 9_000_000 });
+
+  function item(overrides: Partial<PublicDevelopmentSearchItem>): PublicDevelopmentSearchItem {
+    return {
+      ...projectPublicDevelopmentFacts(
+        projectionDevelopment(),
+        [projectionUnit()],
+      ),
+      id: Math.floor(Math.random() * 100000),
+      ...overrides,
+    } as PublicDevelopmentSearchItem;
+  }
+
+  it('is zero when no price filter is active', () => {
+    expect(countUnpricedHiddenByPriceFilter([unpriced, cheap], {})).toBe(0);
+  });
+
+  it('counts only unpriced items that satisfy every other active filter', () => {
+    const filters = { minPrice: 500_000 };
+    const count = countUnpricedHiddenByPriceFilter([unpriced, cheap, expensive], filters);
+    // expensive fails minPrice independently of being priced.
+    expect(count).toBe(1);
+  });
+
+  it('returns zero when every item is priced', () => {
+    expect(
+      countUnpricedHiddenByPriceFilter([cheap, expensive], { maxPrice: 5_000_000 }),
+    ).toBe(0);
   });
 });
