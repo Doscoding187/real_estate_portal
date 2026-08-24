@@ -33,12 +33,13 @@ async function sendDueNotices(window: NoticeWindow): Promise<number> {
   void horizon;
   const result = await db.execute(sql`
     select s.owner_id as ownerId,
+           s.owner_type as ownerType,
            s.current_period_end as periodEnd,
            u.email as email,
            u.first_name as firstName
     from subscriptions s
     inner join users u on u.id = s.owner_id
-    where s.owner_type = 'agent'
+    where s.owner_type in ('agent', 'agency')
       and s.status = 'active'
       and s.current_period_end > now()
       and s.current_period_end <= date_add(now(), interval ${window.daysRemaining} day)
@@ -53,6 +54,7 @@ async function sendDueNotices(window: NoticeWindow): Promise<number> {
     Array.isArray(result) ? result : ((result as any)?.rows ?? [])
   ) as Array<{
     ownerId: number;
+    ownerType: string;
     periodEnd: string | null;
     email: string | null;
     firstName: string | null;
@@ -69,11 +71,13 @@ async function sendDueNotices(window: NoticeWindow): Promise<number> {
       type: 'system_alert',
       title: `Launch Access expires in ${window.label}`,
       content:
-        'Your 90-day Launch Access term is ending. Renew before expiry to keep your listings in discovery and your enquiry pipeline open.',
+        row.ownerType === 'agency'
+          ? 'Your Agency Launch Access term is ending. Renew to continue submitting and publishing new listings.'
+          : 'Your 90-day Launch Access term is ending. Renew before expiry to keep your enquiry pipeline open.',
       data: JSON.stringify({
         notice: window.key,
         currentPeriodEnd: periodEnd,
-        actionUrl: '/agent/select-package',
+        actionUrl: row.ownerType === 'agency' ? '/agency/billing' : '/agent/select-package',
       }),
       isRead: 0,
     });

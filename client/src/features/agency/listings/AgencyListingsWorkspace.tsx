@@ -433,6 +433,9 @@ export function AgencyListingsWorkspace(props: WorkspaceContentProps) {
   const inventoryQuery = trpc.agency.getListingInventory.useQuery(inventoryInput, {
     enabled: Boolean(props.setupComplete),
   });
+  const preflightQuery = trpc.listing.getSubmissionPreflight.useQuery(undefined, {
+    retry: false,
+  });
   const agentsQuery = trpc.agency.listAssignableAgents.useQuery(undefined, {
     enabled: Boolean(props.setupComplete),
   });
@@ -535,8 +538,49 @@ export function AgencyListingsWorkspace(props: WorkspaceContentProps) {
     );
   }
 
+  const publication = preflightQuery.data?.publication ?? null;
+  const publicationBlockers = publication?.blockers ?? [];
+  const capacity = publication?.capacity ?? null;
+
   return (
     <section className="space-y-5">
+      {publication ? (
+        <div
+          data-testid="publication-readiness"
+          className={`rounded-xl border p-4 text-sm ${
+            publication.ready
+              ? 'border-emerald-200 bg-emerald-50 text-emerald-900'
+              : 'border-amber-200 bg-amber-50 text-amber-900'
+          }`}
+        >
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="font-semibold">
+              {publication.ready
+                ? 'Publication ready — new listings can be submitted.'
+                : 'Publication blocked until the following are resolved:'}
+            </p>
+            <span className="text-xs font-medium">
+              {publication.verified ? 'Agency verified' : 'Agency not yet verified'}
+              {publication.daysRemaining !== null
+                ? ` · ${publication.daysRemaining} days of Launch Access left`
+                : ''}
+            </span>
+          </div>
+          {publicationBlockers.length > 0 ? (
+            <ul className="mt-2 list-inside list-disc space-y-1 text-xs">
+              {publicationBlockers.map(blocker => (
+                <li key={blocker.reason}>{blocker.message}</li>
+              ))}
+            </ul>
+          ) : null}
+          {capacity ? (
+            <p className="mt-2 text-xs">
+              Active listings: {capacity.used} of {capacity.max}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+
       <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-6">
         <SummaryMetric label="Published" value={summary.published} tone="emerald" icon={Home} />
         <SummaryMetric label="Ready" value={summary.readyToSubmit} tone="sky" icon={CheckCircle2} />
