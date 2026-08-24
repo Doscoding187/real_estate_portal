@@ -95,6 +95,7 @@ import { discoveryRouter } from './domains/discovery/router';
 import { landRouter } from './landRouter';
 import { landPublicRouter } from './landPublicRouter';
 import { commercialOfficeRouter } from './commercialOfficeRouter';
+import { sharedLivingRouter } from './sharedLivingRouter';
 
 const appRouterConfig = {
   system: systemRouter,
@@ -119,6 +120,7 @@ const appRouterConfig = {
   land: landRouter,
   landPublic: landPublicRouter,
   commercialOffice: commercialOfficeRouter,
+  sharedLiving: sharedLivingRouter,
   upload: uploadRouter,
   settings: settingsRouter,
   savedSearch: savedSearchRouter,

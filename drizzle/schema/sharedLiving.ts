@@ -1,5 +1,6 @@
 import {
   date,
+  json,
   decimal,
   index,
   int,
@@ -138,6 +139,7 @@ export const slSpaceAvailability = mysqlTable('sl_space_availability', {
   rentAmountMinor: int('rent_amount_minor').notNull().default(0),
   rentUnknown: tinyint('rent_unknown').notNull().default(0),
   depositMinor: int('deposit_minor'),
+  billsIncludedJson: json('bills_included_json'),
   createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { mode: 'string' })
     .defaultNow()
@@ -269,9 +271,12 @@ export const slMessages = mysqlTable(
     leadId: int('lead_id')
       .notNull()
       .references(() => leads.id, { onDelete: 'cascade' }),
-    senderUserId: int('sender_user_id')
+    authorKind: mysqlEnum('author_kind', ['consumer', 'lister', 'moderator'])
       .notNull()
-      .references(() => users.id, { onDelete: 'restrict' }),
+      .default('consumer'),
+    senderUserId: int('sender_user_id').references(() => users.id, {
+      onDelete: 'restrict',
+    }),
     body: text().notNull(),
     createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
   },

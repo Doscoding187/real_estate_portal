@@ -1041,6 +1041,16 @@
       "path": "server/migrations/0059_sl_moderation_queue.sql",
       "classification": "canonical active",
       "purpose": "Shared Living foundations: additive domain table (Phase 0, founder-approved migration design)."
+    },
+    {
+      "path": "server/migrations/0060_sl_space_availability_bills.sql",
+      "classification": "canonical active",
+      "purpose": "Shared Living foundations: bills-included facts on space availability (Phase 1)."
+    },
+    {
+      "path": "server/migrations/0061_sl_messages_authorship.sql",
+      "classification": "canonical active",
+      "purpose": "Shared Living: on-platform thread authorship (consumer/lister/moderator)."
     }
   ],
   "prohibitedPaths": [
