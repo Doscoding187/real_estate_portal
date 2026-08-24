@@ -2147,15 +2147,22 @@ async function requirePerformanceListingAccess(
 
 async function createListingPerformanceSnapshot(db: AgencyDb, agencyId: number, listingId: number) {
   const listing = await requireAgencyListing(db, agencyId, listingId);
-  const [[analytics], [canonicalLeadCounts], [legacyLeadCounts], [showingCounts], [offerCounts], [mediaCounts]] = await Promise.all([
+  const [[analytics], [mirrorStats], [canonicalLeadCounts], [legacyLeadCounts], [showingCounts], [offerCounts], [mediaCounts]] = await Promise.all([
     db.select().from(listingAnalytics).where(eq(listingAnalytics.listingId, listingId)).orderBy(desc(listingAnalytics.lastUpdated), desc(listingAnalytics.id)).limit(1),
+    db.select({ views: properties.views }).from(properties).where(eq(properties.sourceListingId, listingId)).limit(1),
     db.select({ enquiries: sql<number>`COUNT(*)`, progressing: sql<number>`SUM(CASE WHEN ${leads.status} IN ('contacted','qualified','viewing_scheduled','offer_sent','converted','closed') THEN 1 ELSE 0 END)` }).from(leads).innerJoin(properties, eq(leads.propertyId, properties.id)).where(eq(properties.sourceListingId, listingId)),
     db.select({ enquiries: sql<number>`COUNT(*)`, progressing: sql<number>`SUM(CASE WHEN ${listingLeads.status} IN ('contacted','qualified','viewing_scheduled','offer_made','converted') THEN 1 ELSE 0 END)` }).from(listingLeads).where(eq(listingLeads.listingId, listingId)),
     db.select({ requested: sql<number>`SUM(CASE WHEN ${showings.status} = 'requested' THEN 1 ELSE 0 END)`, confirmed: sql<number>`SUM(CASE WHEN ${showings.status} = 'confirmed' THEN 1 ELSE 0 END)`, completed: sql<number>`SUM(CASE WHEN ${showings.status} = 'completed' THEN 1 ELSE 0 END)`, cancelled: sql<number>`SUM(CASE WHEN ${showings.status} IN ('cancelled', 'no_show') THEN 1 ELSE 0 END)` }).from(showings).where(eq(showings.listingId, listingId)),
     db.select({ offers: sql<number>`COUNT(*)` }).from(agencyDeals).innerJoin(agencyDealOfferVersions, eq(agencyDealOfferVersions.dealId, agencyDeals.id)).where(and(eq(agencyDeals.agencyId, agencyId), eq(agencyDeals.listingId, listingId))),
     db.select({ media: sql<number>`COUNT(*)` }).from(listingMedia).where(eq(listingMedia.listingId, listingId)),
   ]);
-  const views = Number(analytics?.totalViews || 0);
+  // Mirror counters are the live truth once a public projection exists;
+  // listing_analytics is a retired writer retained as a non-additive
+  // baseline (same precedence the inventory projection applies).
+  const views = Math.max(
+    Number(mirrorStats?.views || 0),
+    Number(analytics?.totalViews || 0),
+  );
   // Canonical public capture writes `leads`. Historical listing_leads and
   // listing_analytics remain a non-additive baseline until a governed data
   // reconciliation can prove overlap and retire them without double-counting.
