@@ -539,6 +539,17 @@ export default function DevelopmentsDemo() {
               </div>
             ) : data?.items && data.items.length > 0 ? (
               <>
+                {Boolean(data.unpricedHiddenCount) && (
+                  <p
+                    role="note"
+                    className="rounded border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900"
+                  >
+                    {data.unpricedHiddenCount}{' '}
+                    {data.unpricedHiddenCount === 1 ? 'development' : 'developments'} without a
+                    published price are hidden by your price filter. Clear the price fields to see
+                    them.
+                  </p>
+                )}
                 <div className="flex flex-col gap-6">
                   {data.items.map(development => (
                     <DevelopmentCard

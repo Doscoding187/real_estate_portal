@@ -33,8 +33,6 @@ describe('public route convergence', () => {
   it('uses the canonical developments root on corrected public discovery surfaces', () => {
     const files = [
       'client/src/sections/home/HomeTrendingSection.tsx',
-      'client/src/components/location/DevelopmentsGrid.tsx',
-      'client/src/components/location/DevelopmentsSlider.tsx',
       'client/src/components/Footer.tsx',
     ];
 

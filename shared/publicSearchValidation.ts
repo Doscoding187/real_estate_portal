@@ -11,7 +11,8 @@ export interface PublicSearchInputValidationIssue {
 interface PublicSearchInputLike {
   province?: string;
   city?: string;
-  suburb?: string[];
+  /** Developments accept a single suburb string or a list at the boundary. */
+  suburb?: string | string[];
   locations?: string[];
   locationId?: string;
   factualLocationId?: string;

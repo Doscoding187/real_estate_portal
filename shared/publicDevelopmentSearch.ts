@@ -431,6 +431,28 @@ export function filterPublicDevelopmentSearchItems(
   return items.filter(item => matchesPublicDevelopmentSearchFilters(item, filters));
 }
 
+/**
+ * Developments without a published unit price can never satisfy a price
+ * filter. They are excluded like any non-match, but hiding them silently
+ * would misrepresent the catalogue: this count lets the consumer journey say
+ * "N developments without published pricing are hidden by your price filter."
+ */
+export function countUnpricedHiddenByPriceFilter(
+  items: readonly PublicDevelopmentSearchItem[],
+  filters: PublicDevelopmentSearchFilters,
+): number {
+  if (filters.minPrice === undefined && filters.maxPrice === undefined) return 0;
+  return items.filter(item => {
+    if (item.priceFrom !== null) return false;
+    // Only count items that would otherwise still be in the running: every
+    // other active filter must already be satisfied.
+    const withoutPrice: PublicDevelopmentSearchFilters = { ...filters };
+    delete withoutPrice.minPrice;
+    delete withoutPrice.maxPrice;
+    return matchesPublicDevelopmentSearchFilters(item, withoutPrice);
+  }).length;
+}
+
 function compareNullableNumbers(
   left: number | null,
   right: number | null,

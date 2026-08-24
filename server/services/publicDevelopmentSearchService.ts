@@ -10,6 +10,7 @@ import {
   parseCanonicalLocationId,
 } from '../../shared/locationAuthority';
 import {
+  countUnpricedHiddenByPriceFilter,
   filterPublicDevelopmentSearchItems,
   paginatePublicDevelopmentSearchItems,
   projectPublicDevelopmentFacts,
@@ -118,6 +119,13 @@ export interface PublicDevelopmentSearchResult {
   locationMessage?: string;
   locationContext?: PublicDevelopmentSearchLocationContext;
   multiLocationContext?: PublicDevelopmentSearchMultiLocationContext;
+  /**
+   * Developments with no published unit price that a price filter excluded.
+   * Surfaced so the journey can say what a price bound hid instead of letting
+   * "Price on request" inventory vanish silently. Zero when no price filter
+   * is active.
+   */
+  unpricedHiddenCount: number;
 }
 
 type LocationResolution = {
@@ -618,6 +626,7 @@ function emptyResult(
     hasMore: false,
     limit: pageSize,
     offset: page * pageSize,
+    unpricedHiddenCount: 0,
     ...publicLocation,
   };
 }
@@ -712,7 +721,9 @@ export class PublicDevelopmentSearchService {
     const items = rows
       .map(row => itemFromRows(row, unitsByDevelopment.get(Number(row.id)) || []))
       .filter((item): item is PublicDevelopmentSearchItem => Boolean(item));
-    const filtered = filterPublicDevelopmentSearchItems(items, developmentFiltersFromInput(input));
+    const developmentFilters = developmentFiltersFromInput(input);
+    const filtered = filterPublicDevelopmentSearchItems(items, developmentFilters);
+    const unpricedHiddenCount = countUnpricedHiddenByPriceFilter(items, developmentFilters);
     const sortOption = isSearchResultSortOption(input.sortOption)
       ? input.sortOption
       : DEFAULT_SEARCH_RESULT_SORT;
@@ -733,6 +744,7 @@ export class PublicDevelopmentSearchService {
       locationMessage: location.locationMessage,
       locationContext: location.locationContext,
       multiLocationContext: location.multiLocationContext,
+      unpricedHiddenCount,
     };
   }
 }
