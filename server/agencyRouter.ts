@@ -70,6 +70,7 @@ import {
 } from './services/planAccessService';
 import { getManualEftBillingAmount } from './services/billingFoundationService';
 import { evaluateAgencyPublicationReadiness } from './services/listingPublicationEntitlementService';
+import { getAgencyOperatingHome } from './services/agencyOperatingHome';
 import { isCurrentActiveAgencyMembership,
   listCurrentActiveMembershipAgentIds,
   listCurrentAgencyMembershipsForAgent,
@@ -3404,6 +3405,21 @@ async function withCanonicalAgencySubscriptionStatus<
 }
 
 export const agencyRouter = router({
+  /**
+   * Server-computed daily brief + ranked next-actions for the agency
+   * principal. Composes canonical signals (leads currency, publication
+   * readiness, inventory pipeline) without per-member N+1 work.
+   */
+  getOperatingHome: agencyAdminProcedure.query(async ({ ctx }) => {
+    const db = await getDb();
+    if (!db) {
+      throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+    }
+    const user = requireUser(ctx);
+    const agencyId = requireAgencyId(user);
+    return getAgencyOperatingHome({ db: db as any, agencyId });
+  }),
+
   getOnboardingStatus: agencyAdminProcedure.query(async ({ ctx }) => {
     const db = await getDb();
     if (!db) {

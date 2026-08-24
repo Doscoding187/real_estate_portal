@@ -21,6 +21,7 @@ import {
 } from '../workspace/WorkspacePanels';
 import type { WorkspaceContentProps } from '../workspace/types';
 import { compactCurrency, numberLabel } from '../workspace/utils';
+import { AgencyOperatingHomePanel } from '../workspace/OperatingHomePanel';
 
 export function AgencyOverviewPage({
   stats,
@@ -40,6 +41,7 @@ export function AgencyOverviewPage({
   const latestPerformance = performance[performance.length - 1];
   return (
     <>
+      <AgencyOperatingHomePanel />
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
         <MetricCard
           title="New leads"
