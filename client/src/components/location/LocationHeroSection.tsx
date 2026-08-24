@@ -52,7 +52,6 @@ const categories = [
   { id: 'developments', label: 'Developments', icon: Building2, listingType: 'development' },
   { id: 'shared_living', label: 'Shared Living', icon: Users, listingType: 'shared_living' },
   { id: 'plot_land', label: 'Plot & Land', icon: LandPlot, listingType: 'plot' },
-  { id: 'commercial', label: 'Commercial', icon: Store, listingType: 'commercial' },
 ];
 
 // Filter configuration
@@ -75,9 +74,6 @@ const filterConfig = {
   },
   plot_land: {
     types: ['Residential', 'Commercial', 'Agricultural', 'Industrial'],
-  },
-  commercial: {
-    useTypes: ['Office', 'Retail', 'Industrial', 'Warehouse', 'Medical', 'Mixed-Use'],
   },
   shared_living: {
     roomTypes: ['Room in Apartment', 'Room in House', 'Co-Living', 'Student Accommodation'],
@@ -594,69 +590,6 @@ export function LocationHeroSection({
                           <SelectItem value="1000000">R 1,000,000</SelectItem>
                           <SelectItem value="5000000">R 5,000,000</SelectItem>
                           <SelectItem value="10000000">R 10,000,000+</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </>
-                )}
-
-                {/* COMMERCIAL FILTERS */}
-                {activeTab === 'commercial' && (
-                  <>
-                    <div className="space-y-1.5">
-                      <Label className="text-xs font-semibold text-muted-foreground uppercase">
-                        Use Type
-                      </Label>
-                      <Select
-                        value={filters.commercialUseType}
-                        onValueChange={val => handleFilterChange('commercialUseType', val)}
-                      >
-                        <SelectTrigger className="h-10 bg-gray-50/50">
-                          <SelectValue placeholder="Any Type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">Any Type</SelectItem>
-                          {filterConfig.commercial.useTypes.map(type => (
-                            <SelectItem key={type} value={type}>
-                              {type}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-xs font-semibold text-muted-foreground uppercase">
-                        Min Price
-                      </Label>
-                      <Select
-                        value={filters.priceMin}
-                        onValueChange={val => handleFilterChange('priceMin', val)}
-                      >
-                        <SelectTrigger className="h-10 bg-gray-50/50">
-                          <SelectValue placeholder="No Min" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="500000">R 500,000</SelectItem>
-                          <SelectItem value="1000000">R 1,000,000</SelectItem>
-                          <SelectItem value="5000000">R 5,000,000</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-xs font-semibold text-muted-foreground uppercase">
-                        Max Price
-                      </Label>
-                      <Select
-                        value={filters.priceMax}
-                        onValueChange={val => handleFilterChange('priceMax', val)}
-                      >
-                        <SelectTrigger className="h-10 bg-gray-50/50">
-                          <SelectValue placeholder="No Max" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="5000000">R 5,000,000</SelectItem>
-                          <SelectItem value="10000000">R 10,000,000</SelectItem>
-                          <SelectItem value="50000000">R 50,000,000+</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>

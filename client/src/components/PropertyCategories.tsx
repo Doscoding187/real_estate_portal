@@ -110,13 +110,6 @@ export function PropertyCategories({ preselectedLocation }: PropertyCategoriesPr
       gradient: 'from-[#0F52BA] to-[#1560BD]',
     },
     {
-      Icon: Warehouse,
-      title: 'Commercial',
-      count: filterCounts?.byPropertyType?.commercial || 0,
-      type: 'commercial',
-      gradient: 'from-[#1560BD] to-[#2774AE]',
-    },
-    {
       Icon: MapPin,
       title: 'Land & Plots',
       count: filterCounts?.byPropertyType?.land || 0,

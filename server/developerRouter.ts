@@ -1138,35 +1138,13 @@ export const developerRouter = router({
           return { items: [], source: 'listings' };
         }
 
-        // commercial
-        const { propertySearchService } = await import('./services/propertySearchService');
-        const commercialResults = await Promise.all(
-          (['sale', 'rent'] as const).map(listingType =>
-            propertySearchService.searchProperties(
-              {
-                province: locationFilter.province,
-                city: locationFilter.city,
-                suburb: locationFilter.suburb ? [locationFilter.suburb] : undefined,
-                propertyType: ['commercial'],
-                listingType,
-              } as any,
-              'date_desc',
-              1,
-              limit,
-              undefined,
-              { publicOnly: true },
-            ),
-          ),
-        );
-        const deduped = Array.from(
-          new Map(
-            commercialResults
-              .flatMap(r => r.properties || [])
-              .map((prop: any) => [String(prop.id), prop]),
-          ).values(),
-        ).slice(0, limit);
-
-        return { items: deduped.map(mapListing), source: 'listings' };
+        // Commercial consumer intent is owned by the dedicated Office Leasing
+        // journey at /commercial (commercialOffice.search over the commercial
+        // asset tables). The previous implementation queried the residential
+        // properties table for propertyType='commercial' and rendered those
+        // rows through residential cards, presenting a second, contradictory
+        // commercial inventory. Fail closed rather than resurrect it.
+        return { items: [], source: 'listings' };
       };
 
       const requestedScope: LocationScope = requestedSuburb

@@ -95,7 +95,7 @@ const INTENT_HELPER_COPY: Record<string, string> = {
   developments: 'Search new developments by city, suburb, developer, or project name.',
   shared_living: 'Find shared living options that match your lifestyle and budget.',
   plot_land: 'Explore land and plots across South Africa.',
-  commercial: 'Find offices, retail spaces, industrial property, and commercial opportunities.',
+  commercial: 'Find office space to lease with verified occupancy costs and commercial terms.',
   find_agent: 'Find trusted agents and property professionals.',
 };
 
@@ -283,9 +283,6 @@ export function EnhancedHero({
     },
     plot_land: {
       types: LAND_PUBLIC_CLASSIFICATION_OPTIONS,
-    },
-    commercial: {
-      useTypes: ['Office', 'Retail', 'Industrial', 'Warehouse', 'Medical', 'Mixed-Use'],
     },
     shared_living: {
       roomTypes: ['Room in Apartment', 'Room in House', 'Co-Living', 'Student Accommodation'],

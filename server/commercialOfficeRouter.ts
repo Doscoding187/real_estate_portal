@@ -189,6 +189,7 @@ export const commercialOfficeRouter = router({
       z
         .object({
           location: z.string().trim().min(1).max(200).optional(),
+          locationIds: z.array(z.string().trim().min(1).max(128)).max(10).optional(),
           minAreaM2: z.number().positive().optional(),
           maxAreaM2: z.number().positive().optional(),
           maxMonthlyBudgetMinor: z.number().int().nonnegative().optional(),
