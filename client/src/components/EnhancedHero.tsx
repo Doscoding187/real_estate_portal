@@ -75,6 +75,8 @@ type HeroFilters = {
   budgetMax: string;
   developmentType: string;
   developmentStatus: string;
+  market: string;
+  maxPrice: string;
 };
 type FilterKey = keyof HeroFilters;
 type FilterDefinition = {
@@ -218,6 +220,30 @@ const JOURNEY_PRESENTATION: Partial<
     placeholder: 'Search commercial locations...',
     guidance: 'Find office leasing opportunities in the right location.',
     primaryFilters: [],
+  },
+  shared_living: {
+    placeholder: 'Search rooms, cottages, and small places...',
+    guidance: 'Find a room, cottage, or small place with honest costs.',
+    primaryFilters: [
+      {
+        key: 'market',
+        label: 'Market',
+        emptyLabel: 'All markets',
+        icon: Users,
+        options: [
+          { value: 'room_share', label: 'Rooms' },
+          { value: 'independent_micro', label: 'Cottages & Small Places' },
+          { value: 'student', label: 'Student Living' },
+        ],
+      },
+      {
+        key: 'maxPrice',
+        label: 'Monthly rent',
+        emptyLabel: 'Any budget',
+        icon: CircleDollarSign,
+        options: PRICE_OPTIONS,
+      },
+    ],
   },
 };
 const UTILITY_ITEMS = [
@@ -435,6 +461,8 @@ export function EnhancedHero({
     budgetMax: '',
     developmentType: '',
     developmentStatus: '',
+    market: '',
+    maxPrice: '',
   });
   const inputRef = useRef<HTMLInputElement | null>(null);
   const activeTab = controlledTab || internalTab;
@@ -580,17 +608,37 @@ export function EnhancedHero({
       );
       return;
     }
-    if (journey === 'commercial' || journey === 'shared_living') {
-      // Rent-flavoured specialist journeys in the current catalogue: hand off
-      // through their own contracts while preserving the selected location.
-      const destinationIntent = 'rent' as const;
+    if (journey === 'commercial') {
+      // Commercial handoff preserves location intent; its own page owns the
+      // search contract.
       setLocation(
         buildConsumerJourneyUrl({
-          intent: destinationIntent,
+          intent: 'rent',
           journey,
           selectedLocations,
         }),
       );
+      return;
+    }
+    if (journey === 'shared_living') {
+      // Shared Living owns /shared-living with its own search contract.
+      // Pass geography + any active SL-specific filter selections so the
+      // discovery page receives them as URL params.
+      const search = new URLSearchParams();
+      if (selectedSearchArea) {
+        search.set('searchAreaId', selectedSearchArea.searchAreaId);
+      } else if (selectedLocations.length === 1) {
+        const id = selectedLocations[0].canonicalLocationId || selectedLocations[0].id;
+        if (id) search.set('locationId', id);
+      } else if (selectedLocations.length > 1) {
+        selectedLocations.forEach(loc => {
+          const id = loc.canonicalLocationId || loc.id;
+          if (id) search.append('locationIds', id);
+        });
+      }
+      if (filters.market) search.set('market', String(filters.market));
+      if (filters.maxPrice) search.set('maxPrice', String(filters.maxPrice));
+      setLocation(`/shared-living?${search.toString()}`);
       return;
     }
     setLocation(getPublicHeroJourney(journey).destination);
