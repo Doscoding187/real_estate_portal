@@ -48,6 +48,7 @@ import {
 } from '@/lib/heroJourneySearch';
 import { RENT_PUBLIC_PROPERTY_TYPES } from '@shared/property-taxonomy';
 import { buildLocationDiscoveryPath, hasCanonicalLocationIdentity } from '@/lib/locationDiscovery';
+import { buildConsumerJourneyUrl } from '@/lib/consumerJourneyRouter';
 import { parseCanonicalLocationId } from '@shared/locationAuthority';
 import type { LocationNode } from '@/types/location';
 import type { SearchAreaDiscoveryResult, SearchDiscoveryResult } from '@shared/searchDiscovery';
@@ -435,7 +436,7 @@ export function EnhancedHero({
     developmentType: '',
     developmentStatus: '',
   });
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
   const activeTab = controlledTab || internalTab;
   const requestedJourney = activeTab ? normalizePublicHeroJourney(activeTab) : null;
   const journey =
@@ -575,6 +576,19 @@ export function EnhancedHero({
           developmentStatus: filters.developmentStatus,
           minPrice: filters.priceMin,
           maxPrice: filters.priceMax,
+        }),
+      );
+      return;
+    }
+    if (journey === 'commercial' || journey === 'shared_living') {
+      // Rent-flavoured specialist journeys in the current catalogue: hand off
+      // through their own contracts while preserving the selected location.
+      const destinationIntent = 'rent' as const;
+      setLocation(
+        buildConsumerJourneyUrl({
+          intent: destinationIntent,
+          journey,
+          selectedLocations,
         }),
       );
       return;
