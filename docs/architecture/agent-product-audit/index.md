@@ -3,7 +3,7 @@
 | Field | Value |
 | --- | --- |
 | Programme | `A3 — Agent Product Audit & Value Proposition` |
-| Status | All nine area audits merged (#507, #510); B1 synthesis drafted; A3-C1 founder brief pending |
+| Status | A3 workstream delivered: charter, nine area audits, B1 synthesis (#511), implementation slices #514/#516/#520, C1 founder brief — founder motion decision pending |
 | Owner | Founder — Edward Banda, with product and commercial governance |
 | Predecessor | PR #491 (Agent Launch MVP, A2-S1 + R1–R5), PR #496 (A2-S4) |
 | Relationship to AAE | Aligns with AAE-S0/S1A/S1B; feeds but does not enter AAE-S1C (`AAE_S1C_ENTRY=REQUIRES_FOUNDER_DECISION` unchanged) |
@@ -37,10 +37,12 @@ by the question:
 | 70 — A4 Onboarding | Approved (PR #510) | Registration-to-approval journey, OS-event funnel, time-to-outcome limits |
 | 80 — A6 Distribution | Approved (PR #510) | Attribution/reciprocity/microsite inventory, observability verdict, gate matrix |
 | 90 — A9 Expansion | Approved (PR #510) | Entitlement headroom map, agency adjacency ceiling, founder-routed option map |
-| 95 — B1 Synthesis | Draft | Consolidated decision map, truth-restoration defect register (D1–D8), cohort-gated question register, founder-reserved items, sequencing recommendation |
+| 95 — B1 Synthesis | Approved (PR #511) | Consolidated decision map, truth-restoration defect register (D1–D8), cohort-gated question register, founder-reserved items, sequencing recommendation |
+| 99 — C1 Founder Brief | Delivered | Agent-motion decision brief: evidence base, motion options × audited preconditions, downstream gates, evidence timing, non-declarations |
 
-All nine areas merged. Synthesis drafted — awaiting founder review; then the
-founder decision brief (A3-C1) for the doc 25 "Agent motion" gate.
+A3 workstream deliverables complete: charter → nine area audits → synthesis →
+founder decision brief. The doc 25 "Agent motion" decision and any S1C scoping
+remain with the founder.
 
 ## Boundaries
 
