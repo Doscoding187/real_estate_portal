@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useSearch } from 'wouter';
 import {
   CheckCircle2,
   ClipboardCheck,
@@ -41,9 +42,16 @@ type WorkspaceDataProps = Omit<
 >;
 
 export function useAgencyWorkspaceData(workspace: WorkspaceId) {
+  const search = useSearch();
+  const searchParams = useMemo(() => new URLSearchParams(search), [search]);
+
   const [leadView, setLeadView] = useState<'kanban' | 'table'>('kanban');
   const [leadSearch, setLeadSearch] = useState('');
-  const [leadStatus, setLeadStatus] = useState('all');
+  const [leadStatus, setLeadStatus] = useState(() => {
+    // Deep-link support: /agency/leads?status=overdue pre-filters the inbox
+    // so operating-home actions land on a precise view.
+    return searchParams.get('status') || 'all';
+  });
   const [leadSource, setLeadSource] = useState('all');
   const [leadPage, setLeadPage] = useState(1);
   const [selectedMetric, setSelectedMetric] = useState<'leads' | 'listings' | 'sales'>('leads');

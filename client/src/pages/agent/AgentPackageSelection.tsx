@@ -382,6 +382,15 @@ export default function AgentPackageSelection() {
         setStatus(result);
         if (result.packageSelected && result.subscriptionStatus === 'active') {
           setLocation(result.dashboardUnlocked ? '/agent/dashboard' : '/agent/setup');
+          return;
+        }
+        // A waiting payer has nothing left to do on this page; the dashboard
+        // status strip carries the verification state until finance decides.
+        if (
+          result.packageSelected &&
+          result.subscriptionStatus === 'payment_under_review'
+        ) {
+          setLocation('/agent/dashboard');
         }
       } catch (error) {
         if (!cancelled) {
@@ -511,6 +520,7 @@ export default function AgentPackageSelection() {
       setProofFile(null);
       setBankReference('');
       toast.success('Payment proof submitted for finance review.');
+      setLocation('/agent/dashboard');
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Payment proof could not be submitted.');
     }

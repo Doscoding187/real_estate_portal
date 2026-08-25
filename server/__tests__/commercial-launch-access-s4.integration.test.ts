@@ -640,6 +640,21 @@ describeWithDb('S4 paid Launch Access disposable runtime', () => {
       subscriptionStatus: 'pending_payment',
     });
 
+    const agentNotifications = await db
+      .select({ title: notifications.title, data: notifications.data })
+      .from(notifications)
+      .where(eq(notifications.userId, agentId));
+    const notificationTypes = agentNotifications.map(row => {
+      try {
+        return String(JSON.parse(row.data || '{}').notificationType);
+      } catch {
+        return '';
+      }
+    });
+    expect(notificationTypes).toContain('invoice_issued');
+    expect(notificationTypes).toContain('proof_received');
+    expect(notificationTypes).toContain('payment_rejected');
+
     const [invoiceAfterRejection] = await db
       .select({ status: billingInvoices.status })
       .from(billingInvoices)
@@ -670,5 +685,60 @@ describeWithDb('S4 paid Launch Access disposable runtime', () => {
     const active = await getPlanAccessProjectionForUserId(agentId);
     expect(active?.subscription?.status).toBe('active');
     expect(isSubscriptionEntitled(active?.subscription?.status)).toBe(true);
+
+    const approvalNotifications = await db
+      .select({ data: notifications.data })
+      .from(notifications)
+      .where(eq(notifications.userId, agentId));
+    const approvedTypes = approvalNotifications.map(row => {
+      try {
+        return String(JSON.parse(row.data || '{}').notificationType);
+      } catch {
+        return '';
+      }
+    });
+    expect(approvedTypes).toContain('payment_approved');
+  }, 60_000);
+
+  it('notifies an agent at every Launch Access billing milestone', async () => {
+    const db = await getDb();
+    if (!db) throw new Error('Database not available');
+    const agentId = await insertUser({ label: 's4-agent-notify', role: 'agent' });
+    const financeId = await insertUser({ label: 's4-finance-notify', role: 'super_admin' });
+
+    const [plan] = await db
+      .select()
+      .from(plans)
+      .where(eq(plans.name, 'agent_launch_access'))
+      .limit(1);
+    if (!plan) throw new Error('Missing agent_launch_access');
+
+    const ownerUser = { id: agentId, role: 'agent' as const, agencyId: null };
+    const requested = await requestPaidLaunchAccessInvoice({ user: ownerUser, planId: plan.id });
+    expect(requested.invoice.status).toBe('issued');
+
+    const proof = await submitPaidLaunchAccessPaymentProof({
+      user: ownerUser,
+      ...proofFor(requested.invoice),
+    });
+
+    const approved = await reviewManualPayment({
+      actorUser: { id: financeId, role: 'super_admin' },
+      paymentId: proof.paymentId,
+      decision: 'approve',
+      verifiedAmount: requested.invoice.amountDue,
+    });
+    expect(approved).toMatchObject({ success: true, subscriptionStatus: 'active' });
+
+    const rows = await db
+      .select({ title: notifications.title })
+      .from(notifications)
+      .where(eq(notifications.userId, agentId));
+    const titles = rows.map(row => row.title).sort();
+    expect(titles).toEqual([
+      'Launch Access activated',
+      'Launch Access invoice issued',
+      'Payment proof received',
+    ]);
   }, 60_000);
 });
