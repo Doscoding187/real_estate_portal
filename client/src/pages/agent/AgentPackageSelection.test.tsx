@@ -178,4 +178,30 @@ describe('Agent paid Launch Access conversion', () => {
     expect(screen.getByText('Manual EFT instructions')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Submit proof for review' })).toBeInTheDocument();
   });
+
+  it('lands a waiting payer on the dashboard while finance verifies the proof', async () => {
+    apiFetchMock.mockImplementation((endpoint: string) => {
+      if (endpoint === '/agent/onboarding-status') {
+        return Promise.resolve({
+          packageSelected: true,
+          onboardingComplete: true,
+          onboardingStep: 4,
+          dashboardUnlocked: true,
+          fullFeaturesUnlocked: true,
+          recommendedNextStep: 'await_verification',
+          subscriptionTier: 'agent_launch_access',
+          subscriptionStatus: 'payment_under_review',
+          trialStartedAt: null,
+          trialEndsAt: null,
+        });
+      }
+      return Promise.resolve({});
+    });
+
+    render(<AgentPackageSelection />);
+
+    await waitFor(() => {
+      expect(setLocationMock).toHaveBeenCalledWith('/agent/dashboard');
+    });
+  });
 });

@@ -727,7 +727,13 @@ guardedDescribe('agency principal bootstrap persisted acceptance', () => {
       db
         .select()
         .from(subscriptions)
-        .where(and(eq(subscriptions.ownerType, 'agency'), eq(subscriptions.planId, planId))),
+        .where(
+          and(
+            eq(subscriptions.ownerType, 'agency'),
+            eq(subscriptions.ownerId, principal.user.id),
+            eq(subscriptions.planId, planId),
+          ),
+        ),
       db.select().from(invitations).where(eq(invitations.invitedBy, principal.user.id)),
     ]);
     expect(persistedPrincipal?.agencyId).toBeNull();
