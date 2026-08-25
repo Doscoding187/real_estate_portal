@@ -19,13 +19,16 @@
  * 10. Lead assigned to agent → agent responds (first response truth)
  * 11. Operating home brief reflects the full journey state
  */
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
-// server/_core/env snapshots JWT_SECRET at import time.
-if (!process.env.JWT_SECRET) process.env.JWT_SECRET = 'walkthrough-test-secret';
+// server/_core/env snapshots JWT_SECRET at module load; seed it before any
+// other import executes using vi.hoisted which runs pre-import.
+const jwtSecretSetup = vi.hoisted(() => {
+  if (!process.env.JWT_SECRET) {
+    process.env.JWT_SECRET = 'launch-readiness-walkthrough-test-secret';
+  }
+});
 
-// server/_core/env snapshots JWT_SECRET at import time; set it first.
-if (!process.env.JWT_SECRET) process.env.JWT_SECRET = 'launch-readiness-walkthrough-secret';
 import { randomUUID } from 'node:crypto';
 import { and, eq, sql } from 'drizzle-orm';
 
@@ -91,7 +94,7 @@ async function insertId(result: any): Promise<number> {
 beforeAll(async () => {
   if (!process.env.DATABASE_URL) return;
   // The acceptance path mints a session token through the auth service.
-  if (!process.env.JWT_SECRET) process.env.JWT_SECRET = 'launch-readiness-walkthrough-secret';
+
 
   // Seed the canonical Launch Access plan (fixture-only; production seeds via authority).
   // Check if the canonical agency_launch_access plan already exists (seeded by db:reference:prepare).
@@ -157,8 +160,6 @@ beforeAll(async () => {
 
 afterAll(async () => {
   if (!process.env.DATABASE_URL) return;
-  if (priorJwtSecret === undefined) delete process.env.JWT_SECRET;
-  else process.env.JWT_SECRET = priorJwtSecret;
   // Cleanup in reverse dependency order.
   const tables = [
     { table: leads, ids: [] as number[], column: leads.id },
