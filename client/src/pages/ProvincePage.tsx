@@ -13,6 +13,7 @@ import { Link, useLocation } from 'wouter';
 import { ListingNavbar } from '@/components/ListingNavbar';
 import { Footer } from '@/components/Footer';
 import { LocationSchema } from '@/components/location/LocationSchema';
+import { RecommendedAgents } from '@/components/location/RecommendedAgents';
 import { ProvincialBillboard } from '@/components/provincial/ProvincialBillboard';
 import { ProvincialComposer } from '@/components/provincial/ProvincialComposer';
 import { trpc } from '@/lib/trpc';
@@ -258,6 +259,14 @@ export default function ProvincePage({ params }: ProvincePageProps) {
         province={data.province}
         marketLocations={marketLocations}
       />
+
+      {data.province.canonicalLocationId ? (
+        <RecommendedAgents
+          locationType="province"
+          locationId={Number(data.province.canonicalLocationId)}
+          areaLabel={data.province.name}
+        />
+      ) : null}
 
       <main id="main-content" tabIndex={-1} className="provincial-main">
         <section className="provincial-rail provincial-section" aria-labelledby="markets-heading">

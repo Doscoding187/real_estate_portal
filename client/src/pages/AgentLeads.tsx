@@ -122,6 +122,73 @@ function EmptyPanel({ title, description }: { title: string; description: string
   );
 }
 
+type LeadResponseSummary = {
+  windowDays: number;
+  totalLeads: number;
+  respondedLeads: number;
+  awaitingFirstResponse: number;
+  medianHoursToFirstResponse: number | null;
+};
+
+/**
+ * Operational response-discipline panel. Reports recorded lead timestamps
+ * only — no performance, ROI or demand claims (AGT-06 boundary).
+ */
+function LeadResponseSummaryPanel({ summary }: { summary?: LeadResponseSummary }) {
+  if (!summary || summary.totalLeads === 0) {
+    return (
+      <EmptyPanel
+        title="No enquiries in the last 30 days"
+        description="When enquiries arrive, this panel reports how quickly each one received its first response, using the timestamps already recorded on the lead."
+      />
+    );
+  }
+
+  const respondedShare = Math.round((summary.respondedLeads / summary.totalLeads) * 100);
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <div className="rounded-[14px] border border-slate-200 bg-white px-4 py-3">
+          <p className="text-xs font-medium uppercase tracking-[0.12em] text-slate-400">
+            Median first response
+          </p>
+          <p className="mt-1 text-xl font-semibold text-slate-900">
+            {summary.medianHoursToFirstResponse === null
+              ? '—'
+              : summary.medianHoursToFirstResponse < 24
+                ? `${summary.medianHoursToFirstResponse} h`
+                : `${Math.round(summary.medianHoursToFirstResponse / 24)} d`}
+          </p>
+        </div>
+        <div className="rounded-[14px] border border-slate-200 bg-white px-4 py-3">
+          <p className="text-xs font-medium uppercase tracking-[0.12em] text-slate-400">
+            Responded
+          </p>
+          <p className="mt-1 text-xl font-semibold text-slate-900">
+            {summary.respondedLeads}
+            <span className="ml-1 text-xs font-normal text-slate-500">
+              of {summary.totalLeads} ({respondedShare}%)
+            </span>
+          </p>
+        </div>
+        <div className="rounded-[14px] border border-slate-200 bg-white px-4 py-3">
+          <p className="text-xs font-medium uppercase tracking-[0.12em] text-slate-400">
+            Awaiting first response
+          </p>
+          <p className="mt-1 text-xl font-semibold text-slate-900">
+            {summary.awaitingFirstResponse}
+          </p>
+        </div>
+      </div>
+      <p className="text-xs text-slate-500">
+        Computed from the last {summary.windowDays} days of recorded enquiry timestamps on leads
+        assigned to you.
+      </p>
+    </div>
+  );
+}
+
 export default function AgentLeads() {
   const [location, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState('pipeline');
@@ -139,6 +206,10 @@ export default function AgentLeads() {
 
   const leadsLocked = !statusLoading && !status?.entitlements?.canReceiveLeads;
 
+  const { data: responseSummary, isLoading: responseSummaryLoading } =
+    trpc.agent.getLeadResponseSummary.useQuery(undefined, {
+      refetchOnWindowFocus: false,
+    });
   const { data: stats } = trpc.agent.getDashboardStats.useQuery(undefined, {
     enabled: !leadsLocked && !statusLoading,
     retry: false,
@@ -398,6 +469,17 @@ export default function AgentLeads() {
                         title="No pipeline data yet"
                         description="As soon as your account starts receiving leads, this tab will show the live funnel breakdown instead of sample conversion charts."
                       />
+                    )}
+                  </CardContent>
+                </Card>
+
+                <Card className={agentPageStyles.panel}>
+                  <CardHeader>
+                    <CardTitle>Response discipline</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {responseSummaryLoading ? null : (
+                      <LeadResponseSummaryPanel summary={responseSummary} />
                     )}
                   </CardContent>
                 </Card>
