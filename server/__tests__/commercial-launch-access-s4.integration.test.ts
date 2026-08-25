@@ -597,4 +597,78 @@ describeWithDb('S4 paid Launch Access disposable runtime', () => {
       },
     });
   }, 60_000);
+
+  it('returns a rejected Launch Access proof to the issued state so the owner can resubmit', async () => {
+    const db = await getDb();
+    if (!db) throw new Error('Database not available');
+    const agentId = await insertUser({ label: 's4-agent-reject', role: 'agent' });
+    const financeId = await insertUser({ label: 's4-finance-reject', role: 'super_admin' });
+
+    const [plan] = await db
+      .select()
+      .from(plans)
+      .where(eq(plans.name, 'agent_launch_access'))
+      .limit(1);
+    if (!plan) throw new Error('Missing agent_launch_access');
+
+    const requested = await requestPaidLaunchAccessInvoice({
+      user: { id: agentId, role: 'agent', agencyId: null },
+      planId: plan.id,
+    });
+    expect(requested.invoice.status).toBe('issued');
+
+    const proof = await submitPaidLaunchAccessPaymentProof({
+      user: { id: agentId, role: 'agent', agencyId: null },
+      ...proofFor(requested.invoice),
+    });
+    const [invoiceAfterProof] = await db
+      .select({ status: billingInvoices.status })
+      .from(billingInvoices)
+      .where(eq(billingInvoices.id, requested.invoice.id))
+      .limit(1);
+    expect(invoiceAfterProof?.status).toBe('submitted');
+
+    const rejected = await reviewManualPayment({
+      actorUser: { id: financeId, role: 'super_admin' },
+      paymentId: proof.paymentId,
+      decision: 'reject',
+      note: 'Amount does not match the invoice.',
+    });
+    expect(rejected).toMatchObject({
+      success: true,
+      invoiceStatus: 'issued',
+      subscriptionStatus: 'pending_payment',
+    });
+
+    const [invoiceAfterRejection] = await db
+      .select({ status: billingInvoices.status })
+      .from(billingInvoices)
+      .where(eq(billingInvoices.id, requested.invoice.id))
+      .limit(1);
+    expect(invoiceAfterRejection?.status).toBe('issued');
+
+    // The canonical issued state accepts a replacement proof and returns the
+    // payable to its normal under-review flow.
+    const resubmitted = await submitPaidLaunchAccessPaymentProof({
+      user: { id: agentId, role: 'agent', agencyId: null },
+      ...proofFor(requested.invoice),
+    });
+    expect(resubmitted.paymentId).not.toBe(proof.paymentId);
+
+    const approved = await reviewManualPayment({
+      actorUser: { id: financeId, role: 'super_admin' },
+      paymentId: resubmitted.paymentId,
+      decision: 'approve',
+      verifiedAmount: requested.invoice.amountDue,
+    });
+    expect(approved).toMatchObject({
+      success: true,
+      invoiceStatus: 'paid',
+      subscriptionStatus: 'active',
+    });
+
+    const active = await getPlanAccessProjectionForUserId(agentId);
+    expect(active?.subscription?.status).toBe('active');
+    expect(isSubscriptionEntitled(active?.subscription?.status)).toBe(true);
+  }, 60_000);
 });

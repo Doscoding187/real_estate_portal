@@ -2294,10 +2294,14 @@ export async function reviewManualPayment(input: {
         })
         .where(eq(billingPayments.id, beforePayment.id));
 
+      // A blocked review returns the payable to `issued`: the canonical
+      // pre-proof state that accepts a corrected or replacement proof.
+      // Retaining `submitted` would strand the invoice against every
+      // resubmission gate.
       await tx
         .update(billingInvoices)
         .set({
-          status: invoiceWasAlreadyPaid ? 'paid' : 'submitted',
+          status: invoiceWasAlreadyPaid ? 'paid' : 'issued',
           paidAt: invoiceWasAlreadyPaid ? invoice.paidAt : null,
           updatedBy: input.actorUser.id,
         })
@@ -2343,7 +2347,7 @@ export async function reviewManualPayment(input: {
         beforeData: beforePayment,
         afterData: {
           state: 'rejected',
-          invoiceStatus: invoiceWasAlreadyPaid ? 'paid' : 'submitted',
+          invoiceStatus: invoiceWasAlreadyPaid ? 'paid' : 'issued',
           subscriptionStatus: nextSubscriptionStatus,
         },
       });
@@ -2370,7 +2374,7 @@ export async function reviewManualPayment(input: {
       return {
         success: true,
         idempotent: invoiceWasAlreadyPaid,
-        invoiceStatus: invoiceWasAlreadyPaid ? 'paid' : 'submitted',
+        invoiceStatus: invoiceWasAlreadyPaid ? 'paid' : 'issued',
         subscriptionStatus: nextSubscriptionStatus,
       };
     }

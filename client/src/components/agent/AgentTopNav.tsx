@@ -3,7 +3,7 @@ import { useLocation } from 'wouter';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { CalendarPlus, FileText, Plus, Search, UserPlus } from 'lucide-react';
+import { CalendarPlus, Plus, Search } from 'lucide-react';
 import { NotificationCenter } from './NotificationCenter';
 
 export function AgentTopNav() {
@@ -58,31 +58,11 @@ export function AgentTopNav() {
           <Button
             type="button"
             variant="outline"
-            onClick={() => setLocation('/agent/leads?action=add')}
-            className="hidden h-[34px] rounded-full border-slate-200 bg-white px-[14px] text-[12.5px] text-slate-600 hover:border-[color:color-mix(in_oklab,var(--primary)_24%,white)] hover:bg-[color:color-mix(in_oklab,var(--primary)_6%,white)] hover:text-[var(--primary)] xl:inline-flex"
-          >
-            <UserPlus className="h-3.5 w-3.5" />
-            <span>Log Lead</span>
-          </Button>
-
-          <Button
-            type="button"
-            variant="outline"
             onClick={() => setLocation('/agent/productivity')}
             className="hidden h-[34px] rounded-full border-slate-200 bg-white px-[14px] text-[12.5px] text-slate-600 hover:border-[color:color-mix(in_oklab,var(--primary)_24%,white)] hover:bg-[color:color-mix(in_oklab,var(--primary)_6%,white)] hover:text-[var(--primary)] xl:inline-flex"
           >
             <CalendarPlus className="h-3.5 w-3.5" />
             <span>Book Showing</span>
-          </Button>
-
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => setLocation('/agent/leads')}
-            className="hidden h-[34px] rounded-full border-slate-200 bg-white px-[14px] text-[12.5px] text-slate-600 hover:border-[color:color-mix(in_oklab,var(--primary)_24%,white)] hover:bg-[color:color-mix(in_oklab,var(--primary)_6%,white)] hover:text-[var(--primary)] xl:inline-flex"
-          >
-            <FileText className="h-3.5 w-3.5" />
-            <span>Submit Offer</span>
           </Button>
 
           <div className="hidden h-6 w-px bg-slate-200 xl:block" />

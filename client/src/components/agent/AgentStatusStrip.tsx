@@ -98,9 +98,9 @@ export function AgentStatusStrip() {
             href="/agent/select-package"
             className="rounded-full border border-current px-3 py-1 text-xs font-semibold hover:bg-white/60"
           >
-            showRenewalCta && status.subscriptionStatus === 'expired'
+            {status.subscriptionStatus === 'expired'
               ? 'Renew Launch Access'
-              : 'Get Launch Access'
+              : 'Get Launch Access'}
           </Link>
         )}
       </div>
