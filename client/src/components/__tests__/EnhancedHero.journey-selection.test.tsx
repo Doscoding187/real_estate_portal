@@ -303,6 +303,17 @@ describe('EnhancedHero explicit journey selection', () => {
     expect(screen.getByText('Any Bathrooms')).toBeInTheDocument();
   });
 
+  it('opens both price boundaries together for the Buy price decision', () => {
+    render(<EnhancedHero activeTab="buy" />);
+
+    fireEvent.click(screen.getByText('Any price'));
+
+    expect(screen.getByText('Minimum price')).toBeInTheDocument();
+    expect(screen.getByText('Maximum price')).toBeInTheDocument();
+    expect(screen.getByText('No min')).toBeInTheDocument();
+    expect(screen.getByText('No max')).toBeInTheDocument();
+  });
+
   it('retains a location when Buy is selected after location-first input', () => {
     const onTabChange = vi.fn();
     render(<EnhancedHero onTabChange={onTabChange} />);

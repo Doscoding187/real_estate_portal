@@ -20,15 +20,17 @@ describe('public Search Discovery transport gate', () => {
   });
 
   it('flag-off path still fails closed without changing server identity authority', () => {
+    // The recovered composition gates suggestions behind the flag in the
+    // useMemo factory rather than a ternary at the consumption site.
     const hero = readRepoFile('client/src/components/EnhancedHero.tsx');
-    expect(hero).toContain('isDiscoveryEnabled ? serverDiscoverySuggestions || [] : []');
+    expect(hero).toContain("VITE_SEARCH_DISCOVERY_AUTOSUGGEST_ENABLED === '1'");
+    expect(hero).toContain('serverDiscoverySuggestions || []');
   });
 
   it('flag-on path uses canonical path-based navigation', () => {
     const hero = readRepoFile('client/src/components/EnhancedHero.tsx');
-    // The onDiscoveryNavigate handler navigates via setLocation(path) — no query params
-    expect(hero).toContain('onDiscoveryNavigate={(path: string) => {');
-    expect(hero).toContain('setLocation(path);');
+    // The onDiscoveryNavigate handler delegates to setLocation — no query params.
+    expect(hero).toContain('onDiscoveryNavigate={setLocation}');
   });
 });
 
