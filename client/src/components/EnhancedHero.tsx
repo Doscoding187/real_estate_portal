@@ -77,6 +77,7 @@ type HeroFilters = {
   developmentStatus: string;
   market: string;
   maxPrice: string;
+  classification: string;
 };
 type FilterKey = keyof HeroFilters;
 type FilterDefinition = {
@@ -463,6 +464,7 @@ export function EnhancedHero({
     developmentStatus: '',
     market: '',
     maxPrice: '',
+    classification: '',
   });
   const inputRef = useRef<HTMLInputElement | null>(null);
   const activeTab = controlledTab || internalTab;
