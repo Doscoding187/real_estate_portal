@@ -64,7 +64,7 @@ interface LocationAutosuggestProps {
   showIcon?: boolean;
   maxLocations?: number;
   renderSelectedLocations?: boolean;
-  inputRef?: Ref | null;
+  inputRef?: RefObject<HTMLInputElement | null>;
   inputAriaDescribedBy?: string;
   // Search Discovery Engine — foundation for future smart suggestions
   discoverySuggestions?: SearchDiscoveryResult[];

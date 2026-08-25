@@ -645,7 +645,7 @@ export function EnhancedHero({
             })}
           </div>
         </div>
-        <div className="relative mx-auto mt-3 max-w-[1180px] rounded-[1.5rem] border border-slate-200/90 bg-white shadow-[0_24px_54px_-28px_rgba(15,23,42,0.38)] sm:mt-4">
+        <div style={{ maxWidth: 'var(--plds-home-hero-search-max-width, 1180px)' }} className="relative mx-auto mt-3 w-full rounded-[1.5rem] border border-slate-200/90 bg-white shadow-[0_24px_54px_-28px_rgba(15,23,42,0.38)] sm:mt-4">
           <div className="flex flex-col gap-3 rounded-t-[1.45rem] bg-gradient-to-r from-blue-100/90 via-blue-50/70 to-cyan-50 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-7">
             <div>
               <h2 className="font-semibold text-slate-950">Start your property journey</h2>
