@@ -157,6 +157,8 @@ beforeAll(async () => {
 
 afterAll(async () => {
   if (!process.env.DATABASE_URL) return;
+  if (priorJwtSecret === undefined) delete process.env.JWT_SECRET;
+  else process.env.JWT_SECRET = priorJwtSecret;
   // Cleanup in reverse dependency order.
   const tables = [
     { table: leads, ids: [] as number[], column: leads.id },
