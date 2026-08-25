@@ -523,6 +523,42 @@ async function notifyAgencyUsers(
   }
 }
 
+/**
+ * Billing milestones must reach a paying agent in-product, not only as page
+ * toasts. Solo owners have exactly one notification target: their own user.
+ */
+async function notifyAgentOwner(
+  db: DbOrTx,
+  input: {
+    ownerId: number;
+    type: string;
+    title: string;
+    content: string;
+    actionUrl?: string;
+    data?: Record<string, any>;
+  },
+) {
+  try {
+    await db.insert(notifications).values({
+      userId: input.ownerId,
+      type: 'system_alert' as const,
+      title: input.title,
+      content: input.content,
+      data: JSON.stringify({
+        notificationType: input.type,
+        ...(input.actionUrl ? { actionUrl: input.actionUrl } : {}),
+        ...(input.data || {}),
+      }),
+      isRead: 0,
+    });
+  } catch (error) {
+    console.warn('[BillingFoundation] Notification insert skipped', {
+      ownerId: input.ownerId,
+      message: (error as any)?.message,
+    });
+  }
+}
+
 async function syncAgencyBillingShadow(
   db: DbOrTx,
   input: {
@@ -1072,6 +1108,17 @@ export async function requestPaidLaunchAccessInvoice(input: {
         type: 'invoice_issued',
         title: 'Launch Access invoice issued',
         content: `Invoice ${invoiceNumber} has been issued for ${centsToRand(launchFee)} once-off Launch Access.`,
+        data: { invoiceId, invoiceNumber, paymentReference },
+      });
+    }
+
+    if (owner.ownerType === 'agent') {
+      await notifyAgentOwner(tx, {
+        ownerId: owner.ownerId,
+        type: 'invoice_issued',
+        title: 'Launch Access invoice issued',
+        content: `Invoice ${invoiceNumber} has been issued for ${centsToRand(launchFee)} once-off Launch Access. Pay by EFT and submit your proof to continue.`,
+        actionUrl: '/agent/select-package',
         data: { invoiceId, invoiceNumber, paymentReference },
       });
     }
@@ -1715,6 +1762,17 @@ export async function submitPaidLaunchAccessPaymentProof(input: LaunchPaymentPro
         type: 'proof_received',
         title: 'Proof received',
         content: `Proof of payment for ${invoice.invoiceNumber} has been submitted for review.`,
+        data: { invoiceId: invoice.id, paymentId },
+      });
+    }
+
+    if (owner.ownerType === 'agent') {
+      await notifyAgentOwner(tx, {
+        ownerId: owner.ownerId,
+        type: 'proof_received',
+        title: 'Payment proof received',
+        content: `Your proof of payment for ${invoice.invoiceNumber} is with finance for review. We will notify you when verification completes.`,
+        actionUrl: '/agent/dashboard',
         data: { invoiceId: invoice.id, paymentId },
       });
     }
@@ -2371,6 +2429,27 @@ export async function reviewManualPayment(input: {
         });
       }
 
+      if (invoice.ownerType === 'agent') {
+        await notifyAgentOwner(tx, {
+          ownerId: invoice.ownerId,
+          type:
+            input.decision === 'reject'
+              ? 'payment_rejected'
+              : input.decision === 'request_correction'
+                ? 'payment_correction_requested'
+                : `payment_review_${input.decision}`,
+          title:
+            input.decision === 'reject'
+              ? 'Payment proof not approved'
+              : input.decision === 'request_correction'
+                ? 'Payment correction requested'
+                : 'Payment review update',
+          content: `${reason}. You can submit a corrected proof of payment for ${invoice.invoiceNumber} from the Launch Access page.`,
+          actionUrl: '/agent/select-package',
+          data: { invoiceId: invoice.id, paymentId: beforePayment.id },
+        });
+      }
+
       return {
         success: true,
         idempotent: invoiceWasAlreadyPaid,
@@ -2511,6 +2590,21 @@ export async function reviewManualPayment(input: {
       if (activationOccurred) {
         activatedAgencyId = invoice.ownerId;
       }
+    }
+
+    if (invoice.ownerType === 'agent' && !invoiceWasAlreadyPaid) {
+      await notifyAgentOwner(tx, {
+        ownerId: invoice.ownerId,
+        type: activationOccurred ? 'payment_approved' : 'partial_payment',
+        title: activationOccurred
+          ? 'Launch Access activated'
+          : 'Partial payment recorded',
+        content: activationOccurred
+          ? `Payment for ${invoice.invoiceNumber} has been verified. Your 90-day Launch Access term is active.`
+          : `A partial payment was recorded for ${invoice.invoiceNumber}.`,
+        actionUrl: '/agent/dashboard',
+        data: { invoiceId: invoice.id, paymentId: beforePayment.id },
+      });
     }
 
     return {
