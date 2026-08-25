@@ -54,6 +54,18 @@ export default function ListingOversight() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [selectedProperty, setSelectedProperty] = useState<any>(null);
   const [actionReason, setActionReason] = useState('');
+  const [rejectionReasons, setRejectionReasons] = useState<string[]>([]);
+  const [rejectionNote, setRejectionNote] = useState('');
+
+  const REJECTION_TAXONOMY = [
+    { value: 'inaccurate_information', label: 'Inaccurate listing information' },
+    { value: 'poor_media_quality', label: 'Poor or missing media quality' },
+    { value: 'pricing_concern', label: 'Pricing significantly off market' },
+    { value: 'incomplete_details', label: 'Missing required listing details' },
+    { value: 'location_issue', label: 'Location or address verification needed' },
+    { value: 'duplicate_listing', label: 'Potential duplicate listing' },
+    { value: 'compliance_concern', label: 'Compliance or regulatory concern' },
+  ] as const;
   const [isActionDialogOpen, setIsActionDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [propertyToDelete, setPropertyToDelete] = useState<any>(null);
@@ -135,8 +147,12 @@ export default function ListingOversight() {
     } else if (selectedProperty.action === 'reject') {
       rejectMutation.mutate({
         listingId: selectedProperty.listingId,
-        reason: actionReason,
+        reason: actionReason || rejectionReasons.map(r => r.replace(/_/g, ' ')).join('; '),
+        reasons: rejectionReasons.length > 0 ? rejectionReasons : undefined,
+        note: rejectionNote || undefined,
       });
+      setRejectionReasons([]);
+      setRejectionNote('');
     }
   };
 
@@ -418,8 +434,37 @@ export default function ListingOversight() {
               <DialogDescription>{selectedProperty?.listingTitle}</DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
+              {selectedProperty?.action === 'reject' && (
+                <div>
+                  <label className="text-sm font-medium">Rejection reasons</label>
+                  <div className="mt-2 grid grid-cols-1 gap-1.5">
+                    {REJECTION_TAXONOMY.map(({ value, label }) => (
+                      <label key={value} className="flex items-center gap-2 text-sm cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={rejectionReasons.includes(value)}
+                          onChange={e =>
+                            setRejectionReasons(prev =>
+                              e.target.checked ? [...prev, value] : prev.filter(r => r !== value),
+                            )
+                          }
+                          className="rounded border-slate-300"
+                        />
+                        {label}
+                      </label>
+                    ))}
+                  </div>
+                  <label className="mt-3 block text-sm font-medium">Review note (visible to the agency)</label>
+                  <Textarea
+                    placeholder='Add a note the agency will see explaining what needs to change...'
+                    value={rejectionNote}
+                    onChange={e => setRejectionNote(e.target.value)}
+                    rows={3}
+                  />
+                </div>
+              )}
               <div>
-                <label className="text-sm font-medium">Reason (Optional)</label>
+                <label className="text-sm font-medium">Additional notes (optional)</label>
                 <Textarea
                   placeholder="Provide a reason for this action..."
                   value={actionReason}
