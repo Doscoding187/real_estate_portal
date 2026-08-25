@@ -23,7 +23,6 @@ client/src/components/development-wizard/unit-types/tabs/ExtrasTab.tsx
 client/src/components/development-wizard/unit-types/tabs/MediaTab.tsx
 client/src/components/development-wizard/unit-types/tabs/SpecificationsTab.tsx
 client/src/components/development-wizard/unit-types/UnitTypeCard.tsx
-client/src/components/EnhancedHero.tsx
 client/src/components/explore/ContactAgentModal.tsx
 client/src/components/explore/VideoCard.tsx
 client/src/components/explore/VideoUploadModal.tsx

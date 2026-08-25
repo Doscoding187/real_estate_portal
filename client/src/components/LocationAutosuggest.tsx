@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useId, type RefObject } from 'react';
+import { useState, useEffect, useRef, useId, type Ref, type RefObject } from 'react';
 import { MapPin, Loader2, X, Compass } from 'lucide-react';
 import { useGoogleMaps } from '@/hooks/useGoogleMaps';
 import { PROVINCE_SLUGS, isProvinceSearch } from '@/lib/locationUtils';
@@ -64,7 +64,7 @@ interface LocationAutosuggestProps {
   showIcon?: boolean;
   maxLocations?: number;
   renderSelectedLocations?: boolean;
-  inputRef?: RefObject<HTMLInputElement>;
+  inputRef?: RefObject<HTMLInputElement | null>;
   inputAriaDescribedBy?: string;
   // Search Discovery Engine — foundation for future smart suggestions
   discoverySuggestions?: SearchDiscoveryResult[];
