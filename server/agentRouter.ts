@@ -574,8 +574,66 @@ export const agentRouter = router({
     },
   ),
 
-  getActivationMilestones: agentProcedure.query(async ({ ctx }) => {
+  /**
+   * Operational response-discipline summary for the signed-in agent.
+   * Computed only from recorded lead timestamps (no new collection):
+   * how quickly enquiries receive their first response in the last 30 days.
+   */
+  getLeadResponseSummary: agentProcedure.query(async ({ ctx }) => {
     const db = await getDb();
+    requireUser(ctx);
+
+    const emptySummary = {
+      windowDays: 30,
+      totalLeads: 0,
+      respondedLeads: 0,
+      awaitingFirstResponse: 0,
+      medianHoursToFirstResponse: null as number | null,
+    };
+
+    const [agentRecord] = await db
+      .select({ id: agents.id })
+      .from(agents)
+      .where(and(eq(agents.userId, requireUser(ctx).id), eq(agents.status, 'approved')))
+      .limit(1);
+    if (!agentRecord) return emptySummary;
+
+    const sinceIso = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+    const rows = await db
+      .select({
+        status: leads.status,
+        createdAt: leads.createdAt,
+        firstRespondedAt: leads.firstRespondedAt,
+      })
+      .from(leads)
+      .where(and(eq(leads.agentId, agentRecord.id), gte(leads.createdAt, sinceIso)));
+
+    const respondedHours = rows
+      .filter(row => Boolean(row.firstRespondedAt))
+      .map(row => {
+        const created = new Date(row.createdAt).getTime();
+        const responded = new Date(row.firstRespondedAt as string).getTime();
+        return Math.max(0, (responded - created) / (60 * 60 * 1000));
+      })
+      .sort((left, right) => left - right);
+
+    const median =
+      respondedHours.length > 0
+        ? respondedHours[Math.floor((respondedHours.length - 1) / 2)]
+        : null;
+
+    return {
+      windowDays: 30,
+      totalLeads: rows.length,
+      respondedLeads: respondedHours.length,
+      awaitingFirstResponse: rows.filter(
+        row => !row.firstRespondedAt && row.status !== 'lost',
+      ).length,
+      medianHoursToFirstResponse: median === null ? null : Math.round(median * 10) / 10,
+    };
+  }),
+
+  getActivationMilestones: agentProcedure.query(async ({ ctx }) => {    const db = await getDb();
     const userId = requireUser(ctx).id;
     const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
