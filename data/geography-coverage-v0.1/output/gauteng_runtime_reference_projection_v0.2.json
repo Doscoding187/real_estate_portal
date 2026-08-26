@@ -7,7 +7,7 @@
     "factual_canonical_geography_sha256": "1fe0e2e3101bd7e459f484b7125dc1ce1f0327104002b184ef0e90d4236b7b7f",
     "factual_canonical_names_sha256": "a87891bc2e4167130d7e5eb649516a34aedaa071278ce8fe25df19f511669b51",
     "carried_projection_v01_sha256": "982ea13cd190a02da5440f122a061713e22bc157ef46f491ce530c5877ff9fc0",
-    "territory_manifest_sha256": "465f868c919d6f2a64301d8474c6e781b2f394d189b65541cf097f2816296b02"
+    "territory_manifest_sha256": "c50e7c2d632528e1ef5c364f88ee9000fa0da5764491240d847fb0e29c153ca1"
   },
   "rows": [
     {
@@ -125,6 +125,28 @@
       ],
       "factual_types": [
         "locality"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/alberton/bracken-downs",
+      "runtime_parent_natural_key": "gauteng/alberton",
+      "name": "Bracken Downs",
+      "slug": "bracken-downs",
+      "latitude": -26.3333333,
+      "longitude": 28.0886111,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-7cb456498535bedcc2b5"
+      ],
+      "factual_preferred_names": [
+        "Bracken Downs"
+      ],
+      "factual_types": [
+        "suburb"
       ]
     },
     {
@@ -4941,6 +4963,28 @@
       ],
       "factual_preferred_names": [
         "Harmelia"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/germiston/hazeldene",
+      "runtime_parent_natural_key": "gauteng/germiston",
+      "name": "Hazeldene",
+      "slug": "hazeldene",
+      "latitude": -26.2516667,
+      "longitude": 28.1741667,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-f715c0731bd5995c26e4"
+      ],
+      "factual_preferred_names": [
+        "Hazeldene"
       ],
       "factual_types": [
         "suburb"
@@ -27047,6 +27091,28 @@
       ],
       "factual_preferred_names": [
         "Mfuyaneni"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/thembisa/midfield-estate",
+      "runtime_parent_natural_key": "gauteng/thembisa",
+      "name": "Midfield Estate",
+      "slug": "midfield-estate",
+      "latitude": -25.9232177,
+      "longitude": 28.1984228,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-860ba4550eae5450996b"
+      ],
+      "factual_preferred_names": [
+        "Midfield Estate"
       ],
       "factual_types": [
         "suburb"

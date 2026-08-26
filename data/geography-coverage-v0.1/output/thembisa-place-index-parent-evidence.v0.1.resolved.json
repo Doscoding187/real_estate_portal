@@ -9,7 +9,7 @@
     "retrieved": "2026-08-26",
     "licence_note": "Official government place-index used for service-area membership assertions; no prose or geometry is copied."
   },
-  "edge_count": 3,
+  "edge_count": 4,
   "edges": [
     {
       "factual_location_id": "pl-gp-v01-650137ebde8e692fa496",
@@ -28,6 +28,14 @@
       "citation": "https://www.ocj.gov.za/maps/areas-gp.html#Gauteng%3A%20Find%20a%20court%20in%20your%20area%20%E2%80%94%20Tembisa%20Sub%20District%20entries (retrieved 2026-08-26)"
     },
     {
+      "factual_location_id": "pl-gp-v01-860ba4550eae5450996b",
+      "preferred_name": "Midfield Estate",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/thembisa",
+      "evidence_class": "official_magisterial_place_index",
+      "citation": "https://www.ocj.gov.za/maps/areas-gp.html#Gauteng%3A%20Find%20a%20court%20in%20your%20area%20%E2%80%94%20Tembisa%20Sub%20District%20entries (retrieved 2026-08-26)"
+    },
+    {
       "factual_location_id": "pl-gp-v01-cf322c795ba705f06bee",
       "preferred_name": "Hospital View",
       "factual_type": "suburb",
@@ -37,7 +45,7 @@
     }
   ],
   "diagnostics": {
-    "researched_names": 3,
+    "researched_names": 4,
     "matched_already_projected": [
       {
         "name": "Hospital View",
@@ -48,6 +56,12 @@
       {
         "name": "Midlands Estate",
         "factual_location_id": "pl-gp-v01-757a83f567419c726108",
+        "existing_parent_natural_key": "gauteng/thembisa",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Mthambeka",
+        "factual_location_id": "pl-gp-v01-650137ebde8e692fa496",
         "existing_parent_natural_key": "gauteng/thembisa",
         "parent_matches_evidence": true
       }
