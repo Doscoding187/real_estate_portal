@@ -48,7 +48,7 @@ import {
 } from '@/lib/heroJourneySearch';
 import { RENT_PUBLIC_PROPERTY_TYPES } from '@shared/property-taxonomy';
 import { buildLocationDiscoveryPath, hasCanonicalLocationIdentity } from '@/lib/locationDiscovery';
-import { buildConsumerJourneyUrl } from '@/lib/consumerJourneyRouter';
+import { buildConsumerJourneyUrl, LAND_PUBLIC_CLASSIFICATION_OPTIONS } from '@/lib/consumerJourneyRouter';
 import { parseCanonicalLocationId } from '@shared/locationAuthority';
 import type { LocationNode } from '@/types/location';
 import type { SearchAreaDiscoveryResult, SearchDiscoveryResult } from '@shared/searchDiscovery';
@@ -215,7 +215,22 @@ const JOURNEY_PRESENTATION: Partial<
   plot_land: {
     placeholder: 'Search plots and land by city, suburb, or area...',
     guidance: 'Explore available plots and land in the places that matter to you.',
-    primaryFilters: [],
+    primaryFilters: [
+      {
+        key: 'classification',
+        label: 'Land type',
+        emptyLabel: 'Any land type',
+        icon: MapPin,
+        options: LAND_PUBLIC_CLASSIFICATION_OPTIONS,
+      },
+      {
+        key: 'maxPrice',
+        label: 'Price range',
+        emptyLabel: 'Any price',
+        icon: CircleDollarSign,
+        options: PRICE_OPTIONS,
+      },
+    ],
   },
   commercial: {
     placeholder: 'Search commercial locations...',
@@ -622,6 +637,25 @@ export function EnhancedHero({
       );
       return;
     }
+    if (journey === 'plot_land') {
+      const params = new URLSearchParams();
+      if (selectedSearchArea) {
+        params.set('searchAreaId', selectedSearchArea.searchAreaId);
+      } else if (selectedLocations.length > 0) {
+        const ids = selectedLocations
+          .map(loc => loc.canonicalLocationId || loc.id)
+          .filter(Boolean);
+        if (ids.length === selectedLocations.length) {
+          if (ids.length === 1) params.set('locationId', ids[0]);
+          else ids.forEach(id => params.append('locationIds', id));
+        }
+      }
+      if (filters.classification) params.set('classification', String(filters.classification));
+      if (filters.maxPrice) params.set('maxPrice', String(filters.maxPrice));
+      setLocation(`/plots-and-land?${params.toString()}`);
+      return;
+    }
+
     if (journey === 'shared_living') {
       // Shared Living owns /shared-living with its own search contract.
       // Pass geography + any active SL-specific filter selections so the
