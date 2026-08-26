@@ -14,13 +14,6 @@ export interface SearchDiscoveryDisplayContext {
   contextLabel?: string;
 }
 
-export type SearchDiscoveryMatchReason =
-  | 'exact'
-  | 'prefix'
-  | 'contains'
-  | 'alias_exact'
-  | 'alias_prefix';
-
 export interface CanonicalLocationDiscoveryResult {
   kind: 'canonical_location';
   /** Environment-independent factual identity when a governed projection exists. */
@@ -39,10 +32,6 @@ export interface CanonicalLocationDiscoveryResult {
   canonicalPath: string;
   source: 'canonical_geography';
   listingCount?: number;
-  /** How the query matched this result; alias hits never create new identities. */
-  matchReason?: SearchDiscoveryMatchReason;
-  /** The accepted alternate name that matched, when the hit came through an alias. */
-  matchedAlias?: string;
 }
 
 export interface SearchAreaDiscoveryResult {

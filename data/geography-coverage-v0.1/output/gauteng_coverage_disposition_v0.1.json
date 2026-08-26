@@ -39,7 +39,7 @@
   "alias_drop_log": [],
   "outputs": {
     "projection": "data/geography-coverage-v0.1/output/gauteng_runtime_reference_projection_v0.2.json",
-    "projection_sha256": "58bd359a5c76fbc9c82142530972dec5ef10641d51cc9bd3be22073c6fb466ba",
+    "projection_sha256": "b7a5ca7f5c1b1381b0f5f6e1e7e8bc907d35d58067ffc3b15f5ea74ab4096d26",
     "mapping": "data/geography-coverage-v0.1/output/gauteng_factual_runtime_mapping_v0.2.jsonl",
     "review_queue": "data/geography-coverage-v0.1/output/gauteng_review_queue_v0.1.jsonl"
   }

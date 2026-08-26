@@ -637,25 +637,6 @@ export function EnhancedHero({
       );
       return;
     }
-    if (journey === 'plot_land') {
-      const params = new URLSearchParams();
-      if (selectedSearchArea) {
-        params.set('searchAreaId', selectedSearchArea.searchAreaId);
-      } else if (selectedLocations.length > 0) {
-        const ids = selectedLocations
-          .map(loc => loc.canonicalLocationId || loc.id)
-          .filter(Boolean);
-        if (ids.length === selectedLocations.length) {
-          if (ids.length === 1) params.set('locationId', ids[0]);
-          else ids.forEach(id => params.append('locationIds', id));
-        }
-      }
-      if (filters.classification) params.set('classification', String(filters.classification));
-      if (filters.maxPrice) params.set('maxPrice', String(filters.maxPrice));
-      setLocation(`/plots-and-land?${params.toString()}`);
-      return;
-    }
-
     if (journey === 'shared_living') {
       // Shared Living owns /shared-living with its own search contract.
       // Pass geography + any active SL-specific filter selections so the

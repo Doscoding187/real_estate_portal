@@ -240,7 +240,6 @@ type CityReference = {
   slug: string;
   latitude?: string | number;
   longitude?: string | number;
-  publicationStatus?: 'verified' | 'provisional';
 };
 
 type SuburbReference = {
@@ -250,39 +249,35 @@ type SuburbReference = {
   postalCode?: string;
   latitude?: string | number;
   longitude?: string | number;
-  publicationStatus?: 'verified' | 'provisional';
 };
 
-const GOVERNED_CITY_REFERENCES: readonly CityReference[] = GOVERNED_RUNTIME_REFERENCE_ROWS.filter(
-  (
-    row,
-  ): row is (typeof GOVERNED_RUNTIME_REFERENCE_ROWS)[number] & {
-    runtimeParentNaturalKey: string;
-  } => row.runtimeStorageLevel === 'city' && Boolean(row.runtimeParentNaturalKey),
-).map(row => ({
-  provinceSlug: row.runtimeParentNaturalKey.split('/').slice(-1)[0]!,
-  name: row.name,
-  slug: row.slug,
-  ...(row.latitude !== undefined ? { latitude: row.latitude } : {}),
-  ...(row.longitude !== undefined ? { longitude: row.longitude } : {}),
-  ...(row.publicationStatus ? { publicationStatus: row.publicationStatus } : {}),
-}));
+const GOVERNED_CITY_REFERENCES: readonly CityReference[] = GOVERNED_RUNTIME_REFERENCE_ROWS
+  .filter(
+    (row): row is (typeof GOVERNED_RUNTIME_REFERENCE_ROWS)[number] & {
+      runtimeParentNaturalKey: string;
+    } => row.runtimeStorageLevel === 'city' && Boolean(row.runtimeParentNaturalKey),
+  )
+  .map(row => ({
+    provinceSlug: row.runtimeParentNaturalKey.split('/').slice(-1)[0]!,
+    name: row.name,
+    slug: row.slug,
+    ...(row.latitude !== undefined ? { latitude: row.latitude } : {}),
+    ...(row.longitude !== undefined ? { longitude: row.longitude } : {}),
+  }));
 
-const GOVERNED_SUBURB_REFERENCES: readonly SuburbReference[] =
-  GOVERNED_RUNTIME_REFERENCE_ROWS.filter(
-    (
-      row,
-    ): row is (typeof GOVERNED_RUNTIME_REFERENCE_ROWS)[number] & {
+const GOVERNED_SUBURB_REFERENCES: readonly SuburbReference[] = GOVERNED_RUNTIME_REFERENCE_ROWS
+  .filter(
+    (row): row is (typeof GOVERNED_RUNTIME_REFERENCE_ROWS)[number] & {
       runtimeParentNaturalKey: string;
     } => row.runtimeStorageLevel === 'suburb' && Boolean(row.runtimeParentNaturalKey),
-  ).map(row => ({
+  )
+  .map(row => ({
     citySlug: row.runtimeParentNaturalKey,
     name: row.name,
     slug: row.slug,
     ...(row.postalCode ? { postalCode: row.postalCode } : {}),
     ...(row.latitude !== undefined ? { latitude: row.latitude } : {}),
     ...(row.longitude !== undefined ? { longitude: row.longitude } : {}),
-    ...(row.publicationStatus ? { publicationStatus: row.publicationStatus } : {}),
   }));
 
 const REFERENCE_PAYLOAD = Object.freeze({ provinces: PROVINCES, cities: CITIES, suburbs: SUBURBS });
@@ -295,24 +290,24 @@ export const CANONICAL_GEOGRAPHY_EXPECTED_ROWS = Object.freeze({
 export const GOVERNED_RUNTIME_GEOGRAPHY_EXPECTED_ROWS = Object.freeze({
   provinces: new Set([
     ...PROVINCES.map(item => item.slug),
-    ...GOVERNED_RUNTIME_REFERENCE_ROWS.filter(row => row.runtimeStorageLevel === 'province').map(
-      row => row.runtimeNaturalKey,
-    ),
+    ...GOVERNED_RUNTIME_REFERENCE_ROWS
+      .filter(row => row.runtimeStorageLevel === 'province')
+      .map(row => row.runtimeNaturalKey),
   ]).size,
   cities: new Set([
     ...CITIES.map(item => `${item.provinceSlug}/${item.slug}`),
-    ...GOVERNED_RUNTIME_REFERENCE_ROWS.filter(row => row.runtimeStorageLevel === 'city').map(
-      row => row.runtimeNaturalKey,
-    ),
+    ...GOVERNED_RUNTIME_REFERENCE_ROWS
+      .filter(row => row.runtimeStorageLevel === 'city')
+      .map(row => row.runtimeNaturalKey),
   ]).size,
   suburbs: new Set([
     ...SUBURBS.map(item => {
       const city = CITIES.find(candidate => candidate.slug === item.citySlug);
       return `${city?.provinceSlug ?? ''}/${item.citySlug}/${item.slug}`;
     }),
-    ...GOVERNED_RUNTIME_REFERENCE_ROWS.filter(row => row.runtimeStorageLevel === 'suburb').map(
-      row => row.runtimeNaturalKey,
-    ),
+    ...GOVERNED_RUNTIME_REFERENCE_ROWS
+      .filter(row => row.runtimeStorageLevel === 'suburb')
+      .map(row => row.runtimeNaturalKey),
   ]).size,
 });
 export const GOVERNED_RUNTIME_REFERENCE_DIGEST = stableDigest(GOVERNED_RUNTIME_REFERENCE_ROWS);
@@ -404,16 +399,8 @@ async function ensureCity(
     return { id: asId(row, `city ${item.slug}`), name: item.name, slug: item.slug };
   }
   const result: any = await connection.execute(
-    'INSERT INTO cities (provinceId, name, latitude, longitude, isMetro, slug, status) VALUES (?, ?, ?, ?, ?, ?, ?)',
-    [
-      provinceId,
-      item.name,
-      item.latitude ?? null,
-      item.longitude ?? null,
-      1,
-      item.slug,
-      item.publicationStatus === 'provisional' ? 'provisional' : 'verified',
-    ],
+    'INSERT INTO cities (provinceId, name, latitude, longitude, isMetro, slug) VALUES (?, ?, ?, ?, ?, ?)',
+    [provinceId, item.name, item.latitude ?? null, item.longitude ?? null, 1, item.slug],
   );
   const id = Number(result?.[0]?.insertId ?? result?.insertId);
   if (!Number.isSafeInteger(id) || id <= 0)
@@ -438,8 +425,7 @@ async function ensureSuburb(
     if (
       String(rowValue(row, 'name')) !== item.name ||
       Number(rowValue(row, 'cityId')) !== cityId ||
-      (item.postalCode !== undefined &&
-        String(rowValue(row, 'postalCode') ?? '') !== item.postalCode)
+      item.postalCode !== undefined && String(rowValue(row, 'postalCode') ?? '') !== item.postalCode
     ) {
       throw new Error(
         `Canonical geography suburb ${item.slug} conflicts with the approved hierarchy.`,
@@ -448,16 +434,8 @@ async function ensureSuburb(
     return { id: asId(row, `suburb ${item.slug}`), name: item.name, slug: item.slug };
   }
   const result: any = await connection.execute(
-    'INSERT INTO suburbs (cityId, name, latitude, longitude, postalCode, slug, status) VALUES (?, ?, ?, ?, ?, ?, ?)',
-    [
-      cityId,
-      item.name,
-      item.latitude ?? null,
-      item.longitude ?? null,
-      item.postalCode ?? null,
-      item.slug,
-      item.publicationStatus === 'provisional' ? 'provisional' : 'verified',
-    ],
+    'INSERT INTO suburbs (cityId, name, latitude, longitude, postalCode, slug) VALUES (?, ?, ?, ?, ?, ?)',
+    [cityId, item.name, item.latitude ?? null, item.longitude ?? null, item.postalCode ?? null, item.slug],
   );
   const id = Number(result?.[0]?.insertId ?? result?.insertId);
   if (!Number.isSafeInteger(id) || id <= 0)
@@ -534,9 +512,7 @@ export async function verifyCanonicalGeographyReferenceData(
     if (row.runtimeStorageLevel === 'province') {
       const province = provinceRows.get(row.runtimeNaturalKey);
       if (!province || String(rowValue(province, 'province_name')) !== row.name) {
-        throw new Error(
-          `Canonical geography is missing governed province ${row.runtimeNaturalKey}.`,
-        );
+        throw new Error(`Canonical geography is missing governed province ${row.runtimeNaturalKey}.`);
       }
       continue;
     }
@@ -554,9 +530,7 @@ export async function verifyCanonicalGeographyReferenceData(
         Number(rowValue(city, 'city_province_id')) !==
           asId(parent, row.runtimeParentNaturalKey || 'province', 'province_id')
       ) {
-        throw new Error(
-          `Governed city ${row.runtimeNaturalKey} is attached to the wrong province.`,
-        );
+        throw new Error(`Governed city ${row.runtimeNaturalKey} is attached to the wrong province.`);
       }
       continue;
     }

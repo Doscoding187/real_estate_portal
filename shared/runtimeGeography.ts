@@ -8,14 +8,9 @@ import {
 } from './factualRuntimeGeographyBridge';
 import type { CanonicalLocationLevel } from './locationAuthority';
 
-export const GOVERNED_RUNTIME_REFERENCE_PROJECTION_SCHEMA_VERSION = '0.2' as const;
+export const GOVERNED_RUNTIME_REFERENCE_PROJECTION_SCHEMA_VERSION = '0.1' as const;
 
 export type RuntimeReferenceStorageLevel = CanonicalLocationLevel;
-
-export const RUNTIME_REFERENCE_PUBLICATION_STATUSES = ['verified', 'provisional'] as const;
-
-export type RuntimeReferencePublicationStatus =
-  (typeof RUNTIME_REFERENCE_PUBLICATION_STATUSES)[number];
 
 /**
  * A generated row in the governed reference projection. It describes the
@@ -33,11 +28,6 @@ export interface GovernedRuntimeReferenceRow {
   latitude?: string | number;
   longitude?: string | number;
   postalCode?: string;
-  /** Accepted alternate names; they never create a second canonical record. */
-  searchableAliases?: readonly string[];
-  /** Tier signal for reference-data preparation; carried rows default to verified. */
-  publicationStatus?: RuntimeReferencePublicationStatus;
-  licensingClassification?: string;
   factualLocationIds: readonly string[];
   factualPreferredNames: readonly string[];
   factualTypes: readonly FactualGeographyType[];
@@ -48,7 +38,6 @@ export interface GovernedRuntimeReferenceProjection {
   projectionVersion: string;
   sourceFactualProjectionArtifact: string;
   numericRuntimeIdsAreDurableAuthority: false;
-  checkpoints?: Readonly<Record<string, string>>;
   rows: readonly GovernedRuntimeReferenceRow[];
 }
 
@@ -132,37 +121,6 @@ export function assertGovernedRuntimeReferenceProjection(
     naturalKeys.add(candidate.runtimeNaturalKey);
     if (!candidate.name?.trim() || !candidate.slug?.trim()) {
       throw new Error('Governed runtime reference rows require a name and slug.');
-    }
-    if (candidate.searchableAliases !== undefined) {
-      if (!Array.isArray(candidate.searchableAliases)) {
-        throw new Error('Governed runtime reference aliases must be an array when present.');
-      }
-      const seenAliases = new Set<string>();
-      for (const alias of candidate.searchableAliases) {
-        if (typeof alias !== 'string' || !alias.trim()) {
-          throw new Error('Governed runtime reference aliases must be non-empty strings.');
-        }
-        const normalizedAlias = alias.trim().toLowerCase();
-        if (normalizedAlias === candidate.name.trim().toLowerCase()) {
-          throw new Error(
-            `Governed runtime reference alias duplicates the preferred name on ${candidate.runtimeNaturalKey}.`,
-          );
-        }
-        if (seenAliases.has(normalizedAlias)) {
-          throw new Error(
-            `Duplicate governed runtime reference alias ${alias} on ${candidate.runtimeNaturalKey}.`,
-          );
-        }
-        seenAliases.add(normalizedAlias);
-      }
-    }
-    if (
-      candidate.publicationStatus !== undefined &&
-      !RUNTIME_REFERENCE_PUBLICATION_STATUSES.includes(candidate.publicationStatus)
-    ) {
-      throw new Error(
-        `Unsupported governed runtime publication status ${String(candidate.publicationStatus)}.`,
-      );
     }
     if (!Array.isArray(candidate.factualLocationIds)) {
       throw new Error('Governed runtime reference rows require factual identities.');

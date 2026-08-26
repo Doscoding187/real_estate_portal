@@ -1,0 +1,20 @@
+CREATE TABLE `provider_reviews` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `provider_id` int NOT NULL,
+  `introduction_id` int,
+  `reviewer_user_id` int,
+  `rating` int NOT NULL,
+  `title` varchar(200),
+  `content` text,
+  `moderation_status` enum('pending','approved','rejected') NOT NULL DEFAULT 'approved',
+  `is_published` tinyint NOT NULL DEFAULT 1,
+  `published_at` timestamp,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_provider_reviews_provider` (`provider_id`),
+  KEY `idx_provider_reviews_introduction` (`introduction_id`),
+  KEY `idx_provider_reviews_created` (`created_at`),
+  CONSTRAINT `fk_provider_reviews_provider` FOREIGN KEY (`provider_id`) REFERENCES `service_providers` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_provider_reviews_introduction` FOREIGN KEY (`introduction_id`) REFERENCES `service_introductions` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `fk_provider_reviews_reviewer` FOREIGN KEY (`reviewer_user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL
+);

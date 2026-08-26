@@ -1,0 +1,23 @@
+CREATE TABLE `service_providers` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `owner_user_id` int NOT NULL,
+  `slug` varchar(180) NOT NULL,
+  `name` varchar(255) NOT NULL,
+  `logo_url` varchar(500),
+  `about` text,
+  `website_url` varchar(500),
+  `contact_email` varchar(320),
+  `contact_phone` varchar(50),
+  `participation_status` enum('draft','pending_review','live','paused','suspended') NOT NULL DEFAULT 'draft',
+  `primary_taxonomy_node_id` int,
+  `metadata` json,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  CONSTRAINT `uq_service_providers_owner` UNIQUE (`owner_user_id`),
+  CONSTRAINT `uq_service_providers_slug` UNIQUE (`slug`),
+  KEY `idx_service_providers_status` (`participation_status`),
+  KEY `idx_service_providers_primary_node` (`primary_taxonomy_node_id`),
+  CONSTRAINT `fk_service_providers_owner_user` FOREIGN KEY (`owner_user_id`) REFERENCES `users` (`id`),
+  CONSTRAINT `fk_service_providers_primary_node` FOREIGN KEY (`primary_taxonomy_node_id`) REFERENCES `service_taxonomy_nodes` (`id`) ON DELETE SET NULL
+);

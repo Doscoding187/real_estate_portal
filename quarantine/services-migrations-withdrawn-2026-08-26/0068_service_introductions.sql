@@ -1,0 +1,21 @@
+CREATE TABLE `service_introductions` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `request_id` int NOT NULL,
+  `provider_id` int NOT NULL,
+  `status` enum('suggested','introduced','viewed','accepted','declined','contacted','quote_requested','quote_submitted','shortlisted','hired','completed','lost','no_response','expired') NOT NULL DEFAULT 'suggested',
+  `source` enum('auto_shortlist','admin_manual','consumer_selected','provider_direct') NOT NULL DEFAULT 'auto_shortlist',
+  `match_score_snapshot` decimal(5,2),
+  `commercial_snapshot` json,
+  `note` text,
+  `responded_at` timestamp,
+  `connected_at` timestamp,
+  `closed_at` timestamp,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  CONSTRAINT `uq_service_introductions_request_provider` UNIQUE (`request_id`,`provider_id`),
+  KEY `idx_service_introductions_provider_status` (`provider_id`,`status`),
+  KEY `idx_service_introductions_request` (`request_id`),
+  CONSTRAINT `fk_service_introductions_request` FOREIGN KEY (`request_id`) REFERENCES `service_requests` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_service_introductions_provider` FOREIGN KEY (`provider_id`) REFERENCES `service_providers` (`id`)
+);

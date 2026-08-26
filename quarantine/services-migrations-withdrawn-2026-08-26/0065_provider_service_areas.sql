@@ -1,0 +1,21 @@
+CREATE TABLE `provider_service_areas` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `provider_id` int NOT NULL,
+  `country_code` varchar(2) NOT NULL DEFAULT 'ZA',
+  `coverage_type` enum('locality','radius','province_wide','national','remote') NOT NULL DEFAULT 'radius',
+  `province_id` int,
+  `city_id` int,
+  `suburb_id` int,
+  `radius_km` int,
+  `is_primary` tinyint NOT NULL DEFAULT 0,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_provider_service_areas_provider` (`provider_id`),
+  KEY `idx_provider_service_areas_province` (`province_id`),
+  KEY `idx_provider_service_areas_city` (`city_id`),
+  KEY `idx_provider_service_areas_suburb` (`suburb_id`),
+  CONSTRAINT `fk_provider_service_areas_provider` FOREIGN KEY (`provider_id`) REFERENCES `service_providers` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_provider_service_areas_province` FOREIGN KEY (`province_id`) REFERENCES `provinces` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `fk_provider_service_areas_city` FOREIGN KEY (`city_id`) REFERENCES `cities` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `fk_provider_service_areas_suburb` FOREIGN KEY (`suburb_id`) REFERENCES `suburbs` (`id`) ON DELETE SET NULL
+);

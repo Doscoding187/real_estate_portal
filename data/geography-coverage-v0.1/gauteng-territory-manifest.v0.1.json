@@ -14,7 +14,10 @@
     "geography_jsonl": "gauteng_factual_canonical_geography_v0.1.jsonl",
     "names_jsonl": "gauteng_factual_canonical_names_v0.1.jsonl",
     "carried_projection": "data/gauteng-canonical-runtime-convergence-v0.1/output/gauteng_runtime_reference_projection_v0.1.json",
-    "carried_mapping": "data/gauteng-canonical-runtime-convergence-v0.1/output/gauteng_factual_runtime_mapping_v0.1.jsonl"
+    "carried_mapping": "data/gauteng-canonical-runtime-convergence-v0.1/output/gauteng_factual_runtime_mapping_v0.1.jsonl",
+    "researched_parent_edges": [
+      "data/geography-coverage-v0.1/output/kempton-park-parent-evidence.v0.1.resolved.json"
+    ]
   },
   "outputs": {
     "output_dir": "data/geography-coverage-v0.1/output",

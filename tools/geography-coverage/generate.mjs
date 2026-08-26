@@ -9,7 +9,25 @@ const SCRIPT_DIRECTORY = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(SCRIPT_DIRECTORY, '../..');
 
 const PROJECTION_SCHEMA_VERSION = '0.2';
-const PROJECTION_VERSION = 'gauteng-runtime-reference-projection-v0.2';
+const PROJECTION_VERSION = 'gauteng-runtime-reference-projection-v0.3';
+
+function loadResearchedEdges(ROOT, rawManifest) {
+  const edgeFiles = rawManifest.inputs.researched_parent_edges ?? [];
+  const byFactualId = new Map();
+  return {
+    byFactualId,
+    hydrate(acceptedMetroKeys) {
+      for (const relativePath of edgeFiles) {
+        const resolved = readJson(path.join(ROOT, relativePath));
+        for (const edge of resolved.edges ?? []) {
+          if (!acceptedMetroKeys.has(edge.parent_natural_key)) continue;
+          byFactualId.set(edge.factual_location_id, edge);
+        }
+      }
+    },
+    declared: edgeFiles.length,
+  };
+}
 
 const METRO_TYPES = new Set(['city', 'town']);
 const LOCALITY_TYPES = new Set(['suburb', 'locality', 'neighbourhood', 'village', 'township']);
@@ -157,8 +175,10 @@ function queueRecord(state, record, reason, nextAction) {
 
 function collectCandidates(state, inputs, manifest) {
   const candidates = [];
+  const localityInputs = [];
   const registryByContext = manifest.registryByContext;
   const excludedContexts = manifest.excludedContexts;
+  const researchedEdges = manifest.researchedEdges;
   const carriedByFactualId = new Map(
     inputs.carriedMapping.map(entry => [entry.factual_location_id, entry]),
   );
@@ -250,8 +270,29 @@ function collectCandidates(state, inputs, manifest) {
       continue;
     }
 
+    localityInputs.push({ record, adm2Name, slug });
+  }
+
+  const acceptedMetroKeys = new Set(
+    inputs.carriedRows
+      .filter(row => row.runtime_storage_level === 'city')
+      .map(row => row.runtime_natural_key),
+  );
+  for (const candidate of candidates) acceptedMetroKeys.add(candidate.naturalKey);
+  researchedEdges.hydrate(acceptedMetroKeys);
+
+  for (const { record, adm2Name, slug } of localityInputs) {
+    const edge = researchedEdges.byFactualId.get(record.canonical_location_id);
     const registryEntry = adm2Name ? registryByContext.get(adm2Name) : undefined;
-    if (!registryEntry) {
+    let parentKey;
+    let decisionNote;
+    if (registryEntry) {
+      parentKey = registryEntry.parent_natural_key;
+      decisionNote = null;
+    } else if (edge) {
+      parentKey = edge.parent_natural_key;
+      decisionNote = `researched edge (${edge.evidence_class})`;
+    } else {
       queueRecord(
         state,
         record,
@@ -264,9 +305,10 @@ function collectCandidates(state, inputs, manifest) {
       record,
       scopeKind: 'locality',
       storageLevel: 'suburb',
-      naturalKey: `${registryEntry.parent_natural_key}/${slug}`,
-      parentKey: registryEntry.parent_natural_key,
+      naturalKey: `${parentKey}/${slug}`,
+      parentKey,
       publicationStatus: 'provisional',
+      decisionNote,
     });
   }
   return candidates;
@@ -384,7 +426,7 @@ function emitRows(state, survivors) {
       `${storageLevel}|${province}|${normalizeName(record.preferred_name)}`,
       naturalKey,
     );
-    state.runtimeRecords.push({ record, row });
+    state.runtimeRecords.push({ record, row, decisionNote: candidate.decisionNote });
   }
   return rows;
 }
@@ -477,7 +519,7 @@ async function main() {
   const excludedContexts = new Set(
     rawManifest.parent_context_registry?.excluded_non_territory_contexts ?? [],
   );
-  const manifest = { registryByContext, excludedContexts };
+  const manifest = { registryByContext, excludedContexts, researchedEdges };
 
   const candidates = collectCandidates(state, inputs, manifest);
   const survivors = resolveCollisions(state, candidates);
