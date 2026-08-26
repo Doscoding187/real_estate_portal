@@ -18,6 +18,7 @@ import {
 } from '../dataAdapters/governedRuntimeGeography';
 import {
   buildScenarioInsertStatement,
+  prepareSearchToLeadScenario,
   SEARCH_TO_LEAD_SCENARIO_DIGEST,
   SEARCH_TO_LEAD_SCENARIO_VERSION,
   verifySearchToLeadScenario,
@@ -77,7 +78,9 @@ function decision(
   return { operation } as any;
 }
 
-function disposableTestAuthority(operation: 'verification' | 'reference-seed' | 'foundation-seed') {
+function disposableTestAuthority(
+  operation: 'verification' | 'reference-seed' | 'foundation-seed' | 'scenario-seed',
+) {
   const testIdentity = identity('fix/database-authority-disposable-test');
   return resolveDatabaseAuthority({
     operation,
@@ -276,6 +279,17 @@ describe('bounded Database Authority data adapters', () => {
         connection: prepareConnection,
       }),
     ).rejects.toThrow('connection must not be reached');
+
+    const scenarioTarget = disposableTestAuthority('scenario-seed');
+    const scenarioConnection = new UnexpectedConnection();
+    await expect(
+      prepareSearchToLeadScenario({
+        authority: scenarioTarget,
+        decision: decision('scenario-seed'),
+        connection: scenarioConnection,
+      }),
+    ).rejects.toThrow('connection must not be reached');
+    expect(scenarioConnection.calls).toBeGreaterThan(0);
 
     const verifyTarget = disposableTestAuthority('verification');
     const verifyConnection = new UnexpectedConnection();

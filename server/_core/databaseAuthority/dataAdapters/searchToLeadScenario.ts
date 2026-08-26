@@ -6,7 +6,7 @@ import {
   assertOperation,
   queryRows,
   requireAcceptedMigrationHead,
-  requireExactAdapterTarget,
+  requireReferenceAdapterTarget,
   rowValue,
   stableDigest,
   withTransaction,
@@ -1812,7 +1812,7 @@ export async function prepareSearchToLeadScenario(input: {
   profileRoot?: string;
 }): Promise<SearchToLeadScenarioEvidence> {
   assertOperation(input.decision, ['scenario-seed']);
-  const ownership = requireExactAdapterTarget(input.authority, input.profileRoot);
+  const ownership = requireReferenceAdapterTarget(input.authority, input.profileRoot);
   const manifest = await requireAcceptedMigrationHead({
     authority: input.authority,
     connection: input.connection,
@@ -2469,7 +2469,7 @@ export async function verifySearchToLeadScenario(input: {
   profileRoot?: string;
 }): Promise<SearchToLeadScenarioEvidence> {
   assertOperation(input.decision, ['verification', 'browser-verification', 'readiness']);
-  const ownership = requireExactAdapterTarget(input.authority, input.profileRoot);
+  const ownership = requireReferenceAdapterTarget(input.authority, input.profileRoot);
   const manifest = await requireAcceptedMigrationHead({
     authority: input.authority,
     connection: input.connection,
