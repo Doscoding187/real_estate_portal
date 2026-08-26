@@ -633,6 +633,19 @@ for (const probe of WAVE26_LOCALITY_PROBES) {
   );
 }
 
+const WAVE31_LOCALITY_PROBES = [
+  { name: 'Khumalo Valley', parentSuffix: 'gauteng/katlehong/khumalo-valley' },
+];
+
+for (const probe of WAVE31_LOCALITY_PROBES) {
+  const row = resolveByName(probe.name);
+  check(
+    `wave31 researched edge resolves: ${probe.name}`,
+    row !== null && row.runtime_natural_key === probe.parentSuffix,
+    row ? row.runtime_natural_key : 'missing',
+  );
+}
+
 const NEGATIVE_PROBES = ['Mamelodi Extension 1', 'Mamelodi Extension 4'];
 for (const probe of NEGATIVE_PROBES) {
   const directHit = resolveByName(probe);

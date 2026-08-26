@@ -7,7 +7,7 @@
     "factual_canonical_geography_sha256": "1fe0e2e3101bd7e459f484b7125dc1ce1f0327104002b184ef0e90d4236b7b7f",
     "factual_canonical_names_sha256": "a87891bc2e4167130d7e5eb649516a34aedaa071278ce8fe25df19f511669b51",
     "carried_projection_v01_sha256": "982ea13cd190a02da5440f122a061713e22bc157ef46f491ce530c5877ff9fc0",
-    "territory_manifest_sha256": "48fbae01a761787e05d0c4540d5bd7130515215f420139cdaf15a377135ca3a9"
+    "territory_manifest_sha256": "a56b886064706c8ac08380f9398307ef064a21b2b8034858a80004dbb6b84dd3"
   },
   "rows": [
     {
@@ -14965,6 +14965,28 @@
       ],
       "factual_types": [
         "town"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/katlehong/khumalo-valley",
+      "runtime_parent_natural_key": "gauteng/katlehong",
+      "name": "Khumalo Valley",
+      "slug": "khumalo-valley",
+      "latitude": -26.375,
+      "longitude": 28.1655556,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-b18b06f8ccf408d7a7c5"
+      ],
+      "factual_preferred_names": [
+        "Khumalo Valley"
+      ],
+      "factual_types": [
+        "suburb"
       ]
     },
     {
