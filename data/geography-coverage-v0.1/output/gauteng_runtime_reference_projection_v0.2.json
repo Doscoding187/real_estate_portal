@@ -7,7 +7,7 @@
     "factual_canonical_geography_sha256": "1fe0e2e3101bd7e459f484b7125dc1ce1f0327104002b184ef0e90d4236b7b7f",
     "factual_canonical_names_sha256": "a87891bc2e4167130d7e5eb649516a34aedaa071278ce8fe25df19f511669b51",
     "carried_projection_v01_sha256": "982ea13cd190a02da5440f122a061713e22bc157ef46f491ce530c5877ff9fc0",
-    "territory_manifest_sha256": "69a6008fcbc843babac8ea0ca9afb9470c7525eb4dd3ac800fb793481ab6bd03"
+    "territory_manifest_sha256": "523f82787c6b08ac26cd6a3fe9b6bbd003dc6baf041c310119b8dbfcae5e6750"
   },
   "rows": [
     {
@@ -27958,6 +27958,30 @@
     {
       "runtime_search_scope_kind": "locality",
       "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/vanderbijlpark/sw1",
+      "runtime_parent_natural_key": "gauteng/vanderbijlpark",
+      "name": "SW1",
+      "slug": "sw1",
+      "latitude": -26.714330099999998,
+      "longitude": 27.830045495593318,
+      "searchable_aliases": [
+        "S.W. 1"
+      ],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-967ce269b60e81e6a0af"
+      ],
+      "factual_preferred_names": [
+        "SW1"
+      ],
+      "factual_types": [
+        "neighbourhood"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
       "runtime_natural_key": "gauteng/vanderbijlpark/sw2",
       "runtime_parent_natural_key": "gauteng/vanderbijlpark",
       "name": "SW2",
@@ -28302,6 +28326,30 @@
       ],
       "factual_types": [
         "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/vereeniging/nw7",
+      "runtime_parent_natural_key": "gauteng/vereeniging",
+      "name": "NW7",
+      "slug": "nw7",
+      "latitude": -26.6780245,
+      "longitude": 27.806172792040087,
+      "searchable_aliases": [
+        "N.W. 7"
+      ],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-c85db613f801f91fd40e"
+      ],
+      "factual_preferred_names": [
+        "NW7"
+      ],
+      "factual_types": [
+        "neighbourhood"
       ]
     },
     {

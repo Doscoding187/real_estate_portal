@@ -463,6 +463,20 @@ for (const probe of WAVE15_LOCALITY_PROBES) {
   );
 }
 
+const WAVE16_LOCALITY_PROBES = [
+  { name: 'SW1', parentSuffix: 'gauteng/vanderbijlpark/sw1' },
+  { name: 'NW7', parentSuffix: 'gauteng/vereeniging/nw7' },
+];
+
+for (const probe of WAVE16_LOCALITY_PROBES) {
+  const row = resolveByName(probe.name);
+  check(
+    `wave16 researched edge resolves: ${probe.name}`,
+    row !== null && row.runtime_natural_key === probe.parentSuffix,
+    row ? row.runtime_natural_key : 'missing',
+  );
+}
+
 const NEGATIVE_PROBES = ['Mamelodi Extension 1', 'Mamelodi Extension 4'];
 for (const probe of NEGATIVE_PROBES) {
   const directHit = resolveByName(probe);

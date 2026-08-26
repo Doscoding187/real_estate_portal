@@ -9,7 +9,7 @@
     "retrieved": "2026-08-26",
     "licence_note": "Official municipal planning-area labels used for locality membership assertions; no prose, geometry, or property data is copied."
   },
-  "edge_count": 19,
+  "edge_count": 20,
   "edges": [
     {
       "factual_location_id": "pl-gp-v01-031a4564f0bc02489ab8",
@@ -100,6 +100,14 @@
       "citation": "https://emfuleni.gov.za/wp-content/uploads/2025/02/Emfuleni-Spatial-Development-Framework-Vision-2035.pdf#Spatial%20Development%20Framework%20Vision%202035%20%E2%80%94%20Table%2020%3A%20Vanderbijlpark%20CW%2C%20CE%2C%20SE%2C%20and%20SW%20planning%20areas (retrieved 2026-08-26)"
     },
     {
+      "factual_location_id": "pl-gp-v01-967ce269b60e81e6a0af",
+      "preferred_name": "SW1",
+      "factual_type": "neighbourhood",
+      "parent_natural_key": "gauteng/vanderbijlpark",
+      "evidence_class": "official_municipal_spatial_development_framework_area_list",
+      "citation": "https://emfuleni.gov.za/wp-content/uploads/2025/02/Emfuleni-Spatial-Development-Framework-Vision-2035.pdf#Spatial%20Development%20Framework%20Vision%202035%20%E2%80%94%20Table%2020%3A%20Vanderbijlpark%20CW%2C%20CE%2C%20SE%2C%20and%20SW%20planning%20areas (retrieved 2026-08-26)"
+    },
+    {
       "factual_location_id": "pl-gp-v01-9aa5536e9bbdad611425",
       "preferred_name": "CW1",
       "factual_type": "neighbourhood",
@@ -165,8 +173,123 @@
     }
   ],
   "diagnostics": {
-    "researched_names": 19,
-    "matched_already_projected": [],
+    "researched_names": 20,
+    "matched_already_projected": [
+      {
+        "name": "CE1",
+        "factual_location_id": "pl-gp-v01-56ec23c70255708abd32",
+        "existing_parent_natural_key": "gauteng/vanderbijlpark",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "CE2",
+        "factual_location_id": "pl-gp-v01-9d5fa0314460dc293089",
+        "existing_parent_natural_key": "gauteng/vanderbijlpark",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "CE3",
+        "factual_location_id": "pl-gp-v01-f813b1503a428b2c1b49",
+        "existing_parent_natural_key": "gauteng/vanderbijlpark",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "CE4",
+        "factual_location_id": "pl-gp-v01-3fda3de883ef7a9fd2a3",
+        "existing_parent_natural_key": "gauteng/vanderbijlpark",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "CE5",
+        "factual_location_id": "pl-gp-v01-48c99cb7e9beb655cdba",
+        "existing_parent_natural_key": "gauteng/vanderbijlpark",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "CE6",
+        "factual_location_id": "pl-gp-v01-ce143cac0e877febd324",
+        "existing_parent_natural_key": "gauteng/vanderbijlpark",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "CW1",
+        "factual_location_id": "pl-gp-v01-9aa5536e9bbdad611425",
+        "existing_parent_natural_key": "gauteng/vanderbijlpark",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "CW2",
+        "factual_location_id": "pl-gp-v01-318343436cc7885fdac6",
+        "existing_parent_natural_key": "gauteng/vanderbijlpark",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "CW3",
+        "factual_location_id": "pl-gp-v01-b8a3506a19e0efee70e4",
+        "existing_parent_natural_key": "gauteng/vanderbijlpark",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "CW4",
+        "factual_location_id": "pl-gp-v01-f6df7b145e2da9f12113",
+        "existing_parent_natural_key": "gauteng/vanderbijlpark",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "CW5",
+        "factual_location_id": "pl-gp-v01-5e5c3e8a111fde0617fc",
+        "existing_parent_natural_key": "gauteng/vanderbijlpark",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "CW6",
+        "factual_location_id": "pl-gp-v01-23fc4894dbc6607ac3a7",
+        "existing_parent_natural_key": "gauteng/vanderbijlpark",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "SE1",
+        "factual_location_id": "pl-gp-v01-7df3c1008aadecd26669",
+        "existing_parent_natural_key": "gauteng/vanderbijlpark",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "SE2",
+        "factual_location_id": "pl-gp-v01-aa6182a041befa2894be",
+        "existing_parent_natural_key": "gauteng/vanderbijlpark",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "SE6",
+        "factual_location_id": "pl-gp-v01-62fda3925195b888ef61",
+        "existing_parent_natural_key": "gauteng/vanderbijlpark",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "SE8",
+        "factual_location_id": "pl-gp-v01-4da245e8a3c6faab7a19",
+        "existing_parent_natural_key": "gauteng/vanderbijlpark",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "SE10",
+        "factual_location_id": "pl-gp-v01-b41cfe3da77d8310ddde",
+        "existing_parent_natural_key": "gauteng/vanderbijlpark",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "SW2",
+        "factual_location_id": "pl-gp-v01-031a4564f0bc02489ab8",
+        "existing_parent_natural_key": "gauteng/vanderbijlpark",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "SW5",
+        "factual_location_id": "pl-gp-v01-136331d44ed84c94a9b8",
+        "existing_parent_natural_key": "gauteng/vanderbijlpark",
+        "parent_matches_evidence": true
+      }
+    ],
     "names_not_in_canonical_layer": [],
     "ambiguous_canonical_matches": []
   }

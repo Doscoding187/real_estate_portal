@@ -1,0 +1,17 @@
+{
+  "artifact_version": "vereeniging-sdf-parent-evidence-v0.1",
+  "town": "Vereeniging",
+  "parent_natural_key": "gauteng/vereeniging",
+  "administrative_context": "Sedibeng",
+  "evidence_class": "official_municipal_spatial_development_framework_area_list",
+  "source": {
+    "publisher": "Emfuleni Local Municipality",
+    "url": "https://emfuleni.gov.za/wp-content/uploads/2025/02/EMFULENI_SDF_2023-2024.pdf",
+    "section": "Spatial Development Framework 2023–2024 — Table 14: existing industrial and commercial areas",
+    "retrieved": "2026-08-26",
+    "licence_note": "Official municipal planning-area label used for locality membership assertion; no prose, geometry, or property data is copied."
+  },
+  "suburb_names": [
+    "NW7"
+  ]
+}
