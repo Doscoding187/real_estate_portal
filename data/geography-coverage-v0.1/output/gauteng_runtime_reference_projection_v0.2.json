@@ -7,7 +7,7 @@
     "factual_canonical_geography_sha256": "1fe0e2e3101bd7e459f484b7125dc1ce1f0327104002b184ef0e90d4236b7b7f",
     "factual_canonical_names_sha256": "a87891bc2e4167130d7e5eb649516a34aedaa071278ce8fe25df19f511669b51",
     "carried_projection_v01_sha256": "982ea13cd190a02da5440f122a061713e22bc157ef46f491ce530c5877ff9fc0",
-    "territory_manifest_sha256": "61923a4166724cf3090f24f916df6174bb8a59c214129310f431773588a191be"
+    "territory_manifest_sha256": "70a3910183b824d6b6286ed62639a023db17d3a192bd7025564ef289e200095a"
   },
   "rows": [
     {
@@ -728,6 +728,28 @@
     {
       "runtime_search_scope_kind": "locality",
       "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/benoni/brentwood",
+      "runtime_parent_natural_key": "gauteng/benoni",
+      "name": "Brentwood",
+      "slug": "brentwood",
+      "latitude": -26.1330556,
+      "longitude": 28.2944444,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-db902473e556b7daa41f"
+      ],
+      "factual_preferred_names": [
+        "Brentwood"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
       "runtime_natural_key": "gauteng/benoni/brentwood-park",
       "runtime_parent_natural_key": "gauteng/benoni",
       "name": "Brentwood Park",
@@ -862,6 +884,28 @@
     {
       "runtime_search_scope_kind": "locality",
       "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/benoni/kilfenora",
+      "runtime_parent_natural_key": "gauteng/benoni",
+      "name": "Kilfenora",
+      "slug": "kilfenora",
+      "latitude": -26.1888889,
+      "longitude": 28.2905556,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-a5f9430ec4984323f101"
+      ],
+      "factual_preferred_names": [
+        "Kilfenora"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
       "runtime_natural_key": "gauteng/benoni/lakefield",
       "runtime_parent_natural_key": "gauteng/benoni",
       "name": "Lakefield",
@@ -876,6 +920,28 @@
       ],
       "factual_preferred_names": [
         "Lakefield"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/benoni/linksview",
+      "runtime_parent_natural_key": "gauteng/benoni",
+      "name": "Linksview",
+      "slug": "linksview",
+      "latitude": -26.1872616,
+      "longitude": 28.2925509,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-d68203f7273308bd50c6"
+      ],
+      "factual_preferred_names": [
+        "Linksview"
       ],
       "factual_types": [
         "suburb"
@@ -989,6 +1055,31 @@
       ],
       "factual_types": [
         "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/benoni/northmead-ext-4",
+      "runtime_parent_natural_key": "gauteng/benoni",
+      "name": "Northmead Ext 4",
+      "slug": "northmead-ext-4",
+      "latitude": -26.1557365,
+      "longitude": 28.3141118,
+      "searchable_aliases": [
+        "Northmead Extension 4",
+        "Northmead Ext. 4"
+      ],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-a82a770255953bcefa5a"
+      ],
+      "factual_preferred_names": [
+        "Northmead Ext 4"
+      ],
+      "factual_types": [
+        "neighbourhood"
       ]
     },
     {
@@ -1118,6 +1209,28 @@
       ],
       "factual_preferred_names": [
         "Westdene"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/benoni/western-extension",
+      "runtime_parent_natural_key": "gauteng/benoni",
+      "name": "Western Extension",
+      "slug": "western-extension",
+      "latitude": -26.1923957,
+      "longitude": 28.3022726,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-4e63af93085e0644f6ce"
+      ],
+      "factual_preferred_names": [
+        "Western Extension"
       ],
       "factual_types": [
         "suburb"
@@ -1492,6 +1605,28 @@
       ],
       "factual_preferred_names": [
         "Elspark"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/boksburg/everleigh",
+      "runtime_parent_natural_key": "gauteng/boksburg",
+      "name": "Everleigh",
+      "slug": "everleigh",
+      "latitude": -26.1894444,
+      "longitude": 28.2538889,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-b48fa458e750cf02ad1c"
+      ],
+      "factual_preferred_names": [
+        "Everleigh"
       ],
       "factual_types": [
         "suburb"
@@ -3158,6 +3293,72 @@
       ],
       "factual_types": [
         "town"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/duduza/bluegum-view",
+      "runtime_parent_natural_key": "gauteng/duduza",
+      "name": "Bluegum View",
+      "slug": "bluegum-view",
+      "latitude": -26.3816667,
+      "longitude": 28.3933333,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-8b081c774d2995e2056c"
+      ],
+      "factual_preferred_names": [
+        "Bluegum View"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/duduza/masetjhaba-view",
+      "runtime_parent_natural_key": "gauteng/duduza",
+      "name": "Masetjhaba View",
+      "slug": "masetjhaba-view",
+      "latitude": -26.3897222,
+      "longitude": 28.3913889,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-9ad5453246b27193eebd"
+      ],
+      "factual_preferred_names": [
+        "Masetjhaba View"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/duduza/spaarwater",
+      "runtime_parent_natural_key": "gauteng/duduza",
+      "name": "Spaarwater",
+      "slug": "spaarwater",
+      "latitude": -26.4041667,
+      "longitude": 28.4061111,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-b1a27b41c8c687d54370"
+      ],
+      "factual_preferred_names": [
+        "Spaarwater"
+      ],
+      "factual_types": [
+        "suburb"
       ]
     },
     {
@@ -15950,6 +16151,116 @@
       ],
       "factual_types": [
         "town"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/nigel/ferryvale",
+      "runtime_parent_natural_key": "gauteng/nigel",
+      "name": "Ferryvale",
+      "slug": "ferryvale",
+      "latitude": -26.4291667,
+      "longitude": 28.4775,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-ba5c3299f6a0ba0cc481"
+      ],
+      "factual_preferred_names": [
+        "Ferryvale"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/nigel/glenvarloch",
+      "runtime_parent_natural_key": "gauteng/nigel",
+      "name": "Glenvarloch",
+      "slug": "glenvarloch",
+      "latitude": -26.4192676,
+      "longitude": 28.461897,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-6f5fb47356e4d98c4e01"
+      ],
+      "factual_preferred_names": [
+        "Glenvarloch"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/nigel/noycedale",
+      "runtime_parent_natural_key": "gauteng/nigel",
+      "name": "Noycedale",
+      "slug": "noycedale",
+      "latitude": -26.4255556,
+      "longitude": 28.4625,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-313c41c45e82747aad24"
+      ],
+      "factual_preferred_names": [
+        "Noycedale"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/nigel/pretoriusstad",
+      "runtime_parent_natural_key": "gauteng/nigel",
+      "name": "Pretoriusstad",
+      "slug": "pretoriusstad",
+      "latitude": -26.4240392,
+      "longitude": 28.4390999,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-722e12a31157eb463e9f"
+      ],
+      "factual_preferred_names": [
+        "Pretoriusstad"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/nigel/sub-nigel",
+      "runtime_parent_natural_key": "gauteng/nigel",
+      "name": "Sub-Nigel",
+      "slug": "sub-nigel",
+      "latitude": -26.3986111,
+      "longitude": 28.4616667,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-7928e724ecfe8b828edc"
+      ],
+      "factual_preferred_names": [
+        "Sub-Nigel"
+      ],
+      "factual_types": [
+        "suburb"
       ]
     },
     {

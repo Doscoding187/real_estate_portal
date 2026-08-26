@@ -1,0 +1,60 @@
+{
+  "resolved_edges_version": "benoni-calendar-2026-parent-evidence.v0.1.resolved",
+  "town": "Benoni",
+  "parent_natural_key": "gauteng/benoni",
+  "source": {
+    "publisher": "City of Ekurhuleni",
+    "url": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/BENONI_Calender-2026.pdf",
+    "section": "2026–2027 Benoni-labelled refuse-removal collection areas",
+    "retrieved": "2026-08-26",
+    "licence_note": "Official municipal service calendar used for locality membership assertions; no prose or geometry is copied."
+  },
+  "edge_count": 5,
+  "edges": [
+    {
+      "factual_location_id": "pl-gp-v01-4e63af93085e0644f6ce",
+      "preferred_name": "Western Extension",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/benoni",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/BENONI_Calender-2026.pdf#2026%E2%80%932027%20Benoni-labelled%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-a5f9430ec4984323f101",
+      "preferred_name": "Kilfenora",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/benoni",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/BENONI_Calender-2026.pdf#2026%E2%80%932027%20Benoni-labelled%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-a82a770255953bcefa5a",
+      "preferred_name": "Northmead Ext 4",
+      "factual_type": "neighbourhood",
+      "parent_natural_key": "gauteng/benoni",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/BENONI_Calender-2026.pdf#2026%E2%80%932027%20Benoni-labelled%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-d68203f7273308bd50c6",
+      "preferred_name": "Linksview",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/benoni",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/BENONI_Calender-2026.pdf#2026%E2%80%932027%20Benoni-labelled%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-db902473e556b7daa41f",
+      "preferred_name": "Brentwood",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/benoni",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/BENONI_Calender-2026.pdf#2026%E2%80%932027%20Benoni-labelled%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
+    }
+  ],
+  "diagnostics": {
+    "researched_names": 5,
+    "matched_already_projected": [],
+    "names_not_in_canonical_layer": []
+  }
+}

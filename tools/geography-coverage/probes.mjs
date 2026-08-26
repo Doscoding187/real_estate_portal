@@ -316,6 +316,32 @@ for (const probe of WAVE10_LOCALITY_PROBES) {
   );
 }
 
+const WAVE11_LOCALITY_PROBES = [
+  { name: 'Western Extension', parentSuffix: 'gauteng/benoni/western-extension' },
+  { name: 'Kilfenora', parentSuffix: 'gauteng/benoni/kilfenora' },
+  { name: 'Northmead Ext 4', parentSuffix: 'gauteng/benoni/northmead-ext-4' },
+  { name: 'Linksview', parentSuffix: 'gauteng/benoni/linksview' },
+  { name: 'Brentwood', parentSuffix: 'gauteng/benoni/brentwood' },
+  { name: 'Everleigh', parentSuffix: 'gauteng/boksburg/everleigh' },
+  { name: 'Noycedale', parentSuffix: 'gauteng/nigel/noycedale' },
+  { name: 'Glenvarloch', parentSuffix: 'gauteng/nigel/glenvarloch' },
+  { name: 'Pretoriusstad', parentSuffix: 'gauteng/nigel/pretoriusstad' },
+  { name: 'Sub-Nigel', parentSuffix: 'gauteng/nigel/sub-nigel' },
+  { name: 'Ferryvale', parentSuffix: 'gauteng/nigel/ferryvale' },
+  { name: 'Bluegum View', parentSuffix: 'gauteng/duduza/bluegum-view' },
+  { name: 'Masetjhaba View', parentSuffix: 'gauteng/duduza/masetjhaba-view' },
+  { name: 'Spaarwater', parentSuffix: 'gauteng/duduza/spaarwater' },
+];
+
+for (const probe of WAVE11_LOCALITY_PROBES) {
+  const row = resolveByName(probe.name);
+  check(
+    `wave11 researched edge resolves: ${probe.name}`,
+    row !== null && row.runtime_natural_key === probe.parentSuffix,
+    row ? row.runtime_natural_key : 'missing',
+  );
+}
+
 const NEGATIVE_PROBES = ['Mamelodi Extension 1', 'Mamelodi Extension 4'];
 for (const probe of NEGATIVE_PROBES) {
   const directHit = resolveByName(probe);
