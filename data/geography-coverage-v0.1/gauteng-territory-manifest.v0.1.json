@@ -1,0 +1,127 @@
+{
+  "manifest_version": "0.1",
+  "contract": "docs/architecture/geography-coverage-contract.md",
+  "territory": {
+    "country": "ZA",
+    "country_name": "South Africa",
+    "province": "Gauteng",
+    "province_slug": "gauteng",
+    "adm1_gate": "geoBoundaries ZAF ADM1 Gauteng containment"
+  },
+  "inputs": {
+    "canonical_root_env": "PL_GEOGRAPHY_CANONICAL_ROOT",
+    "canonical_root_default": "/home/edwardspc/Desktop/Dev/listify-gauteng-factual-canonical-v0-1/data/gauteng-factual-canonical-v0.1/output",
+    "geography_jsonl": "gauteng_factual_canonical_geography_v0.1.jsonl",
+    "names_jsonl": "gauteng_factual_canonical_names_v0.1.jsonl",
+    "carried_projection": "data/gauteng-canonical-runtime-convergence-v0.1/output/gauteng_runtime_reference_projection_v0.1.json",
+    "carried_mapping": "data/gauteng-canonical-runtime-convergence-v0.1/output/gauteng_factual_runtime_mapping_v0.1.jsonl",
+    "researched_parent_edges": [
+      "data/geography-coverage-v0.1/output/kempton-park-parent-evidence.v0.1.resolved.json",
+      "data/geography-coverage-v0.1/output/krugersdorp-idp-parent-evidence.v0.1.resolved.json",
+      "data/geography-coverage-v0.1/output/krugersdorp-notice-parent-evidence.v0.1.resolved.json"
+    ]
+  },
+  "outputs": {
+    "output_dir": "data/geography-coverage-v0.1/output",
+    "projection": "gauteng_runtime_reference_projection_v0.2.json",
+    "mapping": "gauteng_factual_runtime_mapping_v0.2.jsonl",
+    "disposition": "gauteng_coverage_disposition_v0.1.json",
+    "review_queue": "gauteng_review_queue_v0.1.jsonl"
+  },
+  "runtime_levels": {
+    "publicly_searchable_scopes": [
+      "province",
+      "metro_city",
+      "locality"
+    ],
+    "storage_mapping": {
+      "province": "provinces",
+      "metro_city": "cities",
+      "locality": "suburbs"
+    },
+    "context_only_types": [
+      "district_municipality",
+      "local_municipality"
+    ]
+  },
+  "tier_policy": {
+    "A_verified": "accepted executive edge or founder-reviewed bounded slice",
+    "B_provisional": "registry-default parent or provisional type state; searchable; no SEO",
+    "C_candidate": "queued with explicit reason; feeds research queue",
+    "D_rejected": "retired/duplicate/licence-blocked; never public"
+  },
+  "licensing_policy": {
+    "materializable_classes": [
+      "mixed_odbl_supported",
+      "permissive_supported",
+      "osm_only_odbl_provisional"
+    ],
+    "osm_only_production_gate": "Founder-owned production ODbL database-strategy gate must clear before staging/production release of osm_only_odbl_provisional rows."
+  },
+  "parent_context_registry": {
+    "comment": "Deterministic municipality -> runtime market parent. Multi-town districts deliberately register no default; their localities queue rather than guess.",
+    "entries": [
+      {
+        "administrative_context_name": "City of Johannesburg",
+        "parent_natural_key": "gauteng/johannesburg",
+        "relationship": "metro_market_context",
+        "evidence_class": "founder_reviewed_bounded_slice_plus_geoBoundaries_adm1_containment",
+        "citation": "docs/architecture/location-geography-global-coverage-strategy-handoff.md; data/gauteng-canonical-runtime-convergence-v0.1"
+      },
+      {
+        "administrative_context_name": "City of Tshwane",
+        "parent_natural_key": "gauteng/pretoria",
+        "relationship": "metro_market_context",
+        "evidence_class": "founder_reviewed_bounded_slice_plus_geoBoundaries_adm1_containment",
+        "citation": "docs/architecture/location-geography-global-coverage-strategy-handoff.md; data/gauteng-canonical-runtime-convergence-v0.1"
+      }
+    ],
+    "no_default_contexts": [
+      "Ekurhuleni",
+      "Sedibeng",
+      "West Rand"
+    ],
+    "excluded_non_territory_contexts": [
+      "Nkangala",
+      "Fezile Dabi",
+      "Bojanala",
+      "Waterberg",
+      "Dr Kenneth Kaunda",
+      "Gert Sibande"
+    ]
+  },
+  "alias_policy": {
+    "sources": [
+      "accepted searchable name assertions (searchable=true, role != preferred)",
+      "generated extension-pattern forms (Extension N <-> Ext N <-> Ext. N)"
+    ],
+    "normalization": "lowercase, trim, collapse whitespace",
+    "conflict_rule": "An alias equal to any projected preferred name at the same level+province is dropped from that row and logged."
+  },
+  "acceptance": {
+    "required_probes": [
+      "Johannesburg",
+      "Pretoria",
+      "Soweto",
+      "Mamelodi",
+      "Mamelodi Extension 1",
+      "Mamelodi Extension 4",
+      "Newtown",
+      "Sandton",
+      "Bryanston",
+      "Randburg",
+      "Midrand",
+      "Centurion",
+      "Roodepoort",
+      "Vereeniging"
+    ],
+    "must_stay_non_public": [
+      "Kyalami"
+    ],
+    "regeneration": "byte-identical (--check)",
+    "materialization": "pnpm db:reference:prepare && pnpm db:reference:verify on authorized disposable target"
+  },
+  "refresh_cadence": "Territory regeneration is deterministic from versioned inputs; refreshes re-run the pipeline and diff dispositions. Ad hoc manual rows are prohibited.",
+  "coverage_owner": "OX Alpha",
+  "review_queue_consumer": "docs/architecture/location-geography-global-coverage-strategy-handoff.md Phase 6"
+}

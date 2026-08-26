@@ -1,0 +1,25 @@
+{
+  "artifact_version": "krugersdorp-idp-parent-evidence-v0.1",
+  "town": "Krugersdorp",
+  "parent_natural_key": "gauteng/krugersdorp",
+  "administrative_context": "West Rand",
+  "evidence_class": "official_municipal_idp_suburb_cluster",
+  "source": {
+    "publisher": "Mogale City Local Municipality",
+    "url": "https://www.mogalecity.gov.za/wp-content/uploads/Pdfs/Council%20Page/Key%20Documents/Integrated%20Development%20Plan/2016-2017/Draft/4_Section_B_Situational_Analysis_review.pdf",
+    "section": "Krugersdorp Clustered Ward (17, 18, 20, 21, 26 & 29), pp. 56-57",
+    "retrieved": "2026-08-26",
+    "licence_note": "Official municipal IDP publication used for locality membership assertions; no prose or geometry is copied."
+  },
+  "suburb_names": [
+    "Rant-en-Dal",
+    "Kenmare",
+    "Rangeview",
+    "Silverfields",
+    "Burgershoop",
+    "Noordheuwel",
+    "Monument",
+    "Boltonia",
+    "Krugersdorp West"
+  ]
+}

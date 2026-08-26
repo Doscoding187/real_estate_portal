@@ -1,0 +1,22 @@
+{
+  "artifact_version": "krugersdorp-notice-parent-evidence-v0.1",
+  "town": "Krugersdorp",
+  "parent_natural_key": "gauteng/krugersdorp",
+  "administrative_context": "West Rand",
+  "evidence_class": "official_municipal_notice_area_list",
+  "source": {
+    "publisher": "Mogale City Local Municipality",
+    "url": "https://mogalecity.gov.za/2012-public-notices/",
+    "section": "Electricity switch-off: affected Krugersdorp-area communities",
+    "retrieved": "2026-08-26",
+    "licence_note": "Official municipal public notice used for locality membership assertions; no prose or geometry is copied."
+  },
+  "source_name_variants": {
+    "Munsieville": "Munsieville and Munsieville Extensions"
+  },
+  "suburb_names": [
+    "Apple Park",
+    "Munsieville",
+    "Dan Pienaarville"
+  ]
+}

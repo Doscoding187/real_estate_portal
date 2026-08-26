@@ -1,0 +1,37 @@
+{
+  "artifact_version": "kempton-park-parent-evidence-v0.1",
+  "town": "Kempton Park",
+  "parent_natural_key": "gauteng/kempton-park",
+  "administrative_context": "Ekurhuleni",
+  "evidence_class": "curated_municipal_suburb_list",
+  "source": {
+    "publisher": "English Wikipedia",
+    "url": "https://en.wikipedia.org/wiki/Kempton_Park,_South_Africa",
+    "section": "Communities",
+    "retrieved": "2026-08-26",
+    "licence_note": "List membership asserted as fact with attribution; no Wikipedia prose or geometry is copied. CC BY-SA obligations attach to copied expression only."
+  },
+  "suburb_names": [
+    "Allen Grove",
+    "Aston Manor",
+    "Birch Acres",
+    "Birchleigh",
+    "Birchleigh North",
+    "Bonaero Park",
+    "Bredell",
+    "Cresslawn",
+    "Croydon",
+    "Edleen",
+    "Esther Park",
+    "Glen Marais",
+    "Isando",
+    "Kempton Park West",
+    "Nimrod Park",
+    "Norkem Park",
+    "Pomona",
+    "Rhodesfield",
+    "Spartan",
+    "Terenure",
+    "Van Riebeeck Park"
+  ]
+}
