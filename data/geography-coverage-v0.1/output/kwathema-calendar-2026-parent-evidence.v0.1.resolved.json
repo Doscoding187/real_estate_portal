@@ -1,0 +1,60 @@
+{
+  "resolved_edges_version": "kwathema-calendar-2026-parent-evidence.v0.1.resolved",
+  "town": "KwaThema",
+  "parent_natural_key": "gauteng/kwathema",
+  "source": {
+    "publisher": "City of Ekurhuleni",
+    "url": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/SPRINGS_Calender-2026.pdf",
+    "section": "2026 Springs/Kwa-Thema refuse-removal programme: Kwa-Thema-labelled areas",
+    "retrieved": "2026-08-26",
+    "licence_note": "Official municipal service calendar used for locality membership assertions; no prose or geometry is copied."
+  },
+  "edge_count": 5,
+  "edges": [
+    {
+      "factual_location_id": "pl-gp-v01-4d68b7bc78e89e61db75",
+      "preferred_name": "White City",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/kwathema",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/SPRINGS_Calender-2026.pdf#2026%20Springs%2FKwa-Thema%20refuse-removal%20programme%3A%20Kwa-Thema-labelled%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-8008ac0687743f2ba186",
+      "preferred_name": "Mthembu Village",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/kwathema",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/SPRINGS_Calender-2026.pdf#2026%20Springs%2FKwa-Thema%20refuse-removal%20programme%3A%20Kwa-Thema-labelled%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-849a2b3492212a9d12b9",
+      "preferred_name": "Thembilisha",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/kwathema",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/SPRINGS_Calender-2026.pdf#2026%20Springs%2FKwa-Thema%20refuse-removal%20programme%3A%20Kwa-Thema-labelled%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-b46f67661b8ffc96331c",
+      "preferred_name": "Tornado",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/kwathema",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/SPRINGS_Calender-2026.pdf#2026%20Springs%2FKwa-Thema%20refuse-removal%20programme%3A%20Kwa-Thema-labelled%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-d8e37f093742246b0bd2",
+      "preferred_name": "Masimini",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/kwathema",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/SPRINGS_Calender-2026.pdf#2026%20Springs%2FKwa-Thema%20refuse-removal%20programme%3A%20Kwa-Thema-labelled%20areas (retrieved 2026-08-26)"
+    }
+  ],
+  "diagnostics": {
+    "researched_names": 5,
+    "matched_already_projected": [],
+    "names_not_in_canonical_layer": []
+  }
+}

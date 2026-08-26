@@ -273,6 +273,27 @@ for (const probe of WAVE8_LOCALITY_PROBES) {
   );
 }
 
+const WAVE9_LOCALITY_PROBES = [
+  { name: 'Daggafontein', parentSuffix: 'gauteng/springs/daggafontein' },
+  { name: 'East Geduld', parentSuffix: 'gauteng/springs/east-geduld' },
+  { name: 'Lodeyko', parentSuffix: 'gauteng/springs/lodeyko' },
+  { name: 'Selection Park', parentSuffix: 'gauteng/springs/selection-park' },
+  { name: 'Struisbult', parentSuffix: 'gauteng/springs/struisbult' },
+  { name: 'Masimini', parentSuffix: 'gauteng/kwathema/masimini' },
+  { name: 'Mthembu Village', parentSuffix: 'gauteng/kwathema/mthembu-village' },
+  { name: 'Thembilisha', parentSuffix: 'gauteng/kwathema/thembilisha' },
+  { name: 'White City', parentSuffix: 'gauteng/kwathema/white-city' },
+];
+
+for (const probe of WAVE9_LOCALITY_PROBES) {
+  const row = resolveByName(probe.name);
+  check(
+    `wave9 researched edge resolves: ${probe.name}`,
+    row !== null && row.runtime_natural_key === probe.parentSuffix,
+    row ? row.runtime_natural_key : 'missing',
+  );
+}
+
 const NEGATIVE_PROBES = ['Mamelodi Extension 1', 'Mamelodi Extension 4'];
 for (const probe of NEGATIVE_PROBES) {
   const directHit = resolveByName(probe);

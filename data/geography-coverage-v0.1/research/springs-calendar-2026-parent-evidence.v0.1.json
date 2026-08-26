@@ -1,0 +1,38 @@
+{
+  "artifact_version": "springs-calendar-2026-parent-evidence-v0.1",
+  "town": "Springs",
+  "parent_natural_key": "gauteng/springs",
+  "administrative_context": "Ekurhuleni",
+  "evidence_class": "official_municipal_refuse_collection_area_list",
+  "source": {
+    "publisher": "City of Ekurhuleni",
+    "url": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/SPRINGS_Calender-2026.pdf",
+    "section": "2026 Springs-labelled refuse-removal collection areas",
+    "retrieved": "2026-08-26",
+    "licence_note": "Official municipal service calendar used for locality membership assertions; no prose or geometry is copied."
+  },
+  "source_name_variants": {
+    "Dal Fouche'": "Dal Fouche",
+    "New State Areas": "New State Area",
+    "Nuffield Industrial Area": "Nuffield"
+  },
+  "suburb_names": [
+    "Bakerton",
+    "Daggafontein",
+    "Dal Fouche'",
+    "East Geduld",
+    "Geduld",
+    "Edelweiss",
+    "Grootvaly SH",
+    "Lodeyko",
+    "New State Areas",
+    "Nuffield Industrial Area",
+    "Oranjehof",
+    "Paul Krugersoord",
+    "Petersfield",
+    "Rowhill",
+    "Selection Park",
+    "Strubenvale",
+    "Struisbult"
+  ]
+}

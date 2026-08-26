@@ -7,7 +7,7 @@
     "factual_canonical_geography_sha256": "1fe0e2e3101bd7e459f484b7125dc1ce1f0327104002b184ef0e90d4236b7b7f",
     "factual_canonical_names_sha256": "a87891bc2e4167130d7e5eb649516a34aedaa071278ce8fe25df19f511669b51",
     "carried_projection_v01_sha256": "982ea13cd190a02da5440f122a061713e22bc157ef46f491ce530c5877ff9fc0",
-    "territory_manifest_sha256": "f56e852bfb6cad9978046fa439a2bc8e1506de57bf7d3be97bc4d6f2f3584419"
+    "territory_manifest_sha256": "fd94bd3b906f77253df79752bc2f2ebe78b9fa5a1bcabf3bb9a302e56ab1a5f8"
   },
   "rows": [
     {
@@ -14684,6 +14684,116 @@
       ]
     },
     {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/kwathema/masimini",
+      "runtime_parent_natural_key": "gauteng/kwathema",
+      "name": "Masimini",
+      "slug": "masimini",
+      "latitude": -26.3,
+      "longitude": 28.3975,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-d8e37f093742246b0bd2"
+      ],
+      "factual_preferred_names": [
+        "Masimini"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/kwathema/mthembu-village",
+      "runtime_parent_natural_key": "gauteng/kwathema",
+      "name": "Mthembu Village",
+      "slug": "mthembu-village",
+      "latitude": -26.2955556,
+      "longitude": 28.4052778,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-8008ac0687743f2ba186"
+      ],
+      "factual_preferred_names": [
+        "Mthembu Village"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/kwathema/thembilisha",
+      "runtime_parent_natural_key": "gauteng/kwathema",
+      "name": "Thembilisha",
+      "slug": "thembilisha",
+      "latitude": -26.3091667,
+      "longitude": 28.4047222,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-849a2b3492212a9d12b9"
+      ],
+      "factual_preferred_names": [
+        "Thembilisha"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/kwathema/tornado",
+      "runtime_parent_natural_key": "gauteng/kwathema",
+      "name": "Tornado",
+      "slug": "tornado",
+      "latitude": -26.2802778,
+      "longitude": 28.3947222,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-b46f67661b8ffc96331c"
+      ],
+      "factual_preferred_names": [
+        "Tornado"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/kwathema/white-city",
+      "runtime_parent_natural_key": "gauteng/kwathema",
+      "name": "White City",
+      "slug": "white-city",
+      "latitude": -26.3008333,
+      "longitude": 28.3872222,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-4d68b7bc78e89e61db75"
+      ],
+      "factual_preferred_names": [
+        "White City"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
       "runtime_search_scope_kind": "metro_city",
       "runtime_storage_level": "city",
       "runtime_natural_key": "gauteng/la-guelderland",
@@ -22537,6 +22647,384 @@
       ],
       "factual_types": [
         "town"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/springs/bakerton",
+      "runtime_parent_natural_key": "gauteng/springs",
+      "name": "Bakerton",
+      "slug": "bakerton",
+      "latitude": -26.22627165,
+      "longitude": 28.472575,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "mixed_odbl_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-0c2be125abe8d3cd863b"
+      ],
+      "factual_preferred_names": [
+        "Bakerton"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/springs/daggafontein",
+      "runtime_parent_natural_key": "gauteng/springs",
+      "name": "Daggafontein",
+      "slug": "daggafontein",
+      "latitude": -26.297002,
+      "longitude": 28.4763889,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "mixed_odbl_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-a47b8833326e08d83af6"
+      ],
+      "factual_preferred_names": [
+        "Daggafontein"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/springs/dal-fouche",
+      "runtime_parent_natural_key": "gauteng/springs",
+      "name": "Dal Fouche'",
+      "slug": "dal-fouche",
+      "latitude": -26.25642585,
+      "longitude": 28.400146046016257,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-d3b51cd0cfa3da67dd63"
+      ],
+      "factual_preferred_names": [
+        "Dal Fouche'"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/springs/east-geduld",
+      "runtime_parent_natural_key": "gauteng/springs",
+      "name": "East Geduld",
+      "slug": "east-geduld",
+      "latitude": -26.2258333,
+      "longitude": 28.4375,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-ee9e2807934e121e23bd"
+      ],
+      "factual_preferred_names": [
+        "East Geduld"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/springs/edelweiss",
+      "runtime_parent_natural_key": "gauteng/springs",
+      "name": "Edelweiss",
+      "slug": "edelweiss",
+      "latitude": -26.2830556,
+      "longitude": 28.4683333,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-9cfeee44f6c33f0ec76a"
+      ],
+      "factual_preferred_names": [
+        "Edelweiss"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/springs/geduld",
+      "runtime_parent_natural_key": "gauteng/springs",
+      "name": "Geduld",
+      "slug": "geduld",
+      "latitude": -26.2311567,
+      "longitude": 28.427536,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "mixed_odbl_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-4d6478a06c19b49f64a9"
+      ],
+      "factual_preferred_names": [
+        "Geduld"
+      ],
+      "factual_types": [
+        "locality"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/springs/grootvaly-sh",
+      "runtime_parent_natural_key": "gauteng/springs",
+      "name": "Grootvaly SH",
+      "slug": "grootvaly-sh",
+      "latitude": -26.2564404,
+      "longitude": 28.4896779,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-39180687f3f1a526ff05"
+      ],
+      "factual_preferred_names": [
+        "Grootvaly SH"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/springs/lodeyko",
+      "runtime_parent_natural_key": "gauteng/springs",
+      "name": "Lodeyko",
+      "slug": "lodeyko",
+      "latitude": -26.2583333,
+      "longitude": 28.4525,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-7fd7d410fdaf0e8d047e"
+      ],
+      "factual_preferred_names": [
+        "Lodeyko"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/springs/new-state-areas",
+      "runtime_parent_natural_key": "gauteng/springs",
+      "name": "New State Areas",
+      "slug": "new-state-areas",
+      "latitude": -26.245717225,
+      "longitude": 28.4194428,
+      "searchable_aliases": [
+        "NEWSTATEAREAS"
+      ],
+      "publication_status": "provisional",
+      "licensing_classification": "mixed_odbl_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-945a0f69ad41e2748e0a"
+      ],
+      "factual_preferred_names": [
+        "New State Areas"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/springs/nuffield-industrial-area",
+      "runtime_parent_natural_key": "gauteng/springs",
+      "name": "Nuffield Industrial Area",
+      "slug": "nuffield-industrial-area",
+      "latitude": -26.2863892,
+      "longitude": 28.4579,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-40e957fcc1cddd0f410c"
+      ],
+      "factual_preferred_names": [
+        "Nuffield Industrial Area"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/springs/oranjehof",
+      "runtime_parent_natural_key": "gauteng/springs",
+      "name": "Oranjehof",
+      "slug": "oranjehof",
+      "latitude": -26.2472222,
+      "longitude": 28.4372222,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-ed291e6ef157b682882b"
+      ],
+      "factual_preferred_names": [
+        "Oranjehof"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/springs/paul-krugersoord",
+      "runtime_parent_natural_key": "gauteng/springs",
+      "name": "Paul Krugersoord",
+      "slug": "paul-krugersoord",
+      "latitude": -26.2402778,
+      "longitude": 28.4316667,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-e790d9560815cdd59ddb"
+      ],
+      "factual_preferred_names": [
+        "Paul Krugersoord"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/springs/petersfield",
+      "runtime_parent_natural_key": "gauteng/springs",
+      "name": "Petersfield",
+      "slug": "petersfield",
+      "latitude": -26.232803,
+      "longitude": 28.4424507,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-8c187bbff01695eb3fd1"
+      ],
+      "factual_preferred_names": [
+        "Petersfield"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/springs/rowhill",
+      "runtime_parent_natural_key": "gauteng/springs",
+      "name": "Rowhill",
+      "slug": "rowhill",
+      "latitude": -26.2261111,
+      "longitude": 28.4313889,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-8620e174741c483d1ca5"
+      ],
+      "factual_preferred_names": [
+        "Rowhill"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/springs/selection-park",
+      "runtime_parent_natural_key": "gauteng/springs",
+      "name": "Selection Park",
+      "slug": "selection-park",
+      "latitude": -26.28989,
+      "longitude": 28.44703,
+      "searchable_aliases": [
+        "SELECTIONPARK"
+      ],
+      "publication_status": "provisional",
+      "licensing_classification": "mixed_odbl_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-df4532c487d01c3631e5"
+      ],
+      "factual_preferred_names": [
+        "Selection Park"
+      ],
+      "factual_types": [
+        "locality"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/springs/strubenvale",
+      "runtime_parent_natural_key": "gauteng/springs",
+      "name": "Strubenvale",
+      "slug": "strubenvale",
+      "latitude": -26.25162,
+      "longitude": 28.46667,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "mixed_odbl_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-fca803152ea3e7c324cb"
+      ],
+      "factual_preferred_names": [
+        "Strubenvale"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/springs/struisbult",
+      "runtime_parent_natural_key": "gauteng/springs",
+      "name": "Struisbult",
+      "slug": "struisbult",
+      "latitude": -26.31515,
+      "longitude": 28.46039,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "mixed_odbl_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-d15a540b1c7f0dfebdc3"
+      ],
+      "factual_preferred_names": [
+        "Struisbult"
+      ],
+      "factual_types": [
+        "suburb"
       ]
     },
     {
