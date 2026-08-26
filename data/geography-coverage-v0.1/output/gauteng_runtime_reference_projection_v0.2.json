@@ -26857,6 +26857,28 @@
     {
       "runtime_search_scope_kind": "locality",
       "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/thembisa/makhulong",
+      "runtime_parent_natural_key": "gauteng/thembisa",
+      "name": "Makhulong",
+      "slug": "makhulong",
+      "latitude": -25.9969444,
+      "longitude": 28.2330556,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-f03fe0991faa1048e8be"
+      ],
+      "factual_preferred_names": [
+        "Makhulong"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
       "runtime_natural_key": "gauteng/thembisa/maokeng",
       "runtime_parent_natural_key": "gauteng/thembisa",
       "name": "Maokeng",
@@ -27179,6 +27201,28 @@
       ],
       "factual_preferred_names": [
         "Thiteng"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/thembisa/ventershof-ah",
+      "runtime_parent_natural_key": "gauteng/thembisa",
+      "name": "Ventershof AH",
+      "slug": "ventershof-ah",
+      "latitude": -26.0054952,
+      "longitude": 28.4107242,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-6f981faccedb62333bfe"
+      ],
+      "factual_preferred_names": [
+        "Ventershof AH"
       ],
       "factual_types": [
         "suburb"
