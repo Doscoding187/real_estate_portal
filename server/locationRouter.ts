@@ -48,9 +48,8 @@ export const locationRouter = router({
 
       // Check cache first
       // Version the cache key when the authoritative location source changes.
-      // Public search IDs must always resolve to the province/city/suburb
-      // hierarchy, never to an arbitrary property row.
-      const cacheKey = `v4:${input.query}_${input.type}_${input.limit}`;
+      // v5: territory coverage projection v0.2 expanded the governed catalog.
+      const cacheKey = `v5:${input.query}_${input.type}_${input.limit}`;
       const [cached] = await db
         .select()
         .from(locationSearchCache)

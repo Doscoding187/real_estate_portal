@@ -1,0 +1,147 @@
+{
+  "resolved_edges_version": "krugersdorp-idp-parent-evidence.v0.1.resolved",
+  "town": "Krugersdorp",
+  "parent_natural_key": "gauteng/krugersdorp",
+  "source": {
+    "publisher": "Mogale City Local Municipality",
+    "url": "https://www.mogalecity.gov.za/wp-content/uploads/Pdfs/Council%20Page/Key%20Documents/Integrated%20Development%20Plan/2016-2017/Draft/4_Section_B_Situational_Analysis_review.pdf",
+    "section": "Krugersdorp Clustered Ward (17, 18, 20, 21, 26 & 29), pp. 56-57",
+    "retrieved": "2026-08-26",
+    "licence_note": "Official municipal IDP publication used for locality membership assertions; no prose or geometry is copied."
+  },
+  "edge_count": 9,
+  "edges": [
+    {
+      "factual_location_id": "pl-gp-v01-312442a74a6f94e5b620",
+      "preferred_name": "Krugersdorp West",
+      "factual_type": "locality",
+      "parent_natural_key": "gauteng/krugersdorp",
+      "evidence_class": "official_municipal_idp_suburb_cluster",
+      "citation": "https://www.mogalecity.gov.za/wp-content/uploads/Pdfs/Council%20Page/Key%20Documents/Integrated%20Development%20Plan/2016-2017/Draft/4_Section_B_Situational_Analysis_review.pdf#Krugersdorp%20Clustered%20Ward%20(17%2C%2018%2C%2020%2C%2021%2C%2026%20%26%2029)%2C%20pp.%2056-57 (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-3359cd97836fb4baa50d",
+      "preferred_name": "Silverfields",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/krugersdorp",
+      "evidence_class": "official_municipal_idp_suburb_cluster",
+      "citation": "https://www.mogalecity.gov.za/wp-content/uploads/Pdfs/Council%20Page/Key%20Documents/Integrated%20Development%20Plan/2016-2017/Draft/4_Section_B_Situational_Analysis_review.pdf#Krugersdorp%20Clustered%20Ward%20(17%2C%2018%2C%2020%2C%2021%2C%2026%20%26%2029)%2C%20pp.%2056-57 (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-3cff8fa44e2ec0244a4d",
+      "preferred_name": "Rant-en-Dal",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/krugersdorp",
+      "evidence_class": "official_municipal_idp_suburb_cluster",
+      "citation": "https://www.mogalecity.gov.za/wp-content/uploads/Pdfs/Council%20Page/Key%20Documents/Integrated%20Development%20Plan/2016-2017/Draft/4_Section_B_Situational_Analysis_review.pdf#Krugersdorp%20Clustered%20Ward%20(17%2C%2018%2C%2020%2C%2021%2C%2026%20%26%2029)%2C%20pp.%2056-57 (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-63ad3f9f7ed3067bac74",
+      "preferred_name": "Burgershoop",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/krugersdorp",
+      "evidence_class": "official_municipal_idp_suburb_cluster",
+      "citation": "https://www.mogalecity.gov.za/wp-content/uploads/Pdfs/Council%20Page/Key%20Documents/Integrated%20Development%20Plan/2016-2017/Draft/4_Section_B_Situational_Analysis_review.pdf#Krugersdorp%20Clustered%20Ward%20(17%2C%2018%2C%2020%2C%2021%2C%2026%20%26%2029)%2C%20pp.%2056-57 (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-89e3f48feae47c0253c8",
+      "preferred_name": "Boltonia",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/krugersdorp",
+      "evidence_class": "official_municipal_idp_suburb_cluster",
+      "citation": "https://www.mogalecity.gov.za/wp-content/uploads/Pdfs/Council%20Page/Key%20Documents/Integrated%20Development%20Plan/2016-2017/Draft/4_Section_B_Situational_Analysis_review.pdf#Krugersdorp%20Clustered%20Ward%20(17%2C%2018%2C%2020%2C%2021%2C%2026%20%26%2029)%2C%20pp.%2056-57 (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-a2fb6da28af54a850087",
+      "preferred_name": "Rangeview",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/krugersdorp",
+      "evidence_class": "official_municipal_idp_suburb_cluster",
+      "citation": "https://www.mogalecity.gov.za/wp-content/uploads/Pdfs/Council%20Page/Key%20Documents/Integrated%20Development%20Plan/2016-2017/Draft/4_Section_B_Situational_Analysis_review.pdf#Krugersdorp%20Clustered%20Ward%20(17%2C%2018%2C%2020%2C%2021%2C%2026%20%26%2029)%2C%20pp.%2056-57 (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-b5be7142731749f02996",
+      "preferred_name": "Noordheuwel",
+      "factual_type": "locality",
+      "parent_natural_key": "gauteng/krugersdorp",
+      "evidence_class": "official_municipal_idp_suburb_cluster",
+      "citation": "https://www.mogalecity.gov.za/wp-content/uploads/Pdfs/Council%20Page/Key%20Documents/Integrated%20Development%20Plan/2016-2017/Draft/4_Section_B_Situational_Analysis_review.pdf#Krugersdorp%20Clustered%20Ward%20(17%2C%2018%2C%2020%2C%2021%2C%2026%20%26%2029)%2C%20pp.%2056-57 (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-c4d193e3324038b3451e",
+      "preferred_name": "Kenmare",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/krugersdorp",
+      "evidence_class": "official_municipal_idp_suburb_cluster",
+      "citation": "https://www.mogalecity.gov.za/wp-content/uploads/Pdfs/Council%20Page/Key%20Documents/Integrated%20Development%20Plan/2016-2017/Draft/4_Section_B_Situational_Analysis_review.pdf#Krugersdorp%20Clustered%20Ward%20(17%2C%2018%2C%2020%2C%2021%2C%2026%20%26%2029)%2C%20pp.%2056-57 (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-e161213c682079f79431",
+      "preferred_name": "Monument",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/krugersdorp",
+      "evidence_class": "official_municipal_idp_suburb_cluster",
+      "citation": "https://www.mogalecity.gov.za/wp-content/uploads/Pdfs/Council%20Page/Key%20Documents/Integrated%20Development%20Plan/2016-2017/Draft/4_Section_B_Situational_Analysis_review.pdf#Krugersdorp%20Clustered%20Ward%20(17%2C%2018%2C%2020%2C%2021%2C%2026%20%26%2029)%2C%20pp.%2056-57 (retrieved 2026-08-26)"
+    }
+  ],
+  "diagnostics": {
+    "researched_names": 9,
+    "matched_already_projected": [
+      {
+        "name": "Rant-en-Dal",
+        "factual_location_id": "pl-gp-v01-3cff8fa44e2ec0244a4d",
+        "existing_parent_natural_key": "gauteng/krugersdorp",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Kenmare",
+        "factual_location_id": "pl-gp-v01-c4d193e3324038b3451e",
+        "existing_parent_natural_key": "gauteng/krugersdorp",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Rangeview",
+        "factual_location_id": "pl-gp-v01-a2fb6da28af54a850087",
+        "existing_parent_natural_key": "gauteng/krugersdorp",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Silverfields",
+        "factual_location_id": "pl-gp-v01-3359cd97836fb4baa50d",
+        "existing_parent_natural_key": "gauteng/krugersdorp",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Burgershoop",
+        "factual_location_id": "pl-gp-v01-63ad3f9f7ed3067bac74",
+        "existing_parent_natural_key": "gauteng/krugersdorp",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Noordheuwel",
+        "factual_location_id": "pl-gp-v01-b5be7142731749f02996",
+        "existing_parent_natural_key": "gauteng/krugersdorp",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Monument",
+        "factual_location_id": "pl-gp-v01-e161213c682079f79431",
+        "existing_parent_natural_key": "gauteng/krugersdorp",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Boltonia",
+        "factual_location_id": "pl-gp-v01-89e3f48feae47c0253c8",
+        "existing_parent_natural_key": "gauteng/krugersdorp",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Krugersdorp West",
+        "factual_location_id": "pl-gp-v01-312442a74a6f94e5b620",
+        "existing_parent_natural_key": "gauteng/krugersdorp",
+        "parent_matches_evidence": true
+      }
+    ],
+    "names_not_in_canonical_layer": []
+  }
+}
