@@ -700,6 +700,19 @@ for (const probe of WAVE35_LOCALITY_PROBES) {
   );
 }
 
+const WAVE36_LOCALITY_PROBES = [
+  { name: 'Bentley Park', parentSuffix: 'gauteng/carletonville/bentley-park' },
+];
+
+for (const probe of WAVE36_LOCALITY_PROBES) {
+  const row = resolveByName(probe.name);
+  check(
+    `wave36 researched edge resolves: ${probe.name}`,
+    row !== null && row.runtime_natural_key === probe.parentSuffix,
+    row ? row.runtime_natural_key : 'missing',
+  );
+}
+
 const NEGATIVE_PROBES = ['Mamelodi Extension 1', 'Mamelodi Extension 4'];
 for (const probe of NEGATIVE_PROBES) {
   const directHit = resolveByName(probe);
