@@ -673,6 +673,20 @@ for (const probe of WAVE33_LOCALITY_PROBES) {
   );
 }
 
+const WAVE34_LOCALITY_PROBES = [
+  { name: "St. Andrew's", parentSuffix: 'gauteng/germiston/st-andrew-s' },
+  { name: 'Hughes Exts', parentSuffix: 'gauteng/boksburg/hughes-exts' },
+];
+
+for (const probe of WAVE34_LOCALITY_PROBES) {
+  const row = resolveByName(probe.name);
+  check(
+    `wave34 researched edge resolves: ${probe.name}`,
+    row !== null && row.runtime_natural_key === probe.parentSuffix,
+    row ? row.runtime_natural_key : 'missing',
+  );
+}
+
 const NEGATIVE_PROBES = ['Mamelodi Extension 1', 'Mamelodi Extension 4'];
 for (const probe of NEGATIVE_PROBES) {
   const directHit = resolveByName(probe);

@@ -1,0 +1,20 @@
+{
+  "artifact_version": "germiston-st-andrews-parent-evidence-v0.1",
+  "town": "Germiston",
+  "parent_natural_key": "gauteng/germiston",
+  "administrative_context": "Ekurhuleni",
+  "evidence_class": "official_municipal_valuation_roll_area_relationship",
+  "source": {
+    "publisher": "City of Ekurhuleni",
+    "url": "https://www.ekurhuleni.gov.za/wp-content/uploads/2021/11/GERMISTON_FULL_TITLE_BOOK-30.pdf",
+    "section": "General Valuation Roll — AREA: GERMISTON — ST ANDREWS and ST ANDREWS X3/X4 township entries",
+    "retrieved": "2026-08-27",
+    "licence_note": "Official municipal valuation roll used for locality relationship assertions; no prose or geometry is copied."
+  },
+  "source_name_variants": {
+    "St. Andrew's": "ST ANDREWS"
+  },
+  "suburb_names": [
+    "St. Andrew's"
+  ]
+}

@@ -7,7 +7,7 @@
     "factual_canonical_geography_sha256": "1fe0e2e3101bd7e459f484b7125dc1ce1f0327104002b184ef0e90d4236b7b7f",
     "factual_canonical_names_sha256": "a87891bc2e4167130d7e5eb649516a34aedaa071278ce8fe25df19f511669b51",
     "carried_projection_v01_sha256": "982ea13cd190a02da5440f122a061713e22bc157ef46f491ce530c5877ff9fc0",
-    "territory_manifest_sha256": "ac717e3fe9a067bd0ba4ab35f91a56156d2ba323266df1c5b8597ab6e3476aa6"
+    "territory_manifest_sha256": "8e0a8b284c4593a682486a5ddd9026672ac50cf3df1b22fc3f81f7ade2f63b42"
   },
   "rows": [
     {
@@ -1986,6 +1986,28 @@
       ],
       "factual_preferred_names": [
         "Groeneweide"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/boksburg/hughes-exts",
+      "runtime_parent_natural_key": "gauteng/boksburg",
+      "name": "Hughes Exts",
+      "slug": "hughes-exts",
+      "latitude": -26.1846302,
+      "longitude": 28.2273119,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-8ddf0a08a3d9d6607483"
+      ],
+      "factual_preferred_names": [
+        "Hughes Exts"
       ],
       "factual_types": [
         "suburb"
@@ -5498,6 +5520,28 @@
       ],
       "factual_preferred_names": [
         "Solheim"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/germiston/st-andrew-s",
+      "runtime_parent_natural_key": "gauteng/germiston",
+      "name": "St. Andrew's",
+      "slug": "st-andrew-s",
+      "latitude": -26.1619444,
+      "longitude": 28.1222222,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-8c81673ad0afd4e9b5ec"
+      ],
+      "factual_preferred_names": [
+        "St. Andrew's"
       ],
       "factual_types": [
         "suburb"
