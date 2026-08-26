@@ -1,0 +1,71 @@
+{
+  "resolved_edges_version": "boksburg-calendar-2026-parent-evidence.v0.1.resolved",
+  "town": "Boksburg",
+  "parent_natural_key": "gauteng/boksburg",
+  "source": {
+    "publisher": "City of Ekurhuleni",
+    "url": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/BOKSBURG_Calender-2026.pdf",
+    "section": "2026–2027 Boksburg-labelled refuse-removal collection areas",
+    "retrieved": "2026-08-26",
+    "licence_note": "Official municipal service calendar used for locality membership assertions; no prose or geometry is copied."
+  },
+  "edge_count": 4,
+  "edges": [
+    {
+      "factual_location_id": "pl-gp-v01-2a3bb5bf16fe7e26cb54",
+      "preferred_name": "Dunmadley",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/boksburg",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/BOKSBURG_Calender-2026.pdf#2026%E2%80%932027%20Boksburg-labelled%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-b48fa458e750cf02ad1c",
+      "preferred_name": "Everleigh",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/boksburg",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/BOKSBURG_Calender-2026.pdf#2026%E2%80%932027%20Boksburg-labelled%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-bb1cae2d3335d65678c7",
+      "preferred_name": "Berton Park",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/boksburg",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/BOKSBURG_Calender-2026.pdf#2026%E2%80%932027%20Boksburg-labelled%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-fb006a056aafeaf678da",
+      "preferred_name": "Lilianton",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/boksburg",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/BOKSBURG_Calender-2026.pdf#2026%E2%80%932027%20Boksburg-labelled%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
+    }
+  ],
+  "diagnostics": {
+    "researched_names": 4,
+    "matched_already_projected": [
+      {
+        "name": "Everleigh",
+        "factual_location_id": "pl-gp-v01-b48fa458e750cf02ad1c",
+        "existing_parent_natural_key": "gauteng/boksburg",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Berton Park",
+        "factual_location_id": "pl-gp-v01-bb1cae2d3335d65678c7",
+        "existing_parent_natural_key": "gauteng/boksburg",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Lilianton",
+        "factual_location_id": "pl-gp-v01-fb006a056aafeaf678da",
+        "existing_parent_natural_key": "gauteng/boksburg",
+        "parent_matches_evidence": true
+      }
+    ],
+    "names_not_in_canonical_layer": []
+  }
+}

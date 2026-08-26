@@ -222,7 +222,7 @@ jobs:
             echo "Running client test: ${test_file}"
             pnpm vitest run --project client --minWorkers=1 --maxWorkers=1 --silent "${test_file}"
           done
-          pnpm vitest run --project server --minWorkers=1 --maxWorkers=2 --silent
+          pnpm vitest run --project server --minWorkers=1 --maxWorkers=1 --silent
 
   build:
     name: Build Application

@@ -1,0 +1,40 @@
+{
+  "artifact_version": "brakpan-calendar-2026-parent-evidence-v0.1",
+  "town": "Brakpan",
+  "parent_natural_key": "gauteng/brakpan",
+  "administrative_context": "Ekurhuleni",
+  "evidence_class": "official_municipal_refuse_collection_area_list",
+  "source": {
+    "publisher": "City of Ekurhuleni",
+    "url": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/BRAKPAN_Calender-2026.pdf",
+    "section": "2026 Brakpan refuse-removal collection areas labelled BRAKPAN",
+    "retrieved": "2026-08-26",
+    "licence_note": "Official municipal service calendar used for locality membership assertions; no prose or geometry is copied."
+  },
+  "source_name_variants": {
+    "Brakpan-Noord": "Brakpan North",
+    "Brenthurst": "Brenhurst",
+    "Dalpark": "Dalpark Proper",
+    "Dalpark Ext. 1": "Dalpark X1",
+    "Helderwyk": "Heldenrwyk Estate",
+    "Minnebron": "Minnerbron"
+  },
+  "suburb_names": [
+    "Anzac",
+    "Brakpan-Noord",
+    "Brenthurst",
+    "Dalpark",
+    "Dalpark Ext. 1",
+    "Denneoord",
+    "Geluksdal",
+    "Helderwyk",
+    "Huntingdon",
+    "Kenleaf",
+    "Labore",
+    "Larrendale",
+    "Leachville",
+    "Minnebron",
+    "Sallies Village",
+    "Sunair Park"
+  ]
+}

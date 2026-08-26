@@ -1,0 +1,28 @@
+{
+  "artifact_version": "edenvale-calendar-2026-parent-evidence-v0.1",
+  "town": "Edenvale",
+  "parent_natural_key": "gauteng/edenvale",
+  "administrative_context": "Ekurhuleni",
+  "evidence_class": "official_municipal_refuse_collection_area_list",
+  "source": {
+    "publisher": "City of Ekurhuleni",
+    "url": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/EDENVALE_Calender-2026.pdf",
+    "section": "2026 Edenvale refuse-removal collection areas",
+    "retrieved": "2026-08-26",
+    "licence_note": "Official municipal service calendar used for locality membership assertions; no prose or geometry is copied."
+  },
+  "source_name_variants": {
+    "Eden Glen": "Edenglen",
+    "Elmapark": "Elma Park"
+  },
+  "suburb_names": [
+    "De Klerkshof",
+    "Dowerglen",
+    "Dunvegan",
+    "Eden Glen",
+    "Elmapark",
+    "Hurlyvale",
+    "Illiondale",
+    "Marais Steyn Park"
+  ]
+}

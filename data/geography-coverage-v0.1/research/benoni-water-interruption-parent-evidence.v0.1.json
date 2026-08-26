@@ -1,0 +1,27 @@
+{
+  "artifact_version": "benoni-water-interruption-parent-evidence-v0.1",
+  "town": "Benoni",
+  "parent_natural_key": "gauteng/benoni",
+  "administrative_context": "Ekurhuleni",
+  "evidence_class": "official_municipal_water_interruption_area_list",
+  "source": {
+    "publisher": "City of Ekurhuleni",
+    "url": "https://www.ekurhuleni.gov.za/press-releases/service-delivery-interruptions/updated-list-of-affected-areas-and-times-ahead-of-rand-water-maintenance-work/",
+    "section": "24 June 2024: Benoni affected suburbs",
+    "retrieved": "2026-08-26",
+    "licence_note": "Official municipal service notice used for locality membership assertions; no prose or geometry is copied."
+  },
+  "source_name_variants": {
+    "North Villa": "Northvilla"
+  },
+  "suburb_names": [
+    "Farrarmere",
+    "Northmead",
+    "Rynfield",
+    "Brentwood Park",
+    "Goedeburg",
+    "Morehill",
+    "Airfield",
+    "North Villa"
+  ]
+}
