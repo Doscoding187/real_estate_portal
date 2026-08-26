@@ -98,7 +98,7 @@ export function SuburbInsights({
       if (result?.success === false && result?.message?.toLowerCase().includes('disabled')) {
         setReviewsDisabled(true);
         setIsReviewDialogOpen(false);
-        toast.info(result.message || 'Reviews coming soon');
+        toast.info(result.message || 'Reviews are not open yet');
         return;
       }
       toast.success('Review submitted successfully!');
@@ -163,7 +163,7 @@ export function SuburbInsights({
                 className="bg-orange-500 text-white hover:bg-orange-600"
                 disabled={reviewsDisabled}
               >
-                {reviewsDisabled ? 'Reviews Coming Soon' : 'Write a Review'}
+                {reviewsDisabled ? 'Reviews Not Open Yet' : 'Write a Review'}
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[600px]">
@@ -177,7 +177,7 @@ export function SuburbInsights({
               <div className="grid gap-4 py-4">
                 {reviewsDisabled && (
                   <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600">
-                    Reviews are coming soon. We’ll let you know when submissions open.
+                    Reviews are not open yet. We'll let you know when submissions open.
                   </div>
                 )}
                 <div className="grid grid-cols-2 gap-4">
@@ -464,7 +464,7 @@ export function SuburbInsights({
               disabled={reviewsDisabled}
               className="border-slate-300 hover:border-orange-200 hover:bg-orange-50 hover:text-orange-700"
             >
-              {reviewsDisabled ? 'Reviews Coming Soon' : 'Write a Review'}
+              {reviewsDisabled ? 'Reviews Not Open Yet' : 'Write a Review'}
             </Button>
           </div>
         )}

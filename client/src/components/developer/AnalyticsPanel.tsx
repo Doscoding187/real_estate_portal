@@ -11,20 +11,6 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { MetricCard } from '@/components/MetricCard';
-import {
-  LineChart,
-  Line,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-} from 'recharts';
 import { trpc } from '@/lib/trpc';
 import {
   Select,
@@ -35,23 +21,6 @@ import {
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-
-// Mock chart data (until time-series API is ready)
-const trafficData = [
-  { month: 'Jan', views: 2400, clicks: 1200 },
-  { month: 'Feb', views: 3200, clicks: 1600 },
-  { month: 'Mar', views: 2800, clicks: 1400 },
-  { month: 'Apr', views: 3900, clicks: 2100 },
-  { month: 'May', views: 4200, clicks: 2400 },
-  { month: 'Jun', views: 5100, clicks: 2900 },
-];
-
-const sourceData = [
-  { name: 'Direct', value: 35, color: '#3b82f6' }, // blue-500
-  { name: 'Search', value: 30, color: '#10b981' }, // emerald-500
-  { name: 'Social', value: 20, color: '#f59e0b' }, // amber-500
-  { name: 'Referral', value: 15, color: '#ef4444' }, // red-500
-];
 
 type TimeRange = '7d' | '30d' | '90d';
 
@@ -153,46 +122,7 @@ const AnalyticsPanel: React.FC = () => {
         )}
       </div>
 
-      {/* Traffic Overview */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Traffic Overview (Live Data Coming Soon)</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={350}>
-            <LineChart data={trafficData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-              <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-              <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: 'hsl(var(--card))',
-                  border: '1px solid hsl(var(--border))',
-                  borderRadius: '8px',
-                }}
-              />
-              <Line
-                type="monotone"
-                dataKey="views"
-                stroke="#3b82f6"
-                strokeWidth={2}
-                name="Views"
-                dot={{ strokeWidth: 2, r: 4 }}
-                activeDot={{ r: 6, strokeWidth: 2 }}
-              />
-              <Line
-                type="monotone"
-                dataKey="clicks"
-                stroke="#10b981"
-                strokeWidth={2}
-                name="Clicks"
-                dot={{ strokeWidth: 2, r: 4 }}
-                activeDot={{ r: 6, strokeWidth: 2 }}
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
+      {/* Traffic overview returns when a real time-series API exists. */}
 
       {/* Traffic Sources */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -206,7 +136,7 @@ const AnalyticsPanel: React.FC = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="space-y-2">
                 <h4 className="font-medium text-sm text-slate-500">Conversion Rate</h4>
                 <div className="flex items-end gap-2">
@@ -234,14 +164,6 @@ const AnalyticsPanel: React.FC = () => {
                   </span>
                 </div>
                 <p className="text-xs text-slate-400">Leads matching price range</p>
-              </div>
-              <div className="space-y-2">
-                <h4 className="font-medium text-sm text-slate-500">Lead Response</h4>
-                <div className="flex items-end gap-2">
-                  <span className="text-2xl font-bold text-slate-900">2.4h</span>
-                  <span className="text-xs mb-1 text-green-600">-5%</span>
-                </div>
-                <p className="text-xs text-slate-400">Avg time to action lead</p>
               </div>
             </div>
           </CardContent>

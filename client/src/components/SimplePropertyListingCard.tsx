@@ -82,7 +82,7 @@ export function SimplePropertyListingCard({
             Property Listing
           </span>
           <House className="h-12 w-12" />
-          <span className="text-[11px] font-medium text-slate-500">Image coming soon</span>
+          <span className="text-[11px] font-medium text-slate-500">No image provided</span>
         </div>
 
         {resolvedImage && (

@@ -127,7 +127,7 @@ export function DevelopmentGallery({
     if (!img)
       return (
         <div className="flex h-full w-full flex-col justify-end bg-gradient-to-br from-slate-900 via-slate-800 to-slate-700 p-6 text-white">
-          <p className="text-base font-semibold">Gallery coming soon</p>
+          <p className="text-base font-semibold">Gallery in preparation</p>
           <p className="mt-2 max-w-sm text-sm text-white/75">
             We are preparing visuals, floor plans, and sales material for this development.
           </p>

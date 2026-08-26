@@ -70,7 +70,7 @@ const BillingDashboard: React.FC = () => {
 
   const handleUpgradePlan = async () => {
     // TODO: Implement plan upgrade flow
-    toast.info('Plan upgrade coming soon');
+    toast.info('Plan upgrades are not available in this environment yet');
   };
 
   const getStatusBadge = (status: string) => {

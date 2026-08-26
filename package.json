@@ -28,6 +28,7 @@
     "format": "prettier --write client/src/**/*.{ts,tsx,json} server/**/*.{ts,tsx,json} shared/**/*.{ts,tsx,json}",
     "test": "vitest --run",
     "test:ci": "vitest --run --reporter=basic",
+    "test:authority": "cross-env NODE_ENV=test APP_ENV=test tsx scripts/runTestsUnderDatabaseAuthority.mts",
     "test:db-authority:static": "vitest run --no-cache --config vitest.database-authority-static.config.ts --workspace vitest.database-authority-static.workspace.ts --project database-authority-static --reporter=basic",
     "test:watch": "vitest",
     "test:dominance:server": "vitest run server/services/__tests__/locationMonetizationService.validation.test.ts server/services/__tests__/kpiRollupService.reconciliation.test.ts server/services/__tests__/monetization.smoke.test.ts server/services/__tests__/distributionSchemaDrift.test.ts",

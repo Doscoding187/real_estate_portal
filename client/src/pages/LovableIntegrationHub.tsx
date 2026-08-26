@@ -423,9 +423,9 @@ export default function LovableIntegrationHub() {
               <CardContent>
                 <div className="text-center py-12">
                   <Layers className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-lg font-medium mb-2">Asset Management Coming Soon</h3>
+                  <h3 className="text-lg font-medium mb-2">Asset Management Not Enabled</h3>
                   <p className="text-muted-foreground mb-4">
-                    This feature will allow you to manage design assets from Lovable
+                    Asset management from Lovable is not enabled in this environment yet.
                   </p>
                   <Button variant="outline" onClick={() => setActiveTab('add')}>
                     <Plus className="h-4 w-4 mr-2" />

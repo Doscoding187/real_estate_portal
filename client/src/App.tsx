@@ -47,7 +47,6 @@ const AgentMarketingHub = lazy(() => import('./pages/agent/AgentMarketingHub'));
 const AgentEarnings = lazy(() => import('./pages/agent/AgentEarnings'));
 const AgentAnalytics = lazy(() => import('./pages/AgentAnalytics'));
 const AgentProductivity = lazy(() => import('./pages/agent/AgentProductivity'));
-const AgentTrainingSupport = lazy(() => import('./pages/agent/AgentTrainingSupport'));
 const AgentSettings = lazy(() => import('./pages/AgentSettings'));
 const AgentSetup = lazy(() => import('./pages/AgentSetup'));
 const AgentPackageSelection = lazy(() => import('./pages/agent/AgentPackageSelection'));
@@ -56,10 +55,7 @@ const AcceptInvitation = lazy(() => import('./pages/AcceptInvitation'));
 const ExploreFeed = lazy(() => import('./pages/ExploreFeed'));
 const ExploreHome = lazy(() => import('./pages/ExploreHome'));
 const ExploreShorts = lazy(() => import('./pages/ExploreShorts'));
-const ExploreUpload = lazy(() => import('./pages/ExploreUpload'));
 const ExploreMap = lazy(() => import('./pages/ExploreMap'));
-const ExploreOptionAPilot = lazy(() => import('./pages/ExploreOptionAPilot'));
-const PartnerProfile = lazy(() => import('./pages/PartnerProfile'));
 const OnboardingSuccess = lazy(() => import('./pages/OnboardingSuccess'));
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
 const ResetPassword = lazy(() => import('./pages/ResetPassword'));
@@ -123,8 +119,6 @@ const AgencyOnboarding = lazy(() => import('./pages/AgencyOnboarding'));
 const DeveloperSetupWizardEnhanced = lazy(
   () => import('./components/developer/DeveloperSetupWizardEnhanced'),
 );
-
-const MapPreviewDemo = lazy(() => import('./pages/MapPreviewDemo'));
 
 // Import Developer Dashboard Pages
 const SubscriptionPlans = lazy(() => import('./pages/SubscriptionPlans'));
@@ -315,11 +309,6 @@ function Router() {
               <AgentProductivity />
             </RequireRole>
           </Route>
-          <Route path="/agent/training">
-            <RequireRole role="agent">
-              <AgentTrainingSupport />
-            </RequireRole>
-          </Route>
           <Route path="/agent/settings">
             <RequireRole role="agent">
               <AgentSettings />
@@ -400,24 +389,12 @@ function Router() {
             <Redirect to="/explore" />
           </Route>
           <Route path="/explore/shorts" component={ExploreShorts} />
-          <Route path="/explore/upload" component={ExploreUpload} />
-          <Route path="/explore/create">
-            <Redirect to="/explore/upload" />
-          </Route>
-          <Route path="/explore/publish">
-            <Redirect to="/explore/upload" />
-          </Route>
-          <Route path="/explore/upload/video">
-            <Redirect to="/explore/upload" />
-          </Route>
-          <Route path="/map-preview-demo" component={MapPreviewDemo} />
 
           {/* New Explore Pages */}
           <Route path="/explore/discovery">
             <Redirect to="/explore/feed" />
           </Route>
           <Route path="/explore/map" component={ExploreMap} />
-          <Route path="/explore/pilot" component={ExploreOptionAPilot} />
 
           {/* Legacy Feed */}
           <Route path="/explore/feed" component={ExploreFeed} />
@@ -430,8 +407,6 @@ function Router() {
             <ExploreHome />
           </Route>
 
-          {/* Partner Profile */}
-          <Route path="/partner/:partnerId" component={PartnerProfile} />
           <Route path="/referrer/dashboard">
             <Redirect to="/distribution/partner/overview" />
           </Route>
