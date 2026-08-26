@@ -14,7 +14,8 @@
   "source_name_variants": {
     "Dal Fouche'": "Dal Fouche",
     "New State Areas": "New State Area",
-    "Nuffield Industrial Area": "Nuffield"
+    "Nuffield Industrial Area": "Nuffield",
+    "Presidentsdam": "Presidents dam"
   },
   "suburb_names": [
     "Bakerton",
@@ -36,6 +37,7 @@
     "Struisbult",
     "Selcourt",
     "Krugersrus",
-    "Presidentsdam"
+    "Presidentsdam",
+    "Presidents dam"
   ]
 }

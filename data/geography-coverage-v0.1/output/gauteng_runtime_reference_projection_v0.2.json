@@ -7,7 +7,7 @@
     "factual_canonical_geography_sha256": "1fe0e2e3101bd7e459f484b7125dc1ce1f0327104002b184ef0e90d4236b7b7f",
     "factual_canonical_names_sha256": "a87891bc2e4167130d7e5eb649516a34aedaa071278ce8fe25df19f511669b51",
     "carried_projection_v01_sha256": "982ea13cd190a02da5440f122a061713e22bc157ef46f491ce530c5877ff9fc0",
-    "territory_manifest_sha256": "523f82787c6b08ac26cd6a3fe9b6bbd003dc6baf041c310119b8dbfcae5e6750"
+    "territory_manifest_sha256": "967bb0392839ee06a2ef2b7c471a5a5fa22db636a2b05d195381d88c992ca7d1"
   },
   "rows": [
     {
@@ -16321,6 +16321,30 @@
     {
       "runtime_search_scope_kind": "locality",
       "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/krugersdorp/krugersdorp-wildtuin",
+      "runtime_parent_natural_key": "gauteng/krugersdorp",
+      "name": "Krugersdorp Wildtuin",
+      "slug": "krugersdorp-wildtuin",
+      "latitude": -26.0848205,
+      "longitude": 27.713461000000002,
+      "searchable_aliases": [
+        "KRUGERSDORPWILDTUIN"
+      ],
+      "publication_status": "provisional",
+      "licensing_classification": "permissive_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-66fc7a436fa6ab1951eb"
+      ],
+      "factual_preferred_names": [
+        "Krugersdorp Wildtuin"
+      ],
+      "factual_types": [
+        "locality"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
       "runtime_natural_key": "gauteng/krugersdorp/mindalore",
       "runtime_parent_natural_key": "gauteng/krugersdorp",
       "name": "Mindalore",
@@ -26077,6 +26101,28 @@
       ],
       "factual_preferred_names": [
         "Petersfield"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/springs/presidents-dam",
+      "runtime_parent_natural_key": "gauteng/springs",
+      "name": "Presidents dam",
+      "slug": "presidents-dam",
+      "latitude": -26.2129326,
+      "longitude": 28.4152703,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-89b2f45f7d9356af5502"
+      ],
+      "factual_preferred_names": [
+        "Presidents dam"
       ],
       "factual_types": [
         "suburb"
