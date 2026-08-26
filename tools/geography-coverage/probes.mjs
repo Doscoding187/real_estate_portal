@@ -535,6 +535,23 @@ for (const probe of WAVE20_LOCALITY_PROBES) {
   );
 }
 
+const WAVE21_LOCALITY_PROBES = [
+  { name: 'Spruitview', parentSuffix: 'gauteng/katlehong/spruitview' },
+  { name: 'Ramokonapi', parentSuffix: 'gauteng/katlehong/ramokonapi' },
+  { name: 'Siluma View', parentSuffix: 'gauteng/katlehong/siluma-view' },
+  { name: 'Likole', parentSuffix: 'gauteng/katlehong/likole' },
+  { name: 'Mopeli', parentSuffix: 'gauteng/katlehong/mopeli' },
+];
+
+for (const probe of WAVE21_LOCALITY_PROBES) {
+  const row = resolveByName(probe.name);
+  check(
+    `wave21 researched edge resolves: ${probe.name}`,
+    row !== null && row.runtime_natural_key === probe.parentSuffix,
+    row ? row.runtime_natural_key : 'missing',
+  );
+}
+
 const NEGATIVE_PROBES = ['Mamelodi Extension 1', 'Mamelodi Extension 4'];
 for (const probe of NEGATIVE_PROBES) {
   const directHit = resolveByName(probe);

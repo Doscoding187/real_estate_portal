@@ -18,7 +18,12 @@
     "Moseleke East": "Moseleki East",
     "Tshongweni": "Tsongweni",
     "Phaake": "Phake",
-    "Woodemere": "Woodmere"
+    "Woodemere": "Woodmere",
+    "Spruitview": "Spruitview East / Spruitview Ext 1 (West)",
+    "Ramokonapi": "Ramokonopi East / Ramokonopi (West)",
+    "Siluma View": "Siluma Katlehong",
+    "Likole": "Dikole Proper / Dikole Ext 1 / Dikole Ext 2",
+    "Mopeli": "Mopedi"
   },
   "suburb_names": [
     "Moshoeshoe",
@@ -41,6 +46,11 @@
     "Leondale",
     "Phake",
     "Woodmere",
-    "Zonkizizwe"
+    "Zonkizizwe",
+    "Spruitview",
+    "Ramokonapi",
+    "Siluma View",
+    "Likole",
+    "Mopeli"
   ]
 }

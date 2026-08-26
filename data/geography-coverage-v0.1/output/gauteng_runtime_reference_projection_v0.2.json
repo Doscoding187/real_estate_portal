@@ -14838,6 +14838,28 @@
     {
       "runtime_search_scope_kind": "locality",
       "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/katlehong/likole",
+      "runtime_parent_natural_key": "gauteng/katlehong",
+      "name": "Likole",
+      "slug": "likole",
+      "latitude": -26.3747222,
+      "longitude": 28.1577778,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-9584176833a7b4d4fc03"
+      ],
+      "factual_preferred_names": [
+        "Likole"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
       "runtime_natural_key": "gauteng/katlehong/magagula",
       "runtime_parent_natural_key": "gauteng/katlehong",
       "name": "Magagula",
@@ -14940,6 +14962,28 @@
       ],
       "factual_preferred_names": [
         "Monise"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/katlehong/mopeli",
+      "runtime_parent_natural_key": "gauteng/katlehong",
+      "name": "Mopeli",
+      "slug": "mopeli",
+      "latitude": -26.3302778,
+      "longitude": 28.16,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-eb8fdf0f0bf98f50e5d9"
+      ],
+      "factual_preferred_names": [
+        "Mopeli"
       ],
       "factual_types": [
         "suburb"
@@ -15146,6 +15190,50 @@
     {
       "runtime_search_scope_kind": "locality",
       "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/katlehong/ramokonapi",
+      "runtime_parent_natural_key": "gauteng/katlehong",
+      "name": "Ramokonapi",
+      "slug": "ramokonapi",
+      "latitude": -26.3613889,
+      "longitude": 28.1572222,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-c8da7861488edf5e35b8"
+      ],
+      "factual_preferred_names": [
+        "Ramokonapi"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/katlehong/siluma-view",
+      "runtime_parent_natural_key": "gauteng/katlehong",
+      "name": "Siluma View",
+      "slug": "siluma-view",
+      "latitude": -26.38580165,
+      "longitude": 28.158932800000002,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "mixed_odbl_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-b0f0aecaa78e069f69e1"
+      ],
+      "factual_preferred_names": [
+        "Siluma View"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
       "runtime_natural_key": "gauteng/katlehong/skozana",
       "runtime_parent_natural_key": "gauteng/katlehong",
       "name": "Skozana",
@@ -15160,6 +15248,28 @@
       ],
       "factual_preferred_names": [
         "Skozana"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/katlehong/spruitview",
+      "runtime_parent_natural_key": "gauteng/katlehong",
+      "name": "Spruitview",
+      "slug": "spruitview",
+      "latitude": -26.3211111,
+      "longitude": 28.1830556,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-3fa4888f74c5ab216b17"
+      ],
+      "factual_preferred_names": [
+        "Spruitview"
       ],
       "factual_types": [
         "suburb"
