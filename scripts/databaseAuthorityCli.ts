@@ -17,6 +17,14 @@ import {
   verifyCanonicalGeography,
 } from '../server/_core/databaseAuthority/dataAdapters/canonicalGeography';
 import {
+  assertDataRoleManifest,
+  DATA_ROLE_MANIFEST,
+} from '../server/_core/databaseAuthority/dataAdapters/dataRoleManifest';
+import {
+  prepareCanonicalFoundation,
+  verifyCanonicalFoundation,
+} from '../server/_core/databaseAuthority/dataAdapters/canonicalFoundation';
+import {
   planCanonicalCommercialReferenceData,
   prepareCanonicalCommercialReferenceData,
   verifyCanonicalCommercialReference,
@@ -62,6 +70,7 @@ import { runSqlMigrations } from '../server/migrations/runSqlMigrations';
 type Command =
   | 'context'
   | 'manifest'
+  | 'data:manifest'
   | 'worktree:create'
   | 'worktree:dispose'
   | 'worktree:ack'
@@ -78,6 +87,8 @@ type Command =
   | 'schema:check'
   | 'reference:prepare'
   | 'reference:verify'
+  | 'foundation:prepare'
+  | 'foundation:verify'
   | 'scenario:prepare'
   | 'scenario:verify'
   | 'listing-preview:prepare'
@@ -149,6 +160,12 @@ async function run(command: Command): Promise<void> {
         parent: item.parent,
       })),
     });
+    return;
+  }
+
+  if (command === 'data:manifest') {
+    assertDataRoleManifest();
+    print(DATA_ROLE_MANIFEST);
     return;
   }
 
@@ -292,6 +309,8 @@ async function run(command: Command): Promise<void> {
   if (
     command === 'reference:prepare' ||
     command === 'reference:verify' ||
+    command === 'foundation:prepare' ||
+    command === 'foundation:verify' ||
     command === 'scenario:prepare' ||
     command === 'scenario:verify' ||
     command === 'listing-preview:prepare' ||
@@ -315,25 +334,27 @@ async function run(command: Command): Promise<void> {
     }
 
     const isReference = command.startsWith('reference:');
+    const isFoundation = command.startsWith('foundation:');
     const isPrepare = command.endsWith(':prepare');
     const operation = isPrepare
       ? isReference
         ? 'reference-seed'
-        : 'scenario-seed'
+        : isFoundation
+          ? 'foundation-seed'
+          : 'scenario-seed'
       : 'verification';
     const authority = authorityFor(operation, isPrepare ? 'local-owner' : undefined);
     const decision = authorizationFor(authority);
     const connection = await createAuthoritySqlConnection(authority, decision);
     try {
       const evidence = isReference
-        ? {
-            geography: isPrepare
-              ? await prepareCanonicalGeography({ authority, decision, connection })
-              : await verifyCanonicalGeography({ authority, decision, connection }),
-            commercial: isPrepare
-              ? await prepareCanonicalCommercialReferenceData({ authority, decision, connection })
-              : await verifyCanonicalCommercialReference({ authority, decision, connection }),
-          }
+        ? isPrepare
+          ? await prepareCanonicalGeography({ authority, decision, connection })
+          : await verifyCanonicalGeography({ authority, decision, connection })
+        : isFoundation
+          ? isPrepare
+            ? await prepareCanonicalFoundation({ authority, decision, connection })
+            : await verifyCanonicalFoundation({ authority, decision, connection })
         : isPrepare
           ? await prepareSearchToLeadScenario({ authority, decision, connection })
           : await verifySearchToLeadScenario({ authority, decision, connection });
@@ -401,6 +422,7 @@ const command = process.argv[2] as Command | undefined;
 const commands = new Set<Command>([
   'context',
   'manifest',
+  'data:manifest',
   'worktree:create',
   'worktree:dispose',
   'worktree:ack',
@@ -417,6 +439,8 @@ const commands = new Set<Command>([
   'schema:check',
   'reference:prepare',
   'reference:verify',
+  'foundation:prepare',
+  'foundation:verify',
   'scenario:prepare',
   'scenario:verify',
   'listing-preview:prepare',

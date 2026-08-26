@@ -33,6 +33,7 @@ describe('local database lifecycle sequencing', () => {
       ['pnpm', ['db:migrate:plan']],
       ['pnpm', ['db:migrate:apply']],
       ['pnpm', ['db:reference:prepare']],
+      ['pnpm', ['db:foundation:prepare']],
       ['pnpm', ['db:scenario:prepare']],
       ['pnpm', ['db:readiness', '--', '--purpose=location-discovery']],
     ]);
@@ -41,6 +42,7 @@ describe('local database lifecycle sequencing', () => {
   it('delegates verification to approved diagnostics', () => {
     expect(verificationCommandSequence()).toEqual([
       ['pnpm', ['db:reference:verify']],
+      ['pnpm', ['db:foundation:verify']],
       ['pnpm', ['db:scenario:verify']],
       ['pnpm', ['db:readiness', '--', '--purpose=location-discovery']],
     ]);

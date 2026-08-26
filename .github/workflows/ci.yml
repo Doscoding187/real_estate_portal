@@ -191,6 +191,24 @@ jobs:
           DATABASE_URL: mysql://root:test_password@127.0.0.1:3306/listify_test
         run: pnpm db:reference:verify
 
+      - name: Prepare canonical disposable foundation data
+        env:
+          CI: 'true'
+          APP_ENV: test
+          NODE_ENV: test
+          DATABASE_CREDENTIAL_CLASS: test-owner
+          DATABASE_URL: mysql://root:test_password@127.0.0.1:3306/listify_test
+        run: pnpm db:foundation:prepare
+
+      - name: Verify canonical disposable foundation data
+        env:
+          CI: 'true'
+          APP_ENV: test
+          NODE_ENV: test
+          DATABASE_CREDENTIAL_CLASS: test-owner
+          DATABASE_URL: mysql://root:test_password@127.0.0.1:3306/listify_test
+        run: pnpm db:foundation:verify
+
       - name: Run tests
         env:
           DATABASE_URL: mysql://root:test_password@127.0.0.1:3306/listify_test

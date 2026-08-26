@@ -129,10 +129,15 @@ describe('Developer Engine S0 containment contracts', () => {
   });
 
   it('retires direct-seed modules and the strict publication path', () => {
-    const localDemoSeed = source('server/scripts/localDemoSeed.ts');
-    expect(localDemoSeed).toContain('LOCAL_SEED_ALLOWED=true is required');
-    expect(localDemoSeed).toContain('production runtime detected');
-    expect(localDemoSeed).toContain('production database name detected');
+    expect(existsSync(resolve(repoRoot, 'server/scripts/localDemoSeed.ts'))).toBe(false);
+    expect(existsSync(resolve(repoRoot, 'server/scripts/verifyLocalDemoSeed.ts'))).toBe(false);
+    const dataRoleManifest = source(
+      'server/_core/databaseAuthority/dataAdapters/dataRoleManifest.ts',
+    );
+    expect(dataRoleManifest).toContain("key: 'foundation.launch-access'");
+    expect(dataRoleManifest).toContain("key: 'demo.listing-preview-authentication'");
+    expect(dataRoleManifest).toContain("key: 'scenario.search-to-lead'");
+    expect(dataRoleManifest).not.toContain('LOCAL_SEED_ALLOWED');
     expect(existsSync(resolve(repoRoot, 'server/emulatorRouter.ts'))).toBe(false);
     expect(existsSync(resolve(repoRoot, 'server/services/platformBrandSeedingService.ts'))).toBe(
       false,

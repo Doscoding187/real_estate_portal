@@ -7,6 +7,9 @@
     "server/_core/databaseAuthority/lifecycle.ts",
     "server/_core/databaseAuthority/readiness.ts",
     "server/_core/databaseAuthority/dataAdapters/canonicalGeography.ts",
+    "server/_core/databaseAuthority/dataAdapters/canonicalCommercial.ts",
+    "server/_core/databaseAuthority/dataAdapters/canonicalFoundation.ts",
+    "server/_core/databaseAuthority/dataAdapters/listingPreviewFixture.ts",
     "server/_core/databaseAuthority/dataAdapters/searchToLeadScenario.ts",
     "server/_core/databaseAuthority/dataAdapters/plePublicationEntitlement.ts",
     "server/_core/databaseAuthority/dataAdapters/pleReviewerFixture.ts",
@@ -21,10 +24,7 @@
     "server/test-utils/developmentIntegrationMutex.ts"
   ],
   "retiredDirectMutationSources": [
-    "scripts/run-listing-performance-e2e.ts",
-    "scripts/run-prospect-journey-e2e.ts",
-    "scripts/testDbWorkflow.ts",
-    "server/scripts/localDemoSeed.ts"
+    "scripts/testDbWorkflow.ts"
   ],
   "legacyContainedDirectSources": [
     "scripts/check-agent-tables.ts",
@@ -58,8 +58,7 @@
     "scripts/verify-prospect-journey-cross-agency.ts",
     "scripts/verify-prospect-journey-security.ts",
     "server/scripts/debug-db.ts",
-    "server/scripts/debug_db_connection.ts",
-    "server/scripts/verifyLocalDemoSeed.ts"
+    "server/scripts/debug_db_connection.ts"
   ],
   "legacyTargetParsersWithoutRawConnectionCreation": [
     "scripts/debug-slug.ts",
@@ -88,9 +87,12 @@
   },
   "operationAdapters": {
     "canonicalReferenceData": "server/_core/databaseAuthority/dataAdapters/canonicalGeography.ts",
+    "canonicalFoundationData": "server/_core/databaseAuthority/dataAdapters/canonicalFoundation.ts",
+    "listingPreviewDemo": "server/_core/databaseAuthority/dataAdapters/listingPreviewFixture.ts",
     "searchToLeadScenario": "server/_core/databaseAuthority/dataAdapters/searchToLeadScenario.ts",
     "plePublicationEntitlement": "server/_core/databaseAuthority/dataAdapters/plePublicationEntitlement.ts",
     "pleReviewerFixture": "server/_core/databaseAuthority/dataAdapters/pleReviewerFixture.ts",
+    "dataRoleManifest": "server/_core/databaseAuthority/dataAdapters/dataRoleManifest.ts",
     "targetRequirement": "exact owned disposable worktree profile and accepted manifest head",
     "legacyLocationsAuthority": "never written or used as canonical geography authority"
   },
