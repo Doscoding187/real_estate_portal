@@ -1,0 +1,30 @@
+{
+  "resolved_edges_version": "germiston-rondebult-parent-evidence.v0.1.resolved",
+  "town": "Germiston",
+  "parent_natural_key": "gauteng/germiston",
+  "source": {
+    "publisher": "City of Ekurhuleni",
+    "url": "https://www.ekurhuleni.gov.za/wp-content/uploads/2021/11/GERMISTON_FULL_TITLE_BOOK_29.pdf",
+    "section": "Germiston Full Title Book — AREA: GERMISTON; township RONDEBULT",
+    "retrieved": "2026-08-27",
+    "licence_note": "Official municipal valuation/title source used for locality relationship assertions; no prose, geometry, or property data is copied."
+  },
+  "edge_count": 1,
+  "edges": [
+    {
+      "factual_location_id": "pl-gp-v01-5650fd1d9fe9843f204c",
+      "preferred_name": "Rondebult",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/germiston",
+      "evidence_class": "official_municipal_area_and_magisterial_place_index",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2021/11/GERMISTON_FULL_TITLE_BOOK_29.pdf#Germiston%20Full%20Title%20Book%20%E2%80%94%20AREA%3A%20GERMISTON%3B%20township%20RONDEBULT (retrieved 2026-08-27)"
+    }
+  ],
+  "diagnostics": {
+    "researched_names": 0,
+    "identity_specific_records": 1,
+    "matched_already_projected": [],
+    "names_not_in_canonical_layer": [],
+    "ambiguous_canonical_matches": []
+  }
+}

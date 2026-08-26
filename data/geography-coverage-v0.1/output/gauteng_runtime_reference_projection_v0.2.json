@@ -7,7 +7,7 @@
     "factual_canonical_geography_sha256": "1fe0e2e3101bd7e459f484b7125dc1ce1f0327104002b184ef0e90d4236b7b7f",
     "factual_canonical_names_sha256": "a87891bc2e4167130d7e5eb649516a34aedaa071278ce8fe25df19f511669b51",
     "carried_projection_v01_sha256": "982ea13cd190a02da5440f122a061713e22bc157ef46f491ce530c5877ff9fc0",
-    "territory_manifest_sha256": "8aaec49053e53c25dc8b5af9b60a4e7ac87879fbb4d6a57fdfdbb048b21f976d"
+    "territory_manifest_sha256": "3770dd9aa8671579f291c9829a44878ab08eada6883a2ec554644ad5a6feaa2e"
   },
   "rows": [
     {
@@ -2319,6 +2319,28 @@
       ],
       "factual_preferred_names": [
         "Reigerpark"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/boksburg/rondebult",
+      "runtime_parent_natural_key": "gauteng/boksburg",
+      "name": "Rondebult",
+      "slug": "rondebult",
+      "latitude": -26.3098,
+      "longitude": 28.232106,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "mixed_odbl_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-7f93a84351a0b976dd04"
+      ],
+      "factual_preferred_names": [
+        "Rondebult"
       ],
       "factual_types": [
         "suburb"
@@ -5520,6 +5542,28 @@
       ],
       "factual_preferred_names": [
         "Primrose Hill"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/germiston/rondebult",
+      "runtime_parent_natural_key": "gauteng/germiston",
+      "name": "Rondebult",
+      "slug": "rondebult",
+      "latitude": -26.3108952,
+      "longitude": 28.1869778,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-5650fd1d9fe9843f204c"
+      ],
+      "factual_preferred_names": [
+        "Rondebult"
       ],
       "factual_types": [
         "suburb"

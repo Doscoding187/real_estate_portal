@@ -713,6 +713,28 @@ for (const probe of WAVE36_LOCALITY_PROBES) {
   );
 }
 
+const WAVE37_IDENTITY_SPECIFIC_PROBES = [
+  {
+    name: 'Rondebult (Germiston identity)',
+    factualId: 'pl-gp-v01-5650fd1d9fe9843f204c',
+    parentSuffix: 'gauteng/germiston/rondebult',
+  },
+  {
+    name: 'Rondebult (Boksburg identity)',
+    factualId: 'pl-gp-v01-7f93a84351a0b976dd04',
+    parentSuffix: 'gauteng/boksburg/rondebult',
+  },
+];
+
+for (const probe of WAVE37_IDENTITY_SPECIFIC_PROBES) {
+  const row = rowsByNaturalKey.get(probe.parentSuffix);
+  check(
+    `wave37 identity-specific edge resolves: ${probe.name}`,
+    row !== undefined && row.factual_location_ids.includes(probe.factualId),
+    row ? `${row.runtime_natural_key}/${row.factual_location_ids.join(',')}` : 'missing',
+  );
+}
+
 const NEGATIVE_PROBES = ['Mamelodi Extension 1', 'Mamelodi Extension 4'];
 for (const probe of NEGATIVE_PROBES) {
   const directHit = resolveByName(probe);

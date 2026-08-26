@@ -1,0 +1,30 @@
+{
+  "resolved_edges_version": "boksburg-rondebult-parent-evidence.v0.1.resolved",
+  "town": "Boksburg",
+  "parent_natural_key": "gauteng/boksburg",
+  "source": {
+    "publisher": "City of Ekurhuleni",
+    "url": "https://www.ekurhuleni.gov.za/press-releases/human-settlement/city-relocates-hostel-residents-to-new-houses-in-boksburg/",
+    "section": "City relocates hostel residents to new houses in Boksburg — Leeuwpoort Mega Housing Project near Rondebult in Boksburg",
+    "retrieved": "2026-08-27",
+    "licence_note": "Official municipal service-delivery source used for locality relationship assertions; no prose or geometry is copied."
+  },
+  "edge_count": 1,
+  "edges": [
+    {
+      "factual_location_id": "pl-gp-v01-7f93a84351a0b976dd04",
+      "preferred_name": "Rondebult",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/boksburg",
+      "evidence_class": "official_municipal_and_magisterial_area_relationship",
+      "citation": "https://www.ekurhuleni.gov.za/press-releases/human-settlement/city-relocates-hostel-residents-to-new-houses-in-boksburg/#City%20relocates%20hostel%20residents%20to%20new%20houses%20in%20Boksburg%20%E2%80%94%20Leeuwpoort%20Mega%20Housing%20Project%20near%20Rondebult%20in%20Boksburg (retrieved 2026-08-27)"
+    }
+  ],
+  "diagnostics": {
+    "researched_names": 0,
+    "identity_specific_records": 1,
+    "matched_already_projected": [],
+    "names_not_in_canonical_layer": [],
+    "ambiguous_canonical_matches": []
+  }
+}

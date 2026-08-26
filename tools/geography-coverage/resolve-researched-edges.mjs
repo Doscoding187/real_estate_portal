@@ -56,7 +56,9 @@ for (const row of projection.rows) {
 }
 
 const recordsByNormalizedName = new Map();
+const recordsById = new Map();
 for (const record of canonical) {
+  recordsById.set(record.canonical_location_id, record);
   const normalized = normalizeName(record.preferred_name);
   const records = recordsByNormalizedName.get(normalized) ?? [];
   records.push(record);
@@ -67,8 +69,81 @@ const resolved = [];
 const matchedAlreadyProjected = [];
 const notInCanonical = [];
 const ambiguousCanonicalMatches = [];
+const processedFactualIds = new Set();
 
-for (const name of evidence.suburb_names) {
+function resolveRecord(record, name) {
+  if (processedFactualIds.has(record.canonical_location_id)) {
+    throw new Error(
+      `Research artifact ${evidencePath} references canonical identity ${record.canonical_location_id} more than once; refusing to emit duplicate edges.`,
+    );
+  }
+  processedFactualIds.add(record.canonical_location_id);
+
+  const projectedRow = projectedRowByFactualId.get(record.canonical_location_id);
+  if (projectedRow) {
+    matchedAlreadyProjected.push({
+      name,
+      factual_location_id: record.canonical_location_id,
+      existing_parent_natural_key: projectedRow.runtime_parent_natural_key,
+      parent_matches_evidence: projectedRow.runtime_parent_natural_key === evidence.parent_natural_key,
+    });
+    if (projectedRow.runtime_parent_natural_key === evidence.parent_natural_key) {
+      resolved.push({
+        factual_location_id: record.canonical_location_id,
+        preferred_name: record.preferred_name,
+        factual_type: record.canonical_type,
+        parent_natural_key: evidence.parent_natural_key,
+        evidence_class: evidence.evidence_class,
+        citation: `${evidence.source.url}#${encodeURIComponent(evidence.source.section)} (retrieved ${evidence.source.retrieved})`,
+      });
+    }
+    return;
+  }
+
+  resolved.push({
+    factual_location_id: record.canonical_location_id,
+    preferred_name: record.preferred_name,
+    factual_type: record.canonical_type,
+    parent_natural_key: evidence.parent_natural_key,
+    evidence_class: evidence.evidence_class,
+    citation: `${evidence.source.url}#${encodeURIComponent(evidence.source.section)} (retrieved ${evidence.source.retrieved})`,
+  });
+}
+
+const identitySpecificRecords = evidence.identity_specific_records ?? [];
+if (!Array.isArray(identitySpecificRecords)) {
+  throw new Error(`Research artifact ${evidencePath} identity_specific_records must be an array when present.`);
+}
+
+for (const identity of identitySpecificRecords) {
+  if (!identity || typeof identity.factual_location_id !== 'string') {
+    throw new Error(
+      `Research artifact ${evidencePath} identity_specific_records entries must declare factual_location_id.`,
+    );
+  }
+  const record = recordsById.get(identity.factual_location_id);
+  if (!record) {
+    throw new Error(
+      `Research artifact ${evidencePath} references unknown canonical identity ${identity.factual_location_id}; refusing to invent an edge.`,
+    );
+  }
+  if (
+    identity.preferred_name &&
+    normalizeName(identity.preferred_name) !== normalizeName(record.preferred_name)
+  ) {
+    throw new Error(
+      `Research artifact ${evidencePath} identity ${identity.factual_location_id} names ${identity.preferred_name}, but canonical preferred_name is ${record.preferred_name}; refusing to guess.`,
+    );
+  }
+  if (record.administrative_context?.adm2?.[0]?.name !== expectedAdministrativeContext) {
+    throw new Error(
+      `Research artifact ${evidencePath} identity ${identity.factual_location_id} resolves to unexpected municipality ${record.administrative_context?.adm2?.[0]?.name ?? 'unknown'}; expected ${expectedAdministrativeContext}; refusing to emit an edge.`,
+    );
+  }
+  resolveRecord(record, identity.preferred_name ?? record.preferred_name);
+}
+
+for (const name of evidence.suburb_names ?? []) {
   const normalized = normalizeName(name);
   const nameMatches = recordsByNormalizedName.get(normalized) ?? [];
   if (nameMatches.length === 0) {
@@ -112,34 +187,7 @@ for (const name of evidence.suburb_names) {
     continue;
   }
 
-  const projectedRow = projectedRowByFactualId.get(record.canonical_location_id);
-  if (projectedRow) {
-    matchedAlreadyProjected.push({
-      name,
-      factual_location_id: record.canonical_location_id,
-      existing_parent_natural_key: projectedRow.runtime_parent_natural_key,
-      parent_matches_evidence: projectedRow.runtime_parent_natural_key === evidence.parent_natural_key,
-    });
-    if (projectedRow.runtime_parent_natural_key === evidence.parent_natural_key) {
-      resolved.push({
-        factual_location_id: record.canonical_location_id,
-        preferred_name: record.preferred_name,
-        factual_type: record.canonical_type,
-        parent_natural_key: evidence.parent_natural_key,
-        evidence_class: evidence.evidence_class,
-        citation: `${evidence.source.url}#${encodeURIComponent(evidence.source.section)} (retrieved ${evidence.source.retrieved})`,
-      });
-    }
-    continue;
-  }
-  resolved.push({
-    factual_location_id: record.canonical_location_id,
-    preferred_name: record.preferred_name,
-    factual_type: record.canonical_type,
-    parent_natural_key: evidence.parent_natural_key,
-    evidence_class: evidence.evidence_class,
-    citation: `${evidence.source.url}#${encodeURIComponent(evidence.source.section)} (retrieved ${evidence.source.retrieved})`,
-  });
+  resolveRecord(record, name);
 }
 
 resolved.sort((left, right) => left.factual_location_id.localeCompare(right.factual_location_id));
@@ -152,7 +200,8 @@ const output = {
   edge_count: resolved.length,
   edges: resolved,
   diagnostics: {
-    researched_names: evidence.suburb_names.length,
+    researched_names: (evidence.suburb_names ?? []).length,
+    identity_specific_records: identitySpecificRecords.length,
     matched_already_projected: matchedAlreadyProjected,
     names_not_in_canonical_layer: notInCanonical,
     ambiguous_canonical_matches: ambiguousCanonicalMatches,
