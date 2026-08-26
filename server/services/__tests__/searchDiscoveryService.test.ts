@@ -3,6 +3,8 @@ import { describe, expect, it } from 'vitest';
 import { isFactualGeographyId } from '../../../shared/factualRuntimeGeographyBridge';
 import type { ResolvedLocation } from '../locationResolverService';
 import { gautengFactualRuntimeProjectionAuthority } from '../governedRuntimeGeographyReference';
+import type { LocationCoverageEvent } from '../locationCoverageTelemetry';
+import { setLocationCoverageEventSinkForTests } from '../locationCoverageTelemetry';
 import type {
   RuntimeGeographyAuthority,
   RuntimeGeographyAuthorityRecord,
@@ -294,5 +296,43 @@ describe('SearchDiscoveryService collision-safe contract', () => {
       status: 'unavailable',
       reason: 'preview_only',
     });
+  });
+
+  it('emits a no_result coverage outcome for unknown queries', async () => {
+    const events: LocationCoverageEvent[] = [];
+    setLocationCoverageEventSinkForTests(event => events.push(event));
+    const service = new SearchDiscoveryService({
+      mode: 'public',
+      searchAreaAuthority: createSearchAreaAuthority(),
+      runtimeGeographyAuthority: createRuntimeAuthority(),
+      canonicalLocationSearch: async () => [],
+      publicLocationResolver: {
+        resolvePublicLocation: async ({ locationId }) => ({
+          status: 'resolved',
+          location: resolvedCity(locationId || '', 'Cape Town'),
+        }),
+      },
+    });
+
+    const results = await service.search('zzz-no-such-place-zzz', 8);
+
+    expect(results).toHaveLength(0);
+    expect(events).toHaveLength(1);
+    expect(events[0].outcome.coverageSignal).toBe('no_result');
+    expect(events[0].outcome.canonicalResultCount).toBe(0);
+    expect(events[0].outcome.normalizedQuery).toBe('zzz-no-such-place-zzz');
+  });
+
+  it('reports alias match reasons in the coverage outcome', async () => {
+    const events: LocationCoverageEvent[] = [];
+    setLocationCoverageEventSinkForTests(event => events.push(event));
+    const service = createService('controlled_acceptance');
+
+    await service.search('bryanston west extension 1', 8);
+
+    const event = events.at(-1);
+    expect(event?.outcome.coverageSignal).toBe('resolved');
+    expect(event?.outcome.topMatchReason).toBe('alias_exact');
+    expect(event?.outcome.matchedAlias).toBe('Bryanston West Extension 1');
   });
 });

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+/* global console, process */
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -213,7 +214,9 @@ check(
 check(
   'numeric handles appear only in declared observation/evidence fields when they appear at all',
   mapping.every(entry => {
-    const { environment_runtime_compatibility_ids: _a, evidence_references: _b, ...rest } = entry;
+    const rest = { ...entry };
+    delete rest.environment_runtime_compatibility_ids;
+    delete rest.evidence_references;
     const restHasHandle = HANDLE_PATTERN.test(JSON.stringify(rest));
     const observationsMayCarry =
       HANDLE_PATTERN.test(JSON.stringify(entry.environment_runtime_compatibility_ids ?? [])) ||

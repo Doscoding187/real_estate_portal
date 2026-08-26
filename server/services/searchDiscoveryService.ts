@@ -31,6 +31,10 @@ import {
   type PublicLocationResolutionResult,
   type ResolvedLocation,
 } from './locationResolverService';
+import {
+  emitLocationSearchOutcome,
+  type LocationSearchCoverageOutcome,
+} from './locationCoverageTelemetry';
 import { governedRuntimeGeographyAuthority } from './runtimeGeographyResolverService';
 import type {
   RuntimeGeographyAuthority,
@@ -595,7 +599,29 @@ export class SearchDiscoveryService {
       return left.label.localeCompare(right.label);
     });
 
-    return combined.slice(0, safeLimit);
+    const visibleResults = combined.slice(0, safeLimit);
+    emitLocationSearchOutcome(this.coverageOutcome(normalized, journey, visibleResults));
+    return visibleResults;
+  }
+
+  private coverageOutcome(
+    normalizedQuery: string,
+    journey: SearchJourneyId | undefined,
+    results: readonly SearchDiscoveryResult[],
+  ): LocationSearchCoverageOutcome {
+    const canonicalResults = results.filter(result => result.kind === 'canonical_location');
+    const topCanonical = canonicalResults.find(
+      (result): result is Extract<SearchDiscoveryResult, { kind: 'canonical_location' }> =>
+        result.kind === 'canonical_location',
+    );
+    return {
+      normalizedQuery,
+      ...(journey ? { journey } : {}),
+      canonicalResultCount: canonicalResults.length,
+      searchAreaResultCount: results.length - canonicalResults.length,
+      ...(topCanonical?.matchReason ? { topMatchReason: topCanonical.matchReason } : {}),
+      ...(topCanonical?.matchedAlias ? { matchedAlias: topCanonical.matchedAlias } : {}),
+    };
   }
 
   async resolveSelection(
