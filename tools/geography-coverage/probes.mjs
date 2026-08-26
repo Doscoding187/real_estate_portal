@@ -614,6 +614,20 @@ for (const probe of WAVE25_LOCALITY_PROBES) {
   );
 }
 
+const WAVE26_LOCALITY_PROBES = [
+  { name: 'Tenacres AH', parentSuffix: 'gauteng/randfontein/tenacres-ah' },
+  { name: 'Modderbee', parentSuffix: 'gauteng/daveyton/modderbee' },
+];
+
+for (const probe of WAVE26_LOCALITY_PROBES) {
+  const row = resolveByName(probe.name);
+  check(
+    `wave26 researched edge resolves: ${probe.name}`,
+    row !== null && row.runtime_natural_key === probe.parentSuffix,
+    row ? row.runtime_natural_key : 'missing',
+  );
+}
+
 const NEGATIVE_PROBES = ['Mamelodi Extension 1', 'Mamelodi Extension 4'];
 for (const probe of NEGATIVE_PROBES) {
   const directHit = resolveByName(probe);

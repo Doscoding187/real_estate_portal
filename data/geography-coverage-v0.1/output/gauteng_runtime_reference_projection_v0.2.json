@@ -7,7 +7,7 @@
     "factual_canonical_geography_sha256": "1fe0e2e3101bd7e459f484b7125dc1ce1f0327104002b184ef0e90d4236b7b7f",
     "factual_canonical_names_sha256": "a87891bc2e4167130d7e5eb649516a34aedaa071278ce8fe25df19f511669b51",
     "carried_projection_v01_sha256": "982ea13cd190a02da5440f122a061713e22bc157ef46f491ce530c5877ff9fc0",
-    "territory_manifest_sha256": "466fa7aa9e24e2eb24d46a17ecd61fc8e2977dabc05bb004ad7be71dd8dcc23d"
+    "territory_manifest_sha256": "67a34b0e61a9b4cb119ef4602be204225b5eb9ff6cd74ce257fbe60d63a674ef"
   },
   "rows": [
     {
@@ -3267,6 +3267,28 @@
       ],
       "factual_types": [
         "town"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/daveyton/modderbee",
+      "runtime_parent_natural_key": "gauteng/daveyton",
+      "name": "Modderbee",
+      "slug": "modderbee",
+      "latitude": -26.16667,
+      "longitude": 28.4,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "mixed_odbl_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-2028b0570f925e62a16a"
+      ],
+      "factual_preferred_names": [
+        "Modderbee"
+      ],
+      "factual_types": [
+        "suburb"
       ]
     },
     {
@@ -24995,6 +25017,28 @@
       ],
       "factual_preferred_names": [
         "Robin Park"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/randfontein/tenacres-ah",
+      "runtime_parent_natural_key": "gauteng/randfontein",
+      "name": "Tenacres AH",
+      "slug": "tenacres-ah",
+      "latitude": -26.2527105,
+      "longitude": 27.6111515,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-d544e7361ecf8b328971"
+      ],
+      "factual_preferred_names": [
+        "Tenacres AH"
       ],
       "factual_types": [
         "suburb"
