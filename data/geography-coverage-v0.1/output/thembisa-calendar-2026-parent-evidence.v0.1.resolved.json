@@ -1,0 +1,212 @@
+{
+  "resolved_edges_version": "thembisa-calendar-2026-parent-evidence.v0.1.resolved",
+  "town": "Thembisa",
+  "parent_natural_key": "gauteng/thembisa",
+  "source": {
+    "publisher": "City of Ekurhuleni",
+    "url": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/TEMBISA-Calender-2026.pdf",
+    "section": "2026 Tembisa refuse-removal collection areas",
+    "retrieved": "2026-08-26",
+    "licence_note": "Official municipal service calendar used for locality membership assertions; no prose or geometry is copied."
+  },
+  "edge_count": 24,
+  "edges": [
+    {
+      "factual_location_id": "pl-gp-v01-0701aae57d8f15f78d1f",
+      "preferred_name": "Sivana",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/thembisa",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/TEMBISA-Calender-2026.pdf#2026%20Tembisa%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-07aac79edaf12c092ae1",
+      "preferred_name": "Temong",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/thembisa",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/TEMBISA-Calender-2026.pdf#2026%20Tembisa%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-0dcdadd0e98c0090c5ce",
+      "preferred_name": "Mnonjaneni",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/thembisa",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/TEMBISA-Calender-2026.pdf#2026%20Tembisa%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-1a96d34130a3d3e381e8",
+      "preferred_name": "Moedi",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/thembisa",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/TEMBISA-Calender-2026.pdf#2026%20Tembisa%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-2060b204c65519ae3553",
+      "preferred_name": "Sithame",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/thembisa",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/TEMBISA-Calender-2026.pdf#2026%20Tembisa%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-39c5187e0cd31e0d6786",
+      "preferred_name": "Moyeni",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/thembisa",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/TEMBISA-Calender-2026.pdf#2026%20Tembisa%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-4aa8a79b65671fe0bb5b",
+      "preferred_name": "Welumlambo",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/thembisa",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/TEMBISA-Calender-2026.pdf#2026%20Tembisa%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-4c6b544cf57fe7ba49fd",
+      "preferred_name": "Isekelo",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/thembisa",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/TEMBISA-Calender-2026.pdf#2026%20Tembisa%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-4dbc6b47572b212ce9d5",
+      "preferred_name": "Mfuyaneni",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/thembisa",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/TEMBISA-Calender-2026.pdf#2026%20Tembisa%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-4e516818776ad3edbeae",
+      "preferred_name": "Thiteng",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/thembisa",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/TEMBISA-Calender-2026.pdf#2026%20Tembisa%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-5be98ca69ee21ed2b453",
+      "preferred_name": "Endulweni",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/thembisa",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/TEMBISA-Calender-2026.pdf#2026%20Tembisa%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-65bf6bac62643fba2374",
+      "preferred_name": "Vusimuzi",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/thembisa",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/TEMBISA-Calender-2026.pdf#2026%20Tembisa%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-8a0b20bdef71b1ebab27",
+      "preferred_name": "Esselenpark",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/thembisa",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/TEMBISA-Calender-2026.pdf#2026%20Tembisa%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-a6321c49e0d017156898",
+      "preferred_name": "Motsu",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/thembisa",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/TEMBISA-Calender-2026.pdf#2026%20Tembisa%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-b387de018fbb0e37d3ea",
+      "preferred_name": "Nxiweni",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/thembisa",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/TEMBISA-Calender-2026.pdf#2026%20Tembisa%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-ba6ffd0b80dac2132d65",
+      "preferred_name": "Jiyana",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/thembisa",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/TEMBISA-Calender-2026.pdf#2026%20Tembisa%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-bba27fc68ae7ae0a2e26",
+      "preferred_name": "Sangweni",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/thembisa",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/TEMBISA-Calender-2026.pdf#2026%20Tembisa%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-be01c2337a659afa3c83",
+      "preferred_name": "Ethafeni",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/thembisa",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/TEMBISA-Calender-2026.pdf#2026%20Tembisa%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-be412a1cfcd810c76d57",
+      "preferred_name": "Mqansa",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/thembisa",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/TEMBISA-Calender-2026.pdf#2026%20Tembisa%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-c4cc8a5a9eac7ada0afa",
+      "preferred_name": "Lekaneng",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/thembisa",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/TEMBISA-Calender-2026.pdf#2026%20Tembisa%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-c4e5496913a5ab676ab1",
+      "preferred_name": "Lifateng",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/thembisa",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/TEMBISA-Calender-2026.pdf#2026%20Tembisa%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-dfdc0f83e3e5f60c06c4",
+      "preferred_name": "Kopanong",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/thembisa",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/TEMBISA-Calender-2026.pdf#2026%20Tembisa%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-ea9c7eec9de26f393d1a",
+      "preferred_name": "Maokeng",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/thembisa",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/TEMBISA-Calender-2026.pdf#2026%20Tembisa%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-ffa138f9bede0c08b3a4",
+      "preferred_name": "Caleni",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/thembisa",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/TEMBISA-Calender-2026.pdf#2026%20Tembisa%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
+    }
+  ],
+  "diagnostics": {
+    "researched_names": 24,
+    "matched_already_projected": [],
+    "names_not_in_canonical_layer": []
+  }
+}

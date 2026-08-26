@@ -1,0 +1,188 @@
+{
+  "resolved_edges_version": "katlehong-calendar-2026-parent-evidence.v0.1.resolved",
+  "town": "Katlehong",
+  "parent_natural_key": "gauteng/katlehong",
+  "source": {
+    "publisher": "City of Ekurhuleni",
+    "url": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/GERMISTON_Calender-2026U.pdf",
+    "section": "2026–2027 Germiston/Katlehong refuse-removal programme: KATLEHONG-labelled areas",
+    "retrieved": "2026-08-26",
+    "licence_note": "Official municipal service calendar used for locality membership assertions; no prose or geometry is copied."
+  },
+  "edge_count": 21,
+  "edges": [
+    {
+      "factual_location_id": "pl-gp-v01-09fe0e1c02680a5705ed",
+      "preferred_name": "Moshoeshoe",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/katlehong",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/GERMISTON_Calender-2026U.pdf#2026%E2%80%932027%20Germiston%2FKatlehong%20refuse-removal%20programme%3A%20KATLEHONG-labelled%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-18cd4722057c709365e4",
+      "preferred_name": "Monise",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/katlehong",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/GERMISTON_Calender-2026U.pdf#2026%E2%80%932027%20Germiston%2FKatlehong%20refuse-removal%20programme%3A%20KATLEHONG-labelled%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-197ef259d2484199c178",
+      "preferred_name": "Moseleki",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/katlehong",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/GERMISTON_Calender-2026U.pdf#2026%E2%80%932027%20Germiston%2FKatlehong%20refuse-removal%20programme%3A%20KATLEHONG-labelled%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-2109e0b63e8244df39a8",
+      "preferred_name": "Motsamai",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/katlehong",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/GERMISTON_Calender-2026U.pdf#2026%E2%80%932027%20Germiston%2FKatlehong%20refuse-removal%20programme%3A%20KATLEHONG-labelled%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-3174a4d1662daa682c8e",
+      "preferred_name": "Radebe",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/katlehong",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/GERMISTON_Calender-2026U.pdf#2026%E2%80%932027%20Germiston%2FKatlehong%20refuse-removal%20programme%3A%20KATLEHONG-labelled%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-3d61fbf5ce1c8417f6c9",
+      "preferred_name": "Motluong",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/katlehong",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/GERMISTON_Calender-2026U.pdf#2026%E2%80%932027%20Germiston%2FKatlehong%20refuse-removal%20programme%3A%20KATLEHONG-labelled%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-3f2ac5177dee210fe3af",
+      "preferred_name": "Mngadi",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/katlehong",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/GERMISTON_Calender-2026U.pdf#2026%E2%80%932027%20Germiston%2FKatlehong%20refuse-removal%20programme%3A%20KATLEHONG-labelled%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-4029c5e4963259c5779e",
+      "preferred_name": "Magagula",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/katlehong",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/GERMISTON_Calender-2026U.pdf#2026%E2%80%932027%20Germiston%2FKatlehong%20refuse-removal%20programme%3A%20KATLEHONG-labelled%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-583d7255dc1c1b6ad3f0",
+      "preferred_name": "Nhlapo",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/katlehong",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/GERMISTON_Calender-2026U.pdf#2026%E2%80%932027%20Germiston%2FKatlehong%20refuse-removal%20programme%3A%20KATLEHONG-labelled%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-60a825316c716e2e4242",
+      "preferred_name": "Tsongweni",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/katlehong",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/GERMISTON_Calender-2026U.pdf#2026%E2%80%932027%20Germiston%2FKatlehong%20refuse-removal%20programme%3A%20KATLEHONG-labelled%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-68ae30952771a5f0798a",
+      "preferred_name": "Tsolo",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/katlehong",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/GERMISTON_Calender-2026U.pdf#2026%E2%80%932027%20Germiston%2FKatlehong%20refuse-removal%20programme%3A%20KATLEHONG-labelled%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-7b181d4b5cbb62a8d912",
+      "preferred_name": "Skozana",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/katlehong",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/GERMISTON_Calender-2026U.pdf#2026%E2%80%932027%20Germiston%2FKatlehong%20refuse-removal%20programme%3A%20KATLEHONG-labelled%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-87ca2000cc6cdfb80b90",
+      "preferred_name": "Ncala",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/katlehong",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/GERMISTON_Calender-2026U.pdf#2026%E2%80%932027%20Germiston%2FKatlehong%20refuse-removal%20programme%3A%20KATLEHONG-labelled%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-9613c5c3b357974f77a2",
+      "preferred_name": "Leondale",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/katlehong",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/GERMISTON_Calender-2026U.pdf#2026%E2%80%932027%20Germiston%2FKatlehong%20refuse-removal%20programme%3A%20KATLEHONG-labelled%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-b3ecf7a7bb0352a095af",
+      "preferred_name": "Moseleki East",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/katlehong",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/GERMISTON_Calender-2026U.pdf#2026%E2%80%932027%20Germiston%2FKatlehong%20refuse-removal%20programme%3A%20KATLEHONG-labelled%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-ba9f1f5d8c006a5daf0c",
+      "preferred_name": "Maphanga",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/katlehong",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/GERMISTON_Calender-2026U.pdf#2026%E2%80%932027%20Germiston%2FKatlehong%20refuse-removal%20programme%3A%20KATLEHONG-labelled%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-c12eccc41c6c4f90e71b",
+      "preferred_name": "Zonkizizwe",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/katlehong",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/GERMISTON_Calender-2026U.pdf#2026%E2%80%932027%20Germiston%2FKatlehong%20refuse-removal%20programme%3A%20KATLEHONG-labelled%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-c51c2967b2eb9f59fc84",
+      "preferred_name": "Twala",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/katlehong",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/GERMISTON_Calender-2026U.pdf#2026%E2%80%932027%20Germiston%2FKatlehong%20refuse-removal%20programme%3A%20KATLEHONG-labelled%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-c72e25bba82fdafc996d",
+      "preferred_name": "Woodmere",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/katlehong",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/GERMISTON_Calender-2026U.pdf#2026%E2%80%932027%20Germiston%2FKatlehong%20refuse-removal%20programme%3A%20KATLEHONG-labelled%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-e03be638e80780bda096",
+      "preferred_name": "Moleleki",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/katlehong",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/GERMISTON_Calender-2026U.pdf#2026%E2%80%932027%20Germiston%2FKatlehong%20refuse-removal%20programme%3A%20KATLEHONG-labelled%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-ff865f85be50c4e5acbb",
+      "preferred_name": "Phake",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/katlehong",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/GERMISTON_Calender-2026U.pdf#2026%E2%80%932027%20Germiston%2FKatlehong%20refuse-removal%20programme%3A%20KATLEHONG-labelled%20areas (retrieved 2026-08-26)"
+    }
+  ],
+  "diagnostics": {
+    "researched_names": 21,
+    "matched_already_projected": [],
+    "names_not_in_canonical_layer": []
+  }
+}
