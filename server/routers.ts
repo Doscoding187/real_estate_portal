@@ -89,7 +89,6 @@ import { leadsRouter } from './leadsRouter';
 import { prospectJourneyRouter } from './prospectJourneyRouter';
 import { distributionRouter } from './distributionRouter';
 import { demandRouter } from './demandRouter';
-import { servicesEngineRouter } from './servicesEngineRouter';
 import { getAgentEntitlementsForUserId } from './services/agentEntitlementService';
 import { discoveryRouter } from './domains/discovery/router';
 import { landRouter } from './landRouter';
@@ -145,7 +144,6 @@ const appRouterConfig = {
   prospectJourney: prospectJourneyRouter,
   distribution: distributionRouter,
   demand: demandRouter,
-  servicesEngine: servicesEngineRouter,
   discovery: discoveryRouter,
 
   propertyResults: propertyResultsRouter,
