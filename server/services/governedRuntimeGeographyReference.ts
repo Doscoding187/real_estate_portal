@@ -180,11 +180,11 @@ function toFactualRuntimeProjectionEntry(
 }
 
 const REFERENCE_PROJECTION_URL = new URL(
-  '../../data/gauteng-canonical-runtime-convergence-v0.1/output/gauteng_runtime_reference_projection_v0.1.json',
+  '../../data/geography-coverage-v0.1/output/gauteng_runtime_reference_projection_v0.2.json',
   import.meta.url,
 );
 const FACTUAL_PROJECTION_URL = new URL(
-  '../../data/gauteng-canonical-runtime-convergence-v0.1/output/gauteng_factual_runtime_mapping_v0.1.jsonl',
+  '../../data/geography-coverage-v0.1/output/gauteng_factual_runtime_mapping_v0.2.jsonl',
   import.meta.url,
 );
 

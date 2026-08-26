@@ -8,7 +8,7 @@ function loadProjection(): GovernedRuntimeReferenceProjection {
   const value = JSON.parse(
     readFileSync(
       new URL(
-        '../../../../data/gauteng-canonical-runtime-convergence-v0.1/output/gauteng_runtime_reference_projection_v0.1.json',
+        '../../../../data/geography-coverage-v0.1/output/gauteng_runtime_reference_projection_v0.2.json',
         import.meta.url,
       ),
       'utf8',
@@ -21,6 +21,7 @@ function loadProjection(): GovernedRuntimeReferenceProjection {
     projectionVersion: value.projection_version,
     sourceFactualProjectionArtifact: value.source_factual_projection_artifact,
     numericRuntimeIdsAreDurableAuthority: value.numeric_runtime_ids_are_durable_authority,
+    checkpoints: value.checkpoints,
     rows: rawRows.map(row => {
       if (!row || typeof row !== 'object' || Array.isArray(row)) {
         throw new Error('Governed runtime reference projection contains an invalid row.');
@@ -39,6 +40,13 @@ function loadProjection(): GovernedRuntimeReferenceProjection {
         ...(item.latitude !== undefined ? { latitude: item.latitude } : {}),
         ...(item.longitude !== undefined ? { longitude: item.longitude } : {}),
         ...(item.postal_code ? { postalCode: item.postal_code } : {}),
+        ...(Array.isArray(item.searchable_aliases)
+          ? { searchableAliases: item.searchable_aliases }
+          : {}),
+        ...(item.publication_status ? { publicationStatus: item.publication_status } : {}),
+        ...(item.licensing_classification
+          ? { licensingClassification: item.licensing_classification }
+          : {}),
         factualLocationIds: item.factual_location_ids,
         factualPreferredNames: item.factual_preferred_names,
         factualTypes: item.factual_types,

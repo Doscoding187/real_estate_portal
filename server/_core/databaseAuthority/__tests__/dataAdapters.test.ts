@@ -168,14 +168,14 @@ describe('bounded Database Authority data adapters', () => {
       suburbs: 10,
     });
     expect(GOVERNED_RUNTIME_REFERENCE_VERSION).toBe(
-      'gauteng-runtime-reference-projection-v0.1',
+      'gauteng-runtime-reference-projection-v0.2',
     );
     expect(GOVERNED_RUNTIME_REFERENCE_DIGEST).toMatch(/^[a-f0-9]{64}$/);
-    expect(GOVERNED_RUNTIME_REFERENCE_ROWS).toHaveLength(64);
+    expect(GOVERNED_RUNTIME_REFERENCE_ROWS).toHaveLength(957);
     expect(GOVERNED_RUNTIME_GEOGRAPHY_EXPECTED_ROWS).toEqual({
       provinces: 9,
-      cities: 29,
-      suburbs: 50,
+      cities: 338,
+      suburbs: 634,
     });
     expect(
       GOVERNED_RUNTIME_REFERENCE_ROWS.every(
