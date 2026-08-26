@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+/* global console, process */
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -118,7 +119,7 @@ function buildAliasIndex(canonicalNames) {
   return aliasesByFactualId;
 }
 
-function createState(inputs, manifest) {
+function createState(inputs) {
   const usedNaturalKeys = new Map();
   const preferredNameTriples = new Map();
 
@@ -464,7 +465,7 @@ async function main() {
   const rawManifest = readJson(manifestPath);
 
   const inputs = loadInputs(ROOT, rawManifest);
-  const state = createState(inputs, rawManifest);
+  const state = createState(inputs);
   state.aliasIndex = buildAliasIndex(inputs.names);
 
   const registryByContext = new Map(

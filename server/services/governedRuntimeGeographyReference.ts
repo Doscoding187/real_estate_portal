@@ -72,6 +72,7 @@ function toGovernedReferenceProjection(value: unknown): GovernedRuntimeReference
     projectionVersion: raw.projection_version,
     sourceFactualProjectionArtifact: raw.source_factual_projection_artifact,
     numericRuntimeIdsAreDurableAuthority: raw.numeric_runtime_ids_are_durable_authority,
+    checkpoints: raw.checkpoints,
     rows: Array.isArray(raw.rows)
       ? raw.rows.map(row => {
           if (!row || typeof row !== 'object' || Array.isArray(row)) {
@@ -91,6 +92,13 @@ function toGovernedReferenceProjection(value: unknown): GovernedRuntimeReference
             ...(item.latitude !== undefined ? { latitude: item.latitude } : {}),
             ...(item.longitude !== undefined ? { longitude: item.longitude } : {}),
             ...(item.postal_code ? { postalCode: item.postal_code } : {}),
+            ...(Array.isArray(item.searchable_aliases)
+              ? { searchableAliases: item.searchable_aliases }
+              : {}),
+            ...(item.publication_status ? { publicationStatus: item.publication_status } : {}),
+            ...(item.licensing_classification
+              ? { licensingClassification: item.licensing_classification }
+              : {}),
             factualLocationIds: item.factual_location_ids,
             factualPreferredNames: item.factual_preferred_names,
             factualTypes: item.factual_types,
