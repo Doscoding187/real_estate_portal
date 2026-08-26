@@ -7,7 +7,7 @@
     "factual_canonical_geography_sha256": "1fe0e2e3101bd7e459f484b7125dc1ce1f0327104002b184ef0e90d4236b7b7f",
     "factual_canonical_names_sha256": "a87891bc2e4167130d7e5eb649516a34aedaa071278ce8fe25df19f511669b51",
     "carried_projection_v01_sha256": "982ea13cd190a02da5440f122a061713e22bc157ef46f491ce530c5877ff9fc0",
-    "territory_manifest_sha256": "e00d58e85d013388eb4542126ff11610e37d561ec394bcde7c04a457b0d77415"
+    "territory_manifest_sha256": "89f57d557db790cdee714423d05d24162c936e1a0846e5a746922ca7a4fd5116"
   },
   "rows": [
     {
@@ -24691,6 +24691,28 @@
     {
       "runtime_search_scope_kind": "locality",
       "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/randfontein/bhongweni",
+      "runtime_parent_natural_key": "gauteng/randfontein",
+      "name": "Bhongweni",
+      "slug": "bhongweni",
+      "latitude": -26.1655556,
+      "longitude": 27.7275,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-8c192b5f5364157f12a4"
+      ],
+      "factual_preferred_names": [
+        "Bhongweni"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
       "runtime_natural_key": "gauteng/randfontein/culemborgpark",
       "runtime_parent_natural_key": "gauteng/randfontein",
       "name": "Culemborgpark",
@@ -24949,6 +24971,28 @@
       ],
       "factual_preferred_names": [
         "Vleikop AH"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/randfontein/west-porges",
+      "runtime_parent_natural_key": "gauteng/randfontein",
+      "name": "West Porges",
+      "slug": "west-porges",
+      "latitude": -26.1780556,
+      "longitude": 27.7069444,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-22ad71851e62086702b7"
+      ],
+      "factual_preferred_names": [
+        "West Porges"
       ],
       "factual_types": [
         "suburb"
@@ -29429,6 +29473,28 @@
       ],
       "factual_preferred_names": [
         "Dennydale AH"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/westonaria/kloof",
+      "runtime_parent_natural_key": "gauteng/westonaria",
+      "name": "Kloof",
+      "slug": "kloof",
+      "latitude": -26.3905556,
+      "longitude": 27.6002778,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "mixed_odbl_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-3de9aebc8a21333dad29"
+      ],
+      "factual_preferred_names": [
+        "Kloof"
       ],
       "factual_types": [
         "suburb"

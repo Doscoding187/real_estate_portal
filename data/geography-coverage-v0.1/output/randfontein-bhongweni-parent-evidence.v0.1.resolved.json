@@ -1,0 +1,29 @@
+{
+  "resolved_edges_version": "randfontein-bhongweni-parent-evidence.v0.1.resolved",
+  "town": "Randfontein",
+  "parent_natural_key": "gauteng/randfontein",
+  "source": {
+    "publisher": "Gauteng Provincial Government Gazette",
+    "url": "https://www1.saflii.org/za/gaz/ZAGPPrGaz/2014/166.pdf",
+    "section": "Notice 1631 of 2014, Schedule II: township named Bhongweni and locality within Randfontein Local Municipality",
+    "retrieved": "2026-08-27",
+    "licence_note": "Government Gazette township notice used for locality and municipal-jurisdiction assertions; no prose or geometry is copied."
+  },
+  "edge_count": 1,
+  "edges": [
+    {
+      "factual_location_id": "pl-gp-v01-8c192b5f5364157f12a4",
+      "preferred_name": "Bhongweni",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/randfontein",
+      "evidence_class": "official_provincial_township_gazette",
+      "citation": "https://www1.saflii.org/za/gaz/ZAGPPrGaz/2014/166.pdf#Notice%201631%20of%202014%2C%20Schedule%20II%3A%20township%20named%20Bhongweni%20and%20locality%20within%20Randfontein%20Local%20Municipality (retrieved 2026-08-27)"
+    }
+  ],
+  "diagnostics": {
+    "researched_names": 1,
+    "matched_already_projected": [],
+    "names_not_in_canonical_layer": [],
+    "ambiguous_canonical_matches": []
+  }
+}

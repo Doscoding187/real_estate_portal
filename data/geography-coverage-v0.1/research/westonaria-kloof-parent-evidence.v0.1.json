@@ -1,0 +1,17 @@
+{
+  "artifact_version": "westonaria-kloof-parent-evidence-v0.1",
+  "town": "Westonaria",
+  "parent_natural_key": "gauteng/westonaria",
+  "administrative_context": "West Rand",
+  "evidence_class": "official_government_locality_register",
+  "source": {
+    "publisher": "South African Government Gazette",
+    "url": "https://www.gov.za/sites/default/files/gcis_document/201409/270880.pdf",
+    "section": "Government Gazette 27088: Westonaria locality table listing Kloof",
+    "retrieved": "2026-08-27",
+    "licence_note": "Official government locality register used for parent relationship assertions; no prose or geometry is copied."
+  },
+  "suburb_names": [
+    "Kloof"
+  ]
+}
