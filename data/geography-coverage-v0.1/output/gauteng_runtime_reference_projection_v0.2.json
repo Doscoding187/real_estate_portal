@@ -7,7 +7,7 @@
     "factual_canonical_geography_sha256": "1fe0e2e3101bd7e459f484b7125dc1ce1f0327104002b184ef0e90d4236b7b7f",
     "factual_canonical_names_sha256": "a87891bc2e4167130d7e5eb649516a34aedaa071278ce8fe25df19f511669b51",
     "carried_projection_v01_sha256": "982ea13cd190a02da5440f122a061713e22bc157ef46f491ce530c5877ff9fc0",
-    "territory_manifest_sha256": "70a3910183b824d6b6286ed62639a023db17d3a192bd7025564ef289e200095a"
+    "territory_manifest_sha256": "c70ad8beb76b31fc3790d49e7f35b8012e75fc530c79211ffaf7bbef1c407078"
   },
   "rows": [
     {
@@ -884,6 +884,50 @@
     {
       "runtime_search_scope_kind": "locality",
       "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/benoni/gordon-s-view",
+      "runtime_parent_natural_key": "gauteng/benoni",
+      "name": "Gordon's View",
+      "slug": "gordon-s-view",
+      "latitude": -26.1058333,
+      "longitude": 28.3961111,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-230bfcf54dd49a0554a7"
+      ],
+      "factual_preferred_names": [
+        "Gordon's View"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/benoni/jatniel",
+      "runtime_parent_natural_key": "gauteng/benoni",
+      "name": "Jatniël",
+      "slug": "jatniel",
+      "latitude": -26.1152778,
+      "longitude": 28.3158333,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-31bf034fc5b47202f235"
+      ],
+      "factual_preferred_names": [
+        "Jatniël"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
       "runtime_natural_key": "gauteng/benoni/kilfenora",
       "runtime_parent_natural_key": "gauteng/benoni",
       "name": "Kilfenora",
@@ -964,6 +1008,28 @@
       ],
       "factual_preferred_names": [
         "Mackenzie Park"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/benoni/marister",
+      "runtime_parent_natural_key": "gauteng/benoni",
+      "name": "Marister",
+      "slug": "marister",
+      "latitude": -26.080190425,
+      "longitude": 28.33254206496497,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "mixed_odbl_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-eaf223119838a683ed8a"
+      ],
+      "factual_preferred_names": [
+        "Marister"
       ],
       "factual_types": [
         "suburb"
@@ -16156,6 +16222,50 @@
     {
       "runtime_search_scope_kind": "locality",
       "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/nigel/alrapark",
+      "runtime_parent_natural_key": "gauteng/nigel",
+      "name": "Alrapark",
+      "slug": "alrapark",
+      "latitude": -26.435236,
+      "longitude": 28.512918,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "mixed_odbl_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-25e6e2f338d34335aec9"
+      ],
+      "factual_preferred_names": [
+        "Alrapark"
+      ],
+      "factual_types": [
+        "locality"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/nigel/cerutiville",
+      "runtime_parent_natural_key": "gauteng/nigel",
+      "name": "Cerutiville",
+      "slug": "cerutiville",
+      "latitude": -26.43677,
+      "longitude": 28.51218,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "mixed_odbl_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-96baf50287d87d160957"
+      ],
+      "factual_preferred_names": [
+        "Cerutiville"
+      ],
+      "factual_types": [
+        "locality"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
       "runtime_natural_key": "gauteng/nigel/ferryvale",
       "runtime_parent_natural_key": "gauteng/nigel",
       "name": "Ferryvale",
@@ -16195,6 +16305,30 @@
       ],
       "factual_types": [
         "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/nigel/mackenzieville",
+      "runtime_parent_natural_key": "gauteng/nigel",
+      "name": "Mackenzieville",
+      "slug": "mackenzieville",
+      "latitude": -26.438408000000003,
+      "longitude": 28.5126075,
+      "searchable_aliases": [
+        "Charterston"
+      ],
+      "publication_status": "provisional",
+      "licensing_classification": "mixed_odbl_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-98783ce169a05a074ce0"
+      ],
+      "factual_preferred_names": [
+        "Mackenzieville"
+      ],
+      "factual_types": [
+        "locality"
       ]
     },
     {
@@ -16244,6 +16378,28 @@
     {
       "runtime_search_scope_kind": "locality",
       "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/nigel/sharon-park",
+      "runtime_parent_natural_key": "gauteng/nigel",
+      "name": "Sharon Park",
+      "slug": "sharon-park",
+      "latitude": -26.3210237,
+      "longitude": 28.4391407,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-a0419ad561f13daf4e74"
+      ],
+      "factual_preferred_names": [
+        "Sharon Park"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
       "runtime_natural_key": "gauteng/nigel/sub-nigel",
       "runtime_parent_natural_key": "gauteng/nigel",
       "name": "Sub-Nigel",
@@ -16261,6 +16417,50 @@
       ],
       "factual_types": [
         "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/nigel/visagiepark",
+      "runtime_parent_natural_key": "gauteng/nigel",
+      "name": "Visagiepark",
+      "slug": "visagiepark",
+      "latitude": -26.4311111,
+      "longitude": 28.4880556,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-33604494bf5bf83ec806"
+      ],
+      "factual_preferred_names": [
+        "Visagiepark"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/nigel/vosterskroon",
+      "runtime_parent_natural_key": "gauteng/nigel",
+      "name": "Vosterskroon",
+      "slug": "vosterskroon",
+      "latitude": -26.397342000000002,
+      "longitude": 28.481209,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "permissive_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-857b596122f6395b6bde"
+      ],
+      "factual_preferred_names": [
+        "Vosterskroon"
+      ],
+      "factual_types": [
+        "locality"
       ]
     },
     {
@@ -24898,6 +25098,50 @@
       ],
       "factual_types": [
         "town"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/vosloorus/freeway-park",
+      "runtime_parent_natural_key": "gauteng/vosloorus",
+      "name": "Freeway Park",
+      "slug": "freeway-park",
+      "latitude": -26.26074335,
+      "longitude": 28.2374878,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "mixed_odbl_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-da5d33e6894b5fd365b6"
+      ],
+      "factual_preferred_names": [
+        "Freeway Park"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/vosloorus/reiger-park",
+      "runtime_parent_natural_key": "gauteng/vosloorus",
+      "name": "Reiger Park",
+      "slug": "reiger-park",
+      "latitude": -26.231,
+      "longitude": 28.21843,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "mixed_odbl_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-58034936f3af3afe06b8"
+      ],
+      "factual_preferred_names": [
+        "Reiger Park"
+      ],
+      "factual_types": [
+        "suburb"
       ]
     },
     {

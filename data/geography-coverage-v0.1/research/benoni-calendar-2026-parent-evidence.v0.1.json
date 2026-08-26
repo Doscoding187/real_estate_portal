@@ -15,13 +15,19 @@
     "Western Ext X 4 (Westdene)": "Western Extension",
     "North Mead X4": "Northmead Ext 4",
     "Links View": "Linksview",
-    "Brentwood Park": "Brentwood"
+    "Brentwood Park": "Brentwood",
+    "Gordonview": "Gordon's View",
+    "Jatniel": "Jatniël",
+    "Marister X2": "Marister"
   },
   "suburb_names": [
     "Western Extension",
     "Northmead Ext 4",
     "Kilfenora",
     "Linksview",
-    "Brentwood"
+    "Brentwood",
+    "Gordon's View",
+    "Jatniël",
+    "Marister"
   ]
 }

@@ -14,13 +14,23 @@
   "source_name_variants": {
     "Ferrvale": "Ferryvale",
     "Fervale": "Ferryvale",
-    "Vorsterskroon": "Vosterskroon"
+    "Vorsterskroon": "Vosterskroon",
+    "Visagie Park": "Visagiepark",
+    "Mackenzieville Ext 1/2": "Mackenzieville",
+    "Alrapark 1,2,3,5": "Alrapark",
+    "Sharon Park Ext 1/2": "Sharon Park"
   },
   "suburb_names": [
     "Noycedale",
     "Glenvarloch",
     "Pretoriusstad",
     "Sub-Nigel",
-    "Ferryvale"
+    "Ferryvale",
+    "Alrapark",
+    "Visagiepark",
+    "Cerutiville",
+    "Mackenzieville",
+    "Sharon Park",
+    "Vosterskroon"
   ]
 }

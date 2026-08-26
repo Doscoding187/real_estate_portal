@@ -9,11 +9,27 @@
     "retrieved": "2026-08-26",
     "licence_note": "Official municipal service calendar used for locality membership assertions; no prose or geometry is copied."
   },
-  "edge_count": 5,
+  "edge_count": 11,
   "edges": [
+    {
+      "factual_location_id": "pl-gp-v01-25e6e2f338d34335aec9",
+      "preferred_name": "Alrapark",
+      "factual_type": "locality",
+      "parent_natural_key": "gauteng/nigel",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/NIGEL_Calender-2026.pdf#2026%E2%80%932027%20NIGEL%20CCA%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
+    },
     {
       "factual_location_id": "pl-gp-v01-313c41c45e82747aad24",
       "preferred_name": "Noycedale",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/nigel",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/NIGEL_Calender-2026.pdf#2026%E2%80%932027%20NIGEL%20CCA%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-33604494bf5bf83ec806",
+      "preferred_name": "Visagiepark",
       "factual_type": "suburb",
       "parent_natural_key": "gauteng/nigel",
       "evidence_class": "official_municipal_refuse_collection_area_list",
@@ -44,6 +60,38 @@
       "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/NIGEL_Calender-2026.pdf#2026%E2%80%932027%20NIGEL%20CCA%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
     },
     {
+      "factual_location_id": "pl-gp-v01-857b596122f6395b6bde",
+      "preferred_name": "Vosterskroon",
+      "factual_type": "locality",
+      "parent_natural_key": "gauteng/nigel",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/NIGEL_Calender-2026.pdf#2026%E2%80%932027%20NIGEL%20CCA%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-96baf50287d87d160957",
+      "preferred_name": "Cerutiville",
+      "factual_type": "locality",
+      "parent_natural_key": "gauteng/nigel",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/NIGEL_Calender-2026.pdf#2026%E2%80%932027%20NIGEL%20CCA%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-98783ce169a05a074ce0",
+      "preferred_name": "Mackenzieville",
+      "factual_type": "locality",
+      "parent_natural_key": "gauteng/nigel",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/NIGEL_Calender-2026.pdf#2026%E2%80%932027%20NIGEL%20CCA%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-a0419ad561f13daf4e74",
+      "preferred_name": "Sharon Park",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/nigel",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/NIGEL_Calender-2026.pdf#2026%E2%80%932027%20NIGEL%20CCA%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
+    },
+    {
       "factual_location_id": "pl-gp-v01-ba5c3299f6a0ba0cc481",
       "preferred_name": "Ferryvale",
       "factual_type": "suburb",
@@ -53,8 +101,39 @@
     }
   ],
   "diagnostics": {
-    "researched_names": 5,
-    "matched_already_projected": [],
+    "researched_names": 11,
+    "matched_already_projected": [
+      {
+        "name": "Noycedale",
+        "factual_location_id": "pl-gp-v01-313c41c45e82747aad24",
+        "existing_parent_natural_key": "gauteng/nigel",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Glenvarloch",
+        "factual_location_id": "pl-gp-v01-6f5fb47356e4d98c4e01",
+        "existing_parent_natural_key": "gauteng/nigel",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Pretoriusstad",
+        "factual_location_id": "pl-gp-v01-722e12a31157eb463e9f",
+        "existing_parent_natural_key": "gauteng/nigel",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Sub-Nigel",
+        "factual_location_id": "pl-gp-v01-7928e724ecfe8b828edc",
+        "existing_parent_natural_key": "gauteng/nigel",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Ferryvale",
+        "factual_location_id": "pl-gp-v01-ba5c3299f6a0ba0cc481",
+        "existing_parent_natural_key": "gauteng/nigel",
+        "parent_matches_evidence": true
+      }
+    ],
     "names_not_in_canonical_layer": []
   }
 }
