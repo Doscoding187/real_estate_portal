@@ -7,7 +7,7 @@
     "factual_canonical_geography_sha256": "1fe0e2e3101bd7e459f484b7125dc1ce1f0327104002b184ef0e90d4236b7b7f",
     "factual_canonical_names_sha256": "a87891bc2e4167130d7e5eb649516a34aedaa071278ce8fe25df19f511669b51",
     "carried_projection_v01_sha256": "982ea13cd190a02da5440f122a061713e22bc157ef46f491ce530c5877ff9fc0",
-    "territory_manifest_sha256": "a56b886064706c8ac08380f9398307ef064a21b2b8034858a80004dbb6b84dd3"
+    "territory_manifest_sha256": "594fc84bab9817a1b994228085a807f7a5ce019fa2f7e8cabbb98619d8423103"
   },
   "rows": [
     {
@@ -1605,6 +1605,57 @@
       ],
       "factual_preferred_names": [
         "Atlasville"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/boksburg/bardene-ext-2",
+      "runtime_parent_natural_key": "gauteng/boksburg",
+      "name": "Bardene Ext 2",
+      "slug": "bardene-ext-2",
+      "latitude": -26.175,
+      "longitude": 28.2672222,
+      "searchable_aliases": [
+        "Bardene Extension 2",
+        "Bardene Ext. 2"
+      ],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-ab66704b5bac38ece6f8"
+      ],
+      "factual_preferred_names": [
+        "Bardene Ext 2"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/boksburg/bartlett-ext-20",
+      "runtime_parent_natural_key": "gauteng/boksburg",
+      "name": "Bartlett Ext 20",
+      "slug": "bartlett-ext-20",
+      "latitude": -26.16664,
+      "longitude": 28.2562882,
+      "searchable_aliases": [
+        "Twin Pines",
+        "Bartlett Extension 20",
+        "Bartlett Ext. 20"
+      ],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-12d6c967ffe4dd6c3e59"
+      ],
+      "factual_preferred_names": [
+        "Bartlett Ext 20"
       ],
       "factual_types": [
         "suburb"

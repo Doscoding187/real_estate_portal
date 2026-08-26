@@ -1,0 +1,17 @@
+{
+  "artifact_version": "boksburg-bardene-ext2-parent-evidence-v0.1",
+  "town": "Boksburg",
+  "parent_natural_key": "gauteng/boksburg",
+  "administrative_context": "Ekurhuleni",
+  "evidence_class": "official_government_gazette_address_relationship",
+  "source": {
+    "publisher": "Government Gazette of South Africa",
+    "url": "https://www.saflii.org/za/gaz/ZAGovGaz/2020/699.pdf",
+    "section": "Government Gazette address entry — 5 Olienhout Avenue, Bardene Ext 2, Boksburg, Gauteng",
+    "retrieved": "2026-08-27",
+    "licence_note": "Official government-gazette address record used for locality relationship assertions; no prose or geometry is copied."
+  },
+  "suburb_names": [
+    "Bardene Ext 2"
+  ]
+}

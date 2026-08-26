@@ -646,6 +646,20 @@ for (const probe of WAVE31_LOCALITY_PROBES) {
   );
 }
 
+const WAVE32_LOCALITY_PROBES = [
+  { name: 'Bartlett Ext 20', parentSuffix: 'gauteng/boksburg/bartlett-ext-20' },
+  { name: 'Bardene Ext 2', parentSuffix: 'gauteng/boksburg/bardene-ext-2' },
+];
+
+for (const probe of WAVE32_LOCALITY_PROBES) {
+  const row = resolveByName(probe.name);
+  check(
+    `wave32 researched edge resolves: ${probe.name}`,
+    row !== null && row.runtime_natural_key === probe.parentSuffix,
+    row ? row.runtime_natural_key : 'missing',
+  );
+}
+
 const NEGATIVE_PROBES = ['Mamelodi Extension 1', 'Mamelodi Extension 4'];
 for (const probe of NEGATIVE_PROBES) {
   const directHit = resolveByName(probe);
