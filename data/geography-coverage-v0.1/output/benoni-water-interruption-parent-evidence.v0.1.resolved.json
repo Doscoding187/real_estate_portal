@@ -1,0 +1,133 @@
+{
+  "resolved_edges_version": "benoni-water-interruption-parent-evidence.v0.1.resolved",
+  "town": "Benoni",
+  "parent_natural_key": "gauteng/benoni",
+  "source": {
+    "publisher": "City of Ekurhuleni",
+    "url": "https://www.ekurhuleni.gov.za/press-releases/service-delivery-interruptions/updated-list-of-affected-areas-and-times-ahead-of-rand-water-maintenance-work/",
+    "section": "24 June 2024: Benoni affected suburbs",
+    "retrieved": "2026-08-26",
+    "licence_note": "Official municipal service notice used for locality membership assertions; no prose or geometry is copied."
+  },
+  "edge_count": 8,
+  "edges": [
+    {
+      "factual_location_id": "pl-gp-v01-0f8fe72188fbc96030ce",
+      "preferred_name": "North Villa",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/benoni",
+      "evidence_class": "official_municipal_water_interruption_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/press-releases/service-delivery-interruptions/updated-list-of-affected-areas-and-times-ahead-of-rand-water-maintenance-work/#24%20June%202024%3A%20Benoni%20affected%20suburbs (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-1e1153f55408e9191300",
+      "preferred_name": "Brentwood Park",
+      "factual_type": "locality",
+      "parent_natural_key": "gauteng/benoni",
+      "evidence_class": "official_municipal_water_interruption_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/press-releases/service-delivery-interruptions/updated-list-of-affected-areas-and-times-ahead-of-rand-water-maintenance-work/#24%20June%202024%3A%20Benoni%20affected%20suburbs (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-5b2de278274458ee9e37",
+      "preferred_name": "Airfield",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/benoni",
+      "evidence_class": "official_municipal_water_interruption_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/press-releases/service-delivery-interruptions/updated-list-of-affected-areas-and-times-ahead-of-rand-water-maintenance-work/#24%20June%202024%3A%20Benoni%20affected%20suburbs (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-74e43c7ed4b8e09a255e",
+      "preferred_name": "Rynfield",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/benoni",
+      "evidence_class": "official_municipal_water_interruption_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/press-releases/service-delivery-interruptions/updated-list-of-affected-areas-and-times-ahead-of-rand-water-maintenance-work/#24%20June%202024%3A%20Benoni%20affected%20suburbs (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-7a8a575a90deb1e3121b",
+      "preferred_name": "Morehill",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/benoni",
+      "evidence_class": "official_municipal_water_interruption_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/press-releases/service-delivery-interruptions/updated-list-of-affected-areas-and-times-ahead-of-rand-water-maintenance-work/#24%20June%202024%3A%20Benoni%20affected%20suburbs (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-8276780c20285a3e2192",
+      "preferred_name": "Northmead",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/benoni",
+      "evidence_class": "official_municipal_water_interruption_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/press-releases/service-delivery-interruptions/updated-list-of-affected-areas-and-times-ahead-of-rand-water-maintenance-work/#24%20June%202024%3A%20Benoni%20affected%20suburbs (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-c7ee8344f97aa81a7cac",
+      "preferred_name": "Goedeburg",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/benoni",
+      "evidence_class": "official_municipal_water_interruption_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/press-releases/service-delivery-interruptions/updated-list-of-affected-areas-and-times-ahead-of-rand-water-maintenance-work/#24%20June%202024%3A%20Benoni%20affected%20suburbs (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-eeb36d8f2753f96b7f55",
+      "preferred_name": "Farrarmere",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/benoni",
+      "evidence_class": "official_municipal_water_interruption_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/press-releases/service-delivery-interruptions/updated-list-of-affected-areas-and-times-ahead-of-rand-water-maintenance-work/#24%20June%202024%3A%20Benoni%20affected%20suburbs (retrieved 2026-08-26)"
+    }
+  ],
+  "diagnostics": {
+    "researched_names": 8,
+    "matched_already_projected": [
+      {
+        "name": "Farrarmere",
+        "factual_location_id": "pl-gp-v01-eeb36d8f2753f96b7f55",
+        "existing_parent_natural_key": "gauteng/benoni",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Northmead",
+        "factual_location_id": "pl-gp-v01-8276780c20285a3e2192",
+        "existing_parent_natural_key": "gauteng/benoni",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Rynfield",
+        "factual_location_id": "pl-gp-v01-74e43c7ed4b8e09a255e",
+        "existing_parent_natural_key": "gauteng/benoni",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Brentwood Park",
+        "factual_location_id": "pl-gp-v01-1e1153f55408e9191300",
+        "existing_parent_natural_key": "gauteng/benoni",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Goedeburg",
+        "factual_location_id": "pl-gp-v01-c7ee8344f97aa81a7cac",
+        "existing_parent_natural_key": "gauteng/benoni",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Morehill",
+        "factual_location_id": "pl-gp-v01-7a8a575a90deb1e3121b",
+        "existing_parent_natural_key": "gauteng/benoni",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Airfield",
+        "factual_location_id": "pl-gp-v01-5b2de278274458ee9e37",
+        "existing_parent_natural_key": "gauteng/benoni",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "North Villa",
+        "factual_location_id": "pl-gp-v01-0f8fe72188fbc96030ce",
+        "existing_parent_natural_key": "gauteng/benoni",
+        "parent_matches_evidence": true
+      }
+    ],
+    "names_not_in_canonical_layer": []
+  }
+}

@@ -1,0 +1,283 @@
+{
+  "resolved_edges_version": "springs-calendar-2026-parent-evidence.v0.1.resolved",
+  "town": "Springs",
+  "parent_natural_key": "gauteng/springs",
+  "source": {
+    "publisher": "City of Ekurhuleni",
+    "url": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/SPRINGS_Calender-2026.pdf",
+    "section": "2026 Springs-labelled refuse-removal collection areas",
+    "retrieved": "2026-08-26",
+    "licence_note": "Official municipal service calendar used for locality membership assertions; no prose or geometry is copied."
+  },
+  "edge_count": 20,
+  "edges": [
+    {
+      "factual_location_id": "pl-gp-v01-0c2be125abe8d3cd863b",
+      "preferred_name": "Bakerton",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/springs",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/SPRINGS_Calender-2026.pdf#2026%20Springs-labelled%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-39180687f3f1a526ff05",
+      "preferred_name": "Grootvaly SH",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/springs",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/SPRINGS_Calender-2026.pdf#2026%20Springs-labelled%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-40e957fcc1cddd0f410c",
+      "preferred_name": "Nuffield Industrial Area",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/springs",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/SPRINGS_Calender-2026.pdf#2026%20Springs-labelled%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-42b618e5e1a93bed8ee0",
+      "preferred_name": "Selcourt",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/springs",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/SPRINGS_Calender-2026.pdf#2026%20Springs-labelled%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-49349dbb0188055793ce",
+      "preferred_name": "Presidentsdam",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/springs",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/SPRINGS_Calender-2026.pdf#2026%20Springs-labelled%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-4d6478a06c19b49f64a9",
+      "preferred_name": "Geduld",
+      "factual_type": "locality",
+      "parent_natural_key": "gauteng/springs",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/SPRINGS_Calender-2026.pdf#2026%20Springs-labelled%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-7fd7d410fdaf0e8d047e",
+      "preferred_name": "Lodeyko",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/springs",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/SPRINGS_Calender-2026.pdf#2026%20Springs-labelled%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-8620e174741c483d1ca5",
+      "preferred_name": "Rowhill",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/springs",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/SPRINGS_Calender-2026.pdf#2026%20Springs-labelled%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-8c187bbff01695eb3fd1",
+      "preferred_name": "Petersfield",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/springs",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/SPRINGS_Calender-2026.pdf#2026%20Springs-labelled%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-945a0f69ad41e2748e0a",
+      "preferred_name": "New State Areas",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/springs",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/SPRINGS_Calender-2026.pdf#2026%20Springs-labelled%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-9cfeee44f6c33f0ec76a",
+      "preferred_name": "Edelweiss",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/springs",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/SPRINGS_Calender-2026.pdf#2026%20Springs-labelled%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-a47b8833326e08d83af6",
+      "preferred_name": "Daggafontein",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/springs",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/SPRINGS_Calender-2026.pdf#2026%20Springs-labelled%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-d15a540b1c7f0dfebdc3",
+      "preferred_name": "Struisbult",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/springs",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/SPRINGS_Calender-2026.pdf#2026%20Springs-labelled%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-d3b51cd0cfa3da67dd63",
+      "preferred_name": "Dal Fouche'",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/springs",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/SPRINGS_Calender-2026.pdf#2026%20Springs-labelled%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-df4532c487d01c3631e5",
+      "preferred_name": "Selection Park",
+      "factual_type": "locality",
+      "parent_natural_key": "gauteng/springs",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/SPRINGS_Calender-2026.pdf#2026%20Springs-labelled%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-df4a7e971a8bb75062d4",
+      "preferred_name": "Krugersrus",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/springs",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/SPRINGS_Calender-2026.pdf#2026%20Springs-labelled%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-e790d9560815cdd59ddb",
+      "preferred_name": "Paul Krugersoord",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/springs",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/SPRINGS_Calender-2026.pdf#2026%20Springs-labelled%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-ed291e6ef157b682882b",
+      "preferred_name": "Oranjehof",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/springs",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/SPRINGS_Calender-2026.pdf#2026%20Springs-labelled%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-ee9e2807934e121e23bd",
+      "preferred_name": "East Geduld",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/springs",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/SPRINGS_Calender-2026.pdf#2026%20Springs-labelled%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-fca803152ea3e7c324cb",
+      "preferred_name": "Strubenvale",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/springs",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/SPRINGS_Calender-2026.pdf#2026%20Springs-labelled%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
+    }
+  ],
+  "diagnostics": {
+    "researched_names": 20,
+    "matched_already_projected": [
+      {
+        "name": "Bakerton",
+        "factual_location_id": "pl-gp-v01-0c2be125abe8d3cd863b",
+        "existing_parent_natural_key": "gauteng/springs",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Daggafontein",
+        "factual_location_id": "pl-gp-v01-a47b8833326e08d83af6",
+        "existing_parent_natural_key": "gauteng/springs",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Dal Fouche'",
+        "factual_location_id": "pl-gp-v01-d3b51cd0cfa3da67dd63",
+        "existing_parent_natural_key": "gauteng/springs",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "East Geduld",
+        "factual_location_id": "pl-gp-v01-ee9e2807934e121e23bd",
+        "existing_parent_natural_key": "gauteng/springs",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Geduld",
+        "factual_location_id": "pl-gp-v01-4d6478a06c19b49f64a9",
+        "existing_parent_natural_key": "gauteng/springs",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Edelweiss",
+        "factual_location_id": "pl-gp-v01-9cfeee44f6c33f0ec76a",
+        "existing_parent_natural_key": "gauteng/springs",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Grootvaly SH",
+        "factual_location_id": "pl-gp-v01-39180687f3f1a526ff05",
+        "existing_parent_natural_key": "gauteng/springs",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Lodeyko",
+        "factual_location_id": "pl-gp-v01-7fd7d410fdaf0e8d047e",
+        "existing_parent_natural_key": "gauteng/springs",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "New State Areas",
+        "factual_location_id": "pl-gp-v01-945a0f69ad41e2748e0a",
+        "existing_parent_natural_key": "gauteng/springs",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Nuffield Industrial Area",
+        "factual_location_id": "pl-gp-v01-40e957fcc1cddd0f410c",
+        "existing_parent_natural_key": "gauteng/springs",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Oranjehof",
+        "factual_location_id": "pl-gp-v01-ed291e6ef157b682882b",
+        "existing_parent_natural_key": "gauteng/springs",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Paul Krugersoord",
+        "factual_location_id": "pl-gp-v01-e790d9560815cdd59ddb",
+        "existing_parent_natural_key": "gauteng/springs",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Petersfield",
+        "factual_location_id": "pl-gp-v01-8c187bbff01695eb3fd1",
+        "existing_parent_natural_key": "gauteng/springs",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Rowhill",
+        "factual_location_id": "pl-gp-v01-8620e174741c483d1ca5",
+        "existing_parent_natural_key": "gauteng/springs",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Selection Park",
+        "factual_location_id": "pl-gp-v01-df4532c487d01c3631e5",
+        "existing_parent_natural_key": "gauteng/springs",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Strubenvale",
+        "factual_location_id": "pl-gp-v01-fca803152ea3e7c324cb",
+        "existing_parent_natural_key": "gauteng/springs",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Struisbult",
+        "factual_location_id": "pl-gp-v01-d15a540b1c7f0dfebdc3",
+        "existing_parent_natural_key": "gauteng/springs",
+        "parent_matches_evidence": true
+      }
+    ],
+    "names_not_in_canonical_layer": []
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "resolved_edges_version": "vosloorus-calendar-2026-parent-evidence.v0.1.resolved",
+  "town": "Vosloorus",
+  "parent_natural_key": "gauteng/vosloorus",
+  "source": {
+    "publisher": "City of Ekurhuleni",
+    "url": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/BOKSBURG_Calender-2026.pdf",
+    "section": "2026–2027 Boksburg/Vosloorus refuse-removal programme: VOSLOORUS-labelled areas",
+    "retrieved": "2026-08-26",
+    "licence_note": "Official municipal service calendar used for locality membership assertions; no prose or geometry is copied."
+  },
+  "edge_count": 2,
+  "edges": [
+    {
+      "factual_location_id": "pl-gp-v01-58034936f3af3afe06b8",
+      "preferred_name": "Reiger Park",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/vosloorus",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/BOKSBURG_Calender-2026.pdf#2026%E2%80%932027%20Boksburg%2FVosloorus%20refuse-removal%20programme%3A%20VOSLOORUS-labelled%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-da5d33e6894b5fd365b6",
+      "preferred_name": "Freeway Park",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/vosloorus",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/BOKSBURG_Calender-2026.pdf#2026%E2%80%932027%20Boksburg%2FVosloorus%20refuse-removal%20programme%3A%20VOSLOORUS-labelled%20areas (retrieved 2026-08-26)"
+    }
+  ],
+  "diagnostics": {
+    "researched_names": 2,
+    "matched_already_projected": [],
+    "names_not_in_canonical_layer": []
+  }
+}

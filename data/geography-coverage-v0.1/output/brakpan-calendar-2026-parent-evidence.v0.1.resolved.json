@@ -1,0 +1,148 @@
+{
+  "resolved_edges_version": "brakpan-calendar-2026-parent-evidence.v0.1.resolved",
+  "town": "Brakpan",
+  "parent_natural_key": "gauteng/brakpan",
+  "source": {
+    "publisher": "City of Ekurhuleni",
+    "url": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/BRAKPAN_Calender-2026.pdf",
+    "section": "2026 Brakpan refuse-removal collection areas labelled BRAKPAN",
+    "retrieved": "2026-08-26",
+    "licence_note": "Official municipal service calendar used for locality membership assertions; no prose or geometry is copied."
+  },
+  "edge_count": 16,
+  "edges": [
+    {
+      "factual_location_id": "pl-gp-v01-018e4ab1f5aa0fdaa5c9",
+      "preferred_name": "Dalpark Ext. 1",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/brakpan",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/BRAKPAN_Calender-2026.pdf#2026%20Brakpan%20refuse-removal%20collection%20areas%20labelled%20BRAKPAN (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-03ec1845a14271b9991b",
+      "preferred_name": "Helderwyk",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/brakpan",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/BRAKPAN_Calender-2026.pdf#2026%20Brakpan%20refuse-removal%20collection%20areas%20labelled%20BRAKPAN (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-0bc6ec4bbc42a9470352",
+      "preferred_name": "Labore",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/brakpan",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/BRAKPAN_Calender-2026.pdf#2026%20Brakpan%20refuse-removal%20collection%20areas%20labelled%20BRAKPAN (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-28a23a6ce0b62338bcdb",
+      "preferred_name": "Leachville",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/brakpan",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/BRAKPAN_Calender-2026.pdf#2026%20Brakpan%20refuse-removal%20collection%20areas%20labelled%20BRAKPAN (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-2b156d1465dbd45990ce",
+      "preferred_name": "Kenleaf",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/brakpan",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/BRAKPAN_Calender-2026.pdf#2026%20Brakpan%20refuse-removal%20collection%20areas%20labelled%20BRAKPAN (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-2b2042a88d5f8b2918f9",
+      "preferred_name": "Anzac",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/brakpan",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/BRAKPAN_Calender-2026.pdf#2026%20Brakpan%20refuse-removal%20collection%20areas%20labelled%20BRAKPAN (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-4bd7171a6022fd8daa42",
+      "preferred_name": "Sunair Park",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/brakpan",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/BRAKPAN_Calender-2026.pdf#2026%20Brakpan%20refuse-removal%20collection%20areas%20labelled%20BRAKPAN (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-53fa9d44b0d0dbecb68c",
+      "preferred_name": "Brakpan-Noord",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/brakpan",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/BRAKPAN_Calender-2026.pdf#2026%20Brakpan%20refuse-removal%20collection%20areas%20labelled%20BRAKPAN (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-6e70f3095d5ac49b31e7",
+      "preferred_name": "Huntingdon",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/brakpan",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/BRAKPAN_Calender-2026.pdf#2026%20Brakpan%20refuse-removal%20collection%20areas%20labelled%20BRAKPAN (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-7b1d1c7e1d0ba1e60bbd",
+      "preferred_name": "Dalpark",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/brakpan",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/BRAKPAN_Calender-2026.pdf#2026%20Brakpan%20refuse-removal%20collection%20areas%20labelled%20BRAKPAN (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-95d19f93a8427eaf3fae",
+      "preferred_name": "Sallies Village",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/brakpan",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/BRAKPAN_Calender-2026.pdf#2026%20Brakpan%20refuse-removal%20collection%20areas%20labelled%20BRAKPAN (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-ae3ebfbc393e844d06d2",
+      "preferred_name": "Brenthurst",
+      "factual_type": "locality",
+      "parent_natural_key": "gauteng/brakpan",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/BRAKPAN_Calender-2026.pdf#2026%20Brakpan%20refuse-removal%20collection%20areas%20labelled%20BRAKPAN (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-c4a0043e5ee67b2ce3d2",
+      "preferred_name": "Minnebron",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/brakpan",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/BRAKPAN_Calender-2026.pdf#2026%20Brakpan%20refuse-removal%20collection%20areas%20labelled%20BRAKPAN (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-e31e13913d63004c4485",
+      "preferred_name": "Geluksdal",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/brakpan",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/BRAKPAN_Calender-2026.pdf#2026%20Brakpan%20refuse-removal%20collection%20areas%20labelled%20BRAKPAN (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-ea1a5cf9536816a67abf",
+      "preferred_name": "Denneoord",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/brakpan",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/BRAKPAN_Calender-2026.pdf#2026%20Brakpan%20refuse-removal%20collection%20areas%20labelled%20BRAKPAN (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-f2d59ecde6ffc5996b0f",
+      "preferred_name": "Larrendale",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/brakpan",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/BRAKPAN_Calender-2026.pdf#2026%20Brakpan%20refuse-removal%20collection%20areas%20labelled%20BRAKPAN (retrieved 2026-08-26)"
+    }
+  ],
+  "diagnostics": {
+    "researched_names": 16,
+    "matched_already_projected": [],
+    "names_not_in_canonical_layer": []
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "artifact_version": "boksburg-grass-cutting-parent-evidence-v0.1",
+  "town": "Boksburg",
+  "parent_natural_key": "gauteng/boksburg",
+  "administrative_context": "Ekurhuleni",
+  "evidence_class": "official_municipal_tender_area_list",
+  "source": {
+    "publisher": "City of Ekurhuleni",
+    "url": "https://www.ekurhuleni.gov.za/wp-content/uploads/2024/04/FINAL-BID-DOCUMENT-A-EWM-07-2024-GRASS-CUTTING.pdf",
+    "section": "Geographical Breakdown Area 1-6: Boksburg-North Central, Boksburg-South CBD, Boksburg-South, Boksburg-North East and Boksburg-South East",
+    "retrieved": "2026-08-26",
+    "licence_note": "Official municipal tender area list used for locality membership assertions; no prose or geometry is copied."
+  },
+  "source_name_variants": {
+    "Boksburg Noord": "Boksburg North",
+    "Boksburg-Noord": "Boksburg North",
+    "Beyerspark": "Beyers Park",
+    "Jansenpark": "Jansen Park",
+    "Boksburg-Suid": "Boksburg South",
+    "Farrar Park": "Farrarpark"
+  },
+  "suburb_names": [
+    "Boksburg Noord",
+    "Boksburg-Noord",
+    "Beyerspark",
+    "Jan Smutsville",
+    "Jansenpark",
+    "Ravenswood",
+    "Cinderella",
+    "Parkdene",
+    "Libradene",
+    "Boksburg-Suid",
+    "Parkrand",
+    "Impala Park",
+    "Witkoppie Ridge",
+    "Atlasville",
+    "Van Dykpark",
+    "Elspark",
+    "Groeneweide",
+    "Klippoortjie",
+    "Farrar Park"
+  ]
+}

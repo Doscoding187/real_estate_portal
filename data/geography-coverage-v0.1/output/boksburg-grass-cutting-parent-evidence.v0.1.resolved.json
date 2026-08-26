@@ -1,0 +1,275 @@
+{
+  "resolved_edges_version": "boksburg-grass-cutting-parent-evidence.v0.1.resolved",
+  "town": "Boksburg",
+  "parent_natural_key": "gauteng/boksburg",
+  "source": {
+    "publisher": "City of Ekurhuleni",
+    "url": "https://www.ekurhuleni.gov.za/wp-content/uploads/2024/04/FINAL-BID-DOCUMENT-A-EWM-07-2024-GRASS-CUTTING.pdf",
+    "section": "Geographical Breakdown Area 1-6: Boksburg-North Central, Boksburg-South CBD, Boksburg-South, Boksburg-North East and Boksburg-South East",
+    "retrieved": "2026-08-26",
+    "licence_note": "Official municipal tender area list used for locality membership assertions; no prose or geometry is copied."
+  },
+  "edge_count": 19,
+  "edges": [
+    {
+      "factual_location_id": "pl-gp-v01-23808f9ea465095bb209",
+      "preferred_name": "Witkoppie Ridge",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/boksburg",
+      "evidence_class": "official_municipal_tender_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2024/04/FINAL-BID-DOCUMENT-A-EWM-07-2024-GRASS-CUTTING.pdf#Geographical%20Breakdown%20Area%201-6%3A%20Boksburg-North%20Central%2C%20Boksburg-South%20CBD%2C%20Boksburg-South%2C%20Boksburg-North%20East%20and%20Boksburg-South%20East (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-4cdc59639c91de32d5ed",
+      "preferred_name": "Jan Smutsville",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/boksburg",
+      "evidence_class": "official_municipal_tender_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2024/04/FINAL-BID-DOCUMENT-A-EWM-07-2024-GRASS-CUTTING.pdf#Geographical%20Breakdown%20Area%201-6%3A%20Boksburg-North%20Central%2C%20Boksburg-South%20CBD%2C%20Boksburg-South%2C%20Boksburg-North%20East%20and%20Boksburg-South%20East (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-57fcedb19587d6748d5a",
+      "preferred_name": "Libradene",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/boksburg",
+      "evidence_class": "official_municipal_tender_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2024/04/FINAL-BID-DOCUMENT-A-EWM-07-2024-GRASS-CUTTING.pdf#Geographical%20Breakdown%20Area%201-6%3A%20Boksburg-North%20Central%2C%20Boksburg-South%20CBD%2C%20Boksburg-South%2C%20Boksburg-North%20East%20and%20Boksburg-South%20East (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-6510ce98f70f6cecc8d6",
+      "preferred_name": "Jansenpark",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/boksburg",
+      "evidence_class": "official_municipal_tender_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2024/04/FINAL-BID-DOCUMENT-A-EWM-07-2024-GRASS-CUTTING.pdf#Geographical%20Breakdown%20Area%201-6%3A%20Boksburg-North%20Central%2C%20Boksburg-South%20CBD%2C%20Boksburg-South%2C%20Boksburg-North%20East%20and%20Boksburg-South%20East (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-698a937209659aef7cd2",
+      "preferred_name": "Boksburg-Suid",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/boksburg",
+      "evidence_class": "official_municipal_tender_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2024/04/FINAL-BID-DOCUMENT-A-EWM-07-2024-GRASS-CUTTING.pdf#Geographical%20Breakdown%20Area%201-6%3A%20Boksburg-North%20Central%2C%20Boksburg-South%20CBD%2C%20Boksburg-South%2C%20Boksburg-North%20East%20and%20Boksburg-South%20East (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-6f3b9571d8efbd81ee43",
+      "preferred_name": "Elspark",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/boksburg",
+      "evidence_class": "official_municipal_tender_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2024/04/FINAL-BID-DOCUMENT-A-EWM-07-2024-GRASS-CUTTING.pdf#Geographical%20Breakdown%20Area%201-6%3A%20Boksburg-North%20Central%2C%20Boksburg-South%20CBD%2C%20Boksburg-South%2C%20Boksburg-North%20East%20and%20Boksburg-South%20East (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-703d1f1f9deb570819d0",
+      "preferred_name": "Parkrand",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/boksburg",
+      "evidence_class": "official_municipal_tender_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2024/04/FINAL-BID-DOCUMENT-A-EWM-07-2024-GRASS-CUTTING.pdf#Geographical%20Breakdown%20Area%201-6%3A%20Boksburg-North%20Central%2C%20Boksburg-South%20CBD%2C%20Boksburg-South%2C%20Boksburg-North%20East%20and%20Boksburg-South%20East (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-7512ed98a4c11040e081",
+      "preferred_name": "Boksburg-Noord",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/boksburg",
+      "evidence_class": "official_municipal_tender_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2024/04/FINAL-BID-DOCUMENT-A-EWM-07-2024-GRASS-CUTTING.pdf#Geographical%20Breakdown%20Area%201-6%3A%20Boksburg-North%20Central%2C%20Boksburg-South%20CBD%2C%20Boksburg-South%2C%20Boksburg-North%20East%20and%20Boksburg-South%20East (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-9611365fca7eb67372bf",
+      "preferred_name": "Impala Park",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/boksburg",
+      "evidence_class": "official_municipal_tender_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2024/04/FINAL-BID-DOCUMENT-A-EWM-07-2024-GRASS-CUTTING.pdf#Geographical%20Breakdown%20Area%201-6%3A%20Boksburg-North%20Central%2C%20Boksburg-South%20CBD%2C%20Boksburg-South%2C%20Boksburg-North%20East%20and%20Boksburg-South%20East (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-9d177ab9e9ff883ebcb5",
+      "preferred_name": "Parkdene",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/boksburg",
+      "evidence_class": "official_municipal_tender_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2024/04/FINAL-BID-DOCUMENT-A-EWM-07-2024-GRASS-CUTTING.pdf#Geographical%20Breakdown%20Area%201-6%3A%20Boksburg-North%20Central%2C%20Boksburg-South%20CBD%2C%20Boksburg-South%2C%20Boksburg-North%20East%20and%20Boksburg-South%20East (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-a54ba66e6d04166dc06a",
+      "preferred_name": "Van Dykpark",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/boksburg",
+      "evidence_class": "official_municipal_tender_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2024/04/FINAL-BID-DOCUMENT-A-EWM-07-2024-GRASS-CUTTING.pdf#Geographical%20Breakdown%20Area%201-6%3A%20Boksburg-North%20Central%2C%20Boksburg-South%20CBD%2C%20Boksburg-South%2C%20Boksburg-North%20East%20and%20Boksburg-South%20East (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-b00012323da6e17dd0ec",
+      "preferred_name": "Groeneweide",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/boksburg",
+      "evidence_class": "official_municipal_tender_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2024/04/FINAL-BID-DOCUMENT-A-EWM-07-2024-GRASS-CUTTING.pdf#Geographical%20Breakdown%20Area%201-6%3A%20Boksburg-North%20Central%2C%20Boksburg-South%20CBD%2C%20Boksburg-South%2C%20Boksburg-North%20East%20and%20Boksburg-South%20East (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-b37cf31444be4a972daf",
+      "preferred_name": "Klippoortjie",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/boksburg",
+      "evidence_class": "official_municipal_tender_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2024/04/FINAL-BID-DOCUMENT-A-EWM-07-2024-GRASS-CUTTING.pdf#Geographical%20Breakdown%20Area%201-6%3A%20Boksburg-North%20Central%2C%20Boksburg-South%20CBD%2C%20Boksburg-South%2C%20Boksburg-North%20East%20and%20Boksburg-South%20East (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-b78d6ceaf3f2620c6a90",
+      "preferred_name": "Boksburg Noord",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/boksburg",
+      "evidence_class": "official_municipal_tender_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2024/04/FINAL-BID-DOCUMENT-A-EWM-07-2024-GRASS-CUTTING.pdf#Geographical%20Breakdown%20Area%201-6%3A%20Boksburg-North%20Central%2C%20Boksburg-South%20CBD%2C%20Boksburg-South%2C%20Boksburg-North%20East%20and%20Boksburg-South%20East (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-bcd019ee3663ce7e58e6",
+      "preferred_name": "Ravenswood",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/boksburg",
+      "evidence_class": "official_municipal_tender_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2024/04/FINAL-BID-DOCUMENT-A-EWM-07-2024-GRASS-CUTTING.pdf#Geographical%20Breakdown%20Area%201-6%3A%20Boksburg-North%20Central%2C%20Boksburg-South%20CBD%2C%20Boksburg-South%2C%20Boksburg-North%20East%20and%20Boksburg-South%20East (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-bce0347b5c067def261d",
+      "preferred_name": "Atlasville",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/boksburg",
+      "evidence_class": "official_municipal_tender_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2024/04/FINAL-BID-DOCUMENT-A-EWM-07-2024-GRASS-CUTTING.pdf#Geographical%20Breakdown%20Area%201-6%3A%20Boksburg-North%20Central%2C%20Boksburg-South%20CBD%2C%20Boksburg-South%2C%20Boksburg-North%20East%20and%20Boksburg-South%20East (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-cf5e86d6be44220cd48b",
+      "preferred_name": "Cinderella",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/boksburg",
+      "evidence_class": "official_municipal_tender_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2024/04/FINAL-BID-DOCUMENT-A-EWM-07-2024-GRASS-CUTTING.pdf#Geographical%20Breakdown%20Area%201-6%3A%20Boksburg-North%20Central%2C%20Boksburg-South%20CBD%2C%20Boksburg-South%2C%20Boksburg-North%20East%20and%20Boksburg-South%20East (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-d3741f4db0b638746480",
+      "preferred_name": "Farrar Park",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/boksburg",
+      "evidence_class": "official_municipal_tender_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2024/04/FINAL-BID-DOCUMENT-A-EWM-07-2024-GRASS-CUTTING.pdf#Geographical%20Breakdown%20Area%201-6%3A%20Boksburg-North%20Central%2C%20Boksburg-South%20CBD%2C%20Boksburg-South%2C%20Boksburg-North%20East%20and%20Boksburg-South%20East (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-f5207ffe2aea2d8cae13",
+      "preferred_name": "Beyerspark",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/boksburg",
+      "evidence_class": "official_municipal_tender_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2024/04/FINAL-BID-DOCUMENT-A-EWM-07-2024-GRASS-CUTTING.pdf#Geographical%20Breakdown%20Area%201-6%3A%20Boksburg-North%20Central%2C%20Boksburg-South%20CBD%2C%20Boksburg-South%2C%20Boksburg-North%20East%20and%20Boksburg-South%20East (retrieved 2026-08-26)"
+    }
+  ],
+  "diagnostics": {
+    "researched_names": 19,
+    "matched_already_projected": [
+      {
+        "name": "Beyerspark",
+        "factual_location_id": "pl-gp-v01-f5207ffe2aea2d8cae13",
+        "existing_parent_natural_key": "gauteng/boksburg",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Jan Smutsville",
+        "factual_location_id": "pl-gp-v01-4cdc59639c91de32d5ed",
+        "existing_parent_natural_key": "gauteng/boksburg",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Jansenpark",
+        "factual_location_id": "pl-gp-v01-6510ce98f70f6cecc8d6",
+        "existing_parent_natural_key": "gauteng/boksburg",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Ravenswood",
+        "factual_location_id": "pl-gp-v01-bcd019ee3663ce7e58e6",
+        "existing_parent_natural_key": "gauteng/boksburg",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Cinderella",
+        "factual_location_id": "pl-gp-v01-cf5e86d6be44220cd48b",
+        "existing_parent_natural_key": "gauteng/boksburg",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Parkdene",
+        "factual_location_id": "pl-gp-v01-9d177ab9e9ff883ebcb5",
+        "existing_parent_natural_key": "gauteng/boksburg",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Libradene",
+        "factual_location_id": "pl-gp-v01-57fcedb19587d6748d5a",
+        "existing_parent_natural_key": "gauteng/boksburg",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Boksburg-Suid",
+        "factual_location_id": "pl-gp-v01-698a937209659aef7cd2",
+        "existing_parent_natural_key": "gauteng/boksburg",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Parkrand",
+        "factual_location_id": "pl-gp-v01-703d1f1f9deb570819d0",
+        "existing_parent_natural_key": "gauteng/boksburg",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Impala Park",
+        "factual_location_id": "pl-gp-v01-9611365fca7eb67372bf",
+        "existing_parent_natural_key": "gauteng/boksburg",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Witkoppie Ridge",
+        "factual_location_id": "pl-gp-v01-23808f9ea465095bb209",
+        "existing_parent_natural_key": "gauteng/boksburg",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Atlasville",
+        "factual_location_id": "pl-gp-v01-bce0347b5c067def261d",
+        "existing_parent_natural_key": "gauteng/boksburg",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Van Dykpark",
+        "factual_location_id": "pl-gp-v01-a54ba66e6d04166dc06a",
+        "existing_parent_natural_key": "gauteng/boksburg",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Elspark",
+        "factual_location_id": "pl-gp-v01-6f3b9571d8efbd81ee43",
+        "existing_parent_natural_key": "gauteng/boksburg",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Groeneweide",
+        "factual_location_id": "pl-gp-v01-b00012323da6e17dd0ec",
+        "existing_parent_natural_key": "gauteng/boksburg",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Klippoortjie",
+        "factual_location_id": "pl-gp-v01-b37cf31444be4a972daf",
+        "existing_parent_natural_key": "gauteng/boksburg",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Farrar Park",
+        "factual_location_id": "pl-gp-v01-d3741f4db0b638746480",
+        "existing_parent_natural_key": "gauteng/boksburg",
+        "parent_matches_evidence": true
+      }
+    ],
+    "names_not_in_canonical_layer": []
+  }
+}
