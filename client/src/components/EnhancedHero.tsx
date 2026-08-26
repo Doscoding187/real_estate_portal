@@ -48,7 +48,7 @@ import {
 } from '@/lib/heroJourneySearch';
 import { RENT_PUBLIC_PROPERTY_TYPES } from '@shared/property-taxonomy';
 import { buildLocationDiscoveryPath, hasCanonicalLocationIdentity } from '@/lib/locationDiscovery';
-import { buildConsumerJourneyUrl } from '@/lib/consumerJourneyRouter';
+import { buildConsumerJourneyUrl, LAND_PUBLIC_CLASSIFICATION_OPTIONS } from '@/lib/consumerJourneyRouter';
 import { parseCanonicalLocationId } from '@shared/locationAuthority';
 import type { LocationNode } from '@/types/location';
 import type { SearchAreaDiscoveryResult, SearchDiscoveryResult } from '@shared/searchDiscovery';
@@ -215,7 +215,22 @@ const JOURNEY_PRESENTATION: Partial<
   plot_land: {
     placeholder: 'Search plots and land by city, suburb, or area...',
     guidance: 'Explore available plots and land in the places that matter to you.',
-    primaryFilters: [],
+    primaryFilters: [
+      {
+        key: 'classification',
+        label: 'Land type',
+        emptyLabel: 'Any land type',
+        icon: MapPin,
+        options: LAND_PUBLIC_CLASSIFICATION_OPTIONS,
+      },
+      {
+        key: 'maxPrice',
+        label: 'Price range',
+        emptyLabel: 'Any price',
+        icon: CircleDollarSign,
+        options: PRICE_OPTIONS,
+      },
+    ],
   },
   commercial: {
     placeholder: 'Search commercial locations...',
