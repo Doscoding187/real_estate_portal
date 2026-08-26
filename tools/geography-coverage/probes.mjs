@@ -619,6 +619,7 @@ const WAVE26_LOCALITY_PROBES = [
   { name: 'Modderbee', parentSuffix: 'gauteng/daveyton/modderbee' },
   { name: 'Duncanville', parentSuffix: 'gauteng/vereeniging/duncanville' },
   { name: 'Bergsig', parentSuffix: 'gauteng/heidelberg/bergsig' },
+  { name: 'Government Village', parentSuffix: 'gauteng/randfontein/government-village' },
 ];
 
 for (const probe of WAVE26_LOCALITY_PROBES) {

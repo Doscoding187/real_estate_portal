@@ -1,0 +1,29 @@
+{
+  "resolved_edges_version": "randfontein-government-village-parent-evidence.v0.1.resolved",
+  "town": "Randfontein",
+  "parent_natural_key": "gauteng/randfontein",
+  "source": {
+    "publisher": "Transvaal Provincial Administration / Provincial Gazette archive",
+    "url": "https://archive.opengazettes.org.za/archive/ZA-transvaal/1966/provincial-gazette-ZA-transvaal-vol-199-no-3244-dated-1966-12-14.pdf",
+    "section": "Municipality of Randfontein — numbers of wards and description of ward boundaries; Government Village boundary feature",
+    "retrieved": "2026-08-27",
+    "licence_note": "Historical government-gazette boundary schedule used for locality relationship assertions; no prose or geometry is copied."
+  },
+  "edge_count": 1,
+  "edges": [
+    {
+      "factual_location_id": "pl-gp-v01-18d40cd7fc1c293b56b2",
+      "preferred_name": "Government Village",
+      "factual_type": "locality",
+      "parent_natural_key": "gauteng/randfontein",
+      "evidence_class": "historical_government_gazette_municipal_boundary",
+      "citation": "https://archive.opengazettes.org.za/archive/ZA-transvaal/1966/provincial-gazette-ZA-transvaal-vol-199-no-3244-dated-1966-12-14.pdf#Municipality%20of%20Randfontein%20%E2%80%94%20numbers%20of%20wards%20and%20description%20of%20ward%20boundaries%3B%20Government%20Village%20boundary%20feature (retrieved 2026-08-27)"
+    }
+  ],
+  "diagnostics": {
+    "researched_names": 1,
+    "matched_already_projected": [],
+    "names_not_in_canonical_layer": [],
+    "ambiguous_canonical_matches": []
+  }
+}
