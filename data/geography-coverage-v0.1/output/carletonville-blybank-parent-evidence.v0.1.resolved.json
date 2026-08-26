@@ -1,0 +1,29 @@
+{
+  "resolved_edges_version": "carletonville-blybank-parent-evidence.v0.1.resolved",
+  "town": "Carletonville",
+  "parent_natural_key": "gauteng/carletonville",
+  "source": {
+    "publisher": "Merafong City Local Municipality",
+    "url": "https://merafong.gov.za/wp-content/uploads/2024/05/MSDF-2016-21-Annexure-C-Local-Spatial-Development-Directives.pdf",
+    "section": "Blybank, pp. 19–21: locality relationship to Carletonville",
+    "retrieved": "2026-08-27",
+    "licence_note": "Official municipal spatial-development publication used for locality relationship assertions; no prose or geometry is copied."
+  },
+  "edge_count": 1,
+  "edges": [
+    {
+      "factual_location_id": "pl-gp-v01-79b11b5941982d51a051",
+      "preferred_name": "Blybank",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/carletonville",
+      "evidence_class": "official_municipal_spatial_development_plan_area_relationship",
+      "citation": "https://merafong.gov.za/wp-content/uploads/2024/05/MSDF-2016-21-Annexure-C-Local-Spatial-Development-Directives.pdf#Blybank%2C%20pp.%2019%E2%80%9321%3A%20locality%20relationship%20to%20Carletonville (retrieved 2026-08-27)"
+    }
+  ],
+  "diagnostics": {
+    "researched_names": 1,
+    "matched_already_projected": [],
+    "names_not_in_canonical_layer": [],
+    "ambiguous_canonical_matches": []
+  }
+}

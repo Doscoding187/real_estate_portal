@@ -567,6 +567,21 @@ for (const probe of WAVE22_LOCALITY_PROBES) {
   );
 }
 
+const WAVE23_LOCALITY_PROBES = [
+  { name: 'Blybank', parentSuffix: 'gauteng/carletonville/blybank' },
+  { name: 'Deelkraal', parentSuffix: 'gauteng/carletonville/deelkraal' },
+  { name: "Green's Park", parentSuffix: 'gauteng/fochville/green-s-park' },
+];
+
+for (const probe of WAVE23_LOCALITY_PROBES) {
+  const row = resolveByName(probe.name);
+  check(
+    `wave23 researched edge resolves: ${probe.name}`,
+    row !== null && row.runtime_natural_key === probe.parentSuffix,
+    row ? row.runtime_natural_key : 'missing',
+  );
+}
+
 const NEGATIVE_PROBES = ['Mamelodi Extension 1', 'Mamelodi Extension 4'];
 for (const probe of NEGATIVE_PROBES) {
   const directHit = resolveByName(probe);

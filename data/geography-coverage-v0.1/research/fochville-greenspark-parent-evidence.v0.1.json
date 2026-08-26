@@ -1,0 +1,20 @@
+{
+  "artifact_version": "fochville-greenspark-parent-evidence-v0.1",
+  "town": "Fochville",
+  "parent_natural_key": "gauteng/fochville",
+  "administrative_context": "West Rand",
+  "evidence_class": "official_municipal_spatial_development_plan_area_relationship",
+  "source": {
+    "publisher": "Merafong City Local Municipality",
+    "url": "https://merafong.gov.za/wp-content/uploads/2024/05/MSDF-2016-21-Annexure-C-Local-Spatial-Development-Directives.pdf",
+    "section": "Greenspark, pp. 28–30: Greenspark is east of the southern part of Fochville",
+    "retrieved": "2026-08-27",
+    "licence_note": "Official municipal spatial-development publication used for locality relationship assertions; no prose or geometry is copied."
+  },
+  "source_name_variants": {
+    "Green's Park": "Greenspark"
+  },
+  "suburb_names": [
+    "Green's Park"
+  ]
+}

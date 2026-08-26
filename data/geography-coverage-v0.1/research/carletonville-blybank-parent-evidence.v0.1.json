@@ -1,0 +1,17 @@
+{
+  "artifact_version": "carletonville-blybank-parent-evidence-v0.1",
+  "town": "Carletonville",
+  "parent_natural_key": "gauteng/carletonville",
+  "administrative_context": "West Rand",
+  "evidence_class": "official_municipal_spatial_development_plan_area_relationship",
+  "source": {
+    "publisher": "Merafong City Local Municipality",
+    "url": "https://merafong.gov.za/wp-content/uploads/2024/05/MSDF-2016-21-Annexure-C-Local-Spatial-Development-Directives.pdf",
+    "section": "Blybank, pp. 19–21: locality relationship to Carletonville",
+    "retrieved": "2026-08-27",
+    "licence_note": "Official municipal spatial-development publication used for locality relationship assertions; no prose or geometry is copied."
+  },
+  "suburb_names": [
+    "Blybank"
+  ]
+}
