@@ -660,6 +660,19 @@ for (const probe of WAVE32_LOCALITY_PROBES) {
   );
 }
 
+const WAVE33_LOCALITY_PROBES = [
+  { name: 'Palm Ridge', parentSuffix: 'gauteng/katlehong/palm-ridge' },
+];
+
+for (const probe of WAVE33_LOCALITY_PROBES) {
+  const row = resolveByName(probe.name);
+  check(
+    `wave33 researched edge resolves: ${probe.name}`,
+    row !== null && row.runtime_natural_key === probe.parentSuffix,
+    row ? row.runtime_natural_key : 'missing',
+  );
+}
+
 const NEGATIVE_PROBES = ['Mamelodi Extension 1', 'Mamelodi Extension 4'];
 for (const probe of NEGATIVE_PROBES) {
   const directHit = resolveByName(probe);

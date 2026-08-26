@@ -7,7 +7,7 @@
     "factual_canonical_geography_sha256": "1fe0e2e3101bd7e459f484b7125dc1ce1f0327104002b184ef0e90d4236b7b7f",
     "factual_canonical_names_sha256": "a87891bc2e4167130d7e5eb649516a34aedaa071278ce8fe25df19f511669b51",
     "carried_projection_v01_sha256": "982ea13cd190a02da5440f122a061713e22bc157ef46f491ce530c5877ff9fc0",
-    "territory_manifest_sha256": "594fc84bab9817a1b994228085a807f7a5ce019fa2f7e8cabbb98619d8423103"
+    "territory_manifest_sha256": "ac717e3fe9a067bd0ba4ab35f91a56156d2ba323266df1c5b8597ab6e3476aa6"
   },
   "rows": [
     {
@@ -15365,6 +15365,28 @@
       ],
       "factual_preferred_names": [
         "Nhlapo"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/katlehong/palm-ridge",
+      "runtime_parent_natural_key": "gauteng/katlehong",
+      "name": "Palm Ridge",
+      "slug": "palm-ridge",
+      "latitude": -26.393083349999998,
+      "longitude": 28.1487778,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "mixed_odbl_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-579a50b48790aa612f1c"
+      ],
+      "factual_preferred_names": [
+        "Palm Ridge"
       ],
       "factual_types": [
         "suburb"
