@@ -164,6 +164,24 @@ for (const probe of WAVE3_LOCALITY_PROBES) {
   );
 }
 
+const WAVE4_LOCALITY_PROBES = [
+  { name: 'Comet', parentSuffix: 'gauteng/boksburg/comet' },
+  { name: 'Boksburg Wes', parentSuffix: 'gauteng/boksburg/boksburg-wes' },
+  { name: 'Cason', parentSuffix: 'gauteng/boksburg/cason' },
+  { name: 'Parkrand', parentSuffix: 'gauteng/boksburg/parkrand' },
+  { name: 'Witkoppie Ridge', parentSuffix: 'gauteng/boksburg/witkoppie-ridge' },
+  { name: 'Atlasville', parentSuffix: 'gauteng/boksburg/atlasville' },
+];
+
+for (const probe of WAVE4_LOCALITY_PROBES) {
+  const row = resolveByName(probe.name);
+  check(
+    `wave4 researched edge resolves: ${probe.name}`,
+    row !== null && row.runtime_natural_key === probe.parentSuffix,
+    row ? row.runtime_natural_key : 'missing',
+  );
+}
+
 const NEGATIVE_PROBES = ['Mamelodi Extension 1', 'Mamelodi Extension 4'];
 for (const probe of NEGATIVE_PROBES) {
   const directHit = resolveByName(probe);

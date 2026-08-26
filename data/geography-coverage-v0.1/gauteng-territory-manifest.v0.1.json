@@ -18,7 +18,9 @@
     "researched_parent_edges": [
       "data/geography-coverage-v0.1/output/kempton-park-parent-evidence.v0.1.resolved.json",
       "data/geography-coverage-v0.1/output/krugersdorp-idp-parent-evidence.v0.1.resolved.json",
-      "data/geography-coverage-v0.1/output/krugersdorp-notice-parent-evidence.v0.1.resolved.json"
+      "data/geography-coverage-v0.1/output/krugersdorp-notice-parent-evidence.v0.1.resolved.json",
+      "data/geography-coverage-v0.1/output/boksburg-load-rotation-parent-evidence.v0.1.resolved.json",
+      "data/geography-coverage-v0.1/output/boksburg-grass-cutting-parent-evidence.v0.1.resolved.json"
     ]
   },
   "outputs": {

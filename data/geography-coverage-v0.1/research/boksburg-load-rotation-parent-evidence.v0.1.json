@@ -1,0 +1,42 @@
+{
+  "artifact_version": "boksburg-load-rotation-parent-evidence-v0.1",
+  "town": "Boksburg",
+  "parent_natural_key": "gauteng/boksburg",
+  "administrative_context": "Ekurhuleni",
+  "evidence_class": "official_municipal_load_rotation_area_list",
+  "source": {
+    "publisher": "City of Ekurhuleni",
+    "url": "https://www.ekurhuleni.gov.za/wp-content/uploads/2021/11/updated-Boksburg-load-shedding-schedules.pdf",
+    "section": "Boksburg load-rotation schedule, blocks B10-B17 and surrounding Boksburg areas",
+    "retrieved": "2026-08-26",
+    "licence_note": "Official municipal service schedule used for locality membership assertions; no prose or geometry is copied."
+  },
+  "source_name_variants": {
+    "Cason": "Casin",
+    "Boksburg Wes": "Boksburg West",
+    "Boksburg-Suid": "Boksburg South",
+    "Cinderella": "Cindarella",
+    "Dayanglen": "Dayen Glen",
+    "Groeneweide": "Groenewiede",
+    "Klippoortjie": "Klipportie",
+    "Ravensklip": "Raversklip",
+    "Reigerpark": "Reiger Park",
+    "Van Dykpark": "Van Dyk Park"
+  },
+  "suburb_names": [
+    "Comet",
+    "Cason",
+    "Boksburg Wes",
+    "Delmore",
+    "Dayanglen",
+    "Ravensklip",
+    "Morgan Ridge",
+    "Rosedene",
+    "Plantation",
+    "Dawn Park",
+    "Villa Liza",
+    "Windmill Park",
+    "Reigerpark",
+    "Sunward Park"
+  ]
+}

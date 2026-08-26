@@ -1,0 +1,217 @@
+{
+  "resolved_edges_version": "boksburg-load-rotation-parent-evidence.v0.1.resolved",
+  "town": "Boksburg",
+  "parent_natural_key": "gauteng/boksburg",
+  "source": {
+    "publisher": "City of Ekurhuleni",
+    "url": "https://www.ekurhuleni.gov.za/wp-content/uploads/2021/11/updated-Boksburg-load-shedding-schedules.pdf",
+    "section": "Boksburg load-rotation schedule, blocks B10-B17 and surrounding Boksburg areas",
+    "retrieved": "2026-08-26",
+    "licence_note": "Official municipal service schedule used for locality membership assertions; no prose or geometry is copied."
+  },
+  "edge_count": 14,
+  "edges": [
+    {
+      "factual_location_id": "pl-gp-v01-05d75a9c6d5582a6a7b9",
+      "preferred_name": "Delmore",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/boksburg",
+      "evidence_class": "official_municipal_load_rotation_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2021/11/updated-Boksburg-load-shedding-schedules.pdf#Boksburg%20load-rotation%20schedule%2C%20blocks%20B10-B17%20and%20surrounding%20Boksburg%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-09a0a1fd0a272e30a24d",
+      "preferred_name": "Plantation",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/boksburg",
+      "evidence_class": "official_municipal_load_rotation_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2021/11/updated-Boksburg-load-shedding-schedules.pdf#Boksburg%20load-rotation%20schedule%2C%20blocks%20B10-B17%20and%20surrounding%20Boksburg%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-137d397375b0e9c4e140",
+      "preferred_name": "Sunward Park",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/boksburg",
+      "evidence_class": "official_municipal_load_rotation_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2021/11/updated-Boksburg-load-shedding-schedules.pdf#Boksburg%20load-rotation%20schedule%2C%20blocks%20B10-B17%20and%20surrounding%20Boksburg%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-39d6d6219914b6aa5530",
+      "preferred_name": "Dayanglen",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/boksburg",
+      "evidence_class": "official_municipal_load_rotation_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2021/11/updated-Boksburg-load-shedding-schedules.pdf#Boksburg%20load-rotation%20schedule%2C%20blocks%20B10-B17%20and%20surrounding%20Boksburg%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-408a8a09d29f643c4b2a",
+      "preferred_name": "Dawn Park",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/boksburg",
+      "evidence_class": "official_municipal_load_rotation_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2021/11/updated-Boksburg-load-shedding-schedules.pdf#Boksburg%20load-rotation%20schedule%2C%20blocks%20B10-B17%20and%20surrounding%20Boksburg%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-6baa5ac483232742d455",
+      "preferred_name": "Windmill Park",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/boksburg",
+      "evidence_class": "official_municipal_load_rotation_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2021/11/updated-Boksburg-load-shedding-schedules.pdf#Boksburg%20load-rotation%20schedule%2C%20blocks%20B10-B17%20and%20surrounding%20Boksburg%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-9871eae039fab180dd52",
+      "preferred_name": "Ravensklip",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/boksburg",
+      "evidence_class": "official_municipal_load_rotation_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2021/11/updated-Boksburg-load-shedding-schedules.pdf#Boksburg%20load-rotation%20schedule%2C%20blocks%20B10-B17%20and%20surrounding%20Boksburg%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-9ad86c795075b08fb915",
+      "preferred_name": "Cason",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/boksburg",
+      "evidence_class": "official_municipal_load_rotation_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2021/11/updated-Boksburg-load-shedding-schedules.pdf#Boksburg%20load-rotation%20schedule%2C%20blocks%20B10-B17%20and%20surrounding%20Boksburg%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-b196c5907620f2f14ae4",
+      "preferred_name": "Reigerpark",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/boksburg",
+      "evidence_class": "official_municipal_load_rotation_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2021/11/updated-Boksburg-load-shedding-schedules.pdf#Boksburg%20load-rotation%20schedule%2C%20blocks%20B10-B17%20and%20surrounding%20Boksburg%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-b2b118b2bbf02e38c0da",
+      "preferred_name": "Villa Liza",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/boksburg",
+      "evidence_class": "official_municipal_load_rotation_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2021/11/updated-Boksburg-load-shedding-schedules.pdf#Boksburg%20load-rotation%20schedule%2C%20blocks%20B10-B17%20and%20surrounding%20Boksburg%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-cea8e5b79a3ec5e12863",
+      "preferred_name": "Morgan Ridge",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/boksburg",
+      "evidence_class": "official_municipal_load_rotation_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2021/11/updated-Boksburg-load-shedding-schedules.pdf#Boksburg%20load-rotation%20schedule%2C%20blocks%20B10-B17%20and%20surrounding%20Boksburg%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-d41855935506294a2aea",
+      "preferred_name": "Rosedene",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/boksburg",
+      "evidence_class": "official_municipal_load_rotation_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2021/11/updated-Boksburg-load-shedding-schedules.pdf#Boksburg%20load-rotation%20schedule%2C%20blocks%20B10-B17%20and%20surrounding%20Boksburg%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-ec8503478230b9415d0d",
+      "preferred_name": "Comet",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/boksburg",
+      "evidence_class": "official_municipal_load_rotation_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2021/11/updated-Boksburg-load-shedding-schedules.pdf#Boksburg%20load-rotation%20schedule%2C%20blocks%20B10-B17%20and%20surrounding%20Boksburg%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-fdab11fae45282bda7a7",
+      "preferred_name": "Boksburg Wes",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/boksburg",
+      "evidence_class": "official_municipal_load_rotation_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2021/11/updated-Boksburg-load-shedding-schedules.pdf#Boksburg%20load-rotation%20schedule%2C%20blocks%20B10-B17%20and%20surrounding%20Boksburg%20areas (retrieved 2026-08-26)"
+    }
+  ],
+  "diagnostics": {
+    "researched_names": 14,
+    "matched_already_projected": [
+      {
+        "name": "Comet",
+        "factual_location_id": "pl-gp-v01-ec8503478230b9415d0d",
+        "existing_parent_natural_key": "gauteng/boksburg",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Cason",
+        "factual_location_id": "pl-gp-v01-9ad86c795075b08fb915",
+        "existing_parent_natural_key": "gauteng/boksburg",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Boksburg Wes",
+        "factual_location_id": "pl-gp-v01-fdab11fae45282bda7a7",
+        "existing_parent_natural_key": "gauteng/boksburg",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Delmore",
+        "factual_location_id": "pl-gp-v01-05d75a9c6d5582a6a7b9",
+        "existing_parent_natural_key": "gauteng/boksburg",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Dayanglen",
+        "factual_location_id": "pl-gp-v01-39d6d6219914b6aa5530",
+        "existing_parent_natural_key": "gauteng/boksburg",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Ravensklip",
+        "factual_location_id": "pl-gp-v01-9871eae039fab180dd52",
+        "existing_parent_natural_key": "gauteng/boksburg",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Morgan Ridge",
+        "factual_location_id": "pl-gp-v01-cea8e5b79a3ec5e12863",
+        "existing_parent_natural_key": "gauteng/boksburg",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Rosedene",
+        "factual_location_id": "pl-gp-v01-d41855935506294a2aea",
+        "existing_parent_natural_key": "gauteng/boksburg",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Plantation",
+        "factual_location_id": "pl-gp-v01-09a0a1fd0a272e30a24d",
+        "existing_parent_natural_key": "gauteng/boksburg",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Dawn Park",
+        "factual_location_id": "pl-gp-v01-408a8a09d29f643c4b2a",
+        "existing_parent_natural_key": "gauteng/boksburg",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Villa Liza",
+        "factual_location_id": "pl-gp-v01-b2b118b2bbf02e38c0da",
+        "existing_parent_natural_key": "gauteng/boksburg",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Windmill Park",
+        "factual_location_id": "pl-gp-v01-6baa5ac483232742d455",
+        "existing_parent_natural_key": "gauteng/boksburg",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Reigerpark",
+        "factual_location_id": "pl-gp-v01-b196c5907620f2f14ae4",
+        "existing_parent_natural_key": "gauteng/boksburg",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Sunward Park",
+        "factual_location_id": "pl-gp-v01-137d397375b0e9c4e140",
+        "existing_parent_natural_key": "gauteng/boksburg",
+        "parent_matches_evidence": true
+      }
+    ],
+    "names_not_in_canonical_layer": []
+  }
+}

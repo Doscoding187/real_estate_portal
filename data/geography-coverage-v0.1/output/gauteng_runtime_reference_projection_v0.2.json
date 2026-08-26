@@ -7,7 +7,7 @@
     "factual_canonical_geography_sha256": "1fe0e2e3101bd7e459f484b7125dc1ce1f0327104002b184ef0e90d4236b7b7f",
     "factual_canonical_names_sha256": "a87891bc2e4167130d7e5eb649516a34aedaa071278ce8fe25df19f511669b51",
     "carried_projection_v01_sha256": "982ea13cd190a02da5440f122a061713e22bc157ef46f491ce530c5877ff9fc0",
-    "territory_manifest_sha256": "0ea6d757c49d82ddd2f7a21353b52a67b5cc46b537bde289d728dc97e790d7b8"
+    "territory_manifest_sha256": "c5ff827880cdce4d3e7fb1a07f7d45311d85552c61cfd15e38dbf3ee84bc1591"
   },
   "rows": [
     {
@@ -655,6 +655,691 @@
       ],
       "factual_types": [
         "town"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/boksburg/atlasville",
+      "runtime_parent_natural_key": "gauteng/boksburg",
+      "name": "Atlasville",
+      "slug": "atlasville",
+      "latitude": -26.1530622,
+      "longitude": 28.28575645,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "mixed_odbl_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-bce0347b5c067def261d"
+      ],
+      "factual_preferred_names": [
+        "Atlasville"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/boksburg/beyerspark",
+      "runtime_parent_natural_key": "gauteng/boksburg",
+      "name": "Beyerspark",
+      "slug": "beyerspark",
+      "latitude": -26.1816667,
+      "longitude": 28.2705556,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-f5207ffe2aea2d8cae13"
+      ],
+      "factual_preferred_names": [
+        "Beyerspark"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/boksburg/boksburg-suid",
+      "runtime_parent_natural_key": "gauteng/boksburg",
+      "name": "Boksburg-Suid",
+      "slug": "boksburg-suid",
+      "latitude": -26.2261111,
+      "longitude": 28.2708333,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-698a937209659aef7cd2"
+      ],
+      "factual_preferred_names": [
+        "Boksburg-Suid"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/boksburg/boksburg-wes",
+      "runtime_parent_natural_key": "gauteng/boksburg",
+      "name": "Boksburg Wes",
+      "slug": "boksburg-wes",
+      "latitude": -26.1958333,
+      "longitude": 28.2408333,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-fdab11fae45282bda7a7"
+      ],
+      "factual_preferred_names": [
+        "Boksburg Wes"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/boksburg/cason",
+      "runtime_parent_natural_key": "gauteng/boksburg",
+      "name": "Cason",
+      "slug": "cason",
+      "latitude": -26.2091667,
+      "longitude": 28.2569444,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-9ad86c795075b08fb915"
+      ],
+      "factual_preferred_names": [
+        "Cason"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/boksburg/cinderella",
+      "runtime_parent_natural_key": "gauteng/boksburg",
+      "name": "Cinderella",
+      "slug": "cinderella",
+      "latitude": -26.2433333,
+      "longitude": 28.255,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-cf5e86d6be44220cd48b"
+      ],
+      "factual_preferred_names": [
+        "Cinderella"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/boksburg/comet",
+      "runtime_parent_natural_key": "gauteng/boksburg",
+      "name": "Comet",
+      "slug": "comet",
+      "latitude": -26.2013889,
+      "longitude": 28.24,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-ec8503478230b9415d0d"
+      ],
+      "factual_preferred_names": [
+        "Comet"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/boksburg/dawn-park",
+      "runtime_parent_natural_key": "gauteng/boksburg",
+      "name": "Dawn Park",
+      "slug": "dawn-park",
+      "latitude": -26.30033335,
+      "longitude": 28.24480555,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "mixed_odbl_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-408a8a09d29f643c4b2a"
+      ],
+      "factual_preferred_names": [
+        "Dawn Park"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/boksburg/dayanglen",
+      "runtime_parent_natural_key": "gauteng/boksburg",
+      "name": "Dayanglen",
+      "slug": "dayanglen",
+      "latitude": -26.1896582,
+      "longitude": 28.2319601,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-39d6d6219914b6aa5530"
+      ],
+      "factual_preferred_names": [
+        "Dayanglen"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/boksburg/delmore",
+      "runtime_parent_natural_key": "gauteng/boksburg",
+      "name": "Delmore",
+      "slug": "delmore",
+      "latitude": -26.206441,
+      "longitude": 28.198928,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "mixed_odbl_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-05d75a9c6d5582a6a7b9"
+      ],
+      "factual_preferred_names": [
+        "Delmore"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/boksburg/elspark",
+      "runtime_parent_natural_key": "gauteng/boksburg",
+      "name": "Elspark",
+      "slug": "elspark",
+      "latitude": -26.2680556,
+      "longitude": 28.2316667,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-6f3b9571d8efbd81ee43"
+      ],
+      "factual_preferred_names": [
+        "Elspark"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/boksburg/farrar-park",
+      "runtime_parent_natural_key": "gauteng/boksburg",
+      "name": "Farrar Park",
+      "slug": "farrar-park",
+      "latitude": -26.2461111,
+      "longitude": 28.2430556,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-d3741f4db0b638746480"
+      ],
+      "factual_preferred_names": [
+        "Farrar Park"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/boksburg/groeneweide",
+      "runtime_parent_natural_key": "gauteng/boksburg",
+      "name": "Groeneweide",
+      "slug": "groeneweide",
+      "latitude": -26.2791667,
+      "longitude": 28.2305556,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-b00012323da6e17dd0ec"
+      ],
+      "factual_preferred_names": [
+        "Groeneweide"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/boksburg/impala-park",
+      "runtime_parent_natural_key": "gauteng/boksburg",
+      "name": "Impala Park",
+      "slug": "impala-park",
+      "latitude": -26.1611111,
+      "longitude": 28.2666667,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-9611365fca7eb67372bf"
+      ],
+      "factual_preferred_names": [
+        "Impala Park"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/boksburg/jan-smutsville",
+      "runtime_parent_natural_key": "gauteng/boksburg",
+      "name": "Jan Smutsville",
+      "slug": "jan-smutsville",
+      "latitude": -26.1930556,
+      "longitude": 28.2441667,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-4cdc59639c91de32d5ed"
+      ],
+      "factual_preferred_names": [
+        "Jan Smutsville"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/boksburg/jansenpark",
+      "runtime_parent_natural_key": "gauteng/boksburg",
+      "name": "Jansenpark",
+      "slug": "jansenpark",
+      "latitude": -26.1893078,
+      "longitude": 28.2418307,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-6510ce98f70f6cecc8d6"
+      ],
+      "factual_preferred_names": [
+        "Jansenpark"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/boksburg/klippoortjie",
+      "runtime_parent_natural_key": "gauteng/boksburg",
+      "name": "Klippoortjie",
+      "slug": "klippoortjie",
+      "latitude": -26.2844444,
+      "longitude": 28.2377778,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-b37cf31444be4a972daf"
+      ],
+      "factual_preferred_names": [
+        "Klippoortjie"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/boksburg/libradene",
+      "runtime_parent_natural_key": "gauteng/boksburg",
+      "name": "Libradene",
+      "slug": "libradene",
+      "latitude": -26.24508,
+      "longitude": 28.248,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "mixed_odbl_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-57fcedb19587d6748d5a"
+      ],
+      "factual_preferred_names": [
+        "Libradene"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/boksburg/morgan-ridge",
+      "runtime_parent_natural_key": "gauteng/boksburg",
+      "name": "Morgan Ridge",
+      "slug": "morgan-ridge",
+      "latitude": -26.1911111,
+      "longitude": 28.2355556,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-cea8e5b79a3ec5e12863"
+      ],
+      "factual_preferred_names": [
+        "Morgan Ridge"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/boksburg/parkdene",
+      "runtime_parent_natural_key": "gauteng/boksburg",
+      "name": "Parkdene",
+      "slug": "parkdene",
+      "latitude": -26.229225550000002,
+      "longitude": 28.250085,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "mixed_odbl_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-9d177ab9e9ff883ebcb5"
+      ],
+      "factual_preferred_names": [
+        "Parkdene"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/boksburg/parkrand",
+      "runtime_parent_natural_key": "gauteng/boksburg",
+      "name": "Parkrand",
+      "slug": "parkrand",
+      "latitude": -26.245886650000003,
+      "longitude": 28.2685878,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "mixed_odbl_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-703d1f1f9deb570819d0"
+      ],
+      "factual_preferred_names": [
+        "Parkrand"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/boksburg/plantation",
+      "runtime_parent_natural_key": "gauteng/boksburg",
+      "name": "Plantation",
+      "slug": "plantation",
+      "latitude": -26.2155556,
+      "longitude": 28.2411111,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-09a0a1fd0a272e30a24d"
+      ],
+      "factual_preferred_names": [
+        "Plantation"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/boksburg/ravensklip",
+      "runtime_parent_natural_key": "gauteng/boksburg",
+      "name": "Ravensklip",
+      "slug": "ravensklip",
+      "latitude": -26.1817525,
+      "longitude": 28.199607999999998,
+      "searchable_aliases": [
+        "Ravensklip Siding",
+        "RAVENSKLIPSIDING"
+      ],
+      "publication_status": "provisional",
+      "licensing_classification": "mixed_odbl_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-9871eae039fab180dd52"
+      ],
+      "factual_preferred_names": [
+        "Ravensklip"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/boksburg/ravenswood",
+      "runtime_parent_natural_key": "gauteng/boksburg",
+      "name": "Ravenswood",
+      "slug": "ravenswood",
+      "latitude": -26.19640445,
+      "longitude": 28.255960549999998,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "mixed_odbl_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-bcd019ee3663ce7e58e6"
+      ],
+      "factual_preferred_names": [
+        "Ravenswood"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/boksburg/reigerpark",
+      "runtime_parent_natural_key": "gauteng/boksburg",
+      "name": "Reigerpark",
+      "slug": "reigerpark",
+      "latitude": -26.2319444,
+      "longitude": 28.2241667,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-b196c5907620f2f14ae4"
+      ],
+      "factual_preferred_names": [
+        "Reigerpark"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/boksburg/rosedene",
+      "runtime_parent_natural_key": "gauteng/boksburg",
+      "name": "Rosedene",
+      "slug": "rosedene",
+      "latitude": -26.1908542,
+      "longitude": 28.2276452,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-d41855935506294a2aea"
+      ],
+      "factual_preferred_names": [
+        "Rosedene"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/boksburg/sunward-park",
+      "runtime_parent_natural_key": "gauteng/boksburg",
+      "name": "Sunward Park",
+      "slug": "sunward-park",
+      "latitude": -26.2541667,
+      "longitude": 28.2663889,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-137d397375b0e9c4e140"
+      ],
+      "factual_preferred_names": [
+        "Sunward Park"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/boksburg/van-dykpark",
+      "runtime_parent_natural_key": "gauteng/boksburg",
+      "name": "Van Dykpark",
+      "slug": "van-dykpark",
+      "latitude": -26.2466667,
+      "longitude": 28.2958333,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-a54ba66e6d04166dc06a"
+      ],
+      "factual_preferred_names": [
+        "Van Dykpark"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/boksburg/villa-liza",
+      "runtime_parent_natural_key": "gauteng/boksburg",
+      "name": "Villa Liza",
+      "slug": "villa-liza",
+      "latitude": -26.3263889,
+      "longitude": 28.2466667,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-b2b118b2bbf02e38c0da"
+      ],
+      "factual_preferred_names": [
+        "Villa Liza"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/boksburg/windmill-park",
+      "runtime_parent_natural_key": "gauteng/boksburg",
+      "name": "Windmill Park",
+      "slug": "windmill-park",
+      "latitude": -26.2847222,
+      "longitude": 28.2597222,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-6baa5ac483232742d455"
+      ],
+      "factual_preferred_names": [
+        "Windmill Park"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/boksburg/witkoppie-ridge",
+      "runtime_parent_natural_key": "gauteng/boksburg",
+      "name": "Witkoppie Ridge",
+      "slug": "witkoppie-ridge",
+      "latitude": -26.1614635,
+      "longitude": 28.2548885,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-23808f9ea465095bb209"
+      ],
+      "factual_preferred_names": [
+        "Witkoppie Ridge"
+      ],
+      "factual_types": [
+        "suburb"
       ]
     },
     {
