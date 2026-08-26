@@ -1701,6 +1701,28 @@
     {
       "runtime_search_scope_kind": "locality",
       "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/boksburg/dunmadley",
+      "runtime_parent_natural_key": "gauteng/boksburg",
+      "name": "Dunmadley",
+      "slug": "dunmadley",
+      "latitude": -26.1896125,
+      "longitude": 28.2380783,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-2a3bb5bf16fe7e26cb54"
+      ],
+      "factual_preferred_names": [
+        "Dunmadley"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
       "runtime_natural_key": "gauteng/boksburg/elspark",
       "runtime_parent_natural_key": "gauteng/boksburg",
       "name": "Elspark",

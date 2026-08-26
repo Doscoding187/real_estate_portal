@@ -12,11 +12,13 @@
     "licence_note": "Official municipal service calendar used for locality membership assertions; no prose or geometry is copied."
   },
   "source_name_variants": {
-    "Eveleigh": "Everleigh"
+    "Eveleigh": "Everleigh",
+    "Dunmadaley": "Dunmadley"
   },
   "suburb_names": [
     "Everleigh",
     "Berton Park",
-    "Lilianton"
+    "Lilianton",
+    "Dunmadley"
   ]
 }

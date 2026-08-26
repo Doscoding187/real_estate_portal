@@ -369,6 +369,7 @@ const WAVE13_LOCALITY_PROBES = [
   { name: 'Southcrest', parentSuffix: 'gauteng/alberton/southcrest' },
   { name: 'Berton Park', parentSuffix: 'gauteng/boksburg/berton-park' },
   { name: 'Lilianton', parentSuffix: 'gauteng/boksburg/lilianton' },
+  { name: 'Dunmadley', parentSuffix: 'gauteng/boksburg/dunmadley' },
   { name: 'Harmelia', parentSuffix: 'gauteng/germiston/harmelia' },
   { name: 'Highway Gardens', parentSuffix: 'gauteng/germiston/highway-gardens' },
   { name: 'Meadowbrook', parentSuffix: 'gauteng/germiston/meadowbrook' },
