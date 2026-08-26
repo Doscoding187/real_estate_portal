@@ -421,6 +421,29 @@ for (const probe of WAVE13_LOCALITY_PROBES) {
   );
 }
 
+const WAVE14_LOCALITY_PROBES = [
+  { name: 'Muldersdrift', parentSuffix: 'gauteng/krugersdorp/muldersdrift' },
+  { name: 'Orient Hills', parentSuffix: 'gauteng/krugersdorp/orient-hills' },
+  { name: 'Middelvlei AH', parentSuffix: 'gauteng/randfontein/middelvlei-ah' },
+  { name: 'Boiketlong', parentSuffix: 'gauteng/sebokeng/boiketlong' },
+  { name: 'Falcon Ridge', parentSuffix: 'gauteng/vereeniging/falcon-ridge' },
+  { name: 'Tshepiso', parentSuffix: 'gauteng/vanderbijlpark/tshepiso' },
+  { name: 'Homelands AH', parentSuffix: 'gauteng/meyerton/homelands-ah' },
+  { name: 'Overkruin', parentSuffix: 'gauteng/heidelberg/overkruin' },
+  { name: 'Alphen Park', parentSuffix: 'gauteng/benoni/alphen-park' },
+  { name: 'Pirowville', parentSuffix: 'gauteng/germiston/pirowville' },
+  { name: 'Hospital View', parentSuffix: 'gauteng/thembisa/hospital-view' },
+];
+
+for (const probe of WAVE14_LOCALITY_PROBES) {
+  const row = resolveByName(probe.name);
+  check(
+    `wave14 researched edge resolves: ${probe.name}`,
+    row !== null && row.runtime_natural_key === probe.parentSuffix,
+    row ? row.runtime_natural_key : 'missing',
+  );
+}
+
 const NEGATIVE_PROBES = ['Mamelodi Extension 1', 'Mamelodi Extension 4'];
 for (const probe of NEGATIVE_PROBES) {
   const directHit = resolveByName(probe);

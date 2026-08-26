@@ -1,0 +1,37 @@
+{
+  "resolved_edges_version": "thembisa-place-index-parent-evidence.v0.1.resolved",
+  "town": "Thembisa",
+  "parent_natural_key": "gauteng/thembisa",
+  "source": {
+    "publisher": "Office of the Chief Justice, Department of Justice and Constitutional Development",
+    "url": "https://www.ocj.gov.za/maps/areas-gp.html",
+    "section": "Gauteng: Find a court in your area — Tembisa Sub District entries",
+    "retrieved": "2026-08-26",
+    "licence_note": "Official government place-index used for service-area membership assertions; no prose or geometry is copied."
+  },
+  "edge_count": 2,
+  "edges": [
+    {
+      "factual_location_id": "pl-gp-v01-757a83f567419c726108",
+      "preferred_name": "Midlands Estate",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/thembisa",
+      "evidence_class": "official_magisterial_place_index",
+      "citation": "https://www.ocj.gov.za/maps/areas-gp.html#Gauteng%3A%20Find%20a%20court%20in%20your%20area%20%E2%80%94%20Tembisa%20Sub%20District%20entries (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-cf322c795ba705f06bee",
+      "preferred_name": "Hospital View",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/thembisa",
+      "evidence_class": "official_magisterial_place_index",
+      "citation": "https://www.ocj.gov.za/maps/areas-gp.html#Gauteng%3A%20Find%20a%20court%20in%20your%20area%20%E2%80%94%20Tembisa%20Sub%20District%20entries (retrieved 2026-08-26)"
+    }
+  ],
+  "diagnostics": {
+    "researched_names": 2,
+    "matched_already_projected": [],
+    "names_not_in_canonical_layer": [],
+    "ambiguous_canonical_matches": []
+  }
+}

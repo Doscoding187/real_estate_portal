@@ -1,0 +1,38 @@
+{
+  "artifact_version": "randfontein-place-index-parent-evidence-v0.1",
+  "town": "Randfontein",
+  "parent_natural_key": "gauteng/randfontein",
+  "administrative_context": "West Rand",
+  "evidence_class": "official_magisterial_place_index",
+  "source": {
+    "publisher": "Office of the Chief Justice, Department of Justice and Constitutional Development",
+    "url": "https://www.ocj.gov.za/maps/areas-gp.html",
+    "section": "Gauteng: Find a court in your area — Randfontein Sub District entries",
+    "retrieved": "2026-08-26",
+    "licence_note": "Official government place-index used for service-area membership assertions; no prose or geometry is copied."
+  },
+  "source_name_variants": {
+    "Culemborgpark": "Culemborg Park",
+    "Green Hills": "Greenhills",
+    "Helikonpark": "Helikon Park",
+    "Home Lake": "Homelake",
+    "Robin Park": "Robinpark",
+    "Westergloor": "Westerfloor"
+  },
+  "suburb_names": [
+    "Aureus",
+    "Culemborgpark",
+    "Finsbury",
+    "Green Hills",
+    "Hectorton",
+    "Helikonpark",
+    "Hillside AH",
+    "Home Lake",
+    "Middelvlei AH",
+    "Randpoort",
+    "Robin Park",
+    "Rikasrus AH",
+    "Vleikop AH",
+    "Westergloor"
+  ]
+}

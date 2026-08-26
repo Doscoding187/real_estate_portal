@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+/* global console, process */
 // Resolves a researched parent-evidence artifact into concrete locality parent
 // edges by exact normalized-name match against the factual canonical layer.
 // Only queued (awaiting_accepted_parent_edge) identities are eligible; the
@@ -54,22 +55,63 @@ for (const row of projection.rows) {
   }
 }
 
-const byNormalizedName = new Map();
+const recordsByNormalizedName = new Map();
 for (const record of canonical) {
-  byNormalizedName.set(normalizeName(record.preferred_name), record);
+  const normalized = normalizeName(record.preferred_name);
+  const records = recordsByNormalizedName.get(normalized) ?? [];
+  records.push(record);
+  recordsByNormalizedName.set(normalized, records);
 }
 
 const resolved = [];
 const matchedAlreadyProjected = [];
 const notInCanonical = [];
+const ambiguousCanonicalMatches = [];
 
 for (const name of evidence.suburb_names) {
   const normalized = normalizeName(name);
-  const record = byNormalizedName.get(normalized);
-  if (!record) {
+  const nameMatches = recordsByNormalizedName.get(normalized) ?? [];
+  if (nameMatches.length === 0) {
     notInCanonical.push(name);
     continue;
   }
+
+  const contextMatches = nameMatches.filter(
+    record => record.administrative_context?.adm2?.[0]?.name === expectedAdministrativeContext,
+  );
+  if (contextMatches.length === 0) {
+    const contexts = [...
+      new Set(nameMatches.map(record => record.administrative_context?.adm2?.[0]?.name ?? null)),
+    ];
+    throw new Error(
+      `Researched suburb ${name} resolves only to unexpected municipalities ${contexts.join(', ')}; expected ${expectedAdministrativeContext}; refusing to emit an edge.`,
+    );
+  }
+
+  const projectedMatches = contextMatches
+    .map(record => ({ record, row: projectedRowByFactualId.get(record.canonical_location_id) }))
+    .filter(candidate => candidate.row);
+  const matchingProjected = projectedMatches.filter(
+    candidate => candidate.row.runtime_parent_natural_key === evidence.parent_natural_key,
+  );
+
+  let record;
+  if (contextMatches.length === 1) {
+    record = contextMatches[0];
+  } else if (matchingProjected.length === 1) {
+    // A repeated name can be safely referenced when exactly one same-context
+    // identity is already projected under this researched parent. This keeps
+    // existing evidence idempotent while refusing to guess for queued twins.
+    record = matchingProjected[0].record;
+  } else {
+    ambiguousCanonicalMatches.push({
+      name,
+      factual_location_ids: contextMatches.map(candidate => candidate.canonical_location_id),
+      reason: 'multiple same-context canonical identities require an identity-specific artifact',
+    });
+    continue;
+  }
+
   const projectedRow = projectedRowByFactualId.get(record.canonical_location_id);
   if (projectedRow) {
     matchedAlreadyProjected.push({
@@ -89,12 +131,6 @@ for (const name of evidence.suburb_names) {
       });
     }
     continue;
-  }
-  const context = record.administrative_context?.adm2?.[0]?.name ?? null;
-  if (context !== expectedAdministrativeContext) {
-    throw new Error(
-      `Researched suburb ${name} resolves to ${record.canonical_location_id} under unexpected municipality ${context}; expected ${expectedAdministrativeContext}; refusing to emit an edge.`,
-    );
   }
   resolved.push({
     factual_location_id: record.canonical_location_id,
@@ -119,6 +155,7 @@ const output = {
     researched_names: evidence.suburb_names.length,
     matched_already_projected: matchedAlreadyProjected,
     names_not_in_canonical_layer: notInCanonical,
+    ambiguous_canonical_matches: ambiguousCanonicalMatches,
   },
 };
 

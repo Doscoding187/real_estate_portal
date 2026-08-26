@@ -1,0 +1,17 @@
+{
+  "artifact_version": "krugersdorp-mindalore-parent-evidence-v0.1",
+  "town": "Krugersdorp",
+  "parent_natural_key": "gauteng/krugersdorp",
+  "administrative_context": "West Rand",
+  "evidence_class": "official_municipal_idp_cluster",
+  "source": {
+    "publisher": "Mogale City Local Municipality",
+    "url": "https://mogalecity.gov.za/archive/Archive%20documents/IDP/2020%20-%202021/Draft%20IDP%20Review.pdf",
+    "section": "Krugersdorp Mindalore Cluster needs",
+    "retrieved": "2026-08-26",
+    "licence_note": "Official municipal IDP cluster label used for locality membership assertion; no prose or geometry is copied."
+  },
+  "suburb_names": [
+    "Mindalore"
+  ]
+}

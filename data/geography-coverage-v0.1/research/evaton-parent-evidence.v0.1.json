@@ -1,0 +1,22 @@
+{
+  "artifact_version": "evaton-parent-evidence-v0.1",
+  "town": "Evaton",
+  "parent_natural_key": "gauteng/evaton",
+  "administrative_context": "Sedibeng",
+  "evidence_class": "official_municipal_service_area_list",
+  "source": {
+    "publisher": "Emfuleni Local Municipality",
+    "url": "https://emfuleni.gov.za/wp-content/uploads/2025/02/Voice_of_Emfuleni_May_2024.pdf",
+    "section": "Cycles 205/206 area list: Evaton, Evaton North, Evaton West (Beverley Hills), and Evaton Small Farms",
+    "retrieved": "2026-08-26",
+    "licence_note": "Official municipal service-area list used for locality membership assertions; no prose, billing data, or geometry is copied."
+  },
+  "source_name_variants": {
+    "Beverley Hills": "Evaton West (Beverley Hills)"
+  },
+  "suburb_names": [
+    "Beverley Hills",
+    "Evaton North",
+    "Evaton Small Farms"
+  ]
+}

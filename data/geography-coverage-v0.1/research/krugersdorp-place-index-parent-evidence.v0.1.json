@@ -1,0 +1,27 @@
+{
+  "artifact_version": "krugersdorp-place-index-parent-evidence-v0.1",
+  "town": "Krugersdorp",
+  "parent_natural_key": "gauteng/krugersdorp",
+  "administrative_context": "West Rand",
+  "evidence_class": "official_magisterial_place_index",
+  "source": {
+    "publisher": "Office of the Chief Justice, Department of Justice and Constitutional Development",
+    "url": "https://www.ocj.gov.za/maps/areas-gp.html",
+    "section": "Gauteng: Find a court in your area — Krugersdorp Main Seat entries",
+    "retrieved": "2026-08-26",
+    "licence_note": "Official government place-index used for service-area membership assertions; no prose or geometry is copied."
+  },
+  "source_name_variants": {
+    "Krugersdorp-Noord": "Krugersdorp North"
+  },
+  "suburb_names": [
+    "Delporton",
+    "Hekpoort",
+    "Krugersdorp-Noord",
+    "Muldersdrift",
+    "Olivanna",
+    "Orient Hills",
+    "Silverfields Park",
+    "Wentworth Park"
+  ]
+}
