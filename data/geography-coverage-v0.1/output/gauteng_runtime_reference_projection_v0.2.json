@@ -7,7 +7,7 @@
     "factual_canonical_geography_sha256": "1fe0e2e3101bd7e459f484b7125dc1ce1f0327104002b184ef0e90d4236b7b7f",
     "factual_canonical_names_sha256": "a87891bc2e4167130d7e5eb649516a34aedaa071278ce8fe25df19f511669b51",
     "carried_projection_v01_sha256": "982ea13cd190a02da5440f122a061713e22bc157ef46f491ce530c5877ff9fc0",
-    "territory_manifest_sha256": "3770dd9aa8671579f291c9829a44878ab08eada6883a2ec554644ad5a6feaa2e"
+    "territory_manifest_sha256": "bac5c3a9881bf43fcd60de9b9be7010e39d1c66f9b21a70d1283d7e716e7e8f5"
   },
   "rows": [
     {
@@ -29910,6 +29910,28 @@
     {
       "runtime_search_scope_kind": "locality",
       "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/westonaria/etlebeni",
+      "runtime_parent_natural_key": "gauteng/westonaria",
+      "name": "Etlebeni",
+      "slug": "etlebeni",
+      "latitude": -26.405,
+      "longitude": 27.6775,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-19486ee8bd44b2d4afe0"
+      ],
+      "factual_preferred_names": [
+        "Etlebeni"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
       "runtime_natural_key": "gauteng/westonaria/kloof",
       "runtime_parent_natural_key": "gauteng/westonaria",
       "name": "Kloof",
@@ -29968,6 +29990,28 @@
       ],
       "factual_preferred_names": [
         "Simunye"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/westonaria/thabony",
+      "runtime_parent_natural_key": "gauteng/westonaria",
+      "name": "Thabony",
+      "slug": "thabony",
+      "latitude": -26.3694444,
+      "longitude": 27.7086111,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-9ea1eee31975d0b5e98a"
+      ],
+      "factual_preferred_names": [
+        "Thabony"
       ],
       "factual_types": [
         "suburb"

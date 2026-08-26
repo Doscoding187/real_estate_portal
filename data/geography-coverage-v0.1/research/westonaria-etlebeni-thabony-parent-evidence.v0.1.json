@@ -1,0 +1,38 @@
+{
+  "artifact_version": "westonaria-etlebeni-thabony-parent-evidence-v0.1",
+  "town": "Westonaria",
+  "parent_natural_key": "gauteng/westonaria",
+  "administrative_context": "West Rand",
+  "evidence_class": "official_municipal_idp_and_demarcation_place_relationship",
+  "source": {
+    "publisher": "Rand West City Local Municipality",
+    "url": "https://lg.treasury.gov.za/supportingdocs/GT485/GT485_IDP%20Final_2023_Y_20220602T112844Z_itumeleng_mogalobe.pdf",
+    "section": "Rand West City IDP — Westonaria node and Etlebeni listed within the municipality’s southern mining belt",
+    "retrieved": "2026-08-27",
+    "licence_note": "Official municipal integrated development plan used for locality relationship assertions; no prose or geometry is copied."
+  },
+  "supporting_sources": [
+    {
+      "publisher": "Municipal Demarcation Board",
+      "url": "https://www.demarcation.org.za/wp-content/uploads/2021/07/Ward_30_Rand_West_City_Local_Municipality.pdf",
+      "section": "Rand West City Local Municipality (GT485), Ward 30 — Etlebeni and Westonaria NU",
+      "retrieved": "2026-08-27"
+    },
+    {
+      "publisher": "Gauteng Provincial Government / Rand West City Local Municipality",
+      "url": "https://cmbinary.gauteng.gov.za/Media?Item=405&Location=%2Fcogta&Type=Documents&path=cogta%2FDocuments%2FMunicipalities+Spatial+Development+Framework%2FRand+West+City+Spatial+Development+Framework.pdf",
+      "section": "Rand West City Spatial Development Framework — Westonaria node and Thabony",
+      "retrieved": "2026-08-27"
+    },
+    {
+      "publisher": "Municipal Demarcation Board",
+      "url": "https://www.demarcation.org.za/wp-content/uploads/2021/07/Ward_17_Rand_West_City_Local_Municipality.pdf",
+      "section": "Rand West City Local Municipality (GT485), Ward 17 — Thabony and Westonaria NU",
+      "retrieved": "2026-08-27"
+    }
+  ],
+  "suburb_names": [
+    "Etlebeni",
+    "Thabony"
+  ]
+}
