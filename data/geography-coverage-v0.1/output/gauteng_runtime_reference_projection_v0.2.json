@@ -7,7 +7,7 @@
     "factual_canonical_geography_sha256": "1fe0e2e3101bd7e459f484b7125dc1ce1f0327104002b184ef0e90d4236b7b7f",
     "factual_canonical_names_sha256": "a87891bc2e4167130d7e5eb649516a34aedaa071278ce8fe25df19f511669b51",
     "carried_projection_v01_sha256": "982ea13cd190a02da5440f122a061713e22bc157ef46f491ce530c5877ff9fc0",
-    "territory_manifest_sha256": "699877250aaebbc47e86dade025824a1e7b689edb3bbc67944f2c632c04dfce2"
+    "territory_manifest_sha256": "f56e852bfb6cad9978046fa439a2bc8e1506de57bf7d3be97bc4d6f2f3584419"
   },
   "rows": [
     {
@@ -1869,6 +1869,361 @@
       ],
       "factual_types": [
         "town"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/brakpan/anzac",
+      "runtime_parent_natural_key": "gauteng/brakpan",
+      "name": "Anzac",
+      "slug": "anzac",
+      "latitude": -26.23333,
+      "longitude": 28.35,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "mixed_odbl_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-2b2042a88d5f8b2918f9"
+      ],
+      "factual_preferred_names": [
+        "Anzac"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/brakpan/brakpan-noord",
+      "runtime_parent_natural_key": "gauteng/brakpan",
+      "name": "Brakpan-Noord",
+      "slug": "brakpan-noord",
+      "latitude": -26.22,
+      "longitude": 28.3802778,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-53fa9d44b0d0dbecb68c"
+      ],
+      "factual_preferred_names": [
+        "Brakpan-Noord"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/brakpan/brenthurst",
+      "runtime_parent_natural_key": "gauteng/brakpan",
+      "name": "Brenthurst",
+      "slug": "brenthurst",
+      "latitude": -26.249532,
+      "longitude": 28.3709,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "mixed_odbl_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-ae3ebfbc393e844d06d2"
+      ],
+      "factual_preferred_names": [
+        "Brenthurst"
+      ],
+      "factual_types": [
+        "locality"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/brakpan/dalpark",
+      "runtime_parent_natural_key": "gauteng/brakpan",
+      "name": "Dalpark",
+      "slug": "dalpark",
+      "latitude": -26.24980555,
+      "longitude": 28.309611099999998,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "mixed_odbl_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-7b1d1c7e1d0ba1e60bbd"
+      ],
+      "factual_preferred_names": [
+        "Dalpark"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/brakpan/dalpark-ext-1",
+      "runtime_parent_natural_key": "gauteng/brakpan",
+      "name": "Dalpark Ext. 1",
+      "slug": "dalpark-ext-1",
+      "latitude": -26.2727237,
+      "longitude": 28.3216408,
+      "searchable_aliases": [
+        "Dalpark Extension 1",
+        "Dalpark Ext 1"
+      ],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-018e4ab1f5aa0fdaa5c9"
+      ],
+      "factual_preferred_names": [
+        "Dalpark Ext. 1"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/brakpan/denneoord",
+      "runtime_parent_natural_key": "gauteng/brakpan",
+      "name": "Denneoord",
+      "slug": "denneoord",
+      "latitude": -26.2611111,
+      "longitude": 28.3591667,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-ea1a5cf9536816a67abf"
+      ],
+      "factual_preferred_names": [
+        "Denneoord"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/brakpan/geluksdal",
+      "runtime_parent_natural_key": "gauteng/brakpan",
+      "name": "Geluksdal",
+      "slug": "geluksdal",
+      "latitude": -26.3405556,
+      "longitude": 28.3616667,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-e31e13913d63004c4485"
+      ],
+      "factual_preferred_names": [
+        "Geluksdal"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/brakpan/helderwyk",
+      "runtime_parent_natural_key": "gauteng/brakpan",
+      "name": "Helderwyk",
+      "slug": "helderwyk",
+      "latitude": -26.2691276,
+      "longitude": 28.310257,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-03ec1845a14271b9991b"
+      ],
+      "factual_preferred_names": [
+        "Helderwyk"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/brakpan/huntingdon",
+      "runtime_parent_natural_key": "gauteng/brakpan",
+      "name": "Huntingdon",
+      "slug": "huntingdon",
+      "latitude": -26.225,
+      "longitude": 28.3836111,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-6e70f3095d5ac49b31e7"
+      ],
+      "factual_preferred_names": [
+        "Huntingdon"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/brakpan/kenleaf",
+      "runtime_parent_natural_key": "gauteng/brakpan",
+      "name": "Kenleaf",
+      "slug": "kenleaf",
+      "latitude": -26.255,
+      "longitude": 28.3522222,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-2b156d1465dbd45990ce"
+      ],
+      "factual_preferred_names": [
+        "Kenleaf"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/brakpan/labore",
+      "runtime_parent_natural_key": "gauteng/brakpan",
+      "name": "Labore",
+      "slug": "labore",
+      "latitude": -26.3344236,
+      "longitude": 28.360184,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-0bc6ec4bbc42a9470352"
+      ],
+      "factual_preferred_names": [
+        "Labore"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/brakpan/larrendale",
+      "runtime_parent_natural_key": "gauteng/brakpan",
+      "name": "Larrendale",
+      "slug": "larrendale",
+      "latitude": -26.2444444,
+      "longitude": 28.3422222,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-f2d59ecde6ffc5996b0f"
+      ],
+      "factual_preferred_names": [
+        "Larrendale"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/brakpan/leachville",
+      "runtime_parent_natural_key": "gauteng/brakpan",
+      "name": "Leachville",
+      "slug": "leachville",
+      "latitude": -26.2316667,
+      "longitude": 28.3344444,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-28a23a6ce0b62338bcdb"
+      ],
+      "factual_preferred_names": [
+        "Leachville"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/brakpan/minnebron",
+      "runtime_parent_natural_key": "gauteng/brakpan",
+      "name": "Minnebron",
+      "slug": "minnebron",
+      "latitude": -26.2777778,
+      "longitude": 28.345,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-c4a0043e5ee67b2ce3d2"
+      ],
+      "factual_preferred_names": [
+        "Minnebron"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/brakpan/sallies-village",
+      "runtime_parent_natural_key": "gauteng/brakpan",
+      "name": "Sallies Village",
+      "slug": "sallies-village",
+      "latitude": -26.2686111,
+      "longitude": 28.3702778,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-95d19f93a8427eaf3fae"
+      ],
+      "factual_preferred_names": [
+        "Sallies Village"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/brakpan/sunair-park",
+      "runtime_parent_natural_key": "gauteng/brakpan",
+      "name": "Sunair Park",
+      "slug": "sunair-park",
+      "latitude": -26.272187199999998,
+      "longitude": 28.346435550000002,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "mixed_odbl_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-4bd7171a6022fd8daa42"
+      ],
+      "factual_preferred_names": [
+        "Sunair Park"
+      ],
+      "factual_types": [
+        "suburb"
       ]
     },
     {
