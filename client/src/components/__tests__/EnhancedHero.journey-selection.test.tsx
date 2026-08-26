@@ -272,6 +272,30 @@ describe('EnhancedHero explicit journey selection', () => {
     expect(setLocation).toHaveBeenCalledWith('/commercial?location=Johannesburg');
   });
 
+  it('routes Plots & Land filters through the canonical Land contract', () => {
+    render(<EnhancedHero activeTab="plot_land" />);
+
+    expect(screen.getByText('Land type')).toBeInTheDocument();
+    expect(screen.getByText('Price range')).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('select-johannesburg'));
+
+    fireEvent.click(screen.getByText('Any land type'));
+    fireEvent.click(screen.getByRole('option', { name: 'Residential Stand' }));
+    fireEvent.click(screen.getByText('Any price'));
+    fireEvent.click(screen.getByRole('option', { name: 'R1m' }));
+    fireEvent.click(screen.getAllByRole('button', { name: 'Search', exact: true })[0]);
+
+    const submittedUrl = new URL(
+      String(setLocation.mock.calls.at(-1)?.[0]),
+      'https://listify.test',
+    );
+    expect(submittedUrl.pathname).toBe('/plots-and-land');
+    expect(submittedUrl.searchParams.get('locationId')).toBe('city:12');
+    expect(submittedUrl.searchParams.get('classification')).toBe('residential_stand');
+    expect(submittedUrl.searchParams.get('maxPrice')).toBe('1000000');
+    expect(submittedUrl.searchParams.get('minBedrooms')).toBeNull();
+  });
+
   it('supports journey-first selection but waits for a canonical location', () => {
     render(<EnhancedHero />);
 
