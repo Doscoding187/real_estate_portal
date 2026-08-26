@@ -749,6 +749,38 @@ for (const probe of WAVE38_LOCALITY_PROBES) {
   );
 }
 
+const WAVE39_IDENTITY_SPECIFIC_PROBES = [
+  {
+    name: 'Van der Westuizenhoogte AH',
+    factualId: 'pl-gp-v01-22ea6b667528c0f84fc6',
+    parentSuffix: 'gauteng/meyerton/van-der-westuizenhoogte-ah',
+  },
+  {
+    name: 'Buyscelia AH',
+    factualId: 'pl-gp-v01-23f928d4673bd505c129',
+    parentSuffix: 'gauteng/meyerton/buyscelia-ah',
+  },
+  {
+    name: 'Suikerbosrant Nature Reserve',
+    factualId: 'pl-gp-v01-91e1d3befe548dd94a53',
+    parentSuffix: 'gauteng/meyerton/suikerbosrant-nature-reserve',
+  },
+  {
+    name: 'Dicksonville',
+    factualId: 'pl-gp-v01-bc4a485702bddab5ea83',
+    parentSuffix: 'gauteng/vereeniging/dicksonville',
+  },
+];
+
+for (const probe of WAVE39_IDENTITY_SPECIFIC_PROBES) {
+  const row = rowsByNaturalKey.get(probe.parentSuffix);
+  check(
+    `wave39 identity-specific edge resolves: ${probe.name}`,
+    row !== undefined && row.factual_location_ids.includes(probe.factualId),
+    row ? `${row.runtime_natural_key}/${row.factual_location_ids.join(',')}` : 'missing',
+  );
+}
+
 const NEGATIVE_PROBES = ['Mamelodi Extension 1', 'Mamelodi Extension 4'];
 for (const probe of NEGATIVE_PROBES) {
   const directHit = resolveByName(probe);

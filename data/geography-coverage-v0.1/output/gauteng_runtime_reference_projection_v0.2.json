@@ -7,7 +7,7 @@
     "factual_canonical_geography_sha256": "1fe0e2e3101bd7e459f484b7125dc1ce1f0327104002b184ef0e90d4236b7b7f",
     "factual_canonical_names_sha256": "a87891bc2e4167130d7e5eb649516a34aedaa071278ce8fe25df19f511669b51",
     "carried_projection_v01_sha256": "982ea13cd190a02da5440f122a061713e22bc157ef46f491ce530c5877ff9fc0",
-    "territory_manifest_sha256": "bac5c3a9881bf43fcd60de9b9be7010e39d1c66f9b21a70d1283d7e716e7e8f5"
+    "territory_manifest_sha256": "1a501e6d1eca0810d79c8db2ce5c6988c1c52f661ee449c1af7c9d7f7f828f22"
   },
   "rows": [
     {
@@ -18126,6 +18126,28 @@
     {
       "runtime_search_scope_kind": "locality",
       "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/meyerton/buyscelia-ah",
+      "runtime_parent_natural_key": "gauteng/meyerton",
+      "name": "Buyscelia AH",
+      "slug": "buyscelia-ah",
+      "latitude": -26.6334188,
+      "longitude": 28.0120922,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-23f928d4673bd505c129"
+      ],
+      "factual_preferred_names": [
+        "Buyscelia AH"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
       "runtime_natural_key": "gauteng/meyerton/eikenhof",
       "runtime_parent_natural_key": "gauteng/meyerton",
       "name": "Eikenhof",
@@ -18346,6 +18368,30 @@
     {
       "runtime_search_scope_kind": "locality",
       "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/meyerton/suikerbosrant-nature-reserve",
+      "runtime_parent_natural_key": "gauteng/meyerton",
+      "name": "Suikerbosrant Nature Reserve",
+      "slug": "suikerbosrant-nature-reserve",
+      "latitude": -26.5244625,
+      "longitude": 28.193579,
+      "searchable_aliases": [
+        "SUIKERBOSRANTNATURERESERVE"
+      ],
+      "publication_status": "provisional",
+      "licensing_classification": "permissive_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-91e1d3befe548dd94a53"
+      ],
+      "factual_preferred_names": [
+        "Suikerbosrant Nature Reserve"
+      ],
+      "factual_types": [
+        "locality"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
       "runtime_natural_key": "gauteng/meyerton/valley-settlements",
       "runtime_parent_natural_key": "gauteng/meyerton",
       "name": "Valley Settlements",
@@ -18367,6 +18413,28 @@
       ],
       "factual_types": [
         "locality"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/meyerton/van-der-westuizenhoogte-ah",
+      "runtime_parent_natural_key": "gauteng/meyerton",
+      "name": "Van der Westuizenhoogte AH",
+      "slug": "van-der-westuizenhoogte-ah",
+      "latitude": -26.6618758,
+      "longitude": 28.0349704,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-22ea6b667528c0f84fc6"
+      ],
+      "factual_preferred_names": [
+        "Van der Westuizenhoogte AH"
+      ],
+      "factual_types": [
+        "suburb"
       ]
     },
     {
@@ -29148,6 +29216,28 @@
       ],
       "factual_preferred_names": [
         "Debonair Park"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/vereeniging/dicksonville",
+      "runtime_parent_natural_key": "gauteng/vereeniging",
+      "name": "Dicksonville",
+      "slug": "dicksonville",
+      "latitude": -26.6683333,
+      "longitude": 27.8822222,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-bc4a485702bddab5ea83"
+      ],
+      "factual_preferred_names": [
+        "Dicksonville"
       ],
       "factual_types": [
         "suburb"

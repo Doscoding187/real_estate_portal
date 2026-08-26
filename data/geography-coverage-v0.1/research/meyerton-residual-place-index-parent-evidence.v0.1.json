@@ -1,0 +1,40 @@
+{
+  "artifact_version": "meyerton-residual-place-index-parent-evidence-v0.1",
+  "town": "Meyerton",
+  "parent_natural_key": "gauteng/meyerton",
+  "administrative_context": "Sedibeng",
+  "evidence_class": "official_municipal_and_magisterial_place_index",
+  "source": {
+    "publisher": "Midvaal Local Municipality",
+    "url": "https://www.midvaal.gov.za/2026-2027-midvaal-budget-meeting-review-public-meetings-for-midvaal-local-municipality/",
+    "section": "2026/2027 Midvaal budget meeting review — Ward 1 Buyscelia area list and Midvaal municipality location",
+    "retrieved": "2026-08-27",
+    "licence_note": "Official municipal area and service-delivery source used for locality relationship assertions; no prose or geometry is copied."
+  },
+  "supporting_sources": [
+    {
+      "publisher": "Office of the Chief Justice, Department of Justice and Constitutional Development",
+      "url": "https://www.justice.gov.za/maps/areas-gp.html",
+      "section": "Gauteng: Find a court in your area — Buyscella AH, Suikerbosrand Nature Reserve, and Van Der Westhuizenhoogte AH listed under Midvaal Sub District / Meyerton Branch Court",
+      "retrieved": "2026-08-27"
+    }
+  ],
+  "source_name_variants": {
+    "Buyscella AH": "Buyscelia AH",
+    "Van Der Westhuizenhoogte AH": "Van der Westuizenhoogte AH"
+  },
+  "identity_specific_records": [
+    {
+      "factual_location_id": "pl-gp-v01-22ea6b667528c0f84fc6",
+      "preferred_name": "Van der Westuizenhoogte AH"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-23f928d4673bd505c129",
+      "preferred_name": "Buyscelia AH"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-91e1d3befe548dd94a53",
+      "preferred_name": "Suikerbosrant Nature Reserve"
+    }
+  ]
+}
