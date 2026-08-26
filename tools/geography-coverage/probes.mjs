@@ -618,6 +618,7 @@ const WAVE26_LOCALITY_PROBES = [
   { name: 'Tenacres AH', parentSuffix: 'gauteng/randfontein/tenacres-ah' },
   { name: 'Modderbee', parentSuffix: 'gauteng/daveyton/modderbee' },
   { name: 'Duncanville', parentSuffix: 'gauteng/vereeniging/duncanville' },
+  { name: 'Bergsig', parentSuffix: 'gauteng/heidelberg/bergsig' },
 ];
 
 for (const probe of WAVE26_LOCALITY_PROBES) {
