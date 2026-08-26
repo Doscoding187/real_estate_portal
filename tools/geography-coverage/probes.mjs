@@ -365,6 +365,61 @@ for (const probe of WAVE12_LOCALITY_PROBES) {
   );
 }
 
+const WAVE13_LOCALITY_PROBES = [
+  { name: 'Southcrest', parentSuffix: 'gauteng/alberton/southcrest' },
+  { name: 'Berton Park', parentSuffix: 'gauteng/boksburg/berton-park' },
+  { name: 'Lilianton', parentSuffix: 'gauteng/boksburg/lilianton' },
+  { name: 'Harmelia', parentSuffix: 'gauteng/germiston/harmelia' },
+  { name: 'Highway Gardens', parentSuffix: 'gauteng/germiston/highway-gardens' },
+  { name: 'Meadowbrook', parentSuffix: 'gauteng/germiston/meadowbrook' },
+  { name: 'Sunnyrock', parentSuffix: 'gauteng/germiston/sunnyrock' },
+  { name: 'Sunnyridge', parentSuffix: 'gauteng/germiston/sunnyridge' },
+  { name: 'Solheim', parentSuffix: 'gauteng/germiston/solheim' },
+  { name: "Fisher's Hill", parentSuffix: 'gauteng/germiston/fisher-s-hill' },
+  { name: 'Klopperpark', parentSuffix: 'gauteng/germiston/klopperpark' },
+  { name: 'Activia Park', parentSuffix: 'gauteng/germiston/activia-park' },
+  { name: 'Kruinhof', parentSuffix: 'gauteng/germiston/kruinhof' },
+  { name: 'Elandshaven', parentSuffix: 'gauteng/germiston/elandshaven' },
+  { name: 'Albermarle', parentSuffix: 'gauteng/germiston/albermarle' },
+  { name: 'Dinwiddie', parentSuffix: 'gauteng/germiston/dinwiddie' },
+  { name: 'Union', parentSuffix: 'gauteng/germiston/union' },
+  { name: 'Cilvale AH', parentSuffix: 'gauteng/kempton-park/cilvale-ah' },
+  { name: 'Bapsfontein', parentSuffix: 'gauteng/kempton-park/bapsfontein' },
+  { name: 'Selcourt', parentSuffix: 'gauteng/springs/selcourt' },
+  { name: 'Krugersrus', parentSuffix: 'gauteng/springs/krugersrus' },
+  { name: 'Presidentsdam', parentSuffix: 'gauteng/springs/presidentsdam' },
+  { name: 'Moshoeshoe', parentSuffix: 'gauteng/katlehong/moshoeshoe' },
+  { name: 'Monise', parentSuffix: 'gauteng/katlehong/monise' },
+  { name: 'Moseleki', parentSuffix: 'gauteng/katlehong/moseleki' },
+  { name: 'Motsamai', parentSuffix: 'gauteng/katlehong/motsamai' },
+  { name: 'Radebe', parentSuffix: 'gauteng/katlehong/radebe' },
+  { name: 'Motluong', parentSuffix: 'gauteng/katlehong/motluong' },
+  { name: 'Mngadi', parentSuffix: 'gauteng/katlehong/mngadi' },
+  { name: 'Magagula', parentSuffix: 'gauteng/katlehong/magagula' },
+  { name: 'Nhlapo', parentSuffix: 'gauteng/katlehong/nhlapo' },
+  { name: 'Tsongweni', parentSuffix: 'gauteng/katlehong/tsongweni' },
+  { name: 'Tsolo', parentSuffix: 'gauteng/katlehong/tsolo' },
+  { name: 'Skozana', parentSuffix: 'gauteng/katlehong/skozana' },
+  { name: 'Ncala', parentSuffix: 'gauteng/katlehong/ncala' },
+  { name: 'Moseleki East', parentSuffix: 'gauteng/katlehong/moseleki-east' },
+  { name: 'Maphanga', parentSuffix: 'gauteng/katlehong/maphanga' },
+  { name: 'Twala', parentSuffix: 'gauteng/katlehong/twala' },
+  { name: 'Leondale', parentSuffix: 'gauteng/katlehong/leondale' },
+  { name: 'Phake', parentSuffix: 'gauteng/katlehong/phake' },
+  { name: 'Woodmere', parentSuffix: 'gauteng/katlehong/woodmere' },
+  { name: 'Zonkizizwe', parentSuffix: 'gauteng/katlehong/zonkizizwe' },
+  { name: 'Moleleki', parentSuffix: 'gauteng/katlehong/moleleki' },
+];
+
+for (const probe of WAVE13_LOCALITY_PROBES) {
+  const row = resolveByName(probe.name);
+  check(
+    `wave13 researched edge resolves: ${probe.name}`,
+    row !== null && row.runtime_natural_key === probe.parentSuffix,
+    row ? row.runtime_natural_key : 'missing',
+  );
+}
+
 const NEGATIVE_PROBES = ['Mamelodi Extension 1', 'Mamelodi Extension 4'];
 for (const probe of NEGATIVE_PROBES) {
   const directHit = resolveByName(probe);

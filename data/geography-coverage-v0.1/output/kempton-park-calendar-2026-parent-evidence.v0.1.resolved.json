@@ -9,7 +9,7 @@
     "retrieved": "2026-08-26",
     "licence_note": "Official municipal service calendar used for locality membership assertions; no prose or geometry is copied."
   },
-  "edge_count": 5,
+  "edge_count": 7,
   "edges": [
     {
       "factual_location_id": "pl-gp-v01-0dc501e9dbc9167833b1",
@@ -22,6 +22,14 @@
     {
       "factual_location_id": "pl-gp-v01-180a67a1499be34f8f82",
       "preferred_name": "Cress Lawn",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/kempton-park",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/KEMPTON-PARK_Calender-2026.pdf#2026%20Kempton%20Park%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-46ff0ce45643433e11fa",
+      "preferred_name": "Cilvale AH",
       "factual_type": "suburb",
       "parent_natural_key": "gauteng/kempton-park",
       "evidence_class": "official_municipal_refuse_collection_area_list",
@@ -44,6 +52,14 @@
       "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/KEMPTON-PARK_Calender-2026.pdf#2026%20Kempton%20Park%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
     },
     {
+      "factual_location_id": "pl-gp-v01-b832979688d85121edfc",
+      "preferred_name": "Bapsfontein",
+      "factual_type": "village",
+      "parent_natural_key": "gauteng/kempton-park",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/KEMPTON-PARK_Calender-2026.pdf#2026%20Kempton%20Park%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
+    },
+    {
       "factual_location_id": "pl-gp-v01-e605e7d5ec3a49bfb932",
       "preferred_name": "Chloorkop",
       "factual_type": "suburb",
@@ -53,8 +69,39 @@
     }
   ],
   "diagnostics": {
-    "researched_names": 5,
-    "matched_already_projected": [],
+    "researched_names": 7,
+    "matched_already_projected": [
+      {
+        "name": "Chloorkop",
+        "factual_location_id": "pl-gp-v01-e605e7d5ec3a49bfb932",
+        "existing_parent_natural_key": "gauteng/kempton-park",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Cress Lawn",
+        "factual_location_id": "pl-gp-v01-180a67a1499be34f8f82",
+        "existing_parent_natural_key": "gauteng/kempton-park",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Estherpark",
+        "factual_location_id": "pl-gp-v01-0dc501e9dbc9167833b1",
+        "existing_parent_natural_key": "gauteng/kempton-park",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Glenmarais",
+        "factual_location_id": "pl-gp-v01-84b716e3d4f7caaffa83",
+        "existing_parent_natural_key": "gauteng/kempton-park",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Nimrodpark",
+        "factual_location_id": "pl-gp-v01-6ea4794004f477f70e20",
+        "existing_parent_natural_key": "gauteng/kempton-park",
+        "parent_matches_evidence": true
+      }
+    ],
     "names_not_in_canonical_layer": []
   }
 }

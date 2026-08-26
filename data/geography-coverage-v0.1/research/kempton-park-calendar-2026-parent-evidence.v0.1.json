@@ -16,13 +16,17 @@
     "Cress Lawn": "Cresslawn",
     "Estherpark": "Esther Park",
     "Glenmarais": "Glen Marais",
-    "Nimrodpark": "Nimrod Park"
+    "Nimrodpark": "Nimrod Park",
+    "Cilvale AH": "Cilvale AH",
+    "Bapsfontein": "Bapsfontein"
   },
   "suburb_names": [
     "Chloorkop",
     "Cress Lawn",
     "Estherpark",
     "Glenmarais",
-    "Nimrodpark"
+    "Nimrodpark",
+    "Cilvale AH",
+    "Bapsfontein"
   ]
 }

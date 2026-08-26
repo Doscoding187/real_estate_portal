@@ -9,11 +9,19 @@
     "retrieved": "2026-08-26",
     "licence_note": "Official municipal service calendar used for locality membership assertions; no prose or geometry is copied."
   },
-  "edge_count": 19,
+  "edge_count": 33,
   "edges": [
     {
       "factual_location_id": "pl-gp-v01-0c338ea99d8f9585a4ea",
       "preferred_name": "Symhurst",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/germiston",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/GERMISTON_Calender-2026U.pdf#2026%20Germiston-labelled%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-13e742c3bf5463c3f783",
+      "preferred_name": "Meadowbrook",
       "factual_type": "suburb",
       "parent_natural_key": "gauteng/germiston",
       "evidence_class": "official_municipal_refuse_collection_area_list",
@@ -44,6 +52,38 @@
       "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/GERMISTON_Calender-2026U.pdf#2026%20Germiston-labelled%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
     },
     {
+      "factual_location_id": "pl-gp-v01-3d17a0f07c77084a26d1",
+      "preferred_name": "Sunnyrock",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/germiston",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/GERMISTON_Calender-2026U.pdf#2026%20Germiston-labelled%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-44607b9fe4339c8366eb",
+      "preferred_name": "Solheim",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/germiston",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/GERMISTON_Calender-2026U.pdf#2026%20Germiston-labelled%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-64d7364c0657e72cf22d",
+      "preferred_name": "Albermarle",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/germiston",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/GERMISTON_Calender-2026U.pdf#2026%20Germiston-labelled%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-74ae52ccf3667d814d97",
+      "preferred_name": "Fisher's Hill",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/germiston",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/GERMISTON_Calender-2026U.pdf#2026%20Germiston-labelled%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
+    },
+    {
       "factual_location_id": "pl-gp-v01-75fcad49a02056389f58",
       "preferred_name": "Knights",
       "factual_type": "suburb",
@@ -60,6 +100,14 @@
       "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/GERMISTON_Calender-2026U.pdf#2026%20Germiston-labelled%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
     },
     {
+      "factual_location_id": "pl-gp-v01-7da61340c000ae49ceda",
+      "preferred_name": "Activia Park",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/germiston",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/GERMISTON_Calender-2026U.pdf#2026%20Germiston-labelled%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
+    },
+    {
       "factual_location_id": "pl-gp-v01-85981e52e019845127e1",
       "preferred_name": "Castleview",
       "factual_type": "suburb",
@@ -68,8 +116,24 @@
       "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/GERMISTON_Calender-2026U.pdf#2026%20Germiston-labelled%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
     },
     {
+      "factual_location_id": "pl-gp-v01-8df2e5639ac0efb8edf1",
+      "preferred_name": "Elandshaven",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/germiston",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/GERMISTON_Calender-2026U.pdf#2026%20Germiston-labelled%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
+    },
+    {
       "factual_location_id": "pl-gp-v01-8ee7d7e2b59d2c65f2b1",
       "preferred_name": "Marlands",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/germiston",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/GERMISTON_Calender-2026U.pdf#2026%20Germiston-labelled%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-94e897dd4a7a17b2334f",
+      "preferred_name": "Highway Gardens",
       "factual_type": "suburb",
       "parent_natural_key": "gauteng/germiston",
       "evidence_class": "official_municipal_refuse_collection_area_list",
@@ -94,6 +158,30 @@
     {
       "factual_location_id": "pl-gp-v01-997635fcb85f8b67dc0d",
       "preferred_name": "Germiston South",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/germiston",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/GERMISTON_Calender-2026U.pdf#2026%20Germiston-labelled%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-a0a713321f90d76062a9",
+      "preferred_name": "Klopperpark",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/germiston",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/GERMISTON_Calender-2026U.pdf#2026%20Germiston-labelled%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-a9978ba77af281c26802",
+      "preferred_name": "Harmelia",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/germiston",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/GERMISTON_Calender-2026U.pdf#2026%20Germiston-labelled%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-ab0e7425119fba1f04f0",
+      "preferred_name": "Dinwiddie",
       "factual_type": "suburb",
       "parent_natural_key": "gauteng/germiston",
       "evidence_class": "official_municipal_refuse_collection_area_list",
@@ -148,6 +236,30 @@
       "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/GERMISTON_Calender-2026U.pdf#2026%20Germiston-labelled%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
     },
     {
+      "factual_location_id": "pl-gp-v01-e2e22be34ef6910908f2",
+      "preferred_name": "Kruinhof",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/germiston",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/GERMISTON_Calender-2026U.pdf#2026%20Germiston-labelled%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-e37117013122a7876da1",
+      "preferred_name": "Sunnyridge",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/germiston",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/GERMISTON_Calender-2026U.pdf#2026%20Germiston-labelled%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-e63c66fdbe9017e232d2",
+      "preferred_name": "Union",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/germiston",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/GERMISTON_Calender-2026U.pdf#2026%20Germiston-labelled%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
+    },
+    {
       "factual_location_id": "pl-gp-v01-f350fa296eb6c63a03a6",
       "preferred_name": "Wychwood",
       "factual_type": "suburb",
@@ -165,8 +277,123 @@
     }
   ],
   "diagnostics": {
-    "researched_names": 19,
-    "matched_already_projected": [],
+    "researched_names": 33,
+    "matched_already_projected": [
+      {
+        "name": "Barvallen",
+        "factual_location_id": "pl-gp-v01-b477a2d207c5b92524d7",
+        "existing_parent_natural_key": "gauteng/germiston",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Castleview",
+        "factual_location_id": "pl-gp-v01-85981e52e019845127e1",
+        "existing_parent_natural_key": "gauteng/germiston",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Dawnview",
+        "factual_location_id": "pl-gp-v01-286403934f583d08b9ae",
+        "existing_parent_natural_key": "gauteng/germiston",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Delville",
+        "factual_location_id": "pl-gp-v01-fbfbe03887ea7744c34a",
+        "existing_parent_natural_key": "gauteng/germiston",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Estera",
+        "factual_location_id": "pl-gp-v01-c34aea72ad14b4f5230d",
+        "existing_parent_natural_key": "gauteng/germiston",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Georgetown",
+        "factual_location_id": "pl-gp-v01-c691ad5d64ad92be8505",
+        "existing_parent_natural_key": "gauteng/germiston",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Gerdview",
+        "factual_location_id": "pl-gp-v01-2b667677baa285a98b2f",
+        "existing_parent_natural_key": "gauteng/germiston",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Germiston South",
+        "factual_location_id": "pl-gp-v01-997635fcb85f8b67dc0d",
+        "existing_parent_natural_key": "gauteng/germiston",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Homestead",
+        "factual_location_id": "pl-gp-v01-b534bfc58e474d9bfc0c",
+        "existing_parent_natural_key": "gauteng/germiston",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Klippoortje A.L.",
+        "factual_location_id": "pl-gp-v01-dd1b2cb99a0fe7073a2f",
+        "existing_parent_natural_key": "gauteng/germiston",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Knights",
+        "factual_location_id": "pl-gp-v01-75fcad49a02056389f58",
+        "existing_parent_natural_key": "gauteng/germiston",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Lambton",
+        "factual_location_id": "pl-gp-v01-abafe786bb4f9a272b64",
+        "existing_parent_natural_key": "gauteng/germiston",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Lambton Gardens",
+        "factual_location_id": "pl-gp-v01-967a42004d8b0fed522f",
+        "existing_parent_natural_key": "gauteng/germiston",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Marlands",
+        "factual_location_id": "pl-gp-v01-8ee7d7e2b59d2c65f2b1",
+        "existing_parent_natural_key": "gauteng/germiston",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Parkhill Gardens",
+        "factual_location_id": "pl-gp-v01-98bf4ab0140586324482",
+        "existing_parent_natural_key": "gauteng/germiston",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Primrose Hill",
+        "factual_location_id": "pl-gp-v01-31395b4a67b2eba3faca",
+        "existing_parent_natural_key": "gauteng/germiston",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Symhurst",
+        "factual_location_id": "pl-gp-v01-0c338ea99d8f9585a4ea",
+        "existing_parent_natural_key": "gauteng/germiston",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Tedstoneville",
+        "factual_location_id": "pl-gp-v01-77361eac3b08d4c88786",
+        "existing_parent_natural_key": "gauteng/germiston",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Wychwood",
+        "factual_location_id": "pl-gp-v01-f350fa296eb6c63a03a6",
+        "existing_parent_natural_key": "gauteng/germiston",
+        "parent_matches_evidence": true
+      }
+    ],
     "names_not_in_canonical_layer": []
   }
 }

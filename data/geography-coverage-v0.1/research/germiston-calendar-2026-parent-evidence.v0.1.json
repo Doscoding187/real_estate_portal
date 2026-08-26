@@ -14,7 +14,10 @@
   "source_name_variants": {
     "Germiston South": "South Germiston",
     "Klippoortje A.L.": "Klippoortjie Agriculture",
-    "Tedstoneville": "Tedstonville"
+    "Tedstoneville": "Tedstonville",
+    "Sunnyrocks": "Sunnyrock",
+    "Fisherhill": "Fisher's Hill",
+    "Klopper Park": "Klopperpark"
   },
   "suburb_names": [
     "Barvallen",
@@ -35,6 +38,20 @@
     "Primrose Hill",
     "Symhurst",
     "Tedstoneville",
-    "Wychwood"
+    "Wychwood",
+    "Harmelia",
+    "Highway Gardens",
+    "Meadowbrook",
+    "Sunnyrock",
+    "Sunnyridge",
+    "Solheim",
+    "Fisher's Hill",
+    "Klopperpark",
+    "Activia Park",
+    "Kruinhof",
+    "Elandshaven",
+    "Albermarle",
+    "Dinwiddie",
+    "Union"
   ]
 }

@@ -1,0 +1,46 @@
+{
+  "artifact_version": "katlehong-calendar-2026-parent-evidence-v0.1",
+  "town": "Katlehong",
+  "parent_natural_key": "gauteng/katlehong",
+  "administrative_context": "Ekurhuleni",
+  "evidence_class": "official_municipal_refuse_collection_area_list",
+  "source": {
+    "publisher": "City of Ekurhuleni",
+    "url": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/GERMISTON_Calender-2026U.pdf",
+    "section": "2026–2027 Germiston/Katlehong refuse-removal programme: KATLEHONG-labelled areas",
+    "retrieved": "2026-08-26",
+    "licence_note": "Official municipal service calendar used for locality membership assertions; no prose or geometry is copied."
+  },
+  "source_name_variants": {
+    "Mashoeshoe/Makula": "Moshoeshoe",
+    "Motloung": "Motluong",
+    "Magagula Heights": "Magagula",
+    "Moseleke East": "Moseleki East",
+    "Tshongweni": "Tsongweni",
+    "Phaake": "Phake",
+    "Woodemere": "Woodmere"
+  },
+  "suburb_names": [
+    "Moshoeshoe",
+    "Monise",
+    "Moseleki",
+    "Motsamai",
+    "Radebe",
+    "Motluong",
+    "Mngadi",
+    "Magagula",
+    "Moleleki",
+    "Nhlapo",
+    "Tsongweni",
+    "Tsolo",
+    "Skozana",
+    "Ncala",
+    "Moseleki East",
+    "Maphanga",
+    "Twala",
+    "Leondale",
+    "Phake",
+    "Woodmere",
+    "Zonkizizwe"
+  ]
+}

@@ -7,7 +7,7 @@
     "factual_canonical_geography_sha256": "1fe0e2e3101bd7e459f484b7125dc1ce1f0327104002b184ef0e90d4236b7b7f",
     "factual_canonical_names_sha256": "a87891bc2e4167130d7e5eb649516a34aedaa071278ce8fe25df19f511669b51",
     "carried_projection_v01_sha256": "982ea13cd190a02da5440f122a061713e22bc157ef46f491ce530c5877ff9fc0",
-    "territory_manifest_sha256": "c70ad8beb76b31fc3790d49e7f35b8012e75fc530c79211ffaf7bbef1c407078"
+    "territory_manifest_sha256": "c2432f182fb1fffb187523bf2c64a2e72b4eca1c5c018c6a07048db57b314f8e"
   },
   "rows": [
     {
@@ -241,6 +241,28 @@
       ],
       "factual_preferred_names": [
         "Randhart"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/alberton/southcrest",
+      "runtime_parent_natural_key": "gauteng/alberton",
+      "name": "Southcrest",
+      "slug": "southcrest",
+      "latitude": -26.2544444,
+      "longitude": 28.1075,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-489aeed884f371206ee3"
+      ],
+      "factual_preferred_names": [
+        "Southcrest"
       ],
       "factual_types": [
         "suburb"
@@ -1459,6 +1481,28 @@
     {
       "runtime_search_scope_kind": "locality",
       "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/boksburg/berton-park",
+      "runtime_parent_natural_key": "gauteng/boksburg",
+      "name": "Berton Park",
+      "slug": "berton-park",
+      "latitude": -26.1919444,
+      "longitude": 28.2066667,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-bb1cae2d3335d65678c7"
+      ],
+      "factual_preferred_names": [
+        "Berton Park"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
       "runtime_natural_key": "gauteng/boksburg/beyerspark",
       "runtime_parent_natural_key": "gauteng/boksburg",
       "name": "Beyerspark",
@@ -1847,6 +1891,28 @@
       ],
       "factual_preferred_names": [
         "Libradene"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/boksburg/lilianton",
+      "runtime_parent_natural_key": "gauteng/boksburg",
+      "name": "Lilianton",
+      "slug": "lilianton",
+      "latitude": -26.1922007,
+      "longitude": 28.2130906,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-fb006a056aafeaf678da"
+      ],
+      "factual_preferred_names": [
+        "Lilianton"
       ],
       "factual_types": [
         "suburb"
@@ -4267,6 +4333,50 @@
     {
       "runtime_search_scope_kind": "locality",
       "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/germiston/activia-park",
+      "runtime_parent_natural_key": "gauteng/germiston",
+      "name": "Activia Park",
+      "slug": "activia-park",
+      "latitude": -26.1680556,
+      "longitude": 28.1886111,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-7da61340c000ae49ceda"
+      ],
+      "factual_preferred_names": [
+        "Activia Park"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/germiston/albermarle",
+      "runtime_parent_natural_key": "gauteng/germiston",
+      "name": "Albermarle",
+      "slug": "albermarle",
+      "latitude": -26.2611111,
+      "longitude": 28.1555556,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-64d7364c0657e72cf22d"
+      ],
+      "factual_preferred_names": [
+        "Albermarle"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
       "runtime_natural_key": "gauteng/germiston/barvallen",
       "runtime_parent_natural_key": "gauteng/germiston",
       "name": "Barvallen",
@@ -4355,6 +4465,50 @@
     {
       "runtime_search_scope_kind": "locality",
       "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/germiston/dinwiddie",
+      "runtime_parent_natural_key": "gauteng/germiston",
+      "name": "Dinwiddie",
+      "slug": "dinwiddie",
+      "latitude": -26.2730556,
+      "longitude": 28.1552778,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-ab0e7425119fba1f04f0"
+      ],
+      "factual_preferred_names": [
+        "Dinwiddie"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/germiston/elandshaven",
+      "runtime_parent_natural_key": "gauteng/germiston",
+      "name": "Elandshaven",
+      "slug": "elandshaven",
+      "latitude": -26.2486111,
+      "longitude": 28.1280556,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-8df2e5639ac0efb8edf1"
+      ],
+      "factual_preferred_names": [
+        "Elandshaven"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
       "runtime_natural_key": "gauteng/germiston/estera",
       "runtime_parent_natural_key": "gauteng/germiston",
       "name": "Estera",
@@ -4369,6 +4523,28 @@
       ],
       "factual_preferred_names": [
         "Estera"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/germiston/fisher-s-hill",
+      "runtime_parent_natural_key": "gauteng/germiston",
+      "name": "Fisher's Hill",
+      "slug": "fisher-s-hill",
+      "latitude": -26.1783333,
+      "longitude": 28.165,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-74ae52ccf3667d814d97"
+      ],
+      "factual_preferred_names": [
+        "Fisher's Hill"
       ],
       "factual_types": [
         "suburb"
@@ -4443,6 +4619,50 @@
     {
       "runtime_search_scope_kind": "locality",
       "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/germiston/harmelia",
+      "runtime_parent_natural_key": "gauteng/germiston",
+      "name": "Harmelia",
+      "slug": "harmelia",
+      "latitude": -26.1386111,
+      "longitude": 28.1897222,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-a9978ba77af281c26802"
+      ],
+      "factual_preferred_names": [
+        "Harmelia"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/germiston/highway-gardens",
+      "runtime_parent_natural_key": "gauteng/germiston",
+      "name": "Highway Gardens",
+      "slug": "highway-gardens",
+      "latitude": -26.141873349999997,
+      "longitude": 28.174464999999998,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "mixed_odbl_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-94e897dd4a7a17b2334f"
+      ],
+      "factual_preferred_names": [
+        "Highway Gardens"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
       "runtime_natural_key": "gauteng/germiston/homestead",
       "runtime_parent_natural_key": "gauteng/germiston",
       "name": "Homestead",
@@ -4487,6 +4707,28 @@
     {
       "runtime_search_scope_kind": "locality",
       "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/germiston/klopperpark",
+      "runtime_parent_natural_key": "gauteng/germiston",
+      "name": "Klopperpark",
+      "slug": "klopperpark",
+      "latitude": -26.1455556,
+      "longitude": 28.1952778,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-a0a713321f90d76062a9"
+      ],
+      "factual_preferred_names": [
+        "Klopperpark"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
       "runtime_natural_key": "gauteng/germiston/knights",
       "runtime_parent_natural_key": "gauteng/germiston",
       "name": "Knights",
@@ -4501,6 +4743,28 @@
       ],
       "factual_preferred_names": [
         "Knights"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/germiston/kruinhof",
+      "runtime_parent_natural_key": "gauteng/germiston",
+      "name": "Kruinhof",
+      "slug": "kruinhof",
+      "latitude": -26.1613889,
+      "longitude": 28.1988889,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-e2e22be34ef6910908f2"
+      ],
+      "factual_preferred_names": [
+        "Kruinhof"
       ],
       "factual_types": [
         "suburb"
@@ -4575,6 +4839,28 @@
     {
       "runtime_search_scope_kind": "locality",
       "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/germiston/meadowbrook",
+      "runtime_parent_natural_key": "gauteng/germiston",
+      "name": "Meadowbrook",
+      "slug": "meadowbrook",
+      "latitude": -26.1613139,
+      "longitude": 28.16104335,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "mixed_odbl_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-13e742c3bf5463c3f783"
+      ],
+      "factual_preferred_names": [
+        "Meadowbrook"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
       "runtime_natural_key": "gauteng/germiston/parkhill-gardens",
       "runtime_parent_natural_key": "gauteng/germiston",
       "name": "Parkhill Gardens",
@@ -4619,6 +4905,72 @@
     {
       "runtime_search_scope_kind": "locality",
       "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/germiston/solheim",
+      "runtime_parent_natural_key": "gauteng/germiston",
+      "name": "Solheim",
+      "slug": "solheim",
+      "latitude": -26.1758333,
+      "longitude": 28.1647222,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-44607b9fe4339c8366eb"
+      ],
+      "factual_preferred_names": [
+        "Solheim"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/germiston/sunnyridge",
+      "runtime_parent_natural_key": "gauteng/germiston",
+      "name": "Sunnyridge",
+      "slug": "sunnyridge",
+      "latitude": -26.17,
+      "longitude": 28.1772222,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-e37117013122a7876da1"
+      ],
+      "factual_preferred_names": [
+        "Sunnyridge"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/germiston/sunnyrock",
+      "runtime_parent_natural_key": "gauteng/germiston",
+      "name": "Sunnyrock",
+      "slug": "sunnyrock",
+      "latitude": -26.1663889,
+      "longitude": 28.1769444,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-3d17a0f07c77084a26d1"
+      ],
+      "factual_preferred_names": [
+        "Sunnyrock"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
       "runtime_natural_key": "gauteng/germiston/symhurst",
       "runtime_parent_natural_key": "gauteng/germiston",
       "name": "Symhurst",
@@ -4655,6 +5007,28 @@
       ],
       "factual_preferred_names": [
         "Tedstoneville"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/germiston/union",
+      "runtime_parent_natural_key": "gauteng/germiston",
+      "name": "Union",
+      "slug": "union",
+      "latitude": -26.27099,
+      "longitude": 28.162217,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "mixed_odbl_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-e63c66fdbe9017e232d2"
+      ],
+      "factual_preferred_names": [
+        "Union"
       ],
       "factual_types": [
         "suburb"
@@ -13956,6 +14330,468 @@
       ]
     },
     {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/katlehong/leondale",
+      "runtime_parent_natural_key": "gauteng/katlehong",
+      "name": "Leondale",
+      "slug": "leondale",
+      "latitude": -26.30388945,
+      "longitude": 28.18361055,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "mixed_odbl_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-9613c5c3b357974f77a2"
+      ],
+      "factual_preferred_names": [
+        "Leondale"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/katlehong/magagula",
+      "runtime_parent_natural_key": "gauteng/katlehong",
+      "name": "Magagula",
+      "slug": "magagula",
+      "latitude": -26.4219444,
+      "longitude": 28.1983333,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-4029c5e4963259c5779e"
+      ],
+      "factual_preferred_names": [
+        "Magagula"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/katlehong/maphanga",
+      "runtime_parent_natural_key": "gauteng/katlehong",
+      "name": "Maphanga",
+      "slug": "maphanga",
+      "latitude": -26.3175,
+      "longitude": 28.1477778,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-ba9f1f5d8c006a5daf0c"
+      ],
+      "factual_preferred_names": [
+        "Maphanga"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/katlehong/mngadi",
+      "runtime_parent_natural_key": "gauteng/katlehong",
+      "name": "Mngadi",
+      "slug": "mngadi",
+      "latitude": -26.35967335,
+      "longitude": 28.147408900000002,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "mixed_odbl_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-3f2ac5177dee210fe3af"
+      ],
+      "factual_preferred_names": [
+        "Mngadi"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/katlehong/moleleki",
+      "runtime_parent_natural_key": "gauteng/katlehong",
+      "name": "Moleleki",
+      "slug": "moleleki",
+      "latitude": -26.383232800000002,
+      "longitude": 28.17559335,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "mixed_odbl_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-e03be638e80780bda096"
+      ],
+      "factual_preferred_names": [
+        "Moleleki"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/katlehong/monise",
+      "runtime_parent_natural_key": "gauteng/katlehong",
+      "name": "Monise",
+      "slug": "monise",
+      "latitude": -26.3552778,
+      "longitude": 28.1580556,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-18cd4722057c709365e4"
+      ],
+      "factual_preferred_names": [
+        "Monise"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/katlehong/moseleki",
+      "runtime_parent_natural_key": "gauteng/katlehong",
+      "name": "Moseleki",
+      "slug": "moseleki",
+      "latitude": -26.3472222,
+      "longitude": 28.1591667,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-197ef259d2484199c178"
+      ],
+      "factual_preferred_names": [
+        "Moseleki"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/katlehong/moseleki-east",
+      "runtime_parent_natural_key": "gauteng/katlehong",
+      "name": "Moseleki East",
+      "slug": "moseleki-east",
+      "latitude": -26.3508333,
+      "longitude": 28.165,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-b3ecf7a7bb0352a095af"
+      ],
+      "factual_preferred_names": [
+        "Moseleki East"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/katlehong/moshoeshoe",
+      "runtime_parent_natural_key": "gauteng/katlehong",
+      "name": "Moshoeshoe",
+      "slug": "moshoeshoe",
+      "latitude": -26.3194444,
+      "longitude": 28.1591667,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-09fe0e1c02680a5705ed"
+      ],
+      "factual_preferred_names": [
+        "Moshoeshoe"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/katlehong/motluong",
+      "runtime_parent_natural_key": "gauteng/katlehong",
+      "name": "Motluong",
+      "slug": "motluong",
+      "latitude": -26.3147222,
+      "longitude": 28.1602778,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-3d61fbf5ce1c8417f6c9"
+      ],
+      "factual_preferred_names": [
+        "Motluong"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/katlehong/motsamai",
+      "runtime_parent_natural_key": "gauteng/katlehong",
+      "name": "Motsamai",
+      "slug": "motsamai",
+      "latitude": -26.3277778,
+      "longitude": 28.1602778,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-2109e0b63e8244df39a8"
+      ],
+      "factual_preferred_names": [
+        "Motsamai"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/katlehong/ncala",
+      "runtime_parent_natural_key": "gauteng/katlehong",
+      "name": "Ncala",
+      "slug": "ncala",
+      "latitude": -26.3422222,
+      "longitude": 28.1472222,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-87ca2000cc6cdfb80b90"
+      ],
+      "factual_preferred_names": [
+        "Ncala"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/katlehong/nhlapo",
+      "runtime_parent_natural_key": "gauteng/katlehong",
+      "name": "Nhlapo",
+      "slug": "nhlapo",
+      "latitude": -26.3116667,
+      "longitude": 28.1508333,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-583d7255dc1c1b6ad3f0"
+      ],
+      "factual_preferred_names": [
+        "Nhlapo"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/katlehong/phake",
+      "runtime_parent_natural_key": "gauteng/katlehong",
+      "name": "Phake",
+      "slug": "phake",
+      "latitude": -26.335,
+      "longitude": 28.1583333,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-ff865f85be50c4e5acbb"
+      ],
+      "factual_preferred_names": [
+        "Phake"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/katlehong/radebe",
+      "runtime_parent_natural_key": "gauteng/katlehong",
+      "name": "Radebe",
+      "slug": "radebe",
+      "latitude": -26.3535872,
+      "longitude": 28.147260000000003,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "mixed_odbl_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-3174a4d1662daa682c8e"
+      ],
+      "factual_preferred_names": [
+        "Radebe"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/katlehong/skozana",
+      "runtime_parent_natural_key": "gauteng/katlehong",
+      "name": "Skozana",
+      "slug": "skozana",
+      "latitude": -26.3238889,
+      "longitude": 28.1513889,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-7b181d4b5cbb62a8d912"
+      ],
+      "factual_preferred_names": [
+        "Skozana"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/katlehong/tsolo",
+      "runtime_parent_natural_key": "gauteng/katlehong",
+      "name": "Tsolo",
+      "slug": "tsolo",
+      "latitude": -26.3413889,
+      "longitude": 28.1572222,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-68ae30952771a5f0798a"
+      ],
+      "factual_preferred_names": [
+        "Tsolo"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/katlehong/tsongweni",
+      "runtime_parent_natural_key": "gauteng/katlehong",
+      "name": "Tsongweni",
+      "slug": "tsongweni",
+      "latitude": -26.3044444,
+      "longitude": 28.155,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-60a825316c716e2e4242"
+      ],
+      "factual_preferred_names": [
+        "Tsongweni"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/katlehong/twala",
+      "runtime_parent_natural_key": "gauteng/katlehong",
+      "name": "Twala",
+      "slug": "twala",
+      "latitude": -26.3336111,
+      "longitude": 28.1472222,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-c51c2967b2eb9f59fc84"
+      ],
+      "factual_preferred_names": [
+        "Twala"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/katlehong/woodmere",
+      "runtime_parent_natural_key": "gauteng/katlehong",
+      "name": "Woodmere",
+      "slug": "woodmere",
+      "latitude": -26.18,
+      "longitude": 28.1888889,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-c72e25bba82fdafc996d"
+      ],
+      "factual_preferred_names": [
+        "Woodmere"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/katlehong/zonkizizwe",
+      "runtime_parent_natural_key": "gauteng/katlehong",
+      "name": "Zonkizizwe",
+      "slug": "zonkizizwe",
+      "latitude": -26.3940539,
+      "longitude": 28.19275,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "mixed_odbl_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-c12eccc41c6c4f90e71b"
+      ],
+      "factual_preferred_names": [
+        "Zonkizizwe"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
       "runtime_search_scope_kind": "metro_city",
       "runtime_storage_level": "city",
       "runtime_natural_key": "gauteng/kekana",
@@ -14040,6 +14876,30 @@
       ],
       "factual_types": [
         "locality"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/kempton-park/bapsfontein",
+      "runtime_parent_natural_key": "gauteng/kempton-park",
+      "name": "Bapsfontein",
+      "slug": "bapsfontein",
+      "latitude": -26.000972,
+      "longitude": 28.424988,
+      "searchable_aliases": [
+        "FABA"
+      ],
+      "publication_status": "provisional",
+      "licensing_classification": "mixed_odbl_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-b832979688d85121edfc"
+      ],
+      "factual_preferred_names": [
+        "Bapsfontein"
+      ],
+      "factual_types": [
+        "village"
       ]
     },
     {
@@ -14147,6 +15007,28 @@
       ],
       "factual_preferred_names": [
         "Chloorkop"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/kempton-park/cilvale-ah",
+      "runtime_parent_natural_key": "gauteng/kempton-park",
+      "name": "Cilvale AH",
+      "slug": "cilvale-ah",
+      "latitude": -26.0084736,
+      "longitude": 28.3928517,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-46ff0ce45643433e11fa"
+      ],
+      "factual_preferred_names": [
+        "Cilvale AH"
       ],
       "factual_types": [
         "suburb"
@@ -23473,6 +24355,28 @@
     {
       "runtime_search_scope_kind": "locality",
       "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/springs/krugersrus",
+      "runtime_parent_natural_key": "gauteng/springs",
+      "name": "Krugersrus",
+      "slug": "krugersrus",
+      "latitude": -26.2341399,
+      "longitude": 28.408854541585747,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-df4a7e971a8bb75062d4"
+      ],
+      "factual_preferred_names": [
+        "Krugersrus"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
       "runtime_natural_key": "gauteng/springs/lodeyko",
       "runtime_parent_natural_key": "gauteng/springs",
       "name": "Lodeyko",
@@ -23607,6 +24511,28 @@
     {
       "runtime_search_scope_kind": "locality",
       "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/springs/presidentsdam",
+      "runtime_parent_natural_key": "gauteng/springs",
+      "name": "Presidentsdam",
+      "slug": "presidentsdam",
+      "latitude": -26.218975,
+      "longitude": 28.417488963663768,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-49349dbb0188055793ce"
+      ],
+      "factual_preferred_names": [
+        "Presidentsdam"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
       "runtime_natural_key": "gauteng/springs/rowhill",
       "runtime_parent_natural_key": "gauteng/springs",
       "name": "Rowhill",
@@ -23621,6 +24547,28 @@
       ],
       "factual_preferred_names": [
         "Rowhill"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/springs/selcourt",
+      "runtime_parent_natural_key": "gauteng/springs",
+      "name": "Selcourt",
+      "slug": "selcourt",
+      "latitude": -26.3051808,
+      "longitude": 28.4451251,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "mixed_odbl_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-42b618e5e1a93bed8ee0"
+      ],
+      "factual_preferred_names": [
+        "Selcourt"
       ],
       "factual_types": [
         "suburb"

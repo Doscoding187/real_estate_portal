@@ -16,7 +16,8 @@
     "Eden Park & Ext (1,4)": "Eden Park",
     "Albertsdal (Meyersig, Palmietfontein)": "Albertsdal",
     "Alberton (Alberton North, Roxton)": "Alberton",
-    "Leopard's Rest (Albertsdal Ext 30,31,32,43)": "Leopard's Rest"
+    "Leopard's Rest (Albertsdal Ext 30,31,32,43)": "Leopard's Rest",
+    "South Crest": "Southcrest"
   },
   "suburb_names": [
     "Brackenhurst",
@@ -46,6 +47,7 @@
     "New Redruth",
     "Verwoerdpark",
     "Alberante",
+    "Southcrest",
     "Raceview"
   ]
 }
