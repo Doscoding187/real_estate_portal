@@ -48,7 +48,10 @@ import {
 } from '@/lib/heroJourneySearch';
 import { RENT_PUBLIC_PROPERTY_TYPES } from '@shared/property-taxonomy';
 import { buildLocationDiscoveryPath, hasCanonicalLocationIdentity } from '@/lib/locationDiscovery';
-import { buildConsumerJourneyUrl, LAND_PUBLIC_CLASSIFICATION_OPTIONS } from '@/lib/consumerJourneyRouter';
+import {
+  buildConsumerJourneyUrl,
+  LAND_PUBLIC_CLASSIFICATION_OPTIONS,
+} from '@/lib/consumerJourneyRouter';
 import { parseCanonicalLocationId } from '@shared/locationAuthority';
 import type { LocationNode } from '@/types/location';
 import type { SearchAreaDiscoveryResult, SearchDiscoveryResult } from '@shared/searchDiscovery';
@@ -633,6 +636,21 @@ export function EnhancedHero({
           intent: 'rent',
           journey,
           selectedLocations,
+        }),
+      );
+      return;
+    }
+    if (journey === 'plot_land') {
+      // The public hero uses `plot_land`; the canonical consumer router owns
+      // the Land URL contract and its classification allow-list.
+      setLocation(
+        buildConsumerJourneyUrl({
+          intent: 'buy',
+          journey: 'land',
+          selectedLocations: selectedSearchArea ? [] : selectedLocations,
+          searchScope,
+          landClassification: filters.classification,
+          maxPrice: filters.maxPrice,
         }),
       );
       return;
