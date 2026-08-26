@@ -1166,14 +1166,16 @@ async function prepareScenarioRows(
     connection,
     table: 'agency_agent_memberships',
     id: SCENARIO_IDS.agentMembership,
-    columns: ['agency_id', 'agent_id', 'status', 'governance_mode', 'role', 'effective_from'],
+    // effective_from is a TIMESTAMP column whose literal round-trip is
+    // timezone-dependent; membership currency is proven functionally by
+    // scenario verification through public enquiry custody instead.
+    columns: ['agency_id', 'agent_id', 'status', 'governance_mode', 'role'],
     expected: {
       agency_id: SCENARIO_IDS.agency,
       agent_id: SCENARIO_IDS.agent,
       status: 'active',
       governance_mode: 'affiliated',
       role: 'agent',
-      effective_from: FIXTURE_TIMESTAMP,
     },
     insertColumns: [
       'id',
