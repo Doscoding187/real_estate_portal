@@ -14,7 +14,10 @@
     "geography_jsonl": "gauteng_factual_canonical_geography_v0.1.jsonl",
     "names_jsonl": "gauteng_factual_canonical_names_v0.1.jsonl",
     "carried_projection": "data/gauteng-canonical-runtime-convergence-v0.1/output/gauteng_runtime_reference_projection_v0.1.json",
-    "carried_mapping": "data/gauteng-canonical-runtime-convergence-v0.1/output/gauteng_factual_runtime_mapping_v0.1.jsonl"
+    "carried_mapping": "data/gauteng-canonical-runtime-convergence-v0.1/output/gauteng_factual_runtime_mapping_v0.1.jsonl",
+    "researched_parent_edges": [
+      "data/geography-coverage-v0.1/output/kempton-park-parent-evidence.v0.1.resolved.json"
+    ]
   },
   "outputs": {
     "output_dir": "data/geography-coverage-v0.1/output",
@@ -24,7 +27,11 @@
     "review_queue": "gauteng_review_queue_v0.1.jsonl"
   },
   "runtime_levels": {
-    "publicly_searchable_scopes": ["province", "metro_city", "locality"],
+    "publicly_searchable_scopes": [
+      "province",
+      "metro_city",
+      "locality"
+    ],
     "storage_mapping": {
       "province": "provinces",
       "metro_city": "cities",
@@ -106,7 +113,9 @@
       "Roodepoort",
       "Vereeniging"
     ],
-    "must_stay_non_public": ["Kyalami"],
+    "must_stay_non_public": [
+      "Kyalami"
+    ],
     "regeneration": "byte-identical (--check)",
     "materialization": "pnpm db:reference:prepare && pnpm db:reference:verify on authorized disposable target"
   },

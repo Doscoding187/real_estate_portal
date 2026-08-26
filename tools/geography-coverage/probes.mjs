@@ -134,6 +134,20 @@ for (const probe of ALIAS_PROBES) {
   );
 }
 
+const WAVE2_LOCALITY_PROBES = [
+  { name: 'Isando', parentSuffix: 'gauteng/kempton-park/isando' },
+  { name: 'Aston Manor', parentSuffix: 'gauteng/kempton-park/aston-manor' },
+];
+
+for (const probe of WAVE2_LOCALITY_PROBES) {
+  const row = resolveByName(probe.name);
+  check(
+    `wave2 researched edge resolves: ${probe.name}`,
+    row !== null && row.runtime_natural_key === probe.parentSuffix,
+    row ? row.runtime_natural_key : 'missing',
+  );
+}
+
 const NEGATIVE_PROBES = ['Mamelodi Extension 1', 'Mamelodi Extension 4'];
 for (const probe of NEGATIVE_PROBES) {
   const directHit = resolveByName(probe);

@@ -10,36 +10,36 @@
   },
   "summary": {
     "factual_identity_count": 1480,
-    "runtime_row_count": 957,
+    "runtime_row_count": 972,
     "carried_row_count": 64,
-    "newly_promoted_row_count": 893,
-    "queued_count": 587,
+    "newly_promoted_row_count": 908,
+    "queued_count": 572,
     "represented_by_carried_count": 60,
     "alias_drop_count": 0
   },
   "disposition_invariant": {
     "rule": "promoted_new + queued === factual_identity_count",
-    "promoted_new": 893,
-    "queued": 587
+    "promoted_new": 908,
+    "queued": 572
   },
   "tier_counts": {
     "verified_rows": 243,
-    "provisional_rows": 714,
+    "provisional_rows": 729,
     "carried_rows": 64
   },
   "queue_reason_counts": {
-    "awaiting_accepted_parent_edge": 462,
     "represented_by_carried_runtime_row": 60,
     "context_only_type_municipality": 30,
     "province_scope_owned_by_carried_gauteng_row": 2,
     "estate_discovery_entity_deferred": 2,
+    "awaiting_accepted_parent_edge": 447,
     "duplicate_natural_key_within_parent": 28,
     "natural_key_owned_by_accepted_row": 3
   },
   "alias_drop_log": [],
   "outputs": {
     "projection": "data/geography-coverage-v0.1/output/gauteng_runtime_reference_projection_v0.2.json",
-    "projection_sha256": "58bd359a5c76fbc9c82142530972dec5ef10641d51cc9bd3be22073c6fb466ba",
+    "projection_sha256": "17a6d8bd4df6fc141101c28bf912944722eee728063594aedad3920aa8053b50",
     "mapping": "data/geography-coverage-v0.1/output/gauteng_factual_runtime_mapping_v0.2.jsonl",
     "review_queue": "data/geography-coverage-v0.1/output/gauteng_review_queue_v0.1.jsonl"
   }

@@ -1,13 +1,13 @@
 {
   "schema_version": "0.2",
-  "projection_version": "gauteng-runtime-reference-projection-v0.2",
+  "projection_version": "gauteng-runtime-reference-projection-v0.3",
   "source_factual_projection_artifact": "data/geography-coverage-v0.1/output/gauteng_factual_runtime_mapping_v0.2.jsonl",
   "numeric_runtime_ids_are_durable_authority": false,
   "checkpoints": {
     "factual_canonical_geography_sha256": "1fe0e2e3101bd7e459f484b7125dc1ce1f0327104002b184ef0e90d4236b7b7f",
     "factual_canonical_names_sha256": "a87891bc2e4167130d7e5eb649516a34aedaa071278ce8fe25df19f511669b51",
     "carried_projection_v01_sha256": "982ea13cd190a02da5440f122a061713e22bc157ef46f491ce530c5877ff9fc0",
-    "territory_manifest_sha256": "3d141f351d4be56b8e4bc70d009548c600362f9b3e7121070d74642af25b8220"
+    "territory_manifest_sha256": "a1904869ad419aa278d22058e7304857fa260a81f2361ff6b298c6f0fdc47f87"
   },
   "rows": [
     {
@@ -11493,6 +11493,349 @@
       ],
       "factual_types": [
         "town"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/kempton-park/allen-grove",
+      "runtime_parent_natural_key": "gauteng/kempton-park",
+      "name": "Allen Grove",
+      "slug": "allen-grove",
+      "latitude": -26.0821111,
+      "longitude": 28.2308611,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "mixed_odbl_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-d60f124f2f0688827c74"
+      ],
+      "factual_preferred_names": [
+        "Allen Grove"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/kempton-park/aston-manor",
+      "runtime_parent_natural_key": "gauteng/kempton-park",
+      "name": "Aston Manor",
+      "slug": "aston-manor",
+      "latitude": -26.086667,
+      "longitude": 28.245556,
+      "searchable_aliases": [
+        "Aston Manor, Kempton Park"
+      ],
+      "publication_status": "provisional",
+      "licensing_classification": "mixed_odbl_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-89598c5a49181995dc27"
+      ],
+      "factual_preferred_names": [
+        "Aston Manor"
+      ],
+      "factual_types": [
+        "locality"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/kempton-park/birch-acres",
+      "runtime_parent_natural_key": "gauteng/kempton-park",
+      "name": "Birch Acres",
+      "slug": "birch-acres",
+      "latitude": -26.055472199999997,
+      "longitude": 28.2049722,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "mixed_odbl_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-8df24612287a89570618"
+      ],
+      "factual_preferred_names": [
+        "Birch Acres"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/kempton-park/birchleigh",
+      "runtime_parent_natural_key": "gauteng/kempton-park",
+      "name": "Birchleigh",
+      "slug": "birchleigh",
+      "latitude": -26.06728,
+      "longitude": 28.2369444,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "mixed_odbl_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-37ff7b2af3aac8c324e6"
+      ],
+      "factual_preferred_names": [
+        "Birchleigh"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/kempton-park/birchleigh-north",
+      "runtime_parent_natural_key": "gauteng/kempton-park",
+      "name": "Birchleigh North",
+      "slug": "birchleigh-north",
+      "latitude": -26.04451925,
+      "longitude": 28.2324639,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "mixed_odbl_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-987cfd85cae6270b18ea"
+      ],
+      "factual_preferred_names": [
+        "Birchleigh North"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/kempton-park/bonaero-park",
+      "runtime_parent_natural_key": "gauteng/kempton-park",
+      "name": "Bonaero Park",
+      "slug": "bonaero-park",
+      "latitude": -26.123435,
+      "longitude": 28.2568278,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "mixed_odbl_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-d323e424f308f0ecefb5"
+      ],
+      "factual_preferred_names": [
+        "Bonaero Park"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/kempton-park/croydon",
+      "runtime_parent_natural_key": "gauteng/kempton-park",
+      "name": "Croydon",
+      "slug": "croydon",
+      "latitude": -26.1284291,
+      "longitude": 28.1977014,
+      "searchable_aliases": [
+        "Croydon, Kempton Park",
+        "Croydon, Gauteng"
+      ],
+      "publication_status": "provisional",
+      "licensing_classification": "mixed_odbl_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-11ebce2a2c4dcb10d9f7"
+      ],
+      "factual_preferred_names": [
+        "Croydon"
+      ],
+      "factual_types": [
+        "locality"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/kempton-park/edleen",
+      "runtime_parent_natural_key": "gauteng/kempton-park",
+      "name": "Edleen",
+      "slug": "edleen",
+      "latitude": -26.092750000000002,
+      "longitude": 28.2041111,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "mixed_odbl_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-caaca129115eeb3aaef0"
+      ],
+      "factual_preferred_names": [
+        "Edleen"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/kempton-park/isando",
+      "runtime_parent_natural_key": "gauteng/kempton-park",
+      "name": "Isando",
+      "slug": "isando",
+      "latitude": -26.1376165,
+      "longitude": 28.2093405,
+      "searchable_aliases": [
+        "Isandovale"
+      ],
+      "publication_status": "provisional",
+      "licensing_classification": "mixed_odbl_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-10af80f299f30307c96f"
+      ],
+      "factual_preferred_names": [
+        "Isando"
+      ],
+      "factual_types": [
+        "locality"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/kempton-park/kempton-park-west",
+      "runtime_parent_natural_key": "gauteng/kempton-park",
+      "name": "Kempton Park West",
+      "slug": "kempton-park-west",
+      "latitude": -26.0862843,
+      "longitude": 28.18775325,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "mixed_odbl_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-e689437f42417bbebebf"
+      ],
+      "factual_preferred_names": [
+        "Kempton Park West"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/kempton-park/norkem-park",
+      "runtime_parent_natural_key": "gauteng/kempton-park",
+      "name": "Norkem Park",
+      "slug": "norkem-park",
+      "latitude": -26.05158,
+      "longitude": 28.2197389,
+      "searchable_aliases": [
+        "NORKEMPARK"
+      ],
+      "publication_status": "provisional",
+      "licensing_classification": "mixed_odbl_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-638870c405f25d0cd07e"
+      ],
+      "factual_preferred_names": [
+        "Norkem Park"
+      ],
+      "factual_types": [
+        "locality"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/kempton-park/pomona",
+      "runtime_parent_natural_key": "gauteng/kempton-park",
+      "name": "Pomona",
+      "slug": "pomona",
+      "latitude": -26.0910801,
+      "longitude": 28.273953050000003,
+      "searchable_aliases": [
+        "Pomona, Kempton Park"
+      ],
+      "publication_status": "provisional",
+      "licensing_classification": "mixed_odbl_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-fa94b1e249e7140fedc0"
+      ],
+      "factual_preferred_names": [
+        "Pomona"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/kempton-park/rhodesfield",
+      "runtime_parent_natural_key": "gauteng/kempton-park",
+      "name": "Rhodesfield",
+      "slug": "rhodesfield",
+      "latitude": -26.11687165,
+      "longitude": 28.2332494,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "mixed_odbl_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-ca7755d04c06d650792b"
+      ],
+      "factual_preferred_names": [
+        "Rhodesfield"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/kempton-park/terenure",
+      "runtime_parent_natural_key": "gauteng/kempton-park",
+      "name": "Terenure",
+      "slug": "terenure",
+      "latitude": -26.080971955499997,
+      "longitude": 28.1958919275,
+      "searchable_aliases": [
+        "Terenure, Kempton Park"
+      ],
+      "publication_status": "provisional",
+      "licensing_classification": "mixed_odbl_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-504bf6fb1758aebef23e"
+      ],
+      "factual_preferred_names": [
+        "Terenure"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/kempton-park/van-riebeeck-park",
+      "runtime_parent_natural_key": "gauteng/kempton-park",
+      "name": "Van Riebeeck Park",
+      "slug": "van-riebeeck-park",
+      "latitude": -26.078542499999998,
+      "longitude": 28.215528499999998,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "mixed_odbl_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-a7a7e6c3f5cc9dd26642"
+      ],
+      "factual_preferred_names": [
+        "Van Riebeeck Park"
+      ],
+      "factual_types": [
+        "suburb"
       ]
     },
     {
