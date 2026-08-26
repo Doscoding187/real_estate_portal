@@ -7,7 +7,7 @@
     "factual_canonical_geography_sha256": "1fe0e2e3101bd7e459f484b7125dc1ce1f0327104002b184ef0e90d4236b7b7f",
     "factual_canonical_names_sha256": "a87891bc2e4167130d7e5eb649516a34aedaa071278ce8fe25df19f511669b51",
     "carried_projection_v01_sha256": "982ea13cd190a02da5440f122a061713e22bc157ef46f491ce530c5877ff9fc0",
-    "territory_manifest_sha256": "087cdb55cdf42bc456694f5f1f5d6264272c623249dca845194d9b5ee5026b0a"
+    "territory_manifest_sha256": "699877250aaebbc47e86dade025824a1e7b689edb3bbc67944f2c632c04dfce2"
   },
   "rows": [
     {
@@ -2760,6 +2760,184 @@
       ]
     },
     {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/edenvale/de-klerkshof",
+      "runtime_parent_natural_key": "gauteng/edenvale",
+      "name": "De Klerkshof",
+      "slug": "de-klerkshof",
+      "latitude": -26.1222222,
+      "longitude": 28.1666667,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-164ca338f2453496ef54"
+      ],
+      "factual_preferred_names": [
+        "De Klerkshof"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/edenvale/dowerglen",
+      "runtime_parent_natural_key": "gauteng/edenvale",
+      "name": "Dowerglen",
+      "slug": "dowerglen",
+      "latitude": -26.1478772,
+      "longitude": 28.13899335,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "mixed_odbl_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-0f60c81b0f1d89b14039"
+      ],
+      "factual_preferred_names": [
+        "Dowerglen"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/edenvale/dunvegan",
+      "runtime_parent_natural_key": "gauteng/edenvale",
+      "name": "Dunvegan",
+      "slug": "dunvegan",
+      "latitude": -26.155,
+      "longitude": 28.1502778,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-92303c70e7379d311a07"
+      ],
+      "factual_preferred_names": [
+        "Dunvegan"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/edenvale/eden-glen",
+      "runtime_parent_natural_key": "gauteng/edenvale",
+      "name": "Eden Glen",
+      "slug": "eden-glen",
+      "latitude": -26.13170405,
+      "longitude": 28.1697091,
+      "searchable_aliases": [
+        "Edenglen"
+      ],
+      "publication_status": "provisional",
+      "licensing_classification": "mixed_odbl_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-ac25d86431b36bab7cf5"
+      ],
+      "factual_preferred_names": [
+        "Eden Glen"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/edenvale/elmapark",
+      "runtime_parent_natural_key": "gauteng/edenvale",
+      "name": "Elmapark",
+      "slug": "elmapark",
+      "latitude": -26.15537055,
+      "longitude": 28.157806100000002,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "mixed_odbl_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-ff012f74673df12331c6"
+      ],
+      "factual_preferred_names": [
+        "Elmapark"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/edenvale/hurlyvale",
+      "runtime_parent_natural_key": "gauteng/edenvale",
+      "name": "Hurlyvale",
+      "slug": "hurlyvale",
+      "latitude": -26.15,
+      "longitude": 28.1633333,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-92679c3cc712fb15f298"
+      ],
+      "factual_preferred_names": [
+        "Hurlyvale"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/edenvale/illiondale",
+      "runtime_parent_natural_key": "gauteng/edenvale",
+      "name": "Illiondale",
+      "slug": "illiondale",
+      "latitude": -26.1147222,
+      "longitude": 28.1688889,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-f2360e6bda9eb7e93a0b"
+      ],
+      "factual_preferred_names": [
+        "Illiondale"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/edenvale/marais-steyn-park",
+      "runtime_parent_natural_key": "gauteng/edenvale",
+      "name": "Marais Steyn Park",
+      "slug": "marais-steyn-park",
+      "latitude": -26.1336111,
+      "longitude": 28.1380556,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-77caedcd912993885766"
+      ],
+      "factual_preferred_names": [
+        "Marais Steyn Park"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
       "runtime_search_scope_kind": "metro_city",
       "runtime_storage_level": "city",
       "runtime_natural_key": "gauteng/eerste-fabrieke",
@@ -3306,6 +3484,424 @@
       ],
       "factual_types": [
         "town"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/germiston/barvallen",
+      "runtime_parent_natural_key": "gauteng/germiston",
+      "name": "Barvallen",
+      "slug": "barvallen",
+      "latitude": -26.1733764,
+      "longitude": 28.1924082,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-b477a2d207c5b92524d7"
+      ],
+      "factual_preferred_names": [
+        "Barvallen"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/germiston/castleview",
+      "runtime_parent_natural_key": "gauteng/germiston",
+      "name": "Castleview",
+      "slug": "castleview",
+      "latitude": -26.2541667,
+      "longitude": 28.1669444,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-85981e52e019845127e1"
+      ],
+      "factual_preferred_names": [
+        "Castleview"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/germiston/dawnview",
+      "runtime_parent_natural_key": "gauteng/germiston",
+      "name": "Dawnview",
+      "slug": "dawnview",
+      "latitude": -26.1825,
+      "longitude": 28.1536111,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-286403934f583d08b9ae"
+      ],
+      "factual_preferred_names": [
+        "Dawnview"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/germiston/delville",
+      "runtime_parent_natural_key": "gauteng/germiston",
+      "name": "Delville",
+      "slug": "delville",
+      "latitude": -26.2297467,
+      "longitude": 28.1789809,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-fbfbe03887ea7744c34a"
+      ],
+      "factual_preferred_names": [
+        "Delville"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/germiston/estera",
+      "runtime_parent_natural_key": "gauteng/germiston",
+      "name": "Estera",
+      "slug": "estera",
+      "latitude": -26.2536111,
+      "longitude": 28.1905556,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-c34aea72ad14b4f5230d"
+      ],
+      "factual_preferred_names": [
+        "Estera"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/germiston/georgetown",
+      "runtime_parent_natural_key": "gauteng/germiston",
+      "name": "Georgetown",
+      "slug": "georgetown",
+      "latitude": -26.2155556,
+      "longitude": 28.1691667,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-c691ad5d64ad92be8505"
+      ],
+      "factual_preferred_names": [
+        "Georgetown"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/germiston/gerdview",
+      "runtime_parent_natural_key": "gauteng/germiston",
+      "name": "Gerdview",
+      "slug": "gerdview",
+      "latitude": -26.1766667,
+      "longitude": 28.1816667,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-2b667677baa285a98b2f"
+      ],
+      "factual_preferred_names": [
+        "Gerdview"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/germiston/germiston-south",
+      "runtime_parent_natural_key": "gauteng/germiston",
+      "name": "Germiston South",
+      "slug": "germiston-south",
+      "latitude": -26.2241302,
+      "longitude": 28.172588,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-997635fcb85f8b67dc0d"
+      ],
+      "factual_preferred_names": [
+        "Germiston South"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/germiston/homestead",
+      "runtime_parent_natural_key": "gauteng/germiston",
+      "name": "Homestead",
+      "slug": "homestead",
+      "latitude": -26.1736111,
+      "longitude": 28.1886111,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-b534bfc58e474d9bfc0c"
+      ],
+      "factual_preferred_names": [
+        "Homestead"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/germiston/klippoortje-a-l",
+      "runtime_parent_natural_key": "gauteng/germiston",
+      "name": "Klippoortje A.L.",
+      "slug": "klippoortje-a-l",
+      "latitude": -26.2485447,
+      "longitude": 28.194613,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-dd1b2cb99a0fe7073a2f"
+      ],
+      "factual_preferred_names": [
+        "Klippoortje A.L."
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/germiston/knights",
+      "runtime_parent_natural_key": "gauteng/germiston",
+      "name": "Knights",
+      "slug": "knights",
+      "latitude": -26.197756,
+      "longitude": 28.19573,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "mixed_odbl_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-75fcad49a02056389f58"
+      ],
+      "factual_preferred_names": [
+        "Knights"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/germiston/lambton",
+      "runtime_parent_natural_key": "gauteng/germiston",
+      "name": "Lambton",
+      "slug": "lambton",
+      "latitude": -26.24330205,
+      "longitude": 28.17888715,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "mixed_odbl_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-abafe786bb4f9a272b64"
+      ],
+      "factual_preferred_names": [
+        "Lambton"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/germiston/lambton-gardens",
+      "runtime_parent_natural_key": "gauteng/germiston",
+      "name": "Lambton Gardens",
+      "slug": "lambton-gardens",
+      "latitude": -26.2527918,
+      "longitude": 28.184436,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-967a42004d8b0fed522f"
+      ],
+      "factual_preferred_names": [
+        "Lambton Gardens"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/germiston/marlands",
+      "runtime_parent_natural_key": "gauteng/germiston",
+      "name": "Marlands",
+      "slug": "marlands",
+      "latitude": -26.183078899999998,
+      "longitude": 28.190343900000002,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "mixed_odbl_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-8ee7d7e2b59d2c65f2b1"
+      ],
+      "factual_preferred_names": [
+        "Marlands"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/germiston/parkhill-gardens",
+      "runtime_parent_natural_key": "gauteng/germiston",
+      "name": "Parkhill Gardens",
+      "slug": "parkhill-gardens",
+      "latitude": -26.2388889,
+      "longitude": 28.1872222,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-98bf4ab0140586324482"
+      ],
+      "factual_preferred_names": [
+        "Parkhill Gardens"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/germiston/primrose-hill",
+      "runtime_parent_natural_key": "gauteng/germiston",
+      "name": "Primrose Hill",
+      "slug": "primrose-hill",
+      "latitude": -26.1975,
+      "longitude": 28.1388889,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-31395b4a67b2eba3faca"
+      ],
+      "factual_preferred_names": [
+        "Primrose Hill"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/germiston/symhurst",
+      "runtime_parent_natural_key": "gauteng/germiston",
+      "name": "Symhurst",
+      "slug": "symhurst",
+      "latitude": -26.1808333,
+      "longitude": 28.1722222,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-0c338ea99d8f9585a4ea"
+      ],
+      "factual_preferred_names": [
+        "Symhurst"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/germiston/tedstoneville",
+      "runtime_parent_natural_key": "gauteng/germiston",
+      "name": "Tedstoneville",
+      "slug": "tedstoneville",
+      "latitude": -26.2380556,
+      "longitude": 28.2005556,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-77361eac3b08d4c88786"
+      ],
+      "factual_preferred_names": [
+        "Tedstoneville"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/germiston/wychwood",
+      "runtime_parent_natural_key": "gauteng/germiston",
+      "name": "Wychwood",
+      "slug": "wychwood",
+      "latitude": -26.201332800000003,
+      "longitude": 28.125555,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "mixed_odbl_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-f350fa296eb6c63a03a6"
+      ],
+      "factual_preferred_names": [
+        "Wychwood"
+      ],
+      "factual_types": [
+        "suburb"
       ]
     },
     {

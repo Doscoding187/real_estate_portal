@@ -1,0 +1,40 @@
+{
+  "artifact_version": "germiston-calendar-2026-parent-evidence-v0.1",
+  "town": "Germiston",
+  "parent_natural_key": "gauteng/germiston",
+  "administrative_context": "Ekurhuleni",
+  "evidence_class": "official_municipal_refuse_collection_area_list",
+  "source": {
+    "publisher": "City of Ekurhuleni",
+    "url": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/GERMISTON_Calender-2026U.pdf",
+    "section": "2026 Germiston-labelled refuse-removal collection areas",
+    "retrieved": "2026-08-26",
+    "licence_note": "Official municipal service calendar used for locality membership assertions; no prose or geometry is copied."
+  },
+  "source_name_variants": {
+    "Germiston South": "South Germiston",
+    "Klippoortje A.L.": "Klippoortjie Agriculture",
+    "Tedstoneville": "Tedstonville"
+  },
+  "suburb_names": [
+    "Barvallen",
+    "Castleview",
+    "Dawnview",
+    "Delville",
+    "Estera",
+    "Georgetown",
+    "Gerdview",
+    "Germiston South",
+    "Homestead",
+    "Klippoortje A.L.",
+    "Knights",
+    "Lambton",
+    "Lambton Gardens",
+    "Marlands",
+    "Parkhill Gardens",
+    "Primrose Hill",
+    "Symhurst",
+    "Tedstoneville",
+    "Wychwood"
+  ]
+}
