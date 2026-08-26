@@ -1,0 +1,148 @@
+{
+  "resolved_edges_version": "alberton-calendar-2026-parent-evidence.v0.1.resolved",
+  "town": "Alberton",
+  "parent_natural_key": "gauteng/alberton",
+  "source": {
+    "publisher": "City of Ekurhuleni",
+    "url": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/ALBERTON_Refuse-Calender-2026.pdf",
+    "section": "2026–2027 Southern Service Delivery Area: ALBERTON-labelled refuse-removal collection areas",
+    "retrieved": "2026-08-26",
+    "licence_note": "Official municipal service calendar used for locality membership assertions; no prose or geometry is copied."
+  },
+  "edge_count": 10,
+  "edges": [
+    {
+      "factual_location_id": "pl-gp-v01-038dd0cd0cd3da258d56",
+      "preferred_name": "Generaal Albertspark",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/alberton",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/ALBERTON_Refuse-Calender-2026.pdf#2026%E2%80%932027%20Southern%20Service%20Delivery%20Area%3A%20ALBERTON-labelled%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-363287180dcbf77d0769",
+      "preferred_name": "Albertsdal",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/alberton",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/ALBERTON_Refuse-Calender-2026.pdf#2026%E2%80%932027%20Southern%20Service%20Delivery%20Area%3A%20ALBERTON-labelled%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-3a762ad14f3a6cf8a05d",
+      "preferred_name": "Meyersdal",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/alberton",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/ALBERTON_Refuse-Calender-2026.pdf#2026%E2%80%932027%20Southern%20Service%20Delivery%20Area%3A%20ALBERTON-labelled%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-43f407ea64b1990163ce",
+      "preferred_name": "Eden Park",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/alberton",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/ALBERTON_Refuse-Calender-2026.pdf#2026%E2%80%932027%20Southern%20Service%20Delivery%20Area%3A%20ALBERTON-labelled%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-74624d1c4528f756637e",
+      "preferred_name": "Verwoerdpark",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/alberton",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/ALBERTON_Refuse-Calender-2026.pdf#2026%E2%80%932027%20Southern%20Service%20Delivery%20Area%3A%20ALBERTON-labelled%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-800cda0bcb00e0edb9f9",
+      "preferred_name": "Randhart",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/alberton",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/ALBERTON_Refuse-Calender-2026.pdf#2026%E2%80%932027%20Southern%20Service%20Delivery%20Area%3A%20ALBERTON-labelled%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-9354dc4504b0ae2c5f2a",
+      "preferred_name": "Alberante",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/alberton",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/ALBERTON_Refuse-Calender-2026.pdf#2026%E2%80%932027%20Southern%20Service%20Delivery%20Area%3A%20ALBERTON-labelled%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-985ec44dcb92cef279f9",
+      "preferred_name": "Alrode",
+      "factual_type": "locality",
+      "parent_natural_key": "gauteng/alberton",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/ALBERTON_Refuse-Calender-2026.pdf#2026%E2%80%932027%20Southern%20Service%20Delivery%20Area%3A%20ALBERTON-labelled%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-af17bb51ea1399e1ec40",
+      "preferred_name": "Brackenhurst",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/alberton",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/ALBERTON_Refuse-Calender-2026.pdf#2026%E2%80%932027%20Southern%20Service%20Delivery%20Area%3A%20ALBERTON-labelled%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-bd59322d0b3ed7431605",
+      "preferred_name": "Raceview",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/alberton",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/ALBERTON_Refuse-Calender-2026.pdf#2026%E2%80%932027%20Southern%20Service%20Delivery%20Area%3A%20ALBERTON-labelled%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
+    }
+  ],
+  "diagnostics": {
+    "researched_names": 28,
+    "matched_already_projected": [
+      {
+        "name": "Brackenhurst",
+        "factual_location_id": "pl-gp-v01-af17bb51ea1399e1ec40",
+        "existing_parent_natural_key": "gauteng/alberton",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Linmeyer",
+        "factual_location_id": "pl-gp-v01-10a534349bd8ebcea32d",
+        "existing_parent_natural_key": "gauteng/johannesburg",
+        "parent_matches_evidence": false
+      },
+      {
+        "name": "Randhart",
+        "factual_location_id": "pl-gp-v01-800cda0bcb00e0edb9f9",
+        "existing_parent_natural_key": "gauteng/alberton",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Alberton",
+        "factual_location_id": "pl-gp-v01-4c21c1f81da64c1c6728",
+        "existing_parent_natural_key": "gauteng",
+        "parent_matches_evidence": false
+      },
+      {
+        "name": "Raceview",
+        "factual_location_id": "pl-gp-v01-bd59322d0b3ed7431605",
+        "existing_parent_natural_key": "gauteng/alberton",
+        "parent_matches_evidence": true
+      }
+    ],
+    "names_not_in_canonical_layer": [
+      "Meyersig",
+      "Palmietfontein",
+      "Brackensdowns Kromvlei",
+      "Mayberry Park",
+      "Alrode South",
+      "South Downs",
+      "Alrode Ext 7",
+      "Bassonia Rock",
+      "Meyersdal Nature",
+      "Klipriviersberg",
+      "Florentia",
+      "South Crest",
+      "Leopard's Rest",
+      "New Market Minor AH",
+      "New Market Park",
+      "New Redruth"
+    ]
+  }
+}

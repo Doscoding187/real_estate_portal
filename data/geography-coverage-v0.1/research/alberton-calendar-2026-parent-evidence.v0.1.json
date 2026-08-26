@@ -1,0 +1,51 @@
+{
+  "artifact_version": "alberton-calendar-2026-parent-evidence-v0.1",
+  "town": "Alberton",
+  "parent_natural_key": "gauteng/alberton",
+  "administrative_context": "Ekurhuleni",
+  "evidence_class": "official_municipal_refuse_collection_area_list",
+  "source": {
+    "publisher": "City of Ekurhuleni",
+    "url": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/ALBERTON_Refuse-Calender-2026.pdf",
+    "section": "2026–2027 Southern Service Delivery Area: ALBERTON-labelled refuse-removal collection areas",
+    "retrieved": "2026-08-26",
+    "licence_note": "Official municipal service calendar used for locality membership assertions; no prose or geometry is copied."
+  },
+  "source_name_variants": {
+    "Brackehurst": "Brackenhurst",
+    "Eden Park & Ext (1,4)": "Eden Park",
+    "Albertsdal (Meyersig, Palmietfontein)": "Albertsdal",
+    "Alberton (Alberton North, Roxton)": "Alberton",
+    "Leopard's Rest (Albertsdal Ext 30,31,32,43)": "Leopard's Rest"
+  },
+  "suburb_names": [
+    "Brackenhurst",
+    "Albertsdal",
+    "Meyersig",
+    "Palmietfontein",
+    "Eden Park",
+    "Brackensdowns Kromvlei",
+    "Mayberry Park",
+    "Alrode South",
+    "South Downs",
+    "Alrode",
+    "Alrode Ext 7",
+    "Bassonia Rock",
+    "Linmeyer",
+    "Randhart",
+    "Meyersdal",
+    "Meyersdal Nature",
+    "Klipriviersberg",
+    "Alberton",
+    "Florentia",
+    "South Crest",
+    "Leopard's Rest",
+    "Generaal Albertspark",
+    "New Market Minor AH",
+    "New Market Park",
+    "New Redruth",
+    "Verwoerdpark",
+    "Alberante",
+    "Raceview"
+  ]
+}

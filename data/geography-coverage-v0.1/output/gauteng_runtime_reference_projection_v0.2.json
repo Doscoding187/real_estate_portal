@@ -7,7 +7,7 @@
     "factual_canonical_geography_sha256": "1fe0e2e3101bd7e459f484b7125dc1ce1f0327104002b184ef0e90d4236b7b7f",
     "factual_canonical_names_sha256": "a87891bc2e4167130d7e5eb649516a34aedaa071278ce8fe25df19f511669b51",
     "carried_projection_v01_sha256": "982ea13cd190a02da5440f122a061713e22bc157ef46f491ce530c5877ff9fc0",
-    "territory_manifest_sha256": "fd94bd3b906f77253df79752bc2f2ebe78b9fa5a1bcabf3bb9a302e56ab1a5f8"
+    "territory_manifest_sha256": "61923a4166724cf3090f24f916df6174bb8a59c214129310f431773588a191be"
   },
   "rows": [
     {
@@ -64,6 +64,72 @@
     {
       "runtime_search_scope_kind": "locality",
       "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/alberton/alberante",
+      "runtime_parent_natural_key": "gauteng/alberton",
+      "name": "Alberante",
+      "slug": "alberante",
+      "latitude": -26.2677778,
+      "longitude": 28.1052778,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-9354dc4504b0ae2c5f2a"
+      ],
+      "factual_preferred_names": [
+        "Alberante"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/alberton/albertsdal",
+      "runtime_parent_natural_key": "gauteng/alberton",
+      "name": "Albertsdal",
+      "slug": "albertsdal",
+      "latitude": -26.3444444,
+      "longitude": 28.1080556,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-363287180dcbf77d0769"
+      ],
+      "factual_preferred_names": [
+        "Albertsdal"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/alberton/alrode",
+      "runtime_parent_natural_key": "gauteng/alberton",
+      "name": "Alrode",
+      "slug": "alrode",
+      "latitude": -26.308539500000002,
+      "longitude": 28.1322415,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "permissive_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-985ec44dcb92cef279f9"
+      ],
+      "factual_preferred_names": [
+        "Alrode"
+      ],
+      "factual_types": [
+        "locality"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
       "runtime_natural_key": "gauteng/alberton/brackenhurst",
       "runtime_parent_natural_key": "gauteng/alberton",
       "name": "Brackenhurst",
@@ -73,6 +139,74 @@
       ],
       "factual_preferred_names": [
         "Brackenhurst"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/alberton/eden-park",
+      "runtime_parent_natural_key": "gauteng/alberton",
+      "name": "Eden Park",
+      "slug": "eden-park",
+      "latitude": -26.37995,
+      "longitude": 28.12109,
+      "searchable_aliases": [
+        "Edenpark"
+      ],
+      "publication_status": "provisional",
+      "licensing_classification": "mixed_odbl_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-43f407ea64b1990163ce"
+      ],
+      "factual_preferred_names": [
+        "Eden Park"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/alberton/generaal-albertspark",
+      "runtime_parent_natural_key": "gauteng/alberton",
+      "name": "Generaal Albertspark",
+      "slug": "generaal-albertspark",
+      "latitude": -26.2908333,
+      "longitude": 28.1241667,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-038dd0cd0cd3da258d56"
+      ],
+      "factual_preferred_names": [
+        "Generaal Albertspark"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/alberton/meyersdal",
+      "runtime_parent_natural_key": "gauteng/alberton",
+      "name": "Meyersdal",
+      "slug": "meyersdal",
+      "latitude": -26.2941667,
+      "longitude": 28.0975,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-3a762ad14f3a6cf8a05d"
+      ],
+      "factual_preferred_names": [
+        "Meyersdal"
       ],
       "factual_types": [
         "suburb"
@@ -107,6 +241,28 @@
       ],
       "factual_preferred_names": [
         "Randhart"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/alberton/verwoerdpark",
+      "runtime_parent_natural_key": "gauteng/alberton",
+      "name": "Verwoerdpark",
+      "slug": "verwoerdpark",
+      "latitude": -26.2722222,
+      "longitude": 28.1441667,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-74624d1c4528f756637e"
+      ],
+      "factual_preferred_names": [
+        "Verwoerdpark"
       ],
       "factual_types": [
         "suburb"
