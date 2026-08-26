@@ -1,12 +1,15 @@
 import { Link } from 'wouter';
 import { useEffect, useState } from 'react';
 import { trpc } from '@/lib/trpc';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const money = (minor: number) =>
   `R ${(minor / 100).toLocaleString('en-ZA', { maximumFractionDigits: 0 })}`;
 
 const MARKETS = [
-  { value: undefined, label: 'All Shared Living' },
+  { value: 'all', label: 'All Shared Living' },
   { value: 'room_share', label: 'Rooms' },
   { value: 'independent_micro', label: 'Cottages & Small Places' },
   { value: 'student', label: 'Student Living' },
@@ -33,7 +36,7 @@ export default function SharedLiving() {
     handoffParams.get('searchError') === 'unsupported-location-scope';
 
   const [marketTag, setMarketTag] = useState<(typeof MARKETS)[number]['value']>(
-    (handoffParams.get('market') as any) || undefined,
+    (handoffParams.get('market') as any) || 'all',
   );
   const [location, setLocation] = useState(handoffParams.get('location') || '');
   const [minPrice, setMinPrice] = useState(handoffParams.get('minPrice') || '');
@@ -50,7 +53,7 @@ export default function SharedLiving() {
   const [page, setPage] = useState(Number(handoffParams.get('page')) || 0);
 
   const searchInput: SearchInput = {
-    marketTag,
+    marketTag: marketTag === 'all' ? undefined : marketTag,
     location: location || undefined,
     minPrice: minPrice ? Number(minPrice) : undefined,
     maxPrice: maxPrice ? Number(maxPrice) : undefined,
@@ -113,27 +116,20 @@ export default function SharedLiving() {
       >
         <label className="grid gap-1 text-sm">
           <span>Market</span>
-          <select
-            aria-label="Market"
-            className="rounded border p-2"
-            value={marketTag ?? ''}
-            onChange={event => {
-              setMarketTag((event.target.value || undefined) as any);
-              setPage(0);
-            }}
-          >
-            {MARKETS.map(market => (
-              <option key={market.label} value={market.value ?? ''}>
-                {market.label}
-              </option>
-            ))}
-          </select>
+          <Select aria-label="Market" value={marketTag ?? ''} onValueChange={val => { setMarketTag((val || undefined) as any); setPage(0); }}>
+            <SelectTrigger><SelectValue placeholder="All markets" /></SelectTrigger>
+            <SelectContent>
+              {MARKETS.map(market => (
+                <SelectItem key={market.label} value={market.value ?? ''}>{market.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </label>
         <label className="grid gap-1 text-sm">
           <span>Area</span>
           <input
             aria-label="Area"
-            className="rounded border p-2"
+            className="rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             placeholder="Suburb or city"
             value={location}
             onChange={event => {
@@ -146,7 +142,7 @@ export default function SharedLiving() {
           <span>Minimum rent (R/month)</span>
           <input
             aria-label="Minimum rent"
-            className="rounded border p-2"
+            className="rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             type="number"
             min="0"
             value={minPrice}
@@ -160,7 +156,7 @@ export default function SharedLiving() {
           <span>Maximum rent (R/month)</span>
           <input
             aria-label="Maximum rent"
-            className="rounded border p-2"
+            className="rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             type="number"
             min="0"
             value={maxPrice}
@@ -182,7 +178,7 @@ export default function SharedLiving() {
           <span>Bathroom</span>
           <select
             aria-label="Bathroom"
-            className="rounded border p-2"
+            className="rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             value={bathroom}
             onChange={event => setBathroom(event.target.value as any)}
           >
@@ -195,7 +191,7 @@ export default function SharedLiving() {
           <span>Furnishing</span>
           <select
             aria-label="Furnishing"
-            className="rounded border p-2"
+            className="rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             value={furnished}
             onChange={event => setFurnished(event.target.value as any)}
           >
