@@ -1,0 +1,17 @@
+{
+  "artifact_version": "springs-eastvale-parent-evidence-v0.1",
+  "town": "Springs",
+  "parent_natural_key": "gauteng/springs",
+  "administrative_context": "Ekurhuleni",
+  "evidence_class": "official_municipal_service_area_relationship",
+  "source": {
+    "publisher": "City of Ekurhuleni Metropolitan Municipality",
+    "url": "https://www.ekurhuleni.gov.za/press-releases/service-delivery/water-sanitation/areas-impacted-by-rand-waters-the-extensive-maintenance-work/",
+    "section": "Areas impacted by Rand Water's extensive maintenance work — Brakpan/Springs service area, including Eastvale",
+    "retrieved": "2026-08-27",
+    "licence_note": "Official municipal service notice used for locality relationship assertions; no prose or geometry is copied."
+  },
+  "suburb_names": [
+    "Eastvale"
+  ]
+}

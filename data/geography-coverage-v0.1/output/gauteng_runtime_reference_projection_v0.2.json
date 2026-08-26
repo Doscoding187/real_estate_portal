@@ -7,7 +7,7 @@
     "factual_canonical_geography_sha256": "1fe0e2e3101bd7e459f484b7125dc1ce1f0327104002b184ef0e90d4236b7b7f",
     "factual_canonical_names_sha256": "a87891bc2e4167130d7e5eb649516a34aedaa071278ce8fe25df19f511669b51",
     "carried_projection_v01_sha256": "982ea13cd190a02da5440f122a061713e22bc157ef46f491ce530c5877ff9fc0",
-    "territory_manifest_sha256": "4b480fc2535be3280502421f8a6d8ab19d7852a474f54696103eae649c73fddc"
+    "territory_manifest_sha256": "48fbae01a761787e05d0c4540d5bd7130515215f420139cdaf15a377135ca3a9"
   },
   "rows": [
     {
@@ -26377,6 +26377,28 @@
     {
       "runtime_search_scope_kind": "locality",
       "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/springs/eastvale",
+      "runtime_parent_natural_key": "gauteng/springs",
+      "name": "Eastvale",
+      "slug": "eastvale",
+      "latitude": -26.1810885,
+      "longitude": 28.43105949001329,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-7473d736705abefcd26c"
+      ],
+      "factual_preferred_names": [
+        "Eastvale"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
       "runtime_natural_key": "gauteng/springs/edelweiss",
       "runtime_parent_natural_key": "gauteng/springs",
       "name": "Edelweiss",
@@ -26457,6 +26479,28 @@
       ],
       "factual_preferred_names": [
         "Krugersrus"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/springs/largo",
+      "runtime_parent_natural_key": "gauteng/springs",
+      "name": "Largo",
+      "slug": "largo",
+      "latitude": -26.266667,
+      "longitude": 28.516667,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "mixed_odbl_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-73c6f1254b12e32873e5"
+      ],
+      "factual_preferred_names": [
+        "Largo"
       ],
       "factual_types": [
         "suburb"
