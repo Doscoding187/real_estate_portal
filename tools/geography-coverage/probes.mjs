@@ -781,6 +781,33 @@ for (const probe of WAVE39_IDENTITY_SPECIFIC_PROBES) {
   );
 }
 
+const WAVE40_IDENTITY_SPECIFIC_PROBES = [
+  {
+    name: 'Vorsterpark AH',
+    factualId: 'pl-gp-v01-81e8d602a6d2122d56f7',
+    parentSuffix: 'gauteng/meyerton/vorsterpark-ah',
+  },
+  {
+    name: 'Ohinimuri',
+    factualId: 'pl-gp-v01-e9e5b66a143d6d3b85d3',
+    parentSuffix: 'gauteng/meyerton/ohinimuri',
+  },
+  {
+    name: 'Klipwater',
+    factualId: 'pl-gp-v01-f7130c5fb332974131a3',
+    parentSuffix: 'gauteng/meyerton/klipwater',
+  },
+];
+
+for (const probe of WAVE40_IDENTITY_SPECIFIC_PROBES) {
+  const row = rowsByNaturalKey.get(probe.parentSuffix);
+  check(
+    `wave40 identity-specific edge resolves: ${probe.name}`,
+    row !== undefined && row.factual_location_ids.includes(probe.factualId),
+    row ? `${row.runtime_natural_key}/${row.factual_location_ids.join(',')}` : 'missing',
+  );
+}
+
 const NEGATIVE_PROBES = ['Mamelodi Extension 1', 'Mamelodi Extension 4'];
 for (const probe of NEGATIVE_PROBES) {
   const directHit = resolveByName(probe);

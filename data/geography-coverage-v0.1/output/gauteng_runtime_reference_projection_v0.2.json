@@ -7,7 +7,7 @@
     "factual_canonical_geography_sha256": "1fe0e2e3101bd7e459f484b7125dc1ce1f0327104002b184ef0e90d4236b7b7f",
     "factual_canonical_names_sha256": "a87891bc2e4167130d7e5eb649516a34aedaa071278ce8fe25df19f511669b51",
     "carried_projection_v01_sha256": "982ea13cd190a02da5440f122a061713e22bc157ef46f491ce530c5877ff9fc0",
-    "territory_manifest_sha256": "1a501e6d1eca0810d79c8db2ce5c6988c1c52f661ee449c1af7c9d7f7f828f22"
+    "territory_manifest_sha256": "2384db3029092a632363d288a4b174dc48607df36cb646828757f49b91ab1976"
   },
   "rows": [
     {
@@ -18258,6 +18258,28 @@
     {
       "runtime_search_scope_kind": "locality",
       "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/meyerton/klipwater",
+      "runtime_parent_natural_key": "gauteng/meyerton",
+      "name": "Klipwater",
+      "slug": "klipwater",
+      "latitude": -26.4275,
+      "longitude": 28.1019444,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-f7130c5fb332974131a3"
+      ],
+      "factual_preferred_names": [
+        "Klipwater"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
       "runtime_natural_key": "gauteng/meyerton/kookrus",
       "runtime_parent_natural_key": "gauteng/meyerton",
       "name": "Kookrus",
@@ -18338,6 +18360,28 @@
       ],
       "factual_preferred_names": [
         "Noldick"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/meyerton/ohinimuri",
+      "runtime_parent_natural_key": "gauteng/meyerton",
+      "name": "Ohinimuri",
+      "slug": "ohinimuri",
+      "latitude": -26.4383333,
+      "longitude": 27.9488889,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-e9e5b66a143d6d3b85d3"
+      ],
+      "factual_preferred_names": [
+        "Ohinimuri"
       ],
       "factual_types": [
         "suburb"
@@ -18432,6 +18476,28 @@
       ],
       "factual_preferred_names": [
         "Van der Westuizenhoogte AH"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/meyerton/vorsterpark-ah",
+      "runtime_parent_natural_key": "gauteng/meyerton",
+      "name": "Vorsterpark AH",
+      "slug": "vorsterpark-ah",
+      "latitude": -26.6031071,
+      "longitude": 28.0473257,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-81e8d602a6d2122d56f7"
+      ],
+      "factual_preferred_names": [
+        "Vorsterpark AH"
       ],
       "factual_types": [
         "suburb"

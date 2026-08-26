@@ -1,0 +1,46 @@
+{
+  "resolved_edges_version": "meyerton-midvaal-jurisdictional-place-evidence.v0.1.resolved",
+  "town": "Meyerton",
+  "parent_natural_key": "gauteng/meyerton",
+  "source": {
+    "publisher": "Midvaal Local Municipality",
+    "url": "https://www.midvaal.gov.za/wp-content/uploads/2025/06/Annexure-I-Integrated-Waste-Management-Plan-1.pdf",
+    "section": "Integrated Waste Management Plan, Figure 3 — Midvaal local municipality jurisdictional area labels Ohinimuri, Klipwater, Vorsterpark AH, and Meyerton",
+    "retrieved": "2026-08-27",
+    "licence_note": "Official municipal jurisdictional planning source used for locality relationship assertions; no prose or geometry is copied."
+  },
+  "edge_count": 3,
+  "edges": [
+    {
+      "factual_location_id": "pl-gp-v01-81e8d602a6d2122d56f7",
+      "preferred_name": "Vorsterpark AH",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/meyerton",
+      "evidence_class": "official_municipal_jurisdiction_and_magisterial_place_index",
+      "citation": "https://www.midvaal.gov.za/wp-content/uploads/2025/06/Annexure-I-Integrated-Waste-Management-Plan-1.pdf#Integrated%20Waste%20Management%20Plan%2C%20Figure%203%20%E2%80%94%20Midvaal%20local%20municipality%20jurisdictional%20area%20labels%20Ohinimuri%2C%20Klipwater%2C%20Vorsterpark%20AH%2C%20and%20Meyerton (retrieved 2026-08-27)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-e9e5b66a143d6d3b85d3",
+      "preferred_name": "Ohinimuri",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/meyerton",
+      "evidence_class": "official_municipal_jurisdiction_and_magisterial_place_index",
+      "citation": "https://www.midvaal.gov.za/wp-content/uploads/2025/06/Annexure-I-Integrated-Waste-Management-Plan-1.pdf#Integrated%20Waste%20Management%20Plan%2C%20Figure%203%20%E2%80%94%20Midvaal%20local%20municipality%20jurisdictional%20area%20labels%20Ohinimuri%2C%20Klipwater%2C%20Vorsterpark%20AH%2C%20and%20Meyerton (retrieved 2026-08-27)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-f7130c5fb332974131a3",
+      "preferred_name": "Klipwater",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/meyerton",
+      "evidence_class": "official_municipal_jurisdiction_and_magisterial_place_index",
+      "citation": "https://www.midvaal.gov.za/wp-content/uploads/2025/06/Annexure-I-Integrated-Waste-Management-Plan-1.pdf#Integrated%20Waste%20Management%20Plan%2C%20Figure%203%20%E2%80%94%20Midvaal%20local%20municipality%20jurisdictional%20area%20labels%20Ohinimuri%2C%20Klipwater%2C%20Vorsterpark%20AH%2C%20and%20Meyerton (retrieved 2026-08-27)"
+    }
+  ],
+  "diagnostics": {
+    "researched_names": 0,
+    "identity_specific_records": 3,
+    "matched_already_projected": [],
+    "names_not_in_canonical_layer": [],
+    "ambiguous_canonical_matches": []
+  }
+}
