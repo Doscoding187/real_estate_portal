@@ -7,7 +7,7 @@
     "factual_canonical_geography_sha256": "1fe0e2e3101bd7e459f484b7125dc1ce1f0327104002b184ef0e90d4236b7b7f",
     "factual_canonical_names_sha256": "a87891bc2e4167130d7e5eb649516a34aedaa071278ce8fe25df19f511669b51",
     "carried_projection_v01_sha256": "982ea13cd190a02da5440f122a061713e22bc157ef46f491ce530c5877ff9fc0",
-    "territory_manifest_sha256": "92d2cbe04cab5e76c744fde5c2e23fe79326e4077188d6de709af6341b468e68"
+    "territory_manifest_sha256": "465f868c919d6f2a64301d8474c6e781b2f394d189b65541cf097f2816296b02"
   },
   "rows": [
     {
@@ -1008,6 +1008,28 @@
       ],
       "factual_preferred_names": [
         "Kilfenora"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/benoni/kleinfontein-lake",
+      "runtime_parent_natural_key": "gauteng/benoni",
+      "name": "Kleinfontein Lake",
+      "slug": "kleinfontein-lake",
+      "latitude": -26.1847362,
+      "longitude": 28.3271869,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-f6971fb5d7602b2549c6"
+      ],
+      "factual_preferred_names": [
+        "Kleinfontein Lake"
       ],
       "factual_types": [
         "suburb"
