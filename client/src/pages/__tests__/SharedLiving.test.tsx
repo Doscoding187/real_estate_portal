@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 
 const search = vi.hoisted(() => ({ fn: vi.fn(() => ({ data: { items: [], total: 0, pageSize: 24 } })) }));
@@ -28,12 +28,13 @@ describe('SharedLiving discovery', () => {
 
   it('renders the three market facets and passes the selected market to the contract', () => {
     render(<SharedLiving />);
-    expect(screen.getByText('Rooms')).toBeInTheDocument();
-    expect(screen.getByText('Cottages & Small Places')).toBeInTheDocument();
-    expect(screen.getByText('Student Living')).toBeInTheDocument();
+    const marketSelect = screen.getByRole('combobox', { name: 'Market' });
+    fireEvent.click(marketSelect);
+    expect(screen.getByRole('option', { name: 'Rooms' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Cottages & Small Places' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Student Living' })).toBeInTheDocument();
 
-    const marketSelect = screen.getByLabelText('Market') as HTMLSelectElement;
-    expect(marketSelect.value).toBe('');
+    expect(marketSelect).toHaveTextContent('All Shared Living');
     expect(search.fn).toHaveBeenCalledWith(expect.objectContaining({ marketTag: undefined }));
   });
 
