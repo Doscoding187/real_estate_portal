@@ -16,7 +16,9 @@
     "carried_projection": "data/gauteng-canonical-runtime-convergence-v0.1/output/gauteng_runtime_reference_projection_v0.1.json",
     "carried_mapping": "data/gauteng-canonical-runtime-convergence-v0.1/output/gauteng_factual_runtime_mapping_v0.1.jsonl",
     "researched_parent_edges": [
-      "data/geography-coverage-v0.1/output/kempton-park-parent-evidence.v0.1.resolved.json"
+      "data/geography-coverage-v0.1/output/kempton-park-parent-evidence.v0.1.resolved.json",
+      "data/geography-coverage-v0.1/output/krugersdorp-idp-parent-evidence.v0.1.resolved.json",
+      "data/geography-coverage-v0.1/output/krugersdorp-notice-parent-evidence.v0.1.resolved.json"
     ]
   },
   "outputs": {

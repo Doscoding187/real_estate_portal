@@ -134,7 +134,98 @@
   ],
   "diagnostics": {
     "researched_names": 21,
-    "matched_already_projected": [],
+    "matched_already_projected": [
+      {
+        "name": "Allen Grove",
+        "factual_location_id": "pl-gp-v01-d60f124f2f0688827c74",
+        "existing_parent_natural_key": "gauteng/kempton-park",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Aston Manor",
+        "factual_location_id": "pl-gp-v01-89598c5a49181995dc27",
+        "existing_parent_natural_key": "gauteng/kempton-park",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Birch Acres",
+        "factual_location_id": "pl-gp-v01-8df24612287a89570618",
+        "existing_parent_natural_key": "gauteng/kempton-park",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Birchleigh",
+        "factual_location_id": "pl-gp-v01-37ff7b2af3aac8c324e6",
+        "existing_parent_natural_key": "gauteng/kempton-park",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Birchleigh North",
+        "factual_location_id": "pl-gp-v01-987cfd85cae6270b18ea",
+        "existing_parent_natural_key": "gauteng/kempton-park",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Bonaero Park",
+        "factual_location_id": "pl-gp-v01-d323e424f308f0ecefb5",
+        "existing_parent_natural_key": "gauteng/kempton-park",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Croydon",
+        "factual_location_id": "pl-gp-v01-11ebce2a2c4dcb10d9f7",
+        "existing_parent_natural_key": "gauteng/kempton-park",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Edleen",
+        "factual_location_id": "pl-gp-v01-caaca129115eeb3aaef0",
+        "existing_parent_natural_key": "gauteng/kempton-park",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Isando",
+        "factual_location_id": "pl-gp-v01-10af80f299f30307c96f",
+        "existing_parent_natural_key": "gauteng/kempton-park",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Kempton Park West",
+        "factual_location_id": "pl-gp-v01-e689437f42417bbebebf",
+        "existing_parent_natural_key": "gauteng/kempton-park",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Norkem Park",
+        "factual_location_id": "pl-gp-v01-638870c405f25d0cd07e",
+        "existing_parent_natural_key": "gauteng/kempton-park",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Pomona",
+        "factual_location_id": "pl-gp-v01-fa94b1e249e7140fedc0",
+        "existing_parent_natural_key": "gauteng/kempton-park",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Rhodesfield",
+        "factual_location_id": "pl-gp-v01-ca7755d04c06d650792b",
+        "existing_parent_natural_key": "gauteng/kempton-park",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Terenure",
+        "factual_location_id": "pl-gp-v01-504bf6fb1758aebef23e",
+        "existing_parent_natural_key": "gauteng/kempton-park",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Van Riebeeck Park",
+        "factual_location_id": "pl-gp-v01-a7a7e6c3f5cc9dd26642",
+        "existing_parent_natural_key": "gauteng/kempton-park",
+        "parent_matches_evidence": true
+      }
+    ],
     "names_not_in_canonical_layer": [
       "Bredell",
       "Cresslawn",

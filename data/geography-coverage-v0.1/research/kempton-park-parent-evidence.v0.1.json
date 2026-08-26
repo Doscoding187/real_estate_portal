@@ -2,6 +2,7 @@
   "artifact_version": "kempton-park-parent-evidence-v0.1",
   "town": "Kempton Park",
   "parent_natural_key": "gauteng/kempton-park",
+  "administrative_context": "Ekurhuleni",
   "evidence_class": "curated_municipal_suburb_list",
   "source": {
     "publisher": "English Wikipedia",

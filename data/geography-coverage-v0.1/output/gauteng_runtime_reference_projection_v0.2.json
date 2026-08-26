@@ -7,7 +7,7 @@
     "factual_canonical_geography_sha256": "1fe0e2e3101bd7e459f484b7125dc1ce1f0327104002b184ef0e90d4236b7b7f",
     "factual_canonical_names_sha256": "a87891bc2e4167130d7e5eb649516a34aedaa071278ce8fe25df19f511669b51",
     "carried_projection_v01_sha256": "982ea13cd190a02da5440f122a061713e22bc157ef46f491ce530c5877ff9fc0",
-    "territory_manifest_sha256": "a1904869ad419aa278d22058e7304857fa260a81f2361ff6b298c6f0fdc47f87"
+    "territory_manifest_sha256": "0ea6d757c49d82ddd2f7a21353b52a67b5cc46b537bde289d728dc97e790d7b8"
   },
   "rows": [
     {
@@ -12175,6 +12175,272 @@
       ],
       "factual_types": [
         "city"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/krugersdorp/apple-park",
+      "runtime_parent_natural_key": "gauteng/krugersdorp",
+      "name": "Apple Park",
+      "slug": "apple-park",
+      "latitude": -26.0952778,
+      "longitude": 27.7583333,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-11dc3a2fb791c49a9597"
+      ],
+      "factual_preferred_names": [
+        "Apple Park"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/krugersdorp/boltonia",
+      "runtime_parent_natural_key": "gauteng/krugersdorp",
+      "name": "Boltonia",
+      "slug": "boltonia",
+      "latitude": -26.104441100000003,
+      "longitude": 27.74635445,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "mixed_odbl_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-89e3f48feae47c0253c8"
+      ],
+      "factual_preferred_names": [
+        "Boltonia"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/krugersdorp/burgershoop",
+      "runtime_parent_natural_key": "gauteng/krugersdorp",
+      "name": "Burgershoop",
+      "slug": "burgershoop",
+      "latitude": -26.0975,
+      "longitude": 27.7591667,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-63ad3f9f7ed3067bac74"
+      ],
+      "factual_preferred_names": [
+        "Burgershoop"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/krugersdorp/dan-pienaarville",
+      "runtime_parent_natural_key": "gauteng/krugersdorp",
+      "name": "Dan Pienaarville",
+      "slug": "dan-pienaarville",
+      "latitude": -26.0816667,
+      "longitude": 27.7638889,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-66f415e51a57ac41c742"
+      ],
+      "factual_preferred_names": [
+        "Dan Pienaarville"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/krugersdorp/kenmare",
+      "runtime_parent_natural_key": "gauteng/krugersdorp",
+      "name": "Kenmare",
+      "slug": "kenmare",
+      "latitude": -26.1038889,
+      "longitude": 27.8136111,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-c4d193e3324038b3451e"
+      ],
+      "factual_preferred_names": [
+        "Kenmare"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/krugersdorp/krugersdorp-west",
+      "runtime_parent_natural_key": "gauteng/krugersdorp",
+      "name": "Krugersdorp West",
+      "slug": "krugersdorp-west",
+      "latitude": -26.097905,
+      "longitude": 27.748411,
+      "searchable_aliases": [
+        "KRUGERSDORPWEST"
+      ],
+      "publication_status": "provisional",
+      "licensing_classification": "mixed_odbl_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-312442a74a6f94e5b620"
+      ],
+      "factual_preferred_names": [
+        "Krugersdorp West"
+      ],
+      "factual_types": [
+        "locality"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/krugersdorp/monument",
+      "runtime_parent_natural_key": "gauteng/krugersdorp",
+      "name": "Monument",
+      "slug": "monument",
+      "latitude": -26.0980556,
+      "longitude": 27.7938889,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-e161213c682079f79431"
+      ],
+      "factual_preferred_names": [
+        "Monument"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/krugersdorp/munsieville",
+      "runtime_parent_natural_key": "gauteng/krugersdorp",
+      "name": "Munsieville",
+      "slug": "munsieville",
+      "latitude": -26.075,
+      "longitude": 27.753,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "mixed_odbl_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-d2095eccfd205ef2bb89"
+      ],
+      "factual_preferred_names": [
+        "Munsieville"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/krugersdorp/noordheuwel",
+      "runtime_parent_natural_key": "gauteng/krugersdorp",
+      "name": "Noordheuwel",
+      "slug": "noordheuwel",
+      "latitude": -26.08665,
+      "longitude": 27.8022222,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "mixed_odbl_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-b5be7142731749f02996"
+      ],
+      "factual_preferred_names": [
+        "Noordheuwel"
+      ],
+      "factual_types": [
+        "locality"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/krugersdorp/rangeview",
+      "runtime_parent_natural_key": "gauteng/krugersdorp",
+      "name": "Rangeview",
+      "slug": "rangeview",
+      "latitude": -26.1119444,
+      "longitude": 27.8263889,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-a2fb6da28af54a850087"
+      ],
+      "factual_preferred_names": [
+        "Rangeview"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/krugersdorp/rant-en-dal",
+      "runtime_parent_natural_key": "gauteng/krugersdorp",
+      "name": "Rant-en-Dal",
+      "slug": "rant-en-dal",
+      "latitude": -26.077251099999998,
+      "longitude": 27.7759578,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "mixed_odbl_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-3cff8fa44e2ec0244a4d"
+      ],
+      "factual_preferred_names": [
+        "Rant-en-Dal"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/krugersdorp/silverfields",
+      "runtime_parent_natural_key": "gauteng/krugersdorp",
+      "name": "Silverfields",
+      "slug": "silverfields",
+      "latitude": -26.1203528,
+      "longitude": 27.82360835,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "mixed_odbl_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-3359cd97836fb4baa50d"
+      ],
+      "factual_preferred_names": [
+        "Silverfields"
+      ],
+      "factual_types": [
+        "suburb"
       ]
     },
     {

@@ -1,0 +1,63 @@
+{
+  "resolved_edges_version": "krugersdorp-notice-parent-evidence.v0.1.resolved",
+  "town": "Krugersdorp",
+  "parent_natural_key": "gauteng/krugersdorp",
+  "source": {
+    "publisher": "Mogale City Local Municipality",
+    "url": "https://mogalecity.gov.za/2012-public-notices/",
+    "section": "Electricity switch-off: affected Krugersdorp-area communities",
+    "retrieved": "2026-08-26",
+    "licence_note": "Official municipal public notice used for locality membership assertions; no prose or geometry is copied."
+  },
+  "edge_count": 3,
+  "edges": [
+    {
+      "factual_location_id": "pl-gp-v01-11dc3a2fb791c49a9597",
+      "preferred_name": "Apple Park",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/krugersdorp",
+      "evidence_class": "official_municipal_notice_area_list",
+      "citation": "https://mogalecity.gov.za/2012-public-notices/#Electricity%20switch-off%3A%20affected%20Krugersdorp-area%20communities (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-66f415e51a57ac41c742",
+      "preferred_name": "Dan Pienaarville",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/krugersdorp",
+      "evidence_class": "official_municipal_notice_area_list",
+      "citation": "https://mogalecity.gov.za/2012-public-notices/#Electricity%20switch-off%3A%20affected%20Krugersdorp-area%20communities (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-d2095eccfd205ef2bb89",
+      "preferred_name": "Munsieville",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/krugersdorp",
+      "evidence_class": "official_municipal_notice_area_list",
+      "citation": "https://mogalecity.gov.za/2012-public-notices/#Electricity%20switch-off%3A%20affected%20Krugersdorp-area%20communities (retrieved 2026-08-26)"
+    }
+  ],
+  "diagnostics": {
+    "researched_names": 3,
+    "matched_already_projected": [
+      {
+        "name": "Apple Park",
+        "factual_location_id": "pl-gp-v01-11dc3a2fb791c49a9597",
+        "existing_parent_natural_key": "gauteng/krugersdorp",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Munsieville",
+        "factual_location_id": "pl-gp-v01-d2095eccfd205ef2bb89",
+        "existing_parent_natural_key": "gauteng/krugersdorp",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Dan Pienaarville",
+        "factual_location_id": "pl-gp-v01-66f415e51a57ac41c742",
+        "existing_parent_natural_key": "gauteng/krugersdorp",
+        "parent_matches_evidence": true
+      }
+    ],
+    "names_not_in_canonical_layer": []
+  }
+}

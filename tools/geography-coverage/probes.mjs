@@ -148,6 +148,22 @@ for (const probe of WAVE2_LOCALITY_PROBES) {
   );
 }
 
+const WAVE3_LOCALITY_PROBES = [
+  { name: 'Apple Park', parentSuffix: 'gauteng/krugersdorp/apple-park' },
+  { name: 'Munsieville', parentSuffix: 'gauteng/krugersdorp/munsieville' },
+  { name: 'Dan Pienaarville', parentSuffix: 'gauteng/krugersdorp/dan-pienaarville' },
+  { name: 'Noordheuwel', parentSuffix: 'gauteng/krugersdorp/noordheuwel' },
+];
+
+for (const probe of WAVE3_LOCALITY_PROBES) {
+  const row = resolveByName(probe.name);
+  check(
+    `wave3 researched edge resolves: ${probe.name}`,
+    row !== null && row.runtime_natural_key === probe.parentSuffix,
+    row ? row.runtime_natural_key : 'missing',
+  );
+}
+
 const NEGATIVE_PROBES = ['Mamelodi Extension 1', 'Mamelodi Extension 4'];
 for (const probe of NEGATIVE_PROBES) {
   const directHit = resolveByName(probe);

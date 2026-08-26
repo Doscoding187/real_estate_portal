@@ -32,6 +32,12 @@ if (!evidencePath) {
   process.exit(1);
 }
 const evidence = readJson(evidencePath);
+const expectedAdministrativeContext = evidence.administrative_context;
+if (!expectedAdministrativeContext) {
+  throw new Error(
+    `Research artifact ${evidencePath} must declare administrative_context before parent edges can be resolved.`,
+  );
+}
 
 const canonicalRoot =
   process.env.PL_GEOGRAPHY_CANONICAL_ROOT ||
@@ -41,7 +47,12 @@ const canonical = readJsonl(
 );
 
 const projection = readJson(`${OUTPUT_DIR}/gauteng_runtime_reference_projection_v0.2.json`);
-const projectedFactualIds = new Set(projection.rows.flatMap(row => row.factual_location_ids));
+const projectedRowByFactualId = new Map();
+for (const row of projection.rows) {
+  for (const factualId of row.factual_location_ids ?? []) {
+    projectedRowByFactualId.set(factualId, row);
+  }
+}
 
 const byNormalizedName = new Map();
 for (const record of canonical) {
@@ -59,14 +70,30 @@ for (const name of evidence.suburb_names) {
     notInCanonical.push(name);
     continue;
   }
-  if (projectedFactualIds.has(record.canonical_location_id)) {
-    matchedAlreadyProjected.push({ name, factual_location_id: record.canonical_location_id });
+  const projectedRow = projectedRowByFactualId.get(record.canonical_location_id);
+  if (projectedRow) {
+    matchedAlreadyProjected.push({
+      name,
+      factual_location_id: record.canonical_location_id,
+      existing_parent_natural_key: projectedRow.runtime_parent_natural_key,
+      parent_matches_evidence: projectedRow.runtime_parent_natural_key === evidence.parent_natural_key,
+    });
+    if (projectedRow.runtime_parent_natural_key === evidence.parent_natural_key) {
+      resolved.push({
+        factual_location_id: record.canonical_location_id,
+        preferred_name: record.preferred_name,
+        factual_type: record.canonical_type,
+        parent_natural_key: evidence.parent_natural_key,
+        evidence_class: evidence.evidence_class,
+        citation: `${evidence.source.url}#${encodeURIComponent(evidence.source.section)} (retrieved ${evidence.source.retrieved})`,
+      });
+    }
     continue;
   }
   const context = record.administrative_context?.adm2?.[0]?.name ?? null;
-  if (context !== 'Ekurhuleni') {
+  if (context !== expectedAdministrativeContext) {
     throw new Error(
-      `Researched suburb ${name} resolves to ${record.canonical_location_id} under unexpected municipality ${context}; refusing to emit an edge.`,
+      `Researched suburb ${name} resolves to ${record.canonical_location_id} under unexpected municipality ${context}; expected ${expectedAdministrativeContext}; refusing to emit an edge.`,
     );
   }
   resolved.push({
