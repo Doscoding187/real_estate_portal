@@ -1,0 +1,60 @@
+{
+  "resolved_edges_version": "kempton-park-calendar-2026-parent-evidence.v0.1.resolved",
+  "town": "Kempton Park",
+  "parent_natural_key": "gauteng/kempton-park",
+  "source": {
+    "publisher": "City of Ekurhuleni",
+    "url": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/KEMPTON-PARK_Calender-2026.pdf",
+    "section": "2026 Kempton Park refuse-removal collection areas",
+    "retrieved": "2026-08-26",
+    "licence_note": "Official municipal service calendar used for locality membership assertions; no prose or geometry is copied."
+  },
+  "edge_count": 5,
+  "edges": [
+    {
+      "factual_location_id": "pl-gp-v01-0dc501e9dbc9167833b1",
+      "preferred_name": "Estherpark",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/kempton-park",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/KEMPTON-PARK_Calender-2026.pdf#2026%20Kempton%20Park%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-180a67a1499be34f8f82",
+      "preferred_name": "Cress Lawn",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/kempton-park",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/KEMPTON-PARK_Calender-2026.pdf#2026%20Kempton%20Park%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-6ea4794004f477f70e20",
+      "preferred_name": "Nimrodpark",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/kempton-park",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/KEMPTON-PARK_Calender-2026.pdf#2026%20Kempton%20Park%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-84b716e3d4f7caaffa83",
+      "preferred_name": "Glenmarais",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/kempton-park",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/KEMPTON-PARK_Calender-2026.pdf#2026%20Kempton%20Park%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-e605e7d5ec3a49bfb932",
+      "preferred_name": "Chloorkop",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/kempton-park",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/KEMPTON-PARK_Calender-2026.pdf#2026%20Kempton%20Park%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
+    }
+  ],
+  "diagnostics": {
+    "researched_names": 5,
+    "matched_already_projected": [],
+    "names_not_in_canonical_layer": []
+  }
+}

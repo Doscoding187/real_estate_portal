@@ -203,6 +203,33 @@ for (const probe of WAVE5_LOCALITY_PROBES) {
   );
 }
 
+const WAVE6_LOCALITY_PROBES = [
+  { name: 'Chloorkop', parentSuffix: 'gauteng/kempton-park/chloorkop' },
+  { name: 'Cress Lawn', parentSuffix: 'gauteng/kempton-park/cress-lawn' },
+  { name: 'Estherpark', parentSuffix: 'gauteng/kempton-park/estherpark' },
+  { name: 'Glenmarais', parentSuffix: 'gauteng/kempton-park/glenmarais' },
+  { name: 'Nimrodpark', parentSuffix: 'gauteng/kempton-park/nimrodpark' },
+  { name: 'Caleni', parentSuffix: 'gauteng/thembisa/caleni' },
+  { name: 'Endulweni', parentSuffix: 'gauteng/thembisa/endulweni' },
+  { name: 'Esselenpark', parentSuffix: 'gauteng/thembisa/esselenpark' },
+  { name: 'Isekelo', parentSuffix: 'gauteng/thembisa/isekelo' },
+  { name: 'Jiyana', parentSuffix: 'gauteng/thembisa/jiyana' },
+  { name: 'Mfuyaneni', parentSuffix: 'gauteng/thembisa/mfuyaneni' },
+  { name: 'Mnonjaneni', parentSuffix: 'gauteng/thembisa/mnonjaneni' },
+  { name: 'Mqansa', parentSuffix: 'gauteng/thembisa/mqansa' },
+  { name: 'Temong', parentSuffix: 'gauteng/thembisa/temong' },
+  { name: 'Welumlambo', parentSuffix: 'gauteng/thembisa/welumlambo' },
+];
+
+for (const probe of WAVE6_LOCALITY_PROBES) {
+  const row = resolveByName(probe.name);
+  check(
+    `wave6 researched edge resolves: ${probe.name}`,
+    row !== null && row.runtime_natural_key === probe.parentSuffix,
+    row ? row.runtime_natural_key : 'missing',
+  );
+}
+
 const NEGATIVE_PROBES = ['Mamelodi Extension 1', 'Mamelodi Extension 4'];
 for (const probe of NEGATIVE_PROBES) {
   const directHit = resolveByName(probe);

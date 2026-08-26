@@ -7,7 +7,7 @@
     "factual_canonical_geography_sha256": "1fe0e2e3101bd7e459f484b7125dc1ce1f0327104002b184ef0e90d4236b7b7f",
     "factual_canonical_names_sha256": "a87891bc2e4167130d7e5eb649516a34aedaa071278ce8fe25df19f511669b51",
     "carried_projection_v01_sha256": "982ea13cd190a02da5440f122a061713e22bc157ef46f491ce530c5877ff9fc0",
-    "territory_manifest_sha256": "38f99c2f0997fd1f31c51a63fc0aad78bdb1416f8c1d7f526edf07cb907c66b0"
+    "territory_manifest_sha256": "087cdb55cdf42bc456694f5f1f5d6264272c623249dca845194d9b5ee5026b0a"
   },
   "rows": [
     {
@@ -12759,6 +12759,52 @@
     {
       "runtime_search_scope_kind": "locality",
       "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/kempton-park/chloorkop",
+      "runtime_parent_natural_key": "gauteng/kempton-park",
+      "name": "Chloorkop",
+      "slug": "chloorkop",
+      "latitude": -26.05007665,
+      "longitude": 28.17798055,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "mixed_odbl_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-e605e7d5ec3a49bfb932"
+      ],
+      "factual_preferred_names": [
+        "Chloorkop"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/kempton-park/cress-lawn",
+      "runtime_parent_natural_key": "gauteng/kempton-park",
+      "name": "Cress Lawn",
+      "slug": "cress-lawn",
+      "latitude": -26.112099999999998,
+      "longitude": 28.204005549999998,
+      "searchable_aliases": [
+        "Cresslawn"
+      ],
+      "publication_status": "provisional",
+      "licensing_classification": "mixed_odbl_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-180a67a1499be34f8f82"
+      ],
+      "factual_preferred_names": [
+        "Cress Lawn"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
       "runtime_natural_key": "gauteng/kempton-park/croydon",
       "runtime_parent_natural_key": "gauteng/kempton-park",
       "name": "Croydon",
@@ -12806,6 +12852,54 @@
     {
       "runtime_search_scope_kind": "locality",
       "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/kempton-park/estherpark",
+      "runtime_parent_natural_key": "gauteng/kempton-park",
+      "name": "Estherpark",
+      "slug": "estherpark",
+      "latitude": -26.10016725,
+      "longitude": 28.19009635,
+      "searchable_aliases": [
+        "Esther Park"
+      ],
+      "publication_status": "provisional",
+      "licensing_classification": "mixed_odbl_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-0dc501e9dbc9167833b1"
+      ],
+      "factual_preferred_names": [
+        "Estherpark"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/kempton-park/glenmarais",
+      "runtime_parent_natural_key": "gauteng/kempton-park",
+      "name": "Glenmarais",
+      "slug": "glenmarais",
+      "latitude": -26.074861133,
+      "longitude": 28.241666672,
+      "searchable_aliases": [
+        "Glen Marais"
+      ],
+      "publication_status": "provisional",
+      "licensing_classification": "mixed_odbl_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-84b716e3d4f7caaffa83"
+      ],
+      "factual_preferred_names": [
+        "Glenmarais"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
       "runtime_natural_key": "gauteng/kempton-park/isando",
       "runtime_parent_natural_key": "gauteng/kempton-park",
       "name": "Isando",
@@ -12844,6 +12938,30 @@
       ],
       "factual_preferred_names": [
         "Kempton Park West"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/kempton-park/nimrodpark",
+      "runtime_parent_natural_key": "gauteng/kempton-park",
+      "name": "Nimrodpark",
+      "slug": "nimrodpark",
+      "latitude": -26.0906944275,
+      "longitude": 28.240555538499997,
+      "searchable_aliases": [
+        "Nimrod Park"
+      ],
+      "publication_status": "provisional",
+      "licensing_classification": "mixed_odbl_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-6ea4794004f477f70e20"
+      ],
+      "factual_preferred_names": [
+        "Nimrodpark"
       ],
       "factual_types": [
         "suburb"
@@ -21772,6 +21890,534 @@
       ],
       "factual_types": [
         "town"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/thembisa/caleni",
+      "runtime_parent_natural_key": "gauteng/thembisa",
+      "name": "Caleni",
+      "slug": "caleni",
+      "latitude": -26.0125,
+      "longitude": 28.2452778,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-ffa138f9bede0c08b3a4"
+      ],
+      "factual_preferred_names": [
+        "Caleni"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/thembisa/endulweni",
+      "runtime_parent_natural_key": "gauteng/thembisa",
+      "name": "Endulweni",
+      "slug": "endulweni",
+      "latitude": -26.0147222,
+      "longitude": 28.2230556,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-5be98ca69ee21ed2b453"
+      ],
+      "factual_preferred_names": [
+        "Endulweni"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/thembisa/esselenpark",
+      "runtime_parent_natural_key": "gauteng/thembisa",
+      "name": "Esselenpark",
+      "slug": "esselenpark",
+      "latitude": -26.0400284,
+      "longitude": 28.2463603,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-8a0b20bdef71b1ebab27"
+      ],
+      "factual_preferred_names": [
+        "Esselenpark"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/thembisa/ethafeni",
+      "runtime_parent_natural_key": "gauteng/thembisa",
+      "name": "Ethafeni",
+      "slug": "ethafeni",
+      "latitude": -26.0258333,
+      "longitude": 28.2122222,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-be01c2337a659afa3c83"
+      ],
+      "factual_preferred_names": [
+        "Ethafeni"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/thembisa/isekelo",
+      "runtime_parent_natural_key": "gauteng/thembisa",
+      "name": "Isekelo",
+      "slug": "isekelo",
+      "latitude": -26.0166252,
+      "longitude": 28.2327008,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-4c6b544cf57fe7ba49fd"
+      ],
+      "factual_preferred_names": [
+        "Isekelo"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/thembisa/jiyana",
+      "runtime_parent_natural_key": "gauteng/thembisa",
+      "name": "Jiyana",
+      "slug": "jiyana",
+      "latitude": -26.0275,
+      "longitude": 28.2152778,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-ba6ffd0b80dac2132d65"
+      ],
+      "factual_preferred_names": [
+        "Jiyana"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/thembisa/kopanong",
+      "runtime_parent_natural_key": "gauteng/thembisa",
+      "name": "Kopanong",
+      "slug": "kopanong",
+      "latitude": -26.0038889,
+      "longitude": 28.2311111,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-dfdc0f83e3e5f60c06c4"
+      ],
+      "factual_preferred_names": [
+        "Kopanong"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/thembisa/lekaneng",
+      "runtime_parent_natural_key": "gauteng/thembisa",
+      "name": "Lekaneng",
+      "slug": "lekaneng",
+      "latitude": -26.0188889,
+      "longitude": 28.2072222,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-c4cc8a5a9eac7ada0afa"
+      ],
+      "factual_preferred_names": [
+        "Lekaneng"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/thembisa/lifateng",
+      "runtime_parent_natural_key": "gauteng/thembisa",
+      "name": "Lifateng",
+      "slug": "lifateng",
+      "latitude": -26.0130556,
+      "longitude": 28.2119444,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-c4e5496913a5ab676ab1"
+      ],
+      "factual_preferred_names": [
+        "Lifateng"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/thembisa/maokeng",
+      "runtime_parent_natural_key": "gauteng/thembisa",
+      "name": "Maokeng",
+      "slug": "maokeng",
+      "latitude": -25.9913889,
+      "longitude": 28.2202778,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-ea9c7eec9de26f393d1a"
+      ],
+      "factual_preferred_names": [
+        "Maokeng"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/thembisa/mfuyaneni",
+      "runtime_parent_natural_key": "gauteng/thembisa",
+      "name": "Mfuyaneni",
+      "slug": "mfuyaneni",
+      "latitude": -26.0188889,
+      "longitude": 28.1972222,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-4dbc6b47572b212ce9d5"
+      ],
+      "factual_preferred_names": [
+        "Mfuyaneni"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/thembisa/mnonjaneni",
+      "runtime_parent_natural_key": "gauteng/thembisa",
+      "name": "Mnonjaneni",
+      "slug": "mnonjaneni",
+      "latitude": -26.015,
+      "longitude": 28.1919444,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-0dcdadd0e98c0090c5ce"
+      ],
+      "factual_preferred_names": [
+        "Mnonjaneni"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/thembisa/moedi",
+      "runtime_parent_natural_key": "gauteng/thembisa",
+      "name": "Moedi",
+      "slug": "moedi",
+      "latitude": -26.0119444,
+      "longitude": 28.1963889,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-1a96d34130a3d3e381e8"
+      ],
+      "factual_preferred_names": [
+        "Moedi"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/thembisa/motsu",
+      "runtime_parent_natural_key": "gauteng/thembisa",
+      "name": "Motsu",
+      "slug": "motsu",
+      "latitude": -26.0036111,
+      "longitude": 28.2080556,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-a6321c49e0d017156898"
+      ],
+      "factual_preferred_names": [
+        "Motsu"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/thembisa/moyeni",
+      "runtime_parent_natural_key": "gauteng/thembisa",
+      "name": "Moyeni",
+      "slug": "moyeni",
+      "latitude": -26.0136111,
+      "longitude": 28.2325,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-39c5187e0cd31e0d6786"
+      ],
+      "factual_preferred_names": [
+        "Moyeni"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/thembisa/mqansa",
+      "runtime_parent_natural_key": "gauteng/thembisa",
+      "name": "Mqansa",
+      "slug": "mqansa",
+      "latitude": -26.0108333,
+      "longitude": 28.2388889,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-be412a1cfcd810c76d57"
+      ],
+      "factual_preferred_names": [
+        "Mqansa"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/thembisa/nxiweni",
+      "runtime_parent_natural_key": "gauteng/thembisa",
+      "name": "Nxiweni",
+      "slug": "nxiweni",
+      "latitude": -26.0225,
+      "longitude": 28.2216667,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-b387de018fbb0e37d3ea"
+      ],
+      "factual_preferred_names": [
+        "Nxiweni"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/thembisa/sangweni",
+      "runtime_parent_natural_key": "gauteng/thembisa",
+      "name": "Sangweni",
+      "slug": "sangweni",
+      "latitude": -26.0236111,
+      "longitude": 28.1997222,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-bba27fc68ae7ae0a2e26"
+      ],
+      "factual_preferred_names": [
+        "Sangweni"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/thembisa/sithame",
+      "runtime_parent_natural_key": "gauteng/thembisa",
+      "name": "Sithame",
+      "slug": "sithame",
+      "latitude": -26.0058333,
+      "longitude": 28.2238889,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-2060b204c65519ae3553"
+      ],
+      "factual_preferred_names": [
+        "Sithame"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/thembisa/sivana",
+      "runtime_parent_natural_key": "gauteng/thembisa",
+      "name": "Sivana",
+      "slug": "sivana",
+      "latitude": -26.0194444,
+      "longitude": 28.2122222,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-0701aae57d8f15f78d1f"
+      ],
+      "factual_preferred_names": [
+        "Sivana"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/thembisa/temong",
+      "runtime_parent_natural_key": "gauteng/thembisa",
+      "name": "Temong",
+      "slug": "temong",
+      "latitude": -26.0025,
+      "longitude": 28.2158333,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-07aac79edaf12c092ae1"
+      ],
+      "factual_preferred_names": [
+        "Temong"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/thembisa/thiteng",
+      "runtime_parent_natural_key": "gauteng/thembisa",
+      "name": "Thiteng",
+      "slug": "thiteng",
+      "latitude": -26.0202778,
+      "longitude": 28.2025,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-4e516818776ad3edbeae"
+      ],
+      "factual_preferred_names": [
+        "Thiteng"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/thembisa/vusimuzi",
+      "runtime_parent_natural_key": "gauteng/thembisa",
+      "name": "Vusimuzi",
+      "slug": "vusimuzi",
+      "latitude": -26.0261048,
+      "longitude": 28.2059974,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-65bf6bac62643fba2374"
+      ],
+      "factual_preferred_names": [
+        "Vusimuzi"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/thembisa/welumlambo",
+      "runtime_parent_natural_key": "gauteng/thembisa",
+      "name": "Welumlambo",
+      "slug": "welumlambo",
+      "latitude": -26.0222333,
+      "longitude": 28.2097812,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-4aa8a79b65671fe0bb5b"
+      ],
+      "factual_preferred_names": [
+        "Welumlambo"
+      ],
+      "factual_types": [
+        "suburb"
       ]
     },
     {
