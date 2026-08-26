@@ -13,6 +13,7 @@ import {
 } from '../../shared/locationAuthority';
 import type {
   CanonicalLocationDiscoveryResult,
+  SearchDiscoveryMatchReason,
   SearchDiscoveryResult,
   SearchDiscoverySelection,
   SearchAreaDiscoveryResult,
@@ -24,6 +25,7 @@ import {
   type SearchScope,
 } from '../../shared/searchScope';
 import { gautengFactualRuntimeProjectionAuthority } from './governedRuntimeGeographyReference';
+import { GAUTENG_RUNTIME_REFERENCE_PROJECTION } from './governedRuntimeGeographyReference';
 import {
   locationResolver,
   type PublicLocationResolutionResult,
@@ -169,6 +171,62 @@ function pathFromRuntimeNaturalKey(runtimeNaturalKey: string): string {
     .split('/')
     .map(segment => encodeURIComponent(segment))
     .join('/')}`;
+}
+
+interface GovernedAliasIndexEntry {
+  runtimeNaturalKey: string;
+  scopeKind: RuntimeSearchScopeKind;
+  alias: string;
+}
+
+let cachedGovernedAliasIndex: Map<string, GovernedAliasIndexEntry[]> | null = null;
+
+/**
+ * Alias hits resolve through the same governed runtime rows as name hits.
+ * Aliases never create identities; they only route queries to one.
+ */
+function governedAliasIndex(): Map<string, GovernedAliasIndexEntry[]> {
+  if (!cachedGovernedAliasIndex) {
+    const index = new Map<string, GovernedAliasIndexEntry[]>();
+    for (const row of GAUTENG_RUNTIME_REFERENCE_PROJECTION.rows) {
+      for (const alias of row.searchableAliases ?? []) {
+        const normalized = normalizedQuery(alias);
+        if (!normalized || !row.runtimeParentNaturalKey) continue;
+        const list = index.get(normalized) ?? [];
+        list.push({
+          runtimeNaturalKey: row.runtimeNaturalKey,
+          scopeKind: row.runtimeSearchScopeKind,
+          alias,
+        });
+        index.set(normalized, list);
+      }
+    }
+    cachedGovernedAliasIndex = index;
+  }
+  return cachedGovernedAliasIndex;
+}
+
+function matchReasonForLabel(label: string, query: string): SearchDiscoveryMatchReason {
+  const normalizedLabel = normalizedQuery(label);
+  if (normalizedLabel === query) return 'exact';
+  if (normalizedLabel.startsWith(query)) return 'prefix';
+  return 'contains';
+}
+
+function discoveryRank(result: SearchDiscoveryResult, query: string): number {
+  if (result.kind === 'search_area') return 4;
+  switch (result.matchReason) {
+    case 'exact':
+      return 0;
+    case 'prefix':
+      return 1;
+    case 'alias_exact':
+      return 2;
+    case 'alias_prefix':
+      return 3;
+    default:
+      return normalizedQuery(result.label).startsWith(query) ? 1 : 5;
+  }
 }
 
 async function searchCanonicalLocationCatalog(
@@ -372,6 +430,7 @@ export class SearchDiscoveryService {
       if (!runtime) continue;
 
       const [provinceSlug, citySlug, suburbSlug] = entry.runtimeNaturalKey.split('/');
+      const contextLabel = contextLabelForFactualProjection(entry.factualContext, provinceSlug);
       results.push({
         kind: 'canonical_location',
         factualLocationId: entry.factualLocationId,
@@ -382,20 +441,72 @@ export class SearchDiscoveryService {
         searchScopeKind: entry.runtimeSearchScopeKind,
         display: {
           typeLabel: displayTypeLabel(entry.factualType, runtime.level),
-          ...(contextLabelForFactualProjection(entry.factualContext, provinceSlug)
-            ? {
-                contextLabel: contextLabelForFactualProjection(entry.factualContext, provinceSlug),
-              }
-            : {}),
+          ...(contextLabel ? { contextLabel } : {}),
         },
         provinceSlug,
         ...(citySlug ? { citySlug } : {}),
         ...(suburbSlug ? { suburbSlug } : {}),
         canonicalPath: pathFromRuntimeNaturalKey(entry.runtimeNaturalKey),
         source: 'canonical_geography',
+        matchReason: matchReasonForLabel(entry.factualPreferredName, lowerQuery),
       });
     }
 
+    return results;
+  }
+
+  private async searchAliasMatches(
+    query: string,
+    limit: number,
+    excludePaths: ReadonlySet<string>,
+  ): Promise<readonly CanonicalLocationDiscoveryResult[]> {
+    const index = governedAliasIndex();
+    const exactHits = index.get(query) ?? [];
+    const prefixHits: GovernedAliasIndexEntry[] = [];
+    for (const [normalizedAlias, entries] of index.entries()) {
+      if (normalizedAlias.startsWith(query)) prefixHits.push(...entries);
+    }
+
+    const orderedHits = [
+      ...exactHits.map(hit => ({ hit, reason: 'alias_exact' as SearchDiscoveryMatchReason })),
+      ...prefixHits.map(hit => ({ hit, reason: 'alias_prefix' as SearchDiscoveryMatchReason })),
+    ];
+
+    const results: CanonicalLocationDiscoveryResult[] = [];
+    const seenPaths = new Set<string>();
+    for (const { hit, reason } of orderedHits) {
+      if (results.length >= limit) break;
+      const path = pathFromRuntimeNaturalKey(hit.runtimeNaturalKey);
+      if (excludePaths.has(path) || seenPaths.has(path)) continue;
+
+      const runtime = await this.runtimeGeographyAuthority.resolveRuntimeNaturalKey(
+        hit.runtimeNaturalKey,
+        hit.scopeKind,
+      );
+      if (!runtime) continue;
+
+      const [provinceSlug, citySlug, suburbSlug] = hit.runtimeNaturalKey.split('/');
+      seenPaths.add(path);
+      results.push({
+        kind: 'canonical_location',
+        ...(runtime.factualLocationId ? { factualLocationId: runtime.factualLocationId } : {}),
+        canonicalLocationId: runtime.canonicalLocationId,
+        label: runtime.name,
+        factualLevel: runtime.level,
+        factualType: runtime.factualType,
+        searchScopeKind: hit.scopeKind,
+        display: {
+          typeLabel: displayTypeLabel(runtime.factualType, runtime.level),
+        },
+        provinceSlug,
+        ...(citySlug ? { citySlug } : {}),
+        ...(suburbSlug ? { suburbSlug } : {}),
+        canonicalPath: path,
+        source: 'canonical_geography',
+        matchReason: reason,
+        matchedAlias: hit.alias,
+      });
+    }
     return results;
   }
 
@@ -462,14 +573,25 @@ export class SearchDiscoveryService {
     const factualPaths = new Set(factualResults.map(result => result.canonicalPath));
     const catalogResults = catalogRows
       .filter(row => !factualPaths.has(row.canonicalPath))
-      .map(toCanonicalCatalogResult);
+      .map(row => ({
+        ...toCanonicalCatalogResult(row),
+        matchReason: matchReasonForLabel(row.label, normalized),
+      }));
 
-    const combined = [...factualResults, ...catalogResults, ...areaResults];
+    const aliasResults = await this.searchAliasMatches(
+      normalized,
+      safeLimit,
+      factualPaths,
+    ).catch(error => {
+      console.error('[searchDiscovery] Alias match query failed:', error);
+      return [] as readonly CanonicalLocationDiscoveryResult[];
+    });
+
+    const combined = [...factualResults, ...aliasResults, ...catalogResults, ...areaResults];
     combined.sort((left, right) => {
-      const leftPrefix = normalizedQuery(left.label).startsWith(normalized) ? 0 : 1;
-      const rightPrefix = normalizedQuery(right.label).startsWith(normalized) ? 0 : 1;
-      if (leftPrefix !== rightPrefix) return leftPrefix - rightPrefix;
-      if (left.kind !== right.kind) return left.kind === 'canonical_location' ? -1 : 1;
+      const leftRank = discoveryRank(left, normalized);
+      const rightRank = discoveryRank(right, normalized);
+      if (leftRank !== rightRank) return leftRank - rightRank;
       return left.label.localeCompare(right.label);
     });
 
