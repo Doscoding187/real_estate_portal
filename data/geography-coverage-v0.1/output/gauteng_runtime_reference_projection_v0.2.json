@@ -7,7 +7,7 @@
     "factual_canonical_geography_sha256": "1fe0e2e3101bd7e459f484b7125dc1ce1f0327104002b184ef0e90d4236b7b7f",
     "factual_canonical_names_sha256": "a87891bc2e4167130d7e5eb649516a34aedaa071278ce8fe25df19f511669b51",
     "carried_projection_v01_sha256": "982ea13cd190a02da5440f122a061713e22bc157ef46f491ce530c5877ff9fc0",
-    "territory_manifest_sha256": "38ddd1fe68a9f705a8793936176e7383da90c7ff47c8ae8dd7b8457d8533a440"
+    "territory_manifest_sha256": "69a6008fcbc843babac8ea0ca9afb9470c7525eb4dd3ac800fb793481ab6bd03"
   },
   "rows": [
     {
@@ -27528,6 +27528,294 @@
     {
       "runtime_search_scope_kind": "locality",
       "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/vanderbijlpark/ce1",
+      "runtime_parent_natural_key": "gauteng/vanderbijlpark",
+      "name": "CE1",
+      "slug": "ce1",
+      "latitude": -26.701459749999998,
+      "longitude": 27.844039071216905,
+      "searchable_aliases": [
+        "C.E. 1"
+      ],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-56ec23c70255708abd32"
+      ],
+      "factual_preferred_names": [
+        "CE1"
+      ],
+      "factual_types": [
+        "neighbourhood"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/vanderbijlpark/ce2",
+      "runtime_parent_natural_key": "gauteng/vanderbijlpark",
+      "name": "CE2",
+      "slug": "ce2",
+      "latitude": -26.69063805,
+      "longitude": 27.840842536531298,
+      "searchable_aliases": [
+        "C.E. 2"
+      ],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-9d5fa0314460dc293089"
+      ],
+      "factual_preferred_names": [
+        "CE2"
+      ],
+      "factual_types": [
+        "neighbourhood"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/vanderbijlpark/ce3",
+      "runtime_parent_natural_key": "gauteng/vanderbijlpark",
+      "name": "CE3",
+      "slug": "ce3",
+      "latitude": -26.685374250000002,
+      "longitude": 27.843007457542427,
+      "searchable_aliases": [
+        "C.E. 3"
+      ],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-f813b1503a428b2c1b49"
+      ],
+      "factual_preferred_names": [
+        "CE3"
+      ],
+      "factual_types": [
+        "neighbourhood"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/vanderbijlpark/ce4",
+      "runtime_parent_natural_key": "gauteng/vanderbijlpark",
+      "name": "CE4",
+      "slug": "ce4",
+      "latitude": -26.68784865,
+      "longitude": 27.85409755810683,
+      "searchable_aliases": [
+        "C.E. 4"
+      ],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-3fda3de883ef7a9fd2a3"
+      ],
+      "factual_preferred_names": [
+        "CE4"
+      ],
+      "factual_types": [
+        "neighbourhood"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/vanderbijlpark/ce5",
+      "runtime_parent_natural_key": "gauteng/vanderbijlpark",
+      "name": "CE5",
+      "slug": "ce5",
+      "latitude": -26.69877965,
+      "longitude": 27.852104187099343,
+      "searchable_aliases": [
+        "C.E. 5"
+      ],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-48c99cb7e9beb655cdba"
+      ],
+      "factual_preferred_names": [
+        "CE5"
+      ],
+      "factual_types": [
+        "neighbourhood"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/vanderbijlpark/ce6",
+      "runtime_parent_natural_key": "gauteng/vanderbijlpark",
+      "name": "CE6",
+      "slug": "ce6",
+      "latitude": -26.704014649999998,
+      "longitude": 27.855061897918596,
+      "searchable_aliases": [
+        "C.E. 6"
+      ],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-ce143cac0e877febd324"
+      ],
+      "factual_preferred_names": [
+        "CE6"
+      ],
+      "factual_types": [
+        "neighbourhood"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/vanderbijlpark/cw1",
+      "runtime_parent_natural_key": "gauteng/vanderbijlpark",
+      "name": "CW1",
+      "slug": "cw1",
+      "latitude": -26.70261115,
+      "longitude": 27.829077048380324,
+      "searchable_aliases": [
+        "C.W. 1"
+      ],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-9aa5536e9bbdad611425"
+      ],
+      "factual_preferred_names": [
+        "CW1"
+      ],
+      "factual_types": [
+        "neighbourhood"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/vanderbijlpark/cw2",
+      "runtime_parent_natural_key": "gauteng/vanderbijlpark",
+      "name": "CW2",
+      "slug": "cw2",
+      "latitude": -26.693220250000003,
+      "longitude": 27.826956245573854,
+      "searchable_aliases": [
+        "C.W. 2"
+      ],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-318343436cc7885fdac6"
+      ],
+      "factual_preferred_names": [
+        "CW2"
+      ],
+      "factual_types": [
+        "neighbourhood"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/vanderbijlpark/cw3",
+      "runtime_parent_natural_key": "gauteng/vanderbijlpark",
+      "name": "CW3",
+      "slug": "cw3",
+      "latitude": -26.689568100000002,
+      "longitude": 27.83089912025756,
+      "searchable_aliases": [
+        "C.W. 3"
+      ],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-b8a3506a19e0efee70e4"
+      ],
+      "factual_preferred_names": [
+        "CW3"
+      ],
+      "factual_types": [
+        "neighbourhood"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/vanderbijlpark/cw4",
+      "runtime_parent_natural_key": "gauteng/vanderbijlpark",
+      "name": "CW4",
+      "slug": "cw4",
+      "latitude": -26.68063205,
+      "longitude": 27.826643545395683,
+      "searchable_aliases": [
+        "C.W. 4"
+      ],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-f6df7b145e2da9f12113"
+      ],
+      "factual_preferred_names": [
+        "CW4"
+      ],
+      "factual_types": [
+        "neighbourhood"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/vanderbijlpark/cw5",
+      "runtime_parent_natural_key": "gauteng/vanderbijlpark",
+      "name": "CW5",
+      "slug": "cw5",
+      "latitude": -26.6876,
+      "longitude": 27.818112992472514,
+      "searchable_aliases": [
+        "C.W. 5"
+      ],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-5e5c3e8a111fde0617fc"
+      ],
+      "factual_preferred_names": [
+        "CW5"
+      ],
+      "factual_types": [
+        "neighbourhood"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/vanderbijlpark/cw6",
+      "runtime_parent_natural_key": "gauteng/vanderbijlpark",
+      "name": "CW6",
+      "slug": "cw6",
+      "latitude": -26.69962785,
+      "longitude": 27.816307618449677,
+      "searchable_aliases": [
+        "C.W. 6"
+      ],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-23fc4894dbc6607ac3a7"
+      ],
+      "factual_preferred_names": [
+        "CW6"
+      ],
+      "factual_types": [
+        "neighbourhood"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
       "runtime_natural_key": "gauteng/vanderbijlpark/flora-gardens",
       "runtime_parent_natural_key": "gauteng/vanderbijlpark",
       "name": "Flora Gardens",
@@ -27545,6 +27833,174 @@
       ],
       "factual_types": [
         "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/vanderbijlpark/se1",
+      "runtime_parent_natural_key": "gauteng/vanderbijlpark",
+      "name": "SE1",
+      "slug": "se1",
+      "latitude": -26.71434445,
+      "longitude": 27.841728929766703,
+      "searchable_aliases": [
+        "S.E. 1"
+      ],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-7df3c1008aadecd26669"
+      ],
+      "factual_preferred_names": [
+        "SE1"
+      ],
+      "factual_types": [
+        "neighbourhood"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/vanderbijlpark/se10",
+      "runtime_parent_natural_key": "gauteng/vanderbijlpark",
+      "name": "SE10",
+      "slug": "se10",
+      "latitude": -26.71889005,
+      "longitude": 27.865489250291716,
+      "searchable_aliases": [
+        "S.E. 10"
+      ],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-b41cfe3da77d8310ddde"
+      ],
+      "factual_preferred_names": [
+        "SE10"
+      ],
+      "factual_types": [
+        "neighbourhood"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/vanderbijlpark/se2",
+      "runtime_parent_natural_key": "gauteng/vanderbijlpark",
+      "name": "SE2",
+      "slug": "se2",
+      "latitude": -26.7271775,
+      "longitude": 27.845136991983228,
+      "searchable_aliases": [
+        "S.E. 2"
+      ],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-aa6182a041befa2894be"
+      ],
+      "factual_preferred_names": [
+        "SE2"
+      ],
+      "factual_types": [
+        "neighbourhood"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/vanderbijlpark/se6",
+      "runtime_parent_natural_key": "gauteng/vanderbijlpark",
+      "name": "SE6",
+      "slug": "se6",
+      "latitude": -26.7240038,
+      "longitude": 27.857770422056582,
+      "searchable_aliases": [
+        "S.E. 6"
+      ],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-62fda3925195b888ef61"
+      ],
+      "factual_preferred_names": [
+        "SE6"
+      ],
+      "factual_types": [
+        "neighbourhood"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/vanderbijlpark/se8",
+      "runtime_parent_natural_key": "gauteng/vanderbijlpark",
+      "name": "SE8",
+      "slug": "se8",
+      "latitude": -26.72556635,
+      "longitude": 27.86620558913681,
+      "searchable_aliases": [
+        "S.E. 8"
+      ],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-4da245e8a3c6faab7a19"
+      ],
+      "factual_preferred_names": [
+        "SE8"
+      ],
+      "factual_types": [
+        "neighbourhood"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/vanderbijlpark/sw2",
+      "runtime_parent_natural_key": "gauteng/vanderbijlpark",
+      "name": "SW2",
+      "slug": "sw2",
+      "latitude": -26.71781735,
+      "longitude": 27.821212755481923,
+      "searchable_aliases": [
+        "S.W. 2"
+      ],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-031a4564f0bc02489ab8"
+      ],
+      "factual_preferred_names": [
+        "SW2"
+      ],
+      "factual_types": [
+        "neighbourhood"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/vanderbijlpark/sw5",
+      "runtime_parent_natural_key": "gauteng/vanderbijlpark",
+      "name": "SW5",
+      "slug": "sw5",
+      "latitude": -26.735590600000002,
+      "longitude": 27.832492980531654,
+      "searchable_aliases": [
+        "S.W. 5"
+      ],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-136331d44ed84c94a9b8"
+      ],
+      "factual_preferred_names": [
+        "SW5"
+      ],
+      "factual_types": [
+        "neighbourhood"
       ]
     },
     {
@@ -27843,6 +28299,72 @@
       ],
       "factual_preferred_names": [
         "Leeuhof"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/vereeniging/rus-ter-vaal",
+      "runtime_parent_natural_key": "gauteng/vereeniging",
+      "name": "Rus ter Vaal",
+      "slug": "rus-ter-vaal",
+      "latitude": -26.5727778,
+      "longitude": 27.9458333,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-725c2cbcfe8e42d3283e"
+      ],
+      "factual_preferred_names": [
+        "Rus ter Vaal"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/vereeniging/springcol",
+      "runtime_parent_natural_key": "gauteng/vereeniging",
+      "name": "Springcol",
+      "slug": "springcol",
+      "latitude": -26.6136111,
+      "longitude": 27.9352778,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-d21168367adbdcd9ec76"
+      ],
+      "factual_preferred_names": [
+        "Springcol"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/vereeniging/steel-park",
+      "runtime_parent_natural_key": "gauteng/vereeniging",
+      "name": "Steel Park",
+      "slug": "steel-park",
+      "latitude": -26.6411111,
+      "longitude": 27.8811111,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-bbfa0cc12352335c968f"
+      ],
+      "factual_preferred_names": [
+        "Steel Park"
       ],
       "factual_types": [
         "suburb"
