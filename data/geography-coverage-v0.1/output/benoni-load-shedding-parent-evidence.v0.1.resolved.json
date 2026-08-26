@@ -1,0 +1,91 @@
+{
+  "resolved_edges_version": "benoni-load-shedding-parent-evidence.v0.1.resolved",
+  "town": "Benoni",
+  "parent_natural_key": "gauteng/benoni",
+  "source": {
+    "publisher": "City of Ekurhuleni",
+    "url": "https://www.ekurhuleni.gov.za/wp-content/uploads/2021/11/updated-Benoni-load-shedding-schedules.pdf",
+    "section": "Benoni load-shedding schedule, blocks B14-B21",
+    "retrieved": "2026-08-26",
+    "licence_note": "Official municipal service schedule used for locality membership assertions; no prose or geometry is copied."
+  },
+  "edge_count": 5,
+  "edges": [
+    {
+      "factual_location_id": "pl-gp-v01-5e978be044ce9c80276b",
+      "preferred_name": "Dewald Hattinghpark",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/benoni",
+      "evidence_class": "official_municipal_load_shedding_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2021/11/updated-Benoni-load-shedding-schedules.pdf#Benoni%20load-shedding%20schedule%2C%20blocks%20B14-B21 (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-753b2480c7191bf2a095",
+      "preferred_name": "Tamboville",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/benoni",
+      "evidence_class": "official_municipal_load_shedding_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2021/11/updated-Benoni-load-shedding-schedules.pdf#Benoni%20load-shedding%20schedule%2C%20blocks%20B14-B21 (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-7a99862b5d750d81a81f",
+      "preferred_name": "Rynsoord",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/benoni",
+      "evidence_class": "official_municipal_load_shedding_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2021/11/updated-Benoni-load-shedding-schedules.pdf#Benoni%20load-shedding%20schedule%2C%20blocks%20B14-B21 (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-df66b072c148e4d8f031",
+      "preferred_name": "The Stewards",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/benoni",
+      "evidence_class": "official_municipal_load_shedding_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2021/11/updated-Benoni-load-shedding-schedules.pdf#Benoni%20load-shedding%20schedule%2C%20blocks%20B14-B21 (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-f72ce295ab012cf0e6e1",
+      "preferred_name": "New Modder",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/benoni",
+      "evidence_class": "official_municipal_load_shedding_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2021/11/updated-Benoni-load-shedding-schedules.pdf#Benoni%20load-shedding%20schedule%2C%20blocks%20B14-B21 (retrieved 2026-08-26)"
+    }
+  ],
+  "diagnostics": {
+    "researched_names": 5,
+    "matched_already_projected": [
+      {
+        "name": "Rynsoord",
+        "factual_location_id": "pl-gp-v01-7a99862b5d750d81a81f",
+        "existing_parent_natural_key": "gauteng/benoni",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Tamboville",
+        "factual_location_id": "pl-gp-v01-753b2480c7191bf2a095",
+        "existing_parent_natural_key": "gauteng/benoni",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "The Stewards",
+        "factual_location_id": "pl-gp-v01-df66b072c148e4d8f031",
+        "existing_parent_natural_key": "gauteng/benoni",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "New Modder",
+        "factual_location_id": "pl-gp-v01-f72ce295ab012cf0e6e1",
+        "existing_parent_natural_key": "gauteng/benoni",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Dewald Hattinghpark",
+        "factual_location_id": "pl-gp-v01-5e978be044ce9c80276b",
+        "existing_parent_natural_key": "gauteng/benoni",
+        "parent_matches_evidence": true
+      }
+    ],
+    "names_not_in_canonical_layer": []
+  }
+}

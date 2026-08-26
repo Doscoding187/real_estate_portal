@@ -182,6 +182,27 @@ for (const probe of WAVE4_LOCALITY_PROBES) {
   );
 }
 
+const WAVE5_LOCALITY_PROBES = [
+  { name: 'Farrarmere', parentSuffix: 'gauteng/benoni/farrarmere' },
+  { name: 'Northmead', parentSuffix: 'gauteng/benoni/northmead' },
+  { name: 'Wattville', parentSuffix: 'gauteng/benoni/wattville' },
+  {
+    name: 'Chief Albert Luthuli Park',
+    parentSuffix: 'gauteng/benoni/chief-albert-luthuli-park',
+  },
+  { name: 'Rynsoord', parentSuffix: 'gauteng/benoni/rynsoord' },
+  { name: 'The Stewards', parentSuffix: 'gauteng/benoni/the-stewards' },
+];
+
+for (const probe of WAVE5_LOCALITY_PROBES) {
+  const row = resolveByName(probe.name);
+  check(
+    `wave5 researched edge resolves: ${probe.name}`,
+    row !== null && row.runtime_natural_key === probe.parentSuffix,
+    row ? row.runtime_natural_key : 'missing',
+  );
+}
+
 const NEGATIVE_PROBES = ['Mamelodi Extension 1', 'Mamelodi Extension 4'];
 for (const probe of NEGATIVE_PROBES) {
   const directHit = resolveByName(probe);

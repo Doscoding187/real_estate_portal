@@ -20,7 +20,10 @@
       "data/geography-coverage-v0.1/output/krugersdorp-idp-parent-evidence.v0.1.resolved.json",
       "data/geography-coverage-v0.1/output/krugersdorp-notice-parent-evidence.v0.1.resolved.json",
       "data/geography-coverage-v0.1/output/boksburg-load-rotation-parent-evidence.v0.1.resolved.json",
-      "data/geography-coverage-v0.1/output/boksburg-grass-cutting-parent-evidence.v0.1.resolved.json"
+      "data/geography-coverage-v0.1/output/boksburg-grass-cutting-parent-evidence.v0.1.resolved.json",
+      "data/geography-coverage-v0.1/output/benoni-water-interruption-parent-evidence.v0.1.resolved.json",
+      "data/geography-coverage-v0.1/output/benoni-water-maintenance-parent-evidence.v0.1.resolved.json",
+      "data/geography-coverage-v0.1/output/benoni-load-shedding-parent-evidence.v0.1.resolved.json"
     ]
   },
   "outputs": {

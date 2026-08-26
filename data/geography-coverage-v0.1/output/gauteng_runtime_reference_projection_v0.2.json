@@ -7,7 +7,7 @@
     "factual_canonical_geography_sha256": "1fe0e2e3101bd7e459f484b7125dc1ce1f0327104002b184ef0e90d4236b7b7f",
     "factual_canonical_names_sha256": "a87891bc2e4167130d7e5eb649516a34aedaa071278ce8fe25df19f511669b51",
     "carried_projection_v01_sha256": "982ea13cd190a02da5440f122a061713e22bc157ef46f491ce530c5877ff9fc0",
-    "territory_manifest_sha256": "c5ff827880cdce4d3e7fb1a07f7d45311d85552c61cfd15e38dbf3ee84bc1591"
+    "territory_manifest_sha256": "38f99c2f0997fd1f31c51a63fc0aad78bdb1416f8c1d7f526edf07cb907c66b0"
   },
   "rows": [
     {
@@ -523,6 +523,448 @@
       ],
       "factual_types": [
         "town"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/benoni/actonville",
+      "runtime_parent_natural_key": "gauteng/benoni",
+      "name": "Actonville",
+      "slug": "actonville",
+      "latitude": -26.21471,
+      "longitude": 28.2984961,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "mixed_odbl_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-cf8db604e36f743ee4ac"
+      ],
+      "factual_preferred_names": [
+        "Actonville"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/benoni/airfield",
+      "runtime_parent_natural_key": "gauteng/benoni",
+      "name": "Airfield",
+      "slug": "airfield",
+      "latitude": -26.1713897,
+      "longitude": 28.3140787,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-5b2de278274458ee9e37"
+      ],
+      "factual_preferred_names": [
+        "Airfield"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/benoni/brentwood-park",
+      "runtime_parent_natural_key": "gauteng/benoni",
+      "name": "Brentwood Park",
+      "slug": "brentwood-park",
+      "latitude": -26.1352605,
+      "longitude": 28.292581,
+      "searchable_aliases": [
+        "BRENTWOODPARK"
+      ],
+      "publication_status": "provisional",
+      "licensing_classification": "permissive_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-1e1153f55408e9191300"
+      ],
+      "factual_preferred_names": [
+        "Brentwood Park"
+      ],
+      "factual_types": [
+        "locality"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/benoni/chief-albert-luthuli-park",
+      "runtime_parent_natural_key": "gauteng/benoni",
+      "name": "Chief Albert Luthuli Park",
+      "slug": "chief-albert-luthuli-park",
+      "latitude": -26.1592877,
+      "longitude": 28.3811359,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-94095d1b4385a67271bf"
+      ],
+      "factual_preferred_names": [
+        "Chief Albert Luthuli Park"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/benoni/crystal-park",
+      "runtime_parent_natural_key": "gauteng/benoni",
+      "name": "Crystal Park",
+      "slug": "crystal-park",
+      "latitude": -26.1276364,
+      "longitude": 28.3697362,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-b96388f1171bc74caae9"
+      ],
+      "factual_preferred_names": [
+        "Crystal Park"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/benoni/dewald-hattinghpark",
+      "runtime_parent_natural_key": "gauteng/benoni",
+      "name": "Dewald Hattinghpark",
+      "slug": "dewald-hattinghpark",
+      "latitude": -26.2025,
+      "longitude": 28.3322222,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-5e978be044ce9c80276b"
+      ],
+      "factual_preferred_names": [
+        "Dewald Hattinghpark"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/benoni/farrarmere",
+      "runtime_parent_natural_key": "gauteng/benoni",
+      "name": "Farrarmere",
+      "slug": "farrarmere",
+      "latitude": -26.166536999999998,
+      "longitude": 28.2986059,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "mixed_odbl_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-eeb36d8f2753f96b7f55"
+      ],
+      "factual_preferred_names": [
+        "Farrarmere"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/benoni/goedeburg",
+      "runtime_parent_natural_key": "gauteng/benoni",
+      "name": "Goedeburg",
+      "slug": "goedeburg",
+      "latitude": -26.1423588,
+      "longitude": 28.2907686,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-c7ee8344f97aa81a7cac"
+      ],
+      "factual_preferred_names": [
+        "Goedeburg"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/benoni/lakefield",
+      "runtime_parent_natural_key": "gauteng/benoni",
+      "name": "Lakefield",
+      "slug": "lakefield",
+      "latitude": -26.1829178,
+      "longitude": 28.288506650000002,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "mixed_odbl_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-c0b049cc5581d5265127"
+      ],
+      "factual_preferred_names": [
+        "Lakefield"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/benoni/mackenzie-park",
+      "runtime_parent_natural_key": "gauteng/benoni",
+      "name": "Mackenzie Park",
+      "slug": "mackenzie-park",
+      "latitude": -26.1966667,
+      "longitude": 28.3325,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-26d599d0ca0f1585c2cb"
+      ],
+      "factual_preferred_names": [
+        "Mackenzie Park"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/benoni/morehill",
+      "runtime_parent_natural_key": "gauteng/benoni",
+      "name": "Morehill",
+      "slug": "morehill",
+      "latitude": -26.166700300000002,
+      "longitude": 28.333912935682328,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-7a8a575a90deb1e3121b"
+      ],
+      "factual_preferred_names": [
+        "Morehill"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/benoni/new-modder",
+      "runtime_parent_natural_key": "gauteng/benoni",
+      "name": "New Modder",
+      "slug": "new-modder",
+      "latitude": -26.18438985,
+      "longitude": 28.35833057426938,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "mixed_odbl_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-f72ce295ab012cf0e6e1"
+      ],
+      "factual_preferred_names": [
+        "New Modder"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/benoni/north-villa",
+      "runtime_parent_natural_key": "gauteng/benoni",
+      "name": "North Villa",
+      "slug": "north-villa",
+      "latitude": -26.1412689,
+      "longitude": 28.303914,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-0f8fe72188fbc96030ce"
+      ],
+      "factual_preferred_names": [
+        "North Villa"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/benoni/northmead",
+      "runtime_parent_natural_key": "gauteng/benoni",
+      "name": "Northmead",
+      "slug": "northmead",
+      "latitude": -26.16,
+      "longitude": 28.31486,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "mixed_odbl_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-8276780c20285a3e2192"
+      ],
+      "factual_preferred_names": [
+        "Northmead"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/benoni/rynfield",
+      "runtime_parent_natural_key": "gauteng/benoni",
+      "name": "Rynfield",
+      "slug": "rynfield",
+      "latitude": -26.1561111,
+      "longitude": 28.3475,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-74e43c7ed4b8e09a255e"
+      ],
+      "factual_preferred_names": [
+        "Rynfield"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/benoni/rynsoord",
+      "runtime_parent_natural_key": "gauteng/benoni",
+      "name": "Rynsoord",
+      "slug": "rynsoord",
+      "latitude": -26.193671600000002,
+      "longitude": 28.361301064216086,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "mixed_odbl_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-7a99862b5d750d81a81f"
+      ],
+      "factual_preferred_names": [
+        "Rynsoord"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/benoni/tamboville",
+      "runtime_parent_natural_key": "gauteng/benoni",
+      "name": "Tamboville",
+      "slug": "tamboville",
+      "latitude": -26.2308333,
+      "longitude": 28.305,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-753b2480c7191bf2a095"
+      ],
+      "factual_preferred_names": [
+        "Tamboville"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/benoni/the-stewards",
+      "runtime_parent_natural_key": "gauteng/benoni",
+      "name": "The Stewards",
+      "slug": "the-stewards",
+      "latitude": -26.1997222,
+      "longitude": 28.2930556,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-df66b072c148e4d8f031"
+      ],
+      "factual_preferred_names": [
+        "The Stewards"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/benoni/wattville",
+      "runtime_parent_natural_key": "gauteng/benoni",
+      "name": "Wattville",
+      "slug": "wattville",
+      "latitude": -26.222,
+      "longitude": 28.303,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "mixed_odbl_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-398a35c3cecdf4619783"
+      ],
+      "factual_preferred_names": [
+        "Wattville"
+      ],
+      "factual_types": [
+        "locality"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/benoni/westdene",
+      "runtime_parent_natural_key": "gauteng/benoni",
+      "name": "Westdene",
+      "slug": "westdene",
+      "latitude": -26.1969444,
+      "longitude": 28.2958333,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-50f8d469d5f588a62ef3"
+      ],
+      "factual_preferred_names": [
+        "Westdene"
+      ],
+      "factual_types": [
+        "suburb"
       ]
     },
     {
