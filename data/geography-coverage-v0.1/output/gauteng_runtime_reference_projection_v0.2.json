@@ -7,7 +7,7 @@
     "factual_canonical_geography_sha256": "1fe0e2e3101bd7e459f484b7125dc1ce1f0327104002b184ef0e90d4236b7b7f",
     "factual_canonical_names_sha256": "a87891bc2e4167130d7e5eb649516a34aedaa071278ce8fe25df19f511669b51",
     "carried_projection_v01_sha256": "982ea13cd190a02da5440f122a061713e22bc157ef46f491ce530c5877ff9fc0",
-    "territory_manifest_sha256": "67a34b0e61a9b4cb119ef4602be204225b5eb9ff6cd74ce257fbe60d63a674ef"
+    "territory_manifest_sha256": "412237d1ad31aa0e70ac058fa38e031a1362dbf9bc5b1b3c7e05d5017956b49c"
   },
   "rows": [
     {
@@ -28834,6 +28834,28 @@
       ],
       "factual_types": [
         "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/vereeniging/duncanville",
+      "runtime_parent_natural_key": "gauteng/vereeniging",
+      "name": "Duncanville",
+      "slug": "duncanville",
+      "latitude": -26.65471,
+      "longitude": 27.93743,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "mixed_odbl_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-2d4403c2ee456fb17c3f"
+      ],
+      "factual_preferred_names": [
+        "Duncanville"
+      ],
+      "factual_types": [
+        "locality"
       ]
     },
     {
