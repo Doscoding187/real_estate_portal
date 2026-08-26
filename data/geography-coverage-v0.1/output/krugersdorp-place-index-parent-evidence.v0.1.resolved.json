@@ -9,8 +9,16 @@
     "retrieved": "2026-08-26",
     "licence_note": "Official government place-index used for service-area membership assertions; no prose or geometry is copied."
   },
-  "edge_count": 8,
+  "edge_count": 9,
   "edges": [
+    {
+      "factual_location_id": "pl-gp-v01-0e96d282b6c26958368b",
+      "preferred_name": "New Thorndale",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/krugersdorp",
+      "evidence_class": "official_magisterial_place_index",
+      "citation": "https://www.ocj.gov.za/maps/areas-gp.html#Gauteng%3A%20Find%20a%20court%20in%20your%20area%20%E2%80%94%20Krugersdorp%20Main%20Seat%20entries (retrieved 2026-08-26)"
+    },
     {
       "factual_location_id": "pl-gp-v01-1af391f22ebb702ef998",
       "preferred_name": "Muldersdrift",
@@ -77,11 +85,17 @@
     }
   ],
   "diagnostics": {
-    "researched_names": 8,
+    "researched_names": 9,
     "matched_already_projected": [
       {
         "name": "Delporton",
         "factual_location_id": "pl-gp-v01-9bd0e67cde963da55ece",
+        "existing_parent_natural_key": "gauteng/krugersdorp",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Hekpoort",
+        "factual_location_id": "pl-gp-v01-d1ecab4c4b3c861e9007",
         "existing_parent_natural_key": "gauteng/krugersdorp",
         "parent_matches_evidence": true
       },
@@ -92,8 +106,20 @@
         "parent_matches_evidence": true
       },
       {
+        "name": "Muldersdrift",
+        "factual_location_id": "pl-gp-v01-1af391f22ebb702ef998",
+        "existing_parent_natural_key": "gauteng/krugersdorp",
+        "parent_matches_evidence": true
+      },
+      {
         "name": "Olivanna",
         "factual_location_id": "pl-gp-v01-8c08ea06667e62e9729a",
+        "existing_parent_natural_key": "gauteng/krugersdorp",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Orient Hills",
+        "factual_location_id": "pl-gp-v01-bf2f2ce57062cf65c761",
         "existing_parent_natural_key": "gauteng/krugersdorp",
         "parent_matches_evidence": true
       },

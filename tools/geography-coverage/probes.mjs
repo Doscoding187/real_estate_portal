@@ -491,6 +491,23 @@ for (const probe of WAVE17_LOCALITY_PROBES) {
   );
 }
 
+const WAVE18_LOCALITY_PROBES = [
+  { name: 'New Thorndale', parentSuffix: 'gauteng/krugersdorp/new-thorndale' },
+  { name: 'Nestadt', parentSuffix: 'gauteng/benoni/nestadt' },
+  { name: 'Mthambeka', parentSuffix: 'gauteng/thembisa/mthambeka' },
+  { name: 'Lakeside', parentSuffix: 'gauteng/vereeniging/lakeside' },
+  { name: 'Meyerton Park', parentSuffix: 'gauteng/meyerton/meyerton-park' },
+];
+
+for (const probe of WAVE18_LOCALITY_PROBES) {
+  const row = resolveByName(probe.name);
+  check(
+    `wave18 researched edge resolves: ${probe.name}`,
+    row !== null && row.runtime_natural_key === probe.parentSuffix,
+    row ? row.runtime_natural_key : 'missing',
+  );
+}
+
 const NEGATIVE_PROBES = ['Mamelodi Extension 1', 'Mamelodi Extension 4'];
 for (const probe of NEGATIVE_PROBES) {
   const directHit = resolveByName(probe);

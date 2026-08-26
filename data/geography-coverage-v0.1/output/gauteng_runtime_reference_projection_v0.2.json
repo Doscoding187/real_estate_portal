@@ -7,7 +7,7 @@
     "factual_canonical_geography_sha256": "1fe0e2e3101bd7e459f484b7125dc1ce1f0327104002b184ef0e90d4236b7b7f",
     "factual_canonical_names_sha256": "a87891bc2e4167130d7e5eb649516a34aedaa071278ce8fe25df19f511669b51",
     "carried_projection_v01_sha256": "982ea13cd190a02da5440f122a061713e22bc157ef46f491ce530c5877ff9fc0",
-    "territory_manifest_sha256": "967bb0392839ee06a2ef2b7c471a5a5fa22db636a2b05d195381d88c992ca7d1"
+    "territory_manifest_sha256": "92d2cbe04cab5e76c744fde5c2e23fe79326e4077188d6de709af6341b468e68"
   },
   "rows": [
     {
@@ -1140,6 +1140,28 @@
       ],
       "factual_preferred_names": [
         "N12 Highway Park"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/benoni/nestadt",
+      "runtime_parent_natural_key": "gauteng/benoni",
+      "name": "Nestadt",
+      "slug": "nestadt",
+      "latitude": -26.2227778,
+      "longitude": 28.2941667,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-397fd692f0e3d19eb225"
+      ],
+      "factual_preferred_names": [
+        "Nestadt"
       ],
       "factual_types": [
         "suburb"
@@ -16435,6 +16457,30 @@
     {
       "runtime_search_scope_kind": "locality",
       "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/krugersdorp/new-thorndale",
+      "runtime_parent_natural_key": "gauteng/krugersdorp",
+      "name": "New Thorndale",
+      "slug": "new-thorndale",
+      "latitude": -25.955729,
+      "longitude": 27.494476,
+      "searchable_aliases": [
+        "NEWTHORNDALE"
+      ],
+      "publication_status": "provisional",
+      "licensing_classification": "mixed_odbl_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-0e96d282b6c26958368b"
+      ],
+      "factual_preferred_names": [
+        "New Thorndale"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
       "runtime_natural_key": "gauteng/krugersdorp/noordheuwel",
       "runtime_parent_natural_key": "gauteng/krugersdorp",
       "name": "Noordheuwel",
@@ -17667,6 +17713,28 @@
       ],
       "factual_preferred_names": [
         "Mamello"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/meyerton/meyerton-park",
+      "runtime_parent_natural_key": "gauteng/meyerton",
+      "name": "Meyerton Park",
+      "slug": "meyerton-park",
+      "latitude": -26.5525,
+      "longitude": 27.9927778,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-89ce4b1bd13b7d22cbe6"
+      ],
+      "factual_preferred_names": [
+        "Meyerton Park"
       ],
       "factual_types": [
         "suburb"
@@ -26965,6 +27033,28 @@
     {
       "runtime_search_scope_kind": "locality",
       "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/thembisa/mthambeka",
+      "runtime_parent_natural_key": "gauteng/thembisa",
+      "name": "Mthambeka",
+      "slug": "mthambeka",
+      "latitude": -26.0261111,
+      "longitude": 28.1908333,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-650137ebde8e692fa496"
+      ],
+      "factual_preferred_names": [
+        "Mthambeka"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
       "runtime_natural_key": "gauteng/thembisa/nxiweni",
       "runtime_parent_natural_key": "gauteng/thembisa",
       "name": "Nxiweni",
@@ -28321,6 +28411,28 @@
       ],
       "factual_preferred_names": [
         "Falcon Ridge"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/vereeniging/lakeside",
+      "runtime_parent_natural_key": "gauteng/vereeniging",
+      "name": "Lakeside",
+      "slug": "lakeside",
+      "latitude": -26.5197222,
+      "longitude": 27.8711111,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-6a0b9ba38d03b76fdb4f"
+      ],
+      "factual_preferred_names": [
+        "Lakeside"
       ],
       "factual_types": [
         "suburb"

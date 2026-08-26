@@ -12,7 +12,8 @@
     "licence_note": "Official government place-index used for service-area membership assertions; no prose or geometry is copied."
   },
   "source_name_variants": {
-    "Krugersdorp-Noord": "Krugersdorp North"
+    "Krugersdorp-Noord": "Krugersdorp North",
+    "New Thorndale AH": "New Thorndale"
   },
   "suburb_names": [
     "Delporton",
@@ -22,6 +23,7 @@
     "Olivanna",
     "Orient Hills",
     "Silverfields Park",
-    "Wentworth Park"
+    "Wentworth Park",
+    "New Thorndale"
   ]
 }

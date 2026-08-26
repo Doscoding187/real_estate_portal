@@ -11,9 +11,13 @@
     "retrieved": "2026-08-26",
     "licence_note": "Official government place-index used for service-area membership assertions; no prose or geometry is copied."
   },
+  "source_name_variants": {
+    "Nestadt Industrial": "Nestadt"
+  },
   "suburb_names": [
     "Alphen Park",
     "Farrarmere Gardens",
-    "N12 Highway Park"
+    "N12 Highway Park",
+    "Nestadt"
   ]
 }

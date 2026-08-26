@@ -9,7 +9,7 @@
     "retrieved": "2026-08-26",
     "licence_note": "Official government place-index used for service-area membership assertions; no prose or geometry is copied."
   },
-  "edge_count": 11,
+  "edge_count": 12,
   "edges": [
     {
       "factual_location_id": "pl-gp-v01-2c6ca797822d5f70b825",
@@ -46,6 +46,14 @@
     {
       "factual_location_id": "pl-gp-v01-637ad215a87bde72ebea",
       "preferred_name": "Lakeside Estates",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/vereeniging",
+      "evidence_class": "official_magisterial_place_index",
+      "citation": "https://www.ocj.gov.za/maps/areas-gp.html#Gauteng%3A%20Find%20a%20court%20in%20your%20area%20%E2%80%94%20Vereeniging%20Main%20Seat%20entries (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-6a0b9ba38d03b76fdb4f",
+      "preferred_name": "Lakeside",
       "factual_type": "suburb",
       "parent_natural_key": "gauteng/vereeniging",
       "evidence_class": "official_magisterial_place_index",
@@ -101,7 +109,7 @@
     }
   ],
   "diagnostics": {
-    "researched_names": 11,
+    "researched_names": 12,
     "matched_already_projected": [
       {
         "name": "Aerovaal",
@@ -134,14 +142,38 @@
         "parent_matches_evidence": true
       },
       {
+        "name": "Falcon Ridge",
+        "factual_location_id": "pl-gp-v01-3f33878aa4c0b3758d96",
+        "existing_parent_natural_key": "gauteng/vereeniging",
+        "parent_matches_evidence": true
+      },
+      {
         "name": "Lakeside Estates",
         "factual_location_id": "pl-gp-v01-637ad215a87bde72ebea",
         "existing_parent_natural_key": "gauteng/vereeniging",
         "parent_matches_evidence": true
       },
       {
+        "name": "Leeuhof",
+        "factual_location_id": "pl-gp-v01-da4287bf327ab97537e9",
+        "existing_parent_natural_key": "gauteng/vereeniging",
+        "parent_matches_evidence": true
+      },
+      {
         "name": "Three Rivers East",
         "factual_location_id": "pl-gp-v01-49c65ea21fb2bf314b1b",
+        "existing_parent_natural_key": "gauteng/vereeniging",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Unitas Park",
+        "factual_location_id": "pl-gp-v01-93be4b0267a082781114",
+        "existing_parent_natural_key": "gauteng/vereeniging",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Waldrif",
+        "factual_location_id": "pl-gp-v01-b420f9981516948f8f11",
         "existing_parent_natural_key": "gauteng/vereeniging",
         "parent_matches_evidence": true
       }

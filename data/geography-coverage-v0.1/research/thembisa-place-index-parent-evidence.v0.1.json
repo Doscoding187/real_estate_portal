@@ -11,8 +11,12 @@
     "retrieved": "2026-08-26",
     "licence_note": "Official government place-index used for service-area membership assertions; no prose or geometry is copied."
   },
+  "source_name_variants": {
+    "Umthambeka": "Mthambeka"
+  },
   "suburb_names": [
     "Hospital View",
-    "Midlands Estate"
+    "Midlands Estate",
+    "Mthambeka"
   ]
 }

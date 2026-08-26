@@ -1,0 +1,20 @@
+{
+  "artifact_version": "meyerton-sdf-2024-2025-parent-evidence-v0.1",
+  "town": "Meyerton",
+  "parent_natural_key": "gauteng/meyerton",
+  "administrative_context": "Sedibeng",
+  "evidence_class": "official_municipal_spatial_development_framework",
+  "source": {
+    "publisher": "Midvaal Local Municipality",
+    "url": "https://www.midvaal.gov.za/wp-content/uploads/2025/06/Annexure-B-Final-2024-2025-Midvaal-SDF-Review-comp.pdf",
+    "section": "Spatial structure — Meyerton urban complex, p. 34; Meyerton Park (farms) included in Meyerton",
+    "retrieved": "2026-08-27",
+    "licence_note": "Official municipal spatial-planning publication used for locality membership assertions; no prose or geometry is copied."
+  },
+  "source_name_variants": {
+    "Meyerton Park (farms)": "Meyerton Park"
+  },
+  "suburb_names": [
+    "Meyerton Park"
+  ]
+}
