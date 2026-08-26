@@ -7,7 +7,7 @@
     "factual_canonical_geography_sha256": "1fe0e2e3101bd7e459f484b7125dc1ce1f0327104002b184ef0e90d4236b7b7f",
     "factual_canonical_names_sha256": "a87891bc2e4167130d7e5eb649516a34aedaa071278ce8fe25df19f511669b51",
     "carried_projection_v01_sha256": "982ea13cd190a02da5440f122a061713e22bc157ef46f491ce530c5877ff9fc0",
-    "territory_manifest_sha256": "89f57d557db790cdee714423d05d24162c936e1a0846e5a746922ca7a4fd5116"
+    "territory_manifest_sha256": "466fa7aa9e24e2eb24d46a17ecd61fc8e2977dabc05bb004ad7be71dd8dcc23d"
   },
   "rows": [
     {
@@ -16495,6 +16495,28 @@
     {
       "runtime_search_scope_kind": "locality",
       "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/krugersdorp/hartebeesthoek-radio-astronomy-observatory",
+      "runtime_parent_natural_key": "gauteng/krugersdorp",
+      "name": "Hartebeesthoek Radio Astronomy Observatory",
+      "slug": "hartebeesthoek-radio-astronomy-observatory",
+      "latitude": -25.8910867,
+      "longitude": 27.6873215,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-0ccb1be8f6196b96e076"
+      ],
+      "factual_preferred_names": [
+        "Hartebeesthoek Radio Astronomy Observatory"
+      ],
+      "factual_types": [
+        "locality"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
       "runtime_natural_key": "gauteng/krugersdorp/hekpoort",
       "runtime_parent_natural_key": "gauteng/krugersdorp",
       "name": "Hekpoort",
@@ -16601,6 +16623,30 @@
       ],
       "factual_preferred_names": [
         "Krugersdorp Wildtuin"
+      ],
+      "factual_types": [
+        "locality"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/krugersdorp/lewisham-location",
+      "runtime_parent_natural_key": "gauteng/krugersdorp",
+      "name": "Lewisham Location",
+      "slug": "lewisham-location",
+      "latitude": -26.1333315,
+      "longitude": 27.75,
+      "searchable_aliases": [
+        "LEWISHAMLOCATION"
+      ],
+      "publication_status": "provisional",
+      "licensing_classification": "permissive_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-6b55fc4954f3a3f77e02"
+      ],
+      "factual_preferred_names": [
+        "Lewisham Location"
       ],
       "factual_types": [
         "locality"

@@ -1,0 +1,29 @@
+{
+  "resolved_edges_version": "krugersdorp-hartebeesthoek-parent-evidence.v0.1.resolved",
+  "town": "Krugersdorp",
+  "parent_natural_key": "gauteng/krugersdorp",
+  "source": {
+    "publisher": "National Research Foundation",
+    "url": "https://www.nrf.ac.za/procurement/nrf-procuring-business-dp/",
+    "section": "Hartebeesthoek Radio Astronomy Observatory delivery point: Broederstroom Road, Krugersdorp",
+    "retrieved": "2026-08-27",
+    "licence_note": "Official national-facility address used for locality relationship assertions; no prose or geometry is copied."
+  },
+  "edge_count": 1,
+  "edges": [
+    {
+      "factual_location_id": "pl-gp-v01-0ccb1be8f6196b96e076",
+      "preferred_name": "Hartebeesthoek Radio Astronomy Observatory",
+      "factual_type": "locality",
+      "parent_natural_key": "gauteng/krugersdorp",
+      "evidence_class": "official_national_facility_address",
+      "citation": "https://www.nrf.ac.za/procurement/nrf-procuring-business-dp/#Hartebeesthoek%20Radio%20Astronomy%20Observatory%20delivery%20point%3A%20Broederstroom%20Road%2C%20Krugersdorp (retrieved 2026-08-27)"
+    }
+  ],
+  "diagnostics": {
+    "researched_names": 1,
+    "matched_already_projected": [],
+    "names_not_in_canonical_layer": [],
+    "ambiguous_canonical_matches": []
+  }
+}

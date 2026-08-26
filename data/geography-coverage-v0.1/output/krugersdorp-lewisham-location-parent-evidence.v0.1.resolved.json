@@ -1,0 +1,29 @@
+{
+  "resolved_edges_version": "krugersdorp-lewisham-location-parent-evidence.v0.1.resolved",
+  "town": "Krugersdorp",
+  "parent_natural_key": "gauteng/krugersdorp",
+  "source": {
+    "publisher": "Mogale City Local Municipality",
+    "url": "https://mogalecity.gov.za/mogale-city/live-in/clinics/",
+    "section": "Mogale City clinics page: Lewisham address listed in Krugersdorp",
+    "retrieved": "2026-08-27",
+    "licence_note": "Official municipal facility address used for locality relationship assertions; no prose or geometry is copied."
+  },
+  "edge_count": 1,
+  "edges": [
+    {
+      "factual_location_id": "pl-gp-v01-6b55fc4954f3a3f77e02",
+      "preferred_name": "Lewisham Location",
+      "factual_type": "locality",
+      "parent_natural_key": "gauteng/krugersdorp",
+      "evidence_class": "official_municipal_facility_address",
+      "citation": "https://mogalecity.gov.za/mogale-city/live-in/clinics/#Mogale%20City%20clinics%20page%3A%20Lewisham%20address%20listed%20in%20Krugersdorp (retrieved 2026-08-27)"
+    }
+  ],
+  "diagnostics": {
+    "researched_names": 1,
+    "matched_already_projected": [],
+    "names_not_in_canonical_layer": [],
+    "ambiguous_canonical_matches": []
+  }
+}

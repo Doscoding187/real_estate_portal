@@ -597,6 +597,23 @@ for (const probe of WAVE24_LOCALITY_PROBES) {
   );
 }
 
+const WAVE25_LOCALITY_PROBES = [
+  {
+    name: 'Hartebeesthoek Radio Astronomy Observatory',
+    parentSuffix: 'gauteng/krugersdorp/hartebeesthoek-radio-astronomy-observatory',
+  },
+  { name: 'Lewisham Location', parentSuffix: 'gauteng/krugersdorp/lewisham-location' },
+];
+
+for (const probe of WAVE25_LOCALITY_PROBES) {
+  const row = resolveByName(probe.name);
+  check(
+    `wave25 researched edge resolves: ${probe.name}`,
+    row !== null && row.runtime_natural_key === probe.parentSuffix,
+    row ? row.runtime_natural_key : 'missing',
+  );
+}
+
 const NEGATIVE_PROBES = ['Mamelodi Extension 1', 'Mamelodi Extension 4'];
 for (const probe of NEGATIVE_PROBES) {
   const directHit = resolveByName(probe);

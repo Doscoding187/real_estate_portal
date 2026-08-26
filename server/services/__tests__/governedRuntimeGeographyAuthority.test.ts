@@ -246,7 +246,7 @@ describe('governed Gauteng runtime geography and Search Area authority', () => {
     );
 
     const projectedFactualIds = new Set(rows.flatMap(row => row.factualLocationIds));
-    expect(projectedFactualIds.size).toBe(1342);
+    expect(projectedFactualIds.size).toBe(1344);
     const memberships = GAUTENG_SEARCH_AREA_CANDIDATE_DEFINITIONS.flatMap(area => area.members ?? []);
     expect(
       memberships.filter(
@@ -257,7 +257,7 @@ describe('governed Gauteng runtime geography and Search Area authority', () => {
       GAUTENG_FACTUAL_RUNTIME_PROJECTION_ENTRIES.filter(
         entry => entry.runtimeReferenceStatus === 'reference_data_expansion_required',
       ),
-      ).toHaveLength(1341);
+      ).toHaveLength(1343);
   });
 
   it('resolves a governed natural key through the existing environment resolver', async () => {
