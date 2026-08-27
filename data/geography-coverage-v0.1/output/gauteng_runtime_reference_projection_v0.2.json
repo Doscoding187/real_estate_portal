@@ -7,7 +7,7 @@
     "factual_canonical_geography_sha256": "1fe0e2e3101bd7e459f484b7125dc1ce1f0327104002b184ef0e90d4236b7b7f",
     "factual_canonical_names_sha256": "a87891bc2e4167130d7e5eb649516a34aedaa071278ce8fe25df19f511669b51",
     "carried_projection_v01_sha256": "982ea13cd190a02da5440f122a061713e22bc157ef46f491ce530c5877ff9fc0",
-    "territory_manifest_sha256": "3812868241a0c0fa58ca3b1220992907f2862ac0054aedd33997fc134aa886fb"
+    "territory_manifest_sha256": "fee1e8a1f15d4c70f1a6f197a7322caf66f1f83142446e955d9fa1bdcb278225"
   },
   "rows": [
     {
@@ -17279,6 +17279,28 @@
       ],
       "factual_preferred_names": [
         "Mindalore"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/krugersdorp/mindalore-north",
+      "runtime_parent_natural_key": "gauteng/krugersdorp",
+      "name": "Mindalore North",
+      "slug": "mindalore-north",
+      "latitude": -26.1227778,
+      "longitude": 27.8347222,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-e417025c42ab9d2149f7"
+      ],
+      "factual_preferred_names": [
+        "Mindalore North"
       ],
       "factual_types": [
         "suburb"

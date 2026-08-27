@@ -1120,6 +1120,14 @@ check(
   wave56Row ? `${wave56Row.runtime_natural_key}/${wave56Row.factual_location_ids.join(',')}` : 'missing',
 );
 
+const wave57Row = rowsByNaturalKey.get('gauteng/krugersdorp/mindalore-north');
+check(
+  'wave57 official planning-gazette Mindalore North parent edge resolves',
+  wave57Row !== undefined &&
+    wave57Row.factual_location_ids.includes('pl-gp-v01-e417025c42ab9d2149f7'),
+  wave57Row ? `${wave57Row.runtime_natural_key}/${wave57Row.factual_location_ids.join(',')}` : 'missing',
+);
+
 check(
   'ordinary duplicate collisions remain queued without explicit grouping',
   queue.some(entry => entry.reason === 'duplicate_natural_key_within_parent' && entry.preferred_name === 'Vrededorp'),

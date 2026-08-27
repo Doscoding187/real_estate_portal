@@ -1,0 +1,48 @@
+{
+  "artifact_version": "krugersdorp-mindalore-north-planning-gazette-parent-evidence-v0.1",
+  "town": "Krugersdorp",
+  "parent_natural_key": "gauteng/krugersdorp",
+  "administrative_context": "West Rand",
+  "evidence_class": "official_provincial_planning_gazette_parent_assertion",
+  "source": {
+    "publisher": "Gauteng Provincial Government — official provincial gazette",
+    "url": "https://archive.opengazettes.org.za/archive/ZA-GT/1999/provincial-gazette-ZA-GT-vol-5-no-22-dated-1999-03-31.pdf",
+    "section": "Notice 1885 of 1999 — application to amend the Krugersdorp Town Planning Scheme for property in Mindalore, identifying the adjacent business area in Mindalore North and directing representations to the Krugersdorp Local Council",
+    "retrieved": "2026-08-27",
+    "licence_note": "Official provincial planning notice used for a locality-to-town context assertion; no prose, property data, or geometry is copied."
+  },
+  "supporting_sources": [
+    {
+      "publisher": "Mogale City Local Municipality",
+      "url": "https://mogalecity.gov.za/archive/Archive%20documents/IDP/2020%20-%202021/Draft%20IDP%20Review.pdf",
+      "section": "Krugersdorp Mindalore Cluster needs — official municipal IDP cluster label",
+      "retrieved": "2026-08-27"
+    },
+    {
+      "publisher": "Office of the Chief Justice, Department of Justice and Constitutional Development",
+      "url": "https://www.justice.gov.za/maps/areas-gp.html",
+      "section": "Gauteng: Find a court in your area — Mindalore listed in the West Rand / Kagiso Sub District",
+      "retrieved": "2026-08-27"
+    }
+  ],
+  "identity_note": "The canonical Mindalore North identity is retained exactly. The provincial planning notice names Mindalore North in the Krugersdorp Town Planning Scheme / Krugersdorp Local Council context, while the municipal IDP preserves the current Krugersdorp–Mindalore planning cluster. The edge does not use proximity or a display-text-only fallback.",
+  "identity_specific_records": [
+    {
+      "factual_location_id": "pl-gp-v01-e417025c42ab9d2149f7",
+      "preferred_name": "Mindalore North",
+      "source_record_ids": [
+        "sr:osm:node/259496732"
+      ],
+      "canonical_point": {
+        "longitude": 27.8347222,
+        "latitude": -26.1227778
+      },
+      "municipal_identity_match": {
+        "source_native_name": "Mindalore North",
+        "planning_context": "Krugersdorp Town Planning Scheme / Mindalore North",
+        "municipality": "Mogale City Local Municipality",
+        "district": "West Rand"
+      }
+    }
+  ]
+}
