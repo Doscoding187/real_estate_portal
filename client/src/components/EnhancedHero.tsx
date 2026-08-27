@@ -17,16 +17,13 @@ import {
   BriefcaseBusiness,
   ChevronDown,
   CircleDollarSign,
-  GitCompareArrows,
   Home,
   Key,
-  Map,
   MapPin,
   Ruler,
   CalendarClock,
   CarFront,
   Search,
-  ShieldCheck,
   SlidersHorizontal,
   Sparkles,
   Users,
@@ -123,16 +120,9 @@ const PRICE_OPTIONS = [
   { value: '10000000', label: 'R10m+' },
 ] as const;
 const FILTER_TRIGGER_CLASS =
-  'h-11 data-[size=default]:!h-11 gap-2 rounded-lg border border-slate-200 bg-blue-50/45 px-3 text-sm font-medium text-slate-800 shadow-sm transition-colors hover:border-blue-200 hover:bg-blue-50 focus:ring-2 focus:ring-blue-600 focus:ring-offset-1';
-const FILTER_WIDTH_CLASS: Partial<Record<FilterKey, string>> = {
-  propertyType: 'lg:w-[184px]',
-  minBedrooms: 'lg:w-[202px]',
-  minBathrooms: 'lg:w-[202px]',
-  commercialMinAreaM2: 'lg:w-[190px]',
-  commercialMaxMonthlyBudget: 'lg:w-[220px]',
-  commercialAvailability: 'lg:w-[190px]',
-  commercialMinParkingBays: 'lg:w-[180px]',
-};
+  'min-w-0 h-11 data-[size=default]:!h-11 gap-2 rounded-lg border border-slate-200 bg-blue-50/45 px-3 text-sm font-medium text-slate-800 shadow-sm transition-colors hover:border-blue-200 hover:bg-blue-50 focus:ring-2 focus:ring-blue-600 focus:ring-offset-1';
+const FILTER_CELL_CLASS =
+  'min-w-0 w-full border-l border-slate-200/80 px-3 first:border-l-0 sm:px-4 lg:w-fit lg:flex-none';
 const BEDROOM_OPTIONS = [1, 2, 3, 4, 5].map(value => ({
   value: String(value),
   label: value === 5 ? '5+' : `${value}+`,
@@ -311,25 +301,21 @@ const JOURNEY_PRESENTATION: Partial<
     ],
   },
 };
-const UTILITY_ITEMS = [
+const PLATFORM_TOOL_ITEMS = [
   {
-    label: 'Published properties',
-    description: 'Browse homes for sale',
-    path: '/property-for-sale',
-    icon: ShieldCheck,
-  },
-  { label: 'Location search', description: 'Explore areas', path: '/explore/map', icon: Map },
-  {
-    label: 'Compare homes',
-    description: 'Review properties side by side',
-    path: '/compare',
-    icon: GitCompareArrows,
+    label: 'Listmate',
+    description: 'Understand a home’s value',
+    icon: Home,
   },
   {
-    label: 'Find an agent',
-    description: 'Connect with professionals',
-    path: '/agents',
-    icon: Users,
+    label: 'Buymate',
+    description: 'Plan what you can comfortably buy',
+    icon: CircleDollarSign,
+  },
+  {
+    label: 'Search by commute',
+    description: 'Find homes within your travel time',
+    icon: MapPin,
   },
 ] as const;
 
@@ -353,28 +339,31 @@ function FilterControl({
   value,
   onChange,
   onInteractionStart,
+  cellClassName,
 }: {
   definition: FilterDefinition;
   value: string;
   onChange: (value: string) => void;
   onInteractionStart?: () => void;
+  cellClassName?: string;
 }) {
   const Icon = definition.icon;
   return (
-    <div
-      className={`min-w-0 border-l border-slate-200/80 px-3 first:border-l-0 sm:px-4 ${FILTER_WIDTH_CLASS[definition.key] || 'lg:w-[170px]'}`}
-    >
+    <div className={`${FILTER_CELL_CLASS} ${cellClassName || ''}`}>
       <Label className="mb-1.5 block text-xs font-semibold text-slate-600">
         {definition.label}
       </Label>
       <Select value={value || 'any'} onValueChange={next => onChange(next === 'any' ? '' : next)}>
         <SelectTrigger
-          className={`${FILTER_TRIGGER_CLASS} w-full`}
+          className={`${FILTER_TRIGGER_CLASS} w-full lg:w-fit`}
           onPointerDown={onInteractionStart}
           onFocus={onInteractionStart}
         >
           <Icon className="h-4 w-4 shrink-0 text-blue-700" aria-hidden="true" />
-          <SelectValue placeholder={definition.emptyLabel} />
+          <SelectValue
+            className="min-w-0 flex-1 truncate text-left"
+            placeholder={definition.emptyLabel}
+          />
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="any">{definition.emptyLabel}</SelectItem>
@@ -394,12 +383,14 @@ function PriceRangeControl({
   error,
   open,
   onOpenChange,
+  cellClassName,
 }: {
   filters: HeroFilters;
   onChange: (key: FilterKey, value: string) => void;
   error: string | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  cellClassName?: string;
 }) {
   const summary =
     filters.priceMin && filters.priceMax
@@ -412,7 +403,7 @@ function PriceRangeControl({
   return (
     <div
       data-price-range-root
-      className="min-w-0 border-l border-slate-200/80 px-3 sm:px-4 lg:w-[208px]"
+      className={`${FILTER_CELL_CLASS} ${cellClassName || ''}`}
       onPointerDown={event => event.stopPropagation()}
     >
       <Label className="mb-1.5 block text-xs font-semibold text-slate-600">Price Range</Label>
@@ -423,7 +414,7 @@ function PriceRangeControl({
           onClick={() => {
             onOpenChange(!open);
           }}
-          className={`flex w-full cursor-pointer items-center ${FILTER_TRIGGER_CLASS} ${open ? 'border-blue-600' : ''} focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600`}
+          className={`flex w-full cursor-pointer items-center ${FILTER_TRIGGER_CLASS} lg:w-fit ${open ? 'border-blue-600' : ''} focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600`}
         >
           <CircleDollarSign className="h-4 w-4 shrink-0 text-blue-700" aria-hidden="true" />
           <span className="min-w-0 flex-1 truncate">{summary}</span>
@@ -769,8 +760,11 @@ export function EnhancedHero({
               'Search homes, discover new developments, explore local insights, and connect with trusted property professionals.'}
           </p>
         </header>
-        <div className="mx-auto mt-8 max-w-[1180px] overflow-x-auto px-1 pb-2 [scrollbar-width:none] sm:mt-10">
-          <div className="flex min-w-max rounded-2xl border border-slate-200/90 bg-white/95 p-1.5 shadow-[0_10px_24px_-18px_rgba(15,23,42,0.45)] backdrop-blur-sm sm:justify-center">
+        <div
+          style={{ maxWidth: 'var(--plds-home-hero-search-max-width, 1180px)' }}
+          className="mx-auto mt-8 w-full overflow-x-auto px-1 pb-2 [scrollbar-width:none] sm:mt-10"
+        >
+          <div className="flex min-w-max w-fit items-center gap-1 rounded-2xl border border-slate-200/90 bg-white/95 p-1.5 shadow-[0_10px_24px_-18px_rgba(15,23,42,0.45)] backdrop-blur-sm sm:mx-auto">
             {categories.map(category => {
               const Icon = JOURNEY_ICONS[category.key];
               const selected = journey === category.key;
@@ -781,7 +775,7 @@ export function EnhancedHero({
                   aria-pressed={selected}
                   onClick={() => selectJourney(category.key)}
                   onFocus={() => setPriceRangeOpen(false)}
-                  className={`flex min-h-11 items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold transition-all duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 active:translate-y-px sm:px-4 ${selected ? 'bg-blue-700 text-white shadow-md shadow-blue-700/25' : 'text-slate-700 hover:bg-blue-50 hover:text-blue-700'}`}
+                  className={`flex min-h-11 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-xl px-3 py-2 text-sm font-semibold transition-all duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 active:translate-y-px lg:px-4 ${selected ? 'bg-blue-700 text-white shadow-md shadow-blue-700/25' : 'text-slate-700 hover:bg-blue-50 hover:text-blue-700'}`}
                 >
                   <Icon className="h-4 w-4" />
                   {category.label}
@@ -790,7 +784,10 @@ export function EnhancedHero({
             })}
           </div>
         </div>
-        <div style={{ maxWidth: 'var(--plds-home-hero-search-max-width, 1180px)' }} className="relative mx-auto mt-3 w-full rounded-[1.5rem] border border-slate-200/90 bg-white shadow-[0_24px_54px_-28px_rgba(15,23,42,0.38)] sm:mt-4">
+        <div
+          style={{ maxWidth: 'var(--plds-home-hero-search-max-width, 1180px)' }}
+          className="relative mx-auto mt-3 w-full rounded-[1.5rem] border border-slate-200/90 bg-white shadow-[0_24px_54px_-28px_rgba(15,23,42,0.38)] sm:mt-4"
+        >
           <div className="flex flex-col gap-3 rounded-t-[1.45rem] bg-gradient-to-r from-blue-100/90 via-blue-50/70 to-cyan-50 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-7">
             <div>
               <h2 className="font-semibold text-slate-950">Start your property journey</h2>
@@ -970,7 +967,7 @@ export function EnhancedHero({
           {journey && (
             <div className="border-t border-slate-200/80 bg-slate-50/80 p-3 sm:p-4">
               <div
-                className="grid gap-3 sm:grid-cols-2 lg:flex lg:items-end lg:gap-0"
+                className="grid gap-3 sm:grid-cols-2 lg:flex lg:flex-nowrap lg:items-end lg:gap-0"
                 onPointerDown={() => setPriceRangeOpen(false)}
                 onFocusCapture={event => {
                   if (
@@ -983,27 +980,39 @@ export function EnhancedHero({
                   }
                 }}
               >
-                {presentation.primaryFilters.map(definition =>
-                  definition.key === 'priceMax' && journey === 'buy' ? (
-                    <PriceRangeControl
-                      key="price"
-                      filters={filters}
-                      onChange={updateFilter}
-                      error={priceRangeError}
-                      open={priceRangeOpen}
-                      onOpenChange={setPriceRangeOpen}
-                    />
-                  ) : (
-                    <FilterControl
-                      key={definition.key}
-                      definition={definition}
-                      value={filters[definition.key]}
-                      onChange={value => updateFilter(definition.key, value)}
-                      onInteractionStart={() => setPriceRangeOpen(false)}
-                    />
-                  ),
-                )}
-                <div className="flex min-w-0 flex-col lg:w-[184px] lg:pl-4">
+                <div className="contents lg:flex lg:items-end">
+                  {presentation.primaryFilters.map((definition, index) => {
+                    const cellClassName = [index % 2 === 0 ? 'sm:border-l-0' : '']
+                      .filter(Boolean)
+                      .join(' ');
+
+                    return definition.key === 'priceMax' && journey === 'buy' ? (
+                      <PriceRangeControl
+                        key="price"
+                        filters={filters}
+                        onChange={updateFilter}
+                        error={priceRangeError}
+                        open={priceRangeOpen}
+                        onOpenChange={setPriceRangeOpen}
+                        cellClassName={cellClassName}
+                      />
+                    ) : (
+                      <FilterControl
+                        key={definition.key}
+                        definition={definition}
+                        value={filters[definition.key]}
+                        onChange={value => updateFilter(definition.key, value)}
+                        onInteractionStart={() => setPriceRangeOpen(false)}
+                        cellClassName={cellClassName}
+                      />
+                    );
+                  })}
+                </div>
+                <div
+                  className={`${FILTER_CELL_CLASS} flex min-w-0 w-full flex-col lg:ml-auto ${
+                    presentation.primaryFilters.length % 2 === 0 ? 'sm:border-l-0 lg:border-l' : ''
+                  }`}
+                >
                   <span
                     aria-hidden="true"
                     className="mb-1.5 block text-xs font-semibold leading-[18px] text-transparent"
@@ -1018,7 +1027,7 @@ export function EnhancedHero({
                       submitSearch();
                     }}
                     disabled={!canSubmitSearch || Boolean(priceRangeError)}
-                    className="flex h-11 w-full items-center justify-center gap-2 rounded-lg border border-blue-300 bg-white px-4 text-sm font-semibold text-blue-700 shadow-sm transition-all hover:-translate-y-px hover:border-blue-600 hover:bg-blue-50 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 active:translate-y-0 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400"
+                    className="flex h-11 w-full items-center justify-center gap-2 rounded-lg border border-blue-300 bg-white px-4 text-sm font-semibold text-blue-700 shadow-sm transition-all hover:-translate-y-px hover:border-blue-600 hover:bg-blue-50 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 active:translate-y-0 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400 lg:w-fit"
                   >
                     <SlidersHorizontal className="h-4 w-4" />
                     More Filters
@@ -1028,27 +1037,34 @@ export function EnhancedHero({
             </div>
           )}
         </div>
-        <div className="mx-auto mt-4 grid max-w-[1260px] gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {UTILITY_ITEMS.map(item => {
-            const Icon = item.icon;
-            return (
-              <button
-                key={item.label}
-                type="button"
-                onClick={() => setLocation(item.path)}
-                className="flex min-h-20 items-center gap-3 rounded-xl border border-slate-200 bg-white/90 px-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
-              >
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-700">
-                  <Icon className="h-5 w-5" />
-                </span>
-                <span>
-                  <span className="block text-sm font-semibold text-slate-900">{item.label}</span>
-                  <span className="mt-0.5 block text-xs text-slate-500">{item.description}</span>
-                </span>
-              </button>
-            );
-          })}
-        </div>
+        <section
+          style={{ maxWidth: 'var(--plds-home-hero-search-max-width, 1180px)' }}
+          className="mx-auto mt-5 w-full"
+          aria-label="Platform tools"
+        >
+          <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 pr-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:grid sm:grid-cols-3 sm:overflow-visible sm:pb-0 sm:pr-0">
+            {PLATFORM_TOOL_ITEMS.map(item => {
+              const Icon = item.icon;
+              return (
+                <article
+                  key={item.label}
+                  className="flex min-h-24 w-[calc(100%-2rem)] shrink-0 snap-start items-center gap-3 rounded-xl border border-dashed border-slate-300 bg-white/75 px-4 text-left shadow-sm sm:w-auto sm:min-w-0"
+                >
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-700">
+                    <Icon className="h-5 w-5" />
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block text-sm font-semibold text-slate-900">{item.label}</span>
+                    <span className="mt-0.5 block text-xs text-slate-500">{item.description}</span>
+                    <span className="mt-2 inline-flex rounded-full border border-blue-100 bg-blue-50 px-2 py-0.5 text-[11px] font-semibold text-blue-700">
+                      Planned
+                    </span>
+                  </span>
+                </article>
+              );
+            })}
+          </div>
+        </section>
       </div>
     </section>
   );
