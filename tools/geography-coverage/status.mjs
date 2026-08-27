@@ -57,7 +57,8 @@ function buildCoverageReport() {
       runtime_row_count: summary.runtime_row_count,
       public_catalog_coverage:
         `${((summary.runtime_row_count / summary.factual_identity_count) * 100).toFixed(1)}%`,
-      newly_promoted: summary.newly_promoted_row_count,
+      newly_promoted: summary.newly_promoted_identity_count,
+      newly_promoted_rows: summary.newly_promoted_row_count,
       represented_by_carried_slice: summary.represented_by_carried_count,
       queued_total: summary.queued_count,
     },
@@ -89,7 +90,7 @@ function renderMarkdown(report) {
     '',
     `- Contract: ${report.contract}`,
     `- Factual identities: ${report.coverage.factual_identity_count}`,
-    `- Runtime rows: ${report.coverage.runtime_row_count} (${report.coverage.public_catalog_coverage} of identities; ${report.coverage.newly_promoted} promoted this wave, ${report.coverage.represented_by_carried_slice} via founder-reviewed slice)`,
+    `- Runtime rows: ${report.coverage.runtime_row_count} (${report.coverage.public_catalog_coverage} of identities; ${report.coverage.newly_promoted} identities promoted this wave in ${report.coverage.newly_promoted_rows} new rows, ${report.coverage.represented_by_carried_slice} via founder-reviewed slice)`,
     `- Research queue: ${report.research_queue.total} identities`,
     '',
     '## Runtime rows',

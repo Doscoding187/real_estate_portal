@@ -7,7 +7,7 @@
     "factual_canonical_geography_sha256": "1fe0e2e3101bd7e459f484b7125dc1ce1f0327104002b184ef0e90d4236b7b7f",
     "factual_canonical_names_sha256": "a87891bc2e4167130d7e5eb649516a34aedaa071278ce8fe25df19f511669b51",
     "carried_projection_v01_sha256": "982ea13cd190a02da5440f122a061713e22bc157ef46f491ce530c5877ff9fc0",
-    "territory_manifest_sha256": "95ba8ea0d89c9fd4273f7531ab6508eece77f8af02988b85b9c0e46f496b18f1"
+    "territory_manifest_sha256": "eacab4b0a0826b2489bbb1de7b66478485c607e06a1f9665eef45a8f1b5a7346"
   },
   "rows": [
     {
@@ -1198,18 +1198,21 @@
       "runtime_parent_natural_key": "gauteng/benoni",
       "name": "Morehill",
       "slug": "morehill",
-      "latitude": -26.166700300000002,
-      "longitude": 28.333912935682328,
+      "latitude": -26.1619444,
+      "longitude": 28.3552778,
       "searchable_aliases": [],
       "publication_status": "provisional",
       "licensing_classification": "osm_only_odbl_provisional",
       "factual_location_ids": [
+        "pl-gp-v01-5954891aaa7b38cc10bd",
         "pl-gp-v01-7a8a575a90deb1e3121b"
       ],
       "factual_preferred_names": [
+        "Morehill",
         "Morehill"
       ],
       "factual_types": [
+        "suburb",
         "suburb"
       ]
     },
@@ -25476,6 +25479,31 @@
     {
       "runtime_search_scope_kind": "locality",
       "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/randfontein/eikepark",
+      "runtime_parent_natural_key": "gauteng/randfontein",
+      "name": "Eikepark",
+      "slug": "eikepark",
+      "latitude": -26.1828427,
+      "longitude": 27.6741177,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-1e32c07668460cae218f",
+        "pl-gp-v01-b4b64a12d456a96f5779"
+      ],
+      "factual_preferred_names": [
+        "Eikepark",
+        "Eikepark"
+      ],
+      "factual_types": [
+        "suburb",
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
       "runtime_natural_key": "gauteng/randfontein/finsbury",
       "runtime_parent_natural_key": "gauteng/randfontein",
       "name": "Finsbury",
@@ -27364,18 +27392,21 @@
       "runtime_parent_natural_key": "gauteng/springs",
       "name": "Selcourt",
       "slug": "selcourt",
-      "latitude": -26.3051808,
-      "longitude": 28.4451251,
+      "latitude": -26.2658333,
+      "longitude": 28.4280556,
       "searchable_aliases": [],
       "publication_status": "provisional",
-      "licensing_classification": "mixed_odbl_supported",
+      "licensing_classification": "osm_only_odbl_provisional",
       "factual_location_ids": [
+        "pl-gp-v01-2eb78152584e4bac9051",
         "pl-gp-v01-42b618e5e1a93bed8ee0"
       ],
       "factual_preferred_names": [
+        "Selcourt",
         "Selcourt"
       ],
       "factual_types": [
+        "suburb",
         "suburb"
       ]
     },

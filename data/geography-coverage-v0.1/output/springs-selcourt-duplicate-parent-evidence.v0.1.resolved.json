@@ -1,0 +1,39 @@
+{
+  "resolved_edges_version": "springs-selcourt-duplicate-parent-evidence.v0.1.resolved",
+  "town": "Springs",
+  "parent_natural_key": "gauteng/springs",
+  "allow_duplicate_natural_key_grouping": true,
+  "source": {
+    "publisher": "Office of the Chief Justice, Department of Justice and Constitutional Development",
+    "url": "https://www.justice.gov.za/maps/areas-gp.html",
+    "section": "Gauteng: Find a court in your area — Selcourt is listed in Ekurhuleni under Springs Sub District",
+    "retrieved": "2026-08-27",
+    "licence_note": "Official government place index used for the locality-to-runtime-market relationship; no prose or geometry is copied."
+  },
+  "edge_count": 2,
+  "edges": [
+    {
+      "factual_location_id": "pl-gp-v01-2eb78152584e4bac9051",
+      "preferred_name": "Selcourt",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/springs",
+      "evidence_class": "official_magisterial_place_index_identity_specific_duplicate_set",
+      "citation": "https://www.justice.gov.za/maps/areas-gp.html#Gauteng%3A%20Find%20a%20court%20in%20your%20area%20%E2%80%94%20Selcourt%20is%20listed%20in%20Ekurhuleni%20under%20Springs%20Sub%20District (retrieved 2026-08-27)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-42b618e5e1a93bed8ee0",
+      "preferred_name": "Selcourt",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/springs",
+      "evidence_class": "official_magisterial_place_index_identity_specific_duplicate_set",
+      "citation": "https://www.justice.gov.za/maps/areas-gp.html#Gauteng%3A%20Find%20a%20court%20in%20your%20area%20%E2%80%94%20Selcourt%20is%20listed%20in%20Ekurhuleni%20under%20Springs%20Sub%20District (retrieved 2026-08-27)"
+    }
+  ],
+  "diagnostics": {
+    "researched_names": 0,
+    "identity_specific_records": 2,
+    "matched_already_projected": [],
+    "names_not_in_canonical_layer": [],
+    "ambiguous_canonical_matches": []
+  }
+}

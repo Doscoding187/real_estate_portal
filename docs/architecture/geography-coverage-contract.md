@@ -2,7 +2,7 @@
 
 **Status:** Active authority for territory geography coverage work
 **Owner:** OX Alpha (implementation) / Edward (founder approval boundary)
-**Version:** 0.1 (2026-08-26)
+**Version:** 0.2 (2026-08-27)
 **Supersedes:** ad-hoc per-location additions; complements the runtime
 convergence v0.1 bounded slice without rewriting it.
 
@@ -133,8 +133,13 @@ the generated disposition artifacts, which are the audit trail.
    manifest registers an explicit, cited mapping (e.g. City of Johannesburg →
    `gauteng/johannesburg`). Multi-town municipalities register no default;
    their localities queue as Tier C unless another accepted edge exists.
-3. Natural-key collisions fail closed: the colliding identity queues with
-   reason instead of inventing a suffix.
+3. Natural-key collisions fail closed by default: the colliding identity
+   queues with reason instead of inventing a suffix. A versioned,
+   identity-specific researched-parent artifact may explicitly opt in to
+   co-publishing duplicate factual identities under one stable natural key
+   when the parent edge is the same. Each factual ID remains separate in the
+   projection and disposition mapping; this is not an identity merge or
+   rename.
 4. One accepted place occupies one runtime row. A new record whose
    name-slug/level/province triple matches an already-accepted row under a
    different parent queues for reconciliation rather than creating a second

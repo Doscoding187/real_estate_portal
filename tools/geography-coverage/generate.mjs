@@ -21,7 +21,11 @@ function loadResearchedEdges(ROOT, rawManifest) {
         const resolved = readJson(path.join(ROOT, relativePath));
         for (const edge of resolved.edges ?? []) {
           if (!acceptedMetroKeys.has(edge.parent_natural_key)) continue;
-          byFactualId.set(edge.factual_location_id, edge);
+          byFactualId.set(edge.factual_location_id, {
+            ...edge,
+            allowDuplicateNaturalKeyGrouping:
+              resolved.allow_duplicate_natural_key_grouping === true,
+          });
         }
       }
     },
@@ -309,6 +313,7 @@ function collectCandidates(state, inputs, manifest) {
       parentKey,
       publicationStatus: 'provisional',
       decisionNote,
+      allowDuplicateNaturalKeyGrouping: edge?.allowDuplicateNaturalKeyGrouping === true,
     });
   }
   return candidates;
@@ -327,6 +332,20 @@ function resolveCollisions(state, candidates) {
     left[0].localeCompare(right[0]),
   )) {
     const occupant = state.usedNaturalKeys.get(naturalKey);
+    if (
+      !occupant &&
+      group.length > 1 &&
+      group.every(candidate => candidate.allowDuplicateNaturalKeyGrouping === true)
+    ) {
+      const grouped = [...group].sort((left, right) =>
+        left.record.canonical_location_id.localeCompare(right.record.canonical_location_id),
+      );
+      survivors.push({
+        ...grouped[0],
+        records: grouped.map(candidate => candidate.record),
+      });
+      continue;
+    }
     if (occupant || group.length > 1) {
       for (const candidate of group) {
         queueRecord(
@@ -361,21 +380,24 @@ function resolveCollisions(state, candidates) {
 }
 
 function buildAliasList(state, candidate, preferredNameTriples) {
-  const { record, storageLevel, naturalKey } = candidate;
+  const records = candidate.records ?? [candidate.record];
+  const { storageLevel, naturalKey } = candidate;
   const [province] = naturalKey.split('/');
   const requested = [];
-  for (const alias of state.aliasIndex?.get(record.canonical_location_id) ?? []) {
-    requested.push({ name: alias.name, normalized: alias.normalized, origin: 'name_assertion' });
-  }
-  for (const form of extensionAliasForms(record.preferred_name)) {
-    requested.push({
-      name: form,
-      normalized: normalizeName(form),
-      origin: 'generated_extension_pattern',
-    });
+  for (const record of records) {
+    for (const alias of state.aliasIndex?.get(record.canonical_location_id) ?? []) {
+      requested.push({ name: alias.name, normalized: alias.normalized, origin: 'name_assertion' });
+    }
+    for (const form of extensionAliasForms(record.preferred_name)) {
+      requested.push({
+        name: form,
+        normalized: normalizeName(form),
+        origin: 'generated_extension_pattern',
+      });
+    }
   }
 
-  const seen = new Set([normalizeName(record.preferred_name)]);
+  const seen = new Set(records.map(record => normalizeName(record.preferred_name)));
   const accepted = [];
   for (const alias of requested) {
     if (seen.has(alias.normalized)) continue;
@@ -398,7 +420,9 @@ function emitRows(state, survivors) {
   const rows = [];
   for (const candidate of survivors) {
     const aliases = buildAliasList(state, candidate, state.preferredNameTriples);
-    const { record, scopeKind, storageLevel, naturalKey, parentKey, publicationStatus } = candidate;
+    const records = candidate.records ?? [candidate.record];
+    const { scopeKind, storageLevel, naturalKey, parentKey, publicationStatus } = candidate;
+    const record = records[0];
     const row = {
       runtime_search_scope_kind: scopeKind,
       runtime_storage_level: storageLevel,
@@ -415,9 +439,9 @@ function emitRows(state, survivors) {
       searchable_aliases: aliases.map(alias => alias.name),
       publication_status: publicationStatus,
       licensing_classification: record.licensing_classification,
-      factual_location_ids: [record.canonical_location_id],
-      factual_preferred_names: [record.preferred_name],
-      factual_types: [record.canonical_type],
+      factual_location_ids: records.map(item => item.canonical_location_id),
+      factual_preferred_names: records.map(item => item.preferred_name),
+      factual_types: records.map(item => item.canonical_type),
     };
     rows.push(row);
     const [province] = naturalKey.split('/');
@@ -426,7 +450,9 @@ function emitRows(state, survivors) {
       `${storageLevel}|${province}|${normalizeName(record.preferred_name)}`,
       naturalKey,
     );
-    state.runtimeRecords.push({ record, row, decisionNote: candidate.decisionNote });
+    for (const record of records) {
+      state.runtimeRecords.push({ record, row, decisionNote: candidate.decisionNote });
+    }
   }
   return rows;
 }
@@ -578,6 +604,7 @@ async function main() {
       runtime_row_count: finalRows.length,
       carried_row_count: inputs.carriedRows.length,
       newly_promoted_row_count: newRows.length,
+      newly_promoted_identity_count: state.runtimeRecords.length,
       queued_count: state.queueById.size,
       represented_by_carried_count: [...state.queueById.values()].filter(
         entry => entry.reason === 'represented_by_carried_runtime_row',
@@ -585,8 +612,9 @@ async function main() {
       alias_drop_count: state.aliasDrops.length,
     },
     disposition_invariant: {
-      rule: 'promoted_new + queued === factual_identity_count',
-      promoted_new: newRows.length,
+      rule: 'promoted_new_identities + queued === factual_identity_count',
+      promoted_new_identities: state.runtimeRecords.length,
+      promoted_new_rows: newRows.length,
       queued: state.queueById.size,
     },
     tier_counts: {

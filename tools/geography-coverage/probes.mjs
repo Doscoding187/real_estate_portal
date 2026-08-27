@@ -58,8 +58,9 @@ check(
 
 check(
   'promoted + queued accounts for every identity',
-  disposition.summary.newly_promoted_row_count + disposition.summary.queued_count ===
+  disposition.summary.newly_promoted_identity_count + disposition.summary.queued_count ===
     disposition.summary.factual_identity_count,
+  `${disposition.summary.newly_promoted_identity_count} promoted identities + ${disposition.summary.queued_count} queued`,
 );
 
 check(
@@ -956,6 +957,70 @@ for (const probe of WAVE47_IDENTITY_SPECIFIC_PROBES) {
     row ? `${row.runtime_natural_key}/${row.factual_location_ids.join(',')}` : 'missing',
   );
 }
+
+const WAVE48_IDENTITY_SPECIFIC_PROBES = [
+  {
+    name: 'Eikepark (Rand West City identity)',
+    factualId: 'pl-gp-v01-1e32c07668460cae218f',
+    parentSuffix: 'gauteng/randfontein/eikepark',
+  },
+  {
+    name: 'Eikepark (duplicate Rand West City identity)',
+    factualId: 'pl-gp-v01-b4b64a12d456a96f5779',
+    parentSuffix: 'gauteng/randfontein/eikepark',
+  },
+  {
+    name: 'Morehill (queued identity)',
+    factualId: 'pl-gp-v01-5954891aaa7b38cc10bd',
+    parentSuffix: 'gauteng/benoni/morehill',
+  },
+  {
+    name: 'Selcourt (queued identity)',
+    factualId: 'pl-gp-v01-2eb78152584e4bac9051',
+    parentSuffix: 'gauteng/springs/selcourt',
+  },
+];
+
+for (const probe of WAVE48_IDENTITY_SPECIFIC_PROBES) {
+  const row = rowsByNaturalKey.get(probe.parentSuffix);
+  check(
+    `wave48 identity-specific edge resolves: ${probe.name}`,
+    row !== undefined && row.factual_location_ids.includes(probe.factualId),
+    row ? `${row.runtime_natural_key}/${row.factual_location_ids.join(',')}` : 'missing',
+  );
+}
+
+for (const grouped of [
+  {
+    name: 'Eikepark grouped factual identities',
+    parentSuffix: 'gauteng/randfontein/eikepark',
+    factualIds: ['pl-gp-v01-1e32c07668460cae218f', 'pl-gp-v01-b4b64a12d456a96f5779'],
+  },
+  {
+    name: 'Morehill grouped factual identities',
+    parentSuffix: 'gauteng/benoni/morehill',
+    factualIds: ['pl-gp-v01-5954891aaa7b38cc10bd', 'pl-gp-v01-7a8a575a90deb1e3121b'],
+  },
+  {
+    name: 'Selcourt grouped factual identities',
+    parentSuffix: 'gauteng/springs/selcourt',
+    factualIds: ['pl-gp-v01-2eb78152584e4bac9051', 'pl-gp-v01-42b618e5e1a93bed8ee0'],
+  },
+]) {
+  const row = rowsByNaturalKey.get(grouped.parentSuffix);
+  check(
+    `wave48 explicit duplicate grouping: ${grouped.name}`,
+    row !== undefined &&
+      row.factual_location_ids.length === grouped.factualIds.length &&
+      grouped.factualIds.every(factualId => row.factual_location_ids.includes(factualId)),
+    row ? `${row.runtime_natural_key}/${row.factual_location_ids.join(',')}` : 'missing',
+  );
+}
+
+check(
+  'ordinary duplicate collisions remain queued without explicit grouping',
+  queue.some(entry => entry.reason === 'duplicate_natural_key_within_parent' && entry.preferred_name === 'Vrededorp'),
+);
 
 const NEGATIVE_PROBES = ['Mamelodi Extension 1', 'Mamelodi Extension 4'];
 for (const probe of NEGATIVE_PROBES) {

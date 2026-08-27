@@ -196,6 +196,7 @@ const output = {
   resolved_edges_version: `${path.basename(evidencePath, '.json')}.resolved`,
   town: evidence.town,
   parent_natural_key: evidence.parent_natural_key,
+  allow_duplicate_natural_key_grouping: evidence.allow_duplicate_natural_key_grouping === true,
   source: evidence.source,
   edge_count: resolved.length,
   edges: resolved,
