@@ -840,9 +840,9 @@ export const developerRouter = router({
         publisherName?: string | null;
         publisherAuthorityKind?: 'platform_reference' | 'developer_first_party';
         sharedLiving?: {
-          accommodationType: 'private_room' | 'garden_cottage' | 'bachelor_studio';
-          bathroomAccess: 'own' | 'shared';
-          furnishedState: 'furnished' | 'partial';
+          accommodationType: string;
+          bathroomAccess: string;
+          furnishedState: string;
           rentUnknown: boolean;
           billsIncluded: { electricity: boolean; water: boolean; wifi: boolean };
         };
@@ -1179,13 +1179,13 @@ export const developerRouter = router({
         }
 
         if (input.tab === 'shared_living') {
-          const sharedLiving = await searchSharedLivingSpaces({
-            ...(locationFilter.province ? { province: locationFilter.province } : {}),
-            ...(locationFilter.city ? { city: locationFilter.city } : {}),
-            ...(locationFilter.suburb ? { suburb: locationFilter.suburb } : {}),
-            limit,
-          });
-          return { items: sharedLiving.items.map(mapSharedLivingSpace), source: 'shared_living' };
+          const location =
+            locationFilter.suburb || locationFilter.city || locationFilter.province || undefined;
+          const publicSearch = await searchSharedLivingSpaces({ location });
+          return {
+            items: publicSearch.items.slice(0, limit).map(mapSharedLivingSpace),
+            source: 'shared_living',
+          };
         }
 
         // Commercial consumer intent is owned by the dedicated Office Leasing

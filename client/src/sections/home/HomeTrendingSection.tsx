@@ -47,9 +47,9 @@ type TrendingItem = {
   publisherName?: string | null;
   badges?: string[];
   sharedLiving?: {
-    accommodationType: 'private_room' | 'garden_cottage' | 'bachelor_studio';
-    bathroomAccess: 'own' | 'shared';
-    furnishedState: 'furnished' | 'partial';
+    accommodationType: string;
+    bathroomAccess: string;
+    furnishedState: string;
     rentUnknown: boolean;
     billsIncluded: { electricity: boolean; water: boolean; wifi: boolean };
   };

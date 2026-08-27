@@ -49,7 +49,12 @@ export interface SharedLivingSearchInput {
   page?: number;
 }
 
-const STANDALONE_TYPES = new Set(['garden_cottage', 'granny_flat', 'bachelor_studio', 'backyard_unit']);
+const STANDALONE_TYPES = new Set([
+  'garden_cottage',
+  'granny_flat',
+  'bachelor_studio',
+  'backyard_unit',
+]);
 
 type Scope =
   | { status: 'none' }
@@ -82,11 +87,23 @@ async function resolveScope(
   const db = await getDb();
   if (!db) return { status: 'empty' };
 
-  const [provinceRow] = await db.select({ id: provinces.id }).from(provinces).where(eq(provinces.slug, token)).limit(1);
+  const [provinceRow] = await db
+    .select({ id: provinces.id })
+    .from(provinces)
+    .where(eq(provinces.slug, token))
+    .limit(1);
   if (provinceRow) return { status: 'scope', column: 'provinceId', ids: [provinceRow.id] };
-  const [cityRow] = await db.select({ id: cities.id }).from(cities).where(eq(cities.slug, token)).limit(1);
+  const [cityRow] = await db
+    .select({ id: cities.id })
+    .from(cities)
+    .where(eq(cities.slug, token))
+    .limit(1);
   if (cityRow) return { status: 'scope', column: 'cityId', ids: [cityRow.id] };
-  const [suburbRow] = await db.select({ id: suburbs.id }).from(suburbs).where(eq(suburbs.slug, token)).limit(1);
+  const [suburbRow] = await db
+    .select({ id: suburbs.id })
+    .from(suburbs)
+    .where(eq(suburbs.slug, token))
+    .limit(1);
   if (suburbRow) return { status: 'scope', column: 'suburbId', ids: [suburbRow.id] };
 
   return { status: 'empty' };
@@ -168,8 +185,10 @@ export async function searchSharedLivingSpaces(input: SharedLivingSearchInput = 
 
   // Refinement facets that depend on projected facts (bills/furnishing/bathroom/date).
   items = items.filter(item => {
-    if (input.furnished && input.furnished !== 'any' && item.furnishedState !== input.furnished) return false;
-    if (input.bathroom && input.bathroom !== 'any' && item.bathroomAccess !== input.bathroom) return false;
+    if (input.furnished && input.furnished !== 'any' && item.furnishedState !== input.furnished)
+      return false;
+    if (input.bathroom && input.bathroom !== 'any' && item.bathroomAccess !== input.bathroom)
+      return false;
     const bills = item.billsIncluded;
     if (input.billsElectricity && !bills.electricity) return false;
     if (input.billsWifi && !bills.wifi) return false;
@@ -232,7 +251,14 @@ export function projectPublicSpace(row: RawRow): PublicSharedLivingSpace {
   const accommodationType = String(row.accommodationType);
   const billsRaw = row.billsIncludedJson;
   let billsIncluded = { electricity: false, water: false, wifi: false };
-  if (typeof billsRaw === 'string') {
+  if (billsRaw && typeof billsRaw === 'object') {
+    const parsed = billsRaw as Record<string, unknown>;
+    billsIncluded = {
+      electricity: Boolean(parsed.electricity),
+      water: Boolean(parsed.water),
+      wifi: Boolean(parsed.wifi),
+    };
+  } else if (typeof billsRaw === 'string') {
     try {
       const parsed = JSON.parse(billsRaw);
       billsIncluded = {
@@ -245,11 +271,7 @@ export function projectPublicSpace(row: RawRow): PublicSharedLivingSpace {
     }
   }
 
-  const locationParts = [
-    row.suburbName,
-    row.cityName,
-    row.provinceName,
-  ].filter(Boolean);
+  const locationParts = [row.suburbName, row.cityName, row.provinceName].filter(Boolean);
   const locationDisplay = String(locationParts.join(', ') || 'Location on request');
 
   // Privacy matrix: rooms/shared formats never expose coordinates.
@@ -286,7 +308,9 @@ export function projectPublicSpace(row: RawRow): PublicSharedLivingSpace {
   };
 }
 
-export async function sharedLivingDetailBySlug(spaceSlug: string): Promise<PublicSharedLivingSpace | null> {
+export async function sharedLivingDetailBySlug(
+  spaceSlug: string,
+): Promise<PublicSharedLivingSpace | null> {
   const results = await searchSharedLivingSpaces({});
   return results.items.find(item => item.slug === spaceSlug) || null;
 }
