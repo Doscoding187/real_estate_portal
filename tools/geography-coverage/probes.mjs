@@ -896,6 +896,33 @@ for (const probe of WAVE44_IDENTITY_SPECIFIC_PROBES) {
   );
 }
 
+const WAVE45_IDENTITY_SPECIFIC_PROBES = [
+  {
+    name: 'Devon',
+    factualId: 'pl-gp-v01-0127d19bdec24cecd936',
+    parentSuffix: 'gauteng/nigel/devon',
+  },
+  {
+    name: 'Bothasgeluk Agricultural Holdings',
+    factualId: 'pl-gp-v01-37519e0509998852be6d',
+    parentSuffix: 'gauteng/nigel/bothasgeluk-agricultural-holdings',
+  },
+  {
+    name: 'Impumelelo',
+    factualId: 'pl-gp-v01-3a41d69d93d030e80e93',
+    parentSuffix: 'gauteng/nigel/impumelelo',
+  },
+];
+
+for (const probe of WAVE45_IDENTITY_SPECIFIC_PROBES) {
+  const row = rowsByNaturalKey.get(probe.parentSuffix);
+  check(
+    `wave45 identity-specific edge resolves: ${probe.name}`,
+    row !== undefined && row.factual_location_ids.includes(probe.factualId),
+    row ? `${row.runtime_natural_key}/${row.factual_location_ids.join(',')}` : 'missing',
+  );
+}
+
 const NEGATIVE_PROBES = ['Mamelodi Extension 1', 'Mamelodi Extension 4'];
 for (const probe of NEGATIVE_PROBES) {
   const directHit = resolveByName(probe);

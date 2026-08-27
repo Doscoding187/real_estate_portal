@@ -1,0 +1,46 @@
+{
+  "resolved_edges_version": "nigel-devon-impumelelo-bothasgeluk-parent-evidence.v0.1.resolved",
+  "town": "Nigel",
+  "parent_natural_key": "gauteng/nigel",
+  "source": {
+    "publisher": "Office of the Chief Justice, Department of Justice and Constitutional Development",
+    "url": "https://www.justice.gov.za/maps/gp/01%20GT_Sub_2023_Nigel%20Sub%20District%20of%20Ekurhuleni%20Magisterial%20District.pdf",
+    "section": "Nigel Sub District of Ekurhuleni Magisterial District map — exact labels for Devon, Impumelelo, and Bothasgeluk AH appear within the Nigel service area",
+    "retrieved": "2026-08-27",
+    "licence_note": "Official government service-area map used for locality-to-runtime-market assertions; no prose or geometry is copied."
+  },
+  "edge_count": 3,
+  "edges": [
+    {
+      "factual_location_id": "pl-gp-v01-0127d19bdec24cecd936",
+      "preferred_name": "Devon",
+      "factual_type": "village",
+      "parent_natural_key": "gauteng/nigel",
+      "evidence_class": "official_magisterial_place_index_and_map",
+      "citation": "https://www.justice.gov.za/maps/gp/01%20GT_Sub_2023_Nigel%20Sub%20District%20of%20Ekurhuleni%20Magisterial%20District.pdf#Nigel%20Sub%20District%20of%20Ekurhuleni%20Magisterial%20District%20map%20%E2%80%94%20exact%20labels%20for%20Devon%2C%20Impumelelo%2C%20and%20Bothasgeluk%20AH%20appear%20within%20the%20Nigel%20service%20area (retrieved 2026-08-27)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-37519e0509998852be6d",
+      "preferred_name": "Bothasgeluk Agricultural Holdings",
+      "factual_type": "village",
+      "parent_natural_key": "gauteng/nigel",
+      "evidence_class": "official_magisterial_place_index_and_map",
+      "citation": "https://www.justice.gov.za/maps/gp/01%20GT_Sub_2023_Nigel%20Sub%20District%20of%20Ekurhuleni%20Magisterial%20District.pdf#Nigel%20Sub%20District%20of%20Ekurhuleni%20Magisterial%20District%20map%20%E2%80%94%20exact%20labels%20for%20Devon%2C%20Impumelelo%2C%20and%20Bothasgeluk%20AH%20appear%20within%20the%20Nigel%20service%20area (retrieved 2026-08-27)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-3a41d69d93d030e80e93",
+      "preferred_name": "Impumelelo",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/nigel",
+      "evidence_class": "official_magisterial_place_index_and_map",
+      "citation": "https://www.justice.gov.za/maps/gp/01%20GT_Sub_2023_Nigel%20Sub%20District%20of%20Ekurhuleni%20Magisterial%20District.pdf#Nigel%20Sub%20District%20of%20Ekurhuleni%20Magisterial%20District%20map%20%E2%80%94%20exact%20labels%20for%20Devon%2C%20Impumelelo%2C%20and%20Bothasgeluk%20AH%20appear%20within%20the%20Nigel%20service%20area (retrieved 2026-08-27)"
+    }
+  ],
+  "diagnostics": {
+    "researched_names": 0,
+    "identity_specific_records": 3,
+    "matched_already_projected": [],
+    "names_not_in_canonical_layer": [],
+    "ambiguous_canonical_matches": []
+  }
+}
