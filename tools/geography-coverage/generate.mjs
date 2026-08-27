@@ -270,6 +270,7 @@ function collectCandidates(state, inputs, manifest) {
           record.licensing_classification !== 'osm_only_odbl_provisional'
             ? 'verified'
             : 'provisional',
+        allowDuplicateNaturalKeyGrouping: false,
       });
       continue;
     }
@@ -282,8 +283,16 @@ function collectCandidates(state, inputs, manifest) {
       .filter(row => row.runtime_storage_level === 'city')
       .map(row => row.runtime_natural_key),
   );
+  acceptedMetroKeys.add('gauteng');
   for (const candidate of candidates) acceptedMetroKeys.add(candidate.naturalKey);
   researchedEdges.hydrate(acceptedMetroKeys);
+
+  for (const candidate of candidates) {
+    const edge = researchedEdges.byFactualId.get(candidate.record.canonical_location_id);
+    if (!edge) continue;
+    candidate.allowDuplicateNaturalKeyGrouping = edge.allowDuplicateNaturalKeyGrouping === true;
+    candidate.decisionNote = `researched edge (${edge.evidence_class})`;
+  }
 
   for (const { record, adm2Name, slug } of localityInputs) {
     const edge = researchedEdges.byFactualId.get(record.canonical_location_id);

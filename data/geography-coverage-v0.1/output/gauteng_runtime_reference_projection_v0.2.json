@@ -7,7 +7,7 @@
     "factual_canonical_geography_sha256": "1fe0e2e3101bd7e459f484b7125dc1ce1f0327104002b184ef0e90d4236b7b7f",
     "factual_canonical_names_sha256": "a87891bc2e4167130d7e5eb649516a34aedaa071278ce8fe25df19f511669b51",
     "carried_projection_v01_sha256": "982ea13cd190a02da5440f122a061713e22bc157ef46f491ce530c5877ff9fc0",
-    "territory_manifest_sha256": "c1cfbceab21126fc5b7943c55aaf2eff40cb10e8cf889459878632f077a7783a"
+    "territory_manifest_sha256": "d4abd0b0303a7fdcd57e4a20f64bfbeece2c91dc7e0f953875cfbe90dfcb9b0f"
   },
   "rows": [
     {
@@ -1639,6 +1639,31 @@
         "Blyvooruitzicht"
       ],
       "factual_types": [
+        "town"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "metro_city",
+      "runtime_storage_level": "city",
+      "runtime_natural_key": "gauteng/boekenhoutfontein",
+      "runtime_parent_natural_key": "gauteng",
+      "name": "Boekenhoutfontein",
+      "slug": "boekenhoutfontein",
+      "latitude": -25.540988,
+      "longitude": 28.078557500000002,
+      "searchable_aliases": [],
+      "publication_status": "verified",
+      "licensing_classification": "permissive_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-291cc8f92a238f80f336",
+        "pl-gp-v01-b3af21b267c8fc08148a"
+      ],
+      "factual_preferred_names": [
+        "Boekenhoutfontein",
+        "Boekenhoutfontein"
+      ],
+      "factual_types": [
+        "town",
         "town"
       ]
     },
@@ -26487,6 +26512,31 @@
         "Rhenosterfontein"
       ],
       "factual_types": [
+        "town"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "metro_city",
+      "runtime_storage_level": "city",
+      "runtime_natural_key": "gauteng/rietfontein",
+      "runtime_parent_natural_key": "gauteng",
+      "name": "Rietfontein",
+      "slug": "rietfontein",
+      "latitude": -26.038442500000002,
+      "longitude": 27.870067,
+      "searchable_aliases": [],
+      "publication_status": "verified",
+      "licensing_classification": "permissive_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-8db8901b5210ad0808dd",
+        "pl-gp-v01-ab7f056ff7d720e00d63"
+      ],
+      "factual_preferred_names": [
+        "Rietfontein",
+        "Rietfontein"
+      ],
+      "factual_types": [
+        "town",
         "town"
       ]
     },

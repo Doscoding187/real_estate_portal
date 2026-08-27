@@ -1190,6 +1190,30 @@ for (const probe of WAVE58_DUPLICATE_PROBES) {
   );
 }
 
+const WAVE59_METRO_DUPLICATE_PROBES = [
+  {
+    name: 'Boekenhoutfontein',
+    parentSuffix: 'gauteng/boekenhoutfontein',
+    factualIds: ['pl-gp-v01-291cc8f92a238f80f336', 'pl-gp-v01-b3af21b267c8fc08148a'],
+  },
+  {
+    name: 'Rietfontein (West Rand)',
+    parentSuffix: 'gauteng/rietfontein',
+    factualIds: ['pl-gp-v01-8db8901b5210ad0808dd', 'pl-gp-v01-ab7f056ff7d720e00d63'],
+  },
+];
+
+for (const probe of WAVE59_METRO_DUPLICATE_PROBES) {
+  const row = rowsByNaturalKey.get(probe.parentSuffix);
+  check(
+    `wave59 explicit metro duplicate grouping resolves: ${probe.name}`,
+    row !== undefined &&
+      row.factual_location_ids.length === probe.factualIds.length &&
+      probe.factualIds.every(id => row.factual_location_ids.includes(id)),
+    row ? `${row.runtime_natural_key}/${row.factual_location_ids.join(',')}` : 'missing',
+  );
+}
+
 check(
   'ordinary duplicate collisions remain queued without explicit grouping',
   queue.some(entry => entry.reason === 'duplicate_natural_key_within_parent' && entry.preferred_name === 'Slovoville'),
