@@ -203,6 +203,15 @@ describe('public navigation authority', () => {
     });
     expect(getPublicHeroJourney('commercial', localIntegrationRelease).supportedFields).toEqual([
       'location',
+      'minAreaM2',
+      'maxAreaM2',
+      'maxMonthlyBudget',
+      'availability',
+      'fitOutCondition',
+      'backupPower',
+      'backupWater',
+      'fibreConnectivity',
+      'minParkingBays',
     ]);
     expect(getPublicHeroJourney('commercial', containedHostedRelease)).toMatchObject({
       homepageVisible: false,

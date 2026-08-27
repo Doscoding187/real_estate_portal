@@ -52,14 +52,18 @@ describe('CommercialOffice handoff', () => {
     window.history.replaceState(
       {},
       '',
-      '/commercial?location=Sandton&minAreaM2=80&maxAreaM2=200&maxMonthlyBudget=35000&backupPower=1&fibreConnectivity=1',
+      '/commercial?location=Sandton&minAreaM2=80&maxAreaM2=200&maxMonthlyBudget=35000&availability=future&fitOutCondition=fitted&backupPower=1&backupWater=1&fibreConnectivity=1&minParkingBays=4',
     );
     render(<CommercialOffice />);
     expect(screen.getByLabelText('Location')).toHaveValue('Sandton');
     expect(screen.getByLabelText('Minimum square metres')).toHaveValue(80);
     expect(screen.getByLabelText('Maximum square metres')).toHaveValue(200);
     expect(screen.getByLabelText('Monthly occupancy budget')).toHaveValue(35000);
+    expect(screen.getByLabelText('Availability')).toHaveValue('future');
+    expect(screen.getByLabelText('Fit-out condition')).toHaveValue('fitted');
+    expect(screen.getByLabelText('Minimum parking bays')).toHaveValue(4);
     expect(screen.getByLabelText('Backup power')).toBeChecked();
+    expect(screen.getByLabelText('Backup water')).toBeChecked();
     expect(screen.getByLabelText('Fibre')).toBeChecked();
     expect(search).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -67,8 +71,12 @@ describe('CommercialOffice handoff', () => {
         minAreaM2: 80,
         maxAreaM2: 200,
         maxMonthlyBudgetMinor: 3_500_000,
+        availability: 'future',
+        fitOutCondition: 'fitted',
         backupPower: true,
+        backupWater: true,
         fibreConnectivity: true,
+        minParkingBays: 4,
       }),
       { enabled: true },
     );

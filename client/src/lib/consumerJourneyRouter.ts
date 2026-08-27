@@ -9,6 +9,12 @@ import {
   type PublicJourneyReleaseContext,
 } from './publicNavigation';
 import { LAND_CLASSIFICATION_LABELS, LAND_PUBLIC_CLASSIFICATIONS, type LandPublicClassification } from '@shared/land-domain';
+import {
+  COMMERCIAL_SEARCH_QUERY_KEYS,
+  sanitizeCommercialSearchFilters,
+  serializeCommercialSearchParams,
+  type CommercialSearchFilters,
+} from '@shared/commercialSearchContract';
 
 export type ConsumerIntent = 'buy' | 'rent';
 export type ConsumerJourneyKey = 'residential' | 'land' | 'farm' | 'commercial' | 'shared_living';
@@ -35,6 +41,7 @@ export interface ConsumerJourneyDefinition {
 const RESIDENTIAL_FIELDS = ['location', 'propertyType', 'minPrice', 'maxPrice', 'minBedrooms', 'minBathrooms'] as const;
 const LAND_FIELDS = ['location', 'classification', 'minPrice', 'maxPrice', 'minSize', 'maxSize'] as const;
 const FARM_FIELDS = ['location', 'listingType', 'minPrice', 'maxPrice', 'minLandSize', 'maxLandSize'] as const;
+const COMMERCIAL_FIELDS = ['location', ...COMMERCIAL_SEARCH_QUERY_KEYS] as const;
 
 /**
  * The consumer catalogue is the policy boundary between Buy/Rent intent and
@@ -59,7 +66,7 @@ export const CONSUMER_JOURNEYS: readonly ConsumerJourneyDefinition[] = [
   },
   {
     intent: 'buy', key: 'commercial', label: 'Commercial Property', group: 'Commercial', status: 'PLANNED', enabled: false,
-    destination: '/commercial', supportedFields: ['location'], clearedFields: RESIDENTIAL_FIELDS,
+    destination: '/commercial', supportedFields: COMMERCIAL_FIELDS, clearedFields: RESIDENTIAL_FIELDS,
   },
   {
     intent: 'rent', key: 'residential', label: 'Homes', group: 'Homes', status: 'E2E_READY', enabled: true,
@@ -73,7 +80,7 @@ export const CONSUMER_JOURNEYS: readonly ConsumerJourneyDefinition[] = [
   },
   {
     intent: 'rent', key: 'commercial', label: 'Commercial Property', group: 'Commercial', status: 'PUBLIC_SEARCH_READY', enabled: true,
-    destination: '/commercial', supportedFields: ['location'],
+    destination: '/commercial', supportedFields: COMMERCIAL_FIELDS,
     clearedFields: ['propertyType', 'minBedrooms', 'minBathrooms', 'minPrice', 'maxPrice'],
   },
   {
@@ -105,6 +112,7 @@ export type ConsumerJourneySearchInput = Omit<PropertySearchInput, 'transactionT
   landClassification?: string;
   minSize?: string | number;
   maxSize?: string | number;
+  commercialFilters?: Partial<CommercialSearchFilters>;
 };
 
 function landLocationQuery(selectedLocations: readonly LocationNode[], searchScope: ConsumerJourneySearchInput['searchScope']) {
@@ -178,6 +186,11 @@ export function buildConsumerJourneyUrl(input: ConsumerJourneySearchInput): stri
     if (input.maxPrice !== undefined && input.maxPrice !== '') params.set('maxPrice', String(input.maxPrice));
     if (input.minSize !== undefined && input.minSize !== '') params.set('minSize', String(input.minSize));
     if (input.maxSize !== undefined && input.maxSize !== '') params.set('maxSize', String(input.maxSize));
+  }
+  if (input.journey === 'commercial') {
+    const commercialFilters = sanitizeCommercialSearchFilters(input.commercialFilters || {});
+    const commercialParams = serializeCommercialSearchParams(commercialFilters);
+    commercialParams.forEach((value, key) => params.set(key, value));
   }
   return `${definition.destination}?${params.toString()}`;
 }

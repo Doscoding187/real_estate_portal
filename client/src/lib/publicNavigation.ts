@@ -6,6 +6,7 @@ import {
 } from '@/features/services/catalog';
 import { PROVINCE_SLUGS } from '@/lib/locationUtils';
 import { parseDeployEnv } from './env.contract';
+import { COMMERCIAL_SEARCH_QUERY_KEYS } from '@shared/commercialSearchContract';
 
 export type PublicNavigationCapabilityStatus =
   | 'LAUNCH_READY'
@@ -252,7 +253,7 @@ export const PUBLIC_HERO_JOURNEYS: readonly PublicHeroJourneyDefinition[] = [
     // controlled by the existing public-journey release manifest.
     productHomepageVisible: true,
     productHomepageEnabled: true,
-    supportedFields: ['location'],
+    supportedFields: ['location', ...COMMERCIAL_SEARCH_QUERY_KEYS],
   },
   {
     key: 'find_agent',

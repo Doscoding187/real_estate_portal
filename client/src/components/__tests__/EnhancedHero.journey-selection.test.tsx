@@ -296,6 +296,17 @@ describe('EnhancedHero explicit journey selection', () => {
     expect(submittedUrl.searchParams.get('minBedrooms')).toBeNull();
   });
 
+  it('exposes Commercial Office filters that map to tenant decisions', () => {
+    render(<EnhancedHero activeTab="commercial" />);
+
+    expect(screen.getByText('Space size')).toBeInTheDocument();
+    expect(screen.getByText('Monthly occupancy')).toBeInTheDocument();
+    expect(screen.getByText('Availability')).toBeInTheDocument();
+    expect(screen.getByText('Parking')).toBeInTheDocument();
+    expect(screen.queryByText('Bedrooms')).not.toBeInTheDocument();
+    expect(screen.queryByText('Bathrooms')).not.toBeInTheDocument();
+  });
+
   it('supports journey-first selection but waits for a canonical location', () => {
     render(<EnhancedHero />);
 
