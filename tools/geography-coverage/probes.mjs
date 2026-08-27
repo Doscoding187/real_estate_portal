@@ -1025,6 +1025,53 @@ check(
   wave49Row ? `${wave49Row.runtime_natural_key}/${wave49Row.factual_location_ids.join(',')}` : 'missing',
 );
 
+const WAVE50_IDENTITY_SPECIFIC_PROBES = [
+  {
+    name: 'Opmekaar',
+    factualId: 'pl-gp-v01-01e5d6705104962667ff',
+    parentSuffix: 'gauteng/boksburg/opmekaar',
+  },
+  {
+    name: 'Natalspruit',
+    factualId: 'pl-gp-v01-26a5c7cb51ab40b65336',
+    parentSuffix: 'gauteng/katlehong/natalspruit',
+  },
+  {
+    name: 'Sizibeni',
+    factualId: 'pl-gp-v01-3641b9b3a2f8716452de',
+    parentSuffix: 'gauteng/thembisa/sizibeni',
+  },
+  {
+    name: 'Houtkapper Park',
+    factualId: 'pl-gp-v01-460d60f4b27e30d05ae8',
+    parentSuffix: 'gauteng/kempton-park/houtkapper-park',
+  },
+  {
+    name: 'Mmangweni',
+    factualId: 'pl-gp-v01-465ec2c42a0978f460e3',
+    parentSuffix: 'gauteng/thembisa/mmangweni',
+  },
+  {
+    name: 'Gqagqeni',
+    factualId: 'pl-gp-v01-490d96b230aad9b67f0f',
+    parentSuffix: 'gauteng/thembisa/gqagqeni',
+  },
+  {
+    name: 'Geestveld AH',
+    factualId: 'pl-gp-v01-60cd2a20de0015bb37a9',
+    parentSuffix: 'gauteng/kempton-park/geestveld-ah',
+  },
+];
+
+for (const probe of WAVE50_IDENTITY_SPECIFIC_PROBES) {
+  const row = rowsByNaturalKey.get(probe.parentSuffix);
+  check(
+    `wave50 identity-specific edge resolves: ${probe.name}`,
+    row !== undefined && row.factual_location_ids.includes(probe.factualId),
+    row ? `${row.runtime_natural_key}/${row.factual_location_ids.join(',')}` : 'missing',
+  );
+}
+
 check(
   'ordinary duplicate collisions remain queued without explicit grouping',
   queue.some(entry => entry.reason === 'duplicate_natural_key_within_parent' && entry.preferred_name === 'Vrededorp'),

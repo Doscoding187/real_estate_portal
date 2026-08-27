@@ -7,7 +7,7 @@
     "factual_canonical_geography_sha256": "1fe0e2e3101bd7e459f484b7125dc1ce1f0327104002b184ef0e90d4236b7b7f",
     "factual_canonical_names_sha256": "a87891bc2e4167130d7e5eb649516a34aedaa071278ce8fe25df19f511669b51",
     "carried_projection_v01_sha256": "982ea13cd190a02da5440f122a061713e22bc157ef46f491ce530c5877ff9fc0",
-    "territory_manifest_sha256": "7f713f66c8b2cde6ab36976d037ea3ed6a466f7f9616a4c693b87183ef580e25"
+    "territory_manifest_sha256": "c341d9fd207c5e96bbd1d93c639d32b4fcad652a2316ec1890c7aafbcb36fc7e"
   },
   "rows": [
     {
@@ -2258,6 +2258,28 @@
       ],
       "factual_types": [
         "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/boksburg/opmekaar",
+      "runtime_parent_natural_key": "gauteng/boksburg",
+      "name": "Opmekaar",
+      "slug": "opmekaar",
+      "latitude": -26.2345663,
+      "longitude": 28.2185448,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-01e5d6705104962667ff"
+      ],
+      "factual_preferred_names": [
+        "Opmekaar"
+      ],
+      "factual_types": [
+        "neighbourhood"
       ]
     },
     {
@@ -15532,6 +15554,28 @@
     {
       "runtime_search_scope_kind": "locality",
       "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/katlehong/natalspruit",
+      "runtime_parent_natural_key": "gauteng/katlehong",
+      "name": "Natalspruit",
+      "slug": "natalspruit",
+      "latitude": -26.3055855,
+      "longitude": 28.144308000000002,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "permissive_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-26a5c7cb51ab40b65336"
+      ],
+      "factual_preferred_names": [
+        "Natalspruit"
+      ],
+      "factual_types": [
+        "locality"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
       "runtime_natural_key": "gauteng/katlehong/ncala",
       "runtime_parent_natural_key": "gauteng/katlehong",
       "name": "Ncala",
@@ -16178,6 +16222,28 @@
     {
       "runtime_search_scope_kind": "locality",
       "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/kempton-park/geestveld-ah",
+      "runtime_parent_natural_key": "gauteng/kempton-park",
+      "name": "Geestveld AH",
+      "slug": "geestveld-ah",
+      "latitude": -25.9992544,
+      "longitude": 28.4172474,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-60cd2a20de0015bb37a9"
+      ],
+      "factual_preferred_names": [
+        "Geestveld AH"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
       "runtime_natural_key": "gauteng/kempton-park/glenmarais",
       "runtime_parent_natural_key": "gauteng/kempton-park",
       "name": "Glenmarais",
@@ -16194,6 +16260,28 @@
       ],
       "factual_preferred_names": [
         "Glenmarais"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/kempton-park/houtkapper-park",
+      "runtime_parent_natural_key": "gauteng/kempton-park",
+      "name": "Houtkapper Park",
+      "slug": "houtkapper-park",
+      "latitude": -26.0658432,
+      "longitude": 28.2238271,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-460d60f4b27e30d05ae8"
+      ],
+      "factual_preferred_names": [
+        "Houtkapper Park"
       ],
       "factual_types": [
         "suburb"
@@ -27873,6 +27961,28 @@
     {
       "runtime_search_scope_kind": "locality",
       "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/thembisa/gqagqeni",
+      "runtime_parent_natural_key": "gauteng/thembisa",
+      "name": "Gqagqeni",
+      "slug": "gqagqeni",
+      "latitude": -26.0111111,
+      "longitude": 28.2247222,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-490d96b230aad9b67f0f"
+      ],
+      "factual_preferred_names": [
+        "Gqagqeni"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
       "runtime_natural_key": "gauteng/thembisa/hospital-view",
       "runtime_parent_natural_key": "gauteng/thembisa",
       "name": "Hospital View",
@@ -28115,6 +28225,28 @@
     {
       "runtime_search_scope_kind": "locality",
       "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/thembisa/mmangweni",
+      "runtime_parent_natural_key": "gauteng/thembisa",
+      "name": "Mmangweni",
+      "slug": "mmangweni",
+      "latitude": -26.0172222,
+      "longitude": 28.235,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-465ec2c42a0978f460e3"
+      ],
+      "factual_preferred_names": [
+        "Mmangweni"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
       "runtime_natural_key": "gauteng/thembisa/mnonjaneni",
       "runtime_parent_natural_key": "gauteng/thembisa",
       "name": "Mnonjaneni",
@@ -28327,6 +28459,28 @@
       ],
       "factual_preferred_names": [
         "Sivana"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/thembisa/sizibeni",
+      "runtime_parent_natural_key": "gauteng/thembisa",
+      "name": "Sizibeni",
+      "slug": "sizibeni",
+      "latitude": -26.0188889,
+      "longitude": 28.2236111,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-3641b9b3a2f8716452de"
+      ],
+      "factual_preferred_names": [
+        "Sizibeni"
       ],
       "factual_types": [
         "suburb"

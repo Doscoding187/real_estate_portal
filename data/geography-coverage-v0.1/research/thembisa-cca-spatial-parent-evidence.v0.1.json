@@ -1,0 +1,74 @@
+{
+  "artifact_version": "thembisa-cca-spatial-parent-evidence-v0.1",
+  "town": "Thembisa",
+  "parent_natural_key": "gauteng/thembisa",
+  "administrative_context": "Ekurhuleni",
+  "evidence_class": "official_municipal_gis_point_in_polygon_cca",
+  "source": {
+    "publisher": "City of Ekurhuleni Corporate Geo-Informatics Division",
+    "url": "https://gis.ekurhuleni.gov.za/arcgis/rest/services/Ekurhuleni/Ekurhuleni_Propety_Data_Map/MapServer/158",
+    "section": "Townships layer (158) — EPSG:4326 point-intersection queries returned ESIZIBA, EMANGWENI, and IGQAGQA X1 with CCA=TEMBISA 1",
+    "retrieved": "2026-08-27",
+    "licence_note": "Official municipal spatial layer used for point-to-CCA parent assertions; no polygon geometry is copied."
+  },
+  "supporting_sources": [
+    {
+      "publisher": "City of Ekurhuleni",
+      "url": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/08/B-F-04-2025-2025-2026-SDBIP.pdf",
+      "section": "Table 3 — City of Ekurhuleni Customer Care Areas, including Tembisa 1 CCA",
+      "retrieved": "2026-08-27"
+    }
+  ],
+  "identity_note": "Each canonical identity remains separate. The parent edges use official municipal polygon intersections for the identity-specific source points; source spelling differences (Sizibeni/ESIZIBA, Mmangweni/EMANGWENI, and Gqagqeni/IGQAGQA) are recorded as municipal query results rather than normalized by display text.",
+  "spatial_query": {
+    "geometry_type": "esriGeometryPoint",
+    "spatial_reference": "EPSG:4326",
+    "spatial_relationship": "esriSpatialRelIntersects",
+    "out_fields": "*",
+    "return_geometry": false
+  },
+  "identity_specific_records": [
+    {
+      "factual_location_id": "pl-gp-v01-3641b9b3a2f8716452de",
+      "preferred_name": "Sizibeni",
+      "source_record_id": "sr:osm:node/262716113",
+      "canonical_point": {
+        "longitude": 28.2236111,
+        "latitude": -26.0188889
+      },
+      "municipal_query_result": {
+        "township": "ESIZIBA",
+        "suburb": "ESIZIBA",
+        "cca": "TEMBISA 1"
+      }
+    },
+    {
+      "factual_location_id": "pl-gp-v01-465ec2c42a0978f460e3",
+      "preferred_name": "Mmangweni",
+      "source_record_id": "sr:osm:node/262710173",
+      "canonical_point": {
+        "longitude": 28.235,
+        "latitude": -26.0172222
+      },
+      "municipal_query_result": {
+        "township": "EMANGWENI",
+        "suburb": "EMANGWENI",
+        "cca": "TEMBISA 1"
+      }
+    },
+    {
+      "factual_location_id": "pl-gp-v01-490d96b230aad9b67f0f",
+      "preferred_name": "Gqagqeni",
+      "source_record_id": "sr:osm:node/262720441",
+      "canonical_point": {
+        "longitude": 28.2247222,
+        "latitude": -26.0111111
+      },
+      "municipal_query_result": {
+        "township": "IGQAGQA X1",
+        "suburb": "IGQAGQA",
+        "cca": "TEMBISA 1"
+      }
+    }
+  ]
+}

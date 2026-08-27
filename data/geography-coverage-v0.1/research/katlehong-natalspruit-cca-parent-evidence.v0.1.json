@@ -1,0 +1,51 @@
+{
+  "artifact_version": "katlehong-natalspruit-cca-parent-evidence-v0.1",
+  "town": "Katlehong",
+  "parent_natural_key": "gauteng/katlehong",
+  "administrative_context": "Ekurhuleni",
+  "evidence_class": "official_municipal_gis_point_in_polygon_cca",
+  "source": {
+    "publisher": "City of Ekurhuleni Corporate Geo-Informatics Division",
+    "url": "https://gis.ekurhuleni.gov.za/arcgis/rest/services/Ekurhuleni/Ekurhuleni_Propety_Data_Map/MapServer/158",
+    "section": "Townships layer (158) — EPSG:4326 point-intersection query for the canonical Natalspruit point returned NADUSTRIA X1 / NADUSTRIA with CCA=KATLEHONG 1",
+    "retrieved": "2026-08-27",
+    "licence_note": "Official municipal spatial layer used for a point-to-CCA parent assertion; no polygon geometry is copied."
+  },
+  "supporting_sources": [
+    {
+      "publisher": "City of Ekurhuleni",
+      "url": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/08/B-F-04-2025-2025-2026-SDBIP.pdf",
+      "section": "Table 3 — City of Ekurhuleni Customer Care Areas, including Katlehong 1 CCA",
+      "retrieved": "2026-08-27"
+    }
+  ],
+  "identity_note": "The canonical Natalspruit identity is retained; the parent edge uses the official municipal polygon and CCA returned for its source point. This resolves the earlier broad source-name ambiguity with an identity-specific spatial result.",
+  "spatial_query": {
+    "geometry_type": "esriGeometryPoint",
+    "spatial_reference": "EPSG:4326",
+    "spatial_relationship": "esriSpatialRelIntersects",
+    "out_fields": "*",
+    "return_geometry": false
+  },
+  "identity_specific_records": [
+    {
+      "factual_location_id": "pl-gp-v01-26a5c7cb51ab40b65336",
+      "preferred_name": "Natalspruit",
+      "source_record_ids": [
+        "sr:nga_gns:-1264778:-1841301:46693",
+        "sr:nga_gns:-1264777:-1841300:47263",
+        "sr:geonames:972046",
+        "sr:geonames:972045"
+      ],
+      "canonical_point": {
+        "longitude": 28.144308000000002,
+        "latitude": -26.3055855
+      },
+      "municipal_query_result": {
+        "township": "NADUSTRIA X1",
+        "suburb": "NADUSTRIA",
+        "cca": "KATLEHONG 1"
+      }
+    }
+  ]
+}

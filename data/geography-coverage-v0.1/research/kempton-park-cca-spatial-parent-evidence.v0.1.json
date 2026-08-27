@@ -1,0 +1,60 @@
+{
+  "artifact_version": "kempton-park-cca-spatial-parent-evidence-v0.1",
+  "town": "Kempton Park",
+  "parent_natural_key": "gauteng/kempton-park",
+  "administrative_context": "Ekurhuleni",
+  "evidence_class": "official_municipal_gis_point_in_polygon_cca",
+  "source": {
+    "publisher": "City of Ekurhuleni Corporate Geo-Informatics Division",
+    "url": "https://gis.ekurhuleni.gov.za/arcgis/rest/services/Ekurhuleni/Ekurhuleni_Propety_Data_Map/MapServer/158",
+    "section": "Townships layer (158) — EPSG:4326 point-intersection queries returned BIRCHLEIGH X3 and GEESTVELD AH with CCA=KEMPTON PARK",
+    "retrieved": "2026-08-27",
+    "licence_note": "Official municipal spatial layer used for point-to-CCA parent assertions; no polygon geometry is copied."
+  },
+  "supporting_sources": [
+    {
+      "publisher": "City of Ekurhuleni",
+      "url": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/08/B-F-04-2025-2025-2026-SDBIP.pdf",
+      "section": "Table 3 — City of Ekurhuleni Customer Care Areas, including Kempton Park CCA",
+      "retrieved": "2026-08-27"
+    }
+  ],
+  "identity_note": "Each canonical identity remains separate. Houtkapper Park and Geestveld AH are mapped from their identity-specific source points to the official CCA result; the separate Justice place-index hit for Geestveld AH is not used because it lacks identity coordinates and conflicts with this direct municipal spatial result.",
+  "spatial_query": {
+    "geometry_type": "esriGeometryPoint",
+    "spatial_reference": "EPSG:4326",
+    "spatial_relationship": "esriSpatialRelIntersects",
+    "out_fields": "*",
+    "return_geometry": false
+  },
+  "identity_specific_records": [
+    {
+      "factual_location_id": "pl-gp-v01-460d60f4b27e30d05ae8",
+      "preferred_name": "Houtkapper Park",
+      "source_record_id": "sr:osm:node/395232160",
+      "canonical_point": {
+        "longitude": 28.2238271,
+        "latitude": -26.0658432
+      },
+      "municipal_query_result": {
+        "township": "BIRCHLEIGH X3",
+        "suburb": "BIRCHLEIGH",
+        "cca": "KEMPTON PARK"
+      }
+    },
+    {
+      "factual_location_id": "pl-gp-v01-60cd2a20de0015bb37a9",
+      "preferred_name": "Geestveld AH",
+      "source_record_id": "sr:osm:node/1380940631",
+      "canonical_point": {
+        "longitude": 28.4172474,
+        "latitude": -25.9992544
+      },
+      "municipal_query_result": {
+        "township": "GEESTVELD AH",
+        "suburb": "GEESTVELD AH",
+        "cca": "KEMPTON PARK"
+      }
+    }
+  ]
+}
