@@ -7,7 +7,7 @@
     "factual_canonical_geography_sha256": "1fe0e2e3101bd7e459f484b7125dc1ce1f0327104002b184ef0e90d4236b7b7f",
     "factual_canonical_names_sha256": "a87891bc2e4167130d7e5eb649516a34aedaa071278ce8fe25df19f511669b51",
     "carried_projection_v01_sha256": "982ea13cd190a02da5440f122a061713e22bc157ef46f491ce530c5877ff9fc0",
-    "territory_manifest_sha256": "fee1e8a1f15d4c70f1a6f197a7322caf66f1f83142446e955d9fa1bdcb278225"
+    "territory_manifest_sha256": "c1cfbceab21126fc5b7943c55aaf2eff40cb10e8cf889459878632f077a7783a"
   },
   "rows": [
     {
@@ -1820,6 +1820,31 @@
       ],
       "factual_types": [
         "locality"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/boksburg/boksburg-noord",
+      "runtime_parent_natural_key": "gauteng/boksburg",
+      "name": "Boksburg-Noord",
+      "slug": "boksburg-noord",
+      "latitude": -26.2044444,
+      "longitude": 28.2577778,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-7512ed98a4c11040e081",
+        "pl-gp-v01-b78d6ceaf3f2620c6a90"
+      ],
+      "factual_preferred_names": [
+        "Boksburg-Noord",
+        "Boksburg Noord"
+      ],
+      "factual_types": [
+        "suburb",
+        "suburb"
       ]
     },
     {
@@ -9936,6 +9961,31 @@
     {
       "runtime_search_scope_kind": "locality",
       "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/johannesburg/jabavu",
+      "runtime_parent_natural_key": "gauteng/johannesburg",
+      "name": "Jabavu",
+      "slug": "jabavu",
+      "latitude": -26.2466667,
+      "longitude": 27.8736111,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-0ebf919a2a8903c2bb30",
+        "pl-gp-v01-c7230414467bd30d26de"
+      ],
+      "factual_preferred_names": [
+        "Jabavu",
+        "Jabavu"
+      ],
+      "factual_types": [
+        "suburb",
+        "locality"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
       "runtime_natural_key": "gauteng/johannesburg/jabulani",
       "runtime_parent_natural_key": "gauteng/johannesburg",
       "name": "Jabulani",
@@ -14454,6 +14504,35 @@
       ],
       "factual_types": [
         "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/johannesburg/vrededorp",
+      "runtime_parent_natural_key": "gauteng/johannesburg",
+      "name": "Vrededorp",
+      "slug": "vrededorp",
+      "latitude": -26.1941667,
+      "longitude": 28.0186111,
+      "searchable_aliases": [
+        "Pageview",
+        "Sophiatown",
+        "Fietas"
+      ],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-0951415edb1dd117b3e1",
+        "pl-gp-v01-95ddf1d4b71446b3b066"
+      ],
+      "factual_preferred_names": [
+        "Vrededorp",
+        "Vrededorp"
+      ],
+      "factual_types": [
+        "suburb",
+        "locality"
       ]
     },
     {
@@ -21041,6 +21120,31 @@
     {
       "runtime_search_scope_kind": "locality",
       "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/pretoria/dorandia",
+      "runtime_parent_natural_key": "gauteng/pretoria",
+      "name": "Dorandia",
+      "slug": "dorandia",
+      "latitude": -25.662218,
+      "longitude": 28.1542695,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-38957c0dfb1dd73a722e",
+        "pl-gp-v01-d22f5766a31c2ab7c32b"
+      ],
+      "factual_preferred_names": [
+        "Dorandia",
+        "Dorandia"
+      ],
+      "factual_types": [
+        "suburb",
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
       "runtime_natural_key": "gauteng/pretoria/doringkloof",
       "runtime_parent_natural_key": "gauteng/pretoria",
       "name": "Doringkloof",
@@ -22418,6 +22522,31 @@
     {
       "runtime_search_scope_kind": "locality",
       "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/pretoria/lydiana",
+      "runtime_parent_natural_key": "gauteng/pretoria",
+      "name": "Lydiana",
+      "slug": "lydiana",
+      "latitude": -25.7388889,
+      "longitude": 28.2911111,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-1cf7441a107d1faf4720",
+        "pl-gp-v01-e9a46a63d27967a5cd33"
+      ],
+      "factual_preferred_names": [
+        "Lydiana",
+        "Lydiana"
+      ],
+      "factual_types": [
+        "suburb",
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
       "runtime_natural_key": "gauteng/pretoria/lynnwood",
       "runtime_parent_natural_key": "gauteng/pretoria",
       "name": "Lynnwood",
@@ -22519,6 +22648,31 @@
         "Lynnwood Ridge"
       ],
       "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/pretoria/lyttelton-manor",
+      "runtime_parent_natural_key": "gauteng/pretoria",
+      "name": "Lyttelton Manor",
+      "slug": "lyttelton-manor",
+      "latitude": -25.8172222,
+      "longitude": 28.2119444,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-52a2d8d9be3ffc96a599",
+        "pl-gp-v01-d0fffc78c2e45e1bfc2a"
+      ],
+      "factual_preferred_names": [
+        "Lyttelton Manor",
+        "Lyttelton Manor"
+      ],
+      "factual_types": [
+        "suburb",
         "suburb"
       ]
     },
@@ -22720,6 +22874,33 @@
       ],
       "factual_types": [
         "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/pretoria/menlo-park",
+      "runtime_parent_natural_key": "gauteng/pretoria",
+      "name": "Menlo Park",
+      "slug": "menlo-park",
+      "latitude": -25.768980544,
+      "longitude": 28.2562083555,
+      "searchable_aliases": [
+        "MENLOPARK"
+      ],
+      "publication_status": "provisional",
+      "licensing_classification": "mixed_odbl_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-4f2d00ff52232cd343b7",
+        "pl-gp-v01-e3b8c4c2508eebb1f922"
+      ],
+      "factual_preferred_names": [
+        "Menlo Park",
+        "Menlo Park"
+      ],
+      "factual_types": [
+        "suburb",
+        "locality"
       ]
     },
     {
@@ -23768,6 +23949,31 @@
       ],
       "factual_types": [
         "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/pretoria/rietfontein",
+      "runtime_parent_natural_key": "gauteng/pretoria",
+      "name": "Rietfontein",
+      "slug": "rietfontein",
+      "latitude": -25.896049,
+      "longitude": 27.962441,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "mixed_odbl_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-16a594ed4e0b6be4c440",
+        "pl-gp-v01-fcaba12bcdce7fb3c0c2"
+      ],
+      "factual_preferred_names": [
+        "Rietfontein",
+        "Rietfontein"
+      ],
+      "factual_types": [
+        "suburb",
+        "locality"
       ]
     },
     {
@@ -24846,6 +25052,31 @@
         "Vaalbank"
       ],
       "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/pretoria/val-de-grace",
+      "runtime_parent_natural_key": "gauteng/pretoria",
+      "name": "Val De Grace",
+      "slug": "val-de-grace",
+      "latitude": -25.7444447,
+      "longitude": 28.2966255,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-35c9b6514fe9b5f0d03a",
+        "pl-gp-v01-61b9c5fa174305cc3335"
+      ],
+      "factual_preferred_names": [
+        "Val De Grace",
+        "Val-de-Grâce"
+      ],
+      "factual_types": [
+        "suburb",
         "suburb"
       ]
     },

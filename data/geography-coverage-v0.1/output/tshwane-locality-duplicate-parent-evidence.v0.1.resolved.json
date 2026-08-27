@@ -1,0 +1,119 @@
+{
+  "resolved_edges_version": "tshwane-locality-duplicate-parent-evidence.v0.1.resolved",
+  "town": "Pretoria",
+  "parent_natural_key": "gauteng/pretoria",
+  "allow_duplicate_natural_key_grouping": true,
+  "source": {
+    "publisher": "Office of the Chief Justice, Department of Justice and Constitutional Development",
+    "url": "https://www.justice.gov.za/maps/areas-gp.html",
+    "section": "Gauteng: Find a court in your area — Rietfontein, Lydiana, Val de Grace and Dorandia are listed under Tshwane / Pretoria",
+    "retrieved": "2026-08-27",
+    "licence_note": "Official government place index used for identity-specific locality context; no prose or geometry is copied."
+  },
+  "edge_count": 12,
+  "edges": [
+    {
+      "factual_location_id": "pl-gp-v01-16a594ed4e0b6be4c440",
+      "preferred_name": "Rietfontein",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/pretoria",
+      "evidence_class": "official_magisterial_and_municipal_identity_specific_duplicate_set",
+      "citation": "https://www.justice.gov.za/maps/areas-gp.html#Gauteng%3A%20Find%20a%20court%20in%20your%20area%20%E2%80%94%20Rietfontein%2C%20Lydiana%2C%20Val%20de%20Grace%20and%20Dorandia%20are%20listed%20under%20Tshwane%20%2F%20Pretoria (retrieved 2026-08-27)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-1cf7441a107d1faf4720",
+      "preferred_name": "Lydiana",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/pretoria",
+      "evidence_class": "official_magisterial_and_municipal_identity_specific_duplicate_set",
+      "citation": "https://www.justice.gov.za/maps/areas-gp.html#Gauteng%3A%20Find%20a%20court%20in%20your%20area%20%E2%80%94%20Rietfontein%2C%20Lydiana%2C%20Val%20de%20Grace%20and%20Dorandia%20are%20listed%20under%20Tshwane%20%2F%20Pretoria (retrieved 2026-08-27)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-35c9b6514fe9b5f0d03a",
+      "preferred_name": "Val De Grace",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/pretoria",
+      "evidence_class": "official_magisterial_and_municipal_identity_specific_duplicate_set",
+      "citation": "https://www.justice.gov.za/maps/areas-gp.html#Gauteng%3A%20Find%20a%20court%20in%20your%20area%20%E2%80%94%20Rietfontein%2C%20Lydiana%2C%20Val%20de%20Grace%20and%20Dorandia%20are%20listed%20under%20Tshwane%20%2F%20Pretoria (retrieved 2026-08-27)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-38957c0dfb1dd73a722e",
+      "preferred_name": "Dorandia",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/pretoria",
+      "evidence_class": "official_magisterial_and_municipal_identity_specific_duplicate_set",
+      "citation": "https://www.justice.gov.za/maps/areas-gp.html#Gauteng%3A%20Find%20a%20court%20in%20your%20area%20%E2%80%94%20Rietfontein%2C%20Lydiana%2C%20Val%20de%20Grace%20and%20Dorandia%20are%20listed%20under%20Tshwane%20%2F%20Pretoria (retrieved 2026-08-27)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-4f2d00ff52232cd343b7",
+      "preferred_name": "Menlo Park",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/pretoria",
+      "evidence_class": "official_magisterial_and_municipal_identity_specific_duplicate_set",
+      "citation": "https://www.justice.gov.za/maps/areas-gp.html#Gauteng%3A%20Find%20a%20court%20in%20your%20area%20%E2%80%94%20Rietfontein%2C%20Lydiana%2C%20Val%20de%20Grace%20and%20Dorandia%20are%20listed%20under%20Tshwane%20%2F%20Pretoria (retrieved 2026-08-27)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-52a2d8d9be3ffc96a599",
+      "preferred_name": "Lyttelton Manor",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/pretoria",
+      "evidence_class": "official_magisterial_and_municipal_identity_specific_duplicate_set",
+      "citation": "https://www.justice.gov.za/maps/areas-gp.html#Gauteng%3A%20Find%20a%20court%20in%20your%20area%20%E2%80%94%20Rietfontein%2C%20Lydiana%2C%20Val%20de%20Grace%20and%20Dorandia%20are%20listed%20under%20Tshwane%20%2F%20Pretoria (retrieved 2026-08-27)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-61b9c5fa174305cc3335",
+      "preferred_name": "Val-de-Grâce",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/pretoria",
+      "evidence_class": "official_magisterial_and_municipal_identity_specific_duplicate_set",
+      "citation": "https://www.justice.gov.za/maps/areas-gp.html#Gauteng%3A%20Find%20a%20court%20in%20your%20area%20%E2%80%94%20Rietfontein%2C%20Lydiana%2C%20Val%20de%20Grace%20and%20Dorandia%20are%20listed%20under%20Tshwane%20%2F%20Pretoria (retrieved 2026-08-27)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-d0fffc78c2e45e1bfc2a",
+      "preferred_name": "Lyttelton Manor",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/pretoria",
+      "evidence_class": "official_magisterial_and_municipal_identity_specific_duplicate_set",
+      "citation": "https://www.justice.gov.za/maps/areas-gp.html#Gauteng%3A%20Find%20a%20court%20in%20your%20area%20%E2%80%94%20Rietfontein%2C%20Lydiana%2C%20Val%20de%20Grace%20and%20Dorandia%20are%20listed%20under%20Tshwane%20%2F%20Pretoria (retrieved 2026-08-27)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-d22f5766a31c2ab7c32b",
+      "preferred_name": "Dorandia",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/pretoria",
+      "evidence_class": "official_magisterial_and_municipal_identity_specific_duplicate_set",
+      "citation": "https://www.justice.gov.za/maps/areas-gp.html#Gauteng%3A%20Find%20a%20court%20in%20your%20area%20%E2%80%94%20Rietfontein%2C%20Lydiana%2C%20Val%20de%20Grace%20and%20Dorandia%20are%20listed%20under%20Tshwane%20%2F%20Pretoria (retrieved 2026-08-27)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-e3b8c4c2508eebb1f922",
+      "preferred_name": "Menlo Park",
+      "factual_type": "locality",
+      "parent_natural_key": "gauteng/pretoria",
+      "evidence_class": "official_magisterial_and_municipal_identity_specific_duplicate_set",
+      "citation": "https://www.justice.gov.za/maps/areas-gp.html#Gauteng%3A%20Find%20a%20court%20in%20your%20area%20%E2%80%94%20Rietfontein%2C%20Lydiana%2C%20Val%20de%20Grace%20and%20Dorandia%20are%20listed%20under%20Tshwane%20%2F%20Pretoria (retrieved 2026-08-27)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-e9a46a63d27967a5cd33",
+      "preferred_name": "Lydiana",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/pretoria",
+      "evidence_class": "official_magisterial_and_municipal_identity_specific_duplicate_set",
+      "citation": "https://www.justice.gov.za/maps/areas-gp.html#Gauteng%3A%20Find%20a%20court%20in%20your%20area%20%E2%80%94%20Rietfontein%2C%20Lydiana%2C%20Val%20de%20Grace%20and%20Dorandia%20are%20listed%20under%20Tshwane%20%2F%20Pretoria (retrieved 2026-08-27)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-fcaba12bcdce7fb3c0c2",
+      "preferred_name": "Rietfontein",
+      "factual_type": "locality",
+      "parent_natural_key": "gauteng/pretoria",
+      "evidence_class": "official_magisterial_and_municipal_identity_specific_duplicate_set",
+      "citation": "https://www.justice.gov.za/maps/areas-gp.html#Gauteng%3A%20Find%20a%20court%20in%20your%20area%20%E2%80%94%20Rietfontein%2C%20Lydiana%2C%20Val%20de%20Grace%20and%20Dorandia%20are%20listed%20under%20Tshwane%20%2F%20Pretoria (retrieved 2026-08-27)"
+    }
+  ],
+  "diagnostics": {
+    "researched_names": 0,
+    "identity_specific_records": 12,
+    "matched_already_projected": [],
+    "names_not_in_canonical_layer": [],
+    "ambiguous_canonical_matches": []
+  }
+}

@@ -1131,9 +1131,68 @@ check(
   wave57Row ? `${wave57Row.runtime_natural_key}/${wave57Row.factual_location_ids.join(',')}` : 'missing',
 );
 
+const WAVE58_DUPLICATE_PROBES = [
+  {
+    name: 'Vrededorp',
+    parentSuffix: 'gauteng/johannesburg/vrededorp',
+    factualIds: ['pl-gp-v01-0951415edb1dd117b3e1', 'pl-gp-v01-95ddf1d4b71446b3b066'],
+  },
+  {
+    name: 'Jabavu',
+    parentSuffix: 'gauteng/johannesburg/jabavu',
+    factualIds: ['pl-gp-v01-0ebf919a2a8903c2bb30', 'pl-gp-v01-c7230414467bd30d26de'],
+  },
+  {
+    name: 'Rietfontein',
+    parentSuffix: 'gauteng/pretoria/rietfontein',
+    factualIds: ['pl-gp-v01-16a594ed4e0b6be4c440', 'pl-gp-v01-fcaba12bcdce7fb3c0c2'],
+  },
+  {
+    name: 'Lydiana',
+    parentSuffix: 'gauteng/pretoria/lydiana',
+    factualIds: ['pl-gp-v01-1cf7441a107d1faf4720', 'pl-gp-v01-e9a46a63d27967a5cd33'],
+  },
+  {
+    name: 'Val de Grace spelling pair',
+    parentSuffix: 'gauteng/pretoria/val-de-grace',
+    factualIds: ['pl-gp-v01-35c9b6514fe9b5f0d03a', 'pl-gp-v01-61b9c5fa174305cc3335'],
+  },
+  {
+    name: 'Dorandia',
+    parentSuffix: 'gauteng/pretoria/dorandia',
+    factualIds: ['pl-gp-v01-38957c0dfb1dd73a722e', 'pl-gp-v01-d22f5766a31c2ab7c32b'],
+  },
+  {
+    name: 'Menlo Park',
+    parentSuffix: 'gauteng/pretoria/menlo-park',
+    factualIds: ['pl-gp-v01-4f2d00ff52232cd343b7', 'pl-gp-v01-e3b8c4c2508eebb1f922'],
+  },
+  {
+    name: 'Lyttelton Manor',
+    parentSuffix: 'gauteng/pretoria/lyttelton-manor',
+    factualIds: ['pl-gp-v01-52a2d8d9be3ffc96a599', 'pl-gp-v01-d0fffc78c2e45e1bfc2a'],
+  },
+  {
+    name: 'Boksburg Noord spelling pair',
+    parentSuffix: 'gauteng/boksburg/boksburg-noord',
+    factualIds: ['pl-gp-v01-7512ed98a4c11040e081', 'pl-gp-v01-b78d6ceaf3f2620c6a90'],
+  },
+];
+
+for (const probe of WAVE58_DUPLICATE_PROBES) {
+  const row = rowsByNaturalKey.get(probe.parentSuffix);
+  check(
+    `wave58 explicit duplicate grouping resolves: ${probe.name}`,
+    row !== undefined &&
+      row.factual_location_ids.length === probe.factualIds.length &&
+      probe.factualIds.every(id => row.factual_location_ids.includes(id)),
+    row ? `${row.runtime_natural_key}/${row.factual_location_ids.join(',')}` : 'missing',
+  );
+}
+
 check(
   'ordinary duplicate collisions remain queued without explicit grouping',
-  queue.some(entry => entry.reason === 'duplicate_natural_key_within_parent' && entry.preferred_name === 'Vrededorp'),
+  queue.some(entry => entry.reason === 'duplicate_natural_key_within_parent' && entry.preferred_name === 'Slovoville'),
 );
 
 const NEGATIVE_PROBES = ['Mamelodi Extension 1', 'Mamelodi Extension 4'];

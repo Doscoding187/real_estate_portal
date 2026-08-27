@@ -1,0 +1,39 @@
+{
+  "resolved_edges_version": "boksburg-noord-duplicate-parent-evidence.v0.1.resolved",
+  "town": "Boksburg",
+  "parent_natural_key": "gauteng/boksburg",
+  "allow_duplicate_natural_key_grouping": true,
+  "source": {
+    "publisher": "Office of the Chief Justice, Department of Justice and Constitutional Development",
+    "url": "https://www.justice.gov.za/maps/areas-gp.html",
+    "section": "Gauteng: Find a court in your area — Boksburg North is listed in Ekurhuleni under the Boksburg Sub District",
+    "retrieved": "2026-08-27",
+    "licence_note": "Official government place index used for identity-specific locality context; no prose or geometry is copied."
+  },
+  "edge_count": 2,
+  "edges": [
+    {
+      "factual_location_id": "pl-gp-v01-7512ed98a4c11040e081",
+      "preferred_name": "Boksburg-Noord",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/boksburg",
+      "evidence_class": "official_magisterial_place_index_identity_specific_duplicate_set",
+      "citation": "https://www.justice.gov.za/maps/areas-gp.html#Gauteng%3A%20Find%20a%20court%20in%20your%20area%20%E2%80%94%20Boksburg%20North%20is%20listed%20in%20Ekurhuleni%20under%20the%20Boksburg%20Sub%20District (retrieved 2026-08-27)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-b78d6ceaf3f2620c6a90",
+      "preferred_name": "Boksburg Noord",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/boksburg",
+      "evidence_class": "official_magisterial_place_index_identity_specific_duplicate_set",
+      "citation": "https://www.justice.gov.za/maps/areas-gp.html#Gauteng%3A%20Find%20a%20court%20in%20your%20area%20%E2%80%94%20Boksburg%20North%20is%20listed%20in%20Ekurhuleni%20under%20the%20Boksburg%20Sub%20District (retrieved 2026-08-27)"
+    }
+  ],
+  "diagnostics": {
+    "researched_names": 0,
+    "identity_specific_records": 2,
+    "matched_already_projected": [],
+    "names_not_in_canonical_layer": [],
+    "ambiguous_canonical_matches": []
+  }
+}

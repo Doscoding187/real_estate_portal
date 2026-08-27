@@ -1,0 +1,55 @@
+{
+  "resolved_edges_version": "johannesburg-vrededorp-jabavu-duplicate-parent-evidence.v0.1.resolved",
+  "town": "Johannesburg",
+  "parent_natural_key": "gauteng/johannesburg",
+  "allow_duplicate_natural_key_grouping": true,
+  "source": {
+    "publisher": "Office of the Chief Justice, Department of Justice and Constitutional Development",
+    "url": "https://www.justice.gov.za/maps/areas-gp.html",
+    "section": "Gauteng: Find a court in your area — Vrededorp and Jabavu are listed in the Johannesburg magisterial district",
+    "retrieved": "2026-08-27",
+    "licence_note": "Official government place index used for identity-specific locality context; no prose or geometry is copied."
+  },
+  "edge_count": 4,
+  "edges": [
+    {
+      "factual_location_id": "pl-gp-v01-0951415edb1dd117b3e1",
+      "preferred_name": "Vrededorp",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/johannesburg",
+      "evidence_class": "official_magisterial_place_index_identity_specific_duplicate_set",
+      "citation": "https://www.justice.gov.za/maps/areas-gp.html#Gauteng%3A%20Find%20a%20court%20in%20your%20area%20%E2%80%94%20Vrededorp%20and%20Jabavu%20are%20listed%20in%20the%20Johannesburg%20magisterial%20district (retrieved 2026-08-27)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-0ebf919a2a8903c2bb30",
+      "preferred_name": "Jabavu",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/johannesburg",
+      "evidence_class": "official_magisterial_place_index_identity_specific_duplicate_set",
+      "citation": "https://www.justice.gov.za/maps/areas-gp.html#Gauteng%3A%20Find%20a%20court%20in%20your%20area%20%E2%80%94%20Vrededorp%20and%20Jabavu%20are%20listed%20in%20the%20Johannesburg%20magisterial%20district (retrieved 2026-08-27)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-95ddf1d4b71446b3b066",
+      "preferred_name": "Vrededorp",
+      "factual_type": "locality",
+      "parent_natural_key": "gauteng/johannesburg",
+      "evidence_class": "official_magisterial_place_index_identity_specific_duplicate_set",
+      "citation": "https://www.justice.gov.za/maps/areas-gp.html#Gauteng%3A%20Find%20a%20court%20in%20your%20area%20%E2%80%94%20Vrededorp%20and%20Jabavu%20are%20listed%20in%20the%20Johannesburg%20magisterial%20district (retrieved 2026-08-27)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-c7230414467bd30d26de",
+      "preferred_name": "Jabavu",
+      "factual_type": "locality",
+      "parent_natural_key": "gauteng/johannesburg",
+      "evidence_class": "official_magisterial_place_index_identity_specific_duplicate_set",
+      "citation": "https://www.justice.gov.za/maps/areas-gp.html#Gauteng%3A%20Find%20a%20court%20in%20your%20area%20%E2%80%94%20Vrededorp%20and%20Jabavu%20are%20listed%20in%20the%20Johannesburg%20magisterial%20district (retrieved 2026-08-27)"
+    }
+  ],
+  "diagnostics": {
+    "researched_names": 0,
+    "identity_specific_records": 4,
+    "matched_already_projected": [],
+    "names_not_in_canonical_layer": [],
+    "ambiguous_canonical_matches": []
+  }
+}
