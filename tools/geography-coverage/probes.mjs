@@ -1096,6 +1096,14 @@ check(
   wave53Row ? `${wave53Row.runtime_natural_key}/${wave53Row.factual_location_ids.join(',')}` : 'missing',
 );
 
+const wave54Row = rowsByNaturalKey.get('gauteng/vanderbijlpark/vanderbijlpark-auidwes-lokasie');
+check(
+  'wave54 official MDB Vanderbijlpark-auidwes Lokasie parent edge resolves',
+  wave54Row !== undefined &&
+    wave54Row.factual_location_ids.includes('pl-gp-v01-a54d464edbeb8094f958'),
+  wave54Row ? `${wave54Row.runtime_natural_key}/${wave54Row.factual_location_ids.join(',')}` : 'missing',
+);
+
 check(
   'ordinary duplicate collisions remain queued without explicit grouping',
   queue.some(entry => entry.reason === 'duplicate_natural_key_within_parent' && entry.preferred_name === 'Vrededorp'),

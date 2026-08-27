@@ -1,0 +1,31 @@
+{
+  "resolved_edges_version": "vanderbijlpark-auidwes-lokasie-mdb-parent-evidence.v0.1.resolved",
+  "town": "Vanderbijlpark",
+  "parent_natural_key": "gauteng/vanderbijlpark",
+  "allow_duplicate_natural_key_grouping": false,
+  "source": {
+    "publisher": "South African Department of Planning, Monitoring and Evaluation — official MDB2020 spatial layer",
+    "url": "https://dpmegis.dpme.gov.za/arcgis/rest/services/Geospatial_Data_Layers/MapServer/23",
+    "section": "Wards (MDB2020) layer (23) — EPSG:4326 point-intersection query for the canonical Vanderbijlpark-auidwes Lokasie point returned Gauteng, Emfuleni Local Municipality (GT421), Ward 4 (GT421_4)",
+    "retrieved": "2026-08-27",
+    "licence_note": "Official ward boundary service used for an identity-specific spatial parent assertion; no boundary geometry is copied."
+  },
+  "edge_count": 1,
+  "edges": [
+    {
+      "factual_location_id": "pl-gp-v01-a54d464edbeb8094f958",
+      "preferred_name": "Vanderbijlpark-auidwes Lokasie",
+      "factual_type": "locality",
+      "parent_natural_key": "gauteng/vanderbijlpark",
+      "evidence_class": "official_mdb_ward_point_intersection_with_municipal_town_context",
+      "citation": "https://dpmegis.dpme.gov.za/arcgis/rest/services/Geospatial_Data_Layers/MapServer/23#Wards%20(MDB2020)%20layer%20(23)%20%E2%80%94%20EPSG%3A4326%20point-intersection%20query%20for%20the%20canonical%20Vanderbijlpark-auidwes%20Lokasie%20point%20returned%20Gauteng%2C%20Emfuleni%20Local%20Municipality%20(GT421)%2C%20Ward%204%20(GT421_4) (retrieved 2026-08-27)"
+    }
+  ],
+  "diagnostics": {
+    "researched_names": 0,
+    "identity_specific_records": 1,
+    "matched_already_projected": [],
+    "names_not_in_canonical_layer": [],
+    "ambiguous_canonical_matches": []
+  }
+}
