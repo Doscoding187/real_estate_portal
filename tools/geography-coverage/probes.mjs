@@ -1088,6 +1088,14 @@ check(
   wave52Row ? `${wave52Row.runtime_natural_key}/${wave52Row.factual_location_ids.join(',')}` : 'missing',
 );
 
+const wave53Row = rowsByNaturalKey.get('gauteng/randfontein/de-fontein');
+check(
+  'wave53 official MDB De Fontein parent edge resolves',
+  wave53Row !== undefined &&
+    wave53Row.factual_location_ids.includes('pl-gp-v01-be0362250a52c1510807'),
+  wave53Row ? `${wave53Row.runtime_natural_key}/${wave53Row.factual_location_ids.join(',')}` : 'missing',
+);
+
 check(
   'ordinary duplicate collisions remain queued without explicit grouping',
   queue.some(entry => entry.reason === 'duplicate_natural_key_within_parent' && entry.preferred_name === 'Vrededorp'),
