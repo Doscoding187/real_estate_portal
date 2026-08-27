@@ -12,12 +12,12 @@ import {
 } from '@/components/ui/carousel';
 import { trpc } from '@/lib/trpc';
 
-export function TopDevelopers() {
+type TopDevelopersProps = {
+  selectedProvince: string;
+};
+
+export function TopDevelopers({ selectedProvince }: TopDevelopersProps) {
   const [, setLocation] = useLocation();
-  const displayMetric = (value: unknown, fallback = '—') => {
-    const num = Number(value);
-    return Number.isFinite(num) && num > 0 ? String(num) : fallback;
-  };
   const displayCount = (value: unknown, fallback = '—') => {
     const num = Number(value);
     return Number.isFinite(num) && num > 0 ? String(num) : fallback;
@@ -27,15 +27,16 @@ export function TopDevelopers() {
     return Number.isFinite(num) && num > 0;
   };
 
-  // Fetch visible Catalogue Publishers (now enriched with stats)
+  // This is organic local discovery. Visibility and publisher tier do not
+  // imply a promoted placement.
   const {
     data: developers,
     isError,
     isFetching,
     isLoading,
     refetch,
-  } = trpc.cataloguePublisher.listPublishers.useQuery({
-    isVisible: true,
+  } = trpc.cataloguePublisher.listPublishersByProvince.useQuery({
+    province: selectedProvince,
     limit: 12,
   });
   const hasDevelopers = Boolean(developers && developers.length > 0);
@@ -47,11 +48,10 @@ export function TopDevelopers() {
         {/* Section Header */}
         <div className="home-section-header">
           <h2 className="home-section-title text-[1.125rem] sm:text-xl md:text-[26px] font-bold text-slate-900">
-            Explore property developers
+            Developers building in {selectedProvince}
           </h2>
           <p className="text-slate-600 max-w-3xl leading-relaxed text-xs md:text-sm">
-            Explore developer profiles, active project pipelines, and new development opportunities
-            across South Africa.
+            Explore developers with approved, published projects in {selectedProvince}.
           </p>
         </div>
 
@@ -60,7 +60,7 @@ export function TopDevelopers() {
             className="-mx-4 overflow-hidden px-4 sm:mx-0 sm:px-0"
             data-testid="developer-feed-loading"
             role="status"
-            aria-label="Loading developer profiles"
+            aria-label={`Loading developers building in ${selectedProvince}`}
           >
             <div className="flex gap-2">
               {[0, 1, 2].map(index => (
@@ -147,7 +147,7 @@ export function TopDevelopers() {
                               {developer.brandName}
                             </h3>
                             <p className="text-xs text-slate-500 font-medium truncate">
-                              {developer.headOfficeLocation || 'South Africa'}
+                              {developer.headOfficeLocation || 'Developer profile'}
                             </p>
                           </div>
                         </div>
@@ -157,30 +157,30 @@ export function TopDevelopers() {
                           <div className="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2">
                             <span
                               className={`block font-bold text-slate-900 ${
-                                hasNumericValue(developer.stats?.totalProjects)
+                                hasNumericValue(developer.localStats?.activeDevelopments)
                                   ? 'text-lg'
                                   : 'text-sm'
                               }`}
                             >
-                              {displayMetric(developer.stats?.totalProjects)}
+                              {displayCount(developer.localStats?.activeDevelopments, '0')}
                             </span>
                             <span className="text-[10px] text-slate-500 font-medium uppercase tracking-wide">
-                              Projects
+                              Active in {selectedProvince}
                             </span>
                           </div>
 
                           <div className="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2 text-right">
                             <span
                               className={`block font-bold text-slate-900 ${
-                                hasNumericValue(developer.stats?.experience) ? 'text-lg' : 'text-sm'
+                                hasNumericValue(developer.localStats?.sellingNow)
+                                  ? 'text-lg'
+                                  : 'text-sm'
                               }`}
                             >
-                              {hasNumericValue(developer.stats?.experience)
-                                ? `${displayMetric(developer.stats?.experience)} yrs`
-                                : '—'}
+                              {displayCount(developer.localStats?.sellingNow, '0')}
                             </span>
                             <span className="text-[10px] text-slate-500 font-medium uppercase tracking-wide">
-                              Experience
+                              Selling now
                             </span>
                           </div>
                         </div>
@@ -194,10 +194,10 @@ export function TopDevelopers() {
                             }
                           >
                             <span className="text-xs text-slate-700 font-medium truncate">
-                              Ready to Move
+                              Active developments
                             </span>
                             <span className="text-[11px] font-semibold text-slate-500">
-                              {displayCount(developer.stats?.readyToMove)}
+                              {displayCount(developer.localStats?.activeDevelopments, '0')}
                             </span>
                           </button>
 
@@ -208,10 +208,10 @@ export function TopDevelopers() {
                             }
                           >
                             <span className="text-xs text-slate-700 font-medium truncate">
-                              Under Const.
+                              Launching soon
                             </span>
                             <span className="text-[11px] font-semibold text-slate-500">
-                              {displayCount(developer.stats?.underConstruction)}
+                              {displayCount(developer.localStats?.launchingSoon, '0')}
                             </span>
                           </button>
 
@@ -222,10 +222,10 @@ export function TopDevelopers() {
                             }
                           >
                             <span className="text-xs text-slate-700 font-medium truncate">
-                              New Launch
+                              View local projects
                             </span>
                             <span className="text-[11px] font-semibold text-slate-500">
-                              {displayCount(developer.stats?.newLaunch)}
+                              {displayCount(developer.localStats?.activeDevelopments, '0')}
                             </span>
                           </button>
                         </div>
@@ -250,10 +250,11 @@ export function TopDevelopers() {
           <div className="rounded-xl border border-dashed border-slate-200 bg-white px-5 py-10 text-center">
             <Building2 className="mx-auto h-9 w-9 text-slate-300" />
             <h3 className="mt-3 text-sm font-bold text-slate-900">
-              Developer profiles are being prepared
+              No developers are currently building in {selectedProvince}
             </h3>
             <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500">
-              Published developer profiles will appear here when catalogue data is available.
+              We will show developers here when they have approved, published projects in this
+              province.
             </p>
           </div>
         )}

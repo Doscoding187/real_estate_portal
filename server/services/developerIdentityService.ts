@@ -10,6 +10,7 @@ import {
   users,
 } from '../../drizzle/schema';
 import { assertCataloguePublisherContentMutation } from './cataloguePublisherMutationPolicy';
+import { publicDevelopmentEligibilityConditions } from './publicDevelopmentEligibility';
 
 export type PublisherAuthorityKind = 'platform_reference' | 'developer_first_party';
 export type DeveloperOrganisationStatus = 'pending' | 'approved' | 'rejected';
@@ -57,6 +58,19 @@ export interface PublisherFilters {
   limit?: number;
   offset?: number;
 }
+
+export type LocalPublisherDiscovery = {
+  id: number;
+  slug: string;
+  brandName: string;
+  logoUrl: string | null;
+  headOfficeLocation: string | null;
+  localStats: {
+    activeDevelopments: number;
+    sellingNow: number;
+    launchingSoon: number;
+  };
+};
 
 export type DeveloperIdentity = typeof developerOrganisations.$inferSelect & {
   organisation: typeof developerOrganisations.$inferSelect;
@@ -671,6 +685,65 @@ export async function listPublicCataloguePublishers(filters: PublisherFilters = 
   }));
 }
 
+/**
+ * Organic homepage discovery for publishers with qualifying, live work in one
+ * exact province. This query does not assign paid or featured placement.
+ */
+export async function listPublicPublishersByProvince(
+  province: string,
+  limit = 10,
+): Promise<LocalPublisherDiscovery[]> {
+  const database = await getDb();
+  if (!database) return [];
+
+  const rows = await database
+    .select({
+      id: cataloguePublishers.id,
+      slug: cataloguePublishers.slug,
+      brandName: cataloguePublishers.name,
+      logoUrl: cataloguePublishers.logoUrl,
+      headOfficeLocation: cataloguePublishers.headOfficeLocation,
+      activeDevelopments: sql<number>`COUNT(*)`,
+      sellingNow: sql<number>`SUM(CASE WHEN ${developments.status} = 'selling' THEN 1 ELSE 0 END)`,
+      launchingSoon: sql<number>`SUM(CASE WHEN ${developments.status} = 'launching-soon' THEN 1 ELSE 0 END)`,
+    })
+    .from(developments)
+    .innerJoin(cataloguePublishers, eq(developments.cataloguePublisherId, cataloguePublishers.id))
+    .where(
+      and(
+        eq(developments.province, province),
+        inArray(cataloguePublishers.publisherType, ['developer', 'hybrid']),
+        publicDevelopmentEligibilityConditions(),
+      ),
+    )
+    .groupBy(
+      cataloguePublishers.id,
+      cataloguePublishers.slug,
+      cataloguePublishers.name,
+      cataloguePublishers.logoUrl,
+      cataloguePublishers.headOfficeLocation,
+    )
+    .orderBy(
+      desc(sql`COUNT(*)`),
+      desc(sql`MAX(${developments.publishedAt})`),
+      asc(cataloguePublishers.name),
+    )
+    .limit(limit);
+
+  return rows.map(row => ({
+    id: row.id,
+    slug: row.slug,
+    brandName: row.brandName,
+    logoUrl: row.logoUrl,
+    headOfficeLocation: row.headOfficeLocation,
+    localStats: {
+      activeDevelopments: Number(row.activeDevelopments || 0),
+      sellingNow: Number(row.sellingNow || 0),
+      launchingSoon: Number(row.launchingSoon || 0),
+    },
+  }));
+}
+
 export async function updateCataloguePublisher(id: number, input: UpdateCataloguePublisherInput) {
   assertCataloguePublisherContentMutation(input);
   const database = await getDb();
@@ -777,6 +850,7 @@ export const developerIdentityService = {
   getPublicPublisherBySlug,
   listCataloguePublishers,
   listPublicCataloguePublishers,
+  listPublicPublishersByProvince,
   updateCataloguePublisher,
   setPublisherVisibility,
   getPublisherDevelopments,

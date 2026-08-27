@@ -9,6 +9,7 @@ import { TRPCError } from '@trpc/server';
 import {
   developerIdentityService,
   type PublisherFilters,
+  type LocalPublisherDiscovery,
   type UpdateCataloguePublisherInput,
 } from './developerIdentityService';
 import { assertCataloguePublisherContentMutation } from './cataloguePublisherMutationPolicy';
@@ -143,6 +144,13 @@ async function listPublicPublishers(filters: CataloguePublisherFilters = {}) {
   })).map(projectPublisher);
 }
 
+async function listPublicPublishersByProvince(
+  province: string,
+  limit?: number,
+): Promise<LocalPublisherDiscovery[]> {
+  return developerIdentityService.listPublicPublishersByProvince(province, limit);
+}
+
 async function updatePublisher(id: number, input: UpdateCataloguePublisherCommand) {
   assertCataloguePublisherContentMutation(input);
   const publisher = await developerIdentityService.updateCataloguePublisher(id, {
@@ -220,6 +228,7 @@ export const cataloguePublisherService = {
   getPublicPublisherBySlug,
   listPublishers,
   listPublicPublishers,
+  listPublicPublishersByProvince,
   updatePublisher,
   toggleVisibility,
   hidePublisher,
@@ -239,6 +248,7 @@ export {
   getPublicPublisherBySlug,
   listPublishers,
   listPublicPublishers,
+  listPublicPublishersByProvince,
   updatePublisher,
   toggleVisibility,
   hidePublisher,

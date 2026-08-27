@@ -6,6 +6,8 @@ import { ContentRail } from '@/components/layout/ContentRail';
 import { HomeTrendingSection } from '@/sections/home/HomeTrendingSection';
 import { CTASection } from '@/sections/home/CTASection';
 import { ProfessionalEntrySection } from '@/sections/home/ProfessionalEntrySection';
+import { HomeJourneySection } from '@/sections/home/HomeJourneySection';
+import { HomeMarketInsightsSection } from '@/sections/home/HomeMarketInsightsSection';
 import type { HeroTab } from '@/types/hero';
 
 type HomeMobileViewProps = {
@@ -43,8 +45,10 @@ export function HomeMobileView({
           activeHeroTab={activeHeroTab}
         />
         <DiscoverProperties />
-        <TopDevelopers />
-        <ExploreCities customLocations={popularCities} />
+        <TopDevelopers selectedProvince={selectedProvince} />
+        <ExploreCities customLocations={popularCities} basePath="" />
+        <HomeMarketInsightsSection />
+        <HomeJourneySection />
         <ProfessionalEntrySection />
         <CTASection onBrowse={onBrowseProperties} />
       </ContentRail>

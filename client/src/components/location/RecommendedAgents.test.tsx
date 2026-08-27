@@ -64,6 +64,9 @@ describe('RecommendedAgents', () => {
     expect(
       screen.getByText('Property professionals serving Gauteng'),
     ).toBeInTheDocument();
+    expect(
+      screen.getByText(/approved practitioners with public property listify profiles/i),
+    ).toBeInTheDocument();
     const profileLink = screen.getByRole('link', { name: /Thandi Mokoena/i });
     expect(profileLink.getAttribute('href')).toBe('/agents/thandi-mokoena');
   });
