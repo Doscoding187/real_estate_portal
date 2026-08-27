@@ -239,12 +239,16 @@
     ],
     "approvedLocalTestInitialization": [
       "docker/mysql-local/init/01-create-local-databases.sql",
-      "scripts/testDbWorkflow.ts",
-      "server/scripts/localDemoSeed.ts",
-      "server/scripts/verifyLocalDemoSeed.ts"
+      "scripts/testDbWorkflow.ts"
     ],
     "approvedReferenceAndScenarioAdapters": [
+      "server/_core/databaseAuthority/dataAdapters/canonicalCommercial.ts",
+      "server/_core/databaseAuthority/dataAdapters/canonicalFoundation.ts",
       "server/_core/databaseAuthority/dataAdapters/canonicalGeography.ts",
+      "server/_core/databaseAuthority/dataAdapters/dataRoleManifest.ts",
+      "server/_core/databaseAuthority/dataAdapters/listingPreviewFixture.ts",
+      "server/_core/databaseAuthority/dataAdapters/plePublicationEntitlement.ts",
+      "server/_core/databaseAuthority/dataAdapters/pleReviewerFixture.ts",
       "server/_core/databaseAuthority/dataAdapters/searchToLeadScenario.ts"
     ],
     "approvedReadOnlyDiagnostics": [
@@ -1096,7 +1100,9 @@
     "scripts/run-google-places-migration.ts",
     "scripts/run-property-results-optimization-migration.ts",
     "scripts/run-tidb-explore-migration.ts",
-    "server/scripts/debug-schema.ts"
+    "server/scripts/debug-schema.ts",
+    "server/scripts/localDemoSeed.ts",
+    "server/scripts/verifyLocalDemoSeed.ts"
   ],
   "operationalDocumentation": [
     {

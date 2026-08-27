@@ -107,7 +107,7 @@ describe('database residual utility authority', () => {
     }
   });
 
-  it('retains prospect security verification only as guarded local fixture', () => {
+  it('retains prospect security verification as a guarded fixture and retires the old runner', () => {
     const verifier = read(
       'scripts/verify-prospect-journey-security.ts',
     );
@@ -139,12 +139,9 @@ describe('database residual utility authority', () => {
       /UPDATE prospect_action_claim_tokens SET expires_at/,
     );
 
-    expect(runner).toContain(
-      "['exec', 'tsx', 'server/migrations/runSqlMigrations.ts']",
-    );
-    expect(runner).toContain(
-      "['exec', 'tsx', 'scripts/verify-prospect-journey-security.ts']",
-    );
+    expect(runner).toContain('lifecycle is retired');
+    expect(runner).not.toContain('server/scripts/localDemoSeed.ts');
+    expect(runner).not.toContain('runSqlMigrations');
 
     for (const path of [
       'scripts/run-listing-performance-e2e.ts',

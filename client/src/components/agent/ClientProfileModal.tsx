@@ -3,7 +3,6 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Calendar, FileText, Mail, MapPin, MessageSquare, Phone, User } from 'lucide-react';
 
@@ -241,20 +240,6 @@ export function ClientProfileModal({ lead, isOpen, onClose }: ClientProfileModal
             </TabsContent>
 
             <TabsContent value="notes" className="space-y-4">
-              <Card className="shadow-soft">
-                <CardContent className="p-4">
-                  <Textarea
-                    placeholder="Add a note (coming soon)"
-                    className="mb-3 rounded-lg"
-                    rows={3}
-                    disabled
-                  />
-                  <Button className="w-full" disabled>
-                    <FileText className="h-4 w-4 mr-2" />
-                    Save Note
-                  </Button>
-                </CardContent>
-              </Card>
               <EmptyPanel
                 title="No notes yet"
                 description="Notes will show here once the CRM note stream is connected."

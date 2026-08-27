@@ -10,7 +10,10 @@ const RETIRED_SECURITY_UTILITIES = [
   'server/scripts/seed-prod-super-admin.ts',
   'server/scripts/seed_super_admin.ts',
 ] as const;
-const APPROVED_LOCAL_TEST_ACCOUNT_SEED = 'server/scripts/localDemoSeed.ts';
+const RETIRED_MONOLITHIC_DATA_UTILITIES = [
+  'server/scripts/localDemoSeed.ts',
+  'server/scripts/verifyLocalDemoSeed.ts',
+] as const;
 
 function read(path: string): string {
   return readFileSync(join(ROOT, path), 'utf8');
@@ -130,28 +133,35 @@ describe('database production seed security authority', () => {
     }
   });
 
-  it('keeps localDemoSeed as the only approved guarded local/test account seed', () => {
+  it('keeps operation-specific data roles explicit and the monolithic seed retired', () => {
     const manifest = JSON.parse(read('docs/database-authority/migration-tree-authority.json')) as {
-      manualUtilityAuthority: { approvedLocalTestInitialization: string[] };
+      prohibitedPaths: string[];
+      manualUtilityAuthority: {
+        approvedLocalTestInitialization: string[];
+        localTestSeedOrFixtureUtilities: string[];
+      };
     };
-    const source = read(APPROVED_LOCAL_TEST_ACCOUNT_SEED);
-    const approvedExecutableSeeds = manifest.manualUtilityAuthority.approvedLocalTestInitialization.filter(
-      path => path.endsWith('.ts') && /seed/i.test(path) && !/verify/i.test(path),
-    );
 
-    expect(approvedExecutableSeeds).toEqual([APPROVED_LOCAL_TEST_ACCOUNT_SEED]);
-    expect(source).toContain('env.LOCAL_DEMO_AGENCY_PASSWORD');
-    expect(source).toContain('env.LOCAL_SEED_ALLOWED');
-    expect(source).toContain("nodeEnv === 'production' || appEnv === 'production'");
-    expect(source).toContain("explicitFlag !== 'true'");
-    expect(source).toContain('ALLOWED_LOCAL_HOSTS');
-    expect(source).toContain('FORBIDDEN_HOST_PATTERNS');
-    expect(source).toContain('if (!isAllowedHost || isForbiddenHost)');
-    expect(source).toContain("'listify_local'");
-    expect(source).toContain("'listify_test'");
-    expect(source).toContain("'listify_listing_performance_e2e'");
-    expect(source).toContain("'listify_prospect_journey_e2e'");
-    expect(source).toContain('if (dbName !== expectedDb)');
+    for (const path of RETIRED_MONOLITHIC_DATA_UTILITIES) {
+      expect(existsSync(join(ROOT, path)), `Retired data utility returned: ${path}`).toBe(false);
+      expect(manifest.prohibitedPaths, `Missing prohibited path: ${path}`).toContain(path);
+      expect(manifest.manualUtilityAuthority.localTestSeedOrFixtureUtilities).not.toContain(path);
+    }
+
+    const roleManifest = read(
+      'server/_core/databaseAuthority/dataAdapters/dataRoleManifest.ts',
+    );
+    expect(manifest.manualUtilityAuthority.approvedLocalTestInitialization).toEqual([
+      'docker/mysql-local/init/01-create-local-databases.sql',
+      'scripts/testDbWorkflow.ts',
+    ]);
+    expect(roleManifest).toContain("key: 'reference.geography'");
+    expect(roleManifest).toContain("key: 'foundation.launch-access'");
+    expect(roleManifest).toContain("key: 'demo.listing-preview-authentication'");
+    expect(roleManifest).toContain("key: 'scenario.search-to-lead'");
+    expect(roleManifest).toContain("prepareOperation: 'foundation-seed'");
+    expect(roleManifest).toContain('schemaMutation: false');
+    expect(roleManifest).not.toContain('LOCAL_SEED_ALLOWED');
   });
 
   it('runs through an isolated database-authority workspace only', () => {

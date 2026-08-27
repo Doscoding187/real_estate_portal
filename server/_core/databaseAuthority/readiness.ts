@@ -15,9 +15,18 @@ import type { ResolvedDatabaseAuthority } from './types';
 import { assertOwnedDisposableTarget, identityFromAuthority } from './lifecycle';
 import { readWorktreeDatabaseProfile } from './worktreeProfile';
 import { requireReferenceAdapterTarget } from './dataAdapters/common';
-import { verifyCanonicalGeography } from './dataAdapters/canonicalGeography';
-import { verifyCanonicalCommercialReference } from './dataAdapters/canonicalCommercial';
-import { verifySearchToLeadScenario } from './dataAdapters/searchToLeadScenario';
+import {
+  CANONICAL_GEOGRAPHY_VERSION,
+  verifyCanonicalGeography,
+} from './dataAdapters/canonicalGeography';
+import {
+  CANONICAL_FOUNDATION_VERSION,
+  verifyCanonicalFoundation,
+} from './dataAdapters/canonicalFoundation';
+import {
+  SEARCH_TO_LEAD_SCENARIO_VERSION,
+  verifySearchToLeadScenario,
+} from './dataAdapters/searchToLeadScenario';
 import {
   compareNormalizedSchemas,
   normalizedDesiredSchema,
@@ -75,6 +84,22 @@ export type LayeredDatabaseReadiness = {
 
 function layer(state: ReadinessState, code: string, detail: string): ReadinessLayer {
   return { state, code, detail };
+}
+
+function adapterFailureLayer(
+  codePrefix: string,
+  expectedVersion: string,
+  error: unknown,
+): ReadinessLayer {
+  const detail = error instanceof Error ? error.message : 'Required data verification failed.';
+  if (/\b(?:missing|incomplete)\b/i.test(detail)) {
+    return layer(
+      'not-ready',
+      `${codePrefix}-version-missing`,
+      `Required data version ${expectedVersion} is missing: ${detail}`,
+    );
+  }
+  return layer('not-ready', `${codePrefix}-not-ready`, detail);
 }
 
 function rowsFromResult(result: unknown): Array<Record<string, unknown>> {
@@ -344,8 +369,8 @@ export async function assessAuthorizedDatabaseReadiness(input: {
   );
   let commercialReferenceData = layer(
     'not-evaluated',
-    'commercial-reference-not-evaluated',
-    'Canonical commercial reference data is evaluated for database readiness.',
+    'foundation-not-evaluated',
+    'Canonical Launch Access foundation data is evaluated for database and Search-to-Lead readiness.',
   );
   let acceptanceScenario = layer(
     'not-evaluated',
@@ -399,12 +424,10 @@ export async function assessAuthorizedDatabaseReadiness(input: {
           `${reference.version} (${reference.digest.slice(0, 16)}) verified: ${reference.verified.provinces} provinces, ${reference.verified.cities} cities, ${reference.verified.suburbs} suburb(s).`,
         );
       } catch (error) {
-        canonicalReferenceData = layer(
-          'not-ready',
-          'canonical-reference-not-ready',
-          error instanceof Error
-            ? error.message
-            : 'Canonical geography reference data is not ready.',
+        canonicalReferenceData = adapterFailureLayer(
+          'canonical-reference',
+          CANONICAL_GEOGRAPHY_VERSION,
+          error,
         );
       }
       try {
@@ -419,52 +442,65 @@ export async function assessAuthorizedDatabaseReadiness(input: {
           `${scenario.version} (${scenario.digest.slice(0, 16)}) verified: ${scenario.verified.eligibleProperties} property and ${scenario.verified.eligibleDevelopments} development prerequisite(s).`,
         );
       } catch (error) {
-        acceptanceScenario = layer(
-          'not-ready',
-          'acceptance-scenario-not-ready',
-          error instanceof Error
-            ? error.message
-            : 'Search-to-Lead acceptance scenario is not ready.',
+        acceptanceScenario = adapterFailureLayer(
+          'acceptance-scenario',
+          SEARCH_TO_LEAD_SCENARIO_VERSION,
+          error,
         );
       }
     }
   }
-  if (requestedRuntime === 'database') {
+  if (requestedRuntime === 'database' || requestedRuntime === 'search-to-lead') {
     if (migrationHead.state !== 'ready' || schemaCongruent.state !== 'ready') {
       commercialReferenceData = layer(
         'not-ready',
-        'commercial-reference-blocked-by-schema',
-        'Canonical commercial reference data requires the accepted migration head and a congruent schema.',
+        'foundation-blocked-by-schema',
+        'Canonical Launch Access foundation data requires the accepted migration head and a congruent schema.',
       );
     } else if (!input.authorization) {
       commercialReferenceData = layer(
         'not-evaluated',
-        'commercial-reference-authorization-not-supplied',
-        'Commercial reference verification requires the authorized readiness operation.',
+        'foundation-authorization-not-supplied',
+        'Launch Access foundation verification requires the authorized readiness operation.',
       );
     } else {
       try {
-        const commercial = await verifyCanonicalCommercialReference({
+        const foundation = await verifyCanonicalFoundation({
           authority: input.authority,
           decision: input.authorization,
           connection: input.connection,
         });
         commercialReferenceData = layer(
           'ready',
-          'canonical-commercial-reference-ready',
-          `${commercial.version} (${commercial.digest.slice(0, 16)}) verified: ${commercial.verified.products.length} Launch Access products and their entitlements.`,
+          'canonical-foundation-ready',
+          `${foundation.version} (${foundation.digest.slice(0, 16)}) verified: ${foundation.verified.products.length} Launch Access products and their entitlements.`,
         );
       } catch (error) {
-        commercialReferenceData = layer(
-          'not-ready',
-          'canonical-commercial-reference-not-ready',
-          error instanceof Error
-            ? error.message
-            : 'Canonical commercial reference data is not ready.',
+        commercialReferenceData = adapterFailureLayer(
+          'canonical-foundation',
+          CANONICAL_FOUNDATION_VERSION,
+          error,
         );
       }
     }
   }
+  const requiredVersions =
+    requestedRuntime === 'search-to-lead'
+      ? [
+          CANONICAL_GEOGRAPHY_VERSION,
+          CANONICAL_FOUNDATION_VERSION,
+          SEARCH_TO_LEAD_SCENARIO_VERSION,
+        ]
+      : [CANONICAL_GEOGRAPHY_VERSION, SEARCH_TO_LEAD_SCENARIO_VERSION];
+  const requiredDataReady =
+    canonicalReferenceData.state === 'ready' &&
+    acceptanceScenario.state === 'ready' &&
+    (requestedRuntime !== 'search-to-lead' || commercialReferenceData.state === 'ready');
+  const missingRequiredVersions = requiredVersions.filter(version => {
+    if (version === CANONICAL_GEOGRAPHY_VERSION) return canonicalReferenceData.state !== 'ready';
+    if (version === SEARCH_TO_LEAD_SCENARIO_VERSION) return acceptanceScenario.state !== 'ready';
+    return commercialReferenceData.state !== 'ready';
+  });
   const requiredData =
     requestedRuntime === 'database'
       ? layer(
@@ -472,16 +508,16 @@ export async function assessAuthorizedDatabaseReadiness(input: {
           'requested-data-not-required',
           'The database-only readiness purpose does not claim feature reference or scenario data readiness.',
         )
-      : canonicalReferenceData.state === 'ready' && acceptanceScenario.state === 'ready'
+      : requiredDataReady
         ? layer(
             'ready',
             'requested-data-ready',
-            'Canonical geography and the isolated Search-to-Lead acceptance scenario are ready.',
+            `Required data versions ${requiredVersions.join(', ')} are ready.`,
           )
         : layer(
             'not-ready',
             'requested-data-not-ready',
-            'The requested runtime still lacks canonical geography or acceptance scenario data.',
+            `Missing required data version(s): ${missingRequiredVersions.join(', ')}.`,
           );
   const baseReady =
     serviceAvailable.state === 'ready' &&
@@ -490,7 +526,8 @@ export async function assessAuthorizedDatabaseReadiness(input: {
     schemaCongruent.state === 'ready' &&
     incompleteAttemptState.state === 'ready' &&
     structuralSchema.state === 'ready' &&
-    (requestedRuntime !== 'database' || commercialReferenceData.state === 'ready');
+    (requestedRuntime !== 'database' && requestedRuntime !== 'search-to-lead' ||
+      commercialReferenceData.state === 'ready');
   const applicationReady =
     baseReady && (requestedRuntime === 'database' || requiredData.state === 'ready');
   const application = applicationReady
@@ -665,8 +702,8 @@ function unavailableReadiness(input: {
       ),
       commercialReferenceData: layer(
         'not-evaluated',
-        'commercial-reference-not-evaluated',
-        'Target readiness failed before canonical commercial reference-data verification.',
+        'foundation-not-evaluated',
+        'Target readiness failed before Launch Access foundation-data verification.',
       ),
       acceptanceScenario: layer(
         'not-evaluated',

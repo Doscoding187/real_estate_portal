@@ -323,7 +323,7 @@ export default function PartnerSubmitReferralPage() {
                                 : 'bg-amber-100 text-amber-700'
                           }`}
                         >
-                          {isReady ? 'Ready' : 'Coming soon'}
+                          {isReady ? "Ready" : "Opening soon"}
                         </span>
                       </div>
                       <p className={`text-xs ${isSelected ? 'text-slate-200' : 'text-slate-500'}`}>

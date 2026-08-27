@@ -34,9 +34,9 @@ describe('database utility authority guard', () => {
       "const query = 'SELECT table_name FROM information_schema.tables'; await connection.query(query)",
     ],
     [
-      'guarded local/test lifecycle',
-      'server/scripts/localDemoSeed.ts',
-      "import { drizzle } from 'drizzle-orm/mysql2'; await db.insert(users).values({ email: 'local@example.test' })",
+      'canonical authority CLI',
+      'scripts/databaseAuthorityCli.ts',
+      "import mysql from 'mysql2/promise'; await mysql.createConnection(url).then(connection => connection.query('SELECT 1'))",
     ],
     [
       'disposable E2E fixture',
@@ -257,19 +257,19 @@ describe('database utility authority guard', () => {
     ).toMatchObject({ path: 'scripts/schema-sanity-check.mjs', status: 'approved' });
   });
 
-  it('keeps the guarded local/test lifecycle permitted through its canonical package command', () => {
+  it('keeps the canonical authority CLI permitted through its package command', () => {
     const packageEntrypoints = new Set(
-      packageScriptEntrypoints({ seed: 'tsx server/scripts/localDemoSeed.ts' }),
+      packageScriptEntrypoints({ db: 'tsx scripts/databaseAuthorityCli.ts' }),
     );
 
     expect(
       classifyUtilitySource(
-        'server/scripts/localDemoSeed.ts',
-        "import { drizzle } from 'drizzle-orm/mysql2'; await db.insert(users).values({ email: 'local@example.test' })",
+        'scripts/databaseAuthorityCli.ts',
+        "import mysql from 'mysql2/promise'; await mysql.createConnection(url).then(connection => connection.query('SELECT 1'))",
         INVENTORY,
         packageEntrypoints,
       ),
-    ).toMatchObject({ path: 'server/scripts/localDemoSeed.ts', status: 'approved' });
+    ).toMatchObject({ path: 'scripts/databaseAuthorityCli.ts', status: 'approved' });
   });
 
   it('extracts local package-script entrypoints so relocation cannot bypass the guard', () => {

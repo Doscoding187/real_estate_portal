@@ -26,6 +26,7 @@ export function reprovisionCommandSequence() {
     ['pnpm', ['db:migrate:plan']],
     ['pnpm', ['db:migrate:apply']],
     ['pnpm', ['db:reference:prepare']],
+    ['pnpm', ['db:foundation:prepare']],
     ['pnpm', ['db:scenario:prepare']],
     ['pnpm', ['db:readiness', '--', '--purpose=location-discovery']],
   ] as const;
@@ -34,6 +35,7 @@ export function reprovisionCommandSequence() {
 export function verificationCommandSequence() {
   return [
     ['pnpm', ['db:reference:verify']],
+    ['pnpm', ['db:foundation:verify']],
     ['pnpm', ['db:scenario:verify']],
     ['pnpm', ['db:readiness', '--', '--purpose=location-discovery']],
   ] as const;

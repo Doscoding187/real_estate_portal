@@ -76,7 +76,7 @@ export function DevelopmentTypePhase() {
     // a disabled option must never trigger the reset confirmation path.
     const option = TRANSACTION_TYPES.find(o => o.value === type);
     if (option?.enabled === false) {
-      toast.info(`${option.label} workflow is coming soon!`);
+      toast.info(`${option.label} is not available yet.`);
       return;
     }
 
@@ -128,7 +128,7 @@ export function DevelopmentTypePhase() {
     const option = DEVELOPMENT_TYPE_OPTIONS.find(o => o.value === type);
 
     if (!option?.enabled) {
-      toast.info(`${option?.label} is coming soon!`);
+      toast.info(`${option?.label} is not available yet.`);
       return;
     }
     setDevelopmentType(type);
@@ -203,7 +203,7 @@ export function DevelopmentTypePhase() {
                       </h4>
                       {isDisabled && (
                         <Badge variant="secondary" className="text-[10px]">
-                          Coming Soon
+                          Not available yet
                         </Badge>
                       )}
                     </div>
@@ -259,7 +259,7 @@ export function DevelopmentTypePhase() {
                     {option.label}
                   </h4>
                   {isDisabled && (
-                    <span className="text-[10px] text-slate-400 mt-1 block">(Coming Soon)</span>
+                    <span className="text-[10px] text-slate-400 mt-1 block">(Not available yet)</span>
                   )}
                 </div>
               );

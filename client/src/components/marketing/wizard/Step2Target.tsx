@@ -143,7 +143,7 @@ const Step2Target: React.FC<Step2Props> = ({ data, updateData, onNext, onBack, c
               />
             </div>
             <p className="text-sm text-slate-500">
-              Note: Full search integration coming soon. For now, you can proceed to configure your
+              Note: Full search integration is in progress. You can proceed to configure your
               campaign.
             </p>
           </div>

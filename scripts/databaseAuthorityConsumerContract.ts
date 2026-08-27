@@ -8,15 +8,20 @@ import {
   resolveDatabaseAuthority,
 } from '../server/_core/databaseAuthority/context';
 import type { ResolvedDatabaseAuthority } from '../server/_core/databaseAuthority/types';
+import { assessRuntimeDatabaseReadiness } from '../server/_core/databaseAuthority/readiness';
 import { loadAuthorityManifest, validateAuthorityManifest } from './databaseAuthorityStatus';
 
 const CONSUMER_CONTRACT_STEPS = [
   ['pnpm', ['db:migrate:test']],
   ['pnpm', ['db:reference:prepare']],
   ['pnpm', ['db:reference:verify']],
+  ['pnpm', ['db:foundation:prepare']],
+  ['pnpm', ['db:foundation:verify']],
+  ['pnpm', ['db:scenario:prepare']],
+  ['pnpm', ['db:scenario:verify']],
   ['pnpm', ['db:schema:congruency']],
   ['pnpm', ['db:verify:distribution']],
-  ['pnpm', ['db:readiness']],
+  ['pnpm', ['db:readiness', '--', '--purpose=search-to-lead']],
 ] as const;
 
 export function consumerContractCommandSequence() {
@@ -90,6 +95,22 @@ function runStep(command: string, args: readonly string[], authority: ResolvedDa
   }
 }
 
+async function assertSearchToLeadReadiness(authority: ResolvedDatabaseAuthority): Promise<void> {
+  const readinessAuthority = resolveDatabaseAuthority({
+    operation: 'readiness',
+    processEnv: databaseAuthorityChildEnvironment(authority, process.env),
+  });
+  const report = await assessRuntimeDatabaseReadiness({
+    authority: readinessAuthority,
+    purpose: 'search-to-lead',
+  });
+  if (!report.applicationReady) {
+    throw new Error(
+      `[Consumer Contract] Search-to-Lead readiness failed: ${report.layers.requiredData.detail}`,
+    );
+  }
+}
+
 async function main() {
   dotenv.config({ path: resolve(process.cwd(), '.env.test'), override: false, quiet: true });
   const manifest = loadAuthorityManifest();
@@ -102,8 +123,9 @@ async function main() {
   for (const [command, args] of CONSUMER_CONTRACT_STEPS) {
     runStep(command, args, authority);
   }
+  await assertSearchToLeadReadiness(authority);
   console.log(
-    '[Consumer Contract] Canonical migration, commercial reference data, schema congruency, distribution contract, and layered readiness passed.',
+    '[Consumer Contract] Canonical migration, reference, foundation, scenario, schema congruency, distribution contract, and Search-to-Lead readiness passed.',
   );
 }
 

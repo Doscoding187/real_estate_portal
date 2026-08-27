@@ -688,7 +688,14 @@ export async function resolvePublicPropertyEligibilities(
     const evidence = evidenceByPropertyId.get(propertyId);
     if (!evidence) return;
     const evaluation = evaluatePublicPropertySupplyEvidence(evidence);
-    if (!evaluation.eligible) return;
+    if (!evaluation.eligible) {
+      if (process.env.PUBLIC_ELIGIBILITY_DEBUG === '1') {
+        console.debug(
+          `[public-eligibility] property ${propertyId} ineligible: ${evaluation.reason} — ${evaluation.detail}`,
+        );
+      }
+      return;
+    }
 
     resolutions.set(propertyId, {
       ...approval,

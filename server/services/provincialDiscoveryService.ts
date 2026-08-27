@@ -120,6 +120,7 @@ export class ProvincialDiscoveryService {
 
     const provinceResult = await publicSearchService.searchInventory({
       province: province.slug,
+      listingType: 'sale',
       page: 0,
       pageSize: PROVINCE_PREVIEW_LIMIT,
       sortOption: 'date_desc',
@@ -153,6 +154,7 @@ export class ProvincialDiscoveryService {
         ? publicSearchService.searchInventory({
             province: province.slug,
             listingSource: 'development',
+            listingType: 'sale',
             page: 0,
             pageSize: 1,
             sortOption: 'date_desc',
@@ -175,6 +177,7 @@ export class ProvincialDiscoveryService {
         const result = await publicSearchService.searchInventory({
           province: province.slug,
           city: city.slug,
+          listingType: 'sale',
           page: 0,
           pageSize: MARKET_PREVIEW_LIMIT,
           sortOption: 'date_desc',
