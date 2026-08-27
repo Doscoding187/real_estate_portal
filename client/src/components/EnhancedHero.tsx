@@ -17,16 +17,13 @@ import {
   BriefcaseBusiness,
   ChevronDown,
   CircleDollarSign,
-  GitCompareArrows,
   Home,
   Key,
-  Map,
   MapPin,
   Ruler,
   CalendarClock,
   CarFront,
   Search,
-  ShieldCheck,
   SlidersHorizontal,
   Sparkles,
   Users,
@@ -304,25 +301,21 @@ const JOURNEY_PRESENTATION: Partial<
     ],
   },
 };
-const UTILITY_ITEMS = [
+const PLATFORM_TOOL_ITEMS = [
   {
-    label: 'Published properties',
-    description: 'Browse homes for sale',
-    path: '/property-for-sale',
-    icon: ShieldCheck,
-  },
-  { label: 'Location search', description: 'Explore areas', path: '/explore/map', icon: Map },
-  {
-    label: 'Compare homes',
-    description: 'Review properties side by side',
-    path: '/compare',
-    icon: GitCompareArrows,
+    label: 'Listmate',
+    description: 'Understand a home’s value',
+    icon: Home,
   },
   {
-    label: 'Find an agent',
-    description: 'Connect with professionals',
-    path: '/agents',
-    icon: Users,
+    label: 'Buymate',
+    description: 'Plan what you can comfortably buy',
+    icon: CircleDollarSign,
+  },
+  {
+    label: 'Search by commute',
+    description: 'Find homes within your travel time',
+    icon: MapPin,
   },
 ] as const;
 
@@ -1044,27 +1037,34 @@ export function EnhancedHero({
             </div>
           )}
         </div>
-        <div className="mx-auto mt-4 grid max-w-[1260px] gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {UTILITY_ITEMS.map(item => {
-            const Icon = item.icon;
-            return (
-              <button
-                key={item.label}
-                type="button"
-                onClick={() => setLocation(item.path)}
-                className="flex min-h-20 items-center gap-3 rounded-xl border border-slate-200 bg-white/90 px-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
-              >
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-700">
-                  <Icon className="h-5 w-5" />
-                </span>
-                <span>
-                  <span className="block text-sm font-semibold text-slate-900">{item.label}</span>
-                  <span className="mt-0.5 block text-xs text-slate-500">{item.description}</span>
-                </span>
-              </button>
-            );
-          })}
-        </div>
+        <section
+          style={{ maxWidth: 'var(--plds-home-hero-search-max-width, 1180px)' }}
+          className="mx-auto mt-5 w-full"
+          aria-label="Platform tools"
+        >
+          <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 pr-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:grid sm:grid-cols-3 sm:overflow-visible sm:pb-0 sm:pr-0">
+            {PLATFORM_TOOL_ITEMS.map(item => {
+              const Icon = item.icon;
+              return (
+                <article
+                  key={item.label}
+                  className="flex min-h-24 w-[calc(100%-2rem)] shrink-0 snap-start items-center gap-3 rounded-xl border border-dashed border-slate-300 bg-white/75 px-4 text-left shadow-sm sm:w-auto sm:min-w-0"
+                >
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-700">
+                    <Icon className="h-5 w-5" />
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block text-sm font-semibold text-slate-900">{item.label}</span>
+                    <span className="mt-0.5 block text-xs text-slate-500">{item.description}</span>
+                    <span className="mt-2 inline-flex rounded-full border border-blue-100 bg-blue-50 px-2 py-0.5 text-[11px] font-semibold text-blue-700">
+                      Coming soon
+                    </span>
+                  </span>
+                </article>
+              );
+            })}
+          </div>
+        </section>
       </div>
     </section>
   );
