@@ -879,6 +879,23 @@ for (const probe of WAVE43_IDENTITY_SPECIFIC_PROBES) {
   );
 }
 
+const WAVE44_IDENTITY_SPECIFIC_PROBES = [
+  {
+    name: 'Lammermoor',
+    factualId: 'pl-gp-v01-ec83a4bc820895424cf5',
+    parentSuffix: 'gauteng/krugersdorp/lammermoor',
+  },
+];
+
+for (const probe of WAVE44_IDENTITY_SPECIFIC_PROBES) {
+  const row = rowsByNaturalKey.get(probe.parentSuffix);
+  check(
+    `wave44 identity-specific edge resolves: ${probe.name}`,
+    row !== undefined && row.factual_location_ids.includes(probe.factualId),
+    row ? `${row.runtime_natural_key}/${row.factual_location_ids.join(',')}` : 'missing',
+  );
+}
+
 const NEGATIVE_PROBES = ['Mamelodi Extension 1', 'Mamelodi Extension 4'];
 for (const probe of NEGATIVE_PROBES) {
   const directHit = resolveByName(probe);
