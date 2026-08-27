@@ -71,6 +71,25 @@ describe('consumer journey router', () => {
     expect(buildConsumerJourneyUrl({ intent: 'rent', journey: 'commercial', selectedLocations: [sandton] })).toBe('/commercial?location=Sandton');
   });
 
+  it('forwards only supported Commercial Office decisions on handoff', () => {
+    const href = buildConsumerJourneyUrl({
+      intent: 'rent',
+      journey: 'commercial',
+      selectedLocations: [sandton],
+      commercialFilters: {
+        minAreaM2: 250,
+        maxMonthlyBudget: 100_000,
+        availability: 'now',
+        minParkingBays: 4,
+        backupPower: true,
+      },
+    });
+
+    expect(href).toBe(
+      '/commercial?location=Sandton&minAreaM2=250&maxMonthlyBudget=100000&availability=now&backupPower=1&minParkingBays=4',
+    );
+  });
+
   it('preserves Land multi-location and Search Area intent', () => {
     expect(buildConsumerJourneyUrl({ intent: 'buy', journey: 'land', selectedLocations: [johannesburg, capeTown] })).toContain('locationIds=city%3A12');
     expect(buildConsumerJourneyUrl({ intent: 'buy', journey: 'land', selectedLocations: [johannesburg, capeTown] })).toContain('locationIds=city%3A21');

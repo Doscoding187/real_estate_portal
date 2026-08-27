@@ -22,6 +22,9 @@ import {
   Key,
   Map,
   MapPin,
+  Ruler,
+  CalendarClock,
+  CarFront,
   Search,
   ShieldCheck,
   SlidersHorizontal,
@@ -53,6 +56,12 @@ import {
   LAND_PUBLIC_CLASSIFICATION_OPTIONS,
 } from '@/lib/consumerJourneyRouter';
 import { parseCanonicalLocationId } from '@shared/locationAuthority';
+import {
+  COMMERCIAL_AVAILABILITY_OPTIONS,
+  COMMERCIAL_BUDGET_OPTIONS,
+  COMMERCIAL_PARKING_OPTIONS,
+  COMMERCIAL_SPACE_SIZE_OPTIONS,
+} from '@shared/commercialSearchContract';
 import type { LocationNode } from '@/types/location';
 import type { SearchAreaDiscoveryResult, SearchDiscoveryResult } from '@shared/searchDiscovery';
 import type { SearchJourneyId } from '@shared/searchScope';
@@ -81,6 +90,10 @@ type HeroFilters = {
   market: string;
   maxPrice: string;
   classification: string;
+  commercialMinAreaM2: string;
+  commercialMaxMonthlyBudget: string;
+  commercialAvailability: string;
+  commercialMinParkingBays: string;
 };
 type FilterKey = keyof HeroFilters;
 type FilterDefinition = {
@@ -115,6 +128,10 @@ const FILTER_WIDTH_CLASS: Partial<Record<FilterKey, string>> = {
   propertyType: 'lg:w-[184px]',
   minBedrooms: 'lg:w-[202px]',
   minBathrooms: 'lg:w-[202px]',
+  commercialMinAreaM2: 'lg:w-[190px]',
+  commercialMaxMonthlyBudget: 'lg:w-[220px]',
+  commercialAvailability: 'lg:w-[190px]',
+  commercialMinParkingBays: 'lg:w-[180px]',
 };
 const BEDROOM_OPTIONS = [1, 2, 3, 4, 5].map(value => ({
   value: String(value),
@@ -236,9 +253,38 @@ const JOURNEY_PRESENTATION: Partial<
     ],
   },
   commercial: {
-    placeholder: 'Search commercial locations...',
-    guidance: 'Find office leasing opportunities in the right location.',
-    primaryFilters: [],
+    placeholder: 'Search office space by city, suburb, or area...',
+    guidance: 'Find office space by the needs that matter to your business.',
+    primaryFilters: [
+      {
+        key: 'commercialMinAreaM2',
+        label: 'Space size',
+        emptyLabel: 'Any size',
+        icon: Ruler,
+        options: COMMERCIAL_SPACE_SIZE_OPTIONS,
+      },
+      {
+        key: 'commercialMaxMonthlyBudget',
+        label: 'Monthly occupancy',
+        emptyLabel: 'Any budget',
+        icon: CircleDollarSign,
+        options: COMMERCIAL_BUDGET_OPTIONS,
+      },
+      {
+        key: 'commercialAvailability',
+        label: 'Availability',
+        emptyLabel: 'Any timing',
+        icon: CalendarClock,
+        options: COMMERCIAL_AVAILABILITY_OPTIONS,
+      },
+      {
+        key: 'commercialMinParkingBays',
+        label: 'Parking',
+        emptyLabel: 'Any parking',
+        icon: CarFront,
+        options: COMMERCIAL_PARKING_OPTIONS,
+      },
+    ],
   },
   shared_living: {
     placeholder: 'Search rooms, cottages, and small places...',
@@ -483,6 +529,10 @@ export function EnhancedHero({
     market: '',
     maxPrice: '',
     classification: '',
+    commercialMinAreaM2: '',
+    commercialMaxMonthlyBudget: '',
+    commercialAvailability: '',
+    commercialMinParkingBays: '',
   });
   const inputRef = useRef<HTMLInputElement | null>(null);
   const activeTab = controlledTab || internalTab;
@@ -629,13 +679,25 @@ export function EnhancedHero({
       return;
     }
     if (journey === 'commercial') {
-      // Commercial handoff preserves location intent; its own page owns the
-      // search contract.
+      // Commercial handoff preserves location intent and forwards only the
+      // fields owned by the Commercial Office search contract.
       setLocation(
         buildConsumerJourneyUrl({
           intent: 'rent',
           journey,
           selectedLocations,
+          commercialFilters: {
+            minAreaM2: filters.commercialMinAreaM2
+              ? Number(filters.commercialMinAreaM2)
+              : undefined,
+            maxMonthlyBudget: filters.commercialMaxMonthlyBudget
+              ? Number(filters.commercialMaxMonthlyBudget)
+              : undefined,
+            availability: filters.commercialAvailability as 'now' | 'future' | undefined,
+            minParkingBays: filters.commercialMinParkingBays
+              ? Number(filters.commercialMinParkingBays)
+              : undefined,
+          },
         }),
       );
       return;
