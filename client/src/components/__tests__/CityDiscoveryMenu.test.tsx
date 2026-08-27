@@ -3,7 +3,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { CityDiscoveryMenu } from '@/components/CityDiscoveryMenu';
+import { CityDiscoveryMenu, locationHref } from '@/components/CityDiscoveryMenu';
 
 const { popularCitiesQuery, cityDataQuery } = vi.hoisted(() => ({
   popularCitiesQuery: vi.fn(),
@@ -168,6 +168,12 @@ describe('CityDiscoveryMenu', () => {
     expect(cityDataQuery).toHaveBeenCalledWith(
       { provinceSlug: '', citySlug: '' },
       expect.objectContaining({ enabled: false }),
+    );
+  });
+
+  it('routes a province selected from the shared location search to its canonical page', () => {
+    expect(locationHref({ type: 'province', slug: 'gauteng', provinceSlug: 'gauteng' })).toBe(
+      '/gauteng',
     );
   });
 });

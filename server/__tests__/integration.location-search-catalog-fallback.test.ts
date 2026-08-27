@@ -62,7 +62,7 @@ describeWithDb('location search canonical location containment', () => {
     const suffix = `${Date.now()}-${randomUUID().slice(0, 8)}`.toLowerCase();
     const city = `Catalog City ${suffix}`;
     const province = `Catalog Province ${suffix}`;
-    created.cachePrefix = `v3:${city}_all_`;
+    created.cachePrefix = `v7:${city.toLowerCase()}_all_`;
 
     const [userResult] = await db.insert(users).values({
       email: `catalog-location-${suffix}@example.com`,

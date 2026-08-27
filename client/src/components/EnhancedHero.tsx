@@ -818,6 +818,16 @@ export function EnhancedHero({
                             : 'suburb',
                       provinceSlug: suggestion.provinceSlug,
                       citySlug: suggestion.citySlug,
+                      ...(suggestion.factualLocationId
+                        ? { factualLocationId: suggestion.factualLocationId }
+                        : {}),
+                      ...(suggestion.parentCanonicalLocationId
+                        ? { parentCanonicalLocationId: suggestion.parentCanonicalLocationId }
+                        : {}),
+                      selectionTypeLabel: suggestion.display.typeLabel,
+                      ...(suggestion.display.contextLabel
+                        ? { selectionContextLabel: suggestion.display.contextLabel }
+                        : {}),
                     });
                   }}
                   onDiscoveryNavigate={setLocation}

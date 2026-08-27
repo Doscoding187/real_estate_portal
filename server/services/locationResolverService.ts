@@ -21,6 +21,8 @@ export interface ResolvedProvince {
   name: string;
   slug: string;
   code: string;
+  latitude?: string;
+  longitude?: string;
 }
 
 export interface ResolvedCity {
@@ -28,6 +30,7 @@ export interface ResolvedCity {
   name: string;
   slug: string;
   provinceId: number;
+  isMetro?: number;
   latitude?: string;
   longitude?: string;
 }
@@ -39,6 +42,7 @@ export interface ResolvedSuburb {
   cityId: number;
   latitude?: string;
   longitude?: string;
+  postalCode?: string;
 }
 
 export interface ResolvedLocation {
@@ -99,7 +103,14 @@ export class LocationResolverService {
 
     const findProvinceById = async (id: number) => {
       const [row] = await db
-        .select({ id: provinces.id, name: provinces.name, slug: provinces.slug, code: provinces.code })
+        .select({
+          id: provinces.id,
+          name: provinces.name,
+          slug: provinces.slug,
+          code: provinces.code,
+          latitude: provinces.latitude,
+          longitude: provinces.longitude,
+        })
         .from(provinces)
         .where(and(eq(provinces.id, id), ne(provinces.status, 'retired')))
         .limit(1);
@@ -109,13 +120,22 @@ export class LocationResolverService {
             name: row.name,
             slug: row.slug || normalize(row.name),
             code: row.code,
+            latitude: row.latitude || undefined,
+            longitude: row.longitude || undefined,
           }
         : null;
     };
 
     const findProvinceBySlug = async (slug: string) => {
       const [row] = await db
-        .select({ id: provinces.id, name: provinces.name, slug: provinces.slug, code: provinces.code })
+        .select({
+          id: provinces.id,
+          name: provinces.name,
+          slug: provinces.slug,
+          code: provinces.code,
+          latitude: provinces.latitude,
+          longitude: provinces.longitude,
+        })
         .from(provinces)
         .where(and(sql`LOWER(${provinces.slug}) = LOWER(${slug})`, ne(provinces.status, 'retired')))
         .limit(1);
@@ -125,6 +145,8 @@ export class LocationResolverService {
             name: row.name,
             slug: row.slug || slug,
             code: row.code,
+            latitude: row.latitude || undefined,
+            longitude: row.longitude || undefined,
           }
         : null;
     };
@@ -136,6 +158,7 @@ export class LocationResolverService {
           name: cities.name,
           slug: cities.slug,
           provinceId: cities.provinceId,
+          isMetro: cities.isMetro,
           latitude: cities.latitude,
           longitude: cities.longitude,
         })
@@ -148,6 +171,7 @@ export class LocationResolverService {
             name: row.name,
             slug: row.slug || normalize(row.name),
             provinceId: row.provinceId,
+            isMetro: row.isMetro,
             latitude: row.latitude || undefined,
             longitude: row.longitude || undefined,
           }
@@ -161,6 +185,7 @@ export class LocationResolverService {
           name: cities.name,
           slug: cities.slug,
           provinceId: cities.provinceId,
+          isMetro: cities.isMetro,
           latitude: cities.latitude,
           longitude: cities.longitude,
         })
@@ -184,6 +209,7 @@ export class LocationResolverService {
             name: row.name,
             slug: row.slug || slug,
             provinceId: row.provinceId,
+            isMetro: row.isMetro,
             latitude: row.latitude || undefined,
             longitude: row.longitude || undefined,
           }
@@ -197,6 +223,7 @@ export class LocationResolverService {
           name: suburbs.name,
           slug: suburbs.slug,
           cityId: suburbs.cityId,
+          postalCode: suburbs.postalCode,
           latitude: suburbs.latitude,
           longitude: suburbs.longitude,
         })
@@ -209,6 +236,7 @@ export class LocationResolverService {
             name: row.name,
             slug: row.slug || normalize(row.name),
             cityId: row.cityId,
+            postalCode: row.postalCode || undefined,
             latitude: row.latitude || undefined,
             longitude: row.longitude || undefined,
           }
@@ -230,6 +258,7 @@ export class LocationResolverService {
           name: suburbs.name,
           slug: suburbs.slug,
           cityId: suburbs.cityId,
+          postalCode: suburbs.postalCode,
           latitude: suburbs.latitude,
           longitude: suburbs.longitude,
         })
@@ -246,6 +275,7 @@ export class LocationResolverService {
             name: row.name,
             slug: row.slug || slug,
             cityId: row.cityId,
+            postalCode: row.postalCode || undefined,
             latitude: row.latitude || undefined,
             longitude: row.longitude || undefined,
           }

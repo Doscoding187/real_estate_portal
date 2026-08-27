@@ -141,6 +141,48 @@ describe('LocationAutosuggest database fallback', () => {
     expect(screen.queryByText('No locations found')).not.toBeInTheDocument();
   });
 
+  it('preserves the governed identity and parent when selecting an enriched catalog result', async () => {
+    useLocationSearchQuery.mockReturnValue({
+      data: [
+        {
+          id: 991,
+          name: 'Isando',
+          type: 'suburb',
+          slug: 'isando',
+          provinceSlug: 'gauteng',
+          citySlug: 'kempton-park',
+          provinceName: 'Gauteng',
+          cityName: 'Kempton Park',
+          canonicalLocationId: 'suburb:991',
+          factualLocationId: 'pl-gp-v01-isando',
+          parentCanonicalLocationId: 'city:77',
+          canonicalPath: '/gauteng/kempton-park/isando',
+          selectionTypeLabel: 'Suburb',
+          selectionContextLabel: 'Kempton Park',
+        },
+      ],
+      isLoading: false,
+    });
+
+    const onSelect = vi.fn();
+    render(<LocationAutosuggest onSelect={onSelect} />);
+
+    const input = screen.getByRole('combobox', { name: 'Search by city, suburb, or area' });
+    fireEvent.change(input, { target: { value: 'Isan' } });
+    await waitFor(() => expect(screen.getByRole('option', { name: /Isando/ })).toBeInTheDocument());
+    fireEvent.click(screen.getByRole('option', { name: /Isando/ }));
+
+    expect(onSelect).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'suburb:991',
+        canonicalLocationId: 'suburb:991',
+        factualLocationId: 'pl-gp-v01-isando',
+        parentCanonicalLocationId: 'city:77',
+        canonicalPath: '/gauteng/kempton-park/isando',
+      }),
+    );
+  });
+
   it('blocks an eleventh selection when the reconstructed selection already has ten locations', () => {
     const onSelect = vi.fn();
     const selectedLocations = Array.from({ length: 10 }, (_, index) => ({

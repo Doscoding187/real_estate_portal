@@ -298,6 +298,46 @@ describe('SearchDiscoveryService collision-safe contract', () => {
     });
   });
 
+  it('supports shared consumers that request one canonical level without Search Areas', async () => {
+    let requestedLevel: string | undefined;
+    const service = new SearchDiscoveryService({
+      mode: 'public',
+      searchAreaAuthority: createSearchAreaAuthority(),
+      runtimeGeographyAuthority: createRuntimeAuthority(),
+      canonicalLocationSearch: async (_query, _limit, level) => {
+        requestedLevel = level;
+        return [
+          {
+            canonicalLocationId: 'city:4',
+            label: 'Cape Town',
+            factualLevel: 'city',
+            provinceSlug: 'western-cape',
+            citySlug: 'cape-town',
+            parentCanonicalLocationId: 'province:1',
+            provinceName: 'Western Cape',
+            canonicalPath: '/western-cape/cape-town',
+          },
+        ];
+      },
+    });
+
+    const results = await service.search('cape', 10, undefined, {
+      level: 'city',
+      includeSearchAreas: false,
+    });
+
+    expect(requestedLevel).toBe('city');
+    expect(results).toEqual([
+      expect.objectContaining({
+        kind: 'canonical_location',
+        canonicalLocationId: 'city:4',
+        parentCanonicalLocationId: 'province:1',
+        provinceName: 'Western Cape',
+      }),
+    ]);
+    expect(results.some(result => result.kind === 'search_area')).toBe(false);
+  });
+
   it('emits a no_result coverage outcome for unknown queries', async () => {
     const events: LocationCoverageEvent[] = [];
     setLocationCoverageEventSinkForTests(event => events.push(event));

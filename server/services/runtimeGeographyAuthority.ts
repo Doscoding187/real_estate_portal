@@ -9,6 +9,13 @@ export interface RuntimeGeographyAuthorityRecord {
   level: CanonicalLocationLevel;
   name: string;
   slug: string;
+  provinceName?: string;
+  cityName?: string;
+  latitude?: string;
+  longitude?: string;
+  postalCode?: string;
+  isMetro?: number;
+  provinceCode?: string;
   parentCanonicalLocationId?: string;
   parentName?: string;
   parentSlug?: string;
