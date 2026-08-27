@@ -70,6 +70,11 @@ const listPublishersSchema = z
   })
   .optional();
 
+const listPublishersByProvinceSchema = z.object({
+  province: z.string().trim().min(1).max(100),
+  limit: z.number().int().positive().max(20).default(10),
+});
+
 const capturePublisherLeadSchema = z.object({
   cataloguePublisherId: z.number().int().positive(),
   developmentId: z.number().int().positive().optional(),
@@ -149,6 +154,12 @@ export const cataloguePublisherRouter = router({
   listPublishers: publicProcedure.input(listPublishersSchema).query(async ({ input }) => {
     return await cataloguePublisherService.listPublicPublishers(input || {});
   }),
+
+  listPublishersByProvince: publicProcedure
+    .input(listPublishersByProvinceSchema)
+    .query(async ({ input }) => {
+      return cataloguePublisherService.listPublicPublishersByProvince(input.province, input.limit);
+    }),
 
   /**
    * Get developments for a publisher (public).

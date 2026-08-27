@@ -43,7 +43,7 @@ export function HomeDesktopView({
           activeHeroTab={activeHeroTab}
         />
         <DiscoverProperties />
-        <TopDevelopers />
+        <TopDevelopers selectedProvince={selectedProvince} />
         <ExploreCities customLocations={popularCities} />
         <ProfessionalEntrySection />
         <CTASection onBrowse={onBrowseProperties} />
