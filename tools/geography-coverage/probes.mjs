@@ -36,6 +36,9 @@ const projection = readJson(`${OUTPUT}/gauteng_runtime_reference_projection_v0.2
 const mapping = readJsonl(`${OUTPUT}/gauteng_factual_runtime_mapping_v0.2.jsonl`);
 const queue = readJsonl(`${OUTPUT}/gauteng_review_queue_v0.1.jsonl`);
 const disposition = readJson(`${OUTPUT}/gauteng_coverage_disposition_v0.1.json`);
+const residualParentAudit = readJson(
+  'data/geography-coverage-v0.1/research/residual-parent-edge-audit.v0.1.json',
+);
 
 const rowsByNaturalKey = new Map(projection.rows.map(row => [row.runtimeNaturalKey ?? row.runtime_natural_key, row]));
 const rowsByName = new Map(projection.rows.map(row => [normalizeName(row.name), row]));
@@ -1189,6 +1192,23 @@ check(
   'review queue records explicit reasons for every queued identity',
   queue.length > 0 &&
     queue.every(entry => typeof entry.reason === 'string' && entry.reason.length > 0),
+);
+
+const parentEdgeQueue = queue.filter(entry => entry.reason === 'awaiting_accepted_parent_edge');
+const auditedParentEdgeIds = new Set(
+  (residualParentAudit.entries ?? []).map(entry => entry.factual_location_id),
+);
+check(
+  'every awaiting-parent identity has a residual audit entry',
+  parentEdgeQueue.length === auditedParentEdgeIds.size &&
+    parentEdgeQueue.every(entry => auditedParentEdgeIds.has(entry.factual_location_id)),
+  `${auditedParentEdgeIds.size} audited of ${parentEdgeQueue.length}`,
+);
+check(
+  'residual parent audit remains fail-closed',
+  (residualParentAudit.entries ?? []).every(
+    entry => entry.decision === 'retain_queue' && entry.accepted_parent_natural_key === null,
+  ),
 );
 
 const HANDLE_PATTERN = /(?:province|city|suburb):[0-9]+/;
