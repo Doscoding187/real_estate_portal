@@ -3,7 +3,14 @@ import { useEffect, useState } from 'react';
 import { trpc } from '@/lib/trpc';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 const money = (minor: number) =>
   `R ${(minor / 100).toLocaleString('en-ZA', { maximumFractionDigits: 0 })}`;
@@ -14,6 +21,10 @@ const MARKETS = [
   { value: 'independent_micro', label: 'Cottages & Small Places' },
   { value: 'student', label: 'Student Living' },
 ] as const;
+
+type MarketTag = (typeof MARKETS)[number]['value'];
+type Bathroom = 'any' | 'own' | 'shared';
+type Furnishing = 'any' | 'furnished' | 'partial';
 
 const TYPE_LABELS: Record<string, string> = {
   private_room: 'Private room',
@@ -34,9 +45,12 @@ export default function SharedLiving() {
   const handoffParams = new URLSearchParams(window.location.search);
   const unsupportedLocationScope =
     handoffParams.get('searchError') === 'unsupported-location-scope';
+  const marketParam = handoffParams.get('market');
+  const bathroomParam = handoffParams.get('bathroom');
+  const furnishedParam = handoffParams.get('furnished');
 
-  const [marketTag, setMarketTag] = useState<(typeof MARKETS)[number]['value']>(
-    (handoffParams.get('market') as any) || 'all',
+  const [marketTag, setMarketTag] = useState<MarketTag>(
+    MARKETS.some(market => market.value === marketParam) ? (marketParam as MarketTag) : 'all',
   );
   const [location, setLocation] = useState(handoffParams.get('location') || '');
   const [minPrice, setMinPrice] = useState(handoffParams.get('minPrice') || '');
@@ -44,11 +58,11 @@ export default function SharedLiving() {
   const [billsElectricity, setBillsElectricity] = useState(
     handoffParams.get('billsElectricity') === '1',
   );
-  const [bathroom, setBathroom] = useState<'any' | 'own' | 'shared'>(
-    (handoffParams.get('bathroom') as any) || 'any',
+  const [bathroom, setBathroom] = useState<Bathroom>(
+    bathroomParam === 'own' || bathroomParam === 'shared' ? bathroomParam : 'any',
   );
-  const [furnished, setFurnished] = useState<'any' | 'furnished' | 'partial'>(
-    (handoffParams.get('furnished') as any) || 'any',
+  const [furnished, setFurnished] = useState<Furnishing>(
+    furnishedParam === 'furnished' || furnishedParam === 'partial' ? furnishedParam : 'any',
   );
   const [page, setPage] = useState(Number(handoffParams.get('page')) || 0);
 
@@ -116,20 +130,29 @@ export default function SharedLiving() {
       >
         <label className="grid gap-1 text-sm">
           <span>Market</span>
-          <Select aria-label="Market" value={marketTag ?? ''} onValueChange={val => { setMarketTag((val || undefined) as any); setPage(0); }}>
-            <SelectTrigger><SelectValue placeholder="All markets" /></SelectTrigger>
+          <Select
+            value={marketTag}
+            onValueChange={value => {
+              setMarketTag(value as MarketTag);
+              setPage(0);
+            }}
+          >
+            <SelectTrigger aria-label="Market" className="w-full">
+              <SelectValue placeholder="All markets" />
+            </SelectTrigger>
             <SelectContent>
               {MARKETS.map(market => (
-                <SelectItem key={market.label} value={market.value ?? ''}>{market.label}</SelectItem>
+                <SelectItem key={market.value} value={market.value}>
+                  {market.label}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </label>
         <label className="grid gap-1 text-sm">
           <span>Area</span>
-          <input
+          <Input
             aria-label="Area"
-            className="rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             placeholder="Suburb or city"
             value={location}
             onChange={event => {
@@ -140,9 +163,8 @@ export default function SharedLiving() {
         </label>
         <label className="grid gap-1 text-sm">
           <span>Minimum rent (R/month)</span>
-          <input
+          <Input
             aria-label="Minimum rent"
-            className="rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             type="number"
             min="0"
             value={minPrice}
@@ -154,9 +176,8 @@ export default function SharedLiving() {
         </label>
         <label className="grid gap-1 text-sm">
           <span>Maximum rent (R/month)</span>
-          <input
+          <Input
             aria-label="Maximum rent"
-            className="rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             type="number"
             min="0"
             value={maxPrice}
@@ -166,39 +187,55 @@ export default function SharedLiving() {
             }}
           />
         </label>
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
+        <label
+          className="flex items-center gap-2 text-sm"
+          htmlFor="shared-living-bills-electricity"
+        >
+          <Checkbox
+            id="shared-living-bills-electricity"
+            aria-label="Electricity included"
             checked={billsElectricity}
-            onChange={event => setBillsElectricity(event.target.checked)}
+            onCheckedChange={checked => setBillsElectricity(checked === true)}
           />
-          Electricity included
+          <span>Electricity included</span>
         </label>
         <label className="grid gap-1 text-sm">
           <span>Bathroom</span>
-          <select
-            aria-label="Bathroom"
-            className="rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          <Select
             value={bathroom}
-            onChange={event => setBathroom(event.target.value as any)}
+            onValueChange={value => {
+              setBathroom(value as typeof bathroom);
+              setPage(0);
+            }}
           >
-            <option value="any">Any</option>
-            <option value="own">Own bathroom</option>
-            <option value="shared">Shared</option>
-          </select>
+            <SelectTrigger aria-label="Bathroom" className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="any">Any</SelectItem>
+              <SelectItem value="own">Own bathroom</SelectItem>
+              <SelectItem value="shared">Shared</SelectItem>
+            </SelectContent>
+          </Select>
         </label>
         <label className="grid gap-1 text-sm">
           <span>Furnishing</span>
-          <select
-            aria-label="Furnishing"
-            className="rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          <Select
             value={furnished}
-            onChange={event => setFurnished(event.target.value as any)}
+            onValueChange={value => {
+              setFurnished(value as typeof furnished);
+              setPage(0);
+            }}
           >
-            <option value="any">Any</option>
-            <option value="furnished">Furnished</option>
-            <option value="partial">Partly furnished</option>
-          </select>
+            <SelectTrigger aria-label="Furnishing" className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="any">Any</SelectItem>
+              <SelectItem value="furnished">Furnished</SelectItem>
+              <SelectItem value="partial">Partly furnished</SelectItem>
+            </SelectContent>
+          </Select>
         </label>
       </section>
 
@@ -259,23 +296,25 @@ export default function SharedLiving() {
           aria-label="Result pages"
           className="flex items-center justify-between rounded border bg-white p-4"
         >
-          <button
-            className="rounded border px-3 py-2 disabled:opacity-40"
+          <Button
+            type="button"
+            variant="outline"
             disabled={page === 0}
             onClick={() => setPage(page - 1)}
           >
             Previous
-          </button>
+          </Button>
           <p className="text-sm text-slate-600">
             Page {page + 1} of {Math.max(1, pageCount)} · {total} spaces
           </p>
-          <button
-            className="rounded border px-3 py-2 disabled:opacity-40"
+          <Button
+            type="button"
+            variant="outline"
             disabled={(page + 1) * pageSize >= total}
             onClick={() => setPage(page + 1)}
           >
             Next
-          </button>
+          </Button>
         </nav>
       )}
     </main>

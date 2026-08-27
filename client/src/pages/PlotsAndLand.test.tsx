@@ -1,5 +1,6 @@
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { LAND_CLASSIFICATION_LABELS, LAND_PUBLIC_CLASSIFICATIONS } from '@shared/land-domain';
 
 const { search } = vi.hoisted(() => ({
   search: vi.fn(() => ({ data: [] })),
@@ -55,7 +56,9 @@ describe('Plots & Land results handoff', () => {
 
     render(<PlotsAndLand />);
 
-    expect(screen.getByLabelText('Land type')).toHaveValue('residential_stand');
+    expect(screen.getByRole('combobox', { name: 'Land type' })).toHaveTextContent(
+      LAND_CLASSIFICATION_LABELS.residential_stand,
+    );
     expect(screen.getByLabelText('Maximum price (R)')).toHaveValue(1_000_000);
     expect(search).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -117,7 +120,7 @@ describe('Plots & Land results handoff', () => {
 
     render(<PlotsAndLand />);
 
-    expect(screen.getByLabelText('Land type')).toHaveValue('');
+    expect(screen.getByRole('combobox', { name: 'Land type' })).toHaveTextContent('Any land type');
     expect(search).toHaveBeenCalledWith(
       expect.objectContaining({
         locationId: 'city:12',
@@ -126,5 +129,18 @@ describe('Plots & Land results handoff', () => {
       }),
     );
     expect(new URLSearchParams(window.location.search).get('classification')).toBeNull();
+  });
+
+  it('exposes only the governed public classifications in the design-system selector', () => {
+    render(<PlotsAndLand />);
+
+    fireEvent.click(screen.getByRole('combobox', { name: 'Land type' }));
+
+    expect(screen.getAllByRole('option')).toHaveLength(LAND_PUBLIC_CLASSIFICATIONS.length + 1);
+    for (const classification of LAND_PUBLIC_CLASSIFICATIONS) {
+      expect(
+        screen.getByRole('option', { name: LAND_CLASSIFICATION_LABELS[classification] }),
+      ).toBeInTheDocument();
+    }
   });
 });
