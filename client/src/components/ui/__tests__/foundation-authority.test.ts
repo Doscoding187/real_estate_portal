@@ -68,7 +68,7 @@ describe('FPE-S1A foundation authority', () => {
     expect(tokens).toMatch(/--plds-nav-height:\s*4rem;/);
     expect(tokens).toMatch(/--plds-nav-action-height:\s*2\.25rem;/);
     expect(tokens).toMatch(/--plds-home-hero-title-max-width:\s*24rem;/);
-    expect(tokens).toMatch(/--plds-home-hero-search-max-width:\s*56rem;/);
+    expect(tokens).toMatch(/--plds-home-hero-search-max-width:\s*64rem;/);
     expect(tokens).toMatch(/--plds-home-hero-search-radius:\s*1rem;/);
     expect(tokens).toMatch(/--plds-field-group-gap:\s*1\.75rem;/);
     expect(tokens).toMatch(/--plds-field-gap:\s*0\.75rem;/);
