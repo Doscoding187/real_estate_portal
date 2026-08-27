@@ -84,6 +84,8 @@ describe('public discovery route authority', () => {
 
     expect(source).toContain('buildDiscoverBrowseHref');
     expect(source).toContain('buildDiscoverCardHref');
+    expect(source).toMatch(/href=\{buildDiscoverCardHref\(/);
+    expect(source).not.toContain('window.location.assign(buildDiscoverCardHref');
 
     expect(source).not.toContain('/properties?action=sale');
     expect(source).not.toContain('/properties?action=rent');

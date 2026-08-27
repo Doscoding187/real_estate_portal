@@ -204,10 +204,6 @@ export function DiscoverProperties({
     }
   };
 
-  const handleCardClick = (propertyType: string, listingType: 'sale' | 'rent' | 'developments') => {
-    window.location.assign(buildDiscoverCardHref(propertyType, listingType, selectedCity));
-  };
-
   return (
     <div className="home-section bg-gradient-to-b from-white to-muted/20">
       <div className="container">
@@ -377,41 +373,41 @@ export function DiscoverProperties({
                 <>
                   {/* New Developments */}
                   <div>
-                <button
-                  onClick={handleDevelopmentsClick}
-                  className={`w-full p-3.5 sm:p-4 flex items-center justify-between transition-all duration-300 ${
-                    developmentsExpanded
-                      ? 'bg-blue-50/80 text-blue-700'
-                      : 'hover:bg-slate-50 text-slate-700'
-                  }`}
-                >
-                  <span className="font-bold text-base">New Developments</span>
-                  <div
-                    className={`rounded-full p-1 transition-colors ${developmentsExpanded ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-400 group-hover:bg-slate-200'}`}
-                  >
-                    <ChevronRightIcon
-                      className={`h-4 w-4 transition-transform duration-300 ${developmentsExpanded ? 'rotate-90' : ''}`}
-                    />
-                  </div>
-                </button>
-                <div
-                  className={`overflow-hidden transition-all duration-300 ease-in-out ${
-                    developmentsExpanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
-                  }`}
-                >
-                  <div className="px-5 pb-5 pt-2 bg-blue-50/30">
-                    <p className="text-sm text-slate-600 leading-relaxed mb-5">
-                      See the newest off-plan and ready-to-move developments in {selectedCity}.
-                    </p>
-                    <a
-                      href={buildDiscoverBrowseHref('developments', selectedCity)}
-                      className="text-sm font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 transition-colors group"
+                    <button
+                      onClick={handleDevelopmentsClick}
+                      className={`w-full p-3.5 sm:p-4 flex items-center justify-between transition-all duration-300 ${
+                        developmentsExpanded
+                          ? 'bg-blue-50/80 text-blue-700'
+                          : 'hover:bg-slate-50 text-slate-700'
+                      }`}
                     >
-                      View Developments
-                      <ChevronRightIcon className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-                    </a>
-                  </div>
-                </div>
+                      <span className="font-bold text-base">New Developments</span>
+                      <div
+                        className={`rounded-full p-1 transition-colors ${developmentsExpanded ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-400 group-hover:bg-slate-200'}`}
+                      >
+                        <ChevronRightIcon
+                          className={`h-4 w-4 transition-transform duration-300 ${developmentsExpanded ? 'rotate-90' : ''}`}
+                        />
+                      </div>
+                    </button>
+                    <div
+                      className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                        developmentsExpanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
+                      }`}
+                    >
+                      <div className="px-5 pb-5 pt-2 bg-blue-50/30">
+                        <p className="text-sm text-slate-600 leading-relaxed mb-5">
+                          See the newest off-plan and ready-to-move developments in {selectedCity}.
+                        </p>
+                        <a
+                          href={buildDiscoverBrowseHref('developments', selectedCity)}
+                          className="text-sm font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 transition-colors group"
+                        >
+                          View Developments
+                          <ChevronRightIcon className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                        </a>
+                      </div>
+                    </div>
                   </div>
                 </>
               ) : null}
@@ -426,9 +422,15 @@ export function DiscoverProperties({
                   <div
                     key={idx}
                     className="flex-[0_0_78%] min-w-0 sm:flex-[0_0_48%] lg:flex-[0_0_32%]"
-                    onClick={() => handleCardClick(property.type, property.listingType)}
                   >
-                    <div className="relative h-[272px] sm:h-[360px] rounded-xl overflow-hidden group cursor-pointer shadow-md hover:shadow-2xl transition-all duration-500 bg-slate-900 border border-slate-800">
+                    <a
+                      href={buildDiscoverCardHref(
+                        property.type,
+                        property.listingType,
+                        selectedCity,
+                      )}
+                      className="group relative block h-[272px] overflow-hidden rounded-xl border border-slate-800 bg-slate-900 shadow-md transition-all duration-500 hover:shadow-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2774AE] focus-visible:ring-offset-2 sm:h-[360px]"
+                    >
                       <img
                         src={property.image}
                         alt={property.type}
@@ -462,7 +464,7 @@ export function DiscoverProperties({
                           </span>
                         </p>
                       </div>
-                    </div>
+                    </a>
                   </div>
                 ))}
               </div>
