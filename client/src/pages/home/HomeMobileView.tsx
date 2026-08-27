@@ -7,7 +7,6 @@ import { HomeTrendingSection } from '@/sections/home/HomeTrendingSection';
 import { CTASection } from '@/sections/home/CTASection';
 import { ProfessionalEntrySection } from '@/sections/home/ProfessionalEntrySection';
 import { HomeJourneySection } from '@/sections/home/HomeJourneySection';
-import { HomeInsightsSection } from '@/sections/home/HomeInsightsSection';
 import type { HeroTab } from '@/types/hero';
 
 type HomeMobileViewProps = {
@@ -47,7 +46,6 @@ export function HomeMobileView({
         <DiscoverProperties />
         <TopDevelopers selectedProvince={selectedProvince} />
         <ExploreCities customLocations={popularCities} basePath="" />
-        <HomeInsightsSection />
         <HomeJourneySection />
         <ProfessionalEntrySection />
         <CTASection onBrowse={onBrowseProperties} />
