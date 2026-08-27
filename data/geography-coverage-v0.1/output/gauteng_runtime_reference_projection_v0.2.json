@@ -7,7 +7,7 @@
     "factual_canonical_geography_sha256": "1fe0e2e3101bd7e459f484b7125dc1ce1f0327104002b184ef0e90d4236b7b7f",
     "factual_canonical_names_sha256": "a87891bc2e4167130d7e5eb649516a34aedaa071278ce8fe25df19f511669b51",
     "carried_projection_v01_sha256": "982ea13cd190a02da5440f122a061713e22bc157ef46f491ce530c5877ff9fc0",
-    "territory_manifest_sha256": "2b91262cf3d4fc3854bef20e21b63247ac79c09f6de0a4965a1a89a51b8f7d0e"
+    "territory_manifest_sha256": "3812868241a0c0fa58ca3b1220992907f2862ac0054aedd33997fc134aa886fb"
   },
   "rows": [
     {
@@ -18765,6 +18765,28 @@
       ],
       "factual_preferred_names": [
         "Ohinimuri"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/meyerton/risi-sh",
+      "runtime_parent_natural_key": "gauteng/meyerton",
+      "name": "Risi Sh",
+      "slug": "risi-sh",
+      "latitude": -26.6412807,
+      "longitude": 27.9973722,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-6c4517ef22f698e5cd43"
+      ],
+      "factual_preferred_names": [
+        "Risi Sh"
       ],
       "factual_types": [
         "suburb"

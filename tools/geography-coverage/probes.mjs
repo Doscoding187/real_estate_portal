@@ -1112,6 +1112,14 @@ check(
   wave55Row ? `${wave55Row.runtime_natural_key}/${wave55Row.factual_location_ids.join(',')}` : 'missing',
 );
 
+const wave56Row = rowsByNaturalKey.get('gauteng/meyerton/risi-sh');
+check(
+  'wave56 official municipal Risi Sh parent edge resolves',
+  wave56Row !== undefined &&
+    wave56Row.factual_location_ids.includes('pl-gp-v01-6c4517ef22f698e5cd43'),
+  wave56Row ? `${wave56Row.runtime_natural_key}/${wave56Row.factual_location_ids.join(',')}` : 'missing',
+);
+
 check(
   'ordinary duplicate collisions remain queued without explicit grouping',
   queue.some(entry => entry.reason === 'duplicate_natural_key_within_parent' && entry.preferred_name === 'Vrededorp'),
