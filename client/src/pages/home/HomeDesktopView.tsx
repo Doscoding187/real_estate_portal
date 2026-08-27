@@ -44,7 +44,7 @@ export function HomeDesktopView({
         />
         <DiscoverProperties />
         <TopDevelopers selectedProvince={selectedProvince} />
-        <ExploreCities customLocations={popularCities} />
+        <ExploreCities customLocations={popularCities} basePath="" />
         <ProfessionalEntrySection />
         <CTASection onBrowse={onBrowseProperties} />
       </ContentRail>
