@@ -96,6 +96,7 @@ import { landRouter } from './landRouter';
 import { landPublicRouter } from './landPublicRouter';
 import { commercialOfficeRouter } from './commercialOfficeRouter';
 import { sharedLivingRouter } from './sharedLivingRouter';
+import { homeMarketInsightsRouter } from './homeMarketInsightsRouter';
 
 const appRouterConfig = {
   system: systemRouter,
@@ -121,6 +122,7 @@ const appRouterConfig = {
   landPublic: landPublicRouter,
   commercialOffice: commercialOfficeRouter,
   sharedLiving: sharedLivingRouter,
+  homeMarketInsights: homeMarketInsightsRouter,
   upload: uploadRouter,
   settings: settingsRouter,
   savedSearch: savedSearchRouter,
