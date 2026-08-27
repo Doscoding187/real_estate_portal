@@ -1057,7 +1057,7 @@ export function EnhancedHero({
                     <span className="block text-sm font-semibold text-slate-900">{item.label}</span>
                     <span className="mt-0.5 block text-xs text-slate-500">{item.description}</span>
                     <span className="mt-2 inline-flex rounded-full border border-blue-100 bg-blue-50 px-2 py-0.5 text-[11px] font-semibold text-blue-700">
-                      Coming soon
+                      Planned
                     </span>
                   </span>
                 </article>
