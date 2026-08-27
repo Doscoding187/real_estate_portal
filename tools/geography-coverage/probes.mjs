@@ -1080,6 +1080,14 @@ check(
   wave51Row ? `${wave51Row.runtime_natural_key}/${wave51Row.factual_location_ids.join(',')}` : 'missing',
 );
 
+const wave52Row = rowsByNaturalKey.get('gauteng/boksburg/boksburg-lokasie');
+check(
+  'wave52 official CCA Boksburg Lokasie parent edge resolves',
+  wave52Row !== undefined &&
+    wave52Row.factual_location_ids.includes('pl-gp-v01-50eaeb5408cb9975ab18'),
+  wave52Row ? `${wave52Row.runtime_natural_key}/${wave52Row.factual_location_ids.join(',')}` : 'missing',
+);
+
 check(
   'ordinary duplicate collisions remain queued without explicit grouping',
   queue.some(entry => entry.reason === 'duplicate_natural_key_within_parent' && entry.preferred_name === 'Vrededorp'),

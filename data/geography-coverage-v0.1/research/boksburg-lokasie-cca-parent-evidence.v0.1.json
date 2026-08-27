@@ -1,0 +1,47 @@
+{
+  "artifact_version": "boksburg-lokasie-cca-parent-evidence-v0.1",
+  "town": "Boksburg",
+  "parent_natural_key": "gauteng/boksburg",
+  "administrative_context": "Ekurhuleni",
+  "evidence_class": "official_municipal_cca_boundary_point_intersection",
+  "source": {
+    "publisher": "City of Ekurhuleni Corporate Geo-Informatics Division",
+    "url": "https://gis.ekurhuleni.gov.za/arcgis/rest/services/Ward_Delimitation_Draft_Proposal__EKU_Draftset_1_24Jan25__MIL1/MapServer/19",
+    "section": "Customer Care Areas layer (19) — EPSG:4326 point-intersection query for the canonical Boksburg Lokasie point returned CCA=BOKSBURG CCA",
+    "retrieved": "2026-08-27",
+    "licence_note": "Official municipal spatial layer used for a point-to-CCA parent assertion; no polygon geometry is copied."
+  },
+  "supporting_sources": [
+    {
+      "publisher": "City of Ekurhuleni",
+      "url": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/08/B-F-04-2025-2025-2026-SDBIP.pdf",
+      "section": "Table 3 — City of Ekurhuleni Customer Care Areas, including Boksburg CCA",
+      "retrieved": "2026-08-27"
+    }
+  ],
+  "identity_note": "The canonical Boksburg Lokasie identity is retained exactly as supplied by the factual layer. The edge asserts only its current municipal parent context from the identity-specific source point; it does not replace or modernize the historical-style source name.",
+  "spatial_query": {
+    "geometry_type": "esriGeometryPoint",
+    "spatial_reference": "EPSG:4326",
+    "spatial_relationship": "esriSpatialRelIntersects",
+    "out_fields": "*",
+    "return_geometry": false
+  },
+  "identity_specific_records": [
+    {
+      "factual_location_id": "pl-gp-v01-50eaeb5408cb9975ab18",
+      "preferred_name": "Boksburg Lokasie",
+      "source_record_ids": [
+        "sr:nga_gns:-1212968:-1780127:107678",
+        "sr:geonames:1017779"
+      ],
+      "canonical_point": {
+        "longitude": 28.25,
+        "latitude": -26.2166685
+      },
+      "municipal_query_result": {
+        "cca": "BOKSBURG CCA"
+      }
+    }
+  ]
+}
