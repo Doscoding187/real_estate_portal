@@ -1,0 +1,31 @@
+{
+  "artifact_version": "carletonville-bentley-park-parent-evidence-v0.1",
+  "town": "Carletonville",
+  "parent_natural_key": "gauteng/carletonville",
+  "administrative_context": "West Rand",
+  "evidence_class": "official_municipal_idp_and_magisterial_place_index",
+  "source": {
+    "publisher": "Merafong City Local Municipality",
+    "url": "https://merafong.gov.za/wp-content/uploads/2024/04/Final-IDP-Document-2017-2018.pdf",
+    "section": "Integrated Development Plan — MCLM incorporated areas: Carletonville and Bentley Park",
+    "retrieved": "2026-08-27",
+    "licence_note": "Official municipal integrated development plan used for locality relationship assertions; no prose or geometry is copied."
+  },
+  "supporting_sources": [
+    {
+      "publisher": "Office of the Chief Justice, Department of Justice and Constitutional Development",
+      "url": "https://www.justice.gov.za/maps/areas-gp.html",
+      "section": "Gauteng: Find a court in your area — Bentley Park listed under Merafong City Sub District / Oberholzer Magistrate Court",
+      "retrieved": "2026-08-27"
+    },
+    {
+      "publisher": "South African Government Gazette",
+      "url": "https://www.lac.org.na/laws/GGsa/rsagg6294.pdf",
+      "section": "Government Gazette 6294 — Bentley Park, District of Oberholzer",
+      "retrieved": "2026-08-27"
+    }
+  ],
+  "suburb_names": [
+    "Bentley Park"
+  ]
+}

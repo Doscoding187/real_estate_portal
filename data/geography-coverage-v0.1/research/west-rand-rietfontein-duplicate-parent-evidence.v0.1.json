@@ -1,0 +1,38 @@
+{
+  "artifact_version": "west-rand-rietfontein-duplicate-parent-evidence-v0.1",
+  "town": "Gauteng province",
+  "parent_natural_key": "gauteng",
+  "administrative_context": "West Rand",
+  "evidence_class": "official_magisterial_place_index_identity_specific_duplicate_set",
+  "allow_duplicate_natural_key_grouping": true,
+  "source": {
+    "publisher": "Office of the Chief Justice, Department of Justice and Constitutional Development",
+    "url": "https://www.justice.gov.za/maps/areas-gp.html",
+    "section": "Gauteng: Find a court in your area — Rietfontein is listed in the West Rand under the Krugersdorp Main Seat",
+    "retrieved": "2026-08-27",
+    "licence_note": "Official government place index used for identity-specific city-scope context; no prose or geometry is copied."
+  },
+  "identity_note": "The two West Rand Rietfontein town identities remain separate factual records. They are co-published only under one stable province-level natural key and remain distinct from the separately contextualized Tshwane Rietfontein locality identities; this artifact does not merge or rename records.",
+  "identity_specific_records": [
+    {
+      "factual_location_id": "pl-gp-v01-8db8901b5210ad0808dd",
+      "preferred_name": "Rietfontein",
+      "source_record_ids": [
+        "sr:geonames:962164",
+        "sr:geonames:961933",
+        "sr:nga_gns:-1276207:-1854900:33939",
+        "sr:nga_gns:-1275955:-1854644:33403"
+      ]
+    },
+    {
+      "factual_location_id": "pl-gp-v01-ab7f056ff7d720e00d63",
+      "preferred_name": "Rietfontein",
+      "source_record_ids": [
+        "sr:geonames:962149",
+        "sr:geonames:961932",
+        "sr:nga_gns:-1275970:-1854659:33195",
+        "sr:nga_gns:-1276208:-1854901:33530"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "resolved_edges_version": "krugersdorp-quelleriepark-parent-evidence.v0.1.resolved",
+  "town": "Krugersdorp",
+  "parent_natural_key": "gauteng/krugersdorp",
+  "source": {
+    "publisher": "Mogale City Local Municipality",
+    "url": "https://mogalecity.gov.za/mogale-city/live-in/valuation-roll/",
+    "section": "2025/2030 General Valuation Roll — Krugersdorp - Quelleriepark",
+    "retrieved": "2026-08-26",
+    "licence_note": "Official municipal valuation-roll area label used for locality membership assertion; no property records, prose, or geometry is copied."
+  },
+  "edge_count": 1,
+  "edges": [
+    {
+      "factual_location_id": "pl-gp-v01-2c8f951d6356fd455635",
+      "preferred_name": "Quellieriepark",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/krugersdorp",
+      "evidence_class": "official_municipal_valuation_roll_area",
+      "citation": "https://mogalecity.gov.za/mogale-city/live-in/valuation-roll/#2025%2F2030%20General%20Valuation%20Roll%20%E2%80%94%20Krugersdorp%20-%20Quelleriepark (retrieved 2026-08-26)"
+    }
+  ],
+  "diagnostics": {
+    "researched_names": 1,
+    "matched_already_projected": [],
+    "names_not_in_canonical_layer": [],
+    "ambiguous_canonical_matches": []
+  }
+}

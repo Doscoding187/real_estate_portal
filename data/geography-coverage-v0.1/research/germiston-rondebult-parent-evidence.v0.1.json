@@ -1,0 +1,34 @@
+{
+  "artifact_version": "germiston-rondebult-parent-evidence-v0.1",
+  "town": "Germiston",
+  "parent_natural_key": "gauteng/germiston",
+  "administrative_context": "Ekurhuleni",
+  "evidence_class": "official_municipal_area_and_magisterial_place_index",
+  "source": {
+    "publisher": "City of Ekurhuleni",
+    "url": "https://www.ekurhuleni.gov.za/wp-content/uploads/2021/11/GERMISTON_FULL_TITLE_BOOK_29.pdf",
+    "section": "Germiston Full Title Book — AREA: GERMISTON; township RONDEBULT",
+    "retrieved": "2026-08-27",
+    "licence_note": "Official municipal valuation/title source used for locality relationship assertions; no prose, geometry, or property data is copied."
+  },
+  "supporting_sources": [
+    {
+      "publisher": "Office of the Chief Justice, Department of Justice and Constitutional Development",
+      "url": "https://www.justice.gov.za/maps/areas-gp.html",
+      "section": "Gauteng: Find a court in your area — Rondebult listed under Germiston Sub District",
+      "retrieved": "2026-08-27"
+    },
+    {
+      "publisher": "City of Ekurhuleni",
+      "url": "https://www.ekurhuleni.gov.za/press-releases/service-delivery-interruptions/power-supply-interruption-in-parts-of-germiston/",
+      "section": "Power supply interruption in parts of Germiston — Rondebult listed among affected areas",
+      "retrieved": "2026-08-27"
+    }
+  ],
+  "identity_specific_records": [
+    {
+      "factual_location_id": "pl-gp-v01-5650fd1d9fe9843f204c",
+      "preferred_name": "Rondebult"
+    }
+  ]
+}

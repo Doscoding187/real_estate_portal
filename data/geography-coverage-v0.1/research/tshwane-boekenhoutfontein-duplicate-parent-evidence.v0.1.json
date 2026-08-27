@@ -1,0 +1,28 @@
+{
+  "artifact_version": "tshwane-boekenhoutfontein-duplicate-parent-evidence-v0.1",
+  "town": "Gauteng province",
+  "parent_natural_key": "gauteng",
+  "administrative_context": "City of Tshwane",
+  "evidence_class": "official_magisterial_place_index_identity_specific_duplicate_set",
+  "allow_duplicate_natural_key_grouping": true,
+  "source": {
+    "publisher": "Office of the Chief Justice, Department of Justice and Constitutional Development",
+    "url": "https://www.justice.gov.za/maps/areas-gp.html",
+    "section": "Gauteng: Find a court in your area — Boekenhoutfontein is listed under Tshwane / Pretoria",
+    "retrieved": "2026-08-27",
+    "licence_note": "Official government place index used for identity-specific city-scope context; no prose or geometry is copied."
+  },
+  "identity_note": "The two canonical Boekenhoutfontein town identities remain separate factual records. They are co-published only under one stable province-level natural key because the official context is the same; this artifact does not merge, rename, or choose between the source identities.",
+  "identity_specific_records": [
+    {
+      "factual_location_id": "pl-gp-v01-291cc8f92a238f80f336",
+      "preferred_name": "Boekenhoutfontein",
+      "source_record_ids": ["sr:nga_gns:-1212587:-1779680:106664", "sr:geonames:1018100"]
+    },
+    {
+      "factual_location_id": "pl-gp-v01-b3af21b267c8fc08148a",
+      "preferred_name": "Boekenhoutfontein",
+      "source_record_ids": ["sr:nga_gns:-1212586:-1779679:107613", "sr:geonames:1018101"]
+    }
+  ]
+}

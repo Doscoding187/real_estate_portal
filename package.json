@@ -97,6 +97,8 @@
     "geography:coverage:check": "node tools/geography-coverage/generate.mjs --manifest data/geography-coverage-v0.1/gauteng-territory-manifest.v0.1.json --check",
     "geography:coverage:probes": "node tools/geography-coverage/probes.mjs",
     "geography:coverage:status": "node tools/geography-coverage/status.mjs",
+    "geography:coverage:audit": "node tools/geography-coverage/audit-residual-parent-edges.mjs",
+    "geography:coverage:collision-audit": "node tools/geography-coverage/audit-residual-collisions.mjs",
     "db:scenario:prepare": "tsx scripts/databaseAuthorityCli.ts scenario:prepare",
     "db:scenario:verify": "tsx scripts/databaseAuthorityCli.ts scenario:verify",
     "db:listing-preview:prepare": "cross-env NODE_ENV=development APP_ENV=development tsx scripts/databaseAuthorityCli.ts listing-preview:prepare",

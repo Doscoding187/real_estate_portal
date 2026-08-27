@@ -1,0 +1,28 @@
+{
+  "artifact_version": "boksburg-hughes-exts-parent-evidence-v0.1",
+  "town": "Boksburg",
+  "parent_natural_key": "gauteng/boksburg",
+  "administrative_context": "Ekurhuleni",
+  "evidence_class": "official_municipal_valuation_and_service_area_relationship",
+  "source": {
+    "publisher": "City of Ekurhuleni",
+    "url": "https://www.ekurhuleni.gov.za/wp-content/uploads/2021/11/BOKSBURG_FULL_TITLE_BOOK-12.pdf",
+    "section": "General Valuation Roll — AREA: BOKSBURG — HUGHES X55/X56/X57/X58/X59 township entries",
+    "retrieved": "2026-08-27",
+    "licence_note": "Official municipal valuation roll used for locality relationship assertions; no prose or geometry is copied."
+  },
+  "supporting_sources": [
+    {
+      "publisher": "City of Ekurhuleni",
+      "url": "https://www.ekurhuleni.gov.za/press-releases/service-delivery-interruptions/planned-water-supply-interruption/",
+      "section": "Planned water supply interruption in Edenvale & Boksburg — affected areas include Hughes",
+      "retrieved": "2026-08-27"
+    }
+  ],
+  "source_name_variants": {
+    "Hughes Exts": "Hughes"
+  },
+  "suburb_names": [
+    "Hughes Exts"
+  ]
+}

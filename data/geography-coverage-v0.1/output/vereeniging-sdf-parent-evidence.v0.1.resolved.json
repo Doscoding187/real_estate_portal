@@ -1,0 +1,29 @@
+{
+  "resolved_edges_version": "vereeniging-sdf-parent-evidence.v0.1.resolved",
+  "town": "Vereeniging",
+  "parent_natural_key": "gauteng/vereeniging",
+  "source": {
+    "publisher": "Emfuleni Local Municipality",
+    "url": "https://emfuleni.gov.za/wp-content/uploads/2025/02/EMFULENI_SDF_2023-2024.pdf",
+    "section": "Spatial Development Framework 2023–2024 — Table 14: existing industrial and commercial areas",
+    "retrieved": "2026-08-26",
+    "licence_note": "Official municipal planning-area label used for locality membership assertion; no prose, geometry, or property data is copied."
+  },
+  "edge_count": 1,
+  "edges": [
+    {
+      "factual_location_id": "pl-gp-v01-c85db613f801f91fd40e",
+      "preferred_name": "NW7",
+      "factual_type": "neighbourhood",
+      "parent_natural_key": "gauteng/vereeniging",
+      "evidence_class": "official_municipal_spatial_development_framework_area_list",
+      "citation": "https://emfuleni.gov.za/wp-content/uploads/2025/02/EMFULENI_SDF_2023-2024.pdf#Spatial%20Development%20Framework%202023%E2%80%932024%20%E2%80%94%20Table%2014%3A%20existing%20industrial%20and%20commercial%20areas (retrieved 2026-08-26)"
+    }
+  ],
+  "diagnostics": {
+    "researched_names": 1,
+    "matched_already_projected": [],
+    "names_not_in_canonical_layer": [],
+    "ambiguous_canonical_matches": []
+  }
+}

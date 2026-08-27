@@ -1,0 +1,31 @@
+{
+  "resolved_edges_version": "katlehong-natalspruit-cca-parent-evidence.v0.1.resolved",
+  "town": "Katlehong",
+  "parent_natural_key": "gauteng/katlehong",
+  "allow_duplicate_natural_key_grouping": false,
+  "source": {
+    "publisher": "City of Ekurhuleni Corporate Geo-Informatics Division",
+    "url": "https://gis.ekurhuleni.gov.za/arcgis/rest/services/Ekurhuleni/Ekurhuleni_Propety_Data_Map/MapServer/158",
+    "section": "Townships layer (158) — EPSG:4326 point-intersection query for the canonical Natalspruit point returned NADUSTRIA X1 / NADUSTRIA with CCA=KATLEHONG 1",
+    "retrieved": "2026-08-27",
+    "licence_note": "Official municipal spatial layer used for a point-to-CCA parent assertion; no polygon geometry is copied."
+  },
+  "edge_count": 1,
+  "edges": [
+    {
+      "factual_location_id": "pl-gp-v01-26a5c7cb51ab40b65336",
+      "preferred_name": "Natalspruit",
+      "factual_type": "locality",
+      "parent_natural_key": "gauteng/katlehong",
+      "evidence_class": "official_municipal_gis_point_in_polygon_cca",
+      "citation": "https://gis.ekurhuleni.gov.za/arcgis/rest/services/Ekurhuleni/Ekurhuleni_Propety_Data_Map/MapServer/158#Townships%20layer%20(158)%20%E2%80%94%20EPSG%3A4326%20point-intersection%20query%20for%20the%20canonical%20Natalspruit%20point%20returned%20NADUSTRIA%20X1%20%2F%20NADUSTRIA%20with%20CCA%3DKATLEHONG%201 (retrieved 2026-08-27)"
+    }
+  ],
+  "diagnostics": {
+    "researched_names": 0,
+    "identity_specific_records": 1,
+    "matched_already_projected": [],
+    "names_not_in_canonical_layer": [],
+    "ambiguous_canonical_matches": []
+  }
+}

@@ -1,0 +1,52 @@
+{
+  "artifact_version": "meyerton-risi-sh-electricity-parent-evidence-v0.1",
+  "town": "Meyerton",
+  "parent_natural_key": "gauteng/meyerton",
+  "administrative_context": "Sedibeng",
+  "evidence_class": "official_municipal_electricity_network_identity_parent_assertion",
+  "source": {
+    "publisher": "Midvaal Local Municipality",
+    "url": "https://www.midvaal.gov.za/wp-content/uploads/2025/06/Annexure-O-Midvaal-Electricity-Master-Plan-2021.pdf",
+    "section": "Figure 15 — Distribution network schematic for MLM ECS 4 Substation network SH1, titled MEYERTON: ESC4 SUB RISI VILLE & RISI S.F SINGLE LINE DIAGRAM",
+    "retrieved": "2026-08-27",
+    "licence_note": "Official municipal infrastructure-planning publication used for an identity-specific locality-to-town context assertion; no diagram geometry or property data is copied."
+  },
+  "supporting_sources": [
+    {
+      "publisher": "Midvaal Local Municipality",
+      "url": "https://www.midvaal.gov.za/wp-content/themes/midvaal/assets/images/finance-notices/Glubay_GP10084MR_Draft_Scoping_Report_with_Appendixes_FOR_COMMENT.pdf",
+      "section": "Table 3 — adjacent land and water uses lists Residential: Risi Small Holdings as a named residential area in the Midvaal planning context",
+      "retrieved": "2026-08-27"
+    },
+    {
+      "publisher": "Midvaal Local Municipality",
+      "url": "https://www.midvaal.gov.za/wp-content/uploads/2025/06/Annexure-B-2020_2021-Spatial-Development-Framework-SDF.pdf",
+      "section": "Residential Settlement Patterns — the formal-towns table includes Meyerton and Risiville, and describes Meyerton as the highest-order town in the area",
+      "retrieved": "2026-08-27"
+    }
+  ],
+  "identity_note": "The canonical Risi Sh identity is retained exactly. The source-native Sh abbreviation is reconciled to the official municipal Risi S.F. / Risi Small Holdings references; the municipal electricity network title explicitly places that Risi area in the Meyerton network context. The edge does not create a Risi alias or use a display-text-only parent fallback.",
+  "identity_specific_records": [
+    {
+      "factual_location_id": "pl-gp-v01-6c4517ef22f698e5cd43",
+      "preferred_name": "Risi Sh",
+      "source_record_ids": [
+        "sr:osm:node/1380997903"
+      ],
+      "canonical_point": {
+        "longitude": 27.9973722,
+        "latitude": -26.6412807
+      },
+      "municipal_identity_match": {
+        "source_native_name": "Risi Sh",
+        "official_name_forms": [
+          "Risi S.F.",
+          "Risi Small Holdings"
+        ],
+        "planning_context": "Meyerton / Risiville municipal electricity network",
+        "municipality": "Midvaal Local Municipality",
+        "district": "Sedibeng"
+      }
+    }
+  ]
+}

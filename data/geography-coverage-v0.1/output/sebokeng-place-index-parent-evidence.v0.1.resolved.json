@@ -1,0 +1,226 @@
+{
+  "resolved_edges_version": "sebokeng-place-index-parent-evidence.v0.1.resolved",
+  "town": "Sebokeng",
+  "parent_natural_key": "gauteng/sebokeng",
+  "source": {
+    "publisher": "Office of the Chief Justice, Department of Justice and Constitutional Development",
+    "url": "https://www.ocj.gov.za/maps/areas-gp.html",
+    "section": "Gauteng: Find a court in your area — Sebokeng Sub District entries",
+    "retrieved": "2026-08-26",
+    "licence_note": "Official government place-index used for service-area membership assertions; no prose or geometry is copied."
+  },
+  "edge_count": 15,
+  "edges": [
+    {
+      "factual_location_id": "pl-gp-v01-02d794787142fa8b5d5b",
+      "preferred_name": "Westside Park",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/sebokeng",
+      "evidence_class": "official_magisterial_place_index",
+      "citation": "https://www.ocj.gov.za/maps/areas-gp.html#Gauteng%3A%20Find%20a%20court%20in%20your%20area%20%E2%80%94%20Sebokeng%20Sub%20District%20entries (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-1282864bd9833aa7dc35",
+      "preferred_name": "Sebokeng Unit 3",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/sebokeng",
+      "evidence_class": "official_magisterial_place_index",
+      "citation": "https://www.ocj.gov.za/maps/areas-gp.html#Gauteng%3A%20Find%20a%20court%20in%20your%20area%20%E2%80%94%20Sebokeng%20Sub%20District%20entries (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-4d2a43f78ed1e6e0bb5f",
+      "preferred_name": "Sebokeng Unit 14",
+      "factual_type": "village",
+      "parent_natural_key": "gauteng/sebokeng",
+      "evidence_class": "official_magisterial_place_index",
+      "citation": "https://www.ocj.gov.za/maps/areas-gp.html#Gauteng%3A%20Find%20a%20court%20in%20your%20area%20%E2%80%94%20Sebokeng%20Sub%20District%20entries (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-519925f222ab14edf0fe",
+      "preferred_name": "Johandeo AH",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/sebokeng",
+      "evidence_class": "official_magisterial_place_index",
+      "citation": "https://www.ocj.gov.za/maps/areas-gp.html#Gauteng%3A%20Find%20a%20court%20in%20your%20area%20%E2%80%94%20Sebokeng%20Sub%20District%20entries (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-549fee2f4a4f48382bc3",
+      "preferred_name": "Sebokeng Unit 19",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/sebokeng",
+      "evidence_class": "official_magisterial_place_index",
+      "citation": "https://www.ocj.gov.za/maps/areas-gp.html#Gauteng%3A%20Find%20a%20court%20in%20your%20area%20%E2%80%94%20Sebokeng%20Sub%20District%20entries (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-5db01f3793ea32e253f4",
+      "preferred_name": "Sebokeng Unit 17",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/sebokeng",
+      "evidence_class": "official_magisterial_place_index",
+      "citation": "https://www.ocj.gov.za/maps/areas-gp.html#Gauteng%3A%20Find%20a%20court%20in%20your%20area%20%E2%80%94%20Sebokeng%20Sub%20District%20entries (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-627b1de69d21b3c5cced",
+      "preferred_name": "Cyferpan",
+      "factual_type": "neighbourhood",
+      "parent_natural_key": "gauteng/sebokeng",
+      "evidence_class": "official_magisterial_place_index",
+      "citation": "https://www.ocj.gov.za/maps/areas-gp.html#Gauteng%3A%20Find%20a%20court%20in%20your%20area%20%E2%80%94%20Sebokeng%20Sub%20District%20entries (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-667b8481ad18e71d2985",
+      "preferred_name": "Sebokeng Unit 12",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/sebokeng",
+      "evidence_class": "official_magisterial_place_index",
+      "citation": "https://www.ocj.gov.za/maps/areas-gp.html#Gauteng%3A%20Find%20a%20court%20in%20your%20area%20%E2%80%94%20Sebokeng%20Sub%20District%20entries (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-8a4e6608c8fb93599061",
+      "preferred_name": "Boiketlong",
+      "factual_type": "locality",
+      "parent_natural_key": "gauteng/sebokeng",
+      "evidence_class": "official_magisterial_place_index",
+      "citation": "https://www.ocj.gov.za/maps/areas-gp.html#Gauteng%3A%20Find%20a%20court%20in%20your%20area%20%E2%80%94%20Sebokeng%20Sub%20District%20entries (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-9f407c0da59ae6746828",
+      "preferred_name": "Sebokeng Unit 11",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/sebokeng",
+      "evidence_class": "official_magisterial_place_index",
+      "citation": "https://www.ocj.gov.za/maps/areas-gp.html#Gauteng%3A%20Find%20a%20court%20in%20your%20area%20%E2%80%94%20Sebokeng%20Sub%20District%20entries (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-b8ce662ee1c6ee5f30fe",
+      "preferred_name": "Sebokeng Unit 6",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/sebokeng",
+      "evidence_class": "official_magisterial_place_index",
+      "citation": "https://www.ocj.gov.za/maps/areas-gp.html#Gauteng%3A%20Find%20a%20court%20in%20your%20area%20%E2%80%94%20Sebokeng%20Sub%20District%20entries (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-bd6b8dbdfc37ea921c0b",
+      "preferred_name": "Sebokeng Unit 10",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/sebokeng",
+      "evidence_class": "official_magisterial_place_index",
+      "citation": "https://www.ocj.gov.za/maps/areas-gp.html#Gauteng%3A%20Find%20a%20court%20in%20your%20area%20%E2%80%94%20Sebokeng%20Sub%20District%20entries (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-c89ea72559924710b2ea",
+      "preferred_name": "Sebokeng Unit 13",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/sebokeng",
+      "evidence_class": "official_magisterial_place_index",
+      "citation": "https://www.ocj.gov.za/maps/areas-gp.html#Gauteng%3A%20Find%20a%20court%20in%20your%20area%20%E2%80%94%20Sebokeng%20Sub%20District%20entries (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-d14e0ce9a6884cec31df",
+      "preferred_name": "Sebokeng Unit 8",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/sebokeng",
+      "evidence_class": "official_magisterial_place_index",
+      "citation": "https://www.ocj.gov.za/maps/areas-gp.html#Gauteng%3A%20Find%20a%20court%20in%20your%20area%20%E2%80%94%20Sebokeng%20Sub%20District%20entries (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-d151f199ff5ac84ed7d3",
+      "preferred_name": "Sebokeng Unit 7",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/sebokeng",
+      "evidence_class": "official_magisterial_place_index",
+      "citation": "https://www.ocj.gov.za/maps/areas-gp.html#Gauteng%3A%20Find%20a%20court%20in%20your%20area%20%E2%80%94%20Sebokeng%20Sub%20District%20entries (retrieved 2026-08-26)"
+    }
+  ],
+  "diagnostics": {
+    "researched_names": 15,
+    "matched_already_projected": [
+      {
+        "name": "Cyferpan",
+        "factual_location_id": "pl-gp-v01-627b1de69d21b3c5cced",
+        "existing_parent_natural_key": "gauteng/sebokeng",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Johandeo AH",
+        "factual_location_id": "pl-gp-v01-519925f222ab14edf0fe",
+        "existing_parent_natural_key": "gauteng/sebokeng",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Sebokeng Unit 3",
+        "factual_location_id": "pl-gp-v01-1282864bd9833aa7dc35",
+        "existing_parent_natural_key": "gauteng/sebokeng",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Sebokeng Unit 6",
+        "factual_location_id": "pl-gp-v01-b8ce662ee1c6ee5f30fe",
+        "existing_parent_natural_key": "gauteng/sebokeng",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Sebokeng Unit 7",
+        "factual_location_id": "pl-gp-v01-d151f199ff5ac84ed7d3",
+        "existing_parent_natural_key": "gauteng/sebokeng",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Sebokeng Unit 8",
+        "factual_location_id": "pl-gp-v01-d14e0ce9a6884cec31df",
+        "existing_parent_natural_key": "gauteng/sebokeng",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Sebokeng Unit 10",
+        "factual_location_id": "pl-gp-v01-bd6b8dbdfc37ea921c0b",
+        "existing_parent_natural_key": "gauteng/sebokeng",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Sebokeng Unit 11",
+        "factual_location_id": "pl-gp-v01-9f407c0da59ae6746828",
+        "existing_parent_natural_key": "gauteng/sebokeng",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Sebokeng Unit 12",
+        "factual_location_id": "pl-gp-v01-667b8481ad18e71d2985",
+        "existing_parent_natural_key": "gauteng/sebokeng",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Sebokeng Unit 13",
+        "factual_location_id": "pl-gp-v01-c89ea72559924710b2ea",
+        "existing_parent_natural_key": "gauteng/sebokeng",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Sebokeng Unit 14",
+        "factual_location_id": "pl-gp-v01-4d2a43f78ed1e6e0bb5f",
+        "existing_parent_natural_key": "gauteng/sebokeng",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Sebokeng Unit 17",
+        "factual_location_id": "pl-gp-v01-5db01f3793ea32e253f4",
+        "existing_parent_natural_key": "gauteng/sebokeng",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Sebokeng Unit 19",
+        "factual_location_id": "pl-gp-v01-549fee2f4a4f48382bc3",
+        "existing_parent_natural_key": "gauteng/sebokeng",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Westside Park",
+        "factual_location_id": "pl-gp-v01-02d794787142fa8b5d5b",
+        "existing_parent_natural_key": "gauteng/sebokeng",
+        "parent_matches_evidence": true
+      }
+    ],
+    "names_not_in_canonical_layer": [],
+    "ambiguous_canonical_matches": []
+  }
+}

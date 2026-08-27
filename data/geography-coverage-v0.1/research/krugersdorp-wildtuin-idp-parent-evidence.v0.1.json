@@ -1,0 +1,21 @@
+{
+  "artifact_version": "krugersdorp-wildtuin-idp-parent-evidence-v0.1",
+  "town": "Krugersdorp",
+  "parent_natural_key": "gauteng/krugersdorp",
+  "administrative_context": "West Rand",
+  "evidence_class": "official_municipal_idp_ward_area_list",
+  "source": {
+    "publisher": "Mogale City Local Municipality",
+    "url": "https://mogalecity.gov.za/wp-content/uploads/Pdfs/Council%20Page/Key%20Documents/IDP/2025%20-%202026/Adopted%202025-26%20IDP.pdf?_t=1750320721",
+    "section": "2025/26 Revised IDP, MCLM at a glance and Krugersdorp-CBD clustered wards 17, 18, 20, 21, 22, 26, 29, 37 and 38; Krugersdorp Game Reserve and Wildtuin Park Township",
+    "retrieved": "2026-08-27",
+    "licence_note": "Official municipal IDP used for locality membership assertions; no prose or geometry is copied."
+  },
+  "source_name_variants": {
+    "Krugersdorp Game Reserve": "Krugersdorp Wildtuin",
+    "Wildtuin Park Township": "Krugersdorp Wildtuin"
+  },
+  "suburb_names": [
+    "Krugersdorp Wildtuin"
+  ]
+}

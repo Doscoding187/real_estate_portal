@@ -1,0 +1,47 @@
+{
+  "resolved_edges_version": "thembisa-cca-spatial-parent-evidence.v0.1.resolved",
+  "town": "Thembisa",
+  "parent_natural_key": "gauteng/thembisa",
+  "allow_duplicate_natural_key_grouping": false,
+  "source": {
+    "publisher": "City of Ekurhuleni Corporate Geo-Informatics Division",
+    "url": "https://gis.ekurhuleni.gov.za/arcgis/rest/services/Ekurhuleni/Ekurhuleni_Propety_Data_Map/MapServer/158",
+    "section": "Townships layer (158) — EPSG:4326 point-intersection queries returned ESIZIBA, EMANGWENI, and IGQAGQA X1 with CCA=TEMBISA 1",
+    "retrieved": "2026-08-27",
+    "licence_note": "Official municipal spatial layer used for point-to-CCA parent assertions; no polygon geometry is copied."
+  },
+  "edge_count": 3,
+  "edges": [
+    {
+      "factual_location_id": "pl-gp-v01-3641b9b3a2f8716452de",
+      "preferred_name": "Sizibeni",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/thembisa",
+      "evidence_class": "official_municipal_gis_point_in_polygon_cca",
+      "citation": "https://gis.ekurhuleni.gov.za/arcgis/rest/services/Ekurhuleni/Ekurhuleni_Propety_Data_Map/MapServer/158#Townships%20layer%20(158)%20%E2%80%94%20EPSG%3A4326%20point-intersection%20queries%20returned%20ESIZIBA%2C%20EMANGWENI%2C%20and%20IGQAGQA%20X1%20with%20CCA%3DTEMBISA%201 (retrieved 2026-08-27)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-465ec2c42a0978f460e3",
+      "preferred_name": "Mmangweni",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/thembisa",
+      "evidence_class": "official_municipal_gis_point_in_polygon_cca",
+      "citation": "https://gis.ekurhuleni.gov.za/arcgis/rest/services/Ekurhuleni/Ekurhuleni_Propety_Data_Map/MapServer/158#Townships%20layer%20(158)%20%E2%80%94%20EPSG%3A4326%20point-intersection%20queries%20returned%20ESIZIBA%2C%20EMANGWENI%2C%20and%20IGQAGQA%20X1%20with%20CCA%3DTEMBISA%201 (retrieved 2026-08-27)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-490d96b230aad9b67f0f",
+      "preferred_name": "Gqagqeni",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/thembisa",
+      "evidence_class": "official_municipal_gis_point_in_polygon_cca",
+      "citation": "https://gis.ekurhuleni.gov.za/arcgis/rest/services/Ekurhuleni/Ekurhuleni_Propety_Data_Map/MapServer/158#Townships%20layer%20(158)%20%E2%80%94%20EPSG%3A4326%20point-intersection%20queries%20returned%20ESIZIBA%2C%20EMANGWENI%2C%20and%20IGQAGQA%20X1%20with%20CCA%3DTEMBISA%201 (retrieved 2026-08-27)"
+    }
+  ],
+  "diagnostics": {
+    "researched_names": 0,
+    "identity_specific_records": 3,
+    "matched_already_projected": [],
+    "names_not_in_canonical_layer": [],
+    "ambiguous_canonical_matches": []
+  }
+}

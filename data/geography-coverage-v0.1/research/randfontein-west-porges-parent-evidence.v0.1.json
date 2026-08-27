@@ -1,0 +1,17 @@
+{
+  "artifact_version": "randfontein-west-porges-parent-evidence-v0.1",
+  "town": "Randfontein",
+  "parent_natural_key": "gauteng/randfontein",
+  "administrative_context": "West Rand",
+  "evidence_class": "official_municipal_neighbourhood_schedule",
+  "source": {
+    "publisher": "Randfontein Local Municipality / National Treasury MFMA",
+    "url": "https://mfma.treasury.gov.za/Documents/06.%20Annual%20Reports/2011-12/02.%20Local%20municipalities/GT482%20Randfontein/GT482%20Randfontein%20Annual%20Report%202011-12.pdf",
+    "section": "T 1.2.5 Overview of Neighbourhoods within Randfontein Local Municipality",
+    "retrieved": "2026-08-27",
+    "licence_note": "Official municipal annual-report schedule used for locality membership assertions; no prose or geometry is copied."
+  },
+  "suburb_names": [
+    "West Porges"
+  ]
+}

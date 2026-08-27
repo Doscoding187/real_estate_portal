@@ -1,0 +1,31 @@
+{
+  "resolved_edges_version": "krugersdorp-mindalore-north-planning-gazette-parent-evidence.v0.1.resolved",
+  "town": "Krugersdorp",
+  "parent_natural_key": "gauteng/krugersdorp",
+  "allow_duplicate_natural_key_grouping": false,
+  "source": {
+    "publisher": "Gauteng Provincial Government — official provincial gazette",
+    "url": "https://archive.opengazettes.org.za/archive/ZA-GT/1999/provincial-gazette-ZA-GT-vol-5-no-22-dated-1999-03-31.pdf",
+    "section": "Notice 1885 of 1999 — application to amend the Krugersdorp Town Planning Scheme for property in Mindalore, identifying the adjacent business area in Mindalore North and directing representations to the Krugersdorp Local Council",
+    "retrieved": "2026-08-27",
+    "licence_note": "Official provincial planning notice used for a locality-to-town context assertion; no prose, property data, or geometry is copied."
+  },
+  "edge_count": 1,
+  "edges": [
+    {
+      "factual_location_id": "pl-gp-v01-e417025c42ab9d2149f7",
+      "preferred_name": "Mindalore North",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/krugersdorp",
+      "evidence_class": "official_provincial_planning_gazette_parent_assertion",
+      "citation": "https://archive.opengazettes.org.za/archive/ZA-GT/1999/provincial-gazette-ZA-GT-vol-5-no-22-dated-1999-03-31.pdf#Notice%201885%20of%201999%20%E2%80%94%20application%20to%20amend%20the%20Krugersdorp%20Town%20Planning%20Scheme%20for%20property%20in%20Mindalore%2C%20identifying%20the%20adjacent%20business%20area%20in%20Mindalore%20North%20and%20directing%20representations%20to%20the%20Krugersdorp%20Local%20Council (retrieved 2026-08-27)"
+    }
+  ],
+  "diagnostics": {
+    "researched_names": 0,
+    "identity_specific_records": 1,
+    "matched_already_projected": [],
+    "names_not_in_canonical_layer": [],
+    "ambiguous_canonical_matches": []
+  }
+}

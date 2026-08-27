@@ -1,0 +1,17 @@
+{
+  "artifact_version": "randfontein-government-village-parent-evidence-v0.1",
+  "town": "Randfontein",
+  "parent_natural_key": "gauteng/randfontein",
+  "administrative_context": "West Rand",
+  "evidence_class": "historical_government_gazette_municipal_boundary",
+  "source": {
+    "publisher": "Transvaal Provincial Administration / Provincial Gazette archive",
+    "url": "https://archive.opengazettes.org.za/archive/ZA-transvaal/1966/provincial-gazette-ZA-transvaal-vol-199-no-3244-dated-1966-12-14.pdf",
+    "section": "Municipality of Randfontein — numbers of wards and description of ward boundaries; Government Village boundary feature",
+    "retrieved": "2026-08-27",
+    "licence_note": "Historical government-gazette boundary schedule used for locality relationship assertions; no prose or geometry is copied."
+  },
+  "suburb_names": [
+    "Government Village"
+  ]
+}

@@ -1,0 +1,66 @@
+{
+  "artifact_version": "vanderbijlpark-auidwes-lokasie-mdb-parent-evidence-v0.1",
+  "town": "Vanderbijlpark",
+  "parent_natural_key": "gauteng/vanderbijlpark",
+  "administrative_context": "Sedibeng",
+  "evidence_class": "official_mdb_ward_point_intersection_with_municipal_town_context",
+  "source": {
+    "publisher": "South African Department of Planning, Monitoring and Evaluation — official MDB2020 spatial layer",
+    "url": "https://dpmegis.dpme.gov.za/arcgis/rest/services/Geospatial_Data_Layers/MapServer/23",
+    "section": "Wards (MDB2020) layer (23) — EPSG:4326 point-intersection query for the canonical Vanderbijlpark-auidwes Lokasie point returned Gauteng, Emfuleni Local Municipality (GT421), Ward 4 (GT421_4)",
+    "retrieved": "2026-08-27",
+    "licence_note": "Official ward boundary service used for an identity-specific spatial parent assertion; no boundary geometry is copied."
+  },
+  "supporting_sources": [
+    {
+      "publisher": "Municipal Demarcation Board",
+      "url": "https://www.demarcation.org.za/wp-content/uploads/2021/07/Ward_4__Emfuleni_Local_Municipality.pdf",
+      "section": "Emfuleni Local Municipality GT421 Ward 4 map — the ward map identifies Vanderbijlpark and its southwest/east residential subdivisions, including Vanderbijlpark SW 5",
+      "retrieved": "2026-08-27"
+    },
+    {
+      "publisher": "Emfuleni Local Municipality",
+      "url": "https://emfuleni.gov.za/wp-content/uploads/2025/02/Emfuleni-Spatial-Development-Framework-Vision-2035.pdf",
+      "section": "Consolidated SDF Report, section 2.4.2 Vanderbijlpark — identifies SW 5 as a Vanderbijlpark suburb and describes Vanderbijlpark as a town",
+      "retrieved": "2026-08-27"
+    },
+    {
+      "publisher": "Emfuleni Local Municipality",
+      "url": "https://emfuleni.gov.za/elm-geographic-locations/",
+      "section": "Geographic locations — identifies Vanderbijlpark and Vereeniging as Emfuleni's two main town centers",
+      "retrieved": "2026-08-27"
+    }
+  ],
+  "identity_note": "The canonical Vanderbijlpark-auidwes Lokasie identity is retained exactly. The parent edge uses its identity-specific point intersecting official Emfuleni Ward 4 and the official municipal/ward-map Vanderbijlpark town context; the source display name is not used as a standalone geography fallback.",
+  "spatial_query": {
+    "geometry_type": "esriGeometryPoint",
+    "spatial_reference": "EPSG:4326",
+    "spatial_relationship": "esriSpatialRelIntersects",
+    "out_fields": "Province,Municipali,CAT_B,WardNo,District,DistrictCo,WardID,WardLabel,Date",
+    "return_geometry": false
+  },
+  "identity_specific_records": [
+    {
+      "factual_location_id": "pl-gp-v01-a54d464edbeb8094f958",
+      "preferred_name": "Vanderbijlpark-auidwes Lokasie",
+      "source_record_ids": [
+        "sr:geonames:944985",
+        "sr:nga_gns:-1295555:-1877539:11189"
+      ],
+      "canonical_point": {
+        "longitude": 27.8666685,
+        "latitude": -26.7333315
+      },
+      "municipal_query_result": {
+        "province": "Gauteng",
+        "municipality": "Emfuleni Local Municipality",
+        "municipality_code": "GT421",
+        "ward_number": 4,
+        "district": "Sedibeng",
+        "district_code": "DC42",
+        "ward_id": "74201004",
+        "ward_label": "GT421_4"
+      }
+    }
+  ]
+}

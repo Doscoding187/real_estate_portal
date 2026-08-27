@@ -22,7 +22,9 @@
     "Sangweni": "Esangweni",
     "Sivana": "Isivana",
     "Vusimuzi": "Vusimusi",
-    "Welumlambo": "Welomlambo"
+    "Welumlambo": "Welomlambo",
+    "Makhulong": "Makulong",
+    "Ventershof AH": "Venstershof AH"
   },
   "suburb_names": [
     "Caleni",
@@ -48,6 +50,8 @@
     "Temong",
     "Thiteng",
     "Vusimuzi",
-    "Welumlambo"
+    "Welumlambo",
+    "Makhulong",
+    "Ventershof AH"
   ]
 }

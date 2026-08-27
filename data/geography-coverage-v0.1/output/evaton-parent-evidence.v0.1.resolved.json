@@ -1,0 +1,45 @@
+{
+  "resolved_edges_version": "evaton-parent-evidence.v0.1.resolved",
+  "town": "Evaton",
+  "parent_natural_key": "gauteng/evaton",
+  "source": {
+    "publisher": "Emfuleni Local Municipality",
+    "url": "https://emfuleni.gov.za/wp-content/uploads/2025/02/Voice_of_Emfuleni_May_2024.pdf",
+    "section": "Cycles 205/206 area list: Evaton, Evaton North, Evaton West (Beverley Hills), and Evaton Small Farms",
+    "retrieved": "2026-08-26",
+    "licence_note": "Official municipal service-area list used for locality membership assertions; no prose, billing data, or geometry is copied."
+  },
+  "edge_count": 3,
+  "edges": [
+    {
+      "factual_location_id": "pl-gp-v01-35c5c796ea3ad5704d34",
+      "preferred_name": "Beverley Hills",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/evaton",
+      "evidence_class": "official_municipal_service_area_list",
+      "citation": "https://emfuleni.gov.za/wp-content/uploads/2025/02/Voice_of_Emfuleni_May_2024.pdf#Cycles%20205%2F206%20area%20list%3A%20Evaton%2C%20Evaton%20North%2C%20Evaton%20West%20(Beverley%20Hills)%2C%20and%20Evaton%20Small%20Farms (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-d5f6e6454caad9e091ff",
+      "preferred_name": "Evaton Small Farms",
+      "factual_type": "village",
+      "parent_natural_key": "gauteng/evaton",
+      "evidence_class": "official_municipal_service_area_list",
+      "citation": "https://emfuleni.gov.za/wp-content/uploads/2025/02/Voice_of_Emfuleni_May_2024.pdf#Cycles%20205%2F206%20area%20list%3A%20Evaton%2C%20Evaton%20North%2C%20Evaton%20West%20(Beverley%20Hills)%2C%20and%20Evaton%20Small%20Farms (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-eff14879370464c93e88",
+      "preferred_name": "Evaton North",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/evaton",
+      "evidence_class": "official_municipal_service_area_list",
+      "citation": "https://emfuleni.gov.za/wp-content/uploads/2025/02/Voice_of_Emfuleni_May_2024.pdf#Cycles%20205%2F206%20area%20list%3A%20Evaton%2C%20Evaton%20North%2C%20Evaton%20West%20(Beverley%20Hills)%2C%20and%20Evaton%20Small%20Farms (retrieved 2026-08-26)"
+    }
+  ],
+  "diagnostics": {
+    "researched_names": 3,
+    "matched_already_projected": [],
+    "names_not_in_canonical_layer": [],
+    "ambiguous_canonical_matches": []
+  }
+}

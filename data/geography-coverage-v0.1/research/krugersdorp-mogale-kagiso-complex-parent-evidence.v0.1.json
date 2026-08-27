@@ -1,0 +1,46 @@
+{
+  "artifact_version": "krugersdorp-mogale-kagiso-complex-parent-evidence-v0.1",
+  "town": "Krugersdorp",
+  "parent_natural_key": "gauteng/krugersdorp",
+  "administrative_context": "West Rand",
+  "evidence_class": "official_municipal_spatial_cluster_and_area_register",
+  "source": {
+    "publisher": "Mogale City Local Municipality",
+    "url": "https://mogalecity.gov.za/wp-content/uploads/Pdfs/Media%20Room/Public%20Notice/2019/SDF%20FINAL%20DRAFT%20JUNE%202019.pdf?_t=1564129236",
+    "section": "Spatial Development Framework, 8.2.4 Local Nodes — Kagiso, Azaadville & Rietvallei; the Kagiso Complex is situated south of the Krugersdorp CBD",
+    "retrieved": "2026-08-27",
+    "licence_note": "Official municipal spatial-planning source used for named locality-to-town-cluster assertions; no prose or geometry is copied."
+  },
+  "supporting_sources": [
+    {
+      "publisher": "Mogale City Local Municipality",
+      "url": "https://mogalecity.gov.za/mogale-city/live-in/",
+      "section": "Mogale City area register: the city is made up of areas including Krugersdorp, Kagiso, Rietvallei, and Azaadville",
+      "retrieved": "2026-08-27"
+    },
+    {
+      "publisher": "Mogale City Local Municipality",
+      "url": "https://mogalecity.gov.za/wp-content/uploads/Pdfs/Business%20Page/Tenders/Tenders%202021/IEM%20%28P%29%2002_2022/Contract_IEM_P_02_2022.pdf?_t=1629354056",
+      "section": "IEM (P) 02/2022 tender, site information: Rietvallei Extension 2 within Mogale City Local Municipality and the Rietvallei 241 IQ farm context",
+      "retrieved": "2026-08-27"
+    }
+  ],
+  "identity_specific_records": [
+    {
+      "factual_location_id": "pl-gp-v01-e3f2e300de3c1df1a59d",
+      "preferred_name": "Kagiso"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-f4bc69ea01e6387310f8",
+      "preferred_name": "Azaadville"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-fd2df74f870a774312ae",
+      "preferred_name": "Rietvallei"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-dcd3b8cc7af96af8b4e3",
+      "preferred_name": "Rietvallei 241-IQ"
+    }
+  ]
+}

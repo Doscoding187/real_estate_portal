@@ -1,0 +1,29 @@
+{
+  "resolved_edges_version": "heidelberg-bergsig-parent-evidence.v0.1.resolved",
+  "town": "Heidelberg",
+  "parent_natural_key": "gauteng/heidelberg",
+  "source": {
+    "publisher": "Lesedi Local Municipality / National Treasury MFMA",
+    "url": "https://lg.treasury.gov.za/supportingdocs/GT423/GT423_IDP%20Final_2024_Y_20230622T115751Z_tebogos.pdf",
+    "section": "15.1.1 Heidelberg Water Sub-district 01 — Heidelberg south of Blesbokspruit and Bergsig HDB X09 (SD01)",
+    "retrieved": "2026-08-27",
+    "licence_note": "Official municipal integrated development plan used for locality relationship assertions; no prose or geometry is copied."
+  },
+  "edge_count": 1,
+  "edges": [
+    {
+      "factual_location_id": "pl-gp-v01-adfbf65a3638598c0b3f",
+      "preferred_name": "Bergsig",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/heidelberg",
+      "evidence_class": "official_municipal_idp_water_subdistrict_relationship",
+      "citation": "https://lg.treasury.gov.za/supportingdocs/GT423/GT423_IDP%20Final_2024_Y_20230622T115751Z_tebogos.pdf#15.1.1%20Heidelberg%20Water%20Sub-district%2001%20%E2%80%94%20Heidelberg%20south%20of%20Blesbokspruit%20and%20Bergsig%20HDB%20X09%20(SD01) (retrieved 2026-08-27)"
+    }
+  ],
+  "diagnostics": {
+    "researched_names": 1,
+    "matched_already_projected": [],
+    "names_not_in_canonical_layer": [],
+    "ambiguous_canonical_matches": []
+  }
+}

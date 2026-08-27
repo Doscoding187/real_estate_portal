@@ -36,6 +36,12 @@ const projection = readJson(`${OUTPUT}/gauteng_runtime_reference_projection_v0.2
 const mapping = readJsonl(`${OUTPUT}/gauteng_factual_runtime_mapping_v0.2.jsonl`);
 const queue = readJsonl(`${OUTPUT}/gauteng_review_queue_v0.1.jsonl`);
 const disposition = readJson(`${OUTPUT}/gauteng_coverage_disposition_v0.1.json`);
+const residualParentAudit = readJson(
+  'data/geography-coverage-v0.1/research/residual-parent-edge-audit.v0.1.json',
+);
+const residualCollisionAudit = readJson(
+  'data/geography-coverage-v0.1/research/residual-collision-audit.v0.1.json',
+);
 
 const rowsByNaturalKey = new Map(projection.rows.map(row => [row.runtimeNaturalKey ?? row.runtime_natural_key, row]));
 const rowsByName = new Map(projection.rows.map(row => [normalizeName(row.name), row]));
@@ -58,8 +64,9 @@ check(
 
 check(
   'promoted + queued accounts for every identity',
-  disposition.summary.newly_promoted_row_count + disposition.summary.queued_count ===
+  disposition.summary.newly_promoted_identity_count + disposition.summary.queued_count ===
     disposition.summary.factual_identity_count,
+  `${disposition.summary.newly_promoted_identity_count} promoted identities + ${disposition.summary.queued_count} queued`,
 );
 
 check(
@@ -421,6 +428,800 @@ for (const probe of WAVE13_LOCALITY_PROBES) {
   );
 }
 
+const WAVE14_LOCALITY_PROBES = [
+  { name: 'Muldersdrift', parentSuffix: 'gauteng/krugersdorp/muldersdrift' },
+  { name: 'Orient Hills', parentSuffix: 'gauteng/krugersdorp/orient-hills' },
+  { name: 'Middelvlei AH', parentSuffix: 'gauteng/randfontein/middelvlei-ah' },
+  { name: 'Boiketlong', parentSuffix: 'gauteng/sebokeng/boiketlong' },
+  { name: 'Falcon Ridge', parentSuffix: 'gauteng/vereeniging/falcon-ridge' },
+  { name: 'Tshepiso', parentSuffix: 'gauteng/vanderbijlpark/tshepiso' },
+  { name: 'Homelands AH', parentSuffix: 'gauteng/meyerton/homelands-ah' },
+  { name: 'Overkruin', parentSuffix: 'gauteng/heidelberg/overkruin' },
+  { name: 'Alphen Park', parentSuffix: 'gauteng/benoni/alphen-park' },
+  { name: 'Pirowville', parentSuffix: 'gauteng/germiston/pirowville' },
+  { name: 'Hospital View', parentSuffix: 'gauteng/thembisa/hospital-view' },
+];
+
+for (const probe of WAVE14_LOCALITY_PROBES) {
+  const row = resolveByName(probe.name);
+  check(
+    `wave14 researched edge resolves: ${probe.name}`,
+    row !== null && row.runtime_natural_key === probe.parentSuffix,
+    row ? row.runtime_natural_key : 'missing',
+  );
+}
+
+const WAVE15_LOCALITY_PROBES = [
+  { name: 'SW2', parentSuffix: 'gauteng/vanderbijlpark/sw2' },
+  { name: 'CW6', parentSuffix: 'gauteng/vanderbijlpark/cw6' },
+  { name: 'CE4', parentSuffix: 'gauteng/vanderbijlpark/ce4' },
+  { name: 'SE10', parentSuffix: 'gauteng/vanderbijlpark/se10' },
+  { name: 'Rus ter Vaal', parentSuffix: 'gauteng/vereeniging/rus-ter-vaal' },
+  { name: 'Springcol', parentSuffix: 'gauteng/vereeniging/springcol' },
+  { name: 'Steel Park', parentSuffix: 'gauteng/vereeniging/steel-park' },
+];
+
+for (const probe of WAVE15_LOCALITY_PROBES) {
+  const row = resolveByName(probe.name);
+  check(
+    `wave15 researched edge resolves: ${probe.name}`,
+    row !== null && row.runtime_natural_key === probe.parentSuffix,
+    row ? row.runtime_natural_key : 'missing',
+  );
+}
+
+const WAVE16_LOCALITY_PROBES = [
+  { name: 'SW1', parentSuffix: 'gauteng/vanderbijlpark/sw1' },
+  { name: 'NW7', parentSuffix: 'gauteng/vereeniging/nw7' },
+];
+
+for (const probe of WAVE16_LOCALITY_PROBES) {
+  const row = resolveByName(probe.name);
+  check(
+    `wave16 researched edge resolves: ${probe.name}`,
+    row !== null && row.runtime_natural_key === probe.parentSuffix,
+    row ? row.runtime_natural_key : 'missing',
+  );
+}
+
+const WAVE17_LOCALITY_PROBES = [
+  { name: 'Krugersdorp Wildtuin', parentSuffix: 'gauteng/krugersdorp/krugersdorp-wildtuin' },
+  { name: 'Presidents dam', parentSuffix: 'gauteng/springs/presidents-dam' },
+];
+
+for (const probe of WAVE17_LOCALITY_PROBES) {
+  const row = resolveByName(probe.name);
+  check(
+    `wave17 researched edge resolves: ${probe.name}`,
+    row !== null && row.runtime_natural_key === probe.parentSuffix,
+    row ? row.runtime_natural_key : 'missing',
+  );
+}
+
+const WAVE18_LOCALITY_PROBES = [
+  { name: 'New Thorndale', parentSuffix: 'gauteng/krugersdorp/new-thorndale' },
+  { name: 'Nestadt', parentSuffix: 'gauteng/benoni/nestadt' },
+  { name: 'Mthambeka', parentSuffix: 'gauteng/thembisa/mthambeka' },
+  { name: 'Lakeside', parentSuffix: 'gauteng/vereeniging/lakeside' },
+  { name: 'Meyerton Park', parentSuffix: 'gauteng/meyerton/meyerton-park' },
+];
+
+for (const probe of WAVE18_LOCALITY_PROBES) {
+  const row = resolveByName(probe.name);
+  check(
+    `wave18 researched edge resolves: ${probe.name}`,
+    row !== null && row.runtime_natural_key === probe.parentSuffix,
+    row ? row.runtime_natural_key : 'missing',
+  );
+}
+
+const WAVE19_LOCALITY_PROBES = [
+  { name: 'Makhulong', parentSuffix: 'gauteng/thembisa/makhulong' },
+  { name: 'Ventershof AH', parentSuffix: 'gauteng/thembisa/ventershof-ah' },
+];
+
+for (const probe of WAVE19_LOCALITY_PROBES) {
+  const row = resolveByName(probe.name);
+  check(
+    `wave19 researched edge resolves: ${probe.name}`,
+    row !== null && row.runtime_natural_key === probe.parentSuffix,
+    row ? row.runtime_natural_key : 'missing',
+  );
+}
+
+const WAVE20_LOCALITY_PROBES = [
+  { name: 'Kleinfontein Lake', parentSuffix: 'gauteng/benoni/kleinfontein-lake' },
+];
+
+for (const probe of WAVE20_LOCALITY_PROBES) {
+  const row = resolveByName(probe.name);
+  check(
+    `wave20 researched edge resolves: ${probe.name}`,
+    row !== null && row.runtime_natural_key === probe.parentSuffix,
+    row ? row.runtime_natural_key : 'missing',
+  );
+}
+
+const WAVE21_LOCALITY_PROBES = [
+  { name: 'Spruitview', parentSuffix: 'gauteng/katlehong/spruitview' },
+  { name: 'Ramokonapi', parentSuffix: 'gauteng/katlehong/ramokonapi' },
+  { name: 'Siluma View', parentSuffix: 'gauteng/katlehong/siluma-view' },
+  { name: 'Likole', parentSuffix: 'gauteng/katlehong/likole' },
+  { name: 'Mopeli', parentSuffix: 'gauteng/katlehong/mopeli' },
+];
+
+for (const probe of WAVE21_LOCALITY_PROBES) {
+  const row = resolveByName(probe.name);
+  check(
+    `wave21 researched edge resolves: ${probe.name}`,
+    row !== null && row.runtime_natural_key === probe.parentSuffix,
+    row ? row.runtime_natural_key : 'missing',
+  );
+}
+
+const WAVE22_LOCALITY_PROBES = [
+  { name: 'Bracken Downs', parentSuffix: 'gauteng/alberton/bracken-downs' },
+  { name: 'Midfield Estate', parentSuffix: 'gauteng/thembisa/midfield-estate' },
+  { name: 'Hazeldene', parentSuffix: 'gauteng/germiston/hazeldene' },
+];
+
+for (const probe of WAVE22_LOCALITY_PROBES) {
+  const row = resolveByName(probe.name);
+  check(
+    `wave22 researched edge resolves: ${probe.name}`,
+    row !== null && row.runtime_natural_key === probe.parentSuffix,
+    row ? row.runtime_natural_key : 'missing',
+  );
+}
+
+const WAVE23_LOCALITY_PROBES = [
+  { name: 'Blybank', parentSuffix: 'gauteng/carletonville/blybank' },
+  { name: 'Deelkraal', parentSuffix: 'gauteng/carletonville/deelkraal' },
+  { name: "Green's Park", parentSuffix: 'gauteng/fochville/green-s-park' },
+];
+
+for (const probe of WAVE23_LOCALITY_PROBES) {
+  const row = resolveByName(probe.name);
+  check(
+    `wave23 researched edge resolves: ${probe.name}`,
+    row !== null && row.runtime_natural_key === probe.parentSuffix,
+    row ? row.runtime_natural_key : 'missing',
+  );
+}
+
+const WAVE24_LOCALITY_PROBES = [
+  { name: 'West Porges', parentSuffix: 'gauteng/randfontein/west-porges' },
+  { name: 'Bhongweni', parentSuffix: 'gauteng/randfontein/bhongweni' },
+  { name: 'Kloof', parentSuffix: 'gauteng/westonaria/kloof' },
+];
+
+for (const probe of WAVE24_LOCALITY_PROBES) {
+  const row = resolveByName(probe.name);
+  check(
+    `wave24 researched edge resolves: ${probe.name}`,
+    row !== null && row.runtime_natural_key === probe.parentSuffix,
+    row ? row.runtime_natural_key : 'missing',
+  );
+}
+
+const WAVE25_LOCALITY_PROBES = [
+  {
+    name: 'Hartebeesthoek Radio Astronomy Observatory',
+    parentSuffix: 'gauteng/krugersdorp/hartebeesthoek-radio-astronomy-observatory',
+  },
+  { name: 'Lewisham Location', parentSuffix: 'gauteng/krugersdorp/lewisham-location' },
+];
+
+for (const probe of WAVE25_LOCALITY_PROBES) {
+  const row = resolveByName(probe.name);
+  check(
+    `wave25 researched edge resolves: ${probe.name}`,
+    row !== null && row.runtime_natural_key === probe.parentSuffix,
+    row ? row.runtime_natural_key : 'missing',
+  );
+}
+
+const WAVE26_LOCALITY_PROBES = [
+  { name: 'Tenacres AH', parentSuffix: 'gauteng/randfontein/tenacres-ah' },
+  { name: 'Modderbee', parentSuffix: 'gauteng/daveyton/modderbee' },
+  { name: 'Duncanville', parentSuffix: 'gauteng/vereeniging/duncanville' },
+  { name: 'Bergsig', parentSuffix: 'gauteng/heidelberg/bergsig' },
+  { name: 'Government Village', parentSuffix: 'gauteng/randfontein/government-village' },
+  { name: 'Largo', parentSuffix: 'gauteng/springs/largo' },
+  { name: 'Eastvale', parentSuffix: 'gauteng/springs/eastvale' },
+];
+
+for (const probe of WAVE26_LOCALITY_PROBES) {
+  const row = resolveByName(probe.name);
+  check(
+    `wave26 researched edge resolves: ${probe.name}`,
+    row !== null && row.runtime_natural_key === probe.parentSuffix,
+    row ? row.runtime_natural_key : 'missing',
+  );
+}
+
+const WAVE31_LOCALITY_PROBES = [
+  { name: 'Khumalo Valley', parentSuffix: 'gauteng/katlehong/khumalo-valley' },
+];
+
+for (const probe of WAVE31_LOCALITY_PROBES) {
+  const row = resolveByName(probe.name);
+  check(
+    `wave31 researched edge resolves: ${probe.name}`,
+    row !== null && row.runtime_natural_key === probe.parentSuffix,
+    row ? row.runtime_natural_key : 'missing',
+  );
+}
+
+const WAVE32_LOCALITY_PROBES = [
+  { name: 'Bartlett Ext 20', parentSuffix: 'gauteng/boksburg/bartlett-ext-20' },
+  { name: 'Bardene Ext 2', parentSuffix: 'gauteng/boksburg/bardene-ext-2' },
+];
+
+for (const probe of WAVE32_LOCALITY_PROBES) {
+  const row = resolveByName(probe.name);
+  check(
+    `wave32 researched edge resolves: ${probe.name}`,
+    row !== null && row.runtime_natural_key === probe.parentSuffix,
+    row ? row.runtime_natural_key : 'missing',
+  );
+}
+
+const WAVE33_LOCALITY_PROBES = [
+  { name: 'Palm Ridge', parentSuffix: 'gauteng/katlehong/palm-ridge' },
+];
+
+for (const probe of WAVE33_LOCALITY_PROBES) {
+  const row = resolveByName(probe.name);
+  check(
+    `wave33 researched edge resolves: ${probe.name}`,
+    row !== null && row.runtime_natural_key === probe.parentSuffix,
+    row ? row.runtime_natural_key : 'missing',
+  );
+}
+
+const WAVE34_LOCALITY_PROBES = [
+  { name: "St. Andrew's", parentSuffix: 'gauteng/germiston/st-andrew-s' },
+  { name: 'Hughes Exts', parentSuffix: 'gauteng/boksburg/hughes-exts' },
+];
+
+for (const probe of WAVE34_LOCALITY_PROBES) {
+  const row = resolveByName(probe.name);
+  check(
+    `wave34 researched edge resolves: ${probe.name}`,
+    row !== null && row.runtime_natural_key === probe.parentSuffix,
+    row ? row.runtime_natural_key : 'missing',
+  );
+}
+
+const WAVE35_LOCALITY_PROBES = [
+  { name: 'The Falls', parentSuffix: 'gauteng/benoni/the-falls' },
+];
+
+for (const probe of WAVE35_LOCALITY_PROBES) {
+  const row = resolveByName(probe.name);
+  check(
+    `wave35 researched edge resolves: ${probe.name}`,
+    row !== null && row.runtime_natural_key === probe.parentSuffix,
+    row ? row.runtime_natural_key : 'missing',
+  );
+}
+
+const WAVE36_LOCALITY_PROBES = [
+  { name: 'Bentley Park', parentSuffix: 'gauteng/carletonville/bentley-park' },
+];
+
+for (const probe of WAVE36_LOCALITY_PROBES) {
+  const row = resolveByName(probe.name);
+  check(
+    `wave36 researched edge resolves: ${probe.name}`,
+    row !== null && row.runtime_natural_key === probe.parentSuffix,
+    row ? row.runtime_natural_key : 'missing',
+  );
+}
+
+const WAVE37_IDENTITY_SPECIFIC_PROBES = [
+  {
+    name: 'Rondebult (Germiston identity)',
+    factualId: 'pl-gp-v01-5650fd1d9fe9843f204c',
+    parentSuffix: 'gauteng/germiston/rondebult',
+  },
+  {
+    name: 'Rondebult (Boksburg identity)',
+    factualId: 'pl-gp-v01-7f93a84351a0b976dd04',
+    parentSuffix: 'gauteng/boksburg/rondebult',
+  },
+];
+
+for (const probe of WAVE37_IDENTITY_SPECIFIC_PROBES) {
+  const row = rowsByNaturalKey.get(probe.parentSuffix);
+  check(
+    `wave37 identity-specific edge resolves: ${probe.name}`,
+    row !== undefined && row.factual_location_ids.includes(probe.factualId),
+    row ? `${row.runtime_natural_key}/${row.factual_location_ids.join(',')}` : 'missing',
+  );
+}
+
+const WAVE38_LOCALITY_PROBES = [
+  { name: 'Etlebeni', parentSuffix: 'gauteng/westonaria/etlebeni' },
+  { name: 'Thabony', parentSuffix: 'gauteng/westonaria/thabony' },
+];
+
+for (const probe of WAVE38_LOCALITY_PROBES) {
+  const row = resolveByName(probe.name);
+  check(
+    `wave38 researched edge resolves: ${probe.name}`,
+    row !== null && row.runtime_natural_key === probe.parentSuffix,
+    row ? row.runtime_natural_key : 'missing',
+  );
+}
+
+const WAVE39_IDENTITY_SPECIFIC_PROBES = [
+  {
+    name: 'Van der Westuizenhoogte AH',
+    factualId: 'pl-gp-v01-22ea6b667528c0f84fc6',
+    parentSuffix: 'gauteng/meyerton/van-der-westuizenhoogte-ah',
+  },
+  {
+    name: 'Buyscelia AH',
+    factualId: 'pl-gp-v01-23f928d4673bd505c129',
+    parentSuffix: 'gauteng/meyerton/buyscelia-ah',
+  },
+  {
+    name: 'Suikerbosrant Nature Reserve',
+    factualId: 'pl-gp-v01-91e1d3befe548dd94a53',
+    parentSuffix: 'gauteng/meyerton/suikerbosrant-nature-reserve',
+  },
+  {
+    name: 'Dicksonville',
+    factualId: 'pl-gp-v01-bc4a485702bddab5ea83',
+    parentSuffix: 'gauteng/vereeniging/dicksonville',
+  },
+];
+
+for (const probe of WAVE39_IDENTITY_SPECIFIC_PROBES) {
+  const row = rowsByNaturalKey.get(probe.parentSuffix);
+  check(
+    `wave39 identity-specific edge resolves: ${probe.name}`,
+    row !== undefined && row.factual_location_ids.includes(probe.factualId),
+    row ? `${row.runtime_natural_key}/${row.factual_location_ids.join(',')}` : 'missing',
+  );
+}
+
+const WAVE40_IDENTITY_SPECIFIC_PROBES = [
+  {
+    name: 'Vorsterpark AH',
+    factualId: 'pl-gp-v01-81e8d602a6d2122d56f7',
+    parentSuffix: 'gauteng/meyerton/vorsterpark-ah',
+  },
+  {
+    name: 'Ohinimuri',
+    factualId: 'pl-gp-v01-e9e5b66a143d6d3b85d3',
+    parentSuffix: 'gauteng/meyerton/ohinimuri',
+  },
+  {
+    name: 'Klipwater',
+    factualId: 'pl-gp-v01-f7130c5fb332974131a3',
+    parentSuffix: 'gauteng/meyerton/klipwater',
+  },
+];
+
+for (const probe of WAVE40_IDENTITY_SPECIFIC_PROBES) {
+  const row = rowsByNaturalKey.get(probe.parentSuffix);
+  check(
+    `wave40 identity-specific edge resolves: ${probe.name}`,
+    row !== undefined && row.factual_location_ids.includes(probe.factualId),
+    row ? `${row.runtime_natural_key}/${row.factual_location_ids.join(',')}` : 'missing',
+  );
+}
+
+const WAVE41_IDENTITY_SPECIFIC_PROBES = [
+  {
+    name: 'Kagiso',
+    factualId: 'pl-gp-v01-e3f2e300de3c1df1a59d',
+    parentSuffix: 'gauteng/krugersdorp/kagiso',
+  },
+  {
+    name: 'Azaadville',
+    factualId: 'pl-gp-v01-f4bc69ea01e6387310f8',
+    parentSuffix: 'gauteng/krugersdorp/azaadville',
+  },
+  {
+    name: 'Rietvallei',
+    factualId: 'pl-gp-v01-fd2df74f870a774312ae',
+    parentSuffix: 'gauteng/krugersdorp/rietvallei',
+  },
+  {
+    name: 'Rietvallei 241-IQ',
+    factualId: 'pl-gp-v01-dcd3b8cc7af96af8b4e3',
+    parentSuffix: 'gauteng/krugersdorp/rietvallei-241-iq',
+  },
+];
+
+for (const probe of WAVE41_IDENTITY_SPECIFIC_PROBES) {
+  const row = rowsByNaturalKey.get(probe.parentSuffix);
+  check(
+    `wave41 identity-specific edge resolves: ${probe.name}`,
+    row !== undefined && row.factual_location_ids.includes(probe.factualId),
+    row ? `${row.runtime_natural_key}/${row.factual_location_ids.join(',')}` : 'missing',
+  );
+}
+
+const WAVE42_IDENTITY_SPECIFIC_PROBES = [
+  {
+    name: 'Thokoza',
+    factualId: 'pl-gp-v01-2c33a31cdc8b88b5c9b8',
+    parentSuffix: 'gauteng/alberton/thokoza',
+  },
+  {
+    name: 'Greenfields',
+    factualId: 'pl-gp-v01-e76bb97243258b5a28a4',
+    parentSuffix: 'gauteng/alberton/greenfields',
+  },
+];
+
+for (const probe of WAVE42_IDENTITY_SPECIFIC_PROBES) {
+  const row = rowsByNaturalKey.get(probe.parentSuffix);
+  check(
+    `wave42 identity-specific edge resolves: ${probe.name}`,
+    row !== undefined && row.factual_location_ids.includes(probe.factualId),
+    row ? `${row.runtime_natural_key}/${row.factual_location_ids.join(',')}` : 'missing',
+  );
+}
+
+const WAVE43_IDENTITY_SPECIFIC_PROBES = [
+  {
+    name: 'Nespark',
+    factualId: 'pl-gp-v01-ded81be926e9df130977',
+    parentSuffix: 'gauteng/kempton-park/nespark',
+  },
+];
+
+for (const probe of WAVE43_IDENTITY_SPECIFIC_PROBES) {
+  const row = rowsByNaturalKey.get(probe.parentSuffix);
+  check(
+    `wave43 identity-specific edge resolves: ${probe.name}`,
+    row !== undefined && row.factual_location_ids.includes(probe.factualId),
+    row ? `${row.runtime_natural_key}/${row.factual_location_ids.join(',')}` : 'missing',
+  );
+}
+
+const WAVE44_IDENTITY_SPECIFIC_PROBES = [
+  {
+    name: 'Lammermoor',
+    factualId: 'pl-gp-v01-ec83a4bc820895424cf5',
+    parentSuffix: 'gauteng/krugersdorp/lammermoor',
+  },
+];
+
+for (const probe of WAVE44_IDENTITY_SPECIFIC_PROBES) {
+  const row = rowsByNaturalKey.get(probe.parentSuffix);
+  check(
+    `wave44 identity-specific edge resolves: ${probe.name}`,
+    row !== undefined && row.factual_location_ids.includes(probe.factualId),
+    row ? `${row.runtime_natural_key}/${row.factual_location_ids.join(',')}` : 'missing',
+  );
+}
+
+const WAVE45_IDENTITY_SPECIFIC_PROBES = [
+  {
+    name: 'Devon',
+    factualId: 'pl-gp-v01-0127d19bdec24cecd936',
+    parentSuffix: 'gauteng/nigel/devon',
+  },
+  {
+    name: 'Bothasgeluk Agricultural Holdings',
+    factualId: 'pl-gp-v01-37519e0509998852be6d',
+    parentSuffix: 'gauteng/nigel/bothasgeluk-agricultural-holdings',
+  },
+  {
+    name: 'Impumelelo',
+    factualId: 'pl-gp-v01-3a41d69d93d030e80e93',
+    parentSuffix: 'gauteng/nigel/impumelelo',
+  },
+];
+
+for (const probe of WAVE45_IDENTITY_SPECIFIC_PROBES) {
+  const row = rowsByNaturalKey.get(probe.parentSuffix);
+  check(
+    `wave45 identity-specific edge resolves: ${probe.name}`,
+    row !== undefined && row.factual_location_ids.includes(probe.factualId),
+    row ? `${row.runtime_natural_key}/${row.factual_location_ids.join(',')}` : 'missing',
+  );
+}
+
+const WAVE46_IDENTITY_SPECIFIC_PROBES = [
+  {
+    name: 'Ethembeni Park',
+    factualId: 'pl-gp-v01-0b32a8c1fe1a7e558ef4',
+    parentSuffix: 'gauteng/boksburg/ethembeni-park',
+  },
+];
+
+for (const probe of WAVE46_IDENTITY_SPECIFIC_PROBES) {
+  const row = rowsByNaturalKey.get(probe.parentSuffix);
+  check(
+    `wave46 identity-specific edge resolves: ${probe.name}`,
+    row !== undefined && row.factual_location_ids.includes(probe.factualId),
+    row ? `${row.runtime_natural_key}/${row.factual_location_ids.join(',')}` : 'missing',
+  );
+}
+
+const WAVE47_IDENTITY_SPECIFIC_PROBES = [
+  {
+    name: 'Mansieville Location',
+    factualId: 'pl-gp-v01-06fca9fad5944269ccde',
+    parentSuffix: 'gauteng/krugersdorp/mansieville-location',
+  },
+];
+
+for (const probe of WAVE47_IDENTITY_SPECIFIC_PROBES) {
+  const row = rowsByNaturalKey.get(probe.parentSuffix);
+  check(
+    `wave47 identity-specific edge resolves: ${probe.name}`,
+    row !== undefined && row.factual_location_ids.includes(probe.factualId),
+    row ? `${row.runtime_natural_key}/${row.factual_location_ids.join(',')}` : 'missing',
+  );
+}
+
+const WAVE48_IDENTITY_SPECIFIC_PROBES = [
+  {
+    name: 'Eikepark (Rand West City identity)',
+    factualId: 'pl-gp-v01-1e32c07668460cae218f',
+    parentSuffix: 'gauteng/randfontein/eikepark',
+  },
+  {
+    name: 'Eikepark (duplicate Rand West City identity)',
+    factualId: 'pl-gp-v01-b4b64a12d456a96f5779',
+    parentSuffix: 'gauteng/randfontein/eikepark',
+  },
+  {
+    name: 'Morehill (queued identity)',
+    factualId: 'pl-gp-v01-5954891aaa7b38cc10bd',
+    parentSuffix: 'gauteng/benoni/morehill',
+  },
+  {
+    name: 'Selcourt (queued identity)',
+    factualId: 'pl-gp-v01-2eb78152584e4bac9051',
+    parentSuffix: 'gauteng/springs/selcourt',
+  },
+];
+
+for (const probe of WAVE48_IDENTITY_SPECIFIC_PROBES) {
+  const row = rowsByNaturalKey.get(probe.parentSuffix);
+  check(
+    `wave48 identity-specific edge resolves: ${probe.name}`,
+    row !== undefined && row.factual_location_ids.includes(probe.factualId),
+    row ? `${row.runtime_natural_key}/${row.factual_location_ids.join(',')}` : 'missing',
+  );
+}
+
+for (const grouped of [
+  {
+    name: 'Eikepark grouped factual identities',
+    parentSuffix: 'gauteng/randfontein/eikepark',
+    factualIds: ['pl-gp-v01-1e32c07668460cae218f', 'pl-gp-v01-b4b64a12d456a96f5779'],
+  },
+  {
+    name: 'Morehill grouped factual identities',
+    parentSuffix: 'gauteng/benoni/morehill',
+    factualIds: ['pl-gp-v01-5954891aaa7b38cc10bd', 'pl-gp-v01-7a8a575a90deb1e3121b'],
+  },
+  {
+    name: 'Selcourt grouped factual identities',
+    parentSuffix: 'gauteng/springs/selcourt',
+    factualIds: ['pl-gp-v01-2eb78152584e4bac9051', 'pl-gp-v01-42b618e5e1a93bed8ee0'],
+  },
+]) {
+  const row = rowsByNaturalKey.get(grouped.parentSuffix);
+  check(
+    `wave48 explicit duplicate grouping: ${grouped.name}`,
+    row !== undefined &&
+      row.factual_location_ids.length === grouped.factualIds.length &&
+      grouped.factualIds.every(factualId => row.factual_location_ids.includes(factualId)),
+    row ? `${row.runtime_natural_key}/${row.factual_location_ids.join(',')}` : 'missing',
+  );
+}
+
+const wave49Row = rowsByNaturalKey.get('gauteng/vanderbijlpark/cc');
+check(
+  'wave49 source-native CC parent edge resolves',
+  wave49Row !== undefined &&
+    wave49Row.factual_location_ids.includes('pl-gp-v01-d417420de557bb150d61'),
+  wave49Row ? `${wave49Row.runtime_natural_key}/${wave49Row.factual_location_ids.join(',')}` : 'missing',
+);
+
+const WAVE50_IDENTITY_SPECIFIC_PROBES = [
+  {
+    name: 'Opmekaar',
+    factualId: 'pl-gp-v01-01e5d6705104962667ff',
+    parentSuffix: 'gauteng/boksburg/opmekaar',
+  },
+  {
+    name: 'Natalspruit',
+    factualId: 'pl-gp-v01-26a5c7cb51ab40b65336',
+    parentSuffix: 'gauteng/katlehong/natalspruit',
+  },
+  {
+    name: 'Sizibeni',
+    factualId: 'pl-gp-v01-3641b9b3a2f8716452de',
+    parentSuffix: 'gauteng/thembisa/sizibeni',
+  },
+  {
+    name: 'Houtkapper Park',
+    factualId: 'pl-gp-v01-460d60f4b27e30d05ae8',
+    parentSuffix: 'gauteng/kempton-park/houtkapper-park',
+  },
+  {
+    name: 'Mmangweni',
+    factualId: 'pl-gp-v01-465ec2c42a0978f460e3',
+    parentSuffix: 'gauteng/thembisa/mmangweni',
+  },
+  {
+    name: 'Gqagqeni',
+    factualId: 'pl-gp-v01-490d96b230aad9b67f0f',
+    parentSuffix: 'gauteng/thembisa/gqagqeni',
+  },
+  {
+    name: 'Geestveld AH',
+    factualId: 'pl-gp-v01-60cd2a20de0015bb37a9',
+    parentSuffix: 'gauteng/kempton-park/geestveld-ah',
+  },
+];
+
+for (const probe of WAVE50_IDENTITY_SPECIFIC_PROBES) {
+  const row = rowsByNaturalKey.get(probe.parentSuffix);
+  check(
+    `wave50 identity-specific edge resolves: ${probe.name}`,
+    row !== undefined && row.factual_location_ids.includes(probe.factualId),
+    row ? `${row.runtime_natural_key}/${row.factual_location_ids.join(',')}` : 'missing',
+  );
+}
+
+const wave51Row = rowsByNaturalKey.get('gauteng/benoni/summerfields');
+check(
+  'wave51 official CCA Summerfields parent edge resolves',
+  wave51Row !== undefined &&
+    wave51Row.factual_location_ids.includes('pl-gp-v01-d90d1eaf6a6414d7d560'),
+  wave51Row ? `${wave51Row.runtime_natural_key}/${wave51Row.factual_location_ids.join(',')}` : 'missing',
+);
+
+const wave52Row = rowsByNaturalKey.get('gauteng/boksburg/boksburg-lokasie');
+check(
+  'wave52 official CCA Boksburg Lokasie parent edge resolves',
+  wave52Row !== undefined &&
+    wave52Row.factual_location_ids.includes('pl-gp-v01-50eaeb5408cb9975ab18'),
+  wave52Row ? `${wave52Row.runtime_natural_key}/${wave52Row.factual_location_ids.join(',')}` : 'missing',
+);
+
+const wave53Row = rowsByNaturalKey.get('gauteng/randfontein/de-fontein');
+check(
+  'wave53 official MDB De Fontein parent edge resolves',
+  wave53Row !== undefined &&
+    wave53Row.factual_location_ids.includes('pl-gp-v01-be0362250a52c1510807'),
+  wave53Row ? `${wave53Row.runtime_natural_key}/${wave53Row.factual_location_ids.join(',')}` : 'missing',
+);
+
+const wave54Row = rowsByNaturalKey.get('gauteng/vanderbijlpark/vanderbijlpark-auidwes-lokasie');
+check(
+  'wave54 official MDB Vanderbijlpark-auidwes Lokasie parent edge resolves',
+  wave54Row !== undefined &&
+    wave54Row.factual_location_ids.includes('pl-gp-v01-a54d464edbeb8094f958'),
+  wave54Row ? `${wave54Row.runtime_natural_key}/${wave54Row.factual_location_ids.join(',')}` : 'missing',
+);
+
+const wave55Row = rowsByNaturalKey.get('gauteng/krugersdorp/eleadah');
+check(
+  'wave55 official valuation-roll Eleadah parent edge resolves',
+  wave55Row !== undefined &&
+    wave55Row.factual_location_ids.includes('pl-gp-v01-871e4e5c8913a5a892aa'),
+  wave55Row ? `${wave55Row.runtime_natural_key}/${wave55Row.factual_location_ids.join(',')}` : 'missing',
+);
+
+const wave56Row = rowsByNaturalKey.get('gauteng/meyerton/risi-sh');
+check(
+  'wave56 official municipal Risi Sh parent edge resolves',
+  wave56Row !== undefined &&
+    wave56Row.factual_location_ids.includes('pl-gp-v01-6c4517ef22f698e5cd43'),
+  wave56Row ? `${wave56Row.runtime_natural_key}/${wave56Row.factual_location_ids.join(',')}` : 'missing',
+);
+
+const wave57Row = rowsByNaturalKey.get('gauteng/krugersdorp/mindalore-north');
+check(
+  'wave57 official planning-gazette Mindalore North parent edge resolves',
+  wave57Row !== undefined &&
+    wave57Row.factual_location_ids.includes('pl-gp-v01-e417025c42ab9d2149f7'),
+  wave57Row ? `${wave57Row.runtime_natural_key}/${wave57Row.factual_location_ids.join(',')}` : 'missing',
+);
+
+const WAVE58_DUPLICATE_PROBES = [
+  {
+    name: 'Vrededorp',
+    parentSuffix: 'gauteng/johannesburg/vrededorp',
+    factualIds: ['pl-gp-v01-0951415edb1dd117b3e1', 'pl-gp-v01-95ddf1d4b71446b3b066'],
+  },
+  {
+    name: 'Jabavu',
+    parentSuffix: 'gauteng/johannesburg/jabavu',
+    factualIds: ['pl-gp-v01-0ebf919a2a8903c2bb30', 'pl-gp-v01-c7230414467bd30d26de'],
+  },
+  {
+    name: 'Rietfontein',
+    parentSuffix: 'gauteng/pretoria/rietfontein',
+    factualIds: ['pl-gp-v01-16a594ed4e0b6be4c440', 'pl-gp-v01-fcaba12bcdce7fb3c0c2'],
+  },
+  {
+    name: 'Lydiana',
+    parentSuffix: 'gauteng/pretoria/lydiana',
+    factualIds: ['pl-gp-v01-1cf7441a107d1faf4720', 'pl-gp-v01-e9a46a63d27967a5cd33'],
+  },
+  {
+    name: 'Val de Grace spelling pair',
+    parentSuffix: 'gauteng/pretoria/val-de-grace',
+    factualIds: ['pl-gp-v01-35c9b6514fe9b5f0d03a', 'pl-gp-v01-61b9c5fa174305cc3335'],
+  },
+  {
+    name: 'Dorandia',
+    parentSuffix: 'gauteng/pretoria/dorandia',
+    factualIds: ['pl-gp-v01-38957c0dfb1dd73a722e', 'pl-gp-v01-d22f5766a31c2ab7c32b'],
+  },
+  {
+    name: 'Menlo Park',
+    parentSuffix: 'gauteng/pretoria/menlo-park',
+    factualIds: ['pl-gp-v01-4f2d00ff52232cd343b7', 'pl-gp-v01-e3b8c4c2508eebb1f922'],
+  },
+  {
+    name: 'Lyttelton Manor',
+    parentSuffix: 'gauteng/pretoria/lyttelton-manor',
+    factualIds: ['pl-gp-v01-52a2d8d9be3ffc96a599', 'pl-gp-v01-d0fffc78c2e45e1bfc2a'],
+  },
+  {
+    name: 'Boksburg Noord spelling pair',
+    parentSuffix: 'gauteng/boksburg/boksburg-noord',
+    factualIds: ['pl-gp-v01-7512ed98a4c11040e081', 'pl-gp-v01-b78d6ceaf3f2620c6a90'],
+  },
+];
+
+for (const probe of WAVE58_DUPLICATE_PROBES) {
+  const row = rowsByNaturalKey.get(probe.parentSuffix);
+  check(
+    `wave58 explicit duplicate grouping resolves: ${probe.name}`,
+    row !== undefined &&
+      row.factual_location_ids.length === probe.factualIds.length &&
+      probe.factualIds.every(id => row.factual_location_ids.includes(id)),
+    row ? `${row.runtime_natural_key}/${row.factual_location_ids.join(',')}` : 'missing',
+  );
+}
+
+const WAVE59_METRO_DUPLICATE_PROBES = [
+  {
+    name: 'Boekenhoutfontein',
+    parentSuffix: 'gauteng/boekenhoutfontein',
+    factualIds: ['pl-gp-v01-291cc8f92a238f80f336', 'pl-gp-v01-b3af21b267c8fc08148a'],
+  },
+  {
+    name: 'Rietfontein (West Rand)',
+    parentSuffix: 'gauteng/rietfontein',
+    factualIds: ['pl-gp-v01-8db8901b5210ad0808dd', 'pl-gp-v01-ab7f056ff7d720e00d63'],
+  },
+];
+
+for (const probe of WAVE59_METRO_DUPLICATE_PROBES) {
+  const row = rowsByNaturalKey.get(probe.parentSuffix);
+  check(
+    `wave59 explicit metro duplicate grouping resolves: ${probe.name}`,
+    row !== undefined &&
+      row.factual_location_ids.length === probe.factualIds.length &&
+      probe.factualIds.every(id => row.factual_location_ids.includes(id)),
+    row ? `${row.runtime_natural_key}/${row.factual_location_ids.join(',')}` : 'missing',
+  );
+}
+
+check(
+  'ordinary duplicate collisions remain queued without explicit grouping',
+  queue.some(entry => entry.reason === 'duplicate_natural_key_within_parent' && entry.preferred_name === 'Slovoville'),
+);
+
 const NEGATIVE_PROBES = ['Mamelodi Extension 1', 'Mamelodi Extension 4'];
 for (const probe of NEGATIVE_PROBES) {
   const directHit = resolveByName(probe);
@@ -477,6 +1278,41 @@ check(
   'review queue records explicit reasons for every queued identity',
   queue.length > 0 &&
     queue.every(entry => typeof entry.reason === 'string' && entry.reason.length > 0),
+);
+
+const parentEdgeQueue = queue.filter(entry => entry.reason === 'awaiting_accepted_parent_edge');
+const auditedParentEdgeIds = new Set(
+  (residualParentAudit.entries ?? []).map(entry => entry.factual_location_id),
+);
+check(
+  'every awaiting-parent identity has a residual audit entry',
+  parentEdgeQueue.length === auditedParentEdgeIds.size &&
+    parentEdgeQueue.every(entry => auditedParentEdgeIds.has(entry.factual_location_id)),
+  `${auditedParentEdgeIds.size} audited of ${parentEdgeQueue.length}`,
+);
+check(
+  'residual parent audit remains fail-closed',
+  (residualParentAudit.entries ?? []).every(
+    entry => entry.decision === 'retain_queue' && entry.accepted_parent_natural_key === null,
+  ),
+);
+const collisionQueue = queue.filter(entry => entry.reason === 'duplicate_natural_key_within_parent');
+const auditedCollisionIds = new Set(
+  (residualCollisionAudit.entries ?? []).map(entry => entry.factual_location_id),
+);
+check(
+  'every unresolved collision has a residual audit entry',
+  collisionQueue.length === auditedCollisionIds.size &&
+    collisionQueue.every(entry => auditedCollisionIds.has(entry.factual_location_id)),
+  `${auditedCollisionIds.size} audited of ${collisionQueue.length}`,
+);
+check(
+  'residual collision audit remains fail-closed',
+  (residualCollisionAudit.entries ?? []).every(
+    entry => entry.decision === 'retain_queue' &&
+      entry.accepted_parent_natural_key === null &&
+      entry.allow_duplicate_natural_key_grouping === false,
+  ),
 );
 
 const HANDLE_PATTERN = /(?:province|city|suburb):[0-9]+/;

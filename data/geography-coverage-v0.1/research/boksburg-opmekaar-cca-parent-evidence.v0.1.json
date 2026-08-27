@@ -1,0 +1,46 @@
+{
+  "artifact_version": "boksburg-opmekaar-cca-parent-evidence-v0.1",
+  "town": "Boksburg",
+  "parent_natural_key": "gauteng/boksburg",
+  "administrative_context": "Ekurhuleni",
+  "evidence_class": "official_municipal_gis_point_in_polygon_cca",
+  "source": {
+    "publisher": "City of Ekurhuleni Corporate Geo-Informatics Division",
+    "url": "https://gis.ekurhuleni.gov.za/arcgis/rest/services/Ekurhuleni/Ekurhuleni_Propety_Data_Map/MapServer/158",
+    "section": "Townships layer (158) — EPSG:4326 point-intersection query for the canonical Opmekaar point returned REIGER PARK X1 / REIGER PARK with CCA=BOKSBURG",
+    "retrieved": "2026-08-27",
+    "licence_note": "Official municipal spatial layer used for a point-to-CCA parent assertion; no polygon geometry is copied."
+  },
+  "supporting_sources": [
+    {
+      "publisher": "City of Ekurhuleni",
+      "url": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/08/B-F-04-2025-2025-2026-SDBIP.pdf",
+      "section": "Table 3 — City of Ekurhuleni Customer Care Areas, including Boksburg CCA",
+      "retrieved": "2026-08-27"
+    }
+  ],
+  "identity_note": "The canonical OSM identity is retained; the parent edge is based on the official municipal polygon intersecting that identity's source point and returning CCA=BOKSBURG, not on nearby display text.",
+  "spatial_query": {
+    "geometry_type": "esriGeometryPoint",
+    "spatial_reference": "EPSG:4326",
+    "spatial_relationship": "esriSpatialRelIntersects",
+    "out_fields": "*",
+    "return_geometry": false
+  },
+  "identity_specific_records": [
+    {
+      "factual_location_id": "pl-gp-v01-01e5d6705104962667ff",
+      "preferred_name": "Opmekaar",
+      "source_record_id": "sr:osm:node/13279261785",
+      "canonical_point": {
+        "longitude": 28.2185448,
+        "latitude": -26.2345663
+      },
+      "municipal_query_result": {
+        "township": "REIGER PARK X1",
+        "suburb": "REIGER PARK",
+        "cca": "BOKSBURG"
+      }
+    }
+  ]
+}

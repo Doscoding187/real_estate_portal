@@ -1,0 +1,57 @@
+{
+  "artifact_version": "randfontein-de-fontein-mdb-parent-evidence-v0.1",
+  "town": "Randfontein",
+  "parent_natural_key": "gauteng/randfontein",
+  "administrative_context": "West Rand",
+  "evidence_class": "official_mdb_ward_point_intersection_with_town_map",
+  "source": {
+    "publisher": "South African Department of Planning, Monitoring and Evaluation — official MDB2020 spatial layer",
+    "url": "https://dpmegis.dpme.gov.za/arcgis/rest/services/Geospatial_Data_Layers/MapServer/23",
+    "section": "Wards (MDB2020) layer (23) — EPSG:4326 point-intersection query for the canonical De Fontein point returned Gauteng, Rand West City Local Municipality (GT485), Ward 9 (GT485_9)",
+    "retrieved": "2026-08-27",
+    "licence_note": "Official ward boundary service used for an identity-specific spatial parent assertion; no boundary geometry is copied."
+  },
+  "supporting_sources": [
+    {
+      "publisher": "Municipal Demarcation Board",
+      "url": "https://www.demarcation.org.za/wp-content/uploads/2021/07/Ward_9_Rand_West_City_Local_Municipality.pdf",
+      "section": "Rand West City Local Municipality GT485 Ward 9 map — the ward map identifies the Randfontein urban area and Randfontein Estate Gold Mine within Ward 9",
+      "retrieved": "2026-08-27"
+    },
+    {
+      "publisher": "Rand West City Local Municipality",
+      "url": "https://www.randwestcity.gov.za/municipality.html",
+      "section": "Municipality profile — Rand West City describes Randfontein and Westonaria as its two main urban centers",
+      "retrieved": "2026-08-27"
+    }
+  ],
+  "identity_note": "The canonical De Fontein identity is retained exactly. Its parent edge is based on the identity-specific source point intersecting official Ward 9, combined with the official Ward 9 map's Randfontein town context; no display-text or proximity fallback is used.",
+  "spatial_query": {
+    "geometry_type": "esriGeometryPoint",
+    "spatial_reference": "EPSG:4326",
+    "spatial_relationship": "esriSpatialRelIntersects",
+    "out_fields": "Province,Municipali,CAT_B,WardNo,District,DistrictCo,WardID,WardLabel,Date",
+    "return_geometry": false
+  },
+  "identity_specific_records": [
+    {
+      "factual_location_id": "pl-gp-v01-be0362250a52c1510807",
+      "preferred_name": "De Fontein",
+      "source_record_id": "sr:osm:node/262705011",
+      "canonical_point": {
+        "longitude": 27.6819444,
+        "latitude": -26.1547222
+      },
+      "municipal_query_result": {
+        "province": "Gauteng",
+        "municipality": "Rand West City Local Municipality",
+        "municipality_code": "GT485",
+        "ward_number": 9,
+        "district": "West Rand",
+        "district_code": "DC48",
+        "ward_id": "74805009",
+        "ward_label": "GT485_9"
+      }
+    }
+  ]
+}

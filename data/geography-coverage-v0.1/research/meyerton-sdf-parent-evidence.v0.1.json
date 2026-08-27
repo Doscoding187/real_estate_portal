@@ -1,0 +1,21 @@
+{
+  "artifact_version": "meyerton-sdf-parent-evidence-v0.1",
+  "town": "Meyerton",
+  "parent_natural_key": "gauteng/meyerton",
+  "administrative_context": "Sedibeng",
+  "evidence_class": "official_municipal_spatial_development_framework",
+  "source": {
+    "publisher": "Midvaal Local Municipality",
+    "url": "https://www.midvaal.gov.za/wp-content/uploads/2025/06/Annexure-B-2020_2021-Spatial-Development-Framework-SDF.pdf",
+    "section": "Residential Settlement Patterns — Meyerton township composition and formal towns table",
+    "retrieved": "2026-08-26",
+    "licence_note": "Official municipal spatial-planning publication used for locality membership assertions; no prose or geometry is copied."
+  },
+  "source_name_variants": {
+    "Golf Park": "Golfpark"
+  },
+  "suburb_names": [
+    "Golf Park",
+    "Noldick"
+  ]
+}

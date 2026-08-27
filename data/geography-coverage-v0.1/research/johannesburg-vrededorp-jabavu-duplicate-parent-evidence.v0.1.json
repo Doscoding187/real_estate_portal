@@ -1,0 +1,41 @@
+{
+  "artifact_version": "johannesburg-vrededorp-jabavu-duplicate-parent-evidence-v0.1",
+  "town": "Johannesburg",
+  "parent_natural_key": "gauteng/johannesburg",
+  "administrative_context": "City of Johannesburg",
+  "evidence_class": "official_magisterial_place_index_identity_specific_duplicate_set",
+  "allow_duplicate_natural_key_grouping": true,
+  "source": {
+    "publisher": "Office of the Chief Justice, Department of Justice and Constitutional Development",
+    "url": "https://www.justice.gov.za/maps/areas-gp.html",
+    "section": "Gauteng: Find a court in your area — Vrededorp and Jabavu are listed in the Johannesburg magisterial district",
+    "retrieved": "2026-08-27",
+    "licence_note": "Official government place index used for identity-specific locality context; no prose or geometry is copied."
+  },
+  "identity_note": "The two Vrededorp identities and the two Jabavu identities remain separate factual records. They are co-published only under their stable Johannesburg locality keys; this artifact does not merge, rename, or choose between the source identities.",
+  "identity_specific_records": [
+    {
+      "factual_location_id": "pl-gp-v01-0951415edb1dd117b3e1",
+      "preferred_name": "Vrededorp",
+      "source_record_ids": ["sr:osm:node/262718530"]
+    },
+    {
+      "factual_location_id": "pl-gp-v01-95ddf1d4b71446b3b066",
+      "preferred_name": "Vrededorp",
+      "source_record_ids": [
+        "sr:nga_gns:-1298190:-1832772:9128",
+        "sr:geonames:942690"
+      ]
+    },
+    {
+      "factual_location_id": "pl-gp-v01-0ebf919a2a8903c2bb30",
+      "preferred_name": "Jabavu",
+      "source_record_ids": ["sr:osm:node/262707241"]
+    },
+    {
+      "factual_location_id": "pl-gp-v01-c7230414467bd30d26de",
+      "preferred_name": "Jabavu",
+      "source_record_ids": ["sr:nga_gns:-1239572:-1811316:77009", "sr:geonames:994381"]
+    }
+  ]
+}

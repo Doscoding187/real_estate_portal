@@ -1,0 +1,45 @@
+{
+  "artifact_version": "meyerton-midvaal-jurisdictional-place-evidence-v0.1",
+  "town": "Meyerton",
+  "parent_natural_key": "gauteng/meyerton",
+  "administrative_context": "Sedibeng",
+  "evidence_class": "official_municipal_jurisdiction_and_magisterial_place_index",
+  "source": {
+    "publisher": "Midvaal Local Municipality",
+    "url": "https://www.midvaal.gov.za/wp-content/uploads/2025/06/Annexure-I-Integrated-Waste-Management-Plan-1.pdf",
+    "section": "Integrated Waste Management Plan, Figure 3 — Midvaal local municipality jurisdictional area labels Ohinimuri, Klipwater, Vorsterpark AH, and Meyerton",
+    "retrieved": "2026-08-27",
+    "licence_note": "Official municipal jurisdictional planning source used for locality relationship assertions; no prose or geometry is copied."
+  },
+  "supporting_sources": [
+    {
+      "publisher": "Office of the Chief Justice, Department of Justice and Constitutional Development",
+      "url": "https://www.justice.gov.za/maps/areas-gp.html",
+      "section": "Gauteng: Find a court in your area — Midvaal Sub District / Meyerton Branch Court",
+      "retrieved": "2026-08-27"
+    },
+    {
+      "publisher": "Midvaal Local Municipality",
+      "url": "https://www.midvaal.gov.za/wp-content/uploads/2025/11/DRAFT-MIDVAAL-LM-5-YEAR-TOURISM-STRATEGY.pdf",
+      "section": "Five-year tourism strategy, Map 5 — R557 Walkerville Route labels Ohinimuri, Klipwater, and Meyerton",
+      "retrieved": "2026-08-27"
+    }
+  ],
+  "source_name_variants": {
+    "Kipwater": "Klipwater"
+  },
+  "identity_specific_records": [
+    {
+      "factual_location_id": "pl-gp-v01-81e8d602a6d2122d56f7",
+      "preferred_name": "Vorsterpark AH"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-e9e5b66a143d6d3b85d3",
+      "preferred_name": "Ohinimuri"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-f7130c5fb332974131a3",
+      "preferred_name": "Klipwater"
+    }
+  ]
+}

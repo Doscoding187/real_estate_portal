@@ -1,0 +1,17 @@
+{
+  "artifact_version": "krugersdorp-hartebeesthoek-parent-evidence-v0.1",
+  "town": "Krugersdorp",
+  "parent_natural_key": "gauteng/krugersdorp",
+  "administrative_context": "West Rand",
+  "evidence_class": "official_national_facility_address",
+  "source": {
+    "publisher": "National Research Foundation",
+    "url": "https://www.nrf.ac.za/procurement/nrf-procuring-business-dp/",
+    "section": "Hartebeesthoek Radio Astronomy Observatory delivery point: Broederstroom Road, Krugersdorp",
+    "retrieved": "2026-08-27",
+    "licence_note": "Official national-facility address used for locality relationship assertions; no prose or geometry is copied."
+  },
+  "suburb_names": [
+    "Hartebeesthoek Radio Astronomy Observatory"
+  ]
+}

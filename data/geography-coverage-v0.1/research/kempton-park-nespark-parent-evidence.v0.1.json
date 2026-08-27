@@ -1,0 +1,23 @@
+{
+  "artifact_version": "kempton-park-nespark-parent-evidence-v0.1",
+  "town": "Kempton Park",
+  "parent_natural_key": "gauteng/kempton-park",
+  "administrative_context": "Ekurhuleni",
+  "evidence_class": "official_municipal_valuation_roll_name_reconciliation",
+  "source": {
+    "publisher": "City of Ekurhuleni",
+    "url": "https://www.ekurhuleni.gov.za/wp-content/uploads/2021/11/KEMPTON-PARK_FULL_TITLE_BOOK-36.pdf",
+    "section": "General Valuation Roll 2017–2021, Area: KEMPTON PARK — registered township NEST PARK AH",
+    "retrieved": "2026-08-27",
+    "licence_note": "Official municipal valuation-roll source used for township identity and parent-area assertions; no property-owner data, prose, or geometry is copied."
+  },
+  "source_name_variants": {
+    "NEST PARK AH": "Nespark"
+  },
+  "identity_specific_records": [
+    {
+      "factual_location_id": "pl-gp-v01-ded81be926e9df130977",
+      "preferred_name": "Nespark"
+    }
+  ]
+}

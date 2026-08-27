@@ -1,0 +1,17 @@
+{
+  "artifact_version": "carletonville-deelkraal-parent-evidence-v0.1",
+  "town": "Carletonville",
+  "parent_natural_key": "gauteng/carletonville",
+  "administrative_context": "West Rand",
+  "evidence_class": "official_municipal_idp_spatial_relationship",
+  "source": {
+    "publisher": "Merafong City Local Municipality",
+    "url": "https://merafong.gov.za/wp-content/uploads/2026/01/Final-IDP-Document-2025-2026.pdf",
+    "section": "6.10.1 Carletonville: Deelkraal lies west and southwest of Carletonville",
+    "retrieved": "2026-08-27",
+    "licence_note": "Official municipal integrated development plan used for locality relationship assertions; no prose or geometry is copied."
+  },
+  "suburb_names": [
+    "Deelkraal"
+  ]
+}

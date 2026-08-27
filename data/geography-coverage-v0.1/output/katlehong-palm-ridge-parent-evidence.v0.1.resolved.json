@@ -1,0 +1,29 @@
+{
+  "resolved_edges_version": "katlehong-palm-ridge-parent-evidence.v0.1.resolved",
+  "town": "Katlehong",
+  "parent_natural_key": "gauteng/katlehong",
+  "source": {
+    "publisher": "City of Ekurhuleni",
+    "url": "https://www.ekurhuleni.gov.za/press-releases/service-delivery/waste-management/dump-garden-waste-at-the-citys-mini-dumpsites/",
+    "section": "List of mini dump sites — KATLEHONG 2 CUSTOMER CARE AREA — Palm Ridge, Tamarind Avenue",
+    "retrieved": "2026-08-27",
+    "licence_note": "Official municipal customer-care-area schedule used for locality relationship assertions; no prose or geometry is copied."
+  },
+  "edge_count": 1,
+  "edges": [
+    {
+      "factual_location_id": "pl-gp-v01-579a50b48790aa612f1c",
+      "preferred_name": "Palm Ridge",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/katlehong",
+      "evidence_class": "official_municipal_customer_care_area_relationship",
+      "citation": "https://www.ekurhuleni.gov.za/press-releases/service-delivery/waste-management/dump-garden-waste-at-the-citys-mini-dumpsites/#List%20of%20mini%20dump%20sites%20%E2%80%94%20KATLEHONG%202%20CUSTOMER%20CARE%20AREA%20%E2%80%94%20Palm%20Ridge%2C%20Tamarind%20Avenue (retrieved 2026-08-27)"
+    }
+  ],
+  "diagnostics": {
+    "researched_names": 1,
+    "matched_already_projected": [],
+    "names_not_in_canonical_layer": [],
+    "ambiguous_canonical_matches": []
+  }
+}

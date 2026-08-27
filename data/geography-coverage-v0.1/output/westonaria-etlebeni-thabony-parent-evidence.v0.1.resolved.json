@@ -1,0 +1,38 @@
+{
+  "resolved_edges_version": "westonaria-etlebeni-thabony-parent-evidence.v0.1.resolved",
+  "town": "Westonaria",
+  "parent_natural_key": "gauteng/westonaria",
+  "source": {
+    "publisher": "Rand West City Local Municipality",
+    "url": "https://lg.treasury.gov.za/supportingdocs/GT485/GT485_IDP%20Final_2023_Y_20220602T112844Z_itumeleng_mogalobe.pdf",
+    "section": "Rand West City IDP — Westonaria node and Etlebeni listed within the municipality’s southern mining belt",
+    "retrieved": "2026-08-27",
+    "licence_note": "Official municipal integrated development plan used for locality relationship assertions; no prose or geometry is copied."
+  },
+  "edge_count": 2,
+  "edges": [
+    {
+      "factual_location_id": "pl-gp-v01-19486ee8bd44b2d4afe0",
+      "preferred_name": "Etlebeni",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/westonaria",
+      "evidence_class": "official_municipal_idp_and_demarcation_place_relationship",
+      "citation": "https://lg.treasury.gov.za/supportingdocs/GT485/GT485_IDP%20Final_2023_Y_20220602T112844Z_itumeleng_mogalobe.pdf#Rand%20West%20City%20IDP%20%E2%80%94%20Westonaria%20node%20and%20Etlebeni%20listed%20within%20the%20municipality%E2%80%99s%20southern%20mining%20belt (retrieved 2026-08-27)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-9ea1eee31975d0b5e98a",
+      "preferred_name": "Thabony",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/westonaria",
+      "evidence_class": "official_municipal_idp_and_demarcation_place_relationship",
+      "citation": "https://lg.treasury.gov.za/supportingdocs/GT485/GT485_IDP%20Final_2023_Y_20220602T112844Z_itumeleng_mogalobe.pdf#Rand%20West%20City%20IDP%20%E2%80%94%20Westonaria%20node%20and%20Etlebeni%20listed%20within%20the%20municipality%E2%80%99s%20southern%20mining%20belt (retrieved 2026-08-27)"
+    }
+  ],
+  "diagnostics": {
+    "researched_names": 2,
+    "identity_specific_records": 0,
+    "matched_already_projected": [],
+    "names_not_in_canonical_layer": [],
+    "ambiguous_canonical_matches": []
+  }
+}

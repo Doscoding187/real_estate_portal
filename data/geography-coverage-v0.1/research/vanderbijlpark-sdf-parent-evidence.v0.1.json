@@ -1,0 +1,36 @@
+{
+  "artifact_version": "vanderbijlpark-sdf-parent-evidence-v0.1",
+  "town": "Vanderbijlpark",
+  "parent_natural_key": "gauteng/vanderbijlpark",
+  "administrative_context": "Sedibeng",
+  "evidence_class": "official_municipal_spatial_development_framework_area_list",
+  "source": {
+    "publisher": "Emfuleni Local Municipality",
+    "url": "https://emfuleni.gov.za/wp-content/uploads/2025/02/Emfuleni-Spatial-Development-Framework-Vision-2035.pdf",
+    "section": "Spatial Development Framework Vision 2035 — Table 20: Vanderbijlpark CW, CE, SE, and SW planning areas",
+    "retrieved": "2026-08-26",
+    "licence_note": "Official municipal planning-area labels used for locality membership assertions; no prose, geometry, or property data is copied."
+  },
+  "suburb_names": [
+    "CE1",
+    "CE2",
+    "CE3",
+    "CE4",
+    "CE5",
+    "CE6",
+    "CW1",
+    "CW2",
+    "CW3",
+    "CW4",
+    "CW5",
+    "CW6",
+    "SE1",
+    "SE2",
+    "SE6",
+    "SE8",
+    "SE10",
+    "SW1",
+    "SW2",
+    "SW5"
+  ]
+}

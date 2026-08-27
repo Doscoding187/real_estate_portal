@@ -1,0 +1,212 @@
+{
+  "resolved_edges_version": "randfontein-place-index-parent-evidence.v0.1.resolved",
+  "town": "Randfontein",
+  "parent_natural_key": "gauteng/randfontein",
+  "source": {
+    "publisher": "Office of the Chief Justice, Department of Justice and Constitutional Development",
+    "url": "https://www.ocj.gov.za/maps/areas-gp.html",
+    "section": "Gauteng: Find a court in your area — Randfontein Sub District entries",
+    "retrieved": "2026-08-26",
+    "licence_note": "Official government place-index used for service-area membership assertions; no prose or geometry is copied."
+  },
+  "edge_count": 14,
+  "edges": [
+    {
+      "factual_location_id": "pl-gp-v01-046290100f4b110766b7",
+      "preferred_name": "Robin Park",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/randfontein",
+      "evidence_class": "official_magisterial_place_index",
+      "citation": "https://www.ocj.gov.za/maps/areas-gp.html#Gauteng%3A%20Find%20a%20court%20in%20your%20area%20%E2%80%94%20Randfontein%20Sub%20District%20entries (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-106893c840633f71d202",
+      "preferred_name": "Randpoort",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/randfontein",
+      "evidence_class": "official_magisterial_place_index",
+      "citation": "https://www.ocj.gov.za/maps/areas-gp.html#Gauteng%3A%20Find%20a%20court%20in%20your%20area%20%E2%80%94%20Randfontein%20Sub%20District%20entries (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-1e52b3ca3736afff304d",
+      "preferred_name": "Green Hills",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/randfontein",
+      "evidence_class": "official_magisterial_place_index",
+      "citation": "https://www.ocj.gov.za/maps/areas-gp.html#Gauteng%3A%20Find%20a%20court%20in%20your%20area%20%E2%80%94%20Randfontein%20Sub%20District%20entries (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-7d2cd9506ee350ee1d34",
+      "preferred_name": "Culemborgpark",
+      "factual_type": "locality",
+      "parent_natural_key": "gauteng/randfontein",
+      "evidence_class": "official_magisterial_place_index",
+      "citation": "https://www.ocj.gov.za/maps/areas-gp.html#Gauteng%3A%20Find%20a%20court%20in%20your%20area%20%E2%80%94%20Randfontein%20Sub%20District%20entries (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-8f187e146ae2b5510b52",
+      "preferred_name": "Home Lake",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/randfontein",
+      "evidence_class": "official_magisterial_place_index",
+      "citation": "https://www.ocj.gov.za/maps/areas-gp.html#Gauteng%3A%20Find%20a%20court%20in%20your%20area%20%E2%80%94%20Randfontein%20Sub%20District%20entries (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-aa52c17ee6d47ff1a8a0",
+      "preferred_name": "Westergloor",
+      "factual_type": "locality",
+      "parent_natural_key": "gauteng/randfontein",
+      "evidence_class": "official_magisterial_place_index",
+      "citation": "https://www.ocj.gov.za/maps/areas-gp.html#Gauteng%3A%20Find%20a%20court%20in%20your%20area%20%E2%80%94%20Randfontein%20Sub%20District%20entries (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-b5f1c8677a334ce5d1c9",
+      "preferred_name": "Helikonpark",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/randfontein",
+      "evidence_class": "official_magisterial_place_index",
+      "citation": "https://www.ocj.gov.za/maps/areas-gp.html#Gauteng%3A%20Find%20a%20court%20in%20your%20area%20%E2%80%94%20Randfontein%20Sub%20District%20entries (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-bd998381c6f556461606",
+      "preferred_name": "Rikasrus AH",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/randfontein",
+      "evidence_class": "official_magisterial_place_index",
+      "citation": "https://www.ocj.gov.za/maps/areas-gp.html#Gauteng%3A%20Find%20a%20court%20in%20your%20area%20%E2%80%94%20Randfontein%20Sub%20District%20entries (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-ce0382196af8a0e2818c",
+      "preferred_name": "Aureus",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/randfontein",
+      "evidence_class": "official_magisterial_place_index",
+      "citation": "https://www.ocj.gov.za/maps/areas-gp.html#Gauteng%3A%20Find%20a%20court%20in%20your%20area%20%E2%80%94%20Randfontein%20Sub%20District%20entries (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-cfe5d3f0061d6d766782",
+      "preferred_name": "Finsbury",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/randfontein",
+      "evidence_class": "official_magisterial_place_index",
+      "citation": "https://www.ocj.gov.za/maps/areas-gp.html#Gauteng%3A%20Find%20a%20court%20in%20your%20area%20%E2%80%94%20Randfontein%20Sub%20District%20entries (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-d15d32fbe55ee8223be0",
+      "preferred_name": "Hillside AH",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/randfontein",
+      "evidence_class": "official_magisterial_place_index",
+      "citation": "https://www.ocj.gov.za/maps/areas-gp.html#Gauteng%3A%20Find%20a%20court%20in%20your%20area%20%E2%80%94%20Randfontein%20Sub%20District%20entries (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-d2d186879f730835bf3a",
+      "preferred_name": "Middelvlei AH",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/randfontein",
+      "evidence_class": "official_magisterial_place_index",
+      "citation": "https://www.ocj.gov.za/maps/areas-gp.html#Gauteng%3A%20Find%20a%20court%20in%20your%20area%20%E2%80%94%20Randfontein%20Sub%20District%20entries (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-e342bb65632030c541f2",
+      "preferred_name": "Vleikop AH",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/randfontein",
+      "evidence_class": "official_magisterial_place_index",
+      "citation": "https://www.ocj.gov.za/maps/areas-gp.html#Gauteng%3A%20Find%20a%20court%20in%20your%20area%20%E2%80%94%20Randfontein%20Sub%20District%20entries (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-fbb4fb31b18bd70d04e7",
+      "preferred_name": "Hectorton",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/randfontein",
+      "evidence_class": "official_magisterial_place_index",
+      "citation": "https://www.ocj.gov.za/maps/areas-gp.html#Gauteng%3A%20Find%20a%20court%20in%20your%20area%20%E2%80%94%20Randfontein%20Sub%20District%20entries (retrieved 2026-08-26)"
+    }
+  ],
+  "diagnostics": {
+    "researched_names": 14,
+    "matched_already_projected": [
+      {
+        "name": "Aureus",
+        "factual_location_id": "pl-gp-v01-ce0382196af8a0e2818c",
+        "existing_parent_natural_key": "gauteng/randfontein",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Culemborgpark",
+        "factual_location_id": "pl-gp-v01-7d2cd9506ee350ee1d34",
+        "existing_parent_natural_key": "gauteng/randfontein",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Finsbury",
+        "factual_location_id": "pl-gp-v01-cfe5d3f0061d6d766782",
+        "existing_parent_natural_key": "gauteng/randfontein",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Green Hills",
+        "factual_location_id": "pl-gp-v01-1e52b3ca3736afff304d",
+        "existing_parent_natural_key": "gauteng/randfontein",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Hectorton",
+        "factual_location_id": "pl-gp-v01-fbb4fb31b18bd70d04e7",
+        "existing_parent_natural_key": "gauteng/randfontein",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Helikonpark",
+        "factual_location_id": "pl-gp-v01-b5f1c8677a334ce5d1c9",
+        "existing_parent_natural_key": "gauteng/randfontein",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Hillside AH",
+        "factual_location_id": "pl-gp-v01-d15d32fbe55ee8223be0",
+        "existing_parent_natural_key": "gauteng/randfontein",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Home Lake",
+        "factual_location_id": "pl-gp-v01-8f187e146ae2b5510b52",
+        "existing_parent_natural_key": "gauteng/randfontein",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Randpoort",
+        "factual_location_id": "pl-gp-v01-106893c840633f71d202",
+        "existing_parent_natural_key": "gauteng/randfontein",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Robin Park",
+        "factual_location_id": "pl-gp-v01-046290100f4b110766b7",
+        "existing_parent_natural_key": "gauteng/randfontein",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Rikasrus AH",
+        "factual_location_id": "pl-gp-v01-bd998381c6f556461606",
+        "existing_parent_natural_key": "gauteng/randfontein",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Vleikop AH",
+        "factual_location_id": "pl-gp-v01-e342bb65632030c541f2",
+        "existing_parent_natural_key": "gauteng/randfontein",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Westergloor",
+        "factual_location_id": "pl-gp-v01-aa52c17ee6d47ff1a8a0",
+        "existing_parent_natural_key": "gauteng/randfontein",
+        "parent_matches_evidence": true
+      }
+    ],
+    "names_not_in_canonical_layer": [],
+    "ambiguous_canonical_matches": []
+  }
+}

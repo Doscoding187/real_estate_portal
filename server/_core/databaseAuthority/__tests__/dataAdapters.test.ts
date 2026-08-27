@@ -185,11 +185,11 @@ describe('bounded Database Authority data adapters', () => {
       'gauteng-runtime-reference-projection-v0.3',
     );
     expect(GOVERNED_RUNTIME_REFERENCE_DIGEST).toMatch(/^[a-f0-9]{64}$/);
-    expect(GOVERNED_RUNTIME_REFERENCE_ROWS).toHaveLength(1205);
+    expect(GOVERNED_RUNTIME_REFERENCE_ROWS).toHaveLength(1414);
     expect(GOVERNED_RUNTIME_GEOGRAPHY_EXPECTED_ROWS).toEqual({
       provinces: 9,
-      cities: 338,
-      suburbs: 882,
+      cities: 340,
+      suburbs: 1089,
     });
     expect(
       GOVERNED_RUNTIME_REFERENCE_ROWS.every(
