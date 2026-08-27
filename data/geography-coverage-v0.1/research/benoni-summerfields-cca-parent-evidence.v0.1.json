@@ -1,0 +1,50 @@
+{
+  "artifact_version": "benoni-summerfields-cca-parent-evidence-v0.1",
+  "town": "Benoni",
+  "parent_natural_key": "gauteng/benoni",
+  "administrative_context": "Ekurhuleni",
+  "evidence_class": "official_municipal_cca_boundary_point_intersection",
+  "source": {
+    "publisher": "City of Ekurhuleni Corporate Geo-Informatics Division",
+    "url": "https://gis.ekurhuleni.gov.za/arcgis/rest/services/Ward_Delimitation_Draft_Proposal__EKU_Draftset_1_24Jan25__MIL1/MapServer/19",
+    "section": "Customer Care Areas layer (19) — EPSG:4326 point-intersection query for the canonical Summerfields point returned CCA=BENONI CCA",
+    "retrieved": "2026-08-27",
+    "licence_note": "Official municipal CCA boundary layer used for a point-to-market parent assertion; no boundary geometry is copied."
+  },
+  "supporting_sources": [
+    {
+      "publisher": "City of Ekurhuleni",
+      "url": "https://www.ekurhuleni.gov.za/wp-content/uploads/2022/05/24.pdf",
+      "section": "Ward 24 draft delimitation map — Summerfields Primary School shown in the Benoni ward area",
+      "retrieved": "2026-08-27"
+    },
+    {
+      "publisher": "City of Ekurhuleni",
+      "url": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/08/B-F-04-2025-2025-2026-SDBIP.pdf",
+      "section": "Table 3 — City of Ekurhuleni Customer Care Areas, including Benoni CCA",
+      "retrieved": "2026-08-27"
+    }
+  ],
+  "identity_note": "The canonical Summerfields identity is retained. The parent edge is identity-specific: the official CCA boundary directly intersects its canonical source point and returns BENONI CCA; the supporting ward map corroborates the same Benoni service area without relying on display-text proximity.",
+  "spatial_query": {
+    "geometry_type": "esriGeometryPoint",
+    "spatial_reference": "EPSG:4326",
+    "spatial_relationship": "esriSpatialRelIntersects",
+    "out_fields": "*",
+    "return_geometry": false
+  },
+  "identity_specific_records": [
+    {
+      "factual_location_id": "pl-gp-v01-d90d1eaf6a6414d7d560",
+      "preferred_name": "Summerfields",
+      "source_record_id": "sr:osm:node/262717624",
+      "canonical_point": {
+        "longitude": 28.365895,
+        "latitude": -26.116198
+      },
+      "municipal_query_result": {
+        "cca": "BENONI CCA"
+      }
+    }
+  ]
+}

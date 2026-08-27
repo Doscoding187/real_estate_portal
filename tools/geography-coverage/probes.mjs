@@ -1072,6 +1072,14 @@ for (const probe of WAVE50_IDENTITY_SPECIFIC_PROBES) {
   );
 }
 
+const wave51Row = rowsByNaturalKey.get('gauteng/benoni/summerfields');
+check(
+  'wave51 official CCA Summerfields parent edge resolves',
+  wave51Row !== undefined &&
+    wave51Row.factual_location_ids.includes('pl-gp-v01-d90d1eaf6a6414d7d560'),
+  wave51Row ? `${wave51Row.runtime_natural_key}/${wave51Row.factual_location_ids.join(',')}` : 'missing',
+);
+
 check(
   'ordinary duplicate collisions remain queued without explicit grouping',
   queue.some(entry => entry.reason === 'duplicate_natural_key_within_parent' && entry.preferred_name === 'Vrededorp'),
