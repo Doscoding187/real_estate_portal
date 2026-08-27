@@ -1251,7 +1251,8 @@ export const developerRouter = router({
       );
 
       let items: FeedItem[] = [];
-      let source: 'developments' | 'listings' | 'units' | 'mixed' = 'developments';
+      let source: 'developments' | 'listings' | 'units' | 'mixed' | 'shared_living' | 'land' =
+        'developments';
       let selectedScope: LocationScope = requestedScope;
 
       for (const candidate of dedupedCandidates) {
