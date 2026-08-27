@@ -7,7 +7,7 @@
     "factual_canonical_geography_sha256": "1fe0e2e3101bd7e459f484b7125dc1ce1f0327104002b184ef0e90d4236b7b7f",
     "factual_canonical_names_sha256": "a87891bc2e4167130d7e5eb649516a34aedaa071278ce8fe25df19f511669b51",
     "carried_projection_v01_sha256": "982ea13cd190a02da5440f122a061713e22bc157ef46f491ce530c5877ff9fc0",
-    "territory_manifest_sha256": "2384db3029092a632363d288a4b174dc48607df36cb646828757f49b91ab1976"
+    "territory_manifest_sha256": "73197d590701314d0607335ccc9cf85871ab05b409c63fc64df36ef69c402563"
   },
   "rows": [
     {
@@ -16678,6 +16678,28 @@
     {
       "runtime_search_scope_kind": "locality",
       "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/krugersdorp/azaadville",
+      "runtime_parent_natural_key": "gauteng/krugersdorp",
+      "name": "Azaadville",
+      "slug": "azaadville",
+      "latitude": -26.1705395,
+      "longitude": 27.7555556,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "mixed_odbl_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-f4bc69ea01e6387310f8"
+      ],
+      "factual_preferred_names": [
+        "Azaadville"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
       "runtime_natural_key": "gauteng/krugersdorp/boltonia",
       "runtime_parent_natural_key": "gauteng/krugersdorp",
       "name": "Boltonia",
@@ -16805,6 +16827,28 @@
       ],
       "factual_types": [
         "village"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/krugersdorp/kagiso",
+      "runtime_parent_natural_key": "gauteng/krugersdorp",
+      "name": "Kagiso",
+      "slug": "kagiso",
+      "latitude": -26.142012,
+      "longitude": 27.7906166665,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "mixed_odbl_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-e3f2e300de3c1df1a59d"
+      ],
+      "factual_preferred_names": [
+        "Kagiso"
+      ],
+      "factual_types": [
+        "locality"
       ]
     },
     {
@@ -17169,6 +17213,50 @@
       ],
       "factual_types": [
         "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/krugersdorp/rietvallei",
+      "runtime_parent_natural_key": "gauteng/krugersdorp",
+      "name": "Rietvallei",
+      "slug": "rietvallei",
+      "latitude": -26.1978964,
+      "longitude": 27.7631786,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "mixed_odbl_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-fd2df74f870a774312ae"
+      ],
+      "factual_preferred_names": [
+        "Rietvallei"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/krugersdorp/rietvallei-241-iq",
+      "runtime_parent_natural_key": "gauteng/krugersdorp",
+      "name": "Rietvallei 241-IQ",
+      "slug": "rietvallei-241-iq",
+      "latitude": -26.1739642,
+      "longitude": 27.7675628,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-dcd3b8cc7af96af8b4e3"
+      ],
+      "factual_preferred_names": [
+        "Rietvallei 241-IQ"
+      ],
+      "factual_types": [
+        "village"
       ]
     },
     {
