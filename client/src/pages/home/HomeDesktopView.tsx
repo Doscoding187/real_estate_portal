@@ -6,6 +6,7 @@ import { ContentRail } from '@/components/layout/ContentRail';
 import { HomeTrendingSection } from '@/sections/home/HomeTrendingSection';
 import { CTASection } from '@/sections/home/CTASection';
 import { ProfessionalEntrySection } from '@/sections/home/ProfessionalEntrySection';
+import { HomeJourneySection } from '@/sections/home/HomeJourneySection';
 import type { HeroTab } from '@/types/hero';
 
 type HomeDesktopViewProps = {
@@ -45,6 +46,7 @@ export function HomeDesktopView({
         <DiscoverProperties />
         <TopDevelopers selectedProvince={selectedProvince} />
         <ExploreCities customLocations={popularCities} basePath="" />
+        <HomeJourneySection />
         <ProfessionalEntrySection />
         <CTASection onBrowse={onBrowseProperties} />
       </ContentRail>
