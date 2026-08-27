@@ -923,6 +923,23 @@ for (const probe of WAVE45_IDENTITY_SPECIFIC_PROBES) {
   );
 }
 
+const WAVE46_IDENTITY_SPECIFIC_PROBES = [
+  {
+    name: 'Ethembeni Park',
+    factualId: 'pl-gp-v01-0b32a8c1fe1a7e558ef4',
+    parentSuffix: 'gauteng/boksburg/ethembeni-park',
+  },
+];
+
+for (const probe of WAVE46_IDENTITY_SPECIFIC_PROBES) {
+  const row = rowsByNaturalKey.get(probe.parentSuffix);
+  check(
+    `wave46 identity-specific edge resolves: ${probe.name}`,
+    row !== undefined && row.factual_location_ids.includes(probe.factualId),
+    row ? `${row.runtime_natural_key}/${row.factual_location_ids.join(',')}` : 'missing',
+  );
+}
+
 const NEGATIVE_PROBES = ['Mamelodi Extension 1', 'Mamelodi Extension 4'];
 for (const probe of NEGATIVE_PROBES) {
   const directHit = resolveByName(probe);

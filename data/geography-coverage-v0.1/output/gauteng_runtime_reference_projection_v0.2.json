@@ -7,7 +7,7 @@
     "factual_canonical_geography_sha256": "1fe0e2e3101bd7e459f484b7125dc1ce1f0327104002b184ef0e90d4236b7b7f",
     "factual_canonical_names_sha256": "a87891bc2e4167130d7e5eb649516a34aedaa071278ce8fe25df19f511669b51",
     "carried_projection_v01_sha256": "982ea13cd190a02da5440f122a061713e22bc157ef46f491ce530c5877ff9fc0",
-    "territory_manifest_sha256": "962628825e17e47a17bc357ff250189a013012fad1ff85afa9d154a6f82fedd0"
+    "territory_manifest_sha256": "3e40a2976a6950db2e5f3686ed6a3228ae4e8629ebc36324a3037250d6257026"
   },
   "rows": [
     {
@@ -1988,6 +1988,28 @@
       ],
       "factual_preferred_names": [
         "Elspark"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/boksburg/ethembeni-park",
+      "runtime_parent_natural_key": "gauteng/boksburg",
+      "name": "Ethembeni Park",
+      "slug": "ethembeni-park",
+      "latitude": -26.2856317,
+      "longitude": 28.2515934,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-0b32a8c1fe1a7e558ef4"
+      ],
+      "factual_preferred_names": [
+        "Ethembeni Park"
       ],
       "factual_types": [
         "suburb"
