@@ -1,0 +1,20 @@
+{
+  "artifact_version": "boksburg-ethembeni-park-parent-evidence-v0.1",
+  "town": "Boksburg",
+  "parent_natural_key": "gauteng/boksburg",
+  "administrative_context": "Ekurhuleni",
+  "evidence_class": "direct_developer_project_area_relationship",
+  "source": {
+    "publisher": "Base Capital South Africa",
+    "url": "https://www.basecapital.co.za/partnerships/default.html",
+    "section": "Strategic Partnerships and Alliances — Ethembeni Property Developers",
+    "retrieved": "2026-08-27",
+    "licence_note": "First-party developer description used only for the locality-to-runtime-market relationship; no prose or geometry is copied."
+  },
+  "identity_specific_records": [
+    {
+      "factual_location_id": "pl-gp-v01-0b32a8c1fe1a7e558ef4",
+      "preferred_name": "Ethembeni Park"
+    }
+  ]
+}

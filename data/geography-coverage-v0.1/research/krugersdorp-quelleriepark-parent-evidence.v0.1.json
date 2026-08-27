@@ -1,0 +1,20 @@
+{
+  "artifact_version": "krugersdorp-quelleriepark-parent-evidence-v0.1",
+  "town": "Krugersdorp",
+  "parent_natural_key": "gauteng/krugersdorp",
+  "administrative_context": "West Rand",
+  "evidence_class": "official_municipal_valuation_roll_area",
+  "source": {
+    "publisher": "Mogale City Local Municipality",
+    "url": "https://mogalecity.gov.za/mogale-city/live-in/valuation-roll/",
+    "section": "2025/2030 General Valuation Roll — Krugersdorp - Quelleriepark",
+    "retrieved": "2026-08-26",
+    "licence_note": "Official municipal valuation-roll area label used for locality membership assertion; no property records, prose, or geometry is copied."
+  },
+  "source_name_variants": {
+    "Quellieriepark": "Quelleriepark"
+  },
+  "suburb_names": [
+    "Quellieriepark"
+  ]
+}

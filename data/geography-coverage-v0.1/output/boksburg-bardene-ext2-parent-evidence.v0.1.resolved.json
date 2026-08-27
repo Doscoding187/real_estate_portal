@@ -1,0 +1,29 @@
+{
+  "resolved_edges_version": "boksburg-bardene-ext2-parent-evidence.v0.1.resolved",
+  "town": "Boksburg",
+  "parent_natural_key": "gauteng/boksburg",
+  "source": {
+    "publisher": "Government Gazette of South Africa",
+    "url": "https://www.saflii.org/za/gaz/ZAGovGaz/2020/699.pdf",
+    "section": "Government Gazette address entry — 5 Olienhout Avenue, Bardene Ext 2, Boksburg, Gauteng",
+    "retrieved": "2026-08-27",
+    "licence_note": "Official government-gazette address record used for locality relationship assertions; no prose or geometry is copied."
+  },
+  "edge_count": 1,
+  "edges": [
+    {
+      "factual_location_id": "pl-gp-v01-ab66704b5bac38ece6f8",
+      "preferred_name": "Bardene Ext 2",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/boksburg",
+      "evidence_class": "official_government_gazette_address_relationship",
+      "citation": "https://www.saflii.org/za/gaz/ZAGovGaz/2020/699.pdf#Government%20Gazette%20address%20entry%20%E2%80%94%205%20Olienhout%20Avenue%2C%20Bardene%20Ext%202%2C%20Boksburg%2C%20Gauteng (retrieved 2026-08-27)"
+    }
+  ],
+  "diagnostics": {
+    "researched_names": 1,
+    "matched_already_projected": [],
+    "names_not_in_canonical_layer": [],
+    "ambiguous_canonical_matches": []
+  }
+}

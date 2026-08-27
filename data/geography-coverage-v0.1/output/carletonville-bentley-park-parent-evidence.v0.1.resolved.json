@@ -1,0 +1,29 @@
+{
+  "resolved_edges_version": "carletonville-bentley-park-parent-evidence.v0.1.resolved",
+  "town": "Carletonville",
+  "parent_natural_key": "gauteng/carletonville",
+  "source": {
+    "publisher": "Merafong City Local Municipality",
+    "url": "https://merafong.gov.za/wp-content/uploads/2024/04/Final-IDP-Document-2017-2018.pdf",
+    "section": "Integrated Development Plan — MCLM incorporated areas: Carletonville and Bentley Park",
+    "retrieved": "2026-08-27",
+    "licence_note": "Official municipal integrated development plan used for locality relationship assertions; no prose or geometry is copied."
+  },
+  "edge_count": 1,
+  "edges": [
+    {
+      "factual_location_id": "pl-gp-v01-3caebae7fd6c82c89d2d",
+      "preferred_name": "Bentley Park",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/carletonville",
+      "evidence_class": "official_municipal_idp_and_magisterial_place_index",
+      "citation": "https://merafong.gov.za/wp-content/uploads/2024/04/Final-IDP-Document-2017-2018.pdf#Integrated%20Development%20Plan%20%E2%80%94%20MCLM%20incorporated%20areas%3A%20Carletonville%20and%20Bentley%20Park (retrieved 2026-08-27)"
+    }
+  ],
+  "diagnostics": {
+    "researched_names": 1,
+    "matched_already_projected": [],
+    "names_not_in_canonical_layer": [],
+    "ambiguous_canonical_matches": []
+  }
+}

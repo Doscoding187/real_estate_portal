@@ -1,0 +1,46 @@
+{
+  "resolved_edges_version": "meyerton-residual-place-index-parent-evidence.v0.1.resolved",
+  "town": "Meyerton",
+  "parent_natural_key": "gauteng/meyerton",
+  "source": {
+    "publisher": "Midvaal Local Municipality",
+    "url": "https://www.midvaal.gov.za/2026-2027-midvaal-budget-meeting-review-public-meetings-for-midvaal-local-municipality/",
+    "section": "2026/2027 Midvaal budget meeting review — Ward 1 Buyscelia area list and Midvaal municipality location",
+    "retrieved": "2026-08-27",
+    "licence_note": "Official municipal area and service-delivery source used for locality relationship assertions; no prose or geometry is copied."
+  },
+  "edge_count": 3,
+  "edges": [
+    {
+      "factual_location_id": "pl-gp-v01-22ea6b667528c0f84fc6",
+      "preferred_name": "Van der Westuizenhoogte AH",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/meyerton",
+      "evidence_class": "official_municipal_and_magisterial_place_index",
+      "citation": "https://www.midvaal.gov.za/2026-2027-midvaal-budget-meeting-review-public-meetings-for-midvaal-local-municipality/#2026%2F2027%20Midvaal%20budget%20meeting%20review%20%E2%80%94%20Ward%201%20Buyscelia%20area%20list%20and%20Midvaal%20municipality%20location (retrieved 2026-08-27)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-23f928d4673bd505c129",
+      "preferred_name": "Buyscelia AH",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/meyerton",
+      "evidence_class": "official_municipal_and_magisterial_place_index",
+      "citation": "https://www.midvaal.gov.za/2026-2027-midvaal-budget-meeting-review-public-meetings-for-midvaal-local-municipality/#2026%2F2027%20Midvaal%20budget%20meeting%20review%20%E2%80%94%20Ward%201%20Buyscelia%20area%20list%20and%20Midvaal%20municipality%20location (retrieved 2026-08-27)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-91e1d3befe548dd94a53",
+      "preferred_name": "Suikerbosrant Nature Reserve",
+      "factual_type": "locality",
+      "parent_natural_key": "gauteng/meyerton",
+      "evidence_class": "official_municipal_and_magisterial_place_index",
+      "citation": "https://www.midvaal.gov.za/2026-2027-midvaal-budget-meeting-review-public-meetings-for-midvaal-local-municipality/#2026%2F2027%20Midvaal%20budget%20meeting%20review%20%E2%80%94%20Ward%201%20Buyscelia%20area%20list%20and%20Midvaal%20municipality%20location (retrieved 2026-08-27)"
+    }
+  ],
+  "diagnostics": {
+    "researched_names": 0,
+    "identity_specific_records": 3,
+    "matched_already_projected": [],
+    "names_not_in_canonical_layer": [],
+    "ambiguous_canonical_matches": []
+  }
+}

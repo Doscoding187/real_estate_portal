@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+/* global console, process */
 // Wave-2 parent-edge analysis: resolve town-level parents for queued
 // identities from already-ingested evidence (GeoNames hierarchy, Wikidata P131).
 import fs from 'node:fs';

@@ -9,7 +9,7 @@
     "retrieved": "2026-08-26",
     "licence_note": "Official municipal service calendar used for locality membership assertions; no prose or geometry is copied."
   },
-  "edge_count": 20,
+  "edge_count": 21,
   "edges": [
     {
       "factual_location_id": "pl-gp-v01-0c2be125abe8d3cd863b",
@@ -70,6 +70,14 @@
     {
       "factual_location_id": "pl-gp-v01-8620e174741c483d1ca5",
       "preferred_name": "Rowhill",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/springs",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/SPRINGS_Calender-2026.pdf#2026%20Springs-labelled%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-89b2f45f7d9356af5502",
+      "preferred_name": "Presidents dam",
       "factual_type": "suburb",
       "parent_natural_key": "gauteng/springs",
       "evidence_class": "official_municipal_refuse_collection_area_list",
@@ -173,7 +181,7 @@
     }
   ],
   "diagnostics": {
-    "researched_names": 20,
+    "researched_names": 21,
     "matched_already_projected": [
       {
         "name": "Bakerton",
@@ -276,8 +284,27 @@
         "factual_location_id": "pl-gp-v01-d15a540b1c7f0dfebdc3",
         "existing_parent_natural_key": "gauteng/springs",
         "parent_matches_evidence": true
+      },
+      {
+        "name": "Selcourt",
+        "factual_location_id": "pl-gp-v01-42b618e5e1a93bed8ee0",
+        "existing_parent_natural_key": "gauteng/springs",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Krugersrus",
+        "factual_location_id": "pl-gp-v01-df4a7e971a8bb75062d4",
+        "existing_parent_natural_key": "gauteng/springs",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Presidentsdam",
+        "factual_location_id": "pl-gp-v01-49349dbb0188055793ce",
+        "existing_parent_natural_key": "gauteng/springs",
+        "parent_matches_evidence": true
       }
     ],
-    "names_not_in_canonical_layer": []
+    "names_not_in_canonical_layer": [],
+    "ambiguous_canonical_matches": []
   }
 }

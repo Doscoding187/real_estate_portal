@@ -1,0 +1,20 @@
+{
+  "artifact_version": "krugersdorp-lewisham-location-parent-evidence-v0.1",
+  "town": "Krugersdorp",
+  "parent_natural_key": "gauteng/krugersdorp",
+  "administrative_context": "West Rand",
+  "evidence_class": "official_municipal_facility_address",
+  "source": {
+    "publisher": "Mogale City Local Municipality",
+    "url": "https://mogalecity.gov.za/mogale-city/live-in/clinics/",
+    "section": "Mogale City clinics page: Lewisham address listed in Krugersdorp",
+    "retrieved": "2026-08-27",
+    "licence_note": "Official municipal facility address used for locality relationship assertions; no prose or geometry is copied."
+  },
+  "source_name_variants": {
+    "Lewisham Location": "Lewisham"
+  },
+  "suburb_names": [
+    "Lewisham Location"
+  ]
+}

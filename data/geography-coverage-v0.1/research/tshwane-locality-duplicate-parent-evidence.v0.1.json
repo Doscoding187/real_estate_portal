@@ -1,0 +1,106 @@
+{
+  "artifact_version": "tshwane-locality-duplicate-parent-evidence-v0.1",
+  "town": "Pretoria",
+  "parent_natural_key": "gauteng/pretoria",
+  "administrative_context": "City of Tshwane",
+  "evidence_class": "official_magisterial_and_municipal_identity_specific_duplicate_set",
+  "allow_duplicate_natural_key_grouping": true,
+  "source": {
+    "publisher": "Office of the Chief Justice, Department of Justice and Constitutional Development",
+    "url": "https://www.justice.gov.za/maps/areas-gp.html",
+    "section": "Gauteng: Find a court in your area — Rietfontein, Lydiana, Val de Grace and Dorandia are listed under Tshwane / Pretoria",
+    "retrieved": "2026-08-27",
+    "licence_note": "Official government place index used for identity-specific locality context; no prose or geometry is copied."
+  },
+  "supporting_sources": [
+    {
+      "publisher": "City of Tshwane Metropolitan Municipality",
+      "url": "https://www.tshwane.gov.za/?page_id=64214",
+      "section": "Official spatial-nodes material lists Lyttelton Manor",
+      "retrieved": "2026-08-27"
+    },
+    {
+      "publisher": "City of Tshwane Metropolitan Municipality",
+      "url": "https://www.tshwane.gov.za/?p=102541",
+      "section": "Official infrastructure notice names Lydiana and Menlo Park in Tshwane service areas",
+      "retrieved": "2026-08-27"
+    },
+    {
+      "publisher": "City of Tshwane Metropolitan Municipality",
+      "url": "https://www.tshwane.gov.za/?p=100927",
+      "section": "Official infrastructure notice names Lyttelton Manor in Tshwane service areas",
+      "retrieved": "2026-08-27"
+    }
+  ],
+  "identity_note": "Each canonical identity remains separate. The official context supports co-publishing duplicate factual locality identities under the Pretoria locality key, including the Val De Grace / Val-de-Grâce spelling pair; the artifact does not merge or rename the records.",
+  "identity_specific_records": [
+    {
+      "factual_location_id": "pl-gp-v01-16a594ed4e0b6be4c440",
+      "preferred_name": "Rietfontein",
+      "source_record_ids": [
+        "sr:nga_gns:-1275949:-1854638:31958",
+        "sr:osm:node/369581614",
+        "sr:geonames:962170"
+      ]
+    },
+    {
+      "factual_location_id": "pl-gp-v01-fcaba12bcdce7fb3c0c2",
+      "preferred_name": "Rietfontein",
+      "source_record_ids": [
+        "sr:geonames:961921",
+        "sr:osm:node/30483944",
+        "sr:nga_gns:-1276220:-1854913:34223"
+      ]
+    },
+    {
+      "factual_location_id": "pl-gp-v01-1cf7441a107d1faf4720",
+      "preferred_name": "Lydiana",
+      "source_record_ids": ["sr:osm:node/262708866"]
+    },
+    {
+      "factual_location_id": "pl-gp-v01-e9a46a63d27967a5cd33",
+      "preferred_name": "Lydiana",
+      "source_record_ids": ["sr:osm:node/2388570013"]
+    },
+    {
+      "factual_location_id": "pl-gp-v01-35c9b6514fe9b5f0d03a",
+      "preferred_name": "Val De Grace",
+      "source_record_ids": ["sr:osm:node/29631350"]
+    },
+    {
+      "factual_location_id": "pl-gp-v01-61b9c5fa174305cc3335",
+      "preferred_name": "Val-de-Grâce",
+      "source_record_ids": ["sr:osm:node/262726141"]
+    },
+    {
+      "factual_location_id": "pl-gp-v01-38957c0dfb1dd73a722e",
+      "preferred_name": "Dorandia",
+      "source_record_ids": ["sr:osm:node/26021179"]
+    },
+    {
+      "factual_location_id": "pl-gp-v01-d22f5766a31c2ab7c32b",
+      "preferred_name": "Dorandia",
+      "source_record_ids": ["sr:osm:node/29869862"]
+    },
+    {
+      "factual_location_id": "pl-gp-v01-4f2d00ff52232cd343b7",
+      "preferred_name": "Menlo Park",
+      "source_record_ids": ["sr:wikidata:Q3006868", "sr:osm:node/25456673"]
+    },
+    {
+      "factual_location_id": "pl-gp-v01-e3b8c4c2508eebb1f922",
+      "preferred_name": "Menlo Park",
+      "source_record_ids": ["sr:nga_gns:-1259298:-1834803:52802", "sr:geonames:977058"]
+    },
+    {
+      "factual_location_id": "pl-gp-v01-52a2d8d9be3ffc96a599",
+      "preferred_name": "Lyttelton Manor",
+      "source_record_ids": ["sr:osm:node/33495742"]
+    },
+    {
+      "factual_location_id": "pl-gp-v01-d0fffc78c2e45e1bfc2a",
+      "preferred_name": "Lyttelton Manor",
+      "source_record_ids": ["sr:osm:node/262708869"]
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "artifact_version": "vereeniging-residential-policy-parent-evidence-v0.1",
+  "town": "Vereeniging",
+  "parent_natural_key": "gauteng/vereeniging",
+  "administrative_context": "Sedibeng",
+  "evidence_class": "official_municipal_residential_policy_area_grouping",
+  "source": {
+    "publisher": "Emfuleni Local Municipality",
+    "url": "https://emfuleni.gov.za/wp-content/uploads/2025/01/residential_related_policies.pdf",
+    "section": "Residential-related policies — development area Group 2",
+    "retrieved": "2026-08-26",
+    "licence_note": "Official municipal development-area grouping used for locality membership assertions; no prose, geometry, or property data is copied."
+  },
+  "source_name_variants": {
+    "Rust-ter-Vaal": "Rus ter Vaal"
+  },
+  "suburb_names": [
+    "Rus ter Vaal",
+    "Springcol",
+    "Steel Park"
+  ]
+}

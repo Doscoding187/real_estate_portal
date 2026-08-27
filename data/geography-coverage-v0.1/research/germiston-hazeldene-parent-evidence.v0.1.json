@@ -1,0 +1,18 @@
+{
+  "artifact_version": "germiston-hazeldene-parent-evidence-v0.1",
+  "town": "Germiston",
+  "parent_natural_key": "gauteng/germiston",
+  "administrative_context": "Ekurhuleni",
+  "evidence_class": "official_municipal_refuse_collection_area_list",
+  "source": {
+    "publisher": "City of Ekurhuleni",
+    "url": "https://ekurhuleni.gov.za/wp-content/uploads/2021/11/waste-removal-calendar-2021-GERMISTON-1.pdf",
+    "section": "2021 Germiston/Katlehong refuse-removal programme — GERMISTON-labelled areas",
+    "retrieved": "2026-08-27",
+    "licence_note": "Official municipal service calendar used for locality membership assertions; no prose or geometry is copied."
+  },
+  "source_name_variants": {},
+  "suburb_names": [
+    "Hazeldene"
+  ]
+}

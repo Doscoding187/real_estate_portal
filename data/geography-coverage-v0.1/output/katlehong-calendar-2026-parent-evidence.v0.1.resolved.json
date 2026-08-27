@@ -9,7 +9,7 @@
     "retrieved": "2026-08-26",
     "licence_note": "Official municipal service calendar used for locality membership assertions; no prose or geometry is copied."
   },
-  "edge_count": 21,
+  "edge_count": 26,
   "edges": [
     {
       "factual_location_id": "pl-gp-v01-09fe0e1c02680a5705ed",
@@ -68,6 +68,14 @@
       "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/GERMISTON_Calender-2026U.pdf#2026%E2%80%932027%20Germiston%2FKatlehong%20refuse-removal%20programme%3A%20KATLEHONG-labelled%20areas (retrieved 2026-08-26)"
     },
     {
+      "factual_location_id": "pl-gp-v01-3fa4888f74c5ab216b17",
+      "preferred_name": "Spruitview",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/katlehong",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/GERMISTON_Calender-2026U.pdf#2026%E2%80%932027%20Germiston%2FKatlehong%20refuse-removal%20programme%3A%20KATLEHONG-labelled%20areas (retrieved 2026-08-26)"
+    },
+    {
       "factual_location_id": "pl-gp-v01-4029c5e4963259c5779e",
       "preferred_name": "Magagula",
       "factual_type": "suburb",
@@ -116,8 +124,24 @@
       "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/GERMISTON_Calender-2026U.pdf#2026%E2%80%932027%20Germiston%2FKatlehong%20refuse-removal%20programme%3A%20KATLEHONG-labelled%20areas (retrieved 2026-08-26)"
     },
     {
+      "factual_location_id": "pl-gp-v01-9584176833a7b4d4fc03",
+      "preferred_name": "Likole",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/katlehong",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/GERMISTON_Calender-2026U.pdf#2026%E2%80%932027%20Germiston%2FKatlehong%20refuse-removal%20programme%3A%20KATLEHONG-labelled%20areas (retrieved 2026-08-26)"
+    },
+    {
       "factual_location_id": "pl-gp-v01-9613c5c3b357974f77a2",
       "preferred_name": "Leondale",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/katlehong",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/GERMISTON_Calender-2026U.pdf#2026%E2%80%932027%20Germiston%2FKatlehong%20refuse-removal%20programme%3A%20KATLEHONG-labelled%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-b0f0aecaa78e069f69e1",
+      "preferred_name": "Siluma View",
       "factual_type": "suburb",
       "parent_natural_key": "gauteng/katlehong",
       "evidence_class": "official_municipal_refuse_collection_area_list",
@@ -164,8 +188,24 @@
       "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/GERMISTON_Calender-2026U.pdf#2026%E2%80%932027%20Germiston%2FKatlehong%20refuse-removal%20programme%3A%20KATLEHONG-labelled%20areas (retrieved 2026-08-26)"
     },
     {
+      "factual_location_id": "pl-gp-v01-c8da7861488edf5e35b8",
+      "preferred_name": "Ramokonapi",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/katlehong",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/GERMISTON_Calender-2026U.pdf#2026%E2%80%932027%20Germiston%2FKatlehong%20refuse-removal%20programme%3A%20KATLEHONG-labelled%20areas (retrieved 2026-08-26)"
+    },
+    {
       "factual_location_id": "pl-gp-v01-e03be638e80780bda096",
       "preferred_name": "Moleleki",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/katlehong",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/GERMISTON_Calender-2026U.pdf#2026%E2%80%932027%20Germiston%2FKatlehong%20refuse-removal%20programme%3A%20KATLEHONG-labelled%20areas (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-eb8fdf0f0bf98f50e5d9",
+      "preferred_name": "Mopeli",
       "factual_type": "suburb",
       "parent_natural_key": "gauteng/katlehong",
       "evidence_class": "official_municipal_refuse_collection_area_list",
@@ -181,8 +221,136 @@
     }
   ],
   "diagnostics": {
-    "researched_names": 21,
-    "matched_already_projected": [],
-    "names_not_in_canonical_layer": []
+    "researched_names": 26,
+    "matched_already_projected": [
+      {
+        "name": "Moshoeshoe",
+        "factual_location_id": "pl-gp-v01-09fe0e1c02680a5705ed",
+        "existing_parent_natural_key": "gauteng/katlehong",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Monise",
+        "factual_location_id": "pl-gp-v01-18cd4722057c709365e4",
+        "existing_parent_natural_key": "gauteng/katlehong",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Moseleki",
+        "factual_location_id": "pl-gp-v01-197ef259d2484199c178",
+        "existing_parent_natural_key": "gauteng/katlehong",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Motsamai",
+        "factual_location_id": "pl-gp-v01-2109e0b63e8244df39a8",
+        "existing_parent_natural_key": "gauteng/katlehong",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Radebe",
+        "factual_location_id": "pl-gp-v01-3174a4d1662daa682c8e",
+        "existing_parent_natural_key": "gauteng/katlehong",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Motluong",
+        "factual_location_id": "pl-gp-v01-3d61fbf5ce1c8417f6c9",
+        "existing_parent_natural_key": "gauteng/katlehong",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Mngadi",
+        "factual_location_id": "pl-gp-v01-3f2ac5177dee210fe3af",
+        "existing_parent_natural_key": "gauteng/katlehong",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Magagula",
+        "factual_location_id": "pl-gp-v01-4029c5e4963259c5779e",
+        "existing_parent_natural_key": "gauteng/katlehong",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Moleleki",
+        "factual_location_id": "pl-gp-v01-e03be638e80780bda096",
+        "existing_parent_natural_key": "gauteng/katlehong",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Nhlapo",
+        "factual_location_id": "pl-gp-v01-583d7255dc1c1b6ad3f0",
+        "existing_parent_natural_key": "gauteng/katlehong",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Tsongweni",
+        "factual_location_id": "pl-gp-v01-60a825316c716e2e4242",
+        "existing_parent_natural_key": "gauteng/katlehong",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Tsolo",
+        "factual_location_id": "pl-gp-v01-68ae30952771a5f0798a",
+        "existing_parent_natural_key": "gauteng/katlehong",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Skozana",
+        "factual_location_id": "pl-gp-v01-7b181d4b5cbb62a8d912",
+        "existing_parent_natural_key": "gauteng/katlehong",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Ncala",
+        "factual_location_id": "pl-gp-v01-87ca2000cc6cdfb80b90",
+        "existing_parent_natural_key": "gauteng/katlehong",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Moseleki East",
+        "factual_location_id": "pl-gp-v01-b3ecf7a7bb0352a095af",
+        "existing_parent_natural_key": "gauteng/katlehong",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Maphanga",
+        "factual_location_id": "pl-gp-v01-ba9f1f5d8c006a5daf0c",
+        "existing_parent_natural_key": "gauteng/katlehong",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Twala",
+        "factual_location_id": "pl-gp-v01-c51c2967b2eb9f59fc84",
+        "existing_parent_natural_key": "gauteng/katlehong",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Leondale",
+        "factual_location_id": "pl-gp-v01-9613c5c3b357974f77a2",
+        "existing_parent_natural_key": "gauteng/katlehong",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Phake",
+        "factual_location_id": "pl-gp-v01-ff865f85be50c4e5acbb",
+        "existing_parent_natural_key": "gauteng/katlehong",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Woodmere",
+        "factual_location_id": "pl-gp-v01-c72e25bba82fdafc996d",
+        "existing_parent_natural_key": "gauteng/katlehong",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Zonkizizwe",
+        "factual_location_id": "pl-gp-v01-c12eccc41c6c4f90e71b",
+        "existing_parent_natural_key": "gauteng/katlehong",
+        "parent_matches_evidence": true
+      }
+    ],
+    "names_not_in_canonical_layer": [],
+    "ambiguous_canonical_matches": []
   }
 }

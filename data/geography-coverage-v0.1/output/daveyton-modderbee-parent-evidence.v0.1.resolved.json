@@ -1,0 +1,29 @@
+{
+  "resolved_edges_version": "daveyton-modderbee-parent-evidence.v0.1.resolved",
+  "town": "Daveyton",
+  "parent_natural_key": "gauteng/daveyton",
+  "source": {
+    "publisher": "City of Ekurhuleni Metropolitan Municipality",
+    "url": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/04/IDP-Public-Consultations-15-April-2025-Daveyton.pdf",
+    "section": "Daveyton CCA, Ward 71 — request for roads development at Modderbee / Alliance Extension 1",
+    "retrieved": "2026-08-27",
+    "licence_note": "Official municipal IDP consultation schedule used for locality service-area relationship assertions; no prose or geometry is copied."
+  },
+  "edge_count": 1,
+  "edges": [
+    {
+      "factual_location_id": "pl-gp-v01-2028b0570f925e62a16a",
+      "preferred_name": "Modderbee",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/daveyton",
+      "evidence_class": "official_municipal_idp_cca_area_relationship",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/04/IDP-Public-Consultations-15-April-2025-Daveyton.pdf#Daveyton%20CCA%2C%20Ward%2071%20%E2%80%94%20request%20for%20roads%20development%20at%20Modderbee%20%2F%20Alliance%20Extension%201 (retrieved 2026-08-27)"
+    }
+  ],
+  "diagnostics": {
+    "researched_names": 1,
+    "matched_already_projected": [],
+    "names_not_in_canonical_layer": [],
+    "ambiguous_canonical_matches": []
+  }
+}

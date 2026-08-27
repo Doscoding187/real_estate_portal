@@ -9,7 +9,7 @@
     "retrieved": "2026-08-26",
     "licence_note": "Official municipal service calendar used for locality membership assertions; no prose or geometry is copied."
   },
-  "edge_count": 24,
+  "edge_count": 26,
   "edges": [
     {
       "factual_location_id": "pl-gp-v01-0701aae57d8f15f78d1f",
@@ -108,6 +108,14 @@
       "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/TEMBISA-Calender-2026.pdf#2026%20Tembisa%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
     },
     {
+      "factual_location_id": "pl-gp-v01-6f981faccedb62333bfe",
+      "preferred_name": "Ventershof AH",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/thembisa",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/TEMBISA-Calender-2026.pdf#2026%20Tembisa%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
+    },
+    {
       "factual_location_id": "pl-gp-v01-8a0b20bdef71b1ebab27",
       "preferred_name": "Esselenpark",
       "factual_type": "suburb",
@@ -196,6 +204,14 @@
       "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/TEMBISA-Calender-2026.pdf#2026%20Tembisa%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
     },
     {
+      "factual_location_id": "pl-gp-v01-f03fe0991faa1048e8be",
+      "preferred_name": "Makhulong",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/thembisa",
+      "evidence_class": "official_municipal_refuse_collection_area_list",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2025/12/TEMBISA-Calender-2026.pdf#2026%20Tembisa%20refuse-removal%20collection%20areas (retrieved 2026-08-26)"
+    },
+    {
       "factual_location_id": "pl-gp-v01-ffa138f9bede0c08b3a4",
       "preferred_name": "Caleni",
       "factual_type": "suburb",
@@ -205,8 +221,154 @@
     }
   ],
   "diagnostics": {
-    "researched_names": 24,
-    "matched_already_projected": [],
-    "names_not_in_canonical_layer": []
+    "researched_names": 26,
+    "matched_already_projected": [
+      {
+        "name": "Caleni",
+        "factual_location_id": "pl-gp-v01-ffa138f9bede0c08b3a4",
+        "existing_parent_natural_key": "gauteng/thembisa",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Endulweni",
+        "factual_location_id": "pl-gp-v01-5be98ca69ee21ed2b453",
+        "existing_parent_natural_key": "gauteng/thembisa",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Esselenpark",
+        "factual_location_id": "pl-gp-v01-8a0b20bdef71b1ebab27",
+        "existing_parent_natural_key": "gauteng/thembisa",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Ethafeni",
+        "factual_location_id": "pl-gp-v01-be01c2337a659afa3c83",
+        "existing_parent_natural_key": "gauteng/thembisa",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Isekelo",
+        "factual_location_id": "pl-gp-v01-4c6b544cf57fe7ba49fd",
+        "existing_parent_natural_key": "gauteng/thembisa",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Jiyana",
+        "factual_location_id": "pl-gp-v01-ba6ffd0b80dac2132d65",
+        "existing_parent_natural_key": "gauteng/thembisa",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Kopanong",
+        "factual_location_id": "pl-gp-v01-dfdc0f83e3e5f60c06c4",
+        "existing_parent_natural_key": "gauteng/thembisa",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Lekaneng",
+        "factual_location_id": "pl-gp-v01-c4cc8a5a9eac7ada0afa",
+        "existing_parent_natural_key": "gauteng/thembisa",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Lifateng",
+        "factual_location_id": "pl-gp-v01-c4e5496913a5ab676ab1",
+        "existing_parent_natural_key": "gauteng/thembisa",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Maokeng",
+        "factual_location_id": "pl-gp-v01-ea9c7eec9de26f393d1a",
+        "existing_parent_natural_key": "gauteng/thembisa",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Mfuyaneni",
+        "factual_location_id": "pl-gp-v01-4dbc6b47572b212ce9d5",
+        "existing_parent_natural_key": "gauteng/thembisa",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Mnonjaneni",
+        "factual_location_id": "pl-gp-v01-0dcdadd0e98c0090c5ce",
+        "existing_parent_natural_key": "gauteng/thembisa",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Moedi",
+        "factual_location_id": "pl-gp-v01-1a96d34130a3d3e381e8",
+        "existing_parent_natural_key": "gauteng/thembisa",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Moyeni",
+        "factual_location_id": "pl-gp-v01-39c5187e0cd31e0d6786",
+        "existing_parent_natural_key": "gauteng/thembisa",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Motsu",
+        "factual_location_id": "pl-gp-v01-a6321c49e0d017156898",
+        "existing_parent_natural_key": "gauteng/thembisa",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Mqansa",
+        "factual_location_id": "pl-gp-v01-be412a1cfcd810c76d57",
+        "existing_parent_natural_key": "gauteng/thembisa",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Nxiweni",
+        "factual_location_id": "pl-gp-v01-b387de018fbb0e37d3ea",
+        "existing_parent_natural_key": "gauteng/thembisa",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Sangweni",
+        "factual_location_id": "pl-gp-v01-bba27fc68ae7ae0a2e26",
+        "existing_parent_natural_key": "gauteng/thembisa",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Sithame",
+        "factual_location_id": "pl-gp-v01-2060b204c65519ae3553",
+        "existing_parent_natural_key": "gauteng/thembisa",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Sivana",
+        "factual_location_id": "pl-gp-v01-0701aae57d8f15f78d1f",
+        "existing_parent_natural_key": "gauteng/thembisa",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Temong",
+        "factual_location_id": "pl-gp-v01-07aac79edaf12c092ae1",
+        "existing_parent_natural_key": "gauteng/thembisa",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Thiteng",
+        "factual_location_id": "pl-gp-v01-4e516818776ad3edbeae",
+        "existing_parent_natural_key": "gauteng/thembisa",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Vusimuzi",
+        "factual_location_id": "pl-gp-v01-65bf6bac62643fba2374",
+        "existing_parent_natural_key": "gauteng/thembisa",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Welumlambo",
+        "factual_location_id": "pl-gp-v01-4aa8a79b65671fe0bb5b",
+        "existing_parent_natural_key": "gauteng/thembisa",
+        "parent_matches_evidence": true
+      }
+    ],
+    "names_not_in_canonical_layer": [],
+    "ambiguous_canonical_matches": []
   }
 }

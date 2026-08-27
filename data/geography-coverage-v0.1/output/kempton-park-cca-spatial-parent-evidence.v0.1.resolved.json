@@ -1,0 +1,39 @@
+{
+  "resolved_edges_version": "kempton-park-cca-spatial-parent-evidence.v0.1.resolved",
+  "town": "Kempton Park",
+  "parent_natural_key": "gauteng/kempton-park",
+  "allow_duplicate_natural_key_grouping": false,
+  "source": {
+    "publisher": "City of Ekurhuleni Corporate Geo-Informatics Division",
+    "url": "https://gis.ekurhuleni.gov.za/arcgis/rest/services/Ekurhuleni/Ekurhuleni_Propety_Data_Map/MapServer/158",
+    "section": "Townships layer (158) — EPSG:4326 point-intersection queries returned BIRCHLEIGH X3 and GEESTVELD AH with CCA=KEMPTON PARK",
+    "retrieved": "2026-08-27",
+    "licence_note": "Official municipal spatial layer used for point-to-CCA parent assertions; no polygon geometry is copied."
+  },
+  "edge_count": 2,
+  "edges": [
+    {
+      "factual_location_id": "pl-gp-v01-460d60f4b27e30d05ae8",
+      "preferred_name": "Houtkapper Park",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/kempton-park",
+      "evidence_class": "official_municipal_gis_point_in_polygon_cca",
+      "citation": "https://gis.ekurhuleni.gov.za/arcgis/rest/services/Ekurhuleni/Ekurhuleni_Propety_Data_Map/MapServer/158#Townships%20layer%20(158)%20%E2%80%94%20EPSG%3A4326%20point-intersection%20queries%20returned%20BIRCHLEIGH%20X3%20and%20GEESTVELD%20AH%20with%20CCA%3DKEMPTON%20PARK (retrieved 2026-08-27)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-60cd2a20de0015bb37a9",
+      "preferred_name": "Geestveld AH",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/kempton-park",
+      "evidence_class": "official_municipal_gis_point_in_polygon_cca",
+      "citation": "https://gis.ekurhuleni.gov.za/arcgis/rest/services/Ekurhuleni/Ekurhuleni_Propety_Data_Map/MapServer/158#Townships%20layer%20(158)%20%E2%80%94%20EPSG%3A4326%20point-intersection%20queries%20returned%20BIRCHLEIGH%20X3%20and%20GEESTVELD%20AH%20with%20CCA%3DKEMPTON%20PARK (retrieved 2026-08-27)"
+    }
+  ],
+  "diagnostics": {
+    "researched_names": 0,
+    "identity_specific_records": 2,
+    "matched_already_projected": [],
+    "names_not_in_canonical_layer": [],
+    "ambiguous_canonical_matches": []
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "resolved_edges_version": "krugersdorp-eleadah-valuation-roll-parent-evidence.v0.1.resolved",
+  "town": "Krugersdorp",
+  "parent_natural_key": "gauteng/krugersdorp",
+  "allow_duplicate_natural_key_grouping": false,
+  "source": {
+    "publisher": "Mogale City Local Municipality",
+    "url": "https://mogalecity.gov.za/wp-content/uploads/Pdfs/Residents%20Page/Valuation%20Roll/2025-2030%20valuation%20roll/General%20Valuation%20Roll%202025%20-%202030%20Krugersdorp%20-%20Quelleriepark.pdf?_t=1739447293",
+    "section": "General Valuation Roll for the period 1 July 2025 to 30 June 2030 — TOWNSHIP: KRUGERSDORP EXT 2; erven 1937/168–170 identify ELEADAH COMPLEX",
+    "retrieved": "2026-08-27",
+    "licence_note": "Official municipal valuation-roll record used for an identity-specific town-parent assertion; no property data or geometry is copied."
+  },
+  "edge_count": 1,
+  "edges": [
+    {
+      "factual_location_id": "pl-gp-v01-871e4e5c8913a5a892aa",
+      "preferred_name": "Eleadah",
+      "factual_type": "neighbourhood",
+      "parent_natural_key": "gauteng/krugersdorp",
+      "evidence_class": "official_municipal_valuation_roll_identity_parent_assertion",
+      "citation": "https://mogalecity.gov.za/wp-content/uploads/Pdfs/Residents%20Page/Valuation%20Roll/2025-2030%20valuation%20roll/General%20Valuation%20Roll%202025%20-%202030%20Krugersdorp%20-%20Quelleriepark.pdf?_t=1739447293#General%20Valuation%20Roll%20for%20the%20period%201%20July%202025%20to%2030%20June%202030%20%E2%80%94%20TOWNSHIP%3A%20KRUGERSDORP%20EXT%202%3B%20erven%201937%2F168%E2%80%93170%20identify%20ELEADAH%20COMPLEX (retrieved 2026-08-27)"
+    }
+  ],
+  "diagnostics": {
+    "researched_names": 0,
+    "identity_specific_records": 1,
+    "matched_already_projected": [],
+    "names_not_in_canonical_layer": [],
+    "ambiguous_canonical_matches": []
+  }
+}

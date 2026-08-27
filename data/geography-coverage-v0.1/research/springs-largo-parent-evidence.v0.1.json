@@ -1,0 +1,17 @@
+{
+  "artifact_version": "springs-largo-parent-evidence-v0.1",
+  "town": "Springs",
+  "parent_natural_key": "gauteng/springs",
+  "administrative_context": "Ekurhuleni",
+  "evidence_class": "official_municipal_service_area_relationship",
+  "source": {
+    "publisher": "City of Ekurhuleni Metropolitan Municipality",
+    "url": "https://www.ekurhuleni.gov.za/uncategorised/no-water-in-parts-of-springs/",
+    "section": "No Water in Parts of Springs — Largo, Grootvaly small holdings, Strubenvale, Strubenvale Extension and Aston Lake in Springs",
+    "retrieved": "2026-08-27",
+    "licence_note": "Official municipal service notice used for locality relationship assertions; no prose or geometry is copied."
+  },
+  "suburb_names": [
+    "Largo"
+  ]
+}

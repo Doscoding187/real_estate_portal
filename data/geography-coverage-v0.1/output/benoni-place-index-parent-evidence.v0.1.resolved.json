@@ -1,0 +1,72 @@
+{
+  "resolved_edges_version": "benoni-place-index-parent-evidence.v0.1.resolved",
+  "town": "Benoni",
+  "parent_natural_key": "gauteng/benoni",
+  "source": {
+    "publisher": "Office of the Chief Justice, Department of Justice and Constitutional Development",
+    "url": "https://www.ocj.gov.za/maps/areas-gp.html",
+    "section": "Gauteng: Find a court in your area — Benoni Sub District entries",
+    "retrieved": "2026-08-26",
+    "licence_note": "Official government place-index used for service-area membership assertions; no prose or geometry is copied."
+  },
+  "edge_count": 4,
+  "edges": [
+    {
+      "factual_location_id": "pl-gp-v01-0483b462fa1e41039f89",
+      "preferred_name": "Alphen Park",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/benoni",
+      "evidence_class": "official_magisterial_place_index",
+      "citation": "https://www.ocj.gov.za/maps/areas-gp.html#Gauteng%3A%20Find%20a%20court%20in%20your%20area%20%E2%80%94%20Benoni%20Sub%20District%20entries (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-397fd692f0e3d19eb225",
+      "preferred_name": "Nestadt",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/benoni",
+      "evidence_class": "official_magisterial_place_index",
+      "citation": "https://www.ocj.gov.za/maps/areas-gp.html#Gauteng%3A%20Find%20a%20court%20in%20your%20area%20%E2%80%94%20Benoni%20Sub%20District%20entries (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-90e895d1fdca68fb9e41",
+      "preferred_name": "N12 Highway Park",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/benoni",
+      "evidence_class": "official_magisterial_place_index",
+      "citation": "https://www.ocj.gov.za/maps/areas-gp.html#Gauteng%3A%20Find%20a%20court%20in%20your%20area%20%E2%80%94%20Benoni%20Sub%20District%20entries (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-e2b4673ae68f1b145978",
+      "preferred_name": "Farrarmere Gardens",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/benoni",
+      "evidence_class": "official_magisterial_place_index",
+      "citation": "https://www.ocj.gov.za/maps/areas-gp.html#Gauteng%3A%20Find%20a%20court%20in%20your%20area%20%E2%80%94%20Benoni%20Sub%20District%20entries (retrieved 2026-08-26)"
+    }
+  ],
+  "diagnostics": {
+    "researched_names": 4,
+    "matched_already_projected": [
+      {
+        "name": "Alphen Park",
+        "factual_location_id": "pl-gp-v01-0483b462fa1e41039f89",
+        "existing_parent_natural_key": "gauteng/benoni",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Farrarmere Gardens",
+        "factual_location_id": "pl-gp-v01-e2b4673ae68f1b145978",
+        "existing_parent_natural_key": "gauteng/benoni",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "N12 Highway Park",
+        "factual_location_id": "pl-gp-v01-90e895d1fdca68fb9e41",
+        "existing_parent_natural_key": "gauteng/benoni",
+        "parent_matches_evidence": true
+      }
+    ],
+    "names_not_in_canonical_layer": [],
+    "ambiguous_canonical_matches": []
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "resolved_edges_version": "meyerton-risi-sh-electricity-parent-evidence.v0.1.resolved",
+  "town": "Meyerton",
+  "parent_natural_key": "gauteng/meyerton",
+  "allow_duplicate_natural_key_grouping": false,
+  "source": {
+    "publisher": "Midvaal Local Municipality",
+    "url": "https://www.midvaal.gov.za/wp-content/uploads/2025/06/Annexure-O-Midvaal-Electricity-Master-Plan-2021.pdf",
+    "section": "Figure 15 — Distribution network schematic for MLM ECS 4 Substation network SH1, titled MEYERTON: ESC4 SUB RISI VILLE & RISI S.F SINGLE LINE DIAGRAM",
+    "retrieved": "2026-08-27",
+    "licence_note": "Official municipal infrastructure-planning publication used for an identity-specific locality-to-town context assertion; no diagram geometry or property data is copied."
+  },
+  "edge_count": 1,
+  "edges": [
+    {
+      "factual_location_id": "pl-gp-v01-6c4517ef22f698e5cd43",
+      "preferred_name": "Risi Sh",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/meyerton",
+      "evidence_class": "official_municipal_electricity_network_identity_parent_assertion",
+      "citation": "https://www.midvaal.gov.za/wp-content/uploads/2025/06/Annexure-O-Midvaal-Electricity-Master-Plan-2021.pdf#Figure%2015%20%E2%80%94%20Distribution%20network%20schematic%20for%20MLM%20ECS%204%20Substation%20network%20SH1%2C%20titled%20MEYERTON%3A%20ESC4%20SUB%20RISI%20VILLE%20%26%20RISI%20S.F%20SINGLE%20LINE%20DIAGRAM (retrieved 2026-08-27)"
+    }
+  ],
+  "diagnostics": {
+    "researched_names": 0,
+    "identity_specific_records": 1,
+    "matched_already_projected": [],
+    "names_not_in_canonical_layer": [],
+    "ambiguous_canonical_matches": []
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "resolved_edges_version": "carletonville-deelkraal-parent-evidence.v0.1.resolved",
+  "town": "Carletonville",
+  "parent_natural_key": "gauteng/carletonville",
+  "source": {
+    "publisher": "Merafong City Local Municipality",
+    "url": "https://merafong.gov.za/wp-content/uploads/2026/01/Final-IDP-Document-2025-2026.pdf",
+    "section": "6.10.1 Carletonville: Deelkraal lies west and southwest of Carletonville",
+    "retrieved": "2026-08-27",
+    "licence_note": "Official municipal integrated development plan used for locality relationship assertions; no prose or geometry is copied."
+  },
+  "edge_count": 1,
+  "edges": [
+    {
+      "factual_location_id": "pl-gp-v01-43c72c2d72ab5d86b455",
+      "preferred_name": "Deelkraal",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/carletonville",
+      "evidence_class": "official_municipal_idp_spatial_relationship",
+      "citation": "https://merafong.gov.za/wp-content/uploads/2026/01/Final-IDP-Document-2025-2026.pdf#6.10.1%20Carletonville%3A%20Deelkraal%20lies%20west%20and%20southwest%20of%20Carletonville (retrieved 2026-08-27)"
+    }
+  ],
+  "diagnostics": {
+    "researched_names": 1,
+    "matched_already_projected": [],
+    "names_not_in_canonical_layer": [],
+    "ambiguous_canonical_matches": []
+  }
+}

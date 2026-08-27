@@ -1,0 +1,26 @@
+{
+  "artifact_version": "randfontein-eikepark-identities-parent-evidence-v0.1",
+  "town": "Randfontein",
+  "parent_natural_key": "gauteng/randfontein",
+  "administrative_context": "West Rand",
+  "evidence_class": "official_magisterial_place_index_identity_specific_duplicate_set",
+  "allow_duplicate_natural_key_grouping": true,
+  "source": {
+    "publisher": "Office of the Chief Justice, Department of Justice and Constitutional Development",
+    "url": "https://www.justice.gov.za/maps/areas-gp.html",
+    "section": "Gauteng: Find a court in your area — Eikepark is listed in the West Rand under Randfontein Sub District",
+    "retrieved": "2026-08-27",
+    "licence_note": "Official government place index used for the locality-to-runtime-market relationship; no prose or geometry is copied."
+  },
+  "identity_note": "Two canonical Eikepark identities are retained as separate factual records and co-published under one stable public natural key; this artifact does not merge or rename them.",
+  "identity_specific_records": [
+    {
+      "factual_location_id": "pl-gp-v01-1e32c07668460cae218f",
+      "preferred_name": "Eikepark"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-b4b64a12d456a96f5779",
+      "preferred_name": "Eikepark"
+    }
+  ]
+}

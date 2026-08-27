@@ -1,0 +1,58 @@
+{
+  "resolved_edges_version": "vanderbijlpark-place-index-parent-evidence.v0.1.resolved",
+  "town": "Vanderbijlpark",
+  "parent_natural_key": "gauteng/vanderbijlpark",
+  "source": {
+    "publisher": "Office of the Chief Justice, Department of Justice and Constitutional Development",
+    "url": "https://www.ocj.gov.za/maps/areas-gp.html",
+    "section": "Gauteng: Find a court in your area — Vanderbijlpark Sub District entries",
+    "retrieved": "2026-08-26",
+    "licence_note": "Official government place-index used for service-area membership assertions; no prose or geometry is copied."
+  },
+  "edge_count": 3,
+  "edges": [
+    {
+      "factual_location_id": "pl-gp-v01-33dd6d030b7c0fa51d94",
+      "preferred_name": "Bonanne",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/vanderbijlpark",
+      "evidence_class": "official_magisterial_place_index",
+      "citation": "https://www.ocj.gov.za/maps/areas-gp.html#Gauteng%3A%20Find%20a%20court%20in%20your%20area%20%E2%80%94%20Vanderbijlpark%20Sub%20District%20entries (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-b6f1fa8052ab429cdfbe",
+      "preferred_name": "Flora Gardens",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/vanderbijlpark",
+      "evidence_class": "official_magisterial_place_index",
+      "citation": "https://www.ocj.gov.za/maps/areas-gp.html#Gauteng%3A%20Find%20a%20court%20in%20your%20area%20%E2%80%94%20Vanderbijlpark%20Sub%20District%20entries (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-ea978ac69a63358e28d9",
+      "preferred_name": "Tshepiso",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/vanderbijlpark",
+      "evidence_class": "official_magisterial_place_index",
+      "citation": "https://www.ocj.gov.za/maps/areas-gp.html#Gauteng%3A%20Find%20a%20court%20in%20your%20area%20%E2%80%94%20Vanderbijlpark%20Sub%20District%20entries (retrieved 2026-08-26)"
+    }
+  ],
+  "diagnostics": {
+    "researched_names": 3,
+    "matched_already_projected": [
+      {
+        "name": "Bonanne",
+        "factual_location_id": "pl-gp-v01-33dd6d030b7c0fa51d94",
+        "existing_parent_natural_key": "gauteng/vanderbijlpark",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Flora Gardens",
+        "factual_location_id": "pl-gp-v01-b6f1fa8052ab429cdfbe",
+        "existing_parent_natural_key": "gauteng/vanderbijlpark",
+        "parent_matches_evidence": true
+      }
+    ],
+    "names_not_in_canonical_layer": [],
+    "ambiguous_canonical_matches": []
+  }
+}

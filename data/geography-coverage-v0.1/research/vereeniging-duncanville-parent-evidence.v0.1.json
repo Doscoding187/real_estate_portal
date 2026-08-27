@@ -1,0 +1,17 @@
+{
+  "artifact_version": "vereeniging-duncanville-parent-evidence-v0.1",
+  "town": "Vereeniging",
+  "parent_natural_key": "gauteng/vereeniging",
+  "administrative_context": "Sedibeng",
+  "evidence_class": "official_municipal_sdf_area_relationship",
+  "source": {
+    "publisher": "Emfuleni Local Municipality",
+    "url": "https://emfuleni.gov.za/wp-content/uploads/2025/02/EMFULENI_SDF_2023-2024.pdf",
+    "section": "Industrial and commercial — significant industrial areas include Duncanville; these industrial areas are all located in Vereeniging",
+    "retrieved": "2026-08-27",
+    "licence_note": "Official municipal spatial development framework used for locality relationship assertions; no prose or geometry is copied."
+  },
+  "suburb_names": [
+    "Duncanville"
+  ]
+}

@@ -1,0 +1,307 @@
+{
+  "artifact_version": "residual-parent-edge-audit-v0.1",
+  "contract": "docs/architecture/geography-coverage-contract.md#D6",
+  "reviewed_at": "2026-08-27",
+  "queue_reason": "awaiting_accepted_parent_edge",
+  "review_scope": "Every current Gauteng queue identity whose factual identity is supported but whose parent is not yet an accepted runtime market.",
+  "decision_policy": [
+    "A locality is promoted only with an identity-specific, cited parent assertion to an existing accepted runtime market.",
+    "Municipality context, proximity, postal text, facility names, and broad regional labels do not establish a town parent by themselves.",
+    "Conflicting same-name or boundary evidence remains queued until the authority is reconciled; the pipeline does not choose a precedence.",
+    "This audit records retain-queue decisions only; it does not create runtime rows or alter canonical identities."
+  ],
+  "entries": [
+    {
+      "factual_location_id": "pl-gp-v01-112e5aaabede763d24a0",
+      "preferred_name": "Eastdene",
+      "factual_type": "suburb",
+      "administrative_context": "West Rand",
+      "source_record_ids": ["sr:osm:node/262705302"],
+      "decision": "retain_queue",
+      "blocking_condition": "no_direct_parent_assertion",
+      "accepted_parent_natural_key": null,
+      "evidence_reviewed": [
+        {
+          "publisher": "Merafong City Local Municipality",
+          "url": "https://merafong.gov.za/about/",
+          "finding": "Municipal overview identifies the municipality and its principal mining towns, but does not make an Eastdene-to-town parent assertion.",
+          "sufficiency": "context_only"
+        },
+        {
+          "publisher": "Merafong City Local Municipality",
+          "url": "https://merafong.gov.za/wp-content/uploads/2026/01/Final-IDP-Document-2025-2026.pdf",
+          "finding": "Current IDP material was reviewed for an identity-specific Eastdene parent; no accepted town edge was found.",
+          "sufficiency": "insufficient_for_parent_edge"
+        }
+      ],
+      "rationale": "The canonical identity is supported as a West Rand suburb, but the reviewed official material does not connect Eastdene to an existing accepted runtime town. A nearby-place relation from non-authoritative mapping would not satisfy the parent rule.",
+      "next_action": "Re-review against an official municipal, cadastral, planning, or gazette record that explicitly places Eastdene under an accepted Merafong town."
+    },
+    {
+      "factual_location_id": "pl-gp-v01-455d2715587edce120f0",
+      "preferred_name": "Midrand",
+      "factual_type": "locality",
+      "administrative_context": "Ekurhuleni",
+      "source_record_ids": ["sr:geonames:975968", "sr:nga_gns:-1260510:-1836210:55144"],
+      "decision": "retain_queue",
+      "blocking_condition": "conflicting_same_name_authority",
+      "accepted_parent_natural_key": null,
+      "evidence_reviewed": [
+        {
+          "publisher": "Office of the Chief Justice, Department of Justice and Constitutional Development",
+          "url": "https://www.justice.gov.za/maps/areas-gp.html",
+          "finding": "The official Gauteng area index places a Midrand identity in the Johannesburg jurisdiction, while this canonical identity is separately sourced in an Ekurhuleni context.",
+          "sufficiency": "conflict_requires_reconciliation"
+        }
+      ],
+      "rationale": "There are two distinct canonical Midrand identities. The accepted runtime row already represents the City of Johannesburg identity; the Ekurhuleni-context identity cannot be merged into it or assigned a different city without resolving the conflicting authority.",
+      "next_action": "Obtain an authoritative identity-level reconciliation for the Ekurhuleni Midrand record before deciding whether it is a duplicate, a distinct locality, or retired provenance."
+    },
+    {
+      "factual_location_id": "pl-gp-v01-5eb2867d09151fef2ee5",
+      "preferred_name": "Aston Lake",
+      "factual_type": "suburb",
+      "administrative_context": "Sedibeng",
+      "source_record_ids": ["sr:osm:node/262694855"],
+      "decision": "retain_queue",
+      "blocking_condition": "conflicting_parent_authority",
+      "accepted_parent_natural_key": null,
+      "evidence_reviewed": [
+        {
+          "publisher": "Office of the Chief Justice, Department of Justice and Constitutional Development",
+          "url": "https://www.ocj.gov.za/maps/areas-gp.html",
+          "finding": "The official Gauteng court-area index lists Aston Lake under Ekurhuleni and the Springs sub-district.",
+          "sufficiency": "conflicts_with_canonical_context"
+        },
+        {
+          "publisher": "City of Ekurhuleni",
+          "url": "https://www.ekurhuleni.gov.za/uncategorised/no-water-in-parts-of-springs/",
+          "finding": "Municipal service communication refers to Aston Lake in Springs.",
+          "sufficiency": "conflicts_with_canonical_context"
+        },
+        {
+          "publisher": "Municipal Demarcation Board",
+          "url": "https://www.demarcation.org.za/wp-content/uploads/2021/07/Ward_12_Lesedi_Local_Municipality.pdf",
+          "finding": "The official Lesedi Ward 12 map labels Aston Lake in the Lesedi context.",
+          "sufficiency": "conflict_requires_reconciliation"
+        }
+      ],
+      "rationale": "Authoritative sources place Aston Lake in conflicting municipal contexts, while the canonical record is in Sedibeng. Neither the nearby Aston Woods row nor a boundary assumption can resolve the conflict safely.",
+      "next_action": "Resolve the official municipal-boundary conflict for the canonical point and then record an identity-specific parent edge or a retirement/duplicate disposition."
+    },
+    {
+      "factual_location_id": "pl-gp-v01-7c480fa89e61a7e9e3de",
+      "preferred_name": "Emfuleni Park",
+      "factual_type": "locality",
+      "administrative_context": "Sedibeng",
+      "source_record_ids": ["sr:geonames:1005614", "sr:nga_gns:-1226848:-1796214:92733"],
+      "decision": "retain_queue",
+      "blocking_condition": "municipality_has_multiple_town_options",
+      "accepted_parent_natural_key": null,
+      "evidence_reviewed": [
+        {
+          "publisher": "Emfuleni Local Municipality",
+          "url": "https://emfuleni.gov.za/elm-geographic-locations/",
+          "finding": "Municipal geography material identifies Vanderbijlpark as the municipal setting but does not make an Emfuleni Park-to-town assertion.",
+          "sufficiency": "context_only"
+        },
+        {
+          "publisher": "South African Government",
+          "url": "https://www.gov.za/links/local-government",
+          "finding": "Government directory describes Emfuleni through both Vanderbijlpark and Vereeniging within Sedibeng.",
+          "sufficiency": "multiple_parent_options"
+        }
+      ],
+      "rationale": "The municipality has more than one accepted town context. The reviewed sources establish municipal membership but do not identify which town, if any, parents this locality; selecting Vanderbijlpark from a generic municipality reference would be an unsupported precedence decision.",
+      "next_action": "Find a direct official locality, planning, cadastral, or gazette reference that names Emfuleni Park with one accepted town."
+    },
+    {
+      "factual_location_id": "pl-gp-v01-85224ee50069c93dae3e",
+      "preferred_name": "East Rand",
+      "factual_type": "locality",
+      "administrative_context": "Ekurhuleni",
+      "source_record_ids": [
+        "sr:nga_gns:-1269585:-1847117:40891",
+        "sr:nga_gns:-1269585:-1794455:42054",
+        "sr:geonames:7302794",
+        "sr:geonames:967712"
+      ],
+      "decision": "retain_queue",
+      "blocking_condition": "broad_region_without_single_town_parent",
+      "accepted_parent_natural_key": null,
+      "evidence_reviewed": [
+        {
+          "publisher": "City of Ekurhuleni",
+          "url": "https://www.ekurhuleni.gov.za/about-the-city/our-journey/",
+          "finding": "Municipal history describes Ekurhuleni as a composite metropolitan authority formed from multiple former municipalities and towns.",
+          "sufficiency": "context_only"
+        }
+      ],
+      "rationale": "East Rand is a broad regional label rather than an identity-specific town context. The Ekurhuleni material confirms a multi-town metropolitan structure, so no single accepted parent can be selected for this record.",
+      "next_action": "Keep the regional identity out of runtime until it is either explicitly classified as non-searchable regional provenance or tied by authoritative evidence to one accepted scope."
+    },
+    {
+      "factual_location_id": "pl-gp-v01-9516e98ee8a581a49bd8",
+      "preferred_name": "Riverside Township",
+      "factual_type": "suburb",
+      "administrative_context": "West Rand",
+      "source_record_ids": ["sr:osm:node/262715338"],
+      "decision": "retain_queue",
+      "blocking_condition": "no_direct_parent_assertion",
+      "accepted_parent_natural_key": null,
+      "evidence_reviewed": [
+        {
+          "publisher": "Mogale City Local Municipality",
+          "url": "https://mogalecity.gov.za/mogale-city/live-in/utilities/",
+          "finding": "Municipal service material names Riverside, but does not state an identity-specific Riverside Township-to-town parent edge.",
+          "sufficiency": "context_only"
+        },
+        {
+          "publisher": "Mogale City Local Municipality",
+          "url": "https://mogalecity.gov.za/mogale-city/live-in/",
+          "finding": "The municipality identifies its principal areas and urban complexes without assigning the canonical Riverside Township identity to an accepted runtime town.",
+          "sufficiency": "insufficient_for_parent_edge"
+        }
+      ],
+      "rationale": "Riverside is acknowledged in Mogale City service material, but the reviewed official sources do not provide a direct town-parent assertion for this exact canonical identity. Existing nearby rows cannot be used as a substitute.",
+      "next_action": "Seek an official ward, planning-scheme, valuation-roll, or gazette record that explicitly places Riverside Township under Krugersdorp or another accepted Mogale City town."
+    },
+    {
+      "factual_location_id": "pl-gp-v01-a941be5d68478f69c68e",
+      "preferred_name": "Rosherville",
+      "factual_type": "locality",
+      "administrative_context": "Ekurhuleni",
+      "source_record_ids": ["sr:nga_gns:-1279436:-1858470:30171", "sr:geonames:959139"],
+      "decision": "retain_queue",
+      "blocking_condition": "same_name_parent_conflict",
+      "accepted_parent_natural_key": null,
+      "evidence_reviewed": [
+        {
+          "publisher": "Office of the Chief Justice, Department of Justice and Constitutional Development",
+          "url": "https://www.justice.gov.za/maps/areas-gp.html",
+          "finding": "The official Gauteng area index lists a Rosherville identity in the Johannesburg jurisdiction.",
+          "sufficiency": "conflicts_with_canonical_context"
+        },
+        {
+          "publisher": "City of Ekurhuleni",
+          "url": "https://www.ekurhuleni.gov.za/wp-content/uploads/2026/03/RSDF-Southern-Region-2025-excluding-annexures.pdf",
+          "finding": "The Ekurhuleni regional framework references Rosherville in the Johannesburg/Ekurhuleni interface but does not provide a direct accepted runtime town parent for this canonical identity.",
+          "sufficiency": "conflict_requires_reconciliation"
+        }
+      ],
+      "rationale": "A separate Johannesburg Rosherville identity is already projected, while this Ekurhuleni-context identity is sourced separately. The same name must not be merged, and the reviewed Ekurhuleni material does not justify assigning Germiston or another town by proximity.",
+      "next_action": "Obtain an identity-level municipal or planning reconciliation for the Ekurhuleni Rosherville record before promotion or retirement."
+    },
+    {
+      "factual_location_id": "pl-gp-v01-b8b55aa34e7c4ce92567",
+      "preferred_name": "Mogale City",
+      "factual_type": "suburb",
+      "administrative_context": "West Rand",
+      "source_record_ids": ["sr:osm:node/355620362", "sr:geonames:7291234"],
+      "decision": "retain_queue",
+      "blocking_condition": "main_place_without_accepted_runtime_parent",
+      "accepted_parent_natural_key": null,
+      "evidence_reviewed": [
+        {
+          "publisher": "Mogale City Local Municipality",
+          "url": "https://mogalecity.gov.za/mogale-city/live-in/",
+          "finding": "Municipal overview lists ten constituent areas, including Krugersdorp and Magaliesburg, but does not assign the canonical Mogale City locality identity to one accepted runtime town.",
+          "sufficiency": "multiple_parent_options"
+        },
+        {
+          "publisher": "South African Government",
+          "url": "https://www.gov.za/about-government/contact-directory/gp-municipalities/mogale-city-local-municipality",
+          "finding": "Government directory uses Krugersdorp as the municipality's contact address; an administrative seat is not a locality parent assertion.",
+          "sufficiency": "context_only"
+        }
+      ],
+      "rationale": "The canonical name overlaps the municipality name and is also represented as a locality identity. Municipal area lists and the municipal seat do not prove that this exact locality belongs under Krugersdorp or Magaliesburg; proximity cannot resolve the distinction.",
+      "next_action": "Reconcile the canonical main-place/locality identity against an official place register, valuation roll, or planning record before selecting a parent or retiring the candidate."
+    },
+    {
+      "factual_location_id": "pl-gp-v01-ccb7df756128c80708c2",
+      "preferred_name": "West Wits",
+      "factual_type": "locality",
+      "administrative_context": "West Rand",
+      "source_record_ids": ["sr:nga_gns:-1300891:-1883541:5685", "sr:geonames:940290"],
+      "decision": "retain_queue",
+      "blocking_condition": "broad_region_without_single_town_parent",
+      "accepted_parent_natural_key": null,
+      "evidence_reviewed": [
+        {
+          "publisher": "Merafong City Local Municipality",
+          "url": "https://merafong.gov.za/about/",
+          "finding": "Municipal overview describes a municipality containing multiple mining towns and settlements; it does not make a West Wits-to-town parent assertion.",
+          "sufficiency": "context_only"
+        },
+        {
+          "publisher": "Merafong City Local Municipality",
+          "url": "https://merafong.gov.za/wp-content/uploads/2026/01/Final-IDP-Document-2025-2026.pdf",
+          "finding": "Current IDP material was reviewed for a single accepted parent for West Wits; none was found.",
+          "sufficiency": "insufficient_for_parent_edge"
+        }
+      ],
+      "rationale": "West Wits is a regional label spanning more than one possible town context. The municipality-level sources do not provide a single identity-specific parent, so promotion would widen geography or invent precedence.",
+      "next_action": "Keep queued unless an authoritative source reclassifies the identity or explicitly binds it to one accepted town."
+    },
+    {
+      "factual_location_id": "pl-gp-v01-db780a74de63fac6fbde",
+      "preferred_name": "Vaal Marina Community Center",
+      "factual_type": "village",
+      "administrative_context": "Sedibeng",
+      "source_record_ids": ["sr:osm:node/262718173"],
+      "decision": "retain_queue",
+      "blocking_condition": "facility_label_without_accepted_locality_parent",
+      "accepted_parent_natural_key": null,
+      "evidence_reviewed": [
+        {
+          "publisher": "Midvaal Local Municipality",
+          "url": "https://www.midvaal.gov.za/wp-content/uploads/2026/03/Annexure-P-Midvaal-Roads-and-Stormwater-Master-Plan-2024.pdf",
+          "finding": "Municipal roads and stormwater planning material names Vaal Marina Community Hall in Ward 1, establishing a facility and area reference but not an accepted runtime parent row.",
+          "sufficiency": "facility_and_area_context"
+        },
+        {
+          "publisher": "Midvaal Local Municipality",
+          "url": "https://www.midvaal.gov.za/2026-2027-midvaal-budget-meeting-review-public-meetings-for-midvaal-local-municipality/",
+          "finding": "Municipal public-meeting notice lists Vaal Marina as an area and the Community Hall as the venue; it does not create a Vaal Marina runtime identity or town parent.",
+          "sufficiency": "facility_and_area_context"
+        }
+      ],
+      "rationale": "The evidence supports the OSM label as a community facility associated with Vaal Marina, but the canonical catalogue has no accepted Vaal Marina runtime market. The facility name cannot be promoted by substituting Meyerton, Vereeniging, or another nearby town.",
+      "next_action": "Classify the facility identity through the canonical review process or establish an accepted Vaal Marina locality before considering a public geography row."
+    },
+    {
+      "factual_location_id": "pl-gp-v01-fafb75c30fa4744abc56",
+      "preferred_name": "Vaaldamnatuurreservaat",
+      "factual_type": "locality",
+      "administrative_context": "Sedibeng",
+      "source_record_ids": ["sr:geonames:945602", "sr:nga_gns:-1294845:-1876757:10984"],
+      "decision": "retain_queue",
+      "blocking_condition": "protected_area_without_accepted_runtime_parent",
+      "accepted_parent_natural_key": null,
+      "evidence_reviewed": [
+        {
+          "publisher": "Midvaal Local Municipality",
+          "url": "https://www.midvaal.gov.za/wp-content/uploads/2025/06/Final-2024-2025-Midvaal-SDF-Review-Comp.pdf",
+          "finding": "Municipal spatial-planning material identifies Vaal Dam and Suikerbosrand Nature Reserve as regional natural features, but does not assign the exact canonical reserve identity to an accepted runtime town.",
+          "sufficiency": "context_only"
+        },
+        {
+          "publisher": "Midvaal Local Municipality",
+          "url": "https://www.midvaal.gov.za/spatial-development-framework/",
+          "finding": "The current SDF overview confirms protected-area and Vaal Dam planning context without providing an identity-specific town parent for this record.",
+          "sufficiency": "insufficient_for_parent_edge"
+        }
+      ],
+      "rationale": "The identity is a protected-area/locality label in the Sedibeng context. Municipal planning context does not establish a single accepted town parent, and a nearby farm or town name would not be a valid substitute.",
+      "next_action": "Resolve whether the identity is a public geography scope or protected-area provenance, then obtain an explicit accepted parent if it remains searchable."
+    }
+  ],
+  "summary": {
+    "queue_identities_reviewed": 11,
+    "retained_queue_count": 11,
+    "promoted_count": 0,
+    "rejected_or_retired_count": 0,
+    "proposed_parent_edges": 0
+  }
+}

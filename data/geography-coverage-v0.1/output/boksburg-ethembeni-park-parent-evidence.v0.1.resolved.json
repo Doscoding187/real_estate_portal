@@ -1,0 +1,30 @@
+{
+  "resolved_edges_version": "boksburg-ethembeni-park-parent-evidence.v0.1.resolved",
+  "town": "Boksburg",
+  "parent_natural_key": "gauteng/boksburg",
+  "source": {
+    "publisher": "Base Capital South Africa",
+    "url": "https://www.basecapital.co.za/partnerships/default.html",
+    "section": "Strategic Partnerships and Alliances — Ethembeni Property Developers",
+    "retrieved": "2026-08-27",
+    "licence_note": "First-party developer description used only for the locality-to-runtime-market relationship; no prose or geometry is copied."
+  },
+  "edge_count": 1,
+  "edges": [
+    {
+      "factual_location_id": "pl-gp-v01-0b32a8c1fe1a7e558ef4",
+      "preferred_name": "Ethembeni Park",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/boksburg",
+      "evidence_class": "direct_developer_project_area_relationship",
+      "citation": "https://www.basecapital.co.za/partnerships/default.html#Strategic%20Partnerships%20and%20Alliances%20%E2%80%94%20Ethembeni%20Property%20Developers (retrieved 2026-08-27)"
+    }
+  ],
+  "diagnostics": {
+    "researched_names": 0,
+    "identity_specific_records": 1,
+    "matched_already_projected": [],
+    "names_not_in_canonical_layer": [],
+    "ambiguous_canonical_matches": []
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "artifact_version": "boksburg-rondebult-parent-evidence-v0.1",
+  "town": "Boksburg",
+  "parent_natural_key": "gauteng/boksburg",
+  "administrative_context": "Ekurhuleni",
+  "evidence_class": "official_municipal_and_magisterial_area_relationship",
+  "source": {
+    "publisher": "City of Ekurhuleni",
+    "url": "https://www.ekurhuleni.gov.za/press-releases/human-settlement/city-relocates-hostel-residents-to-new-houses-in-boksburg/",
+    "section": "City relocates hostel residents to new houses in Boksburg — Leeuwpoort Mega Housing Project near Rondebult in Boksburg",
+    "retrieved": "2026-08-27",
+    "licence_note": "Official municipal service-delivery source used for locality relationship assertions; no prose or geometry is copied."
+  },
+  "supporting_sources": [
+    {
+      "publisher": "Office of the Chief Justice, Department of Justice and Constitutional Development",
+      "url": "https://www.justice.gov.za/maps/areas-gp.html",
+      "section": "Gauteng: Find a court in your area — Rondebult 136-IR listed under Boksburg Sub District",
+      "retrieved": "2026-08-27"
+    },
+    {
+      "publisher": "City of Ekurhuleni",
+      "url": "https://www.ekurhuleni.gov.za/press-releases/service-delivery/roads-and-transport/rondebult-road-closed-due-to-a-sinkhole/",
+      "section": "Rondebult Road closed due to a sinkhole — Rondebult Road, Boksburg",
+      "retrieved": "2026-08-27"
+    },
+    {
+      "publisher": "City of Ekurhuleni",
+      "url": "https://www.ekurhuleni.gov.za/wp-content/uploads/2021/11/BOKSBURG_FULL_TITLE_BOOK-11.pdf",
+      "section": "Boksburg Full Title Book — Boksburg-area records using RONDEBULT ROAD",
+      "retrieved": "2026-08-27"
+    }
+  ],
+  "identity_specific_records": [
+    {
+      "factual_location_id": "pl-gp-v01-7f93a84351a0b976dd04",
+      "preferred_name": "Rondebult"
+    }
+  ]
+}

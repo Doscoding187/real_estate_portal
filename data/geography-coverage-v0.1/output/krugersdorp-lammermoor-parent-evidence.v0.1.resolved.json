@@ -1,0 +1,30 @@
+{
+  "resolved_edges_version": "krugersdorp-lammermoor-parent-evidence.v0.1.resolved",
+  "town": "Krugersdorp",
+  "parent_natural_key": "gauteng/krugersdorp",
+  "source": {
+    "publisher": "Mogale City Local Municipality",
+    "url": "https://mogalecity.gov.za/wp-content/uploads/Pdfs/Business%20Page/Tenders/Tenders%202025/IDS%20%28R%26T%29%2003-2026/IDS%20%28R%26T%29%2003-2026.pdf?_t=1758211717",
+    "section": "Tender IDS (R&T) 03/2026, areas of delivery — Area 2 lists Muldersdrift area and Lammermoor within the Mogale City service grouping",
+    "retrieved": "2026-08-27",
+    "licence_note": "Official municipal service-area schedule used for locality-to-runtime-market assertions; no prose or geometry is copied."
+  },
+  "edge_count": 1,
+  "edges": [
+    {
+      "factual_location_id": "pl-gp-v01-ec83a4bc820895424cf5",
+      "preferred_name": "Lammermoor",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/krugersdorp",
+      "evidence_class": "official_municipal_service_area_relationship",
+      "citation": "https://mogalecity.gov.za/wp-content/uploads/Pdfs/Business%20Page/Tenders/Tenders%202025/IDS%20%28R%26T%29%2003-2026/IDS%20%28R%26T%29%2003-2026.pdf?_t=1758211717#Tender%20IDS%20(R%26T)%2003%2F2026%2C%20areas%20of%20delivery%20%E2%80%94%20Area%202%20lists%20Muldersdrift%20area%20and%20Lammermoor%20within%20the%20Mogale%20City%20service%20grouping (retrieved 2026-08-27)"
+    }
+  ],
+  "diagnostics": {
+    "researched_names": 0,
+    "identity_specific_records": 1,
+    "matched_already_projected": [],
+    "names_not_in_canonical_layer": [],
+    "ambiguous_canonical_matches": []
+  }
+}

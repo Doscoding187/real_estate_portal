@@ -1,0 +1,28 @@
+{
+  "artifact_version": "boksburg-bartlett-ext20-parent-evidence-v0.1",
+  "town": "Boksburg",
+  "parent_natural_key": "gauteng/boksburg",
+  "administrative_context": "Ekurhuleni",
+  "evidence_class": "official_municipal_transport_and_meter_area_relationship",
+  "source": {
+    "publisher": "City of Ekurhuleni",
+    "url": "https://www.ekurhuleni.gov.za/press-releases/community-empowerment/harambee-service-extension-launch/",
+    "section": "Harambee service extension from Tembisa Hospital to Bartlett in Boksburg",
+    "retrieved": "2026-08-27",
+    "licence_note": "Official municipal transport notice used for locality relationship assertions; no prose or geometry is copied."
+  },
+  "supporting_sources": [
+    {
+      "publisher": "City of Ekurhuleni",
+      "url": "https://www.ekurhuleni.gov.za/wp-content/uploads/2022/10/Meter-Reading-submission-dates.pdf",
+      "section": "Meter-reading schedule row G01020 — BARTLETT EXT 20",
+      "retrieved": "2026-08-27"
+    }
+  ],
+  "source_name_variants": {
+    "Bartlett Ext 20": "Bartlett"
+  },
+  "suburb_names": [
+    "Bartlett Ext 20"
+  ]
+}

@@ -1,0 +1,132 @@
+{
+  "resolved_edges_version": "meyerton-place-index-parent-evidence.v0.1.resolved",
+  "town": "Meyerton",
+  "parent_natural_key": "gauteng/meyerton",
+  "source": {
+    "publisher": "Office of the Chief Justice, Department of Justice and Constitutional Development",
+    "url": "https://www.ocj.gov.za/maps/areas-gp.html",
+    "section": "Gauteng: Find a court in your area — Midvaal Sub District entries",
+    "retrieved": "2026-08-26",
+    "licence_note": "Official government place-index used for service-area membership assertions; no prose or geometry is copied."
+  },
+  "edge_count": 10,
+  "edges": [
+    {
+      "factual_location_id": "pl-gp-v01-42a1031d9b2f5f9d0612",
+      "preferred_name": "Homelands AH",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/meyerton",
+      "evidence_class": "official_magisterial_place_index",
+      "citation": "https://www.ocj.gov.za/maps/areas-gp.html#Gauteng%3A%20Find%20a%20court%20in%20your%20area%20%E2%80%94%20Midvaal%20Sub%20District%20entries (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-55619b520c9d7ffb0d7b",
+      "preferred_name": "Kookrus",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/meyerton",
+      "evidence_class": "official_magisterial_place_index",
+      "citation": "https://www.ocj.gov.za/maps/areas-gp.html#Gauteng%3A%20Find%20a%20court%20in%20your%20area%20%E2%80%94%20Midvaal%20Sub%20District%20entries (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-6c1dc78d739e22a8bd77",
+      "preferred_name": "Mamello",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/meyerton",
+      "evidence_class": "official_magisterial_place_index",
+      "citation": "https://www.ocj.gov.za/maps/areas-gp.html#Gauteng%3A%20Find%20a%20court%20in%20your%20area%20%E2%80%94%20Midvaal%20Sub%20District%20entries (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-7ecca43958679471ba0a",
+      "preferred_name": "Risiville",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/meyerton",
+      "evidence_class": "official_magisterial_place_index",
+      "citation": "https://www.ocj.gov.za/maps/areas-gp.html#Gauteng%3A%20Find%20a%20court%20in%20your%20area%20%E2%80%94%20Midvaal%20Sub%20District%20entries (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-a180190c9a87742ab883",
+      "preferred_name": "Helderstrome AH",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/meyerton",
+      "evidence_class": "official_magisterial_place_index",
+      "citation": "https://www.ocj.gov.za/maps/areas-gp.html#Gauteng%3A%20Find%20a%20court%20in%20your%20area%20%E2%80%94%20Midvaal%20Sub%20District%20entries (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-bb7dddf29d98570ef56d",
+      "preferred_name": "Walkerville",
+      "factual_type": "village",
+      "parent_natural_key": "gauteng/meyerton",
+      "evidence_class": "official_magisterial_place_index",
+      "citation": "https://www.ocj.gov.za/maps/areas-gp.html#Gauteng%3A%20Find%20a%20court%20in%20your%20area%20%E2%80%94%20Midvaal%20Sub%20District%20entries (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-cdd69e3d5482172a3822",
+      "preferred_name": "Bolton Wold AH",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/meyerton",
+      "evidence_class": "official_magisterial_place_index",
+      "citation": "https://www.ocj.gov.za/maps/areas-gp.html#Gauteng%3A%20Find%20a%20court%20in%20your%20area%20%E2%80%94%20Midvaal%20Sub%20District%20entries (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-e2c76050ccf2e1561a96",
+      "preferred_name": "Valley Settlements",
+      "factual_type": "locality",
+      "parent_natural_key": "gauteng/meyerton",
+      "evidence_class": "official_magisterial_place_index",
+      "citation": "https://www.ocj.gov.za/maps/areas-gp.html#Gauteng%3A%20Find%20a%20court%20in%20your%20area%20%E2%80%94%20Midvaal%20Sub%20District%20entries (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-e8c78afe98ba6269d587",
+      "preferred_name": "Highbury",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/meyerton",
+      "evidence_class": "official_magisterial_place_index",
+      "citation": "https://www.ocj.gov.za/maps/areas-gp.html#Gauteng%3A%20Find%20a%20court%20in%20your%20area%20%E2%80%94%20Midvaal%20Sub%20District%20entries (retrieved 2026-08-26)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-f004120e305bf927e9ac",
+      "preferred_name": "Eikenhof",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/meyerton",
+      "evidence_class": "official_magisterial_place_index",
+      "citation": "https://www.ocj.gov.za/maps/areas-gp.html#Gauteng%3A%20Find%20a%20court%20in%20your%20area%20%E2%80%94%20Midvaal%20Sub%20District%20entries (retrieved 2026-08-26)"
+    }
+  ],
+  "diagnostics": {
+    "researched_names": 10,
+    "matched_already_projected": [
+      {
+        "name": "Eikenhof",
+        "factual_location_id": "pl-gp-v01-f004120e305bf927e9ac",
+        "existing_parent_natural_key": "gauteng/meyerton",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Highbury",
+        "factual_location_id": "pl-gp-v01-e8c78afe98ba6269d587",
+        "existing_parent_natural_key": "gauteng/meyerton",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Kookrus",
+        "factual_location_id": "pl-gp-v01-55619b520c9d7ffb0d7b",
+        "existing_parent_natural_key": "gauteng/meyerton",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Mamello",
+        "factual_location_id": "pl-gp-v01-6c1dc78d739e22a8bd77",
+        "existing_parent_natural_key": "gauteng/meyerton",
+        "parent_matches_evidence": true
+      },
+      {
+        "name": "Risiville",
+        "factual_location_id": "pl-gp-v01-7ecca43958679471ba0a",
+        "existing_parent_natural_key": "gauteng/meyerton",
+        "parent_matches_evidence": true
+      }
+    ],
+    "names_not_in_canonical_layer": [],
+    "ambiguous_canonical_matches": []
+  }
+}

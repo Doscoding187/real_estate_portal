@@ -1,0 +1,54 @@
+{
+  "resolved_edges_version": "krugersdorp-mogale-kagiso-complex-parent-evidence.v0.1.resolved",
+  "town": "Krugersdorp",
+  "parent_natural_key": "gauteng/krugersdorp",
+  "source": {
+    "publisher": "Mogale City Local Municipality",
+    "url": "https://mogalecity.gov.za/wp-content/uploads/Pdfs/Media%20Room/Public%20Notice/2019/SDF%20FINAL%20DRAFT%20JUNE%202019.pdf?_t=1564129236",
+    "section": "Spatial Development Framework, 8.2.4 Local Nodes — Kagiso, Azaadville & Rietvallei; the Kagiso Complex is situated south of the Krugersdorp CBD",
+    "retrieved": "2026-08-27",
+    "licence_note": "Official municipal spatial-planning source used for named locality-to-town-cluster assertions; no prose or geometry is copied."
+  },
+  "edge_count": 4,
+  "edges": [
+    {
+      "factual_location_id": "pl-gp-v01-dcd3b8cc7af96af8b4e3",
+      "preferred_name": "Rietvallei 241-IQ",
+      "factual_type": "village",
+      "parent_natural_key": "gauteng/krugersdorp",
+      "evidence_class": "official_municipal_spatial_cluster_and_area_register",
+      "citation": "https://mogalecity.gov.za/wp-content/uploads/Pdfs/Media%20Room/Public%20Notice/2019/SDF%20FINAL%20DRAFT%20JUNE%202019.pdf?_t=1564129236#Spatial%20Development%20Framework%2C%208.2.4%20Local%20Nodes%20%E2%80%94%20Kagiso%2C%20Azaadville%20%26%20Rietvallei%3B%20the%20Kagiso%20Complex%20is%20situated%20south%20of%20the%20Krugersdorp%20CBD (retrieved 2026-08-27)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-e3f2e300de3c1df1a59d",
+      "preferred_name": "Kagiso",
+      "factual_type": "locality",
+      "parent_natural_key": "gauteng/krugersdorp",
+      "evidence_class": "official_municipal_spatial_cluster_and_area_register",
+      "citation": "https://mogalecity.gov.za/wp-content/uploads/Pdfs/Media%20Room/Public%20Notice/2019/SDF%20FINAL%20DRAFT%20JUNE%202019.pdf?_t=1564129236#Spatial%20Development%20Framework%2C%208.2.4%20Local%20Nodes%20%E2%80%94%20Kagiso%2C%20Azaadville%20%26%20Rietvallei%3B%20the%20Kagiso%20Complex%20is%20situated%20south%20of%20the%20Krugersdorp%20CBD (retrieved 2026-08-27)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-f4bc69ea01e6387310f8",
+      "preferred_name": "Azaadville",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/krugersdorp",
+      "evidence_class": "official_municipal_spatial_cluster_and_area_register",
+      "citation": "https://mogalecity.gov.za/wp-content/uploads/Pdfs/Media%20Room/Public%20Notice/2019/SDF%20FINAL%20DRAFT%20JUNE%202019.pdf?_t=1564129236#Spatial%20Development%20Framework%2C%208.2.4%20Local%20Nodes%20%E2%80%94%20Kagiso%2C%20Azaadville%20%26%20Rietvallei%3B%20the%20Kagiso%20Complex%20is%20situated%20south%20of%20the%20Krugersdorp%20CBD (retrieved 2026-08-27)"
+    },
+    {
+      "factual_location_id": "pl-gp-v01-fd2df74f870a774312ae",
+      "preferred_name": "Rietvallei",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/krugersdorp",
+      "evidence_class": "official_municipal_spatial_cluster_and_area_register",
+      "citation": "https://mogalecity.gov.za/wp-content/uploads/Pdfs/Media%20Room/Public%20Notice/2019/SDF%20FINAL%20DRAFT%20JUNE%202019.pdf?_t=1564129236#Spatial%20Development%20Framework%2C%208.2.4%20Local%20Nodes%20%E2%80%94%20Kagiso%2C%20Azaadville%20%26%20Rietvallei%3B%20the%20Kagiso%20Complex%20is%20situated%20south%20of%20the%20Krugersdorp%20CBD (retrieved 2026-08-27)"
+    }
+  ],
+  "diagnostics": {
+    "researched_names": 0,
+    "identity_specific_records": 4,
+    "matched_already_projected": [],
+    "names_not_in_canonical_layer": [],
+    "ambiguous_canonical_matches": []
+  }
+}

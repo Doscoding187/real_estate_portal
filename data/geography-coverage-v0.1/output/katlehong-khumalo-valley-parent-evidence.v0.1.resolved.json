@@ -1,0 +1,29 @@
+{
+  "resolved_edges_version": "katlehong-khumalo-valley-parent-evidence.v0.1.resolved",
+  "town": "Katlehong",
+  "parent_natural_key": "gauteng/katlehong",
+  "source": {
+    "publisher": "Gauteng Department of Education",
+    "url": "https://www.education.gov.za/Portals/0/Documents/Publications/2023/GT%20No%20Fee%20Schools%202025%20list.pdf?quot=",
+    "section": "Thutopele Secondary School — 1150 Hlongwane Street, Khumalo Valley, Katlehong, Germiston, 1434",
+    "retrieved": "2026-08-27",
+    "licence_note": "Official education register used for locality relationship assertions; no prose or geometry is copied."
+  },
+  "edge_count": 1,
+  "edges": [
+    {
+      "factual_location_id": "pl-gp-v01-b18b06f8ccf408d7a7c5",
+      "preferred_name": "Khumalo Valley",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/katlehong",
+      "evidence_class": "official_education_register_address_relationship",
+      "citation": "https://www.education.gov.za/Portals/0/Documents/Publications/2023/GT%20No%20Fee%20Schools%202025%20list.pdf?quot=#Thutopele%20Secondary%20School%20%E2%80%94%201150%20Hlongwane%20Street%2C%20Khumalo%20Valley%2C%20Katlehong%2C%20Germiston%2C%201434 (retrieved 2026-08-27)"
+    }
+  ],
+  "diagnostics": {
+    "researched_names": 1,
+    "matched_already_projected": [],
+    "names_not_in_canonical_layer": [],
+    "ambiguous_canonical_matches": []
+  }
+}
