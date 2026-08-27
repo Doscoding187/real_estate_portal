@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useId, type Ref, type RefObject } from 'react';
+import { useState, useEffect, useRef, useId, type RefObject } from 'react';
 import { MapPin, Loader2, X, Compass } from 'lucide-react';
 import { useGoogleMaps } from '@/hooks/useGoogleMaps';
 import { PROVINCE_SLUGS, isProvinceSearch } from '@/lib/locationUtils';
@@ -22,10 +22,20 @@ interface DatabaseLocationSuggestion {
   id: number;
   name: string;
   type: 'province' | 'city' | 'suburb';
+  slug?: string;
   provinceId?: number;
   cityId?: number;
   provinceName?: string;
   cityName?: string;
+  provinceSlug?: string;
+  citySlug?: string;
+  suburbSlug?: string;
+  canonicalLocationId?: string;
+  factualLocationId?: string;
+  parentCanonicalLocationId?: string;
+  canonicalPath?: string;
+  selectionTypeLabel?: string;
+  selectionContextLabel?: string;
 }
 
 function getCanonicalBuyLocationPath(location: {
@@ -264,37 +274,54 @@ export function LocationAutosuggest({
 
     if (!onSelect) return;
 
-    const slug = slugify(location.name);
+    const canonicalLocationId =
+      location.canonicalLocationId || encodeCanonicalLocationId(location.type, Number(location.id));
+    const slug = location.slug || slugify(location.name);
     const provinceSlug =
-      location.type === 'province'
+      location.provinceSlug ||
+      (location.type === 'province'
         ? slug
         : location.provinceName
           ? slugify(location.provinceName)
-          : undefined;
+          : undefined);
     const citySlug =
-      location.type === 'city' ? slug : location.cityName ? slugify(location.cityName) : undefined;
+      location.citySlug ||
+      (location.type === 'city'
+        ? slug
+        : location.cityName
+          ? slugify(location.cityName)
+          : undefined);
     const parentCanonicalLocationId =
-      location.type === 'city' && Number.isInteger(location.provinceId)
+      location.parentCanonicalLocationId ||
+      (location.type === 'city' && Number.isInteger(location.provinceId)
         ? encodeCanonicalLocationId('province', Number(location.provinceId))
         : location.type === 'suburb' && Number.isInteger(location.cityId)
           ? encodeCanonicalLocationId('city', Number(location.cityId))
-          : undefined;
+          : undefined);
 
     onSelect({
-      id: encodeCanonicalLocationId(location.type, Number(location.id)),
+      id: canonicalLocationId,
       name: location.name,
       slug,
       type: location.type,
+      ...(location.canonicalLocationId ? { canonicalLocationId } : {}),
+      ...(location.factualLocationId ? { factualLocationId: location.factualLocationId } : {}),
       provinceSlug,
       citySlug,
       ...(parentCanonicalLocationId ? { parentCanonicalLocationId } : {}),
-      canonicalPath: getCanonicalBuyLocationPath({
-        type: location.type,
-        slug,
-        provinceSlug,
-        citySlug,
-        canonicalLocationId: encodeCanonicalLocationId(location.type, Number(location.id)),
-      }),
+      canonicalPath:
+        location.canonicalPath ||
+        getCanonicalBuyLocationPath({
+          type: location.type,
+          slug,
+          provinceSlug,
+          citySlug,
+          canonicalLocationId,
+        }),
+      ...(location.selectionTypeLabel ? { selectionTypeLabel: location.selectionTypeLabel } : {}),
+      ...(location.selectionContextLabel
+        ? { selectionContextLabel: location.selectionContextLabel }
+        : {}),
     });
   };
 

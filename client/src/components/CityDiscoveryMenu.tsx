@@ -34,7 +34,10 @@ function listingCountLabel(count: unknown): string {
   return `${formatted} active listing${Number(count) === 1 ? '' : 's'}`;
 }
 
-function locationHref(location: LocationSelection): string {
+export function locationHref(location: LocationSelection): string {
+  if (location.type === 'province' && location.provinceSlug) {
+    return `/${location.provinceSlug}`;
+  }
   if (location.type === 'suburb' && location.provinceSlug && location.citySlug && location.slug) {
     return `/${location.provinceSlug}/${location.citySlug}/${location.slug}`;
   }

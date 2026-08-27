@@ -35,6 +35,20 @@ export interface CanonicalLocationDiscoveryResult {
   provinceSlug: string;
   citySlug?: string;
   suburbSlug?: string;
+  /** Canonical parent handle used to validate same-level sibling selections. */
+  parentCanonicalLocationId?: string;
+  /** Readable hierarchy context for legacy and accessibility consumers. */
+  provinceName?: string;
+  cityName?: string;
+  /** Optional catalog metadata retained for map and legacy autocomplete consumers. */
+  latitude?: string;
+  longitude?: string;
+  postalCode?: string;
+  isMetro?: number;
+  provinceCode?: string;
+  code?: string;
+  status?: string;
+  origin?: string;
   /** Presentation/routing context only; it is never selection authority. */
   canonicalPath: string;
   source: 'canonical_geography';

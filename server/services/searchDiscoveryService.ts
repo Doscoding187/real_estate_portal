@@ -1,4 +1,4 @@
-import { and, eq, like, or, sql } from 'drizzle-orm';
+import { and, eq, like, ne, or, sql } from 'drizzle-orm';
 
 import { getDb } from '../db';
 import { cities, properties, provinces, suburbs } from '../../drizzle/schema';
@@ -10,6 +10,7 @@ import {
 import {
   encodeCanonicalLocationId,
   parseCanonicalLocationId,
+  type CanonicalLocationLevel,
 } from '../../shared/locationAuthority';
 import type {
   CanonicalLocationDiscoveryResult,
@@ -56,8 +57,26 @@ interface CanonicalLocationCatalogRow {
   provinceSlug: string;
   citySlug?: string;
   suburbSlug?: string;
+  parentCanonicalLocationId?: string;
+  provinceName?: string;
+  cityName?: string;
+  latitude?: string;
+  longitude?: string;
+  postalCode?: string;
+  isMetro?: number;
+  provinceCode?: string;
+  code?: string;
+  status?: string;
+  origin?: string;
   canonicalPath: string;
   listingCount?: number;
+}
+
+export interface SearchDiscoverySearchOptions {
+  /** Restrict results to one executable canonical level. */
+  level?: CanonicalLocationLevel;
+  /** Legacy location consumers need canonical locations, never Search Areas. */
+  includeSearchAreas?: boolean;
 }
 
 export interface SearchDiscoverySearchAreaAuthority {
@@ -88,6 +107,7 @@ export interface SearchDiscoveryServiceOptions {
   canonicalLocationSearch?: (
     query: string,
     limit: number,
+    level?: CanonicalLocationLevel,
   ) => Promise<readonly CanonicalLocationCatalogRow[]>;
 }
 
@@ -236,6 +256,7 @@ function discoveryRank(result: SearchDiscoveryResult, query: string): number {
 async function searchCanonicalLocationCatalog(
   query: string,
   limit: number,
+  level?: CanonicalLocationLevel,
 ): Promise<readonly CanonicalLocationCatalogRow[]> {
   const db = await getDb();
   if (!db) return [];
@@ -243,71 +264,159 @@ async function searchCanonicalLocationCatalog(
   const searchPattern = `%${query.toLowerCase()}%`;
   const publishedCount = sql<number>`COUNT(${properties.id})`;
 
-  const provinceRows = await db
-    .select({
-      id: provinces.id,
-      name: provinces.name,
-      slug: provinces.slug,
-      listingCount: publishedCount,
-    })
-    .from(provinces)
-    .leftJoin(
-      properties,
-      and(eq(properties.provinceId, provinces.id), eq(properties.status, 'published')),
-    )
-    .where(
-      or(
-        like(sql`LOWER(${provinces.name})`, searchPattern),
-        like(sql`LOWER(${provinces.slug})`, searchPattern),
-      ),
-    )
-    .groupBy(provinces.id, provinces.name, provinces.slug)
-    .limit(limit);
+  const provinceRows =
+    level && level !== 'province'
+      ? []
+      : await db
+          .select({
+            id: provinces.id,
+            name: provinces.name,
+            code: provinces.code,
+            status: provinces.status,
+            origin: provinces.origin,
+            latitude: provinces.latitude,
+            longitude: provinces.longitude,
+            slug: provinces.slug,
+            listingCount: publishedCount,
+          })
+          .from(provinces)
+          .leftJoin(
+            properties,
+            and(eq(properties.provinceId, provinces.id), eq(properties.status, 'published')),
+          )
+          .where(
+            and(
+              ne(provinces.status, 'retired'),
+              or(
+                like(sql`LOWER(${provinces.name})`, searchPattern),
+                like(sql`LOWER(${provinces.slug})`, searchPattern),
+                like(sql`LOWER(${provinces.code})`, searchPattern),
+              ),
+            ),
+          )
+          .groupBy(
+            provinces.id,
+            provinces.name,
+            provinces.code,
+            provinces.status,
+            provinces.origin,
+            provinces.latitude,
+            provinces.longitude,
+            provinces.slug,
+          )
+          .limit(limit);
 
-  const cityRows = await db
-    .select({
-      id: cities.id,
-      name: cities.name,
-      slug: cities.slug,
-      provinceSlug: provinces.slug,
-      listingCount: publishedCount,
-    })
-    .from(cities)
-    .innerJoin(provinces, eq(cities.provinceId, provinces.id))
-    .leftJoin(properties, and(eq(properties.cityId, cities.id), eq(properties.status, 'published')))
-    .where(
-      or(
-        like(sql`LOWER(${cities.name})`, searchPattern),
-        like(sql`LOWER(${cities.slug})`, searchPattern),
-      ),
-    )
-    .groupBy(cities.id, cities.name, cities.slug, provinces.slug)
-    .limit(limit);
+  const cityRows =
+    level && level !== 'city'
+      ? []
+      : await db
+          .select({
+            id: cities.id,
+            name: cities.name,
+            slug: cities.slug,
+            status: cities.status,
+            origin: cities.origin,
+            latitude: cities.latitude,
+            longitude: cities.longitude,
+            isMetro: cities.isMetro,
+            provinceId: provinces.id,
+            provinceName: provinces.name,
+            provinceCode: provinces.code,
+            provinceSlug: provinces.slug,
+            listingCount: publishedCount,
+          })
+          .from(cities)
+          .innerJoin(provinces, eq(cities.provinceId, provinces.id))
+          .leftJoin(
+            properties,
+            and(eq(properties.cityId, cities.id), eq(properties.status, 'published')),
+          )
+          .where(
+            and(
+              ne(cities.status, 'retired'),
+              ne(provinces.status, 'retired'),
+              or(
+                like(sql`LOWER(${cities.name})`, searchPattern),
+                like(sql`LOWER(${cities.slug})`, searchPattern),
+              ),
+            ),
+          )
+          .groupBy(
+            cities.id,
+            cities.name,
+            cities.slug,
+            cities.status,
+            cities.origin,
+            cities.latitude,
+            cities.longitude,
+            cities.isMetro,
+            provinces.id,
+            provinces.name,
+            provinces.code,
+            provinces.status,
+            provinces.origin,
+            provinces.latitude,
+            provinces.longitude,
+            provinces.slug,
+          )
+          .limit(limit);
 
-  const suburbRows = await db
-    .select({
-      id: suburbs.id,
-      name: suburbs.name,
-      slug: suburbs.slug,
-      citySlug: cities.slug,
-      provinceSlug: provinces.slug,
-      listingCount: publishedCount,
-    })
-    .from(suburbs)
-    .innerJoin(cities, eq(suburbs.cityId, cities.id))
-    .innerJoin(provinces, eq(cities.provinceId, provinces.id))
-    .leftJoin(
-      properties,
-      and(eq(properties.suburbId, suburbs.id), eq(properties.status, 'published')),
-    )
-    .where(
-      or(
-        like(sql`LOWER(${suburbs.name})`, searchPattern),
-        like(sql`LOWER(${suburbs.slug})`, searchPattern),
-      ),
-    )
-    .groupBy(suburbs.id, suburbs.name, suburbs.slug, cities.slug, provinces.slug)
-    .limit(limit);
+  const suburbRows =
+    level && level !== 'suburb'
+      ? []
+      : await db
+          .select({
+            id: suburbs.id,
+            name: suburbs.name,
+            slug: suburbs.slug,
+            status: suburbs.status,
+            origin: suburbs.origin,
+            latitude: suburbs.latitude,
+            longitude: suburbs.longitude,
+            postalCode: suburbs.postalCode,
+            cityId: cities.id,
+            cityName: cities.name,
+            citySlug: cities.slug,
+            provinceName: provinces.name,
+            provinceCode: provinces.code,
+            provinceSlug: provinces.slug,
+            listingCount: publishedCount,
+          })
+          .from(suburbs)
+          .innerJoin(cities, eq(suburbs.cityId, cities.id))
+          .innerJoin(provinces, eq(cities.provinceId, provinces.id))
+          .leftJoin(
+            properties,
+            and(eq(properties.suburbId, suburbs.id), eq(properties.status, 'published')),
+          )
+          .where(
+            and(
+              ne(suburbs.status, 'retired'),
+              ne(cities.status, 'retired'),
+              ne(provinces.status, 'retired'),
+              or(
+                like(sql`LOWER(${suburbs.name})`, searchPattern),
+                like(sql`LOWER(${suburbs.slug})`, searchPattern),
+              ),
+            ),
+          )
+          .groupBy(
+            suburbs.id,
+            suburbs.name,
+            suburbs.slug,
+            suburbs.status,
+            suburbs.origin,
+            suburbs.latitude,
+            suburbs.longitude,
+            suburbs.postalCode,
+            cities.id,
+            cities.name,
+            cities.slug,
+            provinces.name,
+            provinces.code,
+            provinces.slug,
+          )
+          .limit(limit);
 
   return [
     ...provinceRows.map(row => ({
@@ -315,6 +424,12 @@ async function searchCanonicalLocationCatalog(
       label: row.name,
       factualLevel: 'province' as const,
       provinceSlug: row.slug,
+      provinceName: row.name,
+      ...(row.code ? { code: row.code, provinceCode: row.code } : {}),
+      ...(row.status ? { status: row.status } : {}),
+      ...(row.origin ? { origin: row.origin } : {}),
+      ...(row.latitude ? { latitude: row.latitude } : {}),
+      ...(row.longitude ? { longitude: row.longitude } : {}),
       canonicalPath: `/${row.slug}`,
       listingCount: row.listingCount ?? undefined,
     })),
@@ -324,6 +439,14 @@ async function searchCanonicalLocationCatalog(
       factualLevel: 'city' as const,
       provinceSlug: row.provinceSlug,
       citySlug: row.slug,
+      parentCanonicalLocationId: encodeCanonicalLocationId('province', Number(row.provinceId)),
+      provinceName: row.provinceName,
+      ...(row.provinceCode ? { provinceCode: row.provinceCode } : {}),
+      ...(row.status ? { status: row.status } : {}),
+      ...(row.origin ? { origin: row.origin } : {}),
+      ...(row.latitude ? { latitude: row.latitude } : {}),
+      ...(row.longitude ? { longitude: row.longitude } : {}),
+      ...(row.isMetro !== undefined ? { isMetro: row.isMetro } : {}),
       canonicalPath: `/${row.provinceSlug}/${row.slug}`,
       listingCount: row.listingCount ?? undefined,
     })),
@@ -334,6 +457,15 @@ async function searchCanonicalLocationCatalog(
       provinceSlug: row.provinceSlug,
       citySlug: row.citySlug,
       suburbSlug: row.slug,
+      parentCanonicalLocationId: encodeCanonicalLocationId('city', Number(row.cityId)),
+      provinceName: row.provinceName,
+      cityName: row.cityName,
+      ...(row.provinceCode ? { provinceCode: row.provinceCode } : {}),
+      ...(row.status ? { status: row.status } : {}),
+      ...(row.origin ? { origin: row.origin } : {}),
+      ...(row.latitude ? { latitude: row.latitude } : {}),
+      ...(row.longitude ? { longitude: row.longitude } : {}),
+      ...(row.postalCode ? { postalCode: row.postalCode } : {}),
       canonicalPath: `/${row.provinceSlug}/${row.citySlug}/${row.slug}`,
       listingCount: row.listingCount ?? undefined,
     })),
@@ -353,6 +485,19 @@ function toCanonicalCatalogResult(
     provinceSlug: row.provinceSlug,
     ...(row.citySlug ? { citySlug: row.citySlug } : {}),
     ...(row.suburbSlug ? { suburbSlug: row.suburbSlug } : {}),
+    ...(row.parentCanonicalLocationId
+      ? { parentCanonicalLocationId: row.parentCanonicalLocationId }
+      : {}),
+    ...(row.provinceName ? { provinceName: row.provinceName } : {}),
+    ...(row.cityName ? { cityName: row.cityName } : {}),
+    ...(row.latitude ? { latitude: row.latitude } : {}),
+    ...(row.longitude ? { longitude: row.longitude } : {}),
+    ...(row.postalCode ? { postalCode: row.postalCode } : {}),
+    ...(row.isMetro !== undefined ? { isMetro: row.isMetro } : {}),
+    ...(row.provinceCode ? { provinceCode: row.provinceCode } : {}),
+    ...(row.code ? { code: row.code } : {}),
+    ...(row.status ? { status: row.status } : {}),
+    ...(row.origin ? { origin: row.origin } : {}),
     canonicalPath: row.canonicalPath,
     source: 'canonical_geography',
     ...(row.listingCount !== undefined ? { listingCount: Number(row.listingCount) } : {}),
@@ -373,6 +518,7 @@ export class SearchDiscoveryService {
   private readonly canonicalLocationSearch: (
     query: string,
     limit: number,
+    level?: CanonicalLocationLevel,
   ) => Promise<readonly CanonicalLocationCatalogRow[]>;
 
   constructor(options: SearchDiscoveryServiceOptions = {}) {
@@ -402,6 +548,7 @@ export class SearchDiscoveryService {
   private async searchFactualProjection(
     query: string,
     limit: number,
+    level?: CanonicalLocationLevel,
   ): Promise<readonly CanonicalLocationDiscoveryResult[]> {
     const lowerQuery = normalizedQuery(query);
     const entries = this.projectionAuthority
@@ -409,6 +556,9 @@ export class SearchDiscoveryService {
       .filter(
         entry =>
           entry.projectionStatus === 'projection_ready' &&
+          (!level ||
+            (entry.runtimeSearchScopeKind &&
+              scopeKindForLevel(level) === entry.runtimeSearchScopeKind)) &&
           (normalizedQuery(entry.factualPreferredName).includes(lowerQuery) ||
             entry.factualContext.some(context => normalizedQuery(context).includes(lowerQuery))),
       )
@@ -450,6 +600,16 @@ export class SearchDiscoveryService {
         provinceSlug,
         ...(citySlug ? { citySlug } : {}),
         ...(suburbSlug ? { suburbSlug } : {}),
+        ...(runtime.parentCanonicalLocationId
+          ? { parentCanonicalLocationId: runtime.parentCanonicalLocationId }
+          : {}),
+        ...(runtime.provinceName ? { provinceName: runtime.provinceName } : {}),
+        ...(runtime.cityName ? { cityName: runtime.cityName } : {}),
+        ...(runtime.latitude ? { latitude: runtime.latitude } : {}),
+        ...(runtime.longitude ? { longitude: runtime.longitude } : {}),
+        ...(runtime.postalCode ? { postalCode: runtime.postalCode } : {}),
+        ...(runtime.isMetro !== undefined ? { isMetro: runtime.isMetro } : {}),
+        ...(runtime.provinceCode ? { provinceCode: runtime.provinceCode } : {}),
         canonicalPath: pathFromRuntimeNaturalKey(entry.runtimeNaturalKey),
         source: 'canonical_geography',
         matchReason: matchReasonForLabel(entry.factualPreferredName, lowerQuery),
@@ -463,12 +623,20 @@ export class SearchDiscoveryService {
     query: string,
     limit: number,
     excludePaths: ReadonlySet<string>,
+    level?: CanonicalLocationLevel,
   ): Promise<readonly CanonicalLocationDiscoveryResult[]> {
     const index = governedAliasIndex();
-    const exactHits = index.get(query) ?? [];
+    const expectedScopeKind = level ? scopeKindForLevel(level) : undefined;
+    const exactHits = (index.get(query) ?? []).filter(
+      hit => !expectedScopeKind || hit.scopeKind === expectedScopeKind,
+    );
     const prefixHits: GovernedAliasIndexEntry[] = [];
     for (const [normalizedAlias, entries] of index.entries()) {
-      if (normalizedAlias.startsWith(query)) prefixHits.push(...entries);
+      if (normalizedAlias.startsWith(query)) {
+        prefixHits.push(
+          ...entries.filter(hit => !expectedScopeKind || hit.scopeKind === expectedScopeKind),
+        );
+      }
     }
 
     const orderedHits = [
@@ -505,6 +673,16 @@ export class SearchDiscoveryService {
         provinceSlug,
         ...(citySlug ? { citySlug } : {}),
         ...(suburbSlug ? { suburbSlug } : {}),
+        ...(runtime.parentCanonicalLocationId
+          ? { parentCanonicalLocationId: runtime.parentCanonicalLocationId }
+          : {}),
+        ...(runtime.provinceName ? { provinceName: runtime.provinceName } : {}),
+        ...(runtime.cityName ? { cityName: runtime.cityName } : {}),
+        ...(runtime.latitude ? { latitude: runtime.latitude } : {}),
+        ...(runtime.longitude ? { longitude: runtime.longitude } : {}),
+        ...(runtime.postalCode ? { postalCode: runtime.postalCode } : {}),
+        ...(runtime.isMetro !== undefined ? { isMetro: runtime.isMetro } : {}),
+        ...(runtime.provinceCode ? { provinceCode: runtime.provinceCode } : {}),
         canonicalPath: path,
         source: 'canonical_geography',
         matchReason: reason,
@@ -554,28 +732,32 @@ export class SearchDiscoveryService {
     query: string,
     limit = 8,
     journey?: SearchJourneyId,
+    options: SearchDiscoverySearchOptions = {},
   ): Promise<readonly SearchDiscoveryResult[]> {
     const normalized = normalizedQuery(query);
     if (normalized.length < 2) return [];
 
     const safeLimit = Math.max(1, Math.min(20, Math.floor(limit)));
     const [catalogRows, factualResults, areaResults] = await Promise.all([
-      this.canonicalLocationSearch(normalized, safeLimit).catch(error => {
+      this.canonicalLocationSearch(normalized, safeLimit, options.level).catch(error => {
         console.error('[searchDiscovery] Canonical catalog query failed:', error);
         return [] as readonly CanonicalLocationCatalogRow[];
       }),
-      this.searchFactualProjection(normalized, safeLimit).catch(error => {
+      this.searchFactualProjection(normalized, safeLimit, options.level).catch(error => {
         console.error('[searchDiscovery] Factual projection query failed:', error);
         return [] as readonly CanonicalLocationDiscoveryResult[];
       }),
-      this.searchAreas(normalized, journey).catch(error => {
-        console.error('[searchDiscovery] Search Area discovery query failed:', error);
-        return [] as readonly SearchAreaDiscoveryResult[];
-      }),
+      options.includeSearchAreas === false
+        ? Promise.resolve([] as readonly SearchAreaDiscoveryResult[])
+        : this.searchAreas(normalized, journey).catch(error => {
+            console.error('[searchDiscovery] Search Area discovery query failed:', error);
+            return [] as readonly SearchAreaDiscoveryResult[];
+          }),
     ]);
 
     const factualPaths = new Set(factualResults.map(result => result.canonicalPath));
     const catalogResults = catalogRows
+      .filter(row => !options.level || row.factualLevel === options.level)
       .filter(row => !factualPaths.has(row.canonicalPath))
       .map(row => ({
         ...toCanonicalCatalogResult(row),
@@ -586,6 +768,7 @@ export class SearchDiscoveryService {
       normalized,
       safeLimit,
       factualPaths,
+      options.level,
     ).catch(error => {
       console.error('[searchDiscovery] Alias match query failed:', error);
       return [] as readonly CanonicalLocationDiscoveryResult[];

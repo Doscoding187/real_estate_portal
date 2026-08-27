@@ -10,9 +10,10 @@ import {
   locationSearchCache,
   agentCoverageAreas,
 } from '../drizzle/schema';
-import { eq, and, or, like, sql, count, ne, isNull } from 'drizzle-orm';
+import { eq, and, or, sql, count, ne, isNull } from 'drizzle-orm';
 import { requireUser } from './_core/requireUser';
-import { encodeCanonicalLocationId, isCanonicalLocationId } from '../shared/locationAuthority';
+import { isCanonicalLocationId, parseCanonicalLocationId } from '../shared/locationAuthority';
+import type { CanonicalLocationDiscoveryResult } from '../shared/searchDiscovery';
 import {
   ListingLocationResolutionError,
   resolveCanonicalListingLocation,
@@ -25,6 +26,88 @@ import {
   normalizeCoordinatePair,
 } from '../shared/location-contract';
 import { searchDiscoveryService } from './services/searchDiscoveryService';
+
+type LegacyLocationSearchResult = {
+  id: number;
+  name: string;
+  slug: string;
+  type: 'province' | 'city' | 'suburb';
+  canonicalLocationId: string;
+  provinceSlug?: string;
+  citySlug?: string;
+  suburbSlug?: string;
+  provinceId?: number;
+  cityId?: number;
+  provinceName?: string;
+  cityName?: string;
+  provinceCode?: string;
+  code?: string;
+  status?: string;
+  origin?: string;
+  latitude?: string;
+  longitude?: string;
+  postalCode?: string;
+  isMetro?: number;
+  parentCanonicalLocationId?: string;
+  factualLocationId?: string;
+  factualType?: string;
+  canonicalPath: string;
+  listingCount?: number;
+  matchReason?: string;
+  matchedAlias?: string;
+  selectionTypeLabel?: string;
+  selectionContextLabel?: string;
+};
+
+export function toLegacyLocationSearchResult(
+  result: CanonicalLocationDiscoveryResult,
+): LegacyLocationSearchResult | null {
+  const parsed = parseCanonicalLocationId(result.canonicalLocationId);
+  if (!parsed || parsed.level !== result.factualLevel) return null;
+
+  const slug =
+    parsed.level === 'province'
+      ? result.provinceSlug
+      : parsed.level === 'city'
+        ? result.citySlug
+        : result.suburbSlug;
+  if (!slug) return null;
+
+  const parent = parseCanonicalLocationId(result.parentCanonicalLocationId);
+  return {
+    id: parsed.id,
+    name: result.label,
+    slug,
+    type: parsed.level,
+    canonicalLocationId: result.canonicalLocationId,
+    ...(result.provinceSlug ? { provinceSlug: result.provinceSlug } : {}),
+    ...(result.citySlug ? { citySlug: result.citySlug } : {}),
+    ...(result.suburbSlug ? { suburbSlug: result.suburbSlug } : {}),
+    ...(parent?.level === 'province' ? { provinceId: parent.id } : {}),
+    ...(parent?.level === 'city' ? { cityId: parent.id } : {}),
+    ...(result.provinceName ? { provinceName: result.provinceName } : {}),
+    ...(result.cityName ? { cityName: result.cityName } : {}),
+    ...(result.provinceCode ? { provinceCode: result.provinceCode } : {}),
+    ...(result.code ? { code: result.code } : {}),
+    ...(result.status ? { status: result.status } : {}),
+    ...(result.origin ? { origin: result.origin } : {}),
+    ...(result.latitude ? { latitude: result.latitude } : {}),
+    ...(result.longitude ? { longitude: result.longitude } : {}),
+    ...(result.postalCode ? { postalCode: result.postalCode } : {}),
+    ...(result.isMetro !== undefined ? { isMetro: result.isMetro } : {}),
+    ...(result.parentCanonicalLocationId
+      ? { parentCanonicalLocationId: result.parentCanonicalLocationId }
+      : {}),
+    ...(result.factualLocationId ? { factualLocationId: result.factualLocationId } : {}),
+    ...(result.factualType ? { factualType: result.factualType } : {}),
+    canonicalPath: result.canonicalPath,
+    ...(result.listingCount !== undefined ? { listingCount: result.listingCount } : {}),
+    ...(result.matchReason ? { matchReason: result.matchReason } : {}),
+    ...(result.matchedAlias ? { matchedAlias: result.matchedAlias } : {}),
+    ...(result.display.typeLabel ? { selectionTypeLabel: result.display.typeLabel } : {}),
+    ...(result.display.contextLabel ? { selectionContextLabel: result.display.contextLabel } : {}),
+  };
+}
 
 /**
  * Location Router - Location intelligence and search functionality
@@ -43,13 +126,13 @@ export const locationRouter = router({
     )
     .query(async ({ input }) => {
       const db = await getDb();
-      const searchQuery = `%${input.query.toLowerCase()}%`;
-      const results: any[] = [];
+      if (input.type === 'address') return [];
 
       // Check cache first
       // Version the cache key when the authoritative location source changes.
-      // v5: territory coverage projection v0.2 expanded the governed catalog.
-      const cacheKey = `v5:${input.query}_${input.type}_${input.limit}`;
+      // v7: every location autocomplete consumer now uses governed discovery,
+      // including accepted aliases, canonical parents, and legacy map metadata.
+      const cacheKey = `v7:${input.query.trim().toLowerCase()}_${input.type}_${input.limit}`;
       const [cached] = await db
         .select()
         .from(locationSearchCache)
@@ -63,123 +146,30 @@ export const locationRouter = router({
         .limit(1);
 
       if (cached) {
-        return (JSON.parse(cached.resultsJSON) as any[]).map(result => ({
-          ...result,
-          canonicalLocationId:
-            result.canonicalLocationId ||
-            (result.type && result.id
-              ? encodeCanonicalLocationId(result.type, Number(result.id))
-              : undefined),
-        }));
+        return JSON.parse(cached.resultsJSON) as LegacyLocationSearchResult[];
       }
 
-      // Search based on type
-      if (input.type === 'province' || input.type === 'all') {
-        const provinceResults = await db
-          .select({
-            id: provinces.id,
-            name: provinces.name,
-            code: provinces.code,
-            type: sql`'province'`,
-            status: provinces.status,
-            origin: provinces.origin,
-            canonicalLocationId: sql<string>`CONCAT('province:', ${provinces.id})`,
-            latitude: provinces.latitude,
-            longitude: provinces.longitude,
-          })
-          .from(provinces)
-          .where(
-            and(
-              ne(provinces.status, 'retired'),
-              or(like(provinces.name, searchQuery), like(provinces.code, searchQuery)),
-            ),
-          )
-          .limit(input.type === 'province' ? input.limit : Math.ceil(input.limit / 3));
-
-        results.push(...provinceResults);
-      }
-
-      if (input.type === 'city' || input.type === 'all') {
-        const cityResults = await db
-          .select({
-            id: cities.id,
-            name: cities.name,
-            provinceId: provinces.id,
-            provinceName: provinces.name,
-            provinceCode: provinces.code,
-            type: sql`'city'`,
-            status: cities.status,
-            origin: cities.origin,
-            canonicalLocationId: sql<string>`CONCAT('city:', ${cities.id})`,
-            latitude: cities.latitude,
-            longitude: cities.longitude,
-            isMetro: cities.isMetro,
-          })
-          .from(cities)
-          .leftJoin(provinces, eq(cities.provinceId, provinces.id))
-          .where(
-            and(
-              ne(cities.status, 'retired'),
-              ne(provinces.status, 'retired'),
-              like(cities.name, searchQuery),
-            ),
-          )
-          .limit(input.type === 'city' ? input.limit : Math.ceil(input.limit / 3));
-
-        results.push(...cityResults);
-      }
-
-      if (input.type === 'suburb' || input.type === 'all') {
-        const suburbResults = await db
-          .select({
-            id: suburbs.id,
-            name: suburbs.name,
-            cityId: cities.id,
-            cityName: cities.name,
-            provinceName: provinces.name,
-            provinceCode: provinces.code,
-            type: sql`'suburb'`,
-            status: suburbs.status,
-            origin: suburbs.origin,
-            canonicalLocationId: sql<string>`CONCAT('suburb:', ${suburbs.id})`,
-            latitude: suburbs.latitude,
-            longitude: suburbs.longitude,
-            postalCode: suburbs.postalCode,
-          })
-          .from(suburbs)
-          .leftJoin(cities, eq(suburbs.cityId, cities.id))
-          .leftJoin(provinces, eq(cities.provinceId, provinces.id))
-          .where(
-            and(
-              ne(suburbs.status, 'retired'),
-              ne(cities.status, 'retired'),
-              ne(provinces.status, 'retired'),
-              like(suburbs.name, searchQuery),
-            ),
-          )
-          .limit(input.type === 'suburb' ? input.limit : Math.ceil(input.limit / 3));
-
-        results.push(...suburbResults);
-      }
-
+      const level = input.type === 'all' ? undefined : input.type;
+      const discoveryResults = await searchDiscoveryService.search(
+        input.query,
+        input.limit,
+        undefined,
+        { level, includeSearchAreas: false },
+      );
       const seen = new Set<string>();
-      const uniqueResults = results.filter(result => {
-        const key = [
-          String(result.type || ''),
-          String(result.name || '')
-            .trim()
-            .toLowerCase(),
-          String(result.cityName || '')
-            .trim()
-            .toLowerCase(),
-          String(result.provinceName || '')
-            .trim()
-            .toLowerCase(),
-        ].join('|');
-        if (seen.has(key)) return false;
-        seen.add(key);
-        return true;
-      });
+      const uniqueResults = discoveryResults
+        .filter(
+          (result): result is Extract<typeof result, { kind: 'canonical_location' }> =>
+            result.kind === 'canonical_location',
+        )
+        .map(toLegacyLocationSearchResult)
+        .filter((result): result is LegacyLocationSearchResult => Boolean(result))
+        .filter(result => {
+          const identity = result.factualLocationId || result.canonicalLocationId;
+          if (seen.has(identity)) return false;
+          seen.add(identity);
+          return true;
+        });
 
       // Cache results for 1 hour
       const expiresAt = new Date();

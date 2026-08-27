@@ -18,12 +18,20 @@ interface LocationOption {
   id: number;
   name: string;
   type: 'province' | 'city' | 'suburb';
+  slug?: string;
   latitude?: string;
   longitude?: string;
   provinceName?: string;
   cityName?: string;
   postalCode?: string;
   isMetro?: number;
+  provinceSlug?: string;
+  citySlug?: string;
+  suburbSlug?: string;
+  canonicalLocationId?: string;
+  factualLocationId?: string;
+  parentCanonicalLocationId?: string;
+  canonicalPath?: string;
 }
 
 interface LocationData {
@@ -35,6 +43,10 @@ interface LocationData {
   city?: string;
   province?: string;
   postalCode?: string;
+  canonicalLocationId?: string;
+  factualLocationId?: string;
+  parentCanonicalLocationId?: string;
+  canonicalPath?: string;
 }
 
 interface LocationAutocompleteWithMapProps {
@@ -74,6 +86,14 @@ export function LocationAutocompleteWithMap({
         province:
           location.provinceName || (location.type === 'province' ? location.name : undefined),
         postalCode: location.postalCode,
+        ...(location.canonicalLocationId
+          ? { canonicalLocationId: location.canonicalLocationId }
+          : {}),
+        ...(location.factualLocationId ? { factualLocationId: location.factualLocationId } : {}),
+        ...(location.parentCanonicalLocationId
+          ? { parentCanonicalLocationId: location.parentCanonicalLocationId }
+          : {}),
+        ...(location.canonicalPath ? { canonicalPath: location.canonicalPath } : {}),
       };
 
       setSelectedLocation(locationData);

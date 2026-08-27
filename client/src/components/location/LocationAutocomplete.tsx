@@ -16,12 +16,20 @@ interface LocationOption {
   id: number;
   name: string;
   type: 'province' | 'city' | 'suburb';
+  slug?: string;
   latitude?: string;
   longitude?: string;
   provinceName?: string;
   cityName?: string;
   postalCode?: string;
   isMetro?: number;
+  provinceSlug?: string;
+  citySlug?: string;
+  suburbSlug?: string;
+  canonicalLocationId?: string;
+  factualLocationId?: string;
+  parentCanonicalLocationId?: string;
+  canonicalPath?: string;
 }
 
 interface LocationAutocompleteProps {
