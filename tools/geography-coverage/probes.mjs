@@ -39,6 +39,9 @@ const disposition = readJson(`${OUTPUT}/gauteng_coverage_disposition_v0.1.json`)
 const residualParentAudit = readJson(
   'data/geography-coverage-v0.1/research/residual-parent-edge-audit.v0.1.json',
 );
+const residualCollisionAudit = readJson(
+  'data/geography-coverage-v0.1/research/residual-collision-audit.v0.1.json',
+);
 
 const rowsByNaturalKey = new Map(projection.rows.map(row => [row.runtimeNaturalKey ?? row.runtime_natural_key, row]));
 const rowsByName = new Map(projection.rows.map(row => [normalizeName(row.name), row]));
@@ -1291,6 +1294,24 @@ check(
   'residual parent audit remains fail-closed',
   (residualParentAudit.entries ?? []).every(
     entry => entry.decision === 'retain_queue' && entry.accepted_parent_natural_key === null,
+  ),
+);
+const collisionQueue = queue.filter(entry => entry.reason === 'duplicate_natural_key_within_parent');
+const auditedCollisionIds = new Set(
+  (residualCollisionAudit.entries ?? []).map(entry => entry.factual_location_id),
+);
+check(
+  'every unresolved collision has a residual audit entry',
+  collisionQueue.length === auditedCollisionIds.size &&
+    collisionQueue.every(entry => auditedCollisionIds.has(entry.factual_location_id)),
+  `${auditedCollisionIds.size} audited of ${collisionQueue.length}`,
+);
+check(
+  'residual collision audit remains fail-closed',
+  (residualCollisionAudit.entries ?? []).every(
+    entry => entry.decision === 'retain_queue' &&
+      entry.accepted_parent_natural_key === null &&
+      entry.allow_duplicate_natural_key_grouping === false,
   ),
 );
 

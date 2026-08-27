@@ -1,0 +1,215 @@
+{
+  "artifact_version": "residual-collision-audit-v0.1",
+  "contract": "docs/architecture/geography-coverage-contract.md#D6",
+  "reviewed_at": "2026-08-27",
+  "queue_reason": "duplicate_natural_key_within_parent",
+  "review_scope": "Every remaining Gauteng identity blocked because its generated natural key collides with another factual identity and no approved identity-specific grouping has been established.",
+  "decision_policy": [
+    "A collision may be grouped only by an identity-specific researched artifact that establishes the same accepted context for every identity in the group.",
+    "Distinct municipal contexts are not merged because their generated city-scope key is the same province-level slug.",
+    "A source listing a similar name, parcel designator, or adjacent context is not treated as an identity match without a direct reconciliation.",
+    "This audit records retain-queue decisions only; it does not create runtime rows or alter canonical identities."
+  ],
+  "entries": [
+    {
+      "factual_location_id": "pl-gp-v01-1194388f1b7ef65a8dd2",
+      "preferred_name": "Slovoville",
+      "factual_type": "suburb",
+      "administrative_context": "City of Johannesburg",
+      "source_record_ids": ["sr:osm:node/262716123"],
+      "decision": "retain_queue",
+      "blocking_condition": "canonical_context_conflict",
+      "accepted_parent_natural_key": null,
+      "allow_duplicate_natural_key_grouping": false,
+      "evidence_reviewed": [
+        {
+          "publisher": "Office of the Chief Justice, Department of Justice and Constitutional Development",
+          "url": "https://www.justice.gov.za/maps/areas-gp.html",
+          "finding": "The official Gauteng area index lists Slovoville under the West Rand / Kagiso Sub District, while the canonical identity is in a City of Johannesburg context.",
+          "sufficiency": "conflict_requires_reconciliation"
+        }
+      ],
+      "rationale": "The canonical identity and the official area index disagree on the municipal context. The identity cannot be grouped under Johannesburg or reassigned to West Rand without an identity-level boundary reconciliation.",
+      "next_action": "Reconcile the canonical point against an official municipal or boundary source, then record a corrected context, parent edge, or retirement disposition."
+    },
+    {
+      "factual_location_id": "pl-gp-v01-4a64ff77f933e6256971",
+      "preferred_name": "Slovoville",
+      "factual_type": "suburb",
+      "administrative_context": "City of Johannesburg",
+      "source_record_ids": ["sr:osm:node/1607243858"],
+      "decision": "retain_queue",
+      "blocking_condition": "canonical_context_conflict",
+      "accepted_parent_natural_key": null,
+      "allow_duplicate_natural_key_grouping": false,
+      "evidence_reviewed": [
+        {
+          "publisher": "Office of the Chief Justice, Department of Justice and Constitutional Development",
+          "url": "https://www.justice.gov.za/maps/areas-gp.html",
+          "finding": "The official Gauteng area index lists Slovoville under the West Rand / Kagiso Sub District, while the canonical identity is in a City of Johannesburg context.",
+          "sufficiency": "conflict_requires_reconciliation"
+        }
+      ],
+      "rationale": "The canonical identity and the official area index disagree on the municipal context. The identity cannot be grouped under Johannesburg or reassigned to West Rand without an identity-level boundary reconciliation.",
+      "next_action": "Reconcile the canonical point against an official municipal or boundary source, then record a corrected context, parent edge, or retirement disposition."
+    },
+    {
+      "factual_location_id": "pl-gp-v01-6af48310943dd005445b",
+      "preferred_name": "Kromdraai",
+      "factual_type": "town",
+      "administrative_context": "West Rand",
+      "source_record_ids": [
+        "sr:nga_gns:-1248453:-1821939:66060",
+        "sr:geonames:987065",
+        "sr:nga_gns:-1248463:-1821950:66476",
+        "sr:geonames:987075",
+        "sr:nga_gns:-1248422:-1821907:64816",
+        "sr:geonames:987106"
+      ],
+      "decision": "retain_queue",
+      "blocking_condition": "cross_context_same_slug",
+      "accepted_parent_natural_key": null,
+      "allow_duplicate_natural_key_grouping": false,
+      "evidence_reviewed": [
+        {
+          "publisher": "Canonical factual layer",
+          "url": "data/gauteng-factual-canonical-v0.1/output/gauteng_factual_canonical_geography_v0.1.jsonl",
+          "finding": "This identity is a West Rand town and collides at the province-level city key with a distinct City of Tshwane Kromdraai identity.",
+          "sufficiency": "distinct_canonical_contexts"
+        }
+      ],
+      "rationale": "The two Kromdraai identities are in different administrative contexts and are materially separated in the factual layer. A shared province-level slug would erase the distinction; no identity-specific evidence authorizes a merge or a new disambiguating key.",
+      "next_action": "Resolve the city-scope same-name key policy or obtain a founder-approved identity-specific distinction before publishing either colliding city identity."
+    },
+    {
+      "factual_location_id": "pl-gp-v01-6dcd91667c58269b7d67",
+      "preferred_name": "Kromdraai",
+      "factual_type": "town",
+      "administrative_context": "City of Tshwane",
+      "source_record_ids": [
+        "sr:nga_gns:-1248462:-1821949:64970",
+        "sr:geonames:987110",
+        "sr:nga_gns:-1248418:-1821903:65139",
+        "sr:geonames:987066"
+      ],
+      "decision": "retain_queue",
+      "blocking_condition": "cross_context_same_slug",
+      "accepted_parent_natural_key": null,
+      "allow_duplicate_natural_key_grouping": false,
+      "evidence_reviewed": [
+        {
+          "publisher": "Canonical factual layer",
+          "url": "data/gauteng-factual-canonical-v0.1/output/gauteng_factual_canonical_geography_v0.1.jsonl",
+          "finding": "This identity is a City of Tshwane town and collides at the province-level city key with a distinct West Rand Kromdraai identity.",
+          "sufficiency": "distinct_canonical_contexts"
+        }
+      ],
+      "rationale": "The two Kromdraai identities are in different administrative contexts and are materially separated in the factual layer. A shared province-level slug would erase the distinction; no identity-specific evidence authorizes a merge or a new disambiguating key.",
+      "next_action": "Resolve the city-scope same-name key policy or obtain a founder-approved identity-specific distinction before publishing either colliding city identity."
+    },
+    {
+      "factual_location_id": "pl-gp-v01-81d90f95df19721264e4",
+      "preferred_name": "Elandsfontein",
+      "factual_type": "town",
+      "administrative_context": "City of Tshwane",
+      "source_record_ids": ["sr:nga_gns:435792:557280:116999", "sr:geonames:1105723"],
+      "decision": "retain_queue",
+      "blocking_condition": "cross_context_same_slug",
+      "accepted_parent_natural_key": null,
+      "allow_duplicate_natural_key_grouping": false,
+      "evidence_reviewed": [
+        {
+          "publisher": "Office of the Chief Justice, Department of Justice and Constitutional Development",
+          "url": "https://www.justice.gov.za/maps/areas-gp.html",
+          "finding": "The official Gauteng area index contains multiple Elandsfontein entries with parcel-designated contexts, including Johannesburg and Tshwane; it does not identify these two canonical records directly.",
+          "sufficiency": "multiple_identity_options"
+        }
+      ],
+      "rationale": "The canonical Elandsfontein identities span City of Tshwane and City of Johannesburg. The official index confirms multiple same-name jurisdictional possibilities but does not provide an identity-specific mapping for these source records; grouping would be unsafe.",
+      "next_action": "Obtain identity-specific municipal or cadastral evidence for both records before resolving the province-level collision."
+    },
+    {
+      "factual_location_id": "pl-gp-v01-be36df4188a3220df51c",
+      "preferred_name": "Elandsfontein",
+      "factual_type": "town",
+      "administrative_context": "City of Johannesburg",
+      "source_record_ids": ["sr:nga_gns:-1226151:-1795408:93498", "sr:geonames:1006244"],
+      "decision": "retain_queue",
+      "blocking_condition": "cross_context_same_slug",
+      "accepted_parent_natural_key": null,
+      "allow_duplicate_natural_key_grouping": false,
+      "evidence_reviewed": [
+        {
+          "publisher": "Office of the Chief Justice, Department of Justice and Constitutional Development",
+          "url": "https://www.justice.gov.za/maps/areas-gp.html",
+          "finding": "The official Gauteng area index contains multiple Elandsfontein entries with parcel-designated contexts, including Johannesburg and Tshwane; it does not identify these two canonical records directly.",
+          "sufficiency": "multiple_identity_options"
+        }
+      ],
+      "rationale": "The canonical Elandsfontein identities span City of Tshwane and City of Johannesburg. The official index confirms multiple same-name jurisdictional possibilities but does not provide an identity-specific mapping for these source records; grouping would be unsafe.",
+      "next_action": "Obtain identity-specific municipal or cadastral evidence for both records before resolving the province-level collision."
+    },
+    {
+      "factual_location_id": "pl-gp-v01-cda391a2901be452e50e",
+      "preferred_name": "Northdene",
+      "factual_type": "town",
+      "administrative_context": "West Rand",
+      "source_record_ids": ["sr:osm:node/262713970", "sr:geonames:969682", "sr:nga_gns:-1267304:-1844369:46114"],
+      "decision": "retain_queue",
+      "blocking_condition": "cross_context_same_slug",
+      "accepted_parent_natural_key": null,
+      "allow_duplicate_natural_key_grouping": false,
+      "evidence_reviewed": [
+        {
+          "publisher": "Canonical factual layer",
+          "url": "data/gauteng-factual-canonical-v0.1/output/gauteng_factual_canonical_geography_v0.1.jsonl",
+          "finding": "This identity is a West Rand town and collides at the province-level city key with a distinct City of Johannesburg Northdene identity.",
+          "sufficiency": "distinct_canonical_contexts"
+        },
+        {
+          "publisher": "Office of the Chief Justice, Department of Justice and Constitutional Development",
+          "url": "https://www.justice.gov.za/maps/areas-gp.html",
+          "finding": "The official index lists Northdene AH in Sedibeng, not an identity-specific parent for either colliding town record.",
+          "sufficiency": "insufficient_for_identity_reconciliation"
+        }
+      ],
+      "rationale": "The canonical Northdene identities span West Rand and City of Johannesburg. The official index's separate Northdene AH entry does not resolve either town identity, so neither can be grouped or assigned a parent by name alone.",
+      "next_action": "Obtain identity-specific official place or boundary evidence before publishing either province-level Northdene identity."
+    },
+    {
+      "factual_location_id": "pl-gp-v01-f2c25a116aee6e003227",
+      "preferred_name": "Northdene",
+      "factual_type": "town",
+      "administrative_context": "City of Johannesburg",
+      "source_record_ids": ["sr:nga_gns:-1267303:-1844371:45157", "sr:nga_gns:-1267303:-1844368:45827", "sr:geonames:969683"],
+      "decision": "retain_queue",
+      "blocking_condition": "cross_context_same_slug",
+      "accepted_parent_natural_key": null,
+      "allow_duplicate_natural_key_grouping": false,
+      "evidence_reviewed": [
+        {
+          "publisher": "Canonical factual layer",
+          "url": "data/gauteng-factual-canonical-v0.1/output/gauteng_factual_canonical_geography_v0.1.jsonl",
+          "finding": "This identity is a City of Johannesburg town and collides at the province-level city key with a distinct West Rand Northdene identity.",
+          "sufficiency": "distinct_canonical_contexts"
+        },
+        {
+          "publisher": "Office of the Chief Justice, Department of Justice and Constitutional Development",
+          "url": "https://www.justice.gov.za/maps/areas-gp.html",
+          "finding": "The official index lists Northdene AH in Sedibeng, not an identity-specific parent for either colliding town record.",
+          "sufficiency": "insufficient_for_identity_reconciliation"
+        }
+      ],
+      "rationale": "The canonical Northdene identities span West Rand and City of Johannesburg. The official index's separate Northdene AH entry does not resolve either town identity, so neither can be grouped or assigned a parent by name alone.",
+      "next_action": "Obtain identity-specific official place or boundary evidence before publishing either province-level Northdene identity."
+    }
+  ],
+  "summary": {
+    "queue_identities_reviewed": 8,
+    "retained_queue_count": 8,
+    "promoted_count": 0,
+    "rejected_or_retired_count": 0,
+    "proposed_parent_edges": 0,
+    "grouping_exceptions_granted": 0
+  }
+}

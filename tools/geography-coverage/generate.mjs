@@ -289,7 +289,7 @@ function collectCandidates(state, inputs, manifest) {
 
   for (const candidate of candidates) {
     const edge = researchedEdges.byFactualId.get(candidate.record.canonical_location_id);
-    if (!edge) continue;
+    if (!edge || edge.parent_natural_key !== 'gauteng') continue;
     candidate.allowDuplicateNaturalKeyGrouping = edge.allowDuplicateNaturalKeyGrouping === true;
     candidate.decisionNote = `researched edge (${edge.evidence_class})`;
   }
@@ -302,7 +302,7 @@ function collectCandidates(state, inputs, manifest) {
     if (registryEntry) {
       parentKey = registryEntry.parent_natural_key;
       decisionNote = null;
-    } else if (edge) {
+    } else if (edge && edge.parent_natural_key !== 'gauteng') {
       parentKey = edge.parent_natural_key;
       decisionNote = `researched edge (${edge.evidence_class})`;
     } else {
