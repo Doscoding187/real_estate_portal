@@ -1104,6 +1104,14 @@ check(
   wave54Row ? `${wave54Row.runtime_natural_key}/${wave54Row.factual_location_ids.join(',')}` : 'missing',
 );
 
+const wave55Row = rowsByNaturalKey.get('gauteng/krugersdorp/eleadah');
+check(
+  'wave55 official valuation-roll Eleadah parent edge resolves',
+  wave55Row !== undefined &&
+    wave55Row.factual_location_ids.includes('pl-gp-v01-871e4e5c8913a5a892aa'),
+  wave55Row ? `${wave55Row.runtime_natural_key}/${wave55Row.factual_location_ids.join(',')}` : 'missing',
+);
+
 check(
   'ordinary duplicate collisions remain queued without explicit grouping',
   queue.some(entry => entry.reason === 'duplicate_natural_key_within_parent' && entry.preferred_name === 'Vrededorp'),

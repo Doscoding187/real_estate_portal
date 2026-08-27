@@ -1,0 +1,63 @@
+{
+  "artifact_version": "krugersdorp-eleadah-valuation-roll-parent-evidence-v0.1",
+  "town": "Krugersdorp",
+  "parent_natural_key": "gauteng/krugersdorp",
+  "administrative_context": "West Rand",
+  "evidence_class": "official_municipal_valuation_roll_identity_parent_assertion",
+  "source": {
+    "publisher": "Mogale City Local Municipality",
+    "url": "https://mogalecity.gov.za/wp-content/uploads/Pdfs/Residents%20Page/Valuation%20Roll/2025-2030%20valuation%20roll/General%20Valuation%20Roll%202025%20-%202030%20Krugersdorp%20-%20Quelleriepark.pdf?_t=1739447293",
+    "section": "General Valuation Roll for the period 1 July 2025 to 30 June 2030 — TOWNSHIP: KRUGERSDORP EXT 2; erven 1937/168–170 identify ELEADAH COMPLEX",
+    "retrieved": "2026-08-27",
+    "licence_note": "Official municipal valuation-roll record used for an identity-specific town-parent assertion; no property data or geometry is copied."
+  },
+  "supporting_sources": [
+    {
+      "publisher": "South African Department of Planning, Monitoring and Evaluation — official MDB2020 spatial layer",
+      "url": "https://dpmegis.dpme.gov.za/arcgis/rest/services/Geospatial_Data_Layers/MapServer/23",
+      "section": "Wards (MDB2020) layer (23) — EPSG:4326 point-intersection query for the canonical Eleadah point returned Gauteng, Mogale City Local Municipality (GT481), Ward 26 (GT481_26)",
+      "retrieved": "2026-08-27"
+    }
+  ],
+  "identity_note": "The canonical Eleadah identity is retained exactly. Mogale City's current valuation roll places ELEADAH COMPLEX in KRUGERSDORP EXT 2; the identity-specific point's official MDB ward intersection corroborates the Mogale City / West Rand context. The edge does not rely on display-text geography, proximity, or a name-only substitution.",
+  "spatial_query": {
+    "geometry_type": "esriGeometryPoint",
+    "spatial_reference": "EPSG:4326",
+    "spatial_relationship": "esriSpatialRelIntersects",
+    "out_fields": "Province,Municipali,CAT_B,WardNo,District,DistrictCo,WardID,WardLabel,Date",
+    "return_geometry": false
+  },
+  "identity_specific_records": [
+    {
+      "factual_location_id": "pl-gp-v01-871e4e5c8913a5a892aa",
+      "preferred_name": "Eleadah",
+      "source_record_ids": [
+        "sr:osm:node/4258241876"
+      ],
+      "canonical_point": {
+        "longitude": 27.7382589,
+        "latitude": -26.1367639
+      },
+      "municipal_query_result": {
+        "province": "Gauteng",
+        "municipality": "Mogale City Local Municipality",
+        "municipality_code": "GT481",
+        "ward_number": 26,
+        "district": "West Rand",
+        "district_code": "DC48",
+        "ward_id": "74801026",
+        "ward_label": "GT481_26"
+      },
+      "valuation_roll_match": {
+        "municipality": "Mogale City Local Municipality",
+        "valuation_period": "1 July 2025 to 30 June 2030",
+        "township": "KRUGERSDORP EXT 2",
+        "records": [
+          "1937/168 — PRIVATE OPEN SPACE — PRS ELEADAH COMPLEX",
+          "1937/169 — ROAD — ELEADAH COMPLEX",
+          "1937/170 — ROAD — ELEADAH COMPLEX"
+        ]
+      }
+    }
+  ]
+}
