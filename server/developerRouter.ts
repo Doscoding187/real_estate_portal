@@ -7,6 +7,8 @@ import { EmailService } from './_core/emailService';
 import { developerSubscriptionService } from './services/developerSubscriptionService';
 import { developmentService } from './services/developmentService';
 import { publicDevelopmentSearchService } from './services/publicDevelopmentSearchService';
+import { searchSharedLivingSpaces } from './services/sharedLivingPublicService';
+import { searchPublicLand } from './services/landPublicService';
 import { getDeveloperByUserId, requireDeveloperProfileByUserId } from './services/developerService'; // [NEW] Import service methods
 import { getPublisherById } from './services/cataloguePublisherService';
 import { cataloguePublisherService } from './services/cataloguePublisherService';
@@ -813,7 +815,7 @@ export const developerRouter = router({
       };
       type FeedItem = {
         id: string;
-        kind: 'development' | 'listing' | 'unit';
+        kind: 'development' | 'listing' | 'unit' | 'shared_living' | 'land';
         title: string;
         city: string;
         suburb: string;
@@ -837,6 +839,13 @@ export const developerRouter = router({
         availabilityState?: 'available' | 'sold_out' | 'not_stated';
         publisherName?: string | null;
         publisherAuthorityKind?: 'platform_reference' | 'developer_first_party';
+        sharedLiving?: {
+          accommodationType: 'private_room' | 'garden_cottage' | 'bachelor_studio';
+          bathroomAccess: 'own' | 'shared';
+          furnishedState: 'furnished' | 'partial';
+          rentUnknown: boolean;
+          billsIncluded: { electricity: boolean; water: boolean; wifi: boolean };
+        };
       };
       type ListingFeedItem = FeedItem & { kind: 'listing' };
       type UnitFeedItem = FeedItem & { kind: 'unit' };
@@ -889,6 +898,44 @@ export const developerRouter = router({
           development.availabilityState === 'sold_out' || development.status === 'sold-out'
             ? ['Sold out']
             : [],
+      });
+
+      const mapSharedLivingSpace = (
+        space: Awaited<ReturnType<typeof searchSharedLivingSpaces>>['items'][number],
+      ): FeedItem => ({
+        id: String(space.spaceId),
+        kind: 'shared_living',
+        title: space.label,
+        city: space.locationDisplay,
+        suburb: '',
+        priceFrom: space.rentUnknown ? null : space.rentAmountMinor / 100,
+        priceTo: space.rentUnknown ? null : space.rentAmountMinor / 100,
+        image: '',
+        href: space.href,
+        listingType: 'rent',
+        sharedLiving: {
+          accommodationType: space.accommodationType,
+          bathroomAccess: space.bathroomAccess,
+          furnishedState: space.furnishedState,
+          rentUnknown: space.rentUnknown,
+          billsIncluded: space.billsIncluded,
+        },
+      });
+
+      const mapPublicLand = (
+        land: Awaited<ReturnType<typeof searchPublicLand>>[number],
+      ): FeedItem => ({
+        id: String(land.listingId),
+        kind: 'land',
+        title: land.title,
+        city: land.city || '',
+        suburb: '',
+        priceFrom: land.askingPrice === null ? null : Number(land.askingPrice),
+        priceTo: land.askingPrice === null ? null : Number(land.askingPrice),
+        image: '',
+        href: land.href,
+        propertyType: 'plot',
+        area: land.extentM2 === null ? null : Number(land.extentM2),
       });
 
       const listingMediaBaseUrl =
@@ -1097,7 +1144,7 @@ export const developerRouter = router({
         locationFilter: LocationFilter,
       ): Promise<{
         items: FeedItem[];
-        source: 'developments' | 'listings' | 'units' | 'mixed';
+        source: 'developments' | 'listings' | 'units' | 'mixed' | 'shared_living' | 'land';
       }> => {
         if (input.tab === 'buy') {
           return composeResidentialHomeFeed(locationFilter, 'sale');
@@ -1121,21 +1168,24 @@ export const developerRouter = router({
         }
 
         if (input.tab === 'plot_land') {
-          const devs = await developmentService.listPublicDevelopments({
-            province: locationFilter.province,
-            city: locationFilter.city,
-            suburb: locationFilter.suburb,
-            limit,
-            developmentType: 'land',
+          const publicLand = await searchPublicLand({
+            ...(locationFilter.province ? { province: locationFilter.province } : {}),
+            ...(locationFilter.city ? { city: locationFilter.city } : {}),
           });
-          return { items: devs.map(mapDevelopment), source: 'developments' };
+          return {
+            items: publicLand.slice(0, limit).map(mapPublicLand),
+            source: 'land',
+          };
         }
 
         if (input.tab === 'shared_living') {
-          // Shared Living has its own journey identity. Until its executable
-          // inventory contract exists, fail closed instead of using Rent as a
-          // proxy and returning an unrelated rental feed.
-          return { items: [], source: 'listings' };
+          const sharedLiving = await searchSharedLivingSpaces({
+            ...(locationFilter.province ? { province: locationFilter.province } : {}),
+            ...(locationFilter.city ? { city: locationFilter.city } : {}),
+            ...(locationFilter.suburb ? { suburb: locationFilter.suburb } : {}),
+            limit,
+          });
+          return { items: sharedLiving.items.map(mapSharedLivingSpace), source: 'shared_living' };
         }
 
         // Commercial consumer intent is owned by the dedicated Office Leasing
