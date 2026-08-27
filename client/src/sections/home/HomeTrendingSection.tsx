@@ -2,6 +2,7 @@ import { trpc } from '@/lib/trpc';
 import { SimpleDevelopmentCard } from '@/components/SimpleDevelopmentCard';
 import { SimpleDevelopmentUnitCard } from '@/components/SimpleDevelopmentUnitCard';
 import { SimpleHomeListingCard } from '@/components/SimpleHomeListingCard';
+import { SimpleSharedLivingCard } from '@/components/SimpleSharedLivingCard';
 import { getPrimaryDevelopmentImageUrl } from '@/lib/mediaUtils';
 import { isHomepageHeroJourneyEnabled } from '@/lib/publicNavigation';
 import {
@@ -23,7 +24,7 @@ type HomeTrendingSectionProps = {
 
 type TrendingItem = {
   id: string;
-  kind: 'development' | 'listing' | 'unit';
+  kind: 'development' | 'listing' | 'unit' | 'shared_living' | 'land';
   title: string;
   city: string;
   suburb: string;
@@ -45,6 +46,13 @@ type TrendingItem = {
   availabilityState?: 'available' | 'sold_out' | 'not_stated';
   publisherName?: string | null;
   badges?: string[];
+  sharedLiving?: {
+    accommodationType: string;
+    bathroomAccess: string;
+    furnishedState: string;
+    rentUnknown: boolean;
+    billsIncluded: { electricity: boolean; water: boolean; wifi: boolean };
+  };
 };
 
 const PROVINCES = [
@@ -273,6 +281,30 @@ export function HomeTrendingSection({
                         propertyType={item.propertyType}
                         listingType={item.listingType}
                         badgeLabel={item.listingType === 'rent' ? 'Property listing' : 'Resale'}
+                      />
+                    ) : item.kind === 'land' ? (
+                      <SimpleHomeListingCard
+                        id={item.id}
+                        title={item.title}
+                        city={item.city}
+                        suburb={item.suburb}
+                        href={item.href}
+                        price={item.priceFrom}
+                        area={item.area}
+                        propertyType="plot"
+                        badgeLabel="Land"
+                      />
+                    ) : item.kind === 'shared_living' && item.sharedLiving ? (
+                      <SimpleSharedLivingCard
+                        title={item.title}
+                        location={item.city}
+                        href={item.href}
+                        monthlyRent={item.priceFrom}
+                        rentUnknown={item.sharedLiving.rentUnknown}
+                        accommodationType={item.sharedLiving.accommodationType}
+                        bathroomAccess={item.sharedLiving.bathroomAccess}
+                        furnishedState={item.sharedLiving.furnishedState}
+                        billsIncluded={item.sharedLiving.billsIncluded}
                       />
                     ) : item.kind === 'unit' ? (
                       <SimpleDevelopmentUnitCard
