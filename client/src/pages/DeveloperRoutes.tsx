@@ -22,17 +22,6 @@ import DeveloperPublisherPage from '@/pages/DeveloperPublisherPage';
 import DevelopmentHome from '@/pages/developer/DevelopmentHome';
 import { isPublicDeveloperProfilePath } from '@/lib/developerRouteBoundary';
 
-// Placeholder components for missing pages
-function PlaceholderContent({ title }: { title: string }) {
-  return (
-    <div className="flex flex-col items-center justify-center h-64 text-center">
-      <div className="text-6xl mb-4">🚧</div>
-      <h2 className="text-xl font-semibold text-slate-700 mb-2">{title}</h2>
-      <p className="text-slate-500">This module is coming soon!</p>
-    </div>
-  );
-}
-
 // Lazy load drafts page if needed, or import directly
 import { lazy, Suspense } from 'react';
 const MyDrafts = lazy(() => import('@/pages/developer/MyDrafts'));
@@ -203,15 +192,9 @@ export default function DeveloperRoutes() {
         {/* Operations */}
         <Route path="/developer/leads" component={LeadsManager} />
         <Route path="/developer/messages" component={MessagesCenter} />
-        <Route path="/developer/tasks" component={() => <PlaceholderContent title="Tasks" />} />
-        <Route path="/developer/reports" component={() => <PlaceholderContent title="Reports" />} />
 
         {/* Growth */}
         <Route path="/developer/analytics" component={AnalyticsPanel} />
-        <Route
-          path="/developer/explore"
-          component={() => <PlaceholderContent title="Explore Analytics" />}
-        />
         <Route path="/developer/performance" component={DeveloperPerformancePage} />
 
         {/* Settings */}
@@ -220,10 +203,6 @@ export default function DeveloperRoutes() {
         <Route path="/developer/subscription" component={BillingPanel} />
         <Route path="/developer/settings/subscription" component={BillingPanel} />
         <Route path="/developer/plans" component={DeveloperPlans} />
-        <Route
-          path="/developer/notifications"
-          component={() => <PlaceholderContent title="Notifications" />}
-        />
 
         {/* Default fallback */}
         <Route>

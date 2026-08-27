@@ -12,7 +12,6 @@ import {
   Bell,
   MessageSquare,
   Building2,
-  FileText,
   Settings,
   LogOut,
   BarChart3,
@@ -52,10 +51,6 @@ export function DeveloperTopNav() {
               Create Development
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => setLocation('/developer/reports')}>
-              <FileText className="h-4 w-4 mr-2" />
-              Generate Report
-            </DropdownMenuItem>
             <DropdownMenuItem onClick={() => setLocation('/developer/analytics')}>
               <BarChart3 className="h-4 w-4 mr-2" />
               View Analytics
@@ -92,15 +87,6 @@ export function DeveloperTopNav() {
                 <Bell className="h-8 w-8 mx-auto mb-2 text-gray-300" />
                 <p className="text-sm">No new notifications</p>
               </div>
-            </div>
-            <div className="p-2 border-t border-gray-100">
-              <Button
-                variant="ghost"
-                className="w-full text-sm rounded-lg"
-                onClick={() => setLocation('/developer/notifications')}
-              >
-                View All Notifications
-              </Button>
             </div>
           </DropdownMenuContent>
         </DropdownMenu>

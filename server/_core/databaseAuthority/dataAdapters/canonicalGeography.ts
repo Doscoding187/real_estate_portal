@@ -589,7 +589,7 @@ export async function prepareCanonicalGeography(input: {
   connection: AuthoritySqlConnection;
   profileRoot?: string;
 }): Promise<GeographyReferenceEvidence> {
-  assertOperation(input.decision, ['reference-seed', 'foundation-seed']);
+  assertOperation(input.decision, ['reference-seed']);
   const ownership = requireReferenceAdapterTarget(input.authority, input.profileRoot);
   const manifest = await requireAcceptedMigrationHead({
     authority: input.authority,

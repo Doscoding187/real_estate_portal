@@ -27,7 +27,7 @@ const CampaignDetailsPage: React.FC = () => {
         </CardHeader>
         <CardContent>
           <div className="text-center py-12 text-slate-500">
-            <p>Detailed analytics and insights coming soon.</p>
+            <p>Detailed analytics and insights are not available yet.</p>
           </div>
         </CardContent>
       </Card>

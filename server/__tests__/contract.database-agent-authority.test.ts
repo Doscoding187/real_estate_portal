@@ -105,6 +105,7 @@ describe('database authority agent entry contract', () => {
       ['pnpm', ['db:migrate:plan']],
       ['pnpm', ['db:migrate:apply']],
       ['pnpm', ['db:reference:prepare']],
+      ['pnpm', ['db:foundation:prepare']],
       ['pnpm', ['db:scenario:prepare']],
       ['pnpm', ['db:readiness', '--', '--purpose=location-discovery']],
     ]);
@@ -112,9 +113,13 @@ describe('database authority agent entry contract', () => {
       ['pnpm', ['db:migrate:test']],
       ['pnpm', ['db:reference:prepare']],
       ['pnpm', ['db:reference:verify']],
+      ['pnpm', ['db:foundation:prepare']],
+      ['pnpm', ['db:foundation:verify']],
+      ['pnpm', ['db:scenario:prepare']],
+      ['pnpm', ['db:scenario:verify']],
       ['pnpm', ['db:schema:congruency']],
       ['pnpm', ['db:verify:distribution']],
-      ['pnpm', ['db:readiness']],
+      ['pnpm', ['db:readiness', '--', '--purpose=search-to-lead']],
     ]);
   });
 
@@ -194,6 +199,8 @@ describe('database authority agent entry contract', () => {
     expect(testJob).toContain('pnpm db:migrate:test');
     expect(testJob).toContain('pnpm db:reference:prepare');
     expect(testJob).toContain('pnpm db:reference:verify');
+    expect(testJob).toContain('pnpm db:foundation:prepare');
+    expect(testJob).toContain('pnpm db:foundation:verify');
     expect(testJob.indexOf('pnpm db:migrate:test')).toBeLessThan(
       testJob.indexOf('pnpm db:reference:prepare'),
     );
@@ -201,6 +208,12 @@ describe('database authority agent entry contract', () => {
       testJob.indexOf('pnpm db:reference:verify'),
     );
     expect(testJob.indexOf('pnpm db:reference:verify')).toBeLessThan(testJob.indexOf('Run tests'));
+    expect(testJob.indexOf('pnpm db:reference:verify')).toBeLessThan(
+      testJob.indexOf('pnpm db:foundation:prepare'),
+    );
+    expect(testJob.indexOf('pnpm db:foundation:prepare')).toBeLessThan(
+      testJob.indexOf('pnpm db:foundation:verify'),
+    );
     expect(aggregate).toContain("['test:db-authority:static']");
     expect(aggregate).toContain("['db:authority:utilities']");
     expect(aggregate).toContain("['schema:sanity']");

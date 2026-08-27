@@ -47,7 +47,7 @@ const GROW_LINKS = [
 const MANAGE_LINKS = [
   { label: 'Reports', href: '/agent/analytics', icon: FileText },
   { label: 'Settings', href: '/agent/settings', icon: Settings },
-  { label: 'Help Center', href: '/agent/training', icon: CircleHelp },
+  { label: "Help Center", href: "/help", icon: CircleHelp },
 ] as const;
 
 export function AgentSidebar({ mode = 'desktop' }: SidebarProps) {

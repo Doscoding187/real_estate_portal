@@ -25,6 +25,7 @@ are in `authority-manifest.json`; operation permissions are in
 | Local service lifecycle             | `scripts/local-db.sh`, `localServicePaths.ts`             |
 | Canonical geography reference data  | `dataAdapters/canonicalGeography.ts`                      |
 | Canonical commercial reference data | `dataAdapters/canonicalCommercial.ts`                     |
+| Data-role versions and boundaries   | `dataAdapters/dataRoleManifest.ts`                       |
 | Canonical commercial release        | `scripts/databaseAuthorityCli.ts` (`release-reference:*`) |
 | Isolated Search-to-Lead scenario    | `dataAdapters/searchToLeadScenario.ts`                    |
 | Remaining connection paths          | `connection-path-inventory.json`                          |
@@ -60,15 +61,15 @@ pnpm db:migrate:plan
 pnpm db:migrate:apply -- --accepted-old-head=<head-or-none> --expected-new-head=<manifest-head>
 pnpm db:schema:congruency
 pnpm db:reference:prepare
+pnpm db:foundation:prepare
 pnpm db:scenario:prepare
 pnpm db:reference:verify
+pnpm db:foundation:verify
 pnpm db:scenario:verify
 pnpm db:readiness -- --purpose=location-discovery
 ```
 
-Run the sequence stage by stage. The first unexpected result stops the workflow; preserve sanitized logs and runtime state, and do not retry a failed migration or repair data manually. After successful feature verification,
-re-resolve the context, dispose only the exact owned target with its emitted
-acknowledgement, then stop the service through the validated Unix socket:
+Run the sequence stage by stage. The first unexpected result stops the workflow; preserve sanitized logs and runtime state, and do not retry a failed migration or repair data manually. After successful feature verification, re-resolve the context, dispose only the exact owned target with its emitted acknowledgement, then stop the service through the validated Unix socket:
 
 ```sh
 pnpm db:authority:context
@@ -83,12 +84,7 @@ Service shutdown is implemented as `mysqladmin shutdown` over the exact
 validated Unix socket. Do not assume a same-user signal is permitted for a
 confined `mysqld`; there is no silent TCP, signal, or broad-process fallback.
 
-If an abnormal termination leaves only authority-owned transient runtime metadata (`mysqld.pid`, `mysql.sock`, or `mysql.sock.lock`), use the governed
-`pnpm db:authority:service:recover` command. It classifies the complete bundle,
-fails closed on a live or ambiguous service, and removes only those three
-exact artifacts after proving the service root, process, port, socket, and lock
-state are safe. It never removes the service root, data directory, logs, or
-database files. A cleanly stopped service is a recovery no-op.
+If an abnormal termination leaves only authority-owned transient runtime metadata (`mysqld.pid`, `mysql.sock`, or `mysql.sock.lock`), use the governed `pnpm db:authority:service:recover` command. It classifies the complete bundle, fails closed on a live or ambiguous service, and removes only those three exact artifacts after proving the service root, process, port, socket, and lock state are safe. It never removes the service root, data directory, logs, or database files. A cleanly stopped service is a recovery no-op.
 
 The native MySQL initialization command owns creation of its data directory.
 The service path is derived by `localServicePaths.ts` as
@@ -108,12 +104,14 @@ treated as preserved partial or foreign state and fails closed; the service
 never deletes it automatically. Validate and remove only an exact, empty,
 owned residue via an approved cleanup packet before retrying initialization.
 
-Reference and scenario adapters require the exact mode-0600 ownership profile, the accepted `0007_paid_launch_access_invoice_term.sql` migration head, and
-the disposable worktree target. They are never part of ordinary service
-startup. Replay is explicit:
+Reference, foundation, scenario, demo, and test-fixture adapters require the
+exact mode-0600 ownership profile, the accepted canonical migration head, and
+their declared capability anchors. They are never part of ordinary service
+startup. Each role has an independent version and verifier; replay is explicit:
 
 ```sh
 pnpm db:reference:verify
+pnpm db:foundation:verify
 pnpm db:scenario:verify
 ```
 

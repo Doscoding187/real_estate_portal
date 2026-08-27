@@ -85,18 +85,20 @@ export function requireExactAdapterTarget(
   };
 }
 
-const DISPOSABLE_REFERENCE_OPERATIONS: readonly DatabaseOperation[] = [
+const DISPOSABLE_DATA_OPERATIONS: readonly DatabaseOperation[] = [
   'reference-seed',
   'foundation-seed',
+  'scenario-seed',
   'verification',
   'browser-verification',
   'readiness',
 ];
 
 /**
- * Canonical reference adapters may run against either an owned local worktree
- * or an explicitly resolved isolated test target. Worktree lifecycle remains
- * intentionally stricter and is never delegated to this test-target branch.
+ * Canonical disposable data adapters may run against either an owned local
+ * worktree or an explicitly resolved isolated test target. Worktree lifecycle
+ * remains intentionally stricter and is never delegated to this test-target
+ * branch.
  */
 export function requireReferenceAdapterTarget(
   authority: ResolvedDatabaseAuthority,
@@ -108,7 +110,7 @@ export function requireReferenceAdapterTarget(
 
   if (
     authority.context.targetClass === 'disposable-test' &&
-    DISPOSABLE_REFERENCE_OPERATIONS.includes(authority.context.operation) &&
+    DISPOSABLE_DATA_OPERATIONS.includes(authority.context.operation) &&
     authority.context.runtimeMode === 'test' &&
     authority.context.local &&
     authority.context.provider === 'mysql' &&

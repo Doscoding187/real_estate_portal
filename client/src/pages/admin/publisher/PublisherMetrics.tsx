@@ -70,7 +70,7 @@ const PublisherMetrics: React.FC = () => {
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg mb-2">
             <TrendingUp className="w-8 h-8 text-white" />
           </div>
-          <h4 className="text-lg font-semibold text-blue-900">Advanced Analytics Coming Soon</h4>
+          <h4 className="text-lg font-semibold text-blue-900">Advanced Analytics Not Enabled</h4>
           <p className="text-sm text-blue-700 max-w-md mx-auto">
             Detailed charts for views, clicks, conversion rates, and performance trends will be
             available here.

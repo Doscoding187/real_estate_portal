@@ -65,9 +65,7 @@
       "docker/mysql-local/init/01-create-local-databases.sql",
       "scripts/__tests__/localDbWorkflow.test.ts",
       "scripts/localDbWorkflow.ts",
-      "scripts/testDbWorkflow.ts",
-      "server/scripts/localDemoSeed.ts",
-      "server/scripts/verifyLocalDemoSeed.ts"
+      "scripts/testDbWorkflow.ts"
     ],
     "localTestFixtures": [
       "scripts/run-listing-performance-e2e.ts",
@@ -290,8 +288,8 @@
     "canonicalAndAuthoritySupport": "Repository-owned authority inspection, contract orchestration, target guards and workflow helpers. These do not create a competing migration, seed or repair authority.",
     "supportedDiagnostics": "The two retained offline diagnostics: schema:sanity and db:target. Connected verification remains under the supported db:verify commands.",
     "supportedReplacements": "Guarded supported diagnostic verification, local lifecycle shell authority and disposable E2E orchestration.",
-    "localTestLifecycle": "Canonical local/test database initialization, demo seed and verification; targets are guarded and never production authority.",
-    "localTestFixtures": "Disposable E2E fixtures with explicit loopback/database guards and no schema DDL; not production or shared-environment repair authority.",
+    "localTestLifecycle": "Canonical local/test database initialization and lifecycle orchestration; role-specific reference, foundation, demo, scenario and test-fixture data is owned by the named Database Authority adapters.",
+    "localTestFixtures": "Disposable E2E fixtures with explicit target guards and no schema DDL, plus fail-closed browser runner compatibility entrypoints; not production or shared-environment repair authority.",
     "readOnlyEvidence": "Historical or investigative read-only inspection retained for traceability only; it is not a supported operational command and may not be promoted by documentation or package wiring."
   },
   "historicalReconciliation": {
@@ -313,7 +311,7 @@
         "scripts/quick-check.ts"
       ]
     },
-    "guardedOperationalSurfaceCountAtClosure": 122,
+    "guardedOperationalSurfaceCountAtClosure": 118,
     "operationalSurfaceDefinition": "A current source path within the guard boundary that has direct database-client, execution, SQL mutation/inspection, or ambient-target capability signals. Historical documentation, ordinary runtime data access, migrations, tests and non-capable authority files are not counted as operational surfaces."
   },
   "policy": {

@@ -62,6 +62,7 @@ export type AuthorityManifest = {
   localServiceDirectoryPattern: string;
   canonicalReferenceDataAdapter: string;
   canonicalCommercialReferenceDataAdapter: string;
+  dataRoleManifest: string;
   canonicalCommercialReleaseEntrypoint: string;
   canonicalCommercialReleaseCommands: string[];
   acceptanceScenarioAdapter: string;
@@ -94,6 +95,8 @@ const REQUIRED_PACKAGE_SCRIPTS = [
   'db:authority:service:recover',
   'db:reference:prepare',
   'db:reference:verify',
+  'db:foundation:prepare',
+  'db:foundation:verify',
   'db:scenario:prepare',
   'db:scenario:verify',
 ] as const;
@@ -131,6 +134,7 @@ export function validateAuthorityManifest(manifest: AuthorityManifest, root = pr
     manifest.localServiceLifecycle,
     manifest.canonicalReferenceDataAdapter,
     manifest.canonicalCommercialReferenceDataAdapter,
+    manifest.dataRoleManifest,
     manifest.canonicalCommercialReleaseEntrypoint,
     manifest.acceptanceScenarioAdapter,
   ];
@@ -299,7 +303,7 @@ async function main() {
   console.log(`Schema Migrated: ${readiness.layers.schemaMigrated.code}`);
   console.log(`Schema Congruency: ${readiness.layers.schemaCongruent.code}`);
   console.log(`Canonical Reference Data: ${readiness.layers.canonicalReferenceData.code}`);
-  console.log(`Commercial Reference Data: ${readiness.layers.commercialReferenceData.code}`);
+  console.log(`Launch Access Foundation Data: ${readiness.layers.commercialReferenceData.code}`);
   console.log(`Acceptance Scenario Data: ${readiness.layers.acceptanceScenario.code}`);
   console.log(`Requested Runtime: ${readiness.requestedRuntime}`);
   console.log(`Application Readiness: ${readiness.applicationReady ? 'ready' : 'not-ready'}`);

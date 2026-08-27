@@ -302,8 +302,10 @@ pnpm db:migrate:plan -- --accepted-old-head=none --expected-new-head=<manifest-h
 pnpm db:migrate:apply -- --accepted-old-head=none --expected-new-head=<manifest-head>
 pnpm db:schema:congruency
 pnpm db:reference:prepare
-pnpm db:reference:verify
+pnpm db:foundation:prepare
 pnpm db:scenario:prepare
+pnpm db:reference:verify
+pnpm db:foundation:verify
 pnpm db:scenario:verify
 pnpm db:readiness -- --purpose=location-discovery
 pnpm dev
@@ -312,6 +314,13 @@ pnpm dev
 Use only records provided by the approved adapter for the feature under test;
 this workflow does not create the retired agency demo seed or fixed
 `listify_local` database.
+
+The supported data lanes are intentionally separate. `db:reference:*` owns
+canonical geography, `db:foundation:*` owns Launch Access products and
+entitlements, `db:listing-preview:*` owns the small listing-preview auth demo,
+`db:scenario:*` owns Search-to-Lead acceptance rows, and the two
+`db:ple-*:*` commands own their isolated PLE test fixtures. Inspect their
+independent versions and digests with `pnpm db:data:manifest`.
 
 2. Open `http://localhost:3009/login`.
 

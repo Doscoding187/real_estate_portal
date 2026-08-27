@@ -1743,7 +1743,7 @@ export default function DevelopmentDetail() {
                         <div className="w-full text-center py-12 bg-slate-50 rounded-lg border border-dashed border-slate-300">
                           <Home className="mx-auto h-8 w-8 text-slate-300 mb-2" />
                           <p className="text-slate-500 font-medium">
-                            Detailed unit configurations coming soon.
+                            Detailed unit configurations are not published for this development yet.
                           </p>
                           <p className="text-xs text-slate-400">
                             Contact the developer for floor plans.

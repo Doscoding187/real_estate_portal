@@ -104,7 +104,7 @@ export function SimpleDevelopmentCard({
             Development Listing
           </span>
           <Building2 className="w-12 h-12" />
-          <span className="text-[11px] font-medium text-slate-500">Image coming soon</span>
+          <span className="text-[11px] font-medium text-slate-500">No image provided</span>
         </div>
 
         {/* Image Layer - Hides on Error to reveal placeholder */}

@@ -6,7 +6,7 @@ import {
   assertOperation,
   queryRows,
   requireAcceptedMigrationHead,
-  requireExactAdapterTarget,
+  requireReferenceAdapterTarget,
   rowValue,
   stableDigest,
   withTransaction,
@@ -59,6 +59,7 @@ const SCENARIO_IDS = Object.freeze({
   cataloguePublisher: 990001,
   unrelatedDeveloperPublisher: 990002,
   platformPublisher: 990003,
+  agentMembership: 995001,
   development: 990001,
   property: 990001,
   agentProperty: 990001,
@@ -977,7 +978,9 @@ async function prepareScenarioRows(
       email: 'dba-agent@invalid.example',
       role: 'agent',
       emailVerified: 1,
-      agencyId: null,
+      // ensureUserAgency assigns the canonical agency below; asserting the
+      // settled state keeps repeated prepare runs idempotent.
+      agencyId: SCENARIO_IDS.agency,
     },
     insertColumns: [
       'id',
@@ -1153,6 +1156,48 @@ async function prepareScenarioRows(
       1,
       1,
       'approved',
+    ],
+  });
+  // Canonical membership currency: public enquiry custody only treats an
+  // agency-affiliated agent as an eligible active recipient while a current
+  // agency_agent_memberships row exists. The acceptance fixture therefore
+  // carries the same membership its runtime custody rule requires.
+  await ensureDeterministicRow({
+    connection,
+    table: 'agency_agent_memberships',
+    id: SCENARIO_IDS.agentMembership,
+    // effective_from is a TIMESTAMP column whose literal round-trip is
+    // timezone-dependent; membership currency is proven functionally by
+    // scenario verification through public enquiry custody instead.
+    columns: ['agency_id', 'agent_id', 'status', 'governance_mode', 'role'],
+    expected: {
+      agency_id: SCENARIO_IDS.agency,
+      agent_id: SCENARIO_IDS.agent,
+      status: 'active',
+      governance_mode: 'affiliated',
+      role: 'agent',
+    },
+    insertColumns: [
+      'id',
+      'agency_id',
+      'agent_id',
+      'status',
+      'governance_mode',
+      'role',
+      'effective_from',
+      'created_by',
+      'updated_by',
+    ],
+    insertValues: [
+      SCENARIO_IDS.agentMembership,
+      SCENARIO_IDS.agency,
+      SCENARIO_IDS.agent,
+      'active',
+      'affiliated',
+      'agent',
+      FIXTURE_TIMESTAMP,
+      SCENARIO_IDS.agencyOnlyUser,
+      SCENARIO_IDS.agencyOnlyUser,
     ],
   });
   await ensureDeterministicRow({
@@ -1390,7 +1435,7 @@ async function prepareScenarioRows(
       'hybrid',
       null,
       'dba-verification-property-listify-v1',
-      'Property Listify editorial operations',
+      'Property Listify',
       'DBA controlled platform-managed acceptance fixture',
       1,
       1,
@@ -1767,7 +1812,7 @@ export async function prepareSearchToLeadScenario(input: {
   profileRoot?: string;
 }): Promise<SearchToLeadScenarioEvidence> {
   assertOperation(input.decision, ['scenario-seed']);
-  const ownership = requireExactAdapterTarget(input.authority, input.profileRoot);
+  const ownership = requireReferenceAdapterTarget(input.authority, input.profileRoot);
   const manifest = await requireAcceptedMigrationHead({
     authority: input.authority,
     connection: input.connection,
@@ -2424,7 +2469,7 @@ export async function verifySearchToLeadScenario(input: {
   profileRoot?: string;
 }): Promise<SearchToLeadScenarioEvidence> {
   assertOperation(input.decision, ['verification', 'browser-verification', 'readiness']);
-  const ownership = requireExactAdapterTarget(input.authority, input.profileRoot);
+  const ownership = requireReferenceAdapterTarget(input.authority, input.profileRoot);
   const manifest = await requireAcceptedMigrationHead({
     authority: input.authority,
     connection: input.connection,

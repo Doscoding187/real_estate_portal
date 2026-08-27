@@ -16,7 +16,6 @@ import {
   Link2,
   MessageCircle,
   Printer,
-  QrCode,
   Check,
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -149,19 +148,10 @@ export function PropertyShareModal({
           {/* Additional Actions */}
           <div className="space-y-2">
             <Label>Additional Actions</Label>
-            <div className="grid grid-cols-2 gap-3">
-              <Button variant="outline" className="justify-start" onClick={handlePrint}>
+            <div>
+              <Button variant="outline" className="w-full justify-start" onClick={handlePrint}>
                 <Printer className="h-4 w-4 mr-2" />
                 Print
-              </Button>
-              <Button
-                variant="outline"
-                className="justify-start"
-                disabled
-                title="QR Code generation coming soon"
-              >
-                <QrCode className="h-4 w-4 mr-2" />
-                QR Code
               </Button>
             </div>
           </div>

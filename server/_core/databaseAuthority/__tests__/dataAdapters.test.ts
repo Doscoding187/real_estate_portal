@@ -18,6 +18,7 @@ import {
 } from '../dataAdapters/governedRuntimeGeography';
 import {
   buildScenarioInsertStatement,
+  prepareSearchToLeadScenario,
   SEARCH_TO_LEAD_SCENARIO_DIGEST,
   SEARCH_TO_LEAD_SCENARIO_VERSION,
   verifySearchToLeadScenario,
@@ -31,6 +32,12 @@ import {
   prepareCanonicalCommercialReferenceData,
   verifyCanonicalCommercialReference,
 } from '../dataAdapters/canonicalCommercial';
+import {
+  CANONICAL_FOUNDATION_DIGEST,
+  CANONICAL_FOUNDATION_VERSION,
+  prepareCanonicalFoundation,
+  verifyCanonicalFoundation,
+} from '../dataAdapters/canonicalFoundation';
 import { requireReferenceAdapterTarget } from '../dataAdapters/common';
 import type { AuthoritySqlConnection } from '../connectionAuthority';
 import { deriveGitWorktreeIdentity } from '../worktreeIdentity';
@@ -51,7 +58,10 @@ function identity(branch = 'fix/database-authority-adapter-test') {
   });
 }
 
-function authority(url: string, operation: 'verification' | 'reference-seed' | 'scenario-seed') {
+function authority(
+  url: string,
+  operation: 'verification' | 'reference-seed' | 'foundation-seed' | 'scenario-seed',
+) {
   return resolveDatabaseAuthority({
     operation,
     cwd: ROOT,
@@ -62,11 +72,15 @@ function authority(url: string, operation: 'verification' | 'reference-seed' | '
   });
 }
 
-function decision(operation: 'verification' | 'reference-seed' | 'scenario-seed') {
+function decision(
+  operation: 'verification' | 'reference-seed' | 'foundation-seed' | 'scenario-seed',
+) {
   return { operation } as any;
 }
 
-function disposableTestAuthority(operation: 'verification' | 'reference-seed') {
+function disposableTestAuthority(
+  operation: 'verification' | 'reference-seed' | 'foundation-seed' | 'scenario-seed',
+) {
   const testIdentity = identity('fix/database-authority-disposable-test');
   return resolveDatabaseAuthority({
     operation,
@@ -184,6 +198,8 @@ describe('bounded Database Authority data adapters', () => {
     ).toBe(true);
     expect(SEARCH_TO_LEAD_SCENARIO_VERSION).toBe('search-to-lead-v1');
     expect(SEARCH_TO_LEAD_SCENARIO_DIGEST).toMatch(/^[a-f0-9]{64}$/);
+    expect(CANONICAL_FOUNDATION_VERSION).toBe('canonical-launch-foundation-v1');
+    expect(CANONICAL_FOUNDATION_DIGEST).toMatch(/^[a-f0-9]{64}$/);
     expect(CANONICAL_COMMERCIAL_VERSION).toBe('canonical-commercial-v2');
     expect(CANONICAL_COMMERCIAL_DIGEST).toMatch(/^[a-f0-9]{64}$/);
     expect(CANONICAL_DEVELOPER_LAUNCH_ACCESS).toMatchObject({
@@ -256,6 +272,25 @@ describe('bounded Database Authority data adapters', () => {
       }),
     ).rejects.toThrow('connection must not be reached');
 
+    await expect(
+      prepareCanonicalFoundation({
+        authority: prepareTarget,
+        decision: decision('foundation-seed'),
+        connection: prepareConnection,
+      }),
+    ).rejects.toThrow('connection must not be reached');
+
+    const scenarioTarget = disposableTestAuthority('scenario-seed');
+    const scenarioConnection = new UnexpectedConnection();
+    await expect(
+      prepareSearchToLeadScenario({
+        authority: scenarioTarget,
+        decision: decision('scenario-seed'),
+        connection: scenarioConnection,
+      }),
+    ).rejects.toThrow('connection must not be reached');
+    expect(scenarioConnection.calls).toBeGreaterThan(0);
+
     const verifyTarget = disposableTestAuthority('verification');
     const verifyConnection = new UnexpectedConnection();
     await expect(
@@ -273,8 +308,33 @@ describe('bounded Database Authority data adapters', () => {
         connection: verifyConnection,
       }),
     ).rejects.toThrow('connection must not be reached');
+
+    await expect(
+      verifyCanonicalFoundation({
+        authority: verifyTarget,
+        decision: decision('verification'),
+        connection: verifyConnection,
+      }),
+    ).rejects.toThrow('connection must not be reached');
     expect(prepareConnection.calls).toBeGreaterThan(0);
     expect(verifyConnection.calls).toBeGreaterThan(0);
+  });
+
+  it('refuses foundation preparation under another role before SQL', async () => {
+    const target = authority(
+      'mysql://listify_app:private@127.0.0.1:3307/listify_arbitrary',
+      'foundation-seed',
+    );
+    const connection = new UnexpectedConnection();
+
+    await expect(
+      prepareCanonicalFoundation({
+        authority: target,
+        decision: decision('reference-seed'),
+        connection,
+      }),
+    ).rejects.toThrow('operation reference-seed is not approved');
+    expect(connection.calls).toBe(0);
   });
 
   it('rejects test-shaped targets outside test authority and rejects protected targets on the ordinary path', async () => {

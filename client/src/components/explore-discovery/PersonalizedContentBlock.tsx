@@ -302,7 +302,7 @@ export function PersonalizedContentBlock({
           </div>
         </div>
         <div className="rounded-[30px] border border-slate-200 bg-slate-50 px-5 py-7 text-sm text-slate-600">
-          Coming soon. No items yet.
+          No items yet.
         </div>
       </div>
     );

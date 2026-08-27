@@ -99,7 +99,7 @@ function getBuyerProfile(item: any) {
 
 function getOpportunityLabel(item: any) {
   if (item.opportunity?.status === 'ready') return 'Open for buyers';
-  if (item.opportunity?.status === 'pending_setup') return 'Coming soon';
+  if (item.opportunity?.status === 'pending_setup') return 'Opening soon';
   return 'Not accepting referrals yet';
 }
 
@@ -731,7 +731,7 @@ export default function PartnerDevelopmentsPage() {
                       )
                     }
                   >
-                    {item.opportunity?.status === 'ready' ? 'Submit Buyer' : 'Coming Soon'}
+                    {item.opportunity?.status === 'ready' ? 'Submit Buyer' : 'Not open yet'}
                   </Button>
                 </div>
                 {item.opportunity?.status !== 'ready' ? (
@@ -949,7 +949,7 @@ export default function PartnerDevelopmentsPage() {
                     )
                   }
                 >
-                  {brochureItem.opportunity?.status === 'ready' ? 'Submit Buyer' : 'Coming Soon'}
+                  {brochureItem.opportunity?.status === 'ready' ? 'Submit Buyer' : 'Not open yet'}
                 </Button>
               </div>
             </>

@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { MapPin, Phone, Mail, Calendar, CheckCircle2, XCircle, AlertTriangle } from 'lucide-react';
+import { MapPin, Phone, Mail, Calendar, CheckCircle2, XCircle } from 'lucide-react';
 
 interface PropertyDrawerProps {
   property: any | null;
@@ -161,7 +161,7 @@ export const PropertyDrawer: React.FC<PropertyDrawerProps> = ({
         </Tabs>
 
         <SheetFooter className="mt-8 pt-4 border-t">
-          {property.approvalStatus === 'pending' ? (
+          {property.approvalStatus === 'pending' && (
             <div className="flex gap-2 w-full">
               <Button
                 className="flex-1 bg-green-600 hover:bg-green-700"
@@ -171,16 +171,6 @@ export const PropertyDrawer: React.FC<PropertyDrawerProps> = ({
               </Button>
               <Button variant="destructive" className="flex-1" onClick={() => onReject(property)}>
                 <XCircle className="h-4 w-4 mr-2" /> Reject
-              </Button>
-            </div>
-          ) : (
-            <div className="flex gap-2 w-full">
-              <Button
-                variant="outline"
-                className="w-full"
-                onClick={() => alert('Request Edit feature coming soon')}
-              >
-                <AlertTriangle className="h-4 w-4 mr-2" /> Request Edit
               </Button>
             </div>
           )}

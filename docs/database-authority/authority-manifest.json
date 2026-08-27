@@ -37,6 +37,7 @@
   "approvedLocalCommands": [
     "db:authority:status",
     "db:authority:manifest",
+    "db:data:manifest",
     "db:authority:context",
     "db:worktree:create",
     "db:migrate:plan",
@@ -54,6 +55,8 @@
     "db:authority:service:recover",
     "db:reference:prepare",
     "db:reference:verify",
+    "db:foundation:prepare",
+    "db:foundation:verify",
     "db:scenario:prepare",
     "db:scenario:verify",
     "db:ple-publication-entitlement:prepare",
@@ -69,8 +72,8 @@
     "unapproved remote, shared, staging, production, Railway, and TiDB targets",
     "all mutation of the quarantined current listify_local database"
   ],
-  "localSeedEntrypoint": "server/_core/databaseAuthority/dataAdapters/canonicalGeography.ts",
-  "localDataAuthorityStatus": "operation-specific-reference-and-scenario-adapters-only",
+  "localSeedEntrypoint": "server/_core/databaseAuthority/dataAdapters/dataRoleManifest.ts",
+  "localDataAuthorityStatus": "operation-specific-reference-foundation-demo-scenario-and-test-adapters",
   "verificationEntrypoints": [
     "scripts/db-contract-verify.ts",
     "scripts/db-verify-distribution-schema.ts",
@@ -87,6 +90,7 @@
   "localServiceDirectoryPattern": "/var/tmp/property-listify-<uid>/mysql-3307",
   "canonicalReferenceDataAdapter": "server/_core/databaseAuthority/dataAdapters/canonicalGeography.ts",
   "canonicalCommercialReferenceDataAdapter": "server/_core/databaseAuthority/dataAdapters/canonicalCommercial.ts",
+  "dataRoleManifest": "server/_core/databaseAuthority/dataAdapters/dataRoleManifest.ts",
   "canonicalCommercialReleaseEntrypoint": "scripts/databaseAuthorityCli.ts",
   "canonicalCommercialReleaseCommands": [
     "db:release:reference:plan",

@@ -11,18 +11,14 @@ import {
   Building2,
   Users,
   MessageSquare,
-  CheckSquare,
   TrendingUp,
   Target,
   Settings,
   ChevronDown,
   ChevronRight,
-  Bell,
   BarChart3,
-  FileText,
   UserPlus,
   FileEdit,
-  Video,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { trpc } from '@/lib/trpc';
@@ -87,18 +83,6 @@ const MENU_SECTIONS: MenuSection[] = [
         icon: MessageSquare,
         path: '/developer/messages',
       },
-      {
-        id: 'tasks',
-        label: 'Tasks',
-        icon: CheckSquare,
-        path: '/developer/tasks',
-      },
-      {
-        id: 'reports',
-        label: 'Reports',
-        icon: FileText,
-        path: '/developer/reports',
-      },
     ],
   },
   {
@@ -111,12 +95,6 @@ const MENU_SECTIONS: MenuSection[] = [
         label: 'Analytics',
         icon: TrendingUp,
         path: '/developer/analytics',
-      },
-      {
-        id: 'explore',
-        label: 'Explore Analytics',
-        icon: Video,
-        path: '/developer/explore',
       },
       {
         id: 'performance',
@@ -331,25 +309,6 @@ export function EnhancedSidebar({ className }: EnhancedSidebarProps) {
         })}
       </nav>
 
-      {/* Notifications Bell (Fixed at bottom) */}
-      <div className="border-t border-gray-100 p-4">
-        <button
-          onClick={() => setLocation('/developer/notifications')}
-          className={cn(
-            'flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 w-full text-left',
-            'hover:bg-gray-50 relative',
-            location === '/developer/notifications'
-              ? 'bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-600 font-medium shadow-soft'
-              : 'text-gray-700',
-          )}
-        >
-          <Bell className="w-5 h-5" />
-          <span>Notifications</span>
-          {unreadCount > 0 && (
-            <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse shadow-soft" />
-          )}
-        </button>
-      </div>
     </aside>
   );
 }
