@@ -1017,6 +1017,14 @@ for (const grouped of [
   );
 }
 
+const wave49Row = rowsByNaturalKey.get('gauteng/vanderbijlpark/cc');
+check(
+  'wave49 source-native CC parent edge resolves',
+  wave49Row !== undefined &&
+    wave49Row.factual_location_ids.includes('pl-gp-v01-d417420de557bb150d61'),
+  wave49Row ? `${wave49Row.runtime_natural_key}/${wave49Row.factual_location_ids.join(',')}` : 'missing',
+);
+
 check(
   'ordinary duplicate collisions remain queued without explicit grouping',
   queue.some(entry => entry.reason === 'duplicate_natural_key_within_parent' && entry.preferred_name === 'Vrededorp'),

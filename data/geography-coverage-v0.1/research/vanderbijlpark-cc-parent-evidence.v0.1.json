@@ -1,0 +1,21 @@
+{
+  "artifact_version": "vanderbijlpark-cc-parent-evidence-v0.1",
+  "town": "Vanderbijlpark",
+  "parent_natural_key": "gauteng/vanderbijlpark",
+  "administrative_context": "Sedibeng",
+  "evidence_class": "osm_administrative_neighbourhood_address_context",
+  "source": {
+    "publisher": "OpenStreetMap contributors",
+    "url": "https://www.openstreetmap.org/way/1009230592",
+    "section": "Way 1009230592 tags — name=CC, place=neighbourhood, boundary=administrative, admin_level=10, addr:neighbourhood=Vanderbijlpark CC",
+    "retrieved": "2026-08-27",
+    "licence_note": "OSM source-native administrative boundary and address-context tags used under the Open Database License; no geometry is copied."
+  },
+  "identity_note": "The parent edge uses the source-native administrative/address context tag rather than a display-text fallback; the canonical CC identity remains separate.",
+  "identity_specific_records": [
+    {
+      "factual_location_id": "pl-gp-v01-d417420de557bb150d61",
+      "preferred_name": "CC"
+    }
+  ]
+}
