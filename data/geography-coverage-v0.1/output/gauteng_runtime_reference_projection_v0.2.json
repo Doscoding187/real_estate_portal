@@ -7,7 +7,7 @@
     "factual_canonical_geography_sha256": "1fe0e2e3101bd7e459f484b7125dc1ce1f0327104002b184ef0e90d4236b7b7f",
     "factual_canonical_names_sha256": "a87891bc2e4167130d7e5eb649516a34aedaa071278ce8fe25df19f511669b51",
     "carried_projection_v01_sha256": "982ea13cd190a02da5440f122a061713e22bc157ef46f491ce530c5877ff9fc0",
-    "territory_manifest_sha256": "3e40a2976a6950db2e5f3686ed6a3228ae4e8629ebc36324a3037250d6257026"
+    "territory_manifest_sha256": "95ba8ea0d89c9fd4273f7531ab6508eece77f8af02988b85b9c0e46f496b18f1"
   },
   "rows": [
     {
@@ -17074,6 +17074,30 @@
       ],
       "factual_preferred_names": [
         "Lewisham Location"
+      ],
+      "factual_types": [
+        "locality"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/krugersdorp/mansieville-location",
+      "runtime_parent_natural_key": "gauteng/krugersdorp",
+      "name": "Mansieville Location",
+      "slug": "mansieville-location",
+      "latitude": -26.0666685,
+      "longitude": 27.7666685,
+      "searchable_aliases": [
+        "MANSIEVILLELOCATION"
+      ],
+      "publication_status": "provisional",
+      "licensing_classification": "permissive_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-06fca9fad5944269ccde"
+      ],
+      "factual_preferred_names": [
+        "Mansieville Location"
       ],
       "factual_types": [
         "locality"

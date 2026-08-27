@@ -940,6 +940,23 @@ for (const probe of WAVE46_IDENTITY_SPECIFIC_PROBES) {
   );
 }
 
+const WAVE47_IDENTITY_SPECIFIC_PROBES = [
+  {
+    name: 'Mansieville Location',
+    factualId: 'pl-gp-v01-06fca9fad5944269ccde',
+    parentSuffix: 'gauteng/krugersdorp/mansieville-location',
+  },
+];
+
+for (const probe of WAVE47_IDENTITY_SPECIFIC_PROBES) {
+  const row = rowsByNaturalKey.get(probe.parentSuffix);
+  check(
+    `wave47 identity-specific edge resolves: ${probe.name}`,
+    row !== undefined && row.factual_location_ids.includes(probe.factualId),
+    row ? `${row.runtime_natural_key}/${row.factual_location_ids.join(',')}` : 'missing',
+  );
+}
+
 const NEGATIVE_PROBES = ['Mamelodi Extension 1', 'Mamelodi Extension 4'];
 for (const probe of NEGATIVE_PROBES) {
   const directHit = resolveByName(probe);

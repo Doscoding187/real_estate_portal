@@ -1,0 +1,32 @@
+{
+  "artifact_version": "krugersdorp-mansieville-location-parent-evidence-v0.1",
+  "town": "Krugersdorp",
+  "parent_natural_key": "gauteng/krugersdorp",
+  "administrative_context": "West Rand",
+  "evidence_class": "official_magisterial_place_index_with_municipal_name_variant",
+  "source": {
+    "publisher": "Office of the Chief Justice, Department of Justice and Constitutional Development",
+    "url": "https://www.justice.gov.za/maps/areas-gp.html",
+    "section": "Gauteng: Find a court in your area — Munsieville is listed in the West Rand under Krugersdorp Main Seat",
+    "retrieved": "2026-08-27",
+    "licence_note": "Official government place index used for the locality-to-runtime-market relationship; no prose or geometry is copied."
+  },
+  "supporting_sources": [
+    {
+      "publisher": "Mogale City Local Municipality",
+      "url": "https://mogalecity.gov.za/mogale-city/explore-our-city/",
+      "section": "Explore our city — the municipality encompasses Krugersdorp and Munsieville",
+      "retrieved": "2026-08-27"
+    }
+  ],
+  "source_name_variants": {
+    "Mansieville Location": "Munsieville"
+  },
+  "identity_note": "The canonical source-native identity remains Mansieville Location. The current official place index uses Munsieville; this artifact maps the existing identity to the Krugersdorp runtime market without renaming or merging identities.",
+  "identity_specific_records": [
+    {
+      "factual_location_id": "pl-gp-v01-06fca9fad5944269ccde",
+      "preferred_name": "Mansieville Location"
+    }
+  ]
+}
