@@ -7,7 +7,7 @@
     "factual_canonical_geography_sha256": "1fe0e2e3101bd7e459f484b7125dc1ce1f0327104002b184ef0e90d4236b7b7f",
     "factual_canonical_names_sha256": "a87891bc2e4167130d7e5eb649516a34aedaa071278ce8fe25df19f511669b51",
     "carried_projection_v01_sha256": "982ea13cd190a02da5440f122a061713e22bc157ef46f491ce530c5877ff9fc0",
-    "territory_manifest_sha256": "73197d590701314d0607335ccc9cf85871ab05b409c63fc64df36ef69c402563"
+    "territory_manifest_sha256": "fe01aae12ed2facf18de0f6317aa312abfe532bd2df89f10c926ddf3ed45bd0f"
   },
   "rows": [
     {
@@ -215,6 +215,28 @@
     {
       "runtime_search_scope_kind": "locality",
       "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/alberton/greenfields",
+      "runtime_parent_natural_key": "gauteng/alberton",
+      "name": "Greenfields",
+      "slug": "greenfields",
+      "latitude": -26.3841667,
+      "longitude": 28.1272222,
+      "searchable_aliases": [],
+      "publication_status": "provisional",
+      "licensing_classification": "osm_only_odbl_provisional",
+      "factual_location_ids": [
+        "pl-gp-v01-e76bb97243258b5a28a4"
+      ],
+      "factual_preferred_names": [
+        "Greenfields"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
       "runtime_natural_key": "gauteng/alberton/meyersdal",
       "runtime_parent_natural_key": "gauteng/alberton",
       "name": "Meyersdal",
@@ -285,6 +307,30 @@
       ],
       "factual_preferred_names": [
         "Southcrest"
+      ],
+      "factual_types": [
+        "suburb"
+      ]
+    },
+    {
+      "runtime_search_scope_kind": "locality",
+      "runtime_storage_level": "suburb",
+      "runtime_natural_key": "gauteng/alberton/thokoza",
+      "runtime_parent_natural_key": "gauteng/alberton",
+      "name": "Thokoza",
+      "slug": "thokoza",
+      "latitude": -26.3532233,
+      "longitude": 28.1375311,
+      "searchable_aliases": [
+        "Tokoza"
+      ],
+      "publication_status": "provisional",
+      "licensing_classification": "mixed_odbl_supported",
+      "factual_location_ids": [
+        "pl-gp-v01-2c33a31cdc8b88b5c9b8"
+      ],
+      "factual_preferred_names": [
+        "Thokoza"
       ],
       "factual_types": [
         "suburb"

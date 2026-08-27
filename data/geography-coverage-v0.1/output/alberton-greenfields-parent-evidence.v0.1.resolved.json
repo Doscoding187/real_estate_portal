@@ -1,0 +1,30 @@
+{
+  "resolved_edges_version": "alberton-greenfields-parent-evidence.v0.1.resolved",
+  "town": "Alberton",
+  "parent_natural_key": "gauteng/alberton",
+  "source": {
+    "publisher": "City of Ekurhuleni",
+    "url": "https://www.ekurhuleni.gov.za/wp-content/uploads/2021/11/ALBERTON_FULL_TITLE_BOOK-2.pdf",
+    "section": "General Valuation Roll 2017–2021, Area: ALBERTON — registered township GREENFIELDS and physical addresses in Greenfields",
+    "retrieved": "2026-08-27",
+    "licence_note": "Official municipal valuation-roll source used for township-to-area assertions; no property-owner data, prose, or geometry is copied."
+  },
+  "edge_count": 1,
+  "edges": [
+    {
+      "factual_location_id": "pl-gp-v01-e76bb97243258b5a28a4",
+      "preferred_name": "Greenfields",
+      "factual_type": "suburb",
+      "parent_natural_key": "gauteng/alberton",
+      "evidence_class": "official_municipal_valuation_roll_township_area",
+      "citation": "https://www.ekurhuleni.gov.za/wp-content/uploads/2021/11/ALBERTON_FULL_TITLE_BOOK-2.pdf#General%20Valuation%20Roll%202017%E2%80%932021%2C%20Area%3A%20ALBERTON%20%E2%80%94%20registered%20township%20GREENFIELDS%20and%20physical%20addresses%20in%20Greenfields (retrieved 2026-08-27)"
+    }
+  ],
+  "diagnostics": {
+    "researched_names": 0,
+    "identity_specific_records": 1,
+    "matched_already_projected": [],
+    "names_not_in_canonical_layer": [],
+    "ambiguous_canonical_matches": []
+  }
+}
