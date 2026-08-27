@@ -47,7 +47,8 @@ export function RecommendedAgents({ locationType, locationId, areaLabel }: Recom
             </div>
             <h2 className="text-3xl font-bold text-slate-900">{heading}</h2>
             <p className="text-slate-500 mt-2 max-w-2xl">
-              Approved practitioners with live Property Listify profiles and inventory in this area
+              Approved practitioners with public Property Listify profiles who explicitly serve this
+              area
             </p>
           </div>
           <Link href="/agents">
