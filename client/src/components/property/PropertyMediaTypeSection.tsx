@@ -54,7 +54,10 @@ export function PropertyMediaTypeSection({ media, virtualTour }: PropertyMediaTy
   return (
     <div className="mt-4 space-y-4">
       {plans.length > 0 && (
-        <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+        <section
+          id="floor-plans"
+          className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5"
+        >
           <div className="mb-4 flex items-start gap-3">
             <Ruler className="mt-0.5 h-5 w-5 shrink-0 text-blue-600" />
             <div>
@@ -107,7 +110,10 @@ export function PropertyMediaTypeSection({ media, virtualTour }: PropertyMediaTy
       )}
 
       {videos.length > 0 && (
-        <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+        <section
+          id="property-video"
+          className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5"
+        >
           <div className="mb-4 flex items-start gap-3">
             <Play className="mt-0.5 h-5 w-5 shrink-0 text-blue-600" />
             <div>
@@ -141,7 +147,10 @@ export function PropertyMediaTypeSection({ media, virtualTour }: PropertyMediaTy
       )}
 
       {virtualTour && (
-        <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+        <section
+          id="virtual-tour"
+          className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5"
+        >
           <div className="flex items-start gap-3">
             <Box className="mt-0.5 h-5 w-5 shrink-0 text-blue-600" />
             <div className="min-w-0 flex-1">
@@ -163,7 +172,10 @@ export function PropertyMediaTypeSection({ media, virtualTour }: PropertyMediaTy
       )}
 
       {documents.length > 0 && (
-        <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+        <section
+          id="documents"
+          className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5"
+        >
           <div className="mb-4 flex items-start gap-3">
             <FileText className="mt-0.5 h-5 w-5 shrink-0 text-blue-600" />
             <div>

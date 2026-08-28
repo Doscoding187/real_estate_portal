@@ -26,11 +26,13 @@ export const LEGACY_STEP4_PROPERTY_DETAIL_KEYS = [
   'electricitySupply',
   'electricitySource',
   'waterSupply',
+  'wastewaterSystem',
   'waterHeating',
   'internetAccess',
   'internetAvailability',
   'security',
   'securityLevel',
+  'securityEstate',
   'securityFeatures',
   'ownershipType',
   'flooring',
@@ -86,6 +88,19 @@ export type Step4PropertySetting = (typeof STEP4_PROPERTY_SETTINGS)[number];
 export const STEP4_CONTROLLED_ACCESS_VALUES = ['controlled', 'not_controlled', 'unknown'] as const;
 export type Step4ControlledAccess = (typeof STEP4_CONTROLLED_ACCESS_VALUES)[number];
 
+/**
+ * The buyer needs a direct security setting, not an inference from a generic
+ * estate label or controlled-access flag. Confirmed features (such as a
+ * 24-hour guard) remain separate so the public detail can state both facts.
+ */
+export const STEP4_SECURITY_PROFILE_VALUES = [
+  'security_estate',
+  'gated_community',
+  'standard',
+  'unknown',
+] as const;
+export type Step4SecurityProfile = (typeof STEP4_SECURITY_PROFILE_VALUES)[number];
+
 export const STEP4_ELECTRICITY_VALUES = [
   'prepaid',
   'municipal',
@@ -107,6 +122,15 @@ export type Step4BackupPower = (typeof STEP4_BACKUP_POWER_VALUES)[number];
 
 export const STEP4_WATER_SUPPLY_VALUES = ['municipal', 'prepaid', 'borehole', 'unknown'] as const;
 export type Step4WaterSupply = (typeof STEP4_WATER_SUPPLY_VALUES)[number];
+
+export const STEP4_WASTEWATER_SYSTEM_VALUES = [
+  'municipal',
+  'septic_tank',
+  'package_plant',
+  'conservancy_tank',
+  'unknown',
+] as const;
+export type Step4WastewaterSystem = (typeof STEP4_WASTEWATER_SYSTEM_VALUES)[number];
 
 export const STEP4_WATER_HEATING_VALUES = [
   'electric_geyser',
@@ -137,11 +161,13 @@ export interface FeaturesContext {
   context: {
     setting?: Step4PropertySetting;
     controlledAccess?: Step4ControlledAccess;
+    securityProfile?: Step4SecurityProfile;
   };
   utilities: {
     electricitySupply?: Step4ElectricitySupply;
     backupPower?: Step4BackupPower;
     waterSupply?: Step4WaterSupply;
+    wastewaterSystem?: Step4WastewaterSystem;
     waterHeating?: Step4WaterHeating;
     internetAccess?: Step4InternetAccess;
   };
@@ -357,6 +383,9 @@ const readCanonical = (raw: Record<string, any>): FeaturesContext | undefined =>
       controlledAccess: STEP4_CONTROLLED_ACCESS_VALUES.includes(raw.context.controlledAccess)
         ? raw.context.controlledAccess
         : undefined,
+      securityProfile: STEP4_SECURITY_PROFILE_VALUES.includes(raw.context.securityProfile)
+        ? raw.context.securityProfile
+        : undefined,
     },
     utilities: {
       electricitySupply: STEP4_ELECTRICITY_VALUES.includes(raw.utilities.electricitySupply)
@@ -367,6 +396,9 @@ const readCanonical = (raw: Record<string, any>): FeaturesContext | undefined =>
         : undefined,
       waterSupply: STEP4_WATER_SUPPLY_VALUES.includes(raw.utilities.waterSupply)
         ? raw.utilities.waterSupply
+        : undefined,
+      wastewaterSystem: STEP4_WASTEWATER_SYSTEM_VALUES.includes(raw.utilities.wastewaterSystem)
+        ? raw.utilities.wastewaterSystem
         : undefined,
       waterHeating: STEP4_WATER_HEATING_VALUES.includes(raw.utilities.waterHeating)
         ? raw.utilities.waterHeating
@@ -526,10 +558,9 @@ export function pruneFeaturesContextForType(
 
 export function pruneFeaturesContextForIntent(
   value: unknown,
-  intent: PropertyListingIntent | undefined,
+  _intent: PropertyListingIntent | undefined,
 ): FeaturesContext {
-  const context = normalizeFeaturesContext(value);
-  return intent === 'rent' ? context : { ...context, petPolicy: undefined };
+  return normalizeFeaturesContext(value);
 }
 
 export function buildFeaturesContextFromWizardState(
@@ -561,7 +592,7 @@ const includes = (values: readonly string[], value: unknown): boolean =>
 
 export function validateFeaturesContext(
   value: unknown,
-  intent: PropertyListingIntent | undefined,
+  _intent: PropertyListingIntent | undefined,
   propertyType: ListingPropertyType | undefined,
   core?: Partial<CorePropertyInformation>,
 ): FeaturesContextValidationIssue[] {
@@ -604,6 +635,12 @@ export function validateFeaturesContext(
     ) {
       issues.push({ field: 'context.controlledAccess', message: 'Unknown access-control state.' });
     }
+    if (
+      value.context.securityProfile !== undefined &&
+      !includes(STEP4_SECURITY_PROFILE_VALUES, value.context.securityProfile)
+    ) {
+      issues.push({ field: 'context.securityProfile', message: 'Unknown security setting.' });
+    }
   }
 
   if (!isRecord(value.utilities)) {
@@ -613,6 +650,7 @@ export function validateFeaturesContext(
       ['electricitySupply', STEP4_ELECTRICITY_VALUES],
       ['backupPower', STEP4_BACKUP_POWER_VALUES],
       ['waterSupply', STEP4_WATER_SUPPLY_VALUES],
+      ['wastewaterSystem', STEP4_WASTEWATER_SYSTEM_VALUES],
       ['waterHeating', STEP4_WATER_HEATING_VALUES],
       ['internetAccess', STEP4_INTERNET_VALUES],
     ];
@@ -646,12 +684,6 @@ export function validateFeaturesContext(
   if (value.petPolicy !== undefined && !includes(STEP4_PET_POLICY_VALUES, value.petPolicy)) {
     issues.push({ field: 'petPolicy', message: 'Unknown pet policy.' });
   }
-  if (value.petPolicy !== undefined && intent !== 'rent') {
-    issues.push({
-      field: 'petPolicy',
-      message: 'Pet policy is only applicable to rental listings.',
-    });
-  }
   if (!Array.isArray(value.highlights)) {
     issues.push({ field: 'highlights', message: 'Listing highlights must be a list.' });
   } else {
@@ -684,7 +716,10 @@ export function validateFeaturesContext(
     });
   }
   if (value.customHighlights !== undefined && !Array.isArray(value.customHighlights)) {
-    issues.push({ field: 'customHighlights', message: 'Custom listing highlights must be a list.' });
+    issues.push({
+      field: 'customHighlights',
+      message: 'Custom listing highlights must be a list.',
+    });
   } else if (Array.isArray(value.customHighlights)) {
     if (value.customHighlights.length > STEP4_CUSTOM_VALUE_LIMIT) {
       issues.push({

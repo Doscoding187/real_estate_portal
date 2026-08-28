@@ -31,18 +31,32 @@ describe('ResultsHeader result truth', () => {
     expect(screen.queryByRole('button', { name: 'Show map view' })).not.toBeInTheDocument();
   });
 
-  it('renders only a settled authoritative count and exposes selected view state', () => {
+  it('renders only a settled authoritative count and exposes list/map state', () => {
     const onViewModeChange = vi.fn();
     render(<ResultsHeader {...baseProps} resultCount={1} onViewModeChange={onViewModeChange} />);
 
-    expect(screen.getByRole('status')).toHaveTextContent('1 property ready to review');
-    expect(screen.getByText('1 matches')).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent('1 verified listing');
     expect(screen.getByRole('button', { name: 'Show list view' })).toHaveAttribute(
       'aria-pressed',
       'true',
     );
+    expect(screen.queryByRole('button', { name: 'Show grid view' })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Show map view' }));
     expect(onViewModeChange).toHaveBeenCalledWith('map');
+  });
+
+  it('offers save search only when settled results can be acted on', () => {
+    const onSaveSearch = vi.fn();
+    const { rerender } = render(
+      <ResultsHeader {...baseProps} isLoading onSaveSearch={onSaveSearch} />,
+    );
+
+    expect(screen.queryByRole('button', { name: 'Save search' })).not.toBeInTheDocument();
+
+    rerender(<ResultsHeader {...baseProps} resultCount={4} onSaveSearch={onSaveSearch} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Save search' }));
+
+    expect(onSaveSearch).toHaveBeenCalledTimes(1);
   });
 });

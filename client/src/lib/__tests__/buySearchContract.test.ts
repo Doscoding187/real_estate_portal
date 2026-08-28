@@ -13,7 +13,7 @@ describe('canonical Buy search contract', () => {
   it('parses only supported URL fields', () => {
     const filters = parseBuySearchParams(
       new URLSearchParams(
-        'propertyType=house&minPrice=500000&minBedrooms=2&minBathrooms=1&maxBedrooms=4&amenities=Pool',
+        'propertyType=house&minPrice=500000&minBedrooms=2&minBathrooms=1&minArea=120&maxArea=260&maxBedrooms=4&amenities=Pool',
       ),
     );
 
@@ -22,6 +22,8 @@ describe('canonical Buy search contract', () => {
       minPrice: 500000,
       minBedrooms: 2,
       minBathrooms: 1,
+      minArea: 120,
+      maxArea: 260,
     });
   });
 
@@ -67,6 +69,8 @@ describe('canonical Buy search contract', () => {
         listingSource: 'manual',
         minPrice: '500000',
         minBedrooms: '2',
+        minArea: '80',
+        maxArea: '140',
         maxBedrooms: 4,
         amenities: ['Pool'],
       }),
@@ -76,6 +80,8 @@ describe('canonical Buy search contract', () => {
       listingSource: 'manual',
       minPrice: 500000,
       minBedrooms: 2,
+      minArea: 80,
+      maxArea: 140,
     });
   });
 
@@ -96,9 +102,7 @@ describe('canonical Buy search contract', () => {
       {},
     );
     expect(
-      parseBuySearchParams(
-        new URLSearchParams(`minPrice=0&maxPrice=${BUY_FILTER_PRICE_CEILING}`),
-      ),
+      parseBuySearchParams(new URLSearchParams(`minPrice=0&maxPrice=${BUY_FILTER_PRICE_CEILING}`)),
     ).toEqual({});
     expect(toBuyPublicSearchFilters({ minPrice: 0, maxPrice: BUY_FILTER_PRICE_CEILING })).toEqual({
       listingType: 'sale',
@@ -106,9 +110,9 @@ describe('canonical Buy search contract', () => {
   });
 
   it('keeps explicit non-default bounds while dropping only the default-equal side', () => {
-    expect(
-      sanitizeBuySearchFilters({ minPrice: 0, maxPrice: 750_000 }),
-    ).toEqual({ maxPrice: 750_000 });
+    expect(sanitizeBuySearchFilters({ minPrice: 0, maxPrice: 750_000 })).toEqual({
+      maxPrice: 750_000,
+    });
     expect(
       sanitizeBuySearchFilters({ minPrice: 1_500_000, maxPrice: BUY_FILTER_PRICE_CEILING }),
     ).toEqual({ minPrice: 1_500_000 });

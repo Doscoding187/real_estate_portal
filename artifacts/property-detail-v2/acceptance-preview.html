@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Property Listify — property detail acceptance preview v2</title>
+    <style>
+      :root {
+        --blue: #135ed4;
+        --blue-700: #0d4eb5;
+        --blue-50: #edf5ff;
+        --ink: #10203a;
+        --ink-2: #263b58;
+        --muted: #71809a;
+        --line: #e1e8f0;
+        --canvas: #f7f9fc;
+        --card: #fff;
+        --green: #147d56;
+        --warning: #9a6508;
+        --shadow: 0 12px 32px rgba(19, 39, 71, .08);
+        --r: 14px;
+      }
+      * { box-sizing: border-box; }
+      html { background: var(--canvas); scroll-behavior: smooth; }
+      body { margin: 0; background: var(--canvas); color: var(--ink); font: 14px/1.45 Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      button, input, textarea { font: inherit; }
+      .site { min-height: 100vh; }
+      .topbar { height: 59px; background: linear-gradient(116deg, #0c55c5, #0f66ce); color: #fff; display: flex; align-items: center; box-shadow: 0 1px 0 rgba(0,0,0,.09); }
+      .nav { width: min(1320px, calc(100% - 48px)); margin: auto; display: grid; grid-template-columns: 190px minmax(260px, 1fr) auto; align-items: center; gap: 24px; }
+      .brand { display: flex; gap: 8px; align-items: center; font-size: 16px; font-weight: 800; letter-spacing: -.025em; white-space: nowrap; }
+      .mark { position: relative; width: 20px; height: 20px; border-radius: 6px; background: #fff; }
+      .mark:before { content: ""; position: absolute; left: 5px; top: 7px; width: 10px; height: 8px; border-radius: 2px; background: #1670df; }
+      .mark:after { content: ""; position: absolute; left: 3px; top: 3px; border-left: 7px solid transparent; border-right: 7px solid transparent; border-bottom: 6px solid #1670df; }
+      .global-search { display: flex; align-items: center; height: 34px; max-width: 600px; border-radius: 6px; background: #fff; color: #67758b; padding: 0 10px; box-shadow: inset 0 0 0 1px rgba(13, 51, 109,.1); }
+      .global-search span { font-size: 12px; }
+      .global-search b { margin-left: auto; color: #4070ac; font-size: 16px; }
+      .nav-actions { display: flex; align-items: center; justify-content: flex-end; gap: 14px; color: rgba(255,255,255,.94); font-size: 12px; white-space: nowrap; }
+      .post { padding: 7px 11px; border-radius: 5px; background: #fff; color: #234061; font-weight: 750; }
+      .heart { font-size: 19px; }
+
+      .container { width: min(1240px, calc(100% - 48px)); margin: auto; }
+      .preview-banner { display: flex; align-items: center; justify-content: space-between; padding: 12px 0 8px; color: #75839a; font-size: 11px; }
+      .preview-banner b { color: #476285; font-size: 9px; letter-spacing: .11em; }
+      .breadcrumbs { display: flex; align-items: center; gap: 9px; min-height: 33px; color: #6f8096; font-size: 11px; }
+      .breadcrumbs span:not(:last-child):after { content: "›"; display: inline-block; padding-left: 9px; color: #a6b1c0; font-size: 16px; vertical-align: -1px; }
+      .breadcrumbs strong { color: #2a3e5c; }
+      .headrow { display: flex; align-items: flex-start; justify-content: space-between; gap: 22px; padding: 9px 0 19px; }
+      .headrow h1 { margin: 0; font-size: clamp(24px, 2.55vw, 32px); line-height: 1.14; letter-spacing: -.045em; }
+      .location { display: flex; align-items: center; gap: 5px; margin-top: 7px; color: #60728a; font-size: 12px; }
+      .pin { color: var(--blue); font-size: 15px; }
+      .top-actions { display: flex; gap: 7px; padding-top: 5px; }
+      .action { min-height: 31px; display: inline-flex; align-items: center; gap: 6px; border: 1px solid transparent; border-radius: 6px; background: transparent; color: #2b4261; padding: 0 8px; font-size: 11px; font-weight: 750; }
+      .action:hover { background: #fff; border-color: var(--line); }
+      .action .glyph { color: var(--blue); font-size: 16px; line-height: 1; }
+
+      .hero { display: grid; grid-template-columns: minmax(0, 1.68fr) minmax(350px, .98fr); gap: 20px; align-items: stretch; }
+      .media-canvas { min-width: 0; }
+      .gallery { position: relative; height: 445px; overflow: hidden; border-radius: 10px; background: #d7e0e9; box-shadow: 0 1px 1px rgba(20,43,70,.08); }
+      .gallery img { width: 100%; height: 100%; display: block; object-fit: cover; }
+      .feature-pill { position: absolute; top: 13px; left: 13px; display: inline-flex; align-items: center; gap: 5px; padding: 5px 9px; border-radius: 99px; background: rgba(247,255,250,.95); box-shadow: 0 2px 5px rgba(19,59,39,.08); color: #347355; font-size: 10px; font-weight: 800; }
+      /* Gallery navigation is intentionally quiet at rest. Desktop pointer intent or
+         keyboard focus reveals it; touch users browse by swipe and media controls. */
+      .gallery-arrow { position: absolute; top: 50%; width: 35px; height: 35px; display: grid; place-items: center; border: 0; border-radius: 50%; background: rgba(255,255,255,.95); color: #244366; font-size: 25px; transform: translateY(-50%); box-shadow: 0 2px 7px rgba(8,30,56,.17); opacity: 0; pointer-events: none; transition: opacity .16s ease, transform .16s ease; }
+      .gallery:hover .gallery-arrow, .gallery:focus-within .gallery-arrow { opacity: 1; pointer-events: auto; }
+      .gallery-arrow:focus-visible { outline: 3px solid #176cdf; outline-offset: 3px; }
+      .gallery-arrow.left { left: 16px; } .gallery-arrow.right { right: 16px; }
+      .media-controls { position: absolute; right: 13px; bottom: 13px; display: flex; align-items: center; gap: 6px; }
+      .count { position: absolute; left: 13px; bottom: 13px; display: flex; align-items: center; gap: 5px; padding: 7px 10px; border-radius: 7px; background: rgba(8,23,42,.78); color: #fff; font-size: 11px; font-weight: 750; }
+      .media-control { display: inline-flex; align-items: center; gap: 5px; min-height: 29px; padding: 0 10px; border: 1px solid rgba(183,209,243,.9); border-radius: 7px; background: rgba(255,255,255,.95); color: #285eab; font-size: 11px; font-weight: 750; }
+      .media-control.active { background: #e8f2ff; border-color: #9fcbff; color: #1767ca; }
+      .thumbs { display: flex; gap: 7px; margin-top: 8px; }
+      .thumb { width: 86px; height: 60px; overflow: hidden; border: 2px solid transparent; border-radius: 5px; background: #d9e1ea; }
+      .thumb.active { border-color: #176cdf; } .thumb img { width: 100%; height: 100%; display: block; object-fit: cover; }
+      .thumb.more { display: grid; place-items: center; background: linear-gradient(125deg, rgba(8,28,49,.69), rgba(8,28,49,.42)), url('https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=260&q=75') center/cover; color: #fff; font-size: 17px; font-weight: 850; }
+      .media-note { margin-top: 7px; color: #8390a2; font-size: 10px; }
+
+      .decision { border: 1px solid #e1e8f0; border-radius: 10px; background: #fff; padding: 17px; box-shadow: var(--shadow); }
+      .price-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+      .price { color: #132443; font-size: 30px; font-weight: 850; letter-spacing: -.045em; line-height: 1; }
+      .price-caption { margin-top: 5px; color: #6e7e94; font-size: 11px; }
+      .sale-tag { padding: 5px 9px; border-radius: 99px; background: #edf9f0; color: #348053; font-size: 10px; font-weight: 800; }
+      .metric-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; margin: 15px 0 12px; }
+      .metric { min-width: 0; min-height: 70px; padding: 9px 6px; border: 1px solid #e3e9f0; border-radius: 8px; text-align: center; }
+      .metric .icon { display: block; color: #1769db; font-size: 14px; }
+      .metric b { display: block; margin-top: 3px; color: #193657; font-size: 13px; letter-spacing: -.02em; }
+      .metric span { display: block; margin-top: 2px; color: #7a899d; font-size: 9px; font-weight: 650; white-space: nowrap; }
+      .checks-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding-top: 11px; border-top: 1px solid #e4ebf2; }
+      .checks-head h2 { margin: 0; font-size: 13px; letter-spacing: -.01em; }
+      .checks-head span { color: #77869a; font-size: 9px; }
+      .check-grid { display: grid; grid-template-columns: repeat(3, 1fr); column-gap: 8px; row-gap: 12px; padding: 13px 0 15px; }
+      .check { display: grid; grid-template-columns: 23px minmax(0, 1fr); gap: 5px; align-items: center; min-width: 0; }
+      .check i { width: 23px; height: 23px; display: grid; place-items: center; border-radius: 7px; background: #eef5ff; color: #216ddd; font-style: normal; font-size: 12px; }
+      .check em, .check b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .check em { color: #78889d; font-size: 8px; font-style: normal; font-weight: 800; letter-spacing: .03em; text-transform: uppercase; }
+      .check b { margin-top: 1px; color: #203a5a; font-size: 10px; }
+      .check.unknown i { background: #f4f6f9; color: #8b98a9; } .check.unknown b { color: #8190a2; font-weight: 650; }
+      .ctas { display: grid; gap: 7px; }
+      .primary, .secondary { min-height: 38px; display: grid; place-items: center; border-radius: 6px; text-decoration: none; font-size: 11px; font-weight: 800; }
+      .primary { border: 1px solid var(--blue); background: var(--blue); color: #fff; box-shadow: 0 2px 4px rgba(9,66,154,.19); }
+      .secondary { border: 1px solid #8ebbf5; background: #fff; color: #185ebc; }
+      .cta-note { margin: 7px 0 0; color: #7e8ca0; text-align: center; font-size: 9px; }
+
+      .stickybar { position: sticky; top: 0; z-index: 4; display: flex; align-items: center; justify-content: space-between; gap: 20px; min-height: 57px; margin: 23px 0 16px; padding: 0 14px; border: 1px solid #e0e7ef; border-radius: 8px; background: rgba(255,255,255,.96); box-shadow: 0 5px 16px rgba(23,44,77,.07); backdrop-filter: blur(8px); }
+      .tabs { display: flex; align-items: stretch; gap: 26px; overflow-x: auto; white-space: nowrap; }
+      .tabs a { display: flex; align-items: center; min-height: 56px; border-bottom: 2px solid transparent; color: #334861; text-decoration: none; font-size: 10px; font-weight: 750; }
+      .tabs a.active { border-bottom-color: #1d6ad7; color: #1b61c4; }
+      .sticky-actions { display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+      .sticky-price { color: #193655; font-size: 12px; font-weight: 850; }
+      .sticky-actions a { min-height: 31px; padding: 0 13px; font-size: 10px; }
+
+      .content { display: grid; grid-template-columns: minmax(0, 1fr) 360px; align-items: start; gap: 20px; }
+      .maincol, .rail { display: grid; gap: 13px; }
+      .card { border: 1px solid #e1e8ef; border-radius: 9px; background: #fff; padding: 17px; }
+      .card h2 { margin: 0; color: #182d49; font-size: 15px; letter-spacing: -.02em; }
+      .card .sub { margin: 3px 0 0; color: #7b899b; font-size: 10px; }
+      .about { margin: 12px 0 0; color: #41536a; font-size: 11px; line-height: 1.65; }
+      .show { display: inline-flex; align-items: center; gap: 5px; margin-top: 10px; color: #1766c8; font-size: 10px; font-weight: 800; }
+      .groups { display: grid; grid-template-columns: repeat(4, 1fr); gap: 9px; margin-top: 13px; }
+      .group { min-width: 0; }
+      .group + .group { border-left: 1px solid #e5ebf1; padding-left: 10px; }
+      .group b { color: #38506c; font-size: 10px; }
+      .group span { display: block; margin-top: 5px; color: #52647b; font-size: 10px; line-height: 1.75; }
+      .context-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-top: 13px; }
+      .context { min-width: 0; display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 5px; align-items: center; }
+      .context i { display: grid; place-items: center; color: #5b78a3; font-style: normal; font-size: 17px; }
+      .context span, .context b { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .context span { color: #7b899b; font-size: 9px; } .context b { color: #3b506d; font-size: 10px; }
+      .location-grid { display: grid; grid-template-columns: 1.15fr 1fr; gap: 13px; margin-top: 12px; }
+      .map { position: relative; min-height: 180px; overflow: hidden; border-radius: 7px; background: linear-gradient(140deg, #e3edeb 0 34%, #e9eff2 34% 68%, #edf1e5 68%); }
+      .map:before { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(27deg, transparent 0 26px, rgba(255,255,255,.84) 27px 31px, transparent 31px 57px), repeating-linear-gradient(120deg, transparent 0 38px, rgba(255,255,255,.79) 39px 44px, transparent 45px 80px); opacity: .9; }
+      .marker { position: absolute; top: 76px; left: 47%; width: 23px; height: 23px; border-radius: 50% 50% 50% 0; background: #176bd5; transform: rotate(-45deg); box-shadow: 0 3px 9px rgba(19,98,208,.35); }
+      .marker:after { content: ""; position: absolute; top: 7px; left: 7px; width: 8px; height: 8px; border-radius: 50%; background: #fff; }
+      .map-open { position: absolute; right: 9px; top: 9px; padding: 5px 7px; border: 1px solid #b9d5f5; border-radius: 5px; background: #fff; color: #2860a7; font-size: 9px; font-weight: 800; }
+      .location-summary { display: grid; align-content: start; gap: 8px; }
+      .near-summary { display: grid; grid-template-columns: 22px 1fr; gap: 7px; align-items: center; }
+      .near-summary i { width: 22px; height: 22px; display: grid; place-items: center; border-radius: 6px; background: #eef5ff; color: #2b6fd4; font-style: normal; font-size: 11px; }
+      .near-summary b { display: block; color: #40536b; font-size: 10px; } .near-summary span { display: block; margin-top: 1px; color: #78879b; font-size: 9px; }
+      .area-link { display: inline-flex; margin-top: 5px; color: #1765c6; font-size: 10px; font-weight: 800; }
+      .nearby-tabs { display: flex; gap: 6px; margin-top: 12px; overflow-x: auto; white-space: nowrap; }
+      .nearby-tab { padding: 5px 10px; border-radius: 99px; background: #f3f6fa; color: #667991; font-size: 9px; font-weight: 750; } .nearby-tab.active { background: #e9f3ff; color: #1765cb; }
+      .landmarks { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px 13px; margin-top: 11px; }
+      .landmark { display: grid; grid-template-columns: 14px minmax(0,1fr) auto; gap: 4px; color: #586a81; font-size: 9px; }
+      .landmark i { color: #4475bb; font-style: normal; } .landmark span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .landmark b { color: #79899e; font-weight: 650; }
+      .conditional { margin: 10px 0 0; padding: 7px 9px; border-radius: 6px; background: #f6f8fb; color: #738397; font-size: 9px; }
+
+      .contact-head { margin-bottom: 13px; } .contact-head h2 { font-size: 15px; } .contact-head p { margin: 3px 0 0; color: #778599; font-size: 10px; }
+      .form { display: grid; gap: 8px; } .field { width: 100%; height: 29px; padding: 0 9px; border: 1px solid #e0e7ef; border-radius: 5px; color: #789; background: #fff; font-size: 10px; } textarea.field { height: 54px; padding-top: 8px; resize: none; }
+      .form .primary { margin-top: 2px; min-height: 34px; } .consent { margin: 0; color: #7c8a9d; text-align: center; font-size: 8px; line-height: 1.45; }
+      .listed { display: flex; align-items: center; gap: 10px; margin-top: 12px; }
+      .avatar { width: 47px; height: 47px; overflow: hidden; flex: 0 0 auto; border-radius: 50%; background: #d8e3ef; } .avatar img { width: 100%; height: 100%; display: block; object-fit: cover; }
+      .listed b { display: block; color: #2e435e; font-size: 11px; } .listed span { display: block; margin-top: 2px; color: #7a899d; font-size: 9px; }
+      .profile { width: 100%; min-height: 30px; margin-top: 12px; border: 1px solid #9ac3f4; border-radius: 5px; background: #fff; color: #2164b9; font-size: 10px; font-weight: 800; }
+      .agency { display: flex; align-items: center; gap: 10px; margin-top: 16px; padding-top: 14px; border-top: 1px solid #ebeff4; } .agency-logo { width: 49px; height: 35px; display: grid; place-items: center; border: 1px solid #d5e2f3; color: #2570c9; font-size: 9px; font-weight: 850; } .agency b { display: block; font-size: 11px; } .agency span { display: block; margin-top: 2px; color: #78879b; font-size: 9px; }
+      .trust { display: flex; gap: 6px; align-items: flex-start; padding: 10px; border-radius: 8px; background: #f5f9ff; color: #667b96; font-size: 9px; line-height: 1.45; } .trust i { color: var(--green); font-style: normal; font-size: 14px; } .trust b { color: #405875; }
+      .recommendations { margin-top: 2px; } .recommendations .heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; } .recommendations .heading a { color: #2367c5; font-size: 9px; font-weight: 800; }
+      .recommendation-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 12px; }
+      .rec { overflow: hidden; border: 1px solid #e2e8ef; border-radius: 7px; } .rec img { width: 100%; height: 92px; display: block; object-fit: cover; } .rec-body { padding: 8px; } .rec b { display: block; color: #2c415c; font-size: 10px; } .rec span { display: block; margin-top: 3px; color: #77869a; font-size: 8px; } .rec strong { display: block; margin-top: 5px; color: #1c61bb; font-size: 11px; }
+      .footer-note { margin: 23px auto 0; padding-bottom: 28px; color: #8290a2; font-size: 10px; text-align: center; }
+      .mobile-actions { display: none; }
+
+      @media (max-width: 1020px) {
+        .hero { grid-template-columns: minmax(0, 1.43fr) minmax(325px, 1fr); } .gallery { height: 405px; } .metric-grid { gap: 5px; } .content { grid-template-columns: minmax(0, 1fr) 310px; } .groups { grid-template-columns: repeat(2,1fr); row-gap: 13px; } .group:nth-child(3) { border-left: 0; padding-left: 0; } .context-grid { grid-template-columns: repeat(3, 1fr); }
+      }
+      @media (max-width: 760px) {
+        body { padding-bottom: 66px; } .topbar { height: 56px; } .nav { width: calc(100% - 28px); grid-template-columns: 1fr auto; gap: 12px; } .global-search { display: none; } .nav-actions { gap: 8px; } .nav-actions span:not(.post) { display: none; } .post { padding: 7px 9px; }
+        .container { width: calc(100% - 28px); } .preview-banner { padding: 10px 0 5px; } .preview-banner span { display: none; } .breadcrumbs { display: none; } .headrow { position: relative; display: block; padding: 14px 0 14px; } .headrow h1 { max-width: 100%; padding-top: 35px; font-size: 25px; } .location { max-width: 290px; } .top-actions { position: absolute; top: 8px; right: 0; } .action { width: 30px; height: 30px; justify-content: center; padding: 0; border-radius: 50%; background: #fff; border-color: #e0e7ef; box-shadow: 0 2px 7px rgba(22,45,75,.08); } .action span { display: none; }
+        .hero { display: flex; flex-direction: column; gap: 12px; } .gallery { height: 260px; border-radius: 9px; } .gallery-arrow { display: none; } .feature-pill { font-size: 9px; } .thumbs { display: none; } .media-note { display: none; } .count { left: 10px; bottom: 10px; } .media-controls { right: 10px; bottom: 10px; } .media-control:not(.active) { display: none; }
+        .decision { padding: 14px; box-shadow: none; } .price { font-size: 28px; } .metric-grid { grid-template-columns: repeat(2,1fr); gap: 6px; margin: 12px 0; } .metric { min-height: 59px; text-align: left; display: grid; grid-template-columns: 24px 1fr; align-items: center; padding: 8px; } .metric .icon { grid-row: span 2; } .metric b { margin: 0; } .metric span { margin: 0; } .check-grid { row-gap: 10px; } .decision .ctas, .decision .cta-note { display: none; }
+        .stickybar { position: static; min-height: 44px; margin: 15px 0 12px; padding: 0 8px; box-shadow: none; overflow: hidden; } .tabs { gap: 18px; } .tabs a { min-height: 43px; font-size: 9px; } .sticky-actions { display: none; }
+        .content { display: block; min-width: 0; } .maincol, .rail { min-width: 0; width: 100%; } .maincol { gap: 10px; } .rail { gap: 10px; margin-top: 10px; } .card { min-width: 0; max-width: 100%; padding: 14px; border-radius: 8px; } .card h2 { font-size: 14px; } .groups { grid-template-columns: repeat(2, minmax(0,1fr)); gap: 12px; } .group + .group { border-left: 0; padding-left: 0; } .group b { font-size: 10px; } .group span { font-size: 9px; } .context-grid { grid-template-columns: repeat(2, minmax(0,1fr)); } .location-grid { grid-template-columns: minmax(0,1fr); } .map { min-height: 170px; } .landmarks { grid-template-columns: repeat(2, minmax(0,1fr)); } .contact .form { display: none; } .contact:after { content: 'Use the persistent action bar to send one accountable enquiry or viewing request.'; display: block; margin-top: 11px; color: #78879a; font-size: 9px; } .recommendation-row { min-width: 0; max-width: 100%; overflow: auto; grid-template-columns: repeat(3, 160px); } .rec img { height: 89px; }
+        .mobile-actions { position: fixed; z-index: 9; left: 0; right: 0; bottom: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 8px 14px calc(8px + env(safe-area-inset-bottom)); border-top: 1px solid #dfe6ef; background: rgba(255,255,255,.97); box-shadow: 0 -5px 21px rgba(15,35,66,.1); } .mobile-actions a { min-height: 41px; display: grid; place-items: center; border-radius: 6px; text-decoration: none; font-size: 11px; font-weight: 850; } .mobile-actions a:first-child { border: 1px solid #90b9ee; color: #185db6; background: #fff; } .mobile-actions a:last-child { color: #fff; background: var(--blue); }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="site">
+      <header class="topbar">
+        <div class="nav">
+          <div class="brand"><span class="mark" aria-hidden="true"></span>Property Listify</div>
+          <div class="global-search"><span>Search locations, developments, suburbs...</span><b>⌕</b></div>
+          <div class="nav-actions"><span class="post">Post property</span><span class="heart">♡</span><span>Sign in / Register</span></div>
+        </div>
+      </header>
+
+      <main class="container">
+        <div class="preview-banner"><b>PROPERTY DETAIL · PRODUCT DIRECTION V2</b><span>Illustrative rich-listing state — production renders only approved facts and media.</span></div>
+        <nav class="breadcrumbs" aria-label="Breadcrumb"><span>Home</span><span>For sale</span><span>Gauteng</span><span>Johannesburg</span><span>Fourways</span><strong>Property</strong></nav>
+        <div class="headrow">
+          <div><h1>Light-filled family home with garden and solar</h1><div class="location"><span class="pin">⌖</span>Fourways, Johannesburg, Gauteng</div></div>
+          <div class="top-actions" aria-label="Property actions"><button class="action"><span class="glyph">♡</span><span>Save</span></button><button class="action"><span class="glyph">⌯</span><span>Share</span></button><button class="action"><span class="glyph">⇄</span><span>Compare</span></button></div>
+        </div>
+
+        <section class="hero" aria-label="Property decision area">
+          <div class="media-canvas">
+            <div class="gallery">
+              <img src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1400&q=88" alt="Contemporary family home with garden" />
+              <span class="feature-pill">✦ Featured listing</span>
+              <button class="gallery-arrow left" aria-label="Previous photo">‹</button><button class="gallery-arrow right" aria-label="Next photo">›</button>
+              <span class="count">▣ 24 photos</span>
+              <div class="media-controls"><button class="media-control active">▣ Photos</button><button class="media-control">▷ Video</button><button class="media-control">▤ Floor plans</button></div>
+            </div>
+            <div class="thumbs" aria-label="Gallery thumbnails">
+              <div class="thumb active"><img src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=240&q=75" alt="" /></div>
+              <div class="thumb"><img src="https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=240&q=75" alt="" /></div>
+              <div class="thumb"><img src="https://images.unsplash.com/photo-1600607688969-a5bfcd646154?auto=format&fit=crop&w=240&q=75" alt="" /></div>
+              <div class="thumb"><img src="https://images.unsplash.com/photo-1600566753086-00f18fb6b3ea?auto=format&fit=crop&w=240&q=75" alt="" /></div>
+              <div class="thumb more">+20</div>
+            </div>
+            <div class="media-note">Photos, video and plans are gallery modes only when their approved media exists.</div>
+          </div>
+
+          <aside class="decision" aria-label="Price, facts, buyer checks and contact actions">
+            <div class="price-row"><div><div class="price">R 3 850 000</div><div class="price-caption">Asking price · price not negotiable</div></div><span class="sale-tag">For sale</span></div>
+            <div class="metric-grid">
+              <div class="metric"><span class="icon">⌂</span><b>268 m²</b><span>House size</span></div><div class="metric"><span class="icon">▰</span><b>4</b><span>Bedrooms</span></div><div class="metric"><span class="icon">♨</span><b>2.5</b><span>Bathrooms</span></div><div class="metric"><span class="icon">▧</span><b>612 m²</b><span>Yard size</span></div>
+            </div>
+            <div class="checks-head"><h2>Key buyer checks</h2><span>Published decision facts</span></div>
+            <div class="check-grid">
+              <div class="check"><i>ϟ</i><span><em>Electricity</em><b>Municipal</b></span></div><div class="check"><i>◉</i><span><em>Water</em><b>Borehole</b></span></div><div class="check"><i>☼</i><span><em>Backup power</em><b>Solar</b></span></div>
+              <div class="check"><i>◌</i><span><em>Security</em><b>Access control</b></span></div><div class="check"><i>⌁</i><span><em>Internet</em><b>Fibre available</b></span></div><div class="check"><i>▣</i><span><em>Parking</em><b>2 garages</b></span></div>
+              <div class="check"><i>⌂</i><span><em>Ownership</em><b>Freehold</b></span></div><div class="check"><i>¤</i><span><em>Rates &amp; taxes</em><b>R 2 190 p/m</b></span></div><div class="check unknown"><i>—</i><span><em>Levy</em><b>Not applicable</b></span></div>
+            </div>
+            <div class="ctas"><a class="primary" href="#contact">Send enquiry</a><a class="secondary" href="#contact">Request a viewing</a></div><p class="cta-note">An enquiry is saved before successful delivery is confirmed.</p>
+          </aside>
+        </section>
+
+        <nav class="stickybar" aria-label="Property detail sections"><div class="tabs"><a class="active" href="#overview">Overview</a><a href="#features">Features</a><a href="#context">Property context</a><a href="#location">Location</a><a href="#nearby">Nearby</a><a href="#contact">Agent</a><a href="#media">Floor plans</a><a href="#media">Documents</a></div><div class="sticky-actions"><b class="sticky-price">R 3 850 000</b><a class="primary" href="#contact">Send enquiry</a><a class="secondary" href="#contact">Request viewing</a></div></nav>
+
+        <div class="content">
+          <div class="maincol">
+            <section id="overview" class="card"><h2>About this property</h2><p class="about">A light-filled family home designed for easy living and entertaining. The generous living spaces flow to a covered patio and landscaped garden, while practical details such as a dedicated study, secure parking and resilient power support everyday life.</p><span class="show">Show full description&nbsp;⌄</span></section>
+            <section id="features" class="card"><h2>Spaces &amp; features</h2><p class="sub">Grouped by meaningful buyer questions, not a flat pile of generic amenity pills.</p><div class="groups"><div class="group"><b>Living</b><span>2 lounges<br>Dining room<br>Study / office</span></div><div class="group"><b>Kitchen</b><span>Modern kitchen<br>Scullery<br>Breakfast bar</span></div><div class="group"><b>Outdoor</b><span>Covered patio<br>Built-in braai<br>Landscaped garden<br>Pool</span></div><div class="group"><b>Resilience</b><span>Solar system<br>Inverter backup<br>Fibre available</span></div></div><p class="conditional">Each group is conditional: it appears only where canonical features or explicit core facts can support it.</p></section>
+            <section id="context" class="card"><h2>Property context</h2><p class="sub">What this property is, kept distinct from its lifestyle features.</p><div class="context-grid"><div class="context"><i>⌂</i><span>Property type<b>House</b></span></div><div class="context"><i>⌗</i><span>Erf size<b>612 m²</b></span></div><div class="context"><i>▧</i><span>Floor size<b>268 m²</b></span></div><div class="context"><i>◫</i><span>Year built<b>2021</b></span></div><div class="context"><i>⌑</i><span>Ownership<b>Freehold</b></span></div></div></section>
+            <section id="location" class="card"><h2>Location overview</h2><p class="sub">Public map precision and nearby intelligence are constrained by actual public data.</p><div class="location-grid"><div class="map"><span class="marker"></span><button class="map-open">Open in Google Maps ↗</button></div><div class="location-summary"><div class="near-summary"><i>⌂</i><span><b>Education</b><span>4 schools within 3 km</span></span></div><div class="near-summary"><i>▣</i><span><b>Shopping</b><span>Broadacres Shopping Centre · 2.1 km</span></span></div><div class="near-summary"><i>✚</i><span><b>Healthcare</b><span>Life Fourways Hospital · 3.2 km</span></span></div><div class="near-summary"><i>↗</i><span><b>Transport</b><span>N1 Highway on-ramp · 2.7 km</span></span></div><span class="area-link">View full area guide&nbsp;›</span></div></div></section>
+            <section id="nearby" class="card"><h2>Nearby landmarks</h2><div class="nearby-tabs"><span class="nearby-tab active">All</span><span class="nearby-tab">Education</span><span class="nearby-tab">Shopping</span><span class="nearby-tab">Healthcare</span><span class="nearby-tab">Transport</span><span class="nearby-tab">Recreation</span></div><div class="landmarks"><div class="landmark"><i>⌂</i><span>Fourways High School</span><b>1.8 km</b></div><div class="landmark"><i>▣</i><span>Broadacres Shopping Centre</span><b>2.1 km</b></div><div class="landmark"><i>✚</i><span>Life Fourways Hospital</span><b>3.2 km</b></div><div class="landmark"><i>⌂</i><span>Crawford International</span><b>2.3 km</b></div><div class="landmark"><i>↗</i><span>N1 Highway on-ramp</span><b>2.7 km</b></div><div class="landmark"><i>✦</i><span>Local recreation</span><b>3.4 km</b></div></div><p class="conditional">Production rule: this section is omitted—not filled with placeholders—when credible nearby-place results are unavailable.</p></section>
+          </div>
+
+          <aside id="contact" class="rail">
+            <section class="card contact"><div class="contact-head"><h2>Contact the representative</h2><p>One accountable lead flow; a viewing request is not an appointment confirmation.</p></div><form class="form"><input class="field" placeholder="Your name" /><input class="field" placeholder="Your email" /><input class="field" placeholder="Your phone" /><textarea class="field" placeholder="Hi, I’m interested in this property and would like more information."></textarea><button class="primary" type="button">Send enquiry</button><p class="consent">By sending an enquiry, you agree to the Terms of Use and Privacy Policy.</p></form></section>
+            <section class="card"><h2>Listed by</h2><div class="listed"><div class="avatar"><img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=180&q=80" alt="Lerato Mokoena" /></div><span><b>Lerato Mokoena</b><span>Property Practitioner<br>Listed 12 May 2025</span></span></div><button class="profile">View profile</button><div class="agency"><div class="agency-logo">PLR</div><span><b>Prime Living Realty</b><span>Agency identity shown only from the public supply contract</span></span></div></section>
+            <div class="trust"><i>✓</i><span><b>Clear custody:</b> representative identity and lead delivery are resolved from the approved public listing, not from display assumptions.</span></div>
+          </aside>
+        </div>
+
+        <section class="card recommendations"><div class="heading"><div><h2>Still comparing? Explore more in Johannesburg</h2><p class="sub">Relevant public alternatives keep the buyer in the discovery loop.</p></div><a>View all homes for sale&nbsp;›</a></div><div class="recommendation-row"><article class="rec"><img src="https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?auto=format&fit=crop&w=360&q=75" alt="Modern estate home" /><div class="rec-body"><b>Modern home in secure estate</b><span>Fourways, Johannesburg · 4 bed · 2.5 bath</span><strong>R 3 450 000</strong></div></article><article class="rec"><img src="https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?auto=format&fit=crop&w=360&q=75" alt="Spacious family home" /><div class="rec-body"><b>Spacious family home</b><span>Bryanston, Johannesburg · 5 bed · 3 bath</span><strong>R 4 250 000</strong></div></article><article class="rec"><img src="https://images.unsplash.com/photo-1600585154526-990dced4db0d?auto=format&fit=crop&w=360&q=75" alt="Contemporary cluster home" /><div class="rec-body"><b>Contemporary cluster home</b><span>Lonehill, Johannesburg · 3 bed · 2 bath</span><strong>R 2 950 000</strong></div></article></div></section>
+        <div class="footer-note">Acceptance direction only. Example imagery and values demonstrate hierarchy; the implementation will render just the facts and media that the approved public contract supports.</div>
+      </main>
+    </div>
+    <aside class="mobile-actions" aria-label="Property conversion actions"><a href="#contact">Request viewing</a><a href="#contact">Send enquiry</a></aside>
+  </body>
+</html>

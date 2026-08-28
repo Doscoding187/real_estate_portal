@@ -8,7 +8,6 @@ import {
   ChevronRight,
   ImageOff,
   Images,
-  Maximize2,
   Play,
   Ruler,
   X,
@@ -98,7 +97,10 @@ export function PropertyImageGallery({
       icon: Images,
       meta: String(sortedImages.length),
       enabled: true,
-      action: () => setActiveMediaTab('photos'),
+      action: () => {
+        setActiveMediaTab('photos');
+        setIsLightboxOpen(true);
+      },
     },
     {
       id: 'videos' as const,
@@ -201,13 +203,18 @@ export function PropertyImageGallery({
           {selectedImageIndex + 1} / {sortedImages.length}
         </div>
 
-        {/* Navigation Arrows - Desktop hover only; mobile uses swipe */}
+        {/*
+         * Carousel controls are deliberately absent at rest. Desktop users
+         * reveal them through a purposeful hover or keyboard focus; touch
+         * users swipe the canvas or open the photo counter. This keeps the
+         * media experience calm without making it inaccessible.
+         */}
         {sortedImages.length > 1 && (
           <>
             <Button
               variant="secondary"
               size="icon"
-              className="absolute left-4 top-1/2 hidden -translate-y-1/2 rounded-full opacity-0 transition-opacity md:flex md:group-hover:opacity-100"
+              className="pointer-events-none absolute left-4 top-1/2 hidden -translate-y-1/2 rounded-full opacity-0 transition-opacity focus:pointer-events-auto focus:opacity-100 md:flex md:group-hover:pointer-events-auto md:group-hover:opacity-100 md:group-focus-within:pointer-events-auto md:group-focus-within:opacity-100"
               onClick={handlePrevious}
               aria-label="Previous photo"
             >
@@ -216,7 +223,7 @@ export function PropertyImageGallery({
             <Button
               variant="secondary"
               size="icon"
-              className="absolute right-4 top-1/2 hidden -translate-y-1/2 rounded-full opacity-0 transition-opacity md:flex md:group-hover:opacity-100"
+              className="pointer-events-none absolute right-4 top-1/2 hidden -translate-y-1/2 rounded-full opacity-0 transition-opacity focus:pointer-events-auto focus:opacity-100 md:flex md:group-hover:pointer-events-auto md:group-hover:opacity-100 md:group-focus-within:pointer-events-auto md:group-focus-within:opacity-100"
               onClick={handleNext}
               aria-label="Next photo"
             >
@@ -225,17 +232,30 @@ export function PropertyImageGallery({
           </>
         )}
 
-        {/* Desktop Expand Button */}
-        <div className="absolute bottom-4 right-4 hidden md:flex">
-          <Button
-            variant="secondary"
-            size="sm"
-            className="rounded-full bg-white/90 text-slate-900 shadow-sm backdrop-blur hover:bg-white"
-            onClick={() => setIsLightboxOpen(true)}
-          >
-            <Maximize2 className="mr-2 h-4 w-4" />
-            View all photos
-          </Button>
+        {/* Desktop media controls live in the canvas when that media exists. */}
+        <div className="absolute bottom-4 right-4 z-10 hidden max-w-[calc(100%-8rem)] items-center justify-end gap-2 md:flex">
+          {visibleMediaTabs.map(tab => {
+            const Icon = tab.icon;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                aria-label={`${tab.label}, ${tab.meta}`}
+                aria-pressed={activeMediaTab === tab.id}
+                disabled={!tab.enabled}
+                onClick={tab.action}
+                className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-2 text-xs font-semibold shadow-sm backdrop-blur transition ${
+                  activeMediaTab === tab.id
+                    ? 'border-blue-200 bg-white text-blue-700'
+                    : 'border-white/30 bg-slate-950/70 text-white hover:bg-slate-950/90'
+                } ${!tab.enabled ? 'cursor-not-allowed opacity-45' : ''}`}
+              >
+                <Icon className="h-3.5 w-3.5" />
+                {tab.label}
+                <span className="text-[10px] opacity-75">{tab.meta}</span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -267,44 +287,50 @@ export function PropertyImageGallery({
         })}
       </div>
 
-      {/* Desktop Media Rail */}
-      <div className="hidden md:block">
-        <div
-          className="grid gap-2"
-          style={{ gridTemplateColumns: `repeat(${visibleMediaTabs.length}, minmax(0, 1fr))` }}
-        >
-          {visibleMediaTabs.map(tab => {
-            const Icon = tab.icon;
-            const isActive = activeMediaTab === tab.id;
-
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                aria-label={`${tab.label}, ${tab.meta}`}
-                disabled={!tab.enabled}
-                onClick={tab.action}
-                aria-pressed={isActive}
-                className={`flex min-w-0 items-center justify-center gap-2 rounded-xl border px-3 py-2.5 text-sm font-semibold transition ${
-                  isActive
-                    ? 'border-blue-300 bg-blue-50 text-blue-700'
-                    : 'border-slate-200 bg-white text-slate-700 hover:border-blue-200 hover:bg-blue-50/60'
-                } ${!tab.enabled ? 'cursor-not-allowed opacity-45 hover:border-slate-200 hover:bg-white' : ''}`}
-              >
-                <Icon className="h-4 w-4 shrink-0" />
-                <span className="hidden truncate sm:inline">{tab.label}</span>
-                <span
-                  className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${
-                    isActive ? 'bg-white text-blue-700' : 'bg-slate-100 text-slate-500'
-                  }`}
-                >
-                  {tab.meta}
-                </span>
-              </button>
-            );
-          })}
+      {sortedImages.length > 1 && (
+        <div className="hidden gap-2 md:flex" aria-label="Property photo thumbnails">
+          {sortedImages.slice(0, 5).map((image, index) => (
+            <button
+              key={image.id}
+              type="button"
+              onClick={() => {
+                setSelectedImageIndex(index);
+                setZoomLevel(1);
+              }}
+              aria-label={`View photo ${index + 1}`}
+              aria-pressed={selectedImageIndex === index}
+              className={`h-16 min-w-0 flex-1 overflow-hidden rounded-lg border transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
+                selectedImageIndex === index
+                  ? 'border-blue-600 ring-2 ring-blue-100'
+                  : 'border-slate-200 hover:border-blue-300'
+              }`}
+            >
+              <img
+                src={image.imageUrl}
+                alt={`${propertyTitle} thumbnail ${index + 1}`}
+                className="h-full w-full object-cover"
+              />
+            </button>
+          ))}
+          {sortedImages.length > 5 && (
+            <button
+              type="button"
+              onClick={() => setIsLightboxOpen(true)}
+              className="relative h-16 w-20 shrink-0 overflow-hidden rounded-lg border border-slate-200 bg-slate-950 text-xs font-bold text-white transition hover:border-blue-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+              aria-label={`View all ${sortedImages.length} photos`}
+            >
+              <img
+                src={sortedImages[5]?.imageUrl}
+                alt=""
+                className="absolute inset-0 h-full w-full object-cover opacity-55"
+              />
+              <span className="absolute inset-0 grid place-items-center bg-slate-950/45">
+                +{sortedImages.length - 5}
+              </span>
+            </button>
+          )}
         </div>
-      </div>
+      )}
 
       {/* Lightbox Modal */}
       <Dialog open={isLightboxOpen} onOpenChange={setIsLightboxOpen}>

@@ -292,6 +292,7 @@ export function normalizePropertyForUI(raw: any): PropertyCardProps | null {
 export function searchCardResultToPropertyCardProps(card: SearchCardResult): PropertyCardProps {
   const normalized = normalizePublicPropertyCard({
     ...card,
+    highlights: card.highlights.map(highlight => highlight.label),
     publicIdentity: card.identity,
     image: card.image || card.images?.[0]?.url,
     images: card.images,
@@ -344,7 +345,7 @@ export function searchCardResultToPropertyCardProps(card: SearchCardResult): Pro
     hasFloorplan: card.hasFloorplan ?? normalized.hasFloorplan,
     hasVirtualTour: card.hasVirtualTour ?? normalized.hasVirtualTour,
     hasPublicDocuments: card.hasPublicDocuments ?? normalized.hasPublicDocuments,
-    highlights: normalized.highlights,
+    highlights: card.highlights.map(highlight => highlight.label),
     suppressBadges: true,
   };
 }

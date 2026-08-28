@@ -7,10 +7,7 @@
  * must not survive as active Buy filters.
  */
 
-import {
-  BUY_ACTIVE_PUBLIC_PROPERTY_TYPES,
-  BUY_PUBLIC_PROPERTY_TYPES,
-} from './property-taxonomy';
+import { BUY_ACTIVE_PUBLIC_PROPERTY_TYPES, BUY_PUBLIC_PROPERTY_TYPES } from './property-taxonomy';
 
 export const BUY_TRANSACTION_TYPE = 'for-sale' as const;
 export const BUY_LISTING_TYPE = 'sale' as const;
@@ -41,6 +38,8 @@ export const BUY_NUMERIC_FILTER_KEYS = [
   'maxPrice',
   'minBedrooms',
   'minBathrooms',
+  'minArea',
+  'maxArea',
 ] as const;
 
 export const BUY_BOUND_KEYS = ['minLat', 'maxLat', 'minLng', 'maxLng'] as const;
@@ -59,6 +58,8 @@ export interface BuySearchFilters {
   maxPrice?: number;
   minBedrooms?: number;
   minBathrooms?: number;
+  minArea?: number;
+  maxArea?: number;
   minLat?: number;
   maxLat?: number;
   minLng?: number;
@@ -134,6 +135,13 @@ export function sanitizeBuySearchFilters(filters: Record<string, unknown>): BuyS
 
   const minBathrooms = parseNonNegativeNumber(filters.minBathrooms);
   if (minBathrooms !== undefined) sanitized.minBathrooms = minBathrooms;
+
+  const minArea = parseNonNegativeNumber(filters.minArea);
+  const maxArea = parseNonNegativeNumber(filters.maxArea);
+  if (minArea === undefined || maxArea === undefined || minArea <= maxArea) {
+    if (minArea !== undefined && minArea > 0) sanitized.minArea = minArea;
+    if (maxArea !== undefined) sanitized.maxArea = maxArea;
+  }
 
   const minLat = parseFiniteNumber(filters.minLat);
   const maxLat = parseFiniteNumber(filters.maxLat);

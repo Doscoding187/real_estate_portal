@@ -11,7 +11,6 @@ import {
   LandPlot,
   MapPin,
   Maximize,
-  Ruler,
   Shield,
   Sparkles,
   Trees,
@@ -824,6 +823,7 @@ const STEP4_UTILITY_LABELS: Record<string, string> = {
   electricitySupply: 'Electricity supply',
   backupPower: 'Backup power',
   waterSupply: 'Water supply',
+  wastewaterSystem: 'Sewerage system',
   waterHeating: 'Water heating',
   internetAccess: 'Internet access',
 };
@@ -850,6 +850,13 @@ const STEP4_UTILITY_VALUES: Record<string, Record<string, string>> = {
     borehole: 'Borehole',
     unknown: 'Not sure',
   },
+  wastewaterSystem: {
+    municipal: 'Municipal sewerage',
+    septic_tank: 'Septic tank',
+    package_plant: 'Package treatment plant',
+    conservancy_tank: 'Conservancy tank',
+    unknown: 'Not sure',
+  },
   waterHeating: {
     electric_geyser: 'Electric geyser',
     solar_geyser: 'Solar geyser',
@@ -871,6 +878,9 @@ const STEP4_CONTEXT_LABELS: Record<string, string> = {
   estate: 'Estate or managed community',
   controlled: 'Controlled or gated access',
   not_controlled: 'No controlled access',
+  security_estate: 'Security estate',
+  gated_community: 'Gated community',
+  standard: 'Standard security',
   unknown: 'Not sure',
 };
 
@@ -900,7 +910,11 @@ export function getPropertyFeaturesContextGroups(
     });
   }
 
-  const propertyContext = [context.context.setting, context.context.controlledAccess]
+  const propertyContext = [
+    context.context.setting,
+    context.context.controlledAccess,
+    context.context.securityProfile,
+  ]
     .filter(value => value && value !== 'unknown')
     .map((value, index) => ({
       key: `context-${index}-${value}`,
@@ -1801,10 +1815,7 @@ export function normalizePublicPropertyCard(property: PropertyLike): PublicPrope
       explicitIdentity ||
       ({
         role: contactRole,
-        provenance:
-          contactRole === 'platform'
-            ? 'platform_curated'
-            : contactRole,
+        provenance: contactRole === 'platform' ? 'platform_curated' : contactRole,
         name: String(identityName || '-'),
         avatarUrl:
           developerBrand?.logoUrl || agent?.profileImage || agent?.image || agent?.avatar || null,

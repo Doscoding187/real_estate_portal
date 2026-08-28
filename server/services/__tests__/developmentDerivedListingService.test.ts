@@ -235,6 +235,11 @@ describe('DevelopmentDerivedListingService', () => {
       'Lifestyle Amenities',
     ]);
     expect(result.items[0]?.highlights?.some(label => /[{}[\]":]/.test(label))).toBe(false);
+    expect(result.cards?.[0]?.highlights).toEqual([
+      expect.objectContaining({ label: '24-hour security', iconKey: 'security' }),
+      expect.objectContaining({ label: 'Prime location', iconKey: 'scenic' }),
+      expect.objectContaining({ label: 'Lifestyle amenities', iconKey: 'sparkles' }),
+    ]);
   });
 
   it('uses one canonical sibling boundary for development-derived OR filtering and totals', async () => {

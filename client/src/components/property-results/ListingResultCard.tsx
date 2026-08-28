@@ -1,27 +1,23 @@
-import { useState } from 'react';
-import { PropertyContactModal } from '@/components/property/PropertyContactModal';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
+import { HouseMeasureIcon } from '@/components/icons/HouseMeasureIcon';
 import {
-  MapPin,
-  Bed,
+  ArrowRight,
   Bath,
-  House,
-  LandPlot,
-  Mail,
+  Bed,
   Building2,
-  MessageCircle,
-  Heart,
+  Camera,
   GitCompareArrows,
+  Heart,
+  LandPlot,
+  MapPin,
 } from 'lucide-react';
 import { Link } from 'wouter';
 import { PROPERTY_IMAGE_FALLBACK, withApiBase } from '@/lib/mediaUtils';
-import {
-  getPrivateListingContactCopy,
-  isExplicitRentListing,
-  withRentalPeriod,
-} from '@/lib/rentPresentation';
+import { isExplicitRentListing, withRentalPeriod } from '@/lib/rentPresentation';
 import type { SearchCardIdentity } from '@shared/types';
+import type { ListingCardHighlight } from '@shared/listing-highlight-registry';
+import { getListingHighlightIcon } from './listingHighlightIcons';
 
 export interface ListingResultCardData {
   id: string;
@@ -30,17 +26,17 @@ export interface ListingResultCardData {
   location: string;
   price: number;
   image: string;
+  imageCount?: number;
   development?: {
     id?: string | number | null;
     name?: string | null;
     slug?: string | null;
   };
   area?: number;
+  yardSize?: number;
   bedrooms?: number;
   bathrooms?: number;
-  floor?: string;
-  highlights?: string[];
-  description?: string;
+  highlights?: ListingCardHighlight[];
   listingType?: 'sale' | 'rent' | string;
   listingSource?: 'manual' | 'development';
   listerType?: 'agent' | 'agency' | 'private' | 'platform';
@@ -49,13 +45,6 @@ export interface ListingResultCardData {
   postedBy?: string;
   agentAvatarUrl?: string;
   propertyId?: number;
-  agentId?: number;
-  agencyId?: number;
-  cataloguePublisherId?: number;
-  developmentId?: number;
-  contactPhone?: string;
-  contactWhatsapp?: string;
-  contactEmail?: string;
   isSaved?: boolean;
   onSave?: () => void;
   isCompared?: boolean;
@@ -77,70 +66,47 @@ function formatPrice(
   );
 }
 
+function identityRoleLabel(role: ListingResultCardData['contactRole']): string {
+  switch (role) {
+    case 'developer':
+      return 'Developer';
+    case 'agency':
+      return 'Listing agency';
+    case 'agent':
+      return 'Listing agent';
+    case 'private':
+      return 'Private advertiser';
+    case 'platform':
+      return 'Platform listing';
+    default:
+      return 'Property lister';
+  }
+}
+
 export function ListingResultCard({ data }: { data: ListingResultCardData }) {
-  const [contactIntent, setContactIntent] = useState<'contact' | 'whatsapp' | null>(null);
   const canonicalIdentity = data.identity;
   const contactRole = canonicalIdentity?.role ?? data.contactRole;
-  const agentProfileHref =
-    canonicalIdentity?.agentSlug && contactRole === 'agent'
-      ? `/agents/${canonicalIdentity.agentSlug}`
-      : null;
-  const resolvedListingSource =
-    data.listingSource === 'development'
-      ? 'development'
-      : data.listingSource === 'manual'
-        ? 'manual'
-        : contactRole === 'developer'
-          ? 'development'
-          : 'manual';
-  const identityListerType =
-    resolvedListingSource === 'manual'
-      ? contactRole === 'private'
-        ? 'private'
-        : contactRole === 'platform'
-          ? 'platform'
-          : contactRole === 'agency'
-            ? 'agency'
-            : contactRole === 'agent'
-              ? 'agent'
-              : undefined
-      : undefined;
-  const resolvedListerType = canonicalIdentity
-    ? identityListerType
-    : data.listerType || identityListerType;
-  const isDevelopmentListing = resolvedListingSource === 'development';
-  const isPrivateListing = resolvedListingSource === 'manual' && resolvedListerType === 'private';
-  const isPlatformListing = resolvedListingSource === 'manual' && resolvedListerType === 'platform';
-  const isAgencyListing = resolvedListingSource === 'manual' && resolvedListerType === 'agency';
+  const isDevelopmentListing = data.listingSource === 'development' || contactRole === 'developer';
   const isRentalListing = isExplicitRentListing(data.listingType);
   const compareHandler = isRentalListing ? undefined : data.onCompare;
-  const privateContactCopy = getPrivateListingContactCopy(data.listingType);
   const identityDisplayName =
     canonicalIdentity?.name?.trim() ||
-    (isPrivateListing && isRentalListing
-      ? privateContactCopy.identity
-      : data.postedBy?.trim()
-        ? data.postedBy.trim()
+    data.postedBy?.trim() ||
+    (contactRole === 'private'
+      ? isRentalListing
+        ? 'Private Advertiser'
+        : 'Private Seller'
+      : contactRole === 'platform'
+        ? 'Property Listify'
         : isDevelopmentListing
           ? 'Developer Team'
-          : isPrivateListing
-            ? 'Private Seller'
-            : isPlatformListing
-              ? 'Property Listify'
-              : isAgencyListing
-                ? 'Listing Agency'
-                : resolvedListerType === 'agent'
-                  ? 'Listing Agent'
-                  : 'Listing contact unavailable');
-  const hasAgentName = identityDisplayName !== '-';
-  const agentInitials = hasAgentName
-    ? identityDisplayName
-        .split(/\s+/)
-        .slice(0, 2)
-        .map(part => part.charAt(0))
-        .join('')
-        .toUpperCase()
-    : '?';
+          : 'Listing contact unavailable');
+  const agentInitials = identityDisplayName
+    .split(/\s+/)
+    .slice(0, 2)
+    .map(part => part.charAt(0))
+    .join('')
+    .toUpperCase();
   const developmentName = String(data.development?.name || '').trim();
   const developmentHref = developmentName
     ? data.development?.slug
@@ -152,83 +118,63 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
   const listingHref =
     data.href ||
     (isDevelopmentListing && developmentHref ? developmentHref : `/property/${data.id}`);
-  const contactCtaLabel = isDevelopmentListing
-    ? 'Contact Developer'
-    : isPrivateListing
-      ? privateContactCopy.action
-      : isPlatformListing
-        ? 'Enquire via Property Listify'
-        : isAgencyListing
-          ? 'Contact Agency'
-          : resolvedListerType === 'agent'
-            ? 'Contact Agent'
-            : 'View details';
-  const whatsappTarget = String(
-    canonicalIdentity?.whatsapp ||
-      canonicalIdentity?.phone ||
-      data.contactWhatsapp ||
-      data.contactPhone ||
-      '',
-  ).trim();
-  const emailTarget = String(canonicalIdentity?.email || data.contactEmail || '').trim();
   const resolvedImage = withApiBase(data.image) || PROPERTY_IMAGE_FALLBACK;
   const resolvedAvatar = withApiBase(
     canonicalIdentity?.organizationLogoUrl || canonicalIdentity?.avatarUrl || data.agentAvatarUrl,
   );
-  const modalTitle = isDevelopmentListing ? developmentName || data.title : data.title;
-  const whatsappPrefill = `Hi, I'm interested in ${modalTitle}. Please share more details.`;
-  const hasActionableIdentity =
-    contactRole === 'agent' ||
-    contactRole === 'agency' ||
-    contactRole === 'developer' ||
-    contactRole === 'platform' ||
-    contactRole === 'private';
-  const canOpenContact =
-    hasActionableIdentity &&
-    !!(
-      canonicalIdentity?.agentId ||
-      canonicalIdentity?.agencyId ||
-      canonicalIdentity?.cataloguePublisherId ||
-      data.agentId ||
-      data.agencyId ||
-      data.cataloguePublisherId ||
-      data.propertyId ||
-      isPlatformListing ||
-      emailTarget ||
-      whatsappTarget
-    );
+  const agentProfileHref =
+    canonicalIdentity?.agentSlug && contactRole === 'agent'
+      ? `/agents/${canonicalIdentity.agentSlug}`
+      : null;
+  const highlights = Array.isArray(data.highlights) ? data.highlights.slice(0, 3) : [];
 
   return (
-    <>
-      <article className="group relative w-full max-w-[780px] overflow-hidden rounded-[24px] border border-slate-200/90 bg-white shadow-[0_16px_40px_-30px_rgba(15,23,42,0.45)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_24px_48px_-24px_rgba(15,23,42,0.35)] sm:min-h-[300px] lg:max-w-[840px] lg:rounded-[26px]">
-        <Link
-          href={listingHref}
-          onClick={data.onOpen}
-          aria-label={`View ${data.title}`}
-          className="absolute inset-0 z-10 rounded-[24px] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-inset focus-visible:ring-blue-500/35 lg:rounded-[26px]"
-        >
-          <span className="sr-only">View {data.title}</span>
-        </Link>
-        <div className="flex flex-col sm:flex-row">
-          <div className="relative h-[192px] flex-shrink-0 overflow-hidden sm:h-auto sm:w-[300px] sm:self-stretch lg:w-[340px]">
-            <img
-              src={resolvedImage}
-              alt={data.title}
-              className="h-full w-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
-              onError={e => {
-                const target = e.target as HTMLImageElement;
-                target.onerror = null;
-                target.src = PROPERTY_IMAGE_FALLBACK;
-              }}
-            />
-            {(data.onSave || compareHandler) && (
-              <div className="absolute right-3 top-3 z-20 flex gap-2">
+    <article className="group relative w-full overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_16px_40px_-32px_rgba(15,23,42,0.38)] transition-all duration-300 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-[0_22px_44px_-28px_rgba(15,23,42,0.32)] sm:h-[312px]">
+      <Link
+        href={listingHref}
+        onClick={data.onOpen}
+        aria-label={`View ${data.title}`}
+        className="absolute inset-0 z-10 rounded-xl focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-inset focus-visible:ring-blue-500/35"
+      >
+        <span className="sr-only">View {data.title}</span>
+      </Link>
+
+      <div className="flex flex-col sm:h-[312px] sm:flex-row">
+        <div className="relative h-[180px] flex-shrink-0 overflow-hidden sm:h-[312px] sm:w-[43%] lg:w-[44%]">
+          <img
+            src={resolvedImage}
+            alt={data.title}
+            className="h-full w-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
+            onError={event => {
+              const target = event.currentTarget;
+              target.onerror = null;
+              target.src = PROPERTY_IMAGE_FALLBACK;
+            }}
+          />
+          {typeof data.imageCount === 'number' && data.imageCount > 0 && (
+            <span className="absolute bottom-3 left-3 flex items-center gap-1.5 rounded-md bg-black/70 px-2 py-1 text-xs font-semibold text-white">
+              <Camera className="h-3.5 w-3.5" aria-hidden="true" />
+              {data.imageCount}
+            </span>
+          )}
+        </div>
+
+        <div className="flex min-w-0 flex-1 flex-col overflow-hidden px-4 py-3 sm:h-[312px] sm:px-5 sm:py-4 lg:px-6">
+          <div className="flex min-w-0 items-center justify-between gap-4">
+            <p className="min-w-0 text-xl font-bold tracking-tight text-blue-600 sm:text-[22px]">
+              {formatPrice(data.price, {
+                from: isDevelopmentListing,
+                listingType: data.listingType,
+              })}
+            </p>
+            {(data.onSave || (compareHandler && data.propertyId)) && (
+              <div className="relative z-20 flex shrink-0 items-center gap-1 sm:gap-2">
                 {data.onSave && (
                   <Button
                     variant="ghost"
-                    size="icon"
-                    className={`h-9 w-9 rounded-full bg-black/35 text-white backdrop-blur-sm hover:bg-black/55 ${
-                      data.isSaved ? 'text-red-300' : ''
+                    size="sm"
+                    className={`h-8 gap-1.5 rounded-lg px-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900 ${
+                      data.isSaved ? 'text-red-600' : ''
                     }`}
                     onClick={event => {
                       event.stopPropagation();
@@ -238,15 +184,16 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
                     aria-pressed={data.isSaved}
                   >
                     <Heart className="h-4 w-4" fill={data.isSaved ? 'currentColor' : 'none'} />
+                    <span className="hidden xl:inline">Save</span>
                   </Button>
                 )}
                 {compareHandler && data.propertyId && (
                   <Button
                     variant="ghost"
-                    size="icon"
+                    size="sm"
                     disabled={data.compareDisabled}
-                    className={`h-9 w-9 rounded-full bg-black/35 text-white backdrop-blur-sm hover:bg-black/55 ${
-                      data.isCompared ? 'text-blue-300' : ''
+                    className={`h-8 gap-1.5 rounded-lg px-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900 ${
+                      data.isCompared ? 'text-blue-700' : ''
                     }`}
                     onClick={event => {
                       event.stopPropagation();
@@ -258,222 +205,169 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
                     aria-pressed={data.isCompared}
                   >
                     <GitCompareArrows className="h-4 w-4" />
+                    <span className="hidden xl:inline">Compare</span>
                   </Button>
                 )}
               </div>
             )}
           </div>
-
-          <div className="min-w-0 flex-1 overflow-hidden px-4 py-3 sm:flex sm:min-h-[300px] sm:flex-col sm:px-5 sm:py-3 lg:px-6 lg:py-3">
-            {isDevelopmentListing && developmentName && (
-              <p className="mb-1 flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
-                <Building2 className="h-3.5 w-3.5" />
-                {developmentHref ? (
-                  <Link
-                    href={developmentHref}
-                    className="relative z-20 truncate rounded-sm transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
-                    title={developmentName}
-                  >
-                    {developmentName}
-                  </Link>
-                ) : (
-                  <span className="truncate" title={developmentName}>
-                    {developmentName}
-                  </span>
-                )}
-              </p>
-            )}
-            <h3 className="line-clamp-2 text-[17px] font-bold leading-5 text-slate-800">
-              {data.title}
-            </h3>
-            <p className="mt-1 flex items-center gap-1.5 text-[13px] text-muted-foreground">
-              <MapPin className="h-3.5 w-3.5" />
-              {data.location || '-'}
+          <h3 className="mt-1 line-clamp-2 text-[16px] font-bold leading-[19px] text-slate-800 sm:text-[17px] sm:leading-5">
+            {data.title}
+          </h3>
+          <p className="mt-1 flex min-w-0 items-center gap-1.5 text-[13px] text-muted-foreground sm:mt-1.5">
+            <MapPin className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+            <span className="truncate">{data.location || '-'}</span>
+          </p>
+          {developmentName && (
+            <p className="mt-1 flex min-w-0 items-center gap-1.5 text-[11px] text-muted-foreground">
+              <Building2 className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+              {developmentHref ? (
+                <Link
+                  href={developmentHref}
+                  className="relative z-20 truncate rounded-sm transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                >
+                  {developmentName}
+                </Link>
+              ) : (
+                <span className="truncate">{developmentName}</span>
+              )}
             </p>
-            {!isDevelopmentListing && developmentName && (
-              <p className="mt-1 flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                <House className="h-3.5 w-3.5" />
-                {developmentHref ? (
-                  <Link
-                    href={developmentHref}
-                    className="relative z-20 truncate rounded-sm transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
-                    title={developmentName}
-                  >
-                    {developmentName}
-                  </Link>
-                ) : (
-                  <span className="truncate" title={developmentName}>
-                    {developmentName}
-                  </span>
-                )}
-              </p>
+          )}
+
+          <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1.5 pr-2 sm:mt-3 sm:gap-x-5 sm:gap-y-2">
+            {typeof data.area === 'number' && data.area > 0 && (
+              <span
+                className="flex items-center gap-1.5 text-[13px] font-medium text-slate-600"
+                aria-label={`Internal area ${data.area} square metres`}
+              >
+                <HouseMeasureIcon className="h-[18px] w-[18px]" aria-hidden="true" />
+                {data.area}m²
+              </span>
             )}
+            {typeof data.bedrooms === 'number' && data.bedrooms > 0 && (
+              <span className="flex items-center gap-1.5 text-[13px] font-medium text-slate-600">
+                <Bed className="h-[18px] w-[18px]" aria-hidden="true" />
+                {data.bedrooms} {data.bedrooms === 1 ? 'bed' : 'beds'}
+              </span>
+            )}
+            {typeof data.bathrooms === 'number' && data.bathrooms > 0 && (
+              <span className="flex items-center gap-1.5 text-[13px] font-medium text-slate-600">
+                <Bath className="h-[18px] w-[18px]" aria-hidden="true" />
+                {data.bathrooms} {data.bathrooms === 1 ? 'bath' : 'baths'}
+              </span>
+            )}
+            {typeof data.yardSize === 'number' && data.yardSize > 0 && (
+              <span
+                className="flex items-center gap-1.5 text-[13px] font-medium text-slate-600"
+                aria-label={`Erf or yard area ${data.yardSize} square metres`}
+              >
+                <LandPlot className="h-[18px] w-[18px]" aria-hidden="true" />
+                {data.yardSize}m²
+              </span>
+            )}
+          </div>
 
-            <p className="mt-3 text-lg font-semibold tracking-tight text-blue-600 sm:text-xl">
-              {formatPrice(data.price, {
-                from: isDevelopmentListing,
-                listingType: data.listingType,
-              })}
-            </p>
-
-            <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 pr-2">
-              {typeof data.area === 'number' && data.area > 0 && (
-                <span className="flex items-center gap-1.5 text-[13px] font-medium text-muted-foreground">
-                  <House className="h-4 w-4" />
-                  {`${data.area}m2`}
-                </span>
-              )}
-              {typeof data.bedrooms === 'number' && data.bedrooms > 0 && (
-                <span className="flex items-center gap-1.5 text-[13px] font-medium text-muted-foreground">
-                  <Bed className="h-4 w-4" />
-                  {`${data.bedrooms} Bed`}
-                </span>
-              )}
-              {typeof data.bathrooms === 'number' && data.bathrooms > 0 && (
-                <span className="flex items-center gap-1.5 text-[13px] font-medium text-muted-foreground">
-                  <Bath className="h-4 w-4" />
-                  {`${data.bathrooms} Bath`}
-                </span>
-              )}
-              {data.floor && (
-                <span className="flex items-center gap-1.5 text-[13px] font-medium text-muted-foreground">
-                  <LandPlot className="h-4 w-4" />
-                  {data.floor}
-                </span>
-              )}
-            </div>
-
-            {Array.isArray(data.highlights) && data.highlights.length > 0 && (
-              <div className="mt-4 flex flex-wrap gap-2">
-                {data.highlights.slice(0, 3).map((h, index) => (
+          {highlights.length > 0 && (
+            <div
+              className="mt-2.5 flex flex-wrap gap-1.5 sm:mt-3 sm:gap-2"
+              aria-label="Property highlights"
+            >
+              {highlights.map(highlight => {
+                const HighlightIcon = getListingHighlightIcon(highlight.iconKey);
+                return (
                   <span
-                    key={`highlight-${index}-${h}`}
-                    className="max-w-[220px] truncate rounded-full border border-primary/15 bg-primary/10 px-2.5 py-1 text-[11px] font-medium text-primary"
+                    key={highlight.key}
+                    className="flex max-w-[220px] items-center gap-1.5 truncate rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-medium text-slate-700"
+                    title={highlight.label}
                   >
-                    {h}
+                    <HighlightIcon
+                      className="h-3.5 w-3.5 shrink-0 text-blue-600"
+                      aria-hidden="true"
+                    />
+                    <span className="truncate">{highlight.label}</span>
                   </span>
-                ))}
-              </div>
-            )}
+                );
+              })}
+            </div>
+          )}
 
-            {data.description && (
-              <p className="mt-3 line-clamp-2 max-w-[46ch] text-sm leading-5 text-slate-600">
-                {data.description}
-              </p>
-            )}
-
-            <div className="mt-5 flex flex-col gap-3 border-t border-slate-100 pt-3 sm:mt-auto sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex min-w-0 items-center gap-2">
+          <div className="mt-auto flex items-center justify-between gap-3 border-t border-slate-100 pt-3 sm:pt-4">
+            <div className="min-w-0">
               {agentProfileHref ? (
                 <Link
                   href={agentProfileHref}
-                  className="flex min-w-0 items-center gap-2"
+                  className="relative z-20 flex min-w-0 items-center gap-2.5 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
                   aria-label={`View ${identityDisplayName}'s profile`}
                 >
-                  <Avatar className="h-10 w-10 shrink-0 border border-slate-200 bg-white ring-2 ring-slate-100">
-                    <AvatarImage
-                      src={resolvedAvatar || ''}
-                      alt={identityDisplayName}
-                      className={isDevelopmentListing ? 'object-contain p-0.5' : 'object-cover'}
-                    />
-                    <AvatarFallback className="bg-slate-100 text-xs">{agentInitials}</AvatarFallback>
-                  </Avatar>
-                  <span className="min-w-0 max-w-[140px] sm:max-w-[180px]">
-                    <span className="line-clamp-1 block truncate text-[12px] font-semibold leading-snug text-foreground">
-                      {identityDisplayName}
-                    </span>
-                  </span>
+                  <IdentityAvatar
+                    avatarUrl={resolvedAvatar}
+                    initials={agentInitials}
+                    name={identityDisplayName}
+                    contain={isDevelopmentListing}
+                  />
+                  <IdentityCopy name={identityDisplayName} role={identityRoleLabel(contactRole)} />
                 </Link>
               ) : (
-                <>
-                  <Avatar className="h-10 w-10 shrink-0 border border-slate-200 bg-white ring-2 ring-slate-100">
-                    <AvatarImage
-                      src={resolvedAvatar || ''}
-                      alt={identityDisplayName}
-                      className={isDevelopmentListing ? 'object-contain p-0.5' : 'object-cover'}
-                    />
-                    <AvatarFallback className="bg-slate-100 text-xs">{agentInitials}</AvatarFallback>
-                  </Avatar>
-                  <div className="min-w-0 max-w-[140px] sm:max-w-[180px]">
-                    <p className="line-clamp-1 truncate text-[12px] font-semibold leading-snug text-foreground">
-                      {identityDisplayName}
-                    </p>
-                  </div>
-                </>
+                <div className="flex min-w-0 items-center gap-2.5">
+                  <IdentityAvatar
+                    avatarUrl={resolvedAvatar}
+                    initials={agentInitials}
+                    name={identityDisplayName}
+                    contain={isDevelopmentListing}
+                  />
+                  <IdentityCopy name={identityDisplayName} role={identityRoleLabel(contactRole)} />
+                </div>
               )}
             </div>
-              <div className="relative z-20 flex w-full min-w-0 gap-2 sm:w-auto sm:justify-end">
-                {whatsappTarget && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-10 shrink-0 gap-1 border-primary px-3 text-[11px] text-primary hover:bg-primary/10 sm:h-9 sm:w-auto sm:text-[10px]"
-                    onClick={event => {
-                      event.stopPropagation();
-                      setContactIntent('whatsapp');
-                    }}
-                  >
-                    <MessageCircle className="h-3 w-3" />
-                    WhatsApp
-                  </Button>
-                )}
-                {contactCtaLabel === 'View details' ? (
-                  <Button
-                    asChild
-                    size="sm"
-                    className="h-10 min-w-0 flex-1 gap-1 bg-primary px-3 text-[11px] text-primary-foreground hover:bg-primary/90 sm:h-9 sm:w-auto sm:flex-none sm:text-[10px]"
-                  >
-                    <Link href={listingHref} onClick={data.onOpen}>
-                      <Mail className="h-3 w-3" />
-                      View details
-                    </Link>
-                  </Button>
-                ) : (
-                  <Button
-                    size="sm"
-                    className="h-10 min-w-0 flex-1 gap-1 bg-primary px-3 text-[11px] text-primary-foreground hover:bg-primary/90 sm:h-9 sm:w-auto sm:flex-none sm:text-[10px]"
-                    disabled={!canOpenContact}
-                    onClick={() => setContactIntent('contact')}
-                  >
-                    <Mail className="h-3 w-3" />
-                    {contactCtaLabel}
-                  </Button>
-                )}
-              </div>
-            </div>
+
+            <Link
+              href={listingHref}
+              onClick={data.onOpen}
+              className="relative z-20 inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg px-3 text-xs font-semibold text-blue-700 transition-colors hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
+              aria-label={`View property: ${data.title}`}
+            >
+              View property
+              <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+            </Link>
           </div>
         </div>
-      </article>
-      <PropertyContactModal
-        isOpen={contactIntent !== null}
-        onClose={() => setContactIntent(null)}
-        propertyId={data.propertyId}
-        propertyTitle={modalTitle}
-        agentName={identityDisplayName}
-        cataloguePublisherId={
-          data.propertyId
-            ? undefined
-            : (canonicalIdentity?.cataloguePublisherId ?? data.cataloguePublisherId)
-        }
-        developmentId={data.propertyId ? undefined : data.developmentId}
-        source={contactIntent === 'whatsapp' ? 'property_search_whatsapp' : 'property_search'}
-        submitLabel={contactIntent === 'whatsapp' ? 'Continue to WhatsApp' : 'Send enquiry'}
-        successMessage={
-          contactIntent === 'whatsapp'
-            ? 'Your enquiry has been saved. WhatsApp will open after authorized custody is confirmed.'
-            : 'Your enquiry has been saved and delivered to the authorized listing recipient.'
-        }
-        successAction={
-          contactIntent === 'whatsapp' && whatsappTarget
-            ? {
-                type: 'whatsapp',
-                phone: whatsappTarget,
-                message: whatsappPrefill,
-              }
-            : undefined
-        }
-        initialMessage={whatsappPrefill}
+      </div>
+    </article>
+  );
+}
+
+function IdentityAvatar({
+  avatarUrl,
+  initials,
+  name,
+  contain,
+}: {
+  avatarUrl?: string;
+  initials: string;
+  name: string;
+  contain: boolean;
+}) {
+  return (
+    <Avatar className="h-10 w-10 shrink-0 border border-slate-200 bg-white ring-2 ring-slate-100">
+      <AvatarImage
+        src={avatarUrl || ''}
+        alt={name}
+        className={contain ? 'object-contain p-0.5' : 'object-cover'}
       />
-    </>
+      <AvatarFallback className="bg-slate-100 text-xs font-semibold text-slate-600">
+        {initials || '?'}
+      </AvatarFallback>
+    </Avatar>
+  );
+}
+
+function IdentityCopy({ name, role }: { name: string; role: string }) {
+  return (
+    <span className="min-w-0 max-w-[128px] sm:max-w-[160px]">
+      <span className="block truncate text-xs font-semibold leading-snug text-slate-800">
+        {name}
+      </span>
+      <span className="block truncate text-[10px] leading-snug text-slate-500">{role}</span>
+    </span>
   );
 }

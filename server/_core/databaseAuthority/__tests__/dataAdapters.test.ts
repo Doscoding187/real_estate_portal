@@ -193,10 +193,11 @@ describe('bounded Database Authority data adapters', () => {
     });
     expect(
       GOVERNED_RUNTIME_REFERENCE_ROWS.every(
-        row => !('runtimeCompatibilityIds' in row) && !('environmentRuntimeCompatibilityIds' in row),
+        row =>
+          !('runtimeCompatibilityIds' in row) && !('environmentRuntimeCompatibilityIds' in row),
       ),
     ).toBe(true);
-    expect(SEARCH_TO_LEAD_SCENARIO_VERSION).toBe('search-to-lead-v1');
+    expect(SEARCH_TO_LEAD_SCENARIO_VERSION).toBe('search-to-lead-v2');
     expect(SEARCH_TO_LEAD_SCENARIO_DIGEST).toMatch(/^[a-f0-9]{64}$/);
     expect(CANONICAL_FOUNDATION_VERSION).toBe('canonical-launch-foundation-v1');
     expect(CANONICAL_FOUNDATION_DIGEST).toMatch(/^[a-f0-9]{64}$/);

@@ -3,7 +3,15 @@ import { eq } from 'drizzle-orm';
 
 import { getDb } from '../db-connection';
 import { propertySearchService } from '../services/propertySearchService';
-import { agencies, agents, listingMedia, listings, properties, propertyImages, users } from '../../drizzle/schema';
+import {
+  agencies,
+  agents,
+  listingMedia,
+  listings,
+  properties,
+  propertyImages,
+  users,
+} from '../../drizzle/schema';
 
 describe('Property Card Data Flow Integration', () => {
   let createdUserId: number | null = null;
@@ -180,6 +188,12 @@ describe('Property Card Data Flow Integration', () => {
       },
       image: listingImage,
     });
+    expect(matchedCard?.highlights).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ label: 'Solar backup', iconKey: 'power' }),
+        expect.objectContaining({ label: 'Fibre ready', iconKey: 'fibre' }),
+      ]),
+    );
   });
 
   it('fails closed when a listing-backed property has no public image mirror', async () => {
@@ -292,7 +306,13 @@ describe('Property Card Data Flow Integration', () => {
     createdPropertyId = getInsertId(propertyInsert);
 
     const result = await propertySearchService.searchProperties(
-      { city: 'Alberton', province: 'Gauteng', listingType: 'sale', minPrice: 800000, maxPrice: 900000 },
+      {
+        city: 'Alberton',
+        province: 'Gauteng',
+        listingType: 'sale',
+        minPrice: 800000,
+        maxPrice: 900000,
+      },
       'date_desc',
       1,
       20,
@@ -302,7 +322,9 @@ describe('Property Card Data Flow Integration', () => {
     expect(matched).toBeTruthy();
     expect(matched.mainImage).toBeUndefined();
     expect(matched.images).toEqual([]);
-    expect(result.cards?.find(card => Number(card.propertyId) === createdPropertyId)?.image).toBe('');
+    expect(result.cards?.find(card => Number(card.propertyId) === createdPropertyId)?.image).toBe(
+      '',
+    );
   });
 
   it('does not fall back to mutable source listing identity when projection attribution is missing', async () => {
@@ -407,7 +429,13 @@ describe('Property Card Data Flow Integration', () => {
     createdPropertyId = getInsertId(propertyInsert);
 
     const result = await propertySearchService.searchProperties(
-      { city: 'Alberton', province: 'Gauteng', listingType: 'sale', minPrice: 900000, maxPrice: 1000000 },
+      {
+        city: 'Alberton',
+        province: 'Gauteng',
+        listingType: 'sale',
+        minPrice: 900000,
+        maxPrice: 1000000,
+      },
       'date_desc',
       1,
       20,

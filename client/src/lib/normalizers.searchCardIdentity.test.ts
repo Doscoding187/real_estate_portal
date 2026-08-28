@@ -31,7 +31,14 @@ describe('searchCardResultToPropertyCardProps identity contract', () => {
         agencyId: 72,
         email: 'enquiries@northside.example',
       },
-      highlights: [],
+      highlights: [
+        {
+          key: 'study_office',
+          label: 'Study / office',
+          iconKey: 'study',
+          source: 'space',
+        },
+      ],
       listedDate: new Date('2026-08-17T00:00:00.000Z'),
     };
 
@@ -40,5 +47,6 @@ describe('searchCardResultToPropertyCardProps identity contract', () => {
     expect(props.identity).toEqual(card.identity);
     expect(props.identity?.role).toBe('agency');
     expect(props.agent).toBeUndefined();
+    expect(props.highlights).toEqual(['Study / office']);
   });
 });

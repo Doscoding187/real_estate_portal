@@ -1,20 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Check, Search, X } from 'lucide-react';
 import { Slider } from '@/components/ui/slider';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from '@/components/ui/accordion';
-import { formatCurrency } from '@/lib/utils';
-import { SearchFilters } from '@/lib/urlUtils';
+import type { SearchFilters } from '@/lib/urlUtils';
 import { BUY_FILTER_PRICE_CEILING } from '@shared/buySearchContract';
-import { PUBLIC_PROPERTY_TYPES } from '@shared/property-taxonomy';
-import { SearchResults } from '@shared/types';
+import type { SearchResults } from '@shared/types';
 
 interface SidebarFiltersProps {
   filters: SearchFilters;
@@ -33,39 +24,6 @@ interface SidebarFiltersProps {
   showLocationRefinement?: boolean;
   showHeader?: boolean;
 }
-
-const AMENITIES = [
-  'Pool',
-  'Gym',
-  'Garden',
-  'Security',
-  'Parking',
-  'Balcony',
-  'Pet Friendly',
-  'Furnished',
-  'Air Conditioning',
-  'Wi-Fi',
-];
-
-const LISTING_SOURCE_OPTIONS = [
-  {
-    value: undefined,
-    label: 'All',
-  },
-  {
-    value: 'manual',
-    label: 'Property listings',
-  },
-  {
-    value: 'development',
-    label: 'New Development',
-  },
-] as const;
-
-// Presentation order and labels are owned here; the VALUE vocabulary is
-// pinned to the shared taxonomy authority by SidebarFilters.taxonomy.test.ts.
-// Any value added below must exist in PUBLIC_PROPERTY_TYPES (or be added to
-// that authority first).
 export const FALLBACK_PROPERTY_TYPES = [
   { value: 'house', label: 'Houses' },
   { value: 'apartment', label: 'Apartments / Flats' },
@@ -83,586 +41,324 @@ export const PROPERTY_TYPE_CATEGORIES = {
   land: ['plot'],
 } as const;
 
-type PropertyTypeCategory = keyof typeof PROPERTY_TYPE_CATEGORIES;
+export const PROPERTY_TYPE_LABELS: Record<string, string> = Object.fromEntries(
+  FALLBACK_PROPERTY_TYPES.map(item => [item.value, item.label]),
+);
 
-export const PROPERTY_TYPE_LABELS: Record<string, string> = {
-  house: 'Houses',
-  apartment: 'Apartments / Flats',
-  villa: 'Villas',
-  townhouse: 'Townhouses',
-  cluster_home: 'Cluster Homes',
-  farm: 'Farms',
-  commercial: 'Commercial Property',
-  plot: 'Land / Plots',
-};
+const PRICE_STEP = 50_000;
+const AREA_LIMIT = 2_000;
 
-const inferPropertyTypeCategory = (value?: string): PropertyTypeCategory => {
-  if (!value) return 'residential';
-  if ((PROPERTY_TYPE_CATEGORIES.commercial as readonly string[]).includes(value)) {
-    return 'commercial';
+function compactCurrency(value: number): string {
+  if (value >= 1_000_000) {
+    return `R ${(value / 1_000_000).toFixed(1).replace('.0', '')}M`;
   }
-  if ((PROPERTY_TYPE_CATEGORIES.land as readonly string[]).includes(value)) return 'land';
-  return 'residential';
-};
+  if (value >= 1_000) return `R ${Math.round(value / 1_000)}K`;
+  return `R ${value.toLocaleString()}`;
+}
 
-const areSameSelections = (left: string[], right: string[]) => {
-  if (left.length !== right.length) return false;
-  const sortedLeft = [...left].sort();
-  const sortedRight = [...right].sort();
-  return sortedLeft.every((value, index) => value === sortedRight[index]);
-};
+function optionalNumber(value: string): number | undefined {
+  if (!value.trim()) return undefined;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : undefined;
+}
 
 export function SidebarFilters({
   filters,
   filterCounts,
-  locationContext,
   onFilterChange,
   onSaveSearch,
   allowedPropertyTypes,
   listingType,
-  showAmenities = true,
-  showLocationRefinement = true,
   showHeader = true,
 }: SidebarFiltersProps) {
-  const isRentalJourney = listingType === 'rent';
-  const listingSourceOptions = LISTING_SOURCE_OPTIONS.map(option =>
-    option.value === 'manual' && !isRentalJourney ? { ...option, label: 'Resale' } : option,
-  );
-  const isAllowedPropertyType = (value: string) =>
-    !allowedPropertyTypes || allowedPropertyTypes.includes(value);
-
-  const selectedSuburbs = useMemo(
-    () => (Array.isArray(filters.suburb) ? filters.suburb : filters.suburb ? [filters.suburb] : []),
-    [filters.suburb],
-  );
-  const selectedPropertyType =
-    typeof filters.propertyType === 'string' ? filters.propertyType : undefined;
-
-  // Local state for sliders to avoid excessive re-renders/fetches while dragging
+  const priceCeiling = listingType === 'rent' ? 250_000 : BUY_FILTER_PRICE_CEILING;
+  const priceStep = listingType === 'rent' ? 1_000 : PRICE_STEP;
   const [priceRange, setPriceRange] = useState<[number, number]>([
-    filters.minPrice || 0,
-    filters.maxPrice || BUY_FILTER_PRICE_CEILING,
+    filters.minPrice ?? 0,
+    filters.maxPrice ?? priceCeiling,
   ]);
-  const [pendingSuburbs, setPendingSuburbs] = useState<string[]>(selectedSuburbs);
-  const [propertyTypeCategory, setPropertyTypeCategory] = useState<PropertyTypeCategory>(
-    inferPropertyTypeCategory(selectedPropertyType),
-  );
-  const [pendingPropertyType, setPendingPropertyType] = useState<string | undefined>(
-    selectedPropertyType,
-  );
-
-  // Sync local state with props when they change externally
-  useEffect(() => {
-    if (filters.minPrice !== undefined || filters.maxPrice !== undefined) {
-      setPriceRange([filters.minPrice || 0, filters.maxPrice || BUY_FILTER_PRICE_CEILING]);
-    }
-  }, [filters.minPrice, filters.maxPrice]);
+  const [areaRange, setAreaRange] = useState<[number, number]>([
+    filters.minArea ?? 0,
+    filters.maxArea ?? AREA_LIMIT,
+  ]);
 
   useEffect(() => {
-    setPendingSuburbs(selectedSuburbs);
-  }, [selectedSuburbs]);
+    setPriceRange([filters.minPrice ?? 0, filters.maxPrice ?? priceCeiling]);
+  }, [filters.maxPrice, filters.minPrice, priceCeiling]);
 
   useEffect(() => {
-    setPendingPropertyType(selectedPropertyType);
-    setPropertyTypeCategory(inferPropertyTypeCategory(selectedPropertyType));
-  }, [selectedPropertyType]);
+    setAreaRange([filters.minArea ?? 0, filters.maxArea ?? AREA_LIMIT]);
+  }, [filters.maxArea, filters.minArea]);
 
-  const handlePriceChange = (value: number[]) => {
-    setPriceRange([value[0], value[1]]);
-  };
+  const propertyTypeOptions = useMemo(() => {
+    const allowed = new Set(
+      allowedPropertyTypes ?? FALLBACK_PROPERTY_TYPES.map(item => item.value),
+    );
+    return FALLBACK_PROPERTY_TYPES.filter(item => allowed.has(item.value)).map(item => ({
+      ...item,
+      count: filterCounts?.byType?.[item.value],
+    }));
+  }, [allowedPropertyTypes, filterCounts?.byType]);
 
-  const handlePriceCommit = (value: number[]) => {
+  const commitPrice = (next = priceRange) => {
+    const { minPrice: _min, maxPrice: _max, ...rest } = filters;
     onFilterChange({
-      ...filters,
-      minPrice: value[0],
-      maxPrice: value[1],
+      ...rest,
+      ...(next[0] > 0 ? { minPrice: next[0] } : {}),
+      ...(next[1] < priceCeiling ? { maxPrice: next[1] } : {}),
     });
   };
 
-  const handlePropertyTypeChange = (type: string, checked: boolean) => {
-    setPendingPropertyType(checked ? type : undefined);
+  const commitArea = (next = areaRange) => {
+    const { minArea: _min, maxArea: _max, ...rest } = filters;
+    onFilterChange({
+      ...rest,
+      ...(next[0] > 0 ? { minArea: next[0] } : {}),
+      ...(next[1] < AREA_LIMIT ? { maxArea: next[1] } : {}),
+    });
   };
 
-  const handleBedroomChange = (beds: number) => {
-    if (filters.minBedrooms === beds) {
-      const { minBedrooms: _minBedrooms, ...rest } = filters;
-      onFilterChange(rest);
-    } else {
-      onFilterChange({ ...filters, minBedrooms: beds });
-    }
+  const selectPropertyType = (propertyType?: string) => {
+    const { propertyType: _current, ...rest } = filters;
+    onFilterChange(propertyType ? { ...rest, propertyType } : rest);
   };
 
-  const handleBathroomChange = (bathrooms: number) => {
-    if (filters.minBathrooms === bathrooms) {
-      const { minBathrooms: _minBathrooms, ...rest } = filters;
-      onFilterChange(rest);
-    } else {
-      onFilterChange({ ...filters, minBathrooms: bathrooms });
-    }
-  };
-
-  const handleListingSourceChange = (source: SearchFilters['listingSource'] | undefined) => {
-    if (!source || filters.listingSource === source) {
-      const { listingSource: _listingSource, ...rest } = filters;
+  const selectMinimum = (key: 'minBedrooms' | 'minBathrooms', value: number) => {
+    if (filters[key] === value) {
+      const { [key]: _current, ...rest } = filters;
       onFilterChange(rest);
       return;
     }
-
-    onFilterChange({
-      ...filters,
-      listingSource: source,
-    });
+    onFilterChange({ ...filters, [key]: value });
   };
-
-  const handleAmenitiesChange = (value: string, checked: boolean) => {
-    const category = 'amenities';
-    const currentValues = filters[category] || [];
-    let newValues: string[];
-
-    if (checked) {
-      newValues = [...currentValues, value];
-    } else {
-      newValues = currentValues.filter(v => v !== value);
-    }
-
-    onFilterChange({
-      ...filters,
-      [category]: newValues.length > 0 ? newValues : undefined,
-    });
-  };
-
-  const handleLocationToggle = (slug: string) => {
-    const next = pendingSuburbs.includes(slug)
-      ? pendingSuburbs.filter(value => value !== slug)
-      : [...pendingSuburbs, slug];
-
-    setPendingSuburbs(next);
-  };
-
-  const handleApplySuburbs = () => {
-    onFilterChange({
-      ...filters,
-      suburb: pendingSuburbs.length > 0 ? pendingSuburbs : undefined,
-    } as unknown as SearchFilters);
-  };
-
-  const handleApplyPropertyType = () => {
-    if (pendingPropertyType) {
-      onFilterChange({ ...filters, propertyType: pendingPropertyType });
-      return;
-    }
-    const { propertyType: _propertyType, ...rest } = filters;
-    onFilterChange(rest);
-  };
-
-  const formatBudgetCompact = (value: number) => {
-    if (value >= 1_000_000) {
-      const rounded = (value / 1_000_000).toFixed(1).replace('.0', '');
-      return `R ${rounded}M`;
-    }
-    if (value >= 1_000) {
-      return `R ${Math.round(value / 1_000)}K`;
-    }
-    return formatCurrency(value);
-  };
-
-  const locationOptions =
-    filterCounts?.byLocation?.filter(item => item && item.name && item.count > 0).slice(0, 7) ?? [];
-
-  const propertyTypeOptions = (() => {
-    const fromCounts = Object.entries(filterCounts?.byType ?? {})
-      .map(([value, count]) => ({
-        value,
-        label:
-          PROPERTY_TYPE_LABELS[value] ||
-          value
-            .split('_')
-            .map(part => part.charAt(0).toUpperCase() + part.slice(1))
-            .join(' '),
-        count: Number.isFinite(Number(count)) ? Number(count) : undefined,
-      }))
-      .sort((a, b) => (b.count ?? 0) - (a.count ?? 0));
-
-    const seeded = [...fromCounts];
-    FALLBACK_PROPERTY_TYPES.forEach(type => {
-      if (seeded.some(option => option.value === type.value)) return;
-      seeded.push({ ...type, count: undefined });
-    });
-
-    return seeded.filter(option => isAllowedPropertyType(option.value)).slice(0, 10);
-  })();
-
-  const propertyTypeMap = new Map(propertyTypeOptions.map(option => [option.value, option]));
-  const propertyTypeCategoryOptions = PROPERTY_TYPE_CATEGORIES[propertyTypeCategory]
-    .filter(isAllowedPropertyType)
-    .map(value => {
-      const match = propertyTypeMap.get(value);
-      if (match) return match;
-      return {
-        value,
-        label: PROPERTY_TYPE_LABELS[value] || value,
-        count: undefined,
-      };
-    });
-
-  const availablePropertyTypeCategories = (
-    Object.keys(PROPERTY_TYPE_CATEGORIES) as PropertyTypeCategory[]
-  ).filter(category => PROPERTY_TYPE_CATEGORIES[category].some(isAllowedPropertyType));
-
-  const hasPendingSuburbChanges = !areSameSelections(selectedSuburbs, pendingSuburbs);
-  const hasPendingPropertyTypeChanges =
-    (pendingPropertyType || '') !== (selectedPropertyType || '');
-
-  const bedroomOptions = (() => {
-    const byBedrooms = filterCounts?.byBedrooms ?? {};
-    if (Object.keys(byBedrooms).length === 0) return [1, 2, 3, 4, 5];
-    return Object.keys(byBedrooms)
-      .map(v => Number(v))
-      .filter(v => Number.isFinite(v) && v > 0)
-      .sort((a, b) => a - b)
-      .slice(0, 5);
-  })();
-  const bathroomOptions = (() => {
-    const byBathrooms = filterCounts?.byBathrooms ?? {};
-    if (Object.keys(byBathrooms).length === 0) return [1, 2, 3, 4];
-    return Object.keys(byBathrooms)
-      .map(v => Number(v))
-      .filter(v => Number.isFinite(v) && v > 0)
-      .sort((a, b) => a - b)
-      .slice(0, 4);
-  })();
 
   return (
-    <div className="w-full bg-white rounded-lg border border-slate-200 p-4">
-      {showHeader && (
-        <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-lg font-bold text-slate-800">Filters</h3>
-          <div className="flex gap-2">
-            {onSaveSearch && (
-              <Button variant="outline" size="sm" className="h-8 text-xs" onClick={onSaveSearch}>
-                Save
-              </Button>
-            )}
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-auto p-0 text-xs font-medium text-blue-600 hover:text-blue-800"
-              onClick={() => onFilterChange({})}
-            >
-              Reset all
-            </Button>
+    <aside className="w-full rounded-xl border border-slate-200 bg-white px-5 py-5 shadow-[0_18px_45px_-38px_rgba(15,23,42,0.45)]">
+      {showHeader ? (
+        <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+          <div>
+            <h2 className="text-lg font-bold text-slate-950">Filters</h2>
+            <p className="mt-0.5 text-xs text-slate-500">Refine this search</p>
           </div>
+          <button
+            type="button"
+            onClick={() => onFilterChange({})}
+            className="rounded-md px-2 py-1 text-xs font-semibold text-blue-700 hover:bg-blue-50"
+          >
+            Reset all
+          </button>
         </div>
-      )}
+      ) : null}
 
-      <Accordion
-        type="multiple"
-        defaultValue={['listing-source', 'budget', 'locations', 'type', 'bedrooms']}
-        className="w-full"
-      >
-        <AccordionItem value="listing-source">
-          <AccordionTrigger className="text-sm font-bold text-slate-700 hover:no-underline">
-            Listing source
-          </AccordionTrigger>
-          <AccordionContent>
-            <div className="flex flex-wrap gap-0.5 pt-1">
-              {listingSourceOptions.map(option => (
-                <Button
-                  key={option.label}
-                  size="sm"
-                  variant={
-                    option.value === undefined
-                      ? !filters.listingSource
-                        ? 'default'
-                        : 'outline'
-                      : filters.listingSource === option.value
-                        ? 'default'
-                        : 'outline'
-                  }
-                  className={`h-8 !w-auto min-w-0 grow basis-0 rounded-full px-1 text-[9px] font-medium leading-none tracking-tight sm:text-[10px] ${
-                    (option.value === undefined && !filters.listingSource) ||
-                    filters.listingSource === option.value
-                      ? 'border-blue-600 bg-blue-600 text-white hover:bg-blue-700'
-                      : 'border-slate-200 text-slate-700 hover:border-blue-400 hover:text-blue-600'
-                  }`}
-                  onClick={() => handleListingSourceChange(option.value)}
-                >
-                  {option.label}
-                </Button>
-              ))}
-            </div>
-          </AccordionContent>
-        </AccordionItem>
-
-        {/* Budget Filter */}
-        <AccordionItem value="budget">
-          <AccordionTrigger className="text-sm font-bold text-slate-700 hover:no-underline">
-            {isRentalJourney ? 'Monthly rent' : 'Budget'}
-          </AccordionTrigger>
-          <AccordionContent>
-            <div className="px-1 pt-1 pb-4">
-              <div className="mb-3 flex items-center justify-between">
-                <p
-                  className="text-sm font-semibold text-slate-700"
-                  aria-label={`Minimum budget ${formatBudgetCompact(priceRange[0])}`}
-                >
-                  From{' '}
-                  <span className="text-lg font-bold text-slate-900">
-                    {formatBudgetCompact(priceRange[0])}
-                  </span>
-                </p>
-                <span
-                  className="rounded bg-orange-500 px-2 py-1 text-[10px] font-semibold text-white"
-                  aria-label={`Maximum budget ${formatBudgetCompact(priceRange[1])}`}
-                >
-                  Up to {formatBudgetCompact(priceRange[1])}
+      <FilterSection title="Property type">
+        <div className="space-y-1">
+          <button
+            type="button"
+            onClick={() => selectPropertyType()}
+            className="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
+          >
+            <SelectionMark selected={!filters.propertyType} />
+            Any property type
+          </button>
+          {propertyTypeOptions.map(option => (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => selectPropertyType(option.value)}
+              className="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
+            >
+              <SelectionMark selected={filters.propertyType === option.value} />
+              <span className="min-w-0 flex-1 truncate">{option.label}</span>
+              {typeof option.count === 'number' ? (
+                <span className="text-xs tabular-nums text-slate-400">
+                  {option.count.toLocaleString()}
                 </span>
-              </div>
-              <Slider
-                defaultValue={[0, BUY_FILTER_PRICE_CEILING]}
-                value={[priceRange[0], priceRange[1]]}
-                max={BUY_FILTER_PRICE_CEILING}
-                step={5000}
-                min={0}
-                onValueChange={handlePriceChange}
-                onValueCommit={handlePriceCommit}
-                className="mb-3"
-              />
-              <div className="grid grid-cols-2 gap-2">
-                <Input
-                  type="number"
-                  min={0}
-                  step={5000}
-                  value={priceRange[0]}
-                  onChange={e => {
-                    const nextMin = Number(e.target.value || 0);
-                    setPriceRange([Math.max(0, Math.min(nextMin, priceRange[1])), priceRange[1]]);
-                  }}
-                  onBlur={() => handlePriceCommit(priceRange)}
-                  className="h-8 text-xs"
-                  placeholder={isRentalJourney ? 'Min monthly rent' : 'Min Budget'}
-                />
-                <Input
-                  type="number"
-                  min={0}
-                  step={5000}
-                  value={priceRange[1]}
-                  onChange={e => {
-                    const nextMax = Number(e.target.value || 0);
-                    setPriceRange([priceRange[0], Math.max(nextMax, priceRange[0])]);
-                  }}
-                  onBlur={() => handlePriceCommit(priceRange)}
-                  className="h-8 text-xs"
-                  placeholder={isRentalJourney ? 'Max monthly rent' : 'Max Budget'}
-                />
-              </div>
-            </div>
-          </AccordionContent>
-        </AccordionItem>
+              ) : null}
+            </button>
+          ))}
+        </div>
+      </FilterSection>
 
-        {/* Locations */}
-        <AccordionItem value="locations" className={!showLocationRefinement ? 'hidden' : undefined}>
-          <AccordionTrigger className="text-sm font-bold text-slate-700 hover:no-underline">
-            Locations
-          </AccordionTrigger>
-          <AccordionContent>
-            <div className="space-y-3 pt-1">
-              {locationOptions.length > 0 && (
-                <p className="text-[11px] font-medium text-slate-500">
-                  {locationContext?.name
-                    ? `Add surrounding suburbs near ${locationContext.name}`
-                    : 'Add surrounding suburbs'}
-                </p>
-              )}
-              {locationOptions.length > 0 ? (
-                <>
-                  <div className="space-y-1">
-                    {locationOptions.map(location => {
-                      const isSelected = pendingSuburbs.includes(location.slug);
+      <FilterSection title={listingType === 'rent' ? 'Monthly rent' : 'Price'}>
+        <div className="mb-4 flex items-center justify-between text-xs font-semibold text-slate-700">
+          <span aria-label={`Minimum budget ${compactCurrency(priceRange[0])}`}>
+            {compactCurrency(priceRange[0])}
+          </span>
+          <span aria-label={`Maximum budget ${compactCurrency(priceRange[1])}`}>
+            {priceRange[1] >= priceCeiling
+              ? `${compactCurrency(priceCeiling)}+`
+              : compactCurrency(priceRange[1])}
+          </span>
+        </div>
+        <Slider
+          value={priceRange}
+          min={0}
+          max={priceCeiling}
+          step={priceStep}
+          onValueChange={value => setPriceRange([value[0], value[1]])}
+          onValueCommit={value => commitPrice([value[0], value[1]])}
+        />
+        <div className="mt-4 grid grid-cols-2 gap-2">
+          <LabeledNumberInput
+            label="Minimum price"
+            value={priceRange[0]}
+            step={priceStep}
+            onChange={value => setPriceRange([Math.min(value ?? 0, priceRange[1]), priceRange[1]])}
+            onBlur={() => commitPrice()}
+          />
+          <LabeledNumberInput
+            label="Maximum price"
+            value={priceRange[1]}
+            step={priceStep}
+            onChange={value =>
+              setPriceRange([priceRange[0], Math.max(value ?? priceCeiling, priceRange[0])])
+            }
+            onBlur={() => commitPrice()}
+          />
+        </div>
+      </FilterSection>
 
-                      return (
-                        <label
-                          key={location.slug}
-                          className="flex cursor-pointer items-center justify-between gap-2 rounded-md px-1.5 py-1.5 hover:bg-slate-50"
-                        >
-                          <div className="min-w-0 flex flex-1 items-center gap-2">
-                            <Checkbox
-                              checked={isSelected}
-                              onCheckedChange={() => handleLocationToggle(location.slug)}
-                            />
-                            <span className="truncate text-[13px] font-medium text-slate-700">
-                              {location.name}
-                            </span>
-                          </div>
-                          <span className="text-[11px] font-semibold text-slate-500">
-                            ({location.count.toLocaleString()})
-                          </span>
-                        </label>
-                      );
-                    })}
-                  </div>
-                  <Button
-                    type="button"
-                    size="sm"
-                    className="mt-1 h-9 w-full bg-emerald-500 text-white hover:bg-emerald-600"
-                    disabled={!hasPendingSuburbChanges}
-                    onClick={handleApplySuburbs}
-                  >
-                    Update Suburbs
-                  </Button>
-                </>
-              ) : (
-                <p className="text-xs text-slate-500">
-                  Nearby areas will appear when more listings are available in this search area.
-                </p>
-              )}
-            </div>
-          </AccordionContent>
-        </AccordionItem>
+      <FilterSection title="Bedrooms">
+        <MinimumChoiceRow
+          values={[1, 2, 3, 4, 5]}
+          selected={filters.minBedrooms}
+          onSelect={value => selectMinimum('minBedrooms', value)}
+        />
+      </FilterSection>
 
-        {/* Type of Property */}
-        <AccordionItem value="type">
-          <AccordionTrigger className="text-sm font-bold text-slate-700 hover:no-underline">
-            Type of property
-          </AccordionTrigger>
-          <AccordionContent>
-            <div className="space-y-3 pt-1">
-              <div className="grid grid-cols-3 gap-1">
-                {availablePropertyTypeCategories.map(category => (
-                  <Button
-                    key={category}
-                    type="button"
-                    variant={propertyTypeCategory === category ? 'default' : 'outline'}
-                    size="sm"
-                    className="h-7 rounded-full px-2 text-[10px] font-medium capitalize"
-                    onClick={() => setPropertyTypeCategory(category)}
-                  >
-                    {category}
-                  </Button>
-                ))}
-              </div>
+      <FilterSection title="Bathrooms">
+        <MinimumChoiceRow
+          values={[1, 2, 3, 4]}
+          selected={filters.minBathrooms}
+          onSelect={value => selectMinimum('minBathrooms', value)}
+        />
+      </FilterSection>
 
-              <div className="space-y-1">
-                {propertyTypeCategoryOptions.map(type => {
-                  const isSelected = pendingPropertyType === type.value;
-                  return (
-                    <label
-                      key={type.value}
-                      className="flex cursor-pointer items-center justify-between gap-2 rounded-md px-1.5 py-1.5 hover:bg-slate-50"
-                    >
-                      <div className="min-w-0 flex flex-1 items-center gap-2">
-                        <Checkbox
-                          checked={isSelected}
-                          onCheckedChange={checked =>
-                            handlePropertyTypeChange(type.value, Boolean(checked))
-                          }
-                        />
-                        <span className="truncate text-[13px] font-medium text-slate-700">
-                          {type.label}
-                        </span>
-                      </div>
-                      {typeof type.count === 'number' && (
-                        <span className="text-[11px] font-semibold text-slate-500">
-                          ({type.count.toLocaleString()})
-                        </span>
-                      )}
-                    </label>
-                  );
-                })}
-              </div>
+      <FilterSection title="Home size">
+        <div className="grid grid-cols-2 gap-2">
+          <LabeledNumberInput
+            label="Minimum m²"
+            value={areaRange[0]}
+            step={10}
+            onChange={value => setAreaRange([Math.min(value ?? 0, areaRange[1]), areaRange[1]])}
+            onBlur={() => commitArea()}
+          />
+          <LabeledNumberInput
+            label="Maximum m²"
+            value={areaRange[1]}
+            step={10}
+            onChange={value =>
+              setAreaRange([areaRange[0], Math.max(value ?? AREA_LIMIT, areaRange[0])])
+            }
+            onBlur={() => commitArea()}
+          />
+        </div>
+      </FilterSection>
 
-              <Button
-                type="button"
-                size="sm"
-                className="h-9 w-full bg-emerald-500 text-white hover:bg-emerald-600"
-                disabled={!hasPendingPropertyTypeChanges}
-                onClick={handleApplyPropertyType}
-              >
-                Update Property Type
-              </Button>
-            </div>
-          </AccordionContent>
-        </AccordionItem>
+      {onSaveSearch ? (
+        <Button
+          type="button"
+          variant="outline"
+          className="mt-5 h-11 w-full rounded-lg border-blue-200 text-blue-700 hover:bg-blue-50"
+          onClick={onSaveSearch}
+        >
+          <Search className="mr-2 h-4 w-4" />
+          Save this search
+        </Button>
+      ) : null}
+    </aside>
+  );
+}
 
-        {/* No. of Bedrooms */}
-        <AccordionItem value="bedrooms">
-          <AccordionTrigger className="text-sm font-bold text-slate-700 hover:no-underline">
-            No. of Bedrooms
-          </AccordionTrigger>
-          <AccordionContent>
-            <div className="flex flex-wrap gap-2 pt-2">
-              {bedroomOptions.map(num => (
-                <Button
-                  key={num}
-                  variant={filters.minBedrooms === num ? 'default' : 'outline'}
-                  size="sm"
-                  className={`rounded-full w-10 h-10 p-0 ${
-                    filters.minBedrooms === num
-                      ? 'bg-blue-600 hover:bg-blue-700 text-white border-blue-600'
-                      : 'text-slate-600 border-slate-200 hover:border-blue-400 hover:text-blue-600'
-                  }`}
-                  onClick={() => handleBedroomChange(num)}
-                >
-                  {num}
-                  {num === 5 ? '+' : ''}
-                </Button>
-              ))}
-            </div>
-          </AccordionContent>
-        </AccordionItem>
+function FilterSection({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="border-b border-slate-100 py-5 last:border-b-0 last:pb-0">
+      <h3 className="mb-3 text-sm font-bold text-slate-900">{title}</h3>
+      {children}
+    </section>
+  );
+}
 
-        {/* No. of Bathrooms */}
-        <AccordionItem value="bathrooms">
-          <AccordionTrigger className="text-sm font-bold text-slate-700 hover:no-underline">
-            No. of Bathrooms
-          </AccordionTrigger>
-          <AccordionContent>
-            <div className="flex flex-wrap gap-2 pt-2">
-              {bathroomOptions.map(num => (
-                <Button
-                  key={num}
-                  variant={filters.minBathrooms === num ? 'default' : 'outline'}
-                  size="sm"
-                  className={`rounded-full w-10 h-10 p-0 ${
-                    filters.minBathrooms === num
-                      ? 'bg-blue-600 hover:bg-blue-700 text-white border-blue-600'
-                      : 'text-slate-600 border-slate-200 hover:border-blue-400 hover:text-blue-600'
-                  }`}
-                  onClick={() => handleBathroomChange(num)}
-                >
-                  {num}+
-                </Button>
-              ))}
-            </div>
-          </AccordionContent>
-        </AccordionItem>
+function SelectionMark({ selected }: { selected: boolean }) {
+  return (
+    <span
+      className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${
+        selected ? 'border-blue-600 bg-blue-600 text-white' : 'border-slate-300 bg-white'
+      }`}
+      aria-hidden="true"
+    >
+      {selected ? <Check className="h-3 w-3" strokeWidth={3} /> : null}
+    </span>
+  );
+}
 
-        {/* Amenities */}
-        <AccordionItem value="amenities" className={!showAmenities ? 'hidden' : undefined}>
-          <AccordionTrigger className="text-sm font-bold text-slate-700 hover:no-underline">
-            Amenities
-          </AccordionTrigger>
-          <AccordionContent>
-            <div className="space-y-3 pt-2">
-              {AMENITIES.map(amenity => (
-                <div key={amenity} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={`amenity-${amenity}`}
-                    checked={filters.amenities?.includes(amenity)}
-                    onCheckedChange={checked => handleAmenitiesChange(amenity, checked as boolean)}
-                  />
-                  <Label
-                    htmlFor={`amenity-${amenity}`}
-                    className="text-sm font-medium leading-none cursor-pointer text-slate-600"
-                  >
-                    {amenity}
-                  </Label>
-                </div>
-              ))}
-            </div>
-          </AccordionContent>
-        </AccordionItem>
-      </Accordion>
+function MinimumChoiceRow({
+  values,
+  selected,
+  onSelect,
+}: {
+  values: number[];
+  selected?: number;
+  onSelect: (value: number) => void;
+}) {
+  return (
+    <div className="grid grid-cols-5 gap-2">
+      {values.map(value => (
+        <button
+          key={value}
+          type="button"
+          aria-pressed={selected === value}
+          onClick={() => onSelect(value)}
+          className={`h-9 rounded-lg border text-xs font-semibold transition-colors ${
+            selected === value
+              ? 'border-blue-600 bg-blue-600 text-white'
+              : 'border-slate-200 bg-white text-slate-600 hover:border-blue-300 hover:text-blue-700'
+          }`}
+        >
+          {value}
+          {value === values[values.length - 1] ? '+' : ''}
+        </button>
+      ))}
     </div>
+  );
+}
+
+function LabeledNumberInput({
+  label,
+  value,
+  step,
+  onChange,
+  onBlur,
+}: {
+  label: string;
+  value: number;
+  step: number;
+  onChange: (value?: number) => void;
+  onBlur: () => void;
+}) {
+  return (
+    <label className="relative block">
+      <span className="sr-only">{label}</span>
+      <Input
+        aria-label={label}
+        type="number"
+        min={0}
+        step={step}
+        value={value}
+        onChange={event => onChange(optionalNumber(event.target.value))}
+        onBlur={onBlur}
+        className="h-10 rounded-lg border-slate-200 pr-8 text-xs tabular-nums"
+      />
+      {value > 0 ? (
+        <button
+          type="button"
+          aria-label={`Clear ${label.toLowerCase()}`}
+          onClick={() => onChange(undefined)}
+          className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700"
+        >
+          <X className="h-3.5 w-3.5" />
+        </button>
+      ) : null}
+    </label>
   );
 }

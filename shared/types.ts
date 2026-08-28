@@ -1,5 +1,6 @@
 import { OWNERSHIP_TYPES, STRUCTURAL_TYPES, FLOOR_TYPES } from './db-enums';
 import type { PublicPropertyType } from './property-taxonomy';
+import type { ListingCardHighlight } from './listing-highlight-registry';
 
 export type SubscriptionStatus =
   | 'incomplete'
@@ -1032,7 +1033,7 @@ export interface SearchCardResult {
   identity: SearchCardIdentity;
   development?: SearchCardDevelopmentRef;
   developerBrand?: SearchCardDeveloperBrandRef;
-  highlights: string[];
+  highlights: ListingCardHighlight[];
   badges?: string[];
   imageCount?: number;
   videoCount?: number;

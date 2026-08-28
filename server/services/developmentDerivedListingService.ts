@@ -18,6 +18,7 @@ import {
   type PublicSearchQueryBoundary,
 } from './searchAreaQueryBoundary';
 import { publicDevelopmentEligibilityConditions } from './publicDevelopmentEligibility';
+import { buildDevelopmentCardHighlights } from '../../shared/listing-highlight-registry';
 
 interface DevelopmentDerivedListingFilters {
   province?: string;
@@ -280,7 +281,9 @@ function matchesQueryBoundary(
   if (boundary.kind === 'canonical_members') {
     return getSearchAreaQueryMembers(boundary).some(member => {
       if (member.scopeKind === 'province') {
-        return Boolean(member.provinceName) && matchesNormalizedField(row.province, member.provinceName);
+        return (
+          Boolean(member.provinceName) && matchesNormalizedField(row.province, member.provinceName)
+        );
       }
       if (member.scopeKind === 'metro_city') {
         return Boolean(member.cityName) && matchesNormalizedField(row.city, member.cityName);
@@ -664,7 +667,9 @@ function buildDevelopmentSearchCardResult(item: DevelopmentDerivedListing): Sear
     },
     development: item.development,
     developerBrand: item.developerBrand,
-    highlights: Array.isArray(item.highlights) ? item.highlights : [],
+    highlights: buildDevelopmentCardHighlights(
+      Array.isArray(item.highlights) ? item.highlights : [],
+    ),
     badges: Array.isArray(item.badges) ? item.badges : [],
     imageCount: Array.isArray(item.images) ? item.images.length : 0,
     transactionType: item.transactionType,

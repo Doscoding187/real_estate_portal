@@ -42,16 +42,11 @@ import {
   type PublicPropertyEligibilityResolution,
 } from './publicPropertyEligibilityService';
 import { PUBLIC_PROPERTY_QUERY_BATCH_SIZE } from './approvedPublicPropertyService';
+import { buildManualPropertyCardHighlights } from '../../shared/listing-highlight-registry';
 
-// Cache key prefix for property searches
-// Authority version: v7 applies canonical approved public-property
-// eligibility before returning search totals/pages. It also preserves
-// fractional approved bathroom projections,
-// routes approved image-mirror storage keys through the configured media
-// adapter, and keeps missing/invalid public coordinates nullable. Advancing the
-// namespace prevents a cached v5 payload with numeric-zero missing coordinates
-// surviving this correction.
-const CACHE_PREFIX = 'property:search:v8:';
+// SearchCardResult v9 transports governed highlight objects instead of display
+// strings. Advance the namespace so old cards cannot reach the icon-key client.
+const CACHE_PREFIX = 'property:search:v9:';
 
 const propertyOwnerAgencies = alias(agencies, 'property_owner_agencies');
 
@@ -287,7 +282,8 @@ function buildPropertySearchCardResult(property: any): SearchCardResult {
       }
     : undefined;
 
-  const identity = property.publicIdentity ||
+  const identity =
+    property.publicIdentity ||
     (property.listerType === 'private'
       ? {
           role: 'private',
@@ -345,7 +341,10 @@ function buildPropertySearchCardResult(property: any): SearchCardResult {
     identity,
     development,
     developerBrand,
-    highlights: Array.isArray(property.highlights) ? property.highlights : [],
+    highlights: buildManualPropertyCardHighlights({
+      propertyDetails: property.propertySettings,
+      legacyHighlights: property.highlights,
+    }),
     badges: Array.isArray(property.badges) ? property.badges : [],
     imageCount: Array.isArray(property.images) ? property.images.length : 0,
     videoCount: Number(property.videoCount || 0),
@@ -401,9 +400,7 @@ export class PropertySearchService {
     // Public eligibility includes mutable provenance and recipient state. A
     // cached payload could remain visible after archive or reassignment, so
     // P-BUY revalidates on every request. Internal search may still cache.
-    const cached = options.publicOnly
-      ? null
-      : await redisCache.get<SearchResults>(cacheKey);
+    const cached = options.publicOnly ? null : await redisCache.get<SearchResults>(cacheKey);
     if (cached) {
       return {
         ...cached,
@@ -646,10 +643,7 @@ export class PropertySearchService {
       .leftJoin(users, eq(properties.ownerId, users.id))
       .leftJoin(
         propertyOwnerAgencies,
-        and(
-          eq(users.agencyId, propertyOwnerAgencies.id),
-          eq(propertyOwnerAgencies.isVerified, 1),
-        ),
+        and(eq(users.agencyId, propertyOwnerAgencies.id), eq(propertyOwnerAgencies.isVerified, 1)),
       )
       .where(
         and(
@@ -714,10 +708,8 @@ export class PropertySearchService {
         coreInternalArea ||
         asPositiveNumber(prop.internalAreaM2) ||
         asPositiveNumber(prop.floorSize);
-      const erfSize =
-        coreErfArea || asPositiveNumber(prop.erfSizeM2) || asPositiveNumber(prop.erfSize);
-      const landSize =
-        coreLandArea || asPositiveNumber(prop.landAreaM2) || asPositiveNumber(prop.landSize);
+      const erfSize = coreErfArea || asPositiveNumber(prop.erfSizeM2);
+      const landSize = coreLandArea || asPositiveNumber(prop.landAreaM2);
 
       const securityTokens = (
         hasCanonicalStep4
@@ -736,8 +728,14 @@ export class PropertySearchService {
           : (details.internetAvailability ?? details.internetAccess ?? ''),
       ).toLowerCase();
 
-      const explicitSecurityEstate =
-        details.securityEstate === true
+      const explicitSecurityEstate = hasCanonicalStep4
+        ? featuresContext.context.securityProfile === 'security_estate'
+          ? true
+          : featuresContext.context.securityProfile === 'gated_community' ||
+              featuresContext.context.securityProfile === 'standard'
+            ? false
+            : undefined
+        : details.securityEstate === true
           ? true
           : details.securityEstate === false
             ? false
@@ -821,6 +819,15 @@ export class PropertySearchService {
       const publicIdentity = publicResolution?.publicIdentity;
       const storedBadges = Array.isArray(details.badges) ? details.badges : [];
       const publicCoordinates = normalizeCoordinatePair(prop.latitude, prop.longitude);
+      // An approved listing deliberately does not carry a free-text suburb:
+      // its public geography is the typed projection. The search query has
+      // already resolved that canonical suburb name from the projection's
+      // suburbId, so retain it for exact public locations rather than
+      // accidentally repeating the city in the card location.
+      const canonicalPublicSuburb =
+        publicResolution && prop.publicLocationPrecision === 'exact'
+          ? String(rawProperty.suburb || '').trim()
+          : String(prop.suburb || '').trim();
 
       const developmentId = Number(prop.developmentId || 0);
       const developmentName =
@@ -865,7 +872,7 @@ export class PropertySearchService {
         title: prop.title,
         description: prop.description ?? undefined,
         price: prop.price,
-        suburb: prop.suburb || prop.city,
+        suburb: canonicalPublicSuburb || prop.city,
         city: prop.city,
         province: prop.province,
         propertyType: prop.propertyType as Property['propertyType'],
@@ -1447,9 +1454,7 @@ export class PropertySearchService {
                 .select({ count: sql<number>`count(*)` })
                 .from(properties)
                 .leftJoin(developments, eq(properties.developmentId, developments.id))
-                .where(
-                  and(...eligibleBaseNoGeoConditions, eq(properties.suburbId, suburbItem.id)),
-                );
+                .where(and(...eligibleBaseNoGeoConditions, eq(properties.suburbId, suburbItem.id)));
               const count = Number(countResult[0]?.count || 0);
               if (count <= 0) return null;
 

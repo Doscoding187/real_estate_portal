@@ -42,7 +42,7 @@ describe('SidebarFilters count authority', () => {
       />,
     );
 
-    expect(screen.getByText('(12)')).toBeInTheDocument();
+    expect(screen.getByText('12')).toBeInTheDocument();
     expect(screen.queryByText('(0)')).not.toBeInTheDocument();
   });
 
@@ -55,9 +55,9 @@ describe('SidebarFilters count authority', () => {
       />,
     );
 
-    expect(screen.getByLabelText('Minimum budget R 500K')).toHaveTextContent('From R 500K');
-    expect(screen.getByLabelText('Maximum budget R 2M')).toHaveTextContent('Up to R 2M');
-    expect(screen.getByText('Up to R 2M')).toBeInTheDocument();
+    expect(screen.getByLabelText('Minimum budget R 500K')).toHaveTextContent('R 500K');
+    expect(screen.getByLabelText('Maximum budget R 2M')).toHaveTextContent('R 2M');
+    expect(screen.getByText('R 2M')).toBeInTheDocument();
     expect(screen.queryByText('R 2M+')).not.toBeInTheDocument();
   });
 });

@@ -35,10 +35,7 @@ vi.mock('../publicPropertyEligibilityService', () => ({
   resolvePublicPropertyEligibilityIds: mockResolvePublicPropertyEligibilityIds,
 }));
 
-import {
-  buildManualPropertySortOrder,
-  PropertySearchService,
-} from '../propertySearchService';
+import { buildManualPropertySortOrder, PropertySearchService } from '../propertySearchService';
 
 function terminalWhereQuery(rows: unknown[]) {
   const query: any = {};
@@ -140,8 +137,8 @@ describe('manual property Search approved projection authority', () => {
     'suburb_desc',
   ] as const)('adds a stable ascending property-ID tie-breaker for %s', sortOption => {
     const dialect = new MySqlDialect();
-    const order = buildManualPropertySortOrder(sortOption).map(value =>
-      dialect.sqlToQuery(value).sql,
+    const order = buildManualPropertySortOrder(sortOption).map(
+      value => dialect.sqlToQuery(value).sql,
     );
 
     expect(order).toHaveLength(2);
@@ -337,51 +334,83 @@ describe('manual property Search approved projection authority', () => {
     },
   );
 
+  it('derives the security-estate search fact from the canonical context only', async () => {
+    const row = publicCoordinateRow(-26.1076, 28.0567);
+    row.propertySettings = JSON.stringify({
+      featuresContext: {
+        version: 1,
+        spaces: [],
+        context: {
+          setting: 'estate',
+          controlledAccess: 'controlled',
+          securityProfile: 'security_estate',
+        },
+        utilities: {},
+        security: { status: 'known', features: ['guard_24hr'] },
+        highlights: [],
+        customFeatures: [],
+        customHighlights: [],
+      },
+      // A conflicting legacy key must not override canonical public facts.
+      securityEstate: false,
+    });
+    mockSelect
+      .mockReturnValueOnce(terminalWhereQuery([{ count: 1 }]))
+      .mockReturnValueOnce(pagedQuery([row]))
+      .mockReturnValueOnce(orderedQuery([]));
+
+    const result = await new PropertySearchService().searchProperties({}, 'date_desc', 1, 12);
+
+    expect(result.properties[0].securityEstate).toBe(true);
+  });
+
   it('filters public search candidates through the canonical approved-property authority before pagination', async () => {
     mockSelect
       .mockReturnValueOnce(candidateQuery([{ id: 501 }, { id: 502 }]))
-      .mockReturnValueOnce(pagedQuery([
-        {
-          id: 501,
-          title: 'Canonical public result',
-          description: 'Approved projection fixture.',
-          price: 1_000_000,
-          suburb: 'Sandton',
-          address: 'Sandton, Johannesburg',
-          city: 'Johannesburg',
-          province: 'Gauteng',
-          propertyType: 'house',
-          listingType: 'sale',
-          bedrooms: 3,
-          bathrooms: 2,
-          internalAreaM2: 180,
-          erfSizeM2: 420,
-          landAreaM2: null,
-          floorSize: 180,
-          erfSize: 420,
-          landSize: 420,
-          status: 'available',
-          listedDate: new Date('2026-08-10T10:00:00Z'),
-          mainImage: 'https://cdn.example.test/public.jpg',
-          sourceListingId: 9001,
-          ownerId: 100,
-          agentId: 33,
-          propertySettings: '{}',
-          agentDisplayName: 'Jane Agent',
-          agentPhone: '+27110001111',
-          agentWhatsapp: '+27110001111',
-          agentEmail: 'jane@example.test',
-          agencyName: 'Approved Realty',
-          videoCount: 0,
-        },
-      ]))
+      .mockReturnValueOnce(
+        pagedQuery([
+          {
+            id: 501,
+            title: 'Canonical public result',
+            description: 'Approved projection fixture.',
+            price: 1_000_000,
+            suburb: 'Sandton',
+            address: 'Sandton, Johannesburg',
+            city: 'Johannesburg',
+            province: 'Gauteng',
+            propertyType: 'house',
+            listingType: 'sale',
+            bedrooms: 3,
+            bathrooms: 2,
+            internalAreaM2: 180,
+            erfSizeM2: 420,
+            landAreaM2: null,
+            floorSize: 180,
+            erfSize: 420,
+            landSize: 420,
+            status: 'available',
+            listedDate: new Date('2026-08-10T10:00:00Z'),
+            mainImage: 'https://cdn.example.test/public.jpg',
+            sourceListingId: 9001,
+            ownerId: 100,
+            agentId: 33,
+            propertySettings: '{}',
+            agentDisplayName: 'Jane Agent',
+            agentPhone: '+27110001111',
+            agentWhatsapp: '+27110001111',
+            agentEmail: 'jane@example.test',
+            agencyName: 'Approved Realty',
+            videoCount: 0,
+          },
+        ]),
+      )
       .mockReturnValueOnce(orderedQuery([]));
     mockResolvePublicPropertyEligibilities.mockResolvedValue(
       new Map([
         [
           501,
           {
-            property: { id: 501 },
+            property: { id: 501, suburb: undefined, publicLocationPrecision: 'exact' },
             images: [],
             publicIdentity: {
               role: 'agent',
@@ -408,5 +437,55 @@ describe('manual property Search approved projection authority', () => {
     expect(result).toMatchObject({ total: 1, hasMore: false });
     expect(result.properties).toHaveLength(1);
     expect(result.properties[0].id).toBe('501');
+    expect(result.properties[0].suburb).toBe('Sandton');
+  });
+
+  it('does not invent a yard measurement from an apartment internal area', async () => {
+    const apartment = {
+      ...publicCoordinateRow(-26.1076, 28.0567),
+      id: 702,
+      title: 'Apartment without a yard',
+      propertyType: 'apartment',
+      internalAreaM2: 96,
+      floorSize: 96,
+      erfSizeM2: null,
+      landAreaM2: null,
+      // These are the SQL display fallbacks that must never become a yard fact.
+      erfSize: 96,
+      landSize: 96,
+      propertySettings: '{}',
+    };
+    mockSelect
+      .mockReturnValueOnce(candidateQuery([{ id: 702 }]))
+      .mockReturnValueOnce(pagedQuery([apartment]))
+      .mockReturnValueOnce(orderedQuery([]));
+    mockResolvePublicPropertyEligibilities.mockResolvedValue(
+      new Map([
+        [
+          702,
+          {
+            property: { id: 702, suburb: undefined, publicLocationPrecision: 'exact' },
+            images: [],
+            publicIdentity: {
+              role: 'platform',
+              provenance: 'platform_curated',
+              name: 'Property Listify',
+            },
+          },
+        ],
+      ]),
+    );
+
+    const result = await new PropertySearchService().searchProperties(
+      {},
+      'date_desc',
+      1,
+      12,
+      undefined,
+      { publicOnly: true },
+    );
+
+    expect(result.properties[0]).toMatchObject({ internalAreaM2: 96, yardSize: undefined });
+    expect(result.cards[0]).toMatchObject({ area: 96, yardSize: undefined });
   });
 });

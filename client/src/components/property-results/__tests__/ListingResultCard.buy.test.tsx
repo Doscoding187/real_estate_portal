@@ -1,11 +1,7 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import type { ComponentProps } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { ListingResultCard } from '../ListingResultCard';
-
-const testState = vi.hoisted(() => ({
-  modalProps: null as Record<string, unknown> | null,
-}));
 
 vi.mock('wouter', () => ({
   Link: ({ href, children, ...props }: ComponentProps<'a'> & { href: string }) => (
@@ -15,15 +11,8 @@ vi.mock('wouter', () => ({
   ),
 }));
 
-vi.mock('@/components/property/PropertyContactModal', () => ({
-  PropertyContactModal: (props: Record<string, unknown>) => {
-    testState.modalProps = props;
-    return null;
-  },
-}));
-
 describe('ListingResultCard Buy identity', () => {
-  it('uses canonical agency identity and keeps an agency-owned property actionable', () => {
+  it('uses canonical agency identity and routes discovery action to the property', () => {
     const onOpen = vi.fn();
     render(
       <ListingResultCard
@@ -34,11 +23,21 @@ describe('ListingResultCard Buy identity', () => {
           location: 'Parkhurst, Johannesburg',
           price: 4_250_000,
           image: '/home.jpg',
+          area: 150,
+          yardSize: 300,
+          bedrooms: 3,
+          bathrooms: 2,
+          highlights: [
+            {
+              key: 'study_office',
+              label: 'Study / office',
+              iconKey: 'study',
+              source: 'space',
+            },
+          ],
           onOpen,
           listingType: 'sale',
           listingSource: 'manual',
-          cataloguePublisherId: 999,
-          developmentId: 998,
           // Deliberately contradictory legacy hints: canonical identity must win.
           listerType: 'agent',
           contactRole: 'agent',
@@ -54,24 +53,24 @@ describe('ListingResultCard Buy identity', () => {
     );
 
     expect(screen.getByText('Northside Realty')).toBeInTheDocument();
-    expect(screen.queryByText('Listing Agent')).not.toBeInTheDocument();
+    expect(screen.getByText('Listing agency')).toBeInTheDocument();
     expect(screen.queryByText('Private Seller')).not.toBeInTheDocument();
     const propertyLink = screen.getByRole('link', { name: 'View Agency-owned family home' });
     expect(propertyLink).toHaveAttribute('href', '/property/501');
     propertyLink.focus();
     expect(propertyLink).toHaveFocus();
 
-    const contactButton = screen.getByRole('button', { name: 'Contact Agency' });
-    expect(contactButton).toBeEnabled();
-    expect(propertyLink).not.toContainElement(contactButton);
-    fireEvent.click(contactButton);
-    expect(onOpen).not.toHaveBeenCalled();
-    expect(testState.modalProps).toMatchObject({
-      propertyId: 501,
-      cataloguePublisherId: undefined,
-      developmentId: undefined,
-      submitLabel: 'Send enquiry',
+    const viewPropertyLink = screen.getByRole('link', {
+      name: 'View property: Agency-owned family home',
     });
+    expect(viewPropertyLink).toHaveAttribute('href', '/property/501');
+    expect(screen.getByLabelText('Internal area 150 square metres')).toHaveTextContent('150m²');
+    expect(screen.getByText('3 beds')).toBeInTheDocument();
+    expect(screen.getByText('2 baths')).toBeInTheDocument();
+    expect(screen.getByLabelText('Erf or yard area 300 square metres')).toHaveTextContent('300m²');
+    expect(screen.getByText('Study / office')).toBeInTheDocument();
+    expect(screen.getByLabelText('Property highlights').querySelector('svg')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /Contact|WhatsApp/i })).not.toBeInTheDocument();
   });
 
   it('fails closed to property detail instead of inventing a seller for missing identity', () => {
@@ -99,10 +98,8 @@ describe('ListingResultCard Buy identity', () => {
       'href',
       '/property/502',
     );
-    expect(screen.getByRole('link', { name: 'View details' })).toHaveAttribute(
-      'href',
-      '/property/502',
-    );
-    expect(testState.modalProps).toMatchObject({ isOpen: false });
+    expect(
+      screen.getByRole('link', { name: 'View property: Unresolved legacy projection' }),
+    ).toHaveAttribute('href', '/property/502');
   });
 });

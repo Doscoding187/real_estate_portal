@@ -42,4 +42,43 @@ describe('PropertyImageGallery buyer media states', () => {
     fireEvent.click(videoButtons[0]);
     expect(onOpenVideos).toHaveBeenCalledTimes(1);
   });
+
+  it('keeps carousel chevrons hidden until intentional desktop hover or keyboard focus', () => {
+    render(
+      <PropertyImageGallery
+        images={[
+          { id: 1, imageUrl: '/property-1.jpg', isPrimary: 1 },
+          { id: 2, imageUrl: '/property-2.jpg' },
+        ]}
+        propertyTitle="Two-photo property"
+      />,
+    );
+
+    const previous = screen.getByRole('button', { name: 'Previous photo' });
+    const next = screen.getByRole('button', { name: 'Next photo' });
+    expect(previous).toHaveClass('opacity-0', 'pointer-events-none', 'md:group-hover:opacity-100');
+    expect(previous).toHaveClass('md:group-focus-within:opacity-100');
+    expect(next).toHaveClass('opacity-0', 'pointer-events-none', 'md:group-hover:opacity-100');
+    expect(next).toHaveClass('md:group-focus-within:opacity-100');
+  });
+
+  it('grounds an overflow gallery tile in the next available property photo', () => {
+    render(
+      <PropertyImageGallery
+        images={[
+          { id: 1, imageUrl: '/property-1.jpg', isPrimary: 1 },
+          { id: 2, imageUrl: '/property-2.jpg' },
+          { id: 3, imageUrl: '/property-3.jpg' },
+          { id: 4, imageUrl: '/property-4.jpg' },
+          { id: 5, imageUrl: '/property-5.jpg' },
+          { id: 6, imageUrl: '/property-6.jpg' },
+        ]}
+        propertyTitle="Six-photo property"
+      />,
+    );
+
+    const overflowTile = screen.getByRole('button', { name: 'View all 6 photos' });
+    expect(overflowTile.querySelector('img')).toHaveAttribute('src', '/property-6.jpg');
+    expect(overflowTile).toHaveTextContent('+1');
+  });
 });

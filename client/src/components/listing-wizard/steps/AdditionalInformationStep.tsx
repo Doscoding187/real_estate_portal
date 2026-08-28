@@ -26,7 +26,6 @@ import {
   STEP4_HIGHLIGHT_DEFINITIONS,
   STEP4_SECURITY_FEATURE_DEFINITIONS,
 } from '@shared/features-context';
-import { listingActionToIntent } from '@shared/listing-types';
 import type { CorePropertyInformation } from '@shared/core-property-information';
 
 type SelectOption = { value: string; label: string };
@@ -203,6 +202,13 @@ const utilityOptions = {
     { value: 'borehole', label: 'Borehole' },
     { value: 'unknown', label: 'Not sure' },
   ],
+  wastewaterSystem: [
+    { value: 'municipal', label: 'Municipal sewerage' },
+    { value: 'septic_tank', label: 'Septic tank' },
+    { value: 'package_plant', label: 'Package treatment plant' },
+    { value: 'conservancy_tank', label: 'Conservancy tank' },
+    { value: 'unknown', label: 'Not sure' },
+  ],
   waterHeating: [
     { value: 'electric_geyser', label: 'Electric geyser' },
     { value: 'solar_geyser', label: 'Solar geyser' },
@@ -221,7 +227,6 @@ const utilityOptions = {
 export function AdditionalInformationStep() {
   const store = useListingWizardStore();
   const propertyType = store.propertyType;
-  const intent = listingActionToIntent(store.action);
   const additionalInfo = store.additionalInfo || {};
   const propertyDetails = store.propertyDetails || {};
   const context = normalizeFeaturesContext(additionalInfo.featuresContext, additionalInfo);
@@ -229,6 +234,9 @@ export function AdditionalInformationStep() {
     | Partial<CorePropertyInformation>
     | undefined;
   const applicableSpaces = getApplicableStep4Spaces(propertyType, core);
+  const supportsPetPolicy = ['apartment', 'house', 'townhouse', 'cluster_home'].includes(
+    propertyType || '',
+  );
   const [customFeature, setCustomFeature] = React.useState('');
   const [customHighlight, setCustomHighlight] = React.useState('');
   const [customHighlightError, setCustomHighlightError] = React.useState('');
@@ -436,7 +444,7 @@ export function AdditionalInformationStep() {
           title="Property Context"
           description="Describe how the property sits within its immediate setting. These answers do not assume a title or ownership structure."
         />
-        <div className="grid gap-5 md:grid-cols-2">
+        <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
           <fieldset className="space-y-2.5">
             <legend className="text-sm font-medium text-slate-700">Setting</legend>
             <div className="grid gap-2">
@@ -492,14 +500,45 @@ export function AdditionalInformationStep() {
               ))}
             </div>
           </fieldset>
+          <fieldset className="space-y-2.5">
+            <legend className="text-sm font-medium text-slate-700">Security setting</legend>
+            <p className="text-xs leading-5 text-slate-500">
+              Choose the setting directly. Add confirmed details such as a 24-hour guard below.
+            </p>
+            <div className="grid gap-2">
+              {[
+                ['security_estate', 'Security estate'],
+                ['gated_community', 'Gated community'],
+                ['standard', 'Standard security'],
+                ['unknown', 'Not sure'],
+              ].map(([value, label]) => (
+                <ChoiceRadio
+                  key={value}
+                  name="security-profile"
+                  id={`security-profile-${value}`}
+                  label={label}
+                  checked={context.context.securityProfile === value}
+                  onChange={() =>
+                    updateContext(current => ({
+                      ...current,
+                      context: {
+                        ...current.context,
+                        securityProfile: value as FeaturesContext['context']['securityProfile'],
+                      },
+                    }))
+                  }
+                />
+              ))}
+            </div>
+          </fieldset>
         </div>
 
-        {intent === 'rent' && (
+        {supportsPetPolicy && (
           <fieldset className="border-t border-slate-100 pt-5">
             <legend className="mb-2 text-sm font-medium text-slate-700">Pet policy</legend>
             <p className="mb-3 text-xs text-slate-500">
-              This describes the rental policy for the property. It is separate from security and
-              property features.
+              Record the confirmed household, estate or body-corporate policy. It is separate from
+              security and property features.
             </p>
             <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
               {[
@@ -533,7 +572,7 @@ export function AdditionalInformationStep() {
         <SectionHeader
           icon={Zap}
           title="Utilities & Resilience"
-          description="Share practical infrastructure information. Choose Not sure when the answer is not known."
+          description="Share the practical facts buyers repeatedly need. Choose Not sure rather than guessing."
         />
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           <SelectField
@@ -559,6 +598,14 @@ export function AdditionalInformationStep() {
             options={utilityOptions.waterSupply}
             placeholder="Select supply"
             onChange={value => updateUtility('waterSupply', value)}
+          />
+          <SelectField
+            id="wastewater-system"
+            label="Sewerage system"
+            value={context.utilities.wastewaterSystem}
+            options={utilityOptions.wastewaterSystem}
+            placeholder="Select system"
+            onChange={value => updateUtility('wastewaterSystem', value)}
           />
           <SelectField
             id="water-heating"
