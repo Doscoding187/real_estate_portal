@@ -6,12 +6,12 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import type { SortOption } from '@/components/search/ResultsHeader';
+import type { SortOption, ViewMode } from '@/components/search/ResultsHeader';
 
 interface MobileStickyControlsProps {
   onOpenFilters: () => void;
-  currentView: 'list' | 'map' | 'grid';
-  onViewChange: (view: 'list' | 'map' | 'grid') => void;
+  currentView: ViewMode;
+  onViewChange: (view: ViewMode) => void;
   onSortChange?: (sort: SortOption) => void;
   currentSort?: SortOption;
   resultCount?: number;
@@ -46,8 +46,8 @@ export function MobileStickyControls({
 
   return (
     <div
-      className="fixed bottom-3 left-1/2 z-50 flex w-[calc(100%-1.25rem)] max-w-md -translate-x-1/2 items-center justify-between rounded-[22px] border border-slate-200/80 bg-white/95 px-2.5 pt-2.5 shadow-[0_20px_40px_-24px_rgba(15,23,42,0.45)] backdrop-blur-md lg:hidden"
-      style={{ paddingBottom: 'calc(0.6rem + env(safe-area-inset-bottom))' }}
+      className="fixed bottom-3 left-1/2 z-50 flex w-[calc(100%-1.25rem)] max-w-md -translate-x-1/2 items-center justify-between rounded-[20px] border border-slate-200/80 bg-white/95 px-2 py-1 shadow-[0_20px_40px_-24px_rgba(15,23,42,0.45)] backdrop-blur-md lg:hidden"
+      style={{ paddingBottom: 'calc(0.25rem + env(safe-area-inset-bottom))' }}
     >
       <div className="flex min-w-0 items-center gap-2">
         <Button
@@ -61,7 +61,7 @@ export function MobileStickyControls({
         </Button>
 
         {typeof resultCount === 'number' && (
-          <div className="hidden rounded-full bg-slate-100 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-600 min-[390px]:inline-flex">
+          <div className="hidden whitespace-nowrap rounded-full bg-slate-100 px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-600 min-[390px]:inline-flex">
             {resultCount.toLocaleString()} found
           </div>
         )}

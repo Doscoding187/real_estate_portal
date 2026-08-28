@@ -9,7 +9,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { withRentalPeriod } from '@/lib/rentPresentation';
 import type { SearchCardIdentity } from '@shared/types';
-import { AlertCircle, LayoutGrid, List, Loader2, MapPin } from 'lucide-react';
+import { AlertCircle, List, Loader2, MapPin } from 'lucide-react';
 
 const containerStyle = {
   width: '100%',
@@ -49,7 +49,7 @@ interface GooglePropertyMapProps {
   properties: PropertyMarker[];
   onBoundsChange?: (bounds: google.maps.LatLngBounds) => void;
   onPropertySelect?: (propertyId: number) => void;
-  onRecoveryViewChange?: (view: 'list' | 'grid') => void;
+  onRecoveryViewChange?: (view: 'list') => void;
   className?: string;
   minimal?: boolean;
 }
@@ -168,17 +168,13 @@ export function GooglePropertyMap({
         <p className="mt-1 max-w-md text-sm leading-6 text-slate-600">
           {minimal
             ? 'The property location could not be displayed. Please try again later.'
-            : 'Your search results are still available. Continue in List or Grid view while the map reconnects.'}
+            : 'Your search results are still available. Continue in List view while the map reconnects.'}
         </p>
         {!minimal && onRecoveryViewChange ? (
-          <div className="mt-5 flex flex-wrap justify-center gap-2">
-            <Button variant="outline" onClick={() => onRecoveryViewChange('list')}>
+          <div className="mt-5 flex justify-center">
+            <Button onClick={() => onRecoveryViewChange('list')}>
               <List className="mr-2 h-4 w-4" aria-hidden="true" />
               View List
-            </Button>
-            <Button onClick={() => onRecoveryViewChange('grid')}>
-              <LayoutGrid className="mr-2 h-4 w-4" aria-hidden="true" />
-              View Grid
             </Button>
           </div>
         ) : null}

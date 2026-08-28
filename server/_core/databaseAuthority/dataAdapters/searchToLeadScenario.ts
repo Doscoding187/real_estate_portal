@@ -16,10 +16,14 @@ import {
   verifyCanonicalGeographyReferenceData,
   type GeographyReferenceEvidence,
 } from './canonicalGeography';
-import { CANONICAL_DEVELOPER_LAUNCH_ACCESS } from './canonicalCommercial';
+import {
+  CANONICAL_AGENT_LAUNCH_ACCESS,
+  CANONICAL_DEVELOPER_LAUNCH_ACCESS,
+} from './canonicalCommercial';
+import type { RecurringCosts } from '../../../../shared/pricing-contract';
 
-export const SEARCH_TO_LEAD_SCENARIO_VERSION = 'search-to-lead-v1' as const;
-export const SEARCH_TO_LEAD_SCENARIO_CAPTURE_REQUEST_ID = 'dba-search-to-lead-v1-property-enquiry';
+export const SEARCH_TO_LEAD_SCENARIO_VERSION = 'search-to-lead-v2' as const;
+export const SEARCH_TO_LEAD_SCENARIO_CAPTURE_REQUEST_ID = 'dba-search-to-lead-v2-property-enquiry';
 
 function truthfulDirectAcknowledgement(lead: {
   duplicate?: boolean;
@@ -80,11 +84,21 @@ const SCENARIO_IDS = Object.freeze({
   incoherentListing: 991008,
   rentalListing: 991009,
   agentMedia: 992001,
+  agentGalleryArrivalMedia: 992010,
+  agentGalleryLivingMedia: 992011,
+  agentGallerySuiteMedia: 992012,
+  agentGalleryPoolMedia: 992013,
+  agentGalleryStudyMedia: 992014,
   agencyMedia: 992002,
   platformMedia: 992003,
   incoherentMedia: 992008,
   rentalMedia: 992009,
   agentPropertyImage: 993001,
+  agentGalleryArrivalPropertyImage: 993010,
+  agentGalleryLivingPropertyImage: 993011,
+  agentGallerySuitePropertyImage: 993012,
+  agentGalleryPoolPropertyImage: 993013,
+  agentGalleryStudyPropertyImage: 993014,
   agencyPropertyImage: 993002,
   platformPropertyImage: 993003,
   incoherentPropertyImage: 993008,
@@ -106,6 +120,11 @@ const SCENARIO_PAYLOAD = Object.freeze({
   version: SEARCH_TO_LEAD_SCENARIO_VERSION,
   ids: SCENARIO_IDS,
   location: { province: 'gauteng', city: 'johannesburg', suburb: 'sandton' },
+  presentation: {
+    fixtureSet: 'launch-discovery-v1-property-detail-preview-clean-media',
+    mediaAuthority: 'localhost-3009-public-properties',
+    publicAgentAuthority: 'paid-access-and-current-membership',
+  },
   captureRequestId: SEARCH_TO_LEAD_SCENARIO_CAPTURE_REQUEST_ID,
   contact: { email: 'dba-prospect@invalid.example', phone: '+27000000000' },
 });
@@ -155,24 +174,27 @@ export type SearchToLeadScenarioEvidence = AdapterEvidence & {
       durableLeadCount: number;
       acknowledgement: string;
     };
-    scenarios: Record<string, {
-      propertyId: number;
-      cardHref: string;
-      detailIdentity: { role: string; provenance: string; name: string };
-      leadId: number;
-      replayedLeadId: number;
-      duplicateReplay: true;
-      conflictingReplay: 'conflict';
-      durableLeadCount: number;
-      custody: {
-        leadCustody: string;
-        recipientType: string;
-        recipientId: number | null;
-        deliveryStatus: string;
-        deliveryMethod: string;
-      };
-      acknowledgement: string;
-    }>;
+    scenarios: Record<
+      string,
+      {
+        propertyId: number;
+        cardHref: string;
+        detailIdentity: { role: string; provenance: string; name: string };
+        leadId: number;
+        replayedLeadId: number;
+        duplicateReplay: true;
+        conflictingReplay: 'conflict';
+        durableLeadCount: number;
+        custody: {
+          leadCustody: string;
+          recipientType: string;
+          recipientId: number | null;
+          deliveryStatus: string;
+          deliveryMethod: string;
+        };
+        acknowledgement: string;
+      }
+    >;
     discovery: {
       mapRentalExcluded: true;
       comparisonRentalExcluded: true;
@@ -208,7 +230,10 @@ export type SearchToLeadScenarioEvidence = AdapterEvidence & {
         acknowledgement: string;
       };
     };
-    negative: Record<string, { propertyId: number; searchIncluded: false; detail: null; enquiry: 'rejected' }>;
+    negative: Record<
+      string,
+      { propertyId: number; searchIncluded: false; detail: null; enquiry: 'rejected' }
+    >;
     authorization: {
       agent: { ownerVisible: true; unrelatedDenied: true };
       agency: { ownerVisible: true; unrelatedDenied: true };
@@ -286,6 +311,13 @@ async function ensureDeterministicRow(input: {
 
 const FIXTURE_TIMESTAMP = '2026-01-01 00:00:00';
 
+type FixtureGalleryImage = {
+  mediaId: number;
+  propertyImageId: number;
+  imageUrl: string;
+  displayOrder: number;
+};
+
 type ManualFixtureDefinition = {
   propertyId: number;
   listingId: number;
@@ -304,6 +336,16 @@ type ManualFixtureDefinition = {
   cataloguePublisherId: number | null;
   price: number;
   imageUrl: string;
+  bedrooms?: number;
+  bathrooms?: number;
+  internalAreaM2?: number;
+  erfAreaM2?: number;
+  garages?: number;
+  parkingBays?: number;
+  saleRecurringCosts?: RecurringCosts;
+  featuresContext?: Record<string, unknown>;
+  propertyHighlights?: string[];
+  galleryImages?: readonly FixtureGalleryImage[];
   incoherentProjection?: boolean;
 };
 
@@ -313,8 +355,9 @@ const MANUAL_FIXTURES: readonly ManualFixtureDefinition[] = [
     listingId: SCENARIO_IDS.agentListing,
     mediaId: SCENARIO_IDS.agentMedia,
     propertyImageId: SCENARIO_IDS.agentPropertyImage,
-    title: 'DBA Agent Sale Property',
-    description: 'A canonical agent-owned sale fixture with approved source evidence.',
+    title: 'Light-filled family home with garden and solar',
+    description:
+      'A light-filled family home designed for easy living and entertaining, with open-plan spaces flowing to a covered patio, pool and landscaped garden. Practical details include a dedicated study, solar backup, borehole water and secure parking for a calmer everyday rhythm.',
     propertyType: 'house',
     action: 'sell',
     propertyStatus: 'available',
@@ -324,16 +367,96 @@ const MANUAL_FIXTURES: readonly ManualFixtureDefinition[] = [
     agentId: SCENARIO_IDS.agent,
     agencyId: SCENARIO_IDS.agency,
     cataloguePublisherId: null,
-    price: 2200000,
-    imageUrl: 'https://cdn.invalid.example/dba-agent-sale-v1.jpg',
+    price: 3850000,
+    imageUrl: 'http://localhost:3009/properties/property-detail-preview-v1/hero-exterior.webp',
+    bedrooms: 4,
+    bathrooms: 3,
+    internalAreaM2: 238,
+    erfAreaM2: 520,
+    garages: 2,
+    parkingBays: 2,
+    saleRecurringCosts: {
+      ratesAndTaxes: { status: 'known', amount: 2180, cadence: 'monthly' },
+      hoaEstateLevy: { status: 'known', amount: 1850, cadence: 'monthly' },
+    },
+    featuresContext: {
+      version: 1,
+      spaces: [
+        'study_office',
+        'entertainment_area',
+        'scullery',
+        'pantry',
+        'balcony_patio',
+        'garden',
+        'pool',
+        'staff_quarters',
+      ],
+      context: {
+        setting: 'estate',
+        controlledAccess: 'controlled',
+        securityProfile: 'security_estate',
+      },
+      utilities: {
+        electricitySupply: 'municipal',
+        backupPower: 'solar',
+        waterSupply: 'borehole',
+        wastewaterSystem: 'municipal',
+        waterHeating: 'solar_geyser',
+        internetAccess: 'fibre',
+      },
+      security: {
+        status: 'known',
+        features: ['guard_24hr', 'access_control', 'cctv', 'electric_fence'],
+      },
+      petPolicy: 'allowed',
+      highlights: ['high_ceilings', 'modern_finishes', 'natural_light', 'open_plan'],
+      customFeatures: [],
+      customHighlights: [],
+    },
+    propertyHighlights: ['Solar backup', 'Borehole water', 'Study / office', 'Landscaped garden'],
+    galleryImages: [
+      {
+        mediaId: SCENARIO_IDS.agentGalleryArrivalMedia,
+        propertyImageId: SCENARIO_IDS.agentGalleryArrivalPropertyImage,
+        imageUrl:
+          'http://localhost:3009/properties/property-detail-preview-v1/arrival-exterior.webp',
+        displayOrder: 1,
+      },
+      {
+        mediaId: SCENARIO_IDS.agentGalleryLivingMedia,
+        propertyImageId: SCENARIO_IDS.agentGalleryLivingPropertyImage,
+        imageUrl: 'http://localhost:3009/properties/property-detail-preview-v1/living-kitchen.webp',
+        displayOrder: 2,
+      },
+      {
+        mediaId: SCENARIO_IDS.agentGallerySuiteMedia,
+        propertyImageId: SCENARIO_IDS.agentGallerySuitePropertyImage,
+        imageUrl:
+          'http://localhost:3009/properties/property-detail-preview-v1/principal-suite.webp',
+        displayOrder: 3,
+      },
+      {
+        mediaId: SCENARIO_IDS.agentGalleryPoolMedia,
+        propertyImageId: SCENARIO_IDS.agentGalleryPoolPropertyImage,
+        imageUrl: 'http://localhost:3009/properties/property-detail-preview-v1/pool-garden.webp',
+        displayOrder: 4,
+      },
+      {
+        mediaId: SCENARIO_IDS.agentGalleryStudyMedia,
+        propertyImageId: SCENARIO_IDS.agentGalleryStudyPropertyImage,
+        imageUrl: 'http://localhost:3009/properties/property-detail-preview-v1/study.webp',
+        displayOrder: 5,
+      },
+    ],
   },
   {
     propertyId: SCENARIO_IDS.agencyProperty,
     listingId: SCENARIO_IDS.agencyListing,
     mediaId: SCENARIO_IDS.agencyMedia,
     propertyImageId: SCENARIO_IDS.agencyPropertyImage,
-    title: 'DBA Agency-Only Sale Property',
-    description: 'A canonical agency-owned sale fixture without an assigned individual agent.',
+    title: 'Contemporary Sandton home with a private study',
+    description:
+      'A contemporary lock-up-and-go home with considered finishes, controlled access and outdoor living.',
     propertyType: 'house',
     action: 'sell',
     propertyStatus: 'available',
@@ -343,16 +466,33 @@ const MANUAL_FIXTURES: readonly ManualFixtureDefinition[] = [
     agentId: null,
     agencyId: SCENARIO_IDS.agencyOnly,
     cataloguePublisherId: null,
-    price: 2450000,
-    imageUrl: 'https://cdn.invalid.example/dba-agency-sale-v1.jpg',
+    price: 2950000,
+    imageUrl: 'http://localhost:3009/properties/ZcWGSahwTdDK.jpg',
+    bedrooms: 3,
+    bathrooms: 2,
+    internalAreaM2: 168,
+    erfAreaM2: 310,
+    featuresContext: {
+      version: 1,
+      spaces: ['study_office', 'balcony_patio'],
+      context: { setting: 'estate', controlledAccess: 'controlled' },
+      utilities: { backupPower: 'inverter', internetAccess: 'fibre' },
+      security: { status: 'known', features: ['guard_24hr', 'access_control'] },
+      petPolicy: 'allowed_with_permission',
+      highlights: ['modern_finishes'],
+      customFeatures: [],
+      customHighlights: [],
+    },
+    propertyHighlights: ['Private study', '24-hour security', 'Pet friendly'],
   },
   {
     propertyId: SCENARIO_IDS.platformProperty,
     listingId: SCENARIO_IDS.platformListing,
     mediaId: SCENARIO_IDS.platformMedia,
     propertyImageId: SCENARIO_IDS.platformPropertyImage,
-    title: 'DBA Property Listify Curated Sale Property',
-    description: 'A canonical platform-managed sale fixture with explicit platform provenance.',
+    title: 'Modern apartment with balcony and city views',
+    description:
+      'A bright, modern apartment with a generous balcony, fibre connectivity and effortless city access.',
     propertyType: 'apartment',
     action: 'sell',
     propertyStatus: 'available',
@@ -363,7 +503,22 @@ const MANUAL_FIXTURES: readonly ManualFixtureDefinition[] = [
     agencyId: null,
     cataloguePublisherId: SCENARIO_IDS.platformPublisher,
     price: 1850000,
-    imageUrl: 'https://cdn.invalid.example/dba-platform-sale-v1.jpg',
+    imageUrl: 'http://localhost:3009/properties/35t5znQJ1v9V.jpg',
+    bedrooms: 2,
+    bathrooms: 2,
+    internalAreaM2: 96,
+    featuresContext: {
+      version: 1,
+      spaces: ['balcony_patio'],
+      context: { setting: 'complex', controlledAccess: 'controlled' },
+      utilities: { backupPower: 'generator', internetAccess: 'fibre' },
+      security: { status: 'known', features: ['cctv', 'access_control'] },
+      petPolicy: 'allowed_with_permission',
+      highlights: ['natural_light', 'scenic_outlook'],
+      customFeatures: [],
+      customHighlights: [],
+    },
+    propertyHighlights: ['Private balcony', 'Fibre ready', 'Natural light'],
   },
   {
     propertyId: SCENARIO_IDS.unpublishedProperty,
@@ -447,8 +602,8 @@ const MANUAL_FIXTURES: readonly ManualFixtureDefinition[] = [
     listingId: SCENARIO_IDS.rentalListing,
     mediaId: SCENARIO_IDS.rentalMedia,
     propertyImageId: SCENARIO_IDS.rentalPropertyImage,
-    title: 'DBA Rental-Only Property',
-    description: 'A legitimate published rental fixture that must not enter Buy inventory.',
+    title: 'Furnished Sandton apartment with backup power',
+    description: 'A legitimate published rental home with a balcony, fibre and resilient power.',
     propertyType: 'apartment',
     action: 'rent',
     propertyStatus: 'available',
@@ -459,17 +614,43 @@ const MANUAL_FIXTURES: readonly ManualFixtureDefinition[] = [
     agencyId: SCENARIO_IDS.agency,
     cataloguePublisherId: null,
     price: 25000,
-    imageUrl: 'https://cdn.invalid.example/dba-rental-v1.jpg',
+    imageUrl: 'http://localhost:3009/properties/40O7UI0lbxUn.jpg',
+    bedrooms: 2,
+    bathrooms: 2,
+    internalAreaM2: 88,
+    featuresContext: {
+      version: 1,
+      spaces: ['balcony_patio'],
+      context: { setting: 'complex', controlledAccess: 'controlled' },
+      utilities: { backupPower: 'inverter', internetAccess: 'fibre' },
+      security: { status: 'known', features: ['access_control'] },
+      petPolicy: 'allowed_with_permission',
+      highlights: ['modern_finishes', 'natural_light'],
+      customFeatures: [],
+      customHighlights: [],
+    },
+    propertyHighlights: ['Inverter backup', 'Private balcony', 'Fibre ready'],
   },
 ];
 
 function sourceDetailsForFixture(fixture: ManualFixtureDefinition): Record<string, unknown> {
+  const bedrooms = fixture.bedrooms ?? (fixture.propertyType === 'apartment' ? 2 : 3);
+  const bathrooms = fixture.bathrooms ?? 2;
+  const internalAreaM2 =
+    fixture.internalAreaM2 ?? (fixture.propertyType === 'apartment' ? 90 : 150);
+  const erfAreaM2 = fixture.erfAreaM2 ?? (fixture.propertyType === 'apartment' ? undefined : 300);
   const common = {
-    bedrooms: fixture.propertyType === 'apartment' ? 2 : 3,
-    bathrooms: 2,
-    internalAreaM2: fixture.propertyType === 'apartment' ? 90 : 150,
-    erfAreaM2: fixture.propertyType === 'apartment' ? undefined : 300,
-    propertyHighlights: ['Canonical source-backed fixture', 'Published public facts'],
+    bedrooms,
+    bathrooms,
+    internalAreaM2,
+    erfAreaM2,
+    ...(fixture.garages !== undefined ? { garages: fixture.garages } : {}),
+    ...(fixture.parkingBays !== undefined ? { parkingBays: fixture.parkingBays } : {}),
+    featuresContext: fixture.featuresContext,
+    propertyHighlights: fixture.propertyHighlights ?? [
+      'Canonical source-backed fixture',
+      'Published public facts',
+    ],
   };
   return {
     ...common,
@@ -480,7 +661,7 @@ function sourceDetailsForFixture(fixture: ManualFixtureDefinition): Record<strin
             intent: 'sale',
             askingPrice: fixture.price,
             negotiability: 'not_negotiable',
-            recurringCosts: {},
+            recurringCosts: fixture.saleRecurringCosts || {},
           }
         : {
             version: 1,
@@ -489,6 +670,223 @@ function sourceDetailsForFixture(fixture: ManualFixtureDefinition): Record<strin
             deposit: { status: 'unknown' },
           },
   };
+}
+
+/**
+ * This adapter owns its deterministic source and public-projection fixture
+ * snapshots. Keeping those two JSON documents equal is deliberate scenario
+ * maintenance, not a runtime fallback or a schema-compatibility write.
+ */
+async function synchronizeOwnedFixtureSourceSnapshot(
+  connection: AuthoritySqlConnection,
+  fixture: ManualFixtureDefinition,
+  sourceJson: string,
+): Promise<void> {
+  const listingRows = await queryRows(
+    connection,
+    'SELECT propertyDetails, description FROM listings WHERE id = ?',
+    [fixture.listingId],
+  );
+  if (listingRows.length !== 1) {
+    throw new Error(
+      `Search-to-Lead scenario listing ${fixture.listingId} is missing its source snapshot.`,
+    );
+  }
+  if (
+    comparable(rowValue(listingRows[0], 'propertyDetails')) !== sourceJson ||
+    comparable(rowValue(listingRows[0], 'description')) !== fixture.description
+  ) {
+    await connection.execute(
+      'UPDATE listings SET propertyDetails = ?, description = ?, updatedAt = ? WHERE id = ?',
+      [sourceJson, fixture.description, FIXTURE_TIMESTAMP, fixture.listingId],
+    );
+  }
+
+  const propertyRows = await queryRows(
+    connection,
+    'SELECT propertySettings, description FROM properties WHERE id = ?',
+    [fixture.propertyId],
+  );
+  if (propertyRows.length !== 1) {
+    throw new Error(
+      `Search-to-Lead scenario property ${fixture.propertyId} is missing its public snapshot.`,
+    );
+  }
+  if (
+    comparable(rowValue(propertyRows[0], 'propertySettings')) !== sourceJson ||
+    comparable(rowValue(propertyRows[0], 'description')) !== fixture.description
+  ) {
+    await connection.execute(
+      'UPDATE properties SET propertySettings = ?, description = ?, updatedAt = ? WHERE id = ?',
+      [sourceJson, fixture.description, FIXTURE_TIMESTAMP, fixture.propertyId],
+    );
+  }
+}
+
+/** The public WhatsApp action is rendered only for this owned local fixture. */
+async function synchronizeOwnedPreviewAgentContact(
+  connection: AuthoritySqlConnection,
+): Promise<void> {
+  const rows = await queryRows(connection, 'SELECT phone, whatsapp FROM agents WHERE id = ?', [
+    SCENARIO_IDS.agent,
+  ]);
+  if (rows.length !== 1)
+    throw new Error('Search-to-Lead scenario agent is missing its public contact fixture.');
+
+  const phone = '+27000000000';
+  if (
+    comparable(rowValue(rows[0], 'phone')) !== phone ||
+    comparable(rowValue(rows[0], 'whatsapp')) !== phone
+  ) {
+    await connection.execute('UPDATE agents SET phone = ?, whatsapp = ? WHERE id = ?', [
+      phone,
+      phone,
+      SCENARIO_IDS.agent,
+    ]);
+  }
+}
+
+type OwnedFixtureMediaSnapshot = {
+  mediaId: number;
+  propertyImageId: number;
+  imageUrl: string;
+  displayOrder: number;
+  isPrimary: 0 | 1;
+};
+
+const ownedFixtureMediaSnapshots = (
+  fixture: ManualFixtureDefinition,
+): OwnedFixtureMediaSnapshot[] => [
+  {
+    mediaId: fixture.mediaId,
+    propertyImageId: fixture.propertyImageId,
+    imageUrl: fixture.imageUrl,
+    displayOrder: 0,
+    isPrimary: 1,
+  },
+  ...(fixture.galleryImages || []).map(image => ({
+    mediaId: image.mediaId,
+    propertyImageId: image.propertyImageId,
+    imageUrl: image.imageUrl,
+    displayOrder: image.displayOrder,
+    isPrimary: 0 as const,
+  })),
+];
+
+/**
+ * The scenario owns these exact media IDs, their source listing and their
+ * public projection. This is a bounded fixture refresh for local acceptance
+ * data, never a runtime alternate-media fallback.
+ */
+async function synchronizeOwnedFixtureMediaSnapshot(
+  connection: AuthoritySqlConnection,
+  fixture: ManualFixtureDefinition,
+): Promise<void> {
+  for (const snapshot of ownedFixtureMediaSnapshots(fixture)) {
+    const mediaRows = await queryRows(
+      connection,
+      `SELECT listingId, originalUrl, processedUrl, thumbnailUrl, previewUrl,
+              width, height, mimeType, displayOrder, isPrimary, processingStatus
+         FROM listing_media
+        WHERE id = ?`,
+      [snapshot.mediaId],
+    );
+    if (mediaRows.length > 1) {
+      throw new Error(`Search-to-Lead scenario has duplicate media ID ${snapshot.mediaId}.`);
+    }
+    if (mediaRows.length === 1) {
+      const row = mediaRows[0];
+      if (Number(rowValue(row, 'listingId')) !== fixture.listingId) {
+        throw new Error(
+          `Search-to-Lead scenario media ${snapshot.mediaId} is not owned by listing ${fixture.listingId}.`,
+        );
+      }
+      const hasDrift =
+        comparable(rowValue(row, 'originalUrl')) !== snapshot.imageUrl ||
+        comparable(rowValue(row, 'processedUrl')) !== snapshot.imageUrl ||
+        comparable(rowValue(row, 'thumbnailUrl')) !== snapshot.imageUrl ||
+        comparable(rowValue(row, 'previewUrl')) !== snapshot.imageUrl ||
+        Number(rowValue(row, 'width')) !== 1440 ||
+        Number(rowValue(row, 'height')) !== 960 ||
+        rowValue(row, 'mimeType') !== 'image/webp' ||
+        Number(rowValue(row, 'displayOrder')) !== snapshot.displayOrder ||
+        Number(rowValue(row, 'isPrimary')) !== snapshot.isPrimary ||
+        rowValue(row, 'processingStatus') !== 'completed';
+      if (hasDrift) {
+        await connection.execute(
+          `UPDATE listing_media
+              SET originalUrl = ?, processedUrl = ?, thumbnailUrl = ?, previewUrl = ?,
+                  width = ?, height = ?, mimeType = ?, displayOrder = ?, isPrimary = ?, processingStatus = ?
+            WHERE id = ? AND listingId = ?`,
+          [
+            snapshot.imageUrl,
+            snapshot.imageUrl,
+            snapshot.imageUrl,
+            snapshot.imageUrl,
+            1440,
+            960,
+            'image/webp',
+            snapshot.displayOrder,
+            snapshot.isPrimary,
+            'completed',
+            snapshot.mediaId,
+            fixture.listingId,
+          ],
+        );
+      }
+    }
+
+    const imageRows = await queryRows(
+      connection,
+      'SELECT propertyId, imageUrl, isPrimary, displayOrder FROM propertyImages WHERE id = ?',
+      [snapshot.propertyImageId],
+    );
+    if (imageRows.length > 1) {
+      throw new Error(
+        `Search-to-Lead scenario has duplicate property image ID ${snapshot.propertyImageId}.`,
+      );
+    }
+    if (imageRows.length === 1) {
+      const row = imageRows[0];
+      if (Number(rowValue(row, 'propertyId')) !== fixture.propertyId) {
+        throw new Error(
+          `Search-to-Lead scenario property image ${snapshot.propertyImageId} is not owned by property ${fixture.propertyId}.`,
+        );
+      }
+      if (
+        rowValue(row, 'imageUrl') !== snapshot.imageUrl ||
+        Number(rowValue(row, 'isPrimary')) !== snapshot.isPrimary ||
+        Number(rowValue(row, 'displayOrder')) !== snapshot.displayOrder
+      ) {
+        await connection.execute(
+          'UPDATE propertyImages SET imageUrl = ?, isPrimary = ?, displayOrder = ? WHERE id = ? AND propertyId = ?',
+          [
+            snapshot.imageUrl,
+            snapshot.isPrimary,
+            snapshot.displayOrder,
+            snapshot.propertyImageId,
+            fixture.propertyId,
+          ],
+        );
+      }
+    }
+  }
+
+  const propertyRows = await queryRows(
+    connection,
+    'SELECT mainImage FROM properties WHERE id = ?',
+    [fixture.propertyId],
+  );
+  if (propertyRows.length > 1) {
+    throw new Error(`Search-to-Lead scenario has duplicate property ID ${fixture.propertyId}.`);
+  }
+  if (propertyRows.length === 1 && rowValue(propertyRows[0], 'mainImage') !== fixture.imageUrl) {
+    await connection.execute('UPDATE properties SET mainImage = ?, updatedAt = ? WHERE id = ?', [
+      fixture.imageUrl,
+      FIXTURE_TIMESTAMP,
+      fixture.propertyId,
+    ]);
+  }
 }
 
 async function ensureCanonicalManualFixture(
@@ -500,6 +898,7 @@ async function ensureCanonicalManualFixture(
 ): Promise<void> {
   const sourceDetails = sourceDetailsForFixture(fixture);
   const sourceJson = JSON.stringify(sourceDetails);
+  await synchronizeOwnedFixtureMediaSnapshot(connection, fixture);
   const projectionTitle = fixture.incoherentProjection
     ? `${fixture.title} (stale projection)`
     : fixture.title;
@@ -672,9 +1071,9 @@ async function ensureCanonicalManualFixture(
       fixture.imageUrl,
       fixture.imageUrl,
       fixture.imageUrl,
-      1600,
-      1000,
-      'image/jpeg',
+      1440,
+      960,
+      'image/webp',
       0,
       1,
       'completed',
@@ -757,9 +1156,9 @@ async function ensureCanonicalManualFixture(
       fixture.action === 'sell' ? 'sale' : 'rent',
       fixture.action === 'sell' ? 'sale' : 'rent',
       fixture.price,
-      fixture.propertyType === 'apartment' ? 2 : 3,
-      2,
-      fixture.propertyType === 'apartment' ? 90 : 150,
+      fixture.bedrooms ?? (fixture.propertyType === 'apartment' ? 2 : 3),
+      fixture.bathrooms ?? 2,
+      fixture.internalAreaM2 ?? (fixture.propertyType === 'apartment' ? 90 : 150),
       '1 DBA Verification Street',
       'Johannesburg',
       'Gauteng',
@@ -777,8 +1176,12 @@ async function ensureCanonicalManualFixture(
       fixture.imageUrl,
       FIXTURE_TIMESTAMP,
       FIXTURE_TIMESTAMP,
-      fixture.propertyType === 'apartment' ? '90.00' : '150.00',
-      fixture.propertyType === 'apartment' ? null : '300.00',
+      String(fixture.internalAreaM2 ?? (fixture.propertyType === 'apartment' ? 90 : 150)),
+      fixture.erfAreaM2 !== undefined
+        ? String(fixture.erfAreaM2)
+        : fixture.propertyType === 'apartment'
+          ? null
+          : '300',
       'Sandton, Johannesburg',
       '-26.1076',
       '28.0567',
@@ -808,6 +1211,95 @@ async function ensureCanonicalManualFixture(
       FIXTURE_TIMESTAMP,
     ],
   });
+
+  await synchronizeOwnedFixtureSourceSnapshot(connection, fixture, sourceJson);
+
+  for (const galleryImage of fixture.galleryImages || []) {
+    await ensureDeterministicRow({
+      connection,
+      table: 'listing_media',
+      id: galleryImage.mediaId,
+      columns: [
+        'id',
+        'listingId',
+        'mediaType',
+        'originalUrl',
+        'processedUrl',
+        'thumbnailUrl',
+        'previewUrl',
+        'displayOrder',
+        'isPrimary',
+        'processingStatus',
+      ],
+      expected: {
+        listingId: fixture.listingId,
+        mediaType: 'image',
+        originalUrl: galleryImage.imageUrl,
+        processedUrl: galleryImage.imageUrl,
+        displayOrder: galleryImage.displayOrder,
+        isPrimary: 0,
+        processingStatus: 'completed',
+      },
+      insertColumns: [
+        'id',
+        'listingId',
+        'mediaType',
+        'originalUrl',
+        'processedUrl',
+        'thumbnailUrl',
+        'previewUrl',
+        'width',
+        'height',
+        'mimeType',
+        'displayOrder',
+        'isPrimary',
+        'processingStatus',
+        'createdAt',
+        'uploadedAt',
+        'processedAt',
+      ],
+      insertValues: [
+        galleryImage.mediaId,
+        fixture.listingId,
+        'image',
+        galleryImage.imageUrl,
+        galleryImage.imageUrl,
+        galleryImage.imageUrl,
+        galleryImage.imageUrl,
+        1440,
+        960,
+        'image/webp',
+        galleryImage.displayOrder,
+        0,
+        'completed',
+        FIXTURE_TIMESTAMP,
+        FIXTURE_TIMESTAMP,
+        FIXTURE_TIMESTAMP,
+      ],
+    });
+
+    await ensureDeterministicRow({
+      connection,
+      table: 'propertyImages',
+      id: galleryImage.propertyImageId,
+      columns: ['id', 'propertyId', 'imageUrl', 'isPrimary', 'displayOrder'],
+      expected: {
+        propertyId: fixture.propertyId,
+        imageUrl: galleryImage.imageUrl,
+        isPrimary: 0,
+        displayOrder: galleryImage.displayOrder,
+      },
+      insertColumns: ['id', 'propertyId', 'imageUrl', 'isPrimary', 'displayOrder', 'createdAt'],
+      insertValues: [
+        galleryImage.propertyImageId,
+        fixture.propertyId,
+        galleryImage.imageUrl,
+        0,
+        galleryImage.displayOrder,
+        FIXTURE_TIMESTAMP,
+      ],
+    });
+  }
 }
 
 async function ensureOrphanProjection(
@@ -982,15 +1474,7 @@ async function prepareScenarioRows(
       // settled state keeps repeated prepare runs idempotent.
       agencyId: SCENARIO_IDS.agency,
     },
-    insertColumns: [
-      'id',
-      'email',
-      'name',
-      'firstName',
-      'lastName',
-      'role',
-      'emailVerified',
-    ],
+    insertColumns: ['id', 'email', 'name', 'firstName', 'lastName', 'role', 'emailVerified'],
     insertValues: [
       SCENARIO_IDS.agentUser,
       'dba-agent@invalid.example',
@@ -1008,13 +1492,13 @@ async function prepareScenarioRows(
     columns: ['id', 'slug', 'name', 'isVerified'],
     expected: {
       slug: 'dba-verification-agency-v1',
-      name: 'DBA Verification Agency',
+      name: 'Northpoint Realty',
       isVerified: 1,
     },
     insertColumns: ['id', 'name', 'slug', 'email', 'isVerified'],
     insertValues: [
       SCENARIO_IDS.agency,
-      'DBA Verification Agency',
+      'Northpoint Realty',
       'dba-verification-agency-v1',
       'dba-agency@invalid.example',
       1,
@@ -1023,7 +1507,7 @@ async function prepareScenarioRows(
   for (const agency of [
     {
       id: SCENARIO_IDS.agencyOnly,
-      name: 'DBA Agency-Only Operations',
+      name: 'Urban Nest Properties',
       slug: 'dba-verification-agency-only-v1',
       email: 'dba-agency-only@invalid.example',
     },
@@ -1147,9 +1631,9 @@ async function prepareScenarioRows(
       SCENARIO_IDS.agent,
       SCENARIO_IDS.agentUser,
       SCENARIO_IDS.agency,
-      'DBA',
-      'Agent',
-      'DBA Verification Agent',
+      'Lerato',
+      'Mokoena',
+      'Lerato Mokoena',
       'dba-verification-agent-v1',
       'dba-agent@invalid.example',
       'agent',
@@ -1158,6 +1642,8 @@ async function prepareScenarioRows(
       'approved',
     ],
   });
+  await synchronizeOwnedPreviewAgentContact(connection);
+
   // Canonical membership currency: public enquiry custody only treats an
   // agency-affiliated agent as an eligible active recipient while a current
   // agency_agent_memberships row exists. The acceptance fixture therefore
@@ -1441,6 +1927,7 @@ async function prepareScenarioRows(
       1,
     ],
   });
+  await ensureAgentLaunchAccess(connection);
   await ensureDeveloperLaunchAccess(connection);
   await ensureDeterministicRow({
     connection,
@@ -1559,6 +2046,69 @@ async function prepareScenarioRows(
     ],
   });
   await ensureManualPublicFixtures(connection, provinceId, cityId, suburbId);
+}
+
+async function ensureAgentLaunchAccess(connection: AuthoritySqlConnection): Promise<void> {
+  const planRows = await queryRows(
+    connection,
+    'SELECT id FROM plans WHERE name = ? AND segment = ?',
+    [CANONICAL_AGENT_LAUNCH_ACCESS.name, CANONICAL_AGENT_LAUNCH_ACCESS.segment],
+  );
+  if (planRows.length !== 1) {
+    throw new Error('Search-to-Lead scenario requires the canonical agent Launch Access plan.');
+  }
+  const planId = asId({ id: rowValue(planRows[0], 'id') }, 'agent Launch Access plan');
+  const subscriptionRows = await queryRows(
+    connection,
+    `SELECT id, plan_id, status, current_period_end
+       FROM subscriptions
+      WHERE owner_type = 'agent' AND owner_id = ?
+      ORDER BY id`,
+    [SCENARIO_IDS.agentUser],
+  );
+  if (subscriptionRows.length > 1) {
+    throw new Error('Search-to-Lead scenario found duplicate agent Launch Access subscriptions.');
+  }
+  if (subscriptionRows.length === 1) {
+    const row = subscriptionRows[0];
+    const expiresAt = new Date(String(rowValue(row, 'current_period_end') || '')).getTime();
+    if (
+      Number(rowValue(row, 'plan_id')) !== planId ||
+      rowValue(row, 'status') !== 'active' ||
+      !Number.isFinite(expiresAt) ||
+      expiresAt <= Date.now()
+    ) {
+      throw new Error('Search-to-Lead scenario agent Launch Access is not currently eligible.');
+    }
+    return;
+  }
+  await connection.execute(
+    `INSERT INTO subscriptions
+      (owner_type, owner_id, plan_id, status, trial_ends_at,
+       current_period_start, current_period_end, grace_ends_at,
+       cancel_at_period_end, billing_cycle_anchor, metadata, created_by, updated_by)
+     VALUES ('agent', ?, ?, 'active', NULL, CURRENT_TIMESTAMP,
+             DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 90 DAY), NULL, 0,
+             DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 90 DAY), CAST(? AS JSON), ?, ?)`,
+    [
+      SCENARIO_IDS.agentUser,
+      planId,
+      JSON.stringify({
+        fixture: SEARCH_TO_LEAD_SCENARIO_VERSION,
+        commercial_product_key: CANONICAL_AGENT_LAUNCH_ACCESS.name,
+        commercial_term_kind: 'paid_launch_access',
+        commercial_access_activated: true,
+        commercial_requires_verified_payment: true,
+        commercial_auto_renews: false,
+        billing_provider: 'manual_eft',
+        verified_invoice_id: SCENARIO_IDS.agentProperty,
+        verified_payment_id: SCENARIO_IDS.agentProperty,
+        verified_payment_amount_minor: CANONICAL_AGENT_LAUNCH_ACCESS.price,
+      }),
+      SCENARIO_IDS.agentUser,
+      SCENARIO_IDS.agentUser,
+    ],
+  );
 }
 
 async function ensureDeveloperLaunchAccess(connection: AuthoritySqlConnection): Promise<void> {
@@ -1683,7 +2233,9 @@ export async function verifySearchToLeadScenarioData(
               : SCENARIO_IDS.platformListing,
         )
     ) {
-      throw new Error('Search-to-Lead scenario property is not linked to its canonical source listing.');
+      throw new Error(
+        'Search-to-Lead scenario property is not linked to its canonical source listing.',
+      );
     }
     if (
       Number(rowValue(row, 'province_id')) <= 0 ||
@@ -1719,7 +2271,9 @@ export async function verifySearchToLeadScenarioData(
         rowValue(row, 'source_agency_id') != null ||
         Number(rowValue(row, 'catalogue_publisher_id')) !== SCENARIO_IDS.platformPublisher)
     ) {
-      throw new Error('Search-to-Lead scenario platform fixture has non-platform ownership claims.');
+      throw new Error(
+        'Search-to-Lead scenario platform fixture has non-platform ownership claims.',
+      );
     }
   }
   const excludedRows = await queryRows(
@@ -1733,15 +2287,21 @@ export async function verifySearchToLeadScenarioData(
     excludedPropertyIds,
   );
   if (excludedRows.length !== excludedPropertyIds.length) {
-    throw new Error('Search-to-Lead scenario is missing one or more fail-closed inventory fixtures.');
+    throw new Error(
+      'Search-to-Lead scenario is missing one or more fail-closed inventory fixtures.',
+    );
   }
-  const rentalRow = excludedRows.find(row => Number(rowValue(row, 'id')) === SCENARIO_IDS.rentalProperty);
+  const rentalRow = excludedRows.find(
+    row => Number(rowValue(row, 'id')) === SCENARIO_IDS.rentalProperty,
+  );
   if (
     !rentalRow ||
     rowValue(rentalRow, 'listing_type') !== 'rent' ||
     rowValue(rentalRow, 'source_action') !== 'rent'
   ) {
-    throw new Error('Search-to-Lead scenario rental exclusion is not a rental-only source fixture.');
+    throw new Error(
+      'Search-to-Lead scenario rental exclusion is not a rental-only source fixture.',
+    );
   }
   const developmentRows = await queryRows(
     connection,
@@ -1766,6 +2326,67 @@ export async function verifySearchToLeadScenarioData(
     row => Number(rowValue(row, 'id')) === SCENARIO_IDS.agentProperty,
   );
   if (!property) throw new Error('Search-to-Lead scenario is missing its agent-owned property.');
+
+  const agentFixture = MANUAL_FIXTURES.find(
+    fixture => fixture.propertyId === SCENARIO_IDS.agentProperty,
+  );
+  if (!agentFixture)
+    throw new Error('Search-to-Lead scenario is missing its property-detail fixture.');
+  const expectedGallery = [
+    {
+      id: agentFixture.propertyImageId,
+      imageUrl: agentFixture.imageUrl,
+      isPrimary: 1,
+      displayOrder: 0,
+    },
+    ...(agentFixture.galleryImages || []).map(image => ({
+      id: image.propertyImageId,
+      imageUrl: image.imageUrl,
+      isPrimary: 0,
+      displayOrder: image.displayOrder,
+    })),
+  ];
+  const galleryRows = await queryRows(
+    connection,
+    `SELECT id, imageUrl AS image_url, isPrimary AS is_primary, displayOrder AS display_order
+       FROM propertyImages
+      WHERE propertyId = ?
+      ORDER BY displayOrder ASC, id ASC`,
+    [SCENARIO_IDS.agentProperty],
+  );
+  if (galleryRows.length !== expectedGallery.length) {
+    throw new Error(
+      'Search-to-Lead scenario property-detail gallery has an unexpected image count.',
+    );
+  }
+  for (let index = 0; index < expectedGallery.length; index += 1) {
+    const row = galleryRows[index];
+    const expected = expectedGallery[index];
+    if (
+      Number(rowValue(row, 'id')) !== expected.id ||
+      rowValue(row, 'image_url') !== expected.imageUrl ||
+      Number(rowValue(row, 'is_primary')) !== expected.isPrimary ||
+      Number(rowValue(row, 'display_order')) !== expected.displayOrder
+    ) {
+      throw new Error(
+        'Search-to-Lead scenario property-detail gallery drifted from its approved fixture.',
+      );
+    }
+  }
+
+  const contactRows = await queryRows(
+    connection,
+    'SELECT phone, whatsapp FROM agents WHERE id = ?',
+    [SCENARIO_IDS.agent],
+  );
+  if (
+    contactRows.length !== 1 ||
+    rowValue(contactRows[0], 'phone') !== '+27000000000' ||
+    rowValue(contactRows[0], 'whatsapp') !== '+27000000000'
+  ) {
+    throw new Error('Search-to-Lead scenario property-detail contact fixture is incomplete.');
+  }
+
   if (
     Number(rowValue(property, 'province_id')) <= 0 ||
     Number(rowValue(property, 'city_id')) <= 0 ||
@@ -1893,7 +2514,7 @@ async function runContainedApplicationVerification(
         req: { headers: {}, ip: '127.0.0.1' },
         res: {},
         user,
-        requestId: 'dba-search-to-lead-v1',
+        requestId: 'dba-search-to-lead-v2',
       } as any);
 
     const search = await publicSearchService.searchInventory({
@@ -1919,12 +2540,12 @@ async function runContainedApplicationVerification(
       );
     }
     if (search.total !== 4 || search.hasMore) {
-      throw new Error('Search-to-Lead scenario total/pagination disagrees with eligible inventory.');
+      throw new Error(
+        'Search-to-Lead scenario total/pagination disagrees with eligible inventory.',
+      );
     }
     const propertyCards = new Map(
-      search.cards
-        .filter(card => card.kind === 'property')
-        .map(card => [card.href, card]),
+      search.cards.filter(card => card.kind === 'property').map(card => [card.href, card]),
     );
     for (const propertyId of expected.propertyIds) {
       if (!propertyCards.has(`/property/${propertyId}`)) {
@@ -1948,11 +2569,11 @@ async function runContainedApplicationVerification(
     ];
     const scenarioNames = ['agent', 'agency_only', 'platform'] as const;
     const expectedIdentity = {
-      agent: { role: 'agent', provenance: 'agent', name: 'DBA Verification Agent' },
+      agent: { role: 'agent', provenance: 'agent', name: 'Lerato Mokoena' },
       agency_only: {
         role: 'agency',
         provenance: 'agency',
-        name: 'DBA Agency-Only Operations',
+        name: 'Urban Nest Properties',
       },
       platform: { role: 'platform', provenance: 'platform_curated', name: 'Property Listify' },
     } as const;
@@ -1980,7 +2601,7 @@ async function runContainedApplicationVerification(
       const captureRequestId =
         scenarioName === 'agent'
           ? SEARCH_TO_LEAD_SCENARIO_CAPTURE_REQUEST_ID
-          : `dba-search-to-lead-v1-${scenarioName}-enquiry`;
+          : `dba-search-to-lead-v2-${scenarioName}-enquiry`;
       const baseInput = {
         propertyId,
         name: `Database Authority ${scenarioName} Prospect`,
@@ -1991,7 +2612,11 @@ async function runContainedApplicationVerification(
         sourceSurface: 'property_detail',
         leadSource: 'property_detail',
         captureRequestId,
-        consent: { accepted: true as const, version: 'dba-search-to-lead-v1', source: 'local-test' },
+        consent: {
+          accepted: true as const,
+          version: 'dba-search-to-lead-v2',
+          source: 'local-test',
+        },
       };
       const lead = await capturePublicLead(baseInput);
       const replay = await capturePublicLead(baseInput);
@@ -2000,15 +2625,21 @@ async function runContainedApplicationVerification(
       }
       let conflictingReplay: 'conflict' | undefined;
       try {
-        await capturePublicLead({ ...baseInput, message: `${baseInput.message} conflicting replay` });
+        await capturePublicLead({
+          ...baseInput,
+          message: `${baseInput.message} conflicting replay`,
+        });
       } catch (error) {
         if ((error as { code?: unknown })?.code === 'CONFLICT') conflictingReplay = 'conflict';
       }
       if (conflictingReplay !== 'conflict') {
-        throw new Error(`Search-to-Lead scenario accepted a conflicting replay for ${scenarioName}.`);
+        throw new Error(
+          `Search-to-Lead scenario accepted a conflicting replay for ${scenarioName}.`,
+        );
       }
       const database = await getDb();
-      if (!database) throw new Error('Search-to-Lead scenario database disappeared during acceptance.');
+      if (!database)
+        throw new Error('Search-to-Lead scenario database disappeared during acceptance.');
       const durableRows = await database
         .select({
           id: leads.id,
@@ -2023,7 +2654,9 @@ async function runContainedApplicationVerification(
         .from(leads)
         .where(eq(leads.captureRequestId, captureRequestId));
       if (durableRows.length !== 1 || Number(durableRows[0]?.id) !== lead.leadId) {
-        throw new Error(`Search-to-Lead scenario did not prove one durable lead for ${scenarioName}.`);
+        throw new Error(
+          `Search-to-Lead scenario did not prove one durable lead for ${scenarioName}.`,
+        );
       }
       if (scenarioName === 'agent') agentLeadId = lead.leadId;
       if (scenarioName === 'agency_only') agencyLeadId = lead.leadId;
@@ -2065,7 +2698,9 @@ async function runContainedApplicationVerification(
         lead.deliveryMethod !== 'crm_export' ||
         !truthfulDirectAcknowledgement(lead)
       ) {
-        throw new Error(`Search-to-Lead scenario direct acknowledgement is not truthful for ${scenarioName}.`);
+        throw new Error(
+          `Search-to-Lead scenario direct acknowledgement is not truthful for ${scenarioName}.`,
+        );
       }
     }
 
@@ -2089,8 +2724,8 @@ async function runContainedApplicationVerification(
       source: 'development_detail',
       sourceSurface: 'development_detail',
       leadSource: 'development_detail',
-      captureRequestId: 'dba-search-to-lead-v1-development-enquiry',
-      consent: { accepted: true as const, version: 'dba-search-to-lead-v1', source: 'local-test' },
+      captureRequestId: 'dba-search-to-lead-v2-development-enquiry',
+      consent: { accepted: true as const, version: 'dba-search-to-lead-v2', source: 'local-test' },
     };
     const developmentLead = await capturePublicLead(developmentLeadInput);
     const developmentReplay = await capturePublicLead(developmentLeadInput);
@@ -2112,7 +2747,8 @@ async function runContainedApplicationVerification(
       throw new Error('Search-to-Lead scenario accepted a conflicting developer replay.');
     }
     const database = await getDb();
-    if (!database) throw new Error('Search-to-Lead scenario database disappeared during developer acceptance.');
+    if (!database)
+      throw new Error('Search-to-Lead scenario database disappeared during developer acceptance.');
     const developmentDurableRows = await database
       .select({ id: leads.id })
       .from(leads)
@@ -2201,7 +2837,10 @@ async function runContainedApplicationVerification(
     const rentalDetail = await propertyCaller.properties.getById({
       id: SCENARIO_IDS.rentalProperty,
     });
-    if (!rentalDetail.property || Number(rentalDetail.property.id) !== SCENARIO_IDS.rentalProperty) {
+    if (
+      !rentalDetail.property ||
+      Number(rentalDetail.property.id) !== SCENARIO_IDS.rentalProperty
+    ) {
       throw new Error('Search-to-Lead scenario rejected legitimate shared rental detail.');
     }
     const rentalPropertyDto = rentalDetail.property as Record<string, unknown>;
@@ -2216,7 +2855,9 @@ async function runContainedApplicationVerification(
       rentalIdentity.role !== 'agent' ||
       rentalIdentity.provenance !== 'agent'
     ) {
-      throw new Error('Search-to-Lead scenario rental detail did not preserve truthful rental semantics.');
+      throw new Error(
+        'Search-to-Lead scenario rental detail did not preserve truthful rental semantics.',
+      );
     }
 
     const rentalLeadInput = {
@@ -2228,8 +2869,8 @@ async function runContainedApplicationVerification(
       source: 'property_detail',
       sourceSurface: 'property_detail',
       leadSource: 'property_detail',
-      captureRequestId: 'dba-search-to-lead-v1-rental-enquiry',
-      consent: { accepted: true as const, version: 'dba-search-to-lead-v1', source: 'local-test' },
+      captureRequestId: 'dba-search-to-lead-v2-rental-enquiry',
+      consent: { accepted: true as const, version: 'dba-search-to-lead-v2', source: 'local-test' },
     };
     const rentalLead = await capturePublicLead(rentalLeadInput);
     const rentalReplay = await capturePublicLead(rentalLeadInput);
@@ -2238,7 +2879,10 @@ async function runContainedApplicationVerification(
     }
     let rentalConflictingReplay: 'conflict' | undefined;
     try {
-      await capturePublicLead({ ...rentalLeadInput, message: `${rentalLeadInput.message} conflicting replay` });
+      await capturePublicLead({
+        ...rentalLeadInput,
+        message: `${rentalLeadInput.message} conflicting replay`,
+      });
     } catch (error) {
       if ((error as { code?: unknown })?.code === 'CONFLICT') rentalConflictingReplay = 'conflict';
     }
@@ -2246,7 +2890,8 @@ async function runContainedApplicationVerification(
       throw new Error('Search-to-Lead scenario accepted a conflicting rental replay.');
     }
     const rentalDatabase = await getDb();
-    if (!rentalDatabase) throw new Error('Search-to-Lead scenario database disappeared during rental acceptance.');
+    if (!rentalDatabase)
+      throw new Error('Search-to-Lead scenario database disappeared during rental acceptance.');
     const rentalDurableRows = await rentalDatabase
       .select({ id: leads.id })
       .from(leads)
@@ -2325,14 +2970,16 @@ async function runContainedApplicationVerification(
           source: 'property_detail',
           sourceSurface: 'property_detail',
           leadSource: 'property_detail',
-          captureRequestId: `dba-search-to-lead-v1-negative-${name}`,
-          consent: { accepted: true, version: 'dba-search-to-lead-v1', source: 'local-test' },
+          captureRequestId: `dba-search-to-lead-v2-negative-${name}`,
+          consent: { accepted: true, version: 'dba-search-to-lead-v2', source: 'local-test' },
         });
       } catch (error) {
         rejected = String((error as { code?: unknown })?.code || '') === 'NOT_FOUND';
       }
       if (!rejected) {
-        throw new Error(`Search-to-Lead scenario enquiry bypassed fail-closed ${name} eligibility.`);
+        throw new Error(
+          `Search-to-Lead scenario enquiry bypassed fail-closed ${name} eligibility.`,
+        );
       }
       negative[name] = { propertyId, searchIncluded: false, detail: null, enquiry: 'rejected' };
     }
@@ -2359,10 +3006,10 @@ async function runContainedApplicationVerification(
     const unrelatedDeveloperCaller = callerFor(
       user(SCENARIO_IDS.unrelatedDeveloperUser, 'property_developer'),
     );
-    const platformCaller = callerFor(
-      user(SCENARIO_IDS.platformOperationsUser, 'super_admin'),
+    const platformCaller = callerFor(user(SCENARIO_IDS.platformOperationsUser, 'super_admin'));
+    const nonOperationsCaller = callerFor(
+      user(SCENARIO_IDS.agentUser, 'agent', SCENARIO_IDS.agency),
     );
-    const nonOperationsCaller = callerFor(user(SCENARIO_IDS.agentUser, 'agent', SCENARIO_IDS.agency));
 
     const agentLeads = await agentCaller.agent.getMyLeads({ status: 'all', limit: 100 });
     const unrelatedAgentLeads = await unrelatedAgentCaller.agent.getMyLeads({
@@ -2376,7 +3023,9 @@ async function runContainedApplicationVerification(
       .then(() => false)
       .catch(() => true);
     const developerLeads = await developerCaller.developer.getLeads({ limit: 100 });
-    const unrelatedDeveloperLeads = await unrelatedDeveloperCaller.developer.getLeads({ limit: 100 });
+    const unrelatedDeveloperLeads = await unrelatedDeveloperCaller.developer.getLeads({
+      limit: 100,
+    });
     const platformAudit = await platformCaller.system.leadRoutingAudit({
       days: 365,
       attentionLimit: 50,
@@ -2392,7 +3041,9 @@ async function runContainedApplicationVerification(
       !agentAgencyLeads.some(lead => Number(lead.id) === agentLeadId) ||
       !unrelatedAgencyDenied ||
       !developerLeads.items.some((lead: any) => Number(lead.id) === developmentLead.leadId) ||
-      unrelatedDeveloperLeads.items.some((lead: any) => Number(lead.id) === developmentLead.leadId) ||
+      unrelatedDeveloperLeads.items.some(
+        (lead: any) => Number(lead.id) === developmentLead.leadId,
+      ) ||
       Number(platformAudit.summary.platformCustody) < 1 ||
       !platformAudit.attentionLeads.some((lead: any) => Number(lead.id) === platformLeadId) ||
       !nonOperationsDenied
@@ -2401,7 +3052,8 @@ async function runContainedApplicationVerification(
     }
 
     const primaryAgentCard = propertyCards.get(`/property/${SCENARIO_IDS.agentProperty}`);
-    if (!primaryAgentCard) throw new Error('Search-to-Lead scenario lost its primary property card.');
+    if (!primaryAgentCard)
+      throw new Error('Search-to-Lead scenario lost its primary property card.');
     return {
       locationState: 'resolved',
       locationContext: {

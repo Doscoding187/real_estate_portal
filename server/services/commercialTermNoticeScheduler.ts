@@ -36,7 +36,7 @@ async function sendDueNotices(window: NoticeWindow): Promise<number> {
            s.owner_type as ownerType,
            s.current_period_end as periodEnd,
            u.email as email,
-           u.first_name as firstName
+           u.firstName as firstName
     from subscriptions s
     inner join users u on u.id = s.owner_id
     where s.owner_type in ('agent', 'agency')
@@ -50,9 +50,7 @@ async function sendDueNotices(window: NoticeWindow): Promise<number> {
           and json_unquote(json_extract(n.data, '$.notice')) = ${window.key}
       )
   `);
-  const rows = (
-    Array.isArray(result) ? result : ((result as any)?.rows ?? [])
-  ) as Array<{
+  const rows = (Array.isArray(result) ? result : ((result as any)?.rows ?? [])) as Array<{
     ownerId: number;
     ownerType: string;
     periodEnd: string | null;

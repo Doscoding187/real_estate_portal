@@ -14,7 +14,7 @@ export const EnvironmentBadge: React.FC = () => {
 
   return (
     <aside
-      className="fixed bottom-2 right-2 z-[9999] px-2 py-1 bg-red-600 text-white text-xs font-bold rounded shadow-lg pointer-events-none uppercase"
+      className="fixed bottom-2 right-2 z-[9999] hidden rounded bg-red-600 px-2 py-1 text-xs font-bold uppercase text-white shadow-lg pointer-events-none sm:block"
       aria-label="Environment status"
       title={`Backend: ${API_BASE_URL}`}
     >

@@ -207,11 +207,15 @@ describeWithDb('Development Card Data Flow Integration', () => {
     ]);
     expect(matched?.image).toBe('https://placehold.co/600x400/e2e8f0/64748b?text=Card+Flow');
     expect(matched?.highlights).toEqual([
-      '24 Hour Security',
-      'Prime Location',
-      'Lifestyle Amenities',
+      expect.objectContaining({ label: '24-hour security', iconKey: 'security' }),
+      expect.objectContaining({ label: 'Prime location', iconKey: 'scenic' }),
+      expect.objectContaining({ label: 'Lifestyle amenities', iconKey: 'sparkles' }),
     ]);
-    expect(matched?.highlights.some(label => /[{}[\]":]/.test(label))).toBe(false);
+    expect(
+      matched?.highlights.every(highlight =>
+        Boolean(highlight.key && highlight.label && highlight.iconKey),
+      ),
+    ).toBe(true);
   });
 
   it('blocks publishing when description is empty', async () => {

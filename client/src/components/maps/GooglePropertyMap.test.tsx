@@ -179,7 +179,7 @@ describe('GooglePropertyMap deliberate search interaction', () => {
     );
   });
 
-  it('offers explicit List and Grid recovery when the map provider fails to load', () => {
+  it('offers explicit List recovery when the map provider fails to load', () => {
     mapHarness.loaderResult.isLoaded = false;
     mapHarness.loaderResult.loadError = new Error('Google Maps failed');
     const onRecoveryViewChange = vi.fn();
@@ -192,9 +192,8 @@ describe('GooglePropertyMap deliberate search interaction', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('results are still available');
 
     fireEvent.click(screen.getByRole('button', { name: 'View List' }));
-    fireEvent.click(screen.getByRole('button', { name: 'View Grid' }));
 
     expect(onRecoveryViewChange).toHaveBeenNthCalledWith(1, 'list');
-    expect(onRecoveryViewChange).toHaveBeenNthCalledWith(2, 'grid');
+    expect(screen.queryByRole('button', { name: 'View Grid' })).not.toBeInTheDocument();
   });
 });

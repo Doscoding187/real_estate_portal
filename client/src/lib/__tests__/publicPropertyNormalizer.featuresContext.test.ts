@@ -43,10 +43,9 @@ describe('public Features & Context normalization', () => {
       'Sunroom',
     ]);
     expect(groups.find(group => group.key === 'highlights')?.items[0].source).toBe('highlight');
-    expect(groups.find(group => group.key === 'highlights')?.items.map(item => item.label)).toEqual([
-      'Natural light',
-      'Quiet cul-de-sac',
-    ]);
+    expect(groups.find(group => group.key === 'highlights')?.items.map(item => item.label)).toEqual(
+      ['Natural light', 'Quiet cul-de-sac'],
+    );
     expect(groups.find(group => group.key === 'highlights')?.items[1].source).toBe('custom');
   });
 
@@ -72,5 +71,30 @@ describe('public Features & Context normalization', () => {
     expect(checklist.find(item => item.key === 'pet-policy')).toBeUndefined();
     expect(checklist.find(item => item.key === 'security')?.status).toBe('missing');
     expect(checklist.find(item => item.key === 'ownership-type')?.value).toBe('To confirm');
+  });
+
+  it('shows direct security-setting and sewerage answers without inferring either one', () => {
+    const groups = getPropertyFeaturesContextGroups({
+      id: 44,
+      propertyDetails: {
+        featuresContext: {
+          version: 1,
+          spaces: [],
+          context: { securityProfile: 'security_estate' },
+          utilities: { wastewaterSystem: 'septic_tank' },
+          security: { status: 'unknown', features: [] },
+          highlights: [],
+          customFeatures: [],
+          customHighlights: [],
+        },
+      },
+    });
+
+    expect(groups.find(group => group.key === 'context')?.items.map(item => item.label)).toEqual([
+      'Security estate',
+    ]);
+    expect(groups.find(group => group.key === 'utilities')?.items).toContainEqual(
+      expect.objectContaining({ label: 'Sewerage system', value: 'Septic tank' }),
+    );
   });
 });

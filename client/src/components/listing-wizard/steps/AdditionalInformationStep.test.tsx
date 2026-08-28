@@ -51,4 +51,15 @@ describe('AdditionalInformationStep custom highlights', () => {
       customHighlights: ['Sunny kitchen'],
     });
   });
+
+  it('captures the direct security setting as an explicit buyer fact', () => {
+    render(<AdditionalInformationStep />);
+
+    expect(screen.getByText('Sewerage system')).toBeTruthy();
+    fireEvent.click(screen.getByLabelText('Security estate'));
+
+    expect(useListingWizardStore.getState().additionalInfo?.featuresContext).toMatchObject({
+      context: { securityProfile: 'security_estate' },
+    });
+  });
 });

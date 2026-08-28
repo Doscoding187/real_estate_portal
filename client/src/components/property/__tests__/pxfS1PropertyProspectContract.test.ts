@@ -108,18 +108,69 @@ describe('PXF-S1 property prospect contract', () => {
     expect(page).not.toContain('<PropertyServiceActions');
   });
 
+  it('renders the server-owned public detail presentation instead of reparsing authoring JSON', () => {
+    const page = readRepoFile('client/src/pages/PropertyDetailPage.tsx');
+    const comparison = readRepoFile('client/src/pages/CompareProperties.tsx');
+    const dto = readRepoFile('server/services/publicPropertyDto.ts');
+    const locationOverview = readRepoFile(
+      'client/src/components/property/PropertyLocationOverview.tsx',
+    );
+
+    expect(page).toContain('const presentation = property.detailPresentation');
+    expect(page).not.toContain('JSON.parse(property.propertyDetails)');
+    expect(page).not.toContain('getPropertyBuyerChecklist(property)');
+    expect(page).not.toContain('buildPricingContract(');
+    expect(comparison).toContain('detailPresentation');
+    expect(comparison).not.toContain('normalizePropertyForUI');
+    expect(dto).toContain('buildPublicPropertyDetailPresentation');
+    expect(dto).toContain('detailPresentation');
+    expect(dto).toContain('publicLocation:');
+    expect(page).toContain('PropertyLocationOverview');
+    expect(page).toContain('location={presentation.location}');
+    expect(page).not.toContain('NearbyLandmarks');
+    expect(locationOverview).not.toContain('getNearbyAmenities');
+    expect(locationOverview).not.toContain("from '@/lib/trpc'");
+    expect(page).toContain("presentation.location.precision === 'exact'");
+  });
+
   it('keeps one responsive action hierarchy and semantic related-property navigation', () => {
     const page = readRepoFile('client/src/pages/PropertyDetailPage.tsx');
 
-    expect(page.match(/onClick={handleOpenStandardEnquiry}/g)).toHaveLength(2);
-    expect(page).toContain('className="hidden overflow-hidden');
-    expect(page).toContain('lg:block"');
+    // The same lead command is intentionally surfaced in the hero, sticky
+    // desktop layer, right rail and mobile layer. Count is not an authority;
+    // each surface must delegate to the same canonical handlers.
+    expect(page.match(/onClick={handleOpenStandardEnquiry}/g)?.length).toBeGreaterThanOrEqual(3);
+    expect(page).toContain('const handleOpenStandardEnquiry = () => openContactModal();');
+    expect(page).toContain('const handleRequestViewing = () =>');
+    expect(page).toContain('const [isStickyNavVisible, setIsStickyNavVisible]');
+    expect(page).toContain('overviewSectionRef');
+    expect(page).toContain('fixed inset-x-0 top-16');
+    expect(page).toContain('{isStickyNavVisible && (');
     expect(page).toContain('aria-label="Property enquiry actions"');
-    expect(page).toContain('pb-[calc(0.75rem+env(safe-area-inset-bottom))] lg:hidden');
+    expect(page).toContain('pb-[calc(0.75rem+env(safe-area-inset-bottom))]');
+    expect(page).toContain('lg:hidden');
     expect(page).toContain('aria-label="Request a viewing"');
     expect(page).toContain('href={prop.href}');
     expect(page).toContain('aria-label={`Open ${prop.title}`}');
-    expect(page).toContain('<Link href={similarListingsHref}>View All Matching Listings</Link>');
+    expect(page).toContain('<Link href={similarListingsHref}>View all matching listings</Link>');
+    expect(page).toContain('HouseMeasureIcon');
+    expect(page.indexOf('aria-labelledby="listed-by-heading"')).toBeLessThan(
+      page.indexOf('aria-labelledby="contact-heading"'),
+    );
     expect(page).not.toContain('onClick={() => setLocation(prop.href)}');
+  });
+
+  it('only offers WhatsApp through the canonical lead handoff when public contact exists', () => {
+    const page = readRepoFile('client/src/pages/PropertyDetailPage.tsx');
+
+    expect(page).toContain('const handleWhatsAppContact = () =>');
+    expect(page).toContain("intent: 'whatsapp'");
+    expect(page).toContain('whatsappNumber &&');
+    expect(page).toContain('const whatsappActionLabel');
+    expect(page).toContain(
+      "source={contactIntent === 'whatsapp' ? 'property_detail_whatsapp' : 'property_detail'}",
+    );
+    expect(page).toContain('successAction={');
+    expect(page).toContain("type: 'whatsapp'");
   });
 });

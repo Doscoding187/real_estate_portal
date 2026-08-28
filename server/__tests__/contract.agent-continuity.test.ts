@@ -21,8 +21,12 @@ describe('canonical paid-entitlement row predicate', () => {
   });
 
   it('accepts grace_period and a missing period end (matches established loaders)', () => {
-    expect(isPaidSubscriptionRowEntitled({ status: 'grace_period', currentPeriodEnd: null }, NOW)).toBe(true);
-    expect(isPaidSubscriptionRowEntitled({ status: 'active', currentPeriodEnd: null }, NOW)).toBe(true);
+    expect(
+      isPaidSubscriptionRowEntitled({ status: 'grace_period', currentPeriodEnd: null }, NOW),
+    ).toBe(true);
+    expect(isPaidSubscriptionRowEntitled({ status: 'active', currentPeriodEnd: null }, NOW)).toBe(
+      true,
+    );
   });
 
   it('fails closed on an elapsed or malformed period end', () => {
@@ -32,7 +36,9 @@ describe('canonical paid-entitlement row predicate', () => {
         NOW,
       ),
     ).toBe(false);
-    expect(isPaidSubscriptionRowEntitled({ status: 'active', currentPeriodEnd: 'not-a-date' }, NOW)).toBe(false);
+    expect(
+      isPaidSubscriptionRowEntitled({ status: 'active', currentPeriodEnd: 'not-a-date' }, NOW),
+    ).toBe(false);
   });
 
   it('rejects non-paid statuses', () => {
@@ -58,6 +64,8 @@ describe('activation-to-renewal continuity wiring', () => {
 
     const boot = readRepoFile('server/_core/index.ts');
     expect(boot).toContain('commercialTermNoticeScheduler.start()');
+    expect(scheduler).toContain('u.firstName as firstName');
+    expect(scheduler).not.toContain('u.first_name');
   });
 
   it('speaks the expired truth in the agent status strip and CRM lock', () => {

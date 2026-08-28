@@ -7,10 +7,8 @@ import {
   type ListingNavbarLocation,
 } from '@/components/ListingNavbar';
 import { SidebarFilters } from '@/components/SidebarFilters';
-import PropertyCard from '@/components/PropertyCard';
 import { GooglePropertyMap } from '@/components/maps/GooglePropertyMap';
 import { getPrimaryListingBadge } from '@/lib/listingBadges';
-import { searchCardResultToPropertyCardProps } from '@/lib/normalizers';
 import { PROPERTY_IMAGE_FALLBACK } from '@/lib/mediaUtils';
 import {
   DEFAULT_SAVED_SEARCH_DELIVERY_PREFERENCES,
@@ -44,7 +42,6 @@ import {
 // Search components
 import {
   Breadcrumbs,
-  ActiveFilterChips,
   ResultsHeader,
   MobileFilterDrawer,
   MobileStickyControls,
@@ -104,6 +101,17 @@ import {
   normalizePublicSearchPageForTotal,
   PUBLIC_SEARCH_MAX_PAGE_INDEX,
 } from '@/../../shared/publicSearchPagination';
+
+const DISCOVERY_PROPERTY_TYPE_COPY: Record<string, { plural: string; chip: string }> = {
+  house: { plural: 'Houses', chip: 'House' },
+  apartment: { plural: 'Apartments', chip: 'Apartment' },
+  villa: { plural: 'Villas', chip: 'Villa' },
+  townhouse: { plural: 'Townhouses', chip: 'Townhouse' },
+  cluster_home: { plural: 'Cluster homes', chip: 'Cluster home' },
+  farm: { plural: 'Farms', chip: 'Farm' },
+  commercial: { plural: 'Commercial properties', chip: 'Commercial' },
+  plot: { plural: 'Land and plots', chip: 'Land' },
+};
 
 export default function SearchResults({
   province: propProvince,
@@ -354,8 +362,8 @@ export default function SearchResults({
       maxBedrooms: isBuySearch ? undefined : rentFilters?.maxBedrooms,
       minBathrooms: isBuySearch ? buyFilters?.minBathrooms : rentFilters?.minBathrooms,
       maxBathrooms: isBuySearch ? undefined : rentFilters?.maxBathrooms,
-      minArea: isBuySearch ? undefined : rentFilters?.minArea,
-      maxArea: isBuySearch ? undefined : rentFilters?.maxArea,
+      minArea: isBuySearch ? buyFilters?.minArea : rentFilters?.minArea,
+      maxArea: isBuySearch ? buyFilters?.maxArea : rentFilters?.maxArea,
       minLat: isBuySearch ? buyFilters?.minLat : rentFilters?.minLat,
       maxLat: isBuySearch ? buyFilters?.maxLat : rentFilters?.maxLat,
       minLng: isBuySearch ? buyFilters?.minLng : rentFilters?.minLng,
@@ -550,11 +558,6 @@ export default function SearchResults({
 
     const newUrl = generateIntentUrl(updatedIntent);
     setLocation(newUrl);
-  };
-
-  // This is a special handler for "active chips" removal which might be cleaner
-  const handleRemoveFilter = (key: keyof SearchFilters) => {
-    setLocation(generateIntentUrl(clearSearchIntentFilters(searchIntent, [String(key)])));
   };
 
   const handleClearFilterKeys = (keys: readonly string[]) => {
@@ -788,6 +791,29 @@ export default function SearchResults({
   const canonicalUrl = useMemo(() => generateIntentUrl(searchIntent), [searchIntent]);
   const pageTitle = useMemo(() => generatePageTitle(filters), [filters]);
   const pageDescription = useMemo(() => generateMetaDescription(filters), [filters]);
+  const discoveryLocationLabel =
+    searchAreaContext?.label ||
+    (multiLocationContext
+      ? multiLocationContext.locations.map(item => item.name).join(' and ')
+      : locationContext?.name) ||
+    (searchIntent.geography.suburb
+      ? unslugify(searchIntent.geography.suburb)
+      : searchIntent.geography.city
+        ? unslugify(searchIntent.geography.city)
+        : searchIntent.geography.province
+          ? unslugify(searchIntent.geography.province)
+          : 'South Africa');
+  const propertyTypeCopy = filters.propertyType
+    ? DISCOVERY_PROPERTY_TYPE_COPY[String(filters.propertyType)]
+    : undefined;
+  const discoveryHeading = `${propertyTypeCopy?.plural || 'Properties'} ${
+    isRentSearch ? 'to rent' : 'for sale'
+  } in ${discoveryLocationLabel}`;
+  const discoveryScopeLabels = [
+    isRentSearch ? 'To rent' : 'For sale',
+    discoveryLocationLabel,
+    ...(propertyTypeCopy ? [propertyTypeCopy.chip] : []),
+  ];
   const totalPages = getPublicSearchReachablePageCount(resultCount, limit);
   const canAdvancePage = canAdvancePublicSearchPage(effectivePage, resultCount, limit);
   const hasRenderableResults =
@@ -834,7 +860,7 @@ export default function SearchResults({
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-[#f7f8fa]">
       <MetaControl canonicalUrl={canonicalUrl} title={pageTitle} description={pageDescription} />
       <ListingNavbar
         defaultLocations={navbarLocations}
@@ -845,11 +871,11 @@ export default function SearchResults({
 
       {/* prettier-ignore */}
       <main id="main-content" tabIndex={-1} className="outline-none">
-      <div className="container pb-32 pt-44 md:pt-24 lg:pb-12">
-        <div className="mx-auto w-full max-w-[1280px]">
+      <div className="mx-auto w-full max-w-[1480px] px-4 pb-32 pt-44 sm:px-6 md:pt-24 lg:px-8 lg:pb-16">
+        <div className="w-full">
           {/* Header Section */}
-          <div className="mb-3">
-            <div className="mb-2">
+          <div className="mb-5">
+            <div className="mb-4">
               <Breadcrumbs items={scopedBreadcrumbs} />
             </div>
 
@@ -857,7 +883,7 @@ export default function SearchResults({
               <div
                 role="status"
                 aria-label={`${searchAreaContext.label}, Property market area`}
-                className="mb-3 rounded-xl border border-emerald-100 bg-emerald-50/70 px-4 py-3"
+                className="mb-4 rounded-lg border border-emerald-100 bg-emerald-50/70 px-4 py-3"
               >
                 <div className="text-xs font-semibold uppercase tracking-[0.14em] text-emerald-700">
                   Property market area
@@ -874,29 +900,23 @@ export default function SearchResults({
 
             <SearchFallbackNotice locationContext={locationContext} />
 
-            <div className="border-b border-gray-200 pb-3">
-              <ResultsHeader
-                resultCount={publicSearchResults ? resultCount : undefined}
-                isLoading={isLoading}
-                hasError={hasSearchError}
-                viewMode={viewMode}
-                sortBy={sortBy}
-                onViewModeChange={setViewMode}
-                onSortChange={handleSortChange}
-                onOpenFilters={() => setIsMobileFilterOpen(true)}
-              />
-              <div className="mt-2">
-                <ActiveFilterChips
-                  filters={searchIntent.filters} // Only show actual removable filters, not geography path
-                  onRemoveFilter={handleRemoveFilter}
-                  onClearAll={handleClearAllFilters}
-                />
-              </div>
-            </div>
+            <ResultsHeader
+              title={discoveryHeading}
+              scopeLabels={discoveryScopeLabels}
+              resultCount={publicSearchResults ? resultCount : undefined}
+              isLoading={isLoading}
+              hasError={hasSearchError}
+              viewMode={viewMode}
+              sortBy={sortBy}
+              onViewModeChange={setViewMode}
+              onSortChange={handleSortChange}
+              onOpenFilters={() => setIsMobileFilterOpen(true)}
+              onSaveSearch={handleSaveSearch}
+            />
           </div>
 
           {/* Content Section */}
-          <div className="grid grid-cols-1 gap-5 px-2 sm:px-3 lg:grid-cols-[320px_minmax(0,1fr)] lg:items-start lg:gap-6 lg:px-0 xl:grid-cols-[340px_minmax(0,1fr)]">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-[292px_minmax(0,1fr)] lg:items-start lg:gap-7 xl:grid-cols-[308px_minmax(0,1fr)] xl:gap-8">
             {/* LEFT SIDEBAR - FILTERS */}
             <div className="hidden lg:block">
               <div className="sticky top-24">
@@ -977,7 +997,7 @@ export default function SearchResults({
                 ) : mapLocationDisclosureUnavailable ? (
                   <SearchResultsUnavailableState
                     title="No public map location available"
-                    description="These results do not have publicly disclosed coordinates, so no map markers can be shown. Switch to List or Grid view to continue browsing."
+                    description="These results do not have publicly disclosed coordinates, so no map markers can be shown. Switch to List view to continue browsing."
                   />
                 ) : displayState === 'integrity' ? (
                   <SearchResultsUnavailableState
@@ -1000,31 +1020,21 @@ export default function SearchResults({
                                 location: card.location,
                                 price: card.price,
                                 image: resolveCardImage(card),
+                                imageCount: card.imageCount,
                                 listingType: card.listingType,
                                 development: card.development,
                                 area: card.area,
+                                yardSize: card.yardSize,
                                 bedrooms: card.bedrooms,
                                 bathrooms: card.bathrooms,
-                                floor:
-                                  typeof card.yardSize === 'number' && card.yardSize > 0
-                                    ? `${card.yardSize}m2`
-                                    : undefined,
                                 highlights: card.highlights,
-                                description: card.description,
                                 listingSource: card.listingSource,
                                 listerType: card.listerType,
                                 contactRole: card.contactRole,
                                 identity: card.identity,
                                 propertyId: card.propertyId,
-                                agentId: card.identity?.agentId,
-                                agencyId: card.identity?.agencyId,
-                                cataloguePublisherId: card.identity?.cataloguePublisherId,
-                                developmentId: card.developmentId,
                                 postedBy: card.identity?.name,
                                 agentAvatarUrl: card.identity?.avatarUrl ?? undefined,
-                                contactPhone: card.identity?.phone ?? undefined,
-                                contactWhatsapp: card.identity?.whatsapp ?? undefined,
-                                contactEmail: card.identity?.email ?? undefined,
                                 isSaved: savedPropertyIds.has(card.propertyId || 0),
                                 onSave: card.propertyId
                                   ? () => handleSaveProperty(card.propertyId as number)
@@ -1044,44 +1054,6 @@ export default function SearchResults({
                                   !canAddMore,
                                 onOpen: rememberSearchReturn,
                               }}
-                            />
-                          );
-                        })}
-                      </div>
-                    )}
-
-                    {viewMode === 'grid' && (
-                      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 2xl:grid-cols-3 2xl:gap-7">
-                        {renderedResults.map(card => {
-                          const cardProps = searchCardResultToPropertyCardProps(card);
-                          return (
-                            <PropertyCard
-                              key={`${card.kind}-${card.id}`}
-                              {...cardProps}
-                              contactButtonLabel="View details"
-                              onOpen={rememberSearchReturn}
-                              isSaved={savedPropertyIds.has(card.propertyId || 0)}
-                              onFavoriteClick={
-                                card.propertyId
-                                  ? () => handleSaveProperty(card.propertyId as number)
-                                  : undefined
-                              }
-                              isCompared={
-                                isBuySearch && card.propertyId
-                                  ? isInComparison(card.propertyId)
-                                  : false
-                              }
-                              onCompareClick={
-                                isBuySearch && card.propertyId
-                                  ? () => handleCompareProperty(card.propertyId as number)
-                                  : undefined
-                              }
-                              compareDisabled={
-                                isBuySearch &&
-                                Boolean(card.propertyId) &&
-                                !isInComparison(card.propertyId as number) &&
-                                !canAddMore
-                              }
                             />
                           );
                         })}

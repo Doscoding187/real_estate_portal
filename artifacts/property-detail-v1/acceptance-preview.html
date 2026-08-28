@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Property detail v1 — acceptance preview</title>
+    <style>
+      :root {
+        --ink: #0f172a;
+        --muted: #5f6b7b;
+        --line: #e3e8ef;
+        --canvas: #f5f7fa;
+        --surface: #ffffff;
+        --blue: #1267d6;
+        --blue-dark: #0b56b7;
+        --blue-soft: #edf5ff;
+        --green: #087f5b;
+        --radius: 18px;
+        --shadow: 0 14px 40px rgba(15, 23, 42, 0.1);
+      }
+
+      * { box-sizing: border-box; }
+      html { background: var(--canvas); }
+      body {
+        margin: 0;
+        color: var(--ink);
+        background: var(--canvas);
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        font-size: 15px;
+        line-height: 1.45;
+      }
+      button { font: inherit; }
+      .site-header {
+        height: 68px;
+        background: #fff;
+        border-bottom: 1px solid var(--line);
+        display: flex;
+        align-items: center;
+      }
+      .site-nav, .container { width: min(1240px, calc(100% - 40px)); margin: 0 auto; }
+      .site-nav { display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+      .brand { display: inline-flex; align-items: center; gap: 9px; font-size: 18px; font-weight: 800; letter-spacing: -.025em; }
+      .brand-mark { width: 25px; height: 25px; border-radius: 8px; background: linear-gradient(135deg, #1c7df0, #0b57ba); position: relative; }
+      .brand-mark:before { content: ""; position: absolute; background: #fff; left: 7px; top: 7px; width: 11px; height: 10px; border-radius: 3px 3px 2px 2px; }
+      .brand-mark:after { content: ""; position: absolute; border-left: 8px solid transparent; border-right: 8px solid transparent; border-bottom: 7px solid #fff; left: 4px; top: 3px; }
+      .nav-links { display: flex; align-items: center; gap: 24px; color: #344255; font-size: 14px; font-weight: 600; }
+      .nav-links .active { color: var(--blue); }
+      .sign-in { border: 1px solid #cfd8e4; background: #fff; color: #223047; border-radius: 8px; padding: 8px 13px; font-size: 13px; font-weight: 700; }
+
+      .page { padding: 22px 0 84px; }
+      .preview-note { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 17px; color: #66758b; font-size: 12px; }
+      .preview-note strong { color: #314155; letter-spacing: .09em; font-size: 10px; }
+      .return-link { display: inline-flex; align-items: center; gap: 8px; color: #30435c; font-size: 13px; font-weight: 700; text-decoration: none; }
+      .return-link .arrow { font-size: 20px; line-height: 12px; color: var(--blue); }
+      .crumb { color: #7d8a9b; font-size: 12px; margin: 13px 0 4px; }
+
+      .heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; margin-bottom: 22px; }
+      .eyebrow { display: inline-flex; align-items: center; border-radius: 999px; background: var(--blue-soft); color: #1262c6; padding: 4px 9px; font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+      h1 { margin: 8px 0 6px; max-width: 770px; font-size: clamp(27px, 3.1vw, 39px); line-height: 1.12; letter-spacing: -.045em; }
+      .location { display: inline-flex; align-items: center; gap: 7px; color: #526075; font-size: 15px; }
+      .pin { width: 16px; height: 16px; color: var(--blue); }
+      .headline-actions { display: flex; flex-wrap: wrap; gap: 8px; padding-top: 13px; }
+      .icon-action { display: inline-flex; align-items: center; gap: 7px; border: 1px solid #d8e0ea; background: #fff; border-radius: 9px; padding: 9px 11px; color: #405066; font-size: 12px; font-weight: 700; white-space: nowrap; }
+      .icon-action svg { width: 15px; height: 15px; }
+
+      .hero { display: grid; grid-template-columns: minmax(0, 1.59fr) minmax(330px, .91fr); gap: 18px; align-items: stretch; }
+      .gallery { min-height: 474px; display: grid; grid-template-columns: 1.54fr 1fr; grid-template-rows: 1fr 1fr; overflow: hidden; border-radius: var(--radius); background: #d9e1e9; gap: 3px; position: relative; }
+      .photo { min-height: 0; overflow: hidden; background: linear-gradient(145deg, #afbbc6, #d7dfe5); }
+      .photo:first-child { grid-row: 1 / span 2; }
+      .photo img { width: 100%; height: 100%; display: block; object-fit: cover; transition: transform .3s ease; }
+      .photo:first-child img { object-position: center; }
+      .photo:nth-child(2) img { object-position: center; }
+      .photo:nth-child(3) img { object-position: center; }
+      .gallery-count { position: absolute; left: 15px; bottom: 15px; display: inline-flex; align-items: center; gap: 7px; border: 1px solid rgba(255,255,255,.36); border-radius: 999px; background: rgba(15,23,42,.79); color: #fff; padding: 8px 11px; font-size: 12px; font-weight: 750; backdrop-filter: blur(8px); }
+      .gallery-more { position: absolute; right: 15px; bottom: 15px; border: 0; border-radius: 9px; background: #fff; color: #203049; padding: 9px 12px; font-size: 12px; font-weight: 800; box-shadow: 0 3px 12px rgba(0,0,0,.12); }
+
+      .decision-card { display: flex; flex-direction: column; border: 1px solid #dce4ed; border-radius: var(--radius); background: #fff; padding: 25px; box-shadow: var(--shadow); }
+      .price-label { color: #718096; font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+      .price { margin: 4px 0 1px; font-size: 34px; font-weight: 850; line-height: 1.12; letter-spacing: -.045em; }
+      .price-context { color: #69778a; font-size: 12px; }
+      .facts { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0; margin: 20px 0; border: 1px solid #e1e7ee; border-radius: 12px; overflow: hidden; }
+      .fact { min-height: 71px; display: flex; flex-direction: column; justify-content: center; padding: 11px 13px; border-bottom: 1px solid #e9edf2; }
+      .fact:nth-child(odd) { border-right: 1px solid #e9edf2; }
+      .fact:nth-last-child(-n+2) { border-bottom: 0; }
+      .fact-value { color: #172338; font-size: 17px; font-weight: 800; letter-spacing: -.02em; }
+      .fact-label { margin-top: 1px; color: #748197; font-size: 11px; font-weight: 600; }
+      .representative { display: flex; align-items: center; gap: 11px; border-top: 1px solid #e7ecf2; padding-top: 18px; }
+      .avatar { width: 38px; height: 38px; border-radius: 50%; overflow: hidden; background: #d3ddeb; flex: none; }
+      .avatar img { width: 100%; height: 100%; object-fit: cover; }
+      .rep-kicker { color: #778499; font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+      .rep-name { margin-top: 1px; color: #1d2a3f; font-size: 13px; font-weight: 800; }
+      .rep-agency { color: #718096; font-size: 11px; }
+      .primary, .secondary { min-height: 46px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; border-radius: 9px; font-size: 14px; font-weight: 800; text-decoration: none; }
+      .primary { margin-top: 19px; border: 1px solid var(--blue); background: var(--blue); color: #fff; }
+      .secondary { margin-top: 9px; border: 1px solid #ccd7e5; background: #fff; color: #26558e; }
+      .trust-line { margin: 13px 3px 0; color: #6e7c90; font-size: 11px; text-align: center; }
+
+      .section-nav { position: sticky; top: 0; z-index: 2; display: flex; gap: 17px; align-items: center; min-height: 57px; margin: 25px 0 24px; border-bottom: 1px solid #dce3ec; background: rgba(245,247,250,.94); backdrop-filter: blur(9px); overflow-x: auto; }
+      .section-nav a { padding: 19px 0 15px; color: #637087; font-size: 13px; font-weight: 750; text-decoration: none; white-space: nowrap; }
+      .section-nav a.active { border-bottom: 2px solid var(--blue); color: var(--blue); }
+
+      .content-grid { display: grid; grid-template-columns: minmax(0, 1fr) 310px; gap: 29px; align-items: start; }
+      .content-stack { display: grid; gap: 17px; }
+      .section { border: 1px solid #e0e6ee; border-radius: 15px; background: #fff; padding: 25px; }
+      .section-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; margin-bottom: 17px; }
+      h2 { margin: 0; color: #142239; font-size: 20px; letter-spacing: -.025em; }
+      .section-description { margin: 4px 0 0; color: #738095; font-size: 13px; }
+      .about { margin: 0; max-width: 760px; color: #435166; font-size: 15px; line-height: 1.73; }
+      .read-more { display: inline-block; margin-top: 12px; color: #155dbc; font-size: 13px; font-weight: 800; }
+      .feature-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
+      .feature { display: flex; align-items: center; gap: 10px; min-height: 49px; padding: 10px 11px; border: 1px solid #e3e9f1; border-radius: 10px; background: #fbfcfe; color: #2f3e53; font-size: 13px; font-weight: 700; }
+      .feature-icon { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 8px; background: #eef5ff; color: #1267d6; font-size: 14px; }
+      .details-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+      .detail { min-height: 81px; padding: 13px; border-radius: 11px; background: #f8fafc; border: 1px solid #e7ecf2; }
+      .detail-label { color: #738096; font-size: 10px; font-weight: 800; letter-spacing: .075em; text-transform: uppercase; }
+      .detail-value { margin-top: 6px; color: #223046; font-size: 14px; font-weight: 800; }
+      .cost-row { display: grid; grid-template-columns: 1fr auto; gap: 15px; align-items: center; padding: 12px 0; border-top: 1px solid #ecf0f4; }
+      .cost-row:first-of-type { border-top: 0; padding-top: 0; }
+      .cost-title { color: #26364c; font-size: 13px; font-weight: 750; }
+      .cost-hint { margin-top: 2px; color: #78869a; font-size: 11px; }
+      .cost-value { color: #1d2b42; font-size: 14px; font-weight: 850; white-space: nowrap; }
+      .map-card { min-height: 180px; overflow: hidden; position: relative; border-radius: 12px; background: linear-gradient(135deg, #e9f2ec 0%, #eef2ec 42%, #e3edf3 42%, #e3edf3 100%); border: 1px solid #dfe7e6; }
+      .map-roads { position: absolute; inset: 0; background: repeating-linear-gradient(132deg, transparent 0 31px, rgba(255,255,255,.8) 33px 39px, transparent 42px 74px), repeating-linear-gradient(36deg, transparent 0 46px, rgba(255,255,255,.68) 48px 53px, transparent 56px 100px); opacity: .78; }
+      .map-label { position: absolute; left: 16px; bottom: 15px; max-width: 260px; border-radius: 10px; background: rgba(255,255,255,.93); padding: 10px 12px; box-shadow: 0 4px 15px rgba(36,57,66,.13); }
+      .map-label strong { display: block; color: #25364a; font-size: 12px; }
+      .map-label span { display: block; color: #708096; font-size: 11px; margin-top: 2px; }
+      .map-pin { position: absolute; top: 64px; left: 58%; width: 22px; height: 22px; border-radius: 50% 50% 50% 0; background: #176bd7; transform: rotate(-45deg); box-shadow: 0 3px 8px rgba(23,107,215,.4); }
+      .map-pin:after { content: ""; position: absolute; width: 7px; height: 7px; top: 7px; left: 7px; border-radius: 50%; background: #fff; }
+      .map-button { position: absolute; right: 14px; top: 14px; border: 1px solid #cad7e6; border-radius: 8px; background: #fff; color: #315882; padding: 7px 9px; font-size: 11px; font-weight: 800; }
+
+      .side-stack { display: grid; gap: 16px; position: sticky; top: 76px; }
+      .side-card { border: 1px solid #dfe6ef; border-radius: 14px; background: #fff; padding: 18px; }
+      .side-card h3 { margin: 0; color: #1b2a40; font-size: 15px; letter-spacing: -.01em; }
+      .side-card p { margin: 6px 0 0; color: #6c7a8e; font-size: 12px; line-height: 1.55; }
+      .agent-row { display: flex; align-items: center; gap: 10px; margin: 14px 0; }
+      .agent-row .avatar { width: 45px; height: 45px; }
+      .agent-row strong { display: block; color: #24344a; font-size: 13px; }
+      .agent-row span { display: block; margin-top: 2px; color: #6d7b90; font-size: 11px; }
+      .mini-action { width: 100%; min-height: 39px; display: grid; place-items: center; border: 1px solid #bdd4ef; border-radius: 8px; color: #185fae; background: #f8fbff; font-size: 12px; font-weight: 800; }
+      .transparency { display: flex; gap: 8px; align-items: flex-start; padding: 12px 13px; border-radius: 11px; background: #f7fafc; color: #6b798d; font-size: 11px; line-height: 1.45; }
+      .transparency b { color: #40536b; }
+      .check { color: var(--green); font-weight: 900; }
+
+      .related { margin-top: 17px; }
+      .related-row { display: grid; grid-template-columns: 106px 1fr; gap: 11px; align-items: center; margin-top: 13px; }
+      .related-image { height: 68px; overflow: hidden; border-radius: 8px; background: #dae3ec; }
+      .related-image img { width: 100%; height: 100%; object-fit: cover; }
+      .related-title { color: #26364c; font-size: 12px; font-weight: 800; line-height: 1.35; }
+      .related-meta { margin-top: 2px; color: #77859a; font-size: 11px; }
+      .related-price { margin-top: 4px; color: #0d5ebf; font-size: 12px; font-weight: 850; }
+
+      .mobile-action-bar { display: none; }
+      .preview-foot { width: min(1240px, calc(100% - 40px)); margin: 32px auto 0; color: #7b889a; font-size: 11px; text-align: center; }
+
+      @media (max-width: 900px) {
+        .hero { grid-template-columns: minmax(0, 1fr) 320px; }
+        .gallery { min-height: 402px; }
+        .decision-card { padding: 20px; }
+        .price { font-size: 29px; }
+        .content-grid { grid-template-columns: minmax(0, 1fr) 274px; gap: 20px; }
+      }
+      @media (max-width: 720px) {
+        .site-header { height: 58px; }
+        .site-nav, .container { width: min(100% - 28px, 620px); }
+        .nav-links { display: none; }
+        .sign-in { padding: 7px 10px; }
+        .page { padding-top: 14px; padding-bottom: 93px; }
+        .preview-note { margin-bottom: 12px; }
+        .preview-note span:last-child { display: none; }
+        .crumb { display: none; }
+        .return-link { font-size: 12px; }
+        .heading { display: block; margin: 12px 0 15px; }
+        h1 { margin-top: 7px; font-size: 29px; line-height: 1.14; }
+        .location { font-size: 13px; }
+        .headline-actions { position: absolute; right: 14px; top: 72px; padding: 0; }
+        .icon-action { width: 34px; height: 34px; justify-content: center; padding: 0; border-radius: 50%; background: rgba(255,255,255,.94); box-shadow: 0 2px 8px rgba(15,23,42,.12); }
+        .icon-action span { display: none; }
+        .hero { display: flex; flex-direction: column; gap: 14px; }
+        .gallery { order: -1; min-height: auto; height: 262px; display: block; border-radius: 14px; }
+        .gallery .photo { height: 100%; }
+        .gallery .photo:not(:first-child) { display: none; }
+        .gallery-count { bottom: 12px; left: 12px; padding: 7px 9px; font-size: 11px; }
+        .gallery-more { right: 12px; bottom: 12px; padding: 8px 10px; font-size: 11px; }
+        .decision-card { box-shadow: none; border-radius: 14px; padding: 18px; }
+        .price { font-size: 31px; }
+        .facts { margin: 17px 0; }
+        .fact { min-height: 61px; padding: 8px 11px; }
+        .fact-value { font-size: 15px; }
+        .representative { padding-top: 14px; }
+        .decision-card .primary, .decision-card .secondary, .decision-card .trust-line { display: none; }
+        .section-nav { position: static; min-height: 48px; margin: 19px 0 17px; gap: 15px; background: transparent; }
+        .section-nav a { padding: 14px 0 11px; font-size: 12px; }
+        .content-grid { display: block; }
+        .content-stack { gap: 12px; }
+        .section { border-radius: 13px; padding: 18px; }
+        h2 { font-size: 18px; }
+        .about { font-size: 14px; line-height: 1.65; }
+        .feature-grid { grid-template-columns: 1fr; gap: 7px; }
+        .details-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+        .detail { min-height: 74px; padding: 11px; }
+        .side-stack { position: static; margin-top: 12px; }
+        .side-stack .related { display: none; }
+        .map-card { min-height: 170px; }
+        .mobile-action-bar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 4; display: grid; grid-template-columns: 1fr 1fr; gap: 9px; padding: 10px 14px calc(10px + env(safe-area-inset-bottom)); border-top: 1px solid #dce4ee; background: rgba(255,255,255,.97); box-shadow: 0 -5px 22px rgba(15,23,42,.1); }
+        .mobile-action-bar a { min-height: 44px; display: grid; place-items: center; border-radius: 9px; font-size: 13px; font-weight: 850; text-decoration: none; }
+        .mobile-action-bar a:first-child { border: 1px solid #c7d5e4; color: #1d5c9f; background: #fff; }
+        .mobile-action-bar a:last-child { background: var(--blue); color: #fff; }
+        .preview-foot { display: none; }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="site-header">
+      <nav class="site-nav" aria-label="Preview navigation">
+        <div class="brand"><span class="brand-mark" aria-hidden="true"></span>Property Listify</div>
+        <div class="nav-links"><span class="active">Buy</span><span>Rent</span><span>New developments</span><span>Advice</span></div>
+        <button class="sign-in" type="button">Sign in</button>
+      </nav>
+    </header>
+
+    <main class="page">
+      <div class="container">
+        <div class="preview-note">
+          <strong>PROPERTY DETAIL · ACCEPTANCE PREVIEW</strong>
+          <span>Desktop and mobile share one responsive buyer journey.</span>
+        </div>
+        <a href="#" class="return-link"><span class="arrow">←</span>Back to properties for sale in Sandton</a>
+        <div class="crumb">Buy &nbsp;/&nbsp; Gauteng &nbsp;/&nbsp; Johannesburg &nbsp;/&nbsp; Sandton &nbsp;/&nbsp; Morningside</div>
+
+        <section class="heading" aria-label="Property heading">
+          <div>
+            <span class="eyebrow">For sale</span>
+            <h1>4 Bedroom House for Sale in Morningside</h1>
+            <div class="location">
+              <svg class="pin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></svg>
+              Morningside, Sandton, Johannesburg
+            </div>
+          </div>
+          <div class="headline-actions" aria-label="Property actions">
+            <button class="icon-action" type="button" aria-label="Save property"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 1 0-7.8 7.8L12 21l8.9-8.6a5.5 5.5 0 0 0-.1-7.8Z"/></svg><span>Save</span></button>
+            <button class="icon-action" type="button" aria-label="Share property"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 10.5 6.8-4M8.6 13.5l6.8 4"/></svg><span>Share</span></button>
+            <button class="icon-action" type="button" aria-label="Compare property"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 3v14M17 7V21M4 7l3-4 3 4M14 17l3 4 3-4"/></svg><span>Compare</span></button>
+          </div>
+        </section>
+
+        <section class="hero" aria-label="Property media and key decisions">
+          <div class="gallery" aria-label="Property gallery">
+            <div class="photo"><img src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1300&q=85" alt="Modern home exterior" /></div>
+            <div class="photo"><img src="https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=760&q=82" alt="Light living room" /></div>
+            <div class="photo"><img src="https://images.unsplash.com/photo-1600607688969-a5bfcd646154?auto=format&fit=crop&w=760&q=82" alt="Contemporary kitchen" /></div>
+            <span class="gallery-count">▣ &nbsp;27 photos</span>
+            <button class="gallery-more" type="button">View all photos</button>
+          </div>
+
+          <aside class="decision-card" aria-label="Price and property facts">
+            <div class="price-label">Asking price</div>
+            <div class="price">R 4 850 000</div>
+            <div class="price-context">Price supplied by the authorised representative</div>
+            <div class="facts">
+              <div class="fact"><span class="fact-value">4</span><span class="fact-label">Bedrooms</span></div>
+              <div class="fact"><span class="fact-value">3</span><span class="fact-label">Bathrooms</span></div>
+              <div class="fact"><span class="fact-value">286 m²</span><span class="fact-label">Floor size</span></div>
+              <div class="fact"><span class="fact-value">634 m²</span><span class="fact-label">Erf size</span></div>
+            </div>
+            <div class="representative">
+              <div class="avatar"><img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=140&q=80" alt="Avery Molefe" /></div>
+              <div><div class="rep-kicker">Listing representative</div><div class="rep-name">Avery Molefe</div><div class="rep-agency">Molefe Property Group</div></div>
+            </div>
+            <a class="primary" href="#contact">Send enquiry</a>
+            <a class="secondary" href="#contact">Request a viewing</a>
+            <p class="trust-line">Your enquiry is saved before confirmation.</p>
+          </aside>
+        </section>
+
+        <nav class="section-nav" aria-label="Property content">
+          <a class="active" href="#overview">Overview</a>
+          <a href="#features">Features</a>
+          <a href="#costs">Costs &amp; ownership</a>
+          <a href="#location">Location</a>
+          <a href="#contact">Contact</a>
+        </nav>
+
+        <div class="content-grid">
+          <div class="content-stack">
+            <section id="overview" class="section">
+              <div class="section-head"><div><h2>About this home</h2><p class="section-description">The listing description, presented without invented marketing claims.</p></div></div>
+              <p class="about">A considered family home with generous living spaces, a quiet garden and an easy flow between the kitchen, dining and outdoor entertainment area. The practical layout includes a dedicated study, secure parking and room to adapt the spaces around everyday life.</p>
+              <span class="read-more">Read full description</span>
+            </section>
+
+            <section id="features" class="section">
+              <div class="section-head"><div><h2>Home highlights</h2><p class="section-description">Only details published with the approved listing appear here.</p></div></div>
+              <div class="feature-grid">
+                <div class="feature"><span class="feature-icon">⌂</span>Garden and covered patio</div>
+                <div class="feature"><span class="feature-icon">☀</span>Solar and inverter backup</div>
+                <div class="feature"><span class="feature-icon">⌁</span>Fibre-ready connection</div>
+                <div class="feature"><span class="feature-icon">▣</span>Double garage</div>
+                <div class="feature"><span class="feature-icon">◈</span>Electric fence</div>
+                <div class="feature"><span class="feature-icon">⌘</span>Study / home office</div>
+              </div>
+            </section>
+
+            <section class="section">
+              <div class="section-head"><div><h2>Property details</h2><p class="section-description">A single, typed facts section replaces generic JSON-driven feature cards.</p></div></div>
+              <div class="details-grid">
+                <div class="detail"><div class="detail-label">Property type</div><div class="detail-value">Freehold house</div></div>
+                <div class="detail"><div class="detail-label">Parking</div><div class="detail-value">2 garages</div></div>
+                <div class="detail"><div class="detail-label">Pets</div><div class="detail-value">Allowed</div></div>
+                <div class="detail"><div class="detail-label">Security</div><div class="detail-value">Electric fence</div></div>
+                <div class="detail"><div class="detail-label">Power backup</div><div class="detail-value">Solar &amp; inverter</div></div>
+                <div class="detail"><div class="detail-label">Internet</div><div class="detail-value">Fibre-ready</div></div>
+              </div>
+            </section>
+
+            <section id="costs" class="section">
+              <div class="section-head"><div><h2>Ownership &amp; monthly costs</h2><p class="section-description">Seller-supplied figures; confirm them as part of your due diligence.</p></div></div>
+              <div class="cost-row"><div><div class="cost-title">Ownership type</div><div class="cost-hint">Published property information</div></div><div class="cost-value">Freehold</div></div>
+              <div class="cost-row"><div><div class="cost-title">Rates &amp; taxes</div><div class="cost-hint">Monthly seller-supplied figure</div></div><div class="cost-value">R 2 890 p/m</div></div>
+              <div class="cost-row"><div><div class="cost-title">Levy</div><div class="cost-hint">Not applicable for this property</div></div><div class="cost-value">—</div></div>
+            </section>
+
+            <section id="location" class="section">
+              <div class="section-head"><div><h2>Location</h2><p class="section-description">Public location respects the listing’s approved precision.</p></div></div>
+              <div class="map-card" role="img" aria-label="Illustrative map preview of the Morningside area">
+                <div class="map-roads"></div><span class="map-pin"></span><button class="map-button" type="button">Open in Google Maps ↗</button>
+                <div class="map-label"><strong>Morningside, Sandton</strong><span>Map preview falls back safely to the external map when a provider preview is unavailable.</span></div>
+              </div>
+            </section>
+          </div>
+
+          <aside id="contact" class="side-stack" aria-label="Contact and related listings">
+            <section class="side-card">
+              <h3>Interested in this property?</h3>
+              <p>Send an enquiry to the authorised representative or request a viewing. A request is not a confirmed appointment.</p>
+              <div class="agent-row"><div class="avatar"><img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=140&q=80" alt="Avery Molefe" /></div><div><strong>Avery Molefe</strong><span>Molefe Property Group</span></div></div>
+              <button class="mini-action" type="button">Send enquiry</button>
+            </section>
+            <div class="transparency"><span class="check">✓</span><span><b>Clear custody:</b> contact identity and lead delivery come from the approved public listing contract.</span></div>
+            <section class="side-card related">
+              <h3>Nearby homes you may like</h3>
+              <div class="related-row"><div class="related-image"><img src="https://images.unsplash.com/photo-1600566753086-00f18fb6b3ea?auto=format&fit=crop&w=300&q=75" alt="Similar home" /></div><div><div class="related-title">3 Bedroom House in Morningside</div><div class="related-meta">3 bed · 2 bath · 221 m²</div><div class="related-price">R 4 250 000</div></div></div>
+              <div class="related-row"><div class="related-image"><img src="https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=300&q=75" alt="Similar home" /></div><div><div class="related-title">4 Bedroom Home in Sandown</div><div class="related-meta">4 bed · 3 bath · 310 m²</div><div class="related-price">R 5 100 000</div></div></div>
+            </section>
+          </aside>
+        </div>
+      </div>
+      <div class="preview-foot">Acceptance preview only. The proposed implementation will use the approved public listing contract, not these illustrative values or imagery.</div>
+    </main>
+    <div class="mobile-action-bar" aria-label="Property enquiry actions"><a href="#contact">Request viewing</a><a href="#contact">Send enquiry</a></div>
+  </body>
+</html>

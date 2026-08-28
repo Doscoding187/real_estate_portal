@@ -3,6 +3,12 @@ import { buildCanonicalCorePropertyDetails } from '../../shared/core-property-in
 import { normalizeFeaturesContext } from '../../shared/features-context';
 import { buildPricingContract, type ActivePricingContract } from '../../shared/pricing-contract';
 import { isListingPropertyType, type ListingPropertyType } from '../../shared/property-taxonomy';
+import {
+  buildPublicPropertyDetailPresentation,
+  type PublicPropertyDetailPresentation,
+} from '../../shared/public-property-detail-presentation';
+import type { CorePropertyInformation } from '../../shared/core-property-information';
+import type { FeaturesContext } from '../../shared/features-context';
 import type { PublicPropertyEligibilityResolution } from './publicPropertyEligibilityService';
 
 type PublicRecord = Record<string, unknown>;
@@ -277,6 +283,7 @@ export interface PublicPropertyDetailDto {
     publicIdentity: PublicPropertySupplyIdentity;
     images: PublicPropertyImageDto[];
     media: PublicPropertyMediaDto[];
+    detailPresentation: PublicPropertyDetailPresentation;
   };
   images: PublicPropertyImageDto[];
   media: PublicPropertyMediaDto[];
@@ -292,13 +299,17 @@ export function toPublicPropertyDetailDto(
 ): PublicPropertyDetailDto {
   const source = resolution.property;
   const property: PublicRecord = {};
+  const publicDetails = publicPropertyDetails(source);
 
   for (const field of PUBLIC_PROPERTY_FIELDS) {
     // Pricing is a derived public contract and can live only inside approved
     // source details, so serialize it even when the projection has no scalar
     // `pricingContract` column/value.
     if (source[field] === undefined && field !== 'pricingContract') continue;
-    const publicValue = sanitizePublicPropertyField(field, source[field], source);
+    const publicValue =
+      field === 'propertyDetails'
+        ? publicDetails
+        : sanitizePublicPropertyField(field, source[field], source);
     if (publicValue !== undefined) property[field] = publicValue;
   }
 
@@ -309,6 +320,28 @@ export function toPublicPropertyDetailDto(
     .map(item => toPublicPropertyMedia(item))
     .filter((item): item is PublicPropertyMediaDto => Boolean(item?.url));
   const publicIdentity = toPublicIdentity(resolution.publicIdentity);
+  const detailPresentation = buildPublicPropertyDetailPresentation({
+    listingType: source.listingType ?? source.transactionType,
+    propertyType: source.propertyType,
+    price: source.price,
+    corePropertyInformation: publicDetails.corePropertyInformation as CorePropertyInformation,
+    featuresContext: publicDetails.featuresContext as FeaturesContext,
+    pricingContract: publicDetails.pricingContract as ActivePricingContract | undefined,
+    // The eligibility resolution has already projected these values for public
+    // use. Keep the detail presentation on that public projection rather than
+    // allowing the browser to assemble a location from loose property fields.
+    publicLocation: {
+      address: source.publicAddress,
+      city: source.city,
+      province: source.province,
+      precision: source.publicLocationPrecision,
+      latitude: source.publicLatitude,
+      longitude: source.publicLongitude,
+    },
+    media,
+    photoCount: images.length,
+    hasVirtualTour: Boolean(publicVirtualTour(source.virtualTour)),
+  });
 
   return {
     property: {
@@ -318,6 +351,7 @@ export function toPublicPropertyDetailDto(
       publicIdentity,
       images,
       media,
+      detailPresentation,
     },
     images,
     media,

@@ -32,6 +32,10 @@ describe('publicPropertyDto', () => {
         price: 2_500_000,
         listingType: 'sale',
         propertyType: 'house',
+        publicAddress: 'Fourways, Johannesburg, Gauteng',
+        publicLatitude: '-26.0100',
+        publicLongitude: '28.0100',
+        publicLocationPrecision: 'approximate',
         city: 'Johannesburg',
         ownerId: 100,
         agentId: 33,
@@ -172,6 +176,51 @@ describe('publicPropertyDto', () => {
       isPrimary: 1,
       displayOrder: 0,
       mediaType: 'image',
+    });
+    expect(result.property.detailPresentation).toMatchObject({
+      version: 2,
+      listingIntent: 'sale',
+      price: {
+        label: 'Asking price',
+        supportingText: 'Price negotiable',
+      },
+      buyerChecks: expect.arrayContaining([
+        expect.objectContaining({
+          key: 'electricity',
+          label: 'Electricity',
+          value: 'Municipal',
+          status: 'known',
+        }),
+        expect.objectContaining({
+          key: 'security',
+          value: 'Access control',
+          status: 'known',
+        }),
+      ]),
+      runningCosts: expect.arrayContaining([
+        expect.objectContaining({
+          key: 'rates-and-taxes',
+          label: 'Rates & taxes',
+          status: 'known',
+        }),
+      ]),
+      featureGroups: expect.arrayContaining([
+        expect.objectContaining({
+          key: 'outdoor',
+          items: expect.arrayContaining([expect.objectContaining({ label: 'Garden' })]),
+        }),
+      ]),
+      propertyContext: expect.arrayContaining([
+        expect.objectContaining({ key: 'property-type', value: 'House' }),
+      ]),
+      location: {
+        label: 'Fourways, Johannesburg, Gauteng',
+        precision: 'approximate',
+        precisionLabel: 'Approximate area location',
+        description: "The marker represents the public area, not the property's exact position.",
+        coordinates: { latitude: -26.01, longitude: 28.01 },
+        mapsUrl: expect.stringContaining('query=-26.01%2C28.01'),
+      },
     });
 
     const serialized = JSON.stringify(result);
