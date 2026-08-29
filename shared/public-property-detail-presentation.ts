@@ -19,7 +19,7 @@ import { PROPERTY_TYPE_DEFINITIONS, type ListingPropertyType } from './property-
  * boundary. It deliberately contains display-ready facts only: the browser
  * must not re-interpret extensible authoring JSON or pricing aliases.
  */
-export const PUBLIC_PROPERTY_DETAIL_PRESENTATION_VERSION = 3 as const;
+export const PUBLIC_PROPERTY_DETAIL_PRESENTATION_VERSION = 4 as const;
 
 export type PublicPropertyDetailIcon =
   | 'area'
@@ -51,6 +51,8 @@ export interface PublicPropertyDetailFact {
   key: string;
   label: string;
   value: string;
+  /** A concise, equivalent value for compact metric tiles; the full value remains authoritative. */
+  compactValue?: string;
   icon: PublicPropertyDetailIcon;
   status: PublicPropertyDetailFactStatus;
 }
@@ -219,7 +221,14 @@ const suppliedOrMissing = (
   );
 };
 
-const parkingFact = (core: CorePropertyInformation): PublicPropertyDetailFact => {
+/**
+ * Parking is a canonical physical fact rather than a marketing claim. Keeping
+ * its public formatting here lets Search and Detail say the same thing without
+ * asking browser components to interpret listing JSON.
+ */
+export const buildPublicPropertyParkingFact = (
+  core: CorePropertyInformation,
+): PublicPropertyDetailFact => {
   const parkingBays = knownNumber(core.parkingBays);
   const garages = knownNumber(core.garages);
   const parts: string[] = [];
@@ -229,13 +238,22 @@ const parkingFact = (core: CorePropertyInformation): PublicPropertyDetailFact =>
   if (parkingBays !== undefined) {
     parts.push(`${parkingBays} ${parkingBays === 1 ? 'parking bay' : 'parking bays'}`);
   }
-  return fact(
+  const result = fact(
     'parking',
     'Parking',
     parts.length > 0 ? parts.join(' · ') : 'Not supplied',
     'parking',
     parts.length > 0 ? 'known' : 'not_supplied',
   );
+  if (parts.length === 0) return result;
+
+  // The hero tile already labels this number as Parking and shows a vehicle
+  // icon, so a compact total remains precise while preventing a long phrase
+  // such as "1 parking bay" from being truncated in a four-column panel.
+  return {
+    ...result,
+    compactValue: String((garages ?? 0) + (parkingBays ?? 0)),
+  };
 };
 
 const primaryPrice = (
@@ -396,7 +414,14 @@ const rentalTermFact = (
  * tenant's tenancy questions without treating a missing legacy value as a
  * public fact. Older approved rentals are transparent rather than blank.
  */
-const rentalEssentialsFor = (rentalTerms: RentalTerms | undefined): PublicPropertyDetailFact[] => {
+/**
+ * A single public presentation of tenancy terms is shared by the rental
+ * detail and the compact Search-card snapshot. Missing terms remain explicit;
+ * callers may choose a smaller subset, but cannot infer a tenancy claim.
+ */
+export const buildPublicRentalEssentials = (
+  rentalTerms: RentalTerms | undefined,
+): PublicPropertyDetailFact[] => {
   const availability = rentalTerms?.availability;
   const lease = rentalTerms?.lease;
 
@@ -457,6 +482,7 @@ const propertyTypeLabel = (propertyType: unknown) => {
 };
 
 const heroFactsFor = (
+  listingIntent: 'sale' | 'rent',
   propertyType: string,
   core: CorePropertyInformation,
 ): PublicPropertyDetailFact[] => {
@@ -466,7 +492,7 @@ const heroFactsFor = (
   const bedrooms = knownNumber(core.bedrooms);
   const bathrooms = knownNumber(core.bathrooms);
   const floorLevel = knownNumber(core.floorLevel);
-  const parking = parkingFact(core);
+  const parking = buildPublicPropertyParkingFact(core);
 
   const available = new Map<string, PublicPropertyDetailFact>();
   if (internalArea !== undefined) {
@@ -487,7 +513,10 @@ const heroFactsFor = (
   if (bathrooms !== undefined) {
     available.set('bathrooms', fact('bathrooms', 'Bathrooms', String(bathrooms), 'bathrooms'));
   }
-  if (parking.status === 'known') available.set('parking', parking);
+  // Rental decision panels deliberately reserve the fourth metric for
+  // parking. An unknown value stays transparent rather than becoming a zero
+  // or disappearing and leaving the tenant-facing grid visually incomplete.
+  if (parking.status === 'known' || listingIntent === 'rent') available.set('parking', parking);
   if (floorLevel !== undefined) {
     available.set(
       'floor-level',
@@ -775,8 +804,9 @@ export function buildPublicPropertyDetailPresentation(
         : 'Price on request',
       ...(priceSupportingText ? { supportingText: priceSupportingText } : {}),
     },
-    heroFacts: heroFactsFor(type, input.corePropertyInformation),
-    rentalEssentials: listingIntent === 'rent' ? rentalEssentialsFor(input.rentalTerms) : [],
+    heroFacts: heroFactsFor(listingIntent, type, input.corePropertyInformation),
+    rentalEssentials:
+      listingIntent === 'rent' ? buildPublicRentalEssentials(input.rentalTerms) : [],
     buyerChecks,
     runningCosts: runningCostsFor(input.pricingContract),
     featureGroups: featureGroupsFor(input.featuresContext),

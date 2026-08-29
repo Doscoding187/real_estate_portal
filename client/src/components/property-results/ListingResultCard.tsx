@@ -7,6 +7,7 @@ import {
   Bed,
   Building2,
   Camera,
+  CarFront,
   GitCompareArrows,
   Heart,
   LandPlot,
@@ -17,6 +18,7 @@ import { PROPERTY_IMAGE_FALLBACK, withApiBase } from '@/lib/mediaUtils';
 import { isExplicitRentListing, withRentalPeriod } from '@/lib/rentPresentation';
 import type { SearchCardIdentity } from '@shared/types';
 import type { ListingCardHighlight } from '@shared/listing-highlight-registry';
+import type { PublicPropertyDetailFact } from '@shared/public-property-detail-presentation';
 import { getListingHighlightIcon } from './listingHighlightIcons';
 
 export interface ListingResultCardData {
@@ -36,6 +38,8 @@ export interface ListingResultCardData {
   yardSize?: number;
   bedrooms?: number;
   bathrooms?: number;
+  parking?: PublicPropertyDetailFact;
+  rentalSnapshot?: PublicPropertyDetailFact[];
   highlights?: ListingCardHighlight[];
   listingType?: 'sale' | 'rent' | string;
   listingSource?: 'manual' | 'development';
@@ -127,6 +131,22 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
       ? `/agents/${canonicalIdentity.agentSlug}`
       : null;
   const highlights = Array.isArray(data.highlights) ? data.highlights.slice(0, 3) : [];
+  const rentalParking = isRentalListing
+    ? (data.parking ?? {
+        key: 'parking',
+        label: 'Parking',
+        value: 'To confirm',
+        icon: 'parking' as const,
+        status: 'not_supplied' as const,
+      })
+    : undefined;
+  const rentalSnapshot = isRentalListing
+    ? (Array.isArray(data.rentalSnapshot) ? data.rentalSnapshot : [])
+        .filter(
+          fact => fact.key === 'availability' || fact.key === 'lease' || fact.key === 'furnishing',
+        )
+        .slice(0, 3)
+    : [];
 
   return (
     <article className="group relative w-full overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_16px_40px_-32px_rgba(15,23,42,0.38)] transition-all duration-300 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-[0_22px_44px_-28px_rgba(15,23,42,0.32)] sm:h-[312px]">
@@ -256,6 +276,17 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
                 {data.bathrooms} {data.bathrooms === 1 ? 'bath' : 'baths'}
               </span>
             )}
+            {rentalParking && (
+              <span
+                className="flex items-center gap-1.5 text-[13px] font-medium text-slate-600"
+                aria-label={`${rentalParking.label}: ${rentalParking.value}`}
+              >
+                <CarFront className="h-[18px] w-[18px]" aria-hidden="true" />
+                <span className={rentalParking.status === 'known' ? undefined : 'text-slate-500'}>
+                  {rentalParking.status === 'known' ? rentalParking.value : 'Parking to confirm'}
+                </span>
+              </span>
+            )}
             {typeof data.yardSize === 'number' && data.yardSize > 0 && (
               <span
                 className="flex items-center gap-1.5 text-[13px] font-medium text-slate-600"
@@ -291,7 +322,41 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
             </div>
           )}
 
-          <div className="mt-auto flex items-center justify-between gap-3 border-t border-slate-100 pt-3 sm:pt-4">
+          {rentalSnapshot.length > 0 && (
+            <section
+              className="mt-auto border-t border-slate-100 pt-3"
+              aria-label="Rental snapshot"
+            >
+              <div
+                className="grid divide-x divide-slate-100"
+                style={{
+                  gridTemplateColumns: `repeat(${rentalSnapshot.length}, minmax(0, 1fr))`,
+                }}
+              >
+                {rentalSnapshot.map(fact => (
+                  <div key={fact.key} className="min-w-0 px-2 first:pl-0 last:pr-0">
+                    <p className="truncate text-[9px] font-bold uppercase tracking-[0.09em] text-slate-500">
+                      {fact.label}
+                    </p>
+                    <p
+                      className={`mt-1 truncate text-[11px] font-semibold leading-tight ${
+                        fact.status === 'known' ? 'text-slate-800' : 'text-slate-500'
+                      }`}
+                      title={`${fact.label}: ${fact.value}`}
+                    >
+                      {fact.value}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
+          <div
+            className={`flex items-center justify-between gap-3 border-t border-slate-100 ${
+              rentalSnapshot.length > 0 ? 'mt-3 pt-3' : 'mt-auto pt-3 sm:pt-4'
+            }`}
+          >
             <div className="min-w-0">
               {agentProfileHref ? (
                 <Link

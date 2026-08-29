@@ -1032,6 +1032,8 @@ export default function SearchResults({
                                 yardSize: card.yardSize,
                                 bedrooms: card.bedrooms,
                                 bathrooms: card.bathrooms,
+                                parking: card.parking,
+                                rentalSnapshot: card.rentalSnapshot,
                                 highlights: card.highlights,
                                 listingSource: card.listingSource,
                                 listerType: card.listerType,

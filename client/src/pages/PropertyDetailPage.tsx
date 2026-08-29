@@ -172,8 +172,11 @@ function DetailFactGrid({
               className="min-w-0 rounded-xl border border-slate-200 bg-white px-2.5 py-3 text-center"
             >
               <Icon className="mx-auto mb-1.5 h-4 w-4 text-blue-600" aria-hidden="true" />
-              <p className="truncate text-sm font-extrabold leading-tight text-slate-950">
-                {item.value}
+              <p
+                className="truncate text-sm font-extrabold leading-tight text-slate-950"
+                title={`${item.label}: ${item.value}`}
+              >
+                {item.compactValue || item.value}
               </p>
               <p className="mt-1 truncate text-[10px] font-medium text-slate-500">{item.label}</p>
             </div>

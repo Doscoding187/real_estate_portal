@@ -636,6 +636,7 @@ const MANUAL_FIXTURES: readonly ManualFixtureDefinition[] = [
     bedrooms: 2,
     bathrooms: 2,
     internalAreaM2: 88,
+    parkingBays: 1,
     featuresContext: {
       version: 1,
       spaces: ['balcony_patio'],
@@ -2873,6 +2874,23 @@ async function runContainedApplicationVerification(
         'Search-to-Lead scenario Rent search did not return the canonical published rental card.',
       );
     }
+    const rentalCardParking = rentalCard.parking;
+    const rentalCardSnapshot = Array.isArray(rentalCard.rentalSnapshot)
+      ? rentalCard.rentalSnapshot
+      : [];
+    const rentalCardSnapshotValue = (key: string) =>
+      String(rentalCardSnapshot.find(fact => fact.key === key)?.value || '');
+    if (
+      rentalCardParking?.value !== '1 parking bay' ||
+      rentalCardParking.status !== 'known' ||
+      rentalCardSnapshotValue('availability') !== 'Available now' ||
+      rentalCardSnapshotValue('lease') !== '12-month minimum' ||
+      rentalCardSnapshotValue('furnishing') !== 'Furnished'
+    ) {
+      throw new Error(
+        'Search-to-Lead scenario rental card did not preserve canonical parking and tenancy facts.',
+      );
+    }
 
     const rentalDetail = await propertyCaller.properties.getById({
       id: SCENARIO_IDS.rentalProperty,
@@ -2887,6 +2905,15 @@ async function runContainedApplicationVerification(
     const rentalPricing = (rentalPropertyDto.pricingContract || {}) as Record<string, unknown>;
     const rentalIdentity = (rentalPropertyDto.publicIdentity || {}) as Record<string, unknown>;
     const rentalPresentation = (rentalPropertyDto.detailPresentation || {}) as Record<string, unknown>;
+    const rentalHeroFacts = Array.isArray(rentalPresentation.heroFacts)
+      ? rentalPresentation.heroFacts
+      : [];
+    const rentalHeroParking = rentalHeroFacts.find(
+      candidate =>
+        candidate &&
+        typeof candidate === 'object' &&
+        (candidate as Record<string, unknown>).key === 'parking',
+    ) as Record<string, unknown> | undefined;
     const rentalEssentialFacts = Array.isArray(rentalPresentation.rentalEssentials)
       ? rentalPresentation.rentalEssentials
       : [];
@@ -2912,6 +2939,9 @@ async function runContainedApplicationVerification(
       rentalPricing.intent !== 'rent' ||
       Number(rentalPricing.monthlyRent) !== 25000 ||
       rentalPresentation.listingIntent !== 'rent' ||
+      rentalHeroParking?.value !== '1 parking bay' ||
+      rentalHeroParking?.compactValue !== '1' ||
+      rentalHeroParking?.status !== 'known' ||
       rentalTenantTerms.availability !== 'Available now' ||
       rentalTenantTerms.lease !== '12-month minimum' ||
       rentalTenantTerms.utilities !== 'Partly included' ||

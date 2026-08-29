@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { buildPublicPropertyDetailPresentation } from '../public-property-detail-presentation';
+import {
+  buildPublicPropertyDetailPresentation,
+  buildPublicPropertyParkingFact,
+} from '../public-property-detail-presentation';
 
 const houseCore = {
   version: 1 as const,
@@ -162,6 +165,58 @@ describe('public property-detail presentation', () => {
     });
   });
 
+  it('reserves the fourth rental hero metric for transparent parking information', () => {
+    const presentation = buildPublicPropertyDetailPresentation({
+      listingType: 'rent',
+      propertyType: 'apartment',
+      price: 18_000,
+      corePropertyInformation: {
+        version: 1,
+        bedrooms: { status: 'known', value: 2 },
+        bathrooms: { status: 'known', value: 1 },
+        internalArea: { status: 'known', valueM2: 72, unit: 'm2' },
+        parkingBays: { status: 'unknown' },
+        garages: { status: 'unknown' },
+        floorLevel: { status: 'known', value: 3 },
+      },
+      featuresContext,
+      rentalTerms: {
+        version: 1,
+        availability: { status: 'available_now' },
+        lease: { status: 'month_to_month' },
+        utilities: 'not_included',
+        furnishing: 'unfurnished',
+      },
+      publicLocation: { city: 'Johannesburg', province: 'Gauteng' },
+      media: [],
+      photoCount: 1,
+      hasVirtualTour: false,
+    });
+
+    expect(presentation.heroFacts.map(fact => [fact.key, fact.value, fact.status])).toEqual([
+      ['internal-area', '72 m²', 'known'],
+      ['bedrooms', '2', 'known'],
+      ['bathrooms', '1', 'known'],
+      ['parking', 'Not supplied', 'not_supplied'],
+    ]);
+  });
+
+  it('keeps a full parking fact while supplying a compact hero metric', () => {
+    expect(
+      buildPublicPropertyParkingFact({
+        version: 1,
+        parkingBays: { status: 'known', value: 1 },
+        garages: { status: 'unknown' },
+      }),
+    ).toMatchObject({
+      key: 'parking',
+      label: 'Parking',
+      value: '1 parking bay',
+      compactValue: '1',
+      status: 'known',
+    });
+  });
+
   it('makes absent legacy rental terms transparent rather than inventing a tenancy claim', () => {
     const presentation = buildPublicPropertyDetailPresentation({
       listingType: 'rent',
@@ -177,7 +232,11 @@ describe('public property-detail presentation', () => {
 
     expect(presentation.rentalEssentials).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ key: 'availability', value: 'To confirm', status: 'not_supplied' }),
+        expect.objectContaining({
+          key: 'availability',
+          value: 'To confirm',
+          status: 'not_supplied',
+        }),
         expect.objectContaining({ key: 'lease', value: 'To confirm', status: 'not_supplied' }),
         expect.objectContaining({ key: 'utilities', value: 'To confirm', status: 'not_supplied' }),
         expect.objectContaining({ key: 'furnishing', value: 'To confirm', status: 'not_supplied' }),
