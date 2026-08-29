@@ -153,9 +153,15 @@ describe('buildListingSubmitPayloadFromWizardState', () => {
       pricing: {
         monthlyRent: 15000,
         deposit: 30000,
-        leaseTerms: '12 months',
-        availableFrom: '2025-07-01',
-        utilitiesIncluded: ['water', 'electricity'],
+      },
+      propertyDetails: {
+        rentalTerms: {
+          version: 1,
+          availability: { status: 'available_from', date: '2026-10-01' },
+          lease: { status: 'fixed_term', minimumMonths: 12 },
+          utilities: 'partially_included',
+          furnishing: 'furnished',
+        },
       },
     };
     const payload = buildListingSubmitPayloadFromWizardState(state);
@@ -163,7 +169,13 @@ describe('buildListingSubmitPayloadFromWizardState', () => {
     expect(payload.pricing).toMatchObject({
       monthlyRent: 15000,
       deposit: 30000,
-      leaseTerms: '12 months',
+    });
+    expect(payload.propertyDetails.rentalTerms).toEqual({
+      version: 1,
+      availability: { status: 'available_from', date: '2026-10-01' },
+      lease: { status: 'fixed_term', minimumMonths: 12 },
+      utilities: 'partially_included',
+      furnishing: 'furnished',
     });
   });
 
@@ -231,16 +243,12 @@ describe('extractRentPricing', () => {
     const result = extractRentPricing({
       monthlyRent: 12000,
       deposit: 24000,
-      leaseTerms: '6 months',
-      availableFrom: '2025-06-01',
-      utilitiesIncluded: ['water'],
+      depositFact: { status: 'known', amount: 24000 },
     });
     expect(result).toEqual({
       monthlyRent: 12000,
       deposit: 24000,
-      leaseTerms: '6 months',
-      availableFrom: '2025-06-01',
-      utilitiesIncluded: ['water'],
+      depositFact: { status: 'known', amount: 24000 },
     });
   });
 

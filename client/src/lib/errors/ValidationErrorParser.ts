@@ -43,9 +43,7 @@ const LISTING_FIELD_TO_STEP_MAP: Record<string, number> = {
   transferCostEstimate: 5,
   startingBid: 5,
   reservePrice: 5,
-  leaseTerms: 5,
-  availableFrom: 5,
-  utilitiesIncluded: 5,
+  rentalTerms: 5,
   auctionDateTime: 5,
   negotiable: 5,
 
@@ -236,9 +234,7 @@ export function getFieldDisplayName(field: string): string {
     transferCostEstimate: 'Transfer Cost Estimate',
     startingBid: 'Starting Bid',
     reservePrice: 'Reserve Price',
-    leaseTerms: 'Lease Terms',
-    availableFrom: 'Available From',
-    utilitiesIncluded: 'Utilities Included',
+    rentalTerms: 'Rental Essentials',
     auctionDateTime: 'Auction Date & Time',
     negotiable: 'Negotiable',
 

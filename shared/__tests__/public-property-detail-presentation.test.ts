@@ -100,6 +100,7 @@ describe('public property-detail presentation', () => {
       label: 'Asking price',
       supportingText: 'Price not negotiable',
     });
+    expect(presentation.rentalEssentials).toEqual([]);
     expect(presentation.location).toMatchObject({
       label: 'Fourways, Johannesburg, Gauteng',
       precision: 'approximate',
@@ -123,6 +124,13 @@ describe('public property-detail presentation', () => {
         monthlyRent: 24_000,
         deposit: { status: 'unknown' },
       },
+      rentalTerms: {
+        version: 1,
+        availability: { status: 'available_from', date: '2026-09-01' },
+        lease: { status: 'fixed_term', minimumMonths: 12 },
+        utilities: 'partially_included',
+        furnishing: 'partly_furnished',
+      },
       publicLocation: {
         city: 'Johannesburg',
         province: 'Gauteng',
@@ -138,6 +146,12 @@ describe('public property-detail presentation', () => {
     expect(presentation.buyerChecks).toContainEqual(
       expect.objectContaining({ key: 'pet-policy', value: 'Allowed', status: 'known' }),
     );
+    expect(presentation.rentalEssentials).toEqual([
+      expect.objectContaining({ key: 'availability', value: 'From 01 Sept 2026', status: 'known' }),
+      expect.objectContaining({ key: 'lease', value: '12-month minimum', status: 'known' }),
+      expect.objectContaining({ key: 'utilities', value: 'Partly included', status: 'known' }),
+      expect.objectContaining({ key: 'furnishing', value: 'Partly furnished', status: 'known' }),
+    ]);
     expect(presentation.runningCosts).toEqual([]);
     expect(presentation.location).toMatchObject({
       label: 'Johannesburg, Gauteng',
@@ -146,5 +160,28 @@ describe('public property-detail presentation', () => {
       coordinates: null,
       mapsUrl: null,
     });
+  });
+
+  it('makes absent legacy rental terms transparent rather than inventing a tenancy claim', () => {
+    const presentation = buildPublicPropertyDetailPresentation({
+      listingType: 'rent',
+      propertyType: 'apartment',
+      price: 12_000,
+      corePropertyInformation: houseCore,
+      featuresContext,
+      publicLocation: { city: 'Johannesburg', province: 'Gauteng' },
+      media: [],
+      photoCount: 0,
+      hasVirtualTour: false,
+    });
+
+    expect(presentation.rentalEssentials).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ key: 'availability', value: 'To confirm', status: 'not_supplied' }),
+        expect.objectContaining({ key: 'lease', value: 'To confirm', status: 'not_supplied' }),
+        expect.objectContaining({ key: 'utilities', value: 'To confirm', status: 'not_supplied' }),
+        expect.objectContaining({ key: 'furnishing', value: 'To confirm', status: 'not_supplied' }),
+      ]),
+    );
   });
 });

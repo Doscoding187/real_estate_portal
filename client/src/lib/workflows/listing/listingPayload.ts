@@ -17,6 +17,10 @@ import {
 } from '@shared/features-context';
 import { buildPricingContract } from '@shared/pricing-contract';
 import { buildListingLocationAuthoringPayload } from '@shared/location-contract';
+import {
+  createDefaultRentalTerms,
+  normalizeRentalTerms,
+} from '@shared/rental-terms-contract';
 
 /**
  * Shape expected by server/listingRouter.ts createListingSchema.
@@ -99,9 +103,31 @@ export function buildListingSubmitPayloadFromWizardState(
     ),
   };
 
+  if (action === 'rent') {
+    propertyDetails.rentalTerms =
+      normalizeRentalTerms(historicalDetails.rentalTerms) ?? createDefaultRentalTerms();
+  } else {
+    delete propertyDetails.rentalTerms;
+  }
+
+  // These pre-launch flat fields are retired from new authoring. Rental
+  // availability and tenancy facts now have one versioned details authority.
+  const pricing =
+    action === 'rent'
+      ? (() => {
+          const {
+            leaseTerms: _leaseTerms,
+            availableFrom: _availableFrom,
+            utilitiesIncluded: _utilitiesIncluded,
+            ...canonicalRentPricing
+          } = (state.pricing || {}) as Record<string, unknown>;
+          return canonicalRentPricing as RentPricing;
+        })()
+      : state.pricing!;
+
   const pricingContract = buildPricingContract(
     action,
-    state.pricing as Record<string, unknown> | undefined,
+    pricing as Record<string, unknown> | undefined,
     propertyDetails,
     { preferEmbedded: false },
   );
@@ -124,7 +150,7 @@ export function buildListingSubmitPayloadFromWizardState(
     propertyType,
     title: state.title ?? '',
     description: state.description ?? '',
-    pricing: state.pricing!,
+    pricing,
     propertyDetails,
     location: buildListingLocationAuthoringPayload(state.location)!,
     mediaIds,
@@ -159,9 +185,7 @@ export function extractRentPricing(
   return {
     monthlyRent: p.monthlyRent,
     deposit: p.deposit,
-    leaseTerms: p.leaseTerms,
-    availableFrom: p.availableFrom,
-    utilitiesIncluded: p.utilitiesIncluded,
+    depositFact: p.depositFact,
   };
 }
 

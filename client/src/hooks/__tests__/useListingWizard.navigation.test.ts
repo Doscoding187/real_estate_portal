@@ -67,6 +67,29 @@ describe('useListingWizardStore navigation contract', () => {
     expect(result.current.currentStep).toBe(2);
   });
 
+  it('initializes rental terms explicitly and never carries them into a sale', () => {
+    const { result } = renderHook(() => useListingWizardStore());
+
+    act(() => {
+      result.current.setListingIntent('rent');
+      result.current.setPropertyType('apartment');
+    });
+
+    expect(result.current.propertyDetails?.rentalTerms).toEqual({
+      version: 1,
+      availability: { status: 'to_confirm' },
+      lease: { status: 'to_confirm' },
+      utilities: 'to_confirm',
+      furnishing: 'to_confirm',
+    });
+
+    act(() => {
+      result.current.setListingIntent('sale');
+    });
+
+    expect(result.current.propertyDetails?.rentalTerms).toBeUndefined();
+  });
+
   it('allows backward navigation while guarding the next required step', () => {
     const { result } = renderHook(() => useListingWizardStore());
 

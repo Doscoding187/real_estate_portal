@@ -94,7 +94,10 @@ import {
   sanitizeBuySearchFilters,
   toBuyPublicSearchFilters,
 } from '@/../../shared/buySearchContract';
-import { toRentPublicSearchFilters } from '@/../../shared/rentSearchContract';
+import {
+  sanitizeRentSearchFilters,
+  toRentPublicSearchFilters,
+} from '@/../../shared/rentSearchContract';
 import {
   canAdvancePublicSearchPage,
   getPublicSearchReachablePageCount,
@@ -541,6 +544,8 @@ export default function SearchResults({
     const nextFilters =
       searchIntent.transactionType === 'for-sale'
         ? sanitizeBuySearchFilters(mergedFilters)
+        : searchIntent.transactionType === 'to-rent'
+          ? sanitizeRentSearchFilters(mergedFilters)
         : mergedFilters;
 
     const updatedIntent: SearchIntent = {

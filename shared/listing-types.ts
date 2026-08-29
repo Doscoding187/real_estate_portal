@@ -7,6 +7,7 @@ import type {
 import type { CorePropertyInformation } from './core-property-information';
 import type { FeaturesContext } from './features-context';
 import type { MoneyFact, Negotiability, RecurringCosts } from './pricing-contract';
+import type { RentalTerms } from './rental-terms-contract';
 import type {
   LocationCoordinateSource,
   LocationConfirmationState,
@@ -289,6 +290,8 @@ export type PropertyDetails = (
 ) & {
   /** Typed semantic presentation metadata; media rows remain the asset authority. */
   propertyPresentation?: PropertyPresentation;
+  /** Tenant-facing availability and tenancy facts; rental only. */
+  rentalTerms?: RentalTerms;
 };
 
 // Step 3: Pricing Fields
@@ -309,9 +312,6 @@ export interface RentPricing {
   /** Legacy numeric read compatibility. New authoring uses depositFact. */
   deposit?: number;
   depositFact?: MoneyFact;
-  leaseTerms?: string;
-  availableFrom?: Date;
-  utilitiesIncluded?: boolean;
   /** Legacy flat aliases are retained for existing readers only. */
   ratesAndTaxes?: number;
   levies?: number;

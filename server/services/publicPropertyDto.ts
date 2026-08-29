@@ -2,6 +2,7 @@ import type { PublicPropertySupplyIdentity } from '../../shared/types';
 import { buildCanonicalCorePropertyDetails } from '../../shared/core-property-information';
 import { normalizeFeaturesContext } from '../../shared/features-context';
 import { buildPricingContract, type ActivePricingContract } from '../../shared/pricing-contract';
+import { normalizeRentalTerms } from '../../shared/rental-terms-contract';
 import { isListingPropertyType, type ListingPropertyType } from '../../shared/property-taxonomy';
 import {
   buildPublicPropertyDetailPresentation,
@@ -147,6 +148,8 @@ function publicPropertyDetails(source: PublicRecord): PublicRecord {
     ? source.propertyType
     : undefined;
   const pricingContract = publicPricingContract(source, details);
+  const rentalTerms =
+    publicListingAction(source) === 'rent' ? normalizeRentalTerms(details.rentalTerms) : undefined;
 
   // `propertyDetails` is extensible authoring JSON. Public detail deliberately
   // exposes only the canonical typed buyer facts and derived compatibility
@@ -155,6 +158,7 @@ function publicPropertyDetails(source: PublicRecord): PublicRecord {
     ...buildCanonicalCorePropertyDetails(propertyType, details, source),
     featuresContext: normalizeFeaturesContext(details.featuresContext, details),
     ...(pricingContract ? { pricingContract } : {}),
+    ...(rentalTerms ? { rentalTerms } : {}),
   };
 }
 
@@ -327,6 +331,7 @@ export function toPublicPropertyDetailDto(
     corePropertyInformation: publicDetails.corePropertyInformation as CorePropertyInformation,
     featuresContext: publicDetails.featuresContext as FeaturesContext,
     pricingContract: publicDetails.pricingContract as ActivePricingContract | undefined,
+    rentalTerms: normalizeRentalTerms(publicDetails.rentalTerms),
     // The eligibility resolution has already projected these values for public
     // use. Keep the detail presentation on that public projection rather than
     // allowing the browser to assemble a location from loose property fields.

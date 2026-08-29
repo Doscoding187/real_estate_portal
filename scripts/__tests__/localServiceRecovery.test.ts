@@ -16,6 +16,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 type Fixture = {
   root: string;
+  port: number;
   serviceRoot: string;
   dataDir: string;
   pidPath: string;
@@ -28,6 +29,7 @@ type Fixture = {
 
 const fixtures: string[] = [];
 const children: ChildProcess[] = [];
+let nextFixturePort = 43070;
 
 function deadPid(): number {
   let pid = process.pid + 100000;
@@ -37,6 +39,7 @@ function deadPid(): number {
 
 function fixture(): Fixture {
   const root = mkdtempSync('/var/tmp/property-listify-recovery-test-');
+  const port = nextFixturePort++;
   fixtures.push(root);
   const serviceUidRoot = join(root, 'uid-root');
   const serviceRoot = join(serviceUidRoot, 'mysql-3307');
@@ -47,16 +50,19 @@ function fixture(): Fixture {
   chmodSync(serviceRoot, 0o700);
 
   const source = readFileSync(join(process.cwd(), 'scripts/local-db.sh'), 'utf8');
-  const fixtureSource = source.replace(
-    'readonly SERVICE_UID_ROOT="$TMP_PARENT/property-listify-$SERVICE_USER_ID"',
-    `readonly SERVICE_UID_ROOT="${serviceUidRoot}"`,
-  );
+  const fixtureSource = source
+    .replace('readonly PORT=3307', `readonly PORT=${port}`)
+    .replace(
+      'readonly SERVICE_UID_ROOT="$TMP_PARENT/property-listify-$SERVICE_USER_ID"',
+      `readonly SERVICE_UID_ROOT="${serviceUidRoot}"`,
+    );
   const scriptPath = join(root, 'local-db-fixture.sh');
   writeFileSync(scriptPath, fixtureSource, { mode: 0o700 });
   chmodSync(scriptPath, 0o700);
 
   return {
     root,
+    port,
     serviceRoot,
     dataDir: join(serviceRoot, 'data'),
     pidPath: join(serviceRoot, 'mysqld.pid'),
@@ -141,7 +147,7 @@ function prepareDataSentinels(fixtureState: Fixture): void {
   mkdirSync(mysqlDirectory, { recursive: true, mode: 0o700 });
   chmodSync(fixtureState.dataDir, 0o700);
   const fingerprint = createHash('sha256')
-    .update(`127.0.0.1:3307:${fixtureState.serviceRoot}:${fixtureState.dataDir}`)
+    .update(`127.0.0.1:${fixtureState.port}:${fixtureState.serviceRoot}:${fixtureState.dataDir}`)
     .digest('hex');
   const identityPath = join(fixtureState.serviceRoot, 'service.identity');
   writeFileSync(identityPath, `${fingerprint}\n`, { mode: 0o600 });
@@ -233,7 +239,7 @@ describe('governed local service runtime recovery', () => {
     const ssPath = join(state.binDirectory, 'ss');
     writeFileSync(
       ssPath,
-      '#!/usr/bin/env bash\nprintf "%s\\n" "LISTEN 0 128 127.0.0.1:3307 0.0.0.0:*"\n',
+      `#!/usr/bin/env bash\nprintf "%s\\n" "LISTEN 0 128 127.0.0.1:${state.port} 0.0.0.0:*"\n`,
       { mode: 0o700 },
     );
     chmodSync(ssPath, 0o700);
@@ -242,7 +248,7 @@ describe('governed local service runtime recovery', () => {
     const result = run(state, 'recover', `${state.binDirectory}:${process.env.PATH ?? ''}`);
 
     expect(result.status).not.toBe(0);
-    expect(output(result)).toContain('port 3307 is occupied');
+    expect(output(result)).toContain(`port ${state.port} is occupied`);
     expect(existsSync(state.pidPath)).toBe(true);
   });
 

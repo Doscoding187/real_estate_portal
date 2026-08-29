@@ -60,4 +60,18 @@ describe('SidebarFilters count authority', () => {
     expect(screen.getByText('R 2M')).toBeInTheDocument();
     expect(screen.queryByText('R 2M+')).not.toBeInTheDocument();
   });
+
+  it('uses the canonical open-ended rental budget control', () => {
+    render(
+      <SidebarFilters
+        filters={{}}
+        onFilterChange={vi.fn()}
+        listingType="rent"
+        showLocationRefinement={false}
+      />,
+    );
+
+    expect(screen.getByText('Monthly rent')).toBeInTheDocument();
+    expect(screen.getByLabelText('Maximum budget R 250K')).toHaveTextContent('R 250K+');
+  });
 });

@@ -362,10 +362,7 @@ export function validatePricingContract(
     if (
       raw.monthlyRent !== undefined ||
       raw.deposit !== undefined ||
-      raw.depositFact !== undefined ||
-      raw.leaseTerms !== undefined ||
-      raw.availableFrom !== undefined ||
-      raw.utilitiesIncluded !== undefined
+      raw.depositFact !== undefined
     ) {
       issues.push({ field: 'pricing', message: 'Sale pricing cannot contain Rent pricing fields' });
     }

@@ -24,6 +24,13 @@ import {
   type RecurringCostKey,
   type Negotiability,
 } from '@/../../shared/pricing-contract';
+import {
+  createDefaultRentalTerms,
+  normalizeRentalTerms,
+  type RentalAvailability,
+  type RentalLease,
+  type RentalTerms,
+} from '@/../../shared/rental-terms-contract';
 
 const COSTS: Array<{ key: RecurringCostKey; label: string; help: string; cadence?: boolean }> = [
   {
@@ -314,10 +321,40 @@ const SellPricingForm: React.FC<{
 const RentPricingForm: React.FC<{
   pricing?: RentPricing;
   setPricing: (pricing: RentPricing) => void;
-}> = ({ pricing = {}, setPricing }) => {
+  rentalTerms: RentalTerms;
+  setRentalTerms: (rentalTerms: RentalTerms) => void;
+}> = ({ pricing = {}, setPricing, rentalTerms, setRentalTerms }) => {
   const update = (patch: Partial<RentPricing>) => setPricing({ ...pricing, ...patch });
   const depositFact = pricing.depositFact || normalizeMoneyFact(pricing.deposit);
   const depositStatus = depositFact?.status || '';
+  const updateRentalTerms = (patch: Partial<RentalTerms>) =>
+    setRentalTerms({ ...rentalTerms, ...patch });
+
+  const updateAvailability = (status: RentalAvailability['status']) => {
+    if (status === 'available_from') {
+      updateRentalTerms({
+        availability:
+          rentalTerms.availability.status === 'available_from'
+            ? rentalTerms.availability
+            : { status: 'available_from', date: format(new Date(), 'yyyy-MM-dd') },
+      });
+      return;
+    }
+    updateRentalTerms({ availability: { status } });
+  };
+
+  const updateLease = (status: RentalLease['status']) => {
+    if (status === 'fixed_term') {
+      updateRentalTerms({
+        lease:
+          rentalTerms.lease.status === 'fixed_term'
+            ? rentalTerms.lease
+            : { status: 'fixed_term', minimumMonths: 12 },
+      });
+      return;
+    }
+    updateRentalTerms({ lease: { status } });
+  };
 
   const updateDepositStatus = (status: MoneyFactStatus | '') => {
     if (!status) {
@@ -429,9 +466,143 @@ const RentPricingForm: React.FC<{
         )}
       </div>
 
+      <section
+        className="space-y-4 border-t border-slate-100 pt-5"
+        aria-labelledby="rental-essentials-heading"
+      >
+        <div>
+          <p className="text-xs font-bold uppercase tracking-[0.12em] text-blue-600">
+            Tenant decision facts
+          </p>
+          <h4 id="rental-essentials-heading" className="mt-1 text-base font-semibold text-slate-900">
+            Rental essentials
+          </h4>
+          <p className="mt-1 text-sm text-slate-500">
+            These facts appear with the rental listing. Choose “To confirm” only when the
+            representative still needs to verify the detail.
+          </p>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <Label htmlFor="rental-availability" className="text-sm font-semibold text-slate-800">
+              Availability
+            </Label>
+            <select
+              id="rental-availability"
+              aria-label="Rental availability"
+              value={rentalTerms.availability.status}
+              onChange={event =>
+                updateAvailability(event.target.value as RentalAvailability['status'])
+              }
+              className="mt-2 h-11 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+            >
+              <option value="available_now">Available now</option>
+              <option value="available_from">Available from a date</option>
+              <option value="to_confirm">To confirm</option>
+            </select>
+            {rentalTerms.availability.status === 'available_from' && (
+              <Input
+                aria-label="Available from date"
+                type="date"
+                value={rentalTerms.availability.date}
+                onChange={event =>
+                  updateRentalTerms({
+                    availability: { status: 'available_from', date: event.target.value },
+                  })
+                }
+                className="mt-2"
+              />
+            )}
+          </div>
+
+          <div>
+            <Label htmlFor="rental-lease" className="text-sm font-semibold text-slate-800">
+              Lease
+            </Label>
+            <select
+              id="rental-lease"
+              aria-label="Lease terms"
+              value={rentalTerms.lease.status}
+              onChange={event => updateLease(event.target.value as RentalLease['status'])}
+              className="mt-2 h-11 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+            >
+              <option value="fixed_term">Fixed-term lease</option>
+              <option value="month_to_month">Month-to-month</option>
+              <option value="to_confirm">To confirm</option>
+            </select>
+            {rentalTerms.lease.status === 'fixed_term' && (
+              <div className="mt-2">
+                <Label htmlFor="rental-minimum-months" className="text-xs text-slate-600">
+                  Minimum lease (months)
+                </Label>
+                <Input
+                  id="rental-minimum-months"
+                  aria-label="Minimum lease months"
+                  type="number"
+                  min={1}
+                  max={120}
+                  step={1}
+                  value={rentalTerms.lease.minimumMonths}
+                  onChange={event =>
+                    updateRentalTerms({
+                      lease: {
+                        status: 'fixed_term',
+                        minimumMonths: Number(event.target.value) || 0,
+                      },
+                    })
+                  }
+                  className="mt-1"
+                />
+              </div>
+            )}
+          </div>
+
+          <div>
+            <Label htmlFor="rental-utilities" className="text-sm font-semibold text-slate-800">
+              Utilities
+            </Label>
+            <select
+              id="rental-utilities"
+              aria-label="Utilities responsibility"
+              value={rentalTerms.utilities}
+              onChange={event =>
+                updateRentalTerms({ utilities: event.target.value as RentalTerms['utilities'] })
+              }
+              className="mt-2 h-11 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+            >
+              <option value="included">Included in rent</option>
+              <option value="not_included">Not included in rent</option>
+              <option value="partially_included">Partly included</option>
+              <option value="to_confirm">To confirm</option>
+            </select>
+          </div>
+
+          <div>
+            <Label htmlFor="rental-furnishing" className="text-sm font-semibold text-slate-800">
+              Furnishing
+            </Label>
+            <select
+              id="rental-furnishing"
+              aria-label="Rental furnishing"
+              value={rentalTerms.furnishing}
+              onChange={event =>
+                updateRentalTerms({ furnishing: event.target.value as RentalTerms['furnishing'] })
+              }
+              className="mt-2 h-11 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+            >
+              <option value="furnished">Furnished</option>
+              <option value="partly_furnished">Partly furnished</option>
+              <option value="unfurnished">Unfurnished</option>
+              <option value="to_confirm">To confirm</option>
+            </select>
+          </div>
+        </div>
+      </section>
+
       <div className="rounded-lg border border-blue-100 bg-blue-50/70 px-4 py-3 text-sm text-blue-900">
-        <strong>Keep it clear.</strong> Rental availability, lease duration and utility
-        responsibility will be confirmed in a later step.
+        <strong>Clear terms build trust.</strong> A tenant can still enquire when a detail is marked
+        “To confirm,” but we will never turn missing information into a claim.
       </div>
     </Card>
   );
@@ -514,7 +685,20 @@ const AuctionPricingForm: React.FC<{
 };
 
 const PricingStep: React.FC = () => {
-  const { action, pricing, setPricing } = useListingWizardStore();
+  const { action, pricing, setPricing, propertyDetails, setPropertyDetails } = useListingWizardStore();
+  const rentalTerms = normalizeRentalTerms(propertyDetails?.rentalTerms) ?? createDefaultRentalTerms();
+  const hasStoredRentalTerms = propertyDetails?.rentalTerms !== undefined;
+
+  React.useEffect(() => {
+    // Initialize a newly entered rental journey, but do not overwrite an
+    // in-progress (and temporarily invalid) authored value while the user is
+    // editing a date or lease length. Publish validation owns correctness.
+    if (action !== 'rent' || hasStoredRentalTerms) return;
+    setPropertyDetails({ ...propertyDetails, rentalTerms: createDefaultRentalTerms() });
+  }, [action, hasStoredRentalTerms, propertyDetails, setPropertyDetails]);
+
+  const setRentalTerms = (nextRentalTerms: RentalTerms) =>
+    setPropertyDetails({ ...propertyDetails, rentalTerms: nextRentalTerms });
 
   if (!action) {
     return (
@@ -528,7 +712,12 @@ const PricingStep: React.FC = () => {
         <SellPricingForm pricing={pricing as SellPricing} setPricing={setPricing} />
       )}
       {action === 'rent' && (
-        <RentPricingForm pricing={pricing as RentPricing} setPricing={setPricing} />
+        <RentPricingForm
+          pricing={pricing as RentPricing}
+          setPricing={setPricing}
+          rentalTerms={rentalTerms}
+          setRentalTerms={setRentalTerms}
+        />
       )}
       {action === 'auction' && (
         <AuctionPricingForm pricing={pricing as AuctionPricing} setPricing={setPricing} />

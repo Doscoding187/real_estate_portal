@@ -368,6 +368,26 @@ describe('listing lifecycle — canonical identity contract', () => {
     expect(mockDb.submitListingForReview).toHaveBeenCalledWith(LISTING_ID);
   });
 
+  it('requires fresh pricing before changing a listing commercial intent', async () => {
+    const caller = makeCaller(ownerUser);
+    const LISTING_ID = 3002;
+
+    vi.mocked(mockDb.getListingById).mockResolvedValue(
+      mockListing({ id: LISTING_ID, action: 'sell', status: 'draft' }),
+    );
+
+    await withSilencedConsoleError(async () => {
+      await expect(
+        caller.listing.update({ id: LISTING_ID, action: 'rent' }),
+      ).rejects.toMatchObject({
+        code: 'BAD_REQUEST',
+        message: 'Set pricing for the new listing intent before changing it.',
+      });
+    });
+
+    expect(mockDb.updateListing).not.toHaveBeenCalled();
+  });
+
   it('excludes the published source listing when submitting its private revision', async () => {
     const caller = makeCaller(ownerUser);
     const REVISION_ID = 3004;
@@ -755,7 +775,26 @@ describe('listing lifecycle — canonical identity contract', () => {
             : { startingBid: 1000000 };
 
       vi.mocked(mockDb.getListingById).mockResolvedValue(
-        mockListing({ id: LISTING_ID, action, pricing, status: 'draft' }),
+        mockListing({
+          id: LISTING_ID,
+          action,
+          pricing,
+          status: 'draft',
+          ...(action === 'rent'
+            ? {
+                propertyDetails: {
+                  ...mockListing().propertyDetails,
+                  rentalTerms: {
+                    version: 1,
+                    availability: { status: 'to_confirm' },
+                    lease: { status: 'to_confirm' },
+                    utilities: 'to_confirm',
+                    furnishing: 'to_confirm',
+                  },
+                },
+              }
+            : {}),
+        }),
       );
 
       // Submit for review
@@ -765,6 +804,29 @@ describe('listing lifecycle — canonical identity contract', () => {
       expect(mockDb.submitListingForReview).toHaveBeenCalledWith(LISTING_ID);
     },
   );
+
+  it('rejects a rental submission that lacks the canonical tenant terms', async () => {
+    const caller = makeCaller(ownerUser);
+    const LISTING_ID = 12002;
+
+    vi.mocked(mockDb.getListingById).mockResolvedValue(
+      mockListing({
+        id: LISTING_ID,
+        action: 'rent',
+        pricing: { monthlyRent: 15_000, depositFact: { status: 'unknown' } },
+        status: 'draft',
+      }),
+    );
+
+    await withSilencedConsoleError(async () => {
+      await expect(caller.listing.submitForReview({ listingId: LISTING_ID })).rejects.toMatchObject({
+        code: 'BAD_REQUEST',
+        message: 'Set availability, lease, utilities and furnishing before publishing a rental listing',
+      });
+    });
+
+    expect(mockDb.submitListingForReview).not.toHaveBeenCalled();
+  });
 
   // -----------------------------------------------------------------------
   // Additional: Approve with non-admin user must fail

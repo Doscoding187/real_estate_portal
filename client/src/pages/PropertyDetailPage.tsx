@@ -141,6 +141,10 @@ const detailIcons: Record<PublicPropertyDetailIcon, React.ElementType> = {
   internet: Wifi,
   cost: ReceiptText,
   pets: PawPrint,
+  calendar: CalendarDays,
+  lease: ReceiptText,
+  utilities: Zap,
+  furnishing: Home,
   location: MapPin,
   feature: CircleCheckBig,
 };
@@ -287,7 +291,6 @@ export default function PropertyDetailPage({ propertyId: propPropertyId }: Prope
       const overview = overviewSectionRef.current;
       const shouldShow =
         Boolean(overview) &&
-        window.innerWidth >= 1024 &&
         (overview?.getBoundingClientRect().bottom || 0) <= 80;
       setIsStickyNavVisible(current => (current === shouldShow ? current : shouldShow));
     };
@@ -410,6 +413,7 @@ export default function PropertyDetailPage({ propertyId: propPropertyId }: Prope
 
   const isFavorite = favorites.some(favorite => Number(favorite.propertyId) === propertyId);
   const isRentalListing = presentation.listingIntent === 'rent';
+  const enquiryLabel = isRentalListing ? 'Send rental enquiry' : 'Send enquiry';
   const isCompared = isInComparison(propertyId);
   const description = property.description || '';
   const shouldTruncate = description.length > 360;
@@ -562,7 +566,14 @@ export default function PropertyDetailPage({ propertyId: propPropertyId }: Prope
     setContactRequestType(requestType);
     setIsContactModalOpen(true);
   };
-  const handleOpenStandardEnquiry = () => openContactModal();
+  const handleOpenStandardEnquiry = () =>
+    openContactModal(
+      isRentalListing
+        ? {
+            initialMessage: `Hi, I'm interested in renting ${property.title}. Please share more information about this home.`,
+          }
+        : undefined,
+    );
   const handleRequestViewing = () =>
     openContactModal({
       initialMessage: `Hi, I'd like to request a viewing for ${property.title}. Please contact me to discuss a suitable time.`,
@@ -570,7 +581,7 @@ export default function PropertyDetailPage({ propertyId: propPropertyId }: Prope
     });
   const handleWhatsAppContact = () =>
     openContactModal({
-      initialMessage: `Hi, I'm interested in ${property.title}. Please share more information.`,
+      initialMessage: `Hi, I'm interested in ${isRentalListing ? `renting ${property.title}` : property.title}. Please share more information.`,
       intent: 'whatsapp',
     });
   const scrollToSection = (sectionId: string) =>
@@ -578,6 +589,11 @@ export default function PropertyDetailPage({ propertyId: propPropertyId }: Prope
 
   const sectionNavItems = [
     { id: 'overview', label: 'Overview' },
+    {
+      id: 'property-essentials',
+      label: 'Property essentials',
+      enabled: isRentalListing && presentation.buyerChecks.length > 0,
+    },
     { id: 'features', label: 'Features', enabled: presentation.featureGroups.length > 0 },
     {
       id: 'property-context',
@@ -778,7 +794,25 @@ export default function PropertyDetailPage({ propertyId: propPropertyId }: Prope
 
                   <DetailFactGrid facts={presentation.heroFacts} variant="hero" />
 
-                  {presentation.buyerChecks.length > 0 && (
+                  {isRentalListing && presentation.rentalEssentials.length > 0 ? (
+                    <section
+                      className="border-t border-slate-200 pt-5"
+                      aria-labelledby="rental-essentials-heading"
+                    >
+                      <div className="mb-4 flex items-end justify-between gap-3">
+                        <h2
+                          id="rental-essentials-heading"
+                          className="text-sm font-extrabold text-slate-950"
+                        >
+                          Rental essentials
+                        </h2>
+                        <p className="text-[10px] font-medium text-slate-500">
+                          {presentation.rentalEssentials.length} tenancy facts
+                        </p>
+                      </div>
+                      <DetailFactGrid facts={presentation.rentalEssentials} variant="checks" />
+                    </section>
+                  ) : !isRentalListing && presentation.buyerChecks.length > 0 ? (
                     <section
                       className="border-t border-slate-200 pt-5"
                       aria-labelledby="buyer-checks-heading"
@@ -796,7 +830,7 @@ export default function PropertyDetailPage({ propertyId: propPropertyId }: Prope
                       </div>
                       <DetailFactGrid facts={presentation.buyerChecks} variant="checks" />
                     </section>
-                  )}
+                  ) : null}
 
                   {hasPrimaryContactAction && (
                     <div className="space-y-2 border-t border-slate-200 pt-5">
@@ -818,7 +852,7 @@ export default function PropertyDetailPage({ propertyId: propPropertyId }: Prope
                           )}
                           onClick={handleOpenStandardEnquiry}
                         >
-                          Send enquiry
+                          {enquiryLabel}
                         </Button>
                       </div>
                       <Button
@@ -879,7 +913,7 @@ export default function PropertyDetailPage({ propertyId: propPropertyId }: Prope
                         className="bg-blue-600 hover:bg-blue-700"
                         onClick={handleOpenStandardEnquiry}
                       >
-                        Send enquiry
+                        {enquiryLabel}
                       </Button>
                       <Button
                         size="sm"
@@ -918,6 +952,24 @@ export default function PropertyDetailPage({ propertyId: propPropertyId }: Prope
                       {showFullDescription ? 'Show less' : 'Show full description'}
                     </Button>
                   )}
+                </section>
+              )}
+
+              {isRentalListing && presentation.buyerChecks.length > 0 && (
+                <section
+                  id="property-essentials"
+                  className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6"
+                  aria-labelledby="property-essentials-heading"
+                >
+                  <h2 id="property-essentials-heading" className="text-lg font-bold text-slate-950">
+                    Property essentials
+                  </h2>
+                  <p className="mt-1 text-sm text-slate-500">
+                    Services and policies supplied with this rental listing.
+                  </p>
+                  <div className="mt-5">
+                    <DetailFactGrid facts={presentation.buyerChecks} variant="context" />
+                  </div>
                 </section>
               )}
 
@@ -1086,7 +1138,7 @@ export default function PropertyDetailPage({ propertyId: propPropertyId }: Prope
                         )}
                         onClick={handleOpenStandardEnquiry}
                       >
-                        Send enquiry
+                        {enquiryLabel}
                       </Button>
                     </div>
                     <Button
@@ -1216,7 +1268,7 @@ export default function PropertyDetailPage({ propertyId: propPropertyId }: Prope
           )}
         </div>
 
-        {hasPrimaryContactAction && (
+        {hasPrimaryContactAction && isStickyNavVisible && (
           <aside
             aria-label="Property enquiry actions"
             className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] shadow-[0_-12px_32px_rgba(15,23,42,0.12)] backdrop-blur-md lg:hidden"
@@ -1277,14 +1329,14 @@ export default function PropertyDetailPage({ propertyId: propPropertyId }: Prope
             ? 'Continue with WhatsApp'
             : contactRequestType === 'viewing_request'
               ? 'Submit viewing request'
-              : 'Send enquiry'
+              : enquiryLabel
         }
         successMessage={
           contactIntent === 'whatsapp'
             ? `Your enquiry has been saved and delivered to ${contactName}. WhatsApp will open only after authorized custody is confirmed.`
             : contactRequestType === 'viewing_request'
               ? `Your viewing request has been saved and delivered to ${contactName}. This is not a confirmed appointment; the representative can contact you to arrange a suitable time.`
-              : `Your enquiry has been saved and delivered to ${contactName}.`
+              : `Your ${isRentalListing ? 'rental ' : ''}enquiry has been saved and delivered to ${contactName}.`
         }
         successAction={
           contactIntent === 'whatsapp' && whatsappNumber
