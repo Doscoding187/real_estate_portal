@@ -43,10 +43,16 @@ import {
 } from './publicPropertyEligibilityService';
 import { PUBLIC_PROPERTY_QUERY_BATCH_SIZE } from './approvedPublicPropertyService';
 import { buildManualPropertyCardHighlights } from '../../shared/listing-highlight-registry';
+import { normalizeRentalTerms } from '../../shared/rental-terms-contract';
+import {
+  buildPublicPropertyParkingFact,
+  buildPublicRentalEssentials,
+} from '../../shared/public-property-detail-presentation';
 
-// SearchCardResult v9 transports governed highlight objects instead of display
-// strings. Advance the namespace so old cards cannot reach the icon-key client.
-const CACHE_PREFIX = 'property:search:v9:';
+// SearchCardResult v10 transports governed highlight objects and compact,
+// server-built rental facts instead of browser-interpreted listing JSON.
+// Advance the namespace so cached v9 cards cannot reach the current client.
+const CACHE_PREFIX = 'property:search:v10:';
 
 const propertyOwnerAgencies = alias(agencies, 'property_owner_agencies');
 
@@ -263,6 +269,24 @@ function resolveMediaUrl(value: unknown): string | undefined {
 }
 
 function buildPropertySearchCardResult(property: any): SearchCardResult {
+  const propertyDetails = parseJsonObject(property.propertySettings);
+  const corePropertyInformation = buildCorePropertyInformation(
+    property.propertyType as ListingPropertyType | undefined,
+    propertyDetails,
+  );
+  const parking = buildPublicPropertyParkingFact(corePropertyInformation);
+  const isRentalListing =
+    String(property.listingType || '')
+      .trim()
+      .toLowerCase() === 'rent';
+  const rentalTerms = isRentalListing
+    ? normalizeRentalTerms(propertyDetails.rentalTerms)
+    : undefined;
+  const rentalSnapshot = rentalTerms
+    ? buildPublicRentalEssentials(rentalTerms).filter(
+        fact => fact.key === 'availability' || fact.key === 'lease' || fact.key === 'furnishing',
+      )
+    : undefined;
   const publicCoordinates = normalizeCoordinatePair(property.latitude, property.longitude);
   const development = property.development
     ? {
@@ -328,6 +352,8 @@ function buildPropertySearchCardResult(property: any): SearchCardResult {
     description: property.description || undefined,
     bedrooms: property.bedrooms || undefined,
     bathrooms: property.bathrooms || undefined,
+    parking,
+    ...(rentalSnapshot?.length ? { rentalSnapshot } : {}),
     internalAreaM2: property.internalAreaM2 || property.floorSize || undefined,
     erfSizeM2: property.erfSizeM2 || property.erfSize || undefined,
     landAreaM2: property.landAreaM2 || property.landSize || undefined,

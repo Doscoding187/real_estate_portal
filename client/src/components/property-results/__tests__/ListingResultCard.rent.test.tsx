@@ -31,12 +31,67 @@ describe('ListingResultCard rental semantics', () => {
 
     expect(screen.getByText('R 12,000 / month')).toBeInTheDocument();
     expect(screen.getByText('Private Advertiser')).toBeInTheDocument();
+    expect(screen.getByText('Parking to confirm')).toBeInTheDocument();
     expect(
       screen.getByRole('link', { name: 'View property: Two bedroom apartment' }),
     ).toHaveAttribute('href', '/property/rent-1');
     expect(screen.queryByRole('button', { name: /Contact|WhatsApp/i })).not.toBeInTheDocument();
     expect(screen.queryByText('Private Seller')).not.toBeInTheDocument();
     expect(screen.queryByText(/landlord/i)).not.toBeInTheDocument();
+  });
+
+  it('uses public parking and tenancy facts to make a rental card decision-ready', () => {
+    render(
+      <ListingResultCard
+        data={{
+          id: 'rent-facts-1',
+          title: 'Furnished apartment',
+          location: 'Sandton, Johannesburg',
+          price: 25_000,
+          image: '/rent-facts.jpg',
+          listingType: 'rent',
+          area: 88,
+          bedrooms: 2,
+          bathrooms: 2,
+          parking: {
+            key: 'parking',
+            label: 'Parking',
+            value: '1 parking bay',
+            icon: 'parking',
+            status: 'known',
+          },
+          rentalSnapshot: [
+            {
+              key: 'availability',
+              label: 'Availability',
+              value: 'Available now',
+              icon: 'calendar',
+              status: 'known',
+            },
+            {
+              key: 'lease',
+              label: 'Lease',
+              value: '12-month minimum',
+              icon: 'lease',
+              status: 'known',
+            },
+            {
+              key: 'furnishing',
+              label: 'Furnishing',
+              value: 'Furnished',
+              icon: 'furnishing',
+              status: 'known',
+            },
+          ],
+        }}
+      />,
+    );
+
+    expect(screen.getByLabelText('Parking: 1 parking bay')).toHaveTextContent('1 parking bay');
+    const snapshot = screen.getByLabelText('Rental snapshot');
+    expect(snapshot).toHaveTextContent('Available now');
+    expect(snapshot).toHaveTextContent('12-month minimum');
+    expect(snapshot).toHaveTextContent('Furnished');
   });
 
   it('does not infer rental presentation from an unsupported journey-like value', () => {

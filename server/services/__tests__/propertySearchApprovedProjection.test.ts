@@ -257,6 +257,57 @@ describe('manual property Search approved projection authority', () => {
     expect(result.cards[0].propertyId).toBe(77);
   });
 
+  it('projects canonical parking and rental terms into a compact public rental card', async () => {
+    const rental = {
+      ...publicCoordinateRow(-26.1076, 28.0567),
+      id: 88,
+      title: 'Canonical rental card',
+      price: 25_000,
+      propertyType: 'apartment',
+      listingType: 'rent',
+      propertySettings: JSON.stringify({
+        corePropertyInformation: {
+          bedrooms: { status: 'known', value: 2 },
+          bathrooms: { status: 'known', value: 2 },
+          internalArea: { status: 'known', valueM2: 88, unit: 'm2' },
+          parkingBays: { status: 'known', value: 1 },
+          garages: { status: 'unknown' },
+          floorLevel: { status: 'known', value: 4 },
+        },
+        rentalTerms: {
+          version: 1,
+          availability: { status: 'available_now' },
+          lease: { status: 'fixed_term', minimumMonths: 12 },
+          utilities: 'partially_included',
+          furnishing: 'furnished',
+        },
+      }),
+    };
+    mockSelect
+      .mockReturnValueOnce(terminalWhereQuery([{ count: 1 }]))
+      .mockReturnValueOnce(pagedQuery([rental]))
+      .mockReturnValueOnce(orderedQuery([]));
+
+    const result = await new PropertySearchService().searchProperties({}, 'date_desc', 1, 12);
+
+    expect(result.cards[0]).toMatchObject({
+      listingType: 'rent',
+      parking: {
+        key: 'parking',
+        label: 'Parking',
+        value: '1 parking bay',
+        compactValue: '1',
+        status: 'known',
+      },
+      rentalSnapshot: [
+        { key: 'availability', value: 'Available now', status: 'known' },
+        { key: 'lease', value: '12-month minimum', status: 'known' },
+        { key: 'furnishing', value: 'Furnished', status: 'known' },
+      ],
+    });
+    expect(JSON.stringify(result.cards[0])).not.toContain('partially_included');
+  });
+
   it.each([
     ['valid pair', -26.1076, 28.0567, -26.1076, 28.0567],
     ['missing pair', null, null, null, null],

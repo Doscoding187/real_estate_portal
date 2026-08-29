@@ -1,6 +1,7 @@
 import { OWNERSHIP_TYPES, STRUCTURAL_TYPES, FLOOR_TYPES } from './db-enums';
 import type { PublicPropertyType } from './property-taxonomy';
 import type { ListingCardHighlight } from './listing-highlight-registry';
+import type { PublicPropertyDetailFact } from './public-property-detail-presentation';
 
 export type SubscriptionStatus =
   | 'incomplete'
@@ -1022,6 +1023,10 @@ export interface SearchCardResult {
   bathrooms?: number;
   area?: number;
   yardSize?: number;
+  /** Server-built canonical parking fact. Never assembled from raw listing JSON in the browser. */
+  parking?: PublicPropertyDetailFact;
+  /** Compact tenant decision facts for rental cards only. */
+  rentalSnapshot?: PublicPropertyDetailFact[];
   internalAreaM2?: number;
   erfSizeM2?: number;
   landAreaM2?: number;

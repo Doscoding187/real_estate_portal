@@ -178,7 +178,7 @@ describe('publicPropertyDto', () => {
       mediaType: 'image',
     });
     expect(result.property.detailPresentation).toMatchObject({
-      version: 3,
+      version: 4,
       listingIntent: 'sale',
       price: {
         label: 'Asking price',
