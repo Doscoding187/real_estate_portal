@@ -294,24 +294,34 @@ describe('buildListingWizardSubmitPayload', () => {
       transferCostEstimate: null,
     });
 
-    const availableFrom = new Date('2026-08-01T00:00:00.000Z');
     const rentPayload: ListingWizardSubmitPayload = buildListingWizardSubmitPayload({
       ...baseState,
       action: 'rent',
       pricing: {
         monthlyRent: 18500,
         deposit: 37000,
-        leaseTerms: '12 months',
-        availableFrom,
-        utilitiesIncluded: false,
+      },
+      propertyDetails: {
+        ...baseState.propertyDetails,
+        rentalTerms: {
+          version: 1,
+          availability: { status: 'available_from', date: '2026-08-01' },
+          lease: { status: 'fixed_term', minimumMonths: 12 },
+          utilities: 'not_included',
+          furnishing: 'unfurnished',
+        },
       },
     });
     expect(rentPayload.pricing).toEqual({
       monthlyRent: 18500,
       deposit: 37000,
-      leaseTerms: '12 months',
-      availableFrom,
-      utilitiesIncluded: false,
+    });
+    expect(rentPayload.propertyDetails.rentalTerms).toEqual({
+      version: 1,
+      availability: { status: 'available_from', date: '2026-08-01' },
+      lease: { status: 'fixed_term', minimumMonths: 12 },
+      utilities: 'not_included',
+      furnishing: 'unfurnished',
     });
 
     const auctionDateTime = new Date('2026-09-10T10:00:00.000Z');

@@ -11,6 +11,7 @@ import {
   buildCanonicalCorePropertyDetails,
   buildCorePropertyInformation,
 } from '../../shared/core-property-information';
+import { normalizeRentalTerms } from '../../shared/rental-terms-contract';
 import { normalizeFeaturesContext } from '../../shared/features-context';
 import {
   getListingMediaType,
@@ -196,6 +197,14 @@ function buildApprovedSourceDetails(
     canonicalDetails,
   );
   if (pricingContract) canonicalDetails.pricingContract = pricingContract;
+
+  if (sourceListing.action === 'rent') {
+    const rentalTerms = normalizeRentalTerms(sourceDetails.rentalTerms);
+    if (rentalTerms) canonicalDetails.rentalTerms = rentalTerms;
+    else delete canonicalDetails.rentalTerms;
+  } else {
+    delete canonicalDetails.rentalTerms;
+  }
 
   return { sourceDetails, publicDetails: canonicalDetails };
 }

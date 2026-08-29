@@ -1,4 +1,6 @@
 import type { ListingWizardWorkflow } from '@shared/listing-workflow-types';
+import { validatePricingContract } from '@shared/pricing-contract';
+import { validateRentalTerms } from '@shared/rental-terms-contract';
 
 export const listingRentWorkflow: ListingWizardWorkflow = {
   id: 'listing_rent',
@@ -50,14 +52,18 @@ export const listingRentWorkflow: ListingWizardWorkflow = {
       componentKey: 'PricingStep',
       required: true,
       validate: (data) => {
-        const errors: { field: string; message: string }[] = [];
-        const pricing = data.pricing as any;
-        if (!pricing?.monthlyRent || pricing.monthlyRent < 1000) {
-          errors.push({ field: 'monthlyRent', message: 'Monthly rent must be at least R 1,000' });
-        }
-        if (!pricing?.deposit || pricing.deposit < 0) {
-          errors.push({ field: 'deposit', message: 'Deposit amount is required' });
-        }
+        const errors = [
+          ...validatePricingContract(
+            'rent',
+            (data.pricing || {}) as Record<string, unknown>,
+            (data.propertyDetails || {}) as Record<string, unknown>,
+            { mode: 'publish', enforceInputShape: true },
+          ),
+          ...validateRentalTerms(
+            (data.propertyDetails as Record<string, unknown> | undefined)?.rentalTerms,
+            { mode: 'publish' },
+          ),
+        ];
         return { valid: errors.length === 0, errors };
       },
     },

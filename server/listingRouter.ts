@@ -49,6 +49,10 @@ import {
   getPrimaryPrice,
   validatePricingContract,
 } from '../shared/pricing-contract';
+import {
+  normalizeRentalTerms,
+  validateRentalTerms,
+} from '../shared/rental-terms-contract';
 import { getPrimaryListingImage } from '../shared/listing-media';
 import {
   LOCATION_CONFIRMATION_STATES,
@@ -170,6 +174,13 @@ function normalizePropertyDetailsForPublicContract(
     preferEmbedded: false,
   });
   if (pricingContract) normalized.pricingContract = pricingContract;
+
+  if (action === 'rent') {
+    const rentalTerms = normalizeRentalTerms(normalized.rentalTerms);
+    if (rentalTerms) normalized.rentalTerms = rentalTerms;
+  } else {
+    delete normalized.rentalTerms;
+  }
 
   // New writes have one versioned pricing authority. Historical aliases are
   // handled only as read compatibility by buildPricingContract.
@@ -415,9 +426,6 @@ const createListingSchemaBase = z.object({
     monthlyRent: z.number().optional(),
     deposit: z.number().optional(),
     depositFact: z.record(z.string(), z.any()).optional(),
-    leaseTerms: z.string().optional(),
-    availableFrom: z.date().optional(),
-    utilitiesIncluded: z.boolean().optional(),
     // Auction fields
     startingBid: z.number().optional(),
     reservePrice: z.number().optional(),
@@ -502,6 +510,16 @@ const createListingSchema = createListingSchemaBase.superRefine((input, context)
       path: ['pricing', ...issue.field.split('.')],
       message: issue.message,
     });
+  }
+
+  if (input.action === 'rent') {
+    for (const issue of validateRentalTerms(input.propertyDetails.rentalTerms, { mode: 'draft' })) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['propertyDetails', ...issue.field.split('.')],
+        message: issue.message,
+      });
+    }
   }
 });
 
@@ -722,6 +740,7 @@ export const listingRouter = router({
         const taxonomyChanged =
           (input.action !== undefined && input.action !== listing.action) ||
           (input.propertyType !== undefined && input.propertyType !== listing.propertyType);
+        const actionChanged = input.action !== undefined && input.action !== listing.action;
         const nextPropertyType = input.propertyType ?? listing.propertyType;
         if (taxonomyChanged) {
           const nextAction = input.action ?? listing.action;
@@ -732,6 +751,16 @@ export const listingRouter = router({
           if (taxonomyMessage) {
             throw new TRPCError({ code: 'BAD_REQUEST', message: taxonomyMessage });
           }
+        }
+
+        // A listing cannot switch commercial intent while silently retaining
+        // the previous intent's pricing. The authoring shell submits a full
+        // pricing object, and direct callers must make the same choice.
+        if (actionChanged && input.pricing === undefined) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Set pricing for the new listing intent before changing it.',
+          });
         }
 
         if (input.propertyDetails?.featuresContext !== undefined) {
@@ -764,6 +793,19 @@ export const listingRouter = router({
             code: 'BAD_REQUEST',
             message: pricingIssues.map(issue => issue.message).join(' '),
           });
+        }
+
+        if ((input.action ?? listing.action) === 'rent') {
+          const rentalTermsIssues = validateRentalTerms(
+            (input.propertyDetails ?? (listing.propertyDetails as any) ?? {}).rentalTerms,
+            { mode: 'draft' },
+          );
+          if (rentalTermsIssues.length > 0) {
+            throw new TRPCError({
+              code: 'BAD_REQUEST',
+              message: rentalTermsIssues.map(issue => issue.message).join(' '),
+            });
+          }
         }
 
         const requiresReviewBeforePublicUpdate =
@@ -801,10 +843,10 @@ export const listingRouter = router({
         }
         const updatePayload: any = { ...listingInput, updatedAt: new Date() };
 
-        if (input.propertyDetails || input.pricing) {
+        if (input.propertyDetails !== undefined || input.pricing !== undefined || taxonomyChanged) {
           updatePayload.propertyDetails = normalizePropertyDetailsForPublicContract(
-            input.propertyDetails || ((listing.propertyDetails as any) ?? {}),
-            input.pricing || null,
+            input.propertyDetails ?? ((listing.propertyDetails as any) ?? {}),
+            input.pricing ?? ((listing.pricing as any) ?? null),
             input.action ?? listing.action,
             nextPropertyType,
           );
@@ -1670,6 +1712,20 @@ export const listingRouter = router({
               fields: pricingIssues.map(issue => issue.field),
             });
             throw new TRPCError({ code: 'BAD_REQUEST', message });
+          }
+
+          if (fullListing.action === 'rent') {
+            const rentalTermsIssues = validateRentalTerms(
+              (fullListing.propertyDetails as Record<string, unknown>)?.rentalTerms,
+              { mode: 'publish' },
+            );
+            if (rentalTermsIssues.length > 0) {
+              const message = rentalTermsIssues.map(issue => issue.message).join(' ');
+              await recordSubmitFailure('invalid_rental_terms', message, {
+                fields: rentalTermsIssues.map(issue => issue.field),
+              });
+              throw new TRPCError({ code: 'BAD_REQUEST', message });
+            }
           }
 
           const featureIssues = validateFeaturesContext(

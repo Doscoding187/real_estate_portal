@@ -152,6 +152,39 @@ describe('validateListingWorkflowStep', () => {
     expect(result.errors.some((e) => e.field === 'monthlyRent')).toBe(true);
   });
 
+  it('step 5 (pricing) requires the canonical rental terms alongside pricing', async () => {
+    const result = await validateListingWorkflowStep('pricing', {
+      action: 'rent',
+      propertyType: 'apartment',
+      pricing: { monthlyRent: 15_000, depositFact: { status: 'zero' } },
+      propertyDetails: {},
+    });
+
+    expect(result.valid).toBe(false);
+    expect(result.errors).toContainEqual(
+      expect.objectContaining({ field: 'rentalTerms', step: 'pricing' }),
+    );
+  });
+
+  it('step 5 (pricing) accepts an explicit tenant contract', async () => {
+    const result = await validateListingWorkflowStep('pricing', {
+      action: 'rent',
+      propertyType: 'apartment',
+      pricing: { monthlyRent: 15_000, depositFact: { status: 'zero' } },
+      propertyDetails: {
+        rentalTerms: {
+          version: 1,
+          availability: { status: 'available_now' },
+          lease: { status: 'month_to_month' },
+          utilities: 'included',
+          furnishing: 'furnished',
+        },
+      },
+    });
+
+    expect(result).toEqual({ valid: true, errors: [] });
+  });
+
   it('step 5 (pricing) fails when startingBid is missing for auction', async () => {
     const data: ListingWorkflowData = {
       action: 'auction',

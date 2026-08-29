@@ -10,6 +10,10 @@ import {
 import { buildPricingContract } from '../../../shared/pricing-contract';
 import { buildListingLocationAuthoringPayload } from '../../../shared/location-contract';
 import { buildPropertyPresentationForMedia } from '../../../shared/property-presentation';
+import {
+  createDefaultRentalTerms,
+  normalizeRentalTerms,
+} from '../../../shared/rental-terms-contract';
 
 export type ListingWizardSubmitPayload = inferRouterInputs<AppRouter>['listing']['create'];
 
@@ -41,8 +45,15 @@ const fillMissing = (target: Record<string, unknown>, key: string, value: unknow
 
 const normalizePricingForSubmit = (
   pricing: ListingWizardSubmitState['pricing'],
+  action: ListingWizardSubmitState['action'],
 ): ListingWizardSubmitPayload['pricing'] => {
   const normalized = { ...(pricing || {}) } as ListingWizardSubmitPayload['pricing'];
+
+  if (action === 'rent') {
+    delete (normalized as Record<string, unknown>).leaseTerms;
+    delete (normalized as Record<string, unknown>).availableFrom;
+    delete (normalized as Record<string, unknown>).utilitiesIncluded;
+  }
 
   if (!pricing || !('transferCostEstimate' in pricing)) {
     return normalized;
@@ -73,6 +84,13 @@ const normalizePropertyDetailsForPublicContract = (
     { preferEmbedded: false },
   );
   if (pricingContract) normalized.pricingContract = pricingContract;
+
+  if (action === 'rent') {
+    const rentalTerms = normalizeRentalTerms(normalized.rentalTerms);
+    if (rentalTerms) normalized.rentalTerms = rentalTerms;
+  } else {
+    delete normalized.rentalTerms;
+  }
 
   // New authoring has one governed pricing authority. These legacy aliases
   // remain readable by compatibility code but are not written alongside it.
@@ -150,6 +168,13 @@ const buildSubmittedPropertyDetails = (
     ),
   } as Record<string, unknown>;
 
+  if (state.action === 'rent') {
+    propertyDetails.rentalTerms =
+      normalizeRentalTerms(historicalDetails.rentalTerms) ?? createDefaultRentalTerms();
+  } else {
+    delete propertyDetails.rentalTerms;
+  }
+
   const propertyPresentation = buildPropertyPresentationForMedia(
     propertyDetails.propertyPresentation,
     state.media.map(item => ({
@@ -202,7 +227,7 @@ const buildTypedMediaManifest = (
 export const buildListingWizardSubmitPayload = (
   state: ListingWizardSubmitState,
 ): ListingWizardSubmitPayload => {
-  const pricing = normalizePricingForSubmit(state.pricing);
+  const pricing = normalizePricingForSubmit(state.pricing, state.action);
   const mediaIds = state.media.map(getMediaId);
   const media = buildTypedMediaManifest(state.media);
   const mainMediaId =

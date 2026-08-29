@@ -24,13 +24,12 @@ export const RENT_LISTING_SOURCES = ['manual', 'development'] as const;
 export type RentListingSource = (typeof RENT_LISTING_SOURCES)[number];
 
 /**
- * Inclusive upper bound the shared budget slider can express. Committing the
- * untouched slider serializes this value on Rent journeys too, so it is
- * treated as "no explicit ceiling". A rent-scaled slider bound is deferred
- * product work; until then this keeps above-ceiling rentals searchable and
- * canonical URLs free of default noise.
+ * Inclusive upper bound of the consumer rental-budget control. `R250k+`
+ * deliberately means no maximum, so an untouched control never excludes
+ * higher-value rentals or pollutes a canonical URL with a fake budget cap.
  */
-export const RENT_FILTER_PRICE_CEILING = 50_000_000;
+export const RENT_FILTER_PRICE_CEILING = 250_000;
+export const RENT_FILTER_PRICE_STEP = 1_000;
 
 export const RENT_NUMERIC_FILTER_KEYS = [
   'minPrice',

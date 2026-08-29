@@ -26,6 +26,11 @@ import {
 import { buildFeaturesContextFromWizardState } from '../../../shared/features-context';
 import { validatePricingContract } from '../../../shared/pricing-contract';
 import {
+  createDefaultRentalTerms,
+  normalizeRentalTerms,
+  validateRentalTerms,
+} from '../../../shared/rental-terms-contract';
+import {
   coordinatePairSchema,
   validateManualLocationEvidence,
 } from '../../../shared/location-contract';
@@ -179,6 +184,19 @@ const retainFeaturesForState = (
   return { featuresContext: context };
 };
 
+const withRentalTermsForIntent = (
+  details: Partial<PropertyDetails> | undefined,
+  intent: ListingIntent | undefined,
+): Partial<PropertyDetails> | undefined => {
+  const next = { ...(details || {}) } as Partial<PropertyDetails>;
+  if (intent === 'rent') {
+    next.rentalTerms = normalizeRentalTerms(next.rentalTerms) ?? createDefaultRentalTerms();
+  } else {
+    delete (next as Record<string, unknown>).rentalTerms;
+  }
+  return Object.keys(next).length > 0 ? next : undefined;
+};
+
 /**
  * The wizard shell owns forward-navigation prerequisites. Individual steps
  * still own their detailed validation, but the shell must never let a user
@@ -209,12 +227,15 @@ export const canAdvanceFromStep = (state: WizardNavigationState, step: number): 
       const pricing = state.pricing as Record<string, unknown> | undefined;
       if (!pricing) return false;
       if (state.action === 'sell' || state.action === 'rent') {
-        return (
-          validatePricingContract(state.action, pricing, state.propertyDetails, {
-            mode: 'publish',
-            enforceInputShape: true,
-          }).length === 0
-        );
+        const pricingIssues = validatePricingContract(state.action, pricing, state.propertyDetails, {
+          mode: 'publish',
+          enforceInputShape: true,
+        });
+        const rentalTermsIssues =
+          state.action === 'rent'
+            ? validateRentalTerms(state.propertyDetails?.rentalTerms, { mode: 'publish' })
+            : [];
+        return pricingIssues.length === 0 && rentalTermsIssues.length === 0;
       }
       // Preserve the legacy auction shape for already-loaded records without
       // making it selectable from the current authoring journey.
@@ -303,12 +324,14 @@ export const useListingWizardStore = create<ListingWizardStore>()(
       // Step 1: Listing intent
       setListingIntent: intent => {
         const state = get();
+        const propertyDetails = withRentalTermsForIntent(state.propertyDetails, intent);
         set({
           action: listingIntentToAction(intent),
           pricing: undefined,
+          propertyDetails,
           additionalInfo: retainFeaturesForState(
             state.additionalInfo,
-            state.propertyDetails,
+            propertyDetails,
             intent,
             state.propertyType,
           ),
@@ -318,13 +341,16 @@ export const useListingWizardStore = create<ListingWizardStore>()(
       // Legacy/API transport compatibility
       setAction: action => {
         const state = get();
+        const intent = listingActionToIntent(action);
+        const propertyDetails = withRentalTermsForIntent(state.propertyDetails, intent);
         set({
           action,
           pricing: undefined,
+          propertyDetails,
           additionalInfo: retainFeaturesForState(
             state.additionalInfo,
-            state.propertyDetails,
-            listingActionToIntent(action),
+            propertyDetails,
+            intent,
             state.propertyType,
           ),
         });
@@ -346,18 +372,30 @@ export const useListingWizardStore = create<ListingWizardStore>()(
           state.propertyDetails,
           state.basicInfo,
         );
+        const retainedDetails = retainedCore
+          ? ({
+              corePropertyInformation: retainedCore,
+              rentalTerms: (state.propertyDetails as Partial<PropertyDetails> | undefined)
+                ?.rentalTerms,
+            } as Partial<PropertyDetails>)
+          : ({
+              rentalTerms: (state.propertyDetails as Partial<PropertyDetails> | undefined)
+                ?.rentalTerms,
+            } as Partial<PropertyDetails>);
+        const propertyDetails = withRentalTermsForIntent(
+          retainedDetails,
+          listingActionToIntent(state.action),
+        );
 
         set({
           propertyType,
           // Keep only facts whose semantics survive the type change. The
           // canonical Step 3 object owns invalidation; legacy flat fields are
           // never allowed to carry an area or farm fact into another type.
-          propertyDetails: retainedCore
-            ? ({ corePropertyInformation: retainedCore } as Partial<PropertyDetails>)
-            : undefined,
+          propertyDetails,
           additionalInfo: retainFeaturesForState(
             state.additionalInfo,
-            retainedCore ? { corePropertyInformation: retainedCore } : undefined,
+            propertyDetails,
             listingActionToIntent(state.action),
             propertyType,
           ),
@@ -598,6 +636,11 @@ export const useListingWizardStore = create<ListingWizardStore>()(
               { mode: 'publish', enforceInputShape: true },
             );
             errors.push(...pricingIssues);
+            if (state.action === 'rent') {
+              errors.push(
+                ...validateRentalTerms(state.propertyDetails?.rentalTerms, { mode: 'publish' }),
+              );
+            }
           }
         }
 

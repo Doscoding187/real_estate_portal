@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import type { SearchFilters } from '@/lib/urlUtils';
 import { BUY_FILTER_PRICE_CEILING } from '@shared/buySearchContract';
+import { RENT_FILTER_PRICE_CEILING, RENT_FILTER_PRICE_STEP } from '@shared/rentSearchContract';
 import type { SearchResults } from '@shared/types';
 
 interface SidebarFiltersProps {
@@ -71,8 +72,8 @@ export function SidebarFilters({
   listingType,
   showHeader = true,
 }: SidebarFiltersProps) {
-  const priceCeiling = listingType === 'rent' ? 250_000 : BUY_FILTER_PRICE_CEILING;
-  const priceStep = listingType === 'rent' ? 1_000 : PRICE_STEP;
+  const priceCeiling = listingType === 'rent' ? RENT_FILTER_PRICE_CEILING : BUY_FILTER_PRICE_CEILING;
+  const priceStep = listingType === 'rent' ? RENT_FILTER_PRICE_STEP : PRICE_STEP;
   const [priceRange, setPriceRange] = useState<[number, number]>([
     filters.minPrice ?? 0,
     filters.maxPrice ?? priceCeiling,

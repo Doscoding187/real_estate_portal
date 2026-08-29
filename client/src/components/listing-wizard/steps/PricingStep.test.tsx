@@ -48,4 +48,57 @@ describe('PricingStep', () => {
     });
     expect(screen.getByText(/no deposit is required/i)).toBeInTheDocument();
   });
+
+  it('stores the tenant-facing rental terms in the versioned property contract', () => {
+    act(() => {
+      useListingWizardStore.getState().setAction('rent');
+    });
+    render(<PricingStep />);
+
+    fireEvent.change(screen.getByLabelText('Rental availability'), {
+      target: { value: 'available_from' },
+    });
+    fireEvent.change(screen.getByLabelText('Available from date'), {
+      target: { value: '2026-10-01' },
+    });
+    fireEvent.change(screen.getByLabelText('Lease terms'), {
+      target: { value: 'fixed_term' },
+    });
+    fireEvent.change(screen.getByLabelText('Minimum lease months'), {
+      target: { value: '12' },
+    });
+    fireEvent.change(screen.getByLabelText('Utilities responsibility'), {
+      target: { value: 'included' },
+    });
+    fireEvent.change(screen.getByLabelText('Rental furnishing'), {
+      target: { value: 'furnished' },
+    });
+
+    expect(useListingWizardStore.getState().propertyDetails?.rentalTerms).toEqual({
+      version: 1,
+      availability: { status: 'available_from', date: '2026-10-01' },
+      lease: { status: 'fixed_term', minimumMonths: 12 },
+      utilities: 'included',
+      furnishing: 'furnished',
+    });
+  });
+
+  it('does not reset an in-progress availability date while it is being edited', () => {
+    act(() => {
+      useListingWizardStore.getState().setAction('rent');
+    });
+    render(<PricingStep />);
+
+    fireEvent.change(screen.getByLabelText('Rental availability'), {
+      target: { value: 'available_from' },
+    });
+    fireEvent.change(screen.getByLabelText('Available from date'), {
+      target: { value: '' },
+    });
+
+    expect(useListingWizardStore.getState().propertyDetails?.rentalTerms).toMatchObject({
+      version: 1,
+      availability: { status: 'available_from', date: '' },
+    });
+  });
 });

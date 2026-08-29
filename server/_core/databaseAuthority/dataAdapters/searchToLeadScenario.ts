@@ -20,10 +20,11 @@ import {
   CANONICAL_AGENT_LAUNCH_ACCESS,
   CANONICAL_DEVELOPER_LAUNCH_ACCESS,
 } from './canonicalCommercial';
-import type { RecurringCosts } from '../../../../shared/pricing-contract';
+import type { MoneyFact, RecurringCosts } from '../../../../shared/pricing-contract';
+import type { RentalTerms } from '../../../../shared/rental-terms-contract';
 
-export const SEARCH_TO_LEAD_SCENARIO_VERSION = 'search-to-lead-v2' as const;
-export const SEARCH_TO_LEAD_SCENARIO_CAPTURE_REQUEST_ID = 'dba-search-to-lead-v2-property-enquiry';
+export const SEARCH_TO_LEAD_SCENARIO_VERSION = 'search-to-lead-v3' as const;
+export const SEARCH_TO_LEAD_SCENARIO_CAPTURE_REQUEST_ID = 'dba-search-to-lead-v3-property-enquiry';
 
 function truthfulDirectAcknowledgement(lead: {
   duplicate?: boolean;
@@ -121,7 +122,7 @@ const SCENARIO_PAYLOAD = Object.freeze({
   ids: SCENARIO_IDS,
   location: { province: 'gauteng', city: 'johannesburg', suburb: 'sandton' },
   presentation: {
-    fixtureSet: 'launch-discovery-v1-property-detail-preview-clean-media',
+    fixtureSet: 'launch-discovery-v2-property-detail-preview-clean-media',
     mediaAuthority: 'localhost-3009-public-properties',
     publicAgentAuthority: 'paid-access-and-current-membership',
   },
@@ -204,7 +205,8 @@ export type SearchToLeadScenarioEvidence = AdapterEvidence & {
     };
     rental: {
       propertyId: number;
-      searchIncluded: false;
+      saleSearchExcluded: true;
+      rentSearch: { included: true; propertyCardHref: string; total: number };
       detail: {
         id: number;
         listingType: 'rent';
@@ -212,6 +214,12 @@ export type SearchToLeadScenarioEvidence = AdapterEvidence & {
         price: number;
         pricingIntent: 'rent';
         monthlyRent: number;
+        tenantTerms: {
+          availability: 'Available now';
+          lease: '12-month minimum';
+          utilities: 'Partly included';
+          furnishing: 'Furnished';
+        };
         publicIdentity: { role: string; provenance: string; name: string };
       };
       enquiry: {
@@ -343,6 +351,8 @@ type ManualFixtureDefinition = {
   garages?: number;
   parkingBays?: number;
   saleRecurringCosts?: RecurringCosts;
+  rentalDeposit?: MoneyFact;
+  rentalTerms?: RentalTerms;
   featuresContext?: Record<string, unknown>;
   propertyHighlights?: string[];
   galleryImages?: readonly FixtureGalleryImage[];
@@ -614,6 +624,14 @@ const MANUAL_FIXTURES: readonly ManualFixtureDefinition[] = [
     agencyId: SCENARIO_IDS.agency,
     cataloguePublisherId: null,
     price: 25000,
+    rentalDeposit: { status: 'known', amount: 25000, provenance: 'advertiser' },
+    rentalTerms: {
+      version: 1,
+      availability: { status: 'available_now' },
+      lease: { status: 'fixed_term', minimumMonths: 12 },
+      utilities: 'partially_included',
+      furnishing: 'furnished',
+    },
     imageUrl: 'http://localhost:3009/properties/40O7UI0lbxUn.jpg',
     bedrooms: 2,
     bathrooms: 2,
@@ -646,6 +664,7 @@ function sourceDetailsForFixture(fixture: ManualFixtureDefinition): Record<strin
     erfAreaM2,
     ...(fixture.garages !== undefined ? { garages: fixture.garages } : {}),
     ...(fixture.parkingBays !== undefined ? { parkingBays: fixture.parkingBays } : {}),
+    ...(fixture.rentalTerms ? { rentalTerms: fixture.rentalTerms } : {}),
     featuresContext: fixture.featuresContext,
     propertyHighlights: fixture.propertyHighlights ?? [
       'Canonical source-backed fixture',
@@ -667,7 +686,7 @@ function sourceDetailsForFixture(fixture: ManualFixtureDefinition): Record<strin
             version: 1,
             intent: 'rent',
             monthlyRent: fixture.price,
-            deposit: { status: 'unknown' },
+            deposit: fixture.rentalDeposit || { status: 'unknown' },
           },
   };
 }
@@ -2514,7 +2533,7 @@ async function runContainedApplicationVerification(
         req: { headers: {}, ip: '127.0.0.1' },
         res: {},
         user,
-        requestId: 'dba-search-to-lead-v2',
+        requestId: 'dba-search-to-lead-v3',
       } as any);
 
     const search = await publicSearchService.searchInventory({
@@ -2601,7 +2620,7 @@ async function runContainedApplicationVerification(
       const captureRequestId =
         scenarioName === 'agent'
           ? SEARCH_TO_LEAD_SCENARIO_CAPTURE_REQUEST_ID
-          : `dba-search-to-lead-v2-${scenarioName}-enquiry`;
+          : `dba-search-to-lead-v3-${scenarioName}-enquiry`;
       const baseInput = {
         propertyId,
         name: `Database Authority ${scenarioName} Prospect`,
@@ -2614,7 +2633,7 @@ async function runContainedApplicationVerification(
         captureRequestId,
         consent: {
           accepted: true as const,
-          version: 'dba-search-to-lead-v2',
+          version: 'dba-search-to-lead-v3',
           source: 'local-test',
         },
       };
@@ -2724,8 +2743,8 @@ async function runContainedApplicationVerification(
       source: 'development_detail',
       sourceSurface: 'development_detail',
       leadSource: 'development_detail',
-      captureRequestId: 'dba-search-to-lead-v2-development-enquiry',
-      consent: { accepted: true as const, version: 'dba-search-to-lead-v2', source: 'local-test' },
+      captureRequestId: 'dba-search-to-lead-v3-development-enquiry',
+      consent: { accepted: true as const, version: 'dba-search-to-lead-v3', source: 'local-test' },
     };
     const developmentLead = await capturePublicLead(developmentLeadInput);
     const developmentReplay = await capturePublicLead(developmentLeadInput);
@@ -2834,6 +2853,27 @@ async function runContainedApplicationVerification(
       throw new Error('Search-to-Lead scenario Buy map results admitted rental inventory.');
     }
 
+    const rentalSearch = await publicSearchService.searchInventory({
+      province: 'gauteng',
+      city: 'johannesburg',
+      suburb: ['sandton'],
+      listingType: 'rent',
+      page: 0,
+      pageSize: 10,
+    });
+    const rentalCard = rentalSearch.cards.find(
+      card => card.kind === 'property' && card.href === `/property/${SCENARIO_IDS.rentalProperty}`,
+    );
+    if (
+      rentalSearch.locationState !== 'resolved' ||
+      !rentalCard ||
+      rentalCard.listingType !== 'rent'
+    ) {
+      throw new Error(
+        'Search-to-Lead scenario Rent search did not return the canonical published rental card.',
+      );
+    }
+
     const rentalDetail = await propertyCaller.properties.getById({
       id: SCENARIO_IDS.rentalProperty,
     });
@@ -2846,12 +2886,36 @@ async function runContainedApplicationVerification(
     const rentalPropertyDto = rentalDetail.property as Record<string, unknown>;
     const rentalPricing = (rentalPropertyDto.pricingContract || {}) as Record<string, unknown>;
     const rentalIdentity = (rentalPropertyDto.publicIdentity || {}) as Record<string, unknown>;
+    const rentalPresentation = (rentalPropertyDto.detailPresentation || {}) as Record<string, unknown>;
+    const rentalEssentialFacts = Array.isArray(rentalPresentation.rentalEssentials)
+      ? rentalPresentation.rentalEssentials
+      : [];
+    const rentalEssentialValue = (key: string) => {
+      const fact = rentalEssentialFacts.find(
+        candidate =>
+          candidate &&
+          typeof candidate === 'object' &&
+          (candidate as Record<string, unknown>).key === key,
+      ) as Record<string, unknown> | undefined;
+      return String(fact?.value || '');
+    };
+    const rentalTenantTerms = {
+      availability: rentalEssentialValue('availability'),
+      lease: rentalEssentialValue('lease'),
+      utilities: rentalEssentialValue('utilities'),
+      furnishing: rentalEssentialValue('furnishing'),
+    };
     if (
       rentalPropertyDto.listingType !== 'rent' ||
       rentalPropertyDto.transactionType !== 'rent' ||
       Number(rentalPropertyDto.price) !== 25000 ||
       rentalPricing.intent !== 'rent' ||
       Number(rentalPricing.monthlyRent) !== 25000 ||
+      rentalPresentation.listingIntent !== 'rent' ||
+      rentalTenantTerms.availability !== 'Available now' ||
+      rentalTenantTerms.lease !== '12-month minimum' ||
+      rentalTenantTerms.utilities !== 'Partly included' ||
+      rentalTenantTerms.furnishing !== 'Furnished' ||
       rentalIdentity.role !== 'agent' ||
       rentalIdentity.provenance !== 'agent'
     ) {
@@ -2869,8 +2933,8 @@ async function runContainedApplicationVerification(
       source: 'property_detail',
       sourceSurface: 'property_detail',
       leadSource: 'property_detail',
-      captureRequestId: 'dba-search-to-lead-v2-rental-enquiry',
-      consent: { accepted: true as const, version: 'dba-search-to-lead-v2', source: 'local-test' },
+      captureRequestId: 'dba-search-to-lead-v3-rental-enquiry',
+      consent: { accepted: true as const, version: 'dba-search-to-lead-v3', source: 'local-test' },
     };
     const rentalLead = await capturePublicLead(rentalLeadInput);
     const rentalReplay = await capturePublicLead(rentalLeadInput);
@@ -2912,7 +2976,12 @@ async function runContainedApplicationVerification(
 
     const rentalAcceptance: NonNullable<SearchToLeadScenarioEvidence['acceptance']>['rental'] = {
       propertyId: SCENARIO_IDS.rentalProperty,
-      searchIncluded: false,
+      saleSearchExcluded: true,
+      rentSearch: {
+        included: true,
+        propertyCardHref: rentalCard.href,
+        total: rentalSearch.total,
+      },
       detail: {
         id: Number(rentalDetail.property.id),
         listingType: 'rent',
@@ -2920,6 +2989,12 @@ async function runContainedApplicationVerification(
         price: Number(rentalPropertyDto.price),
         pricingIntent: 'rent',
         monthlyRent: Number(rentalPricing.monthlyRent),
+        tenantTerms: {
+          availability: 'Available now',
+          lease: '12-month minimum',
+          utilities: 'Partly included',
+          furnishing: 'Furnished',
+        },
         publicIdentity: {
           role: String(rentalIdentity.role),
           provenance: String(rentalIdentity.provenance),
@@ -2970,8 +3045,8 @@ async function runContainedApplicationVerification(
           source: 'property_detail',
           sourceSurface: 'property_detail',
           leadSource: 'property_detail',
-          captureRequestId: `dba-search-to-lead-v2-negative-${name}`,
-          consent: { accepted: true, version: 'dba-search-to-lead-v2', source: 'local-test' },
+          captureRequestId: `dba-search-to-lead-v3-negative-${name}`,
+          consent: { accepted: true, version: 'dba-search-to-lead-v3', source: 'local-test' },
         });
       } catch (error) {
         rejected = String((error as { code?: unknown })?.code || '') === 'NOT_FOUND';

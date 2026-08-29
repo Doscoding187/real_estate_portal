@@ -3,6 +3,8 @@ import type { ListingStepId, ListingFieldError, ListingWorkflowData } from '@sha
 import type { ValidationContext } from '@/lib/validation/ValidationEngine';
 import { listingActionToIntent } from '@shared/listing-types';
 import { validateCorePropertyInformation } from '@shared/core-property-information';
+import { validatePricingContract } from '@shared/pricing-contract';
+import { validateRentalTerms } from '@shared/rental-terms-contract';
 
 /**
  * Map V2 step IDs to V1 numeric step numbers used by the existing
@@ -113,7 +115,11 @@ export async function validateListingWorkflowStep(
     8: [],
   };
 
-  const fieldsToValidate = stepFields[v1StepNumber] ?? [];
+  // Rent has a richer pricing contract than the historical one-number deposit
+  // rule. Keep the generic engine for other intents, and delegate rental
+  // validation to the same canonical contracts that gate publication.
+  const fieldsToValidate =
+    v1StepNumber === 5 && data.action === 'rent' ? [] : stepFields[v1StepNumber] ?? [];
   const errors: ListingFieldError[] = [];
 
   for (const field of fieldsToValidate) {
@@ -141,6 +147,20 @@ export async function validateListingWorkflowStep(
         message: issue.message,
         step: stepId,
       })),
+    );
+  }
+
+  if (stepId === 'pricing' && data.action === 'rent') {
+    errors.push(
+      ...validatePricingContract(
+        'rent',
+        (data.pricing || {}) as Record<string, unknown>,
+        (data.propertyDetails || {}) as Record<string, unknown>,
+        { mode: 'publish', enforceInputShape: true },
+      ).map(issue => ({ field: issue.field, message: issue.message, step: stepId })),
+      ...validateRentalTerms((data.propertyDetails as Record<string, unknown> | undefined)?.rentalTerms, {
+        mode: 'publish',
+      }).map(issue => ({ field: issue.field, message: issue.message, step: stepId })),
     );
   }
 

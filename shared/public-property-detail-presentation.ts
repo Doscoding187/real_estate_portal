@@ -10,6 +10,7 @@ import type {
   RecurringChargeFact,
   RecurringCosts,
 } from './pricing-contract';
+import type { RentalTerms } from './rental-terms-contract';
 import { normalizeCoordinatePair } from './location-contract';
 import { PROPERTY_TYPE_DEFINITIONS, type ListingPropertyType } from './property-taxonomy';
 
@@ -18,7 +19,7 @@ import { PROPERTY_TYPE_DEFINITIONS, type ListingPropertyType } from './property-
  * boundary. It deliberately contains display-ready facts only: the browser
  * must not re-interpret extensible authoring JSON or pricing aliases.
  */
-export const PUBLIC_PROPERTY_DETAIL_PRESENTATION_VERSION = 2 as const;
+export const PUBLIC_PROPERTY_DETAIL_PRESENTATION_VERSION = 3 as const;
 
 export type PublicPropertyDetailIcon =
   | 'area'
@@ -37,6 +38,10 @@ export type PublicPropertyDetailIcon =
   | 'internet'
   | 'cost'
   | 'pets'
+  | 'calendar'
+  | 'lease'
+  | 'utilities'
+  | 'furnishing'
   | 'location'
   | 'feature';
 
@@ -95,6 +100,8 @@ export interface PublicPropertyDetailPresentation {
     supportingText?: string;
   };
   heroFacts: PublicPropertyDetailFact[];
+  /** Rental-only tenancy facts; missing data is explicitly marked To confirm. */
+  rentalEssentials: PublicPropertyDetailFact[];
   buyerChecks: PublicPropertyDetailFact[];
   /**
    * Sale costs are intentionally supporting detail rather than hero facts.
@@ -115,6 +122,7 @@ export interface BuildPublicPropertyDetailPresentationInput {
   corePropertyInformation: CorePropertyInformation;
   featuresContext: FeaturesContext;
   pricingContract?: ActivePricingContract;
+  rentalTerms?: RentalTerms;
   /**
    * This must be populated from the public listing projection. It is kept
    * separate from raw listing fields so callers cannot accidentally pass
@@ -364,6 +372,81 @@ const runningCostsFor = (
   return [ratesAndTaxes, levy].filter((item): item is PublicPropertyDetailFact =>
     Boolean(item && item.status === 'known'),
   );
+};
+
+const formatRentalDate = (date: string) =>
+  new Intl.DateTimeFormat('en-ZA', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    timeZone: 'UTC',
+  }).format(new Date(`${date}T00:00:00.000Z`));
+
+const rentalTermFact = (
+  key: string,
+  label: string,
+  value: string,
+  icon: PublicPropertyDetailIcon,
+  supplied: boolean,
+): PublicPropertyDetailFact =>
+  fact(key, label, value, icon, supplied ? 'known' : 'not_supplied');
+
+/**
+ * These are purposefully separate from property essentials. They answer the
+ * tenant's tenancy questions without treating a missing legacy value as a
+ * public fact. Older approved rentals are transparent rather than blank.
+ */
+const rentalEssentialsFor = (rentalTerms: RentalTerms | undefined): PublicPropertyDetailFact[] => {
+  const availability = rentalTerms?.availability;
+  const lease = rentalTerms?.lease;
+
+  const availabilityFact =
+    availability?.status === 'available_now'
+      ? rentalTermFact('availability', 'Availability', 'Available now', 'calendar', true)
+      : availability?.status === 'available_from'
+        ? rentalTermFact(
+            'availability',
+            'Availability',
+            `From ${formatRentalDate(availability.date)}`,
+            'calendar',
+            true,
+          )
+        : rentalTermFact('availability', 'Availability', 'To confirm', 'calendar', false);
+
+  const leaseFact =
+    lease?.status === 'fixed_term'
+      ? rentalTermFact(
+          'lease',
+          'Lease',
+          `${lease.minimumMonths}-month minimum`,
+          'lease',
+          true,
+        )
+      : lease?.status === 'month_to_month'
+        ? rentalTermFact('lease', 'Lease', 'Month-to-month', 'lease', true)
+        : rentalTermFact('lease', 'Lease', 'To confirm', 'lease', false);
+
+  const utilities = rentalTerms?.utilities;
+  const utilitiesFact =
+    utilities === 'included'
+      ? rentalTermFact('utilities', 'Utilities', 'Included in rent', 'utilities', true)
+      : utilities === 'not_included'
+        ? rentalTermFact('utilities', 'Utilities', 'Not included', 'utilities', true)
+        : utilities === 'partially_included'
+          ? rentalTermFact('utilities', 'Utilities', 'Partly included', 'utilities', true)
+          : rentalTermFact('utilities', 'Utilities', 'To confirm', 'utilities', false);
+
+  const furnishing = rentalTerms?.furnishing;
+  const furnishingFact =
+    furnishing === 'furnished'
+      ? rentalTermFact('furnishing', 'Furnishing', 'Furnished', 'furnishing', true)
+      : furnishing === 'partly_furnished'
+        ? rentalTermFact('furnishing', 'Furnishing', 'Partly furnished', 'furnishing', true)
+        : furnishing === 'unfurnished'
+          ? rentalTermFact('furnishing', 'Furnishing', 'Unfurnished', 'furnishing', true)
+          : rentalTermFact('furnishing', 'Furnishing', 'To confirm', 'furnishing', false);
+
+  return [availabilityFact, leaseFact, utilitiesFact, furnishingFact];
 };
 
 const propertyTypeLabel = (propertyType: unknown) => {
@@ -693,6 +776,7 @@ export function buildPublicPropertyDetailPresentation(
       ...(priceSupportingText ? { supportingText: priceSupportingText } : {}),
     },
     heroFacts: heroFactsFor(type, input.corePropertyInformation),
+    rentalEssentials: listingIntent === 'rent' ? rentalEssentialsFor(input.rentalTerms) : [],
     buyerChecks,
     runningCosts: runningCostsFor(input.pricingContract),
     featureGroups: featureGroupsFor(input.featuresContext),

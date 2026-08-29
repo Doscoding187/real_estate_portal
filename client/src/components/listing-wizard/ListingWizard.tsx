@@ -48,6 +48,10 @@ import { buildListingWizardSubmitPayload } from '@/lib/listingWizardSubmitMapper
 import { LISTING_MEDIA_TYPES } from '@/../../shared/listing-media';
 import { buildPricingContract } from '@/../../shared/pricing-contract';
 import { getPresentationMediaDescriptor } from '@/../../shared/property-presentation';
+import {
+  createDefaultRentalTerms,
+  normalizeRentalTerms,
+} from '@/../../shared/rental-terms-contract';
 
 const ListingWizard: React.FC = () => {
   const store = useListingWizardStore();
@@ -182,11 +186,6 @@ const ListingWizard: React.FC = () => {
         pricing.startingBid = Number(sourcePricing.startingBid);
       if (sourcePricing.reservePrice !== null && sourcePricing.reservePrice !== undefined)
         pricing.reservePrice = Number(sourcePricing.reservePrice);
-      if (sourcePricing.leaseTerms) pricing.leaseTerms = sourcePricing.leaseTerms;
-      if (sourcePricing.availableFrom)
-        pricing.availableFrom = new Date(sourcePricing.availableFrom);
-      if (listing.action === 'rent' && sourcePricing.utilitiesIncluded !== undefined)
-        pricing.utilitiesIncluded = Boolean(sourcePricing.utilitiesIncluded);
       if (sourcePricing.auctionDateTime)
         pricing.auctionDateTime = new Date(sourcePricing.auctionDateTime);
       if (sourcePricing.auctionTermsDocumentUrl)
@@ -211,7 +210,16 @@ const ListingWizard: React.FC = () => {
 
       // Set property details
       if (listing.propertyDetails) {
-        store.setPropertyDetails(listing.propertyDetails as any);
+        store.setPropertyDetails({
+          ...(listing.propertyDetails as any),
+          ...(listing.action === 'rent'
+            ? {
+                rentalTerms:
+                  normalizeRentalTerms((listing.propertyDetails as any).rentalTerms) ??
+                  createDefaultRentalTerms(),
+              }
+            : {}),
+        });
         // Also map to basicInfo/additionalInfo if needed, or just rely on propertyDetails
         // The wizard seems to split these, so we might need to map them back if they are stored separately in the store
         // But setPropertyDetails should handle the main ones.

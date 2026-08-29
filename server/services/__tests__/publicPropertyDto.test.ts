@@ -178,7 +178,7 @@ describe('publicPropertyDto', () => {
       mediaType: 'image',
     });
     expect(result.property.detailPresentation).toMatchObject({
-      version: 2,
+      version: 3,
       listingIntent: 'sale',
       price: {
         label: 'Asking price',
@@ -237,5 +237,91 @@ describe('publicPropertyDto', () => {
     expect(serialized).not.toContain('internalReserve');
     expect(serialized).not.toContain('"views"');
     expect(serialized).not.toContain('"enquiries"');
+  });
+
+  it('publishes only the versioned rental terms contract', () => {
+    const result = toPublicPropertyDetailDto({
+      authority: 'approved_listing',
+      publicAuthority: 'public_property_eligibility',
+      sourceListingId: 9002,
+      custody: {
+        leadCustody: 'verified_customer_recipient',
+        recipientType: 'agent',
+        recipientId: 33,
+        agentId: 33,
+        agencyId: 44,
+        route: 'direct',
+        supplyOrigin: 'customer_managed',
+      },
+      publicIdentity: {
+        role: 'agent',
+        provenance: 'agent',
+        name: 'Jane Agent',
+        agentId: 33,
+      },
+      property: {
+        id: 502,
+        title: 'Approved rental',
+        description: 'A tenant-safe rental description',
+        price: 18_500,
+        listingType: 'rent',
+        propertyType: 'apartment',
+        city: 'Johannesburg',
+        province: 'Gauteng',
+        propertyDetails: {
+          corePropertyInformation: {
+            version: 1,
+            bedrooms: { status: 'known', value: 2 },
+            bathrooms: { status: 'known', value: 1 },
+            internalArea: { status: 'known', valueM2: 78, unit: 'm2' },
+          },
+          featuresContext: {
+            version: 1,
+            spaces: [],
+            context: {},
+            utilities: {},
+            security: { status: 'unknown', features: [] },
+            highlights: [],
+            customFeatures: [],
+            customHighlights: [],
+          },
+          rentalTerms: {
+            version: 1,
+            availability: { status: 'available_from', date: '2026-10-01' },
+            lease: { status: 'fixed_term', minimumMonths: 12 },
+            utilities: 'included',
+            furnishing: 'furnished',
+            privateWorkflowNote: 'do not publish',
+          },
+          // Retired fields deliberately cannot become public rental facts.
+          leaseTerms: 'six months',
+          availableFrom: '2020-01-01',
+          utilitiesIncluded: false,
+        },
+      },
+      images: [],
+      media: [],
+    } as Parameters<typeof toPublicPropertyDetailDto>[0]);
+
+    expect(result.property.propertyDetails).toMatchObject({
+      rentalTerms: {
+        version: 1,
+        availability: { status: 'available_from', date: '2026-10-01' },
+        lease: { status: 'fixed_term', minimumMonths: 12 },
+        utilities: 'included',
+        furnishing: 'furnished',
+      },
+    });
+    expect(result.property.detailPresentation.rentalEssentials).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ key: 'availability', value: 'From 01 Oct 2026' }),
+        expect.objectContaining({ key: 'utilities', value: 'Included in rent' }),
+      ]),
+    );
+    const serialized = JSON.stringify(result.property.propertyDetails);
+    expect(serialized).not.toContain('privateWorkflowNote');
+    expect(serialized).not.toContain('leaseTerms');
+    expect(serialized).not.toContain('availableFrom');
+    expect(serialized).not.toContain('utilitiesIncluded');
   });
 });

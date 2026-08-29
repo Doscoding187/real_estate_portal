@@ -140,12 +140,15 @@ describe('PXF-S1 property prospect contract', () => {
     // desktop layer, right rail and mobile layer. Count is not an authority;
     // each surface must delegate to the same canonical handlers.
     expect(page.match(/onClick={handleOpenStandardEnquiry}/g)?.length).toBeGreaterThanOrEqual(3);
-    expect(page).toContain('const handleOpenStandardEnquiry = () => openContactModal();');
+    expect(page).toContain('const handleOpenStandardEnquiry = () =>');
+    expect(page).toContain("isRentalListing ?");
+    expect(page).toContain("Send rental enquiry");
     expect(page).toContain('const handleRequestViewing = () =>');
     expect(page).toContain('const [isStickyNavVisible, setIsStickyNavVisible]');
     expect(page).toContain('overviewSectionRef');
     expect(page).toContain('fixed inset-x-0 top-16');
     expect(page).toContain('{isStickyNavVisible && (');
+    expect(page).toContain('{hasPrimaryContactAction && isStickyNavVisible && (');
     expect(page).toContain('aria-label="Property enquiry actions"');
     expect(page).toContain('pb-[calc(0.75rem+env(safe-area-inset-bottom))]');
     expect(page).toContain('lg:hidden');

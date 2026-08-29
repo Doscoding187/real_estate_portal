@@ -90,6 +90,7 @@ import {
   getPrimaryPrice,
   validatePricingContract,
 } from '../shared/pricing-contract';
+import { normalizeRentalTerms, validateRentalTerms } from '../shared/rental-terms-contract';
 import {
   normalizeCoordinatePair,
   storedPrecisionToPublicLocationPolicy,
@@ -2331,11 +2332,6 @@ export async function createListing(
           : null,
         monthlyRent: rentPrice !== undefined ? String(rentPrice) : null,
         deposit: depositAmount !== undefined ? String(depositAmount) : null,
-        leaseTerms: listingData.pricing.leaseTerms || null,
-        availableFrom: listingData.pricing.availableFrom
-          ? new Date(listingData.pricing.availableFrom).toISOString().slice(0, 19).replace('T', ' ')
-          : null,
-        utilitiesIncluded: listingData.pricing.utilitiesIncluded ? 1 : 0,
         startingBid: listingData.pricing.startingBid
           ? String(listingData.pricing.startingBid)
           : null,
@@ -2511,9 +2507,6 @@ export async function getListingById(listingId: number, database?: any) {
       listing.transferCostEstimate != null ? Number(listing.transferCostEstimate) : undefined,
     monthlyRent: listing.monthlyRent != null ? Number(listing.monthlyRent) : undefined,
     deposit: listing.deposit != null ? Number(listing.deposit) : undefined,
-    leaseTerms: listing.leaseTerms,
-    availableFrom: listing.availableFrom ? new Date(listing.availableFrom) : undefined,
-    utilitiesIncluded: listing.utilitiesIncluded === 1,
     startingBid: listing.startingBid != null ? Number(listing.startingBid) : undefined,
     reservePrice: listing.reservePrice != null ? Number(listing.reservePrice) : undefined,
     auctionDateTime: listing.auctionDateTime ? new Date(listing.auctionDateTime) : undefined,
@@ -2584,9 +2577,6 @@ export async function getUserListings(
           listing.transferCostEstimate != null ? Number(listing.transferCostEstimate) : undefined,
         monthlyRent: listing.monthlyRent != null ? Number(listing.monthlyRent) : undefined,
         deposit: listing.deposit != null ? Number(listing.deposit) : undefined,
-        leaseTerms: listing.leaseTerms,
-        availableFrom: listing.availableFrom ? new Date(listing.availableFrom) : undefined,
-        utilitiesIncluded: listing.utilitiesIncluded === 1,
         startingBid: listing.startingBid != null ? Number(listing.startingBid) : undefined,
         reservePrice: listing.reservePrice != null ? Number(listing.reservePrice) : undefined,
         auctionDateTime: listing.auctionDateTime ? new Date(listing.auctionDateTime) : undefined,
@@ -2666,6 +2656,12 @@ export async function updateListing(listingId: number, updateData: any) {
       updateFields.monthlyRent = rentPrice !== undefined ? String(rentPrice) : null;
       updateFields.deposit = depositAmount !== undefined ? String(depositAmount) : null;
       updateFields.negotiable = 0;
+      // Retire the pre-launch flat rental-terms columns whenever a rental is
+      // edited. The versioned propertyDetails.rentalTerms contract is now the
+      // only tenant-facing authority.
+      updateFields.leaseTerms = null;
+      updateFields.availableFrom = null;
+      updateFields.utilitiesIncluded = 0;
     } else {
       if (updateData.pricing.askingPrice !== undefined)
         updateFields.askingPrice = updateData.pricing.askingPrice
@@ -2679,14 +2675,6 @@ export async function updateListing(listingId: number, updateData: any) {
         updateData.pricing.transferCostEstimate !== null
           ? String(updateData.pricing.transferCostEstimate)
           : null;
-    if (updateData.pricing.leaseTerms !== undefined)
-      updateFields.leaseTerms = updateData.pricing.leaseTerms;
-    if (updateData.pricing.availableFrom !== undefined)
-      updateFields.availableFrom = updateData.pricing.availableFrom
-        ? new Date(updateData.pricing.availableFrom).toISOString().slice(0, 19).replace('T', ' ')
-        : null;
-    if (updateData.pricing.utilitiesIncluded !== undefined)
-      updateFields.utilitiesIncluded = updateData.pricing.utilitiesIncluded ? 1 : 0;
     if (updateData.pricing.startingBid !== undefined)
       updateFields.startingBid = updateData.pricing.startingBid
         ? String(updateData.pricing.startingBid)
@@ -2703,6 +2691,14 @@ export async function updateListing(listingId: number, updateData: any) {
       updateFields.auctionTermsDocumentUrl = updateData.pricing.auctionTermsDocumentUrl;
 
     delete updateFields.pricing;
+  }
+
+  if ((updateData.propertyDetails as Record<string, unknown> | undefined)?.rentalTerms !== undefined) {
+    // A terms-only edit is still enough to retire any stale direct-column
+    // values left by a pre-contract draft.
+    updateFields.leaseTerms = null;
+    updateFields.availableFrom = null;
+    updateFields.utilitiesIncluded = 0;
   }
 
   // propertyDetails is json() type, so pass object directly
@@ -2753,6 +2749,15 @@ export async function submitListingForReview(listingId: number, database?: any) 
         );
   if (pricingIssues.length > 0) {
     throw new Error(pricingIssues.map(issue => issue.message).join(' '));
+  }
+  if (String((transitionListing as any).action) === 'rent') {
+    const rentalTermsIssues = validateRentalTerms(
+      (listing as any)?.propertyDetails?.rentalTerms,
+      { mode: 'publish' },
+    );
+    if (rentalTermsIssues.length > 0) {
+      throw new Error(rentalTermsIssues.map(issue => issue.message).join(' '));
+    }
   }
 
   // This is the transition boundary for every caller, including agency routes,
@@ -3437,9 +3442,11 @@ function buildCanonicalListingPricingSnapshot(listing: any) {
     transferCostEstimate: action === 'sell' ? listing.transferCostEstimate : null,
     monthlyRent: action === 'rent' ? listing.monthlyRent : null,
     deposit: action === 'rent' ? listing.deposit : null,
-    leaseTerms: action === 'rent' ? listing.leaseTerms : null,
-    availableFrom: action === 'rent' ? listing.availableFrom : null,
-    utilitiesIncluded: action === 'rent' ? listing.utilitiesIncluded : 0,
+    // These columns are intentionally cleared during every revision
+    // promotion. Rental terms live solely in propertyDetails.rentalTerms.
+    leaseTerms: null,
+    availableFrom: null,
+    utilitiesIncluded: 0,
     startingBid: action === 'auction' ? listing.startingBid : null,
     reservePrice: action === 'auction' ? listing.reservePrice : null,
     auctionDateTime: action === 'auction' ? listing.auctionDateTime : null,
@@ -3475,6 +3482,17 @@ async function buildCanonicalPublicPropertyProjection(
   const pricingProjection = getPricingProjection(String(listing.action), pricing, canonicalDetails);
   if (pricingProjection.contract) {
     canonicalDetails.pricingContract = pricingProjection.contract;
+  }
+
+  if (String(listing.action) === 'rent') {
+    const rentalTerms = normalizeRentalTerms(details.rentalTerms);
+    if (details.rentalTerms !== undefined && !rentalTerms) {
+      throw new Error('Rental terms are not valid for public projection');
+    }
+    if (rentalTerms) canonicalDetails.rentalTerms = rentalTerms;
+    else delete canonicalDetails.rentalTerms;
+  } else {
+    delete canonicalDetails.rentalTerms;
   }
 
   const core = buildCorePropertyInformation(String(listing.propertyType) as any, canonicalDetails);
