@@ -82,7 +82,7 @@ describe('consumer journey router', () => {
     expect(commercialSiblingScope).toContain('locationIds=city%3A21');
   });
 
-  it('forwards only supported Commercial Office decisions on handoff', () => {
+  it('forwards only supported Commercial decisions with canonical location identity', () => {
     const href = buildConsumerJourneyUrl({
       intent: 'rent',
       journey: 'commercial',
@@ -97,7 +97,7 @@ describe('consumer journey router', () => {
     });
 
     expect(href).toBe(
-      '/commercial?location=Sandton&minAreaM2=250&maxMonthlyBudget=100000&availability=now&backupPower=1&minParkingBays=4',
+      '/commercial?locationIds=suburb%3A34&minAreaM2=250&maxMonthlyBudget=100000&availability=now&backupPower=1&minParkingBays=4',
     );
   });
 
