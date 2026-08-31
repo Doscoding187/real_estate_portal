@@ -72,6 +72,31 @@ widen, or infer geography from display text.
 | `worktrees/listify-services-engine-phase0-a04bf22c2a1d/working-tree`                                                                            | **Archive-only implementation; retained product hypothesis**  | The old service-provider notification/orphan-scheduler implementation relies on retired migration and delivery assumptions. Do not merge it. If delivery/reassignment becomes an approved priority, first define the current domain, ownership, and visibility contract in a dedicated workstream.                                                                                                                                                                                                                                                                                              |
 | `worktrees/property-listify-saved-search-ci-repair-2374fc505a41/working-tree`                                                                   | **Generated/archive-only**                                    | The three files are captured CI output, retained as evidence rather than source.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 
+## Formerly unreachable commit decisions
+
+All 101 individually indexed formerly unreachable commits are classified
+**archive-only as isolated Git artifacts**. A disconnected commit does not
+provide enough complete, current-domain context to be a direct merge candidate;
+its object ID, source tree, parent history, and recovery path remain protected
+under the recovery namespace and the verified recovery bundle.
+
+Recognisable product intent was assessed through the fuller recovery unit—the
+associated dirty worktree, stash, or local branch tip—rather than by replaying
+an incomplete commit in isolation:
+
+| Commit families in the index                                                                               | Disposition                                         | Reason                                                                                                                                                                            |
+| ---------------------------------------------------------------------------------------------------------- | --------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Developer Listing Engine (`feat(dle)`, `test(dle)`, evidence/pricing/release/auction commits)              | **Superseded / deferred through current authority** | The current developer model and the retained forward-integration charter own any still-valid requirement; the historical commits assume retired database and operating contracts. |
+| P-BUY, property discovery, Shared Living, commercial/Land, hero, and geography commits                     | **Superseded**                                      | Current journeys, PR #545, and the governed one-authority geography handoff replace the older route, query, and display-text assumptions.                                         |
+| Agency, agent, prospect, search-to-lead, listing-wizard, and product-surface commits                       | **Integrated, superseded, or separately recovered** | Current authority/lifecycle work owns the valid behaviour; the signed-in prospect identity gap was independently reimplemented in PR #547.                                        |
+| Navigation, brochures, layouts, audits, documentation, merge/index/WIP, and untracked-file wrapper commits | **Historical or forensic archive**                  | These commits are point-in-time design/research material or recovery wrappers, not standalone forward source changes.                                                             |
+
+The complete per-object index is in
+[`repository-convergence-2026-08-31-unreachable-commits.tsv`](repository-convergence-2026-08-31-unreachable-commits.tsv).
+This classification preserves every object while ensuring that a recognisable
+requirement remains represented either by its current authority, a recovered
+implementation PR, or the active forward-integration charter.
+
 ## Explicitly retained requirements
 
 The following recovered requirements remain live work rather than abandoned

@@ -1,5 +1,7 @@
 # Formerly unreachable commit recovery index
 # Generated from the immutable local archive namespace during the 2026-08-31 recovery pass.
+# Final disposition: every row is preserved archive-only as an isolated Git artifact.
+# Identifiable product intent is classified through its complete recovery unit in repository-convergence-2026-08-31-classification.md.
 object_id	committed_on	subject	archive_ref
 02a0b807dcf2968af4cd34694d26045a4419a4c9	2026-06-21	Prospect workspace: add ProspectLayout and wrap prospect pages	refs/archive/repository-convergence-20260831/unreachable/02a0b807dcf2968af4cd34694d26045a4419a4c9
 03ff83c10c66b5b92d353810b1546a3dd1c198ff	2026-05-02	index on main: ed453285 Harden Railway startup and onboarding schema failure UX	refs/archive/repository-convergence-20260831/unreachable/03ff83c10c66b5b92d353810b1546a3dd1c198ff
