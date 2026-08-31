@@ -21,13 +21,19 @@ export const HouseMeasureIcon = ({
       className={className}
       {...props}
     >
-      {/* A house sits inside a plot boundary, with a clear width marker.
-          It distinguishes usable floor area from a generic ruler or land size. */}
-      <rect x="2.75" y="4.25" width="18.5" height="15.5" rx="1.5" strokeDasharray="2 2" />
-      <path d="M7 12.25 12 8l5 4.25v4.5H7z" />
-      <path d="M10.25 16.75v-2.75h3.5v2.75" />
-      <path d="M4 21h16" />
-      <path d="m4 21 2-2M4 21l2 2M20 21l-2-2M20 21l-2 2" />
+      <path d="M3 10l9-7 9 7v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V10z" />
+      <path d="M7 21h10" />
+      <path d="M7 21l2 2" />
+      <path d="M7 21l2-2" />
+      <path d="M17 21l-2 2" />
+      <path d="M17 21l-2-2" />
+      <path d="M9 13v4" />
+      <path d="M9 14c0 0 1-1 2-1s2 1 2 1" />
+      <path d="M11 14c0 0 1-1 2-1s2 1 2 1v3" />
+      <path
+        d="M16 12a1 1 0 0 1 1-1 1 1 0 0 1 1 1c0 .5-.5 1-1 1.5l-1 .5h2"
+        strokeWidth={strokeWidth * 0.8}
+      />
     </svg>
   );
 };
