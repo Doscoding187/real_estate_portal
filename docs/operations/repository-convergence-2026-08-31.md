@@ -70,7 +70,7 @@ The lane is an initial routing decision, not approval to merge.
 | `listify-advertise-commercial-truth-a3aa19cea399` | `fix/advertise-commercial-truth-convergence` | 2 runtime files | Public runtime review |
 | `listify-branch-database-coherence-authority-4b067e8ba3d9` | `fix/branch-database-coherence-authority` | 20 modified + 10 new authority/runtime/test files | Dedicated database-authority review |
 | `listify-commercial-monetization-audit-8d4adbbdfe6d` | `audit/commercial-monetization-current-state` | 1 audit document | Documentation/insight review |
-| `listify-developer-leads-operations-4f21c7385f6a` | `feat/developer-leads-operations` | 13 modified + 2 new lead-operation files | Developer leads forward review |
+| `listify-developer-leads-operations-4f21c7385f6a` | `feat/developer-leads-operations` | 13 modified + 2 new lead-operation files | Forward integrated as PR #549 |
 | `listify-developer-listing-engine-a507858def4a` | `feature/dle-publication-lead-contract-hardening` | 13 lead/listing runtime and test files | Developer listing/lead forward review |
 | `listify-development-delivery-updates-recovery-328334a69ff1` | `recovery/development-delivery-updates-control-rescue-20260721` | schema, migration, runtime, test, and shared-domain files | Dedicated database-authority review |
 | `listify-development-home-v1-653ae226dc45` | `feat/developer-development-home-v1` | 1 generated inventory report | Generated/archive-only candidate |
