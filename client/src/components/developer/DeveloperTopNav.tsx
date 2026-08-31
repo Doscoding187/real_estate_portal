@@ -7,15 +7,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import {
-  Plus,
-  Bell,
-  MessageSquare,
-  Building2,
-  Settings,
-  LogOut,
-  BarChart3,
-} from 'lucide-react';
+import { Plus, Building2, Settings, LogOut, BarChart3 } from 'lucide-react';
 import { useAuth } from '@/_core/hooks/useAuth';
 
 export function DeveloperTopNav() {
@@ -26,9 +18,6 @@ export function DeveloperTopNav() {
     await logout();
     setLocation('/login');
   };
-
-  const notificationCount = 0; // TODO: Get from backend
-  const messageCount = 0; // TODO: Get from backend
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-gray-100 bg-white/80 px-3 shadow-soft transition-all duration-200 sm:px-6">
@@ -59,77 +48,8 @@ export function DeveloperTopNav() {
         </DropdownMenu>
       </div>
 
-      {/* Right: Notifications, Messages, Profile */}
+      {/* Right: Profile */}
       <div className="flex items-center gap-2">
-        {/* Notifications */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label="Notifications"
-              className="relative rounded-xl hover:bg-gray-100 transition-colors"
-            >
-              <Bell className="h-5 w-5 text-gray-600" />
-              {notificationCount > 0 && (
-                <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-semibold text-white">
-                  {notificationCount}
-                </span>
-              )}
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-80 rounded-xl shadow-hover">
-            <div className="p-3 border-b border-gray-100">
-              <h3 className="font-semibold text-sm">Notifications</h3>
-            </div>
-            <div className="max-h-96 overflow-y-auto">
-              <div className="p-8 text-center text-gray-500">
-                <Bell className="h-8 w-8 mx-auto mb-2 text-gray-300" />
-                <p className="text-sm">No new notifications</p>
-              </div>
-            </div>
-          </DropdownMenuContent>
-        </DropdownMenu>
-
-        {/* Messages */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label="Messages"
-              className="relative rounded-xl hover:bg-gray-100 transition-colors"
-            >
-              <MessageSquare className="h-5 w-5 text-gray-600" />
-              {messageCount > 0 && (
-                <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-blue-500 text-[10px] font-semibold text-white">
-                  {messageCount}
-                </span>
-              )}
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-80 rounded-xl shadow-hover">
-            <div className="p-3 border-b border-gray-100">
-              <h3 className="font-semibold text-sm">Messages</h3>
-            </div>
-            <div className="max-h-96 overflow-y-auto">
-              <div className="p-8 text-center text-gray-500">
-                <MessageSquare className="h-8 w-8 mx-auto mb-2 text-gray-300" />
-                <p className="text-sm">No new messages</p>
-              </div>
-            </div>
-            <div className="p-2 border-t border-gray-100">
-              <Button
-                variant="ghost"
-                className="w-full text-sm rounded-lg"
-                onClick={() => setLocation('/developer/messages')}
-              >
-                View All Messages
-              </Button>
-            </div>
-          </DropdownMenuContent>
-        </DropdownMenu>
-
         {/* Profile Menu */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

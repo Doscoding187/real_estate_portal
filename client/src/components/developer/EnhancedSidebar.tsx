@@ -10,7 +10,6 @@ import {
   LayoutDashboard,
   Building2,
   Users,
-  MessageSquare,
   TrendingUp,
   Target,
   Settings,
@@ -69,19 +68,6 @@ const MENU_SECTIONS: MenuSection[] = [
         label: 'Leads',
         icon: Users,
         path: '/developer/leads',
-      },
-    ],
-  },
-  {
-    id: 'operations',
-    label: 'OPERATIONS',
-    collapsible: true,
-    items: [
-      {
-        id: 'messages',
-        label: 'Messages',
-        icon: MessageSquare,
-        path: '/developer/messages',
       },
     ],
   },
@@ -145,19 +131,14 @@ export function EnhancedSidebar({ className }: EnhancedSidebarProps) {
     retry: false,
   });
 
-  // Fetch unread notifications count
-  const { data: notificationsData } = trpc.developer.getUnreadNotificationsCount.useQuery(
-    undefined,
-    {
-      refetchInterval: 30000,
-      retry: false,
-      onError: () => {
-        console.log('Notification count temporarily unavailable');
-      },
-    },
-  );
+  // Live lead awareness belongs on the real operating surface. It is derived
+  // from the canonical lead state, not a fake notification feed.
+  const { data: newLeadCountData } = trpc.developer.getNewLeadCount.useQuery(undefined, {
+    refetchInterval: 30000,
+    retry: false,
+  });
 
-  const unreadCount = notificationsData?.count || 0;
+  const newLeadCount = newLeadCountData?.count || 0;
   const developerName = isSuperAdmin ? 'Super Admin' : developerProfile?.name || 'Developer';
   const developerInitials = developerName.substring(0, 2).toUpperCase();
 
@@ -188,12 +169,12 @@ export function EnhancedSidebar({ className }: EnhancedSidebarProps) {
     }
   };
 
-  // Add notification badge to Messages
+  // Show the queue count where a developer can actually act on it.
   const sectionsWithBadges = MENU_SECTIONS.map(section => ({
     ...section,
     items: section.items.map(item => {
-      if (item.id === 'messages' && unreadCount > 0) {
-        return { ...item, badge: unreadCount, badgeColor: 'blue' as const };
+      if (item.id === 'leads' && newLeadCount > 0) {
+        return { ...item, badge: newLeadCount, badgeColor: 'blue' as const };
       }
       return item;
     }),
@@ -308,7 +289,6 @@ export function EnhancedSidebar({ className }: EnhancedSidebarProps) {
           );
         })}
       </nav>
-
     </aside>
   );
 }

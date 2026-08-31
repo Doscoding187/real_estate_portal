@@ -559,6 +559,7 @@ function normalizeLeadRow(
   lead: LeadRow,
   ownerName: string | null,
   distributionEnabledForDevelopment: boolean,
+  developmentName: string | null,
 ) {
   const stage = deriveCanonicalLeadStage(lead);
   const owner = deriveOwner(lead, ownerName);
@@ -581,6 +582,7 @@ function normalizeLeadRow(
     inventory: {
       propertyId: lead.propertyId ? String(lead.propertyId) : null,
       developmentId: lead.developmentId ? String(lead.developmentId) : null,
+      developmentName,
       unitId: lead.unitId || null,
       unitName: lead.unitName || null,
       unitPriceFrom: lead.unitPriceFrom || null,
@@ -628,6 +630,7 @@ async function getDeveloperLeadRow(developerId: number, leadId: number) {
     .select({
       lead: leads,
       ownerName: users.name,
+      developmentName: developments.name,
     })
     .from(leads)
     .innerJoin(developments, eq(leads.developmentId, developments.id))
@@ -659,6 +662,35 @@ async function getDeveloperLeadRow(developerId: number, leadId: number) {
   }
 
   return row;
+}
+
+/**
+ * Returns the real queue of leads awaiting a first developer action. This is
+ * derived from the canonical lead lifecycle rather than a stored notification
+ * count, so it cannot drift from the operating workspace.
+ */
+export async function getDeveloperNewLeadCount(params: { developerId: number }) {
+  const [row] = await db
+    .select({ count: sql<number>`COUNT(*)` })
+    .from(leads)
+    .innerJoin(developments, eq(leads.developmentId, developments.id))
+    .innerJoin(cataloguePublishers, eq(developments.cataloguePublisherId, cataloguePublishers.id))
+    .innerJoin(
+      developerOrganisations,
+      eq(cataloguePublishers.developerOrganisationId, developerOrganisations.id),
+    )
+    .where(
+      and(
+        eq(developments.cataloguePublisherId, params.developerId),
+        eq(cataloguePublishers.authorityKind, 'developer_first_party'),
+        eq(developerOrganisations.status, 'approved'),
+        eq(leads.cataloguePublisherId, params.developerId),
+        ne(leads.deliveryStatus, 'attention_required'),
+        eq(leads.status, 'new'),
+      ),
+    );
+
+  return { count: Number(row?.count || 0) };
 }
 
 export async function listDeveloperLeads(params: FunnelListParams) {
@@ -709,6 +741,7 @@ export async function listDeveloperLeads(params: FunnelListParams) {
     .select({
       lead: leads,
       ownerName: users.name,
+      developmentName: developments.name,
     })
     .from(leads)
     .innerJoin(developments, eq(leads.developmentId, developments.id))
@@ -734,7 +767,12 @@ export async function listDeveloperLeads(params: FunnelListParams) {
     const developmentId = Number(row.lead.developmentId || 0);
     const distributionEnabledForDevelopment =
       developmentId > 0 ? distributionEnabledMap.get(developmentId) === true : false;
-    return normalizeLeadRow(row.lead, row.ownerName || null, distributionEnabledForDevelopment);
+    return normalizeLeadRow(
+      row.lead,
+      row.ownerName || null,
+      distributionEnabledForDevelopment,
+      row.developmentName || null,
+    );
   });
 
   const filteredByStage = params.stage
@@ -852,6 +890,7 @@ export async function assignDeveloperLead(params: AssignParams) {
       updatedRow.lead,
       updatedRow.ownerName || null,
       distributionEnabledForDevelopment,
+      updatedRow.developmentName || null,
     ),
     assignmentMode: params.assignmentMode || 'manual',
   };
@@ -898,6 +937,7 @@ export async function transitionDeveloperLead(params: TransitionParams) {
       updated.lead,
       updated.ownerName || null,
       distributionEnabledMap.get(Number(updated.lead.developmentId || 0)) === true,
+      updated.developmentName || null,
     ),
   };
 }
@@ -940,6 +980,7 @@ export async function logDeveloperLeadActivity(params: ActivityParams) {
       updated.lead,
       updated.ownerName || null,
       distributionEnabledMap.get(Number(updated.lead.developmentId || 0)) === true,
+      updated.developmentName || null,
     ),
   };
 }
@@ -975,6 +1016,7 @@ export async function setDeveloperLeadNextAction(params: NextActionParams) {
       updated.lead,
       updated.ownerName || null,
       distributionEnabledMap.get(Number(updated.lead.developmentId || 0)) === true,
+      updated.developmentName || null,
     ),
   };
 }

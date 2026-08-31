@@ -47,6 +47,7 @@ type LeadItem = {
   inventory?: {
     propertyId?: string | null;
     developmentId?: string | null;
+    developmentName?: string | null;
     unitId?: string | null;
     unitName?: string | null;
     unitPriceFrom?: string | number | null;
@@ -663,6 +664,14 @@ export default function LeadsManager() {
                             {deliveryLabel(lead.delivery?.status)}
                           </Badge>
                         </div>
+                        {!developmentFilter && lead.inventory?.developmentName ? (
+                          <div className="mt-1 text-xs text-muted-foreground">
+                            via{' '}
+                            <span className="font-medium text-foreground">
+                              {lead.inventory.developmentName}
+                            </span>
+                          </div>
+                        ) : null}
                         <div className="mt-2 text-xs">
                           <Badge
                             className={
@@ -758,10 +767,21 @@ export default function LeadsManager() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
                   <div className="border rounded-md p-3 space-y-1">
                     <p className="font-medium">Inventory context</p>
-                    <p className="text-muted-foreground">
-                      Development #
-                      {selectedLead.inventory?.developmentId || selectedLead.developmentId || '-'}
-                    </p>
+                    {selectedLead.inventory?.developmentName ||
+                    selectedLead.inventory?.developmentId ||
+                    selectedLead.developmentId ? (
+                      <p className="text-muted-foreground">
+                        Development:{' '}
+                        <span className="font-medium text-foreground">
+                          {selectedLead.inventory?.developmentName ||
+                            `#${
+                              selectedLead.inventory?.developmentId || selectedLead.developmentId
+                            }`}
+                        </span>
+                      </p>
+                    ) : (
+                      <p className="text-muted-foreground">No development context</p>
+                    )}
                     {selectedLead.inventory?.propertyId ? (
                       <p className="text-muted-foreground">
                         Property #{selectedLead.inventory.propertyId}

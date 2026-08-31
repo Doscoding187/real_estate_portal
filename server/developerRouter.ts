@@ -25,6 +25,7 @@ import {
   getDeveloperDistributionSettings,
   getDeveloperFunnelAttention,
   getDeveloperFunnelKpis,
+  getDeveloperNewLeadCount,
   getOwnedDevelopmentHomeLeadSummary,
   listDeveloperLeads,
   logDeveloperLeadActivity,
@@ -2100,8 +2101,9 @@ export const developerRouter = router({
       };
     }),
 
-  getUnreadNotificationsCount: protectedProcedure.query(async () => {
-    return { count: 0 };
+  getNewLeadCount: protectedProcedure.query(async ({ ctx }) => {
+    const profile = await requireDeveloperProfileByUserId(requireUser(ctx).id);
+    return await getDeveloperNewLeadCount({ developerId: profile.publisherId });
   }),
 
   publishDevelopment: protectedProcedure
