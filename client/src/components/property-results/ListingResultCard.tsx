@@ -149,18 +149,18 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
     : [];
 
   return (
-    <article className="group relative w-full overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_16px_40px_-32px_rgba(15,23,42,0.38)] transition-all duration-300 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-[0_22px_44px_-28px_rgba(15,23,42,0.32)] sm:h-[312px]">
+    <article className="group relative w-full overflow-hidden rounded-[24px] border border-slate-200/90 bg-white shadow-[0_16px_40px_-30px_rgba(15,23,42,0.45)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_24px_48px_-24px_rgba(15,23,42,0.35)] sm:h-[312px] lg:rounded-[26px]">
       <Link
         href={listingHref}
         onClick={data.onOpen}
         aria-label={`View ${data.title}`}
-        className="absolute inset-0 z-10 rounded-xl focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-inset focus-visible:ring-blue-500/35"
+        className="absolute inset-0 z-10 rounded-[24px] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-inset focus-visible:ring-blue-500/35 lg:rounded-[26px]"
       >
         <span className="sr-only">View {data.title}</span>
       </Link>
 
       <div className="flex flex-col sm:h-[312px] sm:flex-row">
-        <div className="relative h-[180px] flex-shrink-0 overflow-hidden sm:h-[312px] sm:w-[43%] lg:w-[44%]">
+        <div className="relative h-[196px] flex-shrink-0 overflow-hidden sm:h-[312px] sm:w-[43%] lg:w-[44%]">
           <img
             src={resolvedImage}
             alt={data.title}
@@ -179,7 +179,7 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
           )}
         </div>
 
-        <div className="flex min-w-0 flex-1 flex-col overflow-hidden px-4 py-3 sm:h-[312px] sm:px-5 sm:py-4 lg:px-6">
+        <div className="flex min-w-0 flex-1 flex-col overflow-hidden px-4 py-4 sm:h-[312px] sm:px-5 lg:px-6">
           <div className="flex min-w-0 items-center justify-between gap-4">
             <p className="min-w-0 text-xl font-bold tracking-tight text-blue-600 sm:text-[22px]">
               {formatPrice(data.price, {
@@ -231,10 +231,10 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
               </div>
             )}
           </div>
-          <h3 className="mt-1 line-clamp-2 text-[16px] font-bold leading-[19px] text-slate-800 sm:text-[17px] sm:leading-5">
+          <h3 className="mt-1 line-clamp-2 text-[17px] font-bold leading-5 text-slate-800">
             {data.title}
           </h3>
-          <p className="mt-1 flex min-w-0 items-center gap-1.5 text-[13px] text-muted-foreground sm:mt-1.5">
+          <p className="mt-1.5 flex min-w-0 items-center gap-1.5 text-[13px] text-muted-foreground">
             <MapPin className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
             <span className="truncate">{data.location || '-'}</span>
           </p>
@@ -254,7 +254,7 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
             </p>
           )}
 
-          <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1.5 pr-2 sm:mt-3 sm:gap-x-5 sm:gap-y-2">
+          <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 pr-2">
             {typeof data.area === 'number' && data.area > 0 && (
               <span
                 className="flex items-center gap-1.5 text-[13px] font-medium text-slate-600"
@@ -299,10 +299,7 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
           </div>
 
           {highlights.length > 0 && (
-            <div
-              className="mt-2.5 flex flex-wrap gap-1.5 sm:mt-3 sm:gap-2"
-              aria-label="Property highlights"
-            >
+            <div className="mt-3 flex flex-wrap gap-2" aria-label="Property highlights">
               {highlights.map(highlight => {
                 const HighlightIcon = getListingHighlightIcon(highlight.iconKey);
                 return (
@@ -354,7 +351,7 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
 
           <div
             className={`flex items-center justify-between gap-3 border-t border-slate-100 ${
-              rentalSnapshot.length > 0 ? 'mt-3 pt-3' : 'mt-auto pt-3 sm:pt-4'
+              rentalSnapshot.length > 0 ? 'mt-3 pt-3' : 'mt-auto pt-4'
             }`}
           >
             <div className="min-w-0">
@@ -388,7 +385,7 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
             <Link
               href={listingHref}
               onClick={data.onOpen}
-              className="relative z-20 inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg px-3 text-xs font-semibold text-blue-700 transition-colors hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
+              className="relative z-20 inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full px-3 text-xs font-semibold text-blue-700 transition-colors hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
               aria-label={`View property: ${data.title}`}
             >
               View property
