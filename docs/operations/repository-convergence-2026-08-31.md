@@ -102,6 +102,18 @@ The lane is an initial routing decision, not approval to merge.
 | `property-listify-svc-fs-32a951081481` | `svc/future-state-wt` | 11 modified + 9 new geography/services files | Geography and database-consumer review |
 | `slc-plot-land-hero-66d636e8c3e2` | `slc/hero-plot-land-filters` | 1 hero UI file | Superseded by the canonical Land handoff |
 
+## Physical worktree retention
+
+The 34 live dirty worktrees are **preserved-retired evidence**, not active
+merge sources. Each has an exact immutable snapshot, a recorded classification,
+and a recovery path; none is anonymous state. They remain physically untouched
+so no local artifact is destroyed. A later disposal task may remove an exact
+retired worktree only after checking its archive ref and target path again.
+
+This programme deliberately pruned only the three absent `/tmp/opencode`
+registrations listed below. It did not reset, clean, delete, or unregister a
+live dirty worktree.
+
 ## Stash records
 
 | Archive ref | Original stash | Scope | Initial review lane |
