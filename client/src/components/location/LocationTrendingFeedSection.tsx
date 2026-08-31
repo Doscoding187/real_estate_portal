@@ -118,6 +118,7 @@ export function LocationTrendingFeedSection({
       (tab.value !== 'rent' || rentJourneyEnabled) &&
       (tab.value !== 'developments' || developmentsJourneyEnabled),
   );
+  const sharedLivingHandsOff = activeTab === 'shared_living';
 
   const { data: feedData } = trpc.developer.getHomeTrendingFeed.useQuery(
     {
@@ -127,7 +128,7 @@ export function LocationTrendingFeedSection({
       suburb,
       limit: maxItems,
     },
-    { enabled: Boolean(activeTab) },
+    { enabled: Boolean(activeTab) && !sharedLivingHandsOff },
   );
 
   const items = ((feedData?.items || []) as TrendingFeedItem[]).slice(0, maxItems);
@@ -180,6 +181,18 @@ export function LocationTrendingFeedSection({
       {!activeTab ? (
         <div className="rounded-xl border border-slate-100 border-dashed bg-white py-10 text-center text-slate-500">
           Choose a supported journey to view published opportunities in this area.
+        </div>
+      ) : sharedLivingHandsOff ? (
+        <div className="rounded-xl border border-slate-100 border-dashed bg-white py-10 text-center text-slate-600">
+          <p>
+            Shared Living uses its own canonical location search rather than this display location.
+          </p>
+          <a
+            href="/shared-living"
+            className="mt-4 inline-flex rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700"
+          >
+            Browse Shared Living
+          </a>
         </div>
       ) : items.length > 0 ? (
         <div className="group/carousel relative w-full max-w-[1240px]">

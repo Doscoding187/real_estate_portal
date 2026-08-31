@@ -130,6 +130,7 @@ export interface ResolvedLeadOwnership {
   sharedLivingContext?: {
     placeId: number;
     spaceId: number | null;
+    ownerUserId: number;
     spaceLabelSnapshot: string;
     spaceTypeSnapshot: string;
   };
@@ -269,7 +270,43 @@ function getPublicTargetCount(input: PublicLeadCaptureInput): number {
   ].filter(value => positiveId(value) !== undefined).length;
 }
 
+/**
+ * Shared Living has its own place/space lead authority. It cannot be blended
+ * with a residential, commercial, development, brand, or client-supplied
+ * recipient target and then silently choose one of them.
+ */
+function assertSharedLivingTargetAuthority(input: PublicLeadCaptureInput): void {
+  const sharedLivingPlaceId = positiveId(input.slPlaceId);
+  if (!sharedLivingPlaceId) {
+    if (positiveId(input.slSpaceId)) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'A Shared Living space must be paired with its canonical place.',
+      });
+    }
+    return;
+  }
+
+  const mixedTargets = [
+    input.listingId,
+    input.commercialAvailabilityId,
+    input.propertyId,
+    input.developmentId,
+    input.cataloguePublisherId,
+    input.agencyId,
+    input.agentId,
+  ].some(value => positiveId(value) !== undefined);
+  if (mixedTargets) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message:
+        'Choose one canonical enquiry authority. Shared Living cannot be combined with another listing or recipient.',
+    });
+  }
+}
+
 function assertPublicCaptureInput(input: PublicLeadCaptureInput) {
+  assertSharedLivingTargetAuthority(input);
   const captureRequestId = input.captureRequestId?.trim() || '';
   if (
     captureRequestId.length < PUBLIC_LEAD_INPUT_LIMITS.captureRequestIdMin ||
@@ -595,6 +632,25 @@ async function notifyAgentOfNewLead(
   );
 }
 
+/** The authenticated Shared Living inbox is a durable delivery channel; this is its alert. */
+async function notifySharedLivingLister(
+  database: NonNullable<Awaited<ReturnType<typeof getDb>>>,
+  input: { ownerUserId: number; leadId: number; placeId: number; spaceLabel: string },
+): Promise<void> {
+  await database.insert(notifications).values({
+    userId: input.ownerUserId,
+    type: 'lead_assigned',
+    title: 'New Shared Living enquiry',
+    content: `A new enquiry was received for ${input.spaceLabel}. Reply in your Shared Living inbox.`,
+    data: JSON.stringify({
+      leadId: input.leadId,
+      placeId: input.placeId,
+      actionUrl: '/shared-living/list',
+    }),
+    isRead: 0,
+  });
+}
+
 export async function resolveLeadOwnership(
   input: PublicLeadCaptureInput,
 ): Promise<ResolvedLeadOwnership> {
@@ -617,12 +673,16 @@ export async function resolveLeadOwnership(
       supplyOrigin: 'shared_living',
       leadCustody: 'platform_managed',
       recipientType: 'manual',
-      recipientId: null,
+      // The canonical `leads` model has no owner-user foreign key. The
+      // durable Shared Living lead context plus this recipient identity is
+      // the owner-scoped inbox delivery boundary.
+      recipientId: resolution.ownerUserId,
       leadDeliveryMethod: 'manual',
       reason: null,
       sharedLivingContext: {
         placeId: resolution.placeId,
         spaceId: resolution.spaceId,
+        ownerUserId: resolution.ownerUserId,
         spaceLabelSnapshot: resolution.spaceLabelSnapshot,
         spaceTypeSnapshot: resolution.spaceTypeSnapshot,
       },
@@ -1000,12 +1060,13 @@ async function existingLeadMatchesTransaction(
   return !development?.transactionType || development.transactionType === transactionType;
 }
 
-function isEquivalentReplay(
+async function isEquivalentReplay(
+  database: any,
   existing: typeof leads.$inferSelect,
   input: PublicLeadCaptureInput,
   source: string,
   leadSource: string,
-): boolean {
+): Promise<boolean> {
   const existingListingId = positiveId(existing.listingId);
   const inputListingId = positiveId(input.listingId);
   const existingPropertyId = positiveId(existing.propertyId);
@@ -1014,32 +1075,55 @@ function isEquivalentReplay(
   const inputDevelopmentId = positiveId(input.developmentId);
   const existingBrandId = positiveId(existing.cataloguePublisherId);
   const inputBrandId = positiveId(input.cataloguePublisherId);
+  const inputSharedLivingPlaceId = positiveId(input.slPlaceId);
+  const inputSharedLivingSpaceId = positiveId(input.slSpaceId) ?? null;
+
+  const sharedLivingTargetMatches = inputSharedLivingPlaceId
+    ? await (async () => {
+        const [context] = await database
+          .select({ placeId: slLeadContexts.placeId, spaceId: slLeadContexts.spaceId })
+          .from(slLeadContexts)
+          .where(eq(slLeadContexts.leadId, existing.id))
+          .limit(1);
+        return Boolean(
+          context &&
+          Number(context.placeId) === inputSharedLivingPlaceId &&
+          (context.spaceId == null ? null : Number(context.spaceId)) === inputSharedLivingSpaceId &&
+          !existingListingId &&
+          !existingPropertyId &&
+          !existingDevelopmentId &&
+          !existingBrandId,
+        );
+      })()
+    : false;
 
   // A property may canonically derive development and brand attribution, and
   // a development may derive brand attribution. Those server-owned fields are
   // not part of the submitted identity when the caller omitted them. When the
   // caller did submit an attribution, it must still match exactly.
-  const targetMatches = inputListingId
-    ? existingListingId === inputListingId &&
-      !existingPropertyId &&
-      !existingDevelopmentId &&
-      !existingBrandId
-    : inputPropertyId
-      ? !existingListingId &&
-        existingPropertyId === inputPropertyId &&
-        (!inputDevelopmentId || existingDevelopmentId === inputDevelopmentId) &&
-        (!inputBrandId || existingBrandId === inputBrandId)
-      : inputDevelopmentId
+  const targetMatches = inputSharedLivingPlaceId
+    ? sharedLivingTargetMatches
+    : inputListingId
+      ? existingListingId === inputListingId &&
+        !existingPropertyId &&
+        !existingDevelopmentId &&
+        !existingBrandId
+      : inputPropertyId
         ? !existingListingId &&
-          !existingPropertyId &&
-          existingDevelopmentId === inputDevelopmentId &&
+          existingPropertyId === inputPropertyId &&
+          (!inputDevelopmentId || existingDevelopmentId === inputDevelopmentId) &&
           (!inputBrandId || existingBrandId === inputBrandId)
-        : inputBrandId
+        : inputDevelopmentId
           ? !existingListingId &&
             !existingPropertyId &&
-            !existingDevelopmentId &&
-            existingBrandId === inputBrandId
-          : false;
+            existingDevelopmentId === inputDevelopmentId &&
+            (!inputBrandId || existingBrandId === inputBrandId)
+          : inputBrandId
+            ? !existingListingId &&
+              !existingPropertyId &&
+              !existingDevelopmentId &&
+              existingBrandId === inputBrandId
+            : false;
 
   const contextMatches =
     normalizeName(existing.name) === normalizeName(input.name) &&
@@ -1180,7 +1264,18 @@ function resultForExistingLead(existing: typeof leads.$inferSelect): PublicLeadC
   };
 }
 
+function initialDeliveryStatus(resolved: ResolvedLeadOwnership): LeadDeliveryStatus {
+  if (resolved.leadCustody === 'verified_customer_recipient') return 'delivered';
+  // A Shared Living context is atomically written beneath the canonical lead
+  // and can only be read from the owning lister's authenticated inbox.
+  if (resolved.sharedLivingContext?.ownerUserId) return 'delivered';
+  return 'attention_required';
+}
+
 function deliveryKeyForOwnership(resolved: ResolvedLeadOwnership): string {
+  if (resolved.sharedLivingContext?.ownerUserId) {
+    return `shared-living:owner:${resolved.sharedLivingContext.ownerUserId}:place:${resolved.sharedLivingContext.placeId}`;
+  }
   if (resolved.recipientType === 'agent' && resolved.agentId)
     return `direct:agent:${resolved.agentId}`;
   if (resolved.recipientType === 'agency' && resolved.agencyId)
@@ -1195,6 +1290,9 @@ function deliveryKeyForOwnership(resolved: ResolvedLeadOwnership): string {
 }
 
 function messageForResolution(resolved: ResolvedLeadOwnership): string {
+  if (resolved.sharedLivingContext?.ownerUserId) {
+    return 'Your enquiry has been recorded in the responsible lister’s secure Shared Living inbox.';
+  }
   if (resolved.leadCustody === 'verified_customer_recipient') {
     return 'Your enquiry has been recorded and sent to the responsible team.';
   }
@@ -1216,7 +1314,7 @@ async function recoverExistingLead(
   leadSource: string,
 ): Promise<PublicLeadCaptureResult> {
   const existingCommercialContext = await resolveCommercialReplayContext(database, existing, input);
-  if (!isEquivalentReplay(existing, input, source, leadSource)) {
+  if (!(await isEquivalentReplay(database, existing, input, source, leadSource))) {
     throw new TRPCError({
       code: 'CONFLICT',
       message: 'This request ID belongs to a different enquiry context.',
@@ -1238,6 +1336,18 @@ async function recoverExistingLead(
       spaceLabelSnapshot: resolvedSl.sharedLivingContext.spaceLabelSnapshot,
       spaceTypeSnapshot: resolvedSl.sharedLivingContext.spaceTypeSnapshot,
     });
+    const [message] = await database
+      .select({ id: slMessages.id })
+      .from(slMessages)
+      .where(eq(slMessages.leadId, existing.id))
+      .limit(1);
+    if (!message) {
+      await database.insert(slMessages).values({
+        leadId: existing.id,
+        authorKind: 'consumer',
+        body: input.message?.trim() || 'New Shared Living enquiry received.',
+      });
+    }
   }
   if (positiveId(input.commercialAvailabilityId)) {
     const resolvedCommercial = await resolveLeadOwnership(input);
@@ -1257,10 +1367,7 @@ async function recoverExistingLead(
   }
   if (!Array.isArray(existing.deliveryAttempts) || existing.deliveryAttempts.length === 0) {
     const replayResolved = await resolveLeadOwnership(input);
-    const replayStatus: LeadDeliveryStatus =
-      replayResolved.leadCustody === 'verified_customer_recipient'
-        ? 'delivered'
-        : 'attention_required';
+    const replayStatus = initialDeliveryStatus(replayResolved);
     await recordInitialLeadDeliveryAttempt({
       leadId: Number(existing.id),
       deliveryKey: deliveryKeyForOwnership(replayResolved),
@@ -1302,8 +1409,7 @@ export async function capturePublicLead(
 
   const resolved = await resolveLeadOwnership(input);
   const leadType = coerceLeadType(input.leadType);
-  const deliveryStatus: LeadDeliveryStatus =
-    resolved.leadCustody === 'verified_customer_recipient' ? 'delivered' : 'attention_required';
+  const deliveryStatus = initialDeliveryStatus(resolved);
   const route: PublicLeadCaptureResult['route'] =
     resolved.recipientType === 'developer' ||
     (resolved.recipientType === 'manual' && resolved.cataloguePublisherId)
@@ -1367,7 +1473,7 @@ export async function capturePublicLead(
           commercialSpaceId: resolved.commercialContext.commercialSpaceId,
           commercialAvailabilityId: resolved.commercialContext.commercialAvailabilityId,
         });
-      if (resolved.sharedLivingContext)
+      if (resolved.sharedLivingContext) {
         await tx.insert(slLeadContexts).values({
           leadId: Number(insertResult.insertId),
           placeId: resolved.sharedLivingContext.placeId,
@@ -1375,10 +1481,29 @@ export async function capturePublicLead(
           spaceLabelSnapshot: resolved.sharedLivingContext.spaceLabelSnapshot,
           spaceTypeSnapshot: resolved.sharedLivingContext.spaceTypeSnapshot,
         });
+        await tx.insert(slMessages).values({
+          leadId: Number(insertResult.insertId),
+          authorKind: 'consumer',
+          body: input.message?.trim() || 'New Shared Living enquiry received.',
+        });
+      }
     };
-    if (resolved.commercialContext && typeof (database as any).transaction === 'function')
+    // Shared Living creates a lead, its custody context, and its first
+    // consumer message as one delivery boundary. Do not permit a partial
+    // Shared Living enquiry when a database adapter cannot transact. Keep the
+    // established generic/commercial behaviour intact for the existing lead
+    // contract adapters, which intentionally expose only the operations they
+    // exercise.
+    if (resolved.sharedLivingContext) {
+      if (typeof (database as any).transaction !== 'function') {
+        throw new Error('Atomic Shared Living lead persistence is unavailable.');
+      }
       await (database as any).transaction(persist);
-    else await persist(database);
+    } else if (resolved.commercialContext && typeof (database as any).transaction === 'function') {
+      await (database as any).transaction(persist);
+    } else {
+      await persist(database);
+    }
   } catch (error) {
     if (input.captureRequestId && isDuplicateKeyError(error)) {
       const duplicate = await findLeadByCaptureRequestId(database, input.captureRequestId);
@@ -1435,6 +1560,14 @@ export async function capturePublicLead(
           leadEmail: input.email,
           message: input.message ?? null,
           propertyId: resolved.propertyId ?? null,
+        })
+      : Promise.resolve(),
+    resolved.sharedLivingContext?.ownerUserId
+      ? notifySharedLivingLister(database, {
+          ownerUserId: resolved.sharedLivingContext.ownerUserId,
+          leadId,
+          placeId: resolved.sharedLivingContext.placeId,
+          spaceLabel: resolved.sharedLivingContext.spaceLabelSnapshot,
         })
       : Promise.resolve(),
   ]);

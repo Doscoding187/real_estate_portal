@@ -36,7 +36,7 @@ export const RequireRole = ({
   unauthenticatedAuthEntry,
   roleMismatchFallback,
 }: {
-  role: string;
+  role: string | readonly string[];
   children: React.ReactNode;
   /**
    * Optional contextual auth entry. When set, unauthenticated visitors are
@@ -53,8 +53,11 @@ export const RequireRole = ({
 }) => {
   const { isAuthenticated, user, loading, error } = useAuth();
   const [, setLocation] = useLocation();
-  const requiredRole = normalizeRole(role);
+  const requiredRoles = (Array.isArray(role) ? role : [role]).map(normalizeRole);
+  const requiredRole = requiredRoles[0];
+  const requiredRoleKey = requiredRoles.join('|');
   const actualRole = normalizeRole(user?.role);
+  const hasRequiredRole = Boolean(actualRole && requiredRoles.includes(actualRole));
   const isUnauthorizedError =
     error instanceof TRPCClientError &&
     (error.data?.code === 'UNAUTHORIZED' || error.message === UNAUTHED_ERR_MSG);
@@ -63,21 +66,21 @@ export const RequireRole = ({
     if (loading) return;
     if (error && !isUnauthorizedError) return;
 
-      if (!isAuthenticated) {
-        if (window.location.pathname !== '/login') {
-          const currentPath = `${window.location.pathname}${window.location.search || ''}${window.location.hash || ''}`;
-          let loginPath = '/login';
-          if (unauthenticatedAuthEntry) {
-            loginPath = getAccountAuthHref(unauthenticatedAuthEntry, currentPath, {
-              registerRole: requiredRole ?? undefined,
-            });
-          }
-          setLocation(loginPath);
+    if (!isAuthenticated) {
+      if (window.location.pathname !== '/login') {
+        const currentPath = `${window.location.pathname}${window.location.search || ''}${window.location.hash || ''}`;
+        let loginPath = '/login';
+        if (unauthenticatedAuthEntry) {
+          loginPath = getAccountAuthHref(unauthenticatedAuthEntry, currentPath, {
+            registerRole: requiredRole ?? undefined,
+          });
         }
-        return;
+        setLocation(loginPath);
       }
+      return;
+    }
 
-    if (actualRole !== requiredRole && !roleMismatchFallback) {
+    if (!hasRequiredRole && !roleMismatchFallback) {
       const fallbackPath = getRoleHomePath(actualRole);
       if (window.location.pathname !== fallbackPath) setLocation(fallbackPath);
     }
@@ -87,7 +90,8 @@ export const RequireRole = ({
     isAuthenticated,
     isUnauthorizedError,
     loading,
-    requiredRole,
+    hasRequiredRole,
+    requiredRoleKey,
     setLocation,
     unauthenticatedAuthEntry,
     // The redirect skip only depends on fallback presence; render identity is
@@ -115,7 +119,7 @@ export const RequireRole = ({
     return null;
   }
 
-  if (actualRole !== requiredRole) {
+  if (!hasRequiredRole) {
     return <>{roleMismatchFallback ?? null}</>;
   }
 

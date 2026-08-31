@@ -2,6 +2,8 @@ import { Link, useRoute } from 'wouter';
 import { useState } from 'react';
 import { trpc } from '@/lib/trpc';
 import { createLeadCaptureRequestId, publicLeadConsent } from '@/lib/leadCapture';
+import { getSharedLivingSearchReturn } from '@shared/sharedLivingSearchContract';
+import { SHARED_LIVING_ACCOMMODATION_LABELS } from '@shared/sharedLivingDomain';
 
 const money = (minor: number | null | undefined) =>
   minor == null
@@ -10,28 +12,36 @@ const money = (minor: number | null | undefined) =>
 
 const label = (text: string) => text.replace(/_/g, ' ').replace(/^./, char => char.toUpperCase());
 
+function known(value: string | null | undefined, fallback = 'To confirm') {
+  return !value || value === 'unknown' ? fallback : label(value);
+}
+
 export default function SharedLivingDetail() {
   const [, params] = useRoute('/shared-living/:slug');
   const slug = params?.slug || '';
   const detail = trpc.sharedLiving.detail.useQuery({ slug }, { enabled: Boolean(slug) });
   const space: any = detail.data;
+  const returnTo = getSharedLivingSearchReturn(window.location.search) || '/shared-living';
 
-  // Enquiry form state
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
   const [consent, setConsent] = useState(false);
   const [captureRequestId] = useState(createLeadCaptureRequestId);
   const enquiry = trpc.sharedLiving.enquire.useMutation();
-  const [submittedToken, setSubmittedToken] = useState<string | null>(null);
+  const [submitted, setSubmitted] = useState<{
+    threadToken: string;
+    message?: string;
+    delivered: boolean;
+  } | null>(null);
 
   if (!slug) return <main className="p-8">Shared Living listing not found.</main>;
   if (detail.isLoading) return <main className="p-8">Loading…</main>;
   if (detail.error)
     return (
       <main className="mx-auto max-w-3xl p-8">
-        <Link href="/shared-living" className="text-sky-700">
-          ← Shared Living
+        <Link href={returnTo} className="text-emerald-700">
+          ← Back to Shared Living search
         </Link>
         <p
           role="alert"
@@ -44,8 +54,8 @@ export default function SharedLivingDetail() {
   if (!space)
     return (
       <main className="mx-auto max-w-3xl p-8">
-        <Link href="/shared-living" className="text-emerald-700">
-          ← Shared Living
+        <Link href={returnTo} className="text-emerald-700">
+          ← Back to Shared Living search
         </Link>
         <p className="mt-4 rounded border bg-white p-4 text-sm text-slate-600">
           This listing is no longer available. Browse other rooms and small places on the Shared
@@ -54,16 +64,23 @@ export default function SharedLivingDetail() {
       </main>
     );
 
+  const canSend =
+    name.trim().length >= 2 && email.trim().length > 0 && message.trim().length >= 5 && consent;
+
   return (
     <main className="mx-auto max-w-5xl space-y-6 p-4 md:p-6">
-      <Link href="/shared-living" className="text-sm text-emerald-700">
-        ← Shared Living
+      <Link href={returnTo} className="text-sm text-emerald-700">
+        ← Back to Shared Living search
       </Link>
 
       <header>
-        <p className="text-sm font-medium text-emerald-700">{label(space.accommodationType)}</p>
+        <p className="text-sm font-medium text-emerald-700">
+          {SHARED_LIVING_ACCOMMODATION_LABELS[
+            space.accommodationType as keyof typeof SHARED_LIVING_ACCOMMODATION_LABELS
+          ] || label(space.accommodationType)}
+        </p>
         <h1 className="text-3xl font-semibold">{space.label}</h1>
-        {/* Privacy model: approximate area identity; the street address is never published for shared formats. */}
+        {/* Private street address and exact coordinates are deliberately never part of this DTO. */}
         <p className="mt-1 text-slate-600">{space.locationDisplay}</p>
         {space.rentableAreaM2 != null && (
           <p className="mt-1 text-sm text-slate-600">
@@ -88,10 +105,7 @@ export default function SharedLivingDetail() {
         aria-label="Arrangement facts"
         className="grid gap-3 rounded border bg-white p-4 sm:grid-cols-2"
       >
-        <Fact
-          label="Furnishing"
-          value={space.furnishedState === 'unknown' ? 'To confirm' : label(space.furnishedState)}
-        />
+        <Fact label="Furnishing" value={known(space.furnishedState)} />
         <Fact
           label="Bathroom"
           value={
@@ -122,6 +136,47 @@ export default function SharedLivingDetail() {
         </p>
       </section>
 
+      <section className="grid gap-4 md:grid-cols-2">
+        <section className="rounded border bg-white p-5">
+          <h2 className="text-lg font-semibold">Household &amp; home rhythm</h2>
+          <dl className="mt-2 grid gap-2 text-sm">
+            <Fact
+              label="Current occupants"
+              value={
+                space.household.occupantsCount == null
+                  ? 'To confirm'
+                  : String(space.household.occupantsCount)
+              }
+            />
+            <Fact label="Household" value={known(space.household.occupantsType)} />
+            <Fact label="Smoking" value={known(space.household.smoking)} />
+            <Fact label="Pets" value={known(space.household.pets)} />
+            <Fact label="Visitors" value={known(space.household.visitors)} />
+            <Fact label="Cleaning" value={known(space.household.cleaning)} />
+          </dl>
+        </section>
+        <section className="rounded border bg-white p-5">
+          <h2 className="text-lg font-semibold">Lister &amp; checks</h2>
+          <p className="mt-2 text-sm font-medium text-slate-800">{space.attribution.label}</p>
+          {space.attribution.name && (
+            <p className="text-sm text-slate-600">{space.attribution.name}</p>
+          )}
+          {space.attribution.agencyName && (
+            <p className="text-sm text-slate-600">{space.attribution.agencyName}</p>
+          )}
+          <ul className="mt-3 grid gap-1 text-sm">
+            <TrustItem label="Phone verified" verified={space.trust.phoneVerified} />
+            <TrustItem label="Listing reviewed" verified={space.trust.propertyVerified} />
+            {space.attribution.kind === 'practitioner' && (
+              <TrustItem
+                label="Mandate evidence reviewed"
+                verified={space.trust.relationshipVerified}
+              />
+            )}
+          </ul>
+        </section>
+      </section>
+
       {space.description && (
         <section className="rounded border bg-white p-5">
           <h2 className="text-lg font-semibold">About this place</h2>
@@ -131,17 +186,22 @@ export default function SharedLivingDetail() {
 
       <section className="rounded border p-5">
         <h2 className="text-lg font-semibold">Enquire about this space</h2>
-        {submittedToken ? (
+        {submitted ? (
           <div
             role="status"
             className="mt-2 space-y-3 rounded border border-emerald-200 bg-emerald-50 p-4 text-sm"
           >
-            <p>Your enquiry was captured by Property Listify.</p>
+            <p>{submitted.message || 'Your enquiry was captured by Property Listify.'}</p>
+            {submitted.delivered && (
+              <p>
+                The responsible lister can now see it in their authenticated Shared Living inbox.
+              </p>
+            )}
             <p>
               Keep this link to follow the conversation on-platform:
               <br />
               <Link
-                href={`/shared-living/thread/${submittedToken}`}
+                href={`/shared-living/thread/${submitted.threadToken}`}
                 className="font-medium underline"
               >
                 Open your conversation thread
@@ -154,12 +214,14 @@ export default function SharedLivingDetail() {
         ) : (
           <>
             <input
+              aria-label="Your name"
               className="m-1 w-full max-w-md border p-2"
               placeholder="Your name"
               value={name}
               onChange={event => setName(event.target.value)}
             />
             <input
+              aria-label="Your email"
               className="m-1 block w-full max-w-md border p-2"
               placeholder="Email"
               type="email"
@@ -167,6 +229,7 @@ export default function SharedLivingDetail() {
               onChange={event => setEmail(event.target.value)}
             />
             <textarea
+              aria-label="Your enquiry"
               className="m-1 block w-full max-w-md border p-2"
               placeholder="Tell the lister about yourself and what you need"
               value={message}
@@ -181,20 +244,28 @@ export default function SharedLivingDetail() {
               I agree that Property Listify may share this enquiry with the responsible lister.
             </label>
             <button
+              type="button"
               className="mt-3 rounded bg-slate-900 px-4 py-2 text-white disabled:opacity-50"
-              disabled={!consent || enquiry.isPending}
+              disabled={!canSend || enquiry.isPending}
               onClick={() =>
                 enquiry.mutate(
                   {
                     slPlaceId: Number(space.placeId),
-                    slSpaceId: space.spaceId,
+                    slSpaceId: Number(space.spaceId),
                     name,
                     email,
                     message,
                     captureRequestId,
                     consent: publicLeadConsent('shared_living_detail'),
                   },
-                  { onSuccess: result => setSubmittedToken(result.threadToken) },
+                  {
+                    onSuccess: result =>
+                      setSubmitted({
+                        threadToken: result.threadToken,
+                        message: result.message,
+                        delivered: result.delivered,
+                      }),
+                  },
                 )
               }
             >
@@ -214,10 +285,10 @@ export default function SharedLivingDetail() {
 
 function Fact({ label: factLabel, value }: { label: string; value: string }) {
   return (
-    <p className="flex justify-between gap-2 text-sm">
-      <span className="text-slate-500">{factLabel}</span>
-      <span className="font-medium text-slate-800">{value}</span>
-    </p>
+    <div className="flex justify-between gap-2 text-sm">
+      <dt className="text-slate-500">{factLabel}</dt>
+      <dd className="font-medium text-slate-800">{value}</dd>
+    </div>
   );
 }
 
@@ -226,6 +297,15 @@ function IncludedItem({ label: itemLabel, included }: { label: string; included:
     <li className={included ? 'text-emerald-800' : 'text-slate-400'}>
       {included ? '✓ ' : '○ '}
       {itemLabel} {included ? 'included' : 'not marked as included'}
+    </li>
+  );
+}
+
+function TrustItem({ label: itemLabel, verified }: { label: string; verified: boolean }) {
+  return (
+    <li className={verified ? 'text-emerald-800' : 'text-slate-500'}>
+      {verified ? '✓ ' : '○ '}
+      {itemLabel} {verified ? 'shown' : 'not shown'}
     </li>
   );
 }

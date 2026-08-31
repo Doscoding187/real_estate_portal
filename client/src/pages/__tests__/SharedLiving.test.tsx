@@ -1,20 +1,46 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const search = vi.hoisted(() => ({ fn: vi.fn(() => ({ data: { items: [], total: 0, pageSize: 24 } })) }));
+const search = vi.hoisted(() => ({
+  fn: vi.fn(() => ({ data: { items: [], total: 0, pageSize: 24 }, isLoading: false })),
+}));
+
 vi.mock('@/lib/trpc', () => ({
   trpc: {
     sharedLiving: {
       search: {
         useQuery: (input: unknown) => {
           search.fn(input);
-          const last = search.fn.mock.results.at(-1)?.value;
-          return last ?? { data: null };
+          return search.fn.mock.results.at(-1)?.value ?? { data: null, isLoading: false };
         },
       },
     },
   },
 }));
+
+vi.mock('@/components/LocationAutosuggest', () => ({
+  LocationAutosuggest: ({ onSelect, selectedLocations }: any) => (
+    <div>
+      <button
+        type="button"
+        onClick={() =>
+          onSelect({
+            id: 'suburb:34',
+            canonicalLocationId: 'suburb:34',
+            name: 'Sandton',
+            slug: 'sandton',
+            type: 'suburb',
+            parentCanonicalLocationId: 'city:12',
+          })
+        }
+      >
+        Choose Sandton
+      </button>
+      <span>{selectedLocations.map((location: any) => location.name).join(', ')}</span>
+    </div>
+  ),
+}));
+
 vi.mock('wouter', () => ({ Link: ({ children, href }: any) => <a href={href}>{children}</a> }));
 
 import SharedLiving from '../SharedLiving';
@@ -23,41 +49,55 @@ describe('SharedLiving discovery', () => {
   beforeEach(() => {
     window.history.replaceState({}, '', '/shared-living');
     search.fn.mockReset();
-    search.fn.mockReturnValue({ data: { items: [], total: 0, pageSize: 24 } });
+    search.fn.mockReturnValue({ data: { items: [], total: 0, pageSize: 24 }, isLoading: false });
   });
 
-  it('renders the three market facets and passes the selected market to the contract', () => {
+  it('renders the independent market facets and passes the selected market to its own contract', () => {
     render(<SharedLiving />);
     const marketSelect = screen.getByRole('combobox', { name: 'Market' });
     fireEvent.click(marketSelect);
     expect(screen.getByRole('option', { name: 'Rooms' })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: 'Cottages & Small Places' })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: 'Student Living' })).toBeInTheDocument();
-
-    expect(marketSelect).toHaveTextContent('All Shared Living');
     expect(search.fn).toHaveBeenCalledWith(expect.objectContaining({ marketTag: undefined }));
   });
 
-  it('restores filters from the URL so refresh preserves intent', () => {
+  it('only sends a selected canonical location and restores it from URL state', () => {
     window.history.replaceState(
       {},
       '',
-      '/shared-living?market=independent_micro&location=sandton&minPrice=2000&bathroom=own',
+      '/shared-living?market=independent_micro&locationId=suburb:34&minPrice=2000&bathroom=own',
     );
     render(<SharedLiving />);
-    expect((screen.getByLabelText('Area') as HTMLInputElement).value).toBe('sandton');
     expect((screen.getByLabelText('Minimum rent') as HTMLInputElement).value).toBe('2000');
     expect(search.fn).toHaveBeenCalledWith(
       expect.objectContaining({
         marketTag: 'independent_micro',
-        location: 'sandton',
+        locationId: 'suburb:34',
+        locationIds: undefined,
         minPrice: 2000,
         bathroom: 'own',
       }),
     );
+    expect(search.fn.mock.calls.flat().some((input: any) => 'location' in input)).toBe(false);
   });
 
-  it('never renders a private street address even if a payload carried one', () => {
+  it('turns a catalogue selection into canonical URL and API state', () => {
+    render(<SharedLiving />);
+    fireEvent.click(screen.getByText('Choose Sandton'));
+    expect(search.fn).toHaveBeenLastCalledWith(
+      expect.objectContaining({ locationId: 'suburb:34', locationIds: undefined }),
+    );
+    expect(window.location.search).toContain('locationId=suburb%3A34');
+  });
+
+  it('does not widen an unsupported Search Area handoff', () => {
+    window.history.replaceState({}, '', '/shared-living?searchAreaId=greater-sandton');
+    render(<SharedLiving />);
+    expect(screen.getByRole('alert')).toHaveTextContent('Search Areas are not available');
+  });
+
+  it('never renders a private street address even if an unsafe payload carried one', () => {
     search.fn.mockReturnValue({
       data: {
         items: [
@@ -89,6 +129,7 @@ describe('SharedLiving discovery', () => {
         pageSize: 24,
         hasMore: false,
       },
+      isLoading: false,
     });
     render(<SharedLiving />);
     const body = document.body.textContent || '';

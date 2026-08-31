@@ -117,6 +117,10 @@ export function HomeTrendingSection({
   // properties table for propertyType='commercial', which presented a second,
   // contradictory commercial inventory; the homepage now hands off instead.
   const commercialHandsOff = activeHeroTab === 'commercial';
+  // Shared Living has a distinct canonical-geography contract. The selected
+  // province label in this legacy rail is display state, so it must not be
+  // translated into a broader Shared Living query.
+  const sharedLivingHandsOff = activeHeroTab === 'shared_living';
   const heroContent = {
     title: `${TAB_COPY[activeHeroTab].titleBase} in ${selectedProvince}`,
     subtitle: MOBILE_FRIENDLY_SUBTITLES[activeHeroTab] || TAB_COPY[activeHeroTab].subtitleBase,
@@ -136,7 +140,9 @@ export function HomeTrendingSection({
     },
     {
       enabled:
-        !commercialHandsOff && (activeHeroTab !== 'developments' || developmentsJourneyEnabled),
+        !commercialHandsOff &&
+        !sharedLivingHandsOff &&
+        (activeHeroTab !== 'developments' || developmentsJourneyEnabled),
     },
   );
 
@@ -159,6 +165,28 @@ export function HomeTrendingSection({
           className="inline-flex items-center rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700"
         >
           Browse commercial space to lease
+        </a>
+      </section>
+    );
+  }
+
+  if (sharedLivingHandsOff) {
+    return (
+      <section className="home-section">
+        <div className="home-section-header">
+          <h2 className="home-section-title max-w-[20.5rem] text-[1.125rem] font-bold text-slate-900 sm:max-w-none sm:text-xl md:text-[26px]">
+            Shared Living
+          </h2>
+          <p className="max-w-[21rem] text-[13px] leading-5 text-slate-600 sm:max-w-2xl sm:text-sm sm:leading-6 md:max-w-2xl md:text-sm md:leading-6">
+            Search rooms, cottages, and small places in the dedicated Shared Living journey. Choose
+            a canonical area there to keep the search boundary exact.
+          </p>
+        </div>
+        <a
+          href="/shared-living"
+          className="inline-flex items-center rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700"
+        >
+          Browse Shared Living
         </a>
       </section>
     );

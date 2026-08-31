@@ -20,7 +20,7 @@ const mockUseLocation = useLocation as ReturnType<typeof vi.fn>;
 
 const renderWithAuth = (
   authValue: any,
-  role: string,
+  role: string | readonly string[],
   options?: { unauthenticatedAuthEntry?: 'signin' | 'register' },
 ) => {
   return render(
@@ -54,6 +54,19 @@ describe('RequireRole', () => {
     mockUseLocation.mockReturnValue([null, vi.fn()]);
 
     renderWithAuth({}, 'agency_admin');
+
+    expect(await screen.findByTestId('protected')).toBeInTheDocument();
+  });
+
+  test('renders protected children when the user holds any allowed role', async () => {
+    mockUseAuth.mockReturnValue({
+      isAuthenticated: true,
+      user: { role: 'visitor' },
+      loading: false,
+    });
+    mockUseLocation.mockReturnValue([null, vi.fn()]);
+
+    renderWithAuth({}, ['visitor', 'agent']);
 
     expect(await screen.findByTestId('protected')).toBeInTheDocument();
   });
