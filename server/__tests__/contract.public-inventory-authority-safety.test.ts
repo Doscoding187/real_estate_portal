@@ -8,6 +8,9 @@ const { mockDb } = vi.hoisted(() => ({
     updateProperty: vi.fn(),
     getListingById: vi.fn(),
     deleteListing: vi.fn(),
+    isFavorite: vi.fn(),
+    addFavorite: vi.fn(),
+    removeFavorite: vi.fn(),
   },
 }));
 
@@ -73,6 +76,56 @@ describe('public inventory authority safety contracts', () => {
     });
 
     expect(mockDb.updateProperty).not.toHaveBeenCalled();
+  });
+
+  it('refuses legacy deletion when the source Listing is Commercial marketing', async () => {
+    mockDb.getPropertyById.mockResolvedValue({
+      id: 703,
+      ownerId: 42,
+      propertyType: 'house',
+      sourceListingId: 1703,
+    });
+    mockDb.getListingById.mockResolvedValue({ id: 1703, propertyType: 'commercial' });
+
+    await expect(callerFor().properties.delete({ id: 703 })).rejects.toMatchObject({
+      code: 'BAD_REQUEST',
+      message: 'Commercial leasing listings are managed through Commercial inventory.',
+    });
+
+    expect(mockDb.archiveListing).not.toHaveBeenCalled();
+    expect(mockDb.deleteProperty).not.toHaveBeenCalled();
+  });
+
+  it('refuses direct legacy updates to a Commercial property record', async () => {
+    mockDb.getPropertyById.mockResolvedValue({
+      id: 704,
+      ownerId: 42,
+      propertyType: 'commercial',
+      sourceListingId: null,
+    });
+
+    await expect(callerFor().properties.update({ id: 704 })).rejects.toMatchObject({
+      code: 'BAD_REQUEST',
+      message: 'Commercial leasing listings are managed through Commercial inventory.',
+    });
+
+    expect(mockDb.updateProperty).not.toHaveBeenCalled();
+  });
+
+  it('refuses to save a legacy Commercial property mirror as a generic favorite', async () => {
+    mockDb.getPropertyById.mockResolvedValue({
+      id: 705,
+      propertyType: 'commercial',
+    });
+
+    await expect(callerFor().properties.toggleFavorite({ propertyId: 705 })).rejects.toMatchObject({
+      code: 'BAD_REQUEST',
+      message: 'Commercial leasing is available through the dedicated Commercial journey only.',
+    });
+
+    expect(mockDb.isFavorite).not.toHaveBeenCalled();
+    expect(mockDb.addFavorite).not.toHaveBeenCalled();
+    expect(mockDb.removeFavorite).not.toHaveBeenCalled();
   });
 
   it('archives published listings instead of hard-deleting customer-visible supply', async () => {

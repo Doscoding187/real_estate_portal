@@ -47,6 +47,15 @@ type LeadPipelineItem = {
     city: string;
     price: number;
   } | null;
+  commercial?: {
+    listingTitle: string;
+    assetName: string;
+    spaceIdentifier: string;
+    useType: string;
+    rentableAreaM2: number | null;
+    city: string | null;
+    province: string | null;
+  } | null;
 };
 
 type PipelineData = {
@@ -266,7 +275,9 @@ export default function AgentLeads() {
   const activeLeadCount = allLeads.filter(
     lead => lead.status !== 'closed' && lead.status !== 'lost',
   ).length;
-  const propertyLinkedCount = allLeads.filter(lead => Boolean(lead.property)).length;
+  const propertyLinkedCount = allLeads.filter(
+    lead => Boolean(lead.property || lead.commercial),
+  ).length;
   const sourceRollup = useMemo(() => {
     const counts = new Map<string, number>();
     allLeads.forEach(lead => {

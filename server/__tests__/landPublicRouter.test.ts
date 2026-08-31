@@ -7,6 +7,9 @@ describe('Land public-search router geography boundary', () => {
     { searchAreaId: 'johannesburg-sandton', city: 'Johannesburg', province: 'Gauteng' },
     { locationId: 'city:12', city: 'Johannesburg' },
     { locationIds: ['suburb:34'] },
+    {},
+    { city: 'Johannesburg' },
+    { province: 'Gauteng' },
   ])('rejects a request that has ambiguous geography authority: %o', input => {
     expect(landPublicSearchInput.safeParse(input).success).toBe(false);
   });

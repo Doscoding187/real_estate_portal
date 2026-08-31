@@ -3,6 +3,7 @@ import { useLocation } from 'wouter';
 import {
   Archive,
   ArrowUpRight,
+  Building2,
   CheckCircle2,
   ClipboardCheck,
   Eye,
@@ -598,10 +599,16 @@ export function AgencyListingsWorkspace(props: WorkspaceContentProps) {
               title="Inventory"
               eyebrow={`${numberLabel(Number(inventory?.total || 0))} canonical listing records`}
               action={
-                <Button onClick={() => props.setLocation('/listings/create')}>
-                  <FileText className="h-4 w-4" />
-                  New listing
-                </Button>
+                <div className="flex flex-wrap gap-2">
+                  <Button variant="outline" onClick={() => props.setLocation('/agency/commercial')}>
+                    <Building2 className="h-4 w-4" />
+                    Commercial inventory
+                  </Button>
+                  <Button onClick={() => props.setLocation('/listings/create')}>
+                    <FileText className="h-4 w-4" />
+                    New listing
+                  </Button>
+                </div>
               }
             />
             <div className="flex rounded-md border border-slate-200 bg-slate-50 p-1">
@@ -816,7 +823,7 @@ export function AgencyListingsWorkspace(props: WorkspaceContentProps) {
             <EmptyPanel
               icon={FileText}
               title="No listing records"
-              text="Inventory will appear once agency listings are attached to the canonical authoring table."
+              text="General inventory will appear once agency listings are attached to the canonical authoring table. Commercial vacancies are managed in Commercial inventory."
             />
           ) : null}
 

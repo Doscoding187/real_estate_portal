@@ -77,6 +77,19 @@ import {
   getMediaStorageAdapter,
   resolveMediaDeliveryUrl,
 } from './_core/mediaStorage';
+import {
+  COMMERCIAL_INVENTORY_MANAGEMENT_MESSAGE,
+  isCommercialMarketingPropertyType,
+} from '../shared/commercial-domain';
+import { assertCommercialMarketingMediaCustody } from './services/commercialOfficeService';
+
+function rejectGenericCommercialWorkflow(propertyType: unknown): void {
+  if (!isCommercialMarketingPropertyType(propertyType)) return;
+  throw new TRPCError({
+    code: 'BAD_REQUEST',
+    message: COMMERCIAL_INVENTORY_MANAGEMENT_MESSAGE,
+  });
+}
 
 // Helper to normalize placeId vs locationId logic
 async function normalizeLocationInput(inputLocation: { placeId?: string; locationId?: number }) {
@@ -532,6 +545,7 @@ export const listingRouter = router({
     if (!userId) {
       throw new TRPCError({ code: 'UNAUTHORIZED' });
     }
+    rejectGenericCommercialWorkflow(input.propertyType);
 
     try {
       const sellerProspectId = input.sellerProspectId;
@@ -736,6 +750,11 @@ export const listingRouter = router({
             message: 'Not authorized to update this listing',
           });
         }
+        rejectGenericCommercialWorkflow(listing.propertyType);
+        // A general listing cannot be reclassified into Commercial. Commercial
+        // identity is created atomically with its Asset → Space → Availability
+        // record, not by changing the Listing transport marker later.
+        rejectGenericCommercialWorkflow(input.propertyType);
 
         const taxonomyChanged =
           (input.action !== undefined && input.action !== listing.action) ||
@@ -1143,7 +1162,10 @@ export const listingRouter = router({
         // Fetch user's listings with pagination
         const listings = await db.getUserListings(userId, input.status, input.limit, input.offset);
 
-        return listings;
+        // Commercial marketing Listings are deliberately absent from the
+        // generic authoring workspace. Their source of truth is the dedicated
+        // Commercial inventory, including availability and advertiser custody.
+        return listings.filter(listing => !isCommercialMarketingPropertyType(listing.propertyType));
       } catch (error) {
         console.error('Error fetching user listings:', error);
         throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to fetch listings' });
@@ -1170,6 +1192,7 @@ export const listingRouter = router({
             message: 'Not authorized to archive this listing',
           });
         }
+        rejectGenericCommercialWorkflow(listing.propertyType);
 
         // Archive listing
         await db.archiveListing(input.id);
@@ -1177,6 +1200,7 @@ export const listingRouter = router({
         return { success: true };
       } catch (error) {
         console.error('Error archiving listing:', error);
+        if (error instanceof TRPCError) throw error;
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: 'Failed to archive listing',
@@ -1211,6 +1235,7 @@ export const listingRouter = router({
             message: 'Not authorized to delete this listing',
           });
         }
+        rejectGenericCommercialWorkflow(listing.propertyType);
 
         // Published inventory is customer-visible supply. Removing it must
         // preserve the source record and durable history, and must cascade
@@ -1264,7 +1289,22 @@ export const listingRouter = router({
             listing &&
             (Number((listing as any).userId || 0) === user.id ||
               Number((listing as any).ownerId || 0) === user.id);
-          if (!listing || (!isOwner && user.role !== 'super_admin')) {
+          if (listing && isCommercialMarketingPropertyType((listing as any).propertyType)) {
+            // Commercial media is mutated only through the linked canonical
+            // marketing Listing.  Even the legacy generic upload reservation
+            // cannot be issued for an unlinked or stale Commercial mirror.
+            try {
+              await assertCommercialMarketingMediaCustody({
+                listingId: input.listingId,
+                userId: user.id,
+              });
+            } catch {
+              throw new TRPCError({
+                code: 'FORBIDDEN',
+                message: 'Not authorized to upload media for this listing',
+              });
+            }
+          } else if (!listing || (!isOwner && user.role !== 'super_admin')) {
             throw new TRPCError({
               code: 'FORBIDDEN',
               message: 'Not authorized to upload media for this listing',
@@ -1345,6 +1385,22 @@ export const listingRouter = router({
           userId: user.id,
           requireConfirmed: false,
         });
+        if (reservation.listingId !== null) {
+          const listing = await db.getListingById(reservation.listingId);
+          if (listing && isCommercialMarketingPropertyType((listing as any).propertyType)) {
+            try {
+              await assertCommercialMarketingMediaCustody({
+                listingId: reservation.listingId,
+                userId: user.id,
+              });
+            } catch {
+              throw new TRPCError({
+                code: 'FORBIDDEN',
+                message: 'Not authorized to confirm media for this listing',
+              });
+            }
+          }
+        }
         const { assertUploadedMediaObject } = await import('./_core/imageUpload');
         const verifiedObject = await assertUploadedMediaObject(
           reservation.key,
@@ -1584,15 +1640,13 @@ export const listingRouter = router({
     // Publication readiness enumeration: surface every canonical blocker
     // (verification, profile, branding, subscription, capacity) BEFORE the
     // agency invests authoring effort, instead of failing at submit time.
-    let publication:
-      | {
-          ready: boolean;
-          blockers: Array<{ reason: string; message: string }>;
-          verified: boolean;
-          daysRemaining: number | null;
-          capacity: { used: number; max: number } | null;
-        }
-      | null = null;
+    let publication: {
+      ready: boolean;
+      blockers: Array<{ reason: string; message: string }>;
+      verified: boolean;
+      daysRemaining: number | null;
+      capacity: { used: number; max: number } | null;
+    } | null = null;
 
     if (currentUser.role === 'agency_admin' && currentUser.agencyId) {
       const readiness = await evaluateAgencyPublicationReadiness(db, Number(currentUser.agencyId), {
@@ -1681,6 +1735,16 @@ export const listingRouter = router({
           throw new TRPCError({
             code: 'FORBIDDEN',
             message: 'Not authorized to submit this listing',
+          });
+        }
+        if (isCommercialMarketingPropertyType(listing.propertyType)) {
+          await recordSubmitFailure(
+            'commercial_inventory_authority',
+            COMMERCIAL_INVENTORY_MANAGEMENT_MESSAGE,
+          );
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: COMMERCIAL_INVENTORY_MANAGEMENT_MESSAGE,
           });
         }
 
@@ -1905,6 +1969,12 @@ export const listingRouter = router({
         if (!isOwner && !isSuperAdmin) {
           throw new TRPCError({ code: 'FORBIDDEN', message: 'Not authorized' });
         }
+
+        // Commercial marketing listings are promoted through the governed
+        // Commercial inventory workflow.  Keeping the generic feature flag
+        // off this route prevents a legacy mutation from changing commercial
+        // discovery state outside that lifecycle.
+        rejectGenericCommercialWorkflow(listing.propertyType);
 
         // Gate: Quality Score >= 85 for featuring
         if (input.featured) {

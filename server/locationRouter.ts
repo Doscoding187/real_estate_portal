@@ -26,6 +26,19 @@ import {
   normalizeCoordinatePair,
 } from '../shared/location-contract';
 import { searchDiscoveryService } from './services/searchDiscoveryService';
+import { TRPCError } from '@trpc/server';
+import {
+  COMMERCIAL_PUBLIC_JOURNEY_HANDOFF_MESSAGE,
+  isCommercialMarketingPropertyType,
+} from '../shared/commercial-domain';
+
+function rejectCommercialPropertyTypes(values: readonly unknown[] | undefined): void {
+  if (!values?.some(value => isCommercialMarketingPropertyType(value))) return;
+  throw new TRPCError({
+    code: 'BAD_REQUEST',
+    message: COMMERCIAL_PUBLIC_JOURNEY_HANDOFF_MESSAGE,
+  });
+}
 
 type LegacyLocationSearchResult = {
   id: number;
@@ -479,12 +492,14 @@ export const locationRouter = router({
       }),
     )
     .query(async ({ input }) => {
+      rejectCommercialPropertyTypes(input.filters?.propertyType);
       const db = await getDb();
 
       const conditions = [
         sql`${properties.publicLatitude} BETWEEN ${input.bounds.south} AND ${input.bounds.north}`,
         sql`${properties.publicLongitude} BETWEEN ${input.bounds.west} AND ${input.bounds.east}`,
         eq(properties.status, 'published'),
+        ne(properties.propertyType, 'commercial'),
       ];
 
       // Apply filters
@@ -784,6 +799,7 @@ export const locationRouter = router({
                 sql`${properties.publicLatitude} BETWEEN ${gridLat} AND ${gridLat + latStep}`,
                 sql`${properties.publicLongitude} BETWEEN ${gridLng} AND ${gridLng + lngStep}`,
                 eq(properties.status, 'published'),
+                ne(properties.propertyType, 'commercial'),
               ),
             );
 

@@ -333,27 +333,45 @@ async function main() {
     void baselineColumnReferenceGuard;
   }
 
-  const baselineTables = Array.from(
-    baselineSql.matchAll(/CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?`([^`]+)`/gi),
-    match => String(match[1]),
-  ).sort();
-
-  // The immutable launch baseline is allowed to be extended by the active
-  // canonical migration chain. Include additive CREATE TABLE authorities from
-  // later migrations when checking the generated model inventory; do not
-  // rewrite the baseline just because S2 adds a durable table.
-  const additiveTables = [];
-  for (const migration of migrationManifest.migrations ?? []) {
-    if (migration.filename === baselineName) continue;
-    const migrationSql = await readFile(join(migrationsDir, migration.filename), 'utf8');
-    additiveTables.push(
+  // Reconstruct the net table set represented by the active migration chain.
+  // Later migrations may retire a table (for example the Services v1
+  // convergence), so counting every historical CREATE TABLE would make the
+  // immutable migration history disagree with the generated desired model.
+  // Apply CREATE/DROP statements in source order and compare the resulting
+  // state to the canonical inventory.
+  const migrationTableState = new Set();
+  const applyTableStatements = sql => {
+    const statements = [
       ...Array.from(
-        migrationSql.matchAll(/CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?`([^`]+)`/gi),
-        match => String(match[1]),
+        sql.matchAll(/CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?`([^`]+)`/gi),
+        match => ({ index: match.index ?? 0, kind: 'create', names: [String(match[1])] }),
       ),
-    );
+      ...Array.from(sql.matchAll(/DROP\s+TABLE\s+(?:IF\s+EXISTS\s+)?([^;]+);/gi), match => ({
+        index: match.index ?? 0,
+        kind: 'drop',
+        names: Array.from(String(match[1]).matchAll(/`([^`]+)`/g), tableMatch =>
+          String(tableMatch[1]),
+        ),
+      })),
+    ].sort((left, right) => left.index - right.index);
+
+    for (const statement of statements) {
+      for (const tableName of statement.names) {
+        if (statement.kind === 'drop') migrationTableState.delete(tableName);
+        else migrationTableState.add(tableName);
+      }
+    }
+  };
+
+  for (const migration of migrationManifest.migrations ?? []) {
+    const migrationSql =
+      migration.filename === baselineName
+        ? baselineSql
+        : await readFile(join(migrationsDir, migration.filename), 'utf8');
+    applyTableStatements(migrationSql);
   }
-  const canonicalTables = [...baselineTables, ...additiveTables].sort();
+
+  const canonicalTables = [...migrationTableState].sort();
 
   if (new Set(canonicalTables).size !== canonicalTables.length) {
     errors.push('Canonical migration chain contains duplicate CREATE TABLE names.');

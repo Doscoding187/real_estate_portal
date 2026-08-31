@@ -11,12 +11,22 @@ describe('public Developments search authority', () => {
     const service = readRepoFile('server/services/publicDevelopmentSearchService.ts');
 
     expect(service).toContain('publicDevelopmentEligibilityConditions()');
+    expect(service).toContain(
+      'Commercial development records are not an alternate public Commercial',
+    );
     expect(service).toContain('buildCanonicalLocationQueryBoundary');
     expect(service).toContain("journey: 'developments'");
     expect(service).toContain('eq(unitTypes.isActive, 1)');
     expect(service).toContain('normalizePublicSearchPageForTotal');
     expect(service).toContain('sortPublicDevelopmentSearchItems');
     expect(service).not.toContain('listPublicDevelopments');
+  });
+
+  it('keeps generic global search out of the dedicated Commercial journey', () => {
+    const globalSearch = readRepoFile('server/services/globalSearchService.ts');
+
+    expect(globalSearch).toContain("ne(developments.developmentType, 'commercial')");
+    expect(globalSearch).toContain("ne(properties.propertyType, 'commercial')");
   });
 
   it('keeps the router and consumer page on one development-first query entry point', () => {

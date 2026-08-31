@@ -94,6 +94,16 @@ import {
   ListingPublicationEntitlementError,
 } from './services/listingPublicationEntitlementService';
 import { nowAsDbTimestamp, toDbTimestampRequired } from './utils/dbTypeUtils';
+import {
+  COMMERCIAL_INVENTORY_MANAGEMENT_MESSAGE,
+  isCommercialMarketingPropertyType,
+} from '../shared/commercial-domain';
+import {
+  COMMERCIAL_LEAD_DEDICATED_WORKFLOW_MESSAGE,
+  commercialLeadContextCandidateIds,
+  loadCommercialLeadContext,
+  loadCommercialLeadContexts,
+} from './services/commercialLeadContextService';
 
 /**
  * Agency Router - Manages real estate agencies
@@ -1000,8 +1010,24 @@ async function resolveViewingInventory(input: {
   let listingId = input.listingId || null;
   let propertyId = input.propertyId || lead.propertyId || null;
 
+  if (
+    commercialLeadContextCandidateIds([lead]).length > 0 &&
+    (await loadCommercialLeadContext(db, lead.id))
+  ) {
+    throw new TRPCError({
+      code: 'PRECONDITION_FAILED',
+      message: COMMERCIAL_LEAD_DEDICATED_WORKFLOW_MESSAGE,
+    });
+  }
+
   if (listingId) {
-    await requireAgencyListing(db, agencyId, listingId);
+    const listing = await requireAgencyListing(db, agencyId, listingId);
+    if (isCommercialMarketingPropertyType(listing.propertyType)) {
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message: COMMERCIAL_LEAD_DEDICATED_WORKFLOW_MESSAGE,
+      });
+    }
     const [publicProperty] = await db
       .select({
         id: properties.id,
@@ -1034,6 +1060,12 @@ async function resolveViewingInventory(input: {
 
   if (propertyId) {
     const property = await requireAgencyProperty(db, agencyId, propertyId);
+    if (isCommercialMarketingPropertyType(property.propertyType)) {
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message: COMMERCIAL_LEAD_DEDICATED_WORKFLOW_MESSAGE,
+      });
+    }
     if (!listingId && property.sourceListingId) {
       const sourceListingId = Number(property.sourceListingId);
       listingId = sourceListingId;
@@ -1529,6 +1561,19 @@ function agencyListingScopeCondition(agencyId: number) {
       ),
     ),
   )!;
+}
+
+/** The general agency workspace intentionally excludes Commercial inventory. */
+function genericAgencyListingScopeCondition(agencyId: number) {
+  return and(agencyListingScopeCondition(agencyId), ne(listings.propertyType, 'commercial'))!;
+}
+
+function rejectGenericAgencyCommercialWorkflow(listing: { propertyType?: unknown }): void {
+  if (!isCommercialMarketingPropertyType(listing.propertyType)) return;
+  throw new TRPCError({
+    code: 'BAD_REQUEST',
+    message: COMMERCIAL_INVENTORY_MANAGEMENT_MESSAGE,
+  });
 }
 
 const listingInventoryFiltersSchema = z.object({
@@ -2101,6 +2146,7 @@ async function requireAgencyListing(
     .select({
       id: listings.id,
       title: listings.title,
+      propertyType: listings.propertyType,
       status: listings.status,
       ownerId: listings.ownerId,
       agentId: listings.agentId,
@@ -2558,6 +2604,15 @@ async function resolveDealContext(input: {
 }) {
   const { db, agencyId, user } = input;
   const lead = await requireAgencyLead(db, user, input.leadId);
+  if (
+    commercialLeadContextCandidateIds([lead]).length > 0 &&
+    (await loadCommercialLeadContext(db, lead.id))
+  ) {
+    throw new TRPCError({
+      code: 'PRECONDITION_FAILED',
+      message: COMMERCIAL_LEAD_DEDICATED_WORKFLOW_MESSAGE,
+    });
+  }
   let listingId = input.listingId || null;
   let propertyId = input.propertyId || lead.propertyId || null;
   let responsibleAgentId = input.responsibleAgentId || lead.agentId || null;
@@ -2884,6 +2939,7 @@ export const __agencyDealEngineTestHooks = {
 };
 
 async function getAgencyListingSummary(db: AgencyDb, agencyId: number) {
+  const scope = genericAgencyListingScopeCondition(agencyId);
   const scopedRows = await db
     .select({
       authoringStatus: listings.status,
@@ -2892,7 +2948,7 @@ async function getAgencyListingSummary(db: AgencyDb, agencyId: number) {
     .from(listings)
     .leftJoin(agents, eq(listings.agentId, agents.id))
     .leftJoin(users, eq(listings.ownerId, users.id))
-    .where(agencyListingScopeCondition(agencyId))
+    .where(scope)
     .groupBy(listings.status);
 
   const [
@@ -2910,7 +2966,7 @@ async function getAgencyListingSummary(db: AgencyDb, agencyId: number) {
         .from(listings)
         .leftJoin(agents, eq(listings.agentId, agents.id))
         .leftJoin(users, eq(listings.ownerId, users.id))
-        .where(and(agencyListingScopeCondition(agencyId), isNull(listings.agentId))),
+        .where(and(scope, isNull(listings.agentId))),
     ),
     countRows(
       db
@@ -2920,7 +2976,7 @@ async function getAgencyListingSummary(db: AgencyDb, agencyId: number) {
         .leftJoin(users, eq(listings.ownerId, users.id))
         .where(
           and(
-            agencyListingScopeCondition(agencyId),
+            scope,
             isNotNull(listings.agentId),
             sql`(${agents.status} IS NULL OR ${agents.status} <> 'approved')`,
           ),
@@ -2934,7 +2990,7 @@ async function getAgencyListingSummary(db: AgencyDb, agencyId: number) {
         .leftJoin(users, eq(listings.ownerId, users.id))
         .where(
           and(
-            agencyListingScopeCondition(agencyId),
+            scope,
             inArray(listings.status, ['draft', 'rejected'] as any),
             sql`${listings.readinessScore} >= 75`,
           ),
@@ -2948,7 +3004,7 @@ async function getAgencyListingSummary(db: AgencyDb, agencyId: number) {
         .leftJoin(users, eq(listings.ownerId, users.id))
         .where(
           and(
-            agencyListingScopeCondition(agencyId),
+            scope,
             sql`NOT EXISTS (
               SELECT 1
               FROM listing_media lm
@@ -2965,7 +3021,7 @@ async function getAgencyListingSummary(db: AgencyDb, agencyId: number) {
         .leftJoin(users, eq(listings.ownerId, users.id))
         .where(
           and(
-            agencyListingScopeCondition(agencyId),
+            scope,
             sql`EXISTS (
               SELECT 1
               FROM properties p
@@ -2983,7 +3039,7 @@ async function getAgencyListingSummary(db: AgencyDb, agencyId: number) {
         .leftJoin(users, eq(listings.ownerId, users.id))
         .where(
           and(
-            agencyListingScopeCondition(agencyId),
+            scope,
             eq(listings.status, 'pending_review' as any),
             sql`EXISTS (
               SELECT 1
@@ -3002,7 +3058,7 @@ async function getAgencyListingSummary(db: AgencyDb, agencyId: number) {
         .leftJoin(users, eq(listings.ownerId, users.id))
         .where(
           and(
-            agencyListingScopeCondition(agencyId),
+            scope,
             eq(listings.status, 'published' as any),
             sql`NOT EXISTS (
               SELECT 1
@@ -4383,6 +4439,11 @@ export const agencyRouter = router({
         .orderBy(desc(leads.createdAt))
         .limit(filters.limit);
 
+      const commercialContexts = await loadCommercialLeadContexts(
+        db,
+        commercialLeadContextCandidateIds(rows.map(({ lead }) => lead)),
+      );
+
       return rows.map(({ lead, property, agent, firstResponseOverdue }) => ({
         ...decorateLeadForWorkspace(lead, { firstResponseOverdue: Boolean(firstResponseOverdue) }),
         agent: agent
@@ -4407,6 +4468,7 @@ export const agencyRouter = router({
               status: property.status,
             }
           : null,
+        commercial: commercialContexts.get(lead.id) || null,
       }));
     }),
 
@@ -4491,6 +4553,10 @@ export const agencyRouter = router({
       const user = requireUser(ctx);
       const agencyId = requireAgencyId(user);
       const lead = await requireAgencyLead(db, user, input.leadId);
+      const commercial =
+        commercialLeadContextCandidateIds([lead]).length > 0
+          ? await loadCommercialLeadContext(db, lead.id)
+          : null;
 
       const [property] = lead.propertyId
         ? await db.select().from(properties).where(eq(properties.id, lead.propertyId)).limit(1)
@@ -4541,6 +4607,7 @@ export const agencyRouter = router({
               status: property.status,
             }
           : null,
+        commercial,
         agent: agent
           ? {
               id: agent.id,
@@ -7298,7 +7365,7 @@ export const agencyRouter = router({
       const user = requireUser(ctx);
       const agencyId = requireAgencyId(user);
       const filters = listingInventoryFiltersSchema.parse(input || {});
-      const conditions: SQL[] = [agencyListingScopeCondition(agencyId)];
+      const conditions: SQL[] = [genericAgencyListingScopeCondition(agencyId)];
       applyAgencyListingFilterConditions(conditions, filters);
 
       const [rows, total, summary] = await Promise.all([
@@ -7346,14 +7413,15 @@ export const agencyRouter = router({
 
       const user = requireUser(ctx);
       const agencyId = requireAgencyId(user);
-      await requireAgencyListing(db, agencyId, input.listingId);
+      const listing = await requireAgencyListing(db, agencyId, input.listingId);
+      rejectGenericAgencyCommercialWorkflow(listing);
 
       const [row] = await db
         .select(agencyListingSelectFields())
         .from(listings)
         .leftJoin(agents, eq(listings.agentId, agents.id))
         .leftJoin(users, eq(listings.ownerId, users.id))
-        .where(and(eq(listings.id, input.listingId), agencyListingScopeCondition(agencyId)))
+        .where(and(eq(listings.id, input.listingId), genericAgencyListingScopeCondition(agencyId)))
         .limit(1);
 
       if (!row) {
@@ -7420,6 +7488,7 @@ export const agencyRouter = router({
       const user = requireUser(ctx);
       const agencyId = requireAgencyId(user);
       const listing = await requireAgencyListing(db, agencyId, input.listingId);
+      rejectGenericAgencyCommercialWorkflow(listing);
       const assignedAgent = input.agentId
         ? await requireAgencyAgent(db, agencyId, input.agentId)
         : null;
@@ -7454,6 +7523,7 @@ export const agencyRouter = router({
       const user = requireUser(ctx);
       const agencyId = requireAgencyId(user);
       const listing = await requireAgencyListing(db, agencyId, input.listingId);
+      rejectGenericAgencyCommercialWorkflow(listing);
       const status = String(listing.status || 'draft');
 
       if (!['draft', 'rejected'].includes(status)) {
@@ -7523,6 +7593,7 @@ export const agencyRouter = router({
       const user = requireUser(ctx);
       const agencyId = requireAgencyId(user);
       const listing = await requireAgencyListing(db, agencyId, input.listingId);
+      rejectGenericAgencyCommercialWorkflow(listing);
 
       if (String(listing.status || '') === 'archived') {
         return { success: true, status: 'archived' };

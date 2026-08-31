@@ -18,6 +18,18 @@ export const LAND_PUBLIC_CLASSIFICATIONS = [
 ] as const satisfies readonly LandClassification[];
 export type LandPublicClassification = (typeof LAND_PUBLIC_CLASSIFICATIONS)[number];
 
+/**
+ * The public Land journey has a deliberately smaller vocabulary than the
+ * durable Land model. Keep this runtime guard beside the allow-list so every
+ * authoring and public-search boundary can reject an authoring-only value.
+ */
+export function isLandPublicClassification(value: unknown): value is LandPublicClassification {
+  return (
+    typeof value === 'string' &&
+    (LAND_PUBLIC_CLASSIFICATIONS as readonly string[]).includes(value)
+  );
+}
+
 export const LAND_CLASSIFICATION_LABELS: Record<LandClassification, string> = {
   residential_stand: 'Residential Stand',
   development_land: 'Development Land',
@@ -51,6 +63,18 @@ export function normalizeLandTimestamp(value: DateLike): Date | null {
 export function isLandTimestampDue(value: DateLike, now: Date): boolean {
   const normalized = normalizeLandTimestamp(value);
   return normalized !== null && normalized.getTime() <= now.getTime();
+}
+
+/** A verified mandate stops being public authority as soon as it expires. */
+export function isLandMarketingAuthorityActive(input: {
+  status: string | null | undefined;
+  expiresAt?: DateLike;
+  now?: Date;
+}): boolean {
+  return (
+    input.status === 'active' &&
+    !isLandTimestampDue(input.expiresAt, input.now || new Date())
+  );
 }
 
 export function deriveLandTrustState(input: {

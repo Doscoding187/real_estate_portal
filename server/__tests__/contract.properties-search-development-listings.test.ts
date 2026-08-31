@@ -129,7 +129,7 @@ describe('properties.searchDevelopmentListings contract', () => {
         brandName: 'Demo Builder',
       },
     });
-    expect((result as any)).toMatchObject({
+    expect(result as any).toMatchObject({
       total: 1,
       page: 1,
       pageSize: 20,
@@ -169,5 +169,21 @@ describe('properties.searchDevelopmentListings contract', () => {
       1,
       20,
     );
+  });
+
+  it('rejects a generic Commercial request so the dedicated Commercial authority remains singular', async () => {
+    const caller = appRouter.createCaller({
+      req: { headers: {} },
+      res: {},
+      user: null,
+    } as any);
+
+    await expect(
+      caller.properties.searchDevelopmentListings({
+        propertyType: 'commercial',
+        listingType: 'rent',
+      }),
+    ).rejects.toThrow(/dedicated Commercial journey/i);
+    expect(mockSearchListings).not.toHaveBeenCalled();
   });
 });

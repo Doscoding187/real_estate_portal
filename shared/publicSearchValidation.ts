@@ -1,6 +1,6 @@
 import { isFactualGeographyId } from './factualRuntimeGeographyBridge';
 import { parseCanonicalLocationId } from './locationAuthority';
-import { RENT_PUBLIC_PROPERTY_TYPES } from './property-taxonomy';
+import { BUY_PUBLIC_PROPERTY_TYPES, RENT_PUBLIC_PROPERTY_TYPES } from './property-taxonomy';
 import { isSearchAreaId, MULTI_LOCATION_MAX, MULTI_LOCATION_MIN } from './searchScope';
 
 export interface PublicSearchInputValidationIssue {
@@ -57,14 +57,21 @@ export function validatePublicSearchInput(
     };
   }
 
+  const supportedPropertyTypes =
+    listingType === 'sale'
+      ? BUY_PUBLIC_PROPERTY_TYPES
+      : listingType === 'rent'
+        ? RENT_PUBLIC_PROPERTY_TYPES
+        : undefined;
   if (
-    listingType === 'rent' &&
+    supportedPropertyTypes &&
     input.propertyType !== undefined &&
-    !(RENT_PUBLIC_PROPERTY_TYPES as readonly string[]).includes(input.propertyType)
+    !(supportedPropertyTypes as readonly string[]).includes(input.propertyType)
   ) {
     return {
       path: 'propertyType',
-      message: 'This rental property type is not available in the Rent journey.',
+      message:
+        'This property type is not available in the generic Buy/Rent journey. Use its dedicated journey instead.',
     };
   }
 

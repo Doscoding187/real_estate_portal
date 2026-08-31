@@ -43,6 +43,13 @@ type LeadItem = {
     city: string;
     price: number;
   } | null;
+  commercial?: {
+    listingTitle: string;
+    spaceIdentifier: string;
+    useType: string;
+    city: string | null;
+    province: string | null;
+  } | null;
 };
 
 type PipelineData = Record<PipelineStage, LeadItem[]>;
@@ -1075,8 +1082,10 @@ export function AgentDashboardOverview() {
                               {lead.name}
                             </p>
                             <p className="truncate text-xs text-slate-500">
-                              {lead.property?.title || 'General inquiry'}
-                              {lead.property?.city ? ` - ${lead.property.city}` : ''}
+                              {lead.commercial?.listingTitle || lead.property?.title || 'General inquiry'}
+                              {(lead.commercial?.city || lead.property?.city)
+                                ? ` - ${lead.commercial?.city || lead.property?.city}`
+                                : ''}
                             </p>
                           </div>
                           <Badge

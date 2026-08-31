@@ -1188,8 +1188,8 @@ export const developerRouter = router({
           };
         }
 
-        // Commercial consumer intent is owned by the dedicated Office Leasing
-        // journey at /commercial (commercialOffice.search over the commercial
+        // Commercial consumer intent is owned by the dedicated Commercial Leasing
+        // journey at /commercial (commercial.search over the commercial
         // asset tables). The previous implementation queried the residential
         // properties table for propertyType='commercial' and rendered those
         // rows through residential cards, presenting a second, contradictory

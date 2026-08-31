@@ -26,6 +26,10 @@ vi.mock('../developmentDerivedListingService', () => ({
 
 import { publicSearchService } from '../publicSearchService';
 import { PUBLIC_SEARCH_MAX_PAGE_INDEX } from '../../../shared/publicSearchPagination';
+import {
+  BUY_PUBLIC_PROPERTY_TYPES,
+  RENT_PUBLIC_PROPERTY_TYPES,
+} from '../../../shared/property-taxonomy';
 
 const resolvedLocation = {
   status: 'resolved' as const,
@@ -300,6 +304,42 @@ describe('publicSearchService contract', () => {
     expect(mockSearchListings).not.toHaveBeenCalled();
   });
 
+  it('pins generic Buy and Rent source searches to their public type universes', async () => {
+    await publicSearchService.searchInventory({ listingType: 'sale' });
+    expect(mockSearchProperties).toHaveBeenCalledWith(
+      expect.objectContaining({ propertyType: BUY_PUBLIC_PROPERTY_TYPES }),
+      'date_desc',
+      1,
+      12,
+      undefined,
+      { publicOnly: true },
+    );
+    expect(mockSearchListings).toHaveBeenCalledWith(
+      expect.objectContaining({ propertyType: BUY_PUBLIC_PROPERTY_TYPES }),
+      'date_desc',
+      1,
+      12,
+    );
+
+    mockSearchProperties.mockClear();
+    mockSearchListings.mockClear();
+    await publicSearchService.searchInventory({ listingType: 'rent' });
+    expect(mockSearchProperties).toHaveBeenCalledWith(
+      expect.objectContaining({ propertyType: RENT_PUBLIC_PROPERTY_TYPES }),
+      'date_desc',
+      1,
+      12,
+      undefined,
+      { publicOnly: true },
+    );
+    expect(mockSearchListings).toHaveBeenCalledWith(
+      expect.objectContaining({ propertyType: RENT_PUBLIC_PROPERTY_TYPES }),
+      'date_desc',
+      1,
+      12,
+    );
+  });
+
   it('rejects unsupported runtime journeys instead of treating them as Rent', async () => {
     for (const listingType of [
       'shared_living',
@@ -315,6 +355,27 @@ describe('publicSearchService contract', () => {
         }),
       ).rejects.toThrow('Buy or Rent');
     }
+
+    expect(mockSearchProperties).not.toHaveBeenCalled();
+    expect(mockSearchListings).not.toHaveBeenCalled();
+  });
+
+  it('hands an explicit Commercial property request to the dedicated journey', async () => {
+    await expect(
+      publicSearchService.searchInventory({
+        listingType: 'rent',
+        propertyType: 'commercial',
+      }),
+    ).rejects.toThrow('dedicated Commercial journey');
+
+    expect(mockSearchProperties).not.toHaveBeenCalled();
+    expect(mockSearchListings).not.toHaveBeenCalled();
+  });
+
+  it('does not turn a Commercial property request without a journey into a generic empty Buy/Rent result', async () => {
+    await expect(
+      publicSearchService.searchInventory({ propertyType: 'commercial' }),
+    ).rejects.toThrow('dedicated Commercial journey');
 
     expect(mockSearchProperties).not.toHaveBeenCalled();
     expect(mockSearchListings).not.toHaveBeenCalled();

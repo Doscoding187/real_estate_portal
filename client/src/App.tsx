@@ -97,7 +97,10 @@ const SharedLivingDetail = lazy(() => import('./pages/SharedLivingDetail'));
 const SharedLivingThread = lazy(() => import('./pages/SharedLivingThread'));
 const SharedLivingLister = lazy(() => import('./pages/SharedLivingLister'));
 const CommercialOfficeDetail = lazy(() => import('./pages/CommercialOfficeDetail'));
-const CommercialOfficeAuthoringWorkspace = lazy(() => import('./pages/agent/CommercialOfficeAuthoringWorkspace'));
+const CommercialOfficeAuthoringWorkspace = lazy(
+  () => import('./pages/agent/CommercialOfficeAuthoringWorkspace'),
+);
+const CommercialInventory = lazy(() => import('./pages/agent/CommercialInventory'));
 
 // Import new role-based dashboards
 const UserDashboard = lazy(() => import('./pages/UserDashboard'));
@@ -245,7 +248,9 @@ function Router() {
           {/* Otherwise /:action/:province/:locationId matches /admin/review/360002 */}
           <Route path="/admin/review/:id" component={AdminPropertyReview} />
           <Route path="/admin/land-review">
-            <RequireRole role="super_admin"><LandReviewWorkspace /></RequireRole>
+            <RequireRole role="super_admin">
+              <LandReviewWorkspace />
+            </RequireRole>
           </Route>
 
           {/* Compatibility edge: preserve inbound query state, then hand off
@@ -271,9 +276,35 @@ function Router() {
             </RequireRole>
           </Route>
           <Route path="/agent/land/create">
-            <RequireRole role="agent"><LandAuthoringWorkspace /></RequireRole>
+            <RequireRole role="agent">
+              <LandAuthoringWorkspace />
+            </RequireRole>
           </Route>
-          <Route path="/agent/commercial/office/create"><RequireRole role="agent"><CommercialOfficeAuthoringWorkspace /></RequireRole></Route>
+          <Route path="/agent/commercial/create">
+            <RequireRole role="agent">
+              <CommercialOfficeAuthoringWorkspace />
+            </RequireRole>
+          </Route>
+          <Route path="/agent/commercial">
+            <RequireRole role="agent">
+              <CommercialInventory />
+            </RequireRole>
+          </Route>
+          <Route path="/agent/commercial/office/create">
+            <RequireRole role="agent">
+              <CommercialOfficeAuthoringWorkspace />
+            </RequireRole>
+          </Route>
+          <Route path="/agency/commercial/create">
+            <RequireRole role="agency_admin">
+              <CommercialOfficeAuthoringWorkspace />
+            </RequireRole>
+          </Route>
+          <Route path="/agency/commercial">
+            <RequireRole role="agency_admin">
+              <CommercialInventory />
+            </RequireRole>
+          </Route>
           <Route path="/agent/leads">
             <RequireRole role="agent">
               <AgentLeads />
@@ -355,7 +386,9 @@ function Router() {
           <Route path="/shared-living/thread/:token" component={SharedLivingThread} />
           <Route path="/shared-living/:slug" component={SharedLivingDetail} />
           <Route path="/shared-living/list">
-            <RequireRole role="agent"><SharedLivingLister /></RequireRole>
+            <RequireRole role="agent">
+              <SharedLivingLister />
+            </RequireRole>
           </Route>
           <Route path="/commercial/:slug" component={CommercialOfficeDetail} />
           {/* Redirect Legacy /developments to /new-developments */}
@@ -638,11 +671,18 @@ function Router() {
           {/* 2. TRANSACTION ROOTS (Query-Based SRP)                         */}
           {/* Geography remains canonical query state on these roots.        */}
           {/* ============================================================== */}
-          <Route path="/property-for-sale" component={() => {
-            const params = new URLSearchParams(window.location.search);
-            if (params.get('propertyType') === 'plot') { params.delete('propertyType'); window.location.replace(`/plots-and-land${params.toString() ? `?${params}` : ''}`); return null; }
-            return <SearchResults />;
-          }} />
+          <Route
+            path="/property-for-sale"
+            component={() => {
+              const params = new URLSearchParams(window.location.search);
+              if (params.get('propertyType') === 'plot') {
+                params.delete('propertyType');
+                window.location.replace(`/plots-and-land${params.toString() ? `?${params}` : ''}`);
+                return null;
+              }
+              return <SearchResults />;
+            }}
+          />
           <Route path="/plots-and-land" component={PlotsAndLand} />
           <Route path="/land/:slug" component={LandDetail} />
           <Route path="/property-to-rent" component={SearchResults} />

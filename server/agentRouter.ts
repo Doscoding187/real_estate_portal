@@ -54,6 +54,17 @@ import { logAudit } from './_core/auditLog';
 import { getAgentEntitlementsForUserId } from './services/agentEntitlementService';
 import { loadAgentPresenceSummary } from './services/agentPresenceSummaryService';
 import { agentOnboardingService } from './services/agentOnboardingService';
+import {
+  COMMERCIAL_INVENTORY_MANAGEMENT_MESSAGE,
+  isCommercialMarketingPropertyType,
+} from '../shared/commercial-domain';
+import {
+  COMMERCIAL_LEAD_DEDICATED_WORKFLOW_MESSAGE,
+  commercialLeadContextCandidateIds,
+  loadCommercialLeadContext,
+  loadCommercialLeadContexts,
+} from './services/commercialLeadContextService';
+import type { CommercialLeadOperationalContext } from './services/commercialLeadContextService';
 
 import {
   getAgentInventorySchedulingOptions,
@@ -107,6 +118,14 @@ const NOTIFICATION_TYPES = [
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 const LIVE_AGENT_LISTING_STATUSES = ['available', 'published'] as const;
 const TERMINAL_FOLLOW_UP_STATUSES = ['converted', 'closed', 'lost'] as const;
+
+function rejectGenericCommercialPropertyWorkflow(propertyType: unknown): void {
+  if (!isCommercialMarketingPropertyType(propertyType)) return;
+  throw new TRPCError({
+    code: 'BAD_REQUEST',
+    message: COMMERCIAL_INVENTORY_MANAGEMENT_MESSAGE,
+  });
+}
 
 function parseTextList(value?: string | null) {
   if (!value) return [];
@@ -170,6 +189,7 @@ async function requireAgentPropertyMutationTarget(
   if (!isOwner && !isAgent) {
     throw new Error('Not authorized to mutate this property');
   }
+  rejectGenericCommercialPropertyWorkflow(property.propertyType);
 
   const sourceListingId = property.sourceListingId == null ? null : Number(property.sourceListingId);
   if (sourceListingId == null) {
@@ -177,7 +197,12 @@ async function requireAgentPropertyMutationTarget(
   }
 
   const [sourceListing] = await database
-    .select({ id: listings.id, ownerId: listings.ownerId, agentId: listings.agentId })
+    .select({
+      id: listings.id,
+      ownerId: listings.ownerId,
+      agentId: listings.agentId,
+      propertyType: listings.propertyType,
+    })
     .from(listings)
     .where(eq(listings.id, sourceListingId))
     .limit(1);
@@ -197,6 +222,7 @@ async function requireAgentPropertyMutationTarget(
   if (sourceListing.ownerId !== userId && !sourceAgent) {
     throw new Error('Not authorized to mutate the source listing for this property');
   }
+  rejectGenericCommercialPropertyWorkflow(sourceListing.propertyType);
 
   return { property, sourceListingId };
 }
@@ -807,6 +833,14 @@ export const agentRouter = router({
         .where(and(...conditions))
         .orderBy(desc(leads.createdAt));
 
+      // Commercial enquiries intentionally have no generic `properties`
+      // projection. Rehydrate their immutable Asset → Space → Availability
+      // handoff context from the dedicated authority for the CRM surface.
+      const commercialContexts = await loadCommercialLeadContexts(
+        db,
+        commercialLeadContextCandidateIds(leadsList.map(({ lead }) => lead)),
+      );
+
       // Define Output Type
       interface LeadPipelineItem {
         id: number;
@@ -836,6 +870,7 @@ export const agentRouter = router({
           city: string;
           price: number;
         } | null;
+        commercial: CommercialLeadOperationalContext | null;
       }
 
       // Group by pipeline stage
@@ -903,6 +938,7 @@ export const agentRouter = router({
                 price: Number(property.price),
               }
             : null,
+          commercial: commercialContexts.get(lead.id) || null,
         });
       });
 
@@ -1052,8 +1088,12 @@ export const agentRouter = router({
         .limit(input.limit);
 
       // Fetch primary images
+      const genericProperties = listings.filter(
+        property => !isCommercialMarketingPropertyType(property.propertyType),
+      );
+
       const listingsWithImages = await Promise.all(
-        listings.map(async property => {
+        genericProperties.map(async property => {
           const images = await db
             .select()
             .from(propertyImages)
@@ -1440,16 +1480,22 @@ export const agentRouter = router({
         .orderBy(desc(leads.createdAt))
         .limit(input.limit);
 
+      const commercialContexts = await loadCommercialLeadContexts(
+        db,
+        commercialLeadContextCandidateIds(leadsList.map(({ lead }) => lead)),
+      );
+
       return leadsList.map(({ lead, property }) => ({
         ...lead,
         property: property
           ? {
               id: property.id,
               title: property.title,
-              city: property.city,
-              price: Number(property.price),
-            }
+            city: property.city,
+            price: Number(property.price),
+          }
           : null,
+        commercial: commercialContexts.get(lead.id) || null,
       }));
     }),
 
@@ -1494,6 +1540,14 @@ export const agentRouter = router({
         .orderBy(asc(leads.nextFollowUp))
         .limit(input.limit);
 
+      // A Commercial enquiry has no authoritative generic property
+      // projection. Keep the follow-up queue aligned with the main pipeline
+      // by carrying its immutable Asset → Space → Availability context too.
+      const commercialContexts = await loadCommercialLeadContexts(
+        db,
+        commercialLeadContextCandidateIds(followUps.map(({ lead }) => lead)),
+      );
+
       return followUps.map(({ lead, property }) => ({
         id: lead.id,
         name: lead.name,
@@ -1510,6 +1564,7 @@ export const agentRouter = router({
               price: Number(property.price),
             }
           : null,
+        commercial: commercialContexts.get(lead.id) || null,
       }));
     }),
 
@@ -1969,6 +2024,7 @@ export const agentRouter = router({
           address: listings.address,
           city: listings.city,
           province: listings.province,
+          propertyType: listings.propertyType,
           status: listings.status,
         })
         .from(listings)
@@ -1978,6 +2034,8 @@ export const agentRouter = router({
       if (!listingRecord) {
         throw new Error('Listing not found');
       }
+
+      rejectGenericCommercialPropertyWorkflow(listingRecord.propertyType);
 
       const isOwner = listingRecord.ownerId === userId;
       const isAssignedAgent = listingRecord.agentId === agentRecord.id;
@@ -2015,6 +2073,16 @@ export const agentRouter = router({
 
         const persistedLead = lead;
         leadRecord = persistedLead;
+
+        if (
+          commercialLeadContextCandidateIds([persistedLead]).length > 0 &&
+          (await loadCommercialLeadContext(db, persistedLead.id))
+        ) {
+          throw new TRPCError({
+            code: 'PRECONDITION_FAILED',
+            message: COMMERCIAL_LEAD_DEDICATED_WORKFLOW_MESSAGE,
+          });
+        }
 
         if (
           persistedLead.propertyId != null &&
@@ -2530,6 +2598,8 @@ export const agentRouter = router({
       if (!property) {
         throw new Error('Property not found or unauthorized');
       }
+
+      rejectGenericCommercialPropertyWorkflow(property.propertyType);
 
       if (property.sourceListingId != null) {
         throw new TRPCError({

@@ -591,13 +591,16 @@ async function applyPlan(input: {
     let completed = 0;
     const transactional = migration.kind === 'transactional-data';
     try {
-      if (transactional) await input.connection.execute('START TRANSACTION');
+      // MySQL transaction control statements are not supported by the
+      // prepared-statement execution path used for parameterized migration
+      // statements. Keep control SQL on the driver's normal query path.
+      if (transactional) await input.connection.query('START TRANSACTION');
       for (const statement of statements) {
         await input.connection.execute(statement);
         completed += 1;
         await updateAttemptProgress(input.connection, attemptId, completed, statement);
       }
-      if (transactional) await input.connection.execute('COMMIT');
+      if (transactional) await input.connection.query('COMMIT');
       await recordMigrationSuccess(
         input.connection,
         migration,
@@ -609,7 +612,7 @@ async function applyPlan(input: {
     } catch (error) {
       if (transactional) {
         try {
-          await input.connection.execute('ROLLBACK');
+          await input.connection.query('ROLLBACK');
         } catch {
           // Durable attempt evidence still blocks continuation.
         }

@@ -75,6 +75,23 @@ export type AgencyLead = {
     price?: number | null;
     status?: string | null;
   } | null;
+  commercial?: {
+    listingId: number;
+    listingSlug: string;
+    listingTitle: string;
+    commercialAssetId: number;
+    assetName: string;
+    commercialSpaceId: number;
+    spaceIdentifier: string;
+    commercialAvailabilityId: number;
+    useType: string;
+    rentableAreaM2: number | null;
+    usableAreaM2: number | null;
+    availabilityState: string;
+    transactionType: 'lease';
+    city: string | null;
+    province: string | null;
+  } | null;
   activities?: Array<{
     id: number;
     leadId: number;

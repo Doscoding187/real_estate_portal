@@ -1,11 +1,6 @@
 import * as listingDb from '../db';
 import { inArray } from 'drizzle-orm';
-import {
-  listingMedia,
-  listings,
-  properties,
-  propertyImages,
-} from '../../drizzle/schema';
+import { listingMedia, listings, properties, propertyImages } from '../../drizzle/schema';
 import { resolveMediaDeliveryUrl } from '../_core/mediaStorage';
 import {
   buildCanonicalCorePropertyDetails,
@@ -66,7 +61,10 @@ const defaultBatchDataSource: ApprovedPublicPropertyBatchDataSource = {
   async getPropertiesByIds(propertyIds) {
     const database = await listingDb.getDb();
     if (!database) throw new Error('Database not available');
-    return database.select().from(properties).where(inArray(properties.id, [...propertyIds]));
+    return database
+      .select()
+      .from(properties)
+      .where(inArray(properties.id, [...propertyIds]));
   },
   async getPropertyImagesByPropertyIds(propertyIds) {
     const database = await listingDb.getDb();
@@ -79,7 +77,10 @@ const defaultBatchDataSource: ApprovedPublicPropertyBatchDataSource = {
   async getListingsByIds(listingIds) {
     const database = await listingDb.getDb();
     if (!database) throw new Error('Database not available');
-    return database.select().from(listings).where(inArray(listings.id, [...listingIds]));
+    return database
+      .select()
+      .from(listings)
+      .where(inArray(listings.id, [...listingIds]));
   },
   async getListingMediaByListingIds(listingIds) {
     const database = await listingDb.getDb();
@@ -399,6 +400,11 @@ function mapApprovedListingProperty(
   projectionImages: Array<Record<string, any>>,
   mediaRows: any[],
 ): ApprovedPublicPropertyResolution | null {
+  // Commercial leasing has a dedicated public authority over Commercial
+  // Asset → Space → Availability. A legacy generic Listing/Property mirror
+  // can never become an alternate public Commercial detail route.
+  if (String(sourceListing.propertyType).toLowerCase() === 'commercial') return null;
+
   const approvedSourceDetails = buildApprovedSourceDetails(sourceListing);
   const projectionSettings = parseRecord(property.propertySettings);
   if (!approvedSourceDetails || !projectionSettings) return null;

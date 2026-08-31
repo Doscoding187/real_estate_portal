@@ -9,7 +9,7 @@
 
 import { getDb } from '../db';
 import { locations, properties, developments, locationSearches } from '../../drizzle/schema';
-import { eq, and, or, like, inArray, SQL, sql } from 'drizzle-orm';
+import { eq, and, or, like, inArray, SQL, sql, ne } from 'drizzle-orm';
 
 export interface SearchOptions {
   query: string;
@@ -329,6 +329,7 @@ async function searchListings(query: string, limit: number = 10): Promise<Listin
           like(properties.locationText, searchQuery),
         ),
         eq(properties.status, 'published'),
+        ne(properties.propertyType, 'commercial'),
       ),
     )
     .limit(limit)) as ListingRow[];
@@ -371,6 +372,7 @@ async function searchDevelopments(query: string, limit: number = 10): Promise<De
           like(developments.suburb, searchQuery),
         ),
         inArray(developments.status, ['launching-soon', 'selling', 'sold-out']),
+        ne(developments.developmentType, 'commercial'),
       ),
     )
     .limit(limit)) as DevelopmentRow[];
@@ -418,6 +420,7 @@ export async function filterListingsByPlaceId(
   const conditions: SQL[] = [
     eq(properties.locationId, location.id),
     eq(properties.status, 'published'),
+    ne(properties.propertyType, 'commercial'),
   ];
 
   if (filters?.propertyType?.length)
@@ -462,7 +465,11 @@ async function filterListingsByPlaceIdDirect(
 ): Promise<ListingResult[]> {
   const db = await getDb();
 
-  const conditions: SQL[] = [eq(properties.placeId, placeId), eq(properties.status, 'published')];
+  const conditions: SQL[] = [
+    eq(properties.placeId, placeId),
+    eq(properties.status, 'published'),
+    ne(properties.propertyType, 'commercial'),
+  ];
 
   if (filters?.propertyType?.length)
     conditions.push(inArray(properties.propertyType, filters.propertyType as any));

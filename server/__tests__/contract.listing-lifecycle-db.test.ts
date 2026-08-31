@@ -54,6 +54,7 @@ class FakeDrizzle {
   activeTransactionCount = 0;
   failureHook: ((call: DbCall) => Error | undefined) | undefined;
   private selectResults: Array<Record<string, unknown>[]> = [];
+  private commercialLinkResults: Array<Record<string, unknown>[]> = [];
 
   constructor() {
     this.reset();
@@ -65,10 +66,16 @@ class FakeDrizzle {
     this.activeTransactionCount = 0;
     this.failureHook = undefined;
     this.selectResults = [];
+    this.commercialLinkResults = [];
   }
 
   setNextSelectResult(rows: Record<string, unknown>[]) {
     this.selectResults.push(rows);
+    return this;
+  }
+
+  setNextCommercialLinkResult(rows: Record<string, unknown>[]) {
+    this.commercialLinkResults.push(rows);
     return this;
   }
 
@@ -83,7 +90,8 @@ class FakeDrizzle {
     // Generic Listing lifecycle fixtures intentionally own no canonical Commercial
     // association. Preserve their queued Listing/projection expectations while
     // representing the authoritative absence of Commercial capability ownership.
-    if (tableName === 'commercial_availability_listing_links') return [];
+    if (tableName === 'commercial_availability_listing_links')
+      return this.commercialLinkResults.shift() || [];
     return this.selectResults.shift() || [];
   }
 
@@ -102,7 +110,8 @@ class FakeDrizzle {
       },
       limit: (n: number) => {
         this.record({ type: 'select', table: tableName, whereCols });
-        if (tableName === 'commercial_availability_listing_links') return Promise.resolve([]);
+        if (tableName === 'commercial_availability_listing_links')
+          return Promise.resolve(this.commercialLinkResults.shift() || []);
         return Promise.resolve(this.selectResults.shift() || []);
       },
       orderBy: (_order: any) => {
@@ -112,7 +121,8 @@ class FakeDrizzle {
       then: (resolve: (v: any) => void) => {
         // If awaited directly (no .limit() called), resolve immediately
         this.record({ type: 'select', table: tableName, whereCols });
-        if (tableName === 'commercial_availability_listing_links') return resolve([]);
+        if (tableName === 'commercial_availability_listing_links')
+          return resolve(this.commercialLinkResults.shift() || []);
         resolve(this.selectResults.shift() || []);
       },
     };
@@ -163,6 +173,7 @@ class FakeDrizzle {
     this.activeTransactionCount += 1;
     const callsBefore = this.calls.length;
     const selectsBefore = [...this.selectResults];
+    const commercialLinksBefore = [...this.commercialLinkResults];
     try {
       return await callback(this);
     } catch (error) {
@@ -170,6 +181,7 @@ class FakeDrizzle {
       // issued through this executor disappear when the callback rejects.
       this.calls.splice(callsBefore);
       this.selectResults = selectsBefore;
+      this.commercialLinkResults = commercialLinksBefore;
       throw error;
     } finally {
       this.activeTransactionCount -= 1;
@@ -179,10 +191,12 @@ class FakeDrizzle {
 
 const fakeDb = new FakeDrizzle();
 
-const { mockAssertListingPublicationEntitled, mockInvalidatePublicSearchCache } = vi.hoisted(() => ({
-  mockAssertListingPublicationEntitled: vi.fn(),
-  mockInvalidatePublicSearchCache: vi.fn(),
-}));
+const { mockAssertListingPublicationEntitled, mockInvalidatePublicSearchCache } = vi.hoisted(
+  () => ({
+    mockAssertListingPublicationEntitled: vi.fn(),
+    mockInvalidatePublicSearchCache: vi.fn(),
+  }),
+);
 
 // Mock db-connection BEFORE importing the db functions
 vi.mock('../db-connection', () => ({
@@ -267,6 +281,56 @@ const listingMediaRow = (overrides: Record<string, any> = {}) => ({
   displayOrder: 1,
   createdAt: '2026-01-01 00:00:00',
   ...overrides,
+});
+
+const commercialLinkRow = (listingId: number, commercialAvailabilityId: number) => ({
+  id: 8801,
+  listingId,
+  commercialAvailabilityId,
+  linkStatus: 'active',
+});
+
+const commercialAvailabilityRow = (id: number, commercialSpaceId: number) => ({
+  id,
+  commercialSpaceId,
+  transactionType: 'lease',
+  pricingMode: 'componentised',
+  vatTreatment: 'excluded',
+  availabilityState: 'available_confirmed',
+  occupationDate: null,
+  lastConfirmedAt: '2026-08-20 00:00:00',
+  confirmationSource: 'broker',
+  confirmationSourceLabel: 'Broker / agent',
+  reconfirmationDueAt: '2026-09-20 00:00:00',
+});
+
+const commercialSpaceRow = (id: number, commercialAssetId: number) => ({
+  id,
+  commercialAssetId,
+  spaceClass: 'office',
+  spaceKind: 'office_suite',
+  identifier: 'Suite 4A',
+  rentableAreaM2: '120.00',
+  usableAreaM2: '105.00',
+  lifecycleStatus: 'active',
+});
+
+const commercialAssetRow = (id: number) => ({
+  id,
+  assetKind: 'office_building',
+  name: 'Canonical Office Building',
+  lifecycleStatus: 'active',
+  locationConfirmationState: 'confirmed',
+});
+
+const commercialEconomicsRow = (commercialAvailabilityId: number) => ({
+  id: 8802,
+  commercialAvailabilityId,
+  componentCode: 'base_rent',
+  valueState: 'supplied',
+  chargeBasis: 'per_m2_month',
+  amountMinor: 18500,
+  rangeMaximumMinor: null,
 });
 
 const configureRevisionApproval = (
@@ -536,6 +600,98 @@ describe('approveListing (lower-level)', () => {
     expect(imgInserts).toHaveLength(2);
   });
 
+  it('publishes canonical Commercial marketing without creating a generic property mirror', async () => {
+    const listingId = 5201;
+    const availabilityId = 6201;
+    const spaceId = 7201;
+    const assetId = 8201;
+
+    fakeDb.setNextSelectResult([
+      listingRow({
+        id: listingId,
+        action: 'rent',
+        propertyType: 'commercial',
+        status: 'pending_review',
+        approvalStatus: 'pending',
+      }),
+    ]);
+    fakeDb.setNextCommercialLinkResult([commercialLinkRow(listingId, availabilityId)]);
+    fakeDb.setNextSelectResult([commercialAvailabilityRow(availabilityId, spaceId)]);
+    fakeDb.setNextSelectResult([commercialSpaceRow(spaceId, assetId)]);
+    fakeDb.setNextSelectResult([commercialAssetRow(assetId)]);
+    fakeDb.setNextCommercialLinkResult([commercialLinkRow(listingId, availabilityId)]);
+    fakeDb.setNextSelectResult([commercialAvailabilityRow(availabilityId, spaceId)]);
+    fakeDb.setNextSelectResult([commercialEconomicsRow(availabilityId)]);
+    // A stale mirror may exist from a pre-Commercial release; it is archived,
+    // never refreshed or replaced.
+    fakeDb.setNextSelectResult([{ id: 9901 }]);
+
+    await approveListing(listingId, 1);
+
+    expect(fakeDb.calls.filter(c => c.type === 'insert' && c.table === 'properties')).toHaveLength(
+      0,
+    );
+    expect(
+      fakeDb.calls.filter(c => c.type === 'insert' && c.table === 'propertyImages'),
+    ).toHaveLength(0);
+    expect(
+      fakeDb.calls.some(
+        c =>
+          c.type === 'update' &&
+          c.table === 'properties' &&
+          c.set?.status === 'archived' &&
+          c.set?.mainImage === null,
+      ),
+    ).toBe(true);
+    expect(
+      fakeDb.calls.some(
+        c => c.type === 'update' && c.table === 'listings' && c.set?.status === 'published',
+      ),
+    ).toBe(true);
+    expect(
+      fakeDb.calls.some(
+        c =>
+          c.type === 'update' &&
+          c.table === 'listing_approval_queue' &&
+          c.set?.status === 'approved',
+      ),
+    ).toBe(true);
+  });
+
+  it('rejects a Commercial Listing whose Listing action is not lease-only rent', async () => {
+    const listingId = 5202;
+    const availabilityId = 6202;
+    const spaceId = 7202;
+    const assetId = 8202;
+
+    fakeDb.setNextSelectResult([
+      listingRow({
+        id: listingId,
+        action: 'sell',
+        propertyType: 'commercial',
+        status: 'pending_review',
+        approvalStatus: 'pending',
+      }),
+    ]);
+    fakeDb.setNextCommercialLinkResult([commercialLinkRow(listingId, availabilityId)]);
+    fakeDb.setNextSelectResult([commercialAvailabilityRow(availabilityId, spaceId)]);
+    fakeDb.setNextSelectResult([commercialSpaceRow(spaceId, assetId)]);
+    fakeDb.setNextSelectResult([commercialAssetRow(assetId)]);
+    fakeDb.setNextCommercialLinkResult([commercialLinkRow(listingId, availabilityId)]);
+    fakeDb.setNextSelectResult([commercialAvailabilityRow(availabilityId, spaceId)]);
+    fakeDb.setNextSelectResult([commercialEconomicsRow(availabilityId)]);
+
+    await expect(approveListing(listingId, 1)).rejects.toThrow(
+      'Commercial publication requires the Listing action to be rent.',
+    );
+    expect(
+      fakeDb.calls.some(
+        call =>
+          call.type === 'update' && call.table === 'listings' && call.set?.status === 'published',
+      ),
+    ).toBe(false);
+  });
+
   it('approves a revision through one transaction and synchronizes the same property mirror', async () => {
     configureRevisionApproval();
 
@@ -543,12 +699,12 @@ describe('approveListing (lower-level)', () => {
 
     expect(fakeDb.transactionCount).toBe(1);
     expect(fakeDb.activeTransactionCount).toBe(0);
-    expect(fakeDb.calls.filter(c => c.type === 'insert' && c.table === 'listing_media')).toHaveLength(
-      2,
-    );
-    expect(fakeDb.calls.filter(c => c.type === 'insert' && c.table === 'propertyImages')).toHaveLength(
-      1,
-    );
+    expect(
+      fakeDb.calls.filter(c => c.type === 'insert' && c.table === 'listing_media'),
+    ).toHaveLength(2);
+    expect(
+      fakeDb.calls.filter(c => c.type === 'insert' && c.table === 'propertyImages'),
+    ).toHaveLength(1);
     expect(
       fakeDb.calls.some(
         call =>
@@ -560,9 +716,7 @@ describe('approveListing (lower-level)', () => {
     expect(
       fakeDb.calls.some(
         call =>
-          call.type === 'update' &&
-          call.table === 'listings' &&
-          call.set?.status === 'archived',
+          call.type === 'update' && call.table === 'listings' && call.set?.status === 'archived',
       ),
     ).toBe(true);
     expect(mockInvalidatePublicSearchCache).toHaveBeenCalledOnce();
@@ -617,9 +771,7 @@ describe('approveListing (lower-level)', () => {
 
     const promotedSource = fakeDb.calls.find(
       call =>
-        call.type === 'update' &&
-        call.table === 'listings' &&
-        call.set?.status === 'published',
+        call.type === 'update' && call.table === 'listings' && call.set?.status === 'published',
     );
     expect(promotedSource?.set).toMatchObject({
       action: 'rent',
@@ -652,9 +804,7 @@ describe('approveListing (lower-level)', () => {
 
     const publicProjection = fakeDb.calls.find(
       call =>
-        call.type === 'update' &&
-        call.table === 'properties' &&
-        call.set?.sourceListingId === 5601,
+        call.type === 'update' && call.table === 'properties' && call.set?.sourceListingId === 5601,
     );
     expect(publicProjection?.set).toMatchObject({
       sourceListingId: 5601,
@@ -684,7 +834,10 @@ describe('approveListing (lower-level)', () => {
   });
 
   it.each([
-    ['before revision media promotion', (call: DbCall) => call.type === 'delete' && call.table === 'listing_media'],
+    [
+      'before revision media promotion',
+      (call: DbCall) => call.type === 'delete' && call.table === 'listing_media',
+    ],
     [
       'after revision media promotion and before public mirror lookup',
       (call: DbCall) => call.type === 'select' && call.table === 'properties',
@@ -697,17 +850,20 @@ describe('approveListing (lower-level)', () => {
       'after public projection and before queue transition',
       (call: DbCall) => call.type === 'update' && call.table === 'listing_approval_queue',
     ],
-  ])('rolls back the complete revision approval when failure occurs %s', async (_stage, failure) => {
-    configureRevisionApproval();
-    fakeDb.failureHook = call =>
-      failure(call) ? new Error(`fault injected: ${_stage}`) : undefined;
+  ])(
+    'rolls back the complete revision approval when failure occurs %s',
+    async (_stage, failure) => {
+      configureRevisionApproval();
+      fakeDb.failureHook = call =>
+        failure(call) ? new Error(`fault injected: ${_stage}`) : undefined;
 
-    await expect(approveListing(5602, 990005)).rejects.toThrow(`fault injected: ${_stage}`);
+      await expect(approveListing(5602, 990005)).rejects.toThrow(`fault injected: ${_stage}`);
 
-    expect(fakeDb.transactionCount).toBe(1);
-    expect(fakeDb.activeTransactionCount).toBe(0);
-    expect(fakeDb.calls.filter(call => call.type !== 'select')).toHaveLength(0);
-  });
+      expect(fakeDb.transactionCount).toBe(1);
+      expect(fakeDb.activeTransactionCount).toBe(0);
+      expect(fakeDb.calls.filter(call => call.type !== 'select')).toHaveLength(0);
+    },
+  );
 
   it('does not open a competing connection or nested transaction for approval media synchronization', async () => {
     configureRevisionApproval();
@@ -737,9 +893,7 @@ describe('approveListing (lower-level)', () => {
           id: 5100,
           action,
           pricing,
-          ...(action === 'rent'
-            ? { monthlyRent: '25000.00', deposit: 0 }
-            : {}),
+          ...(action === 'rent' ? { monthlyRent: '25000.00', deposit: 0 } : {}),
         }),
       ]);
       fakeDb.setNextSelectResult([]); // no existing property
@@ -893,6 +1047,20 @@ describe('syncPublishedListingMediaToPropertyMirror (lower-level)', () => {
 
     expect(result.synced).toBe(false);
     expect(result.reason).toBe('property_mirror_not_found');
+  });
+
+  it('does not run generic media sync for a Commercial listing', async () => {
+    fakeDb.setNextSelectResult([
+      listingRow({ id: 6004, status: 'published', propertyType: 'commercial' }),
+    ]);
+
+    const result = await syncPublishedListingMediaToPropertyMirror(6004);
+
+    expect(result).toEqual({ synced: false, reason: 'commercial_authority' });
+    expect(mockAssertListingPublicationEntitled).not.toHaveBeenCalled();
+    expect(fakeDb.calls.filter(c => c.type === 'select' && c.table === 'properties')).toHaveLength(
+      0,
+    );
   });
 });
 

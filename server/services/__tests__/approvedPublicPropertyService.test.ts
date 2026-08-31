@@ -180,7 +180,9 @@ function batchDataSource(
       fixtures.map(fixture => fixture.property).filter(property => ids.includes(property.id)),
     ),
     getPropertyImagesByPropertyIds: vi.fn(async (ids: readonly number[]) =>
-      fixtures.flatMap(fixture => fixture.propertyImages).filter(image => ids.includes(image.propertyId)),
+      fixtures
+        .flatMap(fixture => fixture.propertyImages)
+        .filter(image => ids.includes(image.propertyId)),
     ),
     getListingsByIds: vi.fn(async (ids: readonly number[]) =>
       fixtures
@@ -188,7 +190,9 @@ function batchDataSource(
         .filter(sourceListing => ids.includes(sourceListing.id)),
     ),
     getListingMediaByListingIds: vi.fn(async (ids: readonly number[]) =>
-      fixtures.flatMap(fixture => fixture.listingMedia).filter(media => ids.includes(media.listingId)),
+      fixtures
+        .flatMap(fixture => fixture.listingMedia)
+        .filter(media => ids.includes(media.listingId)),
     ),
   } as any;
 }
@@ -509,5 +513,13 @@ describe('ApprovedPublicProperty authority', () => {
     expect(result).toBeNull();
     expect(source.getListingById).not.toHaveBeenCalled();
     expect(source.getListingMedia).not.toHaveBeenCalled();
+  });
+
+  it('keeps legacy generic Commercial projections out of the public property authority', async () => {
+    const fixture = canonicalFixture();
+    fixture.property.propertyType = 'commercial';
+    fixture.sourceListing.propertyType = 'commercial';
+
+    await expect(resolveApprovedPublicProperty(501, dataSource(fixture))).resolves.toBeNull();
   });
 });

@@ -64,6 +64,12 @@ export class SimilarPropertiesService {
       throw new Error('Reference property not found');
     }
 
+    if (String(referenceProperty[0].propertyType).toLowerCase() === 'commercial') {
+      throw new Error(
+        'Commercial leasing uses the dedicated Commercial journey and has no generic similar-properties feed.',
+      );
+    }
+
     const ref = {
       ...referenceProperty[0],
       latitude: referenceProperty[0].publicLatitude,
@@ -95,6 +101,7 @@ export class SimilarPropertiesService {
       .where(
         and(
           ne(properties.id, propertyId), // Exclude reference property
+          ne(properties.propertyType, 'commercial'),
           eq(properties.status, 'available'),
           gte(properties.price, priceMin),
           lte(properties.price, priceMax),
@@ -354,6 +361,7 @@ export class SimilarPropertiesService {
       .where(
         and(
           ne(properties.id, excludeId),
+          ne(properties.propertyType, 'commercial'),
           eq(properties.status, 'available'),
           gte(properties.price, priceMin),
           lte(properties.price, priceMax),

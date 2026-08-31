@@ -11,6 +11,7 @@ import {
   sql,
   SQL,
   isNull,
+  ne,
   not,
   count,
   avg,
@@ -65,6 +66,7 @@ import {
   commercialAvailabilityEconomics,
   commercialAvailabilityListingLinks,
   commercialAvailabilities,
+  commercialAssets,
   commercialSpaces,
 } from '../drizzle/schema';
 
@@ -110,11 +112,23 @@ import {
   summarizePropertyPresentation,
 } from '../shared/property-presentation';
 import { resolveMediaDeliveryUrl } from './_core/mediaStorage';
-import { assertCommercialPricingContract } from '../shared/commercial-domain';
+import {
+  assertCommercialAvailabilityFreshness,
+  assertCommercialPricingContract,
+  assertCommercialSpaceIdentity,
+  assertCommercialSpaceAreas,
+  isCommercialMarketingPropertyType,
+  isCommercialSpaceClass,
+  COMMERCIAL_PUBLIC_JOURNEY_HANDOFF_MESSAGE,
+} from '../shared/commercial-domain';
+import {
+  commercialLeadContextCandidateIds,
+  loadCommercialLeadContexts,
+} from './services/commercialLeadContextService';
 
 type CommercialListingApplicability =
   | { kind: 'not_owned' }
-  | { kind: 'canonical_office' }
+  | { kind: 'canonical_commercial' }
   | { kind: 'invalid_commercial_context'; message: string };
 
 /** Resolves capability ownership from the canonical Listing association, never propertyType. */
@@ -149,21 +163,135 @@ async function resolveCommercialListingApplicability(
     .from(commercialSpaces)
     .where(eq(commercialSpaces.id, availability.commercialSpaceId))
     .limit(1);
-  if (!space || space.spaceClass !== 'office' || availability.transactionType !== 'lease') {
+  if (
+    !space ||
+    !isCommercialSpaceClass(space.spaceClass) ||
+    space.lifecycleStatus !== 'active' ||
+    availability.transactionType !== 'lease'
+  ) {
     return {
       kind: 'invalid_commercial_context',
-      message: 'Commercial Listing association is not an Office lease Availability.',
+      message: 'Commercial Listing association is not an approved Commercial lease Availability.',
     };
   }
-  return { kind: 'canonical_office' };
+
+  const [asset] = await db
+    .select()
+    .from(commercialAssets)
+    .where(eq(commercialAssets.id, space.commercialAssetId))
+    .limit(1);
+  if (
+    !asset ||
+    asset.lifecycleStatus !== 'active' ||
+    asset.locationConfirmationState !== 'confirmed'
+  ) {
+    return {
+      kind: 'invalid_commercial_context',
+      message:
+        'Commercial Listing association requires an active asset with a confirmed physical location.',
+    };
+  }
+
+  try {
+    assertCommercialAvailabilityFreshness(availability as any);
+    const availabilityState = String(availability.availabilityState || '');
+    if (!['available_confirmed', 'available_upcoming'].includes(availabilityState)) {
+      throw new Error('Commercial publication requires a currently positive lease availability.');
+    }
+    const reconfirmationDueAt = availability.reconfirmationDueAt
+      ? new Date(availability.reconfirmationDueAt)
+      : null;
+    if (!reconfirmationDueAt || Number.isNaN(reconfirmationDueAt.getTime())) {
+      throw new Error('Commercial publication requires a valid reconfirmation deadline.');
+    }
+    if (reconfirmationDueAt.getTime() < Date.now()) {
+      throw new Error('Commercial availability requires fresh confirmation before publication.');
+    }
+    const confirmedAt = availability.lastConfirmedAt
+      ? new Date(availability.lastConfirmedAt)
+      : null;
+    if (!confirmedAt || Number.isNaN(confirmedAt.getTime()) || confirmedAt.getTime() > Date.now()) {
+      throw new Error('Commercial availability requires a current confirmation timestamp.');
+    }
+    if (availability.availabilityState === 'available_upcoming') {
+      const occupationDate = availability.occupationDate
+        ? new Date(`${availability.occupationDate}T00:00:00Z`)
+        : null;
+      const todayUtc = new Date();
+      const todayStart = Date.UTC(
+        todayUtc.getUTCFullYear(),
+        todayUtc.getUTCMonth(),
+        todayUtc.getUTCDate(),
+      );
+      if (
+        !occupationDate ||
+        Number.isNaN(occupationDate.getTime()) ||
+        occupationDate.getTime() < todayStart
+      ) {
+        throw new Error(
+          'Upcoming Commercial availability requires a current or future occupation date.',
+        );
+      }
+    }
+    assertCommercialSpaceIdentity({
+      spaceClass: space.spaceClass as any,
+      spaceKind: space.spaceKind as any,
+      assetKind: asset.assetKind as any,
+    });
+    assertCommercialSpaceAreas({
+      rentableAreaM2: space.rentableAreaM2 == null ? null : Number(space.rentableAreaM2),
+      usableAreaM2: space.usableAreaM2 == null ? null : Number(space.usableAreaM2),
+    });
+    if (space.rentableAreaM2 == null || Number(space.rentableAreaM2) <= 0) {
+      throw new Error('Commercial publication requires a positive rentable area.');
+    }
+  } catch (error) {
+    return {
+      kind: 'invalid_commercial_context',
+      message: error instanceof Error ? error.message : 'Commercial context is invalid.',
+    };
+  }
+  return { kind: 'canonical_commercial' };
 }
 
-async function validateCommercialOfficeListingPricing(
+/**
+ * A Commercial association and the Listing transport marker are a pair. A
+ * marker without the canonical association must not publish, and an
+ * association on a residential Listing must not silently enter the generic
+ * projection path.
+ */
+function assertCommercialListingMarkerConsistency(
+  listing: { propertyType?: unknown; action?: unknown },
+  applicability: CommercialListingApplicability,
+): boolean {
+  const markedCommercial = isCommercialMarketingPropertyType(listing.propertyType);
+  if (markedCommercial && applicability.kind !== 'canonical_commercial') {
+    throw new Error(
+      `${COMMERCIAL_PUBLIC_JOURNEY_HANDOFF_MESSAGE} A canonical lease association is required before publication.`,
+    );
+  }
+  // The active Commercial product is lease-only.  Keep this check beside the
+  // marker/association pair so a direct DB caller cannot publish a malformed
+  // Commercial Listing as a sale or auction merely because its canonical
+  // Availability happens to be a lease.  Public projection filtering is not a
+  // substitute for rejecting the invalid publication attempt.
+  if (markedCommercial && listing.action !== 'rent') {
+    throw new Error('Commercial publication requires the Listing action to be rent.');
+  }
+  if (!markedCommercial && applicability.kind === 'canonical_commercial') {
+    throw new Error(
+      'A canonical Commercial lease association cannot be published through the generic Listing workflow.',
+    );
+  }
+  return markedCommercial;
+}
+
+async function validateCommercialListingPricing(
   db: any,
   listingId: number,
 ): Promise<CommercialListingApplicability> {
   const applicability = await resolveCommercialListingApplicability(db, listingId);
-  if (applicability.kind !== 'canonical_office') return applicability;
+  if (applicability.kind !== 'canonical_commercial') return applicability;
   const [link] = await db
     .select()
     .from(commercialAvailabilityListingLinks)
@@ -187,7 +315,7 @@ async function validateCommercialOfficeListingPricing(
   if (!availability || availability.transactionType !== 'lease')
     return {
       kind: 'invalid_commercial_context',
-      message: 'Commercial Office listing has no active lease availability.',
+      message: 'Commercial listing has no active lease availability.',
     };
   const economics = await db
     .select()
@@ -821,7 +949,7 @@ export async function searchProperties(params: PropertySearchParams) {
   const db = await getDb();
   if (!db) return [];
 
-  const conditions: SQL[] = [];
+  const conditions: SQL[] = [ne(properties.propertyType, 'commercial')];
 
   // Build WHERE conditions
   if (params.city) conditions.push(like(properties.city, `%${params.city}%`));
@@ -920,7 +1048,7 @@ export async function searchProperties(params: PropertySearchParams) {
       const boostedProperties = await db
         .select()
         .from(properties)
-        .where(inArray(properties.id, boostedIds));
+        .where(and(inArray(properties.id, boostedIds), ne(properties.propertyType, 'commercial')));
 
       // Remove boosted from regular results to avoid duplicates
       const filteredResults = results.filter((prop: any) => !boostedIds.includes(prop.id));
@@ -941,7 +1069,13 @@ export async function getFeaturedProperties(limit: number = 6) {
   return await db
     .select()
     .from(properties)
-    .where(and(eq(properties.featured, 1), eq(properties.status, 'available' as any)))
+    .where(
+      and(
+        eq(properties.featured, 1),
+        eq(properties.status, 'available' as any),
+        ne(properties.propertyType, 'commercial'),
+      ),
+    )
     .orderBy(desc(properties.createdAt))
     .limit(limit);
 }
@@ -959,6 +1093,17 @@ export async function incrementPropertyViews(id: number) {
 export async function addFavorite(userId: number, propertyId: number) {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
+
+  const [property] = await db
+    .select({ propertyType: properties.propertyType })
+    .from(properties)
+    .where(eq(properties.id, propertyId))
+    .limit(1);
+  if (!property) throw new Error('Property not found');
+  if (isCommercialMarketingPropertyType(property.propertyType)) {
+    throw new Error(COMMERCIAL_PUBLIC_JOURNEY_HANDOFF_MESSAGE);
+  }
+
   await db.insert(favorites).values({ userId, propertyId });
 }
 
@@ -982,7 +1127,7 @@ export async function getUserFavorites(userId: number) {
     })
     .from(favorites)
     .innerJoin(properties, eq(favorites.propertyId, properties.id))
-    .where(eq(favorites.userId, userId))
+    .where(and(eq(favorites.userId, userId), ne(properties.propertyType, 'commercial')))
     .orderBy(desc(favorites.createdAt));
 }
 
@@ -1572,6 +1717,7 @@ export async function getRecommendedProperties(prospect: Prospect, limit: number
   // Build query conditions based on prospect preferences and affordability
   const conditions: SQL[] = [
     eq(properties.status, 'available' as any),
+    ne(properties.propertyType, 'commercial'),
     lte(properties.price, affordabilityMax),
   ];
 
@@ -1659,7 +1805,7 @@ export async function getAgencyRecentLeads(agencyId: number, limit: number = 5) 
 
   // Decorate with the shared first-response currency so client signals stay
   // truthful even on the recent-leads fallback path.
-  return await db
+  const rows = await db
     .select({
       lead: leads,
       firstResponseOverdue: firstResponseOverdueSql(),
@@ -1667,13 +1813,17 @@ export async function getAgencyRecentLeads(agencyId: number, limit: number = 5) 
     .from(leads)
     .where(eq(leads.agencyId, agencyId))
     .orderBy(desc(leads.createdAt))
-    .limit(limit)
-    .then(rows =>
-      rows.map(({ lead, firstResponseOverdue }) => ({
-        ...lead,
-        firstResponseOverdue: Number(firstResponseOverdue) === 1,
-      })),
-    );
+    .limit(limit);
+  const commercialContexts = await loadCommercialLeadContexts(
+    db,
+    commercialLeadContextCandidateIds(rows.map(({ lead }) => lead)),
+  );
+
+  return rows.map(({ lead, firstResponseOverdue }) => ({
+    ...lead,
+    firstResponseOverdue: Number(firstResponseOverdue) === 1,
+    commercial: commercialContexts.get(lead.id) || null,
+  }));
 }
 
 export async function getAgencyRecentListings(agencyId: number, limit: number = 5) {
@@ -1685,7 +1835,9 @@ export async function getAgencyRecentListings(agencyId: number, limit: number = 
     .from(listings)
     .leftJoin(users, eq(listings.ownerId, users.id))
     .leftJoin(agents, eq(listings.agentId, agents.id))
-    .where(agencyListingScopeCondition(agencyId))
+    // The general agency dashboard must not surface a Commercial marketing
+    // Listing as though its generic price/status were authoritative.
+    .where(and(agencyListingScopeCondition(agencyId), ne(listings.propertyType, 'commercial')))
     .orderBy(desc(listings.createdAt))
     .limit(limit);
 
@@ -2207,10 +2359,7 @@ export async function createListing(
           .where(
             and(
               eq(agencyAgentMemberships.agentId, Number(agent.id)),
-              eq(
-                agencyAgentMemberships.agencyId,
-                Number(ownerAgencyId || agentAgencyId),
-              ),
+              eq(agencyAgentMemberships.agencyId, Number(ownerAgencyId || agentAgencyId)),
             ),
           )
           .limit(1);
@@ -2735,18 +2884,21 @@ export async function submitListingForReview(listingId: number, database?: any) 
   if (locationIssues.length > 0) {
     throw new Error(locationIssues.join(' '));
   }
-  const commercialPricing = await validateCommercialOfficeListingPricing(db, listingId);
+  const commercialPricing = await validateCommercialListingPricing(db, listingId);
   if (commercialPricing.kind === 'invalid_commercial_context')
     throw new Error(commercialPricing.message);
-  const pricingIssues =
-    commercialPricing.kind === 'canonical_office'
-      ? []
-      : validatePricingContract(
-          String((transitionListing as any).action),
-          (listing as any)?.pricing,
-          (listing as any)?.propertyDetails,
-          { mode: 'publish', enforceInputShape: false },
-        );
+  const isCanonicalCommercial = assertCommercialListingMarkerConsistency(
+    transitionListing,
+    commercialPricing,
+  );
+  const pricingIssues = isCanonicalCommercial
+    ? []
+    : validatePricingContract(
+        String((transitionListing as any).action),
+        (listing as any)?.pricing,
+        (listing as any)?.propertyDetails,
+        { mode: 'publish', enforceInputShape: false },
+      );
   if (pricingIssues.length > 0) {
     throw new Error(pricingIssues.map(issue => issue.message).join(' '));
   }
@@ -3170,6 +3322,10 @@ async function syncPublishedListingMediaToPropertyMirrorWithDatabase(
     return { synced: false, reason: 'listing_not_published' as const };
   }
 
+  if (isCommercialMarketingPropertyType(listing.propertyType)) {
+    return { synced: false, reason: 'commercial_authority' as const };
+  }
+
   // Replacing public media is a public projection update, never a draft-only
   // action. This prevents repair/compatibility callers bypassing entitlement.
   await assertListingPublicationEntitled(database, { listingId, operation: 'public_media_sync' });
@@ -3469,6 +3625,12 @@ async function buildCanonicalPublicPropertyProjection(
     propertyDetails?: Record<string, any>;
   },
 ): Promise<CanonicalPublicPropertyProjection> {
+  if (isCommercialMarketingPropertyType(listing.propertyType)) {
+    throw new Error(
+      'Commercial listings do not use the generic properties publication projection.',
+    );
+  }
+
   const details = input.propertyDetails
     ? { ...input.propertyDetails }
     : parsePublicationRecord(listing.propertyDetails, 'property details');
@@ -3597,6 +3759,12 @@ async function upsertCanonicalPublicPropertyProjection(
   database: any,
   propertyValues: Record<string, any>,
 ): Promise<number> {
+  if (isCommercialMarketingPropertyType(propertyValues.propertyType)) {
+    throw new Error(
+      'Commercial listings do not use the generic properties publication projection.',
+    );
+  }
+
   const [existingProperty] = await database
     .select({ id: properties.id })
     .from(properties)
@@ -3618,6 +3786,35 @@ async function upsertCanonicalPublicPropertyProjection(
     createdAt: propertyValues.updatedAt,
   });
   return Number((propertyResult as any).insertId);
+}
+
+/**
+ * Retire a mirror left by an older release without deleting its provenance or
+ * any lead history that may still point at the property row. Archived mirrors
+ * are outside the public-property eligibility contract and cannot compete
+ * with the canonical Commercial read model.
+ */
+async function quarantineCommercialPropertyMirror(
+  database: any,
+  listingId: number,
+  updatedAt: string,
+): Promise<void> {
+  const mirrors = await database
+    .select({ id: properties.id })
+    .from(properties)
+    .where(eq(properties.sourceListingId, listingId));
+
+  for (const mirror of mirrors) {
+    await database
+      .update(properties)
+      .set({
+        status: 'archived' as any,
+        featured: 0,
+        mainImage: null,
+        updatedAt,
+      })
+      .where(eq(properties.id, Number(mirror.id)));
+  }
 }
 
 function buildApprovedRevisionSourceSnapshot(
@@ -3752,24 +3949,33 @@ export async function approveListing(
       : {}),
   });
 
-  const commercialPricing = await validateCommercialOfficeListingPricing(db, listingId);
+  const commercialPricing = await validateCommercialListingPricing(db, listingId);
   if (commercialPricing.kind === 'invalid_commercial_context')
     throw new Error(commercialPricing.message);
-  const pricingIssues =
-    commercialPricing.kind === 'canonical_office'
-      ? []
-      : validatePricingContract(
-          String((listing as any).action),
-          (listing as any).pricing,
-          (listing as any).propertyDetails,
-          { mode: 'publish', enforceInputShape: false },
-        );
+  const isCanonicalCommercial = assertCommercialListingMarkerConsistency(
+    listing,
+    commercialPricing,
+  );
+  const pricingIssues = isCanonicalCommercial
+    ? []
+    : validatePricingContract(
+        String((listing as any).action),
+        (listing as any).pricing,
+        (listing as any).propertyDetails,
+        { mode: 'publish', enforceInputShape: false },
+      );
   if (pricingIssues.length > 0) {
     throw new Error(pricingIssues.map(issue => issue.message).join(' '));
   }
   const locationIssues = validateListingRecordLocation(listing as Record<string, unknown>);
   if (locationIssues.length > 0) {
     throw new Error(locationIssues.join(' '));
+  }
+
+  if (isCanonicalCommercial && (listing as any).revisionOfListingId) {
+    throw new Error(
+      'Commercial listing revisions require the dedicated Commercial inventory workflow.',
+    );
   }
 
   // A revision is a private listing-engine draft. Approval applies its public fields to
@@ -3842,6 +4048,36 @@ export async function approveListing(
   // in depth for entitlement changes between review and projection.
   await assertListingPublicationEntitled(db, { listingId, operation: 'public_projection' });
   const approvedAt = new Date().toISOString().slice(0, 19).replace('T', ' ');
+
+  // Commercial public reads are composed from Asset → Space → Availability →
+  // Listing. Do not create or refresh the legacy `properties` projection for
+  // this listing. If an older release left a mirror behind, quarantine it so
+  // generic search/detail eligibility cannot expose a second authority.
+  if (isCanonicalCommercial) {
+    await quarantineCommercialPropertyMirror(db, listingId, approvedAt);
+    await db
+      .update(listings)
+      .set({
+        status: 'published' as any,
+        approvalStatus: 'approved' as any,
+        reviewedBy,
+        reviewedAt: approvedAt,
+        publishedAt: approvedAt,
+        updatedAt: approvedAt,
+      } as any)
+      .where(eq(listings.id, listingId));
+    await db
+      .update(listingApprovalQueue)
+      .set({
+        status: 'approved' as any,
+        reviewedBy,
+        reviewedAt: approvedAt,
+        reviewNotes: notes,
+      })
+      .where(eq(listingApprovalQueue.listingId, listingId));
+    return;
+  }
+
   const projection = await buildCanonicalPublicPropertyProjection(db, listing, {
     sourceListingId: listingId,
     approvedAt,
@@ -4130,6 +4366,10 @@ export async function getAgentByUserId(userId: number) {
  * Transform listing to property format for backward compatibility
  */
 export function transformListingToProperty(listing: any, media: any[] = []) {
+  if (isCommercialMarketingPropertyType(listing?.propertyType)) {
+    throw new Error('Commercial listings do not use the generic Listing-to-Property projection.');
+  }
+
   const propertyDetails = (listing.propertyDetails as any) || {};
   const canonicalDetails = {
     ...propertyDetails,
@@ -4341,7 +4581,7 @@ export async function searchListings(params: ListingSearchParams) {
   const db = await getDb();
   if (!db) return [];
 
-  const conditions: SQL[] = [];
+  const conditions: SQL[] = [ne(listings.propertyType, 'commercial')];
 
   // Only show published listings (status after approval)
   // Use raw SQL to bypass Drizzle enum type mismatch
@@ -4503,7 +4743,13 @@ export async function getFeaturedListings(limit: number = 6) {
   const results = await db
     .select()
     .from(listings)
-    .where(and(eq(listings.featured, 1), eq(listings.status, 'approved' as any)))
+    .where(
+      and(
+        eq(listings.featured, 1),
+        eq(listings.status, 'approved' as any),
+        ne(listings.propertyType, 'commercial'),
+      ),
+    )
     .orderBy(desc(listings.createdAt))
     .limit(limit);
 

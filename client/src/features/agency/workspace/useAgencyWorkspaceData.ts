@@ -391,7 +391,15 @@ export function useAgencyWorkspaceData(workspace: WorkspaceId) {
         leadSource === 'all' || lead.source === leadSource || lead.leadSource === leadSource;
       const searchMatches =
         !query ||
-        [lead.name, lead.email, lead.phone, lead.property?.title]
+        [
+          lead.name,
+          lead.email,
+          lead.phone,
+          lead.property?.title,
+          lead.commercial?.listingTitle,
+          lead.commercial?.assetName,
+          lead.commercial?.spaceIdentifier,
+        ]
           .filter(Boolean)
           .some(value => String(value).toLowerCase().includes(query));
       return statusMatches && sourceMatches && searchMatches;

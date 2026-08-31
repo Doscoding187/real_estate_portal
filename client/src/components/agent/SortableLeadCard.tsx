@@ -3,7 +3,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Home, Mail, Phone, DollarSign, Calendar, MoreVertical, GripVertical } from 'lucide-react';
+import { Building2, Home, Mail, Phone, DollarSign, Calendar, MoreVertical, GripVertical } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface Lead {
@@ -17,6 +17,12 @@ interface Lead {
     city: string;
     price: number;
   };
+  commercial?: {
+    listingTitle: string;
+    spaceIdentifier: string;
+    useType: string;
+    rentableAreaM2: number | null;
+  } | null;
   createdAt: string;
   score: number;
   tags: string[];
@@ -84,8 +90,23 @@ export function SortableLeadCard({ lead, onClick }: SortableLeadCardProps) {
               </Button>
             </div>
 
-            {/* Property Info */}
-            {lead.property && (
+            {/* Canonical Commercial or property context */}
+            {lead.commercial ? (
+              <div className="rounded-lg bg-emerald-50 p-3">
+                <div className="mb-1 flex items-center gap-2">
+                  <Building2 className="h-3.5 w-3.5 shrink-0 text-emerald-700" />
+                  <p className="truncate text-xs font-semibold text-emerald-950">
+                    {lead.commercial.listingTitle}
+                  </p>
+                </div>
+                <p className="text-xs text-emerald-800">
+                  {lead.commercial.useType.replace(/_/g, ' ')} · {lead.commercial.spaceIdentifier}
+                  {lead.commercial.rentableAreaM2 != null
+                    ? ` · ${lead.commercial.rentableAreaM2.toLocaleString()} m²`
+                    : ''}
+                </p>
+              </div>
+            ) : lead.property ? (
               <div className="p-3 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg">
                 <div className="flex items-center gap-2 mb-1">
                   <Home className="h-3.5 w-3.5 text-blue-600 flex-shrink-0" />
@@ -97,7 +118,7 @@ export function SortableLeadCard({ lead, onClick }: SortableLeadCardProps) {
                   {lead.property.city} • R {(lead.property.price / 1000000).toFixed(1)}M
                 </p>
               </div>
-            )}
+            ) : null}
 
             {/* Contact Info */}
             <div className="space-y-1.5">

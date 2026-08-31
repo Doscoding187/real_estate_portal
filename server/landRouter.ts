@@ -5,6 +5,7 @@ import { requireUser } from './_core/requireUser';
 import { LAND_PUBLIC_CLASSIFICATIONS } from '../shared/land-domain';
 import {
   accessPrivateLandEvidence,
+  attachLandMarketingMedia,
   addPrivateEvidence,
   createLandDraft,
   declareMarketingAuthority,
@@ -19,6 +20,38 @@ import {
 
 const claim = z.object({ code: z.enum(['land_extent', 'intended_use', 'access', 'road_frontage', 'water', 'electricity', 'sanitation', 'zoning_land_use', 'restrictions_servitudes', 'development_context']), valueState: z.enum(['asserted', 'unknown', 'unavailable', 'not_applicable']), value: z.unknown().optional() });
 
+export const landMarketingAuthorityInput = z
+  .object({
+    listingId: z.number().int().positive(),
+    actorType: z.enum(['owner_direct', 'agent', 'agency', 'developer', 'other']),
+    authorityType: z.enum(['sole_mandate', 'open_mandate', 'joint_mandate', 'owner_direct', 'other']),
+    supportingEvidenceId: z.number().int().positive().optional(),
+    expiresAt: z.string().datetime().optional(),
+  })
+  .superRefine((input, context) => {
+    if (input.actorType !== 'owner_direct' && !input.supportingEvidenceId) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['supportingEvidenceId'],
+        message: 'A non-owner Land marketing authority requires its private mandate evidence.',
+      });
+    }
+    if (input.actorType === 'owner_direct' && input.authorityType !== 'owner_direct') {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['authorityType'],
+        message: 'An owner-direct Land authority must use the owner-direct authority type.',
+      });
+    }
+    if (input.actorType !== 'owner_direct' && input.authorityType === 'owner_direct') {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['authorityType'],
+        message: 'Only an owner-direct actor may use the owner-direct authority type.',
+      });
+    }
+  });
+
 function author(ctx: { user?: { id: number; role?: string | null } | null }) {
   const user = requireUser(ctx);
   if (!isLandAuthorRole(user.role)) throw new TRPCError({ code: 'FORBIDDEN', message: 'Land authoring requires an authorized seller, agent, agency, or developer role.' });
@@ -31,13 +64,13 @@ function rethrow(error: unknown): never {
 }
 
 export const landRouter = router({
-  createDraft: protectedProcedure.input(z.object({ classification: z.enum(LAND_PUBLIC_CLASSIFICATIONS), title: z.string().trim().min(4).max(255), description: z.string().trim().min(20), askingPrice: z.number().positive(), city: z.string().trim().min(2), province: z.string().trim().min(2), address: z.string().trim().optional(), intendedUse: z.string().trim().max(120).optional(), parcel: z.object({ kind: z.enum(['erf', 'portion', 'farm', 'remainder', 'other']), identifier: z.string().trim().min(1).max(500), identifierHash: z.string().regex(/^[a-f0-9]{64}$/), extentM2: z.number().positive(), provinceId: z.number().int().positive().optional(), cityId: z.number().int().positive().optional(), suburbId: z.number().int().positive().optional(), geometryConfidence: z.enum(['unknown', 'approximate', 'confirmed']).optional() }) })).mutation(async ({ ctx, input }) => {
+  createDraft: protectedProcedure.input(z.object({ classification: z.enum(LAND_PUBLIC_CLASSIFICATIONS), title: z.string().trim().min(4).max(255), description: z.string().trim().min(20), askingPrice: z.number().positive(), address: z.string().trim().optional(), intendedUse: z.string().trim().max(120).optional(), parcel: z.object({ kind: z.enum(['erf', 'portion', 'farm', 'remainder', 'other']), identifier: z.string().trim().min(1).max(500), extentM2: z.number().positive(), provinceId: z.number().int().positive(), cityId: z.number().int().positive(), suburbId: z.number().int().positive().optional(), geometryConfidence: z.enum(['unknown', 'approximate', 'confirmed']).optional() }) })).mutation(async ({ ctx, input }) => {
     try { return await createLandDraft({ ...input, userId: author(ctx).id }); } catch (error) { return rethrow(error); }
   }),
   addClaims: protectedProcedure.input(z.object({ listingId: z.number().int().positive(), claims: z.array(claim).min(1) })).mutation(async ({ ctx, input }) => {
     try { await recordLandClaims({ ...input, userId: author(ctx).id }); return { success: true }; } catch (error) { return rethrow(error); }
   }),
-  declareAuthority: protectedProcedure.input(z.object({ listingId: z.number().int().positive(), actorType: z.enum(['owner_direct', 'agent', 'agency', 'developer', 'other']), authorityType: z.enum(['sole_mandate', 'open_mandate', 'joint_mandate', 'owner_direct', 'other']), supportingEvidenceId: z.number().int().positive().optional(), expiresAt: z.string().datetime().optional() })).mutation(async ({ ctx, input }) => {
+  declareAuthority: protectedProcedure.input(landMarketingAuthorityInput).mutation(async ({ ctx, input }) => {
     try { await declareMarketingAuthority({ ...input, userId: author(ctx).id }); return { success: true }; } catch (error) { return rethrow(error); }
   }),
   requestPrivateEvidenceUpload: protectedProcedure.input(z.object({ listingId: z.number().int().positive(), fileName: z.string().trim().min(1).max(255), contentType: z.string().trim().max(120) })).mutation(async ({ ctx, input }) => {
@@ -45,6 +78,9 @@ export const landRouter = router({
   }),
   addPrivateEvidence: protectedProcedure.input(z.object({ listingId: z.number().int().positive(), evidenceType: z.enum(['mandate', 'identity', 'title_registry', 'parcel_survey', 'professional_report', 'planning', 'other']), uploadToken: z.string().trim().min(20), parcelId: z.number().int().positive().optional() })).mutation(async ({ ctx, input }) => {
     try { return { evidenceDocumentId: await addPrivateEvidence({ ...input, userId: author(ctx).id }) }; } catch (error) { return rethrow(error); }
+  }),
+  attachMarketingMedia: protectedProcedure.input(z.object({ listingId: z.number().int().positive(), uploadToken: z.string().trim().min(20) })).mutation(async ({ ctx, input }) => {
+    try { return await attachLandMarketingMedia({ ...input, userId: author(ctx).id }); } catch (error) { return rethrow(error); }
   }),
   getWorkspace: protectedProcedure.input(z.object({ listingId: z.number().int().positive() })).query(async ({ ctx, input }) => {
     try { return await landWorkflowSnapshot(input.listingId, author(ctx).id); } catch (error) { return rethrow(error); }

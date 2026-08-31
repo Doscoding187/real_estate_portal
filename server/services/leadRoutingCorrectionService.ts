@@ -1,7 +1,7 @@
 import { TRPCError } from '@trpc/server';
 import { eq, sql } from 'drizzle-orm';
 
-import { leadActivities, leads } from '../../drizzle/schema';
+import { commercialLeadContexts, leadActivities, leads } from '../../drizzle/schema';
 import { getDb } from '../db';
 import { nowAsDbTimestamp } from '../utils/dbTypeUtils';
 import {
@@ -10,10 +10,7 @@ import {
   parseDeliveryAttempts,
   type LeadDeliveryStatus,
 } from './leadDeliveryService';
-import {
-  resolveLeadOwnership,
-  type ResolvedLeadOwnership,
-} from './publicLeadCaptureService';
+import { resolveLeadOwnership, type ResolvedLeadOwnership } from './publicLeadCaptureService';
 
 export type LeadRoutingCorrectionRoute = 'agent' | 'agency' | 'developer' | 'platform';
 
@@ -77,6 +74,7 @@ function positiveId(value: unknown): number | null {
 
 function routingContextFingerprint(lead: typeof leads.$inferSelect): string {
   return [
+    lead.listingId,
     lead.propertyId,
     lead.developmentId,
     lead.unitId,
@@ -175,8 +173,7 @@ export function buildLeadRoutingCorrectionPlan(
   if (
     input.routeType === 'developer' &&
     (canonical.recipientType !== 'developer' ||
-      positiveId(input.cataloguePublisherId) !==
-        positiveId(canonical.cataloguePublisherId))
+      positiveId(input.cataloguePublisherId) !== positiveId(canonical.cataloguePublisherId))
   ) {
     throw new TRPCError({
       code: 'BAD_REQUEST',
@@ -208,6 +205,27 @@ export function buildLeadRoutingCorrectionPlan(
 }
 
 async function resolveCanonicalTarget(lead: typeof leads.$inferSelect) {
+  if (positiveId(lead.listingId)) {
+    const database = await getDb();
+    if (!database)
+      throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+
+    const [commercialContext] = await database
+      .select({ commercialAvailabilityId: commercialLeadContexts.commercialAvailabilityId })
+      .from(commercialLeadContexts)
+      .where(eq(commercialLeadContexts.leadId, Number(lead.id)))
+      .limit(1);
+
+    return resolveLeadOwnership({
+      listingId: Number(lead.listingId),
+      ...(commercialContext?.commercialAvailabilityId
+        ? { commercialAvailabilityId: Number(commercialContext.commercialAvailabilityId) }
+        : {}),
+      name: lead.name,
+      email: lead.email,
+    });
+  }
+
   if (positiveId(lead.propertyId)) {
     return resolveLeadOwnership({
       propertyId: Number(lead.propertyId),
@@ -269,11 +287,7 @@ export async function correctLeadRouting(input: LeadRoutingCorrectionInput, acto
 
   return database.transaction(async tx => {
     await tx.execute(sql`SELECT id FROM leads WHERE id = ${input.leadId} FOR UPDATE`);
-    const [lockedLead] = await tx
-      .select()
-      .from(leads)
-      .where(eq(leads.id, input.leadId))
-      .limit(1);
+    const [lockedLead] = await tx.select().from(leads).where(eq(leads.id, input.leadId)).limit(1);
 
     if (!lockedLead) {
       throw new TRPCError({ code: 'NOT_FOUND', message: 'Lead not found' });
@@ -342,9 +356,7 @@ export async function correctLeadRouting(input: LeadRoutingCorrectionInput, acto
           leadCustody: plan.leadCustody,
           error: plan.reason,
         });
-    const nextAttempts = isIdempotentReplay
-      ? attempts
-      : [...attempts, correctionAttempt];
+    const nextAttempts = isIdempotentReplay ? attempts : [...attempts, correctionAttempt];
 
     await tx
       .update(leads)
@@ -414,11 +426,7 @@ export async function completePlatformLeadAction(
 
   return database.transaction(async tx => {
     await tx.execute(sql`SELECT id FROM leads WHERE id = ${input.leadId} FOR UPDATE`);
-    const [lead] = await tx
-      .select()
-      .from(leads)
-      .where(eq(leads.id, input.leadId))
-      .limit(1);
+    const [lead] = await tx.select().from(leads).where(eq(leads.id, input.leadId)).limit(1);
     if (!lead) {
       throw new TRPCError({ code: 'NOT_FOUND', message: 'Lead not found' });
     }

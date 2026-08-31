@@ -17,6 +17,10 @@ const capeTown = {
   id: 'city:21', canonicalLocationId: 'city:21', type: 'city' as const,
   name: 'Cape Town', slug: 'cape-town', provinceSlug: 'western-cape', citySlug: 'cape-town',
 };
+const pretoria = {
+  id: 'city:13', canonicalLocationId: 'city:13', type: 'city' as const,
+  name: 'Pretoria', slug: 'pretoria', provinceSlug: 'gauteng', citySlug: 'pretoria',
+};
 
 describe('consumer journey router', () => {
   it('exposes only executable Buy choices', () => {
@@ -68,7 +72,14 @@ describe('consumer journey router', () => {
 
   it('exposes Commercial only for the executable rental authority', () => {
     expect(resolveConsumerJourney('buy', 'commercial')).toBeUndefined();
-    expect(buildConsumerJourneyUrl({ intent: 'rent', journey: 'commercial', selectedLocations: [sandton] })).toBe('/commercial?location=Sandton');
+    expect(buildConsumerJourneyUrl({ intent: 'rent', journey: 'commercial', selectedLocations: [sandton] })).toBe('/commercial?locationIds=suburb%3A34');
+    const commercialSiblingScope = buildConsumerJourneyUrl({
+      intent: 'rent',
+      journey: 'commercial',
+      selectedLocations: [johannesburg, capeTown],
+    });
+    expect(commercialSiblingScope).toContain('locationIds=city%3A12');
+    expect(commercialSiblingScope).toContain('locationIds=city%3A21');
   });
 
   it('forwards only supported Commercial Office decisions on handoff', () => {
@@ -91,9 +102,26 @@ describe('consumer journey router', () => {
   });
 
   it('preserves Land multi-location and Search Area intent', () => {
-    expect(buildConsumerJourneyUrl({ intent: 'buy', journey: 'land', selectedLocations: [johannesburg, capeTown] })).toContain('locationIds=city%3A12');
-    expect(buildConsumerJourneyUrl({ intent: 'buy', journey: 'land', selectedLocations: [johannesburg, capeTown] })).toContain('locationIds=city%3A21');
-    expect(buildConsumerJourneyUrl({ intent: 'buy', journey: 'land', selectedLocations: [sandton], searchScope: { kind: 'search_area', searchAreaId: 'area-1' } })).toBe('/plots-and-land?searchAreaId=area-1');
+    expect(buildConsumerJourneyUrl({ intent: 'buy', journey: 'land', selectedLocations: [johannesburg, pretoria] })).toContain('locationIds=city%3A12');
+    expect(buildConsumerJourneyUrl({ intent: 'buy', journey: 'land', selectedLocations: [johannesburg, pretoria] })).toContain('locationIds=city%3A13');
+    expect(buildConsumerJourneyUrl({ intent: 'buy', journey: 'land', searchScope: { kind: 'search_area', searchAreaId: 'area-1' } })).toBe('/plots-and-land?searchAreaId=area-1');
     expect(buildConsumerJourneyUrl({ intent: 'rent', journey: 'commercial', selectedLocations: [sandton], searchScope: { kind: 'search_area', searchAreaId: 'area-1' } })).toContain('searchError=unsupported-location-scope');
+  });
+
+  it('fails closed instead of selecting a Land geography authority from mixed handoff state', () => {
+    expect(
+      buildConsumerJourneyUrl({
+        intent: 'buy',
+        journey: 'land',
+        selectedLocations: [sandton],
+        searchScope: { kind: 'search_area', searchAreaId: 'area-1' },
+      }),
+    ).toBe('/plots-and-land?searchError=unsupported-location-scope');
+    expect(
+      buildConsumerJourneyUrl({ intent: 'buy', journey: 'land', selectedLocations: [johannesburg, capeTown] }),
+    ).toBe('/plots-and-land?searchError=unsupported-location-scope');
+    expect(
+      buildConsumerJourneyUrl({ intent: 'buy', journey: 'land', selectedLocations: [sandton, johannesburg] }),
+    ).toBe('/plots-and-land?searchError=unsupported-location-scope');
   });
 });

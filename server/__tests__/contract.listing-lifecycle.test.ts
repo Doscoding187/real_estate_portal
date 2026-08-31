@@ -337,6 +337,31 @@ describe('listing lifecycle — canonical identity contract', () => {
     expect(mockDb.approveListing).not.toHaveBeenCalled();
   });
 
+  it('keeps Commercial creation out of the generic listing authoring contract', async () => {
+    const caller = makeCaller(ownerUser);
+
+    await expect(
+      caller.listing.create({
+        action: 'rent',
+        propertyType: 'commercial',
+        title: 'Commercial vacancy through the wrong workflow',
+        description: 'This must be rejected before the generic Listing Engine can create it.',
+        pricing: { monthlyRent: 100000 },
+        propertyDetails: {},
+        location: {
+          address: '1 Commercial Way',
+          latitude: -26.0,
+          longitude: 28.0,
+          city: 'Test City',
+          province: 'Gauteng',
+        },
+        mediaIds: [],
+      }),
+    ).rejects.toThrow(/Commercial/i);
+
+    expect(mockDb.createListing).not.toHaveBeenCalled();
+  });
+
   // -----------------------------------------------------------------------
   // 3.2 Identity Preservation
   // -----------------------------------------------------------------------
@@ -734,6 +759,58 @@ describe('listing lifecycle — canonical identity contract', () => {
     await caller.listing.delete({ id: LISTING_ID });
 
     expect(mockDb.deleteListing).toHaveBeenCalledWith(LISTING_ID);
+  });
+
+  it('rejects every generic lifecycle mutation for a Commercial marketing Listing', async () => {
+    const caller = makeCaller(ownerUser);
+    const LISTING_ID = 11009;
+    vi.mocked(mockDb.getListingById).mockResolvedValue(
+      mockListing({ id: LISTING_ID, propertyType: 'commercial' }),
+    );
+
+    await withSilencedConsoleError(async () => {
+      await expect(
+        caller.listing.update({ id: LISTING_ID, title: 'Commercial update attempt' }),
+      ).rejects.toMatchObject({
+        code: 'BAD_REQUEST',
+        message: 'Commercial leasing listings are managed through Commercial inventory.',
+      });
+      await expect(caller.listing.submitForReview({ listingId: LISTING_ID })).rejects.toMatchObject({
+        code: 'BAD_REQUEST',
+        message: 'Commercial leasing listings are managed through Commercial inventory.',
+      });
+      await expect(caller.listing.archive({ id: LISTING_ID })).rejects.toMatchObject({
+        code: 'BAD_REQUEST',
+        message: 'Commercial leasing listings are managed through Commercial inventory.',
+      });
+      await expect(caller.listing.delete({ id: LISTING_ID })).rejects.toMatchObject({
+        code: 'BAD_REQUEST',
+        message: 'Commercial leasing listings are managed through Commercial inventory.',
+      });
+      await expect(
+        caller.listing.promote({ listingId: LISTING_ID, featured: true }),
+      ).rejects.toMatchObject({
+        code: 'BAD_REQUEST',
+        message: 'Commercial leasing listings are managed through Commercial inventory.',
+      });
+    });
+
+    expect(mockDb.updateListing).not.toHaveBeenCalled();
+    expect(mockDb.submitListingForReview).not.toHaveBeenCalled();
+    expect(mockDb.archiveListing).not.toHaveBeenCalled();
+    expect(mockDb.deleteListing).not.toHaveBeenCalled();
+  });
+
+  it('does not return Commercial marketing records from generic author inventory', async () => {
+    const caller = makeCaller(ownerUser);
+    vi.mocked(mockDb.getUserListings).mockResolvedValue([
+      mockListing({ id: 11010, propertyType: 'house' }),
+      mockListing({ id: 11011, propertyType: 'commercial' }),
+    ] as any);
+
+    const result = await caller.listing.myListings({ status: 'draft', limit: 20, offset: 0 });
+
+    expect(result.map(listing => listing.id)).toEqual([11010]);
   });
 
   // -----------------------------------------------------------------------

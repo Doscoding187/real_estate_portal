@@ -14,6 +14,7 @@ import {
   developmentSupersessions,
   developments,
   leads,
+  listings,
   notifications,
   properties,
   subscriptions,
@@ -47,8 +48,12 @@ import { isPaidSubscriptionRowEntitled } from './planAccessService';
 import { resolvePublicPropertyEligibility } from './publicPropertyEligibilityService';
 import { resolvePublicLandLeadCustody } from './landPublicService';
 import { resolveSharedLivingLeadCustody, ensureLeadContextRow } from './sharedLivingEnquiryService';
-import { resolvePublicCommercialOfficeLeadCustody } from './commercialOfficeService';
+import { resolvePublicCommercialLeadCustody } from './commercialOfficeService';
 import { PUBLIC_LEAD_INPUT_LIMITS } from './publicLeadInputContract';
+import {
+  COMMERCIAL_PUBLIC_JOURNEY_HANDOFF_MESSAGE,
+  isCommercialMarketingPropertyType,
+} from '../../shared/commercial-domain';
 
 type LeadType = 'inquiry' | 'viewing_request' | 'offer' | 'callback';
 type LeadInsert = typeof leads.$inferInsert;
@@ -117,7 +122,11 @@ export interface ResolvedLeadOwnership {
   leadDeliveryMethod: 'crm_export' | 'manual';
   brandLeadStatus?: 'captured' | 'delivered_unsubscribed' | 'delivered_subscriber';
   reason?: string | null;
-  commercialContext?: { commercialAssetId: number; commercialSpaceId: number; commercialAvailabilityId: number };
+  commercialContext?: {
+    commercialAssetId: number;
+    commercialSpaceId: number;
+    commercialAvailabilityId: number;
+  };
   sharedLivingContext?: {
     placeId: number;
     spaceId: number | null;
@@ -327,7 +336,10 @@ function assertPublicCaptureInput(input: PublicLeadCaptureInput) {
 
   for (const value of [input.utmSource, input.utmMedium, input.utmCampaign]) {
     if (value && value.length > PUBLIC_LEAD_INPUT_LIMITS.utm) {
-      throw new TRPCError({ code: 'BAD_REQUEST', message: 'The campaign attribution is too long.' });
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'The campaign attribution is too long.',
+      });
     }
   }
 
@@ -444,21 +456,23 @@ async function isRecipientCommerciallyDeliverable(
         status: agents.status,
         userId: agents.userId,
         isVerified: agents.isVerified,
+        agencyId: agents.agencyId,
       })
       .from(agents)
       .where(eq(agents.id, agentId))
       .limit(1);
     if (!agent || agent.status !== 'approved') {
-      return { eligible: false, reason: 'The assigned listing agent is not an approved recipient.' };
+      return {
+        eligible: false,
+        reason: 'The assigned listing agent is not an approved recipient.',
+      };
     }
     let entitled = false;
     if (agent.userId) {
       const [subscription] = await database
         .select({ status: subscriptions.status, currentPeriodEnd: subscriptions.currentPeriodEnd })
         .from(subscriptions)
-        .where(
-          and(eq(subscriptions.ownerType, 'agent'), eq(subscriptions.ownerId, agent.userId)),
-        )
+        .where(and(eq(subscriptions.ownerType, 'agent'), eq(subscriptions.ownerId, agent.userId)))
         .limit(1);
       entitled = isPaidSubscriptionRowEntitled(
         subscription ?? { status: null, currentPeriodEnd: null },
@@ -472,15 +486,26 @@ async function isRecipientCommerciallyDeliverable(
       };
     }
 
-    // Membership currency mirrors the custody policy: an agency-affiliated
-    // agent whose canonical membership has lapsed stops receiving public
-    // enquiries even while the legacy profile remains approved.
-    const [membership] = await database
-      .select({ id: agencyAgentMemberships.id })
-      .from(agencyAgentMemberships)
-      .where(eq(agencyAgentMemberships.agentId, Number(agentId)))
-      .limit(1);
-    if (membership) {
+    // Membership currency mirrors the public custody policy: an
+    // agency-affiliated agent must have a current canonical membership before
+    // receiving a public enquiry, even when the legacy profile remains
+    // approved/verified. Use both persisted claims because a materialized
+    // Commercial Listing can retain its agency custody while an Agent profile
+    // is later edited; either claim makes the recipient agency-affiliated.
+    const agencyAffiliated =
+      positiveId(agent.agencyId) !== undefined || positiveId(agencyId) !== undefined;
+    if (agencyAffiliated) {
+      const [membership] = await database
+        .select({ id: agencyAgentMemberships.id })
+        .from(agencyAgentMemberships)
+        .where(eq(agencyAgentMemberships.agentId, Number(agentId)))
+        .limit(1);
+      if (!membership) {
+        return {
+          eligible: false,
+          reason: 'The assigned listing agent no longer holds a current agency membership.',
+        };
+      }
       const current = await listCurrentActiveMembershipAgentIds(database, [Number(agentId)]);
       if (!current.has(Number(agentId))) {
         return {
@@ -500,7 +525,10 @@ async function isRecipientCommerciallyDeliverable(
       .where(eq(agencies.id, agencyId))
       .limit(1);
     if (!agency || Number(agency.isVerified || 0) !== 1) {
-      return { eligible: false, reason: 'The owning agency is not an active verified organization.' };
+      return {
+        eligible: false,
+        reason: 'The owning agency is not an active verified organization.',
+      };
     }
     return { eligible: true, reason: '' };
   }
@@ -541,15 +569,18 @@ async function notifyAgentOfNewLead(
     if (property?.title) propertyTitle = property.title;
   }
 
-  const agentName =
-    agent.displayName || [agent.firstName].filter(Boolean).join(' ') || 'there';
+  const agentName = agent.displayName || [agent.firstName].filter(Boolean).join(' ') || 'there';
 
   await database.insert(notifications).values({
     userId: agent.userId,
     type: 'lead_assigned',
     title: `New enquiry from ${input.leadName}`,
     content: `${input.leadName} enquired about ${propertyTitle}. Respond while the interest is warm.`,
-    data: JSON.stringify({ leadId: input.leadId, propertyId: input.propertyId ?? null, actionUrl: '/agent/leads' }),
+    data: JSON.stringify({
+      leadId: input.leadId,
+      propertyId: input.propertyId ?? null,
+      actionUrl: '/agent/leads',
+    }),
     isRead: 0,
   });
 
@@ -577,7 +608,10 @@ export async function resolveLeadOwnership(
       slSpaceId: positiveId(input.slSpaceId),
     });
     if (!resolution) {
-      throw new TRPCError({ code: 'NOT_FOUND', message: 'Shared Living listing is not available for public enquiries.' });
+      throw new TRPCError({
+        code: 'NOT_FOUND',
+        message: 'Shared Living listing is not available for public enquiries.',
+      });
     }
     return {
       supplyOrigin: 'shared_living',
@@ -600,29 +634,132 @@ export async function resolveLeadOwnership(
   const commercialAvailabilityId = positiveId(input.commercialAvailabilityId);
   const requestedDevelopmentId = positiveId(input.developmentId);
   const requestedBrandId = positiveId(input.cataloguePublisherId);
-  if (listingId && propertyId) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Choose one canonical enquiry source.' });
+  if (commercialAvailabilityId && !listingId) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'Commercial enquiries require the matching marketing listing.',
+    });
+  }
+  if (listingId && propertyId)
+    throw new TRPCError({ code: 'BAD_REQUEST', message: 'Choose one canonical enquiry source.' });
   if (listingId) {
     if (commercialAvailabilityId) {
-      const commercial = await resolvePublicCommercialOfficeLeadCustody({ listingId, commercialAvailabilityId });
-      if (!commercial) throw new TRPCError({ code: 'NOT_FOUND', message: 'Commercial Office space is not available for public enquiries.' });
-      const agentId = positiveId(commercial.agentId); const agencyId = positiveId(commercial.agencyId); const recipientId = agentId ?? agencyId;
-      const commercialEligibility = await isRecipientCommerciallyDeliverable(agentId || null, agencyId || null);
+      const commercial = await resolvePublicCommercialLeadCustody({
+        listingId,
+        commercialAvailabilityId,
+      });
+      if (!commercial)
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Commercial space is not available for public enquiries.',
+        });
+      const agentId = positiveId(commercial.agentId);
+      const agencyId = positiveId(commercial.agencyId);
+      const recipientId = agentId ?? agencyId;
+      const commercialEligibility = await isRecipientCommerciallyDeliverable(
+        agentId || null,
+        agencyId || null,
+      );
       if (!recipientId || !commercialEligibility.eligible) {
-        return { listingId, agentId: undefined, agencyId: undefined, supplyOrigin: 'customer_managed', leadCustody: 'attention_required', recipientType: 'manual', recipientId: null, leadDeliveryMethod: 'manual', reason: !recipientId ? 'The Commercial marketing listing has no deliverable supplier recipient.' : commercialEligibility.reason, commercialContext: { commercialAssetId: commercial.commercialAssetId, commercialSpaceId: commercial.commercialSpaceId, commercialAvailabilityId: commercial.commercialAvailabilityId } };
+        return {
+          listingId,
+          agentId: undefined,
+          agencyId: undefined,
+          supplyOrigin: 'customer_managed',
+          leadCustody: 'attention_required',
+          recipientType: 'manual',
+          recipientId: null,
+          leadDeliveryMethod: 'manual',
+          reason: !recipientId
+            ? 'The Commercial marketing listing has no deliverable supplier recipient.'
+            : commercialEligibility.reason,
+          commercialContext: {
+            commercialAssetId: commercial.commercialAssetId,
+            commercialSpaceId: commercial.commercialSpaceId,
+            commercialAvailabilityId: commercial.commercialAvailabilityId,
+          },
+        };
       }
-      return { listingId, agentId: agentId ?? undefined, agencyId: agencyId ?? undefined, supplyOrigin: 'customer_managed', leadCustody: 'verified_customer_recipient', recipientType: agentId ? 'agent' : 'agency', recipientId, leadDeliveryMethod: 'crm_export', reason: null, commercialContext: { commercialAssetId: commercial.commercialAssetId, commercialSpaceId: commercial.commercialSpaceId, commercialAvailabilityId: commercial.commercialAvailabilityId } };
+      return {
+        listingId,
+        agentId: agentId ?? undefined,
+        agencyId: agencyId ?? undefined,
+        supplyOrigin: 'customer_managed',
+        leadCustody: 'verified_customer_recipient',
+        recipientType: agentId ? 'agent' : 'agency',
+        recipientId,
+        leadDeliveryMethod: 'crm_export',
+        reason: null,
+        commercialContext: {
+          commercialAssetId: commercial.commercialAssetId,
+          commercialSpaceId: commercial.commercialSpaceId,
+          commercialAvailabilityId: commercial.commercialAvailabilityId,
+        },
+      };
     }
     const land = await resolvePublicLandLeadCustody(listingId);
-    if (!land) throw new TRPCError({ code: 'NOT_FOUND', message: 'Listing not available for public enquiries.' });
-    const agentId = positiveId(land.agentId); const agencyId = positiveId(land.agencyId); const recipientId = agentId ?? agencyId;
+    if (!land) {
+      // A Listing-only Commercial request has no sufficient canonical
+      // availability context. Detect it after the Land authority declines so
+      // valid Land enquiries keep their existing query path and fake/legacy
+      // callers cannot be silently interpreted as Land.
+      const [listing] = await database
+        .select({ propertyType: listings.propertyType })
+        .from(listings)
+        .where(eq(listings.id, listingId))
+        .limit(1);
+      if (isCommercialMarketingPropertyType(listing?.propertyType)) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: COMMERCIAL_PUBLIC_JOURNEY_HANDOFF_MESSAGE,
+        });
+      }
+      throw new TRPCError({
+        code: 'NOT_FOUND',
+        message: 'Listing not available for public enquiries.',
+      });
+    }
+    const agentId = positiveId(land.agentId);
+    const agencyId = positiveId(land.agencyId);
+    const recipientId = agentId ?? agencyId;
     if (!recipientId) {
-      return { listingId, agentId: undefined, agencyId: undefined, supplyOrigin: 'customer_managed', leadCustody: 'attention_required', recipientType: 'manual', recipientId: null, leadDeliveryMethod: 'manual', reason: 'The approved Land authority has no deliverable marketing recipient.' };
+      return {
+        listingId,
+        agentId: undefined,
+        agencyId: undefined,
+        supplyOrigin: 'customer_managed',
+        leadCustody: 'attention_required',
+        recipientType: 'manual',
+        recipientId: null,
+        leadDeliveryMethod: 'manual',
+        reason: 'The approved Land authority has no deliverable marketing recipient.',
+      };
     }
     const landEligibility = await isRecipientCommerciallyDeliverable(agentId, agencyId);
     if (!landEligibility.eligible) {
-      return { listingId, agentId: undefined, agencyId: undefined, supplyOrigin: 'customer_managed', leadCustody: 'attention_required', recipientType: 'manual', recipientId: null, leadDeliveryMethod: 'manual', reason: landEligibility.reason };
+      return {
+        listingId,
+        agentId: undefined,
+        agencyId: undefined,
+        supplyOrigin: 'customer_managed',
+        leadCustody: 'attention_required',
+        recipientType: 'manual',
+        recipientId: null,
+        leadDeliveryMethod: 'manual',
+        reason: landEligibility.reason,
+      };
     }
-    return { listingId, agentId: agentId ?? undefined, agencyId: agencyId ?? undefined, supplyOrigin: 'customer_managed', leadCustody: 'verified_customer_recipient', recipientType: agentId ? 'agent' : 'agency', recipientId, leadDeliveryMethod: 'crm_export', reason: null };
+    return {
+      listingId,
+      agentId: agentId ?? undefined,
+      agencyId: agencyId ?? undefined,
+      supplyOrigin: 'customer_managed',
+      leadCustody: 'verified_customer_recipient',
+      recipientType: agentId ? 'agent' : 'agency',
+      recipientId,
+      leadDeliveryMethod: 'crm_export',
+      reason: null,
+    };
   }
   const targetKind: 'property' | 'development' | 'brand' = propertyId
     ? 'property'
@@ -738,8 +875,7 @@ export async function resolveLeadOwnership(
   }
 
   const persistedBrandId =
-    positiveId(property?.cataloguePublisherId) ??
-    positiveId(development?.cataloguePublisherId);
+    positiveId(property?.cataloguePublisherId) ?? positiveId(development?.cataloguePublisherId);
   if (targetKind !== 'brand' && requestedBrandId && requestedBrandId !== persistedBrandId) {
     throw new TRPCError({
       code: 'BAD_REQUEST',
@@ -885,18 +1021,25 @@ function isEquivalentReplay(
   // caller did submit an attribution, it must still match exactly.
   const targetMatches = inputListingId
     ? existingListingId === inputListingId &&
-      !existingPropertyId && !existingDevelopmentId && !existingBrandId
+      !existingPropertyId &&
+      !existingDevelopmentId &&
+      !existingBrandId
     : inputPropertyId
-    ? !existingListingId && existingPropertyId === inputPropertyId &&
-      (!inputDevelopmentId || existingDevelopmentId === inputDevelopmentId) &&
-      (!inputBrandId || existingBrandId === inputBrandId)
-    : inputDevelopmentId
-      ? !existingListingId && !existingPropertyId &&
-        existingDevelopmentId === inputDevelopmentId &&
+      ? !existingListingId &&
+        existingPropertyId === inputPropertyId &&
+        (!inputDevelopmentId || existingDevelopmentId === inputDevelopmentId) &&
         (!inputBrandId || existingBrandId === inputBrandId)
-      : inputBrandId
-        ? !existingListingId && !existingPropertyId && !existingDevelopmentId && existingBrandId === inputBrandId
-        : false;
+      : inputDevelopmentId
+        ? !existingListingId &&
+          !existingPropertyId &&
+          existingDevelopmentId === inputDevelopmentId &&
+          (!inputBrandId || existingBrandId === inputBrandId)
+        : inputBrandId
+          ? !existingListingId &&
+            !existingPropertyId &&
+            !existingDevelopmentId &&
+            existingBrandId === inputBrandId
+          : false;
 
   const contextMatches =
     normalizeName(existing.name) === normalizeName(input.name) &&
@@ -928,6 +1071,64 @@ function isEquivalentReplay(
     String(existing.source || '') === source &&
     String(existing.leadSource || '') === leadSource
   );
+}
+
+type CommercialReplayContext = {
+  listingId: number;
+  commercialAvailabilityId: number;
+};
+
+/**
+ * A capture request ID is immutable across retries, including the canonical
+ * Commercial Availability it targeted.  The generic lead row only stores the
+ * Listing ID, so consult the dedicated context before accepting a replay. A
+ * Commercial request that omits or changes its Availability must not be
+ * silently treated as an ordinary Listing enquiry.
+ */
+async function resolveCommercialReplayContext(
+  database: any,
+  existing: typeof leads.$inferSelect,
+  input: PublicLeadCaptureInput,
+): Promise<CommercialReplayContext | null> {
+  if (positiveId(existing.listingId) == null && positiveId(input.commercialAvailabilityId) == null)
+    return null;
+
+  const [context] = await database
+    .select({
+      listingId: commercialLeadContexts.listingId,
+      commercialAvailabilityId: commercialLeadContexts.commercialAvailabilityId,
+    })
+    .from(commercialLeadContexts)
+    .where(eq(commercialLeadContexts.leadId, Number(existing.id)))
+    .limit(1);
+
+  const contextListingId = positiveId(context?.listingId);
+  const contextAvailabilityId = positiveId(context?.commercialAvailabilityId);
+  if (contextListingId == null || contextAvailabilityId == null) {
+    // A non-Commercial Listing enquiry predates the dedicated context table
+    // and may still be replayed through its own journey.  An incoming
+    // Commercial Availability, however, is an assertion that this capture
+    // request was Commercial from the outset.  Never let it graft a newly
+    // resolved Availability onto an existing Listing-only lead.
+    if (positiveId(input.commercialAvailabilityId) != null) {
+      throw new TRPCError({
+        code: 'CONFLICT',
+        message: 'This request ID belongs to a different enquiry context.',
+      });
+    }
+    return null;
+  }
+
+  const inputListingId = positiveId(input.listingId);
+  const inputAvailabilityId = positiveId(input.commercialAvailabilityId);
+  if (inputListingId !== contextListingId || inputAvailabilityId !== contextAvailabilityId) {
+    throw new TRPCError({
+      code: 'CONFLICT',
+      message: 'This request ID belongs to a different enquiry context.',
+    });
+  }
+
+  return { listingId: contextListingId, commercialAvailabilityId: contextAvailabilityId };
 }
 
 function resultForExistingLead(existing: typeof leads.$inferSelect): PublicLeadCaptureResult {
@@ -987,8 +1188,7 @@ function deliveryKeyForOwnership(resolved: ResolvedLeadOwnership): string {
   if (resolved.recipientType === 'developer' && resolved.developerId) {
     return `direct:developer:${resolved.developerId}`;
   }
-  if (resolved.cataloguePublisherId)
-    return `platform:publisher:${resolved.cataloguePublisherId}`;
+  if (resolved.cataloguePublisherId) return `platform:publisher:${resolved.cataloguePublisherId}`;
   if (resolved.propertyId) return `platform:property:${resolved.propertyId}`;
   if (resolved.developmentId) return `platform:development:${resolved.developmentId}`;
   return 'platform:manual';
@@ -1001,10 +1201,11 @@ function messageForResolution(resolved: ResolvedLeadOwnership): string {
   if (resolved.leadCustody === 'platform_managed') {
     return 'Your enquiry has been recorded. Property Listify will review the request.';
   }
-  throw new TRPCError({
-    code: 'NOT_FOUND',
-    message: 'This listing does not currently have an actionable enquiry destination.',
-  });
+  // `attention_required` is returned only after the lead has been durably
+  // captured. Throwing here would make a successful write look lost to the
+  // customer and invite a duplicate retry. Acknowledge the custody state
+  // without promising direct advertiser delivery.
+  return 'Your enquiry has been recorded. Property Listify will review it because a verified advertiser handoff is not currently available.';
 }
 
 async function recoverExistingLead(
@@ -1014,6 +1215,7 @@ async function recoverExistingLead(
   source: string,
   leadSource: string,
 ): Promise<PublicLeadCaptureResult> {
+  const existingCommercialContext = await resolveCommercialReplayContext(database, existing, input);
   if (!isEquivalentReplay(existing, input, source, leadSource)) {
     throw new TRPCError({
       code: 'CONFLICT',
@@ -1024,7 +1226,11 @@ async function recoverExistingLead(
   let durableLead = existing;
   if (positiveId(input.slPlaceId)) {
     const resolvedSl = await resolveLeadOwnership(input);
-    if (!resolvedSl.sharedLivingContext) throw new TRPCError({ code: 'NOT_FOUND', message: 'Shared Living listing is not available for public enquiries.' });
+    if (!resolvedSl.sharedLivingContext)
+      throw new TRPCError({
+        code: 'NOT_FOUND',
+        message: 'Shared Living listing is not available for public enquiries.',
+      });
     await ensureLeadContextRow({
       leadId: existing.id,
       placeId: resolvedSl.sharedLivingContext.placeId,
@@ -1035,9 +1241,19 @@ async function recoverExistingLead(
   }
   if (positiveId(input.commercialAvailabilityId)) {
     const resolvedCommercial = await resolveLeadOwnership(input);
-    if (!resolvedCommercial.commercialContext) throw new TRPCError({ code: 'NOT_FOUND', message: 'Commercial Office space is not available for public enquiries.' });
-    const [context] = await database.select({ id: commercialLeadContexts.id }).from(commercialLeadContexts).where(eq(commercialLeadContexts.leadId, existing.id)).limit(1);
-    if (!context) await database.insert(commercialLeadContexts).values({ leadId: existing.id, listingId: resolvedCommercial.listingId!, commercialAssetId: resolvedCommercial.commercialContext.commercialAssetId, commercialSpaceId: resolvedCommercial.commercialContext.commercialSpaceId, commercialAvailabilityId: resolvedCommercial.commercialContext.commercialAvailabilityId });
+    if (!resolvedCommercial.commercialContext)
+      throw new TRPCError({
+        code: 'NOT_FOUND',
+        message: 'Commercial space is not available for public enquiries.',
+      });
+    if (!existingCommercialContext)
+      await database.insert(commercialLeadContexts).values({
+        leadId: existing.id,
+        listingId: resolvedCommercial.listingId!,
+        commercialAssetId: resolvedCommercial.commercialContext.commercialAssetId,
+        commercialSpaceId: resolvedCommercial.commercialContext.commercialSpaceId,
+        commercialAvailabilityId: resolvedCommercial.commercialContext.commercialAvailabilityId,
+      });
   }
   if (!Array.isArray(existing.deliveryAttempts) || existing.deliveryAttempts.length === 0) {
     const replayResolved = await resolveLeadOwnership(input);
@@ -1057,8 +1273,7 @@ async function recoverExistingLead(
       error: replayResolved.reason,
       database,
     });
-    durableLead =
-      (await findLeadByCaptureRequestId(database, input.captureRequestId)) || existing;
+    durableLead = (await findLeadByCaptureRequestId(database, input.captureRequestId)) || existing;
   }
 
   return resultForExistingLead(durableLead);
@@ -1091,8 +1306,7 @@ export async function capturePublicLead(
     resolved.leadCustody === 'verified_customer_recipient' ? 'delivered' : 'attention_required';
   const route: PublicLeadCaptureResult['route'] =
     resolved.recipientType === 'developer' ||
-    (resolved.recipientType === 'manual' &&
-      resolved.cataloguePublisherId)
+    (resolved.recipientType === 'manual' && resolved.cataloguePublisherId)
       ? 'brand'
       : 'direct';
   const deliveryAttempt = createInitialLeadDeliveryAttempt({
@@ -1110,45 +1324,61 @@ export async function capturePublicLead(
   let insertResult: any;
   try {
     const persist = async (tx: any) => {
-    [insertResult] = await tx.insert(leads).values({
-      listingId: resolved.listingId || null,
-      propertyId: resolved.propertyId || null,
-      developmentId: resolved.developmentId || null,
-      cataloguePublisherId: resolved.cataloguePublisherId || null,
-      agencyId: resolved.agencyId || null,
-      agentId: resolved.agentId || null,
-      unitId: input.unitId || null,
-      unitName: input.unitName || null,
-      unitPriceFrom: input.unitPriceFrom == null ? null : String(input.unitPriceFrom),
-      unitBedrooms: input.unitBedrooms ?? null,
-      unitBathrooms: input.unitBathrooms == null ? null : String(input.unitBathrooms),
-      name: input.name.trim(),
-      email: normalizeEmail(input.email),
-      phone: input.phone?.trim() || null,
-      message: input.message?.trim() || null,
-      leadType,
-      status: 'new',
-      source,
-      leadSource,
-      referrerUrl: input.referrerUrl || null,
-      utmSource: input.utmSource || null,
-      utmMedium: input.utmMedium || null,
-      utmCampaign: input.utmCampaign || null,
-      affordabilityData: input.affordabilityData ? (input.affordabilityData as any) : null,
-      funnelStage: input.affordabilityData ? 'affordability' : 'interest',
-      qualificationStatus: 'pending',
-      captureRequestId: input.captureRequestId,
-      consentCapturedAt: toMySqlDateTime(),
-      consentVersion: input.consent?.version,
-      consentSource: input.consent?.source || null,
-      brandLeadStatus: resolved.brandLeadStatus || null,
-      leadDeliveryMethod: resolved.leadDeliveryMethod,
-      ...deliverySummary,
-    } satisfies LeadInsert);
-    if (resolved.commercialContext) await tx.insert(commercialLeadContexts).values({ leadId: Number(insertResult.insertId), listingId: resolved.listingId!, commercialAssetId: resolved.commercialContext.commercialAssetId, commercialSpaceId: resolved.commercialContext.commercialSpaceId, commercialAvailabilityId: resolved.commercialContext.commercialAvailabilityId });
-    if (resolved.sharedLivingContext) await tx.insert(slLeadContexts).values({ leadId: Number(insertResult.insertId), placeId: resolved.sharedLivingContext.placeId, spaceId: resolved.sharedLivingContext.spaceId, spaceLabelSnapshot: resolved.sharedLivingContext.spaceLabelSnapshot, spaceTypeSnapshot: resolved.sharedLivingContext.spaceTypeSnapshot });
+      [insertResult] = await tx.insert(leads).values({
+        listingId: resolved.listingId || null,
+        propertyId: resolved.propertyId || null,
+        developmentId: resolved.developmentId || null,
+        cataloguePublisherId: resolved.cataloguePublisherId || null,
+        agencyId: resolved.agencyId || null,
+        agentId: resolved.agentId || null,
+        unitId: input.unitId || null,
+        unitName: input.unitName || null,
+        unitPriceFrom: input.unitPriceFrom == null ? null : String(input.unitPriceFrom),
+        unitBedrooms: input.unitBedrooms ?? null,
+        unitBathrooms: input.unitBathrooms == null ? null : String(input.unitBathrooms),
+        name: input.name.trim(),
+        email: normalizeEmail(input.email),
+        phone: input.phone?.trim() || null,
+        message: input.message?.trim() || null,
+        leadType,
+        status: 'new',
+        source,
+        leadSource,
+        referrerUrl: input.referrerUrl || null,
+        utmSource: input.utmSource || null,
+        utmMedium: input.utmMedium || null,
+        utmCampaign: input.utmCampaign || null,
+        affordabilityData: input.affordabilityData ? (input.affordabilityData as any) : null,
+        funnelStage: input.affordabilityData ? 'affordability' : 'interest',
+        qualificationStatus: 'pending',
+        captureRequestId: input.captureRequestId,
+        consentCapturedAt: toMySqlDateTime(),
+        consentVersion: input.consent?.version,
+        consentSource: input.consent?.source || null,
+        brandLeadStatus: resolved.brandLeadStatus || null,
+        leadDeliveryMethod: resolved.leadDeliveryMethod,
+        ...deliverySummary,
+      } satisfies LeadInsert);
+      if (resolved.commercialContext)
+        await tx.insert(commercialLeadContexts).values({
+          leadId: Number(insertResult.insertId),
+          listingId: resolved.listingId!,
+          commercialAssetId: resolved.commercialContext.commercialAssetId,
+          commercialSpaceId: resolved.commercialContext.commercialSpaceId,
+          commercialAvailabilityId: resolved.commercialContext.commercialAvailabilityId,
+        });
+      if (resolved.sharedLivingContext)
+        await tx.insert(slLeadContexts).values({
+          leadId: Number(insertResult.insertId),
+          placeId: resolved.sharedLivingContext.placeId,
+          spaceId: resolved.sharedLivingContext.spaceId,
+          spaceLabelSnapshot: resolved.sharedLivingContext.spaceLabelSnapshot,
+          spaceTypeSnapshot: resolved.sharedLivingContext.spaceTypeSnapshot,
+        });
     };
-    if (resolved.commercialContext && typeof (database as any).transaction === 'function') await (database as any).transaction(persist); else await persist(database);
+    if (resolved.commercialContext && typeof (database as any).transaction === 'function')
+      await (database as any).transaction(persist);
+    else await persist(database);
   } catch (error) {
     if (input.captureRequestId && isDuplicateKeyError(error)) {
       const duplicate = await findLeadByCaptureRequestId(database, input.captureRequestId);

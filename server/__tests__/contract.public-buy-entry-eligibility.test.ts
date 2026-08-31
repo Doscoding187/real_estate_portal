@@ -48,13 +48,13 @@ describe('public Buy entry eligibility contract', () => {
     const end = source.indexOf('getPublicDevelopmentBySlug: publicProcedure', start);
     const homeFeed = source.slice(start, end);
 
-    // Commercial consumer intent is owned by the Office Leasing journey
+    // Commercial consumer intent is owned by the Commercial Leasing journey
     // (/commercial over commercial asset tables). The trending-feed fallthrough
     // must fail closed to an empty list instead of querying residential rows as
     // "commercial" property.
     expect(homeFeed).not.toContain("propertyType: ['commercial']");
     const fallthroughMarker = homeFeed.indexOf(
-      'Commercial consumer intent is owned by the dedicated Office Leasing',
+      'Commercial consumer intent is owned by the dedicated Commercial Leasing',
     );
     expect(fallthroughMarker).toBeGreaterThan(0);
     const fallthrough = homeFeed.slice(fallthroughMarker);

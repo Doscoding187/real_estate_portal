@@ -249,7 +249,7 @@ export const PUBLIC_HERO_JOURNEYS: readonly PublicHeroJourneyDefinition[] = [
     mobileLabel: 'Commercial',
     kind: 'property-search',
     destination: '/commercial',
-    // Office Leasing is product-complete locally; hosted exposure remains
+    // Commercial Leasing is product-complete locally; hosted exposure remains
     // controlled by the existing public-journey release manifest.
     productHomepageVisible: true,
     productHomepageEnabled: true,

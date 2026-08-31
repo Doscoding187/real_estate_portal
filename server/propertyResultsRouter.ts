@@ -21,47 +21,60 @@ import {
   savedSearchNotificationFrequencySchema,
   serializeSavedSearchCriteria,
 } from './lib/savedSearchContract';
+import {
+  COMMERCIAL_PUBLIC_JOURNEY_HANDOFF_MESSAGE,
+  isCommercialMarketingPropertyType,
+} from '../shared/commercial-domain';
 
 function getUserId(ctx: { user: { id: number } | null }) {
   return requireUser(ctx).id;
 }
 
 // Validation schemas
-const propertyFiltersSchema = z.object({
-  province: z.string().optional(),
-  city: z.string().optional(),
-  suburb: z.array(z.string()).optional(),
-  propertyType: z
-    .array(z.enum(['house', 'apartment', 'townhouse', 'plot', 'commercial']))
-    .optional(),
-  listingType: z.enum(['sale', 'rent']).optional(),
-  minPrice: z.number().optional(),
-  maxPrice: z.number().optional(),
-  minBedrooms: z.number().optional(),
-  maxBedrooms: z.number().optional(),
-  minBathrooms: z.number().optional(),
-  minErfSize: z.number().optional(),
-  maxErfSize: z.number().optional(),
-  minFloorSize: z.number().optional(),
-  maxFloorSize: z.number().optional(),
-  minLandSize: z.number().optional(),
-  maxLandSize: z.number().optional(),
-  titleType: z.array(z.enum(['freehold', 'sectional'])).optional(),
-  maxLevy: z.number().optional(),
-  securityEstate: z.boolean().optional(),
-  petFriendly: z.boolean().optional(),
-  fibreReady: z.boolean().optional(),
-  loadSheddingSolutions: z.array(z.enum(['solar', 'generator', 'inverter', 'none'])).optional(),
-  status: z.array(z.enum(['available', 'under_offer', 'sold', 'let'])).optional(),
-  bounds: z
-    .object({
-      north: z.number(),
-      south: z.number(),
-      east: z.number(),
-      west: z.number(),
-    })
-    .optional(),
-});
+const propertyFiltersSchema = z
+  .object({
+    province: z.string().optional(),
+    city: z.string().optional(),
+    suburb: z.array(z.string()).optional(),
+    propertyType: z
+      .array(z.enum(['house', 'apartment', 'townhouse', 'plot', 'commercial']))
+      .optional(),
+    listingType: z.enum(['sale', 'rent']).optional(),
+    minPrice: z.number().optional(),
+    maxPrice: z.number().optional(),
+    minBedrooms: z.number().optional(),
+    maxBedrooms: z.number().optional(),
+    minBathrooms: z.number().optional(),
+    minErfSize: z.number().optional(),
+    maxErfSize: z.number().optional(),
+    minFloorSize: z.number().optional(),
+    maxFloorSize: z.number().optional(),
+    minLandSize: z.number().optional(),
+    maxLandSize: z.number().optional(),
+    titleType: z.array(z.enum(['freehold', 'sectional'])).optional(),
+    maxLevy: z.number().optional(),
+    securityEstate: z.boolean().optional(),
+    petFriendly: z.boolean().optional(),
+    fibreReady: z.boolean().optional(),
+    loadSheddingSolutions: z.array(z.enum(['solar', 'generator', 'inverter', 'none'])).optional(),
+    status: z.array(z.enum(['available', 'under_offer', 'sold', 'let'])).optional(),
+    bounds: z
+      .object({
+        north: z.number(),
+        south: z.number(),
+        east: z.number(),
+        west: z.number(),
+      })
+      .optional(),
+  })
+  .superRefine((input, context) => {
+    if (!input.propertyType?.some(isCommercialMarketingPropertyType)) return;
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['propertyType'],
+      message: COMMERCIAL_PUBLIC_JOURNEY_HANDOFF_MESSAGE,
+    });
+  });
 
 const sortOptionSchema = z.enum([
   'price_asc',
@@ -222,12 +235,7 @@ export const propertyResultsRouter = router({
           const search = await db
             .select()
             .from(savedSearches)
-            .where(
-              and(
-                eq(savedSearches.id, input.id),
-                eq(savedSearches.userId, getUserId(ctx)),
-              ),
-            )
+            .where(and(eq(savedSearches.id, input.id), eq(savedSearches.userId, getUserId(ctx))))
             .limit(1);
 
           if (search.length === 0) {

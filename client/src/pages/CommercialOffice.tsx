@@ -1,208 +1,279 @@
 import { Link } from 'wouter';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { trpc } from '@/lib/trpc';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
-import {
-  COMMERCIAL_AVAILABILITY_OPTIONS,
-  parseCommercialSearchParams,
-  sanitizeCommercialSearchFilters,
-  serializeCommercialSearchParams,
-  type CommercialAvailabilityFilter,
-} from '@shared/commercialSearchContract';
+
+const PAGE_SIZE = 24;
+
+const COMMERCIAL_USE_TYPES = [
+  { value: 'office', label: 'Office' },
+  { value: 'industrial_logistics', label: 'Industrial & logistics' },
+  { value: 'retail', label: 'Retail' },
+] as const;
+
+type CommercialUseType = (typeof COMMERCIAL_USE_TYPES)[number]['value'];
 
 const money = (minor?: number | null) =>
   minor == null
     ? 'To confirm'
     : `R ${(minor / 100).toLocaleString('en-ZA', { maximumFractionDigits: 0 })}`;
 
-const PAGE_SIZE = 24;
+const numberParam = (value: string) => (value.trim() ? Number(value) : undefined);
 
-const stringNumber = (value?: number) => (value == null ? '' : String(value));
+function parseUseTypes(value: string | null): CommercialUseType[] {
+  const known = new Set(COMMERCIAL_USE_TYPES.map(type => type.value));
+  return (value || '')
+    .split(',')
+    .map(item => item.trim())
+    .filter((item): item is CommercialUseType => known.has(item as CommercialUseType));
+}
+
+function commercialUseTypeLabel(value: string) {
+  return COMMERCIAL_USE_TYPES.find(type => type.value === value)?.label || value.replace(/_/g, ' ');
+}
+
+function primaryCommercialImage(space: any): string | null {
+  const images = (Array.isArray(space?.media) ? space.media : []).filter(
+    (item: any) =>
+      item?.mediaType === 'image' && typeof item.url === 'string' && item.url.trim().length > 0,
+  );
+  const primary = images.find((item: any) => Number(item.isPrimary) === 1) || images[0];
+  return primary?.url || null;
+}
 
 export default function CommercialOffice() {
-  const handoffParams = new URLSearchParams(window.location.search);
-  const initialFilters = parseCommercialSearchParams(handoffParams);
+  const handoffParams = useMemo(() => new URLSearchParams(window.location.search), []);
+  const initialLocation = handoffParams.get('location') || '';
+  const initialLocationIds = handoffParams
+    .getAll('locationIds')
+    .map(value => value.trim())
+    .filter(Boolean);
+  const mixedLocationAuthority = Boolean(initialLocation.trim() && initialLocationIds.length);
   const unsupportedLocationScope =
-    handoffParams.get('searchError') === 'unsupported-location-scope';
-
-  const [location, setLocation] = useState(handoffParams.get('location') || '');
-  const [minAreaM2, setMinAreaM2] = useState(stringNumber(initialFilters.minAreaM2));
-  const [maxAreaM2, setMaxAreaM2] = useState(stringNumber(initialFilters.maxAreaM2));
-  const [budget, setBudget] = useState(stringNumber(initialFilters.maxMonthlyBudget));
-  const [availability, setAvailability] = useState<CommercialAvailabilityFilter | ''>(
-    initialFilters.availability || '',
+    handoffParams.get('searchError') === 'unsupported-location-scope' || mixedLocationAuthority;
+  const [location, setLocation] = useState(initialLocation);
+  const [locationIds, setLocationIds] = useState(initialLocationIds);
+  const [useTypes, setUseTypes] = useState<CommercialUseType[]>(() =>
+    parseUseTypes(handoffParams.get('useTypes')),
   );
-  const [fitOutCondition, setFitOutCondition] = useState(initialFilters.fitOutCondition || '');
-  const [minParkingBays, setMinParkingBays] = useState(stringNumber(initialFilters.minParkingBays));
-  const [backupPower, setBackupPower] = useState(initialFilters.backupPower === true);
-  const [backupWater, setBackupWater] = useState(initialFilters.backupWater === true);
+  const [minAreaM2, setMinAreaM2] = useState(handoffParams.get('minAreaM2') || '');
+  const [maxAreaM2, setMaxAreaM2] = useState(handoffParams.get('maxAreaM2') || '');
+  const [budget, setBudget] = useState(handoffParams.get('maxMonthlyBudget') || '');
+  const [availability, setAvailability] = useState<'now' | 'future' | ''>(
+    handoffParams.get('availability') === 'now'
+      ? 'now'
+      : handoffParams.get('availability') === 'future'
+        ? 'future'
+        : '',
+  );
+  const [pricingMode, setPricingMode] = useState<'componentised' | 'gross_quote' | ''>(
+    handoffParams.get('pricingMode') === 'componentised'
+      ? 'componentised'
+      : handoffParams.get('pricingMode') === 'gross_quote'
+        ? 'gross_quote'
+        : '',
+  );
+  const [minParkingBays, setMinParkingBays] = useState(handoffParams.get('minParkingBays') || '');
+  const [minEavesHeightM, setMinEavesHeightM] = useState(
+    handoffParams.get('minEavesHeightM') || '',
+  );
+  const [minPowerCapacityKva, setMinPowerCapacityKva] = useState(
+    handoffParams.get('minPowerCapacityKva') || '',
+  );
+  const [minLoadingDocks, setMinLoadingDocks] = useState(
+    handoffParams.get('minLoadingDocks') || '',
+  );
+  const [yardHardstand, setYardHardstand] = useState(handoffParams.get('yardHardstand') === '1');
+  const [extractionCapability, setExtractionCapability] = useState(
+    handoffParams.get('extractionCapability') === '1',
+  );
+  const [fitOutCondition, setFitOutCondition] = useState(
+    handoffParams.get('fitOutCondition') || '',
+  );
+  const [backupPower, setBackupPower] = useState(handoffParams.get('backupPower') === '1');
+  const [backupWater, setBackupWater] = useState(handoffParams.get('backupWater') === '1');
   const [fibreConnectivity, setFibreConnectivity] = useState(
-    initialFilters.fibreConnectivity === true,
+    handoffParams.get('fibreConnectivity') === '1',
   );
   const [page, setPage] = useState(Number(handoffParams.get('page')) || 0);
 
-  const filters = sanitizeCommercialSearchFilters({
-    minAreaM2,
-    maxAreaM2,
-    maxMonthlyBudget: budget,
-    availability,
-    fitOutCondition,
-    minParkingBays,
-    backupPower,
-    backupWater,
-    fibreConnectivity,
+  const searchInput = {
+    location: locationIds.length ? undefined : location || undefined,
+    locationIds: locationIds.length ? locationIds : undefined,
+    useTypes: useTypes.length ? useTypes : undefined,
+    minAreaM2: numberParam(minAreaM2),
+    maxAreaM2: numberParam(maxAreaM2),
+    maxMonthlyBudgetMinor: budget ? Math.round(Number(budget) * 100) : undefined,
+    availability: availability || undefined,
+    pricingMode: pricingMode || undefined,
+    fitOutCondition: fitOutCondition || undefined,
+    minParkingBays: numberParam(minParkingBays),
+    minEavesHeightM: numberParam(minEavesHeightM),
+    minPowerCapacityKva: numberParam(minPowerCapacityKva),
+    minLoadingDocks: numberParam(minLoadingDocks),
+    yardHardstand: yardHardstand || undefined,
+    extractionCapability: extractionCapability || undefined,
+    backupPower: backupPower || undefined,
+    backupWater: backupWater || undefined,
+    fibreConnectivity: fibreConnectivity || undefined,
+  };
+  const results = trpc.commercial.search.useQuery(searchInput, {
+    enabled: !unsupportedLocationScope,
   });
-  const results = trpc.commercialOffice.search.useQuery(
-    {
-      location: location.trim() || undefined,
-      minAreaM2: filters.minAreaM2,
-      maxAreaM2: filters.maxAreaM2,
-      maxMonthlyBudgetMinor:
-        filters.maxMonthlyBudget == null ? undefined : Math.round(filters.maxMonthlyBudget * 100),
-      availability: filters.availability,
-      fitOutCondition: filters.fitOutCondition,
-      backupPower: filters.backupPower,
-      backupWater: filters.backupWater,
-      fibreConnectivity: filters.fibreConnectivity,
-      minParkingBays: filters.minParkingBays,
-    },
-    { enabled: !unsupportedLocationScope },
-  );
-
-  const allOffices = results.data || [];
-  const totalResults = allOffices.length;
+  const allSpaces = results.data || [];
+  const totalResults = allSpaces.length;
   const pageCount = Math.max(1, Math.ceil(totalResults / PAGE_SIZE));
   const safePage = Math.min(page, pageCount - 1);
-  const visibleOffices = allOffices.slice(safePage * PAGE_SIZE, safePage * PAGE_SIZE + PAGE_SIZE);
-  const hasActiveFilters = Boolean(
-    location.trim() || Object.keys(filters).length > 0 || safePage > 0,
-  );
+  const visibleSpaces = allSpaces.slice(safePage * PAGE_SIZE, safePage * PAGE_SIZE + PAGE_SIZE);
 
   useEffect(() => {
     const next = new URLSearchParams();
-    if (location.trim()) next.set('location', location.trim());
-    serializeCommercialSearchParams(filters).forEach((value, key) => next.set(key, value));
+    if (location) next.set('location', location);
+    locationIds.forEach(locationId => next.append('locationIds', locationId));
+    if (useTypes.length) next.set('useTypes', useTypes.join(','));
+    if (minAreaM2) next.set('minAreaM2', minAreaM2);
+    if (maxAreaM2) next.set('maxAreaM2', maxAreaM2);
+    if (budget) next.set('maxMonthlyBudget', budget);
+    if (availability) next.set('availability', availability);
+    if (pricingMode) next.set('pricingMode', pricingMode);
+    if (fitOutCondition) next.set('fitOutCondition', fitOutCondition);
+    if (minParkingBays) next.set('minParkingBays', minParkingBays);
+    if (minEavesHeightM) next.set('minEavesHeightM', minEavesHeightM);
+    if (minPowerCapacityKva) next.set('minPowerCapacityKva', minPowerCapacityKva);
+    if (minLoadingDocks) next.set('minLoadingDocks', minLoadingDocks);
+    if (yardHardstand) next.set('yardHardstand', '1');
+    if (extractionCapability) next.set('extractionCapability', '1');
+    if (backupPower) next.set('backupPower', '1');
+    if (backupWater) next.set('backupWater', '1');
+    if (fibreConnectivity) next.set('fibreConnectivity', '1');
     if (safePage > 0) next.set('page', String(safePage));
     window.history.replaceState(
       null,
       '',
       `${window.location.pathname}${next.toString() ? `?${next}` : ''}`,
     );
-  }, [filters, location, safePage]);
+  }, [
+    availability,
+    backupPower,
+    backupWater,
+    budget,
+    extractionCapability,
+    fibreConnectivity,
+    fitOutCondition,
+    location,
+    locationIds,
+    maxAreaM2,
+    minAreaM2,
+    minEavesHeightM,
+    minLoadingDocks,
+    minParkingBays,
+    minPowerCapacityKva,
+    pricingMode,
+    safePage,
+    useTypes,
+    yardHardstand,
+  ]);
 
+  const toggleUseType = (type: CommercialUseType) => {
+    setUseTypes(current =>
+      current.includes(type) ? current.filter(value => value !== type) : [...current, type],
+    );
+    setPage(0);
+  };
   const changePage = (nextPage: number) => {
     setPage(Math.min(Math.max(nextPage, 0), pageCount - 1));
     window.scrollTo({ top: 0 });
   };
-
-  const resetFilters = () => {
-    setLocation('');
-    setMinAreaM2('');
-    setMaxAreaM2('');
-    setBudget('');
-    setAvailability('');
-    setFitOutCondition('');
-    setMinParkingBays('');
-    setBackupPower(false);
-    setBackupWater(false);
-    setFibreConnectivity(false);
-    setPage(0);
-  };
+  const showIndustrialFilters = useTypes.length === 0 || useTypes.includes('industrial_logistics');
+  const showRetailFilters = useTypes.length === 0 || useTypes.includes('retail');
 
   return (
-    <main className="mx-auto max-w-6xl space-y-6 p-4 md:p-6">
-      <header>
-        <p className="text-sm font-medium text-sky-700">
-          Property Listify Commercial · Office leasing
+    <main className="mx-auto max-w-6xl space-y-6 p-6">
+      <section>
+        <p className="text-sm font-medium text-sky-700">Property Listify Commercial · Leasing</p>
+        <h1 className="text-3xl font-semibold">
+          Find a commercial space that works for your business
+        </h1>
+        <p className="mt-2 max-w-3xl text-slate-600">
+          Compare Office, Industrial &amp; Logistics, and Retail opportunities by rentable area,
+          current availability and the commercial costs that are actually known.
         </p>
-        <h1 className="text-3xl font-semibold">Find office space that works for your business</h1>
-        <p className="mt-2 text-slate-600">
-          Availability, commercial terms and known monthly occupancy costs—shown separately from
-          what still needs confirmation.
-        </p>
-      </header>
+      </section>
 
-      {unsupportedLocationScope && (
+      {unsupportedLocationScope ? (
         <p
           role="alert"
           className="rounded border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900"
         >
-          Choose one location to continue into the current Commercial search. Multi-location and
-          Search Area handoff are not available yet.
+          {mixedLocationAuthority
+            ? 'Commercial search received both a text location and canonical location IDs. Choose one location authority and try again.'
+            : 'Choose a city, suburb or province to continue into Commercial search. Search Area handoff is not available yet.'}
         </p>
-      )}
+      ) : null}
 
-      <section
-        aria-label="Commercial search filters"
-        className="rounded border bg-white p-4 shadow-sm"
-      >
-        <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h2 className="font-semibold text-slate-900">Filter by business need</h2>
-            <p className="mt-1 text-sm text-slate-600">
-              Start with the space, occupancy cost and timing your business can work with.
-            </p>
-          </div>
-          {hasActiveFilters && (
-            <button
-              type="button"
-              className="text-sm font-medium text-sky-700 hover:text-sky-900"
-              onClick={resetFilters}
-            >
-              Reset filters
-            </button>
-          )}
-        </div>
-
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <section className="space-y-4 rounded border bg-slate-50 p-4" aria-label="Commercial filters">
+        <div className="grid gap-3 md:grid-cols-4">
           <label className="grid gap-1 text-sm">
             <span>Location</span>
-            <Input
+            <input
               aria-label="Location"
               className="rounded border p-2"
               value={location}
               onChange={event => {
                 setLocation(event.target.value);
+                setLocationIds([]);
                 setPage(0);
               }}
-              placeholder="City or suburb"
+              placeholder="Location"
             />
+            {locationIds.length ? (
+              <span className="flex items-center justify-between gap-2 text-xs text-slate-600">
+                Canonical location scope selected from the homepage.
+                <button
+                  type="button"
+                  className="font-medium text-sky-700 underline"
+                  onClick={() => {
+                    setLocationIds([]);
+                    setPage(0);
+                  }}
+                >
+                  Clear
+                </button>
+              </span>
+            ) : null}
           </label>
           <label className="grid gap-1 text-sm">
-            <span>Minimum space (m²)</span>
-            <Input
+            <span>Minimum square metres</span>
+            <input
               aria-label="Minimum square metres"
               className="rounded border p-2"
               type="number"
-              min="1"
+              min="0"
               value={minAreaM2}
               onChange={event => {
                 setMinAreaM2(event.target.value);
                 setPage(0);
               }}
-              placeholder="e.g. 100"
+              placeholder="Min m²"
             />
           </label>
           <label className="grid gap-1 text-sm">
-            <span>Maximum space (m²)</span>
-            <Input
+            <span>Maximum square metres</span>
+            <input
               aria-label="Maximum square metres"
               className="rounded border p-2"
               type="number"
-              min="1"
+              min="0"
               value={maxAreaM2}
               onChange={event => {
                 setMaxAreaM2(event.target.value);
                 setPage(0);
               }}
-              placeholder="e.g. 500"
+              placeholder="Max m²"
             />
           </label>
           <label className="grid gap-1 text-sm">
-            <span>Maximum monthly occupancy (R)</span>
-            <Input
+            <span>Maximum monthly occupancy budget</span>
+            <input
               aria-label="Monthly occupancy budget"
               className="rounded border p-2"
               type="number"
@@ -212,9 +283,29 @@ export default function CommercialOffice() {
                 setBudget(event.target.value);
                 setPage(0);
               }}
-              placeholder="Known total only"
+              placeholder="Monthly budget (R)"
             />
           </label>
+        </div>
+
+        <fieldset>
+          <legend className="text-sm font-medium">Use type</legend>
+          <div className="mt-2 flex flex-wrap gap-4">
+            {COMMERCIAL_USE_TYPES.map(type => (
+              <label key={type.value} className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  aria-label={type.label}
+                  checked={useTypes.includes(type.value)}
+                  onChange={() => toggleUseType(type.value)}
+                />
+                {type.label}
+              </label>
+            ))}
+          </div>
+        </fieldset>
+
+        <div className="grid gap-3 md:grid-cols-4">
           <label className="grid gap-1 text-sm">
             <span>Availability</span>
             <select
@@ -222,21 +313,48 @@ export default function CommercialOffice() {
               className="rounded border p-2"
               value={availability}
               onChange={event => {
-                setAvailability(event.target.value as CommercialAvailabilityFilter | '');
+                setAvailability(event.target.value as 'now' | 'future' | '');
                 setPage(0);
               }}
             >
-              <option value="">Any timing</option>
-              {COMMERCIAL_AVAILABILITY_OPTIONS.map(option => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
+              <option value="">Available now or upcoming</option>
+              <option value="now">Available now</option>
+              <option value="future">Available from a future date</option>
             </select>
           </label>
           <label className="grid gap-1 text-sm">
+            <span>Rental basis</span>
+            <select
+              aria-label="Rental basis"
+              className="rounded border p-2"
+              value={pricingMode}
+              onChange={event => {
+                setPricingMode(event.target.value as 'componentised' | 'gross_quote' | '');
+                setPage(0);
+              }}
+            >
+              <option value="">Gross or componentised</option>
+              <option value="gross_quote">Gross quote</option>
+              <option value="componentised">Componentised quote</option>
+            </select>
+          </label>
+          <label className="grid gap-1 text-sm">
+            <span>Minimum parking bays</span>
+            <input
+              aria-label="Minimum parking bays"
+              className="rounded border p-2"
+              type="number"
+              min="0"
+              value={minParkingBays}
+              onChange={event => {
+                setMinParkingBays(event.target.value);
+                setPage(0);
+              }}
+            />
+          </label>
+          <label className="grid gap-1 text-sm">
             <span>Fit-out condition</span>
-            <Input
+            <input
               aria-label="Fit-out condition"
               className="rounded border p-2"
               value={fitOutCondition}
@@ -244,153 +362,225 @@ export default function CommercialOffice() {
                 setFitOutCondition(event.target.value);
                 setPage(0);
               }}
-              placeholder="Supplier label, e.g. fitted"
-            />
-            <span className="text-xs text-slate-500">Matches the supplier&apos;s exact label.</span>
-          </label>
-          <label className="grid gap-1 text-sm">
-            <span>Minimum parking bays</span>
-            <Input
-              aria-label="Minimum parking bays"
-              className="rounded border p-2"
-              type="number"
-              min="0"
-              step="1"
-              value={minParkingBays}
-              onChange={event => {
-                setMinParkingBays(event.target.value);
-                setPage(0);
-              }}
-              placeholder="Any parking"
+              placeholder="e.g. fitted"
             />
           </label>
         </div>
 
-        <fieldset className="mt-4 border-t pt-4">
-          <legend className="text-sm font-semibold text-slate-700">Building essentials</legend>
-          <div className="mt-2 flex flex-wrap gap-x-6 gap-y-2 text-sm text-slate-700">
-            <label className="flex items-center gap-2" htmlFor="commercial-backup-power">
-              <Checkbox
-                id="commercial-backup-power"
-                aria-label="Backup power"
-                checked={backupPower}
-                onCheckedChange={checked => {
-                  setBackupPower(checked === true);
+        <div className="flex flex-wrap gap-4 text-sm">
+          <label className="flex items-center gap-2">
+            <input
+              aria-label="Backup power"
+              type="checkbox"
+              checked={backupPower}
+              onChange={event => {
+                setBackupPower(event.target.checked);
+                setPage(0);
+              }}
+            />
+            Backup power
+          </label>
+          <label className="flex items-center gap-2">
+            <input
+              aria-label="Backup water"
+              type="checkbox"
+              checked={backupWater}
+              onChange={event => {
+                setBackupWater(event.target.checked);
+                setPage(0);
+              }}
+            />
+            Backup water
+          </label>
+          <label className="flex items-center gap-2">
+            <input
+              aria-label="Fibre"
+              type="checkbox"
+              checked={fibreConnectivity}
+              onChange={event => {
+                setFibreConnectivity(event.target.checked);
+                setPage(0);
+              }}
+            />
+            Fibre connectivity
+          </label>
+        </div>
+
+        {showIndustrialFilters ? (
+          <fieldset className="border-t pt-4">
+            <legend className="text-sm font-medium">Industrial &amp; logistics requirements</legend>
+            <div className="mt-2 grid gap-3 md:grid-cols-4">
+              <label className="grid gap-1 text-sm">
+                <span>Minimum eaves height (m)</span>
+                <input
+                  aria-label="Minimum eaves height"
+                  className="rounded border p-2"
+                  type="number"
+                  min="0"
+                  value={minEavesHeightM}
+                  onChange={event => {
+                    setMinEavesHeightM(event.target.value);
+                    setPage(0);
+                  }}
+                />
+              </label>
+              <label className="grid gap-1 text-sm">
+                <span>Minimum power capacity (kVA)</span>
+                <input
+                  aria-label="Minimum power capacity"
+                  className="rounded border p-2"
+                  type="number"
+                  min="0"
+                  value={minPowerCapacityKva}
+                  onChange={event => {
+                    setMinPowerCapacityKva(event.target.value);
+                    setPage(0);
+                  }}
+                />
+              </label>
+              <label className="grid gap-1 text-sm">
+                <span>Minimum loading docks</span>
+                <input
+                  aria-label="Minimum loading docks"
+                  className="rounded border p-2"
+                  type="number"
+                  min="0"
+                  value={minLoadingDocks}
+                  onChange={event => {
+                    setMinLoadingDocks(event.target.value);
+                    setPage(0);
+                  }}
+                />
+              </label>
+              <label className="flex items-center gap-2 self-end pb-2 text-sm">
+                <input
+                  aria-label="Yard or hardstand"
+                  type="checkbox"
+                  checked={yardHardstand}
+                  onChange={event => {
+                    setYardHardstand(event.target.checked);
+                    setPage(0);
+                  }}
+                />
+                Yard / hardstand
+              </label>
+            </div>
+          </fieldset>
+        ) : null}
+
+        {showRetailFilters ? (
+          <fieldset className="border-t pt-4">
+            <legend className="text-sm font-medium">Retail requirements</legend>
+            <label className="mt-2 flex items-center gap-2 text-sm">
+              <input
+                aria-label="Extraction capability"
+                type="checkbox"
+                checked={extractionCapability}
+                onChange={event => {
+                  setExtractionCapability(event.target.checked);
                   setPage(0);
                 }}
               />
-              <span>Backup power</span>
+              Extraction capability
             </label>
-            <label className="flex items-center gap-2" htmlFor="commercial-backup-water">
-              <Checkbox
-                id="commercial-backup-water"
-                aria-label="Backup water"
-                checked={backupWater}
-                onCheckedChange={checked => {
-                  setBackupWater(checked === true);
-                  setPage(0);
-                }}
-              />
-              <span>Backup water</span>
-            </label>
-            <label className="flex items-center gap-2" htmlFor="commercial-fibre">
-              <Checkbox
-                id="commercial-fibre"
-                aria-label="Fibre"
-                checked={fibreConnectivity}
-                onCheckedChange={checked => {
-                  setFibreConnectivity(checked === true);
-                  setPage(0);
-                }}
-              />
-              <span>Fibre</span>
-            </label>
-          </div>
-        </fieldset>
+          </fieldset>
+        ) : null}
       </section>
 
       <p className="text-sm text-slate-600">
-        A monthly-occupancy filter includes only spaces whose recurring Cost Passport is complete;
+        A monthly-budget filter includes only spaces whose recurring Cost Passport is complete;
         unknown charges are never treated as R0.
       </p>
 
-      <section
-        aria-label="Commercial Office results"
-        aria-live="polite"
-        className="grid gap-4 md:grid-cols-2"
-      >
-        {visibleOffices.map((office: any) => (
-          <Link
-            key={office.availability.id}
-            href={office.href}
-            className="rounded border p-5 hover:border-sky-500"
-          >
-            <p className="font-semibold">
-              {office.asset.name} — {office.asset.suburb || office.asset.city}
-            </p>
-            <p>
-              {office.space.identifier} · {Number(office.space.rentableAreaM2).toLocaleString()} m²
-              Office
-            </p>
-            <p className="mt-2">
-              {office.pricing.quotedRent
-                ? `${money(office.pricing.quotedRent.amountMinor)} / ${office.pricing.quotedRent.chargeBasis === 'per_m2_month' ? 'm²' : 'month'} quoted`
-                : 'Quoted rent to confirm'}
-            </p>
-            <p className="font-medium">
-              Estimated occupancy: {money(office.costPassport.monthlyMinimumMinor)}–
-              {money(office.costPassport.monthlyMaximumMinor)} / month
-            </p>
-            {office.costPassport.unknownComponentCodes.length ? (
-              <p className="text-sm text-amber-700">
-                Still unresolved:{' '}
-                {office.costPassport.unknownComponentCodes.join(', ').replaceAll('_', ' ')}
-              </p>
-            ) : null}
-            <p className="mt-2 text-sm text-slate-700">
-              {office.availability.label}
-              {office.availability.confirmedAt
-                ? ` · confirmed ${String(office.availability.confirmedAt).slice(0, 10)}`
-                : ''}
-              {office.availability.source ? ` by ${office.availability.source}` : ''}
-            </p>
-          </Link>
-        ))}
-      </section>
-
-      {!unsupportedLocationScope && !results.isLoading && totalResults === 0 ? (
-        <p className="rounded border border-dashed p-6 text-slate-600">
-          No published Office spaces match these requirements. Try widening the area or clearing a
-          filter.
+      {results.isError ? (
+        <p role="alert" className="rounded border border-rose-200 bg-rose-50 p-3 text-rose-900">
+          Commercial search is temporarily unavailable. Please try again.
         </p>
       ) : null}
 
-      {totalResults > PAGE_SIZE && (
+      <section className="grid gap-4 md:grid-cols-2" aria-live="polite">
+        {visibleSpaces.map((space: any) => {
+          const image = primaryCommercialImage(space);
+          return (
+            <Link
+              key={space.availability.id}
+              href={space.href}
+              className="overflow-hidden rounded border hover:border-sky-500"
+            >
+              {image ? (
+                <img
+                  src={image}
+                  alt={`${space.asset.name} — ${space.space.identifier}`}
+                  className="aspect-[16/7] w-full object-cover"
+                  loading="lazy"
+                />
+              ) : null}
+              <div className="p-5">
+                <p className="font-semibold">
+                  {space.asset.name} — {space.asset.suburb || space.asset.city}
+                </p>
+                <p>
+                  {space.space.identifier} · {Number(space.space.rentableAreaM2).toLocaleString()}{' '}
+                  m² · {commercialUseTypeLabel(space.space.useType)}
+                </p>
+                <p className="mt-2">
+                  {space.pricing.quotedRent
+                    ? `${money(space.pricing.quotedRent.amountMinor)} / ${
+                        space.pricing.quotedRent.chargeBasis === 'per_m2_month' ? 'm²' : 'month'
+                      } quoted`
+                    : 'Quoted rent to confirm'}
+                </p>
+                <p className="font-medium">
+                  Estimated occupancy: {money(space.costPassport.monthlyMinimumMinor)}–
+                  {money(space.costPassport.monthlyMaximumMinor)} / month
+                </p>
+                {space.costPassport.unknownComponentCodes.length ? (
+                  <p className="text-sm text-amber-700">
+                    Still unresolved:{' '}
+                    {space.costPassport.unknownComponentCodes.join(', ').replace(/_/g, ' ')}
+                  </p>
+                ) : null}
+                <p className="mt-2 text-sm text-slate-700">
+                  {space.availability.label}
+                  {space.availability.confirmedAt
+                    ? ` · confirmed ${String(space.availability.confirmedAt).slice(0, 10)}`
+                    : ''}
+                  {space.availability.source ? ` by ${space.availability.source}` : ''}
+                </p>
+              </div>
+            </Link>
+          );
+        })}
+      </section>
+
+      {!unsupportedLocationScope && !results.isLoading && totalResults === 0 ? (
+        <p>No published Commercial spaces match these requirements.</p>
+      ) : null}
+
+      {totalResults > PAGE_SIZE ? (
         <nav
           aria-label="Result pages"
           className="flex items-center justify-between rounded border bg-white p-4"
         >
-          <Button
-            type="button"
-            variant="outline"
+          <button
+            className="rounded border px-3 py-2 disabled:opacity-40"
             disabled={safePage === 0}
             onClick={() => changePage(safePage - 1)}
           >
             Previous
-          </Button>
+          </button>
           <p className="text-sm text-slate-600">
             Page {safePage + 1} of {pageCount} · {totalResults} spaces
           </p>
-          <Button
-            type="button"
-            variant="outline"
+          <button
+            className="rounded border px-3 py-2 disabled:opacity-40"
             disabled={safePage >= pageCount - 1}
             onClick={() => changePage(safePage + 1)}
           >
             Next
-          </Button>
+          </button>
         </nav>
-      )}
+      ) : null}
     </main>
   );
 }

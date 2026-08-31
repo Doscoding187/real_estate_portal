@@ -39,6 +39,13 @@ type LeadItem = {
     city: string;
     price: number;
   } | null;
+  commercial?: {
+    listingTitle: string;
+    spaceIdentifier: string;
+    useType: string;
+    city: string | null;
+    province: string | null;
+  } | null;
 };
 
 type PipelineData = Record<PipelineStageKey, LeadItem[]>;
@@ -538,7 +545,7 @@ export default function AgentAnalytics() {
                               <div>
                                 <p className="text-sm font-semibold text-slate-900">{lead.name}</p>
                                 <p className="text-xs text-slate-500">
-                                  {lead.property?.title || 'General enquiry'}
+                                  {lead.commercial?.listingTitle || lead.property?.title || 'General enquiry'}
                                 </p>
                               </div>
                               <div className="text-right">
