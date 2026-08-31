@@ -2,6 +2,9 @@
 # Comparison baseline: origin/main at 79aa137a49ed61355bfca9678533e6098ec33424.
 # `unique_patch_count` and `equivalent_patch_count` are from `git cherry -v origin/main <tip>`.
 # Patch equivalence is triage evidence, not approval to discard requirements or generated artifacts.
+# Final semantic decisions for every row are recorded in
+# `repository-convergence-2026-08-31-classification.md`; this TSV retains the
+# original preliminary disposition and object-level comparison evidence.
 source_branch	object_id	tree_relation	unique_patch_count	equivalent_patch_count	range_commit_count	preliminary_disposition	subject	archive_ref
 archive/geography-territory-coverage-pipeline-20260831	28d1432ab22ada75cb008b6339aa34ad55b772da	tree-differs-from-origin-main	5	0	7	unique-patches-require-semantic-review	archive: preserve pre-main-cleanup worktree state	refs/archive/repository-convergence-20260831/local-only-branch-tips/archive/geography-territory-coverage-pipeline-20260831
 audit/mvp-readiness-2026-08-22	d9358f84509ed9d19e0a6960219274043774ee13	tree-differs-from-origin-main	1	0	1	unique-patches-require-semantic-review	docs(audit): property listify MVP readiness audit 2026-08-22 @ 8a3442a0	refs/archive/repository-convergence-20260831/local-only-branch-tips/audit/mvp-readiness-2026-08-22
