@@ -1,4 +1,4 @@
-import { desc, eq } from 'drizzle-orm';
+import { asc, desc, eq } from 'drizzle-orm';
 import { getDb } from '../db-connection';
 import { slLeadContexts, slMessages, slPlaces, slSpaces } from '../../drizzle/schema';
 
@@ -16,6 +16,7 @@ export interface SharedLivingLeadCustodyResolution {
   placeId: number;
   spaceId: number | null;
   placeSlug: string;
+  ownerUserId: number;
   spaceLabelSnapshot: string;
   spaceTypeSnapshot: string;
 }
@@ -33,6 +34,7 @@ export async function resolveSharedLivingLeadCustody(input: {
       id: slPlaces.id,
       slug: slPlaces.slug,
       status: slPlaces.status,
+      ownerUserId: slPlaces.ownerUserId,
     })
     .from(slPlaces)
     .where(eq(slPlaces.id, input.slPlaceId))
@@ -64,6 +66,7 @@ export async function resolveSharedLivingLeadCustody(input: {
     placeId: place.id,
     spaceId,
     placeSlug: place.slug,
+    ownerUserId: Number(place.ownerUserId),
     spaceLabelSnapshot,
     spaceTypeSnapshot,
   };
@@ -97,7 +100,9 @@ export interface SharedLivingThreadView {
   messages: Array<{ id: number; authorKind: string; body: string; createdAt: string }>;
 }
 
-export async function threadViewByToken(captureRequestId: string): Promise<SharedLivingThreadView | null> {
+export async function threadViewByToken(
+  captureRequestId: string,
+): Promise<SharedLivingThreadView | null> {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
   const { leads } = await import('../../drizzle/schema');
@@ -137,20 +142,6 @@ export async function threadViewByToken(captureRequestId: string): Promise<Share
   };
 }
 
-async function leadPlaceOwnerId(leadId: number): Promise<number | null> {
-  const db = await getDb();
-  if (!db) return null;
-  const { leads } = await import('../../drizzle/schema');
-  const [row] = await db
-    .select({ ownerId: slPlaces.ownerUserId })
-    .from(leads)
-    .innerJoin(slLeadContexts, eq(slLeadContexts.leadId, leads.id))
-    .innerJoin(slPlaces, eq(slLeadContexts.placeId, slPlaces.id))
-    .where(eq(leads.id, leadId))
-    .limit(1);
-  return row ? Number(row.ownerId) : null;
-}
-
 export async function replyByToken(
   captureRequestId: string,
   body: string,
@@ -162,6 +153,10 @@ export async function replyByToken(
   const [lead] = await db
     .select({ id: leads.id })
     .from(leads)
+    // A capture request ID exists across the wider lead platform. A guest
+    // capability may only append to the Shared Living thread it was issued
+    // for; it must never become a write token for another lead domain.
+    .innerJoin(slLeadContexts, eq(slLeadContexts.leadId, leads.id))
     .where(eq(leads.captureRequestId, captureRequestId))
     .limit(1);
   if (!lead) return { ok: false, reason: 'Thread not found.' };
@@ -183,19 +178,72 @@ export async function listerOwnsThread(userId: number, captureRequestId: string)
   return Boolean(row && Number(row.ownerId) === userId);
 }
 
+export async function replyAsListerThread(
+  userId: number,
+  captureRequestId: string,
+  body: string,
+): Promise<boolean> {
+  if (!(await listerOwnsThread(userId, captureRequestId))) return false;
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  const { leads } = await import('../../drizzle/schema');
+  const [lead] = await db
+    .select({ id: leads.id })
+    .from(leads)
+    .where(eq(leads.captureRequestId, captureRequestId))
+    .limit(1);
+  if (!lead) return false;
+  await appendThreadMessage({
+    leadId: Number(lead.id),
+    authorKind: 'lister',
+    senderUserId: userId,
+    body,
+  });
+  return true;
+}
+
+/** A durable, owner-scoped inbox is the Shared Living delivery destination. */
+export async function listListerThreads(userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  const { leads } = await import('../../drizzle/schema');
+  return db
+    .select({
+      leadId: leads.id,
+      token: leads.captureRequestId,
+      leadStatus: leads.status,
+      deliveryStatus: leads.deliveryStatus,
+      placeSlug: slPlaces.slug,
+      spaceLabelSnapshot: slLeadContexts.spaceLabelSnapshot,
+      createdAt: leads.createdAt,
+    })
+    .from(slLeadContexts)
+    .innerJoin(leads, eq(slLeadContexts.leadId, leads.id))
+    .innerJoin(slPlaces, eq(slLeadContexts.placeId, slPlaces.id))
+    .where(eq(slPlaces.ownerUserId, userId))
+    .orderBy(desc(leads.createdAt));
+}
+
+/** The generic capability view is only returned to a lister after ownership is proven. */
+export async function listerThreadView(userId: number, captureRequestId: string) {
+  if (!(await listerOwnsThread(userId, captureRequestId))) return null;
+  return threadViewByToken(captureRequestId);
+}
+
 export async function listThreadMessages(leadId: number) {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
   return db
     .select({
       id: slMessages.id,
+      authorKind: slMessages.authorKind,
       senderUserId: slMessages.senderUserId,
       body: slMessages.body,
       createdAt: slMessages.createdAt,
     })
     .from(slMessages)
     .where(eq(slMessages.leadId, leadId))
-    .orderBy(desc(slMessages.createdAt));
+    .orderBy(asc(slMessages.createdAt));
 }
 
 export async function ensureLeadContextRow(input: {

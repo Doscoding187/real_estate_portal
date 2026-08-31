@@ -7,7 +7,6 @@ import { EmailService } from './_core/emailService';
 import { developerSubscriptionService } from './services/developerSubscriptionService';
 import { developmentService } from './services/developmentService';
 import { publicDevelopmentSearchService } from './services/publicDevelopmentSearchService';
-import { searchSharedLivingSpaces } from './services/sharedLivingPublicService';
 import { searchPublicLand } from './services/landPublicService';
 import { getDeveloperByUserId, requireDeveloperProfileByUserId } from './services/developerService'; // [NEW] Import service methods
 import { getPublisherById } from './services/cataloguePublisherService';
@@ -900,28 +899,6 @@ export const developerRouter = router({
             : [],
       });
 
-      const mapSharedLivingSpace = (
-        space: Awaited<ReturnType<typeof searchSharedLivingSpaces>>['items'][number],
-      ): FeedItem => ({
-        id: String(space.spaceId),
-        kind: 'shared_living',
-        title: space.label,
-        city: space.locationDisplay,
-        suburb: '',
-        priceFrom: space.rentUnknown ? null : space.rentAmountMinor / 100,
-        priceTo: space.rentUnknown ? null : space.rentAmountMinor / 100,
-        image: '',
-        href: space.href,
-        listingType: 'rent',
-        sharedLiving: {
-          accommodationType: space.accommodationType,
-          bathroomAccess: space.bathroomAccess,
-          furnishedState: space.furnishedState,
-          rentUnknown: space.rentUnknown,
-          billsIncluded: space.billsIncluded,
-        },
-      });
-
       const mapPublicLand = (
         land: Awaited<ReturnType<typeof searchPublicLand>>[number],
       ): FeedItem => ({
@@ -1179,13 +1156,11 @@ export const developerRouter = router({
         }
 
         if (input.tab === 'shared_living') {
-          const location =
-            locationFilter.suburb || locationFilter.city || locationFilter.province || undefined;
-          const publicSearch = await searchSharedLivingSpaces({ location });
-          return {
-            items: publicSearch.items.slice(0, limit).map(mapSharedLivingSpace),
-            source: 'shared_living',
-          };
+          // This legacy feed accepts display location text only. Shared
+          // Living accepts typed canonical geography only at /shared-living,
+          // so this boundary deliberately hands off rather than widening a
+          // display-location request to a national result set.
+          return { items: [], source: 'shared_living' };
         }
 
         // Commercial consumer intent is owned by the dedicated Commercial Leasing

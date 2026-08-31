@@ -88,6 +88,7 @@ const ProExplorePage = lazy(() => import('./pages/pro/ProExplorePage'));
 const SuperAdminDashboard = lazy(() => import('@/pages/admin/SuperAdminDashboard'));
 const AdminPropertyReview = lazy(() => import('./pages/admin/AdminPropertyReview'));
 const LandReviewWorkspace = lazy(() => import('./pages/admin/LandReviewWorkspace'));
+const SharedLivingReviewWorkspace = lazy(() => import('./pages/admin/SharedLivingReviewWorkspace'));
 const PlotsAndLand = lazy(() => import('./pages/PlotsAndLand'));
 const FarmsAndSmallholdings = lazy(() => import('./pages/FarmsAndSmallholdings'));
 const LandDetail = lazy(() => import('./pages/LandDetail'));
@@ -252,6 +253,11 @@ function Router() {
               <LandReviewWorkspace />
             </RequireRole>
           </Route>
+          <Route path="/admin/shared-living-review">
+            <RequireRole role="super_admin">
+              <SharedLivingReviewWorkspace />
+            </RequireRole>
+          </Route>
 
           {/* Compatibility edge: preserve inbound query state, then hand off
               immediately to the canonical Buy transaction root. */}
@@ -383,13 +389,13 @@ function Router() {
           <Route path="/new-developments" component={DevelopmentsDemo} />
           <Route path="/commercial" component={CommercialOffice} />
           <Route path="/shared-living" component={SharedLiving} />
-          <Route path="/shared-living/thread/:token" component={SharedLivingThread} />
-          <Route path="/shared-living/:slug" component={SharedLivingDetail} />
           <Route path="/shared-living/list">
-            <RequireRole role="agent">
+            <RequireRole role={['visitor', 'agent']} unauthenticatedAuthEntry="register">
               <SharedLivingLister />
             </RequireRole>
           </Route>
+          <Route path="/shared-living/thread/:token" component={SharedLivingThread} />
+          <Route path="/shared-living/:slug" component={SharedLivingDetail} />
           <Route path="/commercial/:slug" component={CommercialOfficeDetail} />
           {/* Redirect Legacy /developments to /new-developments */}
           <Route
