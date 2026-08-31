@@ -1,6 +1,6 @@
 # Repository Convergence Programme — Classification Decisions
 
-**Status:** Partial review; high-risk database, geography, and live-journey batch complete
+**Status:** Dirty-worktree review complete; local branch-tip semantic review continues
 **Forward baseline:** `origin/main` at `79aa137a49ed61355bfca9678533e6098ec33424`
 **Recovery namespace:** `refs/archive/repository-convergence-20260831/`
 
@@ -45,6 +45,33 @@ widen, or infer geography from display text.
 | `stashes/stash-0` and `stashes/stash-1` | Agency listing-performance queue, seller reviews, and price-revision handoff. | **Superseded** | Current `main` contains `drizzle/schema/listingPerformance.ts`, the Agency router operations, client workspace, integration tests, and the historical `0071`/`0072` migrations under `_archived/pre-canonical-baseline/`. The live model is represented by the canonical baseline rather than the old migration lane. | Never pop either stash. Retain both snapshots; no source merge is needed. |
 | `stashes/stash-2` | Temporary main-sync migration-runner and inventory-test work, including untracked old SQL files. | **Superseded / archive-only** | Its SQL belongs to the retired pre-canonical migration lane, now preserved under `server/migrations/_archived/pre-canonical-baseline/`. Current migration authority is manifest-led and was validated by the static gate above. | Keep the stash ref as forensic evidence only. Do not apply its runner or SQL changes. |
 
+## Remaining dirty-worktree decisions
+
+| Preserved item | Classification | Current-baseline evidence and forward action |
+| --- | --- | --- |
+| `worktrees/real_estate_portal_clone-5c6283fec17d/working-tree` | **Generated/archive-only** | The 18 files are local uploads and machine-specific configuration, not reproducible product source. The recovery artifact archive retains them; do not add them to source control. |
+| `worktrees/listify-advertise-commercial-truth-a3aa19cea399/working-tree` | **Archive-only** | The two runtime edits only widen local CORS/dev-port allowances (`3010`/`5010`). No current in-repository consumer requires those ports, so widening the public server surface is not justified. |
+| `worktrees/listify-commercial-monetization-audit-8d4adbbdfe6d/working-tree` | **Research archive** | This is a point-in-time audit. The commercial and Land journeys have since changed materially; retain it as product research, not current documentation or runtime work. |
+| `worktrees/listify-developer-listing-engine-a507858def4a/working-tree` | **Superseded** | All 13 changed paths have later current-main evolution, including developer identity/catalogue custody, development discovery validation, buyer corrections, and current lead flow. Do not revive its older writable-brand/derived-listing contracts. |
+| `worktrees/listify-development-home-v1-653ae226dc45/working-tree` | **Generated/archive-only** | The sole file is a generated frontend inventory report. It remains in the artifact recovery bundle and has no source-integration value. |
+| `worktrees/listify-dle-reconstruction-1d759b0338ff/working-tree` | **Superseded / archive-only** | The 41-file reconstruction predates canonical listing, location, pricing, media, revision, and developer lifecycle contracts and contains an obsolete mocked presentation model. Do not resurrect a parallel listing engine. |
+| `worktrees/listify-doe-s2-audit-4e2b04970faf/working-tree` | **Research archive** | The developer pain-point/milestone document is retained as research input; current developer product work has advanced beyond its point-in-time conclusions. |
+| `worktrees/listify-gauteng-canonical-promotion-5e1b0bff434e/working-tree` | **Superseded** | The captured v0.1 Gauteng review CSV is replaced by current governed v0.2 outputs and policy, which reduce the former review set and keep promotion decisions explicit. Preserve the older evidence; do not overwrite current artifacts. |
+| `worktrees/listify-hero-worktree-reconciliation-audit-c1dda6810e76/working-tree` | **Superseded documentation** | Its hero-gap analysis predates the current homepage/discovery journey work. Keep the audit as historical reasoning only. |
+| `worktrees/listify-homepage-hero-audit-357ba5c9e166/working-tree` | **Superseded documentation** | Current homepage journey and search-to-lead work addresses the audited surface. The old document must not become a competing implementation brief. |
+| `worktrees/listify-land-consumer-journey-convergence-4c221cb6f0d9/working-tree` | **Generated/archive-only** | The sole temporary Vitest configuration is execution state, not a product contract. |
+| `worktrees/listify-listing-wizard-overhaul-2dae3de0efc6/working-tree` | **Superseded / archive-only** | It contains simulated image compression, virtual-tour, engagement, notification, and indexing claims outside the current media/revision lifecycle. Current secure-media, public-presentation, and atomic-revision work is the authority. |
+| `worktrees/listify-location-discovery-v1-foundation-731691a5491e/working-tree` | **Superseded** | Its older discovery catalog and fallback model predates the governed coverage, canonical-intent, search-area, and consumer-discoverability pipeline. Continue only from current geography authority. |
+| `worktrees/listify-next-mvp-journey-audit-2dfeea5874d7/working-tree` | **Superseded documentation** | Later public search-to-lead reliability, P-BUY, and discovery work makes the old launch brief historical context rather than a current plan. |
+| `worktrees/listify-plds-f1-canonical-frontend-foundation-e3cb77523761/working-tree` | **Superseded / evidence archive** | Its visual-test wiring and browser evidence predates the current property-result-card evidence and visual-test practice. Retain the artifacts, but do not reintroduce the old frontend authority. |
+| `worktrees/listify-ple-acceptance-66557e2b-53f0d90af288/working-tree` and `worktrees/listify-ple-acceptance-889a465f-0cdd5b9b4223/working-tree` | **Generated/archive-only** | These are local-media/browser captures only. They remain in the verified artifact archive. |
+| `worktrees/listify-provincial-discovery-gauteng-s0-45baf4e3e0b5/working-tree` | **Superseded by current provincial maturity** | The staged twelve-file snapshot is retained together with its staged index, but the source has since been followed by provincial maturity and correction commits. Reconcile any future province change against the current governed provincial route, not this pre-maturity staging area. |
+| `worktrees/listify-provincial-fallback-hero-refinement-6f3ddb7aa857/working-tree` | **Design evidence retained; raw implementation/archive-only** | The untracked audit usefully maps provincial visual ownership, and eight province hero PNGs are safely preserved. Its associated `GeographyComposer` constructs generic Land/commercial routes and sends developments by display-text location, violating the current single-authority handoff contract. The images also lack approved source/provenance and payload review. Do not merge the old branch or assets. A future current-main province-experience slice may use the audit's component-boundary insight only after preserving governed handoffs and approving image provenance/size. |
+| `worktrees/listify-public-navigation-gateway-v1-4af12a5dedcd/working-tree` | **Superseded** | The snapshot exposes specialist journeys through generic property URLs. Current public navigation and commercial/Land handoffs own these routes and preserve governed scopes. |
+| `worktrees/listify-services-engine-clean-5f803662c373/working-tree` | **Research archive** | The stakeholder-map documents are retained for product context. Their corresponding current documents have evolved, so the snapshot is not copied into active documentation. |
+| `worktrees/listify-services-engine-phase0-a04bf22c2a1d/working-tree` | **Archive-only implementation; retained product hypothesis** | The old service-provider notification/orphan-scheduler implementation relies on retired migration and delivery assumptions. Do not merge it. If delivery/reassignment becomes an approved priority, first define the current domain, ownership, and visibility contract in a dedicated workstream. |
+| `worktrees/property-listify-saved-search-ci-repair-2374fc505a41/working-tree` | **Generated/archive-only** | The three files are captured CI output, retained as evidence rather than source. |
+
 ## Explicitly retained requirements
 
 The following recovered requirements remain live work rather than abandoned
@@ -58,11 +85,14 @@ implementation:
    with one canonical request authority and no silent geographic widening.
 4. Signed-in public enquiries must persist their prospect identity link in the
    same capture transaction; this requirement is implemented in PR #547.
+5. Any future provincial experience refinement must retain the current governed
+   geography handoff and use only approved, payload-reviewed visual assets.
 
 The first two require separate current-main PRs. The third is already a
 forward-integrated governed workstream; its historical snapshots remain
 preserved but are not merge candidates. The fourth has a focused current-main
-PR open for review.
+PR open for review. The fifth is a constraint on any separately authorized
+visual slice, not approval to merge the archived implementation.
 
 ## Forward-integration PRs
 
