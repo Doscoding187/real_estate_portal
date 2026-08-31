@@ -57,6 +57,7 @@
     "test:visual:ui": "playwright test --ui",
     "test:visual:update": "playwright test --update-snapshots",
     "test:visual:report": "playwright show-report",
+    "artifacts:property-discovery": "tsx scripts/capturePropertyDiscoveryArtifacts.ts",
     "process-lovable": "node scripts/process-lovable-components.mjs",
     "extract-lovable": "node scripts/extract-lovable-components.mjs",
     "db:target": "tsx scripts/databaseAuthorityCli.ts context --operation=read-only-connect",
