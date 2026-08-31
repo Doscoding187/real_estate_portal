@@ -10,6 +10,10 @@ import {
 } from '../../shared/publicSearchPagination';
 import type { PropertyFilters, SearchCardResult, SortOption } from '../../shared/types';
 import { validatePublicSearchInput } from '../../shared/publicSearchValidation';
+import {
+  BUY_PUBLIC_PROPERTY_TYPES,
+  RENT_PUBLIC_PROPERTY_TYPES,
+} from '../../shared/property-taxonomy';
 import type { SearchAreaSummary } from '../../shared/searchScope';
 import {
   parseCanonicalLocationId,
@@ -19,6 +23,10 @@ import {
   DEFAULT_SEARCH_RESULT_SORT,
   isSearchResultSortOption,
 } from '../../shared/transactionalSearchState';
+import {
+  COMMERCIAL_PUBLIC_JOURNEY_HANDOFF_MESSAGE,
+  isCommercialMarketingPropertyType,
+} from '../../shared/commercial-domain';
 import { developmentDerivedListingService } from './developmentDerivedListingService';
 import { locationResolver, type ResolvedLocation } from './locationResolverService';
 import { propertySearchService } from './propertySearchService';
@@ -281,6 +289,27 @@ function buildSearchBounds(input: PublicSearchInventoryInput) {
   };
 }
 
+/**
+ * The generic Buy/Rent spine has an explicit public universe. Commercial
+ * leasing has its own Asset → Space → Availability authority and must never
+ * re-enter generic cards merely because an older projection is still stored.
+ */
+function genericJourneyPropertyTypes(
+  listingType: 'sale' | 'rent',
+  requestedPropertyType?: string,
+): NonNullable<PropertyFilters['propertyType']> {
+  // Keep the lower-level adapter fail-closed even if a future caller bypasses
+  // the public service boundary. Commercial identity belongs to the dedicated
+  // Asset → Space → Availability journey, never to generic source filters.
+  if (isCommercialMarketingPropertyType(requestedPropertyType)) {
+    throw new Error(COMMERCIAL_PUBLIC_JOURNEY_HANDOFF_MESSAGE);
+  }
+  if (requestedPropertyType) return [requestedPropertyType as any];
+  return [
+    ...(listingType === 'sale' ? BUY_PUBLIC_PROPERTY_TYPES : RENT_PUBLIC_PROPERTY_TYPES),
+  ] as any;
+}
+
 function buildPublicFilters(
   input: PublicSearchInventoryInput,
   location: ResolvedLocation | null,
@@ -296,7 +325,7 @@ function buildPublicFilters(
           suburbId: location.suburb?.id,
         }
       : undefined,
-    propertyType: input.propertyType ? [input.propertyType as any] : undefined,
+    propertyType: genericJourneyPropertyTypes(input.listingType!, input.propertyType),
     listingType: input.listingType,
     minPrice: input.minPrice,
     maxPrice: input.maxPrice,
@@ -325,7 +354,7 @@ function buildDevelopmentFilters(
     province: location?.province.slug || input.province,
     city: location?.city?.slug || input.city,
     suburb: location?.suburb ? [location.suburb.slug] : input.suburb,
-    propertyType: input.propertyType ? [input.propertyType as any] : undefined,
+    propertyType: genericJourneyPropertyTypes(input.listingType!, input.propertyType),
     listingType: input.listingType,
     minPrice: input.minPrice,
     maxPrice: input.maxPrice,
@@ -368,6 +397,10 @@ export class PublicSearchService {
   }
 
   async searchInventory(input: PublicSearchInventoryInput): Promise<PublicSearchInventoryResult> {
+    if (isCommercialMarketingPropertyType(input.propertyType)) {
+      throw new Error(COMMERCIAL_PUBLIC_JOURNEY_HANDOFF_MESSAGE);
+    }
+
     const validationIssue = validatePublicSearchInput(input);
     if (validationIssue) {
       throw new Error(validationIssue.message);
@@ -403,7 +436,10 @@ export class PublicSearchService {
         return emptyLocationResult(input, 'unavailable', factualResolution.message);
       }
 
-      if (factualResolution.scope.kind === 'search_area' || factualResolution.scope.kind === 'multi_location') {
+      if (
+        factualResolution.scope.kind === 'search_area' ||
+        factualResolution.scope.kind === 'multi_location'
+      ) {
         return emptyLocationResult(
           input,
           'unavailable',

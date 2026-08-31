@@ -206,6 +206,7 @@ export default function AgencyLeads() {
           <div className="grid gap-4">
             {visibleLeads.map((lead: any) => {
               const priceLabel = formatMoney(lead.property?.price);
+              const commercial = lead.commercial;
 
               return (
                 <Card key={lead.id} className="overflow-hidden">
@@ -289,7 +290,25 @@ export default function AgencyLeads() {
                               <Building2 className="h-4 w-4" />
                               Listing
                             </p>
-                            {lead.property ? (
+                            {commercial ? (
+                              <>
+                                <p className="font-medium text-slate-950">
+                                  {commercial.listingTitle}
+                                </p>
+                                <p className="text-emerald-700">
+                                  Commercial lease · {commercial.useType?.replace(/_/g, ' ')} ·{' '}
+                                  {commercial.spaceIdentifier}
+                                  {commercial.rentableAreaM2 != null
+                                    ? ` · ${Number(commercial.rentableAreaM2).toLocaleString()} m²`
+                                    : ''}
+                                </p>
+                                <p className="text-slate-500">
+                                  {[commercial.city, commercial.province]
+                                    .filter(Boolean)
+                                    .join(', ')}
+                                </p>
+                              </>
+                            ) : lead.property ? (
                               <>
                                 <p className="font-medium text-slate-950">{lead.property.title}</p>
                                 <p className="text-slate-500">

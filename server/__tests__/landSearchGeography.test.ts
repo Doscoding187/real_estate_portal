@@ -28,4 +28,10 @@ describe('Land public-search geography authority', () => {
       'locationIds',
     );
   });
+
+  it('requires exactly one complete authority instead of widening an empty or partial request', () => {
+    expect(validateLandSearchGeography({})?.path).toBe('city');
+    expect(validateLandSearchGeography({ city: 'Johannesburg' })?.path).toBe('province');
+    expect(validateLandSearchGeography({ province: 'Gauteng' })?.path).toBe('city');
+  });
 });

@@ -243,8 +243,8 @@ const JOURNEY_PRESENTATION: Partial<
     ],
   },
   commercial: {
-    placeholder: 'Search office space by city, suburb, or area...',
-    guidance: 'Find office space by the needs that matter to your business.',
+    placeholder: 'Search commercial space by city, suburb, or area...',
+    guidance: 'Find the commercial space that meets your business needs.',
     primaryFilters: [
       {
         key: 'commercialMinAreaM2',

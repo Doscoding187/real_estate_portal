@@ -15,14 +15,16 @@ export interface LandSearchGeographyInput {
 }
 
 export interface LandSearchGeographyIssue {
-  path: 'city' | 'locationId' | 'locationIds' | 'searchAreaId';
+  path: 'city' | 'province' | 'locationId' | 'locationIds' | 'searchAreaId';
   message: string;
 }
 
 export function validateLandSearchGeography(
   input: LandSearchGeographyInput,
 ): LandSearchGeographyIssue | undefined {
-  const hasManualGeography = Boolean(input.city || input.province);
+  const hasCity = Boolean(input.city?.trim());
+  const hasProvince = Boolean(input.province?.trim());
+  const hasManualGeography = hasCity || hasProvince;
   const locationIds = input.locationIds || [];
   const hasLocationIds = locationIds.length > 0;
 
@@ -76,6 +78,13 @@ export function validateLandSearchGeography(
     };
   }
 
+  if (hasManualGeography && (!hasCity || !hasProvince)) {
+    return {
+      path: hasCity ? 'province' : 'city',
+      message: 'A typed Land search requires both city and province.',
+    };
+  }
+
   if (input.searchAreaId && (input.locationId || hasLocationIds || hasManualGeography)) {
     return {
       path: 'searchAreaId',
@@ -87,6 +96,14 @@ export function validateLandSearchGeography(
     return {
       path: input.locationId ? 'locationId' : 'locationIds',
       message: 'A canonical Land location cannot be combined with typed city or province filters.',
+    };
+  }
+
+  if (!hasManualGeography && !input.locationId && !hasLocationIds && !input.searchAreaId) {
+    return {
+      path: 'city',
+      message:
+        'Choose one Land geography authority: a typed city and province, canonical location, sibling locations, or an approved Search Area.',
     };
   }
 

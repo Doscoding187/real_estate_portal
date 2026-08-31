@@ -41,11 +41,11 @@ describe('commercial location scope classification', () => {
     });
   });
 
-  it('prefers explicit ids over a legacy display-name token', () => {
+  it('rejects simultaneous canonical ids and a text token instead of choosing a precedence', () => {
     const classified = classifyCommercialLocationScope({
       location: 'Sandton',
       locationIds: ['city:12'],
     });
-    expect(classified).toEqual({ status: 'ids', level: 'city', ids: [12] });
+    expect(classified).toEqual({ status: 'invalid' });
   });
 });

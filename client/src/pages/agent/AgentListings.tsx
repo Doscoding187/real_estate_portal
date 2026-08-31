@@ -6,7 +6,7 @@ import { agentPageStyles } from '@/components/agent/agentPageStyles';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Search, Plus, Filter, Home } from 'lucide-react';
+import { Search, Plus, Filter, Home, Building2 } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EntityStatusCard } from '@/components/dashboard/EntityStatusCard';
@@ -186,6 +186,14 @@ export default function AgentListings() {
           <h1 className={agentPageStyles.title}>My Listings</h1>
         </div>
         <div className="flex items-center gap-3">
+          <Button
+            variant="outline"
+            onClick={() => setLocation('/agent/commercial')}
+            className={agentPageStyles.ghostButton}
+          >
+            <Building2 className="h-4 w-4 mr-2" />
+            Commercial inventory
+          </Button>
           <Button
             onClick={() => setLocation('/listings/create')}
             className={agentPageStyles.primaryButton}

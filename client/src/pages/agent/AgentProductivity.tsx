@@ -28,6 +28,15 @@ type FollowUpItem = {
     city: string;
     price: number;
   } | null;
+  commercial: {
+    listingTitle: string;
+    assetName: string;
+    spaceIdentifier: string;
+    useType: string;
+    rentableAreaM2: number | null;
+    city: string | null;
+    province: string | null;
+  } | null;
 };
 
 function sameDay(left: Date, right: Date) {
@@ -242,7 +251,10 @@ export default function AgentProductivity() {
     const followUpActions = (followUps as FollowUpItem[]).slice(0, 4).map(followUp => ({
       id: `follow-up-${followUp.id}`,
       title: followUp.name,
-      description: followUp.property?.title || 'Lead follow-up is ready to work',
+      description:
+        followUp.commercial?.listingTitle ||
+        followUp.property?.title ||
+        'Lead follow-up is ready to work',
       meta: formatDateTime(followUp.nextFollowUp),
       tone: getFollowUpTone(followUp.nextFollowUp),
       badge:
@@ -568,7 +580,9 @@ export default function AgentProductivity() {
                                 </Badge>
                               </div>
                               <p className="mt-1 text-sm text-slate-600">
-                                {followUp.property?.title || 'Lead follow-up'}
+                                {followUp.commercial?.listingTitle ||
+                                  followUp.property?.title ||
+                                  'Lead follow-up'}
                               </p>
                               <p className="mt-2 text-xs font-medium uppercase tracking-[0.12em] text-slate-400">
                                 {formatDateTime(followUp.nextFollowUp)}

@@ -3,29 +3,29 @@ import { z } from 'zod';
 import { protectedProcedure, publicProcedure, router } from './_core/trpc';
 import { requireUser } from './_core/requireUser';
 import {
-  attachOfficeMarketingMedia,
-  createOfficeDraft,
+  COMMERCIAL_ASSET_KINDS,
+  COMMERCIAL_CONFIRMATION_SOURCES,
+  COMMERCIAL_ECONOMIC_COMPONENT_CODES,
+  COMMERCIAL_NONPUBLIC_AVAILABILITY_STATES,
+  COMMERCIAL_SPACE_CLASSES,
+  COMMERCIAL_SPACE_KINDS,
+  COMMERCIAL_SPECIFICATION_CODES,
+} from '../shared/commercial-domain';
+import {
+  attachCommercialMarketingMedia,
+  createCommercialDraft,
   isCommercialAuthorRole,
-  publicOfficeDetail,
-  reusableOfficeAssetsForAuthor,
-  searchPublicOffice,
-  submitOfficeForReview,
+  myCommercialInventoryForAuthor,
+  publicCommercialDetail,
+  reconfirmCommercialAvailability,
+  setCommercialAvailabilityStatus,
+  reusableCommercialAssetsForAuthor,
+  searchPublicCommercial,
+  submitCommercialForReview,
 } from './services/commercialOfficeService';
 
 const economics = z.object({
-  componentCode: z.enum([
-    'base_rent',
-    'gross_rent',
-    'operating_costs',
-    'rates_recoveries',
-    'parking',
-    'fixed_levies',
-    'utilities',
-    'security_service',
-    'other_recovery',
-    'deposit',
-    'incentive',
-  ]),
+  componentCode: z.enum(COMMERCIAL_ECONOMIC_COMPONENT_CODES),
   valueState: z.enum(['supplied', 'estimated', 'unknown', 'not_applicable']),
   chargeBasis: z
     .enum(['per_m2_month', 'per_bay_month', 'fixed_monthly', 'annual', 'once'])
@@ -34,28 +34,7 @@ const economics = z.object({
   rangeMaximumMinor: z.number().int().nonnegative().nullable(),
 });
 const specification = z.object({
-  specificationCode: z.enum([
-    'building_grade',
-    'fit_out_condition',
-    'backup_power',
-    'backup_water',
-    'fibre_connectivity',
-    'parking_bays',
-    'eaves_height_m',
-    'yard_hardstand',
-    'truck_access',
-    'roller_doors',
-    'loading_docks',
-    'power_capacity_kva',
-    'floor_loading',
-    'sprinklers',
-    'crane_capacity',
-    'frontage_visibility',
-    'footfall_context',
-    'extraction_capability',
-    'tenant_mix_context',
-    'delivery_access',
-  ]),
+  specificationCode: z.enum(COMMERCIAL_SPECIFICATION_CODES),
   valueState: z.enum(['known', 'unknown', 'unavailable', 'not_applicable']),
   numericValue: z.number().nullable(),
   textValue: z.string().max(500).nullable(),
@@ -67,7 +46,7 @@ function author(ctx: { user?: { id: number; role?: string | null } | null }) {
   if (!isCommercialAuthorRole(user.role))
     throw new TRPCError({
       code: 'FORBIDDEN',
-      message: 'Commercial Office authoring requires an authorised supplier.',
+      message: 'Commercial authoring requires an authorised supplier.',
     });
   return user;
 }
@@ -75,17 +54,18 @@ function rethrow(error: unknown): never {
   if (error instanceof TRPCError) throw error;
   throw new TRPCError({
     code: 'PRECONDITION_FAILED',
-    message: error instanceof Error ? error.message : 'Commercial Office workflow action failed.',
+    message: error instanceof Error ? error.message : 'Commercial workflow action failed.',
   });
 }
 
-export const commercialOfficeRouter = router({
+export const commercialRouter = router({
   createDraft: protectedProcedure
     .input(
       z.object({
         asset: z.discriminatedUnion('mode', [
           z.object({
             mode: z.literal('new'),
+            assetKind: z.enum(COMMERCIAL_ASSET_KINDS),
             name: z.string().trim().min(2).max(255),
             provinceId: z.number().int().positive(),
             cityId: z.number().int().positive(),
@@ -110,22 +90,16 @@ export const commercialOfficeRouter = router({
           z.object({ mode: z.literal('existing'), commercialAssetId: z.number().int().positive() }),
         ]),
         space: z.object({
+          spaceClass: z.enum(COMMERCIAL_SPACE_CLASSES),
+          spaceKind: z.enum(COMMERCIAL_SPACE_KINDS),
           identifier: z.string().trim().min(1).max(255),
           rentableAreaM2: z.number().positive(),
           usableAreaM2: z.number().positive().nullable().optional(),
-          floorLevel: z.string().trim().max(100).nullable().optional(),
         }),
         availability: z.object({
           availabilityState: z.enum(['available_confirmed', 'available_upcoming']),
           occupationDate: z.string().date().nullable().optional(),
-          confirmationSource: z.enum([
-            'broker',
-            'landlord',
-            'owner',
-            'asset_manager',
-            'property_fund',
-            'other',
-          ]),
+          confirmationSource: z.enum(COMMERCIAL_CONFIRMATION_SOURCES),
           confirmationSourceLabel: z.string().trim().max(255).nullable().optional(),
           lastConfirmedAt: z.string().datetime(),
           reconfirmationDueAt: z.string().datetime(),
@@ -154,23 +128,65 @@ export const commercialOfficeRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       try {
-        return await createOfficeDraft({ ...input, userId: author(ctx).id } as any);
+        return await createCommercialDraft({ ...input, userId: author(ctx).id } as any);
       } catch (error) {
         return rethrow(error);
       }
     }),
-  reusableAssets: protectedProcedure.query(async ({ ctx }) => {
+  reusableAssets: protectedProcedure
+    .input(z.object({ spaceClass: z.enum(COMMERCIAL_SPACE_CLASSES) }))
+    .query(async ({ ctx, input }) => {
+      try {
+        return await reusableCommercialAssetsForAuthor(author(ctx).id, input.spaceClass);
+      } catch (error) {
+        return rethrow(error);
+      }
+    }),
+  myInventory: protectedProcedure.query(async ({ ctx }) => {
     try {
-      return await reusableOfficeAssetsForAuthor(author(ctx).id);
+      return await myCommercialInventoryForAuthor(author(ctx).id);
     } catch (error) {
       return rethrow(error);
     }
   }),
+  reconfirmAvailability: protectedProcedure
+    .input(
+      z.object({
+        commercialAvailabilityId: z.number().int().positive(),
+        availabilityState: z.enum(['available_confirmed', 'available_upcoming']),
+        occupationDate: z.string().date().nullable().optional(),
+        confirmationSource: z.enum(COMMERCIAL_CONFIRMATION_SOURCES),
+        confirmationSourceLabel: z.string().trim().max(255).nullable().optional(),
+        lastConfirmedAt: z.string().datetime(),
+        reconfirmationDueAt: z.string().datetime(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return await reconfirmCommercialAvailability({ ...input, userId: author(ctx).id });
+      } catch (error) {
+        return rethrow(error);
+      }
+    }),
+  setAvailabilityStatus: protectedProcedure
+    .input(
+      z.object({
+        commercialAvailabilityId: z.number().int().positive(),
+        availabilityState: z.enum(COMMERCIAL_NONPUBLIC_AVAILABILITY_STATES),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return await setCommercialAvailabilityStatus({ ...input, userId: author(ctx).id });
+      } catch (error) {
+        return rethrow(error);
+      }
+    }),
   submit: protectedProcedure
     .input(z.object({ listingId: z.number().int().positive() }))
     .mutation(async ({ ctx, input }) => {
       try {
-        return await submitOfficeForReview({ ...input, userId: author(ctx).id });
+        return await submitCommercialForReview({ ...input, userId: author(ctx).id });
       } catch (error) {
         return rethrow(error);
       }
@@ -179,7 +195,7 @@ export const commercialOfficeRouter = router({
     .input(z.object({ listingId: z.number().int().positive(), uploadToken: z.string().min(1) }))
     .mutation(async ({ ctx, input }) => {
       try {
-        return await attachOfficeMarketingMedia({ ...input, userId: author(ctx).id });
+        return await attachCommercialMarketingMedia({ ...input, userId: author(ctx).id });
       } catch (error) {
         return rethrow(error);
       }
@@ -190,6 +206,8 @@ export const commercialOfficeRouter = router({
         .object({
           location: z.string().trim().min(1).max(200).optional(),
           locationIds: z.array(z.string().trim().min(1).max(128)).max(10).optional(),
+          useTypes: z.array(z.enum(COMMERCIAL_SPACE_CLASSES)).min(1).max(3).optional(),
+          pricingMode: z.enum(['componentised', 'gross_quote']).optional(),
           minAreaM2: z.number().positive().optional(),
           maxAreaM2: z.number().positive().optional(),
           maxMonthlyBudgetMinor: z.number().int().nonnegative().optional(),
@@ -199,11 +217,16 @@ export const commercialOfficeRouter = router({
           backupWater: z.literal(true).optional(),
           fibreConnectivity: z.literal(true).optional(),
           minParkingBays: z.number().nonnegative().optional(),
+          minEavesHeightM: z.number().nonnegative().optional(),
+          minPowerCapacityKva: z.number().nonnegative().optional(),
+          minLoadingDocks: z.number().int().nonnegative().optional(),
+          yardHardstand: z.literal(true).optional(),
+          extractionCapability: z.literal(true).optional(),
         })
         .optional(),
     )
-    .query(({ input }) => searchPublicOffice(input)),
+    .query(({ input }) => searchPublicCommercial(input)),
   detail: publicProcedure
     .input(z.object({ slug: z.string().min(1).max(255) }))
-    .query(({ input }) => publicOfficeDetail(input.slug)),
+    .query(({ input }) => publicCommercialDetail(input.slug)),
 });

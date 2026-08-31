@@ -111,4 +111,38 @@ describe('properties.search contract', () => {
       }),
     );
   });
+
+  it('rejects Commercial from the compatibility Buy/Rent search boundary', async () => {
+    const caller = appRouter.createCaller({
+      req: { headers: {} },
+      res: {},
+      user: null,
+    } as any);
+
+    await expect(
+      caller.properties.search({
+        propertyType: 'commercial',
+        listingType: 'rent',
+        limit: 20,
+        offset: 0,
+      }),
+    ).rejects.toThrow('dedicated Commercial journey');
+    expect(mockSearchPublicInventory).not.toHaveBeenCalled();
+  });
+
+  it('rejects Commercial from the canonical public inventory boundary', async () => {
+    const caller = appRouter.createCaller({
+      req: { headers: {} },
+      res: {},
+      user: null,
+    } as any);
+
+    await expect(
+      caller.properties.searchPublicInventory({
+        propertyType: 'commercial',
+        listingType: 'rent',
+      }),
+    ).rejects.toThrow('dedicated Commercial journey');
+    expect(mockSearchPublicInventory).not.toHaveBeenCalled();
+  });
 });

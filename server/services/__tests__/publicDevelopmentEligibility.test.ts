@@ -33,9 +33,7 @@ function catalogue(
   return {
     development: { ...defaultDevelopment, ...overrides.development },
     publisher:
-      overrides.publisher === null
-        ? null
-        : { ...defaultPublisher, ...overrides.publisher },
+      overrides.publisher === null ? null : { ...defaultPublisher, ...overrides.publisher },
     organisation: overrides.organisation ?? null,
     unitTypes: overrides.unitTypes ?? [{ id: 'unit-101', developmentId: 101, isActive: 1 }],
     commercialAccess: overrides.commercialAccess ?? true,
@@ -73,6 +71,17 @@ describe('public development eligibility authority', () => {
         }),
       ),
     ).toMatchObject({ eligible: true, operatingMode: 'developer', reasons: [] });
+  });
+
+  it('keeps legacy Commercial development rows out of the public catalogue', () => {
+    const result = evaluatePublicDevelopmentEligibility(
+      catalogue({ development: { developmentType: 'commercial' } }),
+    );
+
+    expect(result).toMatchObject({
+      eligible: false,
+      reasons: expect.arrayContaining(['unsupported_development_type']),
+    });
   });
 
   it('keeps an approved developer development private without Launch Access', () => {

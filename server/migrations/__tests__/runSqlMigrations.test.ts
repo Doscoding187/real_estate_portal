@@ -99,6 +99,7 @@ function migrationFixture(includeIncrement = true) {
 
 class FakeMigrationConnection implements AuthoritySqlConnection {
   calls: Array<{ statement: string; values: readonly unknown[] }> = [];
+  queryCalls: Array<{ statement: string; values: readonly unknown[] }> = [];
   selectedDatabase: string;
   history = new Map<string, string>();
   attempts = new Map<
@@ -110,6 +111,7 @@ class FakeMigrationConnection implements AuthoritySqlConnection {
   applicationTableCount: number | null = 0;
   failStatement?: RegExp;
   failFailureUpdate = false;
+  rejectPreparedControlStatements = false;
   ended = false;
   connectionId = '314';
   lockOwnerConnectionId = '314';
@@ -120,6 +122,14 @@ class FakeMigrationConnection implements AuthoritySqlConnection {
 
   async execute(statement: string, values: readonly unknown[] = []): Promise<unknown> {
     this.calls.push({ statement, values });
+    if (
+      this.rejectPreparedControlStatements &&
+      /^(START TRANSACTION|COMMIT|ROLLBACK)$/i.test(statement.trim())
+    ) {
+      throw Object.assign(new Error('prepared transaction control is unsupported'), {
+        code: 'ER_UNSUPPORTED_PS',
+      });
+    }
     if (statement.startsWith('SELECT DATABASE()')) {
       return [[{ database_name: this.selectedDatabase }]];
     }
@@ -196,12 +206,46 @@ class FakeMigrationConnection implements AuthoritySqlConnection {
   }
 
   async query(statement: string, values: readonly unknown[] = []): Promise<unknown> {
+    this.queryCalls.push({ statement, values });
+    if (/^(START TRANSACTION|COMMIT|ROLLBACK)$/i.test(statement.trim())) return {};
     return this.execute(statement, values);
   }
 
   async end(): Promise<void> {
     this.ended = true;
   }
+}
+
+function transactionalMigrationFixture() {
+  const root = mkdtempSync(join(tmpdir(), 'listify-runner-transactional-'));
+  temporaryRoots.push(root);
+  const baselineSql = 'CREATE TABLE canonical_widget (id int);';
+  const seedSql = 'INSERT INTO canonical_widget (id) VALUES (1), (2);';
+  const baseline = entry(0, '0000_canonical_launch_baseline.sql', baselineSql, null);
+  const seed: MigrationManifestEntry = {
+    sequence: 1,
+    filename: '0001_seed_canonical_widget.sql',
+    checksum: sha256(seedSql),
+    parent: baseline.filename,
+    parentChecksum: baseline.checksum,
+    kind: 'transactional-data',
+    statementPolicy: 'transactional-dml',
+    requiredReferenceDataVersion: null,
+  };
+  writeFileSync(join(root, baseline.filename), baselineSql);
+  writeFileSync(join(root, seed.filename), seedSql);
+  const document: MigrationManifestDocument = {
+    manifestVersion: 1,
+    dialect: 'mysql',
+    historyTable: 'sql_migration_history',
+    attemptTable: 'sql_migration_attempts',
+    lockName: 'fixture_migration_lock',
+    expectedHead: seed.filename,
+    migrations: [baseline, seed],
+  };
+  const manifestPath = join(root, 'manifest.json');
+  writeFileSync(manifestPath, `${JSON.stringify(document, null, 2)}\n`);
+  return { root, manifestPath, baseline, seed };
 }
 
 afterEach(() => {
@@ -288,6 +332,36 @@ describe('manifest migration planning and durable attempts', () => {
     ]);
     expect(connection.historyTablePresent).toBe(true);
     expect(connection.attemptTablePresent).toBe(true);
+  });
+
+  it('uses the non-prepared query path for transactional control statements', async () => {
+    const fixture = transactionalMigrationFixture();
+    const { authority, authorization } = authorityFor('apply');
+    const connection = new FakeMigrationConnection(authority.context.databaseName);
+    connection.historyTablePresent = true;
+    connection.attemptTablePresent = true;
+    connection.history.set(fixture.baseline.filename, fixture.baseline.checksum);
+    connection.rejectPreparedControlStatements = true;
+
+    const result = await runSqlMigrations({
+      mode: 'apply',
+      migrationsDir: fixture.root,
+      manifestPath: fixture.manifestPath,
+      authority,
+      authorization,
+      acceptedOldHead: fixture.baseline.filename,
+      expectedNewHead: fixture.seed.filename,
+      connectionFactory: async () => connection,
+    });
+
+    expect(result.applied).toEqual([fixture.seed.filename]);
+    expect(connection.queryCalls.map(call => call.statement)).toEqual([
+      'START TRANSACTION',
+      'COMMIT',
+    ]);
+    expect(
+      connection.calls.some(call => /^(START TRANSACTION|COMMIT|ROLLBACK)$/i.test(call.statement)),
+    ).toBe(false);
   });
 
   it.each([

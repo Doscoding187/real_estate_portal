@@ -4,6 +4,8 @@ import {
   LAND_CLASSIFICATIONS,
   LAND_PUBLIC_CLASSIFICATIONS,
   deriveLandTrustState,
+  isLandMarketingAuthorityActive,
+  isLandPublicClassification,
   toPublicLandPassportAssertions,
 } from '../land-domain';
 
@@ -21,6 +23,13 @@ describe('Land domain foundation', () => {
     ]);
     expect(LAND_PUBLIC_CLASSIFICATIONS).not.toContain('farm');
     expect(LAND_PUBLIC_CLASSIFICATIONS).not.toContain('smallholding');
+    expect(isLandPublicClassification('residential_stand')).toBe(true);
+    expect(isLandPublicClassification('farm')).toBe(false);
+  });
+
+  it('does not keep an expired marketing authority publicly active', () => {
+    expect(isLandMarketingAuthorityActive({ status: 'active', expiresAt: '2026-08-20 00:00:00', now: new Date('2026-08-21T00:00:00Z') })).toBe(false);
+    expect(isLandMarketingAuthorityActive({ status: 'active', expiresAt: '2026-08-22 00:00:00', now: new Date('2026-08-21T00:00:00Z') })).toBe(true);
   });
 
   it('derives Passport trust from authority, assertions, freshness and conflicts', () => {

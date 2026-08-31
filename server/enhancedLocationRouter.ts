@@ -1,5 +1,6 @@
 import { router, publicProcedure, protectedProcedure, agentProcedure } from './_core/trpc';
 import { z } from 'zod';
+import { TRPCError } from '@trpc/server';
 import { getDb } from './db';
 import {
   provinces,
@@ -9,9 +10,21 @@ import {
   locationSearchCache,
   agentCoverageAreas,
 } from '../drizzle/schema';
-import { eq, and, or, like, desc, sql, count, inArray } from 'drizzle-orm';
+import { eq, and, or, like, desc, sql, count, inArray, ne } from 'drizzle-orm';
 import { requireUser } from './_core/requireUser';
 import { normalizeCoordinatePair } from '../shared/location-contract';
+import {
+  COMMERCIAL_PUBLIC_JOURNEY_HANDOFF_MESSAGE,
+  isCommercialMarketingPropertyType,
+} from '../shared/commercial-domain';
+
+function rejectCommercialPropertyTypes(values: readonly unknown[] | undefined): void {
+  if (!values?.some(value => isCommercialMarketingPropertyType(value))) return;
+  throw new TRPCError({
+    code: 'BAD_REQUEST',
+    message: COMMERCIAL_PUBLIC_JOURNEY_HANDOFF_MESSAGE,
+  });
+}
 
 /**
  * Enhanced Location Router - Advanced Property Discovery & Location Intelligence
@@ -106,6 +119,7 @@ export const enhancedLocationRouter = router({
       }),
     )
     .query(async ({ input }) => {
+      rejectCommercialPropertyTypes(input.filters?.propertyType);
       const db = await getDb();
       const coordinateSearch = (() => {
         if (input.location?.type !== 'coordinates') return null;
@@ -118,7 +132,10 @@ export const enhancedLocationRouter = router({
       }
 
       // Build WHERE conditions
-      const conditions = [eq(properties.status, 'published')];
+      const conditions = [
+        eq(properties.status, 'published'),
+        ne(properties.propertyType, 'commercial'),
+      ];
 
       // Location-based filtering
       if (input.location) {
@@ -437,6 +454,7 @@ export const enhancedLocationRouter = router({
       }),
     )
     .query(async ({ input }) => {
+      rejectCommercialPropertyTypes(input.filters?.propertyType);
       const db = await getDb();
 
       const latStep = (input.bounds.north - input.bounds.south) / input.gridSize;
@@ -452,7 +470,10 @@ export const enhancedLocationRouter = router({
       const heatmapData: HeatPoint[] = [];
 
       // Build filter conditions
-      const conditions = [eq(properties.status, 'published')];
+      const conditions = [
+        eq(properties.status, 'published'),
+        ne(properties.propertyType, 'commercial'),
+      ];
       if (input.filters?.propertyType?.length) {
         conditions.push(
           sql`${properties.propertyType} IN (${input.filters.propertyType.map(() => '?').join(',')})`,
@@ -522,6 +543,13 @@ export const enhancedLocationRouter = router({
         throw new Error('Property not found');
       }
 
+      if (isCommercialMarketingPropertyType(referenceProperty.propertyType)) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: COMMERCIAL_PUBLIC_JOURNEY_HANDOFF_MESSAGE,
+        });
+      }
+
       const referenceCoordinates = normalizeCoordinatePair(
         referenceProperty.publicLatitude,
         referenceProperty.publicLongitude,
@@ -535,6 +563,7 @@ export const enhancedLocationRouter = router({
       // Build similarity criteria
       const conditions = [
         eq(properties.status, 'published'),
+        ne(properties.propertyType, 'commercial'),
         sql`${properties.id} != ${input.propertyId}`,
         sql`${properties.publicLatitude} IS NOT NULL
           AND ${properties.publicLongitude} IS NOT NULL
@@ -621,6 +650,12 @@ export const enhancedLocationRouter = router({
       }),
     )
     .query(async ({ input }) => {
+      if (isCommercialMarketingPropertyType(input.propertyType)) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: COMMERCIAL_PUBLIC_JOURNEY_HANDOFF_MESSAGE,
+        });
+      }
       const db = await getDb();
 
       let locationFilter: any = null;
@@ -647,7 +682,10 @@ export const enhancedLocationRouter = router({
       }
 
       // Get property statistics
-      const conditions = [eq(properties.status, 'published')];
+      const conditions = [
+        eq(properties.status, 'published'),
+        ne(properties.propertyType, 'commercial'),
+      ];
 
       if (locationValue && locationFilter) {
         if (input.location.type === 'suburb') {

@@ -25,7 +25,7 @@ export const landPublicSearchInput = z
 
 export const landPublicRouter = router({
   search: publicProcedure
-    .input(landPublicSearchInput.optional())
+    .input(landPublicSearchInput)
     .query(({ input }) => searchPublicLand(input)),
   detail: publicProcedure
     .input(z.object({ slug: z.string().min(1) }))

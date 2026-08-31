@@ -14,6 +14,7 @@ import {
   LAND_PUBLIC_CLASSIFICATIONS,
   type LandPublicClassification,
 } from '@shared/land-domain';
+import { validateLandSearchGeography } from '@shared/landSearchGeography';
 
 const numberValue = (value: string) => (value.trim() ? Number(value) : undefined);
 
@@ -78,6 +79,7 @@ export default function PlotsAndLand() {
     minSize: numberValue(minSize),
     maxSize: numberValue(maxSize),
   };
+  const geographyIssue = validateLandSearchGeography(queryInput);
 
   useEffect(() => {
     const next = new URLSearchParams();
@@ -111,7 +113,7 @@ export default function PlotsAndLand() {
     locationIds,
   ]);
 
-  const results = trpc.landPublic.search.useQuery(queryInput);
+  const results = trpc.landPublic.search.useQuery(queryInput, { enabled: !geographyIssue });
 
   return (
     <main className="mx-auto max-w-6xl space-y-6 p-4 md:p-6">
@@ -127,6 +129,15 @@ export default function PlotsAndLand() {
         >
           That location scope is not available for Land yet. Choose a canonical province, city,
           suburb, sibling locations, or an approved Search Area.
+        </p>
+      )}
+
+      {geographyIssue && (
+        <p
+          role="status"
+          className="rounded border border-sky-200 bg-sky-50 p-3 text-sm text-sky-950"
+        >
+          {geographyIssue.message}
         </p>
       )}
 
@@ -244,13 +255,13 @@ export default function PlotsAndLand() {
             <p>{item.intendedUse || 'Land opportunity'}</p>
             <p className="mt-2 font-medium">R {Number(item.askingPrice).toLocaleString()}</p>
             <p className="text-sm text-slate-600">
-              {item.passport.trustState?.replaceAll('_', ' ') || 'Listed with disclosures'}
+              {item.passport.trustState?.replace(/_/g, ' ') || 'Listed with disclosures'}
             </p>
           </Link>
         ))}
       </section>
 
-      {!results.isLoading && !results.error && !results.data?.length && (
+      {!geographyIssue && !results.isLoading && !results.error && !results.data?.length && (
         <p className="rounded border border-dashed p-6 text-slate-600">
           No eligible Land listings match these exact filters.
         </p>

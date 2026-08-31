@@ -119,6 +119,13 @@ export const leadsRouter = router({
           consent: leadConsentSchema.optional(),
         })
         .superRefine((input, refinementContext) => {
+          if (input.commercialAvailabilityId && !input.listingId) {
+            refinementContext.addIssue({
+              code: z.ZodIssueCode.custom,
+              path: ['listingId'],
+              message: 'Commercial enquiries require the matching marketing listing.',
+            });
+          }
           if ((input.listingId || input.propertyId || input.developmentId) && !input.captureRequestId) {
             refinementContext.addIssue({
               code: z.ZodIssueCode.custom,

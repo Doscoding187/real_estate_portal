@@ -263,13 +263,13 @@ describe('EnhancedHero explicit journey selection', () => {
     );
   });
 
-  it('submits a canonical location through the Office Leasing Commercial journey', () => {
+  it('submits a canonical location through the Commercial Leasing journey', () => {
     render(<EnhancedHero activeTab="commercial" />);
 
     fireEvent.click(screen.getByTestId('select-johannesburg'));
     fireEvent.click(screen.getAllByRole('button', { name: 'Search', exact: true })[0]);
 
-    expect(setLocation).toHaveBeenCalledWith('/commercial?location=Johannesburg');
+    expect(setLocation).toHaveBeenCalledWith('/commercial?locationIds=city%3A12');
   });
 
   it('routes Plots & Land filters through the canonical Land contract', () => {

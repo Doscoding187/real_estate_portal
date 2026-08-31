@@ -66,6 +66,7 @@ describe('Plots & Land results handoff', () => {
         classification: 'residential_stand',
         maxPrice: 1_000_000,
       }),
+      { enabled: true },
     );
     expect(screen.getByRole('link', { name: /North Ridge/ })).toHaveAttribute(
       'href',
@@ -89,6 +90,7 @@ describe('Plots & Land results handoff', () => {
         searchAreaId: undefined,
         classification: 'development_land',
       }),
+      { enabled: true },
     );
   });
 
@@ -108,6 +110,7 @@ describe('Plots & Land results handoff', () => {
         searchAreaId: 'johannesburg-sandton',
         classification: 'residential_stand',
       }),
+      { enabled: true },
     );
   });
 
@@ -127,6 +130,7 @@ describe('Plots & Land results handoff', () => {
         classification: undefined,
         maxPrice: 1_000_000,
       }),
+      { enabled: true },
     );
     expect(new URLSearchParams(window.location.search).get('classification')).toBeNull();
   });

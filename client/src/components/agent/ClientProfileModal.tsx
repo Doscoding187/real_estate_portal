@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
-import { Calendar, FileText, Mail, MapPin, MessageSquare, Phone, User } from 'lucide-react';
+import { Building2, Calendar, FileText, Mail, MapPin, MessageSquare, Phone, User } from 'lucide-react';
 
 type Lead = {
   id: string;
@@ -19,6 +19,14 @@ type Lead = {
     city: string;
     price: number;
   };
+  commercial?: {
+    listingTitle: string;
+    spaceIdentifier: string;
+    useType: string;
+    rentableAreaM2: number | null;
+    city: string | null;
+    province: string | null;
+  } | null;
   createdAt: string;
   lastContact?: string;
   nextFollowUp?: string;
@@ -205,7 +213,32 @@ export function ClientProfileModal({ lead, isOpen, onClose }: ClientProfileModal
                 </CardContent>
               </Card>
 
-              {lead.property && (
+              {lead.commercial ? (
+                <Card className="shadow-soft">
+                  <CardContent className="p-6">
+                    <h3 className="mb-4 text-lg font-semibold text-gray-900">Commercial enquiry</h3>
+                    <div className="rounded-xl bg-emerald-50 p-4">
+                      <div className="flex items-start gap-4">
+                        <div className="rounded-lg bg-white p-3">
+                          <Building2 className="h-6 w-6 text-emerald-700" />
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="font-semibold text-gray-900">{lead.commercial.listingTitle}</h4>
+                          <p className="mt-1 text-sm text-emerald-800">
+                            {lead.commercial.useType.replace(/_/g, ' ')} · {lead.commercial.spaceIdentifier}
+                            {lead.commercial.rentableAreaM2 != null
+                              ? ` · ${lead.commercial.rentableAreaM2.toLocaleString()} m² rentable`
+                              : ''}
+                          </p>
+                          <p className="mt-2 text-xs text-emerald-700">
+                            Keep this enquiry with the verified Commercial advertiser.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : lead.property ? (
                 <Card className="shadow-soft">
                   <CardContent className="p-6">
                     <h3 className="text-lg font-semibold text-gray-900 mb-4">
@@ -229,7 +262,7 @@ export function ClientProfileModal({ lead, isOpen, onClose }: ClientProfileModal
                     </div>
                   </CardContent>
                 </Card>
-              )}
+              ) : null}
             </TabsContent>
 
             <TabsContent value="timeline" className="space-y-4">

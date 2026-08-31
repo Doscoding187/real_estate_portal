@@ -1,4 +1,4 @@
-import { and, eq, sql, type SQL } from 'drizzle-orm';
+import { and, eq, ne, sql, type SQL } from 'drizzle-orm';
 
 import {
   cataloguePublishers,
@@ -20,6 +20,7 @@ export type PublicDevelopmentEligibilityReason =
   | 'not_published'
   | 'not_approved'
   | 'unsupported_transaction'
+  | 'unsupported_development_type'
   | 'missing_publisher'
   | 'publisher_not_visible'
   | 'missing_source_attribution'
@@ -53,6 +54,12 @@ export function evaluatePublicDevelopmentEligibility(
   if (catalogue.activeSupersessionSource) reasons.push('active_supersession_source');
   if (!isTinyIntTrue(development.isPublished)) reasons.push('not_published');
   if (development.approvalStatus !== 'approved') reasons.push('not_approved');
+  // Commercial leasing has its own Asset → Space → Availability authority.
+  // A legacy Developer catalogue row must not become a second public
+  // Commercial inventory merely because its publication flags are live.
+  if (development.developmentType === 'commercial') {
+    reasons.push('unsupported_development_type');
+  }
 
   const supportedTransactionType = isSupportedPublicTransaction(development.transactionType)
     ? development.transactionType
@@ -163,6 +170,7 @@ export function publicDevelopmentEligibilityConditions(): SQL {
   return and(
     eq(developments.isPublished, 1),
     eq(developments.approvalStatus, 'approved'),
+    ne(developments.developmentType, 'commercial'),
     sql`(${developments.transactionType} IN ('for_sale', 'for_rent'))`,
     publisherExists,
     sql`(${developments.developmentType} = 'land' OR ${activeUnitTypeExists})`,

@@ -1,10 +1,6 @@
 import { and, desc, eq, inArray, or, sql, type SQL } from 'drizzle-orm';
 
-import {
-  cataloguePublishers,
-  developments,
-  unitTypes,
-} from '../../drizzle/schema';
+import { cataloguePublishers, developments, unitTypes } from '../../drizzle/schema';
 import {
   encodeCanonicalLocationId,
   parseCanonicalLocationId,
@@ -45,6 +41,10 @@ import {
   type PublicSearchQueryBoundary,
 } from './searchAreaQueryBoundary';
 import { searchAreaAuthority } from './searchAreaAuthority';
+import {
+  COMMERCIAL_PUBLIC_JOURNEY_HANDOFF_MESSAGE,
+  isCommercialMarketingPropertyType,
+} from '../../shared/commercial-domain';
 
 export interface PublicDevelopmentSearchInput {
   locationId?: string;
@@ -225,7 +225,6 @@ function finiteNumber(value: unknown): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-
 function canonicalLocationIdForResolvedLocation(location: ResolvedLocation): string | null {
   if (location.level === 'province') {
     return encodeCanonicalLocationId('province', location.province.id);
@@ -239,7 +238,9 @@ function canonicalLocationIdForResolvedLocation(location: ResolvedLocation): str
   return null;
 }
 
-function toLocationContext(location: ResolvedLocation): PublicDevelopmentSearchLocationContext | undefined {
+function toLocationContext(
+  location: ResolvedLocation,
+): PublicDevelopmentSearchLocationContext | undefined {
   const selected = location.suburb || location.city || location.province;
   const canonicalLocationId = canonicalLocationIdForResolvedLocation(location);
   if (!canonicalLocationId) return undefined;
@@ -306,7 +307,10 @@ function toMultiLocationContext(
 }
 
 function emptyLocationResolution(
-  locationState: Extract<LocationResolution['locationState'], 'unresolved' | 'ambiguous' | 'unavailable'>,
+  locationState: Extract<
+    LocationResolution['locationState'],
+    'unresolved' | 'ambiguous' | 'unavailable'
+  >,
   locationMessage: string,
 ): LocationResolution {
   return { locationState, locationMessage };
@@ -340,7 +344,9 @@ function sqlConditionForBoundary(boundary: PublicSearchQueryBoundary) {
   if (boundary.kind === 'canonical_members') {
     const memberConditions = getSearchAreaQueryMembers(boundary).flatMap(member => {
       if (member.scopeKind === 'province') {
-        return member.provinceName ? [locationEquals(developments.province, member.provinceName)] : [];
+        return member.provinceName
+          ? [locationEquals(developments.province, member.provinceName)]
+          : [];
       }
       if (member.scopeKind === 'metro_city') {
         return member.cityName ? [locationEquals(developments.city, member.cityName)] : [];
@@ -389,9 +395,7 @@ async function resolveCanonicalLocationBoundary(
   canonicalLocationIds: readonly string[],
 ): Promise<LocationResolution> {
   const resolutions = await Promise.all(
-    canonicalLocationIds.map(locationId =>
-      locationResolver.resolvePublicLocation({ locationId }),
-    ),
+    canonicalLocationIds.map(locationId => locationResolver.resolvePublicLocation({ locationId })),
   );
   const failed = resolutions.find(
     resolution => resolution.status !== 'resolved' || !resolution.location,
@@ -415,8 +419,7 @@ async function resolveCanonicalLocationBoundary(
   return {
     locationState: 'resolved',
     boundary,
-    locationContext:
-      locations.length === 1 ? toLocationContext(locations[0]) : undefined,
+    locationContext: locations.length === 1 ? toLocationContext(locations[0]) : undefined,
     multiLocationContext:
       locations.length > 1 ? toMultiLocationContext(locations, canonicalLocationIds) : undefined,
   };
@@ -431,7 +434,9 @@ async function resolveTextLocationBoundary(
   input: PublicDevelopmentSearchInput,
 ): Promise<LocationResolution> {
   const suburbValues = normalizeList(input.suburb);
-  const legacyLocations = (input.locations || []).map(value => String(value).trim()).filter(Boolean);
+  const legacyLocations = (input.locations || [])
+    .map(value => String(value).trim())
+    .filter(Boolean);
 
   if (suburbValues.length > 1 || legacyLocations.length > 1) {
     return emptyLocationResolution(
@@ -442,8 +447,7 @@ async function resolveTextLocationBoundary(
 
   const suburbSlug = suburbValues[0];
   const citySlug =
-    input.city ||
-    (!input.province && !suburbSlug ? legacyLocations[0] || input.search : undefined);
+    input.city || (!input.province && !suburbSlug ? legacyLocations[0] || input.search : undefined);
   const resolution = await locationResolver.resolvePublicLocation({
     provinceSlug: input.province,
     citySlug,
@@ -463,7 +467,10 @@ async function resolveTextLocationBoundary(
     ? buildCanonicalLocationQueryBoundary([resolution.location], [canonicalLocationId])
     : null;
   if (!boundary) {
-    return emptyLocationResolution('unavailable', 'The selected location has no safe query boundary.');
+    return emptyLocationResolution(
+      'unavailable',
+      'The selected location has no safe query boundary.',
+    );
   }
 
   return {
@@ -509,7 +516,10 @@ async function resolveSearchLocation(
       journey: 'developments',
     });
     if (resolution.status === 'preview') {
-      return emptyLocationResolution('unavailable', 'This Search Area is not live for Developments.');
+      return emptyLocationResolution(
+        'unavailable',
+        'This Search Area is not live for Developments.',
+      );
     }
     if (resolution.status === 'unavailable') {
       return emptyLocationResolution(
@@ -527,7 +537,9 @@ async function resolveSearchLocation(
   }
 
   if (input.searchAreaIds?.length) {
-    const searchAreaIds = Array.from(new Set(input.searchAreaIds.map(value => value.trim()).filter(Boolean)));
+    const searchAreaIds = Array.from(
+      new Set(input.searchAreaIds.map(value => value.trim()).filter(Boolean)),
+    );
     const resolutions = await Promise.all(
       searchAreaIds.map(searchAreaId =>
         searchAreaAuthority.resolveSearchArea(searchAreaId, { journey: 'developments' }),
@@ -563,16 +575,16 @@ async function resolveSearchLocation(
   const hasTextLocation = Boolean(
     input.province || input.city || input.suburb || input.locations?.length || input.search,
   );
-  return hasTextLocation
-    ? resolveTextLocationBoundary(input)
-    : { locationState: 'not_requested' };
+  return hasTextLocation ? resolveTextLocationBoundary(input) : { locationState: 'not_requested' };
 }
 
 function buildSqlLocationCondition(boundary: PublicSearchQueryBoundary | undefined) {
   return boundary ? sqlConditionForBoundary(boundary) : undefined;
 }
 
-function developmentFiltersFromInput(input: PublicDevelopmentSearchInput): PublicDevelopmentSearchFilters {
+function developmentFiltersFromInput(
+  input: PublicDevelopmentSearchInput,
+): PublicDevelopmentSearchFilters {
   const minPrice = finiteNumber(input.minPrice);
   const maxPrice = finiteNumber(input.maxPrice);
   const minBedrooms = finiteNumber(input.minBedrooms);
@@ -633,6 +645,12 @@ function emptyResult(
 
 export class PublicDevelopmentSearchService {
   async search(input: PublicDevelopmentSearchInput): Promise<PublicDevelopmentSearchResult> {
+    // Commercial development records are not an alternate public Commercial
+    // inventory. The active Commercial authority is Asset → Space →
+    // Availability leasing, so callers must enter that journey explicitly.
+    if (isCommercialMarketingPropertyType(input.developmentType)) {
+      throw new Error(COMMERCIAL_PUBLIC_JOURNEY_HANDOFF_MESSAGE);
+    }
     const location = await resolveSearchLocation(input);
     if (location.locationState !== 'not_requested' && !location.boundary) {
       return emptyResult(input, location);
@@ -645,7 +663,8 @@ export class PublicDevelopmentSearchService {
     if (input.transactionType) {
       conditions.push(eq(developments.transactionType, input.transactionType));
     }
-    if (input.developmentType) conditions.push(eq(developments.developmentType, input.developmentType));
+    if (input.developmentType)
+      conditions.push(eq(developments.developmentType, input.developmentType));
     if (input.developmentStatus) conditions.push(eq(developments.status, input.developmentStatus));
 
     const locationCondition = buildSqlLocationCondition(location.boundary);

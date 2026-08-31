@@ -16,7 +16,7 @@ import {
   users,
   suburbs,
 } from '../../drizzle/schema';
-import { eq, and, gte, lte, inArray, or, sql, SQL, desc, asc } from 'drizzle-orm';
+import { eq, and, gte, lte, inArray, or, sql, SQL, desc, asc, ne } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/mysql-core';
 import { redisCache, CacheTTL } from '../lib/redis';
 import type {
@@ -1039,6 +1039,10 @@ export class PropertySearchService {
 
     // Only show published/available properties by default
     conditions.push(or(eq(properties.status, 'available'), eq(properties.status, 'published'))!);
+    // Commercial leasing has a separate Asset → Space → Availability public
+    // authority. Generic property projections are never a valid Commercial
+    // search source, even when an old mirror still exists.
+    conditions.push(ne(properties.propertyType, 'commercial'));
     // Location filters - Use Hybrid Approach (ID OR Text) to handle legitimate legacy data
 
     // Location filters - Use Hybrid Approach (ID OR Text)

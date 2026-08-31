@@ -101,4 +101,25 @@ describe('public lead honeypot contract', () => {
     expect(mockCapturePublicLead).not.toHaveBeenCalled();
     expect(mockGetDb).not.toHaveBeenCalled();
   });
+
+  it('rejects a Commercial availability identifier unless it is paired with its marketing listing', async () => {
+    const caller = leadsRouter.createCaller({
+      req: { headers: {} },
+      res: {},
+      user: null,
+      requestId: 'commercial-lead-pair-contract-request',
+    } as any);
+
+    await expect(
+      caller.create({
+        name: 'Commercial Prospect',
+        email: 'prospect@example.test',
+        commercialAvailabilityId: 901,
+      }),
+    ).rejects.toThrow('Commercial enquiries require the matching marketing listing.');
+
+    expect(mockGetClientIp).not.toHaveBeenCalled();
+    expect(mockCheckRateLimit).not.toHaveBeenCalled();
+    expect(mockCapturePublicLead).not.toHaveBeenCalled();
+  });
 });

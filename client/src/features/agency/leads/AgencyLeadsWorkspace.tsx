@@ -608,13 +608,22 @@ export function AgencyLeadsWorkspace(props: WorkspaceContentProps) {
                     <SectionTitle icon={Eye} title="Viewing" eyebrow="Appointment" />
                   </CardHeader>
                   <CardContent className="space-y-3">
+                    {selectedLead.commercial ? (
+                      <div className="rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
+                        This enquiry is linked to the verified Commercial advertiser. Generic
+                        viewing booking is unavailable; continue the handoff through Commercial
+                        inventory.
+                      </div>
+                    ) : null}
                     <Input
                       type="datetime-local"
                       value={viewingAt}
+                      disabled={Boolean(selectedLead.commercial)}
                       onChange={event => setViewingAt(event.target.value)}
                     />
                     <select
                       value={viewingAgentId}
+                      disabled={Boolean(selectedLead.commercial)}
                       onChange={event => setViewingAgentId(event.target.value)}
                       className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm"
                     >
@@ -627,11 +636,12 @@ export function AgencyLeadsWorkspace(props: WorkspaceContentProps) {
                     </select>
                     <Textarea
                       value={viewingNotes}
+                      disabled={Boolean(selectedLead.commercial)}
                       onChange={event => setViewingNotes(event.target.value)}
                       placeholder="Viewing note"
                     />
                     <Button
-                      disabled={busy || !viewingAt}
+                      disabled={busy || !viewingAt || Boolean(selectedLead.commercial)}
                       onClick={() =>
                         scheduleViewing.mutate({
                           leadId: selectedLead.id,
@@ -662,6 +672,7 @@ export function AgencyLeadsWorkspace(props: WorkspaceContentProps) {
 
 function LeadContextCard({ lead }: { lead: AgencyLead }) {
   const priceLabel = money(lead.property?.price);
+  const commercial = lead.commercial;
   return (
     <Card className="border-slate-200">
       <CardContent className="p-4">
@@ -694,17 +705,29 @@ function LeadContextCard({ lead }: { lead: AgencyLead }) {
           <InfoBlock label="Contact" value={lead.email || lead.phone || 'No contact'} icon={Phone} />
           <InfoBlock
             label="Listing"
-            value={lead.property?.title || 'No listing context'}
+            value={commercial?.listingTitle || lead.property?.title || 'No listing context'}
             detail={
-              lead.property
-                ? [lead.property.city, lead.property.province].filter(Boolean).join(', ')
-                : undefined
+              commercial
+                ? [
+                    commercial.useType.replace(/_/g, ' '),
+                    commercial.spaceIdentifier,
+                    commercial.rentableAreaM2 != null
+                      ? `${commercial.rentableAreaM2.toLocaleString()} m²`
+                      : null,
+                    commercial.city,
+                    commercial.province,
+                  ]
+                    .filter(Boolean)
+                    .join(' · ')
+                : lead.property
+                  ? [lead.property.city, lead.property.province].filter(Boolean).join(', ')
+                  : undefined
             }
             icon={Eye}
           />
           <InfoBlock
             label="Value"
-            value={priceLabel || 'Not recorded'}
+            value={commercial ? 'Commercial lease' : priceLabel || 'Not recorded'}
             detail={sourceLabel(lead.leadSource || lead.source)}
             icon={ListChecks}
           />
@@ -775,6 +798,11 @@ function KanbanLeads({
                   <p className="mt-1 truncate text-xs text-slate-500">
                     {lead.email || lead.phone || 'No contact'}
                   </p>
+                  {lead.commercial ? (
+                    <p className="mt-2 truncate text-xs font-medium text-emerald-700">
+                      Commercial · {lead.commercial.listingTitle} · {lead.commercial.spaceIdentifier}
+                    </p>
+                  ) : null}
                   <p className="mt-2 truncate text-xs text-slate-500">
                     {lead.agent?.name || 'Unassigned'} · {sourceLabel(lead.leadSource || lead.source)}
                   </p>
@@ -824,7 +852,7 @@ function LeadTable({
           <div className="min-w-0">
             <p className="truncate font-semibold text-slate-950">{lead.name || `Lead #${lead.id}`}</p>
             <p className="truncate text-xs text-slate-500">
-              {lead.property?.title || lead.email || lead.phone || 'No context'}
+              {lead.commercial?.listingTitle || lead.property?.title || lead.email || lead.phone || 'No context'}
             </p>
           </div>
           <span className={cn('truncate text-slate-500', !lead.agentId && 'font-medium text-amber-700')}>
@@ -898,7 +926,7 @@ export function LeadRow({ lead }: { lead: AgencyLead }) {
       <div className="min-w-0">
         <p className="truncate font-semibold text-slate-950">{lead.name || `Lead #${lead.id}`}</p>
         <p className="truncate text-sm text-slate-500">
-          {lead.property?.title || lead.message || 'No listing context'}
+          {lead.commercial?.listingTitle || lead.property?.title || lead.message || 'No listing context'}
         </p>
       </div>
       <Badge variant="outline" className="w-fit capitalize">

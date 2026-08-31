@@ -71,6 +71,12 @@ describe('public Search Area request validation', () => {
     }
   });
 
+  it('rejects commercial from the generic Buy journey so Commercial stays on its dedicated authority', () => {
+    expect(
+      validatePublicSearchInput({ listingType: 'sale', propertyType: 'commercial' }),
+    ).toMatchObject({ path: 'propertyType' });
+  });
+
   it('rejects mixed authority, mixed level, invalid and excessive selections', () => {
     expect(
       validatePublicSearchInput({

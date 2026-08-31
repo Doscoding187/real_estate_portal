@@ -11,11 +11,6 @@ import { trpc } from '@/lib/trpc';
 import { toast } from 'sonner';
 import { LAND_CLASSIFICATION_LABELS, LAND_PUBLIC_CLASSIFICATIONS, type LandPublicClassification } from '@shared/land-domain';
 
-async function sha256(value: string) {
-  const bytes = new TextEncoder().encode(value.trim().toLowerCase());
-  return Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes))).map(byte => byte.toString(16).padStart(2, '0')).join('');
-}
-
 const labels = Object.fromEntries(LAND_PUBLIC_CLASSIFICATIONS.map(value => [value, LAND_CLASSIFICATION_LABELS[value]])) as Record<LandPublicClassification, string>;
 type LandClassification = LandPublicClassification;
 
@@ -25,12 +20,17 @@ export default function LandAuthoringWorkspace() {
   const [form, setForm] = useState({ classification: 'residential_stand' as LandClassification, title: '', description: '', askingPrice: '', city: '', province: '', provinceId: '', cityId: '', parcelKind: 'erf' as 'erf' | 'portion' | 'farm' | 'remainder' | 'other', parcelReference: '', extentM2: '', intendedUse: '' });
   const [fact, setFact] = useState({ code: 'water' as any, value: '' });
   const [file, setFile] = useState<File | null>(null);
+  const [marketingFile, setMarketingFile] = useState<File | null>(null);
+  const [selectedMandateEvidenceId, setSelectedMandateEvidenceId] = useState<number | null>(null);
   const [evidenceType, setEvidenceType] = useState<'mandate' | 'title_registry' | 'parcel_survey' | 'planning' | 'other'>('mandate');
   const create = trpc.land.createDraft.useMutation();
   const addClaims = trpc.land.addClaims.useMutation();
   const authority = trpc.land.declareAuthority.useMutation();
   const requestUpload = trpc.land.requestPrivateEvidenceUpload.useMutation();
   const registerEvidence = trpc.land.addPrivateEvidence.useMutation();
+  const attachMarketingMedia = trpc.land.attachMarketingMedia.useMutation();
+  const reserveMarketingUpload = trpc.listing.uploadMedia.useMutation();
+  const confirmMarketingUpload = trpc.listing.confirmMediaUpload.useMutation();
   const submit = trpc.land.submit.useMutation();
   const workspace = trpc.land.getWorkspace.useQuery({ listingId: listingId ?? 0 }, { enabled: Boolean(listingId) });
   const provincesQuery = trpc.location.getLocationHierarchy.useQuery({ depth: 'province' });
@@ -41,7 +41,7 @@ export default function LandAuthoringWorkspace() {
 
   const createDraft = async () => {
     try {
-      const result = await create.mutateAsync({ classification: form.classification, title: form.title, description: form.description, askingPrice: Number(form.askingPrice), city: form.city, province: form.province, intendedUse: form.intendedUse || undefined, parcel: { kind: form.parcelKind, identifier: form.parcelReference, identifierHash: await sha256(form.parcelReference), extentM2: Number(form.extentM2), provinceId: Number(form.provinceId), cityId: Number(form.cityId), geometryConfidence: 'approximate' } });
+      const result = await create.mutateAsync({ classification: form.classification, title: form.title, description: form.description, askingPrice: Number(form.askingPrice), intendedUse: form.intendedUse || undefined, parcel: { kind: form.parcelKind, identifier: form.parcelReference, extentM2: Number(form.extentM2), provinceId: Number(form.provinceId), cityId: Number(form.cityId), geometryConfidence: 'approximate' } });
       setListingId(result.listingId); toast.success('Land draft saved. Continue with facts and authority.');
     } catch (error) { toast.error(error instanceof Error ? error.message : 'Unable to save Land draft.'); }
   };
@@ -51,9 +51,25 @@ export default function LandAuthoringWorkspace() {
       const target = await requestUpload.mutateAsync({ listingId, fileName: file.name, contentType: file.type });
       const response = await fetch(target.uploadUrl, { method: 'PUT', headers: { 'Content-Type': file.type }, body: file });
       if (!response.ok) throw new Error('Private document upload failed.');
-      await registerEvidence.mutateAsync({ listingId, evidenceType, uploadToken: target.uploadToken });
+      const result = await registerEvidence.mutateAsync({ listingId, evidenceType, uploadToken: target.uploadToken });
+      if (evidenceType === 'mandate') setSelectedMandateEvidenceId(result.evidenceDocumentId);
       workspace.refetch(); setFile(null); toast.success('Private evidence attached. It is visible only to permitted custodians and reviewers.');
     } catch (error) { toast.error(error instanceof Error ? error.message : 'Unable to upload private evidence.'); }
+  };
+  const uploadMarketingMedia = async () => {
+    if (!listingId || !marketingFile) return;
+    if (!marketingFile.type.startsWith('image/')) {
+      toast.error('Land marketing media must be a public image. Keep documents in private evidence.');
+      return;
+    }
+    try {
+      const target = await reserveMarketingUpload.mutateAsync({ listingId, type: 'image', filename: marketingFile.name, contentType: marketingFile.type });
+      const response = await fetch(target.uploadUrl, { method: 'PUT', headers: { 'Content-Type': marketingFile.type }, body: marketingFile });
+      if (!response.ok) throw new Error('Marketing image upload failed.');
+      const confirmed = await confirmMarketingUpload.mutateAsync({ uploadToken: target.uploadToken });
+      await attachMarketingMedia.mutateAsync({ listingId, uploadToken: confirmed.uploadToken });
+      setMarketingFile(null); await workspace.refetch(); toast.success('Public Land marketing image attached.');
+    } catch (error) { toast.error(error instanceof Error ? error.message : 'Unable to attach marketing media.'); }
   };
   const addFact = async () => {
     if (!listingId || !fact.value.trim()) return;
@@ -62,15 +78,20 @@ export default function LandAuthoringWorkspace() {
   const requestSubmission = async () => { if (!listingId) return; try { await submit.mutateAsync({ listingId }); workspace.refetch(); toast.success('Submitted to the Land review team.'); } catch (error) { toast.error(error instanceof Error ? error.message : 'Submission is not ready.'); } };
   const readiness = workspace.data?.readiness;
   const changes = workspace.data?.reviewEvents?.filter((event: any) => event.eventType === 'changes_requested') ?? [];
+  const mandateEvidence = (workspace.data?.evidence || []).filter((item: any) => item.evidenceType === 'mandate');
+  const mandateEvidenceId = selectedMandateEvidenceId && mandateEvidence.some((item: any) => item.id === selectedMandateEvidenceId)
+    ? selectedMandateEvidenceId
+    : mandateEvidence[0]?.id;
 
   return <AgentAppShell><main className="mx-auto max-w-5xl space-y-6 p-4 md:p-8">
     <div><p className="text-sm font-medium text-emerald-700">Plots & Land · private workspace</p><h1 className="text-3xl font-semibold text-slate-950">Create a Land listing</h1><p className="mt-1 text-slate-600">Land facts are seller declarations until independently checked. Private documents are never marketing media.</p></div>
     {!listingId ? <Card><CardHeader><CardTitle>What are you listing?</CardTitle></CardHeader><CardContent className="grid gap-4 md:grid-cols-2"><div><Label>Land type</Label><Select value={form.classification} onValueChange={classification => setForm({ ...form, classification: classification as LandClassification })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{Object.entries(labels).map(([value, label]) => <SelectItem key={value} value={value}>{label}</SelectItem>)}</SelectContent></Select></div><div><Label>Asking price</Label><Input type="number" value={form.askingPrice} onChange={e => setForm({ ...form, askingPrice: e.target.value })} /></div><div className="md:col-span-2"><Label>Listing title</Label><Input value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder="Serviced stand in…" /></div><div className="md:col-span-2"><Label>Describe the opportunity</Label><Textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} /></div><div><Label>Province</Label><Select value={form.provinceId} onValueChange={provinceId => { const province = (provincesQuery.data || []).find((item: any) => item.id === Number(provinceId)); setForm({ ...form, provinceId, province: province?.name || '', cityId: '', city: '' }); }}><SelectTrigger><SelectValue placeholder="Choose province" /></SelectTrigger><SelectContent>{(provincesQuery.data || []).map((item: any) => <SelectItem key={item.id} value={String(item.id)}>{item.name}</SelectItem>)}</SelectContent></Select></div><div><Label>City</Label><Select value={form.cityId} onValueChange={cityId => { const city = (citiesQuery.data || []).find((item: any) => item.id === Number(cityId)); setForm({ ...form, cityId, city: city?.name || '' }); }} disabled={!form.provinceId}><SelectTrigger><SelectValue placeholder="Choose city" /></SelectTrigger><SelectContent>{(citiesQuery.data || []).map((item: any) => <SelectItem key={item.id} value={String(item.id)}>{item.name}</SelectItem>)}</SelectContent></Select></div><div><Label>Parcel reference</Label><Input value={form.parcelReference} onChange={e => setForm({ ...form, parcelReference: e.target.value })} placeholder="Erf 123" /></div><div><Label>Site extent (m²)</Label><Input type="number" value={form.extentM2} onChange={e => setForm({ ...form, extentM2: e.target.value })} /></div><div className="md:col-span-2"><Label>Intended use</Label><Input value={form.intendedUse} onChange={e => setForm({ ...form, intendedUse: e.target.value })} placeholder="Residential development" /></div><div className="md:col-span-2"><Button onClick={createDraft} disabled={create.isPending || !form.provinceId || !form.cityId}>Save Land draft</Button></div></CardContent></Card> : <>
       <Card><CardHeader><CardTitle>Readiness</CardTitle></CardHeader><CardContent><p className="text-sm text-slate-600">{readiness?.submissionReady ? 'Ready to submit for Land review.' : 'Complete the items below before submission.'}</p><ul className="mt-3 list-disc pl-5 text-sm text-slate-700">{[...(readiness?.blockers?.draft ?? []), ...(readiness?.blockers?.submission ?? [])].map((item: string) => <li key={item}>{item.replace(/_/g, ' ')}</li>)}</ul></CardContent></Card>
       {changes.length > 0 && <Card className="border-amber-300"><CardHeader><CardTitle>Changes requested</CardTitle></CardHeader><CardContent>{changes.map((event: any) => <p key={event.id} className="text-sm text-slate-700">{event.comment}</p>)}</CardContent></Card>}
-      <Card><CardHeader><CardTitle>What do you know about the land?</CardTitle></CardHeader><CardContent className="flex flex-wrap gap-3"><Select value={fact.code} onValueChange={code => setFact({ ...fact, code })}><SelectTrigger className="w-52"><SelectValue /></SelectTrigger><SelectContent>{['access','road_frontage','water','electricity','sanitation','zoning_land_use','restrictions_servitudes','development_context'].map(code => <SelectItem key={code} value={code}>{code.replace(/_/g, ' ')}</SelectItem>)}</SelectContent></Select><Input className="max-w-md" value={fact.value} onChange={e => setFact({ ...fact, value: e.target.value })} placeholder="Seller-declared detail" /><Button variant="outline" onClick={addFact}>Save fact</Button></CardContent></Card>
-      <Card><CardHeader><CardTitle>Authority to market</CardTitle></CardHeader><CardContent className="flex gap-3"><Button onClick={() => authority.mutateAsync({ listingId, actorType: 'agent', authorityType: 'sole_mandate' }).then(() => workspace.refetch())}>Declare agent mandate</Button><p className="self-center text-sm text-slate-600">Attach the mandate below before submitting.</p></CardContent></Card>
+      <Card><CardHeader><CardTitle>What do you know about the land?</CardTitle></CardHeader><CardContent className="space-y-3"><p className="text-sm text-slate-600">Saving the same fact replaces the current seller declaration and retains the previous version for private review.</p><div className="flex flex-wrap gap-3"><Select value={fact.code} onValueChange={code => setFact({ ...fact, code })}><SelectTrigger className="w-52"><SelectValue /></SelectTrigger><SelectContent>{['access','road_frontage','water','electricity','sanitation','zoning_land_use','restrictions_servitudes','development_context'].map(code => <SelectItem key={code} value={code}>{code.replace(/_/g, ' ')}</SelectItem>)}</SelectContent></Select><Input className="max-w-md" value={fact.value} onChange={e => setFact({ ...fact, value: e.target.value })} placeholder="Seller-declared detail" /><Button variant="outline" onClick={addFact}>Save or update fact</Button></div>{workspace.data?.claims?.length ? <div className="grid gap-2 text-sm">{workspace.data.claims.map((claim: any) => <p key={claim.id} className="rounded border p-2"><b>{claim.claimCode.replace(/_/g, ' ')}:</b> {claim.valueState === 'asserted' ? 'Seller declared' : claim.valueState.replace(/_/g, ' ')}</p>)}</div> : <p className="text-sm text-slate-500">No seller declarations saved yet.</p>}</CardContent></Card>
+      <Card><CardHeader><CardTitle>Public marketing image</CardTitle></CardHeader><CardContent className="space-y-3"><p className="text-sm text-slate-600">Upload a public photograph for this Land listing. Private mandates, title documents and surveys never appear here.</p><div className="flex flex-wrap gap-3"><Input type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" onChange={e => setMarketingFile(e.target.files?.[0] ?? null)} /><Button variant="outline" onClick={uploadMarketingMedia} disabled={!marketingFile || reserveMarketingUpload.isPending || confirmMarketingUpload.isPending || attachMarketingMedia.isPending}>Attach public image</Button></div><p className="text-sm text-slate-600">{workspace.data?.marketingImageCount ? `${workspace.data.marketingImageCount} public marketing image${workspace.data.marketingImageCount === 1 ? '' : 's'} attached.` : 'At least one public marketing image is required before review.'}</p></CardContent></Card>
       <Card><CardHeader><CardTitle>Private supporting evidence</CardTitle></CardHeader><CardContent className="space-y-3"><p className="text-sm text-slate-600">PDF, JPEG, PNG or WebP. Documents stay private to permitted custodians and Land reviewers.</p><div className="flex flex-wrap gap-3"><Select value={evidenceType} onValueChange={value => setEvidenceType(value as any)}><SelectTrigger className="w-56"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="mandate">Authority / mandate</SelectItem><SelectItem value="title_registry">Title or parcel document</SelectItem><SelectItem value="parcel_survey">Parcel / survey document</SelectItem><SelectItem value="planning">Planning / zoning evidence</SelectItem><SelectItem value="other">Other supporting document</SelectItem></SelectContent></Select><Input type="file" accept="application/pdf,image/jpeg,image/png,image/webp" onChange={e => setFile(e.target.files?.[0] ?? null)} /><Button onClick={uploadEvidence} disabled={!file}>Upload privately</Button></div></CardContent></Card>
+      <Card><CardHeader><CardTitle>Authority to market</CardTitle></CardHeader><CardContent className="space-y-3"><p className="text-sm text-slate-600">An agent mandate is private evidence. Choose the mandate that authorizes this listing before asking for Land review.</p>{mandateEvidence.length > 0 && <Select value={mandateEvidenceId ? String(mandateEvidenceId) : undefined} onValueChange={value => setSelectedMandateEvidenceId(Number(value))}><SelectTrigger className="max-w-xl"><SelectValue placeholder="Choose private mandate evidence" /></SelectTrigger><SelectContent>{mandateEvidence.map((item: any) => <SelectItem key={item.id} value={String(item.id)}>{item.originalFileName || `Mandate evidence #${item.id}`}</SelectItem>)}</SelectContent></Select>}<div className="flex flex-wrap items-center gap-3"><Button disabled={!mandateEvidenceId || authority.isPending} onClick={() => authority.mutateAsync({ listingId, actorType: 'agent', authorityType: 'sole_mandate', supportingEvidenceId: mandateEvidenceId }).then(() => workspace.refetch())}>Declare agent mandate</Button><p className="text-sm text-slate-600">{mandateEvidenceId ? 'The selected mandate will be bound to this marketing authority.' : 'Upload private mandate evidence first.'}</p></div></CardContent></Card>
       <div className="flex gap-3"><Button onClick={requestSubmission}>Submit for Land review</Button><Button variant="outline" onClick={() => setLocation('/agent/listings')}>Back to listings</Button></div>
     </>}
   </main></AgentAppShell>;

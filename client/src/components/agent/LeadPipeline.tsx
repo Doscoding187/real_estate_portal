@@ -26,6 +26,7 @@ import {
   Plus,
   ArrowRight,
   AlertTriangle,
+  Building2,
   CheckCircle2,
   Clock3,
   Flame,
@@ -62,6 +63,23 @@ interface Lead {
     title: string;
     city: string;
     price: number;
+  } | null;
+  commercial?: {
+    listingId: number;
+    listingSlug: string;
+    listingTitle: string;
+    commercialAssetId: number;
+    assetName: string;
+    commercialSpaceId: number;
+    spaceIdentifier: string;
+    commercialAvailabilityId: number;
+    useType: string;
+    rentableAreaM2: number | null;
+    usableAreaM2: number | null;
+    availabilityState: string;
+    transactionType: 'lease';
+    city: string | null;
+    province: string | null;
   } | null;
 }
 
@@ -428,11 +446,18 @@ export function LeadPipeline({ className, propertyId }: LeadPipelineProps) {
       lead =>
         lead.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         lead.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        lead.property?.title?.toLowerCase().includes(searchQuery.toLowerCase()),
+        lead.property?.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        lead.commercial?.listingTitle?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        lead.commercial?.assetName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        lead.commercial?.spaceIdentifier?.toLowerCase().includes(searchQuery.toLowerCase()),
     );
   };
 
   const openScheduleDialog = (lead: Lead) => {
+    if (lead.commercial) {
+      toast.info('Commercial enquiries use the dedicated Commercial workflow for viewings.');
+      return;
+    }
     const defaultDateTime = new Date();
     defaultDateTime.setHours(defaultDateTime.getHours() + 1, 0, 0, 0);
 
@@ -677,7 +702,9 @@ export function LeadPipeline({ className, propertyId }: LeadPipelineProps) {
             <div className="rounded-xl bg-gray-50 p-4 text-sm">
               <div className="font-semibold text-gray-900">{leadToSchedule?.name || 'Lead'}</div>
               <div className="text-gray-600">
-                {leadToSchedule?.property?.title || 'No property linked'}
+                {leadToSchedule?.commercial?.listingTitle ||
+                  leadToSchedule?.property?.title ||
+                  'No property linked'}
               </div>
               {leadToSchedule?.email ? (
                 <div className="text-gray-500">{leadToSchedule.email}</div>
@@ -823,7 +850,28 @@ export function LeadPipeline({ className, propertyId }: LeadPipelineProps) {
                   <Badge variant="outline">{SOURCE_LABELS[selectedLead.source || ''] || selectedLead.source || 'Web'}</Badge>
                 </div>
 
-                {selectedLead.property ? (
+                {selectedLead.commercial ? (
+                  <div className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm">
+                    <div className="flex items-center gap-2 font-medium text-emerald-900">
+                      <Building2 className="h-4 w-4" />
+                      Commercial lease enquiry
+                    </div>
+                    <div className="mt-1 font-medium text-emerald-950">
+                      {selectedLead.commercial.listingTitle}
+                    </div>
+                    <div className="text-emerald-800">
+                      {selectedLead.commercial.useType.replace(/_/g, ' ')} ·{' '}
+                      {selectedLead.commercial.spaceIdentifier} ·{' '}
+                      {selectedLead.commercial.rentableAreaM2 != null
+                        ? `${selectedLead.commercial.rentableAreaM2.toLocaleString()} m² rentable`
+                        : 'Rentable area not recorded'}
+                    </div>
+                    <div className="mt-1 text-xs text-emerald-700">
+                      Keep this enquiry with the verified Commercial advertiser; generic viewing
+                      booking is unavailable.
+                    </div>
+                  </div>
+                ) : selectedLead.property ? (
                   <div className="mt-4 rounded-lg border border-gray-200 bg-white p-3 text-sm">
                     <div className="font-medium text-gray-900">{selectedLead.property.title}</div>
                     <div className="text-gray-500">
@@ -881,16 +929,18 @@ export function LeadPipeline({ className, propertyId }: LeadPipelineProps) {
 
               <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_280px]">
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between">
                     <h3 className="font-semibold text-gray-900">Unified Timeline</h3>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => openScheduleDialog(selectedLead)}
-                    >
-                      <Calendar className="h-4 w-4 mr-2" />
-                      Schedule Showing
-                    </Button>
+                    {!selectedLead.commercial ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openScheduleDialog(selectedLead)}
+                      >
+                        <Calendar className="h-4 w-4 mr-2" />
+                        Schedule Showing
+                      </Button>
+                    ) : null}
                   </div>
 
                   {activitiesLoading ? (
@@ -1169,8 +1219,24 @@ function LeadCard({
             </div>
           </div>
 
-          {/* Property Info */}
-          {lead.property && (
+          {/* Canonical Commercial handoff context */}
+          {lead.commercial ? (
+            <div className="flex items-start gap-2 rounded-lg border border-emerald-200 bg-emerald-50 p-2.5 text-xs">
+              <Building2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-700" />
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-medium text-emerald-950">
+                  {lead.commercial.listingTitle}
+                </p>
+                <p className="truncate text-emerald-800">
+                  {lead.commercial.useType.replace(/_/g, ' ')} · {lead.commercial.spaceIdentifier}
+                  {lead.commercial.rentableAreaM2 != null
+                    ? ` · ${lead.commercial.rentableAreaM2.toLocaleString()} m²`
+                    : ''}
+                </p>
+                <p className="mt-1 text-[11px] text-emerald-700">Verified Commercial handoff</p>
+              </div>
+            </div>
+          ) : lead.property ? (
             <div className="flex items-center gap-2 p-2.5 bg-gray-50 rounded-lg text-xs">
               <Home className="h-3.5 w-3.5 text-gray-400" />
               <div className="flex-1 min-w-0">
@@ -1180,7 +1246,7 @@ function LeadCard({
                 </p>
               </div>
             </div>
-          )}
+          ) : null}
 
           {/* Contact Info */}
           <div className="space-y-1.5">
@@ -1259,18 +1325,24 @@ function LeadCard({
           ) : null}
 
           <div className="grid grid-cols-1 gap-2 pt-1 sm:grid-cols-2">
-            <Button
-              size="sm"
-              variant="outline"
-              className="w-full"
-              onClick={event => {
-                event.stopPropagation();
-                onScheduleShowing();
-              }}
-            >
-              <Calendar className="h-4 w-4 mr-2" />
-              Schedule Showing
-            </Button>
+            {!lead.commercial ? (
+              <Button
+                size="sm"
+                variant="outline"
+                className="w-full"
+                onClick={event => {
+                  event.stopPropagation();
+                  onScheduleShowing();
+                }}
+              >
+                <Calendar className="h-4 w-4 mr-2" />
+                Schedule Showing
+              </Button>
+            ) : (
+              <div className="flex items-center justify-center rounded-md border border-emerald-200 bg-emerald-50 px-2 py-2 text-center text-xs text-emerald-800">
+                Commercial handoff
+              </div>
+            )}
             {nextStage ? (
               <Button
                 size="sm"

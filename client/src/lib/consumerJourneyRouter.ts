@@ -8,7 +8,13 @@ import {
   getPublicHeroJourney,
   type PublicJourneyReleaseContext,
 } from './publicNavigation';
-import { LAND_CLASSIFICATION_LABELS, LAND_PUBLIC_CLASSIFICATIONS, type LandPublicClassification } from '@shared/land-domain';
+import {
+  LAND_CLASSIFICATION_LABELS,
+  LAND_PUBLIC_CLASSIFICATIONS,
+  isLandPublicClassification,
+  type LandPublicClassification,
+} from '@shared/land-domain';
+import { parseCanonicalLocationId } from '@shared/locationAuthority';
 import {
   COMMERCIAL_SEARCH_QUERY_KEYS,
   sanitizeCommercialSearchFilters,
@@ -117,11 +123,36 @@ export type ConsumerJourneySearchInput = Omit<PropertySearchInput, 'transactionT
 
 function landLocationQuery(selectedLocations: readonly LocationNode[], searchScope: ConsumerJourneySearchInput['searchScope']) {
   if (searchScope?.kind === 'search_area') {
+    if (selectedLocations.length > 0) return undefined;
     return new URLSearchParams({ searchAreaId: searchScope.searchAreaId });
   }
   if (selectedLocations.length === 0 || selectedLocations.some(location => location.type === 'area')) return undefined;
   const ids = selectedLocations.map(location => location.canonicalLocationId || location.id).filter(Boolean);
   if (ids.length !== selectedLocations.length) return undefined;
+  const canonicalLocations = ids.map(parseCanonicalLocationId);
+  if (canonicalLocations.some(location => !location) || new Set(ids).size !== ids.length) {
+    return undefined;
+  }
+  if (canonicalLocations.length > 1) {
+    const levels = new Set(canonicalLocations.map(location => location!.level));
+    if (levels.size !== 1) return undefined;
+    const level = canonicalLocations[0]!.level;
+    const parentIdentities = selectedLocations
+      .map(location =>
+        location.parentCanonicalLocationId ||
+        (level === 'city' && location.provinceSlug
+          ? `province-slug:${location.provinceSlug}`
+          : level === 'suburb' && location.citySlug
+            ? `city-slug:${location.citySlug}`
+            : level === 'province'
+              ? 'country:za'
+              : null),
+      )
+      .filter((value): value is string => Boolean(value));
+    if (parentIdentities.length === selectedLocations.length && new Set(parentIdentities).size !== 1) {
+      return undefined;
+    }
+  }
   const params = new URLSearchParams();
   if (ids.length === 1) params.set('locationId', ids[0]);
   else ids.forEach(id => params.append('locationIds', id));
@@ -129,12 +160,16 @@ function landLocationQuery(selectedLocations: readonly LocationNode[], searchSco
 }
 
 function commercialLocationQuery(selectedLocations: readonly LocationNode[], hasSearchArea: boolean) {
-  if (hasSearchArea || selectedLocations.length !== 1 || !selectedLocations[0] || selectedLocations[0].type === 'area') return undefined;
-  return new URLSearchParams({ location: selectedLocations[0].name });
-}
-
-function isLandPublicClassification(value: unknown): value is LandPublicClassification {
-  return LAND_PUBLIC_CLASSIFICATION_OPTIONS.some(option => option.value === value);
+  if (hasSearchArea || selectedLocations.length === 0 || selectedLocations.some(location => location.type === 'area')) {
+    return undefined;
+  }
+  const ids = selectedLocations
+    .map(location => location.canonicalLocationId || location.id)
+    .filter(Boolean);
+  if (ids.length !== selectedLocations.length) return undefined;
+  const params = new URLSearchParams();
+  ids.forEach(id => params.append('locationIds', id));
+  return params;
 }
 
 function farmLocationQuery(selectedLocations: readonly LocationNode[], searchScope: ConsumerJourneySearchInput['searchScope']) {
