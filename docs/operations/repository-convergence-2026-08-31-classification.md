@@ -55,3 +55,17 @@ implementation:
 The first two require separate current-main PRs. The third is already a
 forward-integrated governed workstream; its historical snapshots remain
 preserved but are not merge candidates.
+
+## Local branch-tip triage
+
+The recovery index contains 117 local branch tips that were not present in
+remote refs at capture time. Of those, 63 are already ancestors of the forward
+baseline. A patch-equivalence pass over the other 54 found 12 whose complete
+non-main patch series is already represented in current `main`; those need no
+source merge. The remaining 42 have one or more non-equivalent patches and are
+scheduled for semantic review by product-risk lane.
+
+See
+[`repository-convergence-2026-08-31-local-branch-semantic-review.tsv`](repository-convergence-2026-08-31-local-branch-semantic-review.tsv)
+for the per-tip evidence. Patch equivalence avoids duplicate implementation; it
+does not by itself classify product requirements as obsolete.
