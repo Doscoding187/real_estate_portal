@@ -139,3 +139,6 @@ Every forward-integration candidate gets a clean current-main worktree, a
 dedicated branch, focused tests, and a PR. Database-bearing candidates also
 follow the repository database-authority entry contract and must not reuse
 historical schema assumptions.
+
+The evidence-backed decisions made during the review are recorded in
+[`repository-convergence-2026-08-31-classification.md`](repository-convergence-2026-08-31-classification.md).
