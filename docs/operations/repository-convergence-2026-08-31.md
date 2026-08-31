@@ -29,7 +29,7 @@ not be merged only because it was recovered.
 | Dirty worktrees | 34 working-tree snapshots, all independently rebuilt and verified against their live worktrees. One staged-index snapshot was also retained for `feat/provincial-discovery-gauteng-s0`. |
 | Stashes | All three stashes have immutable archive refs under `stashes/stash-0` through `stashes/stash-2`. |
 | Formerly unreachable commits | 101 commit refs exist under `unreachable/<full-object-id>`; a subsequent `git fsck --no-reflogs --unreachable` reported zero unreachable commits. |
-| Local branch tips absent from all current remote refs | 117 branch-tip refs exist under `local-only-branch-tips/<branch-name>`. |
+| Local branch tips absent from all current remote refs | 117 branch-tip refs exist under `local-only-branch-tips/<branch-name>`; the [per-branch index](repository-convergence-2026-08-31-local-branch-tips.tsv) identifies 63 already integrated into `origin/main` and 54 requiring review. |
 | Missing worktree registrations | The three confirmed-dead `/tmp/opencode` registrations were pruned only after their registered heads were anchored under `prunable-worktrees/`. |
 | Standalone Git recovery | `~/.codex/recovery/property-listify-repository-convergence-20260831.bundle`, 205 MiB, SHA-256 `d7605f50e60064c05e7c008cd3a6f345ca616b05cef8c4ead5d4f7b43516f1db`; `git bundle verify` passed. |
 | Generated/artifact recovery | `~/.codex/recovery/property-listify-repository-convergence-20260831-artifacts-v2.tar.gz`, 51 MiB, 364 entries, SHA-256 `e85d93d830745fbb9372d91c362d5fca62b26609961c8a679657d34bccf59212`. Credentials and dependency caches were intentionally excluded. |
