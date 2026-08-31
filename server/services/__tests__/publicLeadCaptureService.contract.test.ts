@@ -5,6 +5,7 @@ const {
   mockGetDb,
   mockRecordAgentOsEventForAgentId,
   mockRecordProspectLeadAction,
+  mockGetOrCreateProspectIdentity,
   mockIncrementLeadCountAsync,
   mockResolvePublicPropertyEligibility,
   mockResolvePublicLandLeadCustody,
@@ -13,6 +14,7 @@ const {
   mockGetDb: vi.fn(),
   mockRecordAgentOsEventForAgentId: vi.fn(),
   mockRecordProspectLeadAction: vi.fn(),
+  mockGetOrCreateProspectIdentity: vi.fn(),
   mockIncrementLeadCountAsync: vi.fn(),
   mockResolvePublicPropertyEligibility: vi.fn(),
   mockResolvePublicLandLeadCustody: vi.fn(),
@@ -29,6 +31,7 @@ vi.mock('../agentOsEventService', () => ({
 }));
 
 vi.mock('../prospectJourneyService', () => ({
+  getOrCreateProspectIdentity: mockGetOrCreateProspectIdentity,
   recordProspectLeadAction: mockRecordProspectLeadAction,
 }));
 
@@ -187,6 +190,11 @@ describe('publicLeadCaptureService contract', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockRecordAgentOsEventForAgentId.mockResolvedValue(undefined);
+    mockGetOrCreateProspectIdentity.mockResolvedValue({
+      id: 'prospect-identity-001',
+      userId: 701,
+      contactPreferences: {},
+    });
     mockRecordProspectLeadAction.mockResolvedValue(undefined);
     mockIncrementLeadCountAsync.mockResolvedValue(undefined);
     mockResolvePublicPropertyEligibility.mockImplementation(async (propertyId: number) =>
@@ -249,6 +257,48 @@ describe('publicLeadCaptureService contract', () => {
         agencyId: 9,
       }),
     );
+  });
+
+  it('persists a signed-in property enquiry and its prospect identity in one transaction', async () => {
+    const database = makeFakeDatabase({ selectResults: [[]], insertId: 913 });
+    mockGetDb.mockResolvedValue(database);
+
+    await capturePublicLead(
+      baseInput({
+        propertyId: 505,
+        source: 'property_detail',
+        sourceSurface: 'property_detail_contact_modal',
+        leadSource: 'property_detail',
+        authenticatedUserId: 701,
+      }),
+    );
+
+    expect(database.transaction).toHaveBeenCalledTimes(1);
+    expect(mockGetOrCreateProspectIdentity).toHaveBeenCalledWith(expect.anything(), 701);
+    expect(database.insertValues).toHaveBeenCalledWith(
+      expect.objectContaining({
+        propertyId: 505,
+        prospectIdentityId: 'prospect-identity-001',
+      }),
+    );
+    expect(mockRecordProspectLeadAction).toHaveBeenCalledWith(
+      expect.objectContaining({
+        leadId: 913,
+        prospectIdentityId: 'prospect-identity-001',
+      }),
+    );
+  });
+
+  it('fails closed when signed-in journey ownership cannot be persisted transactionally', async () => {
+    const database = makeFakeDatabase({ selectResults: [[]] });
+    delete (database as { transaction?: unknown }).transaction;
+    mockGetDb.mockResolvedValue(database);
+
+    await expect(
+      capturePublicLead(baseInput({ propertyId: 505, authenticatedUserId: 701 })),
+    ).rejects.toThrow('Atomic public lead persistence is unavailable.');
+    expect(database.insertValues).not.toHaveBeenCalled();
+    expect(mockRecordProspectLeadAction).not.toHaveBeenCalled();
   });
 
   it('replays an identical Land listing enquiry idempotently but rejects a changed target', async () => {

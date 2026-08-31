@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { toProspectSafeLeadStatus, toProspectSafeViewingStatus } from '../prospectJourneyRouter';
-import { normalizeProspectSourceType } from '../services/prospectJourneyService';
+import {
+  normalizeProspectSourceType,
+  recordProspectLeadAction,
+} from '../services/prospectJourneyService';
 
 describe('Prospect Journey status contract', () => {
   it('translates agency lead states without returning the agency state', () => {
@@ -35,5 +38,36 @@ describe('Prospect Journey status contract', () => {
     expect(normalizeProspectSourceType('property-page')).toBe('property_detail');
     expect(normalizeProspectSourceType('sponsored_placement')).toBe('sponsored_placement');
     expect(normalizeProspectSourceType('agency_internal_campaign')).toBe('web');
+  });
+
+  it('keeps a capture-owned identity instead of issuing a later lead update', async () => {
+    let leadUpdateAttempted = false;
+    let attribution: Record<string, unknown> | null = null;
+    const database = {
+      update: () => {
+        leadUpdateAttempted = true;
+        throw new Error('capture-owned identity must not be updated again');
+      },
+      insert: () => ({
+        values: async (value: Record<string, unknown>) => {
+          attribution = value;
+        },
+      }),
+    };
+
+    await recordProspectLeadAction({
+      db: database,
+      leadId: 42,
+      prospectIdentityId: 'prospect-identity-001',
+      source: 'property_detail',
+      propertyId: 99,
+    });
+
+    expect(leadUpdateAttempted).toBe(false);
+    expect(attribution).toMatchObject({
+      leadId: 42,
+      sourceType: 'property_detail',
+      sourceEntityId: 'property:99',
+    });
   });
 });
