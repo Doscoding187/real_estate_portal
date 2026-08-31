@@ -9,7 +9,6 @@ import { getAccountAuthHref } from '@/lib/publicNavigation';
 // Import content components
 import Overview from '@/components/developer/Overview';
 import DevelopmentsList from '@/components/developer/DevelopmentsList';
-import MessagesCenter from '@/components/developer/MessagesCenter';
 import LeadsManager from '@/components/developer/LeadsManager';
 import SettingsPanel from '@/components/developer/SettingsPanel';
 import TeamManagement from '@/components/developer/TeamManagement';
@@ -191,7 +190,6 @@ export default function DeveloperRoutes() {
 
         {/* Operations */}
         <Route path="/developer/leads" component={LeadsManager} />
-        <Route path="/developer/messages" component={MessagesCenter} />
 
         {/* Growth */}
         <Route path="/developer/analytics" component={AnalyticsPanel} />

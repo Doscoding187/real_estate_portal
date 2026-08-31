@@ -51,10 +51,10 @@ describe('DeveloperTopNav quick actions', () => {
     expect(screen.queryByRole('searchbox')).not.toBeInTheDocument();
   });
 
-  it('keeps the workspace shell chrome (notifications, messages, profile)', () => {
+  it('removes empty notification and message controls from the workspace chrome', () => {
     render(<DeveloperTopNav />);
     expect(screen.getByRole('button', { name: /quick action/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /notifications/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /messages/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /notifications/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /messages/i })).not.toBeInTheDocument();
   });
 });
