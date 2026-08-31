@@ -1,6 +1,6 @@
 # Repository Convergence Programme — Recovery Ledger
 
-**Status:** active; recovery complete, forward-integration review in progress
+**Status:** active; recovery and semantic triage complete, forward-integration PR review in progress
 **Forward baseline:** `origin/main` at `79aa137a49ed61355bfca9678533e6098ec33424`
 **Recovery namespace:** `refs/archive/repository-convergence-20260831/`
 
@@ -29,7 +29,8 @@ not be merged only because it was recovered.
 | Dirty worktrees | 34 working-tree snapshots, all independently rebuilt and verified against their live worktrees. One staged-index snapshot was also retained for `feat/provincial-discovery-gauteng-s0`. |
 | Stashes | All three stashes have immutable archive refs under `stashes/stash-0` through `stashes/stash-2`. |
 | Formerly unreachable commits | 101 commit refs exist under `unreachable/<full-object-id>`; a subsequent `git fsck --no-reflogs --unreachable` reported zero unreachable commits. |
-| Local branch tips absent from all current remote refs | 117 branch-tip refs exist under `local-only-branch-tips/<branch-name>`; the [per-branch index](repository-convergence-2026-08-31-local-branch-tips.tsv) identifies 63 already integrated into `origin/main` and 54 requiring review. Of the latter, the [semantic comparison](repository-convergence-2026-08-31-local-branch-semantic-review.tsv) found 12 patch-equivalent tips and 42 with unique patches needing review. |
+| Formerly dangling non-commit objects | Final convergence verification found 87 root trees and 470 blobs without commit refs. They are retained by `dangling-object-forest` at `238fd58d4a782f7c660b2dfb5cde80c53b70151e` and the verified supplemental bundle `~/.codex/recovery/property-listify-repository-convergence-20260831-dangling-object-forest.bundle` (58,198,949 bytes, SHA-256 `ebb231ce659ddb7958942b07c4a56276f51c35085cd86edf76d0db308674dade`). A final strict fsck reported no unreachable objects. |
+| Local branch tips absent from all current remote refs | 117 branch-tip refs exist under `local-only-branch-tips/<branch-name>`; the [per-branch index](repository-convergence-2026-08-31-local-branch-tips.tsv) identifies 63 already integrated into `origin/main` and 54 requiring review. Of the latter, the [semantic comparison](repository-convergence-2026-08-31-local-branch-semantic-review.tsv) found 12 patch-equivalent tips and 42 unique-patch tips; final decisions for all 54 are recorded in the [classification](repository-convergence-2026-08-31-classification.md). |
 | Missing worktree registrations | The three confirmed-dead `/tmp/opencode` registrations were pruned only after their registered heads were anchored under `prunable-worktrees/`. |
 | Standalone Git recovery | `~/.codex/recovery/property-listify-repository-convergence-20260831.bundle`, 205 MiB, SHA-256 `d7605f50e60064c05e7c008cd3a6f345ca616b05cef8c4ead5d4f7b43516f1db`; `git bundle verify` passed. |
 | Generated/artifact recovery | `~/.codex/recovery/property-listify-repository-convergence-20260831-artifacts-v2.tar.gz`, 51 MiB, 364 entries, SHA-256 `e85d93d830745fbb9372d91c362d5fca62b26609961c8a679657d34bccf59212`. Credentials and dependency caches were intentionally excluded. |
