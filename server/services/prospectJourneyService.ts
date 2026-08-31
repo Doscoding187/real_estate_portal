@@ -88,6 +88,7 @@ export async function recordProspectLeadAction({
   db,
   leadId,
   authenticatedUserId,
+  prospectIdentityId,
   source,
   propertyId,
   developmentId,
@@ -99,6 +100,12 @@ export async function recordProspectLeadAction({
   db: JourneyDb;
   leadId: number;
   authenticatedUserId?: number;
+  /**
+   * Capture may already have attached the lead to a verified identity in its
+   * transaction. Preserve that durable association instead of performing a
+   * later optional update that could fail independently.
+   */
+  prospectIdentityId?: string | null;
   source?: string | null;
   propertyId?: number | null;
   developmentId?: number | null;
@@ -107,7 +114,7 @@ export async function recordProspectLeadAction({
   utmMedium?: string | null;
   utmCampaign?: string | null;
 }) {
-  if (authenticatedUserId) {
+  if (!prospectIdentityId && authenticatedUserId) {
     const identity = await getOrCreateProspectIdentity(db, authenticatedUserId);
     await db
       .update(leads)

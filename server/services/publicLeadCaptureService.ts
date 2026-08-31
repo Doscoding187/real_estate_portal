@@ -22,7 +22,7 @@ import {
 } from '../../drizzle/schema';
 import { cataloguePublisherService } from './cataloguePublisherService';
 import { recordAgentOsEventForAgentId } from './agentOsEventService';
-import { recordProspectLeadAction } from './prospectJourneyService';
+import { getOrCreateProspectIdentity, recordProspectLeadAction } from './prospectJourneyService';
 import {
   createInitialLeadDeliveryAttempt,
   leadDeliverySummaryForInitialAttempt,
@@ -1428,8 +1428,17 @@ export async function capturePublicLead(
   const deliverySummary = leadDeliverySummaryForInitialAttempt(deliveryAttempt);
 
   let insertResult: any;
+  let prospectIdentityId: string | null = null;
   try {
     const persist = async (tx: any) => {
+      // A signed-in visitor's private journey is a custody boundary. Establish
+      // the verified identity before inserting the lead so a later optional
+      // attribution or notification failure cannot orphan that journey.
+      if (input.authenticatedUserId) {
+        const identity = await getOrCreateProspectIdentity(tx, input.authenticatedUserId);
+        prospectIdentityId = identity.id;
+      }
+
       [insertResult] = await tx.insert(leads).values({
         listingId: resolved.listingId || null,
         propertyId: resolved.propertyId || null,
@@ -1463,6 +1472,7 @@ export async function capturePublicLead(
         consentSource: input.consent?.source || null,
         brandLeadStatus: resolved.brandLeadStatus || null,
         leadDeliveryMethod: resolved.leadDeliveryMethod,
+        prospectIdentityId,
         ...deliverySummary,
       } satisfies LeadInsert);
       if (resolved.commercialContext)
@@ -1488,15 +1498,15 @@ export async function capturePublicLead(
         });
       }
     };
-    // Shared Living creates a lead, its custody context, and its first
-    // consumer message as one delivery boundary. Do not permit a partial
-    // Shared Living enquiry when a database adapter cannot transact. Keep the
-    // established generic/commercial behaviour intact for the existing lead
-    // contract adapters, which intentionally expose only the operations they
-    // exercise.
-    if (resolved.sharedLivingContext) {
+    // Shared Living creates a lead, custody context, and first consumer
+    // message together. Signed-in capture also creates an identity-to-lead
+    // relationship. Neither may degrade to an optional post-capture update.
+    const requiresAtomicCapture = Boolean(
+      resolved.sharedLivingContext || input.authenticatedUserId,
+    );
+    if (requiresAtomicCapture) {
       if (typeof (database as any).transaction !== 'function') {
-        throw new Error('Atomic Shared Living lead persistence is unavailable.');
+        throw new Error('Atomic public lead persistence is unavailable.');
       }
       await (database as any).transaction(persist);
     } else if (resolved.commercialContext && typeof (database as any).transaction === 'function') {
@@ -1543,7 +1553,7 @@ export async function capturePublicLead(
     recordProspectLeadAction({
       db: database,
       leadId,
-      authenticatedUserId: input.authenticatedUserId,
+      prospectIdentityId,
       source,
       propertyId: resolved.propertyId,
       developmentId: resolved.developmentId,
