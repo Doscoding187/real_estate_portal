@@ -88,18 +88,22 @@ implementation:
 5. Any future provincial experience refinement must retain the current governed
    geography handoff and use only approved, payload-reviewed visual assets.
 
-The first two require separate current-main PRs. The third is already a
-forward-integrated governed workstream; its historical snapshots remain
-preserved but are not merge candidates. The fourth has a focused current-main
-PR open for review. The fifth is a constraint on any separately authorized
-visual slice, not approval to merge the archived implementation.
+The first two are actively represented by the
+[database forward-integration charter](repository-convergence-2026-08-31-database-forward-charters.md)
+in PR #548. They require a separate current-main Database Authority
+implementation PR only after the documented product decisions. The third is
+already a forward-integrated governed workstream; its historical snapshots
+remain preserved but are not merge candidates. The fourth has a focused
+current-main PR open for review. The fifth is a constraint on any separately
+authorized visual slice, not approval to merge the archived implementation.
 
 ## Forward-integration PRs
 
-| PR                                                                  | Recovered requirement                                                     | Status                                                                        | Validation                                                                                                        |
-| ------------------------------------------------------------------- | ------------------------------------------------------------------------- | ----------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| [#547](https://github.com/Doscoding187/real_estate_portal/pull/547) | Atomic signed-in prospect identity-to-lead custody during public capture. | Open against `main` from `fix/prospect-identity-atomic-capture` (`c378485d`). | `pnpm check`; focused public-lead and prospect-status tests (53 passed); focused ESLint has zero errors.          |
-| [#549](https://github.com/Doscoding187/real_estate_portal/pull/549) | Honest Developer lead awareness in place of fake messages/notifications.  | Open against `main` from `fix/developer-live-lead-awareness` (`251b975f`).    | `pnpm check`; focused developer lead-count and workspace-chrome tests (6 passed); focused ESLint has zero errors. |
+| PR                                                                  | Recovered requirement                                                                                                        | Status                                                                                                                                        | Validation                                                                                                                      |
+| ------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| [#548](https://github.com/Doscoding187/real_estate_portal/pull/548) | Recovery ledger, final classifications, and current-main charters for the delivery-update and Explore-authority workstreams. | Open against `main` from `docs/repository-convergence-20260831`; it makes the deferred database work explicit without authorizing legacy DDL. | Documentation checks and repository CI run on the PR. No database operation, schema mutation, or remote target access occurred. |
+| [#547](https://github.com/Doscoding187/real_estate_portal/pull/547) | Atomic signed-in prospect identity-to-lead custody during public capture.                                                    | Open against `main` from `fix/prospect-identity-atomic-capture` (`c378485d`).                                                                 | `pnpm check`; focused public-lead and prospect-status tests (53 passed); focused ESLint has zero errors.                        |
+| [#549](https://github.com/Doscoding187/real_estate_portal/pull/549) | Honest Developer lead awareness in place of fake messages/notifications.                                                     | Open against `main` from `fix/developer-live-lead-awareness` (`251b975f`).                                                                    | `pnpm check`; focused developer lead-count and workspace-chrome tests (6 passed); focused ESLint has zero errors.               |
 
 ## Local branch-tip decisions
 
