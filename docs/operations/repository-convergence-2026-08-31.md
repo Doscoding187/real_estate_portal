@@ -91,15 +91,15 @@ The lane is an initial routing decision, not approval to merge.
 | `listify-provincial-discovery-gauteng-s0-45baf4e3e0b5` | `feat/provincial-discovery-gauteng-s0` | 12 staged geography/discovery files | Geography forward review; staged index preserved |
 | `listify-provincial-fallback-hero-refinement-6f3ddb7aa857` | `feat/geography-experience-page-bodies` | 8 generated hero assets + 1 audit document | Geography experience/evidence review |
 | `listify-public-navigation-gateway-v1-4af12a5dedcd` | `feat/public-navigation-gateway-v1` | 12 modified + 2 new navigation/test files | Public navigation forward review |
-| `listify-pxf-s2a0-1-listing-safety-lifecycle-41bec5bff8d7` | `feat/pxf-s2a0-1-listing-safety-lifecycle-containment` | listing lifecycle/access runtime and test files | Listing safety forward review |
+| `listify-pxf-s2a0-1-listing-safety-lifecycle-41bec5bff8d7` | `feat/pxf-s2a0-1-listing-safety-lifecycle-containment` | listing lifecycle/access runtime and test files | Partially superseded; archive-only pending any current-model authorization policy |
 | `listify-services-engine-clean-5f803662c373` | detached | 8 architecture documents | Documentation/insight review |
 | `listify-services-engine-phase0-a04bf22c2a1d` | `feature/services-engine-phase0` | 4 modified + 3 new services workflow files | Services forward review |
 | `property-listify-commercial-comm-s1-b28a3ce497c8` | `feat/commercial-engine-s1-office-leasing` | 1 database lifecycle contract test | Commercial/database test review |
-| `property-listify-pbuy-01-convergence-15f5eaac82c4` | `fix/pbuy-01-convergence` | 33 public search/detail/lead source and test files | PBUY forward review |
-| `property-listify-prospect-conversion-1a43c69edda1` | `feat/prospect-conversion-viewing-continuity` | 3 prospect/lead service and test files | Prospect conversion forward review |
+| `property-listify-pbuy-01-convergence-15f5eaac82c4` | `fix/pbuy-01-convergence` | 33 public search/detail/lead source and test files | Superseded by current P-BUY and discovery work |
+| `property-listify-prospect-conversion-1a43c69edda1` | `feat/prospect-conversion-viewing-continuity` | 3 prospect/lead service and test files | Forward integrated as PR #547 |
 | `property-listify-saved-search-ci-repair-2374fc505a41` | `fix/saved-search-ci-baseline` | 3 generated CI-output files | Generated/archive-only candidate |
 | `property-listify-svc-fs-32a951081481` | `svc/future-state-wt` | 11 modified + 9 new geography/services files | Geography and database-consumer review |
-| `slc-plot-land-hero-66d636e8c3e2` | `slc/hero-plot-land-filters` | 1 hero UI file | Land-search forward review |
+| `slc-plot-land-hero-66d636e8c3e2` | `slc/hero-plot-land-filters` | 1 hero UI file | Superseded by the canonical Land handoff |
 
 ## Stash records
 

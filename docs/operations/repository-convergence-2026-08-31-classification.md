@@ -1,6 +1,6 @@
 # Repository Convergence Programme — Classification Decisions
 
-**Status:** Partial review; database, billing, and geography batch complete
+**Status:** Partial review; high-risk database, geography, and live-journey batch complete
 **Forward baseline:** `origin/main` at `79aa137a49ed61355bfca9678533e6098ec33424`
 **Recovery namespace:** `refs/archive/repository-convergence-20260831/`
 
@@ -37,6 +37,10 @@ widen, or infer geography from display text.
 | `worktrees/listify-launch-agency-founding-access-e5dcae676ff9/working-tree` | Fixed-term paid Agency Founding Access and assisted activation. | **Superseded** | Current `main` owns the commercial model through `0007_paid_launch_access_invoice_term.sql` and the later canonical paid Launch Access / agency lifecycle commits. The historical slice uses an obsolete `0001` migration and now-conflicting commercial copy and price. | Keep as historical product evidence only; do not reintroduce its migration, billing service, or marketing claims. |
 | `worktrees/property-listify-commercial-comm-s1-b28a3ce497c8/working-tree` | Formatting-only adjustment to the listing lifecycle database contract. | **Generated/archive-only** | The diff contains no behavioral assertion change. The current lifecycle contract has subsequently advanced with canonical commercial and listing-lifecycle work. | No source integration. Keep the snapshot through the recovery namespace. |
 | `worktrees/property-listify-svc-fs-32a951081481/working-tree` | Gauteng coverage pipeline, governed runtime geography, deterministic output artifacts, and discovery-consumer integration. | **Superseded by forward geography work** | Current `main` contains the governed coverage contract, generator, reference projection, runtime resolver, and later parent-edge/collision research artifacts. The clean territory-pipeline and search-discoverability commits are present in its history; the current artifacts intentionally differ because they include subsequent correction waves. | Do not merge the stale snapshot or overwrite current artifacts. Continue geography only from the current governed pipeline and its explicit contracts. |
+| `worktrees/property-listify-pbuy-01-convergence-15f5eaac82c4/working-tree` | Public Buy result/detail and lead-capture convergence. | **Superseded by current P-BUY and discovery work** | The 33 changed paths all evolved after the snapshot source head. Current `main` contains the later P-BUY convergence (`54a3129`), property-discovery journey work, and the subsequent result-card evidence refinement. The archived patch no longer reverse-applies because its source contracts have evolved. | Keep the snapshot as evidence only; do not merge or partially cherry-pick it. Any new Buy work starts from the current journey contracts. |
+| `worktrees/property-listify-prospect-conversion-1a43c69edda1/working-tree` | Link a signed-in public lead to its prospect identity during capture rather than through an optional later side effect. | **Forward integrated — PR #547** | The recovered intent exposed a real gap in the current capture flow: a lead could commit before its identity link, while attribution ran later as an optional side effect. It was reimplemented on a clean current-main branch as commit `c378485d`, retaining the current Shared Living boundary and adding focused contracts. | Review and merge [PR #547](https://github.com/Doscoding187/real_estate_portal/pull/547); do not merge the archived three-file snapshot. It changes no schema or migration. |
+| `worktrees/listify-pxf-s2a0-1-listing-safety-lifecycle-41bec5bff8d7/working-tree` | Listing lifecycle containment: authorization, safe destructive transitions, and private-to-public integrity. | **Partially superseded / archive-only** | Current `main` supersedes its transaction and public-safety work through the current listing lifecycle, published-edit revisions (`0043e9f`), atomic revision approval (`aca6ba4`), and canonical source-to-public archive path. Its broad generic authoring role gate and legacy agency-claim inference are not forward-safe: private-seller authoring remains supported, and current agency authority is membership-led. | Do not merge the raw nine-file patch. Any future generic-listing authorization change needs a current-model policy and tests against `agencyAgentMemberships`, private sellers, and the revision workflow. |
+| `worktrees/slc-plot-land-hero-66d636e8c3e2/working-tree` | Send Plots & Land hero filters to the Land search page. | **Superseded by canonical Land handoff** | Current `EnhancedHero` delegates `plot_land` to `buildConsumerJourneyUrl` with the canonical Land journey, governed search scope, and the central classification allow-list. The snapshot manually assembled `/plots-and-land` query text and therefore predates the Land request-authority contract. | Keep as recovery evidence only. Do not restore a manual query builder that could bypass the governed Land contract. |
 | `stashes/stash-0` and `stashes/stash-1` | Agency listing-performance queue, seller reviews, and price-revision handoff. | **Superseded** | Current `main` contains `drizzle/schema/listingPerformance.ts`, the Agency router operations, client workspace, integration tests, and the historical `0071`/`0072` migrations under `_archived/pre-canonical-baseline/`. The live model is represented by the canonical baseline rather than the old migration lane. | Never pop either stash. Retain both snapshots; no source merge is needed. |
 | `stashes/stash-2` | Temporary main-sync migration-runner and inventory-test work, including untracked old SQL files. | **Superseded / archive-only** | Its SQL belongs to the retired pre-canonical migration lane, now preserved under `server/migrations/_archived/pre-canonical-baseline/`. Current migration authority is manifest-led and was validated by the static gate above. | Keep the stash ref as forensic evidence only. Do not apply its runner or SQL changes. |
 
@@ -51,10 +55,19 @@ implementation:
    including expiry, revocation, idempotent operations, and immutable events.
 3. Geography coverage must evolve through the current deterministic pipeline,
    with one canonical request authority and no silent geographic widening.
+4. Signed-in public enquiries must persist their prospect identity link in the
+   same capture transaction; this requirement is implemented in PR #547.
 
 The first two require separate current-main PRs. The third is already a
 forward-integrated governed workstream; its historical snapshots remain
-preserved but are not merge candidates.
+preserved but are not merge candidates. The fourth has a focused current-main
+PR open for review.
+
+## Forward-integration PRs
+
+| PR | Recovered requirement | Status | Validation |
+| --- | --- | --- | --- |
+| [#547](https://github.com/Doscoding187/real_estate_portal/pull/547) | Atomic signed-in prospect identity-to-lead custody during public capture. | Open against `main` from `fix/prospect-identity-atomic-capture` (`c378485d`). | `pnpm check`; focused public-lead and prospect-status tests (53 passed); focused ESLint has zero errors. |
 
 ## Local branch-tip triage
 
