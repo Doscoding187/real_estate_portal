@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'wouter';
 import { AgentAppShell } from '@/components/agent/AgentAppShell';
 import { agentPageStyles } from '@/components/agent/agentPageStyles';
@@ -125,12 +125,29 @@ function getFollowUpTone(value: string | Date | null | undefined) {
   return 'bg-blue-100 text-blue-700';
 }
 
+function productivityTabFromLocation(location: string) {
+  const search =
+    typeof window !== 'undefined'
+      ? window.location.search
+      : location.includes('?')
+        ? location.slice(location.indexOf('?'))
+        : '';
+  const requestedTab = new URLSearchParams(search).get('tab');
+  return ['tasks', 'calendar', 'showings', 'reminders'].includes(String(requestedTab))
+    ? String(requestedTab)
+    : 'tasks';
+}
+
 export default function AgentProductivity() {
-  const [, setLocation] = useLocation();
-  const [activeTab, setActiveTab] = useState('tasks');
+  const [location, setLocation] = useLocation();
+  const [activeTab, setActiveTab] = useState(() => productivityTabFromLocation(location));
   const { isLoading: statusLoading } = useAgentOnboardingStatus({
     requireDashboardUnlocked: true,
   });
+
+  useEffect(() => {
+    setActiveTab(productivityTabFromLocation(location));
+  }, [location]);
 
   const calendarRange = useMemo(() => {
     const now = new Date();
@@ -574,7 +591,8 @@ export default function AgentProductivity() {
                               <div className="flex flex-wrap items-center gap-2">
                                 <p className="font-semibold text-slate-900">{followUp.name}</p>
                                 <Badge className={getFollowUpTone(followUp.nextFollowUp)}>
-                                  {parseDatabaseTimestamp(followUp.nextFollowUp).getTime() < Date.now()
+                                  {parseDatabaseTimestamp(followUp.nextFollowUp).getTime() <
+                                  Date.now()
                                     ? 'Overdue'
                                     : 'Scheduled'}
                                 </Badge>
@@ -598,7 +616,9 @@ export default function AgentProductivity() {
                               </Button>
                               <Button
                                 disabled={completeFollowUpMutation.isPending}
-                                onClick={() => completeFollowUpMutation.mutate({ leadId: followUp.id })}
+                                onClick={() =>
+                                  completeFollowUpMutation.mutate({ leadId: followUp.id })
+                                }
                               >
                                 {completeFollowUpMutation.isPending ? 'Completing...' : 'Complete'}
                               </Button>

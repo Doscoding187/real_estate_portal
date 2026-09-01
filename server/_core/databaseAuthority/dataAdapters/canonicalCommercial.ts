@@ -15,7 +15,7 @@ import {
   type AdapterEvidence,
 } from './common';
 
-export const CANONICAL_COMMERCIAL_VERSION = 'canonical-commercial-v2' as const;
+export const CANONICAL_COMMERCIAL_VERSION = 'canonical-commercial-v3' as const;
 
 export type LaunchAudience = 'agent' | 'agency' | 'developer';
 
@@ -119,12 +119,13 @@ export const CANONICAL_AGENT_LAUNCH_ACCESS: LaunchProductReference = Object.free
     'Lead and enquiry access',
     'Agent profile and directory',
     'Agent analytics and reporting',
+    'Commission and earnings tracking',
   ],
   limits: { max_active_listings: 50 },
   entitlements: {
     max_active_listings: 50,
-    has_commission_tracking: false,
-    has_revenue_dashboard: false,
+    has_commission_tracking: true,
+    has_revenue_dashboard: true,
   },
   isActive: 1,
   isPopular: 0,
@@ -200,7 +201,9 @@ const REFERENCE_PAYLOAD = Object.freeze({
       featureAccessPolicy: metadata.commercial_feature_access_policy || null,
       resourceLimitPolicy: metadata.commercial_resource_limit_policy || null,
       entitlementSource: String(metadata.commercial_entitlement_source || 'explicit'),
-      entitlementKeys: Object.keys(product.entitlements),
+      entitlements: Object.entries(product.entitlements).sort(([left], [right]) =>
+        left.localeCompare(right),
+      ),
     };
   }),
 });

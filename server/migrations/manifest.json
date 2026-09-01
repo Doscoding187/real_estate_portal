@@ -4,7 +4,7 @@
   "historyTable": "sql_migration_history",
   "attemptTable": "sql_migration_attempts",
   "lockName": "property_listify_manifest_migrations",
-  "expectedHead": "0061_sl_messages_authorship.sql",
+  "expectedHead": "0063_agent_launch_access_earnings_feature.sql",
   "migrations": [
     {
       "sequence": 0,
@@ -638,6 +638,26 @@
       "statementPolicy": "approved-exception",
       "requiredReferenceDataVersion": null,
       "approvalReference": "SL-P1-sl-messages-authorship-2026-08-24-Edward"
+    },
+    {
+      "sequence": 62,
+      "filename": "0062_agent_launch_access_full_capabilities.sql",
+      "checksum": "de1e31655ebb152af383c18197bf299cacee4b365ee9639f35c0ec3257915eff",
+      "parent": "0061_sl_messages_authorship.sql",
+      "parentChecksum": "4b07ca2038c51683b573f9ed780a58efd1817e27ea75460364c6f80d14cd4109",
+      "kind": "transactional-data",
+      "statementPolicy": "transactional-dml",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 63,
+      "filename": "0063_agent_launch_access_earnings_feature.sql",
+      "checksum": "b3e8227ba6224de1b7d7426fdafbd8e872dd53f9191a77b271ed1a61dae44cef",
+      "parent": "0062_agent_launch_access_full_capabilities.sql",
+      "parentChecksum": "de1e31655ebb152af383c18197bf299cacee4b365ee9639f35c0ec3257915eff",
+      "kind": "transactional-data",
+      "statementPolicy": "transactional-dml",
+      "requiredReferenceDataVersion": null
     }
   ]
 }

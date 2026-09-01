@@ -181,9 +181,7 @@ describe('bounded Database Authority data adapters', () => {
       cities: 10,
       suburbs: 10,
     });
-    expect(GOVERNED_RUNTIME_REFERENCE_VERSION).toBe(
-      'gauteng-runtime-reference-projection-v0.3',
-    );
+    expect(GOVERNED_RUNTIME_REFERENCE_VERSION).toBe('gauteng-runtime-reference-projection-v0.3');
     expect(GOVERNED_RUNTIME_REFERENCE_DIGEST).toMatch(/^[a-f0-9]{64}$/);
     expect(GOVERNED_RUNTIME_REFERENCE_ROWS).toHaveLength(1414);
     expect(GOVERNED_RUNTIME_GEOGRAPHY_EXPECTED_ROWS).toEqual({
@@ -201,7 +199,7 @@ describe('bounded Database Authority data adapters', () => {
     expect(SEARCH_TO_LEAD_SCENARIO_DIGEST).toMatch(/^[a-f0-9]{64}$/);
     expect(CANONICAL_FOUNDATION_VERSION).toBe('canonical-launch-foundation-v1');
     expect(CANONICAL_FOUNDATION_DIGEST).toMatch(/^[a-f0-9]{64}$/);
-    expect(CANONICAL_COMMERCIAL_VERSION).toBe('canonical-commercial-v2');
+    expect(CANONICAL_COMMERCIAL_VERSION).toBe('canonical-commercial-v3');
     expect(CANONICAL_COMMERCIAL_DIGEST).toMatch(/^[a-f0-9]{64}$/);
     expect(CANONICAL_DEVELOPER_LAUNCH_ACCESS).toMatchObject({
       name: 'developer_launch_access',
@@ -404,7 +402,7 @@ describe('bounded Database Authority data adapters', () => {
     ]);
     expect(plan.products.every(product => product.state === 'missing')).toBe(true);
     expect(plan.pending.filter(item => item.action === 'insert_plan')).toHaveLength(3);
-    expect(plan.migrationHead).toBe('0061_sl_messages_authorship.sql');
+    expect(plan.migrationHead).toBe('0063_agent_launch_access_earnings_feature.sql');
   });
 
   it('fails closed when a protected commercial row conflicts with canonical authority', async () => {

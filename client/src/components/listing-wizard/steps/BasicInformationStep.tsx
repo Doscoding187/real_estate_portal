@@ -93,6 +93,7 @@ const BasicInformationStep: React.FC = () => {
   const propertyType: PropertyType | undefined = store.propertyType;
   const title = store.title || '';
   const description = store.description || '';
+  const descriptionCharactersUntilSubmission = Math.max(0, 100 - description.trim().length);
   const propertyDetails = store.propertyDetails || {};
   const basicInfo = store.basicInfo || {};
   const core = readCorePropertyInformation(propertyType, propertyDetails, basicInfo);
@@ -138,7 +139,8 @@ const BasicInformationStep: React.FC = () => {
     }
     const value = Number(rawValue);
     updateCore({
-      [field]: Number.isFinite(value) && value >= 0 ? { status: 'known', value } : { status: 'unknown' },
+      [field]:
+        Number.isFinite(value) && value >= 0 ? { status: 'known', value } : { status: 'unknown' },
     });
   };
 
@@ -279,7 +281,7 @@ const BasicInformationStep: React.FC = () => {
                 descriptionValidation.clearError();
               }}
               onBlur={descriptionValidation.onBlur}
-              placeholder="Describe your property in detail (minimum 50 characters)"
+              placeholder="Describe the property (50 characters to continue; 100+ to submit)"
               className="mt-1 min-h-[120px]"
               maxLength={5000}
               aria-invalid={!!descriptionValidation.error}
@@ -292,6 +294,17 @@ const BasicInformationStep: React.FC = () => {
               />
               <p className="text-xs text-slate-500">{description.length}/5000 characters</p>
             </div>
+            <p
+              className={`mt-1 text-xs ${
+                descriptionCharactersUntilSubmission === 0 ? 'text-emerald-700' : 'text-amber-700'
+              }`}
+            >
+              {descriptionCharactersUntilSubmission === 0
+                ? 'Description length is ready for submission.'
+                : description.trim().length >= 50
+                  ? `${descriptionCharactersUntilSubmission} more characters are needed for submission.`
+                  : 'You can continue at 50 characters; 100 characters are required for submission.'}
+            </p>
           </div>
         </div>
       </Card>
@@ -299,7 +312,11 @@ const BasicInformationStep: React.FC = () => {
       <Card className="p-6 bg-white/50 backdrop-blur-sm border-slate-200/60 shadow-sm">
         <div className="flex items-center gap-3 mb-2 pb-4 border-b border-slate-100">
           <div className="p-2 bg-blue-100 rounded-lg">
-            {isFarm ? <Wheat className="w-5 h-5 text-blue-600" /> : <Building2 className="w-5 h-5 text-blue-600" />}
+            {isFarm ? (
+              <Wheat className="w-5 h-5 text-blue-600" />
+            ) : (
+              <Building2 className="w-5 h-5 text-blue-600" />
+            )}
           </div>
           <div>
             <h3 className="text-lg font-semibold text-slate-800">Core Property Information</h3>
@@ -331,7 +348,11 @@ const BasicInformationStep: React.FC = () => {
             />
             <NumberField
               id="core-internal-area"
-              label={propertyType === 'apartment' ? 'Internal / unit area (m²)' : 'Internal / floor area (m²)'}
+              label={
+                propertyType === 'apartment'
+                  ? 'Internal / unit area (m²)'
+                  : 'Internal / floor area (m²)'
+              }
               required={isCoreFieldRequiredWhenVisible('internalArea')}
               step="0.01"
               min="0.01"
@@ -403,7 +424,10 @@ const BasicInformationStep: React.FC = () => {
               <Label htmlFor="core-farm-use" className="text-slate-700">
                 Farm / smallholding use {isCoreFieldRequired('farmUse') ? '*' : ''}
               </Label>
-              <Select value={core.farmUse || ''} onValueChange={value => updateCore({ farmUse: value })}>
+              <Select
+                value={core.farmUse || ''}
+                onValueChange={value => updateCore({ farmUse: value })}
+              >
                 <SelectTrigger id="core-farm-use" className="mt-1">
                   <SelectValue placeholder="Select the primary use" />
                 </SelectTrigger>
@@ -427,7 +451,10 @@ const BasicInformationStep: React.FC = () => {
                   type="number"
                   min="0.01"
                   step="0.01"
-                  value={draftValue('farmLandArea', farmArea?.status === 'known' ? farmArea.value : '')}
+                  value={draftValue(
+                    'farmLandArea',
+                    farmArea?.status === 'known' ? farmArea.value : '',
+                  )}
                   onChange={e => handleFarmAreaChange(e.target.value)}
                   onBlur={() => clearNumericDraft('farmLandArea')}
                   {...directNumericInputProps('decimal')}
@@ -456,7 +483,13 @@ const BasicInformationStep: React.FC = () => {
                 Is a residence included? {isCoreFieldRequired('residenceIncluded') ? '*' : ''}
               </Label>
               <Select
-                value={core.residenceIncluded === true ? 'yes' : core.residenceIncluded === false ? 'no' : ''}
+                value={
+                  core.residenceIncluded === true
+                    ? 'yes'
+                    : core.residenceIncluded === false
+                      ? 'no'
+                      : ''
+                }
                 onValueChange={updateFarmResidence}
               >
                 <SelectTrigger id="core-residence-included" className="mt-1">

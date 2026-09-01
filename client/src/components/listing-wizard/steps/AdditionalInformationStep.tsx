@@ -1,6 +1,5 @@
 import React from 'react';
 import { useListingWizardStore } from '@/hooks/useListingWizard';
-import { Card } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import {
@@ -10,7 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Building2, Check, Home, Plus, Shield, Sparkles, X, Zap } from 'lucide-react';
+import { Building2, Check, ChevronDown, Home, Plus, Shield, Sparkles, X, Zap } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type {
   FeaturesContext,
@@ -34,13 +33,15 @@ function SectionHeader({
   icon: Icon,
   title,
   description,
+  className,
 }: {
   icon: React.ElementType;
   title: string;
   description: string;
+  className?: string;
 }) {
   return (
-    <div className="flex items-start gap-3 border-b border-slate-100 pb-4">
+    <div className={cn('flex items-start gap-3 border-b border-slate-100 pb-4', className)}>
       <div className="mt-0.5 rounded-xl bg-emerald-50 p-2.5 text-emerald-700">
         <Icon className="h-5 w-5" aria-hidden="true" />
       </div>
@@ -49,6 +50,57 @@ function SectionHeader({
         <p className="mt-1 text-sm leading-5 text-slate-500">{description}</p>
       </div>
     </div>
+  );
+}
+
+function OptionalDetailsSection({
+  id,
+  icon,
+  title,
+  description,
+  selectedCount = 0,
+  children,
+}: {
+  id: string;
+  icon: React.ElementType;
+  title: string;
+  description: string;
+  selectedCount?: number;
+  children: React.ReactNode;
+}) {
+  const [isOpen, setIsOpen] = React.useState(false);
+  const progressLabel = selectedCount > 0 ? `${selectedCount} added` : 'Optional';
+
+  return (
+    <details
+      open={isOpen}
+      onToggle={event => setIsOpen(event.currentTarget.open)}
+      className="group rounded-2xl border border-slate-200/80 bg-white shadow-sm transition-colors open:border-slate-300"
+    >
+      <summary
+        data-testid={`optional-section-${id}`}
+        className="flex cursor-pointer list-none items-start gap-4 px-5 py-5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-inset sm:px-6 [&::-webkit-details-marker]:hidden"
+      >
+        <SectionHeader
+          icon={icon}
+          title={title}
+          description={description}
+          className="min-w-0 flex-1 border-b-0 pb-0"
+        />
+        <div className="flex shrink-0 items-center gap-2 pt-1">
+          <span className="hidden rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-600 sm:inline">
+            {progressLabel}
+          </span>
+          <ChevronDown
+            className="h-5 w-5 text-slate-400 transition-transform duration-200 group-open:rotate-180"
+            aria-hidden="true"
+          />
+        </div>
+      </summary>
+      <div id={`${id}-content`} className="border-t border-slate-100 px-5 py-5 sm:px-6 sm:pb-6">
+        {children}
+      </div>
+    </details>
   );
 }
 
@@ -240,6 +292,15 @@ export function AdditionalInformationStep() {
   const [customFeature, setCustomFeature] = React.useState('');
   const [customHighlight, setCustomHighlight] = React.useState('');
   const [customHighlightError, setCustomHighlightError] = React.useState('');
+  const contextFactCount = [
+    context.context.setting,
+    context.context.controlledAccess,
+    context.context.securityProfile,
+    context.petPolicy,
+  ].filter(value => value && value !== 'unknown').length;
+  const utilityFactCount = Object.values(context.utilities).filter(
+    value => value && value !== 'unknown',
+  ).length;
 
   const updateContext = (update: (current: FeaturesContext) => FeaturesContext) => {
     store.setAdditionalInfo({ featuresContext: update(context) });
@@ -349,12 +410,18 @@ export function AdditionalInformationStep() {
   return (
     <div
       data-testid="features-context-step"
-      className="animate-in slide-in-from-bottom-4 space-y-6 py-6 duration-500"
+      className="animate-in slide-in-from-bottom-4 space-y-4 py-4 duration-500 sm:py-6"
     >
       <div className="mx-auto max-w-3xl text-center">
-        <h2 className="text-2xl font-bold text-slate-800">Features &amp; Context</h2>
-        <p className="mt-2 text-slate-500">
-          Add the practical details that help prospects understand the property.
+        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--primary)]">
+          Step 4 · Optional details
+        </p>
+        <h2 className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-slate-950">
+          Add the details you know
+        </h2>
+        <p className="mt-2 text-sm leading-6 text-slate-600">
+          Everything on this page is optional. Add only confirmed details now, or return to them in
+          the listing editor later.
         </p>
         {propertyType === 'farm' && (
           <p className="mt-3 rounded-xl bg-amber-50 px-4 py-3 text-left text-sm text-amber-800">
@@ -364,12 +431,13 @@ export function AdditionalInformationStep() {
         )}
       </div>
 
-      <Card className="space-y-5 rounded-2xl border-slate-200/70 bg-white/80 p-5 shadow-sm sm:p-6">
-        <SectionHeader
-          icon={Home}
-          title="Spaces & Features"
-          description="Choose the additional spaces and practical features that are genuinely part of the property."
-        />
+      <OptionalDetailsSection
+        id="spaces"
+        icon={Home}
+        title="Spaces & Features"
+        description="Choose the additional spaces and practical features that are genuinely part of the property."
+        selectedCount={context.spaces.length + context.customFeatures.length}
+      >
         <fieldset>
           <legend className="sr-only">Spaces and features</legend>
           <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
@@ -436,14 +504,15 @@ export function AdditionalInformationStep() {
             Other features appear as display-only details and do not change search filters.
           </p>
         </div>
-      </Card>
+      </OptionalDetailsSection>
 
-      <Card className="space-y-5 rounded-2xl border-slate-200/70 bg-white/80 p-5 shadow-sm sm:p-6">
-        <SectionHeader
-          icon={Building2}
-          title="Property Context"
-          description="Describe how the property sits within its immediate setting. These answers do not assume a title or ownership structure."
-        />
+      <OptionalDetailsSection
+        id="context"
+        icon={Building2}
+        title="Property Context"
+        description="Describe how the property sits within its immediate setting. These answers do not assume a title or ownership structure."
+        selectedCount={contextFactCount}
+      >
         <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
           <fieldset className="space-y-2.5">
             <legend className="text-sm font-medium text-slate-700">Setting</legend>
@@ -566,14 +635,15 @@ export function AdditionalInformationStep() {
             </div>
           </fieldset>
         )}
-      </Card>
+      </OptionalDetailsSection>
 
-      <Card className="space-y-5 rounded-2xl border-slate-200/70 bg-white/80 p-5 shadow-sm sm:p-6">
-        <SectionHeader
-          icon={Zap}
-          title="Utilities & Resilience"
-          description="Share the practical facts buyers repeatedly need. Choose Not sure rather than guessing."
-        />
+      <OptionalDetailsSection
+        id="utilities"
+        icon={Zap}
+        title="Utilities & Resilience"
+        description="Share the practical facts buyers repeatedly need. Choose Not sure rather than guessing."
+        selectedCount={utilityFactCount}
+      >
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           <SelectField
             id="electricity-supply"
@@ -624,14 +694,15 @@ export function AdditionalInformationStep() {
             onChange={value => updateUtility('internetAccess', value)}
           />
         </div>
-      </Card>
+      </OptionalDetailsSection>
 
-      <Card className="space-y-5 rounded-2xl border-slate-200/70 bg-white/80 p-5 shadow-sm sm:p-6">
-        <SectionHeader
-          icon={Shield}
-          title="Security"
-          description="Select specific security characteristics only when you know they are present."
-        />
+      <OptionalDetailsSection
+        id="security"
+        icon={Shield}
+        title="Security"
+        description="Select specific security characteristics only when you know they are present."
+        selectedCount={context.security.status === 'known' ? context.security.features.length : 0}
+      >
         <fieldset className="space-y-3">
           <legend className="sr-only">Security information certainty</legend>
           <div className="grid gap-2 sm:grid-cols-2">
@@ -683,14 +754,15 @@ export function AdditionalInformationStep() {
             </div>
           </fieldset>
         )}
-      </Card>
+      </OptionalDetailsSection>
 
-      <Card className="space-y-5 rounded-2xl border-slate-200/70 bg-slate-50/80 p-5 shadow-sm sm:p-6">
-        <SectionHeader
-          icon={Sparkles}
-          title="Listing Highlights"
-          description="Optional presentation characteristics. These help describe the property but are not verified search facts."
-        />
+      <OptionalDetailsSection
+        id="highlights"
+        icon={Sparkles}
+        title="Listing Highlights"
+        description="Optional presentation characteristics. These help describe the property but are not verified search facts."
+        selectedCount={context.highlights.length + context.customHighlights.length}
+      >
         <fieldset>
           <legend className="sr-only">Listing highlights</legend>
           <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
@@ -771,7 +843,7 @@ export function AdditionalInformationStep() {
             </div>
           )}
         </div>
-      </Card>
+      </OptionalDetailsSection>
     </div>
   );
 }

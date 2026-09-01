@@ -34,7 +34,7 @@ import {
 import { TRPCError } from '@trpc/server';
 import type { SQL } from 'drizzle-orm';
 import { EmailService } from './_core/emailService';
-import { ENV } from './_core/env';
+import { resolveMediaDeliveryUrl } from './_core/mediaStorage';
 import { nowAsDbTimestamp, toDbTimestampRequired } from './utils/dbTypeUtils';
 import { requireUser } from './_core/requireUser';
 import {
@@ -1098,16 +1098,12 @@ export const agentRouter = router({
             .select()
             .from(propertyImages)
             .where(eq(propertyImages.propertyId, property.id))
-            .orderBy(propertyImages.displayOrder)
+            .orderBy(desc(propertyImages.isPrimary), asc(propertyImages.displayOrder))
             .limit(1);
 
-          const cdnUrl =
-            ENV.cloudFrontUrl || `https://${ENV.s3BucketName}.s3.${ENV.awsRegion}.amazonaws.com`;
           const primaryImage =
             images.length > 0
-              ? images[0].imageUrl.startsWith('http')
-                ? images[0].imageUrl
-                : `${cdnUrl}/${images[0].imageUrl}`
+              ? resolveMediaDeliveryUrl(images[0].imageUrl)
               : null;
 
           return {

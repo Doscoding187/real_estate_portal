@@ -33,7 +33,12 @@ import {
   getCommercialPresentationLimits,
   getCommercialTermPresentation,
 } from '@/lib/commercialCatalog';
+import { getAccountAuthHref } from '@/lib/publicNavigation';
 import { COMMERCIAL_HERO_CLASS } from './commercialHero';
+
+const AGENT_ACCOUNT_START_HREF = getAccountAuthHref('register', '/agent/select-package', {
+  registerRole: 'agent',
+});
 
 type AgentCapability = {
   label: string;
@@ -89,6 +94,15 @@ const AGENT_CAPABILITIES: readonly AgentCapability[] = [
     href: '/agent/analytics',
     icon: BarChart3,
     matches: ['analytic', 'report'],
+  },
+  {
+    label: 'Earnings',
+    title: 'Keep commissions in view.',
+    description:
+      'Track commissions, payout state and exportable earnings records alongside the rest of your agent work.',
+    href: '/agent/earnings',
+    icon: CircleDollarSign,
+    matches: ['commission', 'earning'],
   },
 ];
 
@@ -277,18 +291,27 @@ function CapabilityCard({
 function LaunchAccessCard({ product }: { product?: CommercialProduct }) {
   if (!product) {
     return (
-      <div className="rounded-[30px] border border-slate-200 bg-white p-7 text-slate-950 shadow-[0_28px_80px_rgba(15,23,42,0.12)]">
+      <div
+        data-testid="agent-launch-access-unavailable-card"
+        className="rounded-[30px] border border-slate-200 bg-white p-7 text-slate-950 shadow-[0_28px_80px_rgba(15,23,42,0.12)]"
+      >
         <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--brand-blue)]">
           Agent Launch Access
         </p>
         <h3 className="mt-4 text-3xl font-bold">Commercial details unavailable</h3>
         <p className="mt-4 text-sm leading-7 text-slate-600">
-          The canonical Agent product is not available right now. Contact Property Listify for an
-          assisted conversation instead of relying on an old price.
+          You can still create your Agent account and begin setting up your public presence. If you
+          need help while Launch Access details are unavailable, Property Listify can assist you.
         </p>
         <a
-          href="/contact"
+          href={AGENT_ACCOUNT_START_HREF}
           className="mt-7 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-[var(--conversion)] px-5 py-3.5 text-sm font-bold text-white transition hover:bg-[var(--conversion-hover)]"
+        >
+          Create your Agent account <ArrowRight className="h-4 w-4" aria-hidden="true" />
+        </a>
+        <a
+          href="/contact"
+          className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-300 bg-white px-5 py-3.5 text-sm font-bold text-slate-950 transition hover:border-slate-950"
         >
           Contact Property Listify <ArrowRight className="h-4 w-4" aria-hidden="true" />
         </a>
@@ -470,19 +493,25 @@ export default function AgentProductLandingPage() {
                 </p>
                 <div className="mt-9 flex flex-wrap gap-3">
                   <a
-                    href="#agent-workspace"
+                    href={AGENT_ACCOUNT_START_HREF}
                     className="inline-flex items-center gap-2 rounded-2xl bg-[var(--conversion)] px-5 py-3.5 text-sm font-bold text-white shadow-lg shadow-orange-950/25 transition hover:bg-[var(--conversion-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
                   >
-                    Explore the Agent workspace{' '}
+                    Create your Agent account
                     <ArrowRight className="h-4 w-4" aria-hidden="true" />
                   </a>
                   <a
-                    href="#launch-access"
+                    href="/contact"
                     className="inline-flex items-center gap-2 rounded-2xl border border-white/35 bg-white/10 px-5 py-3.5 text-sm font-bold text-white shadow-sm transition hover:border-white/60 hover:bg-white/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
                   >
-                    View Launch Access <ArrowDown className="h-4 w-4" aria-hidden="true" />
+                    Contact Property Listify <ArrowRight className="h-4 w-4" aria-hidden="true" />
                   </a>
                 </div>
+                <a
+                  href="#agent-workspace"
+                  className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-slate-300 transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
+                >
+                  Explore the Agent workspace <ArrowDown className="h-4 w-4" aria-hidden="true" />
+                </a>
                 <div className="mt-8 flex flex-wrap gap-3 text-sm font-semibold text-slate-300">
                   <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-2">
                     <CircleDollarSign
@@ -833,24 +862,24 @@ export default function AgentProductLandingPage() {
           <div className="mx-auto flex max-w-4xl flex-col items-center px-4 text-center sm:px-6 lg:px-8">
             <BriefcaseBusiness className="h-7 w-7 text-[var(--brand-blue)]" aria-hidden="true" />
             <h2 className="mt-5 text-3xl font-bold tracking-[-0.03em] text-slate-950 md:text-4xl">
-              Want to talk it through first?
+              Ready to make the Agent workspace yours?
             </h2>
             <p className="mt-4 max-w-2xl text-base leading-8 text-slate-600">
-              Ask a question, discuss your current inventory or have an assisted conversation before
-              requesting an invoice.
+              Create your Agent account first, then choose Launch Access, request your invoice and
+              complete the payment handoff that unlocks the supported workspace.
             </p>
             <div className="mt-7 flex flex-wrap justify-center gap-3">
               <a
-                href="/contact"
-                className="inline-flex items-center gap-2 rounded-2xl bg-slate-950 px-5 py-3.5 text-sm font-bold text-white transition hover:bg-[var(--brand-blue)]"
+                href={AGENT_ACCOUNT_START_HREF}
+                className="inline-flex items-center gap-2 rounded-2xl bg-[var(--conversion)] px-5 py-3.5 text-sm font-bold text-white shadow-lg shadow-orange-900/15 transition hover:bg-[var(--conversion-hover)]"
               >
-                Contact Property Listify <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                Create your Agent account <ArrowRight className="h-4 w-4" aria-hidden="true" />
               </a>
               <a
-                href="#launch-access"
+                href="/contact"
                 className="inline-flex items-center gap-2 rounded-2xl border border-slate-300 bg-white px-5 py-3.5 text-sm font-bold text-slate-950 transition hover:border-slate-950"
               >
-                Review Launch Access <ArrowDown className="h-4 w-4" aria-hidden="true" />
+                Contact Property Listify <ArrowRight className="h-4 w-4" aria-hidden="true" />
               </a>
             </div>
           </div>

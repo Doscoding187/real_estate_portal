@@ -53,6 +53,7 @@ import { TrustStripSection } from '@/components/advertise/TrustStripSection';
 import { LiveDemandSection } from '@/components/advertise/LiveDemandSection';
 import { HeroSection } from '@/components/advertise/HeroSection';
 import { toAbsoluteUrl } from '@/lib/seo/structuredData';
+import { RoleWorkspaceHeroPreview } from './advertise/RoleWorkspaceHeroPreview';
 
 export default function AdvertiseWithUs() {
   useAdvertiseAnalytics();
@@ -85,7 +86,7 @@ export default function AdvertiseWithUs() {
               }
               subheadline="Publish and manage inventory, participate in Property Listify discovery, capture property interest and follow up in the right business workspace."
               primaryCTA={{
-                label: 'Explore Launch Access',
+                label: 'Choose your business path',
                 href: '#audience-gateways',
                 variant: 'primary',
               }}
@@ -99,8 +100,18 @@ export default function AdvertiseWithUs() {
                 { value: 'Once-off', label: 'pricing' },
                 { value: 'No auto', label: 'renewal' },
               ]}
+              visual={<RoleWorkspaceHeroPreview />}
+              visualCaption="Select a role to preview its workspace. Illustrative product views — not live market activity."
             />
           </section>
+        </SectionErrorBoundary>
+
+        <SectionErrorBoundary sectionName="Audience Gateways">
+          <Suspense
+            fallback={<SectionLoader minHeight="500px" message="Loading business paths..." />}
+          >
+            <SegmentationLayer />
+          </Suspense>
         </SectionErrorBoundary>
 
         <SectionErrorBoundary sectionName="Trust Strip">
@@ -119,14 +130,6 @@ export default function AdvertiseWithUs() {
           <section id="live-demand" aria-labelledby="live-demand-heading">
             <LiveDemandSection />
           </section>
-        </SectionErrorBoundary>
-
-        <SectionErrorBoundary sectionName="Audience Gateways">
-          <Suspense
-            fallback={<SectionLoader minHeight="500px" message="Loading business paths..." />}
-          >
-            <SegmentationLayer />
-          </Suspense>
         </SectionErrorBoundary>
 
         <SectionErrorBoundary sectionName="Platform Journey">

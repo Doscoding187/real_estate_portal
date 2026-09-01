@@ -5,30 +5,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AgentAppShell } from '@/components/agent/AgentAppShell';
 import { agentPageStyles } from '@/components/agent/agentPageStyles';
 import { AgentFeatureLockedState } from '@/components/agent/AgentFeatureLockedState';
-import {
-  User,
-  Bell,
-  Lock,
-  CreditCard,
-  Smartphone,
-  Mail,
-  Globe,
-  Shield,
-  Key,
-  Link2,
-  Eye,
-  EyeOff,
-  Save,
-  Camera,
-  Loader2,
-  Clock,
-  X,
-} from 'lucide-react';
+import { User, CreditCard, Save, Camera, Loader2, Clock, X } from 'lucide-react';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -91,7 +72,6 @@ export default function AgentSettings() {
     requireDashboardUnlocked: true,
   });
   const [activeTab, setActiveTab] = useState('profile');
-  const [showPassword, setShowPassword] = useState(false);
   const isAgent = user?.role === 'agent';
   const profileImageInputRef = useRef<HTMLInputElement>(null);
   const [isUploadingProfileImage, setIsUploadingProfileImage] = useState(false);
@@ -119,14 +99,6 @@ export default function AgentSettings() {
     slug: '',
     profileImage: '',
     areasServed: [] as string[],
-  });
-
-  const [notifications, setNotifications] = useState({
-    emailLeads: true,
-    emailShowings: true,
-    pushLeads: true,
-    pushShowings: false,
-    smsShowings: true,
   });
 
   const profileQuery = trpc.agent.getMyProfileOnboarding.useQuery(undefined, {
@@ -202,9 +174,6 @@ export default function AgentSettings() {
     });
   };
 
-  const handleSaveNotifications = () => {
-    toast.success('Notification preferences saved');
-  };
   const hasActiveCommercialTerm = Boolean(
     status?.packageSelected && status?.subscriptionStatus !== 'none',
   );
@@ -233,7 +202,7 @@ export default function AgentSettings() {
       ? 'Unlimited'
       : currentPlanMaxActiveListings > 0
         ? String(currentPlanMaxActiveListings)
-        : 'Not available yet';
+        : 'No active allowance';
 
   return (
     <AgentAppShell>
@@ -245,7 +214,7 @@ export default function AgentSettings() {
               <div>
                 <h1 className={agentPageStyles.title}>Settings</h1>
                 <p className={cn(agentPageStyles.subtitle, 'mt-1')}>
-                  Manage your account and preferences
+                  Manage your public profile and Launch Access details
                 </p>
               </div>
             </div>
@@ -264,15 +233,11 @@ export default function AgentSettings() {
             />
           ) : (
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className={cn(agentPageStyles.tabsList, 'mb-6 grid w-full grid-cols-5')}>
+              <TabsList
+                className={cn(agentPageStyles.tabsList, 'mb-6 grid w-full max-w-md grid-cols-2')}
+              >
                 <TabsTrigger value="profile" className={agentPageStyles.tabTrigger}>
                   Profile
-                </TabsTrigger>
-                <TabsTrigger value="notifications" className={agentPageStyles.tabTrigger}>
-                  Notifications
-                </TabsTrigger>
-                <TabsTrigger value="security" className={agentPageStyles.tabTrigger}>
-                  Security
                 </TabsTrigger>
                 <TabsTrigger value="billing" className={agentPageStyles.tabTrigger}>
                   Billing
@@ -743,187 +708,6 @@ export default function AgentSettings() {
                 </Card>
               </TabsContent>
 
-              {/* Notifications Tab */}
-              <TabsContent value="notifications" className="space-y-6">
-                <Card className={agentPageStyles.panel}>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Bell className="h-5 w-5 text-blue-600" />
-                      Notification Preferences
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                    {/* Email Notifications */}
-                    <div>
-                      <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                        <Mail className="h-5 w-5 text-gray-600" />
-                        Email Notifications
-                      </h3>
-                      <div className="space-y-4">
-                        {[
-                          {
-                            key: 'emailLeads',
-                            label: 'New Leads',
-                            description: 'Get notified when you receive new leads',
-                          },
-                          {
-                            key: 'emailShowings',
-                            label: 'Showing Requests',
-                            description: 'Notifications for new showing requests',
-                          },
-                        ].map(item => (
-                          <div
-                            key={item.key}
-                            className="flex items-center justify-between rounded-[12px] border border-slate-200/70 bg-[#fbfaf7] p-4"
-                          >
-                            <div>
-                              <p className="font-medium text-gray-900">{item.label}</p>
-                              <p className="text-sm text-gray-500">{item.description}</p>
-                            </div>
-                            <Switch
-                              checked={
-                                notifications[item.key as keyof typeof notifications] as boolean
-                              }
-                              onCheckedChange={checked =>
-                                setNotifications({ ...notifications, [item.key]: checked })
-                              }
-                            />
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Push Notifications */}
-                    <div>
-                      <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                        <Smartphone className="h-5 w-5 text-gray-600" />
-                        Push Notifications
-                      </h3>
-                      <div className="space-y-4">
-                        {[
-                          {
-                            key: 'pushLeads',
-                            label: 'New Leads',
-                            description: 'Real-time lead notifications',
-                          },
-                          {
-                            key: 'pushShowings',
-                            label: 'Showing Reminders',
-                            description: '15 min before scheduled showings',
-                          },
-                        ].map(item => (
-                          <div
-                            key={item.key}
-                            className="flex items-center justify-between rounded-[12px] border border-slate-200/70 bg-[#fbfaf7] p-4"
-                          >
-                            <div>
-                              <p className="font-medium text-gray-900">{item.label}</p>
-                              <p className="text-sm text-gray-500">{item.description}</p>
-                            </div>
-                            <Switch
-                              checked={
-                                notifications[item.key as keyof typeof notifications] as boolean
-                              }
-                              onCheckedChange={checked =>
-                                setNotifications({ ...notifications, [item.key]: checked })
-                              }
-                            />
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-100">
-                      <Button variant="outline">Reset to Default</Button>
-                      <Button onClick={handleSaveNotifications}>
-                        <Save className="h-4 w-4 mr-2" />
-                        Save Preferences
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              {/* Security Tab */}
-              <TabsContent value="security" className="space-y-6">
-                <Card className={agentPageStyles.panel}>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Shield className="h-5 w-5 text-blue-600" />
-                      Security Settings
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                    {/* Change Password */}
-                    <div>
-                      <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                        <Lock className="h-5 w-5 text-gray-600" />
-                        Change Password
-                      </h3>
-                      <div className="space-y-4 max-w-md">
-                        <div className="space-y-2">
-                          <Label htmlFor="current-password">Current Password</Label>
-                          <div className="relative">
-                            <Input
-                              id="current-password"
-                              type={showPassword ? 'text' : 'password'}
-                              placeholder="Enter current password"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => setShowPassword(!showPassword)}
-                              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                            >
-                              {showPassword ? (
-                                <EyeOff className="h-4 w-4" />
-                              ) : (
-                                <Eye className="h-4 w-4" />
-                              )}
-                            </button>
-                          </div>
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label htmlFor="new-password">New Password</Label>
-                          <Input
-                            id="new-password"
-                            type={showPassword ? 'text' : 'password'}
-                            placeholder="Enter new password"
-                          />
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label htmlFor="confirm-password">Confirm New Password</Label>
-                          <Input
-                            id="confirm-password"
-                            type={showPassword ? 'text' : 'password'}
-                            placeholder="Confirm new password"
-                          />
-                        </div>
-
-                        <Button className="w-full">Update Password</Button>
-                      </div>
-                    </div>
-
-                    {/* Two-Factor Authentication */}
-                    <div className="pt-6 border-t border-gray-100">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h3 className="font-semibold text-gray-900 flex items-center gap-2 mb-1">
-                            <Key className="h-5 w-5 text-gray-600" />
-                            Two-Factor Authentication
-                          </h3>
-                          <p className="text-sm text-gray-500">
-                            Add an extra layer of security to your account
-                          </p>
-                        </div>
-                        <Button variant="outline">Enable 2FA</Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
               {/* Billing Tab */}
               <TabsContent value="billing" className="space-y-6">
                 <Card className={agentPageStyles.panel}>
@@ -957,7 +741,7 @@ export default function AgentSettings() {
                             </div>
                           </div>
                           <div className={cn(agentPageStyles.mutedPanel, 'p-4')}>
-                            <div className="text-sm text-gray-500">Trial Status</div>
+                            <div className="text-sm text-gray-500">Access Status</div>
                             <div className="flex items-center gap-2 mt-1">
                               <Clock className="h-4 w-4 text-blue-600" />
                               <span className="text-lg font-semibold text-gray-900">
@@ -974,22 +758,24 @@ export default function AgentSettings() {
                             </div>
                           </div>
                           <div className={cn(agentPageStyles.mutedPanel, 'p-4')}>
-                            <div className="text-sm text-gray-500">Feature Access</div>
+                            <div className="text-sm text-gray-500">Workspace Access</div>
                             <div className="text-sm text-gray-800 mt-2 space-y-1">
                               <div>
-                                Featured placement allowance:{' '}
+                                Active listing capacity:{' '}
                                 <span className="font-medium">{listingLimitLabel}</span>
                               </div>
                               <div>
-                                Priority exposure:{' '}
+                                Commission and earnings:{' '}
                                 <span className="font-medium">
-                                  {featureFlags?.hasPriorityExposure ? 'Enabled' : 'Standard'}
+                                  {featureFlags?.hasCommissionTracking
+                                    ? 'Included'
+                                    : 'Not included'}
                                 </span>
                               </div>
                               <div>
-                                AI insights:{' '}
+                                Core workspace:{' '}
                                 <span className="font-medium">
-                                  {featureFlags?.hasAiInsights ? 'Enabled' : 'Disabled'}
+                                  Listings, leads, calendar and analytics
                                 </span>
                               </div>
                             </div>
@@ -999,12 +785,11 @@ export default function AgentSettings() {
                         <div className="rounded-[18px] border border-slate-200 bg-white p-5 shadow-[0_1px_3px_rgba(15,23,42,0.06)]">
                           <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                             <div className="space-y-2">
-                              <h3 className="font-semibold text-gray-900">Billing setup status</h3>
+                              <h3 className="font-semibold text-gray-900">Launch Access billing</h3>
                               <p className="max-w-2xl text-sm leading-6 text-gray-600">
-                                Your onboarding tier is saved and your current entitlements are
-                                active. Self-serve billing actions like card management, invoices,
-                                and live plan switching will appear here once the billing
-                                infrastructure is connected in production.
+                                {hasActiveCommercialTerm
+                                  ? 'Your once-off Launch Access term and workspace entitlements are reflected above. This fixed launch offer does not use card management or in-place plan switching.'
+                                  : 'Start Agent Launch Access to request a once-off manual EFT invoice, submit payment proof, and activate your workspace after finance verification.'}
                               </p>
                               <div className="flex flex-wrap gap-2 pt-1 text-xs text-slate-600">
                                 <span className="rounded-full bg-slate-100 px-3 py-1">
@@ -1019,8 +804,16 @@ export default function AgentSettings() {
                               </div>
                             </div>
                             <div className="flex flex-col gap-2 md:min-w-[220px]">
-                              <Button onClick={() => setLocation('/agent/select-package')}>
-                                Review launch tiers
+                              <Button
+                                onClick={() =>
+                                  setLocation(
+                                    hasActiveCommercialTerm
+                                      ? '/agent/dashboard'
+                                      : '/agent/select-package',
+                                  )
+                                }
+                              >
+                                {hasActiveCommercialTerm ? 'Open workspace' : 'Start Launch Access'}
                               </Button>
                               <Button variant="outline" onClick={() => setActiveTab('profile')}>
                                 Update profile access
@@ -1030,63 +823,6 @@ export default function AgentSettings() {
                         </div>
                       </div>
                     )}
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              {/* Integrations Tab */}
-              <TabsContent value="integrations" className="space-y-6">
-                <Card className={agentPageStyles.panel}>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Link2 className="h-5 w-5 text-blue-600" />
-                      Connected Integrations
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      {[
-                        {
-                          name: 'Google Calendar',
-                          description: 'Sync your showings and appointments',
-                          connected: true,
-                        },
-                        {
-                          name: 'WhatsApp Business',
-                          description: 'Send automated messages to clients',
-                          connected: false,
-                        },
-                        { name: 'Zapier', description: 'Connect to 1000+ apps', connected: false },
-                      ].map(integration => (
-                        <div
-                          key={integration.name}
-                          className="flex items-center justify-between rounded-[12px] border border-slate-200/70 bg-[#fbfaf7] p-4"
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className="p-2 bg-white rounded-lg shadow-sm">
-                              <Globe className="h-5 w-5 text-blue-600" />
-                            </div>
-                            <div>
-                              <p className="font-medium text-gray-900">{integration.name}</p>
-                              <p className="text-sm text-gray-500">{integration.description}</p>
-                            </div>
-                          </div>
-                          {integration.connected ? (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className={agentPageStyles.ghostButton}
-                            >
-                              Disconnect
-                            </Button>
-                          ) : (
-                            <Button size="sm" className={agentPageStyles.primaryButton}>
-                              Connect
-                            </Button>
-                          )}
-                        </div>
-                      ))}
-                    </div>
                   </CardContent>
                 </Card>
               </TabsContent>

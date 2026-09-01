@@ -27,8 +27,8 @@ export default function AgentEarnings() {
           />
         ) : earningsLocked ? (
           <AgentFeatureLockedState
-            title="Commission tracking is not part of your current plan"
-            description="The current Agent Launch Access product does not include commission or earnings tracking. Your listings, leads and daily pipeline remain fully available."
+            title="Commission tracking is not active on this account"
+            description="This workspace has not been granted commission and earnings tracking yet. Your listings, leads and daily pipeline remain available according to your current access."
             actionLabel="Back to dashboard"
             onAction={() => setLocation('/agent/dashboard')}
           />

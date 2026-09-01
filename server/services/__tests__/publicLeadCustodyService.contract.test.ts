@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  resolvePublicAgentProfileCustody,
   resolvePublicBrandOnlyCustody,
   resolvePublicDevelopmentCustody,
   resolvePublicPropertyCustody,
@@ -23,6 +24,25 @@ const approvedDeveloper = {
 };
 
 describe('publicLeadCustodyService contract', () => {
+  it('routes an eligible public agent profile directly to that agent', () => {
+    expect(resolvePublicAgentProfileCustody({ agent: activeAgent })).toMatchObject({
+      supplyOrigin: 'customer_managed',
+      leadCustody: 'verified_customer_recipient',
+      recipientType: 'agent',
+      recipientId: 33,
+      agentId: 33,
+      agencyId: null,
+    });
+  });
+
+  it('does not route a public agent profile after its commercial entitlement ends', () => {
+    expect(
+      resolvePublicAgentProfileCustody({
+        agent: { ...activeAgent, isVerified: 0, hasActivePaidEntitlement: false },
+      }),
+    ).toMatchObject({ leadCustody: 'attention_required', recipientType: 'manual' });
+  });
+
   it('routes an active direct agent to a verified customer recipient', () => {
     expect(
       resolvePublicPropertyCustody({

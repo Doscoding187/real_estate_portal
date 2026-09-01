@@ -34,11 +34,15 @@ export const EntityStatusCard: React.FC<EntityStatusCardProps> = ({
 }) => {
   const isListing = type === 'listing';
   const status = data.status;
+  const normalizedStatus = String(status || '').toLowerCase();
   const approvalStatus = data.approvalStatus;
+  const isLive = ['available', 'published', 'active'].includes(normalizedStatus);
+  const isDraft = normalizedStatus === 'draft';
+  const isInReview = ['pending', 'pending_review'].includes(normalizedStatus);
 
   // Status Badge Logic
   const getStatusBadge = () => {
-    switch (status) {
+    switch (normalizedStatus) {
       case 'available':
       case 'published':
       case 'active':
@@ -50,6 +54,12 @@ export const EntityStatusCard: React.FC<EntityStatusCardProps> = ({
         return <Badge className="bg-amber-500 hover:bg-amber-600">Pending Review</Badge>;
       case 'rejected':
         return <Badge variant="destructive">Action Required</Badge>;
+      case 'sold':
+        return <Badge variant="secondary">Sold</Badge>;
+      case 'rented':
+        return <Badge variant="secondary">Rented</Badge>;
+      case 'archived':
+        return <Badge variant="secondary">Archived</Badge>;
       case 'draft':
       default:
         return (
@@ -61,7 +71,7 @@ export const EntityStatusCard: React.FC<EntityStatusCardProps> = ({
   };
 
   // Rejection Logic
-  const isRejected = status === 'rejected' || approvalStatus === 'rejected';
+  const isRejected = normalizedStatus === 'rejected' || approvalStatus === 'rejected';
   // Use structured reasons if available, else legacy reason (which might be JSON stringified array or plain text)
   let rejectionReasons: string[] = [];
   if (data.rejectionReasons) {
@@ -84,7 +94,7 @@ export const EntityStatusCard: React.FC<EntityStatusCardProps> = ({
   const image = isListing ? data.primaryImage : getPrimaryDevelopmentImageUrl(data.images);
 
   const priceFrom = isListing
-    ? data.pricing?.askingPrice || data.pricing?.monthlyRent
+    ? data.pricing?.askingPrice || data.pricing?.monthlyRent || data.price
     : data.priceFrom;
   const priceTo = !isListing ? data.priceTo : null;
 
@@ -137,7 +147,7 @@ export const EntityStatusCard: React.FC<EntityStatusCardProps> = ({
                 <div className="hidden sm:block">{getStatusBadge()}</div>
                 <div className="flex items-center gap-3">
                   {/* Readiness Indicator */}
-                  {status === 'draft' && (
+                  {isDraft && (
                     <div className="scale-90 origin-right">
                       <ReadinessIndicator
                         score={readiness.score}
@@ -150,10 +160,7 @@ export const EntityStatusCard: React.FC<EntityStatusCardProps> = ({
 
                   {/* Quality Indicator (Only for drafts/active) */}
                   {quality &&
-                    (status === 'draft' ||
-                      status === 'active' ||
-                      status === 'available' ||
-                      status === 'published') && (
+                    (isDraft || isLive) && (
                       <div className="flex items-center gap-1.5 px-2.5 py-1 bg-slate-50 rounded-md border border-slate-200">
                         <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">
                           Quality
@@ -255,8 +262,7 @@ export const EntityStatusCard: React.FC<EntityStatusCardProps> = ({
             </div>
 
             {/* Footer Actions if needed */}
-            {!isRejected &&
-              (status === 'published' || status === 'active' || status === 'available') && (
+            {!isRejected && isLive && (
                 <div className="mt-5 flex flex-col gap-3 border-t border-slate-50 pt-4 sm:flex-row sm:items-center sm:justify-between">
                   <div className="text-sm text-slate-500">
                     {typeof data.enquiries === 'number'
@@ -280,7 +286,7 @@ export const EntityStatusCard: React.FC<EntityStatusCardProps> = ({
                 </div>
               )}
 
-            {!isRejected && status !== 'published' && status !== 'active' && (
+            {!isRejected && (isDraft || isInReview) && (
               <div className="mt-5 flex flex-wrap justify-end gap-2 border-t border-slate-50 pt-4">
                 {onView && !isListing && (
                   <Button size="sm" variant="outline" onClick={() => onView(data.id)}>
@@ -288,7 +294,7 @@ export const EntityStatusCard: React.FC<EntityStatusCardProps> = ({
                     Open Development
                   </Button>
                 )}
-                {status === 'draft' ? (
+                {isDraft ? (
                   <Button size="sm" onClick={() => onEdit(data.id)} className="font-medium">
                     {readiness.score >= 90 ? 'Review & Submit' : 'Continue Setup'}
                   </Button>

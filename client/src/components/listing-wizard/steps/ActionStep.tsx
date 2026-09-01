@@ -83,19 +83,25 @@ const ActionStep: React.FC = () => {
   };
 
   return (
-    <div className="py-8">
+    <div className="py-2 sm:py-4">
       <div className="mb-6">
-        <h2 id="listing-intent-heading" className="text-2xl font-bold text-gray-900">
-          What would you like to do with this property?
+        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--primary)]">
+          Step 1 · Listing intent
+        </p>
+        <h2
+          id="listing-intent-heading"
+          className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-slate-950"
+        >
+          How should this property be marketed?
         </h2>
-        <p className="mt-2 text-gray-600">
-          Choose the property&apos;s commercial journey. We&apos;ll ask for the right pricing and
-          availability details next.
+        <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
+          Choose whether it is available for sale or rent. We&apos;ll tailor the pricing and
+          availability details in the next steps.
         </p>
       </div>
 
       <div
-        className="grid grid-cols-1 md:grid-cols-2 gap-6"
+        className="grid grid-cols-1 gap-4 md:grid-cols-2"
         role="radiogroup"
         aria-labelledby="listing-intent-heading"
         aria-required="true"
@@ -115,32 +121,34 @@ const ActionStep: React.FC = () => {
               aria-checked={isSelected}
               aria-describedby={`listing-intent-${option.value}-description`}
               tabIndex={isSelected || (!selectedIntent && index === 0) ? 0 : -1}
-              className={`relative cursor-pointer transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${
+              className={`relative cursor-pointer rounded-2xl border-2 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_12px_28px_rgba(15,23,42,0.09)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2 ${
                 isSelected
-                  ? `border-2 shadow-xl bg-gradient-to-br ${option.color === 'blue' ? 'from-blue-50 to-blue-100 border-blue-400' : 'from-green-50 to-green-100 border-green-400'}`
-                  : 'border-2 border-gray-200 hover:border-gray-300 bg-white'
+                  ? option.color === 'blue'
+                    ? 'border-[var(--primary)] bg-[color:color-mix(in_oklab,var(--primary)_7%,white)] shadow-[0_10px_24px_rgba(0,92,168,0.12)]'
+                    : 'border-emerald-400 bg-emerald-50 shadow-[0_10px_24px_rgba(5,150,105,0.1)]'
+                  : 'border-slate-200 bg-white hover:border-slate-300'
               }`}
             >
               {/* Selection Indicator */}
               {isSelected && (
                 <div
                   className={`absolute top-4 right-4 rounded-full p-1 shadow-lg ${
-                    option.color === 'blue' ? 'bg-blue-500' : 'bg-green-500'
+                    option.color === 'blue' ? 'bg-[var(--primary)]' : 'bg-emerald-500'
                   }`}
                 >
                   <Check className="w-5 h-5 text-white" />
                 </div>
               )}
 
-              <div className="p-8 flex flex-col items-center text-center space-y-4">
+              <div className="flex flex-col items-center space-y-3 p-6 text-center sm:p-7">
                 {/* Icon */}
                 <div
-                  className={`p-4 rounded-full transition-all shadow-md ${
+                  className={`flex h-12 w-12 items-center justify-center rounded-xl transition-colors ${
                     isSelected
                       ? option.color === 'blue'
-                        ? 'bg-blue-100 text-blue-600'
-                        : 'bg-green-100 text-green-600'
-                      : 'bg-gray-100 text-gray-600'
+                        ? 'bg-[color:color-mix(in_oklab,var(--primary)_12%,white)] text-[var(--primary)]'
+                        : 'bg-emerald-100 text-emerald-700'
+                      : 'bg-slate-100 text-slate-600'
                   }`}
                 >
                   {option.icon}
@@ -148,12 +156,12 @@ const ActionStep: React.FC = () => {
 
                 {/* Label */}
                 <h3
-                  className={`text-2xl font-bold transition-colors ${
+                  className={`text-xl font-semibold tracking-[-0.025em] transition-colors ${
                     isSelected
                       ? option.color === 'blue'
-                        ? 'text-blue-600'
-                        : 'text-green-600'
-                      : 'text-gray-900'
+                        ? 'text-[var(--primary)]'
+                        : 'text-emerald-700'
+                      : 'text-slate-950'
                   }`}
                 >
                   {option.label}
@@ -162,7 +170,7 @@ const ActionStep: React.FC = () => {
                 {/* Description */}
                 <p
                   id={`listing-intent-${option.value}-description`}
-                  className="text-gray-600 text-sm"
+                  className="text-sm leading-5 text-slate-600"
                 >
                   {option.description}
                 </p>
@@ -180,10 +188,9 @@ const ActionStep: React.FC = () => {
       )}
 
       {/* Supporting explanation */}
-      <div className="mt-8 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3">
-        <p className="text-sm text-blue-800">
-          Select one option to continue. You can change this choice later before submitting the
-          listing.
+      <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+        <p className="text-sm leading-5 text-slate-600">
+          You can change this choice before you submit the listing.
         </p>
       </div>
     </div>

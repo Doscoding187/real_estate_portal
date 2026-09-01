@@ -127,6 +127,14 @@ const ListingWizard: React.FC = () => {
   const isEditMode = searchParams.get('edit') === 'true';
   const sellerProspectId = Number(searchParams.get('sellerProspectId') || 0);
   const hasSellerProspectHandoff = Number.isInteger(sellerProspectId) && sellerProspectId > 0;
+  const workspaceReturn =
+    user?.role === 'agent'
+      ? { href: '/agent/dashboard', label: 'Back to agent workspace' }
+      : user?.role === 'agency_admin'
+        ? { href: '/agency/overview', label: 'Back to agency workspace' }
+        : user?.role === 'property_developer'
+          ? { href: '/developer/dashboard', label: 'Back to developer workspace' }
+          : { href: '/dashboard', label: 'Back to dashboard' };
 
   // Fetch existing listing if in edit mode
   const { data: existingListing, isLoading: isLoadingExisting } = trpc.listing.getById.useQuery(
@@ -691,9 +699,10 @@ const ListingWizard: React.FC = () => {
       })),
     );
   }, [readiness.missing]);
+  const showReadinessReview = store.currentStep === 8;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 py-8">
+    <div className="min-h-screen bg-[#f7f6f3] py-5 sm:py-8">
       <Dialog
         open={showPreflightModal}
         onOpenChange={nextOpen => {
@@ -752,7 +761,7 @@ const ListingWizard: React.FC = () => {
         }}
       />
 
-      <div className="container mx-auto px-4 max-w-5xl">
+      <div className="container mx-auto max-w-5xl px-4 sm:px-6">
         {!isInitialized ? (
           <div className="flex items-center justify-center min-h-[60vh]">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
@@ -767,38 +776,51 @@ const ListingWizard: React.FC = () => {
           </div>
         ) : (
           <>
-            {/* Header */}
-            <div className="mb-8">
-              <div className="flex items-center justify-between mb-4">
-                <div className="text-center flex-1">
-                  <h1 className="mb-3 text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent sm:text-4xl">
-                    Create New Listing
-                  </h1>
-                  <p className="text-base text-gray-600 sm:text-lg">
-                    Follow the steps to create your property listing
-                  </p>
-                </div>
-                {/* Auto-save status indicator */}
-                {store.currentStep > 1 && (
-                  <div className="relative mt-4 flex items-center justify-center gap-4 md:absolute md:top-8 md:right-8 md:mt-0 md:justify-end">
-                    <div className="bg-white/80 backdrop-blur-md p-1.5 rounded-full shadow-sm">
-                      <ReadinessIndicator
-                        score={readiness.score}
-                        missing={readiness.missing}
-                        size="md"
-                      />
-                    </div>
-                    <div className="hidden md:block text-right">
-                      <p className="text-xs font-semibold text-slate-700">
-                        Readiness {readiness.score}% / 90%
-                      </p>
-                      <p className="text-[11px] text-slate-500">Submission gate</p>
-                    </div>
-                    {/* SaveStatusIndicator removed - auto-save runs silently */}
-                  </div>
-                )}
+            <header className="mb-8">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setLocation(workspaceReturn.href)}
+                  className="h-auto rounded-full px-0 text-sm font-medium text-slate-600 hover:bg-transparent hover:text-[var(--primary)]"
+                >
+                  <ArrowLeft className="mr-2 h-4 w-4" />
+                  {workspaceReturn.label}
+                </Button>
+                <span className="rounded-full border border-[color:color-mix(in_oklab,var(--primary)_16%,white)] bg-[color:color-mix(in_oklab,var(--primary)_6%,white)] px-3 py-1 text-[11px] font-semibold text-[var(--primary)]">
+                  {isEditMode ? 'Listing editor' : 'Listing workspace'}
+                </span>
               </div>
-            </div>
+
+              <div className="mt-6 max-w-2xl">
+                <h1 className="text-3xl font-semibold tracking-[-0.04em] text-slate-950 sm:text-[38px]">
+                  {isEditMode ? 'Update your property listing' : 'Create a property listing'}
+                </h1>
+                <p className="mt-2 text-sm leading-6 text-slate-600 sm:text-[15px]">
+                  {isEditMode
+                    ? 'Review the details, keep the property accurate, and submit changes when it is ready.'
+                    : 'Complete the essentials to publish a property, start discovery, and receive enquiries in your workspace.'}
+                </p>
+              </div>
+
+              {showReadinessReview && (
+                <div className="mt-4 flex items-center gap-3">
+                  <div className="rounded-full border border-slate-200 bg-white p-1.5 shadow-[0_1px_2px_rgba(15,23,42,0.05)]">
+                    <ReadinessIndicator
+                      score={readiness.score}
+                      missing={readiness.missing}
+                      size="md"
+                    />
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-slate-700">
+                      Readiness {readiness.score}% / 90%
+                    </p>
+                    <p className="text-[11px] text-slate-500">Required before submission</p>
+                  </div>
+                </div>
+              )}
+            </header>
 
             {sellerProspectPrefill ? (
               <div
@@ -825,12 +847,12 @@ const ListingWizard: React.FC = () => {
             {/* Step Content */}
             <div
               key={wizardKey}
-              className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-8 mb-8"
+              className="mb-8 rounded-[20px] border border-slate-200 bg-white p-6 shadow-[0_12px_30px_rgba(15,23,42,0.08)] sm:p-8"
             >
               {getCurrentStep()}
             </div>
 
-            {store.currentStep >= 2 && (
+            {showReadinessReview && (
               <div className="mb-8 rounded-2xl border border-slate-200 bg-white/90 p-4">
                 <div className="flex items-center justify-between gap-4 flex-wrap">
                   <div className="flex items-center gap-2">
@@ -863,8 +885,8 @@ const ListingWizard: React.FC = () => {
             )}
 
             {/* Navigation */}
-            <div className="flex items-center justify-between">
-              <div className="flex gap-2">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-wrap gap-2">
                 <Button
                   variant="outline"
                   onClick={store.prevStep}
@@ -889,7 +911,7 @@ const ListingWizard: React.FC = () => {
                   ) : (
                     <>
                       <Save className="h-4 w-4" />
-                      {isSavingDraft ? 'Saving...' : 'Save on this device'}
+                      {isSavingDraft ? 'Saving...' : 'Save progress on this device'}
                     </>
                   )}
                 </Button>
@@ -899,13 +921,13 @@ const ListingWizard: React.FC = () => {
                 <Button
                   onClick={store.nextStep}
                   disabled={isSubmitting || !canAdvanceFromCurrentStep}
-                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-lg"
+                  className="self-end bg-[var(--primary)] shadow-[0_8px_20px_rgba(0,92,168,0.2)] hover:bg-[color:color-mix(in_oklab,var(--primary)_86%,black)] sm:self-auto"
                 >
                   Next
                   <ArrowRight className="h-4 w-4 ml-2" />
                 </Button>
               ) : (
-                <div className="flex flex-col items-end gap-2">
+                <div className="flex self-end flex-col items-end gap-2 sm:self-auto">
                   {readiness.score < 90 && (
                     <span className="text-xs text-amber-600 font-medium">
                       Readiness is {readiness.score}%. Complete checklist items to reach 90%.

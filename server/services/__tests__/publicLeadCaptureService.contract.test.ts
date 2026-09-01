@@ -259,6 +259,71 @@ describe('publicLeadCaptureService contract', () => {
     );
   });
 
+  it('captures a public agent-profile enquiry directly into the selected agent CRM', async () => {
+    const database = makeFakeDatabase({
+      selectResults: [
+        [],
+        [{ id: 33, userId: 70, agencyId: null, status: 'approved', isVerified: 0 }],
+        [{ status: 'active', currentPeriodEnd: '2099-01-01 00:00:00' }],
+        [{ role: 'agent' }],
+      ],
+      insertId: 916,
+    });
+    mockGetDb.mockResolvedValue(database);
+
+    await expect(
+      capturePublicLead(
+        baseInput({
+          agentId: 33,
+          source: 'agent_profile',
+          sourceSurface: 'agent_profile_enquiry',
+          leadSource: 'agent_profile',
+        }),
+      ),
+    ).resolves.toMatchObject({
+      success: true,
+      leadId: 916,
+      deliveryStatus: 'delivered',
+      recipientType: 'agent',
+      recipientId: 33,
+    });
+
+    expect(database.insertValues).toHaveBeenCalledWith(
+      expect.objectContaining({
+        listingId: null,
+        propertyId: null,
+        developmentId: null,
+        agentId: 33,
+        source: 'agent_profile',
+        leadSource: 'agent_profile',
+      }),
+    );
+  });
+
+  it('fails closed when an approved public profile is not commercially eligible to receive leads', async () => {
+    const database = makeFakeDatabase({
+      selectResults: [
+        [],
+        [{ id: 33, userId: 70, agencyId: null, status: 'approved', isVerified: 0 }],
+        [],
+        [{ role: 'agent' }],
+      ],
+    });
+    mockGetDb.mockResolvedValue(database);
+
+    await expect(
+      capturePublicLead(
+        baseInput({
+          agentId: 33,
+          source: 'agent_profile',
+          sourceSurface: 'agent_profile_enquiry',
+          leadSource: 'agent_profile',
+        }),
+      ),
+    ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+    expect(database.insertValues).not.toHaveBeenCalled();
+  });
+
   it('persists a signed-in property enquiry and its prospect identity in one transaction', async () => {
     const database = makeFakeDatabase({ selectResults: [[]], insertId: 913 });
     mockGetDb.mockResolvedValue(database);

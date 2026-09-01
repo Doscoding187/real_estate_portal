@@ -126,14 +126,20 @@ export const leadsRouter = router({
               message: 'Commercial enquiries require the matching marketing listing.',
             });
           }
-          if ((input.listingId || input.propertyId || input.developmentId) && !input.captureRequestId) {
+          if (
+            (input.listingId || input.propertyId || input.developmentId || input.agentId) &&
+            !input.captureRequestId
+          ) {
             refinementContext.addIssue({
               code: z.ZodIssueCode.custom,
               path: ['captureRequestId'],
               message: 'A stable enquiry request ID is required.',
             });
           }
-          if ((input.listingId || input.propertyId || input.developmentId) && !input.consent) {
+          if (
+            (input.listingId || input.propertyId || input.developmentId || input.agentId) &&
+            !input.consent
+          ) {
             refinementContext.addIssue({
               code: z.ZodIssueCode.custom,
               path: ['consent'],

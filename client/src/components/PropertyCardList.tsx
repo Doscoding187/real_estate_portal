@@ -54,6 +54,8 @@ export interface PropertyCardListProps {
   imageCount?: number;
   videoCount?: number;
   highlights?: string[];
+  /** Render the real search-card presentation without making it navigable or actionable. */
+  interactionMode?: 'interactive' | 'static';
 }
 
 const PropertyCardList: React.FC<PropertyCardListProps> = ({
@@ -78,9 +80,11 @@ const PropertyCardList: React.FC<PropertyCardListProps> = ({
   imageCount = 15,
   videoCount = 2,
   highlights,
+  interactionMode = 'interactive',
 }) => {
   const [, setLocation] = useLocation();
   const { addToComparison, removeFromComparison, isInComparison, canAddMore } = useComparison();
+  const isStaticPreview = interactionMode === 'static';
   const isMultiSizeImage = typeof image === 'object' && 'medium' in image;
   const propertyId = parseInt(id);
   const inComparison = isInComparison(propertyId);
@@ -102,6 +106,8 @@ const PropertyCardList: React.FC<PropertyCardListProps> = ({
 
   const handleComparisonToggle = (e: React.MouseEvent) => {
     e.stopPropagation();
+    if (isStaticPreview) return;
+
     if (inComparison) {
       removeFromComparison(propertyId);
     } else {
@@ -111,8 +117,12 @@ const PropertyCardList: React.FC<PropertyCardListProps> = ({
 
   return (
     <div
-      className="group relative bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all overflow-hidden flex flex-col md:flex-row h-auto max-w-[840px] cursor-pointer"
-      onClick={() => setLocation(`/property/${id}`)}
+      className={`group relative bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all overflow-hidden flex flex-col md:flex-row h-auto max-w-[840px] ${
+        isStaticPreview ? 'cursor-default' : 'cursor-pointer'
+      }`}
+      onClick={() => {
+        if (!isStaticPreview) setLocation(`/property/${id}`);
+      }}
     >
       {/* Image Section (Left) -40% width */}
       <div className="relative w-full md:w-[40%] h-56 md:h-auto md:aspect-square shrink-0 overflow-hidden">
@@ -296,6 +306,7 @@ const PropertyCardList: React.FC<PropertyCardListProps> = ({
               className="h-9 px-4 text-sm font-medium transition-all"
               onClick={e => {
                 e.stopPropagation();
+                if (isStaticPreview) return;
                 // Contact logic
               }}
             >

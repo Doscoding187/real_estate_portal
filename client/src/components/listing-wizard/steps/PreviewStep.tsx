@@ -32,6 +32,7 @@ import {
   getStep4SpaceLabel,
   normalizeFeaturesContext,
 } from '@shared/features-context';
+import { readCorePropertyInformation } from '@shared/core-property-information';
 
 const PreviewStep: React.FC = () => {
   const state = useListingWizardStore();
@@ -65,6 +66,11 @@ const PreviewStep: React.FC = () => {
     state.additionalInfo?.featuresContext,
     state.additionalInfo,
   );
+  const corePropertyInformation = readCorePropertyInformation(
+    state.propertyType,
+    state.propertyDetails,
+    state.basicInfo,
+  );
   const amenitiesList = [
     ...featuresContext.spaces.map(getStep4SpaceLabel),
     ...featuresContext.security.features.map(getStep4SecurityFeatureLabel),
@@ -72,8 +78,16 @@ const PreviewStep: React.FC = () => {
     ...featuresContext.customHighlights,
   ];
 
+  const knownNumericValue = (fact: any) =>
+    fact?.status === 'known' && Number.isFinite(Number(fact.value)) ? Number(fact.value) : 0;
+  const knownAreaValue = (fact: any) =>
+    fact?.status === 'known' && Number.isFinite(Number(fact.valueM2)) ? Number(fact.valueM2) : 0;
+
   // Calculate house/building area (not yard/land)
   const getPropertyArea = () => {
+    const canonicalArea = knownAreaValue(corePropertyInformation.internalArea);
+    if (canonicalArea > 0) return canonicalArea;
+
     if (!state.propertyDetails) return 0;
 
     if (state.propertyType === 'apartment') {
@@ -93,6 +107,9 @@ const PreviewStep: React.FC = () => {
 
   // Get yard/land size separately (for houses)
   const getYardSize = () => {
+    const canonicalErfArea = knownAreaValue(corePropertyInformation.erfArea);
+    if (canonicalErfArea > 0) return canonicalErfArea;
+
     if (!state.propertyDetails) return undefined;
 
     if (state.propertyType === 'house') {
@@ -143,8 +160,8 @@ const PreviewStep: React.FC = () => {
           location={`${state.location?.address || ''}, ${state.location?.city || ''}`}
           image={primaryMedia?.url || '/assets/placeholder.jpg'}
           description={state.description}
-          bedrooms={Number((state.propertyDetails as any)?.bedrooms) || 0}
-          bathrooms={Number((state.propertyDetails as any)?.bathrooms) || 0}
+          bedrooms={knownNumericValue(corePropertyInformation.bedrooms)}
+          bathrooms={knownNumericValue(corePropertyInformation.bathrooms)}
           area={getPropertyArea()}
           yardSize={getYardSize()}
           propertyType={

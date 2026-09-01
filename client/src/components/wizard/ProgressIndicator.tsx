@@ -80,11 +80,36 @@ export const ProgressIndicator: React.FC<ProgressIndicatorProps> = ({
       onStepClick(step.number);
     }
   };
+  const currentStep = steps.find(step => step.isCurrent);
+  const progressPercent =
+    steps.length > 1 && currentStep ? ((currentStep.number - 1) / (steps.length - 1)) * 100 : 0;
 
   return (
     <TooltipProvider>
       <div className={cn('w-full', className)}>
-        <div className="flex min-w-0 items-start justify-between gap-1 sm:gap-0">
+        <div className="sm:hidden">
+          <div className="flex items-center gap-3">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--primary)] text-xs font-bold text-white shadow-[0_4px_10px_rgba(0,92,168,0.18)]">
+              {currentStep?.number ?? 1}
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center justify-between gap-3 text-[11px] font-semibold text-slate-600">
+                <span>
+                  Step {currentStep?.number ?? 1} of {steps.length}
+                </span>
+                <span>{currentStep?.title ?? 'Listing setup'}</span>
+              </div>
+              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-200">
+                <div
+                  className="h-full rounded-full bg-[var(--primary)] transition-all duration-300"
+                  style={{ width: `${progressPercent}%` }}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="hidden min-w-0 items-start justify-between gap-0 sm:flex">
           {steps.map((step, index) => (
             <React.Fragment key={step.number}>
               {/* Step Circle */}
@@ -212,11 +237,6 @@ export const ProgressIndicator: React.FC<ProgressIndicatorProps> = ({
             </React.Fragment>
           ))}
         </div>
-        {steps.find(step => step.isCurrent) && (
-          <p className="mt-2 text-center text-xs font-semibold text-slate-700 sm:hidden">
-            {steps.find(step => step.isCurrent)?.title}
-          </p>
-        )}
       </div>
     </TooltipProvider>
   );

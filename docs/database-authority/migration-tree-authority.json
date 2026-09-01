@@ -1055,6 +1055,16 @@
       "path": "server/migrations/0061_sl_messages_authorship.sql",
       "classification": "canonical active",
       "purpose": "Shared Living: on-platform thread authorship (consumer/lister/moderator)."
+    },
+    {
+      "path": "server/migrations/0062_agent_launch_access_full_capabilities.sql",
+      "classification": "canonical active",
+      "purpose": "Agent Launch Access: align the canonical early-adopter entitlement set with all currently supported agent capabilities."
+    },
+    {
+      "path": "server/migrations/0063_agent_launch_access_earnings_feature.sql",
+      "classification": "canonical active",
+      "purpose": "Agent Launch Access: expose the supported commission and earnings workspace in the canonical product feature set."
     }
   ],
   "prohibitedPaths": [
