@@ -3,6 +3,7 @@ import { useRoute } from 'wouter';
 import { trpc } from '@/lib/trpc';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { AgentProfileEnquiryDialog } from '@/components/agent/AgentProfileEnquiryDialog';
 import {
   ArrowLeft,
   ArrowRight,
@@ -18,6 +19,7 @@ import {
   MapPin,
   MessageCircle,
   Phone,
+  Send,
   Share2,
   Twitter,
 } from 'lucide-react';
@@ -167,6 +169,7 @@ export default function AgentMicrosite() {
 
   const trackedAgentIdRef = useRef<number | null>(null);
   const [showAllInventory, setShowAllInventory] = useState(false);
+  const [isEnquiryDialogOpen, setIsEnquiryDialogOpen] = useState(false);
   const INVENTORY_PREVIEW_COUNT = 6;
   const visibleInventory = showAllInventory
     ? inventory
@@ -255,7 +258,19 @@ export default function AgentMicrosite() {
   const roleLabel = profile.role
     ? ROLE_LABELS[profile.role] || profile.role.replace(/_/g, ' ')
     : '';
-  const hasContact = Boolean(whatsappHref || profile.phone || profile.email);
+  // An approved public profile can always offer the consent-aware CRM route,
+  // even when the agent has chosen not to publish every direct contact method.
+  const hasContact = Number.isSafeInteger(Number(profile.id)) && Number(profile.id) > 0;
+
+  const openEnquiryDialog = (surface: 'header' | 'hero' | 'contact' | 'mobile') => {
+    track(AGENT_PROFILE_EVENTS.contactCta, {
+      slug: profile.slug,
+      agentId: profile.id,
+      action: 'send_enquiry',
+      surface,
+    });
+    setIsEnquiryDialogOpen(true);
+  };
 
   const trackAreaGuideClick = (areaName: string, url: string) => {
     track(AGENT_PROFILE_EVENTS.areaGuideClick, {
@@ -289,12 +304,13 @@ export default function AgentMicrosite() {
               <Share2 className="h-4 w-4 mr-1.5" />
               Share
             </Button>
-            <a
-              href="#contact"
+            <button
+              type="button"
+              onClick={() => openEnquiryDialog('header')}
               className="hidden sm:inline-flex items-center rounded-md bg-[#0F4C75] px-4 py-2 text-sm font-medium text-white hover:bg-[#0A2540] transition-colors"
             >
-              Contact
-            </a>
+              Send enquiry
+            </button>
           </div>
         </div>
       </header>
@@ -365,6 +381,15 @@ export default function AgentMicrosite() {
               )}
 
               <div className="mt-7 flex flex-wrap gap-3" data-testid="hero-contact-actions">
+                <button
+                  type="button"
+                  onClick={() => openEnquiryDialog('hero')}
+                  className="inline-flex items-center gap-2 rounded-md bg-white px-5 py-2.5 font-medium text-[#0F4C75] hover:bg-blue-50 transition-colors"
+                  data-testid="send-profile-enquiry"
+                >
+                  <Send className="h-4 w-4" />
+                  Send enquiry
+                </button>
                 {whatsappHref && (
                   <a
                     href={whatsappHref}
@@ -381,7 +406,7 @@ export default function AgentMicrosite() {
                   <a
                     href={`tel:${profile.phone}`}
                     onClick={() => track(AGENT_PROFILE_EVENTS.callClick, { slug })}
-                    className="inline-flex items-center gap-2 rounded-md bg-white px-5 py-2.5 font-medium text-[#0F4C75] hover:bg-blue-50 transition-colors"
+                    className="inline-flex items-center gap-2 rounded-md border border-white/60 px-5 py-2.5 font-medium text-white hover:bg-white/10 transition-colors"
                   >
                     <Phone className="h-4 w-4" />
                     Call
@@ -427,7 +452,7 @@ export default function AgentMicrosite() {
                 Local market focus
               </p>
               <h2 className="text-3xl md:text-4xl font-bold tracking-tight">
-                {profile.firstName}&rsquo;s {primaryArea.name}
+                Property expertise in {primaryArea.name}
               </h2>
               <p className="mt-3 max-w-2xl text-slate-600 leading-relaxed">
                 {displayName} serves the {primaryArea.name} area
@@ -721,6 +746,15 @@ export default function AgentMicrosite() {
               {primaryArea ? ` in ${primaryArea.name}` : ''}.
             </p>
             <div className="mt-8 flex flex-wrap justify-center gap-3" data-testid="contact-actions">
+              <button
+                type="button"
+                onClick={() => openEnquiryDialog('contact')}
+                className="inline-flex items-center gap-2 rounded-md bg-white px-6 py-3 font-medium text-[#0F4C75] hover:bg-blue-50 transition-colors"
+                data-testid="send-profile-enquiry-contact"
+              >
+                <Send className="h-4 w-4" />
+                Send enquiry
+              </button>
               {whatsappHref && (
                 <a
                   href={whatsappHref}
@@ -805,7 +839,16 @@ export default function AgentMicrosite() {
           className="md:hidden fixed bottom-0 inset-x-0 z-40 border-t border-slate-200 bg-white/95 backdrop-blur px-4 py-3 flex gap-3"
           data-testid="mobile-contact-bar"
         >
-          {whatsappHref && (
+          <button
+            type="button"
+            onClick={() => openEnquiryDialog('mobile')}
+            className="flex-1 inline-flex items-center justify-center gap-2 rounded-md bg-[#0F4C75] px-4 py-2.5 text-sm font-medium text-white"
+            data-testid="mobile-send-profile-enquiry"
+          >
+            <Send className="h-4 w-4" />
+            Enquire
+          </button>
+          {whatsappHref ? (
             <a
               href={whatsappHref}
               target="_blank"
@@ -818,8 +861,7 @@ export default function AgentMicrosite() {
               <MessageCircle className="h-4 w-4" />
               WhatsApp
             </a>
-          )}
-          {profile.phone && (
+          ) : profile.phone ? (
             <a
               href={`tel:${profile.phone}`}
               onClick={() => track(AGENT_PROFILE_EVENTS.callClick, { slug, surface: 'mobile_bar' })}
@@ -828,9 +870,16 @@ export default function AgentMicrosite() {
               <Phone className="h-4 w-4" />
               Call
             </a>
-          )}
+          ) : null}
         </div>
       )}
+
+      <AgentProfileEnquiryDialog
+        agentId={Number(profile.id)}
+        agentName={displayName}
+        open={isEnquiryDialogOpen}
+        onOpenChange={setIsEnquiryDialogOpen}
+      />
     </div>
   );
 }

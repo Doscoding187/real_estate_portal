@@ -45,6 +45,7 @@ const AgentLeads = lazy(() => import('./pages/AgentLeads'));
 const AgentCanvassing = lazy(() => import('./pages/agent/AgentCanvassing'));
 const AgentMarketingHub = lazy(() => import('./pages/agent/AgentMarketingHub'));
 const AgentEarnings = lazy(() => import('./pages/agent/AgentEarnings'));
+const AgentReferrals = lazy(() => import('./pages/agent/AgentReferrals'));
 const AgentAnalytics = lazy(() => import('./pages/AgentAnalytics'));
 const AgentProductivity = lazy(() => import('./pages/agent/AgentProductivity'));
 const AgentSettings = lazy(() => import('./pages/AgentSettings'));
@@ -371,7 +372,7 @@ function Router() {
           </Route>
           <Route path="/agent/referrals">
             <RequireRole role="agent">
-              <Redirect to="/distribution/partner/overview" />
+              <AgentReferrals />
             </RequireRole>
           </Route>
           <Route path="/agents/:slug" component={AgentMicrosite} />

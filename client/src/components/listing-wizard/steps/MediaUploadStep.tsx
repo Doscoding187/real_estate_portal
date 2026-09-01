@@ -9,7 +9,7 @@ import type { MediaFile } from '@/../../shared/listing-types';
 import type { MediaItem } from '@/components/media/SortableMediaGrid';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import { getPrimaryListingImage } from '@/../../shared/listing-media';
+import { getCompletedListingImages, getPrimaryListingImage } from '@/../../shared/listing-media';
 import {
   PROPERTY_PRESENTATION_PLAN_LABELS,
   PROPERTY_PRESENTATION_PLAN_LABEL_TEXT,
@@ -18,6 +18,7 @@ import {
 } from '@/../../shared/property-presentation';
 
 type PresentationUploadCategory = 'photos' | 'plans' | 'video' | 'documents' | 'tour';
+const MINIMUM_SUBMISSION_PHOTOS = 5;
 
 const PRESENTATION_CATEGORIES: Array<{
   id: PresentationUploadCategory;
@@ -330,6 +331,9 @@ const MediaUploadStep: React.FC = () => {
     presentationLabel: media.presentationLabel,
     displayOrder: media.displayOrder,
   }));
+  const completedPhotoCount = getCompletedListingImages(store.media).length;
+  const remainingPhotosForSubmission = Math.max(0, MINIMUM_SUBMISSION_PHOTOS - completedPhotoCount);
+  const hasPrimaryImage = Boolean(getPrimaryListingImage(store.media));
 
   // Handle media reorder - bulk replace all media with new order
   const handleReorder = useCallback(
@@ -397,13 +401,32 @@ const MediaUploadStep: React.FC = () => {
   }, []);
 
   return (
-    <Card className="p-6">
+    <Card className="border-slate-200 bg-white p-6 shadow-sm">
       <div className="space-y-6">
         {/* Header */}
         <div>
-          <h3 className="mb-2 text-xl font-semibold text-slate-950">Showcase the property</h3>
-          <p className="text-gray-600">
-            Help prospects understand the property with photos, plans, video and immersive tours.
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--primary)]">
+              Step 7 · Photos for submission
+            </p>
+            <span
+              className={cn(
+                'rounded-full px-2.5 py-1 text-[11px] font-semibold',
+                hasPrimaryImage ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-800',
+              )}
+            >
+              {completedPhotoCount >= MINIMUM_SUBMISSION_PHOTOS
+                ? 'Media ready'
+                : `${completedPhotoCount} / ${MINIMUM_SUBMISSION_PHOTOS} for submission`}
+            </span>
+          </div>
+          <h3 className="mt-2 text-xl font-semibold tracking-[-0.03em] text-slate-950">
+            Add property photos
+          </h3>
+          <p className="mt-2 text-sm leading-6 text-slate-600">
+            Start with the strongest exterior or main-room photo. One completed photo unlocks
+            Preview; five completed photos are required to submit. Plans, video, tours and documents
+            are optional enhancements.
           </p>
         </div>
 
@@ -552,7 +575,9 @@ const MediaUploadStep: React.FC = () => {
                       : 'Public PDF documents up to 25MB each'}
               </p>
               <p className="mt-1 text-xs text-slate-400">
-                {store.media.length} presentation assets added
+                {activeCategory === 'photos'
+                  ? `${completedPhotoCount} / ${MINIMUM_SUBMISSION_PHOTOS} completed photos for submission`
+                  : `${store.media.length} presentation assets added`}
               </p>
               <input
                 ref={fileInputRef}
@@ -601,6 +626,21 @@ const MediaUploadStep: React.FC = () => {
               onRemove={handleRemove}
               onSetPrimary={handleSetPrimary}
             />
+          </div>
+        )}
+
+        {completedPhotoCount < MINIMUM_SUBMISSION_PHOTOS && (
+          <div
+            data-testid="media-required-notice"
+            className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+          >
+            <Images className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+            <p>
+              {hasPrimaryImage
+                ? `Add ${remainingPhotosForSubmission} more completed photo${remainingPhotosForSubmission === 1 ? '' : 's'} to meet the five-photo submission requirement.`
+                : 'Add your first completed photo to unlock Preview. You will need five completed photos to submit.'}{' '}
+              The first photo becomes the cover photo automatically.
+            </p>
           </div>
         )}
 

@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CommercialProduct } from '@/hooks/useCommercialCatalog';
 import AgentProductLandingPage from './AgentProductLandingPage';
@@ -38,12 +38,13 @@ const agentProduct = {
     'Lead and enquiry access',
     'Agent profile and directory',
     'Agent analytics and reporting',
+    'Commission and earnings tracking',
   ],
   limits: { max_active_listings: 50 },
   entitlements: {
     max_active_listings: 50,
-    has_commission_tracking: false,
-    has_revenue_dashboard: false,
+    has_commission_tracking: true,
+    has_revenue_dashboard: true,
   },
   trial: { days: 0, available: false },
   term: {
@@ -110,9 +111,10 @@ describe('public Agent product landing page', () => {
     expect(
       screen.getByRole('heading', { name: 'Experience the complete supported Agent workspace.' }),
     ).toBeInTheDocument();
+    expect(screen.getByText('Keep commissions in view.')).toBeInTheDocument();
   });
 
-  it('renders canonical Agent Launch Access truth and assisted actions', () => {
+  it('renders canonical Agent Launch Access truth and a direct account-start action', () => {
     render(<AgentProductLandingPage />);
 
     expect(screen.getAllByText('R499').length).toBeGreaterThan(0);
@@ -126,9 +128,47 @@ describe('public Agent product landing page', () => {
       'href',
       '/agents',
     );
-    expect(
-      screen.getAllByRole('link', { name: /Contact Property Listify/i }).length,
-    ).toBeGreaterThan(0);
+    const accountStartLinks = screen.getAllByRole('link', { name: /Create your Agent account/i });
+    expect(accountStartLinks).toHaveLength(2);
+    accountStartLinks.forEach(link => {
+      expect(link).toHaveAttribute(
+        'href',
+        '/login?mode=register&next=%2Fagent%2Fselect-package&role=agent',
+      );
+    });
+    expect(screen.getByRole('link', { name: /Explore the Agent workspace/i })).toHaveAttribute(
+      'href',
+      '#agent-workspace',
+    );
+    expect(screen.getAllByRole('link', { name: /Contact Property Listify/i })).toHaveLength(2);
     expect(screen.queryByText(/free trial|\/month/i)).not.toBeInTheDocument();
+  });
+
+  it('keeps account creation primary when commercial details are unavailable', () => {
+    useCatalogMock.mockReturnValue({
+      data: {
+        authority: {
+          products: 'canonical_plans',
+          entitlements: 'plan_entitlements',
+          prices: 'billingFoundationService',
+          paidState: 'canonical_subscriptions_and_verified_billing',
+        },
+        audience: 'agent',
+        products: [],
+      },
+      isLoading: false,
+      isError: false,
+      refetch: vi.fn(),
+    } as unknown as ReturnType<typeof useCommercialCatalog>);
+
+    render(<AgentProductLandingPage />);
+
+    const unavailableCard = screen.getByTestId('agent-launch-access-unavailable-card');
+    expect(
+      within(unavailableCard).getByRole('link', { name: /Create your Agent account/i }),
+    ).toHaveAttribute('href', '/login?mode=register&next=%2Fagent%2Fselect-package&role=agent');
+    expect(
+      within(unavailableCard).getByRole('link', { name: /Contact Property Listify/i }),
+    ).toHaveAttribute('href', '/contact');
   });
 });

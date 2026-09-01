@@ -1,7 +1,15 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { profileResult, inventoryResult, trackMutate } = vi.hoisted(() => ({
+class ResizeObserverMock {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+
+vi.stubGlobal('ResizeObserver', ResizeObserverMock);
+
+const { profileResult, inventoryResult, trackMutate, createLeadMutate } = vi.hoisted(() => ({
   profileResult: {
     current: {
       data: null as Record<string, unknown> | null,
@@ -13,6 +21,7 @@ const { profileResult, inventoryResult, trackMutate } = vi.hoisted(() => ({
     current: { data: [] as Array<Record<string, unknown>> },
   },
   trackMutate: vi.fn(),
+  createLeadMutate: vi.fn(),
 }));
 
 vi.mock('wouter', () => ({
@@ -25,6 +34,11 @@ vi.mock('@/lib/trpc', () => ({
     analytics: {
       track: {
         useMutation: () => ({ mutate: trackMutate }),
+      },
+    },
+    leads: {
+      create: {
+        useMutation: () => ({ mutate: createLeadMutate, isPending: false }),
       },
     },
     agent: {
@@ -81,6 +95,7 @@ describe('AgentMicrosite public web presence', () => {
     };
     inventoryResult.current = { data: [] };
     trackMutate.mockReset();
+    createLeadMutate.mockReset();
   });
 
   afterEach(() => cleanup());
@@ -123,6 +138,58 @@ describe('AgentMicrosite public web presence', () => {
     expect(whatsapp.getAttribute('href')).toContain('wa.me/27820000000');
     expect(call.getAttribute('href')).toBe('tel:082 000 0000');
     expect(email.getAttribute('href')).toBe('mailto:jane@example.com');
+  });
+
+  it('captures a consent-aware profile enquiry for the selected agent CRM', () => {
+    profileResult.current = { data: baseProfile as never, isLoading: false, isError: false };
+
+    render(<AgentMicrosite />);
+
+    fireEvent.click(screen.getByTestId('send-profile-enquiry'));
+
+    const dialog = screen.getByTestId('agent-profile-enquiry-dialog');
+    expect(within(dialog).getByText(/goes directly to Jane Agent/i)).toBeDefined();
+    fireEvent.change(within(dialog).getByLabelText(/Your name/i), {
+      target: { value: 'Local Journey Buyer' },
+    });
+    fireEvent.change(within(dialog).getByLabelText(/Email address/i), {
+      target: { value: 'buyer@example.test' },
+    });
+    fireEvent.change(within(dialog).getByLabelText(/How can Jane Agent help/i), {
+      target: { value: 'I am looking for a two-bedroom apartment.' },
+    });
+    fireEvent.click(within(dialog).getByLabelText(/I agree to be contacted/i));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Send enquiry' }));
+
+    expect(createLeadMutate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        agentId: 42,
+        source: 'agent_profile',
+        sourceSurface: 'agent_profile_enquiry',
+        leadSource: 'agent_profile',
+        name: 'Local Journey Buyer',
+        email: 'buyer@example.test',
+      }),
+    );
+    expect(trackMutate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'agent_profile_contact_cta',
+        properties: expect.objectContaining({
+          action: 'send_enquiry',
+          surface: 'hero',
+          agentId: 42,
+        }),
+      }),
+    );
+  });
+
+  it('uses neutral local-market copy instead of an awkward possessive heading', () => {
+    profileResult.current = { data: baseProfile as never, isLoading: false, isError: false };
+
+    render(<AgentMicrosite />);
+
+    expect(screen.getByText('Property expertise in Bryanston')).toBeDefined();
+    expect(screen.queryByText("Jane's Bryanston")).toBeNull();
   });
 
   it('never fabricates unpopulated professional claims', () => {

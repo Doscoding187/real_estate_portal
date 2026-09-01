@@ -54,6 +54,7 @@ export function LocationMapPicker({
     libraries,
   });
 
+  const [hasLoadingTimedOut, setHasLoadingTimedOut] = useState(false);
   const [markerPosition, setMarkerPosition] = useState<{ lat: number; lng: number } | null>(
     initialLat && initialLng ? { lat: initialLat, lng: initialLng } : null,
   );
@@ -63,9 +64,27 @@ export function LocationMapPicker({
 
   useEffect(() => {
     if (loadError) {
-      onGeocodingError?.('Google Maps is not available right now. You can enter the location manually.');
+      onGeocodingError?.(
+        'Google Maps is not available right now. You can enter the location manually.',
+      );
     }
   }, [loadError, onGeocodingError]);
+
+  useEffect(() => {
+    if (isLoaded || loadError) {
+      setHasLoadingTimedOut(false);
+      return;
+    }
+
+    const timeout = window.setTimeout(() => {
+      setHasLoadingTimedOut(true);
+      onGeocodingError?.(
+        'Map search is taking longer than expected. You can enter the location manually.',
+      );
+    }, 7000);
+
+    return () => window.clearTimeout(timeout);
+  }, [isLoaded, loadError, onGeocodingError]);
 
   const parseGeocodingResult = useCallback(
     (
@@ -228,11 +247,13 @@ export function LocationMapPicker({
     }
   }, [onLocationSelect, parseGeocodingResult]);
 
-  if (loadError) {
+  if (loadError || hasLoadingTimedOut) {
     return (
       <Alert variant="destructive">
         <AlertDescription>
-          Failed to load Google Maps. Please check your API key configuration.
+          {hasLoadingTimedOut
+            ? 'Map search is taking longer than expected. You can enter the location manually.'
+            : 'Failed to load Google Maps. Please check your API key configuration.'}
         </AlertDescription>
       </Alert>
     );

@@ -10,15 +10,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { trpc } from '@/lib/trpc';
 import { cn } from '@/lib/utils';
 import { useAgentOnboardingStatus } from '@/hooks/useAgentOnboardingStatus';
-import {
-  BarChart3,
-  Download,
-  Eye,
-  Home,
-  Target,
-  TrendingUp,
-  Users,
-} from 'lucide-react';
+import { toast } from 'sonner';
+import { BarChart3, Download, Eye, Home, Target, TrendingUp, Users } from 'lucide-react';
 
 type TimeRange = '7d' | '30d' | '90d' | '1y';
 type PerformancePeriod = 'week' | 'month' | 'quarter' | 'year';
@@ -95,6 +88,10 @@ function formatStatus(value: string | null | undefined) {
   return value.replace(/_/g, ' ').replace(/\b\w/g, char => char.toUpperCase());
 }
 
+function escapeCsvValue(value: string | number | null | undefined) {
+  return `"${String(value ?? '').replace(/"/g, '""')}"`;
+}
+
 function MetricCard({
   title,
   value,
@@ -143,7 +140,7 @@ export default function AgentAnalytics() {
 
   const selectedPeriod = TIME_RANGES.find(range => range.value === timeRange)?.period || 'month';
 
-  const { data: stats, isLoading: statsLoading } = trpc.agent.getDashboardStats.useQuery();
+  const { isLoading: statsLoading } = trpc.agent.getDashboardStats.useQuery();
   const { data: performance, isLoading: performanceLoading } =
     trpc.agent.getPerformanceAnalytics.useQuery({
       period: selectedPeriod,
@@ -225,6 +222,63 @@ export default function AgentAnalytics() {
 
   const isLoading = statsLoading || performanceLoading || pipelineLoading || listingsLoading;
 
+  const handleExport = () => {
+    if (isLoading) {
+      toast.message('Your live analytics are still loading. Try exporting again in a moment.');
+      return;
+    }
+
+    const selectedRange = TIME_RANGES.find(range => range.value === timeRange);
+    const reportRows: Array<Array<string | number>> = [
+      ['Property Listify analytics report'],
+      ['Period', selectedRange?.label || timeRange],
+      ['Generated', new Date().toLocaleString('en-ZA')],
+      [],
+      ['Summary'],
+      ['Total listing views', totalListingViews],
+      ['Live listings', listings.length],
+      ['Lead volume', performance?.totalLeads ?? allLeads.length],
+      ['Converted leads', performance?.convertedLeads ?? 0],
+      ['Conversion rate', `${performance?.conversionRate ?? 0}%`],
+      [],
+      ['Pipeline stage', 'Leads'],
+      ...PIPELINE_STAGE_META.map(stage => [stage.label, pipeline[stage.key].length]),
+      [],
+      ['Listings'],
+      ['Property', 'City', 'Type', 'Views', 'Enquiries', 'Price', 'Status'],
+      ...listings.map(listing => [
+        listing.title,
+        listing.city,
+        formatPropertyType(listing.propertyType),
+        listing.views || 0,
+        listing.enquiries || 0,
+        formatPrice(listing.price),
+        formatStatus(listing.status),
+      ]),
+      [],
+      ['Leads'],
+      ['Name', 'Property', 'Stage', 'Source', 'Received'],
+      ...allLeads.map(lead => [
+        lead.name,
+        lead.commercial?.listingTitle || lead.property?.title || 'General enquiry',
+        formatStatus(lead.status),
+        lead.source || 'Direct',
+        new Date(lead.createdAt).toLocaleString('en-ZA'),
+      ]),
+    ];
+    const csv = reportRows.map(row => row.map(escapeCsvValue).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    const url = window.URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `property-listify-analytics-${timeRange}-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    window.URL.revokeObjectURL(url);
+    toast.success('Analytics report downloaded');
+  };
+
   return (
     <AgentAppShell>
       <div className="min-h-screen bg-[#f7f6f3]">
@@ -254,10 +308,18 @@ export default function AgentAnalytics() {
                     </button>
                   ))}
                 </div>
-                <Button variant="outline" size="sm" className={agentPageStyles.ghostButton}>
-                  <Download className="mr-2 h-4 w-4" />
-                  Export
-                </Button>
+                {!statusLoading && !analyticsLocked ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className={agentPageStyles.ghostButton}
+                    onClick={handleExport}
+                    disabled={isLoading}
+                  >
+                    <Download className="mr-2 h-4 w-4" />
+                    {isLoading ? 'Preparing…' : 'Export'}
+                  </Button>
+                ) : null}
               </div>
             </div>
           </div>
@@ -545,7 +607,9 @@ export default function AgentAnalytics() {
                               <div>
                                 <p className="text-sm font-semibold text-slate-900">{lead.name}</p>
                                 <p className="text-xs text-slate-500">
-                                  {lead.commercial?.listingTitle || lead.property?.title || 'General enquiry'}
+                                  {lead.commercial?.listingTitle ||
+                                    lead.property?.title ||
+                                    'General enquiry'}
                                 </p>
                               </div>
                               <div className="text-right">

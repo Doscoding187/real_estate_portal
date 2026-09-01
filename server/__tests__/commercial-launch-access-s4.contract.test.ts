@@ -40,9 +40,7 @@ describe('commercial monetization S4 paid Launch Access contract', () => {
         expect(product.metadata.commercial_feature_access_policy).toBe(
           'all_supported_canonical_capabilities',
         );
-        expect(product.metadata.commercial_resource_limit_policy).toBe(
-          'explicit_launch_safeguard',
-        );
+        expect(product.metadata.commercial_resource_limit_policy).toBe('explicit_launch_safeguard');
         expect(product.metadata.commercial_learning_cohort).toBe('launch_access');
       }
     }
@@ -52,10 +50,10 @@ describe('commercial monetization S4 paid Launch Access contract', () => {
     expect(CANONICAL_AGENT_LAUNCH_ACCESS.limits).toEqual({ max_active_listings: 50 });
     expect(CANONICAL_AGENT_LAUNCH_ACCESS.entitlements).toEqual({
       max_active_listings: 50,
-      has_commission_tracking: false,
-      has_revenue_dashboard: false,
+      has_commission_tracking: true,
+      has_revenue_dashboard: true,
     });
-    expect(CANONICAL_AGENT_LAUNCH_ACCESS.features).not.toContain('Commission tracking');
+    expect(CANONICAL_AGENT_LAUNCH_ACCESS.features).toContain('Commission and earnings tracking');
     expect(CANONICAL_AGENCY_LAUNCH_ACCESS.limits).toEqual({ max_active_listings: 500 });
     expect(CANONICAL_AGENCY_LAUNCH_ACCESS.entitlements).toEqual({
       max_active_listings: 500,
@@ -84,8 +82,8 @@ describe('commercial monetization S4 paid Launch Access contract', () => {
     expect(billing).toContain('lockLaunchBillingState');
     expect(billing).toContain('lockLaunchInvoice');
     expect(billing).toContain("commercialTermKind: 'paid_launch_access'");
-    expect(billing).toContain("entitlement_starts_on_verified_activation: true");
-    expect(billing).toContain("commercial_auto_renews: false");
+    expect(billing).toContain('entitlement_starts_on_verified_activation: true');
+    expect(billing).toContain('commercial_auto_renews: false');
     expect(router).toContain('requestLaunchAccessInvoice: protectedProcedure');
     expect(router).toContain('submitLaunchAccessPaymentProof: protectedProcedure');
   });
@@ -118,7 +116,7 @@ describe('commercial monetization S4 paid Launch Access contract', () => {
   it('keeps proof documents owner-private, including independent agents', () => {
     const billing = readRepoFile('server/services/billingFoundationService.ts');
     expect(billing).toContain("document.ownerType === 'agent'");
-    expect(billing).toContain('input.user.role === \'agent\'');
+    expect(billing).toContain("input.user.role === 'agent'");
     expect(billing).toContain('getInvoiceForOwnerOrThrow');
   });
 });

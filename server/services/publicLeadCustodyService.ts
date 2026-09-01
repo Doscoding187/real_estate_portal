@@ -122,6 +122,53 @@ function isEligibleAgentRecipient(agent: PublicAgentOwnershipCandidate | null | 
   );
 }
 
+/**
+ * A direct enquiry from an approved public agent profile has exactly one
+ * recipient authority: that agent.  It must not inherit an agency recipient
+ * merely because the profile has an affiliation.  Agency affiliation still
+ * matters to eligibility (via current membership), but the CRM owner remains
+ * the person the visitor chose to contact.
+ */
+export function resolvePublicAgentProfileCustody(input: {
+  agent: PublicAgentOwnershipCandidate | null | undefined;
+}): PublicLeadCustodyResolution {
+  const agent = input.agent;
+
+  if (isEligibleAgentRecipient(agent)) {
+    return customerResolution({
+      recipientType: 'agent',
+      recipientId: Number(agent!.id),
+      agentId: Number(agent!.id),
+    });
+  }
+
+  if (!agent || agent.status !== 'approved') {
+    return attentionResolution(
+      'customer_managed',
+      'The public agent profile is no longer available for enquiries.',
+    );
+  }
+
+  if (!positiveId(agent.userId) || agent.userRole !== 'agent') {
+    return attentionResolution(
+      'customer_managed',
+      'The public agent profile has no eligible account recipient.',
+    );
+  }
+
+  if (positiveId(agent.agencyId) && agent.hasCurrentMembership !== true) {
+    return attentionResolution(
+      'customer_managed',
+      'The public agent profile no longer has a current agency membership.',
+    );
+  }
+
+  return attentionResolution(
+    'customer_managed',
+    'The public agent profile is not an eligible active recipient.',
+  );
+}
+
 function isVerifiedAgency(agency: PublicAgencyOwnershipCandidate | null | undefined): boolean {
   return Boolean(agency && Number(agency.isVerified) === 1);
 }

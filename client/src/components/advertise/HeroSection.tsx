@@ -25,6 +25,12 @@ export interface HeroSectionProps {
   primaryCTA: CTAConfig;
   secondaryCTA: CTAConfig;
   stats: HeroStat[];
+  /**
+   * An optional product-specific visual. The generic dashboard remains the
+   * default so the component can still be used by the existing demo pages.
+   */
+  visual?: React.ReactNode;
+  visualCaption?: React.ReactNode | null;
 }
 
 interface HeroCTAProps {
@@ -82,6 +88,8 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
   primaryCTA,
   secondaryCTA,
   stats,
+  visual,
+  visualCaption,
 }) => {
   return (
     <section
@@ -118,7 +126,9 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
           initial="initial"
           whileInView="animate"
           viewport={{ once: true, margin: '-100px' }}
-          className="grid items-center gap-12 lg:grid-cols-[1.14fr_.86fr] lg:gap-14"
+          className={`grid items-center gap-12 lg:gap-14 ${
+            visual ? 'lg:grid-cols-[.82fr_1.18fr]' : 'lg:grid-cols-[1.14fr_.86fr]'
+          }`}
         >
           <div className="max-w-3xl text-left">
             {/* Eyebrow */}
@@ -173,16 +183,25 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
             )}
           </div>
 
-          <motion.div variants={fadeUp} className="relative mx-auto w-full max-w-2xl lg:mx-0">
+          <motion.div
+            variants={fadeUp}
+            className={`relative mx-auto w-full ${
+              visual
+                ? 'max-w-[48rem] lg:mx-0 lg:translate-x-4 xl:mr-[calc(-1*max(0px,calc((100vw-80rem)/2+1rem)))] xl:max-w-none xl:translate-x-32 xl:w-[calc(100%+max(0px,calc((100vw-80rem)/2+1rem)))]'
+                : 'max-w-2xl lg:mx-0'
+            }`}
+          >
             <div
               className="pointer-events-none absolute -inset-8 rounded-full bg-blue-500/15 blur-3xl"
               aria-hidden="true"
             />
             <div className="relative">
-              <WorkspaceProductPreview />
-              <p className="mt-3 text-center text-xs text-slate-400">
-                Illustrative workspace view — not live market activity.
-              </p>
+              {visual ?? <WorkspaceProductPreview />}
+              {visualCaption !== null && (
+                <p className="mt-3 text-center text-xs text-slate-400">
+                  {visualCaption ?? 'Illustrative workspace view — not live market activity.'}
+                </p>
+              )}
             </div>
           </motion.div>
         </motion.div>

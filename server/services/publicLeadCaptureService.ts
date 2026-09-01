@@ -1,7 +1,7 @@
 import { TRPCError } from '@trpc/server';
 import { and, eq, inArray, sql } from 'drizzle-orm';
 import { getDb } from '../db';
-import { slLeadContexts, slMessages } from '../../drizzle/schema';
+import { slLeadContexts, slMessages, users } from '../../drizzle/schema';
 import { agencyAgentMemberships } from '../../drizzle/schema';
 import { listCurrentActiveMembershipAgentIds } from './agencyMembershipService';
 import {
@@ -34,6 +34,7 @@ import {
 import {
   resolvePublicBrandOnlyCustody,
   resolvePublicDevelopmentCustody,
+  resolvePublicAgentProfileCustody,
   type PublicBrandOwnershipCandidate,
   type PublicDevelopmentOwnershipCandidates,
   type PublicLeadCustody,
@@ -231,7 +232,9 @@ function normalizeLeadSource(value?: string | null): string {
     normalized === 'agent' ||
     normalized === 'agent-page' ||
     normalized === 'agent_detail' ||
-    normalized === 'agent-detail'
+    normalized === 'agent-detail' ||
+    normalized === 'agent_profile' ||
+    normalized === 'agent_profile_enquiry'
   ) {
     return 'agent_profile';
   }
@@ -267,6 +270,7 @@ function getPublicTargetCount(input: PublicLeadCaptureInput): number {
     input.developmentId,
     input.cataloguePublisherId,
     input.slPlaceId,
+    input.agentId,
   ].filter(value => positiveId(value) !== undefined).length;
 }
 
@@ -401,7 +405,7 @@ function assertPublicCaptureInput(input: PublicLeadCaptureInput) {
   if (getPublicTargetCount(input) === 0) {
     throw new TRPCError({
       code: 'BAD_REQUEST',
-      message: 'A public listing, property, development or brand target is required.',
+      message: 'A public listing, property, development, brand or agent target is required.',
     });
   }
 
@@ -694,6 +698,7 @@ export async function resolveLeadOwnership(
   const commercialAvailabilityId = positiveId(input.commercialAvailabilityId);
   const requestedDevelopmentId = positiveId(input.developmentId);
   const requestedBrandId = positiveId(input.cataloguePublisherId);
+  const directAgentId = positiveId(input.agentId);
   if (commercialAvailabilityId && !listingId) {
     throw new TRPCError({
       code: 'BAD_REQUEST',
@@ -702,6 +707,91 @@ export async function resolveLeadOwnership(
   }
   if (listingId && propertyId)
     throw new TRPCError({ code: 'BAD_REQUEST', message: 'Choose one canonical enquiry source.' });
+
+  // A profile enquiry is an explicit person-to-person request, not a property
+  // enquiry with a client-selected recipient.  Property/listing flows below
+  // intentionally derive their recipient server-side and continue to ignore
+  // client agent IDs for compatibility with existing public forms.
+  if (
+    directAgentId &&
+    !listingId &&
+    !propertyId &&
+    !requestedDevelopmentId &&
+    !requestedBrandId
+  ) {
+    if (positiveId(input.agencyId)) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'A direct agent profile enquiry cannot select an agency recipient.',
+      });
+    }
+
+    const [agent] = await database
+      .select({
+        id: agents.id,
+        userId: agents.userId,
+        agencyId: agents.agencyId,
+        status: agents.status,
+        isVerified: agents.isVerified,
+      })
+      .from(agents)
+      .where(eq(agents.id, directAgentId))
+      .limit(1);
+
+    // Do not allow a caller to use this endpoint as an agent-directory probe.
+    if (!agent || agent.status !== 'approved') {
+      throw new TRPCError({
+        code: 'NOT_FOUND',
+        message: 'Agent profile not available for enquiries.',
+      });
+    }
+
+    const [subscription] = agent.userId
+      ? await database
+          .select({ status: subscriptions.status, currentPeriodEnd: subscriptions.currentPeriodEnd })
+          .from(subscriptions)
+          .where(and(eq(subscriptions.ownerType, 'agent'), eq(subscriptions.ownerId, agent.userId)))
+          .limit(1)
+      : [];
+    const [agentUser] = agent.userId
+      ? await database
+          .select({ role: users.role })
+          .from(users)
+          .where(eq(users.id, agent.userId))
+          .limit(1)
+      : [];
+    const hasCurrentMembership = agent.agencyId
+      ? (await listCurrentActiveMembershipAgentIds(database, [Number(agent.id)])).has(Number(agent.id))
+      : true;
+
+    const custody = resolvePublicAgentProfileCustody({
+      agent: {
+        id: Number(agent.id),
+        userId: agent.userId == null ? null : Number(agent.userId),
+        agencyId: agent.agencyId == null ? null : Number(agent.agencyId),
+        status: agent.status || null,
+        isVerified: Number(agent.isVerified || 0),
+        hasActivePaidEntitlement: isPaidSubscriptionRowEntitled(subscription ?? {
+          status: null,
+          currentPeriodEnd: null,
+        }),
+        hasCurrentMembership,
+        userRole: agentUser?.role || null,
+      },
+    });
+
+    // A public profile can remain viewable after a commercial term ends, but
+    // it cannot accept a lead that we would not deliver to that agent.
+    if (custody.leadCustody !== 'verified_customer_recipient') {
+      throw new TRPCError({
+        code: 'NOT_FOUND',
+        message: 'Agent profile not available for enquiries.',
+      });
+    }
+
+    return mapCustodyResolution({}, custody);
+  }
+
   if (listingId) {
     if (commercialAvailabilityId) {
       const commercial = await resolvePublicCommercialLeadCustody({
@@ -1070,9 +1160,11 @@ async function isEquivalentReplay(
   const existingListingId = positiveId(existing.listingId);
   const inputListingId = positiveId(input.listingId);
   const existingPropertyId = positiveId(existing.propertyId);
+  const existingAgentId = positiveId(existing.agentId);
   const existingDevelopmentId = positiveId(existing.developmentId);
   const inputPropertyId = positiveId(input.propertyId);
   const inputDevelopmentId = positiveId(input.developmentId);
+  const inputAgentId = positiveId(input.agentId);
   const existingBrandId = positiveId(existing.cataloguePublisherId);
   const inputBrandId = positiveId(input.cataloguePublisherId);
   const inputSharedLivingPlaceId = positiveId(input.slPlaceId);
@@ -1123,6 +1215,12 @@ async function isEquivalentReplay(
               !existingPropertyId &&
               !existingDevelopmentId &&
               existingBrandId === inputBrandId
+            : inputAgentId
+              ? !existingListingId &&
+                !existingPropertyId &&
+                !existingDevelopmentId &&
+                !existingBrandId &&
+                existingAgentId === inputAgentId
             : false;
 
   const contextMatches =

@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 
 export function AgentAppShell({ children }: { children: ReactNode }) {
   return (
-    <div className="flex min-h-screen bg-[#f7f6f3]">
+    <div className="flex min-h-screen min-w-0 bg-[#f7f6f3]">
       <AgentSidebar />
 
       <Sheet>
@@ -21,7 +21,7 @@ export function AgentAppShell({ children }: { children: ReactNode }) {
         </SheetContent>
       </Sheet>
 
-      <div className="flex-1 lg:pl-[232px]">
+      <div className="min-w-0 flex-1 lg:pl-[232px]">
         <AgentTopNav />
         {children}
       </div>

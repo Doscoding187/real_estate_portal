@@ -40,6 +40,7 @@ const OPERATE_LINKS = [
 
 const GROW_LINKS = [
   { label: 'Analytics', href: '/agent/analytics', icon: BarChart3 },
+  { label: 'Earnings', href: '/agent/earnings', icon: DollarSign },
   { label: 'Referrals', href: '/agent/referrals', icon: Share2 },
   { label: 'Marketing Hub', href: '/agent/marketing', icon: Megaphone },
 ] as const;
@@ -47,7 +48,7 @@ const GROW_LINKS = [
 const MANAGE_LINKS = [
   { label: 'Reports', href: '/agent/analytics', icon: FileText },
   { label: 'Settings', href: '/agent/settings', icon: Settings },
-  { label: "Help Center", href: "/help", icon: CircleHelp },
+  { label: 'Help Center', href: '/help', icon: CircleHelp },
 ] as const;
 
 export function AgentSidebar({ mode = 'desktop' }: SidebarProps) {
@@ -102,6 +103,9 @@ export function AgentSidebar({ mode = 'desktop' }: SidebarProps) {
     },
     {
       ...OPERATE_LINKS[3],
+    },
+    {
+      ...OPERATE_LINKS[4],
     },
   ];
 

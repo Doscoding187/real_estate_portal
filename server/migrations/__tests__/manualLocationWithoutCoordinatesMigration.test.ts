@@ -23,16 +23,18 @@ describe('PLE-6C manual location without coordinates migration', () => {
       statementPolicy: 'approved-exception',
       approvalReference: 'PLE-6C-2026-08-10-Edward',
     });
-    expect(manifest.expectedHead.filename).toBe(
-      '0061_sl_messages_authorship.sql',
-    );
+    expect(manifest.expectedHead.filename).toBe('0063_agent_launch_access_earnings_feature.sql');
   });
 
   it('contains only the approved nullable coordinate alteration', () => {
     const sql = readFileSync(migrationPath, 'utf8');
     const statements = parseSqlStatements(sql);
     const normalized = sql.toLowerCase();
-    const normalizedStatement = statements[0].replace(/\s+/g, ' ').trim().replace(/;$/, '').toLowerCase();
+    const normalizedStatement = statements[0]
+      .replace(/\s+/g, ' ')
+      .trim()
+      .replace(/;$/, '')
+      .toLowerCase();
 
     expect(statements).toHaveLength(1);
     expect(normalizedStatement).toBe(

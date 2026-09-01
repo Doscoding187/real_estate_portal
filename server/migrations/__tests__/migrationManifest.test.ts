@@ -172,7 +172,29 @@ describe('canonical migration manifest', () => {
       kind: 'ddl',
       statementPolicy: 'single-ddl',
     });
-    expect(manifest.expectedHead.filename).toBe('0061_sl_messages_authorship.sql');
+    const fullCapabilities = manifest.orderedMigrations.find(
+      entry => entry.filename === '0062_agent_launch_access_full_capabilities.sql',
+    );
+    const earningsFeature = manifest.orderedMigrations.find(
+      entry => entry.filename === '0063_agent_launch_access_earnings_feature.sql',
+    );
+    expect(fullCapabilities).toMatchObject({
+      sequence: 62,
+      parent: '0061_sl_messages_authorship.sql',
+      parentChecksum: '4b07ca2038c51683b573f9ed780a58efd1817e27ea75460364c6f80d14cd4109',
+      checksum: 'de1e31655ebb152af383c18197bf299cacee4b365ee9639f35c0ec3257915eff',
+      kind: 'transactional-data',
+      statementPolicy: 'transactional-dml',
+    });
+    expect(earningsFeature).toMatchObject({
+      sequence: 63,
+      parent: '0062_agent_launch_access_full_capabilities.sql',
+      parentChecksum: 'de1e31655ebb152af383c18197bf299cacee4b365ee9639f35c0ec3257915eff',
+      checksum: 'b3e8227ba6224de1b7d7426fdafbd8e872dd53f9191a77b271ed1a61dae44cef',
+      kind: 'transactional-data',
+      statementPolicy: 'transactional-dml',
+    });
+    expect(manifest.expectedHead.filename).toBe('0063_agent_launch_access_earnings_feature.sql');
   });
 
   it('plans the identity-and-custody migration chain from the integrated 0007 head', () => {
@@ -188,11 +210,11 @@ describe('canonical migration manifest', () => {
         checksum: item.checksum,
       })),
       acceptedOldHead: currentIntegratedHead.filename,
-      expectedNewHead: '0061_sl_messages_authorship.sql',
+      expectedNewHead: '0063_agent_launch_access_earnings_feature.sql',
     });
 
     expect(plan.acceptedOldHead).toBe('0007_paid_launch_access_invoice_term.sql');
-    expect(plan.pending).toHaveLength(54);
+    expect(plan.pending).toHaveLength(56);
     expect(plan.pending.map(item => item.filename)).toEqual([
       '0008_developer_organisations.sql',
       '0009_developer_organisation_memberships.sql',
@@ -248,8 +270,10 @@ describe('canonical migration manifest', () => {
       '0059_sl_moderation_queue.sql',
       '0060_sl_space_availability_bills.sql',
       '0061_sl_messages_authorship.sql',
+      '0062_agent_launch_access_full_capabilities.sql',
+      '0063_agent_launch_access_earnings_feature.sql',
     ]);
-    expect(plan.expectedNewHead).toBe('0061_sl_messages_authorship.sql');
+    expect(plan.expectedNewHead).toBe('0063_agent_launch_access_earnings_feature.sql');
   });
 
   it('accepts an isolated 0000 -> 0001 -> 0002 progression in ancestry order', () => {

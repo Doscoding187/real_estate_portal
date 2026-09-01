@@ -205,12 +205,22 @@ export default function AgentLeads() {
     requireDashboardUnlocked: true,
   });
 
-  const propertyId = useMemo(() => {
-    const [, search = ''] = location.split('?');
+  const { propertyId, selectedLeadId } = useMemo(() => {
+    const search =
+      typeof window !== 'undefined'
+        ? window.location.search
+        : location.includes('?')
+          ? location.slice(location.indexOf('?'))
+          : '';
     const searchParams = new URLSearchParams(search);
-    const value = searchParams.get('propertyId');
-    const parsed = value ? Number(value) : NaN;
-    return Number.isFinite(parsed) ? parsed : undefined;
+    const propertyValue = searchParams.get('propertyId');
+    const leadValue = searchParams.get('leadId');
+    const parsedPropertyId = propertyValue ? Number(propertyValue) : NaN;
+    const parsedLeadId = leadValue ? Number(leadValue) : NaN;
+    return {
+      propertyId: Number.isFinite(parsedPropertyId) ? parsedPropertyId : undefined,
+      selectedLeadId: Number.isFinite(parsedLeadId) ? parsedLeadId : undefined,
+    };
   }, [location]);
 
   const leadsLocked = !statusLoading && !status?.entitlements?.canReceiveLeads;
@@ -275,8 +285,8 @@ export default function AgentLeads() {
   const activeLeadCount = allLeads.filter(
     lead => lead.status !== 'closed' && lead.status !== 'lost',
   ).length;
-  const propertyLinkedCount = allLeads.filter(
-    lead => Boolean(lead.property || lead.commercial),
+  const propertyLinkedCount = allLeads.filter(lead =>
+    Boolean(lead.property || lead.commercial),
   ).length;
   const sourceRollup = useMemo(() => {
     const counts = new Map<string, number>();
@@ -440,7 +450,7 @@ export default function AgentLeads() {
               </TabsList>
 
               <TabsContent value="pipeline">
-                <LeadPipeline propertyId={propertyId} />
+                <LeadPipeline propertyId={propertyId} selectedLeadId={selectedLeadId} />
               </TabsContent>
 
               <TabsContent value="insights" className="space-y-6">
@@ -584,9 +594,9 @@ export default function AgentLeads() {
                       <div>
                         <h3 className="text-lg font-semibold text-slate-900">Unified messaging</h3>
                         <p className="mt-1 text-sm leading-6 text-slate-600">
-                          A dedicated lead inbox is not live yet. For now, use lead detail, CRM
-                          notes, and showing scheduling from the pipeline rather than a fake message
-                          center.
+                          Keep every follow-up attached to the lead record. Use lead detail for CRM
+                          notes, showing scheduling and offer readiness, then return to the pipeline
+                          with the full context still visible.
                         </p>
                       </div>
                       <Button

@@ -93,17 +93,17 @@ export const SegmentationLayer: React.FC<SegmentationLayerProps> = () => {
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="mx-auto mb-12 max-w-3xl text-center">
           <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-700">
-            MVP commercial gateway
+            Choose your workspace
           </p>
           <h2
             id="segmentation-heading"
             className="mt-4 text-3xl font-extrabold tracking-tight text-slate-950 md:text-5xl"
           >
-            Choose how you work with Property Listify
+            Choose the path that fits your property business
           </h2>
           <p className="mt-5 text-lg leading-8 text-slate-600">
-            Three focused Launch Access paths, each connected to the business workspace and tools
-            that support that way of working.
+            Start with the role that matches how you work. Each path explains its Launch Access,
+            workspace and next step before you create an account.
           </p>
         </div>
 

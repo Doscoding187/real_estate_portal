@@ -99,9 +99,7 @@ function resolvePackageScript(
         'migration-recovery:apply',
         'release:plan',
         'release:apply',
-      ].includes(
-        authorityCliCommand,
-      );
+      ].includes(authorityCliCommand);
     if (executable !== 'scripts/databaseAuthorityCli.ts' || authorityCliUsesMigrationRunner) {
       signals.push(...migrationSignals(source));
       if (source.includes(CANONICAL_RUNNER) || source.includes('migrations/runSqlMigrations')) {
@@ -410,10 +408,10 @@ describe('migration execution authority', () => {
       '0059_sl_moderation_queue.sql',
       '0060_sl_space_availability_bills.sql',
       '0061_sl_messages_authorship.sql',
+      '0062_agent_launch_access_full_capabilities.sql',
+      '0063_agent_launch_access_earnings_feature.sql',
     ]);
-    expect(executionManifest.expectedHead).toBe(
-      '0061_sl_messages_authorship.sql',
-    );
+    expect(executionManifest.expectedHead).toBe('0063_agent_launch_access_earnings_feature.sql');
     expect(archivedSqlFiles.length).toBeGreaterThan(0);
     expect(activeSqlFiles.some(file => file.includes('_archived'))).toBe(false);
     expect(executionManifest.historyTable).toBe('sql_migration_history');

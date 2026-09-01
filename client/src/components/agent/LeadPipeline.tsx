@@ -12,8 +12,18 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-// TODO: Migrate to dnd-kit for drag-and-drop functionality
-// import { Droppable, Draggable, DragDropContext } from '@hello-pangea/dnd';
+import {
+  closestCorners,
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  useDraggable,
+  useDroppable,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import { CSS } from '@dnd-kit/utilities';
 import {
   Users,
   Mail,
@@ -29,11 +39,14 @@ import {
   Building2,
   CheckCircle2,
   Clock3,
+  GripVertical,
   Flame,
   Lock,
   MessageCircle,
+  MapPin,
 } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
+import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
 interface Lead {
@@ -83,7 +96,7 @@ interface Lead {
   } | null;
 }
 
-interface PipelineColumn {
+interface PipelineColumnState {
   id: string;
   title: string;
   leads: Lead[];
@@ -99,6 +112,33 @@ const PIPELINE_STAGES = [
 ];
 
 type PipelineStageId = (typeof PIPELINE_STAGES)[number]['id'];
+
+const LEAD_STATUS_BY_STAGE: Record<PipelineStageId, string> = {
+  new: 'new',
+  contacted: 'contacted',
+  viewing: 'viewing_scheduled',
+  offer: 'offer_sent',
+  closed: 'closed',
+};
+
+function getPipelineStageForLeadStatus(status: string | null | undefined): PipelineStageId {
+  switch (status) {
+    case 'contacted':
+    case 'qualified':
+      return 'contacted';
+    case 'viewing_scheduled':
+      return 'viewing';
+    case 'offer_sent':
+    case 'converted':
+      return 'offer';
+    case 'closed':
+    case 'lost':
+      return 'closed';
+    default:
+      return 'new';
+  }
+}
+
 type LeadReadiness = {
   viewingCompleted: boolean;
   feedbackLogged: boolean;
@@ -191,10 +231,73 @@ function getLeadTemperature(lead: Lead) {
   };
 }
 
-function getNextStage(stageId: PipelineStageId): PipelineStageId | null {
-  const index = PIPELINE_STAGES.findIndex(stage => stage.id === stageId);
-  if (index < 0 || index >= PIPELINE_STAGES.length - 1) return null;
-  return PIPELINE_STAGES[index + 1].id;
+function getLeadInitials(name: string | null | undefined) {
+  const initials = (name || 'Lead')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map(part => part.charAt(0).toUpperCase())
+    .join('');
+
+  return initials || 'L';
+}
+
+function getLeadNextMove(lead: Lead) {
+  const stage = getPipelineStageForLeadStatus(lead.status);
+
+  if (lead.commercial) {
+    return {
+      eyebrow: 'Commercial handoff',
+      title: 'Keep the enquiry moving',
+      description: 'Capture the next conversation and coordinate with the verified advertiser.',
+      action: 'note',
+      actionLabel: 'Add CRM note',
+    };
+  }
+
+  switch (stage) {
+    case 'new':
+      return {
+        eyebrow: 'First response',
+        title: 'Make contact while interest is fresh',
+        description: 'Use the buyer’s contact details, then record the real outcome and next step.',
+        action: lead.phone ? 'phone' : 'followUp',
+        actionLabel: lead.phone ? 'Call buyer' : 'Set follow-up',
+      };
+    case 'contacted':
+      return {
+        eyebrow: 'Progress the lead',
+        title: 'Turn the conversation into a viewing',
+        description: 'Offer a time that works and keep the property context in the record.',
+        action: 'showing',
+        actionLabel: 'Schedule showing',
+      };
+    case 'viewing':
+      return {
+        eyebrow: 'Viewing in progress',
+        title: 'Capture the outcome and agree the next step',
+        description: 'Set a follow-up before the viewing momentum goes cold.',
+        action: 'followUp',
+        actionLabel: 'Set follow-up',
+      };
+    case 'offer':
+      return {
+        eyebrow: 'Offer work',
+        title: 'Keep the deal checks current',
+        description: 'Record the viewing outcome, feedback, and budget before progressing.',
+        action: 'readiness',
+        actionLabel: 'Review deal checks',
+      };
+    default:
+      return {
+        eyebrow: 'Lead record',
+        title: 'Keep the close-out context complete',
+        description: 'Add a note if there is anything the team should retain.',
+        action: 'note',
+        actionLabel: 'Add CRM note',
+      };
+  }
 }
 
 function isReadinessComplete(readiness?: LeadReadiness) {
@@ -228,13 +331,16 @@ function getDeliveryMeta(status?: string | null) {
 }
 
 function getDeliveryAttemptCount(attempts: unknown) {
-  const parsed = typeof attempts === 'string' ? (() => {
-    try {
-      return JSON.parse(attempts);
-    } catch {
-      return null;
-    }
-  })() : attempts;
+  const parsed =
+    typeof attempts === 'string'
+      ? (() => {
+          try {
+            return JSON.parse(attempts);
+          } catch {
+            return null;
+          }
+        })()
+      : attempts;
 
   if (!Array.isArray(parsed)) return 0;
   return parsed.reduce((highest, attempt) => {
@@ -246,10 +352,11 @@ function getDeliveryAttemptCount(attempts: unknown) {
 interface LeadPipelineProps {
   className?: string;
   propertyId?: number;
+  selectedLeadId?: number;
 }
 
-export function LeadPipeline({ className, propertyId }: LeadPipelineProps) {
-  const [pipeline, setPipeline] = useState<Record<string, PipelineColumn>>({
+export function LeadPipeline({ className, propertyId, selectedLeadId }: LeadPipelineProps) {
+  const [pipeline, setPipeline] = useState<Record<string, PipelineColumnState>>({
     new: { id: 'new', title: 'New Leads', leads: [], color: 'bg-blue-500' },
     contacted: { id: 'contacted', title: 'Contacted', leads: [], color: 'bg-yellow-500' },
     viewing: { id: 'viewing', title: 'Viewing', leads: [], color: 'bg-purple-500' },
@@ -271,6 +378,13 @@ export function LeadPipeline({ className, propertyId }: LeadPipelineProps) {
     notes: '',
   });
   const [leadReadiness, setLeadReadiness] = useState<Record<number, LeadReadiness>>({});
+  const [openedSearchLeadId, setOpenedSearchLeadId] = useState<number | null>(null);
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 8 },
+    }),
+    useSensor(KeyboardSensor),
+  );
 
   const utils = trpc.useUtils();
   const { data: availableListings = [] } = trpc.agent.getShowingListingOptions.useQuery();
@@ -300,6 +414,7 @@ export function LeadPipeline({ className, propertyId }: LeadPipelineProps) {
     },
     onError: error => {
       toast.error(error.message || 'Failed to move lead');
+      void utils.agent.getLeadsPipeline.invalidate();
     },
   });
   const bookShowingMutation = trpc.agent.bookShowing.useMutation({
@@ -395,51 +510,6 @@ export function LeadPipeline({ className, propertyId }: LeadPipelineProps) {
     }
   }, [pipelineData]);
 
-  const handleDragEnd = (result: any) => {
-    const { destination, source, draggableId } = result;
-
-    if (!destination) {
-      return;
-    }
-
-    if (destination.droppableId === source.droppableId && destination.index === source.index) {
-      return;
-    }
-
-    const sourceColumn = pipeline[source.droppableId];
-    const destColumn = pipeline[destination.droppableId];
-    const draggedLead = sourceColumn.leads.find(lead => lead.id.toString() === draggableId);
-
-    if (!draggedLead) return;
-
-    // Create new arrays
-    const sourceLeads = Array.from(sourceColumn.leads);
-    sourceLeads.splice(source.index, 1);
-
-    const destLeads = Array.from(destColumn.leads);
-    destLeads.splice(destination.index, 0, draggedLead);
-
-    // Update pipeline state
-    setPipeline({
-      ...pipeline,
-      [source.droppableId]: {
-        ...sourceColumn,
-        leads: sourceLeads,
-      },
-      [destination.droppableId]: {
-        ...destColumn,
-        leads: destLeads,
-      },
-    });
-
-    // Update lead status on the server
-    updateLeadStatusMutation.mutate({
-      leadId: draggedLead.id,
-      targetStage: destination.droppableId as any,
-      notes: `Moved from ${source.droppableId} to ${destination.droppableId}`,
-    });
-  };
-
   const filteredLeads = (leads: Lead[]) => {
     if (!searchQuery) return leads;
     return leads.filter(
@@ -484,6 +554,54 @@ export function LeadPipeline({ className, propertyId }: LeadPipelineProps) {
     setFollowUpForm({ nextFollowUp: toDateTimeLocal(lead.nextFollowUp), note: '' });
   };
 
+  useEffect(() => {
+    if (!selectedLeadId || openedSearchLeadId === selectedLeadId) return;
+
+    const matchingLead = Object.values(pipeline)
+      .flatMap(column => column.leads)
+      .find(lead => lead.id === selectedLeadId);
+
+    if (!matchingLead) return;
+
+    openLeadDetail(matchingLead);
+    setOpenedSearchLeadId(selectedLeadId);
+  }, [openedSearchLeadId, pipeline, selectedLeadId]);
+
+  const runLeadNextMove = (lead: Lead) => {
+    const nextMove = getLeadNextMove(lead);
+
+    switch (nextMove.action) {
+      case 'phone': {
+        const dialableNumber = lead.phone?.replace(/[^\d+]/g, '');
+        if (dialableNumber) {
+          window.location.href = `tel:${dialableNumber}`;
+          return;
+        }
+        requestAnimationFrame(() => {
+          document.getElementById(`lead-follow-up-${lead.id}`)?.focus();
+        });
+        break;
+      }
+      case 'showing':
+        openScheduleDialog(lead);
+        break;
+      case 'followUp':
+        requestAnimationFrame(() => {
+          document.getElementById(`lead-follow-up-${lead.id}`)?.focus();
+        });
+        break;
+      case 'readiness':
+        document
+          .getElementById(`lead-readiness-${lead.id}`)
+          ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        break;
+      default:
+        requestAnimationFrame(() => {
+          document.getElementById(`lead-note-${lead.id}`)?.focus();
+        });
+    }
+  };
+
   const getReadinessForLead = (leadId: number) => leadReadiness[leadId] || DEFAULT_READINESS;
 
   const toggleReadinessItem = (leadId: number, key: keyof LeadReadiness) => {
@@ -505,11 +623,45 @@ export function LeadPipeline({ className, propertyId }: LeadPipelineProps) {
     return isReadinessComplete(getReadinessForLead(lead.id));
   };
 
-  const moveLeadToStage = (lead: Lead, targetStage: PipelineStageId) => {
+  const moveLeadToStage = (
+    lead: Lead,
+    targetStage: PipelineStageId,
+    sourceStage?: PipelineStageId,
+  ) => {
     if (!canMoveLeadToStage(lead, targetStage)) {
       toast.error('Complete the viewing checklist before moving this lead to Offer.');
       return;
     }
+
+    const currentStage =
+      sourceStage ||
+      (PIPELINE_STAGES.find(stage => pipeline[stage.id]?.leads.some(item => item.id === lead.id))
+        ?.id as PipelineStageId | undefined);
+
+    if (!currentStage || currentStage === targetStage) return;
+
+    setPipeline(current => {
+      const sourceColumn = current[currentStage];
+      const targetColumn = current[targetStage];
+      const leadToMove = sourceColumn?.leads.find(item => item.id === lead.id);
+
+      if (!sourceColumn || !targetColumn || !leadToMove) return current;
+
+      return {
+        ...current,
+        [currentStage]: {
+          ...sourceColumn,
+          leads: sourceColumn.leads.filter(item => item.id !== lead.id),
+        },
+        [targetStage]: {
+          ...targetColumn,
+          leads: [
+            ...targetColumn.leads,
+            { ...leadToMove, status: LEAD_STATUS_BY_STAGE[targetStage] },
+          ],
+        },
+      };
+    });
 
     updateLeadStatusMutation.mutate({
       leadId: lead.id,
@@ -519,6 +671,17 @@ export function LeadPipeline({ className, propertyId }: LeadPipelineProps) {
           ? 'Moved to offer after viewing readiness checklist was completed'
           : `Moved to ${targetStage}`,
     });
+  };
+
+  const handleDragEnd = ({ active, over }: DragEndEvent) => {
+    if (!over) return;
+
+    const lead = active.data.current?.lead as Lead | undefined;
+    const sourceStage = active.data.current?.stageId as PipelineStageId | undefined;
+    const targetStage = over.data.current?.stageId as PipelineStageId | undefined;
+
+    if (!lead || !sourceStage || !targetStage || sourceStage === targetStage) return;
+    moveLeadToStage(lead, targetStage, sourceStage);
   };
 
   const communicationTimeline = selectedLead
@@ -561,6 +724,11 @@ export function LeadPipeline({ className, propertyId }: LeadPipelineProps) {
       ].filter(Boolean)
     : [];
 
+  const selectedLeadStage = selectedLead
+    ? PIPELINE_STAGES.find(stage => stage.id === getPipelineStageForLeadStatus(selectedLead.status))
+    : null;
+  const selectedLeadNextMove = selectedLead ? getLeadNextMove(selectedLead) : null;
+
   if (isLoading) {
     return (
       <div className={`space-y-4 ${className}`}>
@@ -579,7 +747,7 @@ export function LeadPipeline({ className, propertyId }: LeadPipelineProps) {
   return (
     <div className={`space-y-4 ${className}`}>
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex items-center gap-3">
           <Users className="h-6 w-6 text-primary" />
           <h2 className="text-2xl font-bold">Lead Pipeline</h2>
@@ -588,17 +756,22 @@ export function LeadPipeline({ className, propertyId }: LeadPipelineProps) {
           </Badge>
           {propertyId ? <Badge variant="outline">Property #{propertyId}</Badge> : null}
         </div>
-        <div className="flex items-center gap-2">
-          <div className="relative">
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+          <div className="relative w-full sm:w-64">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search leads..."
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              className="pl-10 w-64"
+              className="w-full pl-10"
             />
           </div>
-          <Button variant="outline" size="sm" onClick={() => setShowFilters(!showFilters)}>
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full sm:w-auto"
+            onClick={() => setShowFilters(!showFilters)}
+          >
             <Filter className="h-4 w-4 mr-2" />
             Filters
             <ChevronDown className="h-4 w-4 ml-2" />
@@ -630,50 +803,33 @@ export function LeadPipeline({ className, propertyId }: LeadPipelineProps) {
         </Card>
       )}
 
-      {/* Kanban Board - Drag-and-drop temporarily disabled */}
-      <div className="grid grid-cols-5 gap-4 overflow-x-auto">
-        {PIPELINE_STAGES.map(stage => {
-          const column = pipeline[stage.id];
-          const leads = filteredLeads(column.leads);
+      <div className="flex flex-col gap-1">
+        <p className="text-xs text-slate-500">
+          Click a lead to work the full record. Use the grip to move it between pipeline stages.
+        </p>
+        <DndContext sensors={sensors} collisionDetection={closestCorners} onDragEnd={handleDragEnd}>
+          {/* The board owns horizontal scrolling; the page and CRM summary do not. */}
+          <div
+            className="max-w-full overflow-x-auto overscroll-x-contain pb-3"
+            aria-label="Lead pipeline board"
+          >
+            <div className="grid min-w-[1360px] grid-cols-5 gap-4 pr-1">
+              {PIPELINE_STAGES.map(stage => {
+                const column = pipeline[stage.id];
+                const leads = filteredLeads(column.leads);
 
-          return (
-            <div key={stage.id} className="flex flex-col min-w-80">
-              <Card className="h-fit">
-                <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center gap-2 text-sm">
-                    <div className={`w-3 h-3 rounded-full ${stage.color}`}></div>
-                    {stage.title}
-                    <Badge variant="outline" className="ml-auto">
-                      {leads.length}
-                    </Badge>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="pt-0">
-                  <div className="space-y-3 min-h-[200px] p-1 rounded">
-                    {leads.map(lead => (
-                      <div key={lead.id}>
-                        <LeadCard
-                          lead={lead}
-                          stageId={stage.id as PipelineStageId}
-                          readiness={getReadinessForLead(lead.id)}
-                          onScheduleShowing={() => openScheduleDialog(lead)}
-                          onOpenDetail={() => openLeadDetail(lead)}
-                          onMoveLead={targetStage => moveLeadToStage(lead, targetStage)}
-                        />
-                      </div>
-                    ))}
-                    {leads.length === 0 && (
-                      <div className="text-center py-8 text-muted-foreground">
-                        <Plus className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                        <p className="text-sm">No leads</p>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
+                return (
+                  <PipelineColumn
+                    key={stage.id}
+                    stage={stage}
+                    leads={leads}
+                    onOpenLead={openLeadDetail}
+                  />
+                );
+              })}
             </div>
-          );
-        })}
+          </div>
+        </DndContext>
       </div>
 
       <Dialog
@@ -744,9 +900,7 @@ export function LeadPipeline({ className, propertyId }: LeadPipelineProps) {
                 <Input
                   type="datetime-local"
                   value={bookingForm.scheduledAt}
-                  onChange={e =>
-                    setBookingForm(prev => ({ ...prev, scheduledAt: e.target.value }))
-                  }
+                  onChange={e => setBookingForm(prev => ({ ...prev, scheduledAt: e.target.value }))}
                 />
               </div>
 
@@ -815,193 +969,310 @@ export function LeadPipeline({ className, propertyId }: LeadPipelineProps) {
           }
         }}
       >
-        <DialogContent className="sm:max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Lead Detail</DialogTitle>
-            <DialogDescription>
-              View the canonical lead record, recent CRM activity, and add notes without leaving the
-              pipeline.
-            </DialogDescription>
-          </DialogHeader>
-
+        <DialogContent className="max-h-[calc(100dvh-2rem)] gap-0 overflow-y-auto overflow-x-hidden rounded-[24px] border-slate-200 bg-[#f8fafc] p-0 shadow-2xl sm:max-w-5xl [&_[data-slot=dialog-close]]:top-6 [&_[data-slot=dialog-close]]:right-6 [&_[data-slot=dialog-close]]:z-20 [&_[data-slot=dialog-close]]:rounded-full [&_[data-slot=dialog-close]]:border [&_[data-slot=dialog-close]]:border-slate-200 [&_[data-slot=dialog-close]]:bg-white [&_[data-slot=dialog-close]]:p-2 [&_[data-slot=dialog-close]]:opacity-100">
           {selectedLead ? (
-            <div className="space-y-6">
-              <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-4">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="space-y-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="text-lg font-semibold text-gray-900">{selectedLead.name}</p>
-                      <Badge
-                        variant="outline"
-                        className={`text-xs ${getLeadTemperature(selectedLead).className}`}
-                      >
-                        <Flame className="mr-1 h-3 w-3" />
-                        {getLeadTemperature(selectedLead).label}
-                      </Badge>
+            <div>
+              <DialogHeader className="relative overflow-hidden border-b border-slate-200 bg-white px-5 py-6 text-left sm:px-7">
+                <div
+                  className="absolute inset-y-0 left-0 w-1 bg-[var(--primary)]"
+                  aria-hidden="true"
+                />
+                <div
+                  className="absolute -right-20 -top-24 h-56 w-56 rounded-full bg-sky-100/70 blur-3xl"
+                  aria-hidden="true"
+                />
+                <div className="relative flex flex-col gap-5 pr-9 lg:flex-row lg:items-start lg:justify-between">
+                  <div className="min-w-0">
+                    <div className="flex items-start gap-3">
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[var(--primary)] text-sm font-bold text-white shadow-sm">
+                        {getLeadInitials(selectedLead.name)}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--primary)]">
+                          Lead workspace
+                        </p>
+                        <DialogTitle className="mt-1 truncate text-2xl font-bold tracking-tight text-slate-950">
+                          {selectedLead.name || 'Unnamed lead'}
+                        </DialogTitle>
+                        <DialogDescription className="mt-1.5">
+                          {SOURCE_LABELS[selectedLead.source || ''] || selectedLead.source || 'Web'}{' '}
+                          enquiry · received {formatLeadCardDate(selectedLead.createdAt)}
+                        </DialogDescription>
+                      </div>
                     </div>
-                    <p className="text-sm text-gray-500">{selectedLead.email}</p>
-                    {selectedLead.phone ? (
-                      <p className="text-sm text-gray-500">{selectedLead.phone}</p>
-                    ) : null}
-                    <p className="text-xs text-gray-500">
-                      Created {new Date(selectedLead.createdAt).toLocaleString()}
-                    </p>
+
+                    <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-slate-600">
+                      {selectedLead.email ? (
+                        <span className="inline-flex min-w-0 items-center gap-2">
+                          <Mail className="h-4 w-4 shrink-0 text-slate-400" />
+                          <span className="truncate">{selectedLead.email}</span>
+                        </span>
+                      ) : null}
+                      {selectedLead.phone ? (
+                        <span className="inline-flex items-center gap-2">
+                          <Phone className="h-4 w-4 shrink-0 text-slate-400" />
+                          {selectedLead.phone}
+                        </span>
+                      ) : null}
+                    </div>
                   </div>
-                  <Badge variant="outline">{SOURCE_LABELS[selectedLead.source || ''] || selectedLead.source || 'Web'}</Badge>
+
+                  <div className="shrink-0 rounded-2xl border border-slate-200 bg-white/90 p-3.5 shadow-sm lg:w-[220px]">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+                      Pipeline stage
+                    </p>
+                    <div className="mt-2 flex items-center gap-2 text-sm font-semibold text-slate-900">
+                      <span
+                        className={`h-2.5 w-2.5 rounded-full ${selectedLeadStage?.color || 'bg-blue-500'}`}
+                      />
+                      {selectedLeadStage?.title || 'New Leads'}
+                    </div>
+                    <div className="mt-3 flex items-center gap-2 border-t border-slate-100 pt-3 text-xs text-slate-500">
+                      <Flame
+                        className={`h-3.5 w-3.5 ${getLeadTemperature(selectedLead).label === 'Hot' ? 'text-rose-500' : 'text-amber-500'}`}
+                      />
+                      {getLeadTemperature(selectedLead).label} intent
+                    </div>
+                  </div>
                 </div>
 
                 {selectedLead.commercial ? (
-                  <div className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm">
-                    <div className="flex items-center gap-2 font-medium text-emerald-900">
-                      <Building2 className="h-4 w-4" />
-                      Commercial lease enquiry
+                  <div className="relative mt-5 flex items-start gap-3 rounded-2xl border border-emerald-200 bg-emerald-50/80 p-4 text-sm">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-emerald-700 shadow-sm">
+                      <Building2 className="h-5 w-5" />
                     </div>
-                    <div className="mt-1 font-medium text-emerald-950">
-                      {selectedLead.commercial.listingTitle}
-                    </div>
-                    <div className="text-emerald-800">
-                      {selectedLead.commercial.useType.replace(/_/g, ' ')} ·{' '}
-                      {selectedLead.commercial.spaceIdentifier} ·{' '}
-                      {selectedLead.commercial.rentableAreaM2 != null
-                        ? `${selectedLead.commercial.rentableAreaM2.toLocaleString()} m² rentable`
-                        : 'Rentable area not recorded'}
-                    </div>
-                    <div className="mt-1 text-xs text-emerald-700">
-                      Keep this enquiry with the verified Commercial advertiser; generic viewing
-                      booking is unavailable.
+                    <div className="min-w-0">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-emerald-700">
+                        Commercial lease enquiry
+                      </p>
+                      <p className="mt-1 truncate font-semibold text-emerald-950">
+                        {selectedLead.commercial.listingTitle}
+                      </p>
+                      <p className="mt-1 text-emerald-800">
+                        {selectedLead.commercial.useType.replace(/_/g, ' ')} ·{' '}
+                        {selectedLead.commercial.spaceIdentifier} ·{' '}
+                        {selectedLead.commercial.rentableAreaM2 != null
+                          ? `${selectedLead.commercial.rentableAreaM2.toLocaleString()} m² rentable`
+                          : 'Rentable area not recorded'}
+                      </p>
+                      <p className="mt-2 text-xs text-emerald-700">
+                        This enquiry stays with the verified commercial advertiser.
+                      </p>
                     </div>
                   </div>
                 ) : selectedLead.property ? (
-                  <div className="mt-4 rounded-lg border border-gray-200 bg-white p-3 text-sm">
-                    <div className="font-medium text-gray-900">{selectedLead.property.title}</div>
-                    <div className="text-gray-500">
-                      {selectedLead.property.city} | R
-                      {selectedLead.property.price.toLocaleString()}
+                  <div className="relative mt-5 flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50/90 p-4 text-sm">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-[var(--primary)] shadow-sm">
+                      <Home className="h-5 w-5" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+                        Enquiry about
+                      </p>
+                      <p className="mt-1 truncate font-semibold text-slate-950">
+                        {selectedLead.property.title}
+                      </p>
+                      <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-slate-600">
+                        <span className="inline-flex items-center gap-1">
+                          <MapPin className="h-3.5 w-3.5 text-slate-400" />
+                          {selectedLead.property.city}
+                        </span>
+                        <span className="font-medium text-slate-700">
+                          R{selectedLead.property.price.toLocaleString()}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                ) : null}
+                ) : (
+                  <div className="relative mt-5 flex items-center gap-3 rounded-2xl border border-dashed border-slate-200 bg-slate-50/70 p-4 text-sm text-slate-500">
+                    <Home className="h-5 w-5 text-slate-400" />
+                    No property is linked to this enquiry yet.
+                  </div>
+                )}
 
                 {selectedLead.message ? (
-                  <div className="mt-4 text-sm text-gray-700">
-                    <span className="font-medium">Lead message:</span> {selectedLead.message}
+                  <div className="relative mt-4 border-l-2 border-[var(--primary)] pl-4">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+                      Buyer message
+                    </p>
+                    <p className="mt-1 text-sm leading-6 text-slate-700">
+                      “{selectedLead.message}”
+                    </p>
                   </div>
                 ) : null}
+              </DialogHeader>
 
-                <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                  <div className="rounded-lg border border-slate-200 bg-white p-3 text-sm">
-                    <p className="font-medium text-gray-900">Consent evidence</p>
-                    {selectedLead.consent?.capturedAt ? (
-                      <>
-                        <p className="mt-1 text-gray-600">
-                          Recorded {parseDatabaseTimestamp(selectedLead.consent.capturedAt).toLocaleString()}
+              <div className="grid items-start gap-5 p-5 sm:p-6 lg:grid-cols-[minmax(0,1fr)_304px] lg:p-7">
+                <main className="min-w-0 space-y-5">
+                  <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                    <div className="flex flex-col gap-3 border-b border-slate-100 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+                      <div>
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+                          Activity
                         </p>
-                        <p className="mt-1 text-xs text-gray-500">
-                          Version {selectedLead.consent.version || 'unspecified'} ·{' '}
-                          {selectedLead.consent.source || 'unspecified source'}
-                        </p>
-                      </>
-                    ) : (
-                      <p className="mt-1 text-amber-700">No consent evidence recorded.</p>
-                    )}
-                  </div>
-                  <div className="rounded-lg border border-slate-200 bg-white p-3 text-sm">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <p className="font-medium text-gray-900">Recipient delivery</p>
-                      <Badge
-                        variant="outline"
-                        className={getDeliveryMeta(selectedLead.delivery?.status).className}
-                      >
-                        {getDeliveryMeta(selectedLead.delivery?.status).label}
-                      </Badge>
-                    </div>
-                    <p className="mt-1 text-xs text-gray-500">
-                      {getDeliveryAttemptCount(selectedLead.delivery?.attempts)} attempt(s)
-                      {selectedLead.delivery?.lastAttemptAt
-                        ? ` · last ${parseDatabaseTimestamp(selectedLead.delivery.lastAttemptAt).toLocaleString()}`
-                        : ''}
-                    </p>
-                    {selectedLead.delivery?.lastError ? (
-                      <p className="mt-1 text-xs text-rose-700">{selectedLead.delivery.lastError}</p>
-                    ) : null}
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_280px]">
-                <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                    <h3 className="font-semibold text-gray-900">Unified Timeline</h3>
-                    {!selectedLead.commercial ? (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => openScheduleDialog(selectedLead)}
-                      >
-                        <Calendar className="h-4 w-4 mr-2" />
-                        Schedule Showing
-                      </Button>
-                    ) : null}
-                  </div>
-
-                  {activitiesLoading ? (
-                    <p className="text-sm text-gray-500">Loading activity...</p>
-                  ) : (
-                    <div className="space-y-3">
-                      {communicationTimeline.map((activity: any) => (
-                        <div
-                          key={activity.id}
-                          className="relative rounded-xl border border-gray-100 bg-white p-3"
+                        <h3 className="mt-1 font-semibold text-slate-950">Lead timeline</h3>
+                      </div>
+                      {!selectedLead.commercial ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full border-slate-200 bg-white sm:w-auto"
+                          onClick={() => openScheduleDialog(selectedLead)}
                         >
-                          <div className="flex items-center justify-between gap-3">
-                            <Badge variant="outline" className={activity.tone}>
-                              {activity.type === 'whatsapp' ? (
-                                <MessageCircle className="mr-1 h-3 w-3" />
-                              ) : activity.type === 'email' ? (
-                                <Mail className="mr-1 h-3 w-3" />
-                              ) : activity.type === 'phone' ? (
-                                <Phone className="mr-1 h-3 w-3" />
-                              ) : activity.type === 'status_change' ? (
-                                <CheckCircle2 className="mr-1 h-3 w-3" />
-                              ) : (
-                                <Clock3 className="mr-1 h-3 w-3" />
-                              )}
-                              {String(activity.type).replace(/_/g, ' ')}
-                            </Badge>
-                            <span className="text-xs text-gray-500">
-                              {new Date(activity.createdAt).toLocaleString()}
-                            </span>
-                          </div>
-                          <p className="mt-2 text-sm leading-6 text-gray-700">
-                            {activity.description}
-                          </p>
-                        </div>
-                      ))}
+                          <Calendar className="mr-2 h-4 w-4" />
+                          Schedule showing
+                        </Button>
+                      ) : null}
                     </div>
-                  )}
-                </div>
+
+                    {activitiesLoading ? (
+                      <p className="px-5 py-8 text-sm text-slate-500 sm:px-6">Loading activity…</p>
+                    ) : (
+                      <div className="divide-y divide-slate-100">
+                        {communicationTimeline.map((activity: any, index) => {
+                          const ActivityIcon =
+                            activity.type === 'whatsapp'
+                              ? MessageCircle
+                              : activity.type === 'email'
+                                ? Mail
+                                : activity.type === 'phone'
+                                  ? Phone
+                                  : activity.type === 'status_change'
+                                    ? CheckCircle2
+                                    : Clock3;
+
+                          return (
+                            <div
+                              key={activity.id}
+                              className="relative flex gap-3 px-5 py-4 sm:px-6"
+                            >
+                              {index < communicationTimeline.length - 1 ? (
+                                <span
+                                  className="absolute left-[2.55rem] top-[3.35rem] h-[calc(100%-1.35rem)] w-px bg-slate-100 sm:left-[3.05rem]"
+                                  aria-hidden="true"
+                                />
+                              ) : null}
+                              <div
+                                className={`relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border ${activity.tone}`}
+                              >
+                                <ActivityIcon className="h-3.5 w-3.5" />
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
+                                  <p className="text-sm font-semibold capitalize text-slate-800">
+                                    {String(activity.type).replace(/_/g, ' ')}
+                                  </p>
+                                  <time className="shrink-0 text-xs text-slate-400">
+                                    {new Date(activity.createdAt).toLocaleString()}
+                                  </time>
+                                </div>
+                                <p className="mt-1 text-sm leading-6 text-slate-600">
+                                  {activity.description}
+                                </p>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </section>
+
+                  <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+                    <div className="flex items-start gap-3">
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-[var(--primary)]">
+                        <MessageCircle className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+                          Shared context
+                        </p>
+                        <h3 className="mt-1 font-semibold text-slate-950">Capture a note</h3>
+                      </div>
+                    </div>
+                    <Textarea
+                      id={`lead-note-${selectedLead.id}`}
+                      rows={4}
+                      className="mt-4 min-h-28 border-slate-200 bg-slate-50/60 focus-visible:bg-white"
+                      value={newActivityNote}
+                      onChange={e => setNewActivityNote(e.target.value)}
+                      placeholder="Log the outcome, a reminder, or context another team member needs."
+                    />
+                    <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <p className="text-xs leading-5 text-slate-500">
+                        Saved to this lead’s shared activity record.
+                      </p>
+                      <Button
+                        className="sm:shrink-0"
+                        disabled={addLeadActivityMutation.isPending || !newActivityNote.trim()}
+                        onClick={() =>
+                          addLeadActivityMutation.mutate({
+                            leadId: selectedLead.id,
+                            activityType: 'note',
+                            description: newActivityNote.trim(),
+                          })
+                        }
+                      >
+                        {addLeadActivityMutation.isPending ? 'Saving…' : 'Save note'}
+                      </Button>
+                    </div>
+                  </section>
+                </main>
 
                 <aside className="space-y-4">
-                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                    <div className="flex items-center justify-between gap-3">
-                      <h3 className="font-semibold text-gray-900">Follow-up</h3>
-                      {selectedLead.nextFollowUp ? (
-                        <Badge variant="outline" className="border-blue-200 bg-blue-50 text-blue-700">
-                          Scheduled
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline" className="border-slate-200 bg-white text-slate-600">
-                          Not set
-                        </Badge>
-                      )}
-                    </div>
-                    {selectedLead.nextFollowUp ? (
-                      <p className="mt-2 text-xs leading-5 text-slate-600">
-                        Due {parseDatabaseTimestamp(selectedLead.nextFollowUp).toLocaleString()}
+                  <section className="relative overflow-hidden rounded-2xl bg-[var(--primary)] p-5 text-white shadow-sm">
+                    <div
+                      className="absolute -right-9 -top-10 h-36 w-36 rounded-full bg-white/10"
+                      aria-hidden="true"
+                    />
+                    <div className="relative">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/65">
+                        {selectedLeadNextMove?.eyebrow}
                       </p>
-                    ) : null}
+                      <h3 className="mt-2 text-lg font-semibold leading-6">
+                        {selectedLeadNextMove?.title}
+                      </h3>
+                      <p className="mt-2 text-sm leading-6 text-white/75">
+                        {selectedLeadNextMove?.description}
+                      </p>
+                      <Button
+                        className="mt-5 w-full bg-white text-[var(--primary)] hover:bg-slate-50"
+                        onClick={() => runLeadNextMove(selectedLead)}
+                      >
+                        {selectedLeadNextMove?.action === 'showing' ||
+                        selectedLeadNextMove?.action === 'followUp' ? (
+                          <Calendar className="mr-2 h-4 w-4" />
+                        ) : selectedLeadNextMove?.action === 'phone' ? (
+                          <Phone className="mr-2 h-4 w-4" />
+                        ) : selectedLeadNextMove?.action === 'readiness' ? (
+                          <CheckCircle2 className="mr-2 h-4 w-4" />
+                        ) : (
+                          <MessageCircle className="mr-2 h-4 w-4" />
+                        )}
+                        {selectedLeadNextMove?.actionLabel}
+                      </Button>
+                    </div>
+                  </section>
+
+                  <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+                          Keep momentum
+                        </p>
+                        <h3 className="mt-1 font-semibold text-slate-950">Follow-up</h3>
+                      </div>
+                      <Calendar className="mt-1 h-4 w-4 text-slate-400" />
+                    </div>
+                    <p className="mt-2 text-xs leading-5 text-slate-500">
+                      {selectedLead.nextFollowUp
+                        ? `Due ${parseDatabaseTimestamp(selectedLead.nextFollowUp).toLocaleString()}`
+                        : 'No reminder is set yet.'}
+                    </p>
                     <div className="mt-4 space-y-3">
                       <Input
+                        id={`lead-follow-up-${selectedLead.id}`}
                         type="datetime-local"
+                        className="border-slate-200 bg-slate-50/60"
                         value={followUpForm.nextFollowUp}
                         onChange={event =>
                           setFollowUpForm(current => ({
@@ -1012,17 +1283,16 @@ export function LeadPipeline({ className, propertyId }: LeadPipelineProps) {
                       />
                       <Textarea
                         rows={2}
+                        className="border-slate-200 bg-slate-50/60"
                         value={followUpForm.note}
                         onChange={event =>
                           setFollowUpForm(current => ({ ...current, note: event.target.value }))
                         }
-                        placeholder="Outcome or reminder context"
+                        placeholder="What should happen next?"
                       />
                       <Button
                         className="w-full"
-                        disabled={
-                          setLeadFollowUpMutation.isPending || !followUpForm.nextFollowUp
-                        }
+                        disabled={setLeadFollowUpMutation.isPending || !followUpForm.nextFollowUp}
                         onClick={() =>
                           setLeadFollowUpMutation.mutate({
                             leadId: selectedLead.id,
@@ -1033,15 +1303,15 @@ export function LeadPipeline({ className, propertyId }: LeadPipelineProps) {
                       >
                         <Calendar className="mr-2 h-4 w-4" />
                         {setLeadFollowUpMutation.isPending
-                          ? 'Scheduling...'
+                          ? 'Scheduling…'
                           : selectedLead.nextFollowUp
-                            ? 'Reschedule Follow-up'
-                            : 'Schedule Follow-up'}
+                            ? 'Reschedule follow-up'
+                            : 'Schedule follow-up'}
                       </Button>
                       {selectedLead.nextFollowUp ? (
                         <Button
                           variant="outline"
-                          className="w-full"
+                          className="w-full border-slate-200"
                           disabled={completeLeadFollowUpMutation.isPending}
                           onClick={() =>
                             completeLeadFollowUpMutation.mutate({
@@ -1052,25 +1322,31 @@ export function LeadPipeline({ className, propertyId }: LeadPipelineProps) {
                         >
                           <CheckCircle2 className="mr-2 h-4 w-4" />
                           {completeLeadFollowUpMutation.isPending
-                            ? 'Completing...'
-                            : 'Complete Follow-up'}
+                            ? 'Completing…'
+                            : 'Complete follow-up'}
                         </Button>
                       ) : null}
                     </div>
-                  </div>
+                  </section>
 
-                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                    <div className="flex items-center justify-between gap-3">
-                      <h3 className="font-semibold text-gray-900">Offer Readiness</h3>
+                  <section
+                    id={`lead-readiness-${selectedLead.id}`}
+                    className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+                          Deal checks
+                        </p>
+                        <h3 className="mt-1 font-semibold text-slate-950">Offer readiness</h3>
+                      </div>
                       {isReadinessComplete(getReadinessForLead(selectedLead.id)) ? (
-                        <Badge className="bg-emerald-100 text-emerald-700">Ready</Badge>
+                        <span className="text-xs font-semibold text-emerald-700">Ready</span>
                       ) : (
-                        <Badge variant="outline" className="border-amber-200 text-amber-700">
-                          Locked
-                        </Badge>
+                        <span className="text-xs font-semibold text-amber-700">In progress</span>
                       )}
                     </div>
-                    <div className="mt-4 space-y-2">
+                    <div className="mt-4 space-y-1.5">
                       {READINESS_ITEMS.map(item => {
                         const checked = getReadinessForLead(selectedLead.id)[item.key];
                         return (
@@ -1078,81 +1354,96 @@ export function LeadPipeline({ className, propertyId }: LeadPipelineProps) {
                             key={item.key}
                             type="button"
                             onClick={() => toggleReadinessItem(selectedLead.id, item.key)}
-                            className={`flex w-full items-center justify-between rounded-lg border px-3 py-2 text-left text-sm transition ${
+                            className={`flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-sm transition ${
                               checked
-                                ? 'border-emerald-200 bg-white text-emerald-800'
-                                : 'border-slate-200 bg-white text-slate-600 hover:border-amber-200'
+                                ? 'bg-emerald-50 text-emerald-800'
+                                : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
                             }`}
                           >
                             <span>{item.label}</span>
                             {checked ? (
-                              <CheckCircle2 className="h-4 w-4" />
+                              <CheckCircle2 className="h-4 w-4 shrink-0" />
                             ) : (
-                              <span className="h-4 w-4 rounded-full border border-slate-300" />
+                              <span className="h-4 w-4 shrink-0 rounded-full border border-slate-300" />
                             )}
                           </button>
                         );
                       })}
                     </div>
                     {!isReadinessComplete(getReadinessForLead(selectedLead.id)) ? (
-                      <div className="mt-3 flex gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
-                        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-                        Offer stage remains locked until every viewing prerequisite is done.
+                      <div className="mt-3 flex gap-2 text-xs leading-5 text-amber-800">
+                        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
+                        Complete every deal check before moving this lead to Offer.
                       </div>
                     ) : null}
-                  </div>
+                    {selectedLeadStage?.id !== 'offer' && selectedLeadStage?.id !== 'closed' ? (
+                      <Button
+                        className="mt-4 w-full"
+                        disabled={!canMoveLeadToStage(selectedLead, 'offer')}
+                        onClick={() => moveLeadToStage(selectedLead, 'offer')}
+                      >
+                        {!canMoveLeadToStage(selectedLead, 'offer') ? (
+                          <Lock className="mr-2 h-4 w-4" />
+                        ) : (
+                          <ArrowRight className="mr-2 h-4 w-4" />
+                        )}
+                        Move to Offer
+                      </Button>
+                    ) : null}
+                  </section>
 
-                  <div className="grid gap-2">
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        addLeadActivityMutation.mutate({
-                          leadId: selectedLead.id,
-                          activityType: 'call',
-                          description: 'Follow-up call logged from CRM hub.',
-                        });
-                      }}
-                    >
-                      <Phone className="h-4 w-4 mr-2" />
-                      Log call
-                    </Button>
-                    <Button
-                      disabled={!canMoveLeadToStage(selectedLead, 'offer')}
-                      onClick={() => moveLeadToStage(selectedLead, 'offer')}
-                    >
-                      {!canMoveLeadToStage(selectedLead, 'offer') ? (
-                        <Lock className="h-4 w-4 mr-2" />
-                      ) : (
-                        <ArrowRight className="h-4 w-4 mr-2" />
-                      )}
-                      Move to Offer
-                    </Button>
-                  </div>
+                  <details className="group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                    <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-5 [&::-webkit-details-marker]:hidden">
+                      <div>
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+                          Record health
+                        </p>
+                        <p className="mt-1 text-sm font-semibold text-slate-900">
+                          Delivery & consent
+                        </p>
+                      </div>
+                      <ChevronDown className="h-4 w-4 text-slate-400 transition-transform group-open:rotate-180" />
+                    </summary>
+                    <div className="space-y-4 border-t border-slate-100 px-5 pb-5 pt-4 text-sm">
+                      <div>
+                        <p className="font-medium text-slate-800">Consent evidence</p>
+                        {selectedLead.consent?.capturedAt ? (
+                          <>
+                            <p className="mt-1 text-slate-600">
+                              Recorded{' '}
+                              {parseDatabaseTimestamp(
+                                selectedLead.consent.capturedAt,
+                              ).toLocaleString()}
+                            </p>
+                            <p className="mt-1 text-xs text-slate-500">
+                              Version {selectedLead.consent.version || 'unspecified'} ·{' '}
+                              {selectedLead.consent.source || 'unspecified source'}
+                            </p>
+                          </>
+                        ) : (
+                          <p className="mt-1 text-amber-700">No consent evidence recorded.</p>
+                        )}
+                      </div>
+                      <div className="border-t border-slate-100 pt-4">
+                        <p className="font-medium text-slate-800">Recipient delivery</p>
+                        <p className="mt-1 text-slate-600">
+                          {getDeliveryMeta(selectedLead.delivery?.status).label}
+                        </p>
+                        <p className="mt-1 text-xs text-slate-500">
+                          {getDeliveryAttemptCount(selectedLead.delivery?.attempts)} attempt(s)
+                          {selectedLead.delivery?.lastAttemptAt
+                            ? ` · last ${parseDatabaseTimestamp(selectedLead.delivery.lastAttemptAt).toLocaleString()}`
+                            : ''}
+                        </p>
+                        {selectedLead.delivery?.lastError ? (
+                          <p className="mt-2 text-xs text-rose-700">
+                            {selectedLead.delivery.lastError}
+                          </p>
+                        ) : null}
+                      </div>
+                    </div>
+                  </details>
                 </aside>
-              </div>
-
-              <div className="space-y-3">
-                <h3 className="font-semibold text-gray-900">Add CRM Note</h3>
-                <Textarea
-                  rows={4}
-                  value={newActivityNote}
-                  onChange={e => setNewActivityNote(e.target.value)}
-                  placeholder="Log a call outcome, follow-up reminder, or client note"
-                />
-                <div className="flex justify-end">
-                  <Button
-                    disabled={addLeadActivityMutation.isPending || !newActivityNote.trim()}
-                    onClick={() =>
-                      addLeadActivityMutation.mutate({
-                        leadId: selectedLead.id,
-                        activityType: 'note',
-                        description: newActivityNote.trim(),
-                      })
-                    }
-                  >
-                    {addLeadActivityMutation.isPending ? 'Saving...' : 'Save Note'}
-                  </Button>
-                </div>
               </div>
             </div>
           ) : null}
@@ -1162,209 +1453,206 @@ export function LeadPipeline({ className, propertyId }: LeadPipelineProps) {
   );
 }
 
+function formatLeadCardDate(value: string) {
+  const date = parseDatabaseTimestamp(value);
+  if (Number.isNaN(date.getTime())) return 'Recently';
+
+  return date.toLocaleDateString('en-ZA', {
+    day: 'numeric',
+    month: 'short',
+    year: date.getFullYear() === new Date().getFullYear() ? undefined : 'numeric',
+  });
+}
+
+function PipelineColumn({
+  stage,
+  leads,
+  onOpenLead,
+}: {
+  stage: (typeof PIPELINE_STAGES)[number];
+  leads: Lead[];
+  onOpenLead: (lead: Lead) => void;
+}) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: stage.id,
+    data: { stageId: stage.id },
+  });
+
+  return (
+    <section className="min-w-0" aria-label={`${stage.title} pipeline stage`}>
+      <Card
+        className={cn(
+          'h-full min-h-[340px] border-slate-200 transition-colors',
+          isOver &&
+            'border-[var(--primary)] ring-2 ring-[color:color-mix(in_oklab,var(--primary)_18%,transparent)]',
+        )}
+      >
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-sm">
+            <span className={`h-2.5 w-2.5 rounded-full ${stage.color}`} aria-hidden="true" />
+            {stage.title}
+            <Badge variant="outline" className="ml-auto">
+              {leads.length}
+            </Badge>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="pt-0">
+          <div
+            ref={setNodeRef}
+            className={cn(
+              'min-h-[252px] space-y-3 rounded-xl p-1 transition-colors',
+              isOver && 'bg-[color:color-mix(in_oklab,var(--primary)_6%,transparent)]',
+            )}
+          >
+            {leads.map(lead => (
+              <LeadCard
+                key={lead.id}
+                lead={lead}
+                stageId={stage.id as PipelineStageId}
+                onOpenDetail={() => onOpenLead(lead)}
+              />
+            ))}
+            {leads.length === 0 ? (
+              <div className="flex min-h-[190px] flex-col items-center justify-center rounded-lg border border-dashed border-slate-200 px-4 text-center text-slate-500">
+                <Plus className="mb-2 h-7 w-7 opacity-45" />
+                <p className="text-sm font-medium">{isOver ? 'Drop lead here' : 'No leads'}</p>
+                <p className="mt-1 text-xs">Drag a lead here when its stage changes.</p>
+              </div>
+            ) : null}
+          </div>
+        </CardContent>
+      </Card>
+    </section>
+  );
+}
+
 function LeadCard({
   lead,
   stageId,
-  readiness,
-  onScheduleShowing,
   onOpenDetail,
-  onMoveLead,
 }: {
   lead: Lead;
   stageId: PipelineStageId;
-  readiness: LeadReadiness;
-  onScheduleShowing: () => void;
   onOpenDetail: () => void;
-  onMoveLead: (targetStage: PipelineStageId) => void;
 }) {
   const temperature = getLeadTemperature(lead);
-  const nextStage = getNextStage(stageId);
-  const offerBlocked = nextStage === 'offer' && !isReadinessComplete(readiness);
   const ageDays = getLeadAgeDays(lead);
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useDraggable({
+    id: `lead-${lead.id}`,
+    data: { lead, stageId },
+  });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  const sourceLabel = lead.source ? SOURCE_LABELS[lead.source] || lead.source : 'Web';
+  const stageColor = PIPELINE_STAGES.find(stage => stage.id === stageId)?.color || 'bg-blue-500';
 
   return (
-    <Card
-      className="cursor-pointer border-gray-100 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-soft"
-      onClick={onOpenDetail}
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={cn('min-w-0', isDragging && 'relative z-20 opacity-55')}
     >
-      <CardContent className="p-4">
-        <div className="space-y-3">
-          {/* Lead Name & Contact */}
-          <div className="flex items-start justify-between">
-            <div className="min-w-0">
-              <h4 className="font-semibold text-sm text-gray-900">{lead.name || 'Unnamed Lead'}</h4>
-              <div className="flex items-center gap-1 text-xs text-gray-500 mt-1">
-                <Calendar className="h-3 w-3" />
-                {new Date(lead.createdAt).toLocaleDateString()}
+      <Card
+        tabIndex={0}
+        role="button"
+        aria-label={`Open lead for ${lead.name || 'unnamed lead'}`}
+        className="relative min-w-0 cursor-pointer overflow-hidden border-slate-200 transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]"
+        onClick={onOpenDetail}
+        onKeyDown={event => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            onOpenDetail();
+          }
+        }}
+      >
+        <span className={`absolute inset-y-0 left-0 w-1 ${stageColor}`} aria-hidden="true" />
+        <CardContent className="p-3.5 pl-4">
+          <div className="min-w-0 space-y-3">
+            <div className="flex items-start gap-2.5">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[color:color-mix(in_srgb,var(--primary)_10%,white)] text-[11px] font-bold text-[var(--primary)]">
+                {getLeadInitials(lead.name)}
               </div>
-            </div>
-            <Badge variant="outline" className={`shrink-0 text-xs ${temperature.className}`}>
-              <span className={`mr-1.5 h-1.5 w-1.5 rounded-full ${temperature.dotClassName}`} />
-              {temperature.label}
-            </Badge>
-          </div>
-
-          <div className="grid grid-cols-3 gap-2 rounded-lg border border-gray-100 bg-gray-50 p-2 text-center text-[11px]">
-            <div>
-              <p className="font-semibold text-gray-900">{ageDays}d</p>
-              <p className="text-gray-500">age</p>
-            </div>
-            <div>
-              <p className="font-semibold text-gray-900">{lead.status.replace(/_/g, ' ')}</p>
-              <p className="text-gray-500">stage</p>
-            </div>
-            <div>
-              <p className="font-semibold text-gray-900">{lead.source ? SOURCE_LABELS[lead.source] || lead.source : 'Web'}</p>
-              <p className="text-gray-500">source</p>
-            </div>
-          </div>
-
-          {/* Canonical Commercial handoff context */}
-          {lead.commercial ? (
-            <div className="flex items-start gap-2 rounded-lg border border-emerald-200 bg-emerald-50 p-2.5 text-xs">
-              <Building2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-700" />
               <div className="min-w-0 flex-1">
-                <p className="truncate font-medium text-emerald-950">
-                  {lead.commercial.listingTitle}
-                </p>
-                <p className="truncate text-emerald-800">
-                  {lead.commercial.useType.replace(/_/g, ' ')} · {lead.commercial.spaceIdentifier}
-                  {lead.commercial.rentableAreaM2 != null
-                    ? ` · ${lead.commercial.rentableAreaM2.toLocaleString()} m²`
-                    : ''}
-                </p>
-                <p className="mt-1 text-[11px] text-emerald-700">Verified Commercial handoff</p>
-              </div>
-            </div>
-          ) : lead.property ? (
-            <div className="flex items-center gap-2 p-2.5 bg-gray-50 rounded-lg text-xs">
-              <Home className="h-3.5 w-3.5 text-gray-400" />
-              <div className="flex-1 min-w-0">
-                <p className="font-medium truncate text-gray-900">{lead.property.title}</p>
-                <p className="text-gray-500">
-                  {lead.property.city} | R{lead.property.price.toLocaleString()}
-                </p>
-              </div>
-            </div>
-          ) : null}
-
-          {/* Contact Info */}
-          <div className="space-y-1.5">
-            {lead.email && (
-              <div className="flex items-center gap-2 text-xs">
-                <Mail className="h-3.5 w-3.5 text-gray-400" />
-                <span className="truncate text-gray-600">{lead.email}</span>
-              </div>
-            )}
-            {lead.phone && (
-              <div className="flex items-center gap-2 text-xs">
-                <Phone className="h-3.5 w-3.5 text-gray-400" />
-                <span className="text-gray-600">{lead.phone}</span>
-              </div>
-            )}
-          </div>
-
-          {/* Message Preview */}
-          {lead.message && (
-            <p className="text-xs text-gray-500 line-clamp-2 italic">"{lead.message}"</p>
-          )}
-
-          {/* Source */}
-          {lead.source && (
-            <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
-              {SOURCE_LABELS[lead.source || ''] || lead.source}
-            </Badge>
-          )}
-
-          <div className="flex flex-wrap gap-2">
-            <Badge
-              variant="outline"
-              className={`text-xs ${getDeliveryMeta(lead.delivery?.status).className}`}
-            >
-              {getDeliveryMeta(lead.delivery?.status).label}
-            </Badge>
-            <Badge
-              variant="outline"
-              className={
-                lead.consent?.capturedAt
-                  ? 'border-emerald-200 bg-emerald-50 text-xs text-emerald-700'
-                  : 'border-amber-200 bg-amber-50 text-xs text-amber-700'
-              }
-            >
-              {lead.consent?.capturedAt ? 'Consent recorded' : 'Consent evidence missing'}
-            </Badge>
-          </div>
-
-          {nextStage === 'offer' ? (
-            <div
-              className={`rounded-lg border p-2.5 text-xs ${
-                offerBlocked
-                  ? 'border-amber-200 bg-amber-50 text-amber-800'
-                  : 'border-emerald-200 bg-emerald-50 text-emerald-800'
-              }`}
-            >
-              <div className="flex items-center gap-2 font-medium">
-                {offerBlocked ? <Lock className="h-3.5 w-3.5" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
-                {offerBlocked ? 'Offer locked' : 'Offer ready'}
-              </div>
-              <div className="mt-2 grid grid-cols-3 gap-1.5">
-                {READINESS_ITEMS.map(item => (
-                  <span
-                    key={item.key}
-                    className={`rounded border px-1.5 py-1 text-center ${
-                      readiness[item.key]
-                        ? 'border-emerald-200 bg-white text-emerald-700'
-                        : 'border-amber-200 bg-white/70 text-amber-700'
-                    }`}
+                <h4 className="line-clamp-2 text-sm font-semibold leading-5 text-slate-900">
+                  {lead.name || 'Unnamed lead'}
+                </h4>
+                <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <div className="flex items-center gap-1 text-xs text-slate-500">
+                    <Calendar className="h-3.5 w-3.5" />
+                    <span>{formatLeadCardDate(lead.createdAt)}</span>
+                    <span aria-hidden="true">·</span>
+                    <span>{ageDays === 0 ? 'Today' : `${ageDays}d old`}</span>
+                  </div>
+                  <Badge
+                    variant="outline"
+                    className={`shrink-0 text-[10px] ${temperature.className}`}
                   >
-                    {readiness[item.key] ? 'Done' : 'Open'}
-                  </span>
-                ))}
+                    <span
+                      className={`mr-1.5 inline-block h-1.5 w-1.5 rounded-full ${temperature.dotClassName}`}
+                    />
+                    {temperature.label}
+                  </Badge>
+                </div>
               </div>
+              <span
+                {...attributes}
+                {...listeners}
+                aria-label={`Move ${lead.name || 'lead'} to another stage`}
+                title="Drag to move stage"
+                className="mt-0.5 shrink-0 cursor-grab rounded-md p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 active:cursor-grabbing"
+                onClick={event => event.stopPropagation()}
+              >
+                <GripVertical className="h-4 w-4" />
+              </span>
             </div>
-          ) : null}
 
-          <div className="grid grid-cols-1 gap-2 pt-1 sm:grid-cols-2">
-            {!lead.commercial ? (
-              <Button
-                size="sm"
-                variant="outline"
-                className="w-full"
-                onClick={event => {
-                  event.stopPropagation();
-                  onScheduleShowing();
-                }}
-              >
-                <Calendar className="h-4 w-4 mr-2" />
-                Schedule Showing
-              </Button>
+            {lead.commercial ? (
+              <div className="flex min-w-0 items-start gap-2 rounded-xl border border-emerald-100 bg-emerald-50/70 p-3 text-xs">
+                <Building2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-700" />
+                <div className="min-w-0">
+                  <p className="truncate font-medium text-emerald-950">
+                    {lead.commercial.listingTitle}
+                  </p>
+                  <p className="mt-0.5 truncate text-emerald-800">
+                    {lead.commercial.spaceIdentifier} · {lead.commercial.useType.replace(/_/g, ' ')}
+                  </p>
+                </div>
+              </div>
+            ) : lead.property ? (
+              <div className="flex min-w-0 items-start gap-2 rounded-xl border border-slate-100 bg-slate-50/80 p-3 text-xs">
+                <Home className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-400" />
+                <div className="min-w-0">
+                  <p className="truncate font-medium text-slate-900">{lead.property.title}</p>
+                  <p className="mt-0.5 truncate text-slate-500">
+                    {lead.property.city} · R{lead.property.price.toLocaleString()}
+                  </p>
+                </div>
+              </div>
             ) : (
-              <div className="flex items-center justify-center rounded-md border border-emerald-200 bg-emerald-50 px-2 py-2 text-center text-xs text-emerald-800">
-                Commercial handoff
+              <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-3 py-2.5 text-xs text-slate-500">
+                No property linked yet
               </div>
             )}
-            {nextStage ? (
-              <Button
-                size="sm"
-                className="w-full"
-                variant={offerBlocked ? 'outline' : 'default'}
-                onClick={event => {
-                  event.stopPropagation();
-                  onMoveLead(nextStage);
-                }}
-              >
-                {offerBlocked ? <Lock className="h-4 w-4 mr-2" /> : <ArrowRight className="h-4 w-4 mr-2" />}
-                {PIPELINE_STAGES.find(stage => stage.id === nextStage)?.title || 'Next'}
-              </Button>
-            ) : (
-              <Button size="sm" variant="outline" className="w-full" disabled>
-                <CheckCircle2 className="h-4 w-4 mr-2" />
-                Complete
-              </Button>
-            )}
+
+            <div className="flex items-center justify-between gap-2 border-t border-slate-100 pt-2.5">
+              <span className="inline-flex min-w-0 items-center gap-1.5 truncate text-[11px] font-medium text-slate-500">
+                <span
+                  className={`h-1.5 w-1.5 shrink-0 rounded-full ${stageColor}`}
+                  aria-hidden="true"
+                />
+                <span className="truncate">{sourceLabel}</span>
+              </span>
+              <span className="inline-flex shrink-0 items-center gap-1 text-[11px] font-semibold text-[var(--primary)]">
+                View workspace
+                <ArrowRight className="h-3.5 w-3.5" />
+              </span>
+            </div>
           </div>
-        </div>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+    </div>
   );
 }

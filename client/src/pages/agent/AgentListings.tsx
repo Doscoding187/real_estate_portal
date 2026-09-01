@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useLocation } from 'wouter';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { AgentAppShell } from '@/components/agent/AgentAppShell';
@@ -6,7 +6,7 @@ import { agentPageStyles } from '@/components/agent/agentPageStyles';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Search, Plus, Filter, Home, Building2 } from 'lucide-react';
+import { Search, Plus, Home, Building2 } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EntityStatusCard } from '@/components/dashboard/EntityStatusCard';
@@ -18,14 +18,37 @@ import { cn } from '@/lib/utils';
 type ListingTab = 'active' | 'pending' | 'draft' | 'sold' | 'archived';
 type ListingStatusFilter = 'pending_review' | 'draft';
 
+function listingTabFromLocation(location: string): ListingTab {
+  // Wouter may expose the pathname without its search string, while the
+  // browser URL remains the canonical source for a deep-linked tab.
+  const search =
+    typeof window !== 'undefined'
+      ? window.location.search
+      : location.includes('?')
+        ? location.slice(location.indexOf('?'))
+        : '';
+  const requestedTab = new URLSearchParams(search).get('tab');
+
+  return requestedTab === 'pending' ||
+    requestedTab === 'draft' ||
+    requestedTab === 'sold' ||
+    requestedTab === 'archived'
+    ? requestedTab
+    : 'active';
+}
+
 export default function AgentListings() {
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
   const { user } = useAuth();
   const { status, isLoading: statusLoading } = useAgentOnboardingStatus({
     requireDashboardUnlocked: true,
   });
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeTab, setActiveTab] = useState<ListingTab>('active');
+  const [activeTab, setActiveTab] = useState<ListingTab>(() => listingTabFromLocation(location));
+
+  useEffect(() => {
+    setActiveTab(listingTabFromLocation(location));
+  }, [location]);
 
   // Map tabs to status for API
   const getListingStatusForTab = (tab: ListingTab): ListingStatusFilter => {
@@ -157,6 +180,7 @@ export default function AgentListings() {
       listing.pricing?.askingPrice ||
       listing.pricing?.monthlyRent ||
       listing.pricing?.startingBid ||
+      listing.price ||
       0,
     primaryImage: listing.primaryImage,
     readiness: calculateListingReadiness(listing),
@@ -249,12 +273,6 @@ export default function AgentListings() {
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
                 />
-              </div>
-              <div className="flex items-center gap-2 w-full sm:w-auto">
-                <Button variant="outline" className={agentPageStyles.ghostButton}>
-                  <Filter className="h-4 w-4 mr-2" />
-                  Filter
-                </Button>
               </div>
             </div>
 

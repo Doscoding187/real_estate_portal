@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { AlertCircle, CheckCircle2, Info, MapPin } from 'lucide-react';
+import { AlertCircle, CheckCircle2, ChevronDown, Info, MapPin } from 'lucide-react';
 import { useListingWizardStore, getLocationValidationIssues } from '@/hooks/useListingWizard';
 import { trpc } from '@/lib/trpc';
 import type { LocationData } from '../../../../../shared/listing-types';
@@ -51,12 +51,12 @@ const EMPTY_LOCATION: LocationData = {
 
 function addressFromPrivate(privateAddress: PrivateAddress | null | undefined): string {
   if (!privateAddress) return '';
-  return [privateAddress.streetNumber, privateAddress.streetName]
-    .filter(Boolean)
-    .join(' ')
-    || privateAddress.farmOrHoldingName
-    || privateAddress.complexOrEstateName
-    || '';
+  return (
+    [privateAddress.streetNumber, privateAddress.streetName].filter(Boolean).join(' ') ||
+    privateAddress.farmOrHoldingName ||
+    privateAddress.complexOrEstateName ||
+    ''
+  );
 }
 
 function hasAddressValues(value: PrivateAddress): boolean {
@@ -67,9 +67,7 @@ const LocationStep: React.FC<{ addressHint?: string }> = ({ addressHint }) => {
   const store = useListingWizardStore();
   const { location, propertyType, setLocation } = store;
   const currentLocation = location || EMPTY_LOCATION;
-  const [mapUnavailable, setMapUnavailable] = useState(
-    !import.meta.env.VITE_GOOGLE_MAPS_API_KEY,
-  );
+  const [mapUnavailable, setMapUnavailable] = useState(!import.meta.env.VITE_GOOGLE_MAPS_API_KEY);
   const [providerMessage, setProviderMessage] = useState('');
   const [manualError, setManualError] = useState('');
 
@@ -102,7 +100,9 @@ const LocationStep: React.FC<{ addressHint?: string }> = ({ addressHint }) => {
     .filter(Boolean)
     .join(' · ');
   const resolvedArea = [currentLocation.suburb, currentLocation.city].filter(Boolean).join(', ');
-  const hasResolvedLocation = Boolean(resolvedStreet || resolvedRuralContext || resolvedArea || currentLocation.province);
+  const hasResolvedLocation = Boolean(
+    resolvedStreet || resolvedRuralContext || resolvedArea || currentLocation.province,
+  );
   const validationIssues = useMemo(
     () => getLocationValidationIssues({ propertyType, location }),
     [location, propertyType],
@@ -125,10 +125,7 @@ const LocationStep: React.FC<{ addressHint?: string }> = ({ addressHint }) => {
       locationConfirmationState: 'needs_confirmation',
     });
 
-  const updateHierarchy = (
-    level: 'province' | 'city' | 'suburb',
-    idValue: string,
-  ) => {
+  const updateHierarchy = (level: 'province' | 'city' | 'suburb', idValue: string) => {
     const id = Number(idValue);
     if (!Number.isInteger(id) || id <= 0) return;
 
@@ -245,7 +242,9 @@ const LocationStep: React.FC<{ addressHint?: string }> = ({ addressHint }) => {
       });
       applyResolvedLocation(resolved, nextLocation);
     } catch (error) {
-      setManualError(error instanceof Error ? error.message : 'We could not confirm this location.');
+      setManualError(
+        error instanceof Error ? error.message : 'We could not confirm this location.',
+      );
     }
   };
 
@@ -304,7 +303,9 @@ const LocationStep: React.FC<{ addressHint?: string }> = ({ addressHint }) => {
       applyResolvedLocation(resolved, nextLocation);
       await refreshResolvedSuburb(resolved);
     } catch (error) {
-      setProviderMessage(error instanceof Error ? error.message : 'We could not resolve that place.');
+      setProviderMessage(
+        error instanceof Error ? error.message : 'We could not resolve that place.',
+      );
     }
   };
 
@@ -319,135 +320,27 @@ const LocationStep: React.FC<{ addressHint?: string }> = ({ addressHint }) => {
   return (
     <div className="space-y-6" data-testid="location-step">
       <div>
-        <p className="text-sm font-medium uppercase tracking-[0.16em] text-blue-600">Step 6</p>
-        <h2 className="mt-1 text-2xl font-semibold text-slate-900">Where is the property?</h2>
+        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--primary)]">
+          Step 6 · Required to publish
+        </p>
+        <h2 className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-slate-950">
+          Where is the property?
+        </h2>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
-          Choose the canonical area, then confirm the street-level property location. A map can
-          enrich the listing, but it is not required for manual authoring.
+          Start with the canonical area, then confirm the street-level property location. Map search
+          is optional and never required for manual authoring.
         </p>
       </div>
 
-      {(mapUnavailable || providerMessage) && (
-        <Alert variant={providerMessage && !mapUnavailable ? 'default' : 'destructive'}>
-          <Info className="h-4 w-4" />
-          <AlertDescription>
-            {providerMessage ||
-              'Map search is not available right now. You can still enter the property location manually.'}
-          </AlertDescription>
-        </Alert>
-      )}
-
-      <Card className="border-blue-200 shadow-sm">
+      <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg">
-            <MapPin className="h-5 w-5 text-blue-600" />
-            Find the property
+            <MapPin className="h-5 w-5 text-[var(--primary)]" />
+            Enter the property location
           </CardTitle>
           <CardDescription>
-            Search an address, street or place, or move the pin to the property. The details below
-            will stay synchronized with the latest location action.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {!mapUnavailable ? (
-            <LocationMapPicker
-              initialLat={currentLocation.latitude ?? undefined}
-              initialLng={currentLocation.longitude ?? undefined}
-              searchQuery={[
-                currentLocation.privateAddress?.streetNumber,
-                currentLocation.privateAddress?.streetName,
-                currentLocation.suburb,
-                currentLocation.city,
-                currentLocation.province,
-              ]
-                .filter(Boolean)
-                .join(', ')}
-              onLocationSelect={handleProviderLocation}
-              onGeocodingError={message => {
-                setProviderMessage(message);
-                if (/load|api key|maps/i.test(message)) setMapUnavailable(true);
-              }}
-            />
-          ) : (
-            <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-5 text-sm text-slate-700">
-              <p className="font-medium text-slate-900">Map search isn&apos;t available right now.</p>
-              <p className="mt-1">You can still enter the property location details below.</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Location found</CardTitle>
-          <CardDescription>
-            Review the location resolved from the search or pin before confirming it.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div
-            data-testid="resolved-location-summary"
-            className="rounded-lg border border-slate-200 bg-slate-50 p-4"
-          >
-            {hasResolvedLocation ? (
-              <>
-                {(resolvedStreet || resolvedRuralContext) && (
-                  <p className="font-semibold text-slate-900">{resolvedStreet || resolvedRuralContext}</p>
-                )}
-                {resolvedArea && <p className="text-sm text-slate-700">{resolvedArea}</p>}
-                {currentLocation.province && (
-                  <p className="text-sm text-slate-600">{currentLocation.province}</p>
-                )}
-              </>
-            ) : (
-              <p className="text-sm text-slate-600">
-                Choose a location above or complete the property details below.
-              </p>
-            )}
-            {currentLocation.latitude != null && currentLocation.longitude != null && (
-              <Badge className="mt-3" variant="secondary">
-                Coordinates captured
-              </Badge>
-            )}
-          </div>
-
-          <div className="mt-4 rounded-lg border border-blue-100 bg-blue-50/60 p-4 text-sm text-slate-700">
-            <p className="font-medium text-slate-900">Confirm this location</p>
-            <p className="mt-1">
-              {isConfirmed
-                ? 'The current address and discovery area are confirmed.'
-                : 'Confirm the current address and discovery area before continuing.'}
-            </p>
-            <Button
-              type="button"
-              className="mt-3"
-              onClick={confirmManualLocation}
-              disabled={resolveLocation.isPending}
-            >
-              {resolveLocation.isPending ? 'Confirming…' : isConfirmed ? 'Reconfirm location' : 'Confirm location'}
-            </Button>
-            {manualError && (
-              <p className="mt-2 flex items-center gap-2 text-sm text-red-700" role="alert">
-                <AlertCircle className="h-4 w-4" />
-                {manualError}
-              </p>
-            )}
-            {isConfirmed && !manualError && (
-              <p className="mt-2 flex items-center gap-2 text-sm text-emerald-700">
-                <CheckCircle2 className="h-4 w-4" />
-                Ready to continue. Coordinates are optional when the location is valid.
-              </p>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Property location details</CardTitle>
-          <CardDescription>
-            These details use Property Listify geography IDs and stay synchronized with the map.
-            You can edit them manually if needed.
+            Select the province, city and suburb first, then add the property address. These fields
+            use Property Listify geography IDs and are ready for manual entry.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -484,7 +377,8 @@ const LocationStep: React.FC<{ addressHint?: string }> = ({ addressHint }) => {
                   Loading provinces…
                 </p>
               )}
-              {(provincesQuery.isError || (!provincesQuery.isPending && provinces.length === 0)) && (
+              {(provincesQuery.isError ||
+                (!provincesQuery.isPending && provinces.length === 0)) && (
                 <p className="text-xs text-red-600" role="alert">
                   We couldn&apos;t load locations. Try again.
                 </p>
@@ -523,21 +417,26 @@ const LocationStep: React.FC<{ addressHint?: string }> = ({ addressHint }) => {
                   Loading cities…
                 </p>
               )}
-              {currentLocation.provinceId && (citiesQuery.isError || (!citiesQuery.isPending && cities.length === 0)) && (
-                <p className="text-xs text-red-600" role="alert">
-                  We couldn&apos;t load locations. Try again.
-                </p>
-              )}
+              {currentLocation.provinceId &&
+                (citiesQuery.isError || (!citiesQuery.isPending && cities.length === 0)) && (
+                  <p className="text-xs text-red-600" role="alert">
+                    We couldn&apos;t load locations. Try again.
+                  </p>
+                )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="location-suburb">Suburb / locality {isFarm ? '(optional)' : ''}</Label>
+              <Label htmlFor="location-suburb">
+                Suburb / locality {isFarm ? '(optional)' : ''}
+              </Label>
               <Select
                 value={currentLocation.suburbId ? String(currentLocation.suburbId) : ''}
                 onValueChange={value => updateHierarchy('suburb', value)}
                 disabled={!currentLocation.cityId}
               >
                 <SelectTrigger id="location-suburb" className="w-full">
-                  <SelectValue placeholder={isFarm ? 'Select if applicable' : 'Select suburb or locality'} />
+                  <SelectValue
+                    placeholder={isFarm ? 'Select if applicable' : 'Select suburb or locality'}
+                  />
                 </SelectTrigger>
                 <SelectContent>
                   {suburbsQuery.isPending ? (
@@ -562,11 +461,12 @@ const LocationStep: React.FC<{ addressHint?: string }> = ({ addressHint }) => {
                   Loading suburbs…
                 </p>
               )}
-              {currentLocation.cityId && (suburbsQuery.isError || (!suburbsQuery.isPending && suburbs.length === 0)) && (
-                <p className="text-xs text-red-600" role="alert">
-                  We couldn&apos;t load locations. Try again.
-                </p>
-              )}
+              {currentLocation.cityId &&
+                (suburbsQuery.isError || (!suburbsQuery.isPending && suburbs.length === 0)) && (
+                  <p className="text-xs text-red-600" role="alert">
+                    We couldn&apos;t load locations. Try again.
+                  </p>
+                )}
             </div>
           </div>
 
@@ -625,7 +525,11 @@ const LocationStep: React.FC<{ addressHint?: string }> = ({ addressHint }) => {
               </Label>
               <Input
                 id="location-building"
-                value={currentLocation.privateAddress?.buildingName || currentLocation.privateAddress?.complexOrEstateName || ''}
+                value={
+                  currentLocation.privateAddress?.buildingName ||
+                  currentLocation.privateAddress?.complexOrEstateName ||
+                  ''
+                }
                 onChange={event => updateAddress('buildingName', event.target.value)}
                 placeholder="Optional building or estate"
               />
@@ -647,11 +551,90 @@ const LocationStep: React.FC<{ addressHint?: string }> = ({ addressHint }) => {
               </Label>
               <Input
                 id="location-postal"
-                value={currentLocation.privateAddress?.postalCode || currentLocation.postalCode || ''}
+                value={
+                  currentLocation.privateAddress?.postalCode || currentLocation.postalCode || ''
+                }
                 onChange={event => updateAddress('postalCode', event.target.value)}
                 placeholder="Optional postal code"
               />
             </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="border-[color:color-mix(in_oklab,var(--primary)_18%,white)]">
+        <CardHeader>
+          <CardTitle className="text-lg">Review &amp; confirm</CardTitle>
+          <CardDescription>
+            Check the resolved area and street-level details before continuing. Coordinates are
+            helpful, but not required when the manual location is valid.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div
+            data-testid="resolved-location-summary"
+            className="rounded-xl border border-slate-200 bg-slate-50 p-4"
+          >
+            {hasResolvedLocation ? (
+              <>
+                {(resolvedStreet || resolvedRuralContext) && (
+                  <p className="font-semibold text-slate-900">
+                    {resolvedStreet || resolvedRuralContext}
+                  </p>
+                )}
+                {resolvedArea && <p className="text-sm text-slate-700">{resolvedArea}</p>}
+                {currentLocation.province && (
+                  <p className="text-sm text-slate-600">{currentLocation.province}</p>
+                )}
+              </>
+            ) : (
+              <p className="text-sm text-slate-600">
+                Complete the property location details above, then confirm the result here.
+              </p>
+            )}
+            {currentLocation.latitude != null && currentLocation.longitude != null && (
+              <Badge className="mt-3" variant="secondary">
+                Coordinates captured
+              </Badge>
+            )}
+          </div>
+
+          <div className="mt-4 rounded-xl border border-blue-100 bg-blue-50/60 p-4 text-sm text-slate-700">
+            <p className="font-medium text-slate-900">Confirm this location</p>
+            <p className="mt-1">
+              {isConfirmed
+                ? 'The current address and discovery area are confirmed.'
+                : 'Confirm the current address and discovery area before continuing.'}
+            </p>
+            <Button
+              type="button"
+              className="mt-3 bg-[var(--primary)] hover:bg-[color:color-mix(in_oklab,var(--primary)_86%,black)]"
+              onClick={confirmManualLocation}
+              disabled={resolveLocation.isPending || validationIssues.length > 0}
+            >
+              {resolveLocation.isPending
+                ? 'Confirming…'
+                : isConfirmed
+                  ? 'Reconfirm location'
+                  : 'Confirm location'}
+            </Button>
+            {!isConfirmed && validationIssues.length > 0 && (
+              <p className="mt-2 text-xs text-slate-500">
+                Complete the required location details above to unlock confirmation.
+              </p>
+            )}
+            {manualError && (
+              <p className="mt-2 flex items-center gap-2 text-sm text-red-700" role="alert">
+                <AlertCircle className="h-4 w-4" />
+                {manualError}
+              </p>
+            )}
+            {isConfirmed && !manualError && (
+              <p className="mt-2 flex items-center gap-2 text-sm text-emerald-700">
+                <CheckCircle2 className="h-4 w-4" />
+                Ready to continue. Coordinates are optional when the location is valid.
+              </p>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -673,7 +656,9 @@ const LocationStep: React.FC<{ addressHint?: string }> = ({ addressHint }) => {
             <label className="flex cursor-pointer gap-3 rounded-lg border p-4 has-[[data-state=checked]]:border-blue-500 has-[[data-state=checked]]:bg-blue-50">
               <RadioGroupItem value="street" id="public-location-street" className="mt-1" />
               <span>
-                <span className="block font-medium text-slate-900">Street location — Recommended</span>
+                <span className="block font-medium text-slate-900">
+                  Street location — Recommended
+                </span>
                 <span className="mt-1 block text-sm text-slate-600">
                   Show the street and area, but hide the house number, unit and exact private point.
                 </span>
@@ -691,6 +676,68 @@ const LocationStep: React.FC<{ addressHint?: string }> = ({ addressHint }) => {
           </RadioGroup>
         </CardContent>
       </Card>
+
+      <details
+        data-testid="optional-map-search"
+        className="group rounded-2xl border border-slate-200/80 bg-white shadow-sm transition-colors open:border-slate-300"
+      >
+        <summary className="flex cursor-pointer list-none items-start gap-4 px-5 py-5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-inset sm:px-6 [&::-webkit-details-marker]:hidden">
+          <div className="mt-0.5 rounded-xl bg-blue-50 p-2.5 text-[var(--primary)]">
+            <MapPin className="h-5 w-5" aria-hidden="true" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-lg font-semibold text-slate-800">Use map search</p>
+            <p className="mt-1 text-sm leading-5 text-slate-500">
+              Optional: search an address or move a pin. The latest map result will synchronize the
+              details above.
+            </p>
+          </div>
+          <div className="flex shrink-0 items-center gap-2 pt-1">
+            <span className="hidden rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-600 sm:inline">
+              Optional
+            </span>
+            <ChevronDown
+              className="h-5 w-5 text-slate-400 transition-transform duration-200 group-open:rotate-180"
+              aria-hidden="true"
+            />
+          </div>
+        </summary>
+        <div className="space-y-4 border-t border-slate-100 px-5 py-5 sm:px-6 sm:pb-6">
+          {providerMessage && (
+            <Alert variant="destructive">
+              <Info className="h-4 w-4" />
+              <AlertDescription>{providerMessage}</AlertDescription>
+            </Alert>
+          )}
+          {!mapUnavailable ? (
+            <LocationMapPicker
+              initialLat={currentLocation.latitude ?? undefined}
+              initialLng={currentLocation.longitude ?? undefined}
+              searchQuery={[
+                currentLocation.privateAddress?.streetNumber,
+                currentLocation.privateAddress?.streetName,
+                currentLocation.suburb,
+                currentLocation.city,
+                currentLocation.province,
+              ]
+                .filter(Boolean)
+                .join(', ')}
+              onLocationSelect={handleProviderLocation}
+              onGeocodingError={message => {
+                setProviderMessage(message);
+                if (/load|api key|maps/i.test(message)) setMapUnavailable(true);
+              }}
+            />
+          ) : (
+            <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-5 text-sm text-slate-700">
+              <p className="font-medium text-slate-900">
+                Map search isn&apos;t available right now.
+              </p>
+              <p className="mt-1">You can continue by entering the property location manually.</p>
+            </div>
+          )}
+        </div>
+      </details>
 
       {validationIssues.length > 0 && (
         <Alert variant="destructive" role="alert">
