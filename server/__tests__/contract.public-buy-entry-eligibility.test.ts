@@ -61,4 +61,16 @@ describe('public Buy entry eligibility contract', () => {
     expect(fallthrough).toContain("{ items: [], source: 'listings' }");
     expect(fallthrough).not.toContain('propertySearchService.searchProperties');
   });
+
+  it('keeps the selected homepage geography exact instead of silently widening it', () => {
+    const source = readFileSync(path.resolve(process.cwd(), 'server/developerRouter.ts'), 'utf8');
+    const start = source.indexOf('getHomeTrendingFeed: publicProcedure');
+    const end = source.indexOf('getPublicDevelopmentBySlug: publicProcedure', start);
+    const homeFeed = source.slice(start, end);
+
+    expect(homeFeed).toContain('const exactLocationFilter: LocationFilter = {');
+    expect(homeFeed).toContain('const usedFallback = false;');
+    expect(homeFeed).toContain("const fallbackLevel = 'none';");
+    expect(homeFeed).not.toContain('locationCandidates');
+  });
 });

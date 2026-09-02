@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const {
   mockSearchDevelopmentListings,
+  mockSearchProperties,
   mockSearchDevelopments,
   mockGetPublicDevelopmentBySlug,
   mockListPublicDevelopments,
@@ -20,6 +21,7 @@ const {
   mockRecordAgentOsEventForAgentId,
 } = vi.hoisted(() => ({
   mockSearchDevelopmentListings: vi.fn(),
+  mockSearchProperties: vi.fn(),
   mockSearchDevelopments: vi.fn(),
   mockGetPublicDevelopmentBySlug: vi.fn(),
   mockListPublicDevelopments: vi.fn(),
@@ -41,6 +43,12 @@ const {
 vi.mock('../services/developmentDerivedListingService', () => ({
   developmentDerivedListingService: {
     searchListings: mockSearchDevelopmentListings,
+  },
+}));
+
+vi.mock('../services/propertySearchService', () => ({
+  propertySearchService: {
+    searchProperties: mockSearchProperties,
   },
 }));
 
@@ -199,6 +207,14 @@ describe('development search-detail-lead public journey contract', () => {
         },
       ],
       total: 1,
+      page: 1,
+      pageSize: 20,
+      hasMore: false,
+    });
+    mockSearchProperties.mockResolvedValue({
+      properties: [],
+      cards: [],
+      total: 0,
       page: 1,
       pageSize: 20,
       hasMore: false,
@@ -456,5 +472,145 @@ describe('development search-detail-lead public journey contract', () => {
       }),
     );
     expect(mockListPublicDevelopments).not.toHaveBeenCalled();
+  });
+
+  it('preserves the canonical property type and compact parking fact for the homepage Buy rail', async () => {
+    mockSearchProperties.mockResolvedValueOnce({
+      properties: [
+        {
+          id: '501',
+          title: 'Family home with garden',
+          city: 'Johannesburg',
+          suburb: 'Sandton',
+          price: 3_850_000,
+          listingType: 'sale',
+          propertyType: 'house',
+          bedrooms: 4,
+          bathrooms: 3,
+          floorSize: 238,
+          erfSize: 520,
+        },
+        {
+          id: '502',
+          title: 'City apartment',
+          city: 'Johannesburg',
+          suburb: 'Rosebank',
+          price: 1_850_000,
+          listingType: 'sale',
+          propertyType: 'apartment',
+          bedrooms: 2,
+          bathrooms: 2,
+          floorSize: 96,
+        },
+      ],
+      cards: [
+        {
+          id: '501',
+          parking: { compactValue: '4' },
+        },
+        {
+          id: '502',
+          parking: { compactValue: '1' },
+        },
+      ],
+      total: 2,
+      page: 1,
+      pageSize: 12,
+      hasMore: false,
+    });
+    mockSearchDevelopmentListings.mockResolvedValueOnce({
+      items: [],
+      cards: [],
+      total: 0,
+      page: 1,
+      pageSize: 12,
+      hasMore: false,
+    });
+
+    const caller = appRouter.createCaller({
+      req: { headers: {} },
+      res: {},
+      user: null,
+    } as any);
+
+    const result = await caller.developer.getHomeTrendingFeed({
+      tab: 'buy',
+      province: 'Gauteng',
+      limit: 10,
+    });
+
+    expect(result.items).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: '501',
+          propertyType: 'house',
+          area: 238,
+          yardSize: 520,
+          parkingCount: 4,
+        }),
+        expect.objectContaining({
+          id: '502',
+          propertyType: 'apartment',
+          area: 96,
+          parkingCount: 1,
+        }),
+      ]),
+    );
+    expect(mockSearchProperties).toHaveBeenCalledWith(
+      expect.objectContaining({ listingType: 'sale', province: 'Gauteng' }),
+      'date_desc',
+      1,
+      20,
+      undefined,
+      { publicOnly: true },
+    );
+  });
+
+  it('does not widen an empty selected province to unrelated homepage inventory', async () => {
+    mockSearchProperties.mockResolvedValueOnce({
+      properties: [],
+      cards: [],
+      total: 0,
+      page: 1,
+      pageSize: 20,
+      hasMore: false,
+    });
+    mockSearchDevelopmentListings.mockResolvedValueOnce({
+      items: [],
+      cards: [],
+      total: 0,
+      page: 1,
+      pageSize: 20,
+      hasMore: false,
+    });
+
+    const caller = appRouter.createCaller({
+      req: { headers: {} },
+      res: {},
+      user: null,
+    } as any);
+
+    const result = await caller.developer.getHomeTrendingFeed({
+      tab: 'buy',
+      province: 'Gauteng',
+      limit: 10,
+    });
+
+    expect(result.items).toEqual([]);
+    expect(result.meta).toMatchObject({
+      requestedScope: 'province',
+      selectedScope: 'province',
+      usedFallback: false,
+      fallbackLevel: 'none',
+    });
+    expect(mockSearchProperties).toHaveBeenCalledTimes(1);
+    expect(mockSearchProperties).toHaveBeenCalledWith(
+      expect.objectContaining({ province: 'Gauteng' }),
+      'date_desc',
+      1,
+      20,
+      undefined,
+      { publicOnly: true },
+    );
   });
 });
