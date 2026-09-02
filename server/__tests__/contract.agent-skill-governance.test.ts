@@ -1,12 +1,65 @@
-import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { execFileSync, spawnSync } from 'node:child_process';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { join, resolve } from 'node:path';
+import { tmpdir } from 'node:os';
 import { describe, expect, it } from 'vitest';
 
 const ROOT = process.cwd();
+const GOVERNANCE_CHECK = resolve(ROOT, 'scripts/check-agent-skill-governance.mjs');
 
 function read(relativePath: string): string {
   return readFileSync(resolve(ROOT, relativePath), 'utf8');
+}
+
+function createFixture(reviewedAt = '2026-09-02'): string {
+  const root = mkdtempSync(join(tmpdir(), 'property-listify-agent-skill-governance-'));
+  const skillDirectory = join(root, '.agent', 'skills', 'fixture-skill');
+  mkdirSync(skillDirectory, { recursive: true });
+  mkdirSync(join(root, 'docs', 'architecture'), { recursive: true });
+  writeFileSync(join(root, 'docs', 'architecture', 'agent-skill-governance.md'), '# Fixture\n');
+  writeFileSync(
+    join(skillDirectory, 'SKILL.md'),
+    `---\nname: fixture-skill\ndescription: Fixture governed skill.\nallowed-tools: Read\nmetadata:\n  owner: property-listify\n  version: 0.1.0\n  status: active\n  risk_tier: instruction-only\n  provenance: original\n---\n\n# Fixture\n`,
+  );
+  writeFileSync(
+    join(root, '.agent', 'skills', 'registry.json'),
+    JSON.stringify({
+      schemaVersion: 1,
+      governanceDocument: 'docs/architecture/agent-skill-governance.md',
+      skills: [
+        {
+          name: 'fixture-skill',
+          path: '.agent/skills/fixture-skill/SKILL.md',
+          owner: 'property-listify',
+          version: '0.1.0',
+          status: 'active',
+          riskTier: 'instruction-only',
+          allowedTools: ['Read'],
+          capabilities: {
+            networkAccess: false,
+            mcp: false,
+            hooks: false,
+            persistentState: false,
+          },
+          provenance: {
+            kind: 'original',
+            copiedThirdPartyTextOrCode: false,
+          },
+          reviewedAt,
+          nextReview: '2026-12-01',
+        },
+      ],
+    }),
+  );
+
+  return root;
+}
+
+function runGovernanceCheck(cwd: string) {
+  return spawnSync(process.execPath, [GOVERNANCE_CHECK], {
+    cwd,
+    encoding: 'utf8',
+  });
 }
 
 describe('agent skill governance', () => {
@@ -60,5 +113,41 @@ describe('agent skill governance', () => {
     });
 
     expect(output).toContain('3 instruction-only skill(s), 1 local-helper-script skill(s).');
+  });
+
+  it('rejects non-calendar registry dates instead of normalizing them', () => {
+    const fixture = createFixture('2026-09-31');
+
+    try {
+      const result = runGovernanceCheck(fixture);
+
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain('reviewedAt must use a valid YYYY-MM-DD date.');
+    } finally {
+      rmSync(fixture, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects a governed skill path that traverses a symbolic link', () => {
+    const fixture = createFixture();
+    const externalSkillDirectory = mkdtempSync(join(tmpdir(), 'property-listify-external-skill-'));
+    const linkedSkillDirectory = join(fixture, '.agent', 'skills', 'fixture-skill');
+
+    try {
+      writeFileSync(
+        join(externalSkillDirectory, 'SKILL.md'),
+        readFileSync(join(linkedSkillDirectory, 'SKILL.md')),
+      );
+      rmSync(linkedSkillDirectory, { recursive: true, force: true });
+      symlinkSync(externalSkillDirectory, linkedSkillDirectory, 'dir');
+
+      const result = runGovernanceCheck(fixture);
+
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain('governed skill path may not traverse a symbolic link.');
+    } finally {
+      rmSync(fixture, { recursive: true, force: true });
+      rmSync(externalSkillDirectory, { recursive: true, force: true });
+    }
   });
 });

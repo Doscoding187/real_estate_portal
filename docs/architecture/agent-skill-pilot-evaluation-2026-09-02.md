@@ -56,7 +56,7 @@ pilot.
 - `pnpm db:authority:manifest` and `pnpm db:authority:context` resolved the
   canonical migration head and a disposable local worktree target without
   exposing credentials.
-- Focused Vitest execution passed all 6 files and 33 tests: Land geography,
+- Focused Vitest execution passed all 6 files and 35 tests: Land geography,
   Land UI boundary, agency authentication smoke, agent-skill governance,
   database authority entry, and database governance authority.
 - The agency-auth test emitted an existing Express `res.clearCookie` deprecation

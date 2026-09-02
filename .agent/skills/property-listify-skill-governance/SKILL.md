@@ -4,7 +4,7 @@ description: Create, change, review, or retire Property Listify agent skills whi
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash
 metadata:
   owner: property-listify
-  version: 0.2.1
+  version: 0.2.2
   status: active
   risk_tier: local-helper-script
   provenance: original

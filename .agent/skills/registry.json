@@ -50,7 +50,7 @@
       "name": "property-listify-skill-governance",
       "path": ".agent/skills/property-listify-skill-governance/SKILL.md",
       "owner": "property-listify",
-      "version": "0.2.1",
+      "version": "0.2.2",
       "status": "active",
       "riskTier": "local-helper-script",
       "allowedTools": ["Read", "Write", "Edit", "Glob", "Grep", "Bash"],

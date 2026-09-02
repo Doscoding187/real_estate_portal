@@ -39,7 +39,24 @@ function normalizeTools(value) {
 }
 
 function assertDate(value, label) {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(value) || Number.isNaN(Date.parse(`${value}T00:00:00Z`))) {
+  const match = typeof value === 'string' && /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) {
+    fail(`${label} must use a valid YYYY-MM-DD date.`);
+  }
+
+  const [, yearValue, monthValue, dayValue] = match;
+  const year = Number(yearValue);
+  const month = Number(monthValue);
+  const day = Number(dayValue);
+  const date = new Date(0);
+  date.setUTCFullYear(year, month - 1, day);
+  date.setUTCHours(0, 0, 0, 0);
+
+  if (
+    date.getUTCFullYear() !== year ||
+    date.getUTCMonth() !== month - 1 ||
+    date.getUTCDate() !== day
+  ) {
     fail(`${label} must use a valid YYYY-MM-DD date.`);
   }
 }
@@ -50,6 +67,9 @@ async function listFiles(directory) {
 
   for (const entry of entries) {
     const entryPath = path.join(directory, entry.name);
+    if (entry.isSymbolicLink()) {
+      fail(`${entryPath}: governed skill folders may not contain symbolic links.`);
+    }
     if (entry.isDirectory()) {
       const nested = await listFiles(entryPath);
       files.push(...nested.map(file => path.join(entry.name, file)));
@@ -87,6 +107,37 @@ function assertProjectLocalHelperPath(relativePath, name) {
   }
 }
 
+function isWithinProjectRoot(projectRoot, candidatePath) {
+  const relativePath = path.relative(projectRoot, candidatePath);
+  return (
+    relativePath !== '' &&
+    relativePath !== '..' &&
+    !relativePath.startsWith(`..${path.sep}`) &&
+    !path.isAbsolute(relativePath)
+  );
+}
+
+async function resolveProjectLocalPath(relativePath, name, label) {
+  const projectRoot = path.resolve('.');
+  const realProjectRoot = await fs.realpath(projectRoot);
+  let candidatePath = projectRoot;
+
+  for (const segment of relativePath.split(/[\\/]/)) {
+    candidatePath = path.join(candidatePath, segment);
+    const stats = await fs.lstat(candidatePath);
+    if (stats.isSymbolicLink()) {
+      fail(`${name}: ${label} may not traverse a symbolic link.`);
+    }
+  }
+
+  const realCandidatePath = await fs.realpath(candidatePath);
+  if (!isWithinProjectRoot(realProjectRoot, realCandidatePath)) {
+    fail(`${name}: ${label} must resolve beneath the project root.`);
+  }
+
+  return candidatePath;
+}
+
 async function validateLocalHelper(entry, name) {
   const helper = entry.localHelper;
   if (!helper || typeof helper !== 'object') {
@@ -103,7 +154,7 @@ async function validateLocalHelper(entry, name) {
   if (!entry.allowedTools.includes('Bash')) {
     fail(`${name}: local-helper-script entries must declare Bash in allowedTools.`);
   }
-  await fs.access(path.resolve(helper.entryPoint));
+  await resolveProjectLocalPath(helper.entryPoint, name, 'local helper path');
 
   const packageJson = JSON.parse(await fs.readFile(path.resolve('package.json'), 'utf8'));
   if (packageJson.scripts?.[helper.packageScript] !== `node ${helper.entryPoint}`) {
@@ -157,7 +208,7 @@ async function validateEntry(entry, seenNames) {
     fail(`${name}: nextReview must not precede reviewedAt.`);
   }
 
-  const absolutePath = path.resolve(relativePath);
+  const absolutePath = await resolveProjectLocalPath(relativePath, name, 'governed skill path');
   const skillDirectory = path.dirname(absolutePath);
   const files = await listFiles(skillDirectory);
   if (files.length !== 1 || files[0] !== 'SKILL.md') {
