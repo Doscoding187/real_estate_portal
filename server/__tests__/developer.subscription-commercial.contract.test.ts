@@ -95,7 +95,11 @@ describe('developer canonical commercial contract', () => {
       path.resolve(process.cwd(), 'client/src/components/developer/MarketingTools.tsx'),
     );
     expect(exists).toBe(false);
-    expect(settings).toContain("useCommercialCatalog('developer')");
+    // Organisation settings no longer duplicates a price or plan-management
+    // surface. Commercial decisions remain on the canonical plans and billing
+    // routes, so this identity page cannot drift into a second sellable offer.
+    expect(settings).not.toContain("useCommercialCatalog('developer')");
+    expect(settings).toContain("setLocation('/developer/subscription')");
     expect(settings).not.toContain('R2,499.00');
     expect(settings).not.toContain('subscription?.tier');
     expect(settings).not.toContain('maxDevelopments ?? 1');

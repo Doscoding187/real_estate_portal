@@ -135,23 +135,6 @@ function assertDeveloperDistributionEnabled() {
   }
 }
 
-const EMPTY_DEVELOPER_KPIS = {
-  totalLeads: 0,
-  qualifiedLeads: 0,
-  conversionRate: 0,
-  unitsSold: 0,
-  unitsAvailable: 0,
-  affordabilityMatchPercent: 0,
-  marketingPerformanceScore: 0,
-  trends: {
-    totalLeads: 0,
-    qualifiedLeads: 0,
-    conversionRate: 0,
-    unitsSold: 0,
-    affordabilityMatchPercent: 0,
-    marketingPerformanceScore: 0,
-  },
-};
 async function resolvePublicPublisherProfile(profile: any) {
   if (!profile || Number(profile.isVisible) !== 1) return null;
 
@@ -1661,17 +1644,18 @@ export const developerRouter = router({
         .optional(),
     )
     .query(async ({ ctx, input }) => {
-      try {
-        const profile = await requireDeveloperProfileByUserId(requireUser(ctx).id);
-        return await getKPIsWithCache(
-          profile.organisationId,
-          input?.timeRange,
-          input?.forceRefresh ?? false,
-        );
-      } catch (error) {
-        console.warn('[developer.getDashboardKPIs] Returning safe defaults due to error:', error);
-        return EMPTY_DEVELOPER_KPIS;
-      }
+      const profile = await requireDeveloperProfileByUserId(requireUser(ctx).id);
+
+      // KPI aggregation is publisher-scoped: developments and their leads are
+      // owned by the first-party Catalogue Publisher, not by the organisation
+      // primary key. An unavailable aggregation must remain visible to the
+      // workspace instead of being rendered as a believable zero-performance
+      // report.
+      return await getKPIsWithCache(
+        profile.publisherId,
+        input?.timeRange,
+        input?.forceRefresh ?? false,
+      );
     }),
 
   getSubscription: protectedProcedure.query(async ({ ctx }) => {
@@ -1806,21 +1790,16 @@ export const developerRouter = router({
   getDevelopment: protectedProcedure
     .input(z.object({ id: z.number() }))
     .query(async ({ ctx, input }) => {
-      try {
-        const profile = await requireDeveloperProfileByUserId(requireUser(ctx).id);
+      const profile = await requireDeveloperProfileByUserId(requireUser(ctx).id);
 
-        // NOTE: Using getDevelopmentWithPhases to ensure we return full object
-        const dev = await developmentService.getDevelopmentWithPhases(input.id);
-        if (!dev) return null;
-
-        if (dev.cataloguePublisherId !== profile.publisherId) {
-          return null;
-        }
-        return dev;
-      } catch (error) {
-        console.warn('[developer.getDevelopment] Returning null due to error:', error);
-        return null;
+      // Scope the aggregate at the read boundary. A foreign or absent record
+      // is one private NOT_FOUND response; a database failure is not rewritten
+      // as an empty development that a caller could accidentally resave.
+      const dev = await developmentService.getDevelopmentWithPhases(input.id, profile.publisherId);
+      if (!dev) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Development not found' });
       }
+      return dev;
     }),
 
   getOperatingHome: protectedProcedure

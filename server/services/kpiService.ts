@@ -6,10 +6,22 @@
 
 import { db } from '../db';
 import { developments, leads, unitTypes } from '../../drizzle/schema';
-import { eq, and, gte, lte, sql, count, avg } from 'drizzle-orm';
+import { eq, and, gte, lte, sql, count, inArray } from 'drizzle-orm';
 import type { DeveloperKPIs, DeveloperKPICache } from '../../shared/types';
 
 const CACHE_TTL_MINUTES = 5;
+
+// These are the canonical `leads.status` values for a prospect who has
+// progressed beyond initial contact. Keep this in step with
+// drizzle/schema/leads.ts; the similarly named legacy listing enum has a
+// different offer value and must not leak into developer reporting.
+const QUALIFIED_LEAD_STATUSES = [
+  'qualified',
+  'viewing_scheduled',
+  'offer_sent',
+  'converted',
+  'closed',
+] as const;
 
 interface TimeRange {
   start: Date;
@@ -113,7 +125,7 @@ async function calculateQualifiedLeads(
     .where(
       and(
         eq(developments.cataloguePublisherId, cataloguePublisherId),
-        sql`${leads.status} IN ('qualified', 'viewing_scheduled', 'offer_made', 'converted')`,
+        inArray(leads.status, QUALIFIED_LEAD_STATUSES),
         gte(leads.createdAt, timeRange.start.toISOString()),
         lte(leads.createdAt, timeRange.end.toISOString()),
       ),
@@ -126,7 +138,7 @@ async function calculateQualifiedLeads(
     .where(
       and(
         eq(developments.cataloguePublisherId, cataloguePublisherId),
-        sql`${leads.status} IN ('qualified', 'viewing_scheduled', 'offer_made', 'converted')`,
+        inArray(leads.status, QUALIFIED_LEAD_STATUSES),
         gte(leads.createdAt, timeRange.previousStart.toISOString()),
         lte(leads.createdAt, timeRange.previousEnd.toISOString()),
       ),
@@ -139,7 +151,12 @@ async function calculateQualifiedLeads(
 }
 
 /**
- * Calculate conversion rate (leads to sales)
+ * Calculate sale conversion rate (leads closed as sales).
+ *
+ * `converted` is the canonical in-progress deal state; `closed` is the
+ * closed-won sale state in the developer funnel. The UI promises sales, so
+ * this metric must use the latter rather than report in-progress deals as
+ * completed sales.
  */
 async function calculateConversionRate(
   cataloguePublisherId: number,
@@ -152,7 +169,7 @@ async function calculateConversionRate(
     .where(
       and(
         eq(developments.cataloguePublisherId, cataloguePublisherId),
-        eq(leads.status, 'converted'),
+        eq(leads.status, 'closed'),
         gte(leads.createdAt, timeRange.start.toISOString()),
         lte(leads.createdAt, timeRange.end.toISOString()),
       ),
@@ -177,7 +194,7 @@ async function calculateConversionRate(
     .where(
       and(
         eq(developments.cataloguePublisherId, cataloguePublisherId),
-        eq(leads.status, 'converted'),
+        eq(leads.status, 'closed'),
         gte(leads.createdAt, timeRange.previousStart.toISOString()),
         lte(leads.createdAt, timeRange.previousEnd.toISOString()),
       ),
@@ -217,30 +234,24 @@ async function calculateConversionRate(
 async function calculateUnitsMetrics(
   cataloguePublisherId: number,
 ): Promise<{ sold: number; available: number }> {
-  try {
-    const units = await db
-      .select({
-        sold: sql<number>`COALESCE(SUM(GREATEST(
-          ${unitTypes.totalUnits} - ${unitTypes.availableUnits} - COALESCE(${unitTypes.reservedUnits}, 0),
-          0
-        )), 0)`,
-        available: sql<number>`COALESCE(SUM(${unitTypes.availableUnits}), 0)`,
-      })
-      .from(unitTypes)
-      .innerJoin(developments, eq(developments.id, unitTypes.developmentId))
-      .where(
-        and(eq(developments.cataloguePublisherId, cataloguePublisherId), eq(unitTypes.isActive, 1)),
-      );
+  const units = await db
+    .select({
+      sold: sql<number>`COALESCE(SUM(GREATEST(
+        ${unitTypes.totalUnits} - ${unitTypes.availableUnits} - COALESCE(${unitTypes.reservedUnits}, 0),
+        0
+      )), 0)`,
+      available: sql<number>`COALESCE(SUM(${unitTypes.availableUnits}), 0)`,
+    })
+    .from(unitTypes)
+    .innerJoin(developments, eq(developments.id, unitTypes.developmentId))
+    .where(
+      and(eq(developments.cataloguePublisherId, cataloguePublisherId), eq(unitTypes.isActive, 1)),
+    );
 
-    return {
-      sold: Number(units[0]?.sold || 0),
-      available: Number(units[0]?.available || 0),
-    };
-  } catch (error) {
-    console.warn('[KPI Service] Failed to calculate units metrics:', error);
-    // Return zeros when query fails (table might not exist or have data)
-    return { sold: 0, available: 0 };
-  }
+  return {
+    sold: Number(units[0]?.sold || 0),
+    available: Number(units[0]?.available || 0),
+  };
 }
 
 /**
@@ -320,8 +331,8 @@ async function calculateAffordabilityMatch(
 }
 
 /**
- * Calculate marketing performance score
- * Based on: lead quality, conversion rate, response time, engagement
+ * Calculate a lead-progression score from qualification and closed-sale rates.
+ * It is deliberately not a visitor-traffic or channel-attribution metric.
  */
 async function calculateMarketingScore(
   cataloguePublisherId: number,
