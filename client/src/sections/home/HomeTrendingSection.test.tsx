@@ -178,15 +178,17 @@ describe('HomeTrendingSection request states', () => {
     const rail = screen.getByTestId('home-property-carousel');
     const slides = rail.querySelectorAll('[data-slot="carousel-item"]');
     expect(slides).toHaveLength(10);
-    expect(slides[0]).toHaveClass('lg:basis-1/4');
+    expect(slides[0]).toHaveClass('pl-3.5', 'lg:basis-1/4');
     expect(rail).toHaveClass('group/rail');
+    expect(rail.querySelector('[data-slot="carousel"]')).not.toHaveClass('lg:px-12');
+    expect(rail.querySelector('[data-slot="carousel-content"]')).toHaveClass('-ml-3.5');
     expect(screen.getAllByRole('button', { name: 'Save property' })).toHaveLength(10);
     expect(screen.getByRole('button', { name: 'Previous slide' })).toHaveClass(
-      'lg:left-0',
+      'lg:-left-12',
       'group-hover/rail:opacity-100',
     );
     expect(screen.getByRole('button', { name: 'Next slide' })).toHaveClass(
-      'lg:right-0',
+      'lg:-right-12',
       'group-hover/rail:opacity-100',
     );
     expect(screen.getAllByText('For sale')).toHaveLength(10);
@@ -195,6 +197,74 @@ describe('HomeTrendingSection request states', () => {
       expect.objectContaining({ limit: 10, tab: 'buy' }),
       expect.any(Object),
     );
+  });
+
+  it('saves a property through the authenticated favourite mutation', () => {
+    testState.isAuthenticated = true;
+    testState.query = {
+      ...testState.query,
+      data: {
+        items: [
+          {
+            id: '41',
+            kind: 'listing',
+            title: 'Published home',
+            city: 'Johannesburg',
+            suburb: 'Sandton',
+            priceFrom: 3_850_000,
+            priceTo: 3_850_000,
+            image: '',
+            href: '/property/41',
+            listingType: 'sale',
+            bedrooms: 3,
+            bathrooms: 2,
+            area: 180,
+            yardSize: 400,
+            parkingCount: 2,
+            propertyType: 'house',
+          },
+        ],
+      },
+    };
+
+    renderSection();
+    fireEvent.click(screen.getByRole('button', { name: 'Save property' }));
+
+    expect(testState.mutateFavorite).toHaveBeenCalledWith({ propertyId: 41 });
+  });
+
+  it('takes an unauthenticated user to sign-in without losing their current location', () => {
+    testState.query = {
+      ...testState.query,
+      data: {
+        items: [
+          {
+            id: '42',
+            kind: 'listing',
+            title: 'Published home',
+            city: 'Johannesburg',
+            suburb: 'Sandton',
+            priceFrom: 3_850_000,
+            priceTo: 3_850_000,
+            image: '',
+            href: '/property/42',
+            listingType: 'sale',
+            bedrooms: 3,
+            bathrooms: 2,
+            area: 180,
+            yardSize: 400,
+            parkingCount: 2,
+            propertyType: 'house',
+          },
+        ],
+      },
+    };
+
+    renderSection();
+    fireEvent.click(screen.getByRole('button', { name: 'Save property' }));
+
+    expect(testState.mutateFavorite).not.toHaveBeenCalled();
+    expect(testState.setLocation).toHaveBeenCalledWith('/login?redirect=%2F');
   });
 
   it('hands Land off to its dedicated exact-location journey', () => {

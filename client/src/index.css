@@ -205,6 +205,14 @@
     padding-right: 0;
   }
 
+  /* Homepage sections share the ContentRail edge instead of nesting another
+     responsive container inside it. */
+  .home-section-content {
+    width: 100%;
+    margin-inline: 0;
+    padding-inline: 0;
+  }
+
   .home-section {
     padding-top: 1.25rem;
     padding-bottom: 1.25rem;

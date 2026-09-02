@@ -1,17 +1,16 @@
 import {
   BatteryCharging,
   Bath,
-  Bed,
+  BedDouble,
   Building2,
-  Car,
+  CarFront,
   CheckCircle2,
   Droplets,
   Dumbbell,
   Home,
+  House,
   LandPlot,
   MapPin,
-  Maximize,
-  Ruler,
   Shield,
   Sparkles,
   Trees,
@@ -41,6 +40,19 @@ import {
   getPrimaryPrice,
   type MoneyFactStatus,
 } from '@/../../shared/pricing-contract';
+
+/**
+ * Keep public property-card facts visually consistent wherever the shared
+ * normalizer is used. These are the Lucide symbols that match the fact, not
+ * generic measurement or vehicle glyphs.
+ */
+const PROPERTY_FACT_ICONS = Object.freeze({
+  residentialSize: House,
+  landSize: LandPlot,
+  bedrooms: BedDouble,
+  bathrooms: Bath,
+  parking: CarFront,
+});
 
 export type PropertyFact = {
   key: string;
@@ -444,7 +456,7 @@ export function getPropertyFacts(property: PropertyLike): PropertyFact[] {
       key: 'unit-size',
       label: 'Unit Size',
       value: formatM2(unitSize ?? 0),
-      icon: Home,
+      icon: PROPERTY_FACT_ICONS.residentialSize,
       priority: 10,
     });
   } else if (isHouse || isTownhouse) {
@@ -453,7 +465,7 @@ export function getPropertyFacts(property: PropertyLike): PropertyFact[] {
       key: 'house-size',
       label: isTownhouse ? 'Unit Size' : 'House Size',
       value: formatM2(size ?? 0),
-      icon: Ruler,
+      icon: PROPERTY_FACT_ICONS.residentialSize,
       priority: 10,
     });
   } else if (isLand) {
@@ -462,7 +474,7 @@ export function getPropertyFacts(property: PropertyLike): PropertyFact[] {
       key: 'land-size',
       label: 'Land Size',
       value: formatM2(size ?? 0),
-      icon: Maximize,
+      icon: PROPERTY_FACT_ICONS.landSize,
       priority: 10,
     });
   } else if (isCommercial) {
@@ -480,7 +492,7 @@ export function getPropertyFacts(property: PropertyLike): PropertyFact[] {
       key: 'size',
       label: 'Size',
       value: formatM2(size ?? 0),
-      icon: Home,
+      icon: PROPERTY_FACT_ICONS.residentialSize,
       priority: 10,
     });
   }
@@ -488,7 +500,7 @@ export function getPropertyFacts(property: PropertyLike): PropertyFact[] {
   addFact(!!bedrooms && !isLand && !isCommercial, {
     key: 'bedrooms',
     label: 'Bedrooms',
-    icon: Bed,
+    icon: PROPERTY_FACT_ICONS.bedrooms,
     priority: 20,
     ...plural(bedrooms!, 'Bedroom', 'Bed'),
   });
@@ -496,7 +508,7 @@ export function getPropertyFacts(property: PropertyLike): PropertyFact[] {
   addFact(!!bathrooms && !isLand && !isCommercial, {
     key: 'bathrooms',
     label: 'Bathrooms',
-    icon: Bath,
+    icon: PROPERTY_FACT_ICONS.bathrooms,
     priority: 30,
     ...plural(bathrooms!, 'Bathroom', 'Bath'),
   });
@@ -505,7 +517,7 @@ export function getPropertyFacts(property: PropertyLike): PropertyFact[] {
     key: 'erf-size',
     label: 'Erf Size',
     value: formatM2(erfSize ?? 0),
-    icon: LandPlot,
+    icon: PROPERTY_FACT_ICONS.landSize,
     priority: 40,
   });
 
@@ -514,7 +526,7 @@ export function getPropertyFacts(property: PropertyLike): PropertyFact[] {
     label: isCommercial ? 'Parking Bays' : 'Parking',
     value: parkingLabel!,
     shortValue: parkingCount ? `${parkingCount} Parking` : parkingLabel!,
-    icon: Car,
+    icon: PROPERTY_FACT_ICONS.parking,
     priority: 50,
   });
 
@@ -1205,7 +1217,7 @@ export function getPropertyFeatureSpecs(property: PropertyLike): PropertyFeature
     key: 'parking-type',
     label: 'Parking Type',
     rawValue: valueFor('parkingType', 'parking'),
-    icon: Car,
+    icon: PROPERTY_FACT_ICONS.parking,
     priority: 110,
     category: 'parking',
   });
@@ -1216,7 +1228,7 @@ export function getPropertyFeatureSpecs(property: PropertyLike): PropertyFeature
       key: 'parking-count',
       label: 'Parking Count',
       value: String(parkingCount),
-      icon: Car,
+      icon: PROPERTY_FACT_ICONS.parking,
       priority: 120,
       category: 'parking',
     });
@@ -1616,7 +1628,7 @@ export function getPropertyBuyerChecklist(property: PropertyLike): PropertyBuyer
     {
       key: 'parking',
       label: 'Parking',
-      icon: Car,
+      icon: PROPERTY_FACT_ICONS.parking,
       category: 'parking',
       ...parking,
     },

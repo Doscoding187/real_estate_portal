@@ -293,7 +293,7 @@ export function HomeTrendingSection({
           role="status"
           aria-label="Loading published property"
         >
-          <div className="flex gap-2">
+          <div className="flex gap-3.5">
             {[0, 1, 2, 3].map(index => (
               <div
                 key={index}
@@ -347,14 +347,14 @@ export function HomeTrendingSection({
         <div className="group/rail relative w-full" data-testid="home-property-carousel">
           <Carousel
             opts={{ align: 'start', loop: trendingItems.length > 4 }}
-            className="w-full lg:px-12"
+            className="w-full"
             aria-label="Explore property carousel"
           >
-            <CarouselContent className="-ml-2 pb-2 justify-start">
+            <CarouselContent className="-ml-3.5 pb-2 justify-start">
               {trendingItems.map(item => (
                 <CarouselItem
                   key={item.id}
-                  className="basis-[77%] pl-2 sm:basis-[64%] md:basis-1/2 lg:basis-1/4"
+                  className="basis-[77%] pl-3.5 sm:basis-[64%] md:basis-1/2 lg:basis-1/4"
                 >
                   <div className="relative">
                     {item.kind === 'listing' ? (
@@ -449,8 +449,8 @@ export function HomeTrendingSection({
                 </CarouselItem>
               ))}
             </CarouselContent>
-            <CarouselPrevious className="hidden size-10 border-slate-200 bg-white opacity-0 shadow-md transition-opacity duration-200 group-hover/rail:opacity-100 group-focus-within/rail:opacity-100 focus-visible:opacity-100 disabled:invisible lg:inline-flex lg:left-0" />
-            <CarouselNext className="hidden size-10 border-slate-200 bg-white opacity-0 shadow-md transition-opacity duration-200 group-hover/rail:opacity-100 group-focus-within/rail:opacity-100 focus-visible:opacity-100 disabled:invisible lg:inline-flex lg:right-0" />
+            <CarouselPrevious className="hidden size-10 border-slate-200 bg-white opacity-0 shadow-md transition-opacity duration-200 group-hover/rail:opacity-100 group-focus-within/rail:opacity-100 focus-visible:opacity-100 disabled:invisible lg:-left-12 lg:inline-flex" />
+            <CarouselNext className="hidden size-10 border-slate-200 bg-white opacity-0 shadow-md transition-opacity duration-200 group-hover/rail:opacity-100 group-focus-within/rail:opacity-100 focus-visible:opacity-100 disabled:invisible lg:-right-12 lg:inline-flex" />
           </Carousel>
         </div>
       ) : (

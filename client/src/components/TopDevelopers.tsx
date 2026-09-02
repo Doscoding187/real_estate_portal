@@ -44,7 +44,7 @@ export function TopDevelopers({ selectedProvince }: TopDevelopersProps) {
 
   return (
     <section className="home-section bg-white">
-      <div className="container">
+      <div className="home-section-content">
         {/* Section Header */}
         <div className="home-section-header">
           <h2 className="home-section-title text-[1.125rem] sm:text-xl md:text-[26px] font-bold text-slate-900">

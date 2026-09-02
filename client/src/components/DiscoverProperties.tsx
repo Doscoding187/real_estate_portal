@@ -100,6 +100,8 @@ interface DiscoverPropertiesProps {
   title?: string;
   subtitle?: string;
   locationName?: string;
+  /** Use the full homepage content rail rather than adding a second container. */
+  withinContentRail?: boolean;
 }
 
 export function DiscoverProperties({
@@ -108,6 +110,7 @@ export function DiscoverProperties({
   title,
   subtitle,
   locationName = 'South Africa',
+  withinContentRail = false,
 }: DiscoverPropertiesProps = {}) {
   const rentJourneyEnabled = isHomepageHeroJourneyEnabled('rent');
   const developmentsJourneyEnabled = isHomepageHeroJourneyEnabled('developments');
@@ -206,7 +209,7 @@ export function DiscoverProperties({
 
   return (
     <div className="home-section bg-gradient-to-b from-white to-muted/20">
-      <div className="container">
+      <div className={withinContentRail ? 'home-section-content' : 'container'}>
         <div className="home-section-header">
           <h2 className="home-section-title text-[1.125rem] sm:text-xl md:text-[26px] font-bold text-slate-900">
             {displayTitle}

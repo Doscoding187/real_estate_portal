@@ -21,6 +21,8 @@ interface ExploreCitiesProps {
   basePath?: string;
   queryParams?: string;
   initialLimit?: number;
+  /** Use the full homepage content rail rather than adding a second container. */
+  withinContentRail?: boolean;
 }
 
 export function ExploreCities({
@@ -31,6 +33,7 @@ export function ExploreCities({
   basePath = '/property-for-sale',
   queryParams = '',
   initialLimit = 12,
+  withinContentRail = false,
 }: ExploreCitiesProps = {}) {
   const [visibleCount, setVisibleCount] = useState(initialLimit);
 
@@ -208,7 +211,7 @@ export function ExploreCities({
 
   return (
     <section className="home-section bg-white">
-      <div className="container">
+      <div className={withinContentRail ? 'home-section-content' : 'container'}>
         {/* Section Header */}
         <div className="home-section-header flex flex-col items-start gap-3 text-left">
           <div className="max-w-3xl text-left">

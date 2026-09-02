@@ -1,4 +1,4 @@
-import { LandPlot, Ruler } from 'lucide-react';
+import { Bath, BedDouble, CarFront, House, LandPlot } from 'lucide-react';
 import { describe, expect, it } from 'vitest';
 import {
   getCompactPropertyFacts,
@@ -98,7 +98,9 @@ describe('public pricing normalization', () => {
       'bathrooms',
       'erf-size',
     ]);
-    expect(facts[0]?.icon).toBe(Ruler);
+    expect(facts[0]?.icon).toBe(House);
+    expect(facts[1]?.icon).toBe(BedDouble);
+    expect(facts[2]?.icon).toBe(Bath);
     expect(facts[3]?.icon).toBe(LandPlot);
   });
 
@@ -116,6 +118,10 @@ describe('public pricing normalization', () => {
     );
 
     expect(facts.map(fact => fact.key)).toEqual(['unit-size', 'bedrooms', 'bathrooms', 'parking']);
+    expect(facts[0]?.icon).toBe(House);
+    expect(facts[1]?.icon).toBe(BedDouble);
+    expect(facts[2]?.icon).toBe(Bath);
+    expect(facts[3]?.icon).toBe(CarFront);
     expect(facts[3]).toMatchObject({ value: '2 Covered', shortValue: '2 Parking' });
   });
 });
