@@ -16,11 +16,19 @@ describe('agency listing performance API contract', () => {
       source.indexOf('getMyDay: agentProcedure'),
     );
 
-    expect(reviewPath).toContain("code: 'BAD_REQUEST', message: 'A contact date is required");
-    expect(reviewPath).toContain("code: 'BAD_REQUEST', message: 'A proposed price and rationale are required");
-    expect(reviewPath).toContain("code: 'PRECONDITION_FAILED', message: 'Seller reviews can only be recorded for published listings.'");
-    expect(revisionPath).toContain("code: 'PRECONDITION_FAILED', message: 'Only an accepted price recommendation");
-    expect(revisionPath).toContain("code: 'CONFLICT', message: 'Another listing revision is already in progress.");
+    expect(reviewPath).toMatch(/code:\s*'BAD_REQUEST',\s*message:\s*'A contact date is required/);
+    expect(reviewPath).toMatch(
+      /code:\s*'BAD_REQUEST',\s*message:\s*'A proposed price and rationale are required/,
+    );
+    expect(reviewPath).toMatch(
+      /code:\s*'PRECONDITION_FAILED',\s*message:\s*'Seller reviews can only be recorded for published listings\.'/,
+    );
+    expect(revisionPath).toMatch(
+      /code:\s*'PRECONDITION_FAILED',\s*message:\s*'Only an accepted price recommendation/,
+    );
+    expect(revisionPath).toMatch(
+      /code:\s*'CONFLICT',\s*message:\s*'Another listing revision is already in progress\./,
+    );
     expect(revisionPath).toContain('await requirePerformanceListingAccess(db, user, review.listingId);');
   });
 
