@@ -118,6 +118,26 @@ describe('public Agency product landing page', () => {
     expect(screen.getByRole('link', { name: /Explore team tools/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Explore business visibility/i })).toBeInTheDocument();
     expect(screen.getAllByText('Visibility without micromanagement').length).toBeGreaterThan(0);
+    expect(screen.getByTestId('agency-value-hierarchy')).toBeInTheDocument();
+    expect(screen.getByText('Operate the Agency')).toBeInTheDocument();
+    expect(
+      screen.getByText('Put eligible inventory into the Property Listify marketplace'),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Connect to more ways the market is discovered')).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', {
+        name: 'Your Agency operates the work. Eligible inventory joins the Property Listify marketplace.',
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('Platform discovery, not outsourced Agency marketing.'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('Is Property Listify doing our digital marketing for us?'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/not a bespoke social-media, advertising or campaign-management service/i),
+    ).toBeInTheDocument();
     expect(
       screen.queryByText(/recruitment|candidate pipeline|interview stage/i),
     ).not.toBeInTheDocument();
@@ -143,6 +163,50 @@ describe('public Agency product landing page', () => {
       screen.getAllByRole('link', { name: /Contact Property Listify/i }).length,
     ).toBeGreaterThan(0);
     expect(screen.queryByText(/Coming Soon|waitlist|free trial|\/month/i)).not.toBeInTheDocument();
+  });
+
+  it('derives commercial copy and capacity from the catalog rather than hardcoded offer values', () => {
+    const changedProduct = {
+      ...agencyProduct,
+      limits: { max_active_listings: 275 },
+      entitlements: { ...agencyProduct.entitlements, max_active_listings: 275 },
+      term: { ...agencyProduct.term, durationDays: 45 },
+      pricing: {
+        ...agencyProduct.pricing,
+        basePrice: { amountMinor: 124_900, currency: 'ZAR' },
+      },
+    } as unknown as CommercialProduct;
+
+    useCatalogMock.mockReturnValue({
+      data: {
+        authority: {
+          products: 'canonical_plans',
+          entitlements: 'plan_entitlements',
+          prices: 'billingFoundationService',
+          paidState: 'canonical_subscriptions_and_verified_billing',
+        },
+        audience: 'agency',
+        products: [changedProduct],
+      },
+      isLoading: false,
+      isError: false,
+      refetch: vi.fn(),
+    } as unknown as ReturnType<typeof useCommercialCatalog>);
+
+    render(<AgencyProductLandingPage />);
+
+    expect(screen.getAllByText('R1,249').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('45 days').length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Active Listings: 275/i).length).toBeGreaterThan(0);
+    expect(screen.getByText('What does R1,249 include?')).toBeInTheDocument();
+    expect(screen.getByText('Up to 275 active published listings')).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', {
+        name: 'Give your Agency 45 days to operate the complete supported workspace.',
+      }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText('R999')).not.toBeInTheDocument();
+    expect(screen.queryByText('90 days')).not.toBeInTheDocument();
   });
 
   it('starts the Agency journey with a dedicated owner account and preserves setup intent', () => {
@@ -172,11 +236,10 @@ describe('public Agency product landing page', () => {
     render(<AgencyProductLandingPage />);
 
     expect(screen.getByTestId('agency-launch-access-card')).toBeInTheDocument();
-    expect(
-      screen.getByRole('heading', { name: '90-day assisted access path' }),
-    ).toBeInTheDocument();
-    expect(screen.getByText('Manual EFT activation')).toBeInTheDocument();
-    expect(screen.getByText('No automatic renewal')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Assisted access path' })).toBeInTheDocument();
+    expect(screen.getByText('Assisted commercial confirmation')).toBeInTheDocument();
+    expect(screen.getByText('Finance-verified activation')).toBeInTheDocument();
+    expect(screen.getByText('No instant checkout')).toBeInTheDocument();
     expect(screen.getByText(/canonical product details are unavailable/i)).toBeInTheDocument();
     expect(
       within(screen.getByTestId('agency-launch-access-card')).getByRole('link', {
@@ -184,5 +247,6 @@ describe('public Agency product landing page', () => {
       }),
     ).toHaveAttribute('href', '/contact');
     expect(screen.queryByText('R999')).not.toBeInTheDocument();
+    expect(screen.queryByText('90 days')).not.toBeInTheDocument();
   });
 });

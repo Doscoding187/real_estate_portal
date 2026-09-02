@@ -46,8 +46,12 @@ const segments: SegmentData[] = [
     eyebrow: 'Team and business workspace',
     icon: UsersRound,
     description:
-      'Bring agency inventory, team capability, lead routing and business follow-up into one supported workspace.',
-    benefits: ['Agency inventory management', 'Team and account capability', 'Lead routing'],
+      'Operate your agency across team, inventory and enquiries, while eligible published inventory participates in Property Listify marketplace discovery.',
+    benefits: [
+      'Agency operating workspace',
+      'Team, inventory and lead-routing capability',
+      'Marketplace participation for eligible inventory',
+    ],
     ctaText: 'Explore Agency tools',
     ctaLink: '/advertise/sell/agencies',
     accent: {

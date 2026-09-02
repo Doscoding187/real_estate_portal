@@ -49,6 +49,13 @@ type AgencyCapability = {
   matches: readonly string[];
 };
 
+type AgencyValueLayer = {
+  label: string;
+  title: string;
+  description: string;
+  icon: typeof ListChecks;
+};
+
 const AGENCY_CAPABILITIES: readonly AgencyCapability[] = [
   {
     label: 'Run the team',
@@ -99,6 +106,30 @@ const AGENCY_CAPABILITIES: readonly AgencyCapability[] = [
     ctaLabel: 'Explore business visibility',
     icon: BarChart3,
     matches: ['report', 'commission'],
+  },
+];
+
+const AGENCY_VALUE_LAYERS: readonly AgencyValueLayer[] = [
+  {
+    label: 'Primary value',
+    title: 'Operate the Agency',
+    description:
+      'Use one shared workspace for Agency identity, people, inventory, enquiries, follow-up and business visibility.',
+    icon: Building2,
+  },
+  {
+    label: 'Marketplace participation',
+    title: 'Put eligible inventory into the Property Listify marketplace',
+    description:
+      'Eligible published Agency inventory can take part in normal Property Listify search, location and public-property journeys, subject to publication rules.',
+    icon: Search,
+  },
+  {
+    label: 'Growing discovery ecosystem',
+    title: 'Connect to more ways the market is discovered',
+    description:
+      'Property Listify operates its marketplace discovery surfaces and is building further discovery and acquisition paths around the market. That is platform-level work, not an individual Agency marketing campaign or guaranteed demand.',
+    icon: MapPin,
   },
 ];
 
@@ -181,74 +212,6 @@ const AGENCY_PROBLEMS = [
   },
 ] as const;
 
-const FAQS = [
-  {
-    question: 'What is Agency Launch Access?',
-    answer:
-      'Agency Launch Access is a paid, once-off term that gives an Agency 90 days of the strongest supported Agency workspace available in Property Listify. It is broad enough to use against real inventory, team activity and property enquiries before a normal long-term product is introduced.',
-  },
-  {
-    question: 'What does R999 include?',
-    answer:
-      'The canonical Agency Launch Access product includes supported Agency inventory management, team and account workflows, property enquiries, lead routing, Agency reporting and analytics, and commission and deal workflows. It also carries an explicit safeguard of up to 500 active listings during the 90-day term.',
-  },
-  {
-    question: 'Is Launch Access a smaller feature tier?',
-    answer:
-      'No. Agency Launch Access is the current full supported-capability launch cohort, not a reduced feature tier. Normal authorization, publication-quality, anti-abuse and explicit launch-capacity safeguards still apply.',
-  },
-  {
-    question: 'Is R999 a monthly subscription?',
-    answer:
-      'No. R999 is the once-off price for the fixed 90-day Agency Launch Access period. It is not a monthly subscription and it is not a permanent locked-in price for future renewal.',
-  },
-  {
-    question: 'When do the 90 days begin?',
-    answer:
-      'The 90 days begin only after Property Listify finance verifies the manual EFT payment. Requesting an invoice or submitting payment proof does not activate access by itself.',
-  },
-  {
-    question: 'How many active listings can the Agency manage?',
-    answer:
-      'Agency Launch Access allows up to 500 active listings. Ownership, authorization, verification, publication-quality and anti-abuse rules remain in force; the safeguard is launch capacity, not permission to publish inventory that the Agency is not authorised to represent.',
-  },
-  {
-    question: 'Can my team use Property Listify?',
-    answer:
-      'Yes. The supported Agency workspace includes Agency account and team workflows, invitations, membership status, role boundaries and team visibility. Property Listify does not publish an unlimited-seats promise or a separate commercial seat limit here.',
-  },
-  {
-    question: 'How does the Agency workspace support visibility without micromanagement?',
-    answer:
-      'It focuses attention on ownership and next actions: inventory needing work, unassigned opportunities, follow-ups, viewings and supported commercial progress. The point is to make the operating picture clearer without claiming access to every private conversation.',
-  },
-  {
-    question: 'How does lead routing work?',
-    answer:
-      'Agency lead routing keeps an enquiry in the Agency operating context and supports assignment to an active, assignable team member. The current workflow is not advertised as AI-based best-agent selection; the Agency team remains responsible for ownership and follow-up.',
-  },
-  {
-    question: 'Are leads or sales guaranteed?',
-    answer:
-      'No. Property Listify provides the Agency workspace, normal discovery surfaces and supported enquiry workflows. Demand and outcomes depend on inventory, location, pricing, responsiveness and buyer behaviour, so Launch Access does not guarantee leads, traffic, viewings or sales.',
-  },
-  {
-    question: 'What happens after 90 days?',
-    answer:
-      'Launch Access expires without automatic renewal. Continued access after the launch period will require a future normal Agency commercial product; its price and structure are not promised on this page.',
-  },
-  {
-    question: 'How does the Agency pay?',
-    answer:
-      'Request the supported Launch Access invoice, pay by manual EFT and submit the payment proof through the assisted process. Finance verification is the activation authority; there is no instant checkout on the public page.',
-  },
-  {
-    question: 'Can we talk to Property Listify before requesting an invoice?',
-    answer:
-      'Yes. Use the Contact Property Listify route if you want to discuss your team structure, inventory, onboarding or commercial requirements before requesting Launch Access.',
-  },
-] as const;
-
 function hasMatchingBenefit(product: CommercialProduct, matches: readonly string[]) {
   if (!matches.length) return true;
   const benefits = product.benefits.map(benefit => benefit.toLowerCase());
@@ -257,6 +220,140 @@ function hasMatchingBenefit(product: CommercialProduct, matches: readonly string
 
 function formatLimit(value: unknown) {
   return formatCommercialLimitValue(value);
+}
+
+type AgencyFaq = {
+  question: string;
+  answer: string;
+};
+
+function getAgencyFaqs(product?: CommercialProduct): readonly AgencyFaq[] {
+  if (!product) {
+    return [
+      {
+        question: 'What is Agency Launch Access?',
+        answer:
+          'Agency Launch Access is an assisted commercial path into the supported Agency workspace. The current catalogue is unavailable on this page, so contact Property Listify for verified product details before acting.',
+      },
+      {
+        question: 'How can we confirm the current offer?',
+        answer:
+          'Contact Property Listify for an assisted commercial conversation. We will confirm the current price, access term, activation path and applicable safeguards from the canonical catalogue rather than relying on an old public value.',
+      },
+      {
+        question: 'What does the Agency workspace support?',
+        answer:
+          'The Agency workspace is designed to bring people, inventory, property enquiries and follow-through into one organisational operating context. Current supported capabilities remain subject to verified commercial confirmation.',
+      },
+    ];
+  }
+
+  const price = getCommercialPricePresentation(product);
+  const term = getCommercialTermPresentation(product);
+  const activeListingLimit = getCommercialPresentationLimits(product).find(
+    ([key]) => key === 'max_active_listings',
+  )?.[1];
+  const priceLabel = price.kind === 'fixed' ? price.label : null;
+  const formattedActiveListingLimit =
+    activeListingLimit === undefined || activeListingLimit === null
+      ? null
+      : formatLimit(activeListingLimit);
+  const listingCapacity = formattedActiveListingLimit
+    ? `up to ${formattedActiveListingLimit} active published listings`
+    : 'the active-listing capacity shown in the current catalogue';
+  const listingCapacitySummary = formattedActiveListingLimit
+    ? `Up to ${formattedActiveListingLimit} active published listings is an explicit launch-capacity safeguard`
+    : 'The active-listing capacity shown in the current catalogue is an explicit launch-capacity safeguard';
+  const renewalAnswer = product.term.autoRenews
+    ? 'The current catalogue says Launch Access renews according to its configured term.'
+    : 'Launch Access expires without automatic renewal.';
+
+  return [
+    {
+      question: 'What am I buying?',
+      answer:
+        'A shared Agency operating workspace and participation in the Property Listify property marketplace for eligible published inventory. It keeps Agency identity, people, inventory, enquiries, ownership and follow-through connected in one organisational context.',
+    },
+    {
+      question: 'What is Agency Launch Access?',
+      answer: `Agency Launch Access is a paid, once-off ${term.label} term for the strongest currently supported Agency workspace in Property Listify. It is broad enough to use with real inventory, team activity and property enquiries before a normal long-term product is introduced.`,
+    },
+    {
+      question: priceLabel
+        ? `What does ${priceLabel} include?`
+        : 'What does Agency Launch Access include?',
+      answer: `The current product includes Agency identity and account workflows, team membership and invitations, shared inventory and attribution, property enquiries and lead routing, supported follow-up and viewing work, and supported reporting, deal and commission workflows. Eligible published inventory can also participate in applicable Property Listify marketplace discovery surfaces. ${listingCapacitySummary}, not the primary product promise.`,
+    },
+    {
+      question: 'What makes this different from an individual Agent account?',
+      answer:
+        'The Agency product preserves organisational continuity and control across multiple people: Agency membership and roles, shared inventory, listing attribution, enquiry custody, assignment and management visibility. It is not individual Agent pricing multiplied by headcount, and it does not publish an unlimited-seat promise or a separate commercial seat limit.',
+    },
+    {
+      question: 'How does marketplace participation work?',
+      answer:
+        'Eligible published Agency inventory can participate in normal Property Listify search, location and public property-detail journeys. When a property seeker enquires, the supported workflow retains the listing and accountable Agency context for follow-up. Normal authorisation, verification, publication-quality and safety rules still apply.',
+    },
+    {
+      question: 'Is Launch Access a smaller feature tier?',
+      answer:
+        'No. Agency Launch Access is the current full supported-capability launch cohort, not a reduced feature tier. Normal authorisation, publication-quality, anti-abuse and explicit launch-capacity safeguards still apply.',
+    },
+    {
+      question: priceLabel
+        ? `Is ${priceLabel} a monthly subscription?`
+        : 'Is Agency Launch Access a monthly subscription?',
+      answer: `No. Agency Launch Access is a once-off price for the fixed ${term.label} period. It is not a monthly subscription and it is not a permanent locked-in price for future renewal.`,
+    },
+    {
+      question: `When does the ${term.label} term begin?`,
+      answer:
+        'The access term begins only after Property Listify finance verifies the manual EFT payment. Requesting an invoice or submitting payment proof does not activate access by itself.',
+    },
+    {
+      question: 'How many active listings can the Agency manage?',
+      answer: `Agency Launch Access allows ${listingCapacity}. Ownership, authorisation, verification, publication-quality and anti-abuse rules remain in force; the safeguard is capacity, not permission to publish inventory that the Agency is not authorised to represent.`,
+    },
+    {
+      question: 'Can my team use Property Listify?',
+      answer:
+        'Yes. The supported Agency workspace includes Agency account and team workflows, invitations, membership status, role boundaries and team visibility. Property Listify does not publish an unlimited-seat promise or a separate commercial seat limit here.',
+    },
+    {
+      question: 'How does the Agency workspace support visibility without micromanagement?',
+      answer:
+        'It focuses attention on ownership and next actions: inventory needing work, unassigned opportunities, follow-ups, viewings and supported commercial progress. The point is to make the operating picture clearer without claiming access to every private conversation.',
+    },
+    {
+      question: 'How does lead routing work?',
+      answer:
+        'Agency lead routing keeps an enquiry in the Agency operating context and supports assignment to an active, assignable team member. The current workflow is not advertised as AI-based best-agent selection; the Agency team remains responsible for ownership and follow-up.',
+    },
+    {
+      question: 'Is Property Listify doing our digital marketing for us?',
+      answer:
+        'No. Your Agency remains free to run its own marketing. Property Listify operates its own marketplace discovery surfaces and is building further discovery and acquisition paths around the market; that platform-level work is not a bespoke social-media, advertising or campaign-management service for an individual Agency.',
+    },
+    {
+      question: 'Are leads or sales guaranteed?',
+      answer:
+        'No. Property Listify provides the Agency workspace, marketplace participation for eligible published inventory and supported enquiry workflows. Demand and outcomes depend on inventory, location, pricing, responsiveness and buyer behaviour, so Launch Access does not guarantee placement, traffic, leads, viewings or sales.',
+    },
+    {
+      question: `What happens after ${term.label}?`,
+      answer: `${renewalAnswer} Continued access after the launch period will require the then-current Agency commercial product; its future price and structure are not promised on this page.`,
+    },
+    {
+      question: 'How does the Agency pay?',
+      answer:
+        'Request the supported Launch Access invoice, pay by manual EFT and submit the payment proof through the assisted process. Finance verification is the activation authority; there is no instant checkout on the public page.',
+    },
+    {
+      question: 'Can we talk to Property Listify before requesting an invoice?',
+      answer:
+        'Yes. Use the Contact Property Listify route if you want to discuss your team structure, inventory, onboarding or commercial requirements before requesting Launch Access.',
+    },
+  ];
 }
 
 function SectionIntro({
@@ -280,6 +377,55 @@ function SectionIntro({
       </h2>
       <p className="mt-5 text-base leading-8 text-slate-600 md:text-lg">{children}</p>
     </div>
+  );
+}
+
+function AgencyValueHierarchy() {
+  return (
+    <section
+      data-testid="agency-value-hierarchy"
+      className="border-b border-slate-200 bg-[var(--surface)] py-24 md:py-32"
+    >
+      <div className="mx-auto max-w-[1280px] px-4 sm:px-6 lg:px-8">
+        <SectionIntro
+          align="center"
+          eyebrow="What Agency Launch Access is for"
+          title="One Agency product. Three connected sources of value."
+        >
+          Agency Launch Access is a shared operating workspace first. Marketplace participation and
+          a growing discovery ecosystem extend that operating foundation; listing capacity supports
+          the offer rather than defining it.
+        </SectionIntro>
+
+        <div className="mt-12 grid gap-5 lg:grid-cols-3">
+          {AGENCY_VALUE_LAYERS.map((layer, index) => {
+            const Icon = layer.icon;
+            return (
+              <article
+                key={layer.title}
+                className="flex h-full flex-col rounded-[26px] border border-slate-200 bg-white p-7 shadow-[0_16px_45px_rgba(15,23,42,0.05)]"
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-50 text-[var(--brand-blue)]">
+                    <Icon className="h-5 w-5" aria-hidden="true" />
+                  </span>
+                  <span className="font-mono text-xs font-semibold text-slate-400">
+                    0{index + 1}
+                  </span>
+                </div>
+                <p className="mt-7 text-xs font-bold uppercase tracking-[0.17em] text-[var(--brand-blue)]">
+                  {layer.label}
+                </p>
+                <h3 className="mt-3 text-2xl font-bold leading-tight tracking-[-0.03em] text-slate-950">
+                  {layer.title}
+                </h3>
+                <p className="mt-4 text-sm leading-8 text-slate-600">{layer.description}</p>
+              </article>
+            );
+          })}
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -412,18 +558,18 @@ function CapabilitySupportSummary({ product }: { product?: CommercialProduct }) 
 
 const AGENCY_LAUNCH_FALLBACK_DETAILS = [
   {
-    label: '90-day assisted access',
-    detail: 'Confirm the current Launch Access setup for the fixed launch period.',
+    label: 'Assisted commercial confirmation',
+    detail: 'Confirm the current catalogued Launch Access setup before acting.',
     icon: Clock3,
   },
   {
-    label: 'Manual EFT activation',
+    label: 'Finance-verified activation',
     detail: 'Finance verification remains the activation authority.',
     icon: CircleDollarSign,
   },
   {
-    label: 'No automatic renewal',
-    detail: 'Any continued access requires a future normal Agency product.',
+    label: 'No instant checkout',
+    detail: 'Use the assisted route while current commercial facts are unavailable.',
     icon: ShieldCheck,
   },
 ] as const;
@@ -441,7 +587,7 @@ function LaunchAccessCard({ product }: { product?: CommercialProduct }) {
               Agency Launch Access
             </p>
             <h3 className="mt-4 text-3xl font-bold leading-tight tracking-[-0.03em]">
-              90-day assisted access path
+              Assisted access path
             </h3>
           </div>
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-[var(--brand-blue)]">
@@ -506,8 +652,9 @@ function LaunchAccessCard({ product }: { product?: CommercialProduct }) {
             {product.displayName}
           </h3>
           <p className="mt-3 max-w-sm text-sm leading-6 text-slate-600">
-            Use the supported Agency workspace with your real team, inventory and opportunities
-            during the fixed launch period.
+            Use the supported Agency workspace with your real team, inventory and opportunities.
+            Eligible published inventory can participate in applicable Property Listify marketplace
+            discovery during the fixed launch term.
           </p>
         </div>
         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-[var(--brand-blue)]">
@@ -517,7 +664,9 @@ function LaunchAccessCard({ product }: { product?: CommercialProduct }) {
 
       <div className="mt-8 flex flex-wrap items-end justify-between gap-5 border-b border-slate-200 pb-8">
         <div>
-          <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-500">Once-off</p>
+          <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-500">
+            {price.period?.trim() || 'Commercial term'}
+          </p>
           <p className="mt-2 font-mono text-5xl font-semibold tracking-[-0.06em] text-slate-950">
             {price.label}
           </p>
@@ -540,16 +689,28 @@ function LaunchAccessCard({ product }: { product?: CommercialProduct }) {
             <span>{benefit}</span>
           </div>
         ))}
-        {limits.map(([key, value]) => (
-          <div key={key} className="flex items-start gap-2.5 text-sm leading-6 text-slate-700">
-            <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center text-[var(--brand-blue)]">
-              <Check className="h-4 w-4" aria-hidden="true" />
-            </span>
-            <span>
-              {formatCommercialLimitLabel(key)}: {formatLimit(value)}
-            </span>
+        {limits.length > 0 ? (
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+            <p className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500">
+              Launch capacity safeguard
+            </p>
+            <div className="mt-3 space-y-2.5">
+              {limits.map(([key, value]) => (
+                <div
+                  key={key}
+                  className="flex items-start gap-2.5 text-sm leading-6 text-slate-700"
+                >
+                  <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center text-[var(--brand-blue)]">
+                    <Check className="h-4 w-4" aria-hidden="true" />
+                  </span>
+                  <span>
+                    {formatCommercialLimitLabel(key)}: {formatLimit(value)}
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
-        ))}
+        ) : null}
       </div>
 
       <div className="mt-auto rounded-2xl bg-slate-50 px-5 py-5 text-sm leading-6 text-slate-600">
@@ -577,7 +738,7 @@ function LaunchAccessCard({ product }: { product?: CommercialProduct }) {
   );
 }
 
-function AgencyFaqSection() {
+function AgencyFaqSection({ faqs }: { faqs: readonly AgencyFaq[] }) {
   return (
     <section id="agency-faq" className="border-t border-slate-200 bg-white py-24 md:py-32">
       <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
@@ -590,7 +751,7 @@ function AgencyFaqSection() {
           assisted payment, explicit launch capacity and no promise of guaranteed demand.
         </SectionIntro>
         <div className="mt-12 divide-y divide-slate-200 rounded-[28px] border border-slate-200 bg-slate-50 px-5 sm:px-8 lg:px-10">
-          {FAQS.map(item => (
+          {faqs.map(item => (
             <details key={item.question} className="group py-7">
               <summary className="flex cursor-pointer list-none items-center justify-between gap-6 text-left text-base font-bold text-slate-950 sm:text-lg [&::-webkit-details-marker]:hidden">
                 {item.question}
@@ -617,12 +778,20 @@ export default function AgencyProductLandingPage() {
   );
   const price = product ? getCommercialPricePresentation(product) : null;
   const term = product ? getCommercialTermPresentation(product) : null;
+  const activeListingLimit = product
+    ? getCommercialPresentationLimits(product).find(([key]) => key === 'max_active_listings')?.[1]
+    : undefined;
+  const listingCapacityLabel =
+    activeListingLimit === undefined || activeListingLimit === null
+      ? 'Active-listing launch capacity'
+      : `Up to ${formatLimit(activeListingLimit)} active published listings`;
+  const faqs = getAgencyFaqs(product);
 
   return (
     <div className="min-h-screen bg-[var(--surface)] text-slate-950">
       <SEOHead
-        title="Property Listify for Agencies | Agency Operating Workspace"
-        description="Property Listify helps South African property agencies connect people, inventory, enquiries, follow-up and commercial visibility in one Agency operating workspace. Explore 90-day Launch Access."
+        title="Property Listify for Agencies | Operating Workspace & Marketplace"
+        description="Property Listify gives property agencies a shared operating workspace for people, inventory, enquiries and business visibility, with eligible published inventory able to participate in Property Listify marketplace discovery."
         canonicalUrl="/advertise/sell/agencies"
       />
       <EnhancedNavbar />
@@ -651,9 +820,10 @@ export default function AgencyProductLandingPage() {
                   Run more of your agency from one connected operating workspace.
                 </h1>
                 <p className="mt-7 max-w-xl text-lg leading-8 text-slate-300 sm:text-xl sm:leading-9">
-                  Property Listify helps agencies bring together the people, properties, enquiries
-                  and operating processes behind the public listings — with clearer ownership,
-                  follow-up and business visibility.
+                  Property Listify gives agencies one shared place to organise people, inventory,
+                  enquiries and the work behind them. Eligible published inventory can also
+                  participate in the Property Listify marketplace and applicable discovery journeys
+                  — with clearer ownership, follow-up and business visibility when interest arrives.
                 </p>
                 <div className="mt-9 flex flex-wrap gap-3">
                   <a
@@ -682,15 +852,19 @@ export default function AgencyProductLandingPage() {
                       className="h-4 w-4 shrink-0 text-orange-300"
                       aria-hidden="true"
                     />
-                    <span>{price ? `${price.label} once-off` : 'Launch Access pricing'}</span>
+                    <span>
+                      {price?.kind === 'fixed'
+                        ? `${price.label} ${price.period?.trim() || ''}`.trim()
+                        : 'Launch Access pricing'}
+                    </span>
                   </span>
                   <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-2">
                     <Clock3 className="h-4 w-4 shrink-0 text-blue-200" aria-hidden="true" />
                     <span>{term?.label || 'Fixed launch term'}</span>
                   </span>
                   <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-2">
-                    <UsersRound className="h-4 w-4 shrink-0 text-blue-200" aria-hidden="true" />
-                    <span>Team + operating views</span>
+                    <Building2 className="h-4 w-4 shrink-0 text-blue-200" aria-hidden="true" />
+                    <span>Agency operations + marketplace</span>
                   </span>
                 </div>
               </div>
@@ -702,6 +876,8 @@ export default function AgencyProductLandingPage() {
             </div>
           </div>
         </section>
+
+        <AgencyValueHierarchy />
 
         <section id="agency-workflow" className="border-b border-slate-200 bg-white py-24 md:py-32">
           <div className="mx-auto max-w-[1280px] px-4 sm:px-6 lg:px-8">
@@ -802,12 +978,13 @@ export default function AgencyProductLandingPage() {
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <SectionIntro
               align="center"
-              eyebrow="Public discovery is part of the loop"
-              title="Inventory enters the market. The Agency manages what happens next."
+              eyebrow="Marketplace participation"
+              title="Your Agency operates the work. Eligible inventory joins the Property Listify marketplace."
             >
-              Legitimate Agency inventory can take part in normal Search, province and location
-              discovery. Public discovery opens the opportunity; the operating workspace keeps the
-              ownership and follow-through visible afterwards.
+              Eligible published Agency inventory can take part in normal Property Listify search,
+              location and public property-detail journeys. Public discovery opens the opportunity;
+              the Agency workspace keeps the listing, ownership and follow-through context visible
+              afterwards.
             </SectionIntro>
 
             <div className="mt-12 grid gap-5 md:grid-cols-3">
@@ -817,8 +994,8 @@ export default function AgencyProductLandingPage() {
                 </span>
                 <h3 className="mt-6 text-2xl font-bold text-slate-950">Search</h3>
                 <p className="mt-4 flex-1 text-sm leading-7 text-slate-600">
-                  Publish eligible inventory into the same normal property search environment used
-                  by people looking for homes and rentals.
+                  Eligible published inventory can participate in the same normal property search
+                  environment used by people looking for homes and rentals.
                 </p>
                 <a
                   href="/property-for-sale"
@@ -847,10 +1024,11 @@ export default function AgencyProductLandingPage() {
                 <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-orange-50 text-orange-700">
                   <MessageSquareText className="h-5 w-5" aria-hidden="true" />
                 </span>
-                <h3 className="mt-6 text-2xl font-bold text-slate-950">Property context</h3>
+                <h3 className="mt-6 text-2xl font-bold text-slate-950">Broader discovery</h3>
                 <p className="mt-4 flex-1 text-sm leading-7 text-slate-600">
-                  The enquiry workflow retains the listing and contact context needed to bring
-                  interest back into the Agency&apos;s operating view.
+                  Explore is a separate Property Listify experience for broader property and content
+                  discovery. It is not a promised inventory placement or campaign service for each
+                  Agency.
                 </p>
                 <a
                   href="/explore"
@@ -867,9 +1045,13 @@ export default function AgencyProductLandingPage() {
                 aria-hidden="true"
               />
               <p>
-                Launch Access does not buy search priority, sponsored placement, guaranteed traffic
-                or guaranteed leads. Discovery and publication remain subject to normal product and
-                safety rules.
+                <strong className="font-bold">
+                  Platform discovery, not outsourced Agency marketing.
+                </strong>{' '}
+                Property Listify operates its own marketplace discovery surfaces and is building
+                further discovery and acquisition paths around the market. Your Agency continues its
+                own marketing. Launch Access does not include bespoke social-media or advertising
+                campaigns, priority placement, or guaranteed traffic, leads, viewings or sales.
               </p>
             </div>
           </div>
@@ -968,14 +1150,17 @@ export default function AgencyProductLandingPage() {
             <div className="grid items-stretch gap-10 xl:grid-cols-[.85fr_1.15fr] xl:gap-16">
               <div className="pt-2 xl:pt-4">
                 <p className="text-xs font-bold uppercase tracking-[0.2em] text-[var(--brand-blue)]">
-                  90-Day Launch Access
+                  Launch Access · {term?.label || 'Fixed term'}
                 </p>
                 <h2 className="mt-5 max-w-xl font-serif text-4xl font-semibold leading-[1.04] tracking-[-0.04em] text-slate-950 md:text-5xl xl:text-[3.5rem]">
-                  Give your Agency 90 days to operate the complete supported workspace.
+                  Give your Agency {term?.label || 'a fixed launch term'} to operate the complete
+                  supported workspace.
                 </h2>
                 <p className="mt-5 max-w-lg text-base leading-7 text-slate-600 md:text-lg md:leading-8">
-                  R999 gives the business one launch term for the complete currently supported
-                  Agency workspace — not a reduced feature tier. Bring real people, inventory and
+                  {price?.kind === 'fixed' ? `${price.label} gives` : 'Agency Launch Access gives'}{' '}
+                  the business one fixed launch term for the complete currently supported Agency
+                  workspace and participation in the Property Listify marketplace for eligible
+                  published inventory — not a reduced feature tier. Bring real people, inventory and
                   opportunities into Property Listify, then use supported follow-up, deal,
                   commission and management views in the rhythm of the Agency.
                 </p>
@@ -990,6 +1175,22 @@ export default function AgencyProductLandingPage() {
                       <span>
                         {' '}
                         — supported Agency accounts, invitations, roles and ownership context.
+                      </span>
+                    </p>
+                  </div>
+                  <div className="flex items-start gap-3 rounded-2xl border border-blue-100 bg-white/65 px-4 py-3.5">
+                    <Check
+                      className="mt-0.5 h-4 w-4 shrink-0 text-[var(--brand-blue)]"
+                      aria-hidden="true"
+                    />
+                    <p>
+                      <strong className="font-bold text-slate-950">
+                        Participate in the marketplace
+                      </strong>
+                      <span>
+                        {' '}
+                        — eligible published inventory can participate in normal search, location
+                        and public property-detail discovery, subject to normal rules.
                       </span>
                     </p>
                   </div>
@@ -1025,12 +1226,10 @@ export default function AgencyProductLandingPage() {
                       aria-hidden="true"
                     />
                     <p>
-                      <strong className="font-bold text-slate-950">
-                        Up to 500 active listings
-                      </strong>
+                      <strong className="font-bold text-slate-950">{listingCapacityLabel}</strong>
                       <span>
                         {' '}
-                        — launch capacity safeguard, subject to normal controls; not the whole
+                        — launch capacity safeguard, subject to normal controls; not the primary
                         reason to buy.
                       </span>
                     </p>
@@ -1071,14 +1270,14 @@ export default function AgencyProductLandingPage() {
           </div>
         </section>
 
-        <AgencyFaqSection />
+        <AgencyFaqSection faqs={faqs} />
       </main>
 
       <script type="application/ld+json">
         {JSON.stringify({
           '@context': 'https://schema.org',
           '@type': 'FAQPage',
-          mainEntity: FAQS.map(item => ({
+          mainEntity: faqs.map(item => ({
             '@type': 'Question',
             name: item.question,
             acceptedAnswer: { '@type': 'Answer', text: item.answer },
