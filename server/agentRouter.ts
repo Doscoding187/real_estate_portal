@@ -67,6 +67,8 @@ import {
 } from './services/commercialLeadContextService';
 import type { CommercialLeadOperationalContext } from './services/commercialLeadContextService';
 import {
+  AGENT_LEAD_OFFER_READINESS_METADATA_KIND,
+  AGENT_LEAD_OFFER_READINESS_METADATA_VERSION,
   DEFAULT_AGENT_LEAD_OFFER_READINESS,
   isAgentLeadOfferReadinessComplete,
   parseAgentLeadOfferReadiness,
@@ -84,6 +86,7 @@ type AgentShowingStatus = 'scheduled' | 'completed' | 'cancelled' | 'no_show';
 type CanonicalAgentShowingStorageStatus = 'confirmed' | 'completed' | 'cancelled' | 'no_show';
 
 const OFFER_READINESS_QUALIFICATION_BLOCKER = 'Qualification must be recorded before offer work.';
+const OFFER_READINESS_METADATA_PATTERN = `%"kind":"${AGENT_LEAD_OFFER_READINESS_METADATA_KIND}","version":${AGENT_LEAD_OFFER_READINESS_METADATA_VERSION}%`;
 
 const OFFER_READINESS_CHECKS: Array<{
   key: keyof AgentLeadOfferReadiness;
@@ -129,9 +132,14 @@ async function getAgentOfferReadiness(
   const activities = await db
     .select({ metadata: leadActivities.metadata })
     .from(leadActivities)
-    .where(eq(leadActivities.leadId, lead.id))
+    .where(
+      and(
+        eq(leadActivities.leadId, lead.id),
+        like(leadActivities.metadata, OFFER_READINESS_METADATA_PATTERN),
+      ),
+    )
     .orderBy(desc(leadActivities.createdAt), desc(leadActivities.id))
-    .limit(100);
+    .limit(1);
 
   const persistedReadiness =
     activities
@@ -153,6 +161,10 @@ async function getAgentOfferReadiness(
     blockers: [...canonicalBlockers, ...checklistBlockers],
   };
 }
+
+export const __agentOfferReadinessTestHooks = {
+  getAgentOfferReadiness,
+};
 
 function mapAgentShowingStatusToCanonical(
   status: AgentShowingStatus,

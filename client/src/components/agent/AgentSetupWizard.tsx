@@ -266,8 +266,25 @@ export function AgentSetupWizard() {
   const handleCompleteSetup = async () => {
     await saveProfileMutation.mutateAsync(buildPayload());
     const result = await publishProfileMutation.mutateAsync();
-
-    const onboardingStatus = await apiFetch<AgentOnboardingStatus>('/agent/onboarding-status');
+    let onboardingStatus: AgentOnboardingStatus;
+    try {
+      onboardingStatus = await apiFetch<AgentOnboardingStatus>('/agent/onboarding-status');
+    } catch {
+      // The completed profile mutations remain durable even if the navigation
+      // lookup is temporarily unavailable. The dashboard owns a retryable
+      // onboarding-status state, so hand the agent there instead of leaving
+      // this async click handler unhandled on the setup screen.
+      toast.success(
+        result.isPublic
+          ? 'Your public profile is now live. Opening your workspace so you can continue.'
+          : 'Your profile was saved. Opening your workspace so you can continue.',
+      );
+      toast.error(
+        'We could not confirm your next setup step. Your workspace will let you retry shortly.',
+      );
+      setLocation('/agent/dashboard');
+      return;
+    }
     const journeyAction = getAgentJourneyAction(onboardingStatus);
 
     toast.success(
