@@ -98,6 +98,10 @@ describe('EnhancedNavbar Professionals journey menu', () => {
       'href',
       '/advertise/sell/agents',
     );
+    expect(within(region).getByRole('link', { name: 'Agency onboarding' })).toHaveAttribute(
+      'href',
+      '/advertise/sell/agencies',
+    );
     expect(within(region).getByRole('link', { name: 'Developer onboarding' })).toHaveAttribute(
       'href',
       '/advertise/sell/developers',

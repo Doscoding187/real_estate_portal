@@ -39,7 +39,7 @@ export default function OnboardingSuccess() {
           </div>
           <h1 className="mb-2 text-2xl font-bold text-gray-900">
             {isActive
-              ? 'Agency Activated'
+              ? 'Agency Launch Access active'
               : isManualEftHandoff
                 ? 'Invoice Issued'
                 : 'Activation Pending'}
@@ -48,7 +48,7 @@ export default function OnboardingSuccess() {
             {isManualEftHandoff && !isActive
               ? 'Your agency setup is saved. Complete the EFT payment and upload proof to activate access.'
               : isActive
-                ? 'Your agency is active and ready to use.'
+                ? 'Your Agency workspace is active and ready for your people, inventory and opportunities.'
                 : 'A verified invoice and payment proof are required before agency access can be activated.'}
           </p>
         </div>
@@ -85,8 +85,11 @@ export default function OnboardingSuccess() {
             <div className="flex items-start gap-3">
               <CheckCircle2 className="mt-0.5 h-5 w-5 text-green-600" />
               <div className="flex-1">
-                <p className="mb-1 font-medium text-green-900">Agency Activated! 🎉</p>
-                <p className="text-sm text-green-700">Team invitations have been sent</p>
+                <p className="mb-1 font-medium text-green-900">Agency workspace ready</p>
+                <p className="text-sm text-green-700">
+                  Bring the team into the workspace, then manage inventory, opportunities and
+                  commercial progress in one place.
+                </p>
               </div>
             </div>
           </div>
@@ -100,7 +103,7 @@ export default function OnboardingSuccess() {
         >
           {isActive ? (
             <>
-              Continue to Dashboard
+              Open Agency workspace
               <span className="ml-2">→</span>
             </>
           ) : isManualEftHandoff ? (

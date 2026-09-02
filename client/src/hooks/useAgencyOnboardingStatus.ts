@@ -1,6 +1,10 @@
 import { useAuth } from '@/_core/hooks/useAuth';
 import { trpc } from '@/lib/trpc';
-import { useEffect } from 'react';
+import type {
+  AgencyRecommendedNextStep,
+  AgencySubscriptionDisplayStatus,
+} from '@shared/agencyJourney';
+import { useCallback, useEffect } from 'react';
 import { useLocation } from 'wouter';
 
 export type AgencyOnboardingStatus = {
@@ -12,7 +16,7 @@ export type AgencyOnboardingStatus = {
   onboardingStep: number;
   dashboardUnlocked: boolean;
   fullFeaturesUnlocked: boolean;
-  recommendedNextStep: string;
+  recommendedNextStep: AgencyRecommendedNextStep;
   teamMembersCount: number;
   invitationsCount: number;
   accessState: AgencyAccessState;
@@ -29,17 +33,7 @@ export type AgencyOnboardingStatus = {
 
 export type AgencyAccessState = {
   onboardingComplete: boolean;
-  billingStatus:
-    | 'not_started'
-    | 'pending_payment'
-    | 'payment_under_review'
-    | 'active'
-    | 'past_due'
-    | 'grace_period'
-    | 'suspended'
-    | 'cancelled'
-    | 'expired'
-    | 'unavailable';
+  billingStatus: AgencySubscriptionDisplayStatus;
   planKey: string | null;
   planAccessSource: string;
   degraded: boolean;
@@ -66,6 +60,10 @@ export function useAgencyOnboardingStatus(options: UseAgencyOnboardingStatusOpti
     retry: 0,
     refetchOnWindowFocus: false,
   });
+  const { refetch: refetchStatus } = statusQuery;
+  const retry = useCallback(() => {
+    void refetchStatus();
+  }, [refetchStatus]);
 
   useEffect(() => {
     if (authLoading || statusQuery.isLoading) return;
@@ -73,7 +71,12 @@ export function useAgencyOnboardingStatus(options: UseAgencyOnboardingStatusOpti
 
     const status = statusQuery.data;
 
-    if (!status?.hasAgency) {
+    // A failed or absent response is not evidence that the Agency has not
+    // been created. Preserve the current route and let the workspace offer a
+    // retry instead of incorrectly bouncing an owner into setup.
+    if (statusQuery.error || !status) return;
+
+    if (!status.hasAgency) {
       if (window.location.pathname !== '/agency/setup') setLocation('/agency/setup');
       return;
     }
@@ -81,10 +84,6 @@ export function useAgencyOnboardingStatus(options: UseAgencyOnboardingStatusOpti
     if (requireDashboardUnlocked && !status.dashboardUnlocked) {
       if (window.location.pathname !== '/agency/setup') setLocation('/agency/setup');
       return;
-    }
-
-    if (statusQuery.error) {
-      if (window.location.pathname !== '/agency/setup') setLocation('/agency/setup');
     }
   }, [
     authLoading,
@@ -99,5 +98,9 @@ export function useAgencyOnboardingStatus(options: UseAgencyOnboardingStatusOpti
   return {
     status: statusQuery.data ?? null,
     isLoading: authLoading || statusQuery.isLoading,
+    error: statusQuery.error
+      ? 'We could not confirm your Agency workspace access right now.'
+      : null,
+    retry,
   };
 }

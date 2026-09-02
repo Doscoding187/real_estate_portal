@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { useAgencyOnboardingStatus } from '@/hooks/useAgencyOnboardingStatus';
+import { getAgencyJourneyAction } from '@/lib/agencyJourney';
 import { trpc } from '@/lib/trpc';
 import {
   DETAIL_WORKSPACES,
@@ -57,7 +58,12 @@ export function useAgencyWorkspaceData(workspace: WorkspaceId) {
   const [selectedMetric, setSelectedMetric] = useState<'leads' | 'listings' | 'sales'>('leads');
   const [selectedReportMonth, setSelectedReportMonth] = useState<string | null>(null);
   const { user } = useAuth();
-  const { status, isLoading: statusLoading } = useAgencyOnboardingStatus({
+  const {
+    status,
+    isLoading: statusLoading,
+    error: statusError,
+    retry: retryStatus,
+  } = useAgencyOnboardingStatus({
     requireDashboardUnlocked: true,
   });
 
@@ -131,6 +137,21 @@ export function useAgencyWorkspaceData(workspace: WorkspaceId) {
   const setupComplete = Boolean(status?.fullFeaturesUnlocked);
   const billingNeedsAttention = Boolean(status?.hasAgency && !status?.billingActivated);
   const teamNeedsAttention = Boolean(status?.billingActivated && !status?.teamReady);
+  const journeyNeedsAttention = Boolean(
+    status?.hasAgency && status.recommendedNextStep !== 'workspace',
+  );
+  const billingJourneyNeedsAttention = Boolean(
+    status &&
+      [
+        'activate_launch_access',
+        'complete_payment',
+        'await_payment_review',
+        'renew_launch_access',
+      ].includes(status.recommendedNextStep),
+  );
+  const teamCoverageNeedsAttention = Boolean(
+    status?.billingActivated && (teamNeedsAttention || stats.totalAgents === 0),
+  );
 
   const leadSignals = useMemo(() => {
     const source = leads.length ? leads : recentLeads;
@@ -188,18 +209,19 @@ export function useAgencyWorkspaceData(workspace: WorkspaceId) {
   const attentionItems = useMemo(() => {
     const items: WorkspaceDataProps['attentionItems'] = [];
 
-    if (billingNeedsAttention) {
+    if (billingJourneyNeedsAttention) {
+      const action = getAgencyJourneyAction(status);
       items.push({
-        title: 'Subscription activation is pending',
-        detail: 'Publishing and full agency workflows unlock after billing activation.',
+        title: action.title,
+        detail: action.description,
         value: 'High',
         tone: 'amber',
         icon: CreditCard,
         route: 'billing',
-        action: 'Review billing',
+        action: action.label,
       });
     }
-    if (teamNeedsAttention || stats.totalAgents === 0) {
+    if (teamCoverageNeedsAttention) {
       items.push({
         title: 'Team coverage is thin',
         detail: 'Invite or activate agents so leads and listings have clear ownership.',
@@ -309,14 +331,15 @@ export function useAgencyWorkspaceData(workspace: WorkspaceId) {
     }
     return items;
   }, [
-    billingNeedsAttention,
+    billingJourneyNeedsAttention,
     leadSignals,
     stats.pendingListings,
     stats.totalAgents,
     performanceExceptions,
     settlements,
     status?.teamMembersCount,
-    teamNeedsAttention,
+    status?.recommendedNextStep,
+    teamCoverageNeedsAttention,
   ]);
 
   const agendaItems = useMemo(
@@ -481,11 +504,14 @@ export function useAgencyWorkspaceData(workspace: WorkspaceId) {
   return {
     status,
     statusLoading,
+    statusError,
+    retryStatus,
     agencyName,
     principalName,
     setupComplete,
     billingNeedsAttention,
     teamNeedsAttention,
+    journeyNeedsAttention,
     workspaceContent,
   };
 }

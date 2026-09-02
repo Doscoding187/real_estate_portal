@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useLocation } from 'wouter';
 import { AgencyLayout } from '@/components/agency/AgencyLayout';
 import { ActivationBanner } from '@/features/agency/shell/ActivationBanner';
+import { AgencyJourneyStatusErrorState } from '@/features/agency/shell/AgencyJourneyStatusErrorState';
 import { AgencySidebar } from '@/features/agency/shell/AgencySidebar';
 import { AgencyTopBar } from '@/features/agency/shell/AgencyTopBar';
 import { WORKSPACE_TITLES, workspaceFromPath } from '@/features/agency/workspace/constants';
@@ -17,11 +18,12 @@ export default function AgencyWorkspace() {
   const {
     status,
     statusLoading,
+    statusError,
+    retryStatus,
     agencyName,
     principalName,
     setupComplete,
-    billingNeedsAttention,
-    teamNeedsAttention,
+    journeyNeedsAttention,
     workspaceContent,
   } = useAgencyWorkspaceData(workspace);
 
@@ -38,6 +40,16 @@ export default function AgencyWorkspace() {
             <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-4 border-emerald-100 border-t-emerald-600" />
             <p className="text-sm font-medium text-slate-500">Preparing your agency workspace...</p>
           </div>
+        </div>
+      </AgencyLayout>
+    );
+  }
+
+  if (statusError) {
+    return (
+      <AgencyLayout className="bg-[#f5f7f4]">
+        <div className="flex min-h-screen items-center justify-center px-4">
+          <AgencyJourneyStatusErrorState onRetry={retryStatus} />
         </div>
       </AgencyLayout>
     );
@@ -67,10 +79,13 @@ export default function AgencyWorkspace() {
           />
 
           <main className="mx-auto max-w-[1440px] space-y-5 px-4 py-5 lg:px-6">
-            {billingNeedsAttention || teamNeedsAttention ? (
+            {journeyNeedsAttention && status ? (
               <ActivationBanner
-                billingNeedsAttention={billingNeedsAttention}
-                onNavigate={navigateTo}
+                recommendedNextStep={status.recommendedNextStep}
+                onNavigate={href => {
+                  setLocation(href);
+                  setMobileNavOpen(false);
+                }}
               />
             ) : null}
 
