@@ -4,7 +4,9 @@ import { AgentAppShell } from '@/components/agent/AgentAppShell';
 import { agentPageStyles } from '@/components/agent/agentPageStyles';
 import { LeadPipeline } from '@/components/agent/LeadPipeline';
 import { AgentFeatureLockedState } from '@/components/agent/AgentFeatureLockedState';
+import { AgentJourneyStatusErrorState } from '@/components/agent/AgentJourneyStatusErrorState';
 import { useAgentOnboardingStatus } from '@/hooks/useAgentOnboardingStatus';
+import { getAgentJourneyAction, isAgentProfileJourneyStep } from '@/lib/agentJourney';
 import { trpc } from '@/lib/trpc';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -201,7 +203,12 @@ function LeadResponseSummaryPanel({ summary }: { summary?: LeadResponseSummary }
 export default function AgentLeads() {
   const [location, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState('pipeline');
-  const { status, isLoading: statusLoading } = useAgentOnboardingStatus({
+  const {
+    status,
+    isLoading: statusLoading,
+    error: statusError,
+    retry: retryStatus,
+  } = useAgentOnboardingStatus({
     requireDashboardUnlocked: true,
   });
 
@@ -224,9 +231,12 @@ export default function AgentLeads() {
   }, [location]);
 
   const leadsLocked = !statusLoading && !status?.entitlements?.canReceiveLeads;
+  const journeyAction = getAgentJourneyAction(status);
+  const needsProfileCompletion = isAgentProfileJourneyStep(status);
 
   const { data: responseSummary, isLoading: responseSummaryLoading } =
     trpc.agent.getLeadResponseSummary.useQuery(undefined, {
+      enabled: !leadsLocked && !statusLoading,
       refetchOnWindowFocus: false,
     });
   const { data: stats } = trpc.agent.getDashboardStats.useQuery(undefined, {
@@ -324,19 +334,24 @@ export default function AgentLeads() {
             onAction={() => {}}
             isLoading
           />
-        ) : leadsLocked && status?.subscriptionStatus === 'expired' ? (
-          <AgentFeatureLockedState
-            title="Your Launch Access term has expired"
-            description="Your leads are safely stored. Renew Launch Access to regain lead management and keep new enquiries flowing."
-            actionLabel="Renew Launch Access"
-            onAction={() => setLocation('/agent/select-package')}
-          />
+        ) : statusError ? (
+          <AgentJourneyStatusErrorState onRetry={retryStatus} />
         ) : leadsLocked ? (
           <AgentFeatureLockedState
-            title="Lead management unlocks after contact setup"
-            description="Add the remaining core profile details, especially your contact information, to start receiving and managing leads."
-            actionLabel="Finish setup"
-            onAction={() => setLocation('/agent/setup')}
+            title={
+              needsProfileCompletion
+                ? 'Add your contact details before working leads'
+                : journeyAction.title
+            }
+            description={
+              needsProfileCompletion
+                ? 'Keep a working phone number on your professional profile, then activate Launch Access to receive and manage enquiries.'
+                : journeyAction.description
+            }
+            actionLabel={journeyAction.waiting ? 'Return to dashboard' : journeyAction.label}
+            onAction={() =>
+              setLocation(journeyAction.waiting ? '/agent/dashboard' : journeyAction.href)
+            }
           />
         ) : (
           <>

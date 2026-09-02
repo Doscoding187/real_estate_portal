@@ -49,9 +49,10 @@ const NOTIFICATION_COLORS = {
 
 interface NotificationCenterProps {
   className?: string;
+  enabled?: boolean;
 }
 
-export function NotificationCenter({ className }: NotificationCenterProps) {
+export function NotificationCenter({ className, enabled = true }: NotificationCenterProps) {
   const [showAll, setShowAll] = useState(false);
   const [filterType, setFilterType] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -65,13 +66,15 @@ export function NotificationCenter({ className }: NotificationCenterProps) {
       unreadOnly: !showAll,
     },
     {
-      refetchInterval: 30000, // Refetch every 30 seconds
+      enabled,
+      refetchInterval: enabled ? 30000 : false, // Refetch every 30 seconds
     },
   );
 
   // Fetch unread count
   const { data: unreadCount } = trpc.agent.getUnreadNotificationCount.useQuery(undefined, {
-    refetchInterval: 30000,
+    enabled,
+    refetchInterval: enabled ? 30000 : false,
   });
 
   // Mark as read mutation
@@ -114,7 +117,7 @@ export function NotificationCenter({ className }: NotificationCenterProps) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="sm" className={`relative ${className}`}>
+        <Button variant="ghost" size="sm" disabled={!enabled} className={`relative ${className}`}>
           {(unreadCount?.count || 0) > 0 ? (
             <BellRing className="h-5 w-5" />
           ) : (

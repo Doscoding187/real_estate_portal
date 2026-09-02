@@ -23,9 +23,10 @@ describe('AgentStatusStrip', () => {
     apiFetchMock.mockResolvedValue({
       packageSelected: false,
       approvalStatus: 'approved',
+      recommendedNextStep: 'select_package',
     });
     renderStrip();
-    expect(await screen.findByText('Get Launch Access')).toBeTruthy();
+    expect(await screen.findByText('Activate Launch Access')).toBeTruthy();
   });
 
   it('offers renewal language once the launch term has expired', async () => {
@@ -33,6 +34,7 @@ describe('AgentStatusStrip', () => {
       packageSelected: true,
       approvalStatus: 'approved',
       subscriptionStatus: 'expired',
+      recommendedNextStep: 'renew_launch_access',
     });
     renderStrip();
     expect(await screen.findByText('Renew Launch Access')).toBeTruthy();
@@ -44,6 +46,7 @@ describe('AgentStatusStrip', () => {
       packageSelected: true,
       approvalStatus: 'approved',
       subscriptionStatus: 'active',
+      recommendedNextStep: 'dashboard',
     });
     renderStrip();
     await waitFor(() => expect(screen.getByText('Launch Access active')).toBeTruthy());
@@ -56,6 +59,7 @@ describe('AgentStatusStrip', () => {
       packageSelected: true,
       approvalStatus: 'pending',
       subscriptionStatus: 'payment_under_review',
+      recommendedNextStep: 'await_payment_review',
     });
     renderStrip();
     expect(await screen.findByText('Payment proof under review')).toBeTruthy();

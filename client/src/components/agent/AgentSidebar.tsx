@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useLocation } from 'wouter';
 import { useAuth } from '@/_core/hooks/useAuth';
+import { useAgentOnboardingStatus } from '@/hooks/useAgentOnboardingStatus';
 import { trpc } from '@/lib/trpc';
 import { cn } from '@/lib/utils';
 import {
@@ -9,7 +10,6 @@ import {
   CalendarDays,
   CircleHelp,
   DollarSign,
-  FileText,
   Home,
   MapPinned,
   LogOut,
@@ -34,7 +34,7 @@ const OPERATE_LINKS = [
   { label: 'Overview', href: '/agent/dashboard', icon: Home },
   { label: 'Listings', href: '/agent/listings', icon: Building2 },
   { label: 'Leads & CRM', href: '/agent/leads', icon: Users },
-  { label: 'Canvassing', href: '/agent/canvassing', icon: MapPinned },
+  { label: 'Seller Growth', href: '/agent/canvassing', icon: MapPinned },
   { label: 'Calendar', href: '/agent/productivity', icon: CalendarDays },
 ] as const;
 
@@ -46,24 +46,26 @@ const GROW_LINKS = [
 ] as const;
 
 const MANAGE_LINKS = [
-  { label: 'Reports', href: '/agent/analytics', icon: FileText },
   { label: 'Settings', href: '/agent/settings', icon: Settings },
-  { label: 'Help Center', href: '/help', icon: CircleHelp },
+  { label: 'Help Center', href: '/agent/training-support', icon: CircleHelp },
 ] as const;
 
 export function AgentSidebar({ mode = 'desktop' }: SidebarProps) {
   const [location, setLocation] = useLocation();
   const { user, logout } = useAuth();
+  const { status, isLoading: statusLoading } = useAgentOnboardingStatus();
+  const operationalDataEnabled =
+    user?.role === 'agent' && !statusLoading && Boolean(status?.fullFeaturesUnlocked);
 
   const { data: stats } = trpc.agent.getDashboardStats.useQuery(undefined, {
-    enabled: user?.role === 'agent',
+    enabled: operationalDataEnabled,
     retry: false,
   });
 
   const { data: pipelineData } = trpc.agent.getLeadsPipeline.useQuery(
     { filters: {} },
     {
-      enabled: user?.role === 'agent',
+      enabled: operationalDataEnabled,
       retry: false,
     },
   );

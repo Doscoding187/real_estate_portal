@@ -99,13 +99,14 @@ export default function ListingTemplate() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header with listing wizard link */}
+      {/* Public template preview: route prospective publishers through the
+          audience-aware Advertise journey before asking for an account. */}
       <div className="bg-primary text-primary-foreground py-4">
         <div className="container flex justify-between items-center">
           <h1 className="text-xl font-bold">Property Listing Template</h1>
-          <Link href="/listings/create">
+          <Link href="/advertise">
             <Button variant="secondary" className="font-semibold">
-              Create Your Listing
+              Advertise a Property
             </Button>
           </Link>
         </div>
@@ -330,9 +331,9 @@ export default function ListingTemplate() {
                 </div>
 
                 <div className="space-y-3">
-              <Button variant="conversion" className="w-full" size="lg">
-                Contact Agent
-              </Button>
+                  <Button variant="conversion" className="w-full" size="lg">
+                    Contact Agent
+                  </Button>
                   <Button variant="outline" className="w-full" size="lg">
                     <Heart className="h-5 w-5 mr-2" />
                     Save Property
@@ -341,9 +342,9 @@ export default function ListingTemplate() {
                     <Share2 className="h-5 w-5 mr-2" />
                     Share Property
                   </Button>
-                  <Link href="/listings/create">
+                  <Link href="/advertise">
                     <Button variant="secondary" className="w-full" size="lg">
-                      Create Similar Listing
+                      Advertise a Similar Property
                     </Button>
                   </Link>
                 </div>

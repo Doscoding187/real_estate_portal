@@ -1,7 +1,6 @@
 import { Button } from './ui/button';
 import { Search, User, ChevronDown, X } from 'lucide-react';
 import { LocationAutosuggest } from './LocationAutosuggest';
-import { Badge } from './ui/badge';
 import { useLocation, useSearch } from 'wouter';
 import { useEffect, useMemo, useState } from 'react';
 import {
@@ -402,12 +401,9 @@ export function ListingNavbar({
         <Button
           variant="secondary"
           className="hidden md:flex bg-white hover:bg-gray-100 text-gray-900 font-medium text-sm h-9 px-4 gap-2"
-          onClick={() => setLocation('/listings/create')}
+          onClick={() => setLocation('/advertise')}
         >
-          Post property
-          <Badge className="bg-green-700 hover:bg-green-800 text-[10px] px-1 py-0 h-4 rounded text-white border-0">
-            FREE
-          </Badge>
+          Advertise / List Property
         </Button>
         <button
           type="button"

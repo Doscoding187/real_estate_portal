@@ -1,9 +1,13 @@
 import { useLocation } from 'wouter';
 import { AgentAppShell } from '@/components/agent/AgentAppShell';
+import { AgentFeatureLockedState } from '@/components/agent/AgentFeatureLockedState';
+import { AgentJourneyStatusErrorState } from '@/components/agent/AgentJourneyStatusErrorState';
 import { agentPageStyles } from '@/components/agent/agentPageStyles';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { useAgentOnboardingStatus } from '@/hooks/useAgentOnboardingStatus';
+import { getAgentJourneyAction, isAgentProfileJourneyStep } from '@/lib/agentJourney';
 import { trpc } from '@/lib/trpc';
 import { cn } from '@/lib/utils';
 import {
@@ -139,19 +143,31 @@ function MetricCard({
 
 export default function AgentReferrals() {
   const [, setLocation] = useLocation();
+  const {
+    status,
+    isLoading: statusLoading,
+    error: statusError,
+    retry: retryStatus,
+  } = useAgentOnboardingStatus({
+    requireDashboardUnlocked: true,
+  });
+  const referralWorkspaceEnabled = !statusLoading && Boolean(status?.fullFeaturesUnlocked);
   const opportunitiesQuery =
     trpc.distribution.partner.listEligibleDevelopmentsForSubmission.useQuery(undefined, {
+      enabled: referralWorkspaceEnabled,
       retry: false,
       refetchOnWindowFocus: false,
     });
   const referralsQuery = trpc.distribution.partner.listMyReferrals.useQuery(
     { limit: 8 },
     {
+      enabled: referralWorkspaceEnabled,
       retry: false,
       refetchOnWindowFocus: false,
     },
   );
   const networkStatusQuery = trpc.distribution.referrer.status.useQuery(undefined, {
+    enabled: referralWorkspaceEnabled,
     retry: false,
     refetchOnWindowFocus: false,
   });
@@ -167,12 +183,66 @@ export default function AgentReferrals() {
   const hasFullNetworkAccess = networkStatusQuery.data?.hasAccess === true;
   const activeProgramCount = Number(networkStatusQuery.data?.accessCount || 0);
   const isLoading = opportunitiesQuery.isLoading || referralsQuery.isLoading;
+  const journeyAction = getAgentJourneyAction(status);
+  const needsProfileCompletion = isAgentProfileJourneyStep(status);
+  const journeyLocked = !statusLoading && !status?.fullFeaturesUnlocked;
 
   const refreshData = () => {
     void opportunitiesQuery.refetch();
     void referralsQuery.refetch();
     void networkStatusQuery.refetch();
   };
+
+  if (statusLoading) {
+    return (
+      <AgentAppShell>
+        <main className={agentPageStyles.container}>
+          <AgentFeatureLockedState
+            title="Preparing your referral workspace"
+            description="We are checking your onboarding and Launch Access before loading referral opportunities and buyer files."
+            actionLabel="Loading"
+            onAction={() => {}}
+            isLoading
+          />
+        </main>
+      </AgentAppShell>
+    );
+  }
+
+  if (statusError) {
+    return (
+      <AgentAppShell>
+        <main className={agentPageStyles.container}>
+          <AgentJourneyStatusErrorState onRetry={retryStatus} />
+        </main>
+      </AgentAppShell>
+    );
+  }
+
+  if (journeyLocked) {
+    return (
+      <AgentAppShell>
+        <main className={agentPageStyles.container}>
+          <AgentFeatureLockedState
+            title={
+              needsProfileCompletion
+                ? 'Complete your profile before using referrals'
+                : journeyAction.title
+            }
+            description={
+              needsProfileCompletion
+                ? 'Finish your professional profile, then activate Launch Access to work buyer referrals from your agent workspace.'
+                : journeyAction.description
+            }
+            actionLabel={journeyAction.waiting ? 'Return to dashboard' : journeyAction.label}
+            onAction={() =>
+              setLocation(journeyAction.waiting ? '/agent/dashboard' : journeyAction.href)
+            }
+          />
+        </main>
+      </AgentAppShell>
+    );
+  }
 
   return (
     <AgentAppShell>

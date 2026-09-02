@@ -48,6 +48,10 @@ import {
 import { trpc } from '@/lib/trpc';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import {
+  DEFAULT_AGENT_LEAD_OFFER_READINESS,
+  type AgentLeadOfferReadiness,
+} from '@shared/agentLeadOfferReadiness';
 
 interface Lead {
   id: number;
@@ -139,22 +143,10 @@ function getPipelineStageForLeadStatus(status: string | null | undefined): Pipel
   }
 }
 
-type LeadReadiness = {
-  viewingCompleted: boolean;
-  feedbackLogged: boolean;
-  affordabilityConfirmed: boolean;
-};
-
-const DEFAULT_READINESS: LeadReadiness = {
-  viewingCompleted: false,
-  feedbackLogged: false,
-  affordabilityConfirmed: false,
-};
-
-const READINESS_ITEMS: Array<{ key: keyof LeadReadiness; label: string }> = [
+const READINESS_ITEMS: Array<{ key: keyof AgentLeadOfferReadiness; label: string }> = [
   { key: 'viewingCompleted', label: 'Viewing completed' },
   { key: 'feedbackLogged', label: 'Feedback logged' },
-  { key: 'affordabilityConfirmed', label: 'Budget confirmed' },
+  { key: 'affordabilityConfirmed', label: 'Buyer affordability confirmed' },
 ];
 
 const SOURCE_OPTIONS = [
@@ -300,11 +292,6 @@ function getLeadNextMove(lead: Lead) {
   }
 }
 
-function isReadinessComplete(readiness?: LeadReadiness) {
-  const value = readiness || DEFAULT_READINESS;
-  return value.viewingCompleted && value.feedbackLogged && value.affordabilityConfirmed;
-}
-
 function getDeliveryMeta(status?: string | null) {
   switch (status) {
     case 'delivered':
@@ -377,7 +364,6 @@ export function LeadPipeline({ className, propertyId, selectedLeadId }: LeadPipe
     durationMinutes: '30',
     notes: '',
   });
-  const [leadReadiness, setLeadReadiness] = useState<Record<number, LeadReadiness>>({});
   const [openedSearchLeadId, setOpenedSearchLeadId] = useState<number | null>(null);
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -396,6 +382,13 @@ export function LeadPipeline({ className, propertyId, selectedLeadId }: LeadPipe
         enabled: !!selectedLead?.id,
       },
     );
+  const { data: offerReadiness, isLoading: offerReadinessLoading } =
+    trpc.agent.getLeadOfferReadiness.useQuery(
+      { leadId: selectedLead?.id ?? 0 },
+      {
+        enabled: !!selectedLead?.id,
+      },
+    );
 
   // Fetch leads pipeline
   const { data: pipelineData, isLoading } = trpc.agent.getLeadsPipeline.useQuery({
@@ -407,10 +400,18 @@ export function LeadPipeline({ className, propertyId, selectedLeadId }: LeadPipe
 
   // Update lead status mutation
   const updateLeadStatusMutation = trpc.agent.moveLeadToStage.useMutation({
-    onSuccess: () => {
+    onSuccess: (_result, input) => {
       toast.success('Lead moved successfully');
+      setSelectedLead(current =>
+        current?.id === input.leadId
+          ? { ...current, status: LEAD_STATUS_BY_STAGE[input.targetStage as PipelineStageId] }
+          : current,
+      );
       utils.agent.getLeadsPipeline.invalidate();
       utils.agent.getDashboardStats.invalidate();
+      if (selectedLead?.id) {
+        utils.agent.getLeadOfferReadiness.invalidate({ leadId: selectedLead.id });
+      }
     },
     onError: error => {
       toast.error(error.message || 'Failed to move lead');
@@ -437,16 +438,27 @@ export function LeadPipeline({ className, propertyId, selectedLeadId }: LeadPipe
     },
   });
   const addLeadActivityMutation = trpc.agent.addLeadActivity.useMutation({
-    onSuccess: () => {
-      toast.success('CRM note added');
+    onSuccess: (_result, input) => {
+      toast.success(input.activityType === 'note' ? 'CRM note added' : 'Contact outcome recorded');
       setNewActivityNote('');
       if (selectedLead?.id) {
         utils.agent.getLeadActivities.invalidate({ leadId: selectedLead.id });
+        utils.agent.getLeadOfferReadiness.invalidate({ leadId: selectedLead.id });
       }
       utils.agent.getActivationMilestones.invalidate();
     },
     onError: error => {
       toast.error(error.message || 'Failed to add CRM note');
+    },
+  });
+  const setLeadOfferReadinessMutation = trpc.agent.setLeadOfferReadiness.useMutation({
+    onSuccess: (_result, input) => {
+      toast.success('Offer readiness saved to the lead record');
+      utils.agent.getLeadOfferReadiness.invalidate({ leadId: input.leadId });
+      utils.agent.getLeadActivities.invalidate({ leadId: input.leadId });
+    },
+    onError: error => {
+      toast.error(error.message || 'Failed to save offer readiness');
     },
   });
   const setLeadFollowUpMutation = trpc.agent.setLeadFollowUp.useMutation({
@@ -602,25 +614,26 @@ export function LeadPipeline({ className, propertyId, selectedLeadId }: LeadPipe
     }
   };
 
-  const getReadinessForLead = (leadId: number) => leadReadiness[leadId] || DEFAULT_READINESS;
+  const getReadinessForLead = (leadId: number) => {
+    if (selectedLead?.id !== leadId) return DEFAULT_AGENT_LEAD_OFFER_READINESS;
+    return offerReadiness?.readiness || DEFAULT_AGENT_LEAD_OFFER_READINESS;
+  };
 
-  const toggleReadinessItem = (leadId: number, key: keyof LeadReadiness) => {
-    setLeadReadiness(prev => {
-      const current = prev[leadId] || DEFAULT_READINESS;
-      return {
-        ...prev,
-        [leadId]: {
-          ...current,
-          [key]: !current[key],
-        },
-      };
+  const toggleReadinessItem = (leadId: number, key: keyof AgentLeadOfferReadiness) => {
+    const current = getReadinessForLead(leadId);
+    setLeadOfferReadinessMutation.mutate({
+      leadId,
+      readiness: {
+        ...current,
+        [key]: !current[key],
+      },
     });
   };
 
   const canMoveLeadToStage = (lead: Lead, targetStage: PipelineStageId) => {
     if (targetStage !== 'offer') return true;
     if (['offer_sent', 'converted', 'closed'].includes(lead.status)) return true;
-    return isReadinessComplete(getReadinessForLead(lead.id));
+    return selectedLead?.id === lead.id && Boolean(offerReadiness?.canMoveToOffer);
   };
 
   const moveLeadToStage = (
@@ -629,7 +642,20 @@ export function LeadPipeline({ className, propertyId, selectedLeadId }: LeadPipe
     sourceStage?: PipelineStageId,
   ) => {
     if (!canMoveLeadToStage(lead, targetStage)) {
-      toast.error('Complete the viewing checklist before moving this lead to Offer.');
+      if (targetStage === 'offer') {
+        if (selectedLead?.id !== lead.id) {
+          openLeadDetail(lead);
+          toast.info('Open the lead checks before moving it to Offer.');
+        } else if (offerReadinessLoading) {
+          toast.info('Checking the lead record before moving it to Offer.');
+        } else {
+          toast.error(
+            offerReadiness?.blockers?.[0] ||
+              'Complete the recorded offer checks before moving this lead to Offer.',
+          );
+        }
+        return;
+      }
       return;
     }
 
@@ -668,7 +694,7 @@ export function LeadPipeline({ className, propertyId, selectedLeadId }: LeadPipe
       targetStage: targetStage as any,
       notes:
         targetStage === 'offer'
-          ? 'Moved to offer after viewing readiness checklist was completed'
+          ? 'Moved to offer after recorded readiness checks were completed'
           : `Moved to ${targetStage}`,
     });
   };
@@ -728,6 +754,11 @@ export function LeadPipeline({ className, propertyId, selectedLeadId }: LeadPipe
     ? PIPELINE_STAGES.find(stage => stage.id === getPipelineStageForLeadStatus(selectedLead.status))
     : null;
   const selectedLeadNextMove = selectedLead ? getLeadNextMove(selectedLead) : null;
+  const selectedOfferReadiness = selectedLead
+    ? getReadinessForLead(selectedLead.id)
+    : DEFAULT_AGENT_LEAD_OFFER_READINESS;
+  const selectedOfferCanMove = Boolean(offerReadiness?.canMoveToOffer);
+  const selectedOfferBlockers = offerReadiness?.blockers || [];
 
   if (isLoading) {
     return (
@@ -1186,7 +1217,7 @@ export function LeadPipeline({ className, propertyId, selectedLeadId }: LeadPipe
                         <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
                           Shared context
                         </p>
-                        <h3 className="mt-1 font-semibold text-slate-950">Capture a note</h3>
+                        <h3 className="mt-1 font-semibold text-slate-950">Capture the outcome</h3>
                       </div>
                     </div>
                     <Textarea
@@ -1195,25 +1226,41 @@ export function LeadPipeline({ className, propertyId, selectedLeadId }: LeadPipe
                       className="mt-4 min-h-28 border-slate-200 bg-slate-50/60 focus-visible:bg-white"
                       value={newActivityNote}
                       onChange={e => setNewActivityNote(e.target.value)}
-                      placeholder="Log the outcome, a reminder, or context another team member needs."
+                      placeholder="Log the real contact outcome, buyer feedback, a reminder, or context another team member needs."
                     />
                     <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                       <p className="text-xs leading-5 text-slate-500">
-                        Saved to this lead’s shared activity record.
+                        Recording a contact outcome also updates this lead’s first-response
+                        evidence.
                       </p>
-                      <Button
-                        className="sm:shrink-0"
-                        disabled={addLeadActivityMutation.isPending || !newActivityNote.trim()}
-                        onClick={() =>
-                          addLeadActivityMutation.mutate({
-                            leadId: selectedLead.id,
-                            activityType: 'note',
-                            description: newActivityNote.trim(),
-                          })
-                        }
-                      >
-                        {addLeadActivityMutation.isPending ? 'Saving…' : 'Save note'}
-                      </Button>
+                      <div className="flex shrink-0 flex-wrap gap-2">
+                        <Button
+                          variant="outline"
+                          disabled={addLeadActivityMutation.isPending || !newActivityNote.trim()}
+                          onClick={() =>
+                            addLeadActivityMutation.mutate({
+                              leadId: selectedLead.id,
+                              activityType: selectedLead.phone ? 'call' : 'email',
+                              description: newActivityNote.trim(),
+                            })
+                          }
+                        >
+                          <Phone className="mr-2 h-4 w-4" />
+                          {addLeadActivityMutation.isPending ? 'Saving…' : 'Record contact'}
+                        </Button>
+                        <Button
+                          disabled={addLeadActivityMutation.isPending || !newActivityNote.trim()}
+                          onClick={() =>
+                            addLeadActivityMutation.mutate({
+                              leadId: selectedLead.id,
+                              activityType: 'note',
+                              description: newActivityNote.trim(),
+                            })
+                          }
+                        >
+                          {addLeadActivityMutation.isPending ? 'Saving…' : 'Save note'}
+                        </Button>
+                      </div>
                     </div>
                   </section>
                 </main>
@@ -1340,21 +1387,28 @@ export function LeadPipeline({ className, propertyId, selectedLeadId }: LeadPipe
                         </p>
                         <h3 className="mt-1 font-semibold text-slate-950">Offer readiness</h3>
                       </div>
-                      {isReadinessComplete(getReadinessForLead(selectedLead.id)) ? (
-                        <span className="text-xs font-semibold text-emerald-700">Ready</span>
+                      {offerReadinessLoading ? (
+                        <span className="text-xs font-semibold text-slate-500">Checking…</span>
+                      ) : selectedOfferCanMove ? (
+                        <span className="text-xs font-semibold text-emerald-700">
+                          Ready to offer
+                        </span>
                       ) : (
                         <span className="text-xs font-semibold text-amber-700">In progress</span>
                       )}
                     </div>
                     <div className="mt-4 space-y-1.5">
                       {READINESS_ITEMS.map(item => {
-                        const checked = getReadinessForLead(selectedLead.id)[item.key];
+                        const checked = selectedOfferReadiness[item.key];
                         return (
                           <button
                             key={item.key}
                             type="button"
+                            disabled={
+                              setLeadOfferReadinessMutation.isPending || offerReadinessLoading
+                            }
                             onClick={() => toggleReadinessItem(selectedLead.id, item.key)}
-                            className={`flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-sm transition ${
+                            className={`flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-sm transition disabled:cursor-wait disabled:opacity-70 ${
                               checked
                                 ? 'bg-emerald-50 text-emerald-800'
                                 : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
@@ -1370,19 +1424,22 @@ export function LeadPipeline({ className, propertyId, selectedLeadId }: LeadPipe
                         );
                       })}
                     </div>
-                    {!isReadinessComplete(getReadinessForLead(selectedLead.id)) ? (
+                    {!offerReadinessLoading && !selectedOfferCanMove ? (
                       <div className="mt-3 flex gap-2 text-xs leading-5 text-amber-800">
                         <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
-                        Complete every deal check before moving this lead to Offer.
+                        <span>
+                          {selectedOfferBlockers[0] ||
+                            'Complete every recorded deal check before moving this lead to Offer.'}
+                        </span>
                       </div>
                     ) : null}
                     {selectedLeadStage?.id !== 'offer' && selectedLeadStage?.id !== 'closed' ? (
                       <Button
                         className="mt-4 w-full"
-                        disabled={!canMoveLeadToStage(selectedLead, 'offer')}
+                        disabled={!selectedOfferCanMove || offerReadinessLoading}
                         onClick={() => moveLeadToStage(selectedLead, 'offer')}
                       >
-                        {!canMoveLeadToStage(selectedLead, 'offer') ? (
+                        {!selectedOfferCanMove ? (
                           <Lock className="mr-2 h-4 w-4" />
                         ) : (
                           <ArrowRight className="mr-2 h-4 w-4" />

@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { APP_TITLE } from '@/const';
 import { apiFetch } from '@/lib/api';
+import { getAgentJourneyAction } from '@/lib/agentJourney';
 import { trpc } from '@/lib/trpc';
 import type { AppRouter } from '../../../../server/routers';
 import {
@@ -20,6 +21,7 @@ import {
   getCommercialTermPresentation,
 } from '@/lib/commercialCatalog';
 import { useCommercialCatalog, type CommercialProduct } from '@/hooks/useCommercialCatalog';
+import type { AgentOnboardingStatus } from '@/hooks/useAgentOnboardingStatus';
 import {
   ArrowRight,
   Briefcase,
@@ -28,6 +30,7 @@ import {
   ExternalLink,
   LogOut,
   ShieldCheck,
+  TriangleAlert,
   UploadCloud,
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -45,19 +48,6 @@ type AgentInvoiceResponse = {
   reused: boolean;
   ownerType: string;
   ownerId: number;
-};
-
-type AgentOnboardingStatus = {
-  packageSelected: boolean;
-  onboardingComplete: boolean;
-  onboardingStep: number;
-  dashboardUnlocked: boolean;
-  fullFeaturesUnlocked: boolean;
-  recommendedNextStep: string;
-  subscriptionTier: string;
-  subscriptionStatus: string;
-  trialStartedAt: string | null;
-  trialEndsAt: string | null;
 };
 
 function formatLimitValue(value: unknown) {
@@ -173,6 +163,7 @@ function AgentManualEftPanel({
   paymentDate,
   setPaymentDate,
   setProofFile,
+  rejectionMessage,
   onSubmit,
   isSubmitting,
 }: {
@@ -188,6 +179,7 @@ function AgentManualEftPanel({
   paymentDate: string;
   setPaymentDate: Dispatch<SetStateAction<string>>;
   setProofFile: Dispatch<SetStateAction<File | null>>;
+  rejectionMessage?: string | null;
   onSubmit: () => void;
   isSubmitting: boolean;
 }) {
@@ -257,6 +249,23 @@ function AgentManualEftPanel({
               'Finance verification is required before the 90-day term starts.'}
           </p>
         </div>
+
+        {rejectionMessage ? (
+          <div
+            role="alert"
+            className="flex items-start gap-3 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950"
+          >
+            <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-700" aria-hidden="true" />
+            <div>
+              <p className="font-semibold">Finance requested a correction</p>
+              <p className="mt-1 leading-6">{rejectionMessage}</p>
+              <p className="mt-1 text-xs text-amber-800">
+                Update the details or attach a clearer proof document, then submit it below for a
+                new review.
+              </p>
+            </div>
+          </div>
+        ) : null}
 
         {proofCanBeSubmitted ? (
           <div className="grid gap-3 md:grid-cols-2">
@@ -380,17 +389,9 @@ export default function AgentPackageSelection() {
         if (cancelled) return;
 
         setStatus(result);
-        if (result.packageSelected && result.subscriptionStatus === 'active') {
-          setLocation(result.dashboardUnlocked ? '/agent/dashboard' : '/agent/setup');
-          return;
-        }
-        // A waiting payer has nothing left to do on this page; the dashboard
-        // status strip carries the verification state until finance decides.
-        if (
-          result.packageSelected &&
-          result.subscriptionStatus === 'payment_under_review'
-        ) {
-          setLocation('/agent/dashboard');
+        const journeyAction = getAgentJourneyAction(result);
+        if (journeyAction.href !== '/agent/select-package') {
+          setLocation(journeyAction.href);
         }
       } catch (error) {
         if (!cancelled) {
@@ -412,6 +413,28 @@ export default function AgentPackageSelection() {
   const activeInvoice = invoiceResponse?.invoice ?? workspaceQuery.data?.activeInvoice ?? null;
   const bankDetails = invoiceResponse?.bankDetails ?? workspaceQuery.data?.bankDetails;
   const proofStorage = workspaceQuery.data?.proofStorage;
+  const rejectionMessage = useMemo(() => {
+    if (!activeInvoice) return null;
+
+    const latestPayment = [...(workspaceQuery.data?.payments || [])]
+      .filter(payment => Number(payment.invoiceId) === Number(activeInvoice.id))
+      .sort((left, right) => {
+        const leftTime = new Date(
+          String(left.createdAt || left.updatedAt || left.reviewedAt || ''),
+        ).getTime();
+        const rightTime = new Date(
+          String(right.createdAt || right.updatedAt || right.reviewedAt || ''),
+        ).getTime();
+        return rightTime - leftTime;
+      })[0];
+
+    if (!latestPayment || latestPayment.state !== 'rejected') return null;
+    return (
+      latestPayment.reviewNote?.trim() ||
+      latestPayment.rejectionReason?.trim() ||
+      'The previous payment proof was not approved. Please submit corrected proof for review.'
+    );
+  }, [activeInvoice, workspaceQuery.data?.payments]);
 
   useEffect(() => {
     if (activeInvoice && !paymentAmount) {
@@ -632,6 +655,7 @@ export default function AgentPackageSelection() {
                   paymentDate={paymentDate}
                   setPaymentDate={setPaymentDate}
                   setProofFile={setProofFile}
+                  rejectionMessage={rejectionMessage}
                   onSubmit={() => void handleProofSubmit()}
                   isSubmitting={submitProof.isPending}
                 />

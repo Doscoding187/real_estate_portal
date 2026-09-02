@@ -35,7 +35,7 @@ const AgentPublicProfile = lazy(() => import('./pages/AgentPublicProfile'));
 const AgentMicrosite = lazy(() => import('./pages/AgentMicrosite'));
 const ProvincePage = lazy(() => import('./pages/ProvincePage'));
 const CityPage = lazy(() => import('./pages/CityPage'));
-const Dashboard = lazy(() => import('./pages/Dashboard'));
+const SmartDashboardRedirect = lazy(() => import('./components/SmartDashboardRedirect'));
 const Login = lazy(() => import('./pages/Login'));
 
 const AgencyDashboard = lazy(() => import('./pages/agency/AgencyDashboard'));
@@ -48,6 +48,7 @@ const AgentEarnings = lazy(() => import('./pages/agent/AgentEarnings'));
 const AgentReferrals = lazy(() => import('./pages/agent/AgentReferrals'));
 const AgentAnalytics = lazy(() => import('./pages/AgentAnalytics'));
 const AgentProductivity = lazy(() => import('./pages/agent/AgentProductivity'));
+const AgentTrainingSupport = lazy(() => import('./pages/agent/AgentTrainingSupport'));
 const AgentSettings = lazy(() => import('./pages/AgentSettings'));
 const AgentSetup = lazy(() => import('./pages/AgentSetup'));
 const AgentPackageSelection = lazy(() => import('./pages/agent/AgentPackageSelection'));
@@ -278,27 +279,27 @@ function Router() {
             </RequireRole>
           </Route>
           <Route path="/agent/listings">
-            <RequireRole role="agent">
+            <RequireRole role="agent" unauthenticatedAuthEntry="signin">
               <AgentListings />
             </RequireRole>
           </Route>
           <Route path="/agent/land/create">
-            <RequireRole role="agent">
+            <RequireRole role="agent" unauthenticatedAuthEntry="signin">
               <LandAuthoringWorkspace />
             </RequireRole>
           </Route>
           <Route path="/agent/commercial/create">
-            <RequireRole role="agent">
+            <RequireRole role="agent" unauthenticatedAuthEntry="signin">
               <CommercialOfficeAuthoringWorkspace />
             </RequireRole>
           </Route>
           <Route path="/agent/commercial">
-            <RequireRole role="agent">
+            <RequireRole role="agent" unauthenticatedAuthEntry="signin">
               <CommercialInventory />
             </RequireRole>
           </Route>
           <Route path="/agent/commercial/office/create">
-            <RequireRole role="agent">
+            <RequireRole role="agent" unauthenticatedAuthEntry="signin">
               <CommercialOfficeAuthoringWorkspace />
             </RequireRole>
           </Route>
@@ -313,42 +314,47 @@ function Router() {
             </RequireRole>
           </Route>
           <Route path="/agent/leads">
-            <RequireRole role="agent">
+            <RequireRole role="agent" unauthenticatedAuthEntry="signin">
               <AgentLeads />
             </RequireRole>
           </Route>
           <Route path="/agent/canvassing">
-            <RequireRole role="agent">
+            <RequireRole role="agent" unauthenticatedAuthEntry="signin">
               <AgentCanvassing />
             </RequireRole>
           </Route>
           <Route path="/agent/marketing">
-            <RequireRole role="agent">
+            <RequireRole role="agent" unauthenticatedAuthEntry="signin">
               <AgentMarketingHub />
             </RequireRole>
           </Route>
           <Route path="/agent/earnings">
-            <RequireRole role="agent">
+            <RequireRole role="agent" unauthenticatedAuthEntry="signin">
               <AgentEarnings />
             </RequireRole>
           </Route>
           <Route path="/agent/analytics">
-            <RequireRole role="agent">
+            <RequireRole role="agent" unauthenticatedAuthEntry="signin">
               <AgentAnalytics />
             </RequireRole>
           </Route>
           <Route path="/agent/calendar">
-            <RequireRole role="agent">
+            <RequireRole role="agent" unauthenticatedAuthEntry="signin">
               <Redirect to="/agent/productivity" />
             </RequireRole>
           </Route>
           <Route path="/agent/productivity">
-            <RequireRole role="agent">
+            <RequireRole role="agent" unauthenticatedAuthEntry="signin">
               <AgentProductivity />
             </RequireRole>
           </Route>
+          <Route path="/agent/training-support">
+            <RequireRole role="agent" unauthenticatedAuthEntry="signin">
+              <AgentTrainingSupport />
+            </RequireRole>
+          </Route>
           <Route path="/agent/settings">
-            <RequireRole role="agent">
+            <RequireRole role="agent" unauthenticatedAuthEntry="signin">
               <AgentSettings />
             </RequireRole>
           </Route>
@@ -371,7 +377,7 @@ function Router() {
             </RequireRole>
           </Route>
           <Route path="/agent/referrals">
-            <RequireRole role="agent">
+            <RequireRole role="agent" unauthenticatedAuthEntry="signin">
               <AgentReferrals />
             </RequireRole>
           </Route>
@@ -381,7 +387,11 @@ function Router() {
           <Route path="/agent/:id" component={AgentPublicProfile} />
 
           {/* Route Handlers / Wizards */}
-          <Route path="/listings/create" component={ListingWizard} />
+          <Route path="/listings/create">
+            <RequireRole role={['agent', 'agency_admin']} unauthenticatedAuthEntry="register">
+              <ListingWizard />
+            </RequireRole>
+          </Route>
           <Route path="/listing-template" component={ListingTemplate} />
           <Route path="/developments/create" component={CreateDevelopment} />
           <Route path="/development-wizard" component={CreateDevelopment} />
@@ -578,8 +588,10 @@ function Router() {
             />
           ))}
 
-          {/* Other routes that might conflict */}
-          <Route path="/dashboard" component={Dashboard} />
+          {/* Keep the legacy account URL as a role-aware handoff. The old
+              generic property dashboard made agents, agencies and buyers
+              share a surface with incompatible actions. */}
+          <Route path="/dashboard" component={SmartDashboardRedirect} />
           <Route path="/dashboard/settings">
             <Redirect to="/agent/settings" />
           </Route>
