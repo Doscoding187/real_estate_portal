@@ -32,6 +32,10 @@ describe('Advertise product-led gateway', () => {
       '/advertise/sell/developers',
     );
 
+    const agencyCard = cards.find(card => card.getAttribute('data-audience') === 'agency');
+    expect(agencyCard).toHaveTextContent('Agency operating workspace');
+    expect(agencyCard).toHaveTextContent('Marketplace participation for eligible inventory');
+
     expect(screen.queryByText(/Private Seller|Service Provider|Partner/)).not.toBeInTheDocument();
   });
 
