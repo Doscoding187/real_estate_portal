@@ -756,6 +756,14 @@ export const PUBLIC_NAVIGATION_MENUS: PublicNavigationMenu[] = [
             activeHref: '/advertise',
           }),
           destination({
+            id: 'professionals-agencies-acquisition',
+            label: 'Agency onboarding',
+            href: '/advertise/sell/agencies',
+            owner: 'advertising-engine',
+            capability: 'LIMITED_BUT_VALID',
+            activeHref: '/advertise',
+          }),
+          destination({
             id: 'professionals-developer-acquisition',
             label: 'Developer onboarding',
             href: '/advertise/sell/developers',

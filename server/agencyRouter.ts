@@ -124,6 +124,10 @@ import {
   loadCommercialLeadContexts,
 } from './services/commercialLeadContextService';
 import { LISTING_SUBMISSION_READINESS_THRESHOLD } from '../shared/listing-workflow-types';
+import {
+  deriveAgencyJourneyAccessState,
+  type AgencySubscriptionDisplayStatus,
+} from '../shared/agencyJourney';
 
 /**
  * Agency Router - Manages real estate agencies
@@ -512,17 +516,7 @@ type ViewingRescheduleEntry = {
   rescheduledByUserId: number;
   note: string | null;
 };
-type AgencyBillingStatus =
-  | 'not_started'
-  | 'pending_payment'
-  | 'payment_under_review'
-  | 'active'
-  | 'past_due'
-  | 'grace_period'
-  | 'suspended'
-  | 'cancelled'
-  | 'expired'
-  | 'unavailable';
+type AgencyBillingStatus = AgencySubscriptionDisplayStatus;
 
 const VIEWING_TRANSITIONS: Record<ViewingStatus, ViewingStatus[]> = {
   requested: ['awaiting_confirmation', 'confirmed', 'cancelled', 'rescheduled'],
@@ -3663,6 +3657,14 @@ export const agencyRouter = router({
     }
 
     const user = requireUser(ctx);
+    const emptyJourney = deriveAgencyJourneyAccessState({
+      hasAgency: false,
+      profileConfigured: false,
+      brandingConfigured: false,
+      billingActivated: false,
+      teamReady: false,
+      subscriptionStatus: 'not_started',
+    });
     const emptyState = {
       hasAgency: false,
       profileConfigured: false,
@@ -3671,11 +3673,24 @@ export const agencyRouter = router({
       teamReady: false,
       publicationReadiness: null,
       onboardingStep: 0,
-      dashboardUnlocked: false,
-      fullFeaturesUnlocked: false,
-      recommendedNextStep: '/agency/setup',
+      ...emptyJourney,
       teamMembersCount: 0,
       invitationsCount: 0,
+      accessState: {
+        onboardingComplete: false,
+        billingStatus: 'not_started' as AgencyBillingStatus,
+        planKey: null as string | null,
+        planAccessSource: 'none',
+        degraded: false,
+        fallbackReason: 'No canonical subscription row found.',
+        actionableReason: 'Create an agency profile before starting Launch Access.',
+        workspaceAccess: {
+          listings: false,
+          publishing: false,
+          teamManagement: false,
+          reporting: false,
+        },
+      },
       agency: null as null | {
         id: number;
         name: string;
@@ -3761,17 +3776,15 @@ export const agencyRouter = router({
     if (accessBillingActivated) onboardingStep = 3;
     if (teamReady) onboardingStep = 4;
 
-    const dashboardUnlocked = profileConfigured;
-    const fullFeaturesUnlocked = profileConfigured && brandingConfigured && accessBillingActivated;
-    const recommendedNextStep = !profileConfigured
-      ? '/agency/setup'
-      : !brandingConfigured
-        ? '/agency/setup'
-        : !accessBillingActivated
-          ? '/agency/billing/subscription'
-          : !teamReady
-            ? '/agency/team/invitations'
-            : '/agency/overview';
+    const { dashboardUnlocked, fullFeaturesUnlocked, recommendedNextStep } =
+      deriveAgencyJourneyAccessState({
+        hasAgency: true,
+        profileConfigured,
+        brandingConfigured,
+        billingActivated: accessBillingActivated,
+        teamReady,
+        subscriptionStatus: accessState.billingStatus,
+      });
 
     if (
       Number(user.onboardingStep || 0) !== onboardingStep ||
@@ -3812,8 +3825,8 @@ export const agencyRouter = router({
         id: agency.id,
         name: agency.name,
         slug: agency.slug,
-        subscriptionStatus: agency.subscriptionStatus,
-        subscriptionPlan: agency.subscriptionPlan,
+        subscriptionStatus: accessState.billingStatus,
+        subscriptionPlan: accessState.planKey || 'unassigned',
         city: agency.city,
         province: agency.province,
       },

@@ -84,11 +84,11 @@ type TeamSetupData = z.infer<typeof teamSetupSchema>;
 type PlanSelectionData = z.infer<typeof planSelectionSchema>;
 
 const STEPS = [
-  { id: 1, title: 'Basic Info', description: 'Tell us about your agency' },
-  { id: 2, title: 'Branding', description: 'Customize your look' },
-  { id: 3, title: 'Team Setup', description: 'Invite your team members' },
-  { id: 4, title: 'Plan Selection', description: 'Choose your plan' },
-  { id: 5, title: 'Payment', description: 'Complete your setup' },
+  { id: 1, title: 'Agency foundation', description: 'Establish the business account' },
+  { id: 2, title: 'Agency identity', description: 'Set the business identity' },
+  { id: 3, title: 'Team launch', description: 'Invite people who will own work' },
+  { id: 4, title: 'Launch Access', description: 'Confirm the Agency workspace' },
+  { id: 5, title: 'Invoice handoff', description: 'Request the EFT invoice' },
 ];
 
 const AgencyOnboarding: React.FC = () => {
@@ -288,15 +288,19 @@ const AgencyOnboarding: React.FC = () => {
     <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Welcome to SA Property Portal</h1>
-          <p className="mt-2 text-gray-600">Let's get your real estate agency set up and running</p>
+          <h1 className="text-3xl font-bold text-gray-900">Build your Agency operating workspace</h1>
+          <p className="mt-2 text-gray-600">
+            Establish the business once, then use one connected space to manage the team,
+            inventory, opportunities and commercial progress.
+          </p>
         </div>
 
         <Card className="shadow-lg">
           <CardHeader>
-            <CardTitle>Agency Onboarding</CardTitle>
+            <CardTitle>Set up your Agency base</CardTitle>
             <CardDescription>
-              Complete these steps to activate your agency's premium features
+              Create the Agency identity, invite your team when ready, then request the once-off
+              Launch Access invoice.
             </CardDescription>
           </CardHeader>
           <CardContent className="p-6">
@@ -367,7 +371,7 @@ const BasicInfoStep: React.FC<StepProps> = ({ onNext }) => {
     <div className="space-y-6">
       <div className="flex items-center space-x-2">
         <Building2 className="w-5 h-5 text-primary" />
-        <h3 className="text-lg font-semibold">Basic Information</h3>
+        <h3 className="text-lg font-semibold">Agency foundation</h3>
       </div>
 
       <form onSubmit={handleSubmit(onNext)} className="space-y-4">
@@ -434,7 +438,7 @@ const BasicInfoStep: React.FC<StepProps> = ({ onNext }) => {
         </div>
 
         <div className="flex justify-end">
-          <Button type="submit">Continue to Branding</Button>
+          <Button type="submit">Continue to Agency identity</Button>
         </div>
       </form>
     </div>
@@ -458,13 +462,13 @@ const BrandingStep: React.FC<StepProps> = ({ onNext, onPrev }) => {
     <div className="space-y-6">
       <div className="flex items-center space-x-2">
         <Palette className="w-5 h-5 text-primary" />
-        <h3 className="text-lg font-semibold">Agency Branding</h3>
+        <h3 className="text-lg font-semibold">Agency identity</h3>
       </div>
 
       <Alert>
         <AlertDescription>
-          Customize your agency's appearance. These settings can be changed later in your agency
-          settings.
+          Set the business identity people will recognise in the Agency workspace and on supported
+          public-facing inventory. These settings can be changed later in Agency settings.
         </AlertDescription>
       </Alert>
 
@@ -533,7 +537,7 @@ const BrandingStep: React.FC<StepProps> = ({ onNext, onPrev }) => {
             <ChevronLeft className="w-4 h-4 mr-2" />
             Back
           </Button>
-          <Button type="submit">Continue to Team Setup</Button>
+          <Button type="submit">Continue to Team launch</Button>
         </div>
       </form>
     </div>
@@ -583,13 +587,13 @@ const TeamSetupStep: React.FC<StepProps> = ({ onNext, onPrev }) => {
     <div className="space-y-6">
       <div className="flex items-center space-x-2">
         <Users className="w-5 h-5 text-primary" />
-        <h3 className="text-lg font-semibold">Team Setup</h3>
+        <h3 className="text-lg font-semibold">Bring the team into the workspace</h3>
       </div>
 
       <Alert>
         <AlertDescription>
-          Invite your team members to join your agency. They'll receive an email invitation to
-          create their accounts.
+          Invite the people who will own Agency inventory, opportunities and follow-up. You can do
+          this now or continue and manage the team from the workspace later.
         </AlertDescription>
       </Alert>
 
@@ -654,7 +658,7 @@ const TeamSetupStep: React.FC<StepProps> = ({ onNext, onPrev }) => {
             <ChevronLeft className="w-4 h-4 mr-2" />
             Back
           </Button>
-          <Button type="submit">Continue to Plan Selection</Button>
+          <Button type="submit">Continue to Launch Access</Button>
         </div>
       </form>
     </div>
@@ -852,13 +856,13 @@ const PaymentStep: React.FC<{ onComplete: () => void; onPrev: () => void; isSubm
     <div className="space-y-6">
       <div className="flex items-center space-x-2">
         <CreditCard className="w-5 h-5 text-primary" />
-        <h3 className="text-lg font-semibold">Complete Setup</h3>
+        <h3 className="text-lg font-semibold">Request your Launch Access invoice</h3>
       </div>
 
       <Alert>
         <AlertDescription>
-          You're almost done. Click "Issue Invoice" to generate your EFT invoice and continue to the
-          billing workspace.
+          Your Agency profile and Launch Access selection are ready. Issue the invoice, then use
+          Billing to complete manual EFT and submit proof for finance verification.
         </AlertDescription>
       </Alert>
 
@@ -881,15 +885,15 @@ const PaymentStep: React.FC<{ onComplete: () => void; onPrev: () => void; isSubm
           <div className="flex items-start space-x-3">
             <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
             <div>
-              <strong>Activation review:</strong> Premium features unlock after finance approves the
-              payment proof
+              <strong>Activation review:</strong> The supported Agency workspace unlocks after
+              finance approves the payment proof
             </div>
           </div>
           <div className="flex items-start space-x-3">
             <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
             <div>
-              <strong>Team Invitations:</strong> Your invited team members receive setup emails once
-              the agency is activated
+              <strong>Team launch:</strong> Bring people into the Agency workspace so inventory,
+              opportunities and follow-up have clear operating owners
             </div>
           </div>
         </div>

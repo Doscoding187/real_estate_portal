@@ -145,6 +145,22 @@ describe('public Agency product landing page', () => {
     expect(screen.queryByText(/Coming Soon|waitlist|free trial|\/month/i)).not.toBeInTheDocument();
   });
 
+  it('starts the Agency journey with a dedicated owner account and preserves setup intent', () => {
+    render(<AgencyProductLandingPage />);
+
+    const accountLinks = screen.getAllByRole('link', {
+      name: /Create your Agency owner account/i,
+    });
+    expect(accountLinks).toHaveLength(2);
+    for (const link of accountLinks) {
+      expect(link).toHaveAttribute(
+        'href',
+        '/login?mode=register&next=%2Fagency%2Fsetup&role=agency_admin',
+      );
+    }
+    expect(screen.getAllByText(/not a reduced feature tier/i).length).toBeGreaterThan(0);
+  });
+
   it('keeps catalog-unavailable Launch Access as an intentional assisted path', () => {
     useCatalogMock.mockReturnValue({
       data: undefined,

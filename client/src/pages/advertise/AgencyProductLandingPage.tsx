@@ -31,8 +31,13 @@ import {
   getCommercialPresentationLimits,
   getCommercialTermPresentation,
 } from '@/lib/commercialCatalog';
+import { getAccountAuthHref } from '@/lib/publicNavigation';
 import { AgencyWorkspacePreview } from './AgencyWorkspacePreview';
 import { COMMERCIAL_HERO_CLASS } from './commercialHero';
+
+const AGENCY_ACCOUNT_START_HREF = getAccountAuthHref('register', '/agency/setup', {
+  registerRole: 'agency_admin',
+});
 
 type AgencyCapability = {
   label: string;
@@ -186,6 +191,11 @@ const FAQS = [
     question: 'What does R999 include?',
     answer:
       'The canonical Agency Launch Access product includes supported Agency inventory management, team and account workflows, property enquiries, lead routing, Agency reporting and analytics, and commission and deal workflows. It also carries an explicit safeguard of up to 500 active listings during the 90-day term.',
+  },
+  {
+    question: 'Is Launch Access a smaller feature tier?',
+    answer:
+      'No. Agency Launch Access is the current full supported-capability launch cohort, not a reduced feature tier. Normal authorization, publication-quality, anti-abuse and explicit launch-capacity safeguards still apply.',
   },
   {
     question: 'Is R999 a monthly subscription?',
@@ -647,19 +657,25 @@ export default function AgencyProductLandingPage() {
                 </p>
                 <div className="mt-9 flex flex-wrap gap-3">
                   <a
-                    href="#agency-workspace"
+                    href={AGENCY_ACCOUNT_START_HREF}
                     className="inline-flex items-center gap-2 rounded-2xl bg-[var(--conversion)] px-5 py-3.5 text-sm font-bold text-white shadow-lg shadow-orange-950/25 transition hover:bg-[var(--conversion-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
                   >
-                    Explore the Agency workspace{' '}
+                    Create your Agency owner account{' '}
                     <ArrowRight className="h-4 w-4" aria-hidden="true" />
                   </a>
                   <a
-                    href="#launch-access"
-                    className="inline-flex items-center gap-2 rounded-2xl border border-white/20 bg-white/5 px-5 py-3.5 text-sm font-bold text-white transition hover:border-white/40 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
+                    href="/contact"
+                    className="inline-flex items-center gap-2 rounded-2xl border border-white/35 bg-white/10 px-5 py-3.5 text-sm font-bold text-white shadow-sm transition hover:border-white/60 hover:bg-white/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
                   >
-                    View Launch Access <ArrowDown className="h-4 w-4" aria-hidden="true" />
+                    Contact Property Listify <ArrowRight className="h-4 w-4" aria-hidden="true" />
                   </a>
                 </div>
+                <a
+                  href="#agency-workspace"
+                  className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-slate-300 transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
+                >
+                  Explore the Agency workspace <ArrowDown className="h-4 w-4" aria-hidden="true" />
+                </a>
                 <div className="mt-8 flex flex-wrap gap-2.5 text-xs font-semibold text-slate-200">
                   <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-2">
                     <CircleDollarSign
@@ -958,9 +974,10 @@ export default function AgencyProductLandingPage() {
                   Give your Agency 90 days to operate the complete supported workspace.
                 </h2>
                 <p className="mt-5 max-w-lg text-base leading-7 text-slate-600 md:text-lg md:leading-8">
-                  R999 gives the business time to bring real people, inventory and opportunities
-                  into Property Listify — then use supported follow-up, deal, commission and
-                  management views in the rhythm of the Agency.
+                  R999 gives the business one launch term for the complete currently supported
+                  Agency workspace — not a reduced feature tier. Bring real people, inventory and
+                  opportunities into Property Listify, then use supported follow-up, deal,
+                  commission and management views in the rhythm of the Agency.
                 </p>
                 <div className="mt-8 grid gap-3 text-sm leading-6 text-slate-700">
                   <div className="flex items-start gap-3 rounded-2xl border border-blue-100 bg-white/65 px-4 py-3.5">
@@ -1029,24 +1046,26 @@ export default function AgencyProductLandingPage() {
           <div className="mx-auto flex max-w-4xl flex-col items-center px-4 text-center sm:px-6 lg:px-8">
             <BriefcaseBusiness className="h-7 w-7 text-[var(--brand-blue)]" aria-hidden="true" />
             <h2 className="mt-5 text-3xl font-bold tracking-[-0.03em] text-slate-950 md:text-4xl">
-              Want to talk through the Agency fit first?
+              Ready to give your Agency one operating workspace?
             </h2>
             <p className="mt-4 max-w-2xl text-base leading-8 text-slate-600">
-              Discuss team structure, inventory, onboarding or commercial requirements with Property
-              Listify before requesting an invoice.
+              Create your Agency owner account first. Then establish the business, invite the team
+              when you are ready, request the once-off Launch Access invoice and complete the
+              finance-verified EFT handoff.
             </p>
             <div className="mt-7 flex flex-wrap justify-center gap-3">
               <a
-                href="/contact"
+                href={AGENCY_ACCOUNT_START_HREF}
                 className="inline-flex items-center gap-2 rounded-2xl bg-slate-950 px-5 py-3.5 text-sm font-bold text-white transition hover:bg-[var(--brand-blue)]"
               >
-                Contact Property Listify <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                Create your Agency owner account{' '}
+                <ArrowRight className="h-4 w-4" aria-hidden="true" />
               </a>
               <a
-                href="#launch-access"
+                href="/contact"
                 className="inline-flex items-center gap-2 rounded-2xl border border-slate-300 bg-white px-5 py-3.5 text-sm font-bold text-slate-950 transition hover:border-slate-950"
               >
-                Review Launch Access <ArrowDown className="h-4 w-4" aria-hidden="true" />
+                Contact Property Listify <ArrowRight className="h-4 w-4" aria-hidden="true" />
               </a>
             </div>
           </div>
