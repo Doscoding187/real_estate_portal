@@ -326,14 +326,14 @@ type FixtureGalleryImage = {
   displayOrder: number;
 };
 
-type ManualFixtureDefinition = {
+export type ManualFixtureDefinition = {
   propertyId: number;
   listingId: number;
   mediaId: number;
   propertyImageId: number;
   title: string;
   description: string;
-  propertyType: 'house' | 'apartment';
+  propertyType: 'house' | 'apartment' | 'townhouse';
   action: 'sell' | 'rent';
   propertyStatus: 'available' | 'archived' | 'pending';
   listingStatus: 'published' | 'draft' | 'archived' | 'pending_review';
@@ -909,7 +909,7 @@ async function synchronizeOwnedFixtureMediaSnapshot(
   }
 }
 
-async function ensureCanonicalManualFixture(
+export async function ensureCanonicalManualFixture(
   connection: AuthoritySqlConnection,
   fixture: ManualFixtureDefinition,
   provinceId: number,

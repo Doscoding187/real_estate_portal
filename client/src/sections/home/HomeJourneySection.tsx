@@ -21,7 +21,7 @@ const journeySteps = [
 export function HomeJourneySection() {
   return (
     <section className="home-section bg-slate-50" aria-labelledby="home-journey-heading">
-      <div className="container">
+      <div className="home-section-content">
         <div className="home-section-header max-w-3xl">
           <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#2774AE]">
             One connected property journey

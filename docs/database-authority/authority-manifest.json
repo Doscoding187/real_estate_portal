@@ -59,6 +59,8 @@
     "db:foundation:verify",
     "db:scenario:prepare",
     "db:scenario:verify",
+    "db:homepage-preview:prepare",
+    "db:homepage-preview:verify",
     "db:ple-publication-entitlement:prepare",
     "db:ple-publication-entitlement:verify",
     "db:ple-reviewer:prepare",

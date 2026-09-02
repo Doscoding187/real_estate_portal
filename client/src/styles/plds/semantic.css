@@ -6,7 +6,7 @@
   --space-lg: clamp(1rem, 1.8vw, 1.5rem);
   --space-xl: clamp(1.5rem, 2.5vw, 2rem);
 
-  --content-rail-width: 1240px;
+  --content-rail-width: 1280px;
   --content-padding-mobile: 0.875rem;
   --content-padding-desktop: 2rem;
 }

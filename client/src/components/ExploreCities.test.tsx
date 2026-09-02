@@ -50,4 +50,27 @@ describe('ExploreCities', () => {
       '/property-for-sale?province=gauteng&city=johannesburg',
     );
   });
+
+  it('uses the shared homepage rail without nesting another container', () => {
+    render(
+      <ExploreCities
+        withinContentRail
+        basePath=""
+        customLocations={[
+          {
+            name: 'Johannesburg',
+            province: 'Gauteng',
+            slug: 'johannesburg',
+            provinceSlug: 'gauteng',
+          },
+        ]}
+      />,
+    );
+
+    expect(
+      screen
+        .getByRole('heading', { name: 'Explore property by city' })
+        .closest('.home-section-content'),
+    ).toBeInTheDocument();
+  });
 });
