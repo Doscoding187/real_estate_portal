@@ -1,0 +1,100 @@
+{
+  "schemaVersion": 1,
+  "governanceDocument": "docs/architecture/agent-skill-governance.md",
+  "skills": [
+    {
+      "name": "property-listify-change-routing",
+      "path": ".agent/skills/property-listify-change-routing/SKILL.md",
+      "owner": "property-listify",
+      "version": "0.1.0",
+      "status": "active",
+      "riskTier": "instruction-only",
+      "allowedTools": ["Read", "Glob", "Grep"],
+      "capabilities": {
+        "networkAccess": false,
+        "mcp": false,
+        "hooks": false,
+        "persistentState": false
+      },
+      "provenance": {
+        "kind": "original",
+        "informedBy": ["ECC architectural review, 2026-09-02"],
+        "copiedThirdPartyTextOrCode": false
+      },
+      "reviewedAt": "2026-09-02",
+      "nextReview": "2026-12-01"
+    },
+    {
+      "name": "property-listify-agent-security",
+      "path": ".agent/skills/property-listify-agent-security/SKILL.md",
+      "owner": "property-listify",
+      "version": "0.1.1",
+      "status": "active",
+      "riskTier": "instruction-only",
+      "allowedTools": ["Read", "Glob", "Grep"],
+      "capabilities": {
+        "networkAccess": false,
+        "mcp": false,
+        "hooks": false,
+        "persistentState": false
+      },
+      "provenance": {
+        "kind": "original",
+        "informedBy": ["ECC architectural review, 2026-09-02"],
+        "copiedThirdPartyTextOrCode": false
+      },
+      "reviewedAt": "2026-09-02",
+      "nextReview": "2026-12-01"
+    },
+    {
+      "name": "property-listify-skill-governance",
+      "path": ".agent/skills/property-listify-skill-governance/SKILL.md",
+      "owner": "property-listify",
+      "version": "0.2.2",
+      "status": "active",
+      "riskTier": "local-helper-script",
+      "allowedTools": ["Read", "Write", "Edit", "Glob", "Grep", "Bash"],
+      "capabilities": {
+        "networkAccess": false,
+        "mcp": false,
+        "hooks": false,
+        "persistentState": false
+      },
+      "localHelper": {
+        "entryPoint": "scripts/check-agent-skill-governance.mjs",
+        "packageScript": "agent:skills:check",
+        "networkAccess": false,
+        "mutates": false
+      },
+      "provenance": {
+        "kind": "original",
+        "informedBy": ["ECC architectural review, 2026-09-02"],
+        "copiedThirdPartyTextOrCode": false
+      },
+      "reviewedAt": "2026-09-02",
+      "nextReview": "2026-12-01"
+    },
+    {
+      "name": "property-listify-skill-evaluation",
+      "path": ".agent/skills/property-listify-skill-evaluation/SKILL.md",
+      "owner": "property-listify",
+      "version": "0.1.0",
+      "status": "active",
+      "riskTier": "instruction-only",
+      "allowedTools": ["Read", "Glob", "Grep", "Bash"],
+      "capabilities": {
+        "networkAccess": false,
+        "mcp": false,
+        "hooks": false,
+        "persistentState": false
+      },
+      "provenance": {
+        "kind": "original",
+        "informedBy": ["ECC architectural review, 2026-09-02"],
+        "copiedThirdPartyTextOrCode": false
+      },
+      "reviewedAt": "2026-09-02",
+      "nextReview": "2026-12-01"
+    }
+  ]
+}
