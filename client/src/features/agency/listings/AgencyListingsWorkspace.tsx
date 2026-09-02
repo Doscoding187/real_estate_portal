@@ -36,6 +36,7 @@ import { useAuth } from '@/_core/hooks/useAuth';
 import { EmptyPanel, ErrorPanel, SectionTitle } from '../workspace/WorkspacePrimitives';
 import type { WorkspaceContentProps } from '../workspace/types';
 import { compactCurrency, formatAge, numberLabel } from '../workspace/utils';
+import { LISTING_SUBMISSION_READINESS_THRESHOLD } from '@shared/listing-workflow-types';
 
 type InventoryStatus =
   | 'all'
@@ -204,7 +205,10 @@ function actionSupported(listing: any, action: 'submit' | 'archive') {
   if (!listing) return false;
   const status = String(listing.authoringStatus || '');
   if (action === 'archive') return status !== 'archived';
-  return ['draft', 'rejected'].includes(status) && Number(listing.readinessScore || 0) >= 75;
+  return (
+    ['draft', 'rejected'].includes(status) &&
+    Number(listing.readinessScore || 0) >= LISTING_SUBMISSION_READINESS_THRESHOLD
+  );
 }
 
 function SummaryMetric({

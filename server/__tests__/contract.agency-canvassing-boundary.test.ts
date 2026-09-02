@@ -46,6 +46,7 @@ describe('agency canvassing boundary contract', () => {
     const canvassingRouter = readRepoFile('server/canvassingRouter.ts');
     const listingRouter = readRepoFile('server/listingRouter.ts');
     const appRouter = readRepoFile('server/routers.ts');
+    const agentCanvassing = readRepoFile('client/src/pages/agent/AgentCanvassing.tsx');
 
     expect(canvassingRouter).toContain('getSellerProspectActorScope');
     expect(canvassingRouter).toContain('requireSellerProspect');
@@ -53,9 +54,12 @@ describe('agency canvassing boundary contract', () => {
     expect(canvassingRouter).toContain('recordContactAttempt');
     expect(canvassingRouter).toContain('Record the next action for every active seller prospect.');
     expect(canvassingRouter).toContain('updateMandate');
+    expect(canvassingRouter).toContain('getWorkspaceAccess');
     expect(listingRouter).toContain('sellerProspectId');
     expect(listingRouter).toContain('prepareSellerProspectListingConversion');
     expect(appRouter).toContain('canvassing: canvassingRouter');
+    expect(agentCanvassing).toContain("accessQuery.data?.mode === 'agency_team'");
+    expect(agentCanvassing).toContain('IndependentGrowthPlan');
   });
 
   it('unifies seller work with My Day and keeps mandate evidence private', () => {

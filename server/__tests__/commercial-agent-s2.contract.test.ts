@@ -57,7 +57,7 @@ describe('commercial monetization S2 agent authority', () => {
     const publication = readRepoFile('server/services/listingPublicationEntitlementService.ts');
 
     expect(publication).toContain("plan.segment !== 'agent'");
-    expect(publication).toContain('maxActiveListings <= 0');
+    expect(publication).toMatch(/(?:maxActiveListings|capacityMax)\s*<=\s*0/);
     expect(publication).toContain('subscriptionFailure(subscription, now)');
   });
 

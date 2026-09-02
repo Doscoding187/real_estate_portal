@@ -6,7 +6,8 @@ import { Badge } from '@/components/ui/badge';
 import { AgentPresenceProof } from '@/components/agent/AgentPresenceProof';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { apiFetch } from '@/lib/api';
+import type { AgentOnboardingStatus } from '@/hooks/useAgentOnboardingStatus';
+import { getAgentJourneyAction, isAgentProfileJourneyStep } from '@/lib/agentJourney';
 import {
   ArrowRight,
   Bell,
@@ -79,45 +80,6 @@ type ShowingItem = {
   visitorName?: string | null;
   status: string;
   scheduledAt?: string | Date;
-};
-
-type AgentDashboardEntitlements = {
-  trialExpired: boolean;
-  canPublishListings: boolean;
-  canReceiveLeads: boolean;
-  canAppearInDirectory: boolean;
-  trialStatusDetail: {
-    status: 'active' | 'expired' | 'none';
-    trialEndsAt: string | null;
-    daysRemaining: number | null;
-  };
-  featureFlags: {
-    maxActiveListings: number;
-    hasAiInsights: boolean;
-    hasAreaIntelligence: boolean;
-    hasCommissionTracking: boolean;
-    hasRevenueDashboard: boolean;
-    hasTeamDashboard: boolean;
-    hasRecruitmentFunnel: boolean;
-    hasBenchmarking: boolean;
-    hasPriorityExposure: boolean;
-  };
-};
-
-type AgentDashboardOnboardingStatus = {
-  packageSelected: boolean;
-  approvalStatus: 'pending' | 'approved' | 'rejected' | 'suspended';
-  onboardingStep: number;
-  onboardingComplete: boolean;
-  fullFeaturesUnlocked: boolean;
-  subscriptionTier: string;
-  subscriptionStatus: string;
-  profile: {
-    slug: string;
-  } | null;
-  profileCompletionScore: number;
-  profileCompletionFlags: string[];
-  entitlements: AgentDashboardEntitlements;
 };
 
 type DashboardGuidanceMode = 'setup';
@@ -335,8 +297,8 @@ function FeatureLockOverlay({
 }: {
   title: string;
   description: string;
-  actionLabel: string;
-  onAction: () => void;
+  actionLabel?: string | null;
+  onAction?: () => void;
 }) {
   return (
     <div className="absolute inset-0 z-10 flex items-center justify-center rounded-[15px] bg-white/88 p-6 backdrop-blur-[2px]">
@@ -346,10 +308,12 @@ function FeatureLockOverlay({
         </div>
         <h3 className="mt-4 text-lg font-semibold tracking-[-0.03em] text-slate-950">{title}</h3>
         <p className="mt-2 text-sm leading-6 text-slate-600">{description}</p>
-        <Button className="mt-5 rounded-full px-5" onClick={onAction}>
-          {actionLabel}
-          <ArrowRight className="ml-2 h-4 w-4" />
-        </Button>
+        {actionLabel && onAction ? (
+          <Button className="mt-5 rounded-full px-5" onClick={onAction}>
+            {actionLabel}
+            <ArrowRight className="ml-2 h-4 w-4" />
+          </Button>
+        ) : null}
       </div>
     </div>
   );
@@ -360,24 +324,28 @@ function getGuidanceSnoozeMs(mode: DashboardGuidanceMode | null) {
   return 0;
 }
 
-export function AgentDashboardOverview() {
+export function AgentDashboardOverview({
+  onboardingStatus,
+}: {
+  onboardingStatus: AgentOnboardingStatus;
+}) {
   const [, setLocation] = useLocation();
   const { user } = useAuth();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [calendarMonth, setCalendarMonth] = useState<Date>(
     new Date(new Date().getFullYear(), new Date().getMonth(), 1),
   );
-  const [onboardingStatus, setOnboardingStatus] = useState<AgentDashboardOnboardingStatus | null>(
-    null,
-  );
   const [dismissedGuidance, setDismissedGuidance] = useState<{
     signature: string;
     dismissedAt: number;
   } | null>(null);
+  const operationalDataEnabled = Boolean(onboardingStatus?.fullFeaturesUnlocked);
+  const authoredListingDataEnabled = Boolean(user && onboardingStatus?.dashboardUnlocked);
 
   const { data: stats, isLoading: statsLoading } = trpc.agent.getDashboardStats.useQuery(
     undefined,
     {
+      enabled: operationalDataEnabled,
       retry: false,
     },
   );
@@ -389,12 +357,12 @@ export function AgentDashboardOverview() {
 
   const { data: pipelineData } = trpc.agent.getLeadsPipeline.useQuery(
     { filters: {} },
-    { retry: false },
+    { enabled: operationalDataEnabled, retry: false },
   );
 
   const { data: listingsData } = trpc.agent.getMyListings.useQuery(
     { status: 'all', limit: 24 },
-    { retry: false },
+    { enabled: operationalDataEnabled, retry: false },
   );
 
   // Published inventory is intentionally projected into `properties`, while
@@ -404,31 +372,8 @@ export function AgentDashboardOverview() {
   const { data: authoredListingsData, isLoading: authoredListingsLoading } =
     trpc.listing.myListings.useQuery(
       { limit: 24, offset: 0 },
-      { retry: false, enabled: Boolean(user) },
+      { retry: false, enabled: authoredListingDataEnabled },
     );
-
-  useEffect(() => {
-    let cancelled = false;
-
-    const loadOnboardingStatus = async () => {
-      try {
-        const result = await apiFetch<AgentDashboardOnboardingStatus>('/agent/onboarding-status');
-        if (!cancelled) {
-          setOnboardingStatus(result);
-        }
-      } catch {
-        if (!cancelled) {
-          setOnboardingStatus(null);
-        }
-      }
-    };
-
-    void loadOnboardingStatus();
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   const calendarRange = useMemo(() => {
     return {
@@ -447,7 +392,7 @@ export function AgentDashboardOverview() {
       endDate: calendarRange.endDate,
       status: 'all',
     },
-    { retry: false },
+    { enabled: operationalDataEnabled, retry: false },
   );
 
   const { data: notificationsData = [] } = trpc.agent.getNotifications.useQuery(
@@ -455,7 +400,7 @@ export function AgentDashboardOverview() {
       limit: 8,
       unreadOnly: true,
     },
-    { retry: false },
+    { enabled: operationalDataEnabled, retry: false },
   );
 
   const pipeline = useMemo(
@@ -615,9 +560,9 @@ export function AgentDashboardOverview() {
   const profileCompletionScore = onboardingStatus?.profileCompletionScore ?? 0;
   const profileSetupFlags = onboardingStatus?.profileCompletionFlags ?? [];
   const fullFeaturesUnlocked = onboardingStatus?.fullFeaturesUnlocked ?? false;
-  const needsProfileCompletion = !fullFeaturesUnlocked;
+  const needsProfileCompletion = isAgentProfileJourneyStep(onboardingStatus);
+  const journeyAction = getAgentJourneyAction(onboardingStatus);
   const canPublishListings = entitlements?.canPublishListings ?? false;
-  const trialExpired = entitlements?.trialExpired ?? false;
   const setupPriorityFlags = profileSetupFlags.slice(0, 3).map(formatSetupFlag);
   const guidanceMode: DashboardGuidanceMode | null = needsProfileCompletion ? 'setup' : null;
   const guidanceSignature = JSON.stringify({
@@ -738,17 +683,23 @@ export function AgentDashboardOverview() {
   const hasDraftInventory = draftCount > 0;
   const workspaceAction = !canPublishListings
     ? {
-        eyebrow: 'Workspace readiness',
+        eyebrow: journeyAction.waiting ? 'Verification in progress' : 'Workspace activation',
         title: needsProfileCompletion
           ? 'Finish setting up your professional presence.'
-          : 'Your workspace is not ready to publish yet.',
+          : journeyAction.title,
         description: needsProfileCompletion
           ? 'Complete the remaining profile details so you can publish inventory and start building your pipeline.'
-          : trialExpired
-            ? 'Your access period has ended. Review your access to continue working with listings and leads.'
-            : 'Review your profile and activation status before you start publishing inventory.',
-        actionLabel: needsProfileCompletion ? 'Continue setup' : 'Review access',
-        actionHref: needsProfileCompletion ? '/agent/setup' : '/agent/settings',
+          : journeyAction.description,
+        actionLabel: journeyAction.waiting
+          ? null
+          : needsProfileCompletion
+            ? 'Continue setup'
+            : journeyAction.label,
+        actionHref: journeyAction.waiting
+          ? null
+          : needsProfileCompletion
+            ? '/agent/setup'
+            : journeyAction.href,
       }
     : !hasPublishedInventory && hasPendingReviewInventory
       ? {
@@ -774,42 +725,45 @@ export function AgentDashboardOverview() {
             actionHref: '/agent/listings?tab=draft',
           }
         : !hasPublishedInventory
-      ? {
-          eyebrow: 'Launch your business',
-          title: 'Get your first property live.',
-          description:
-            'Your Agent workspace is ready. Publishing a listing is the first step towards discovery, enquiries and a working pipeline.',
-          actionLabel: 'Add your first listing',
-          actionHref: '/listings/create',
-        }
-      : activeLeads > 0
-        ? {
-            eyebrow: 'Today’s priority',
-            title: `${activeLeads} lead${activeLeads === 1 ? '' : 's'} ready for follow-up.`,
-            description:
-              'Keep the conversation moving while the enquiry and property context are still fresh.',
-            actionLabel: 'Work your leads',
-            actionHref: '/agent/leads',
-          }
-        : todaysShowings.length > 0
           ? {
-              eyebrow: 'Today’s priority',
-              title: `${todaysShowings.length} showing${todaysShowings.length === 1 ? '' : 's'} on your calendar.`,
+              eyebrow: 'Launch your business',
+              title: 'Get your first property live.',
               description:
-                'Review the schedule, prepare the property context and keep the next conversation on track.',
-              actionLabel: 'Open your calendar',
-              actionHref: '/agent/productivity',
-            }
-          : {
-              eyebrow: 'Keep momentum',
-              title: 'Keep your business moving.',
-              description:
-                'Your inventory is live. Add another property, review your public presence or prepare your next follow-up.',
-              actionLabel: 'Add another listing',
+                'Your Agent workspace is ready. Publishing a listing is the first step towards discovery, enquiries and a working pipeline.',
+              actionLabel: 'Add your first listing',
               actionHref: '/listings/create',
-            };
+            }
+          : activeLeads > 0
+            ? {
+                eyebrow: 'Today’s priority',
+                title: `${activeLeads} lead${activeLeads === 1 ? '' : 's'} ready for follow-up.`,
+                description:
+                  'Keep the conversation moving while the enquiry and property context are still fresh.',
+                actionLabel: 'Work your leads',
+                actionHref: '/agent/leads',
+              }
+            : todaysShowings.length > 0
+              ? {
+                  eyebrow: 'Today’s priority',
+                  title: `${todaysShowings.length} showing${todaysShowings.length === 1 ? '' : 's'} on your calendar.`,
+                  description:
+                    'Review the schedule, prepare the property context and keep the next conversation on track.',
+                  actionLabel: 'Open your calendar',
+                  actionHref: '/agent/productivity',
+                }
+              : {
+                  eyebrow: 'Grow your reach',
+                  title: 'Give your live listings another lift.',
+                  description:
+                    'Share a listing, use your marketing tools and keep your public presence working while new enquiries arrive.',
+                  actionLabel: 'Open Marketing Hub',
+                  actionHref: '/agent/marketing',
+                };
   const showLaunchSteps =
-    canPublishListings && !hasPublishedInventory && !hasPendingReviewInventory && !hasDraftInventory;
+    canPublishListings &&
+    !hasPublishedInventory &&
+    !hasPendingReviewInventory &&
+    !hasDraftInventory;
   const showReviewSteps = canPublishListings && !hasPublishedInventory && hasPendingReviewInventory;
   const workspaceJourneyLabel = showLaunchSteps
     ? 'Your launch path'
@@ -953,14 +907,16 @@ export function AgentDashboardOverview() {
                 </div>
 
                 <div className="flex flex-wrap gap-3">
-                  <Button
-                    type="button"
-                    onClick={() => setLocation(workspaceAction.actionHref)}
-                    className="h-auto rounded-full bg-white px-4 py-2 text-[12.5px] font-semibold text-[var(--primary)] shadow-none hover:bg-white/92"
-                  >
-                    {workspaceAction.actionLabel}
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
+                  {workspaceAction.actionHref && workspaceAction.actionLabel ? (
+                    <Button
+                      type="button"
+                      onClick={() => setLocation(workspaceAction.actionHref!)}
+                      className="h-auto rounded-full bg-white px-4 py-2 text-[12.5px] font-semibold text-[var(--primary)] shadow-none hover:bg-white/92"
+                    >
+                      {workspaceAction.actionLabel}
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
+                  ) : null}
                   <Button
                     type="button"
                     variant="ghost"
@@ -1029,19 +985,19 @@ export function AgentDashboardOverview() {
                 <div className="mt-4 rounded-[12px] border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <p className="font-semibold">Finish setup to unlock your full reporting.</p>
-                      <p className="mt-1 text-sm text-amber-800">
-                        Complete the remaining profile steps to unlock the full reporting layer.
-                      </p>
+                      <p className="font-semibold">{journeyAction.title}.</p>
+                      <p className="mt-1 text-sm text-amber-800">{journeyAction.description}</p>
                     </div>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => setLocation('/agent/setup')}
-                      className="rounded-full border-amber-300 bg-white text-amber-900 hover:bg-amber-100"
-                    >
-                      Finish setup
-                    </Button>
+                    {!journeyAction.waiting ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setLocation(journeyAction.href)}
+                        className="rounded-full border-amber-300 bg-white text-amber-900 hover:bg-amber-100"
+                      >
+                        {journeyAction.label}
+                      </Button>
+                    ) : null}
                   </div>
                 </div>
               ) : null}
@@ -1407,17 +1363,28 @@ export function AgentDashboardOverview() {
 
               {!canPublishListings ? (
                 <FeatureLockOverlay
-                  title="Listing publishing is still locked"
-                  description={
-                    profileCompletionScore < 70
-                      ? 'Reach 70% profile completion to publish listings, unlock stronger visibility, and open your full inventory workflow.'
-                      : trialExpired
-                        ? 'Your trial access has expired. Review your package to restore publishing access.'
-                        : 'Your current access does not include listing publishing yet.'
+                  title={
+                    needsProfileCompletion
+                      ? 'Listing publishing is still locked'
+                      : journeyAction.title
                   }
-                  actionLabel={profileCompletionScore < 70 ? 'Finish setup' : 'Review access'}
-                  onAction={() =>
-                    setLocation(profileCompletionScore < 70 ? '/agent/setup' : '/agent/settings')
+                  description={
+                    needsProfileCompletion
+                      ? 'Complete the remaining profile details, then activate Launch Access to publish inventory and open your full listing workflow.'
+                      : journeyAction.description
+                  }
+                  actionLabel={
+                    journeyAction.waiting
+                      ? null
+                      : needsProfileCompletion
+                        ? 'Finish setup'
+                        : journeyAction.label
+                  }
+                  onAction={
+                    journeyAction.waiting
+                      ? undefined
+                      : () =>
+                          setLocation(needsProfileCompletion ? '/agent/setup' : journeyAction.href)
                   }
                 />
               ) : null}

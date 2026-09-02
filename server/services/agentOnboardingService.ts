@@ -6,35 +6,12 @@ import {
   getAgentEntitlementsForUserId,
 } from './agentEntitlementService';
 import { getCommercialCatalog } from './commercialCatalogService';
-import {
-  getPlanAccessProjectionForUserId,
-  type PlanAccessProjection,
-  type SubscriptionStatus,
-} from './planAccessService';
+import { getPlanAccessProjectionForUserId, type PlanAccessProjection } from './planAccessService';
 import { nowAsDbTimestamp } from '../utils/dbTypeUtils';
-
-export const AGENT_ONBOARDING_STATUS_VALUES = ['trial', 'active', 'expired', 'cancelled'] as const;
-
-export type AgentOnboardingStatus = (typeof AGENT_ONBOARDING_STATUS_VALUES)[number];
-
-function toOnboardingStatus(status: SubscriptionStatus | null | undefined): AgentOnboardingStatus {
-  switch (status) {
-    case 'active':
-    case 'grace_period':
-      return 'active';
-    case 'cancelled':
-      return 'cancelled';
-    case 'expired':
-    case 'past_due':
-    case 'suspended':
-    case 'pending_payment':
-    case 'payment_under_review':
-      return 'expired';
-    case 'trial':
-    default:
-      return 'trial';
-  }
-}
+import {
+  deriveAgentJourneyAccessState,
+  normalizeAgentSubscriptionStatus,
+} from '../../shared/agentJourney';
 
 function slugify(value: string): string {
   return value
@@ -77,6 +54,7 @@ function buildOnboardingState(
 ) {
   const completion = calculateAgentProfileCompletion(agent);
   const packageSelected = Boolean(planAccess.subscription && planAccess.currentPlan);
+  const subscriptionStatus = normalizeAgentSubscriptionStatus(planAccess.subscription?.status);
 
   // Professional identity progression is deliberately independent of the
   // commercial term: agents build and submit their profile before paying,
@@ -89,27 +67,26 @@ function buildOnboardingState(
   }
 
   const onboardingComplete = onboardingStep >= 4 || user.onboardingComplete === 1;
+  const approvalStatus = agent?.status ?? 'pending';
+  const journeyAccess = deriveAgentJourneyAccessState({
+    onboardingComplete,
+    onboardingStep,
+    coreContactReady: completion.hasPhone,
+    emailVerified: Number(user.emailVerified || 0) === 1,
+    approvalStatus,
+    subscriptionStatus,
+  });
 
   return {
     packageSelected,
-    approvalStatus: agent?.status ?? 'pending',
+    approvalStatus,
     onboardingStep,
     onboardingComplete,
     profileCompletionScore: completion.score,
     profileCompletionFlags: completion.flags,
     dashboardUnlocked: onboardingStep >= 3,
-    fullFeaturesUnlocked: onboardingComplete && packageSelected,
-    recommendedNextStep: !packageSelected
-      ? onboardingStep >= 4
-        ? 'select_package'
-        : 'complete_profile_basics'
-      : onboardingComplete
-        ? 'dashboard'
-        : onboardingStep <= 2
-          ? 'complete_profile_basics'
-          : onboardingStep === 3
-            ? 'publish_profile'
-            : 'dashboard',
+    ...journeyAccess,
+    subscriptionStatus,
   };
 }
 
@@ -146,17 +123,16 @@ export class AgentOnboardingService {
     if (user.role !== 'agent') throw new Error('Agent onboarding is only available to agents');
 
     const [agent] = await db.select().from(agents).where(eq(agents.userId, userId)).limit(1);
-    const planAccess =
-      (await getPlanAccessProjectionForUserId(userId)) || {
-        ownerType: 'agent' as const,
-        ownerId: userId,
-        currentPlan: null,
-        subscription: null,
-        entitlements: {},
-        trialStatus: 'none' as const,
-        trialEndsAt: null,
-        trialDaysRemaining: null,
-      };
+    const planAccess = (await getPlanAccessProjectionForUserId(userId)) || {
+      ownerType: 'agent' as const,
+      ownerId: userId,
+      currentPlan: null,
+      subscription: null,
+      entitlements: {},
+      trialStatus: 'none' as const,
+      trialEndsAt: null,
+      trialDaysRemaining: null,
+    };
     const onboardingState = buildOnboardingState(user, agent || null, planAccess);
 
     if (
@@ -184,7 +160,7 @@ export class AgentOnboardingService {
       fullFeaturesUnlocked: onboardingState.fullFeaturesUnlocked,
       recommendedNextStep: onboardingState.recommendedNextStep,
       subscriptionTier: planAccess.currentPlan?.name || 'unassigned',
-      subscriptionStatus: toOnboardingStatus(planAccess.subscription?.status),
+      subscriptionStatus: onboardingState.subscriptionStatus,
       trialStartedAt:
         planAccess.subscription && planAccess.trialStatus !== 'none'
           ? planAccess.subscription.createdAt
@@ -331,17 +307,16 @@ export class AgentOnboardingService {
       .where(eq(agents.id, agent.id));
 
     const [updatedAgent] = await db.select().from(agents).where(eq(agents.id, agent.id)).limit(1);
-    const planAccess =
-      (await getPlanAccessProjectionForUserId(userId)) || {
-        ownerType: 'agent' as const,
-        ownerId: userId,
-        currentPlan: null,
-        subscription: null,
-        entitlements: {},
-        trialStatus: 'none' as const,
-        trialEndsAt: null,
-        trialDaysRemaining: null,
-      };
+    const planAccess = (await getPlanAccessProjectionForUserId(userId)) || {
+      ownerType: 'agent' as const,
+      ownerId: userId,
+      currentPlan: null,
+      subscription: null,
+      entitlements: {},
+      trialStatus: 'none' as const,
+      trialEndsAt: null,
+      trialDaysRemaining: null,
+    };
     const onboardingState = buildOnboardingState(
       {
         ...user,

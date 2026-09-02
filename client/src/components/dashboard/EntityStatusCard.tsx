@@ -8,6 +8,7 @@ import { Edit, Trash2, AlertTriangle, Eye, Inbox } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { getQualityTier } from '@/lib/quality';
 import { withApiBase, getPrimaryDevelopmentImageUrl } from '@/lib/mediaUtils';
+import { LISTING_SUBMISSION_READINESS_THRESHOLD } from '@shared/listing-workflow-types';
 
 interface EntityStatusCardProps {
   type: 'listing' | 'development';
@@ -159,28 +160,27 @@ export const EntityStatusCard: React.FC<EntityStatusCardProps> = ({
                   )}
 
                   {/* Quality Indicator (Only for drafts/active) */}
-                  {quality &&
-                    (isDraft || isLive) && (
-                      <div className="flex items-center gap-1.5 px-2.5 py-1 bg-slate-50 rounded-md border border-slate-200">
-                        <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">
-                          Quality
-                        </span>
-                        <div
-                          className={cn(
-                            'text-xs font-bold',
-                            getQualityTier(quality.score).color === 'green'
-                              ? 'text-emerald-600'
-                              : getQualityTier(quality.score).color === 'blue'
-                                ? 'text-blue-600'
-                                : getQualityTier(quality.score).color === 'yellow'
-                                  ? 'text-amber-600'
-                                  : 'text-rose-600',
-                          )}
-                        >
-                          {quality.score}
-                        </div>
+                  {quality && (isDraft || isLive) && (
+                    <div className="flex items-center gap-1.5 px-2.5 py-1 bg-slate-50 rounded-md border border-slate-200">
+                      <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">
+                        Quality
+                      </span>
+                      <div
+                        className={cn(
+                          'text-xs font-bold',
+                          getQualityTier(quality.score).color === 'green'
+                            ? 'text-emerald-600'
+                            : getQualityTier(quality.score).color === 'blue'
+                              ? 'text-blue-600'
+                              : getQualityTier(quality.score).color === 'yellow'
+                                ? 'text-amber-600'
+                                : 'text-rose-600',
+                        )}
+                      >
+                        {quality.score}
                       </div>
-                    )}
+                    </div>
+                  )}
 
                   {/* Quick Actions */}
                   <div className="flex items-center gap-1 border-l border-slate-100 pl-2 ml-1">
@@ -263,28 +263,28 @@ export const EntityStatusCard: React.FC<EntityStatusCardProps> = ({
 
             {/* Footer Actions if needed */}
             {!isRejected && isLive && (
-                <div className="mt-5 flex flex-col gap-3 border-t border-slate-50 pt-4 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="text-sm text-slate-500">
-                    {typeof data.enquiries === 'number'
-                      ? `${data.enquiries} enquiries`
-                      : 'No enquiry data'}
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {onViewEnquiries && (
-                      <Button size="sm" variant="outline" onClick={() => onViewEnquiries(data.id)}>
-                        <Inbox className="mr-2 h-4 w-4" />
-                        View Enquiries
-                      </Button>
-                    )}
-                    {onView && (
-                      <Button size="sm" onClick={() => onView(data.id)}>
-                        <Eye className="mr-2 h-4 w-4" />
-                        {isListing ? 'View Property' : 'Open Development'}
-                      </Button>
-                    )}
-                  </div>
+              <div className="mt-5 flex flex-col gap-3 border-t border-slate-50 pt-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="text-sm text-slate-500">
+                  {typeof data.enquiries === 'number'
+                    ? `${data.enquiries} enquiries`
+                    : 'No enquiry data'}
                 </div>
-              )}
+                <div className="flex flex-wrap gap-2">
+                  {onViewEnquiries && (
+                    <Button size="sm" variant="outline" onClick={() => onViewEnquiries(data.id)}>
+                      <Inbox className="mr-2 h-4 w-4" />
+                      View Enquiries
+                    </Button>
+                  )}
+                  {onView && (
+                    <Button size="sm" onClick={() => onView(data.id)}>
+                      <Eye className="mr-2 h-4 w-4" />
+                      {isListing ? 'View Property' : 'Open Development'}
+                    </Button>
+                  )}
+                </div>
+              </div>
+            )}
 
             {!isRejected && (isDraft || isInReview) && (
               <div className="mt-5 flex flex-wrap justify-end gap-2 border-t border-slate-50 pt-4">
@@ -296,7 +296,9 @@ export const EntityStatusCard: React.FC<EntityStatusCardProps> = ({
                 )}
                 {isDraft ? (
                   <Button size="sm" onClick={() => onEdit(data.id)} className="font-medium">
-                    {readiness.score >= 90 ? 'Review & Submit' : 'Continue Setup'}
+                    {readiness.score >= (isListing ? LISTING_SUBMISSION_READINESS_THRESHOLD : 90)
+                      ? 'Review & Submit'
+                      : 'Continue Setup'}
                   </Button>
                 ) : (
                   <Button

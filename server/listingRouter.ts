@@ -28,12 +28,14 @@ import { prepareSellerProspectListingConversion } from './services/sellerProspec
 import {
   assertListingPublicationEntitled,
   evaluateAgencyPublicationReadiness,
+  evaluateIndependentAgentPublicationReadiness,
   ListingPublicationEntitlementError,
 } from './services/listingPublicationEntitlementService';
 import {
   getListingAuthoringValidationMessage,
   LISTING_PROPERTY_TYPES,
 } from '../shared/property-taxonomy';
+import { LISTING_SUBMISSION_READINESS_THRESHOLD } from '../shared/listing-workflow-types';
 import {
   buildCanonicalCorePropertyDetails,
   validateCorePropertyInformation,
@@ -49,10 +51,7 @@ import {
   getPrimaryPrice,
   validatePricingContract,
 } from '../shared/pricing-contract';
-import {
-  normalizeRentalTerms,
-  validateRentalTerms,
-} from '../shared/rental-terms-contract';
+import { normalizeRentalTerms, validateRentalTerms } from '../shared/rental-terms-contract';
 import { getPrimaryListingImage } from '../shared/listing-media';
 import {
   LOCATION_CONFIRMATION_STATES,
@@ -89,6 +88,42 @@ function rejectGenericCommercialWorkflow(propertyType: unknown): void {
     code: 'BAD_REQUEST',
     message: COMMERCIAL_INVENTORY_MANAGEMENT_MESSAGE,
   });
+}
+
+function publicationPreflightAction(
+  reason: string,
+  actor: 'agent' | 'agency',
+): { actionLabel: string; actionPath: string } {
+  const agentProfilePath = '/agent/setup';
+  const agencySetupPath = '/agency/setup';
+  const billingPath = actor === 'agency' ? '/agency/billing' : '/agent/select-package';
+  const inventoryPath = actor === 'agency' ? '/agency/listings' : '/agent/listings?tab=active';
+
+  switch (reason) {
+    case 'agency_unverified':
+      return { actionLabel: 'Contact Property Listify', actionPath: '/contact' };
+    case 'agency_profile_incomplete':
+      return { actionLabel: 'Complete Agency Setup', actionPath: agencySetupPath };
+    case 'agency_branding_incomplete':
+      return { actionLabel: 'Complete Agency Branding', actionPath: agencySetupPath };
+    case 'individual_agent_email_unverified':
+    case 'individual_agent_unapproved':
+    case 'individual_agent_profile_incomplete':
+      return { actionLabel: 'Complete Agent Profile', actionPath: agentProfilePath };
+    case 'subscription_required':
+    case 'subscription_pending_payment':
+      return { actionLabel: 'Complete Launch Access', actionPath: billingPath };
+    case 'subscription_suspended':
+    case 'subscription_period_ended':
+    case 'subscription_expired':
+    case 'subscription_plan_unresolved':
+    case 'subscription_plan_ineligible':
+      return { actionLabel: 'Review Launch Access', actionPath: billingPath };
+    case 'listing_capacity_exhausted':
+      return { actionLabel: 'Manage Active Listings', actionPath: inventoryPath };
+    default:
+      return { actionLabel: 'Contact Property Listify', actionPath: '/contact' };
+  }
 }
 
 // Helper to normalize placeId vs locationId logic
@@ -864,8 +899,8 @@ export const listingRouter = router({
 
         if (input.propertyDetails !== undefined || input.pricing !== undefined || taxonomyChanged) {
           updatePayload.propertyDetails = normalizePropertyDetailsForPublicContract(
-            input.propertyDetails ?? ((listing.propertyDetails as any) ?? {}),
-            input.pricing ?? ((listing.pricing as any) ?? null),
+            input.propertyDetails ?? (listing.propertyDetails as any) ?? {},
+            input.pricing ?? (listing.pricing as any) ?? null,
             input.action ?? listing.action,
             nextPropertyType,
           );
@@ -1638,8 +1673,8 @@ export const listingRouter = router({
     }
 
     // Publication readiness enumeration: surface every canonical blocker
-    // (verification, profile, branding, subscription, capacity) BEFORE the
-    // agency invests authoring effort, instead of failing at submit time.
+    // (profile, approval, verification, subscription, capacity) BEFORE an
+    // author invests in a listing that cannot be submitted.
     let publication: {
       ready: boolean;
       blockers: Array<{ reason: string; message: string }>;
@@ -1648,9 +1683,22 @@ export const listingRouter = router({
       capacity: { used: number; max: number } | null;
     } | null = null;
 
-    if (currentUser.role === 'agency_admin' && currentUser.agencyId) {
-      const readiness = await evaluateAgencyPublicationReadiness(db, Number(currentUser.agencyId), {
+    const userAgencyId = Number(currentUser.agencyId || 0);
+    const agentAgencyId = Number(agent?.agencyId || 0);
+
+    if (userAgencyId && agentAgencyId && userAgencyId !== agentAgencyId) {
+      blockers.push({
+        code: 'listing_ownership_inconsistent',
+        message:
+          'Your account has inconsistent agency membership details. Contact Property Listify before creating inventory.',
+        actionLabel: 'Contact Property Listify',
+        actionPath: '/contact',
+      });
+    } else if (userAgencyId || agentAgencyId) {
+      const agencyId = userAgencyId || agentAgencyId;
+      const readiness = await evaluateAgencyPublicationReadiness(db, agencyId, {
         includeCapacityCount: true,
+        skipCapacityWhenBlocked: false,
       });
       publication = {
         ready: readiness.ready,
@@ -1663,28 +1711,47 @@ export const listingRouter = router({
             : null,
       };
 
-      if (!readiness.facts.verified) {
+      for (const blocker of readiness.blockers) {
+        const action = publicationPreflightAction(blocker.reason, 'agency');
         blockers.push({
-          code: 'agency_unverified',
-          message:
-            'Your agency must be verified by Property Listify before listings can be submitted for publication.',
-          actionLabel: 'Contact Property Listify',
-          actionPath: '/contact',
+          code: blocker.reason,
+          message: blocker.message,
+          ...action,
         });
       }
+    } else if (currentUser.role === 'agent') {
+      const readiness = await evaluateIndependentAgentPublicationReadiness(db, currentUser.id, {
+        agentId: agent?.id ? Number(agent.id) : undefined,
+        includeCapacityCount: true,
+        skipCapacityWhenBlocked: false,
+      });
+      publication = {
+        ready: readiness.ready,
+        blockers: readiness.blockers.map(({ reason, message }) => ({ reason, message })),
+        verified: readiness.facts.approved && readiness.facts.emailVerified,
+        daysRemaining: readiness.facts.daysRemaining,
+        capacity:
+          readiness.facts.capacityUsed !== null && readiness.facts.capacityMax !== null
+            ? { used: readiness.facts.capacityUsed, max: readiness.facts.capacityMax }
+            : null,
+      };
 
-      if (
-        publication.capacity &&
-        publication.capacity.max > 0 &&
-        publication.capacity.used >= publication.capacity.max
-      ) {
+      for (const blocker of readiness.blockers) {
+        const action = publicationPreflightAction(blocker.reason, 'agent');
         blockers.push({
-          code: 'listing_capacity_exhausted',
-          message: `Your plan allows ${publication.capacity.max} active listings and the capacity is fully used. Archive an active listing or upgrade before starting another.`,
-          actionLabel: 'Open Billing Workspace',
-          actionPath: '/agency/billing',
+          code: blocker.reason,
+          message: blocker.message,
+          ...action,
         });
       }
+    } else {
+      blockers.push({
+        code: 'listing_authoring_unavailable',
+        message:
+          'Listing authoring is available to approved agents and agency teams. Use the workspace for your account type.',
+        actionLabel: 'Back to Dashboard',
+        actionPath: '/dashboard',
+      });
     }
 
     return {
@@ -1822,11 +1889,10 @@ export const listingRouter = router({
 
         const readiness = calculateListingReadiness({ ...fullListing, media });
 
-        if (readiness.score < 75) {
-          // Threshold 75%
+        if (readiness.score < LISTING_SUBMISSION_READINESS_THRESHOLD) {
           await recordSubmitFailure(
             'readiness_below_threshold',
-            `Listing readiness ${readiness.score}% is below required 75%`,
+            `Listing readiness ${readiness.score}% is below required ${LISTING_SUBMISSION_READINESS_THRESHOLD}%`,
             {
               readinessScore: readiness.score,
               missing: Array.isArray((readiness as any).missing) ? (readiness as any).missing : [],
@@ -1834,7 +1900,7 @@ export const listingRouter = router({
           );
           throw new TRPCError({
             code: 'PRECONDITION_FAILED',
-            message: `Listing is not ready for submission (${readiness.score}%). Please complete missing fields.`,
+            message: `Listing is not ready for submission (${readiness.score}%). Reach ${LISTING_SUBMISSION_READINESS_THRESHOLD}% and complete the remaining required fields.`,
           });
         }
 

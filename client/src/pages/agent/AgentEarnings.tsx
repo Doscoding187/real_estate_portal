@@ -3,16 +3,26 @@ import { AgentAppShell } from '@/components/agent/AgentAppShell';
 import { CommissionTracker } from '@/components/agent/CommissionTracker';
 import { agentPageStyles } from '@/components/agent/agentPageStyles';
 import { AgentFeatureLockedState } from '@/components/agent/AgentFeatureLockedState';
+import { AgentJourneyStatusErrorState } from '@/components/agent/AgentJourneyStatusErrorState';
 import { useAgentOnboardingStatus } from '@/hooks/useAgentOnboardingStatus';
+import { getAgentJourneyAction, isAgentProfileJourneyStep } from '@/lib/agentJourney';
 
 export default function AgentEarnings() {
   const [, setLocation] = useLocation();
-  const { status, isLoading: statusLoading } = useAgentOnboardingStatus({
+  const {
+    status,
+    isLoading: statusLoading,
+    error: statusError,
+    retry: retryStatus,
+  } = useAgentOnboardingStatus({
     requireDashboardUnlocked: true,
   });
 
+  const journeyLocked = !statusLoading && !status?.fullFeaturesUnlocked;
   const earningsLocked =
-    !statusLoading && !status?.entitlements?.featureFlags?.hasCommissionTracking;
+    !statusLoading && !journeyLocked && !status?.entitlements?.featureFlags?.hasCommissionTracking;
+  const journeyAction = getAgentJourneyAction(status);
+  const needsProfileCompletion = isAgentProfileJourneyStep(status);
 
   return (
     <AgentAppShell>
@@ -24,6 +34,25 @@ export default function AgentEarnings() {
             actionLabel="Loading"
             onAction={() => {}}
             isLoading
+          />
+        ) : statusError ? (
+          <AgentJourneyStatusErrorState onRetry={retryStatus} />
+        ) : journeyLocked ? (
+          <AgentFeatureLockedState
+            title={
+              needsProfileCompletion
+                ? 'Complete your profile before using earnings'
+                : journeyAction.title
+            }
+            description={
+              needsProfileCompletion
+                ? 'Finish your professional profile, then activate Launch Access before using optional business tools.'
+                : journeyAction.description
+            }
+            actionLabel={journeyAction.waiting ? 'Return to dashboard' : journeyAction.label}
+            onAction={() =>
+              setLocation(journeyAction.waiting ? '/agent/dashboard' : journeyAction.href)
+            }
           />
         ) : earningsLocked ? (
           <AgentFeatureLockedState

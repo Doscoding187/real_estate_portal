@@ -3,11 +3,13 @@ import { useLocation } from 'wouter';
 import { AgentAppShell } from '@/components/agent/AgentAppShell';
 import { agentPageStyles } from '@/components/agent/agentPageStyles';
 import { AgentFeatureLockedState } from '@/components/agent/AgentFeatureLockedState';
+import { AgentJourneyStatusErrorState } from '@/components/agent/AgentJourneyStatusErrorState';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAgentOnboardingStatus } from '@/hooks/useAgentOnboardingStatus';
+import { getAgentJourneyAction, isAgentProfileJourneyStep } from '@/lib/agentJourney';
 import { trpc } from '@/lib/trpc';
 import { cn } from '@/lib/utils';
 import {
@@ -71,13 +73,21 @@ function EmptyPanel({ title, description }: { title: string; description: string
 export default function AgentTrainingSupport() {
   const [, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState('academy');
-  const { status, isLoading: statusLoading } = useAgentOnboardingStatus({
-    requireDashboardUnlocked: true,
-  });
+  const {
+    status,
+    isLoading: statusLoading,
+    error: statusError,
+    retry: retryStatus,
+  } = useAgentOnboardingStatus();
+  const trainingLocked = !statusLoading && !status?.dashboardUnlocked;
+  const operationalDataEnabled = !statusLoading && Boolean(status?.fullFeaturesUnlocked);
+  const journeyAction = getAgentJourneyAction(status);
+  const needsProfileCompletion = isAgentProfileJourneyStep(status);
 
   const { data: stats, isLoading: statsLoading } = trpc.agent.getDashboardStats.useQuery(
     undefined,
     {
+      enabled: operationalDataEnabled,
       retry: false,
     },
   );
@@ -98,6 +108,25 @@ export default function AgentTrainingSupport() {
             actionLabel="Loading"
             onAction={() => {}}
             isLoading
+          />
+        ) : statusError ? (
+          <AgentJourneyStatusErrorState onRetry={retryStatus} />
+        ) : trainingLocked ? (
+          <AgentFeatureLockedState
+            title={
+              needsProfileCompletion
+                ? 'Complete your profile before opening training and support'
+                : journeyAction.title
+            }
+            description={
+              needsProfileCompletion
+                ? 'Finish your professional profile, then activate Launch Access to use training, support, and daily-work tools.'
+                : journeyAction.description
+            }
+            actionLabel={journeyAction.waiting ? 'Return to dashboard' : journeyAction.label}
+            onAction={() =>
+              setLocation(journeyAction.waiting ? '/agent/dashboard' : journeyAction.href)
+            }
           />
         ) : (
           <>
@@ -122,27 +151,53 @@ export default function AgentTrainingSupport() {
                 icon={UserCheck}
                 tone="border-l-4 border-l-[var(--primary)]"
               />
-              <StatCard
-                title="Active Listings"
-                value={statsLoading ? '�' : (stats?.activeListings ?? 0)}
-                subtitle="Listings currently live"
-                icon={TrendingUp}
-                tone="border-l-4 border-l-emerald-500"
-              />
-              <StatCard
-                title="Leads This Week"
-                value={statsLoading ? '�' : (stats?.newLeadsThisWeek ?? 0)}
-                subtitle="Incoming pipeline activity"
-                icon={Target}
-                tone="border-l-4 border-l-blue-500"
-              />
-              <StatCard
-                title="Showings Today"
-                value={statsLoading ? '�' : (stats?.showingsToday ?? 0)}
-                subtitle="Appointments on schedule"
-                icon={CalendarDays}
-                tone="border-l-4 border-l-amber-500"
-              />
+              {operationalDataEnabled ? (
+                <>
+                  <StatCard
+                    title="Active Listings"
+                    value={statsLoading ? '—' : (stats?.activeListings ?? 0)}
+                    subtitle="Listings currently live"
+                    icon={TrendingUp}
+                    tone="border-l-4 border-l-emerald-500"
+                  />
+                  <StatCard
+                    title="Leads This Week"
+                    value={statsLoading ? '—' : (stats?.newLeadsThisWeek ?? 0)}
+                    subtitle="Incoming pipeline activity"
+                    icon={Target}
+                    tone="border-l-4 border-l-blue-500"
+                  />
+                  <StatCard
+                    title="Showings Today"
+                    value={statsLoading ? '—' : (stats?.showingsToday ?? 0)}
+                    subtitle="Appointments on schedule"
+                    icon={CalendarDays}
+                    tone="border-l-4 border-l-amber-500"
+                  />
+                </>
+              ) : (
+                <Card className={cn(agentPageStyles.panel, 'md:col-span-3')}>
+                  <CardContent className="p-6">
+                    <p className={agentPageStyles.statLabel}>Workspace activation</p>
+                    <p className="mt-2 text-lg font-semibold text-slate-900">
+                      {journeyAction.title}
+                    </p>
+                    <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
+                      {journeyAction.description} Listing, enquiry, and showing activity will appear
+                      here after Launch Access is active.
+                    </p>
+                    <Button
+                      variant="outline"
+                      className="mt-4 rounded-full"
+                      onClick={() =>
+                        setLocation(journeyAction.waiting ? '/agent/dashboard' : journeyAction.href)
+                      }
+                    >
+                      {journeyAction.waiting ? 'View activation status' : journeyAction.label}
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
             </div>
 
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">

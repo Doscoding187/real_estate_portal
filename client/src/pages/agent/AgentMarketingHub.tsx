@@ -4,12 +4,14 @@ import { useAuth } from '@/_core/hooks/useAuth';
 import { AgentAppShell } from '@/components/agent/AgentAppShell';
 import { agentPageStyles } from '@/components/agent/agentPageStyles';
 import { AgentFeatureLockedState } from '@/components/agent/AgentFeatureLockedState';
+import { AgentJourneyStatusErrorState } from '@/components/agent/AgentJourneyStatusErrorState';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { trpc } from '@/lib/trpc';
 import { useAgentOnboardingStatus } from '@/hooks/useAgentOnboardingStatus';
+import { getAgentJourneyAction, isAgentProfileJourneyStep } from '@/lib/agentJourney';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import {
@@ -215,7 +217,12 @@ function EmptyState({
 export default function AgentMarketingHub() {
   const [location, setLocation] = useLocation();
   const { user } = useAuth();
-  const { status, isLoading: statusLoading } = useAgentOnboardingStatus({
+  const {
+    status,
+    isLoading: statusLoading,
+    error: statusError,
+    retry: retryStatus,
+  } = useAgentOnboardingStatus({
     requireDashboardUnlocked: true,
   });
 
@@ -246,6 +253,8 @@ export default function AgentMarketingHub() {
   }, [activeTab]);
 
   const marketingLocked = !statusLoading && !status?.entitlements?.canPublishListings;
+  const journeyAction = getAgentJourneyAction(status);
+  const needsProfileCompletion = isAgentProfileJourneyStep(status);
   const explorePublishingQuery = trpc.explore.getPublishingEligibility.useQuery(undefined, {
     enabled: Boolean(user) && !marketingLocked,
     retry: false,
@@ -384,23 +393,23 @@ export default function AgentMarketingHub() {
             onAction={() => {}}
             isLoading
           />
+        ) : statusError ? (
+          <AgentJourneyStatusErrorState onRetry={retryStatus} />
         ) : marketingLocked ? (
           <AgentFeatureLockedState
-            title="Marketing tools unlock after publishing access"
+            title={
+              needsProfileCompletion
+                ? 'Complete your profile before growing visibility'
+                : journeyAction.title
+            }
             description={
-              (status?.profileCompletionScore || 0) < 70
-                ? 'Finish your setup and reach 70% profile completion to unlock Explore publishing and marketing tools.'
-                : status?.entitlements?.trialExpired
-                  ? 'Your trial access has expired. Review your package to restore promotion tools.'
-                  : 'Your current package does not include publishing and promotion access yet.'
+              needsProfileCompletion
+                ? 'Finish your professional profile first. Then activate Launch Access to use live inventory, Explore, and promotion tools together.'
+                : journeyAction.description
             }
-            actionLabel={
-              (status?.profileCompletionScore || 0) < 70 ? 'Finish setup' : 'Review access'
-            }
+            actionLabel={journeyAction.waiting ? 'Return to dashboard' : journeyAction.label}
             onAction={() =>
-              setLocation(
-                (status?.profileCompletionScore || 0) < 70 ? '/agent/setup' : '/agent/settings',
-              )
+              setLocation(journeyAction.waiting ? '/agent/dashboard' : journeyAction.href)
             }
           />
         ) : (

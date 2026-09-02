@@ -11,7 +11,9 @@ import { trpc } from '@/lib/trpc';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EntityStatusCard } from '@/components/dashboard/EntityStatusCard';
 import { AgentFeatureLockedState } from '@/components/agent/AgentFeatureLockedState';
+import { AgentJourneyStatusErrorState } from '@/components/agent/AgentJourneyStatusErrorState';
 import { useAgentOnboardingStatus } from '@/hooks/useAgentOnboardingStatus';
+import { getAgentJourneyAction, isAgentProfileJourneyStep } from '@/lib/agentJourney';
 import { calculateListingReadiness } from '@/lib/readiness';
 import { cn } from '@/lib/utils';
 
@@ -40,7 +42,12 @@ function listingTabFromLocation(location: string): ListingTab {
 export default function AgentListings() {
   const [location, setLocation] = useLocation();
   const { user } = useAuth();
-  const { status, isLoading: statusLoading } = useAgentOnboardingStatus({
+  const {
+    status,
+    isLoading: statusLoading,
+    error: statusError,
+    retry: retryStatus,
+  } = useAgentOnboardingStatus({
     requireDashboardUnlocked: true,
   });
   const [searchQuery, setSearchQuery] = useState('');
@@ -56,6 +63,8 @@ export default function AgentListings() {
   };
 
   const isDraftOrPending = activeTab === 'draft' || activeTab === 'pending';
+  const dashboardUnlocked = !statusLoading && Boolean(status?.dashboardUnlocked);
+  const operationalDataEnabled = !statusLoading && Boolean(status?.fullFeaturesUnlocked);
 
   const isListingInTab = (status: string | null | undefined, tab: ListingTab) => {
     const normalized = String(status || '').toLowerCase();
@@ -79,7 +88,9 @@ export default function AgentListings() {
       limit: 50,
     },
     {
-      enabled: !!user && !isDraftOrPending,
+      // Active inventory is operational data. Keep it behind the same
+      // server-decided journey gate used by the rest of the workspace.
+      enabled: !!user && operationalDataEnabled && !isDraftOrPending,
     },
   );
 
@@ -94,7 +105,9 @@ export default function AgentListings() {
       limit: 50,
     },
     {
-      enabled: !!user && isDraftOrPending,
+      // Drafts and submissions are private authoring work, so an agent can
+      // recover them while payment or profile approval is still pending.
+      enabled: !!user && dashboardUnlocked && isDraftOrPending,
     },
   );
 
@@ -201,6 +214,12 @@ export default function AgentListings() {
   );
 
   const listingAccessLocked = !statusLoading && !status?.entitlements?.canPublishListings;
+  const journeyAction = getAgentJourneyAction(status);
+  const needsProfileCompletion = isAgentProfileJourneyStep(status);
+  const startListing = () => {
+    if (statusLoading || journeyAction.waiting) return;
+    setLocation(listingAccessLocked ? journeyAction.href : '/listings/create');
+  };
 
   return (
     <AgentAppShell>
@@ -219,11 +238,12 @@ export default function AgentListings() {
             Commercial inventory
           </Button>
           <Button
-            onClick={() => setLocation('/listings/create')}
+            onClick={startListing}
+            disabled={statusLoading || journeyAction.waiting}
             className={agentPageStyles.primaryButton}
           >
             <Plus className="h-4 w-4 mr-2" />
-            Add New Listing
+            {listingAccessLocked ? journeyAction.label : 'Add New Listing'}
           </Button>
         </div>
       </header>
@@ -237,27 +257,48 @@ export default function AgentListings() {
             onAction={() => {}}
             isLoading
           />
-        ) : listingAccessLocked ? (
+        ) : statusError ? (
+          <AgentJourneyStatusErrorState onRetry={retryStatus} />
+        ) : !dashboardUnlocked ? (
           <AgentFeatureLockedState
-            title="Listing management unlocks after publishing access"
+            title={
+              needsProfileCompletion
+                ? 'Complete your profile before opening listings'
+                : journeyAction.title
+            }
             description={
-              (status?.profileCompletionScore || 0) < 70
-                ? 'Reach 70% profile completion to unlock publishing, inventory management, and listing workflows.'
-                : status?.entitlements?.trialExpired
-                  ? 'Your trial access has expired. Review your package to restore listing publishing.'
-                  : 'Your current package does not include listing publishing yet.'
+              needsProfileCompletion
+                ? 'Complete the remaining professional profile details to unlock your Agent workspace.'
+                : journeyAction.description
             }
-            actionLabel={
-              (status?.profileCompletionScore || 0) < 70 ? 'Finish setup' : 'Review access'
-            }
+            actionLabel={journeyAction.waiting ? 'Return to dashboard' : journeyAction.label}
             onAction={() =>
-              setLocation(
-                (status?.profileCompletionScore || 0) < 70 ? '/agent/setup' : '/agent/settings',
-              )
+              setLocation(journeyAction.waiting ? '/agent/dashboard' : journeyAction.href)
             }
           />
         ) : (
           <>
+            {listingAccessLocked && isDraftOrPending ? (
+              <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-950">
+                <p className="font-medium">
+                  Your private {activeTab === 'draft' ? 'drafts' : 'submissions'} are still here.
+                </p>
+                <p className="mt-1 text-amber-900/80">
+                  {journeyAction.description} You can review or edit this work while access is being
+                  completed.
+                </p>
+                {!journeyAction.waiting ? (
+                  <Button
+                    variant="outline"
+                    className="mt-3 rounded-full border-amber-300 bg-white"
+                    onClick={() => setLocation(journeyAction.href)}
+                  >
+                    {journeyAction.label}
+                  </Button>
+                ) : null}
+              </div>
+            ) : null}
+
             {/* Controls */}
             <div
               className={cn(
@@ -306,7 +347,26 @@ export default function AgentListings() {
                 value={activeTab}
                 className="space-y-6 animate-in fade-in-50 duration-500 slide-in-from-bottom-2"
               >
-                {isLoading ? (
+                {listingAccessLocked && !isDraftOrPending ? (
+                  <AgentFeatureLockedState
+                    title={
+                      needsProfileCompletion
+                        ? 'Complete your profile before listing'
+                        : journeyAction.title
+                    }
+                    description={
+                      needsProfileCompletion
+                        ? 'Complete the remaining professional profile details, then activate Launch Access to publish and manage inventory.'
+                        : journeyAction.description
+                    }
+                    actionLabel={
+                      journeyAction.waiting ? 'Return to dashboard' : journeyAction.label
+                    }
+                    onAction={() =>
+                      setLocation(journeyAction.waiting ? '/agent/dashboard' : journeyAction.href)
+                    }
+                  />
+                ) : isLoading ? (
                   <div className="flex flex-col gap-4">
                     {[1, 2, 3].map(i => (
                       <div key={i} className={cn(agentPageStyles.panel, 'flex gap-4 p-4')}>
@@ -331,10 +391,11 @@ export default function AgentListings() {
                     </p>
                     {!searchQuery && (activeTab === 'active' || activeTab === 'draft') && (
                       <Button
-                        onClick={() => setLocation('/listings/create')}
+                        onClick={startListing}
+                        disabled={statusLoading || journeyAction.waiting}
                         className={cn(agentPageStyles.primaryButton, 'mt-4')}
                       >
-                        Create Listing
+                        {listingAccessLocked ? journeyAction.label : 'Create Listing'}
                       </Button>
                     )}
                   </div>

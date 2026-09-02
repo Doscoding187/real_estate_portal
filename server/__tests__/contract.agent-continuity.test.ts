@@ -71,11 +71,12 @@ describe('activation-to-renewal continuity wiring', () => {
   it('speaks the expired truth in the agent status strip and CRM lock', () => {
     const strip = readRepoFile('client/src/components/agent/AgentStatusStrip.tsx');
     expect(strip).toContain("expired: 'Launch Access expired'");
-    expect(strip).toContain("status.subscriptionStatus === 'expired'");
+    expect(strip).toContain("'renew_launch_access'");
+    expect(strip).toContain('getAgentJourneyAction');
 
     const leads = readRepoFile('client/src/pages/AgentLeads.tsx');
-    expect(leads).toContain('Your Launch Access term has expired');
-    expect(leads).toContain('Renew Launch Access');
+    expect(leads).toContain('getAgentJourneyAction');
+    expect(leads).toContain('journeyAction.title');
   });
 
   it('routes demand leads only to commercially active recipients', () => {

@@ -9,12 +9,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AgentAppShell } from '@/components/agent/AgentAppShell';
 import { agentPageStyles } from '@/components/agent/agentPageStyles';
 import { AgentFeatureLockedState } from '@/components/agent/AgentFeatureLockedState';
+import { AgentJourneyStatusErrorState } from '@/components/agent/AgentJourneyStatusErrorState';
 import { User, CreditCard, Save, Camera, Loader2, Clock, X } from 'lucide-react';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { trpc } from '@/lib/trpc';
 import { useAgentOnboardingStatus } from '@/hooks/useAgentOnboardingStatus';
+import { getAgentJourneyAction } from '@/lib/agentJourney';
 import { LocationAutocomplete } from '@/components/location/LocationAutocomplete';
 
 type LocationOption = {
@@ -56,6 +58,16 @@ function formatSubscriptionStatus(status: string | null | undefined) {
       return 'Trial active';
     case 'active':
       return 'Active subscription';
+    case 'pending_payment':
+      return 'Payment outstanding';
+    case 'payment_under_review':
+      return 'Payment proof under review';
+    case 'past_due':
+      return 'Payment overdue';
+    case 'grace_period':
+      return 'Grace period';
+    case 'suspended':
+      return 'Suspended';
     case 'expired':
       return 'Expired';
     case 'cancelled':
@@ -68,7 +80,12 @@ function formatSubscriptionStatus(status: string | null | undefined) {
 export default function AgentSettings() {
   const [, setLocation] = useLocation();
   const { user } = useAuth();
-  const { status, isLoading: statusLoading } = useAgentOnboardingStatus({
+  const {
+    status,
+    isLoading: statusLoading,
+    error: statusError,
+    retry: retryStatus,
+  } = useAgentOnboardingStatus({
     requireDashboardUnlocked: true,
   });
   const [activeTab, setActiveTab] = useState('profile');
@@ -175,14 +192,23 @@ export default function AgentSettings() {
   };
 
   const hasActiveCommercialTerm = Boolean(
-    status?.packageSelected && status?.subscriptionStatus !== 'none',
+    status?.packageSelected &&
+    ['trial', 'active', 'grace_period'].includes(String(status?.subscriptionStatus)),
   );
+  const hasSelectedCommercialTerm = Boolean(
+    status?.packageSelected && status?.subscriptionStatus !== 'unassigned',
+  );
+  const journeyAction = getAgentJourneyAction(status);
   const currentTierLabel = hasActiveCommercialTerm
     ? 'Agent Launch Access'
-    : 'No active commercial term';
+    : hasSelectedCommercialTerm
+      ? 'Agent Launch Access activation'
+      : 'No active commercial term';
   const currentTierDescription = hasActiveCommercialTerm
     ? 'Once-off 90-day access to the supported Agent workspace.'
-    : 'Start Agent Launch Access to publish inventory and receive enquiries.';
+    : hasSelectedCommercialTerm
+      ? journeyAction.description
+      : 'Start Agent Launch Access to publish inventory and receive enquiries.';
   const trialEndsAt = status?.entitlements?.trialStatusDetail?.trialEndsAt
     ? new Date(status.entitlements.trialStatusDetail.trialEndsAt)
     : status?.trialEndsAt
@@ -231,10 +257,12 @@ export default function AgentSettings() {
               onAction={() => {}}
               isLoading
             />
+          ) : statusError ? (
+            <AgentJourneyStatusErrorState onRetry={retryStatus} />
           ) : (
             <Tabs value={activeTab} onValueChange={setActiveTab}>
               <TabsList
-                className={cn(agentPageStyles.tabsList, 'mb-6 grid w-full max-w-md grid-cols-2')}
+                className={cn(agentPageStyles.tabsList, 'mb-6 grid w-full max-w-md grid-cols-3')}
               >
                 <TabsTrigger value="profile" className={agentPageStyles.tabTrigger}>
                   Profile
@@ -789,7 +817,7 @@ export default function AgentSettings() {
                               <p className="max-w-2xl text-sm leading-6 text-gray-600">
                                 {hasActiveCommercialTerm
                                   ? 'Your once-off Launch Access term and workspace entitlements are reflected above. This fixed launch offer does not use card management or in-place plan switching.'
-                                  : 'Start Agent Launch Access to request a once-off manual EFT invoice, submit payment proof, and activate your workspace after finance verification.'}
+                                  : journeyAction.description}
                               </p>
                               <div className="flex flex-wrap gap-2 pt-1 text-xs text-slate-600">
                                 <span className="rounded-full bg-slate-100 px-3 py-1">
@@ -807,13 +835,15 @@ export default function AgentSettings() {
                               <Button
                                 onClick={() =>
                                   setLocation(
-                                    hasActiveCommercialTerm
-                                      ? '/agent/dashboard'
-                                      : '/agent/select-package',
+                                    journeyAction.waiting ? '/agent/dashboard' : journeyAction.href,
                                   )
                                 }
                               >
-                                {hasActiveCommercialTerm ? 'Open workspace' : 'Start Launch Access'}
+                                {journeyAction.waiting
+                                  ? 'Return to dashboard'
+                                  : hasActiveCommercialTerm
+                                    ? 'Open workspace'
+                                    : journeyAction.label}
                               </Button>
                               <Button variant="outline" onClick={() => setActiveTab('profile')}>
                                 Update profile access

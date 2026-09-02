@@ -38,7 +38,9 @@ describe('agency viewings operating workflow contract', () => {
   it('keeps lifecycle transitions server-owned and rejects invalid jumps', () => {
     expect(agencyRouter).toContain('const VIEWING_TRANSITIONS');
     expect(agencyRouter).toContain('assertViewingTransitionAllowed(viewing.status, input.status)');
-    expect(agencyRouter).toContain("status: z.enum(['rescheduled', 'awaiting_confirmation', 'confirmed']).default('rescheduled')");
+    expect(agencyRouter).toMatch(
+      /status:\s*z\s*\.\s*enum\(\[\s*'rescheduled',\s*'awaiting_confirmation',\s*'confirmed'\s*\]\)\s*\.\s*default\('rescheduled'\)/,
+    );
     expect(agencyRouter).toContain('appendViewingRescheduleHistory');
     expect(agencyRouter).toContain("message: `Cannot move viewing from ${current} to ${targetStatus}.`");
     expect(agencyRouter).toContain("completed: []");
