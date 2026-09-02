@@ -52,6 +52,7 @@ export type ProfileCompletionResult = {
   flags: string[];
   hasPhoto: boolean;
   hasAreas: boolean;
+  hasPhone: boolean;
 };
 
 function hasValue(value: unknown): boolean {
@@ -100,6 +101,7 @@ export function calculateAgentProfileCompletion(
       flags: ['missing_profile'],
       hasPhoto: false,
       hasAreas: false,
+      hasPhone: false,
     };
   }
 
@@ -127,6 +129,7 @@ export function calculateAgentProfileCompletion(
     flags,
     hasPhoto,
     hasAreas,
+    hasPhone,
   };
 }
 
@@ -185,19 +188,14 @@ export async function getAgentEntitlementsForUserId(
   const hasCommercialAccess = isSubscriptionEntitled(effectivePlanAccess.subscription?.status);
   const trialExpired = !hasActivePaidPlan && trialStatus === 'expired';
   const profileCompletionScore = completion.score;
+  const agentApproved = agent?.status === 'approved';
   const maxActiveListings = getEntitlementNumber(entitlements, 'max_active_listings', 0);
   const hasAiInsights = getEntitlementBoolean(entitlements, 'has_ai_insights');
   const hasAreaIntelligence = getEntitlementBoolean(entitlements, 'has_area_intelligence');
-  const hasCommissionTracking = getEntitlementBoolean(
-    entitlements,
-    'has_commission_tracking',
-  );
+  const hasCommissionTracking = getEntitlementBoolean(entitlements, 'has_commission_tracking');
   const hasRevenueDashboard = getEntitlementBoolean(entitlements, 'has_revenue_dashboard');
   const hasTeamDashboard = getEntitlementBoolean(entitlements, 'has_team_dashboard');
-  const hasRecruitmentFunnel = getEntitlementBoolean(
-    entitlements,
-    'has_recruitment_funnel',
-  );
+  const hasRecruitmentFunnel = getEntitlementBoolean(entitlements, 'has_recruitment_funnel');
   const hasBenchmarking = getEntitlementBoolean(entitlements, 'has_benchmarking');
   const hasPriorityExposure = getEntitlementBoolean(entitlements, 'has_priority_exposure');
   const planMode: 'trial' | 'paid' = hasActivePaidPlan ? 'paid' : 'trial';
@@ -206,16 +204,25 @@ export async function getAgentEntitlementsForUserId(
   const canPublishListings =
     hasCommercialAccess &&
     emailVerified &&
+    agentApproved &&
     !trialExpired &&
     profileCompletionScore >= 70 &&
     canPublishByPlan;
   const canReceiveLeads =
-    hasCommercialAccess && emailVerified && !trialExpired && hasValue(agent?.phone);
+    hasCommercialAccess &&
+    emailVerified &&
+    agentApproved &&
+    !trialExpired &&
+    hasValue(agent?.phone);
   const canAppearInDirectory =
     profileCompletionScore >= 80 &&
     completion.hasPhoto &&
     completion.hasAreas &&
-    agent?.status !== 'suspended';
+    // Approval is the public identity gate. `isVerified` is an optional trust
+    // badge used by specific discovery surfaces (for example Explore), not a
+    // prerequisite for the canonical approved-agent directory or for the
+    // commercial listing/lead journey.
+    agentApproved;
 
   return {
     plan: planMode,

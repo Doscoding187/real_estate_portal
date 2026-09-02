@@ -54,18 +54,28 @@ const optionalEmail = z
   .transform(value => (value === undefined ? undefined : value || null));
 
 const mandateRequirementsSchema = z.object({
-  sellerIdentityRecorded: z.boolean(), propertyAddressConfirmed: z.boolean(), contactDetailsConfirmed: z.boolean(),
-  mandateTypeSelected: z.boolean(), pricingDiscussionCompleted: z.boolean(), agreedPriceRecorded: z.boolean(),
-  mandateDocumentRecorded: z.boolean(), disclosureStatusRecorded: z.boolean(), mediaPlanRecorded: z.boolean(),
-  accessArrangementsRecorded: z.boolean(), responsibleAgentConfirmed: z.boolean(), nextActionRecorded: z.boolean(),
+  sellerIdentityRecorded: z.boolean(),
+  propertyAddressConfirmed: z.boolean(),
+  contactDetailsConfirmed: z.boolean(),
+  mandateTypeSelected: z.boolean(),
+  pricingDiscussionCompleted: z.boolean(),
+  agreedPriceRecorded: z.boolean(),
+  mandateDocumentRecorded: z.boolean(),
+  disclosureStatusRecorded: z.boolean(),
+  mediaPlanRecorded: z.boolean(),
+  accessArrangementsRecorded: z.boolean(),
+  responsibleAgentConfirmed: z.boolean(),
+  nextActionRecorded: z.boolean(),
 });
 
 function isAgencyPrivateMandateStorageReference(reference: string, agencyId: number) {
   const prefix = `private/agency-${agencyId}/mandates/`;
-  return reference.startsWith(prefix)
-    && !/^https?:\/\//i.test(reference)
-    && !reference.includes('\\')
-    && !reference.split('/').some(segment => segment === '.' || segment === '..');
+  return (
+    reference.startsWith(prefix) &&
+    !/^https?:\/\//i.test(reference) &&
+    !reference.includes('\\') &&
+    !reference.split('/').some(segment => segment === '.' || segment === '..')
+  );
 }
 
 const createSellerProspectSchema = z
@@ -91,7 +101,8 @@ const createSellerProspectSchema = z
       context.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['ownerName'],
-        message: 'Record an owner/contact or a property address, suburb, or city for this seller prospect.',
+        message:
+          'Record an owner/contact or a property address, suburb, or city for this seller prospect.',
       });
     }
   });
@@ -199,9 +210,7 @@ function parseDatabaseTimestamp(value: string | Date | null | undefined) {
   if (!value) return null;
   if (value instanceof Date) return value;
   const normalized = value.includes('T') ? value : value.replace(' ', 'T');
-  const withTimeZone = /(?:Z|[+-]\d{2}:?\d{2})$/.test(normalized)
-    ? normalized
-    : `${normalized}Z`;
+  const withTimeZone = /(?:Z|[+-]\d{2}:?\d{2})$/.test(normalized) ? normalized : `${normalized}Z`;
   const parsed = new Date(withTimeZone);
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
@@ -242,7 +251,10 @@ function buildScopeConditions(
   }
 
   if (agentId !== undefined && agentId !== scope.agentId) {
-    throw new TRPCError({ code: 'FORBIDDEN', message: 'Agents can only view their own prospects.' });
+    throw new TRPCError({
+      code: 'FORBIDDEN',
+      message: 'Agents can only view their own prospects.',
+    });
   }
 
   conditions.push(eq(sellerProspects.assignedAgentId, scope.agentId!));
@@ -276,6 +288,41 @@ async function logCanvassingAudit(input: {
 }
 
 export const canvassingRouter = router({
+  /**
+   * Seller prospects are a private, agency-owned record. Return an explicit
+   * workspace mode before the client loads the operational surface so an
+   * independent agent is never dropped into a screen full of forbidden
+   * queries.
+   */
+  getWorkspaceAccess: agentProcedure.query(async ({ ctx }) => {
+    const user = requireUser(ctx);
+    if (!user.agencyId) {
+      return {
+        mode: 'independent_growth' as const,
+        message:
+          'Shared seller prospect records and mandate workflows are available through an agency team.',
+      };
+    }
+
+    const db = await requireDatabase();
+    try {
+      const scope = await getSellerProspectActorScope(db, user);
+      return {
+        mode: 'agency_team' as const,
+        scope: scope.isManager ? ('manager' as const) : ('agent' as const),
+        agencyId: scope.agencyId,
+      };
+    } catch (error) {
+      if (error instanceof TRPCError && error.code === 'FORBIDDEN') {
+        return {
+          mode: 'agency_profile_required' as const,
+          message: error.message,
+        };
+      }
+      throw error;
+    }
+  }),
+
   list: agentProcedure
     .input(
       z.object({
@@ -368,7 +415,9 @@ export const canvassingRouter = router({
         })
         .from(sellerProspects)
         .leftJoin(agents, eq(sellerProspects.assignedAgentId, agents.id))
-        .where(and(eq(sellerProspects.id, prospect.id), eq(sellerProspects.agencyId, scope.agencyId)))
+        .where(
+          and(eq(sellerProspects.id, prospect.id), eq(sellerProspects.agencyId, scope.agencyId)),
+        )
         .limit(1);
 
       const activities = await db
@@ -411,10 +460,9 @@ export const canvassingRouter = router({
       .from(sellerProspects)
       .where(and(...buildScopeConditions(scope)));
     const now = new Date();
-    const stageCounts = Object.fromEntries(SELLER_PROSPECT_STAGE_VALUES.map(stage => [stage, 0])) as Record<
-      string,
-      number
-    >;
+    const stageCounts = Object.fromEntries(
+      SELLER_PROSPECT_STAGE_VALUES.map(stage => [stage, 0]),
+    ) as Record<string, number>;
     let overdueFollowUps = 0;
     let scheduledFollowUps = 0;
     let unassigned = 0;
@@ -446,7 +494,9 @@ export const canvassingRouter = router({
       total: prospects.length,
       active,
       converted,
-      conversionRate: prospects.length ? Number(((converted / prospects.length) * 100).toFixed(1)) : 0,
+      conversionRate: prospects.length
+        ? Number(((converted / prospects.length) * 100).toFixed(1))
+        : 0,
       overdueFollowUps,
       scheduledFollowUps,
       unassigned: scope.isManager ? unassigned : 0,
@@ -628,7 +678,9 @@ export const canvassingRouter = router({
     await db
       .update(sellerProspects)
       .set({ ...updateValues, updatedAt: now })
-      .where(and(eq(sellerProspects.id, sellerProspectId), eq(sellerProspects.agencyId, scope.agencyId)));
+      .where(
+        and(eq(sellerProspects.id, sellerProspectId), eq(sellerProspects.agencyId, scope.agencyId)),
+      );
 
     await logCanvassingAudit({
       ctx,
@@ -664,14 +716,19 @@ export const canvassingRouter = router({
         await tx
           .update(sellerProspects)
           .set({ assignedAgentId: agent?.id || null, updatedAt: now })
-          .where(and(eq(sellerProspects.id, prospect.id), eq(sellerProspects.agencyId, scope.agencyId)));
+          .where(
+            and(eq(sellerProspects.id, prospect.id), eq(sellerProspects.agencyId, scope.agencyId)),
+          );
         await tx.insert(sellerProspectActivities).values({
           agencyId: scope.agencyId,
           sellerProspectId: prospect.id,
           actorUserId: user.id,
           activityType: 'assignment',
           description: agent ? 'Seller prospect reassigned.' : 'Seller prospect unassigned.',
-          metadata: { previousAgentId: prospect.assignedAgentId || null, nextAgentId: agent?.id || null },
+          metadata: {
+            previousAgentId: prospect.assignedAgentId || null,
+            nextAgentId: agent?.id || null,
+          },
           createdAt: now,
         });
       });
@@ -681,7 +738,10 @@ export const canvassingRouter = router({
         action: 'canvassing.seller_prospect_assigned',
         sellerProspectId: prospect.id,
         agencyId: scope.agencyId,
-        metadata: { previousAgentId: prospect.assignedAgentId || null, nextAgentId: agent?.id || null },
+        metadata: {
+          previousAgentId: prospect.assignedAgentId || null,
+          nextAgentId: agent?.id || null,
+        },
       });
       return { success: true, assignedAgentId: agent?.id || null };
     }),
@@ -748,7 +808,9 @@ export const canvassingRouter = router({
                 : prospect.firstContactedAt,
             updatedAt: now,
           })
-          .where(and(eq(sellerProspects.id, prospect.id), eq(sellerProspects.agencyId, scope.agencyId)));
+          .where(
+            and(eq(sellerProspects.id, prospect.id), eq(sellerProspects.agencyId, scope.agencyId)),
+          );
         if (currentStage !== input.stage) {
           await tx.insert(sellerProspectActivities).values({
             agencyId: scope.agencyId,
@@ -800,7 +862,12 @@ export const canvassingRouter = router({
           await tx
             .update(sellerProspects)
             .set({ lastContactedAt: now, updatedAt: now })
-            .where(and(eq(sellerProspects.id, prospect.id), eq(sellerProspects.agencyId, scope.agencyId)));
+            .where(
+              and(
+                eq(sellerProspects.id, prospect.id),
+                eq(sellerProspects.agencyId, scope.agencyId),
+              ),
+            );
         }
       });
       await logCanvassingAudit({
@@ -884,10 +951,7 @@ export const canvassingRouter = router({
             updatedAt: now,
           })
           .where(
-            and(
-              eq(sellerProspects.id, prospect.id),
-              eq(sellerProspects.agencyId, scope.agencyId),
-            ),
+            and(eq(sellerProspects.id, prospect.id), eq(sellerProspects.agencyId, scope.agencyId)),
           );
         await tx.insert(sellerProspectActivities).values({
           agencyId: scope.agencyId,
@@ -928,102 +992,305 @@ export const canvassingRouter = router({
       const db = await requireDatabase();
       const scope = await getSellerProspectActorScope(db, requireUser(ctx));
       const prospect = await requireSellerProspect(db, scope, input.sellerProspectId);
-      const [operation] = await db.select().from(sellerMandateOperations)
-        .where(and(eq(sellerMandateOperations.sellerProspectId, prospect.id), eq(sellerMandateOperations.agencyId, scope.agencyId))).limit(1);
-      const comparables = operation ? await db.select().from(sellerMandateComparables)
-        .where(and(eq(sellerMandateComparables.mandateOperationId, operation.id), eq(sellerMandateComparables.agencyId, scope.agencyId))) : [];
-      return { operation: operation || null, comparables, readiness: getMandateReadiness(operation, prospect) };
+      const [operation] = await db
+        .select()
+        .from(sellerMandateOperations)
+        .where(
+          and(
+            eq(sellerMandateOperations.sellerProspectId, prospect.id),
+            eq(sellerMandateOperations.agencyId, scope.agencyId),
+          ),
+        )
+        .limit(1);
+      const comparables = operation
+        ? await db
+            .select()
+            .from(sellerMandateComparables)
+            .where(
+              and(
+                eq(sellerMandateComparables.mandateOperationId, operation.id),
+                eq(sellerMandateComparables.agencyId, scope.agencyId),
+              ),
+            )
+        : [];
+      return {
+        operation: operation || null,
+        comparables,
+        readiness: getMandateReadiness(operation, prospect),
+      };
     }),
 
   saveMandateOperations: agentProcedure
-    .input(z.object({
-      sellerProspectId: z.number().int().positive(),
-      status: z.enum(SELLER_MANDATE_STATUS_VALUES),
-      mandateType: z.enum(SELLER_PROSPECT_MANDATE_TYPE_VALUES).optional(),
-      signedAt: z.string().trim().min(1).optional().nullable(), expiresAt: z.string().trim().min(1).optional().nullable(),
-      sellerRequestedPrice: z.coerce.number().positive().optional().nullable(), recommendedPriceMin: z.coerce.number().positive().optional().nullable(), recommendedPriceMax: z.coerce.number().positive().optional().nullable(), agreedListingPrice: z.coerce.number().positive().optional().nullable(),
-      pricingRationale: optionalText(4000), pricingDiscussedAt: z.string().trim().min(1).optional().nullable(), priceReviewAt: z.string().trim().min(1).optional().nullable(), sellerObjections: optionalText(4000), mandateStartAt: z.string().trim().min(1).optional().nullable(),
-      documentStatus: z.enum(SELLER_MANDATE_DOCUMENT_STATUS_VALUES), documentName: optionalText(255), privateStorageReference: optionalText(500), documentDate: z.string().trim().min(1).optional().nullable(),
-      requirements: mandateRequirementsSchema, nextAction: z.string().trim().min(1).max(255),
-    }).superRefine((input, context) => {
-      if (input.recommendedPriceMin && input.recommendedPriceMax && input.recommendedPriceMin > input.recommendedPriceMax) context.addIssue({ code: z.ZodIssueCode.custom, path: ['recommendedPriceMax'], message: 'Recommended maximum must be at least the recommended minimum.' });
-    }))
+    .input(
+      z
+        .object({
+          sellerProspectId: z.number().int().positive(),
+          status: z.enum(SELLER_MANDATE_STATUS_VALUES),
+          mandateType: z.enum(SELLER_PROSPECT_MANDATE_TYPE_VALUES).optional(),
+          signedAt: z.string().trim().min(1).optional().nullable(),
+          expiresAt: z.string().trim().min(1).optional().nullable(),
+          sellerRequestedPrice: z.coerce.number().positive().optional().nullable(),
+          recommendedPriceMin: z.coerce.number().positive().optional().nullable(),
+          recommendedPriceMax: z.coerce.number().positive().optional().nullable(),
+          agreedListingPrice: z.coerce.number().positive().optional().nullable(),
+          pricingRationale: optionalText(4000),
+          pricingDiscussedAt: z.string().trim().min(1).optional().nullable(),
+          priceReviewAt: z.string().trim().min(1).optional().nullable(),
+          sellerObjections: optionalText(4000),
+          mandateStartAt: z.string().trim().min(1).optional().nullable(),
+          documentStatus: z.enum(SELLER_MANDATE_DOCUMENT_STATUS_VALUES),
+          documentName: optionalText(255),
+          privateStorageReference: optionalText(500),
+          documentDate: z.string().trim().min(1).optional().nullable(),
+          requirements: mandateRequirementsSchema,
+          nextAction: z.string().trim().min(1).max(255),
+        })
+        .superRefine((input, context) => {
+          if (
+            input.recommendedPriceMin &&
+            input.recommendedPriceMax &&
+            input.recommendedPriceMin > input.recommendedPriceMax
+          )
+            context.addIssue({
+              code: z.ZodIssueCode.custom,
+              path: ['recommendedPriceMax'],
+              message: 'Recommended maximum must be at least the recommended minimum.',
+            });
+        }),
+    )
     .mutation(async ({ ctx, input }) => {
-      const db = await requireDatabase(); const user = requireUser(ctx); const scope = await getSellerProspectActorScope(db, user);
+      const db = await requireDatabase();
+      const user = requireUser(ctx);
+      const scope = await getSellerProspectActorScope(db, user);
       const prospect = await requireSellerProspect(db, scope, input.sellerProspectId);
-      if (!['qualified', 'mandate_won'].includes(String(prospect.stage))) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Qualify the seller before starting mandate operations.' });
-      const signedAt = parseOptionalTimestamp(input.signedAt); const expiresAt = parseOptionalTimestamp(input.expiresAt);
-      if (expiresAt && signedAt && new Date(expiresAt).getTime() <= new Date(signedAt).getTime()) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Mandate expiry must be after signing.' });
+      if (!['qualified', 'mandate_won'].includes(String(prospect.stage)))
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Qualify the seller before starting mandate operations.',
+        });
+      const signedAt = parseOptionalTimestamp(input.signedAt);
+      const expiresAt = parseOptionalTimestamp(input.expiresAt);
+      if (expiresAt && signedAt && new Date(expiresAt).getTime() <= new Date(signedAt).getTime())
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Mandate expiry must be after signing.',
+        });
       const storageReference = input.privateStorageReference || null;
-      if (storageReference && !isAgencyPrivateMandateStorageReference(storageReference, scope.agencyId)) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Mandate document reference must be an agency-private mandate storage reference.' });
-      const candidate = { status: input.status, requirements: input.requirements, pricingDiscussedAt: parseOptionalTimestamp(input.pricingDiscussedAt), agreedListingPrice: input.agreedListingPrice, documentStatus: input.documentStatus };
-      const readiness = getMandateReadiness(candidate, { ...prospect, mandateType: input.mandateType || prospect.mandateType, agreedAskingPrice: input.agreedListingPrice || prospect.agreedAskingPrice, mandateSignedAt: signedAt || prospect.mandateSignedAt, mandateExpiresAt: expiresAt || prospect.mandateExpiresAt });
-      if (input.status === 'listing_ready' && !readiness.ready) throw new TRPCError({ code: 'BAD_REQUEST', message: `Complete mandate requirements before declaring listing ready: ${readiness.missing.join(', ')}` });
+      if (
+        storageReference &&
+        !isAgencyPrivateMandateStorageReference(storageReference, scope.agencyId)
+      )
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message:
+            'Mandate document reference must be an agency-private mandate storage reference.',
+        });
+      const candidate = {
+        status: input.status,
+        requirements: input.requirements,
+        pricingDiscussedAt: parseOptionalTimestamp(input.pricingDiscussedAt),
+        agreedListingPrice: input.agreedListingPrice,
+        documentStatus: input.documentStatus,
+      };
+      const readiness = getMandateReadiness(candidate, {
+        ...prospect,
+        mandateType: input.mandateType || prospect.mandateType,
+        agreedAskingPrice: input.agreedListingPrice || prospect.agreedAskingPrice,
+        mandateSignedAt: signedAt || prospect.mandateSignedAt,
+        mandateExpiresAt: expiresAt || prospect.mandateExpiresAt,
+      });
+      if (input.status === 'listing_ready' && !readiness.ready)
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: `Complete mandate requirements before declaring listing ready: ${readiness.missing.join(', ')}`,
+        });
       const now = nowAsDbTimestamp();
       await db.transaction(async (tx: any) => {
-        const values: any = { agencyId: scope.agencyId, sellerProspectId: prospect.id, status: input.status, sellerRequestedPrice: input.sellerRequestedPrice == null ? null : input.sellerRequestedPrice.toFixed(2), recommendedPriceMin: input.recommendedPriceMin == null ? null : input.recommendedPriceMin.toFixed(2), recommendedPriceMax: input.recommendedPriceMax == null ? null : input.recommendedPriceMax.toFixed(2), agreedListingPrice: input.agreedListingPrice == null ? null : input.agreedListingPrice.toFixed(2), pricingRationale: input.pricingRationale, pricingDiscussedAt: candidate.pricingDiscussedAt, priceReviewAt: parseOptionalTimestamp(input.priceReviewAt), sellerObjections: input.sellerObjections, mandateStartAt: parseOptionalTimestamp(input.mandateStartAt), documentStatus: input.documentStatus, documentName: input.documentName, privateStorageReference: storageReference, documentDate: parseOptionalTimestamp(input.documentDate), requirements: input.requirements, nextAction: input.nextAction, listingReadyAt: input.status === 'listing_ready' ? now : null, updatedAt: now };
-        await tx.insert(sellerMandateOperations).values(values).onDuplicateKeyUpdate({ set: values });
-        await tx.update(sellerProspects).set({ stage: input.status === 'listing_ready' ? 'mandate_won' : prospect.stage, mandateType: input.mandateType || prospect.mandateType, mandateSignedAt: signedAt || prospect.mandateSignedAt, mandateExpiresAt: expiresAt || prospect.mandateExpiresAt, agreedAskingPrice: input.agreedListingPrice == null ? prospect.agreedAskingPrice : input.agreedListingPrice.toFixed(2), nextAction: input.nextAction, updatedAt: now }).where(and(eq(sellerProspects.id, prospect.id), eq(sellerProspects.agencyId, scope.agencyId)));
-        await tx.insert(sellerProspectActivities).values({ agencyId: scope.agencyId, sellerProspectId: prospect.id, actorUserId: user.id, activityType: 'mandate_updated', description: `Mandate operations updated: ${input.status.replace(/_/g, ' ')}.`, metadata: { status: input.status, readiness }, createdAt: now });
+        const values: any = {
+          agencyId: scope.agencyId,
+          sellerProspectId: prospect.id,
+          status: input.status,
+          sellerRequestedPrice:
+            input.sellerRequestedPrice == null ? null : input.sellerRequestedPrice.toFixed(2),
+          recommendedPriceMin:
+            input.recommendedPriceMin == null ? null : input.recommendedPriceMin.toFixed(2),
+          recommendedPriceMax:
+            input.recommendedPriceMax == null ? null : input.recommendedPriceMax.toFixed(2),
+          agreedListingPrice:
+            input.agreedListingPrice == null ? null : input.agreedListingPrice.toFixed(2),
+          pricingRationale: input.pricingRationale,
+          pricingDiscussedAt: candidate.pricingDiscussedAt,
+          priceReviewAt: parseOptionalTimestamp(input.priceReviewAt),
+          sellerObjections: input.sellerObjections,
+          mandateStartAt: parseOptionalTimestamp(input.mandateStartAt),
+          documentStatus: input.documentStatus,
+          documentName: input.documentName,
+          privateStorageReference: storageReference,
+          documentDate: parseOptionalTimestamp(input.documentDate),
+          requirements: input.requirements,
+          nextAction: input.nextAction,
+          listingReadyAt: input.status === 'listing_ready' ? now : null,
+          updatedAt: now,
+        };
+        await tx
+          .insert(sellerMandateOperations)
+          .values(values)
+          .onDuplicateKeyUpdate({ set: values });
+        await tx
+          .update(sellerProspects)
+          .set({
+            stage: input.status === 'listing_ready' ? 'mandate_won' : prospect.stage,
+            mandateType: input.mandateType || prospect.mandateType,
+            mandateSignedAt: signedAt || prospect.mandateSignedAt,
+            mandateExpiresAt: expiresAt || prospect.mandateExpiresAt,
+            agreedAskingPrice:
+              input.agreedListingPrice == null
+                ? prospect.agreedAskingPrice
+                : input.agreedListingPrice.toFixed(2),
+            nextAction: input.nextAction,
+            updatedAt: now,
+          })
+          .where(
+            and(eq(sellerProspects.id, prospect.id), eq(sellerProspects.agencyId, scope.agencyId)),
+          );
+        await tx
+          .insert(sellerProspectActivities)
+          .values({
+            agencyId: scope.agencyId,
+            sellerProspectId: prospect.id,
+            actorUserId: user.id,
+            activityType: 'mandate_updated',
+            description: `Mandate operations updated: ${input.status.replace(/_/g, ' ')}.`,
+            metadata: { status: input.status, readiness },
+            createdAt: now,
+          });
       });
-      await logCanvassingAudit({ ctx, userId: user.id, action: 'canvassing.seller_mandate_operations_updated', sellerProspectId: prospect.id, agencyId: scope.agencyId, metadata: { status: input.status } });
+      await logCanvassingAudit({
+        ctx,
+        userId: user.id,
+        action: 'canvassing.seller_mandate_operations_updated',
+        sellerProspectId: prospect.id,
+        agencyId: scope.agencyId,
+        metadata: { status: input.status },
+      });
       return { success: true, readiness };
     }),
 
   addMandateComparable: agentProcedure
-    .input(z.object({ sellerProspectId: z.number().int().positive(), reference: z.string().trim().min(1).max(500), propertyType: optionalText(100), area: optionalText(200), price: z.coerce.number().positive().optional().nullable(), priceKind: z.enum(['asking', 'selling', 'other']).default('other'), notes: optionalText(2000) }))
-    .mutation(async ({ ctx, input }) => {
-      const db = await requireDatabase(); const scope = await getSellerProspectActorScope(db, requireUser(ctx)); const prospect = await requireSellerProspect(db, scope, input.sellerProspectId);
-      const [operation] = await db.select({ id: sellerMandateOperations.id }).from(sellerMandateOperations).where(and(eq(sellerMandateOperations.sellerProspectId, prospect.id), eq(sellerMandateOperations.agencyId, scope.agencyId))).limit(1);
-      if (!operation) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Save mandate operations before adding private comparable references.' });
-      const [result] = await db.insert(sellerMandateComparables).values({ agencyId: scope.agencyId, mandateOperationId: operation.id, reference: input.reference, propertyType: input.propertyType, area: input.area, price: input.price == null ? null : input.price.toFixed(2), priceKind: input.priceKind, notes: input.notes });
-      return { comparableId: Number(result.insertId) };
-    }),
-
-  removeMandateComparable: agentProcedure
-    .input(z.object({ sellerProspectId: z.number().int().positive(), comparableId: z.number().int().positive() }))
+    .input(
+      z.object({
+        sellerProspectId: z.number().int().positive(),
+        reference: z.string().trim().min(1).max(500),
+        propertyType: optionalText(100),
+        area: optionalText(200),
+        price: z.coerce.number().positive().optional().nullable(),
+        priceKind: z.enum(['asking', 'selling', 'other']).default('other'),
+        notes: optionalText(2000),
+      }),
+    )
     .mutation(async ({ ctx, input }) => {
       const db = await requireDatabase();
       const scope = await getSellerProspectActorScope(db, requireUser(ctx));
       const prospect = await requireSellerProspect(db, scope, input.sellerProspectId);
-      const [operation] = await db.select({ id: sellerMandateOperations.id }).from(sellerMandateOperations)
-        .where(and(eq(sellerMandateOperations.sellerProspectId, prospect.id), eq(sellerMandateOperations.agencyId, scope.agencyId))).limit(1);
-      if (!operation) throw new TRPCError({ code: 'NOT_FOUND', message: 'Mandate operations not found.' });
-      const [comparable] = await db.select({ id: sellerMandateComparables.id }).from(sellerMandateComparables).where(and(
-        eq(sellerMandateComparables.id, input.comparableId),
-        eq(sellerMandateComparables.mandateOperationId, operation.id),
-        eq(sellerMandateComparables.agencyId, scope.agencyId),
-      )).limit(1);
-      if (!comparable) throw new TRPCError({ code: 'NOT_FOUND', message: 'Private comparable not found.' });
-      await db.delete(sellerMandateComparables).where(eq(sellerMandateComparables.id, comparable.id));
+      const [operation] = await db
+        .select({ id: sellerMandateOperations.id })
+        .from(sellerMandateOperations)
+        .where(
+          and(
+            eq(sellerMandateOperations.sellerProspectId, prospect.id),
+            eq(sellerMandateOperations.agencyId, scope.agencyId),
+          ),
+        )
+        .limit(1);
+      if (!operation)
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Save mandate operations before adding private comparable references.',
+        });
+      const [result] = await db
+        .insert(sellerMandateComparables)
+        .values({
+          agencyId: scope.agencyId,
+          mandateOperationId: operation.id,
+          reference: input.reference,
+          propertyType: input.propertyType,
+          area: input.area,
+          price: input.price == null ? null : input.price.toFixed(2),
+          priceKind: input.priceKind,
+          notes: input.notes,
+        });
+      return { comparableId: Number(result.insertId) };
+    }),
+
+  removeMandateComparable: agentProcedure
+    .input(
+      z.object({
+        sellerProspectId: z.number().int().positive(),
+        comparableId: z.number().int().positive(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const db = await requireDatabase();
+      const scope = await getSellerProspectActorScope(db, requireUser(ctx));
+      const prospect = await requireSellerProspect(db, scope, input.sellerProspectId);
+      const [operation] = await db
+        .select({ id: sellerMandateOperations.id })
+        .from(sellerMandateOperations)
+        .where(
+          and(
+            eq(sellerMandateOperations.sellerProspectId, prospect.id),
+            eq(sellerMandateOperations.agencyId, scope.agencyId),
+          ),
+        )
+        .limit(1);
+      if (!operation)
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Mandate operations not found.' });
+      const [comparable] = await db
+        .select({ id: sellerMandateComparables.id })
+        .from(sellerMandateComparables)
+        .where(
+          and(
+            eq(sellerMandateComparables.id, input.comparableId),
+            eq(sellerMandateComparables.mandateOperationId, operation.id),
+            eq(sellerMandateComparables.agencyId, scope.agencyId),
+          ),
+        )
+        .limit(1);
+      if (!comparable)
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Private comparable not found.' });
+      await db
+        .delete(sellerMandateComparables)
+        .where(eq(sellerMandateComparables.id, comparable.id));
       return { success: true };
     }),
 
   updateMandate: agentProcedure
     .input(
-      z.object({
-        sellerProspectId: z.number().int().positive(),
-        mandateType: z.enum(SELLER_PROSPECT_MANDATE_TYPE_VALUES),
-        signedAt: z.string().trim().min(1),
-        expiresAt: z.string().trim().min(1).optional().nullable(),
-        agreedAskingPrice: z.coerce.number().positive().optional().nullable(),
-        checklist: z.object({
-          pricingAgreed: z.boolean(),
-          sellerIdentityConfirmed: z.boolean(),
-          propertyDetailsConfirmed: z.boolean(),
-          mandateRecorded: z.boolean(),
+      z
+        .object({
+          sellerProspectId: z.number().int().positive(),
+          mandateType: z.enum(SELLER_PROSPECT_MANDATE_TYPE_VALUES),
+          signedAt: z.string().trim().min(1),
+          expiresAt: z.string().trim().min(1).optional().nullable(),
+          agreedAskingPrice: z.coerce.number().positive().optional().nullable(),
+          checklist: z.object({
+            pricingAgreed: z.boolean(),
+            sellerIdentityConfirmed: z.boolean(),
+            propertyDetailsConfirmed: z.boolean(),
+            mandateRecorded: z.boolean(),
+          }),
+          nextAction: z.string().trim().min(1).max(255),
+        })
+        .superRefine((input, context) => {
+          const missing = Object.entries(input.checklist).filter(([, complete]) => !complete);
+          if (missing.length) {
+            context.addIssue({
+              code: z.ZodIssueCode.custom,
+              path: ['checklist'],
+              message: 'Complete every mandate checkpoint before recording a won mandate.',
+            });
+          }
         }),
-        nextAction: z.string().trim().min(1).max(255),
-      }).superRefine((input, context) => {
-        const missing = Object.entries(input.checklist).filter(([, complete]) => !complete);
-        if (missing.length) {
-          context.addIssue({
-            code: z.ZodIssueCode.custom,
-            path: ['checklist'],
-            message: 'Complete every mandate checkpoint before recording a won mandate.',
-          });
-        }
-      }),
     )
     .mutation(async ({ ctx, input }) => {
       const db = await requireDatabase();
@@ -1060,10 +1327,7 @@ export const canvassingRouter = router({
             updatedAt: now,
           })
           .where(
-            and(
-              eq(sellerProspects.id, prospect.id),
-              eq(sellerProspects.agencyId, scope.agencyId),
-            ),
+            and(eq(sellerProspects.id, prospect.id), eq(sellerProspects.agencyId, scope.agencyId)),
           );
         await tx.insert(sellerProspectActivities).values({
           agencyId: scope.agencyId,
@@ -1124,7 +1388,9 @@ export const canvassingRouter = router({
             nextAction: input.note || 'Complete scheduled seller follow-up',
             updatedAt: now,
           })
-          .where(and(eq(sellerProspects.id, prospect.id), eq(sellerProspects.agencyId, scope.agencyId)));
+          .where(
+            and(eq(sellerProspects.id, prospect.id), eq(sellerProspects.agencyId, scope.agencyId)),
+          );
         await tx.insert(sellerProspectActivities).values({
           agencyId: scope.agencyId,
           sellerProspectId: prospect.id,
@@ -1179,7 +1445,9 @@ export const canvassingRouter = router({
             lastContactedAt: now,
             updatedAt: now,
           })
-          .where(and(eq(sellerProspects.id, prospect.id), eq(sellerProspects.agencyId, scope.agencyId)));
+          .where(
+            and(eq(sellerProspects.id, prospect.id), eq(sellerProspects.agencyId, scope.agencyId)),
+          );
         await tx.insert(sellerProspectActivities).values({
           agencyId: scope.agencyId,
           sellerProspectId: prospect.id,

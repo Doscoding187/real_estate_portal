@@ -11,6 +11,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Progress } from '@/components/ui/progress';
 import { ArrowLeft, ArrowRight, CheckCircle2, Upload, X } from 'lucide-react';
 import { LocationAutocomplete } from '@/components/location/LocationAutocomplete';
+import { apiFetch } from '@/lib/api';
+import { getAgentJourneyAction } from '@/lib/agentJourney';
+import type { AgentOnboardingStatus } from '@/hooks/useAgentOnboardingStatus';
 
 const TOTAL_STEPS = 5;
 
@@ -97,7 +100,7 @@ export function AgentSetupWizard() {
 
   useEffect(() => {
     if (searchParams.get('verified') === 'true') {
-      toast.success('Email verified. Finish your profile setup to unlock publishing.');
+      toast.success('Email verified. Finish your profile, then activate Launch Access to publish.');
     }
   }, [searchParams]);
 
@@ -264,14 +267,19 @@ export function AgentSetupWizard() {
     await saveProfileMutation.mutateAsync(buildPayload());
     const result = await publishProfileMutation.mutateAsync();
 
+    const onboardingStatus = await apiFetch<AgentOnboardingStatus>('/agent/onboarding-status');
+    const journeyAction = getAgentJourneyAction(onboardingStatus);
+
     toast.success(
-      result.isPublic
-        ? 'Your public profile is now live.'
-        : 'Profile completed. Public publishing is pending approval.',
+      journeyAction.href === '/agent/select-package'
+        ? 'Your professional profile is ready. Activate Launch Access to start publishing.'
+        : result.isPublic
+          ? 'Your public profile is now live. Your workspace is ready for the next step.'
+          : 'Profile completed. Public publishing is pending approval.',
     );
 
-    if (result.slug && result.isPublic) {
-      setLocation(`/agents/${result.slug}`);
+    if (journeyAction.href !== '/agent/dashboard') {
+      setLocation(journeyAction.href);
       return;
     }
 
@@ -604,7 +612,8 @@ export function AgentSetupWizard() {
               <div className="rounded-lg border bg-slate-50 p-4 space-y-2">
                 <p className="text-sm">Profile completion: {currentScore}%</p>
                 <p className="text-sm">
-                  Listing publish unlock: {currentScore >= 70 ? 'Ready' : 'Need 70%+'}
+                  Listing profile readiness:{' '}
+                  {currentScore >= 70 ? 'Ready — Launch Access is still required' : 'Need 70%+'}
                 </p>
                 <p className="text-sm">
                   Directory visibility unlock:{' '}

@@ -3,11 +3,14 @@ import { Link } from 'wouter';
 import { ShieldCheck, ShieldQuestion, ShieldX, CreditCard } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { apiFetch } from '@/lib/api';
+import { getAgentJourneyAction } from '@/lib/agentJourney';
+import type { AgentRecommendedNextStep } from '@shared/agentJourney';
 
 type StatusPayload = {
   packageSelected: boolean;
   approvalStatus: 'pending' | 'approved' | 'rejected' | 'suspended';
   subscriptionStatus?: string;
+  recommendedNextStep?: AgentRecommendedNextStep;
 };
 
 type ApprovalTone = {
@@ -69,12 +72,20 @@ export function AgentStatusStrip() {
     pending_payment: 'Invoice issued — payment outstanding',
     payment_under_review: 'Payment proof under review',
     expired: 'Launch Access expired',
+    past_due: 'Launch Access payment overdue',
+    cancelled: 'Launch Access cancelled',
+    suspended: 'Launch Access suspended',
   };
   const commercialLabel =
     paidStates[status.subscriptionStatus ?? ''] ??
     (status.packageSelected ? 'Commercial term in progress' : 'Launch Access not started');
-  const showRenewalCta =
-    !status.packageSelected || status.subscriptionStatus === 'expired';
+  const journeyAction = getAgentJourneyAction(status);
+  const showJourneyAction = [
+    'select_package',
+    'complete_payment',
+    'renew_launch_access',
+    'contact_support',
+  ].includes(status.recommendedNextStep || 'select_package');
 
   return (
     <div
@@ -93,14 +104,12 @@ export function AgentStatusStrip() {
       <div className="flex items-center gap-2 whitespace-nowrap">
         <CreditCard className="h-4 w-4 shrink-0" aria-hidden="true" />
         <span className="font-medium">{commercialLabel}</span>
-        {showRenewalCta && (
+        {showJourneyAction && (
           <Link
-            href="/agent/select-package"
+            href={journeyAction.href}
             className="rounded-full border border-current px-3 py-1 text-xs font-semibold hover:bg-white/60"
           >
-            {status.subscriptionStatus === 'expired'
-              ? 'Renew Launch Access'
-              : 'Get Launch Access'}
+            {journeyAction.label}
           </Link>
         )}
       </div>

@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation } from 'wouter';
 import { AgentAppShell } from '@/components/agent/AgentAppShell';
 import { agentPageStyles } from '@/components/agent/agentPageStyles';
 import { AgentFeatureLockedState } from '@/components/agent/AgentFeatureLockedState';
+import { AgentJourneyStatusErrorState } from '@/components/agent/AgentJourneyStatusErrorState';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -10,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { trpc } from '@/lib/trpc';
 import { cn } from '@/lib/utils';
 import { useAgentOnboardingStatus } from '@/hooks/useAgentOnboardingStatus';
+import { getAgentJourneyAction, isAgentProfileJourneyStep } from '@/lib/agentJourney';
 import { toast } from 'sonner';
 import { BarChart3, Download, Eye, Home, Target, TrendingUp, Users } from 'lucide-react';
 
@@ -54,11 +56,16 @@ type ListingItem = {
   enquiries: number;
 };
 
-const TIME_RANGES: Array<{ value: TimeRange; label: string; period: PerformancePeriod }> = [
-  { value: '7d', label: '7 Days', period: 'week' },
-  { value: '30d', label: '30 Days', period: 'month' },
-  { value: '90d', label: '90 Days', period: 'quarter' },
-  { value: '1y', label: '1 Year', period: 'year' },
+const TIME_RANGES: Array<{
+  value: TimeRange;
+  label: string;
+  period: PerformancePeriod;
+  days: number;
+}> = [
+  { value: '7d', label: '7 Days', period: 'week', days: 7 },
+  { value: '30d', label: '30 Days', period: 'month', days: 30 },
+  { value: '90d', label: '90 Days', period: 'quarter', days: 90 },
+  { value: '1y', label: '1 Year', period: 'year', days: 365 },
 ];
 
 const PIPELINE_STAGE_META: Array<{ key: PipelineStageKey; label: string; tone: string }> = [
@@ -134,32 +141,63 @@ export default function AgentAnalytics() {
   const [, setLocation] = useLocation();
   const [timeRange, setTimeRange] = useState<TimeRange>('30d');
   const [activeTab, setActiveTab] = useState('overview');
-  const { status, isLoading: statusLoading } = useAgentOnboardingStatus({
+  const {
+    status,
+    isLoading: statusLoading,
+    error: statusError,
+    retry: retryStatus,
+  } = useAgentOnboardingStatus({
     requireDashboardUnlocked: true,
   });
 
-  const selectedPeriod = TIME_RANGES.find(range => range.value === timeRange)?.period || 'month';
+  const selectedRange = TIME_RANGES.find(range => range.value === timeRange) || TIME_RANGES[1];
+  const selectedRangeStart = useMemo(
+    () => new Date(Date.now() - selectedRange.days * 24 * 60 * 60 * 1000).toISOString(),
+    [selectedRange.days],
+  );
+  const analyticsEnabled = !statusLoading && Boolean(status?.fullFeaturesUnlocked);
+  const hasRecordedSurfaceView = useRef(false);
 
-  const { isLoading: statsLoading } = trpc.agent.getDashboardStats.useQuery();
   const { data: performance, isLoading: performanceLoading } =
-    trpc.agent.getPerformanceAnalytics.useQuery({
-      period: selectedPeriod,
-    });
-  const { data: pipelineData, isLoading: pipelineLoading } = trpc.agent.getLeadsPipeline.useQuery({
-    filters: {},
-  });
-  const { data: listingsData, isLoading: listingsLoading } = trpc.agent.getMyListings.useQuery({
-    status: 'active',
-    limit: 50,
-  });
+    trpc.agent.getPerformanceAnalytics.useQuery(
+      {
+        period: selectedRange.period,
+      },
+      {
+        enabled: analyticsEnabled,
+        retry: false,
+      },
+    );
+  const { data: pipelineData, isLoading: pipelineLoading } = trpc.agent.getLeadsPipeline.useQuery(
+    {
+      filters: { dateRange: { start: selectedRangeStart } },
+    },
+    {
+      enabled: analyticsEnabled,
+      retry: false,
+    },
+  );
+  const { data: listingsData, isLoading: listingsLoading } = trpc.agent.getMyListings.useQuery(
+    {
+      status: 'active',
+      limit: 50,
+    },
+    {
+      enabled: analyticsEnabled,
+      retry: false,
+    },
+  );
 
   const analyticsLocked = !statusLoading && !status?.fullFeaturesUnlocked;
+  const journeyAction = getAgentJourneyAction(status);
+  const needsProfileCompletion = isAgentProfileJourneyStep(status);
 
   const recordSurfaceView = trpc.agent.recordSurfaceView.useMutation();
   useEffect(() => {
+    if (!analyticsEnabled || hasRecordedSurfaceView.current) return;
+    hasRecordedSurfaceView.current = true;
     recordSurfaceView.mutate({ surface: 'analytics' });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [analyticsEnabled, recordSurfaceView]);
 
   const pipeline = useMemo(
     () =>
@@ -220,7 +258,7 @@ export default function AgentAnalytics() {
       .slice(0, 6);
   }, [allLeads]);
 
-  const isLoading = statsLoading || performanceLoading || pipelineLoading || listingsLoading;
+  const isLoading = performanceLoading || pipelineLoading || listingsLoading;
 
   const handleExport = () => {
     if (isLoading) {
@@ -228,23 +266,23 @@ export default function AgentAnalytics() {
       return;
     }
 
-    const selectedRange = TIME_RANGES.find(range => range.value === timeRange);
     const reportRows: Array<Array<string | number>> = [
       ['Property Listify analytics report'],
-      ['Period', selectedRange?.label || timeRange],
+      ['Lead and conversion period', selectedRange.label],
+      ['Current inventory scope', 'All current live listings; listing engagement is cumulative'],
       ['Generated', new Date().toLocaleString('en-ZA')],
       [],
       ['Summary'],
-      ['Total listing views', totalListingViews],
-      ['Live listings', listings.length],
-      ['Lead volume', performance?.totalLeads ?? allLeads.length],
-      ['Converted leads', performance?.convertedLeads ?? 0],
-      ['Conversion rate', `${performance?.conversionRate ?? 0}%`],
+      ['Cumulative listing views on current live inventory', totalListingViews],
+      ['Current live listings', listings.length],
+      ['Leads captured in selected period', performance?.totalLeads ?? allLeads.length],
+      ['Converted lead cohort', performance?.convertedLeads ?? 0],
+      ['Lead cohort conversion rate', `${performance?.conversionRate ?? 0}%`],
       [],
-      ['Pipeline stage', 'Leads'],
+      ['Current pipeline stage', 'Leads captured in selected period'],
       ...PIPELINE_STAGE_META.map(stage => [stage.label, pipeline[stage.key].length]),
       [],
-      ['Listings'],
+      ['Current live inventory snapshot'],
       ['Property', 'City', 'Type', 'Views', 'Enquiries', 'Price', 'Status'],
       ...listings.map(listing => [
         listing.title,
@@ -256,7 +294,7 @@ export default function AgentAnalytics() {
         formatStatus(listing.status),
       ]),
       [],
-      ['Leads'],
+      ['Leads captured in selected period'],
       ['Name', 'Property', 'Stage', 'Source', 'Received'],
       ...allLeads.map(lead => [
         lead.name,
@@ -288,7 +326,7 @@ export default function AgentAnalytics() {
               <div>
                 <h1 className={agentPageStyles.title}>Analytics Dashboard</h1>
                 <p className={cn(agentPageStyles.subtitle, 'mt-1')}>
-                  Live performance across your listings, leads and pipeline.
+                  Lead activity for {selectedRange.label}, plus your current live inventory.
                 </p>
               </div>
               <div className="flex items-center gap-3">
@@ -334,33 +372,51 @@ export default function AgentAnalytics() {
               onAction={() => {}}
               isLoading
             />
+          ) : statusError ? (
+            <AgentJourneyStatusErrorState onRetry={retryStatus} />
           ) : analyticsLocked ? (
             <AgentFeatureLockedState
-              title="Analytics unlock after setup"
-              description="Complete the remaining onboarding steps to unlock the full analytics workspace and reporting stack."
-              actionLabel="Finish setup"
-              onAction={() => setLocation('/agent/setup')}
+              title={
+                needsProfileCompletion
+                  ? 'Complete your profile before using analytics'
+                  : journeyAction.title
+              }
+              description={
+                needsProfileCompletion
+                  ? 'Finish your professional profile, then activate Launch Access to see the reporting that supports your daily decisions.'
+                  : journeyAction.description
+              }
+              actionLabel={journeyAction.waiting ? 'Return to dashboard' : journeyAction.label}
+              onAction={() =>
+                setLocation(journeyAction.waiting ? '/agent/dashboard' : journeyAction.href)
+              }
             />
           ) : (
             <>
               <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4">
                 <MetricCard
-                  title="Total Listing Views"
+                  title="Current Listing Views"
                   value={isLoading ? '—' : totalListingViews.toLocaleString('en-ZA')}
-                  subtitle={`${listings.length} live listing${listings.length === 1 ? '' : 's'}`}
+                  subtitle={`Cumulative across ${listings.length} live listing${listings.length === 1 ? '' : 's'}`}
                   icon={Eye}
                 />
                 <MetricCard
                   title="Lead Volume"
                   value={isLoading ? '—' : (performance?.totalLeads ?? allLeads.length)}
-                  subtitle={`${pipeline.offer.length} active offer${pipeline.offer.length === 1 ? '' : 's'}`}
+                  subtitle={`Leads received in ${selectedRange.label}`}
                   icon={Users}
                 />
                 <MetricCard
-                  title="Conversion Rate"
+                  title="Lead Cohort Conversion"
                   value={isLoading ? '—' : `${performance?.conversionRate ?? 0}%`}
-                  subtitle={`${performance?.convertedLeads ?? 0} converted lead${(performance?.convertedLeads ?? 0) === 1 ? '' : 's'}`}
+                  subtitle={`Of leads received in ${selectedRange.label}`}
                   icon={Target}
+                />
+                <MetricCard
+                  title="Properties Closed"
+                  value={isLoading ? '—' : (performance?.propertiesClosed ?? 0)}
+                  subtitle={`Sold or rented in ${selectedRange.label}`}
+                  icon={Home}
                 />
               </div>
 
@@ -383,7 +439,7 @@ export default function AgentAnalytics() {
                       <CardHeader>
                         <CardTitle className="flex items-center gap-2">
                           <TrendingUp className="h-5 w-5 text-blue-600" />
-                          Lead Sources
+                          Lead Sources · {selectedRange.label}
                         </CardTitle>
                       </CardHeader>
                       <CardContent className="space-y-4">
@@ -420,7 +476,7 @@ export default function AgentAnalytics() {
                       <CardHeader>
                         <CardTitle className="flex items-center gap-2">
                           <BarChart3 className="h-5 w-5 text-blue-600" />
-                          Pipeline Snapshot
+                          Pipeline now · {selectedRange.label} leads
                         </CardTitle>
                       </CardHeader>
                       <CardContent>
@@ -447,8 +503,11 @@ export default function AgentAnalytics() {
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2">
                         <Home className="h-5 w-5 text-blue-600" />
-                        Top Performing Listings
+                        Current live inventory
                       </CardTitle>
+                      <p className="text-sm text-slate-500">
+                        Views and enquiries are cumulative for the live listings shown.
+                      </p>
                     </CardHeader>
                     <CardContent>
                       {topListings.length > 0 ? (
@@ -517,7 +576,10 @@ export default function AgentAnalytics() {
                 <TabsContent value="listings" className="mt-6">
                   <Card className={agentPageStyles.panel}>
                     <CardHeader>
-                      <CardTitle>Listing Performance</CardTitle>
+                      <CardTitle>Current live inventory snapshot</CardTitle>
+                      <p className="text-sm text-slate-500">
+                        Listing engagement is cumulative and is not filtered by the lead period.
+                      </p>
                     </CardHeader>
                     <CardContent>
                       {listings.length > 0 ? (
@@ -594,7 +656,7 @@ export default function AgentAnalytics() {
 
                   <Card className={agentPageStyles.panel}>
                     <CardHeader>
-                      <CardTitle>Recent Leads</CardTitle>
+                      <CardTitle>Leads received in {selectedRange.label}</CardTitle>
                     </CardHeader>
                     <CardContent>
                       {recentLeads.length > 0 ? (
@@ -623,8 +685,8 @@ export default function AgentAnalytics() {
                         </div>
                       ) : (
                         <EmptyPanel
-                          title="No lead activity yet"
-                          description="Lead analytics will appear once enquiries start moving through your pipeline."
+                          title={`No leads received in ${selectedRange.label}`}
+                          description="When enquiries arrive, their source and current pipeline stage will appear here."
                         />
                       )}
                     </CardContent>

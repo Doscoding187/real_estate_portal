@@ -64,7 +64,10 @@ export function deriveLeadReadiness(lead: LeadRow) {
   };
 }
 
-export function mapStatusToFunnelStage(status: LeadTransitionStatus, fallback: string | null | undefined) {
+export function mapStatusToFunnelStage(
+  status: LeadTransitionStatus,
+  fallback: string | null | undefined,
+) {
   if (status === 'qualified') return 'qualification';
   if (status === 'viewing_scheduled') return 'viewing';
   if (status === 'offer_sent' || status === 'converted' || status === 'closed') {
@@ -81,7 +84,7 @@ export function mapStatusToFunnelStage(status: LeadTransitionStatus, fallback: s
 export function validateLeadTransition(
   lead: LeadRow,
   targetStatus: LeadTransitionStatus,
-  options: { lostReason?: string | null } = {},
+  options: { lostReason?: string | null; qualificationConfirmed?: boolean } = {},
 ): void {
   const currentStatus = (lead.status || 'new') as LeadTransitionStatus;
   if (currentStatus === targetStatus) return;
@@ -103,10 +106,15 @@ export function validateLeadTransition(
 
   if (targetStatus === 'offer_sent') {
     const readiness = deriveLeadReadiness(lead);
-    if (!readiness.canMoveToOffer) {
+    const unresolvedBlockers = options.qualificationConfirmed
+      ? readiness.blockers.filter(
+          blocker => blocker !== 'Qualification must be recorded before offer work.',
+        )
+      : readiness.blockers;
+    if (unresolvedBlockers.length > 0) {
       throw new TRPCError({
         code: 'BAD_REQUEST',
-        message: readiness.blockers.join(' '),
+        message: unresolvedBlockers.join(' '),
       });
     }
   }

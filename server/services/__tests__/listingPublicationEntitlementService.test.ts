@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   assertListingPublicationEntitled,
+  evaluateIndependentAgentPublicationReadiness,
   ListingPublicationEntitlementError,
   resolveListingCommercialOwner,
 } from '../listingPublicationEntitlementService';
@@ -111,6 +112,49 @@ function independentAgentDb(input: {
   ]);
 }
 
+function independentAgentReadinessDb(input: {
+  activeListingCount?: number;
+  entitlements?: Array<Record<string, unknown>>;
+  agent?: Record<string, unknown>;
+  user?: Record<string, unknown>;
+  subscription?: Record<string, unknown> | null;
+  plan?: Record<string, unknown> | null;
+}) {
+  const future = new Date(at.getTime() + 86_400_000).toISOString();
+  const agent = {
+    id: 45,
+    userId: 200,
+    agencyId: null,
+    status: 'approved',
+    profileImage: 'a',
+    areasServed: 'b',
+    bio: 'c',
+    phone: 'd',
+    focus: 'sales',
+    propertyTypes: 'house',
+    ...(input.agent || {}),
+  };
+  const subscription =
+    input.subscription === undefined
+      ? { status: 'active', currentPeriodEnd: future }
+      : input.subscription;
+  const plan = input.plan === undefined ? { id: 2, segment: 'agent', isActive: 1 } : input.plan;
+  const rows: any[][] = [
+    [{ id: 200, role: 'agent', agencyId: null, emailVerified: 1, ...(input.user || {}) }],
+    [agent],
+    subscription ? [{ subscription, plan }] : [],
+  ];
+
+  if (plan) {
+    rows.push(input.entitlements || [{ featureKey: 'max_active_listings', valueJson: 50 }]);
+    rows.push(
+      Array.from({ length: input.activeListingCount || 0 }, (_, index) => ({ id: index + 1 })),
+    );
+  }
+
+  return new QueuedDb(rows);
+}
+
 async function expectAgencyDenied(
   input: Parameters<typeof agencyDb>[0],
   reason: ListingPublicationEntitlementError['reason'],
@@ -219,6 +263,42 @@ describe('listing publication entitlement service', () => {
         at,
       }),
     ).rejects.toMatchObject({ reason: 'listing_capacity_exhausted' });
+  });
+
+  it('enumerates independent-agent blockers before authoring begins', async () => {
+    const readiness = await evaluateIndependentAgentPublicationReadiness(
+      independentAgentReadinessDb({
+        agent: { status: 'pending', profileImage: null, areasServed: null, bio: null },
+        user: { emailVerified: 0 },
+        subscription: { status: 'payment_under_review' },
+      }),
+      200,
+      { now: at, skipCapacityWhenBlocked: false },
+    );
+
+    expect(readiness.ready).toBe(false);
+    expect(readiness.blockers.map(blocker => blocker.reason)).toEqual(
+      expect.arrayContaining([
+        'individual_agent_unapproved',
+        'individual_agent_email_unverified',
+        'individual_agent_profile_incomplete',
+        'subscription_pending_payment',
+      ]),
+    );
+    expect(readiness.facts.profileCompletionScore).toBeLessThan(70);
+  });
+
+  it('reports capacity facts for a ready independent agent', async () => {
+    const readiness = await evaluateIndependentAgentPublicationReadiness(
+      independentAgentReadinessDb({ activeListingCount: 3 }),
+      200,
+      { now: at },
+    );
+
+    expect(readiness).toMatchObject({
+      ready: true,
+      facts: { approved: true, emailVerified: true, capacityUsed: 3, capacityMax: 50 },
+    });
   });
 
   it('denies unapproved agents and publishes approved agents regardless of the badge flag', async () => {

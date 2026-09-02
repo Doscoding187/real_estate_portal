@@ -70,6 +70,10 @@ export function Navbar() {
   };
 
   const dashboardRoute = getDashboardRoute(user?.role, hasReferrerAccess);
+  // The generic listing wizard is an authorised Agent/Agency workflow. Keep
+  // it out of account menus for buyers, developers and service providers so a
+  // role never lands in a dead-end authoring screen.
+  const canCreateListings = user?.role === 'agent' || user?.role === 'agency_admin';
   const showDashboardLink =
     user?.role &&
     [
@@ -139,7 +143,7 @@ export function Navbar() {
 
           {/* Desktop Auth Section */}
           <div className="hidden min-w-0 shrink-0 items-center gap-3 md:flex">
-            {isAuthenticated && (
+            {isAuthenticated && canCreateListings && (
               <Button
                 variant="secondary"
                 onClick={() => setLocation('/listings/create')}
@@ -191,12 +195,14 @@ export function Navbar() {
                       </Link>
                     </DropdownMenuItem>
                   )}
-                  <DropdownMenuItem asChild>
-                    <Link href="/listings/create" className="flex items-center gap-2 w-full">
-                      <Home className="h-4 w-4" />
-                      List Property
-                    </Link>
-                  </DropdownMenuItem>
+                  {canCreateListings && (
+                    <DropdownMenuItem asChild>
+                      <Link href="/listings/create" className="flex items-center gap-2 w-full">
+                        <Home className="h-4 w-4" />
+                        List Property
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleLogout} className="text-destructive">
                     Logout

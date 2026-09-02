@@ -187,8 +187,8 @@ describe('Agent paid Launch Access conversion', () => {
           onboardingComplete: true,
           onboardingStep: 4,
           dashboardUnlocked: true,
-          fullFeaturesUnlocked: true,
-          recommendedNextStep: 'await_verification',
+          fullFeaturesUnlocked: false,
+          recommendedNextStep: 'await_payment_review',
           subscriptionTier: 'agent_launch_access',
           subscriptionStatus: 'payment_under_review',
           trialStartedAt: null,
@@ -203,5 +203,56 @@ describe('Agent paid Launch Access conversion', () => {
     await waitFor(() => {
       expect(setLocationMock).toHaveBeenCalledWith('/agent/dashboard');
     });
+  });
+
+  it('shows finance correction guidance when a previous proof was rejected', async () => {
+    agentWorkspaceMock.mockReturnValue({
+      data: {
+        activeInvoice: invoice,
+        payments: [
+          {
+            invoiceId: invoice.id,
+            state: 'rejected',
+            reviewNote: 'Please upload a legible bank-stamped proof.',
+            createdAt: '2026-08-01T10:00:00.000Z',
+          },
+        ],
+        bankDetails: {
+          accountName: 'Property Listify Test',
+          bankName: 'Local Test Bank',
+          accountNumber: '0000000000',
+          branchCode: '000000',
+          configurationMessage: null,
+        },
+        proofStorage: { configured: true },
+      },
+      isLoading: false,
+      refetch: vi.fn().mockResolvedValue(undefined),
+    });
+
+    apiFetchMock.mockImplementation((endpoint: string) => {
+      if (endpoint === '/agent/onboarding-status') {
+        return Promise.resolve({
+          packageSelected: true,
+          onboardingComplete: true,
+          onboardingStep: 4,
+          dashboardUnlocked: true,
+          fullFeaturesUnlocked: false,
+          recommendedNextStep: 'complete_payment',
+          subscriptionTier: 'agent_launch_access',
+          subscriptionStatus: 'pending_payment',
+          trialStartedAt: null,
+          trialEndsAt: null,
+        });
+      }
+      return Promise.resolve({});
+    });
+
+    render(<AgentPackageSelection />);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Please upload a legible bank-stamped proof.',
+    );
+    expect(screen.getByRole('button', { name: 'Submit proof for review' })).toBeInTheDocument();
   });
 });

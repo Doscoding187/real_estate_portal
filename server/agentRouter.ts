@@ -47,6 +47,7 @@ import {
 } from './services/agentPublicProfileService';
 import { recordAgentOsEvent } from './services/agentOsEventService';
 import {
+  deriveLeadReadiness,
   leadStatusTimestamps,
   validateLeadTransition,
 } from './services/leadTransitionService';
@@ -65,23 +66,93 @@ import {
   loadCommercialLeadContexts,
 } from './services/commercialLeadContextService';
 import type { CommercialLeadOperationalContext } from './services/commercialLeadContextService';
+import {
+  DEFAULT_AGENT_LEAD_OFFER_READINESS,
+  isAgentLeadOfferReadinessComplete,
+  parseAgentLeadOfferReadiness,
+  serializeAgentLeadOfferReadiness,
+  type AgentLeadOfferReadiness,
+} from '../shared/agentLeadOfferReadiness';
 
 import {
   getAgentInventorySchedulingOptions,
   resolvePropertiesForListings,
   resolvePropertyForListing,
 } from './services/inventoryLinkResolver';
-type AgentShowingStatus =
-  | 'scheduled'
-  | 'completed'
-  | 'cancelled'
-  | 'no_show';
+type AgentShowingStatus = 'scheduled' | 'completed' | 'cancelled' | 'no_show';
 
-type CanonicalAgentShowingStorageStatus =
-  | 'confirmed'
-  | 'completed'
-  | 'cancelled'
-  | 'no_show';
+type CanonicalAgentShowingStorageStatus = 'confirmed' | 'completed' | 'cancelled' | 'no_show';
+
+const OFFER_READINESS_QUALIFICATION_BLOCKER = 'Qualification must be recorded before offer work.';
+
+const OFFER_READINESS_CHECKS: Array<{
+  key: keyof AgentLeadOfferReadiness;
+  missingMessage: string;
+  completedLabel: string;
+}> = [
+  {
+    key: 'viewingCompleted',
+    missingMessage: 'Record that the viewing is complete before sending an offer.',
+    completedLabel: 'Viewing completed',
+  },
+  {
+    key: 'feedbackLogged',
+    missingMessage: 'Log the buyer feedback before sending an offer.',
+    completedLabel: 'Buyer feedback logged',
+  },
+  {
+    key: 'affordabilityConfirmed',
+    missingMessage: 'Confirm buyer affordability or qualification before sending an offer.',
+    completedLabel: 'Affordability or qualification confirmed',
+  },
+];
+
+type AgentOfferReadinessSummary = {
+  readiness: AgentLeadOfferReadiness;
+  canMoveToOffer: boolean;
+  blockers: string[];
+};
+
+function describeOfferReadiness(readiness: AgentLeadOfferReadiness) {
+  const completed = OFFER_READINESS_CHECKS.filter(item => readiness[item.key]).map(
+    item => item.completedLabel,
+  );
+  return completed.length
+    ? `Offer readiness updated: ${completed.join(', ')}.`
+    : 'Offer readiness reset. Complete the checks before sending an offer.';
+}
+
+async function getAgentOfferReadiness(
+  db: Awaited<ReturnType<typeof getDb>>,
+  lead: typeof leads.$inferSelect,
+): Promise<AgentOfferReadinessSummary> {
+  const activities = await db
+    .select({ metadata: leadActivities.metadata })
+    .from(leadActivities)
+    .where(eq(leadActivities.leadId, lead.id))
+    .orderBy(desc(leadActivities.createdAt), desc(leadActivities.id))
+    .limit(100);
+
+  const persistedReadiness =
+    activities
+      .map(activity => parseAgentLeadOfferReadiness(activity.metadata))
+      .find((readiness): readiness is AgentLeadOfferReadiness => readiness !== null) ||
+    DEFAULT_AGENT_LEAD_OFFER_READINESS;
+  const canonicalReadiness = deriveLeadReadiness(lead);
+  const canonicalBlockers = canonicalReadiness.blockers.filter(
+    blocker => blocker !== OFFER_READINESS_QUALIFICATION_BLOCKER,
+  );
+  const checklistBlockers = OFFER_READINESS_CHECKS.filter(
+    item => !persistedReadiness[item.key],
+  ).map(item => item.missingMessage);
+
+  return {
+    readiness: persistedReadiness,
+    canMoveToOffer:
+      canonicalBlockers.length === 0 && isAgentLeadOfferReadinessComplete(persistedReadiness),
+    blockers: [...canonicalBlockers, ...checklistBlockers],
+  };
+}
 
 function mapAgentShowingStatusToCanonical(
   status: AgentShowingStatus,
@@ -89,9 +160,7 @@ function mapAgentShowingStatusToCanonical(
   return status === 'scheduled' ? 'confirmed' : status;
 }
 
-function mapCanonicalShowingStatusToAgent(
-  status: unknown,
-): AgentShowingStatus {
+function mapCanonicalShowingStatusToAgent(status: unknown): AgentShowingStatus {
   switch (status) {
     case 'completed':
       return 'completed';
@@ -191,7 +260,8 @@ async function requireAgentPropertyMutationTarget(
   }
   rejectGenericCommercialPropertyWorkflow(property.propertyType);
 
-  const sourceListingId = property.sourceListingId == null ? null : Number(property.sourceListingId);
+  const sourceListingId =
+    property.sourceListingId == null ? null : Number(property.sourceListingId);
   if (sourceListingId == null) {
     return { property, sourceListingId: null as number | null };
   }
@@ -331,37 +401,15 @@ function readCountValue(result: any): number {
   return Number.isFinite(countValue) ? countValue : 0;
 }
 
-
-
-
-
-
-
-function normalizeAgentShowingRow(
-  row: RawAgentShowingRow,
-): AgentShowingRecord {
+function normalizeAgentShowingRow(row: RawAgentShowingRow): AgentShowingRecord {
   return {
     id: Number(row.id),
-    listingId:
-      row.listingId == null
-        ? null
-        : Number(row.listingId),
-    propertyId:
-      row.propertyId == null
-        ? null
-        : Number(row.propertyId),
-    leadId:
-      row.leadId == null
-        ? null
-        : Number(row.leadId),
-    agentId:
-      row.agentId == null
-        ? null
-        : Number(row.agentId),
+    listingId: row.listingId == null ? null : Number(row.listingId),
+    propertyId: row.propertyId == null ? null : Number(row.propertyId),
+    leadId: row.leadId == null ? null : Number(row.leadId),
+    agentId: row.agentId == null ? null : Number(row.agentId),
     scheduledAt: row.scheduledAt ?? null,
-    status: mapCanonicalShowingStatusToAgent(
-      row.status,
-    ),
+    status: mapCanonicalShowingStatusToAgent(row.status),
     notes: row.notes ?? row.feedback ?? null,
     createdAt: row.createdAt ?? null,
     updatedAt: row.updatedAt ?? null,
@@ -402,13 +450,9 @@ async function listAgentShowings(params: {
     : sql``;
   const statusValue =
     params.status && params.status !== 'all'
-      ? mapAgentShowingStatusToCanonical(
-          params.status,
-        )
+      ? mapAgentShowingStatusToCanonical(params.status)
       : null;
-  const statusCondition = statusValue
-    ? sql` AND status = ${statusValue}`
-    : sql``;
+  const statusCondition = statusValue ? sql` AND status = ${statusValue}` : sql``;
 
   const result = await params.db.execute(sql`
     SELECT
@@ -431,11 +475,7 @@ async function listAgentShowings(params: {
     ORDER BY scheduledAt
   `);
 
-  return normalizeDbRows(result).map(row =>
-    normalizeAgentShowingRow(
-      row as RawAgentShowingRow,
-    ),
-  );
+  return normalizeDbRows(result).map(row => normalizeAgentShowingRow(row as RawAgentShowingRow));
 }
 
 /**
@@ -524,78 +564,47 @@ export const agentRouter = router({
       const todayDate = new Date();
       todayDate.setHours(0, 0, 0, 0);
       const tomorrowDate = new Date(todayDate);
-      tomorrowDate.setDate(
-        tomorrowDate.getDate() + 1,
-      );
+      tomorrowDate.setDate(tomorrowDate.getDate() + 1);
 
       const today = todayDate.toISOString();
       const tomorrow = tomorrowDate.toISOString();
-      const weekAgo = new Date(
-        Date.now() - 7 * 24 * 60 * 60 * 1000,
-      ).toISOString();
+      const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
       const [activeListingsResult] = await db
         .select({ count: count() })
         .from(properties)
-        .where(
-          and(
-            ...buildAgentInventoryConditions(
-              userId,
-              agentId,
-              'active',
-            ),
-          ),
-        );
+        .where(and(...buildAgentInventoryConditions(userId, agentId, 'active')));
 
-      let newLeadsResult:
-        | { count: number }
-        | undefined;
-      let pendingCommissionsResult:
-        | { total: number | null }
-        | undefined;
+      let newLeadsResult: { count: number } | undefined;
+      let pendingCommissionsResult: { total: number | null } | undefined;
       let showingsTodayCount = 0;
 
       if (agentId) {
         [newLeadsResult] = await db
           .select({ count: count() })
           .from(leads)
-          .where(
-            and(
-              eq(leads.agentId, agentId),
-              gte(leads.createdAt, weekAgo),
-            ),
-          );
+          .where(and(eq(leads.agentId, agentId), gte(leads.createdAt, weekAgo)));
 
-        showingsTodayCount =
-          await countAgentShowingsInRange({
-            db,
-            agentId,
-            startIso: today,
-            endIso: tomorrow,
-          });
+        showingsTodayCount = await countAgentShowingsInRange({
+          db,
+          agentId,
+          startIso: today,
+          endIso: tomorrow,
+        });
 
         [pendingCommissionsResult] = await db
           .select({
             total: sql<number>`SUM(${commissions.amount})`,
           })
           .from(commissions)
-          .where(
-            and(
-              eq(commissions.agentId, agentId),
-              eq(commissions.status, 'pending'),
-            ),
-          );
+          .where(and(eq(commissions.agentId, agentId), eq(commissions.status, 'pending')));
       }
 
       return {
-        activeListings:
-          activeListingsResult?.count || 0,
-        newLeadsThisWeek:
-          newLeadsResult?.count || 0,
+        activeListings: activeListingsResult?.count || 0,
+        newLeadsThisWeek: newLeadsResult?.count || 0,
         showingsToday: showingsTodayCount,
-        commissionsPending: Number(
-          pendingCommissionsResult?.total || 0,
-        ),
+        commissionsPending: Number(pendingCommissionsResult?.total || 0),
       };
     },
   ),
@@ -652,14 +661,14 @@ export const agentRouter = router({
       windowDays: 30,
       totalLeads: rows.length,
       respondedLeads: respondedHours.length,
-      awaitingFirstResponse: rows.filter(
-        row => !row.firstRespondedAt && row.status !== 'lost',
-      ).length,
+      awaitingFirstResponse: rows.filter(row => !row.firstRespondedAt && row.status !== 'lost')
+        .length,
       medianHoursToFirstResponse: median === null ? null : Math.round(median * 10) / 10,
     };
   }),
 
-  getActivationMilestones: agentProcedure.query(async ({ ctx }) => {    const db = await getDb();
+  getActivationMilestones: agentProcedure.query(async ({ ctx }) => {
+    const db = await getDb();
     const userId = requireUser(ctx).id;
     const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
@@ -997,7 +1006,20 @@ export const agentRouter = router({
           break;
       }
 
-      validateLeadTransition(lead, newStatus as any);
+      const needsOfferReadiness =
+        input.targetStage === 'offer' &&
+        !['offer_sent', 'converted', 'closed'].includes(String(lead.status));
+      const offerReadiness = needsOfferReadiness ? await getAgentOfferReadiness(db, lead) : null;
+      if (offerReadiness && !offerReadiness.canMoveToOffer) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: offerReadiness.blockers.join(' '),
+        });
+      }
+
+      validateLeadTransition(lead, newStatus as any, {
+        qualificationConfirmed: Boolean(offerReadiness?.readiness.affordabilityConfirmed),
+      });
       const now = nowAsDbTimestamp();
 
       await db
@@ -1102,9 +1124,7 @@ export const agentRouter = router({
             .limit(1);
 
           const primaryImage =
-            images.length > 0
-              ? resolveMediaDeliveryUrl(images[0].imageUrl)
-              : null;
+            images.length > 0 ? resolveMediaDeliveryUrl(images[0].imageUrl) : null;
 
           return {
             ...property,
@@ -1487,9 +1507,9 @@ export const agentRouter = router({
           ? {
               id: property.id,
               title: property.title,
-            city: property.city,
-            price: Number(property.price),
-          }
+              city: property.city,
+              price: Number(property.price),
+            }
           : null,
         commercial: commercialContexts.get(lead.id) || null,
       }));
@@ -1832,6 +1852,116 @@ export const agentRouter = router({
     }),
 
   /**
+   * Return the durable offer checklist for a lead. The response combines the
+   * latest agent-recorded checklist snapshot with the canonical lead
+   * transition requirements, so the client never invents its own gate.
+   */
+  getLeadOfferReadiness: agentProcedure
+    .input(z.object({ leadId: z.number().int().positive() }))
+    .query(async ({ ctx, input }): Promise<AgentOfferReadinessSummary> => {
+      const db = await getDb();
+      const [agentRecord] = await db
+        .select({ id: agents.id })
+        .from(agents)
+        .where(and(eq(agents.userId, requireUser(ctx).id), eq(agents.status, 'approved')))
+        .limit(1);
+
+      if (!agentRecord) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Agent profile not found' });
+      }
+
+      const [lead] = await db.select().from(leads).where(eq(leads.id, input.leadId)).limit(1);
+      if (!lead || Number(lead.agentId) !== Number(agentRecord.id)) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Lead not found or unauthorized' });
+      }
+
+      return getAgentOfferReadiness(db, lead);
+    }),
+
+  /**
+   * Persist an agent's offer checks as an immutable timeline snapshot. This
+   * avoids a second schema authority while preserving who recorded the
+   * readiness evidence and when it was changed.
+   */
+  setLeadOfferReadiness: agentProcedure
+    .input(
+      z.object({
+        leadId: z.number().int().positive(),
+        readiness: z
+          .object({
+            viewingCompleted: z.boolean(),
+            feedbackLogged: z.boolean(),
+            affordabilityConfirmed: z.boolean(),
+          })
+          .strict(),
+      }),
+    )
+    .mutation(async ({ ctx, input }): Promise<AgentOfferReadinessSummary> => {
+      const db = await getDb();
+      const user = requireUser(ctx);
+      const [agentRecord] = await db
+        .select({ id: agents.id })
+        .from(agents)
+        .where(and(eq(agents.userId, user.id), eq(agents.status, 'approved')))
+        .limit(1);
+
+      if (!agentRecord) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Agent profile not found' });
+      }
+
+      const [lead] = await db.select().from(leads).where(eq(leads.id, input.leadId)).limit(1);
+      if (!lead || Number(lead.agentId) !== Number(agentRecord.id)) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Lead not found or unauthorized' });
+      }
+
+      if (['converted', 'closed', 'lost'].includes(String(lead.status))) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Offer readiness cannot be changed for a closed lead.',
+        });
+      }
+
+      const readiness: AgentLeadOfferReadiness = {
+        viewingCompleted: input.readiness.viewingCompleted,
+        feedbackLogged: input.readiness.feedbackLogged,
+        affordabilityConfirmed: input.readiness.affordabilityConfirmed,
+      };
+      const now = nowAsDbTimestamp();
+
+      await db.transaction(async tx => {
+        await tx.insert(leadActivities).values({
+          leadId: lead.id,
+          userId: user.id,
+          type: 'note',
+          description: describeOfferReadiness(readiness),
+          metadata: JSON.stringify(serializeAgentLeadOfferReadiness(readiness)),
+        });
+        await tx
+          .update(leads)
+          .set({ updatedAt: now })
+          .where(and(eq(leads.id, lead.id), eq(leads.agentId, agentRecord.id)));
+      });
+
+      await logAudit({
+        userId: user.id,
+        action: 'agent.lead_offer_readiness_updated',
+        targetType: 'lead',
+        targetId: lead.id,
+        metadata: { agentId: agentRecord.id, readiness },
+        req: ctx.req,
+      });
+      await recordAgentOsEvent({
+        userId: user.id,
+        eventType: 'agent_crm_action_logged',
+        eventData: { leadId: lead.id, activityType: 'offer_readiness_updated', readiness },
+        req: ctx.req,
+        requestId: ctx.requestId,
+      });
+
+      return getAgentOfferReadiness(db, lead);
+    }),
+
+  /**
    * Add lead activity/note
    */
   addLeadActivity: agentProcedure
@@ -1848,7 +1978,7 @@ export const agentRouter = router({
           'offer_sent',
         ]),
         description: z.string(),
-        metadata: z.string().optional(),
+        metadata: z.string().max(10_000).optional(),
       }),
     )
     .mutation(async ({ ctx, input }): Promise<{ success: boolean }> => {
@@ -1872,22 +2002,34 @@ export const agentRouter = router({
         throw new Error('Lead not found or unauthorized');
       }
 
-      // Add activity
-      await db.insert(leadActivities).values({
-        leadId: input.leadId,
-        userId: requireUser(ctx).id,
-        type:
-          input.activityType === 'viewing_scheduled' || input.activityType === 'offer_sent'
-            ? 'status_change'
-            : input.activityType,
-        description: input.description,
-      });
+      const activityType =
+        input.activityType === 'viewing_scheduled' || input.activityType === 'offer_sent'
+          ? 'status_change'
+          : input.activityType;
+      const isRecordedContact = ['call', 'email', 'meeting'].includes(input.activityType);
+      const now = nowAsDbTimestamp();
 
-      // Update lead's updatedAt
-      await db
-        .update(leads)
-        .set({ updatedAt: nowAsDbTimestamp() })
-        .where(eq(leads.id, input.leadId));
+      // A concrete contact outcome is both an immutable CRM activity and the
+      // canonical first/last-response evidence used by the offer gate.
+      await db.transaction(async tx => {
+        await tx.insert(leadActivities).values({
+          leadId: input.leadId,
+          userId: requireUser(ctx).id,
+          type: activityType,
+          description: input.description,
+          metadata: input.metadata || null,
+        });
+
+        await tx
+          .update(leads)
+          .set({
+            updatedAt: now,
+            ...(isRecordedContact
+              ? { lastContactedAt: now, firstRespondedAt: lead.firstRespondedAt || now }
+              : {}),
+          })
+          .where(eq(leads.id, input.leadId));
+      });
 
       await recordAgentOsEvent({
         userId: requireUser(ctx).id,
@@ -1948,15 +2090,7 @@ export const agentRouter = router({
       z.object({
         startDate: z.string().optional(),
         endDate: z.string().optional(),
-        status: z
-          .enum([
-            'all',
-            'scheduled',
-            'completed',
-            'cancelled',
-            'no_show',
-          ])
-          .optional(),
+        status: z.enum(['all', 'scheduled', 'completed', 'cancelled', 'no_show']).optional(),
       }),
     )
     .query(async ({ ctx, input }) => {
@@ -1965,12 +2099,7 @@ export const agentRouter = router({
       const [agentRecord] = await db
         .select()
         .from(agents)
-        .where(
-          eq(
-            agents.userId,
-            requireUser(ctx).id,
-          ),
-        )
+        .where(eq(agents.userId, requireUser(ctx).id))
         .limit(1);
 
       if (!agentRecord) {
@@ -2113,16 +2242,11 @@ export const agentRouter = router({
         sql`${null}`,
       ];
 
-        const insertResult =
-          typeof (
-            db as { execute?: unknown }
-          ).execute === 'function'
-            ? await db.execute(sql`
+      const insertResult =
+        typeof (db as { execute?: unknown }).execute === 'function'
+          ? await db.execute(sql`
                 INSERT INTO showings (
-                  ${sql.join(
-                    showingColumns,
-                    sql`, `,
-                  )}
+                  ${sql.join(showingColumns, sql`, `)}
                 )
                 VALUES (
                   ${sql.join(showingValues, sql`, `)}
@@ -2209,7 +2333,6 @@ export const agentRouter = router({
     .mutation(async ({ ctx, input }): Promise<{ success: boolean }> => {
       const db = await getDb();
 
-
       // Get agent record
       const [agentRecord] = await db
         .select()
@@ -2221,10 +2344,7 @@ export const agentRouter = router({
         throw new Error('Agent profile not found');
       }
 
-      const nextStatus =
-          mapAgentShowingStatusToCanonical(
-            input.status,
-          );
+      const nextStatus = mapAgentShowingStatusToCanonical(input.status);
       const result = await db.execute(sql`
           UPDATE showings
           SET status = ${nextStatus},
@@ -2349,11 +2469,12 @@ export const agentRouter = router({
       }[input.period];
       const startDate = new Date(now.getTime() - periodDays * 24 * 60 * 60 * 1000).toISOString();
 
-      // Leads contacted
+      // Contacted leads: use recorded contact evidence, not lead capture, so
+      // the metric means what its label says across every selected period.
       const [leadsContactedResult] = await db
         .select({ count: count() })
         .from(leads)
-        .where(and(eq(leads.agentId, agentRecord.id), gte(leads.createdAt, startDate)));
+        .where(and(eq(leads.agentId, agentRecord.id), gte(leads.lastContactedAt, startDate)));
 
       // Properties sold/rented
       const [propertiesClosedResult] = await db
@@ -2367,7 +2488,10 @@ export const agentRouter = router({
           ),
         );
 
-      // Conversion rate (leads -> converted)
+      // Cohort conversion: leads captured during this exact period that have
+      // since reached a converted or closed state. Keeping numerator and
+      // denominator on the same captured-lead cohort prevents misleading
+      // rates when older enquiries close this month.
       const [totalLeadsResult] = await db
         .select({ count: count() })
         .from(leads)
@@ -2379,7 +2503,7 @@ export const agentRouter = router({
         .where(
           and(
             eq(leads.agentId, agentRecord.id),
-            eq(leads.status, 'converted'),
+            inArray(leads.status, ['converted', 'closed'] as any),
             gte(leads.createdAt, startDate),
           ),
         );
@@ -2389,6 +2513,7 @@ export const agentRouter = router({
       const conversionRate = totalLeads > 0 ? (convertedLeads / totalLeads) * 100 : 0;
 
       return {
+        periodDays,
         leadsContacted: leadsContactedResult?.count || 0,
         propertiesClosed: propertiesClosedResult?.count || 0,
         conversionRate: Math.round(conversionRate * 10) / 10,

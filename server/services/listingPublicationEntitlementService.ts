@@ -89,6 +89,21 @@ export type AgencyPublicationReadiness = {
   };
 };
 
+export type IndependentAgentPublicationReadiness = {
+  ready: boolean;
+  blockers: PublicationBlocker[];
+  facts: {
+    approved: boolean;
+    emailVerified: boolean;
+    profileCompletionScore: number;
+    subscriptionStatus: string | null;
+    currentPeriodEnd: string | null;
+    daysRemaining: number | null;
+    capacityUsed: number | null;
+    capacityMax: number | null;
+  };
+};
+
 type DbLike = any;
 
 /**
@@ -150,10 +165,7 @@ export async function evaluateAgencyPublicationReadiness(
 
   const verified = Number(agency.isVerified || 0) === 1;
   if (!verified) {
-    push(
-      'agency_unverified',
-      'The agency must be verified before publishing listings.',
-    );
+    push('agency_unverified', 'The agency must be verified before publishing listings.');
   }
 
   const profileComplete = Boolean(agency.name && agency.email && agency.city && agency.province);
@@ -202,10 +214,14 @@ export async function evaluateAgencyPublicationReadiness(
     }
   }
 
-  const skipCapacity =
-    (options.skipCapacityWhenBlocked ?? true) && blockers.length > 0;
+  const skipCapacity = (options.skipCapacityWhenBlocked ?? true) && blockers.length > 0;
   let capacityUsed: number | null = null;
-  if (!skipCapacity && capacityMax !== null && capacityMax > 0 && options.includeCapacityCount !== false) {
+  if (
+    !skipCapacity &&
+    capacityMax !== null &&
+    capacityMax > 0 &&
+    options.includeCapacityCount !== false
+  ) {
     const owner: ListingCommercialOwner = {
       kind: 'agency',
       agencyId,
@@ -223,7 +239,9 @@ export async function evaluateAgencyPublicationReadiness(
 
   const currentPeriodEnd = dbTimestamp(subscriptionWithPlan?.subscription.currentPeriodEnd);
   const daysRemaining =
-    currentPeriodEnd !== null ? Math.max(0, Math.ceil((currentPeriodEnd - nowMs) / 86_400_000)) : null;
+    currentPeriodEnd !== null
+      ? Math.max(0, Math.ceil((currentPeriodEnd - nowMs) / 86_400_000))
+      : null;
 
   return {
     ready: blockers.length === 0,
@@ -244,7 +262,158 @@ export async function evaluateAgencyPublicationReadiness(
   };
 }
 
+/**
+ * Enumerate the requirements for an independent agent to submit inventory.
+ *
+ * This is deliberately the same commercial authority used during a listing
+ * transition. It gives authoring surfaces an honest, complete preflight
+ * without weakening the transaction-time assertion that still protects every
+ * publication operation.
+ */
+export async function evaluateIndependentAgentPublicationReadiness(
+  db: DbLike,
+  userId: number,
+  options: {
+    agentId?: number;
+    excludeListingIds?: number[];
+    now?: Date;
+    includeCapacityCount?: boolean;
+    skipCapacityWhenBlocked?: boolean;
+  } = {},
+): Promise<IndependentAgentPublicationReadiness> {
+  const now = options.now ?? new Date();
+  const nowMs = now.getTime();
+  const blockers: PublicationBlocker[] = [];
+  const push = (reason: ListingPublicationFailureCode, message: string) =>
+    blockers.push({ reason, message });
 
+  const [[user], [agent]] = await Promise.all([
+    db.select().from(users).where(eq(users.id, userId)).limit(1),
+    options.agentId
+      ? db.select().from(agents).where(eq(agents.id, options.agentId)).limit(1)
+      : db.select().from(agents).where(eq(agents.userId, userId)).limit(1),
+  ]);
+
+  if (!user || !agent || Number(agent.userId || 0) !== Number(userId)) {
+    push(
+      'commercial_owner_unresolved',
+      'This listing does not have a resolvable independent-agent owner.',
+    );
+  }
+
+  const hasAgencyMembership = Boolean(user?.agencyId || agent?.agencyId);
+  if (hasAgencyMembership) {
+    push(
+      'commercial_owner_unresolved',
+      'Your account is associated with an agency. Use your agency listing workspace for this inventory.',
+    );
+  }
+
+  const approved = Boolean(agent && agent.status === 'approved');
+  if (agent && !approved) {
+    push(
+      'individual_agent_unapproved',
+      'The agent profile must be approved before publishing listings.',
+    );
+  }
+
+  const emailVerified = Number(user?.emailVerified || 0) === 1;
+  if (user && !emailVerified) {
+    push(
+      'individual_agent_email_unverified',
+      'Verify the agent email address before publishing listings.',
+    );
+  }
+
+  const completionScore = profileCompletionScore(agent);
+  if (agent && completionScore < 70) {
+    push(
+      'individual_agent_profile_incomplete',
+      'Complete the agent profile before publishing listings.',
+    );
+  }
+
+  const subscriptionWithPlan = await getCanonicalSubscription(db, 'agent', userId);
+  const subscription = subscriptionWithPlan?.subscription;
+  const plan = subscriptionWithPlan?.plan;
+  const trialEndsAt = dbTimestamp(subscription?.trialEndsAt);
+  const validTrial =
+    subscription?.status === 'trial' && trialEndsAt !== null && trialEndsAt > nowMs;
+  const failure = validTrial ? null : subscriptionFailure(subscription, now);
+  if (failure) {
+    push(failure.reason, failure.message);
+  }
+
+  let capacityMax: number | null = null;
+  if (!plan) {
+    push(
+      'subscription_plan_unresolved',
+      'A valid agent publishing plan is required before this listing can be submitted.',
+    );
+  } else if (plan.segment !== 'agent' || Number(plan.isActive) !== 1) {
+    push(
+      'subscription_plan_ineligible',
+      'The current plan is not eligible for independent-agent listing publication.',
+    );
+  } else {
+    capacityMax = await getPlanMaximumActiveListings(db, plan.id);
+    if (capacityMax <= 0) {
+      push(
+        'listing_capacity_exhausted',
+        'The current plan does not include active listing publication.',
+      );
+    }
+  }
+
+  const skipCapacity = (options.skipCapacityWhenBlocked ?? true) && blockers.length > 0;
+  let capacityUsed: number | null = null;
+  if (
+    !skipCapacity &&
+    capacityMax !== null &&
+    capacityMax > 0 &&
+    options.includeCapacityCount !== false
+  ) {
+    const activeCapacityUsed = await getActiveListingCount(
+      db,
+      {
+        kind: 'independent_agent',
+        userId,
+        agentId: Number(agent?.id || options.agentId || 0),
+        listingId: 0,
+      },
+      options.excludeListingIds ?? [],
+    );
+    capacityUsed = activeCapacityUsed;
+    if (activeCapacityUsed >= capacityMax) {
+      push(
+        'listing_capacity_exhausted',
+        `The current plan allows ${capacityMax} active listings. Archive an active listing before publishing another.`,
+      );
+    }
+  }
+
+  const currentPeriodEnd = dbTimestamp(subscription?.currentPeriodEnd);
+  const daysRemaining =
+    currentPeriodEnd !== null
+      ? Math.max(0, Math.ceil((currentPeriodEnd - nowMs) / 86_400_000))
+      : null;
+
+  return {
+    ready: blockers.length === 0,
+    blockers,
+    facts: {
+      approved,
+      emailVerified,
+      profileCompletionScore: completionScore,
+      subscriptionStatus: subscription?.status ?? null,
+      currentPeriodEnd:
+        subscription?.currentPeriodEnd != null ? String(subscription.currentPeriodEnd) : null,
+      daysRemaining,
+      capacityUsed,
+      capacityMax,
+    },
+  };
+}
 
 const ACTIVE_CANONICAL_LISTING_STATUSES = ['approved', 'published'] as const;
 
@@ -399,21 +568,6 @@ async function getActiveListingCount(
   return rows.length;
 }
 
-async function assertActiveListingCapacity(
-  db: DbLike,
-  owner: ListingCommercialOwner,
-  maxActiveListings: number,
-  additionalExcludedListingIds: number[] = [],
-) {
-  const activeListingCount = await getActiveListingCount(db, owner, additionalExcludedListingIds);
-  if (activeListingCount >= maxActiveListings) {
-    throw new ListingPublicationEntitlementError(
-      'listing_capacity_exhausted',
-      `The current plan allows ${maxActiveListings} active listings. Archive an active listing before publishing another.`,
-    );
-  }
-}
-
 function profileCompletionScore(agent: any) {
   if (!agent) return 0;
   const present = (value: unknown) => Boolean(typeof value === 'string' ? value.trim() : value);
@@ -537,64 +691,17 @@ export async function assertListingPublicationEntitled(
     return owner;
   }
 
-  const [[user], [agent]] = await Promise.all([
-    db.select().from(users).where(eq(users.id, owner.userId)).limit(1),
-    db.select().from(agents).where(eq(agents.id, owner.agentId)).limit(1),
-  ]);
-  if (!user || !agent) {
+  const readiness = await evaluateIndependentAgentPublicationReadiness(db, owner.userId, {
+    agentId: owner.agentId,
+    excludeListingIds: input.excludeListingIds ?? [owner.listingId],
+    now,
+    includeCapacityCount: true,
+  });
+  if (readiness.blockers.length > 0) {
     throw new ListingPublicationEntitlementError(
-      'commercial_owner_unresolved',
-      'This listing does not have a resolvable commercial owner.',
+      readiness.blockers[0].reason,
+      readiness.blockers[0].message,
     );
   }
-  if (agent.status !== 'approved') {
-    throw new ListingPublicationEntitlementError(
-      'individual_agent_unapproved',
-      'The agent profile must be approved before publishing listings.',
-    );
-  }
-  if (user.emailVerified !== 1) {
-    throw new ListingPublicationEntitlementError(
-      'individual_agent_email_unverified',
-      'Verify the agent email address before publishing listings.',
-    );
-  }
-  if (profileCompletionScore(agent) < 70) {
-    throw new ListingPublicationEntitlementError(
-      'individual_agent_profile_incomplete',
-      'Complete the agent profile before publishing listings.',
-    );
-  }
-
-  const subscriptionWithPlan = await getCanonicalSubscription(db, 'agent', owner.userId);
-  const subscription = subscriptionWithPlan?.subscription;
-  const plan = subscriptionWithPlan?.plan;
-  const trialEndsAt = dbTimestamp(subscription?.trialEndsAt);
-  const validTrial =
-    subscription?.status === 'trial' && trialEndsAt !== null && trialEndsAt > now.getTime();
-  const failure = validTrial ? null : subscriptionFailure(subscription, now);
-  if (failure) throw failure;
-
-  if (!plan) {
-    throw new ListingPublicationEntitlementError(
-      'subscription_plan_unresolved',
-      'A valid agent publishing plan is required before this listing can be submitted.',
-    );
-  }
-  if (plan.segment !== 'agent' || Number(plan.isActive) !== 1) {
-    throw new ListingPublicationEntitlementError(
-      'subscription_plan_ineligible',
-      'The current plan is not eligible for independent-agent listing publication.',
-    );
-  }
-
-  const maxActiveListings = await getPlanMaximumActiveListings(db, plan.id);
-  if (maxActiveListings <= 0) {
-    throw new ListingPublicationEntitlementError(
-      'listing_capacity_exhausted',
-      'The current plan does not include active listing publication.',
-    );
-  }
-  await assertActiveListingCapacity(db, owner, maxActiveListings, input.excludeListingIds);
   return owner;
 }

@@ -1,7 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useLocation } from 'wouter';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { apiFetch } from '@/lib/api';
+import type {
+  AgentRecommendedNextStep,
+  AgentSubscriptionDisplayStatus,
+} from '@shared/agentJourney';
 
 export type AgentEntitlementsSnapshot = {
   trialExpired: boolean;
@@ -33,11 +37,14 @@ export type AgentOnboardingStatus = {
   onboardingComplete: boolean;
   dashboardUnlocked: boolean;
   fullFeaturesUnlocked: boolean;
-  recommendedNextStep: string;
+  recommendedNextStep: AgentRecommendedNextStep;
   subscriptionTier: string;
-  subscriptionStatus: string;
+  subscriptionStatus: AgentSubscriptionDisplayStatus;
   trialStartedAt?: string | null;
   trialEndsAt?: string | null;
+  profile?: {
+    slug?: string | null;
+  } | null;
   profileCompletionScore: number;
   profileCompletionFlags: string[];
   entitlements: AgentEntitlementsSnapshot;
@@ -53,10 +60,17 @@ export function useAgentOnboardingStatus(options: UseAgentOnboardingStatusOption
   const { user, loading: authLoading } = useAuth({ redirectOnUnauthenticated: true });
   const [status, setStatus] = useState<AgentOnboardingStatus | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [requestVersion, setRequestVersion] = useState(0);
+  const retry = useCallback(() => {
+    setRequestVersion(version => version + 1);
+  }, []);
 
   useEffect(() => {
     if (authLoading) return;
     if (user?.role !== 'agent') {
+      setStatus(null);
+      setError(null);
       setIsLoading(false);
       return;
     }
@@ -65,6 +79,7 @@ export function useAgentOnboardingStatus(options: UseAgentOnboardingStatusOption
 
     const loadStatus = async () => {
       setIsLoading(true);
+      setError(null);
       try {
         const result = await apiFetch<AgentOnboardingStatus>('/agent/onboarding-status');
         if (cancelled) return;
@@ -72,6 +87,7 @@ export function useAgentOnboardingStatus(options: UseAgentOnboardingStatusOption
         // Professional identity work is available before activation. Paid
         // capability remains gated server-side and via fullFeaturesUnlocked.
         if (requireDashboardUnlocked && !result.dashboardUnlocked) {
+          setStatus(result);
           setLocation('/agent/setup');
           return;
         }
@@ -79,7 +95,10 @@ export function useAgentOnboardingStatus(options: UseAgentOnboardingStatusOption
         setStatus(result);
       } catch {
         if (!cancelled) {
-          setLocation('/agent/setup');
+          // A network or transient service failure is not onboarding evidence.
+          // Preserve any last known state and let the active surface offer a
+          // retry instead of sending an agent into setup incorrectly.
+          setError('We could not confirm your Agent workspace access right now.');
         }
       } finally {
         if (!cancelled) {
@@ -93,10 +112,12 @@ export function useAgentOnboardingStatus(options: UseAgentOnboardingStatusOption
     return () => {
       cancelled = true;
     };
-  }, [authLoading, requireDashboardUnlocked, setLocation, user?.role]);
+  }, [authLoading, requestVersion, requireDashboardUnlocked, setLocation, user?.role]);
 
   return {
     status,
     isLoading: authLoading || isLoading,
+    error,
+    retry,
   };
 }

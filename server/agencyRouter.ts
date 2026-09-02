@@ -45,7 +45,21 @@ import {
   sellerMandateOperations,
   SELLER_PROSPECT_TERMINAL_STAGE_VALUES,
 } from '../drizzle/schema';
-import { eq, like, or, desc, asc, and, inArray, notInArray, sql, isNull, isNotNull, ne, aliasedTable } from 'drizzle-orm';
+import {
+  eq,
+  like,
+  or,
+  desc,
+  asc,
+  and,
+  inArray,
+  notInArray,
+  sql,
+  isNull,
+  isNotNull,
+  ne,
+  aliasedTable,
+} from 'drizzle-orm';
 import type { SQL } from 'drizzle-orm';
 import {
   getDb,
@@ -71,7 +85,8 @@ import {
 import { getManualEftBillingAmount } from './services/billingFoundationService';
 import { evaluateAgencyPublicationReadiness } from './services/listingPublicationEntitlementService';
 import { getAgencyOperatingHome } from './services/agencyOperatingHome';
-import { isCurrentActiveAgencyMembership,
+import {
+  isCurrentActiveAgencyMembership,
   listCurrentActiveMembershipAgentIds,
   listCurrentAgencyMembershipsForAgent,
   maintainAgencyAgentMembership,
@@ -84,7 +99,11 @@ import {
   mapStatusToFunnelStage,
   validateLeadTransition,
 } from './services/leadTransitionService';
-import { getCommercialProductKey, getConfiguredLaunchFeeMinor, resolveCommercialTerm } from './services/commercialTerm';
+import {
+  getCommercialProductKey,
+  getConfiguredLaunchFeeMinor,
+  resolveCommercialTerm,
+} from './services/commercialTerm';
 import {
   endCanonicalAgencyMembership,
   establishCanonicalAgencyMembership,
@@ -104,6 +123,7 @@ import {
   loadCommercialLeadContext,
   loadCommercialLeadContexts,
 } from './services/commercialLeadContextService';
+import { LISTING_SUBMISSION_READINESS_THRESHOLD } from '../shared/listing-workflow-types';
 
 /**
  * Agency Router - Manages real estate agencies
@@ -304,7 +324,12 @@ const offerTermsInputSchema = z.object({
   financeRequired: z.boolean().optional(),
   bondAmount: nullableMoneyInputSchema,
   cashPortion: nullableMoneyInputSchema,
-  occupationDate: z.string().trim().regex(/^\d{4}-\d{2}-\d{2}$/).optional().nullable(),
+  occupationDate: z
+    .string()
+    .trim()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional()
+    .nullable(),
   occupationalRent: nullableMoneyInputSchema,
   monthlyRental: nullableMoneyInputSchema,
   leaseDurationMonths: z.number().int().min(1).max(120).optional().nullable(),
@@ -400,7 +425,9 @@ const updateTransactionInputSchema = z.object({
   transactionId: z.number().int().positive(),
   stage: z.string().trim().min(2).max(80).optional(),
   status: z.enum(['open', 'in_progress', 'completed', 'cancelled']).optional(),
-  riskStatus: z.enum(['on_track', 'watch', 'at_risk', 'blocked', 'complete', 'cancelled']).optional(),
+  riskStatus: z
+    .enum(['on_track', 'watch', 'at_risk', 'blocked', 'complete', 'cancelled'])
+    .optional(),
   nextAction: z.string().trim().max(255).optional().nullable(),
   nextDeadline: dateInputSchema,
   expectedPaymentDate: dateInputSchema,
@@ -410,7 +437,10 @@ const updateTransactionInputSchema = z.object({
 
 const recordCommissionPaymentInputSchema = z.object({
   settlementId: z.number().int().positive(),
-  amountReceived: moneyInputSchema.refine(value => value > 0, 'Payment amount must be greater than zero'),
+  amountReceived: moneyInputSchema.refine(
+    value => value > 0,
+    'Payment amount must be greater than zero',
+  ),
   receivedAt: z.string().trim().min(10).max(80),
   reference: z.string().trim().max(160).optional().nullable(),
   note: z.string().trim().max(2000).optional().nullable(),
@@ -430,8 +460,27 @@ const resolveCommissionDisputeInputSchema = z.object({
   resolutionNote: z.string().trim().min(2).max(2000),
 });
 
-const performanceRecommendationSchema = z.enum(['keep_unchanged', 'improve_media', 'improve_description', 'correct_information', 'change_price', 'adjust_viewing_availability', 'increase_marketing', 'pause_listing', 'withdraw_listing', 'review_later']);
-const sellerDecisionSchema = z.enum(['pending', 'accepted', 'partially_accepted', 'rejected', 'deferred', 'unable_to_contact', 'unavailable']);
+const performanceRecommendationSchema = z.enum([
+  'keep_unchanged',
+  'improve_media',
+  'improve_description',
+  'correct_information',
+  'change_price',
+  'adjust_viewing_availability',
+  'increase_marketing',
+  'pause_listing',
+  'withdraw_listing',
+  'review_later',
+]);
+const sellerDecisionSchema = z.enum([
+  'pending',
+  'accepted',
+  'partially_accepted',
+  'rejected',
+  'deferred',
+  'unable_to_contact',
+  'unavailable',
+]);
 const performanceReviewInputSchema = z.object({
   listingId: z.number().int().positive(),
   contactChannel: z.enum(['call', 'whatsapp', 'email', 'meeting', 'other']).optional(),
@@ -543,7 +592,6 @@ function normalizeBillingStatus(value: unknown): AgencyBillingStatus {
   return 'unavailable';
 }
 
-
 function toLeadTemperature(score: unknown): {
   label: 'hot' | 'warm' | 'cool';
   score: number;
@@ -581,20 +629,29 @@ function getLeadFirstResponseState(lead: typeof leads.$inferSelect) {
   const firstRespondedAt = lead.firstRespondedAt || lead.lastContactedAt;
   const respondedAt = firstRespondedAt ? new Date(firstRespondedAt) : null;
   const createdTime = createdAt && !Number.isNaN(createdAt.getTime()) ? createdAt.getTime() : null;
-  const respondedTime = respondedAt && !Number.isNaN(respondedAt.getTime()) ? respondedAt.getTime() : null;
+  const respondedTime =
+    respondedAt && !Number.isNaN(respondedAt.getTime()) ? respondedAt.getTime() : null;
   const active = ACTIVE_WORK_LEAD_STATUSES.includes(lead.status as any);
-  const ageMinutes = createdTime == null ? null : Math.max(0, Math.floor((Date.now() - createdTime) / 60_000));
+  const ageMinutes =
+    createdTime == null ? null : Math.max(0, Math.floor((Date.now() - createdTime) / 60_000));
 
   return {
     slaMinutes: FIRST_RESPONSE_SLA_MINUTES,
     firstRespondedAt: respondedTime == null ? null : respondedAt!.toISOString(),
     firstResponseMinutes:
-      createdTime == null || respondedTime == null ? null : Math.max(0, Math.round((respondedTime - createdTime) / 60_000)),
+      createdTime == null || respondedTime == null
+        ? null
+        : Math.max(0, Math.round((respondedTime - createdTime) / 60_000)),
     firstResponseOverdue: Boolean(
-      active && respondedTime == null && ageMinutes != null && ageMinutes >= FIRST_RESPONSE_SLA_MINUTES,
+      active &&
+      respondedTime == null &&
+      ageMinutes != null &&
+      ageMinutes >= FIRST_RESPONSE_SLA_MINUTES,
     ),
     firstResponseDueAt:
-      createdTime == null ? null : new Date(createdTime + FIRST_RESPONSE_SLA_MINUTES * 60_000).toISOString(),
+      createdTime == null
+        ? null
+        : new Date(createdTime + FIRST_RESPONSE_SLA_MINUTES * 60_000).toISOString(),
   };
 }
 
@@ -677,12 +734,12 @@ async function requireAgencyLead(
           .select({ id: agents.id })
           .from(agents)
           .where(
-              and(
-                eq(agents.id, lead.agentId),
-                eq(agents.agencyId, agencyId),
-                eq(agents.userId, user.id),
-                eq(agents.status, 'approved'),
-              ),
+            and(
+              eq(agents.id, lead.agentId),
+              eq(agents.agencyId, agencyId),
+              eq(agents.userId, user.id),
+              eq(agents.status, 'approved'),
+            ),
           )
           .limit(1)
       : [];
@@ -697,15 +754,13 @@ async function requireAgencyLead(
   return lead;
 }
 
-async function requireAgencyAgent(
-  db: AgencyDb,
-  agencyId: number,
-  agentId: number,
-) {
+async function requireAgencyAgent(db: AgencyDb, agencyId: number, agentId: number) {
   const [agent] = await db
     .select()
     .from(agents)
-    .where(and(eq(agents.id, agentId), eq(agents.agencyId, agencyId), eq(agents.status, 'approved')))
+    .where(
+      and(eq(agents.id, agentId), eq(agents.agencyId, agencyId), eq(agents.status, 'approved')),
+    )
     .limit(1);
 
   if (!agent) {
@@ -881,10 +936,7 @@ function normalizeViewingStatus(status: unknown): ViewingStatus {
   return 'requested';
 }
 
-function assertViewingTransitionAllowed(
-  currentStatus: unknown,
-  targetStatus: ViewingStatus,
-) {
+function assertViewingTransitionAllowed(currentStatus: unknown, targetStatus: ViewingStatus) {
   const current = normalizeViewingStatus(currentStatus);
   if (current === targetStatus) return;
 
@@ -922,7 +974,10 @@ function formatAgencyDateKey(date: Date) {
   const month = parts.find(part => part.type === 'month')?.value;
   const day = parts.find(part => part.type === 'day')?.value;
   if (!year || !month || !day) {
-    throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Unable to format agency date.' });
+    throw new TRPCError({
+      code: 'INTERNAL_SERVER_ERROR',
+      message: 'Unable to format agency date.',
+    });
   }
   return `${year}-${month}-${day}`;
 }
@@ -966,7 +1021,11 @@ function getDayBounds(dateInput?: string | null) {
 }
 
 async function requireAgencyProperty(db: AgencyDb, agencyId: number, propertyId: number) {
-  const [property] = await db.select().from(properties).where(eq(properties.id, propertyId)).limit(1);
+  const [property] = await db
+    .select()
+    .from(properties)
+    .where(eq(properties.id, propertyId))
+    .limit(1);
   if (!property) {
     throw new TRPCError({ code: 'NOT_FOUND', message: 'Property not found' });
   }
@@ -1038,7 +1097,11 @@ async function resolveViewingInventory(input: {
       .orderBy(desc(properties.updatedAt))
       .limit(1);
 
-    if (lead.propertyId && publicProperty?.id && Number(lead.propertyId) !== Number(publicProperty.id)) {
+    if (
+      lead.propertyId &&
+      publicProperty?.id &&
+      Number(lead.propertyId) !== Number(publicProperty.id)
+    ) {
       throw new TRPCError({
         code: 'BAD_REQUEST',
         message: 'Selected listing does not match the lead property.',
@@ -1047,7 +1110,10 @@ async function resolveViewingInventory(input: {
 
     if (lead.propertyId && !publicProperty) {
       const leadProperty = await requireAgencyProperty(db, agencyId, lead.propertyId);
-      if (leadProperty.sourceListingId && Number(leadProperty.sourceListingId) !== Number(listingId)) {
+      if (
+        leadProperty.sourceListingId &&
+        Number(leadProperty.sourceListingId) !== Number(listingId)
+      ) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
           message: 'Selected listing does not match the lead property.',
@@ -1190,7 +1256,8 @@ function mapViewingRow(row: any) {
           phone: row.leadPhone,
           status: row.leadStatus,
           nextFollowUp: row.leadNextFollowUp,
-          qualificationScore: row.leadQualificationScore == null ? null : Number(row.leadQualificationScore),
+          qualificationScore:
+            row.leadQualificationScore == null ? null : Number(row.leadQualificationScore),
         }
       : null,
     listing: row.listingId
@@ -1555,10 +1622,7 @@ function agencyListingScopeCondition(agencyId: number) {
     eq(listings.agencyId, agencyId),
     and(
       isNull(listings.agencyId),
-      or(
-        eq(users.agencyId, agencyId),
-        and(isNull(users.agencyId), eq(agents.agencyId, agencyId)),
-      ),
+      or(eq(users.agencyId, agencyId), and(isNull(users.agencyId), eq(agents.agencyId, agencyId))),
     ),
   )!;
 }
@@ -1626,7 +1690,7 @@ function priceForListing(row: {
         ? row.startingBid
         : action === 'sell'
           ? row.askingPrice
-          : row.askingPrice ?? row.monthlyRent ?? row.startingBid ?? null;
+          : (row.askingPrice ?? row.monthlyRent ?? row.startingBid ?? null);
   const numeric = Number(value);
   return Number.isFinite(numeric) && numeric > 0 ? numeric : null;
 }
@@ -1725,7 +1789,11 @@ function deriveListingHealth(row: any, publicationState: string, agencyId: numbe
   };
 }
 
-function deriveListingNextAction(row: any, publicationState: string, health: { reasons: string[] }) {
+function deriveListingNextAction(
+  row: any,
+  publicationState: string,
+  health: { reasons: string[] },
+) {
   const status = String(row.status || 'draft');
   if (
     health.reasons.includes('review_aging') &&
@@ -1733,11 +1801,16 @@ function deriveListingNextAction(row: any, publicationState: string, health: { r
   ) {
     return 'Chase review progress with Property Listify';
   }
-  if (health.reasons.includes('assigned_agent_outside_agency')) return 'Reassign outside-agency agent';
+  if (health.reasons.includes('assigned_agent_outside_agency'))
+    return 'Reassign outside-agency agent';
   if (health.reasons.includes('assigned_agent_inactive')) return 'Reassign inactive agent';
   if (!row.agentId) return 'Assign listing';
   if (status === 'rejected') return 'Correct and resubmit';
-  if (status === 'draft' && Number(row.readinessScore || 0) >= 75) return 'Submit for review';
+  if (
+    status === 'draft' &&
+    Number(row.readinessScore || 0) >= LISTING_SUBMISSION_READINESS_THRESHOLD
+  )
+    return 'Submit for review';
   if (status === 'draft') return 'Complete draft';
   if (status === 'pending_review') {
     return publicationState === 'public_with_private_pending_edits'
@@ -1776,7 +1849,8 @@ function mapAgencyListingRow(row: any, agencyId: number) {
       : Number(row.publicEnquiries);
   const daysLive = daysBetweenNow(row.publishedAt);
   const publicUrl =
-    publicPropertyId && ['published', 'public_with_private_pending_edits'].includes(publicationState)
+    publicPropertyId &&
+    ['published', 'public_with_private_pending_edits'].includes(publicationState)
       ? `/property/${publicPropertyId}`
       : null;
 
@@ -1795,23 +1869,28 @@ function mapAgencyListingRow(row: any, agencyId: number) {
     publicationState,
     publicPropertyId,
     publicUrl,
-    assignedAgent: row.agentId && assignmentInAgency
-      ? {
-          id: Number(row.agentId),
-          name: getAgentDisplayName({
-            displayName: row.agentDisplayName,
-            firstName: row.agentFirstName,
-            lastName: row.agentLastName,
+    assignedAgent:
+      row.agentId && assignmentInAgency
+        ? {
+            id: Number(row.agentId),
+            name: getAgentDisplayName({
+              displayName: row.agentDisplayName,
+              firstName: row.agentFirstName,
+              lastName: row.agentLastName,
+              email: row.agentEmail,
+            }),
             email: row.agentEmail,
-          }),
-          email: row.agentEmail,
-          status: row.agentStatus,
-        }
-      : null,
+            status: row.agentStatus,
+          }
+        : null,
     assignment: {
       agentId: row.agentId ? Number(row.agentId) : null,
       inAgency: assignmentInAgency,
-      label: row.agentId ? (assignmentInAgency ? 'Assigned' : 'Outside agency assignment') : 'Unassigned',
+      label: row.agentId
+        ? assignmentInAgency
+          ? 'Assigned'
+          : 'Outside agency assignment'
+        : 'Unassigned',
       status: row.agentStatus || null,
     },
     creator: {
@@ -2045,7 +2124,7 @@ function applyAgencyListingFilterConditions(
   if (filters.status !== 'all') {
     if (filters.status === 'ready_to_submit') {
       conditions.push(inArray(listings.status, ['draft', 'rejected'] as any));
-      conditions.push(sql`${listings.readinessScore} >= 75`);
+      conditions.push(sql`${listings.readinessScore} >= ${LISTING_SUBMISSION_READINESS_THRESHOLD}`);
     } else if (filters.status === 'private_pending_edits') {
       conditions.push(eq(listings.status, 'pending_review' as any));
       conditions.push(
@@ -2075,7 +2154,9 @@ function applyAgencyListingFilterConditions(
   }
 
   if (filters.ownerUserId) {
-    conditions.push(or(eq(listings.ownerId, filters.ownerUserId), eq(agents.userId, filters.ownerUserId))!);
+    conditions.push(
+      or(eq(listings.ownerId, filters.ownerUserId), eq(agents.userId, filters.ownerUserId))!,
+    );
   }
 
   if (filters.transactionType !== 'all') {
@@ -2085,10 +2166,12 @@ function applyAgencyListingFilterConditions(
   switch (filters.attention) {
     case 'ready_to_submit':
       conditions.push(inArray(listings.status, ['draft', 'rejected'] as any));
-      conditions.push(sql`${listings.readinessScore} >= 75`);
+      conditions.push(sql`${listings.readinessScore} >= ${LISTING_SUBMISSION_READINESS_THRESHOLD}`);
       break;
     case 'needs_attention':
-      conditions.push(sql`(${listings.readinessScore} < 75 OR ${listings.status} = 'rejected')`);
+      conditions.push(
+        sql`(${listings.readinessScore} < ${LISTING_SUBMISSION_READINESS_THRESHOLD} OR ${listings.status} = 'rejected')`,
+      );
       break;
     case 'missing_media':
       conditions.push(
@@ -2137,11 +2220,7 @@ function applyAgencyListingFilterConditions(
   }
 }
 
-async function requireAgencyListing(
-  db: AgencyDb,
-  agencyId: number,
-  listingId: number,
-) {
+async function requireAgencyListing(db: AgencyDb, agencyId: number, listingId: number) {
   const [row] = await db
     .select({
       id: listings.id,
@@ -2181,11 +2260,25 @@ async function requirePerformanceListingAccess(
   const agencyId = requireAgencyId(user);
   const listing = await requireAgencyListing(db, agencyId, listingId);
   if (user.role === 'agent') {
-    const [agent] = await db.select({ id: agents.id }).from(agents).where(and(
-      eq(agents.userId, user.id), eq(agents.agencyId, agencyId), eq(agents.status, 'approved'),
-    )).limit(1);
-    if (!agent || (Number(listing.agentId || 0) !== agent.id && Number(listing.ownerId || 0) !== user.id)) {
-      throw new TRPCError({ code: 'FORBIDDEN', message: 'You can only review listings assigned to you.' });
+    const [agent] = await db
+      .select({ id: agents.id })
+      .from(agents)
+      .where(
+        and(
+          eq(agents.userId, user.id),
+          eq(agents.agencyId, agencyId),
+          eq(agents.status, 'approved'),
+        ),
+      )
+      .limit(1);
+    if (
+      !agent ||
+      (Number(listing.agentId || 0) !== agent.id && Number(listing.ownerId || 0) !== user.id)
+    ) {
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message: 'You can only review listings assigned to you.',
+      });
     }
   }
   return listing;
@@ -2193,22 +2286,64 @@ async function requirePerformanceListingAccess(
 
 async function createListingPerformanceSnapshot(db: AgencyDb, agencyId: number, listingId: number) {
   const listing = await requireAgencyListing(db, agencyId, listingId);
-  const [[analytics], [mirrorStats], [canonicalLeadCounts], [legacyLeadCounts], [showingCounts], [offerCounts], [mediaCounts]] = await Promise.all([
-    db.select().from(listingAnalytics).where(eq(listingAnalytics.listingId, listingId)).orderBy(desc(listingAnalytics.lastUpdated), desc(listingAnalytics.id)).limit(1),
-    db.select({ views: properties.views }).from(properties).where(eq(properties.sourceListingId, listingId)).limit(1),
-    db.select({ enquiries: sql<number>`COUNT(*)`, progressing: sql<number>`SUM(CASE WHEN ${leads.status} IN ('contacted','qualified','viewing_scheduled','offer_sent','converted','closed') THEN 1 ELSE 0 END)` }).from(leads).innerJoin(properties, eq(leads.propertyId, properties.id)).where(eq(properties.sourceListingId, listingId)),
-    db.select({ enquiries: sql<number>`COUNT(*)`, progressing: sql<number>`SUM(CASE WHEN ${listingLeads.status} IN ('contacted','qualified','viewing_scheduled','offer_made','converted') THEN 1 ELSE 0 END)` }).from(listingLeads).where(eq(listingLeads.listingId, listingId)),
-    db.select({ requested: sql<number>`SUM(CASE WHEN ${showings.status} = 'requested' THEN 1 ELSE 0 END)`, confirmed: sql<number>`SUM(CASE WHEN ${showings.status} = 'confirmed' THEN 1 ELSE 0 END)`, completed: sql<number>`SUM(CASE WHEN ${showings.status} = 'completed' THEN 1 ELSE 0 END)`, cancelled: sql<number>`SUM(CASE WHEN ${showings.status} IN ('cancelled', 'no_show') THEN 1 ELSE 0 END)` }).from(showings).where(eq(showings.listingId, listingId)),
-    db.select({ offers: sql<number>`COUNT(*)` }).from(agencyDeals).innerJoin(agencyDealOfferVersions, eq(agencyDealOfferVersions.dealId, agencyDeals.id)).where(and(eq(agencyDeals.agencyId, agencyId), eq(agencyDeals.listingId, listingId))),
-    db.select({ media: sql<number>`COUNT(*)` }).from(listingMedia).where(eq(listingMedia.listingId, listingId)),
+  const [
+    [analytics],
+    [mirrorStats],
+    [canonicalLeadCounts],
+    [legacyLeadCounts],
+    [showingCounts],
+    [offerCounts],
+    [mediaCounts],
+  ] = await Promise.all([
+    db
+      .select()
+      .from(listingAnalytics)
+      .where(eq(listingAnalytics.listingId, listingId))
+      .orderBy(desc(listingAnalytics.lastUpdated), desc(listingAnalytics.id))
+      .limit(1),
+    db
+      .select({ views: properties.views })
+      .from(properties)
+      .where(eq(properties.sourceListingId, listingId))
+      .limit(1),
+    db
+      .select({
+        enquiries: sql<number>`COUNT(*)`,
+        progressing: sql<number>`SUM(CASE WHEN ${leads.status} IN ('contacted','qualified','viewing_scheduled','offer_sent','converted','closed') THEN 1 ELSE 0 END)`,
+      })
+      .from(leads)
+      .innerJoin(properties, eq(leads.propertyId, properties.id))
+      .where(eq(properties.sourceListingId, listingId)),
+    db
+      .select({
+        enquiries: sql<number>`COUNT(*)`,
+        progressing: sql<number>`SUM(CASE WHEN ${listingLeads.status} IN ('contacted','qualified','viewing_scheduled','offer_made','converted') THEN 1 ELSE 0 END)`,
+      })
+      .from(listingLeads)
+      .where(eq(listingLeads.listingId, listingId)),
+    db
+      .select({
+        requested: sql<number>`SUM(CASE WHEN ${showings.status} = 'requested' THEN 1 ELSE 0 END)`,
+        confirmed: sql<number>`SUM(CASE WHEN ${showings.status} = 'confirmed' THEN 1 ELSE 0 END)`,
+        completed: sql<number>`SUM(CASE WHEN ${showings.status} = 'completed' THEN 1 ELSE 0 END)`,
+        cancelled: sql<number>`SUM(CASE WHEN ${showings.status} IN ('cancelled', 'no_show') THEN 1 ELSE 0 END)`,
+      })
+      .from(showings)
+      .where(eq(showings.listingId, listingId)),
+    db
+      .select({ offers: sql<number>`COUNT(*)` })
+      .from(agencyDeals)
+      .innerJoin(agencyDealOfferVersions, eq(agencyDealOfferVersions.dealId, agencyDeals.id))
+      .where(and(eq(agencyDeals.agencyId, agencyId), eq(agencyDeals.listingId, listingId))),
+    db
+      .select({ media: sql<number>`COUNT(*)` })
+      .from(listingMedia)
+      .where(eq(listingMedia.listingId, listingId)),
   ]);
   // Mirror counters are the live truth once a public projection exists;
   // listing_analytics is a retired writer retained as a non-additive
   // baseline (same precedence the inventory projection applies).
-  const views = Math.max(
-    Number(mirrorStats?.views || 0),
-    Number(analytics?.totalViews || 0),
-  );
+  const views = Math.max(Number(mirrorStats?.views || 0), Number(analytics?.totalViews || 0));
   // Canonical public capture writes `leads`. Historical listing_leads and
   // listing_analytics remain a non-additive baseline until a governed data
   // reconciliation can prove overlap and retire them without double-counting.
@@ -2222,11 +2357,36 @@ async function createListingPerformanceSnapshot(db: AgencyDb, agencyId: number, 
   const flags = [
     ...(daysLive >= 14 && views === 0 ? ['no_engagement'] : []),
     ...(views > 0 && enquiries === 0 ? ['views_without_enquiries'] : []),
-    ...(enquiries > 0 && Number(showingCounts?.requested || 0) === 0 ? ['enquiries_without_viewings'] : []),
-    ...(Number(showingCounts?.completed || 0) > 0 && Number(offerCounts?.offers || 0) === 0 ? ['viewings_without_offers'] : []),
+    ...(enquiries > 0 && Number(showingCounts?.requested || 0) === 0
+      ? ['enquiries_without_viewings']
+      : []),
+    ...(Number(showingCounts?.completed || 0) > 0 && Number(offerCounts?.offers || 0) === 0
+      ? ['viewings_without_offers']
+      : []),
     ...(Number(mediaCounts?.media || 0) === 0 ? ['missing_media'] : []),
   ];
-  return { metrics: { capturedAt: nowAsDbTimestamp(), reviewPeriodStart: (listing as any).publishedAt || null, reviewPeriodEnd: nowAsDbTimestamp(), daysLive, views, uniqueViews: Number(analytics?.uniqueVisitors || 0), enquiries, progressingLeads: canonicalEnquiries > 0 ? Number(canonicalLeadCounts?.progressing || 0) : Number(legacyLeadCounts?.progressing || 0), viewingRequests: Number(showingCounts?.requested || 0), confirmedViewings: Number(showingCounts?.confirmed || 0), completedViewings: Number(showingCounts?.completed || 0), cancelledOrNoShowViewings: Number(showingCounts?.cancelled || 0), offers: Number(offerCounts?.offers || 0), currentPrice: priceForListing(listing as any) }, flags };
+  return {
+    metrics: {
+      capturedAt: nowAsDbTimestamp(),
+      reviewPeriodStart: (listing as any).publishedAt || null,
+      reviewPeriodEnd: nowAsDbTimestamp(),
+      daysLive,
+      views,
+      uniqueViews: Number(analytics?.uniqueVisitors || 0),
+      enquiries,
+      progressingLeads:
+        canonicalEnquiries > 0
+          ? Number(canonicalLeadCounts?.progressing || 0)
+          : Number(legacyLeadCounts?.progressing || 0),
+      viewingRequests: Number(showingCounts?.requested || 0),
+      confirmedViewings: Number(showingCounts?.confirmed || 0),
+      completedViewings: Number(showingCounts?.completed || 0),
+      cancelledOrNoShowViewings: Number(showingCounts?.cancelled || 0),
+      offers: Number(offerCounts?.offers || 0),
+      currentPrice: priceForListing(listing as any),
+    },
+    flags,
+  };
 }
 
 function insertResultId(result: any) {
@@ -2301,9 +2461,7 @@ function offerVersionInsertValues(input: {
 }) {
   const terms = normalizeOfferTerms(input.terms);
   const submittedAt =
-    input.status === 'submitted' || input.status === 'under_review'
-      ? nowAsDbTimestamp()
-      : null;
+    input.status === 'submitted' || input.status === 'under_review' ? nowAsDbTimestamp() : null;
 
   return {
     agencyId: input.agencyId,
@@ -2389,7 +2547,12 @@ function workflowTemplates(transactionType: DealTransactionType) {
         ['Tenant screening', 'Screening must be completed before approval.', 'agency', 2],
         ['Deposit and first payment', 'Deposit and first payment must be confirmed.', 'tenant', 5],
         ['Lease signed', 'Signed lease must be stored privately on the transaction.', 'tenant', 7],
-        ['Incoming inspection', 'Inspection record must be completed before occupation.', 'agency', 9],
+        [
+          'Incoming inspection',
+          'Inspection record must be completed before occupation.',
+          'agency',
+          9,
+        ],
       ] as const,
     };
   }
@@ -2411,7 +2574,12 @@ function workflowTemplates(transactionType: DealTransactionType) {
       ['commission_payable', 'Commission payable', 'agency', 91, 'pending'],
     ] as const,
     conditions: [
-      ['Signed offer document', 'Signed offer must be uploaded to the private transaction.', 'agency', 1],
+      [
+        'Signed offer document',
+        'Signed offer must be uploaded to the private transaction.',
+        'agency',
+        1,
+      ],
       ['Deposit payment', 'Deposit payment must be confirmed by the due date.', 'buyer', 3],
       ['Bond approval', 'Bond approval must be recorded if finance is required.', 'buyer', 21],
       ['FICA documents', 'Required FICA documents must be collected privately.', 'buyer', 7],
@@ -2528,11 +2696,7 @@ async function requireAgencyDeal(db: AgencyDb, agencyId: number, dealId: number)
   return deal;
 }
 
-async function requireAgencyOfferVersion(
-  db: AgencyDb,
-  agencyId: number,
-  offerVersionId: number,
-) {
+async function requireAgencyOfferVersion(db: AgencyDb, agencyId: number, offerVersionId: number) {
   const [row] = await db
     .select({ offer: agencyDealOfferVersions, deal: agencyDeals })
     .from(agencyDealOfferVersions)
@@ -2553,11 +2717,7 @@ async function requireAgencyOfferVersion(
   return row;
 }
 
-async function requireAgencyTransaction(
-  db: AgencyDb,
-  agencyId: number,
-  transactionId: number,
-) {
+async function requireAgencyTransaction(db: AgencyDb, agencyId: number, transactionId: number) {
   const [transaction] = await db
     .select()
     .from(agencyTransactions)
@@ -2586,7 +2746,10 @@ async function getNextOfferVersionNumber(db: AgencyDb, agencyId: number, dealId:
     .select({ maxVersion: sql<number>`MAX(${agencyDealOfferVersions.versionNumber})` })
     .from(agencyDealOfferVersions)
     .where(
-      and(eq(agencyDealOfferVersions.dealId, dealId), eq(agencyDealOfferVersions.agencyId, agencyId)),
+      and(
+        eq(agencyDealOfferVersions.dealId, dealId),
+        eq(agencyDealOfferVersions.agencyId, agencyId),
+      ),
     );
 
   return Number(row?.maxVersion || 0) + 1;
@@ -2743,7 +2906,9 @@ async function recomputeTransactionNextStep(db: AgencyDb, agencyId: number, tran
       riskStatus: riskStatus as any,
       updatedAt: nowAsDbTimestamp(),
     })
-    .where(and(eq(agencyTransactions.id, transactionId), eq(agencyTransactions.agencyId, agencyId)));
+    .where(
+      and(eq(agencyTransactions.id, transactionId), eq(agencyTransactions.agencyId, agencyId)),
+    );
 
   const [updated] = await db
     .select()
@@ -2798,63 +2963,67 @@ async function getDealWorkspaceRows(input: {
     .select()
     .from(agencyTransactions)
     .where(
-      and(eq(agencyTransactions.agencyId, input.agencyId), inArray(agencyTransactions.dealId, dealIds)),
+      and(
+        eq(agencyTransactions.agencyId, input.agencyId),
+        inArray(agencyTransactions.dealId, dealIds),
+      ),
     );
   const transactionIds = transactionRows.map(transaction => transaction.id);
 
-  const [milestoneRows, conditionRows, partyRows, documentRows, activityRows] = transactionIds.length
-    ? await Promise.all([
-        input.db
-          .select()
-          .from(agencyTransactionMilestones)
-          .where(
-            and(
-              eq(agencyTransactionMilestones.agencyId, input.agencyId),
-              inArray(agencyTransactionMilestones.transactionId, transactionIds),
+  const [milestoneRows, conditionRows, partyRows, documentRows, activityRows] =
+    transactionIds.length
+      ? await Promise.all([
+          input.db
+            .select()
+            .from(agencyTransactionMilestones)
+            .where(
+              and(
+                eq(agencyTransactionMilestones.agencyId, input.agencyId),
+                inArray(agencyTransactionMilestones.transactionId, transactionIds),
+              ),
+            )
+            .orderBy(asc(agencyTransactionMilestones.sequence)),
+          input.db
+            .select()
+            .from(agencyTransactionConditions)
+            .where(
+              and(
+                eq(agencyTransactionConditions.agencyId, input.agencyId),
+                inArray(agencyTransactionConditions.transactionId, transactionIds),
+              ),
+            )
+            .orderBy(asc(agencyTransactionConditions.dueAt)),
+          input.db
+            .select()
+            .from(agencyTransactionParties)
+            .where(
+              and(
+                eq(agencyTransactionParties.agencyId, input.agencyId),
+                inArray(agencyTransactionParties.transactionId, transactionIds),
+              ),
             ),
-          )
-          .orderBy(asc(agencyTransactionMilestones.sequence)),
-        input.db
-          .select()
-          .from(agencyTransactionConditions)
-          .where(
-            and(
-              eq(agencyTransactionConditions.agencyId, input.agencyId),
-              inArray(agencyTransactionConditions.transactionId, transactionIds),
-            ),
-          )
-          .orderBy(asc(agencyTransactionConditions.dueAt)),
-        input.db
-          .select()
-          .from(agencyTransactionParties)
-          .where(
-            and(
-              eq(agencyTransactionParties.agencyId, input.agencyId),
-              inArray(agencyTransactionParties.transactionId, transactionIds),
-            ),
-          ),
-        input.db
-          .select()
-          .from(agencyTransactionDocuments)
-          .where(
-            and(
-              eq(agencyTransactionDocuments.agencyId, input.agencyId),
-              inArray(agencyTransactionDocuments.transactionId, transactionIds),
-            ),
-          )
-          .orderBy(desc(agencyTransactionDocuments.uploadedAt)),
-        input.db
-          .select()
-          .from(agencyTransactionActivity)
-          .where(
-            and(
-              eq(agencyTransactionActivity.agencyId, input.agencyId),
-              inArray(agencyTransactionActivity.transactionId, transactionIds),
-            ),
-          )
-          .orderBy(desc(agencyTransactionActivity.createdAt)),
-      ])
-    : [[], [], [], [], []];
+          input.db
+            .select()
+            .from(agencyTransactionDocuments)
+            .where(
+              and(
+                eq(agencyTransactionDocuments.agencyId, input.agencyId),
+                inArray(agencyTransactionDocuments.transactionId, transactionIds),
+              ),
+            )
+            .orderBy(desc(agencyTransactionDocuments.uploadedAt)),
+          input.db
+            .select()
+            .from(agencyTransactionActivity)
+            .where(
+              and(
+                eq(agencyTransactionActivity.agencyId, input.agencyId),
+                inArray(agencyTransactionActivity.transactionId, transactionIds),
+              ),
+            )
+            .orderBy(desc(agencyTransactionActivity.createdAt)),
+        ])
+      : [[], [], [], [], []];
 
   const offersByDeal = new Map<number, typeof offerRows>();
   offerRows.forEach(offer => {
@@ -2992,7 +3161,7 @@ async function getAgencyListingSummary(db: AgencyDb, agencyId: number) {
           and(
             scope,
             inArray(listings.status, ['draft', 'rejected'] as any),
-            sql`${listings.readinessScore} >= 75`,
+            sql`${listings.readinessScore} >= ${LISTING_SUBMISSION_READINESS_THRESHOLD}`,
           ),
         ),
     ),
@@ -3086,7 +3255,12 @@ async function getAgencyListingSummary(db: AgencyDb, agencyId: number) {
     privatePendingEdits,
     publicationMismatch,
     needsAttention:
-      unassigned + inactiveAgent + readyToSubmit + missingMedia + privatePendingEdits + publicationMismatch,
+      unassigned +
+      inactiveAgent +
+      readyToSubmit +
+      missingMedia +
+      privatePendingEdits +
+      publicationMismatch,
   };
 }
 
@@ -3218,7 +3392,11 @@ async function getAgencyMemberWorkload(input: {
     pendingListingWork,
     upcomingViewings,
     hasActiveWork:
-      assignedActiveLeads + overdueFollowUps + activeListings + pendingListingWork + upcomingViewings >
+      assignedActiveLeads +
+        overdueFollowUps +
+        activeListings +
+        pendingListingWork +
+        upcomingViewings >
       0,
   };
 }
@@ -3232,10 +3410,7 @@ async function countAgencyAdmins(db: AgencyDb, agencyId: number) {
   );
 }
 
-function membershipStatusForRow(input: {
-  userRole: string | null;
-  agentStatus?: string | null;
-}) {
+function membershipStatusForRow(input: { userRole: string | null; agentStatus?: string | null }) {
   if (input.userRole === 'visitor' || input.agentStatus === 'suspended') return 'suspended';
   if (ACTIVE_MEMBER_ROLES.has(String(input.userRole || ''))) return 'active';
   return 'inactive';
@@ -3343,11 +3518,7 @@ async function getAgencyTeamMembers(db: AgencyDb, agencyId: number) {
   );
 }
 
-async function requireAgencyMemberUser(
-  db: AgencyDb,
-  agencyId: number,
-  userId: number,
-) {
+async function requireAgencyMemberUser(db: AgencyDb, agencyId: number, userId: number) {
   const [targetUser] = await db
     .select()
     .from(users)
@@ -3368,7 +3539,9 @@ async function getApprovedAgentProfileForUser(db: AgencyDb, agencyId: number, us
   const [agent] = await db
     .select()
     .from(agents)
-    .where(and(eq(agents.userId, userId), eq(agents.agencyId, agencyId), eq(agents.status, 'approved')))
+    .where(
+      and(eq(agents.userId, userId), eq(agents.agencyId, agencyId), eq(agents.status, 'approved')),
+    )
     .limit(1);
 
   return agent || null;
@@ -3756,7 +3929,12 @@ export const agencyRouter = router({
     const availablePlans = await db
       .select()
       .from(plans)
-      .where(and(eq(plans.isActive, 1), or(eq(plans.segment, 'agency'), eq(plans.segment, 'enterprise'))!))
+      .where(
+        and(
+          eq(plans.isActive, 1),
+          or(eq(plans.segment, 'agency'), eq(plans.segment, 'enterprise'))!,
+        ),
+      )
       .orderBy(plans.sortOrder);
 
     return {
@@ -3795,10 +3973,7 @@ export const agencyRouter = router({
           tagline: z.string().max(100, 'Tagline must be less than 100 characters').optional(),
           companyName: z.string().min(2, 'Company name is required'),
         }),
-        teamEmails: z
-          .array(z.string().trim().email())
-          .optional()
-          .default([]),
+        teamEmails: z.array(z.string().trim().email()).optional().default([]),
         planId: z.number(),
       }),
     )
@@ -3811,9 +3986,16 @@ export const agencyRouter = router({
 
       const result = await db.transaction(async tx => {
         await tx.execute(sql`SELECT id FROM users WHERE id = ${authenticatedUser.id} FOR UPDATE`);
-        const [principal] = await tx.select().from(users).where(eq(users.id, authenticatedUser.id)).limit(1);
+        const [principal] = await tx
+          .select()
+          .from(users)
+          .where(eq(users.id, authenticatedUser.id))
+          .limit(1);
         if (!principal) {
-          throw new TRPCError({ code: 'FORBIDDEN', message: 'Agency onboarding requires a valid principal account.' });
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Agency onboarding requires a valid principal account.',
+          });
         }
         if (Number(principal.emailVerified) !== 1) {
           throw new TRPCError({
@@ -3832,7 +4014,13 @@ export const agencyRouter = router({
             input.teamEmails
               .map(email => email.trim().toLowerCase())
               .filter(Boolean)
-              .filter(email => email !== String(principal.email || '').trim().toLowerCase()),
+              .filter(
+                email =>
+                  email !==
+                  String(principal.email || '')
+                    .trim()
+                    .toLowerCase(),
+              ),
           ),
         );
 
@@ -3844,7 +4032,12 @@ export const agencyRouter = router({
           const memberships = await tx
             .select({ id: agencyAgentMemberships.id })
             .from(agencyAgentMemberships)
-            .where(inArray(agencyAgentMemberships.agentId, linkedAgents.map(agent => agent.id)));
+            .where(
+              inArray(
+                agencyAgentMemberships.agentId,
+                linkedAgents.map(agent => agent.id),
+              ),
+            );
           throw new TRPCError({
             code: 'CONFLICT',
             message:
@@ -3857,7 +4050,11 @@ export const agencyRouter = router({
         if (principal.agencyId) {
           const [[existingAgency], [existingBranding], [existingSubscription]] = await Promise.all([
             tx.select().from(agencies).where(eq(agencies.id, principal.agencyId)).limit(1),
-            tx.select().from(agencyBranding).where(eq(agencyBranding.agencyId, principal.agencyId)).limit(1),
+            tx
+              .select()
+              .from(agencyBranding)
+              .where(eq(agencyBranding.agencyId, principal.agencyId))
+              .limit(1),
             tx
               .select()
               .from(subscriptions)
@@ -3877,7 +4074,8 @@ export const agencyRouter = router({
           ) {
             throw new TRPCError({
               code: 'CONFLICT',
-              message: 'This account is linked to an incomplete agency onboarding record. Contact support to resolve it.',
+              message:
+                'This account is linked to an incomplete agency onboarding record. Contact support to resolve it.',
             });
           }
           return {
@@ -3891,13 +4089,17 @@ export const agencyRouter = router({
 
         const [plan] = await tx.select().from(plans).where(eq(plans.id, input.planId)).limit(1);
         if (!plan || Number(plan.isActive) !== 1 || plan.segment !== 'agency') {
-          throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'Select an active agency plan.' });
+          throw new TRPCError({
+            code: 'PRECONDITION_FAILED',
+            message: 'Select an active agency plan.',
+          });
         }
         const commercialTerm = resolveCommercialTerm(plan);
         if (commercialTerm.kind === 'free_trial') {
           throw new TRPCError({
             code: 'PRECONDITION_FAILED',
-            message: 'Free agency trials are retired. Request Agency Launch Access and complete manual-EFT verification.',
+            message:
+              'Free agency trials are retired. Request Agency Launch Access and complete manual-EFT verification.',
           });
         }
         if (commercialTerm.kind === 'paid_launch_access') {
@@ -3909,19 +4111,29 @@ export const agencyRouter = router({
           ) {
             throw new TRPCError({
               code: 'PRECONDITION_FAILED',
-              message: 'The selected agency Launch Access product is not configured with its approved terms.',
+              message:
+                'The selected agency Launch Access product is not configured with its approved terms.',
             });
           }
         } else {
           if (!['month', 'year'].includes(String(plan.interval))) {
-            throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'The selected agency plan has an unsupported billing interval.' });
+            throw new TRPCError({
+              code: 'PRECONDITION_FAILED',
+              message: 'The selected agency plan has an unsupported billing interval.',
+            });
           }
           if (getManualEftBillingAmount(plan, 'monthly') <= 0) {
-            throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'The selected agency plan has no valid manual-EFT price.' });
+            throw new TRPCError({
+              code: 'PRECONDITION_FAILED',
+              message: 'The selected agency plan has no valid manual-EFT price.',
+            });
           }
         }
         const entitlementRows = await tx
-          .select({ featureKey: planEntitlements.featureKey, valueJson: planEntitlements.valueJson })
+          .select({
+            featureKey: planEntitlements.featureKey,
+            valueJson: planEntitlements.valueJson,
+          })
           .from(planEntitlements)
           .where(eq(planEntitlements.planId, plan.id));
         const entitlements = Object.fromEntries(
@@ -3942,14 +4154,21 @@ export const agencyRouter = router({
           )
           .limit(1);
         if (existing.length) {
-          throw new TRPCError({ code: 'CONFLICT', message: 'Agency name or email already registered.' });
+          throw new TRPCError({
+            code: 'CONFLICT',
+            message: 'Agency name or email already registered.',
+          });
         }
 
         const slug = input.basicInfo.name
           .toLowerCase()
           .replace(/[^a-z0-9]+/g, '-')
           .replace(/^-|-$/g, '');
-        const [slugExists] = await tx.select().from(agencies).where(eq(agencies.slug, slug)).limit(1);
+        const [slugExists] = await tx
+          .select()
+          .from(agencies)
+          .where(eq(agencies.slug, slug))
+          .limit(1);
         const finalSlug = slugExists ? `${slug}-${Date.now()}` : slug;
         const [agencyResult] = await tx.insert(agencies).values({
           name: input.basicInfo.name,
@@ -4510,7 +4729,8 @@ export const agencyRouter = router({
           nextAction:
             input.status === 'lost' || input.status === 'converted' || input.status === 'closed'
               ? null
-              : lead.nextAction || getNextLeadAction({ ...lead, status: input.status, nextAction: null } as any),
+              : lead.nextAction ||
+                getNextLeadAction({ ...lead, status: input.status, nextAction: null } as any),
           ...leadStatusTimestamps(lead, input.status, now, { lostReason: input.lostReason }),
         })
         .where(and(eq(leads.id, input.leadId), eq(leads.agencyId, user.agencyId)));
@@ -4805,7 +5025,10 @@ export const agencyRouter = router({
         ? 'lost'
         : input.outcome === 'viewing_booked'
           ? 'viewing_scheduled'
-          : reached || input.outcome === 'follow_up_required' || input.outcome === 'no_answer' || input.outcome === 'voicemail'
+          : reached ||
+              input.outcome === 'follow_up_required' ||
+              input.outcome === 'no_answer' ||
+              input.outcome === 'voicemail'
             ? 'contacted'
             : (lead.status as LeadStatus);
       const nextAction = terminalOutcome ? null : input.nextAction || null;
@@ -4819,12 +5042,11 @@ export const agencyRouter = router({
             nextAction,
             firstRespondedAt: lead.firstRespondedAt || recordedAt,
             lastContactedAt: recordedAt,
-            lostReason:
-              terminalOutcome
-                ? input.outcome === 'not_interested'
-                  ? 'Buyer not interested'
-                  : 'Invalid buyer contact details'
-                : lead.lostReason,
+            lostReason: terminalOutcome
+              ? input.outcome === 'not_interested'
+                ? 'Buyer not interested'
+                : 'Invalid buyer contact details'
+              : lead.lostReason,
             updatedAt: recordedAt,
             funnelStage: mapStatusToFunnelStage(nextStatus, lead.funnelStage) as any,
           })
@@ -5188,7 +5410,9 @@ export const agencyRouter = router({
         agentId: z.number().int().positive(),
         scheduledAt: z.string().min(1),
         durationMinutes: z.number().int().min(15).max(240).default(45),
-        status: z.enum(['requested', 'awaiting_confirmation', 'confirmed']).default('awaiting_confirmation'),
+        status: z
+          .enum(['requested', 'awaiting_confirmation', 'confirmed'])
+          .default('awaiting_confirmation'),
         location: z.string().trim().max(500).optional(),
         instructions: z.string().trim().max(1000).optional(),
         notes: z.string().trim().max(1000).optional(),
@@ -5334,7 +5558,9 @@ export const agencyRouter = router({
 
       await createViewingNotification({
         db,
-        userId: viewing.agentId ? (await requireAgencyAgent(db, agencyId, viewing.agentId)).userId : null,
+        userId: viewing.agentId
+          ? (await requireAgencyAgent(db, agencyId, viewing.agentId)).userId
+          : null,
         event: `viewing_${input.status}`,
         title: `Viewing ${input.status.replace(/_/g, ' ')}`,
         content: input.note || `Viewing #${input.viewingId} moved to ${input.status}.`,
@@ -5365,7 +5591,9 @@ export const agencyRouter = router({
         viewingId: z.number().int().positive(),
         scheduledAt: z.string().min(1),
         durationMinutes: z.number().int().min(15).max(240).optional(),
-        status: z.enum(['rescheduled', 'awaiting_confirmation', 'confirmed']).default('rescheduled'),
+        status: z
+          .enum(['rescheduled', 'awaiting_confirmation', 'confirmed'])
+          .default('rescheduled'),
         note: z.string().trim().max(1000).optional(),
       }),
     )
@@ -5431,9 +5659,12 @@ export const agencyRouter = router({
 
       await createViewingNotification({
         db,
-        userId: viewing.agentId ? (await requireAgencyAgent(db, agencyId, viewing.agentId)).userId : null,
+        userId: viewing.agentId
+          ? (await requireAgencyAgent(db, agencyId, viewing.agentId)).userId
+          : null,
         event: 'viewing_rescheduled',
-        title: nextStatus === 'confirmed' ? 'Viewing rescheduled and confirmed' : 'Viewing rescheduled',
+        title:
+          nextStatus === 'confirmed' ? 'Viewing rescheduled and confirmed' : 'Viewing rescheduled',
         content: input.note || `Viewing moved to ${scheduledAt}.`,
         showingId: input.viewingId,
         agencyId,
@@ -5514,7 +5745,8 @@ export const agencyRouter = router({
             leadId: viewing.leadId,
             userId: user.id,
             type: 'note',
-            description: input.note || `Viewing reassigned to ${getAgentDisplayName(assignedAgent)}.`,
+            description:
+              input.note || `Viewing reassigned to ${getAgentDisplayName(assignedAgent)}.`,
           });
         }
       });
@@ -5653,114 +5885,112 @@ export const agencyRouter = router({
       });
     }),
 
-  createDeal: agentProcedure
-    .input(createDealInputSchema)
-    .mutation(async ({ ctx, input }) => {
-      const db = await getDb();
-      if (!db) {
-        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
-      }
+  createDeal: agentProcedure.input(createDealInputSchema).mutation(async ({ ctx, input }) => {
+    const db = await getDb();
+    if (!db) {
+      throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+    }
 
-      const user = requireUser(ctx);
-      const agencyId = requireAgencyId(user);
-      const context = await resolveDealContext({
-        db,
+    const user = requireUser(ctx);
+    const agencyId = requireAgencyId(user);
+    const context = await resolveDealContext({
+      db,
+      agencyId,
+      user,
+      leadId: input.leadId,
+      sourceViewingId: input.sourceViewingId,
+      listingId: input.listingId,
+      propertyId: input.propertyId,
+      responsibleAgentId: input.responsibleAgentId,
+    });
+
+    if (['lost', 'closed'].includes(String(context.lead.status || ''))) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'Closed or lost leads cannot start new offer work.',
+      });
+    }
+
+    const now = nowAsDbTimestamp();
+    let dealId = 0;
+    let offerVersionId: number | null = null;
+    const stage = input.terms ? 'draft_offer' : 'interest';
+    const nextAction = input.terms ? 'Submit offer to seller decision' : 'Draft offer terms';
+    const nextDeadline = input.terms?.offerExpiry
+      ? parseOptionalDbTimestamp(input.terms.offerExpiry)
+      : null;
+
+    await db.transaction(async tx => {
+      const [dealInsert] = await tx.insert(agencyDeals).values({
         agencyId,
-        user,
-        leadId: input.leadId,
-        sourceViewingId: input.sourceViewingId,
-        listingId: input.listingId,
-        propertyId: input.propertyId,
-        responsibleAgentId: input.responsibleAgentId,
-      });
+        leadId: context.lead.id,
+        listingId: context.listingId,
+        propertyId: context.propertyId,
+        sourceViewingId: context.sourceViewing?.id || null,
+        responsibleAgentId: context.responsibleAgent.id,
+        transactionType: input.transactionType,
+        stage,
+        interestStatus: input.interestStatus,
+        riskStatus: input.interestStatus === 'not_interested' ? 'cancelled' : 'on_track',
+        nextAction,
+        nextDeadline,
+        createdByUserId: user.id,
+        updatedByUserId: user.id,
+      } as any);
+      dealId = insertResultId(dealInsert);
 
-      if (['lost', 'closed'].includes(String(context.lead.status || ''))) {
-        throw new TRPCError({
-          code: 'BAD_REQUEST',
-          message: 'Closed or lost leads cannot start new offer work.',
-        });
+      if (input.terms) {
+        const [offerInsert] = await tx.insert(agencyDealOfferVersions).values(
+          offerVersionInsertValues({
+            agencyId,
+            dealId,
+            versionNumber: 1,
+            actor: input.transactionType === 'rental' ? 'tenant' : 'buyer',
+            eventType: 'initial_offer',
+            status: 'draft',
+            terms: input.terms,
+            userId: user.id,
+          }) as any,
+        );
+        offerVersionId = insertResultId(offerInsert);
       }
 
-      const now = nowAsDbTimestamp();
-      let dealId = 0;
-      let offerVersionId: number | null = null;
-      const stage = input.terms ? 'draft_offer' : 'interest';
-      const nextAction = input.terms ? 'Submit offer to seller decision' : 'Draft offer terms';
-      const nextDeadline = input.terms?.offerExpiry
-        ? parseOptionalDbTimestamp(input.terms.offerExpiry)
-        : null;
+      await tx
+        .update(leads)
+        .set({
+          status: 'offer_sent',
+          funnelStage: 'offer',
+          updatedAt: now,
+          lastContactedAt: context.lead.lastContactedAt || now,
+        } as any)
+        .where(and(eq(leads.id, context.lead.id), eq(leads.agencyId, agencyId)));
 
-      await db.transaction(async tx => {
-        const [dealInsert] = await tx.insert(agencyDeals).values({
-          agencyId,
-          leadId: context.lead.id,
-          listingId: context.listingId,
-          propertyId: context.propertyId,
-          sourceViewingId: context.sourceViewing?.id || null,
-          responsibleAgentId: context.responsibleAgent.id,
-          transactionType: input.transactionType,
-          stage,
-          interestStatus: input.interestStatus,
-          riskStatus: input.interestStatus === 'not_interested' ? 'cancelled' : 'on_track',
-          nextAction,
-          nextDeadline,
-          createdByUserId: user.id,
-          updatedByUserId: user.id,
-        } as any);
-        dealId = insertResultId(dealInsert);
-
-        if (input.terms) {
-          const [offerInsert] = await tx.insert(agencyDealOfferVersions).values(
-            offerVersionInsertValues({
-              agencyId,
-              dealId,
-              versionNumber: 1,
-              actor: input.transactionType === 'rental' ? 'tenant' : 'buyer',
-              eventType: 'initial_offer',
-              status: 'draft',
-              terms: input.terms,
-              userId: user.id,
-            }) as any,
-          );
-          offerVersionId = insertResultId(offerInsert);
-        }
-
-        await tx
-          .update(leads)
-          .set({
-            status: 'offer_sent',
-            funnelStage: 'offer',
-            updatedAt: now,
-            lastContactedAt: context.lead.lastContactedAt || now,
-          } as any)
-          .where(and(eq(leads.id, context.lead.id), eq(leads.agencyId, agencyId)));
-
-        await tx.insert(leadActivities).values({
-          leadId: context.lead.id,
-          userId: user.id,
-          type: 'status_change',
-          description:
-            input.notes ||
-            `Deal opened from ${context.sourceViewing ? 'completed viewing' : 'agency lead'} with ${input.interestStatus.replace(/_/g, ' ')} interest.`,
-        });
-      });
-
-      await logAudit({
+      await tx.insert(leadActivities).values({
+        leadId: context.lead.id,
         userId: user.id,
-        action: 'agency.deal_created',
-        targetType: 'agency_deal',
-        targetId: dealId,
-        metadata: {
-          agencyId,
-          leadId: context.lead.id,
-          sourceViewingId: context.sourceViewing?.id || null,
-          offerVersionId,
-        },
-        req: ctx.req,
+        type: 'status_change',
+        description:
+          input.notes ||
+          `Deal opened from ${context.sourceViewing ? 'completed viewing' : 'agency lead'} with ${input.interestStatus.replace(/_/g, ' ')} interest.`,
       });
+    });
 
-      return { success: true, dealId, offerVersionId };
-    }),
+    await logAudit({
+      userId: user.id,
+      action: 'agency.deal_created',
+      targetType: 'agency_deal',
+      targetId: dealId,
+      metadata: {
+        agencyId,
+        leadId: context.lead.id,
+        sourceViewingId: context.sourceViewing?.id || null,
+        offerVersionId,
+      },
+      req: ctx.req,
+    });
+
+    return { success: true, dealId, offerVersionId };
+  }),
 
   createOfferVersion: agentProcedure
     .input(createOfferVersionInputSchema)
@@ -5777,7 +6007,8 @@ export const agencyRouter = router({
       if (existingTransaction) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
-          message: 'This deal already has an accepted transaction. Add transaction updates instead.',
+          message:
+            'This deal already has an accepted transaction. Add transaction updates instead.',
         });
       }
 
@@ -5820,7 +6051,8 @@ export const agencyRouter = router({
           .update(agencyDeals)
           .set({
             stage: input.status === 'draft' ? 'draft_offer' : 'negotiation',
-            nextAction: input.status === 'draft' ? 'Submit offer version' : 'Review negotiation response',
+            nextAction:
+              input.status === 'draft' ? 'Submit offer version' : 'Review negotiation response',
             nextDeadline,
             updatedByUserId: user.id,
             updatedAt: nowAsDbTimestamp(),
@@ -5963,10 +6195,12 @@ export const agencyRouter = router({
               eq(agencyDealOfferVersions.agencyId, agencyId),
               eq(agencyDealOfferVersions.dealId, deal.id),
               ne(agencyDealOfferVersions.id, offer.id),
-              inArray(
-                agencyDealOfferVersions.status,
-                ['draft', 'submitted', 'under_review', 'countered'] as any,
-              ),
+              inArray(agencyDealOfferVersions.status, [
+                'draft',
+                'submitted',
+                'under_review',
+                'countered',
+              ] as any),
             ),
           );
         await tx
@@ -6432,8 +6666,10 @@ export const agencyRouter = router({
                 ? transaction.expectedPaymentDate
                 : parseOptionalDbTimestamp(input.expectedPaymentDate),
             commissionStatus,
-            completedAt: nextStatus === 'completed' ? transaction.completedAt || now : transaction.completedAt,
-            cancelledAt: nextStatus === 'cancelled' ? transaction.cancelledAt || now : transaction.cancelledAt,
+            completedAt:
+              nextStatus === 'completed' ? transaction.completedAt || now : transaction.completedAt,
+            cancelledAt:
+              nextStatus === 'cancelled' ? transaction.cancelledAt || now : transaction.cancelledAt,
             updatedByUserId: user.id,
             updatedAt: now,
           } as any)
@@ -6455,7 +6691,10 @@ export const agencyRouter = router({
               and(
                 eq(agencyCommissionSettlements.agencyId, agencyId),
                 eq(agencyCommissionSettlements.transactionId, transaction.id),
-                inArray(agencyCommissionSettlements.status, ['forecast', 'awaiting_completion'] as any),
+                inArray(agencyCommissionSettlements.status, [
+                  'forecast',
+                  'awaiting_completion',
+                ] as any),
               ),
             );
         }
@@ -6470,8 +6709,7 @@ export const agencyRouter = router({
                   ? 'cancelled'
                   : 'transaction_progression',
             riskStatus,
-            nextAction:
-              input.nextAction === undefined ? transaction.nextAction : input.nextAction,
+            nextAction: input.nextAction === undefined ? transaction.nextAction : input.nextAction,
             nextDeadline:
               input.nextDeadline === undefined
                 ? transaction.nextDeadline
@@ -6487,8 +6725,7 @@ export const agencyRouter = router({
           actorUserId: user.id,
           eventType: 'transaction_updated',
           description:
-            input.note ||
-            `Transaction updated${input.status ? ` to ${input.status}` : ''}.`,
+            input.note || `Transaction updated${input.status ? ` to ${input.status}` : ''}.`,
           metadata: {
             previousStatus: transaction.status,
             nextStatus,
@@ -6502,13 +6739,13 @@ export const agencyRouter = router({
 
   getCommissionSettlements: agentProcedure.query(async ({ ctx }) => {
     const db = await getDb();
-    if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+    if (!db)
+      throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
 
     const user = requireUser(ctx);
     const agencyId = requireAgencyId(user);
-    const ownAgent = user.role === 'agent'
-      ? await getApprovedAgentProfileForUser(db, agencyId, user.id)
-      : null;
+    const ownAgent =
+      user.role === 'agent' ? await getApprovedAgentProfileForUser(db, agencyId, user.id) : null;
     if (user.role === 'agent' && !ownAgent) return [];
 
     const rows = await db
@@ -6521,7 +6758,10 @@ export const agencyRouter = router({
         agent: agents,
       })
       .from(agencyCommissionSettlements)
-      .innerJoin(agencyTransactions, eq(agencyCommissionSettlements.transactionId, agencyTransactions.id))
+      .innerJoin(
+        agencyTransactions,
+        eq(agencyCommissionSettlements.transactionId, agencyTransactions.id),
+      )
       .innerJoin(agencyDeals, eq(agencyTransactions.dealId, agencyDeals.id))
       .leftJoin(listings, eq(agencyDeals.listingId, listings.id))
       .leftJoin(properties, eq(agencyDeals.propertyId, properties.id))
@@ -6534,7 +6774,10 @@ export const agencyRouter = router({
             : undefined,
         ),
       )
-      .orderBy(asc(agencyCommissionSettlements.expectedPaymentDate), desc(agencyCommissionSettlements.createdAt));
+      .orderBy(
+        asc(agencyCommissionSettlements.expectedPaymentDate),
+        desc(agencyCommissionSettlements.createdAt),
+      );
     if (!rows.length) return [];
 
     const settlementIds = rows.map(row => row.settlement.id);
@@ -6591,22 +6834,33 @@ export const agencyRouter = router({
     .input(recordCommissionPaymentInputSchema)
     .mutation(async ({ ctx, input }) => {
       const db = await getDb();
-      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+      if (!db)
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
 
       const user = requireUser(ctx);
       const agencyId = requireAgencyId(user);
       const [settlement] = await db
         .select()
         .from(agencyCommissionSettlements)
-        .where(and(eq(agencyCommissionSettlements.id, input.settlementId), eq(agencyCommissionSettlements.agencyId, agencyId)))
+        .where(
+          and(
+            eq(agencyCommissionSettlements.id, input.settlementId),
+            eq(agencyCommissionSettlements.agencyId, agencyId),
+          ),
+        )
         .limit(1);
-      if (!settlement) throw new TRPCError({ code: 'NOT_FOUND', message: 'Commission settlement not found' });
+      if (!settlement)
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Commission settlement not found' });
       if (['cancelled', 'disputed'].includes(String(settlement.status))) {
-        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Resolve the settlement status before recording a payment.' });
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Resolve the settlement status before recording a payment.',
+        });
       }
 
       const receivedAt = parseOptionalDbTimestamp(input.receivedAt);
-      if (!receivedAt) throw new TRPCError({ code: 'BAD_REQUEST', message: 'A valid received date is required.' });
+      if (!receivedAt)
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'A valid received date is required.' });
       const transaction = await requireAgencyTransaction(db, agencyId, settlement.transactionId);
       let nextStatus: ReturnType<typeof settlementStatusFromPayments> = 'awaiting_payment';
       let amountReceived = 0;
@@ -6623,26 +6877,61 @@ export const agencyRouter = router({
         const payments = await tx
           .select({ amount: agencyCommissionSettlementPayments.amountReceived })
           .from(agencyCommissionSettlementPayments)
-          .where(and(eq(agencyCommissionSettlementPayments.agencyId, agencyId), eq(agencyCommissionSettlementPayments.settlementId, settlement.id)));
-        amountReceived = payments.reduce((total, payment) => total + decimalToNumber(payment.amount), 0);
-        nextStatus = settlementStatusFromPayments(decimalToNumber(settlement.expectedCommission), amountReceived);
-        if (nextStatus === 'reconciliation_required' && !input.varianceReason && !settlement.varianceReason) {
-          throw new TRPCError({ code: 'BAD_REQUEST', message: 'A variance reason is required when received commission exceeds the forecast.' });
+          .where(
+            and(
+              eq(agencyCommissionSettlementPayments.agencyId, agencyId),
+              eq(agencyCommissionSettlementPayments.settlementId, settlement.id),
+            ),
+          );
+        amountReceived = payments.reduce(
+          (total, payment) => total + decimalToNumber(payment.amount),
+          0,
+        );
+        nextStatus = settlementStatusFromPayments(
+          decimalToNumber(settlement.expectedCommission),
+          amountReceived,
+        );
+        if (
+          nextStatus === 'reconciliation_required' &&
+          !input.varianceReason &&
+          !settlement.varianceReason
+        ) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'A variance reason is required when received commission exceeds the forecast.',
+          });
         }
         const now = nowAsDbTimestamp();
-        await tx.update(agencyCommissionSettlements).set({
-          status: nextStatus,
-          varianceReason: input.varianceReason === undefined ? settlement.varianceReason : input.varianceReason,
-          approvedByUserId: user.id,
-          approvedAt: now,
-          updatedAt: now,
-        } as any).where(and(eq(agencyCommissionSettlements.id, settlement.id), eq(agencyCommissionSettlements.agencyId, agencyId)));
-        await tx.update(agencyTransactions).set({
-          commissionStatus: nextStatus === 'received' ? 'paid' : transaction.commissionStatus,
-          paidDate: nextStatus === 'received' ? receivedAt : transaction.paidDate,
-          updatedByUserId: user.id,
-          updatedAt: now,
-        } as any).where(and(eq(agencyTransactions.id, transaction.id), eq(agencyTransactions.agencyId, agencyId)));
+        await tx
+          .update(agencyCommissionSettlements)
+          .set({
+            status: nextStatus,
+            varianceReason:
+              input.varianceReason === undefined ? settlement.varianceReason : input.varianceReason,
+            approvedByUserId: user.id,
+            approvedAt: now,
+            updatedAt: now,
+          } as any)
+          .where(
+            and(
+              eq(agencyCommissionSettlements.id, settlement.id),
+              eq(agencyCommissionSettlements.agencyId, agencyId),
+            ),
+          );
+        await tx
+          .update(agencyTransactions)
+          .set({
+            commissionStatus: nextStatus === 'received' ? 'paid' : transaction.commissionStatus,
+            paidDate: nextStatus === 'received' ? receivedAt : transaction.paidDate,
+            updatedByUserId: user.id,
+            updatedAt: now,
+          } as any)
+          .where(
+            and(
+              eq(agencyTransactions.id, transaction.id),
+              eq(agencyTransactions.agencyId, agencyId),
+            ),
+          );
         await createTransactionActivity({
           db: tx as AgencyDb,
           agencyId,
@@ -6650,28 +6939,47 @@ export const agencyRouter = router({
           userId: user.id,
           eventType: 'commission_payment_recorded',
           description: `Commission receipt of ${input.amountReceived.toFixed(2)} recorded; settlement is ${nextStatus.replace(/_/g, ' ')}.`,
-          metadata: { settlementId: settlement.id, amountReceived, expectedCommission: decimalToNumber(settlement.expectedCommission), nextStatus },
+          metadata: {
+            settlementId: settlement.id,
+            amountReceived,
+            expectedCommission: decimalToNumber(settlement.expectedCommission),
+            nextStatus,
+          },
         });
       });
-      return { success: true, amountReceived: Number(amountReceived.toFixed(2)), status: nextStatus };
+      return {
+        success: true,
+        amountReceived: Number(amountReceived.toFixed(2)),
+        status: nextStatus,
+      };
     }),
 
   updateCommissionSettlementStatus: agencyAdminProcedure
     .input(updateCommissionSettlementStatusInputSchema)
     .mutation(async ({ ctx, input }) => {
       const db = await getDb();
-      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+      if (!db)
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
 
       const user = requireUser(ctx);
       const agencyId = requireAgencyId(user);
       const [settlement] = await db
         .select()
         .from(agencyCommissionSettlements)
-        .where(and(eq(agencyCommissionSettlements.id, input.settlementId), eq(agencyCommissionSettlements.agencyId, agencyId)))
+        .where(
+          and(
+            eq(agencyCommissionSettlements.id, input.settlementId),
+            eq(agencyCommissionSettlements.agencyId, agencyId),
+          ),
+        )
         .limit(1);
-      if (!settlement) throw new TRPCError({ code: 'NOT_FOUND', message: 'Commission settlement not found' });
+      if (!settlement)
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Commission settlement not found' });
       if (String(settlement.status) === 'received') {
-        throw new TRPCError({ code: 'BAD_REQUEST', message: 'A received settlement cannot be changed without a reconciliation workflow.' });
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'A received settlement cannot be changed without a reconciliation workflow.',
+        });
       }
       if (input.status === 'disputed' && !input.varianceReason) {
         throw new TRPCError({ code: 'BAD_REQUEST', message: 'A dispute reason is required.' });
@@ -6682,28 +6990,50 @@ export const agencyRouter = router({
           const [paymentCount] = await tx
             .select({ count: sql<number>`COUNT(*)` })
             .from(agencyCommissionSettlementPayments)
-            .where(and(
-              eq(agencyCommissionSettlementPayments.agencyId, agencyId),
-              eq(agencyCommissionSettlementPayments.settlementId, settlement.id),
-            ));
+            .where(
+              and(
+                eq(agencyCommissionSettlementPayments.agencyId, agencyId),
+                eq(agencyCommissionSettlementPayments.settlementId, settlement.id),
+              ),
+            );
           if (Number(paymentCount?.count || 0) > 0) {
-            throw new TRPCError({ code: 'BAD_REQUEST', message: 'A settlement with receipts cannot be cancelled.' });
+            throw new TRPCError({
+              code: 'BAD_REQUEST',
+              message: 'A settlement with receipts cannot be cancelled.',
+            });
           }
         }
         const now = nowAsDbTimestamp();
-        await tx.update(agencyCommissionSettlements).set({
-          status: input.status,
-          varianceReason: input.status === 'disputed' ? input.varianceReason : settlement.varianceReason,
-          approvedByUserId: user.id,
-          approvedAt: now,
-          updatedAt: now,
-        } as any).where(and(eq(agencyCommissionSettlements.id, settlement.id), eq(agencyCommissionSettlements.agencyId, agencyId)));
-        if (input.status === 'cancelled') {
-          await tx.update(agencyTransactions).set({
-            commissionStatus: 'cancelled',
-            updatedByUserId: user.id,
+        await tx
+          .update(agencyCommissionSettlements)
+          .set({
+            status: input.status,
+            varianceReason:
+              input.status === 'disputed' ? input.varianceReason : settlement.varianceReason,
+            approvedByUserId: user.id,
+            approvedAt: now,
             updatedAt: now,
-          } as any).where(and(eq(agencyTransactions.id, settlement.transactionId), eq(agencyTransactions.agencyId, agencyId)));
+          } as any)
+          .where(
+            and(
+              eq(agencyCommissionSettlements.id, settlement.id),
+              eq(agencyCommissionSettlements.agencyId, agencyId),
+            ),
+          );
+        if (input.status === 'cancelled') {
+          await tx
+            .update(agencyTransactions)
+            .set({
+              commissionStatus: 'cancelled',
+              updatedByUserId: user.id,
+              updatedAt: now,
+            } as any)
+            .where(
+              and(
+                eq(agencyTransactions.id, settlement.transactionId),
+                eq(agencyTransactions.agencyId, agencyId),
+              ),
+            );
         }
         await createTransactionActivity({
           db: tx as AgencyDb,
@@ -6712,7 +7042,11 @@ export const agencyRouter = router({
           userId: user.id,
           eventType: `commission_settlement_${input.status}`,
           description: `Commission settlement marked ${input.status.replace(/_/g, ' ')}.${input.varianceReason ? ` Reason: ${input.varianceReason}` : ''}`,
-          metadata: { settlementId: settlement.id, status: input.status, varianceReason: input.varianceReason || null },
+          metadata: {
+            settlementId: settlement.id,
+            status: input.status,
+            varianceReason: input.varianceReason || null,
+          },
         });
       });
       return { success: true, status: input.status };
@@ -6722,38 +7056,64 @@ export const agencyRouter = router({
     .input(resolveCommissionDisputeInputSchema)
     .mutation(async ({ ctx, input }) => {
       const db = await getDb();
-      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+      if (!db)
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
 
       const user = requireUser(ctx);
       const agencyId = requireAgencyId(user);
       const [settlement] = await db
         .select()
         .from(agencyCommissionSettlements)
-        .where(and(eq(agencyCommissionSettlements.id, input.settlementId), eq(agencyCommissionSettlements.agencyId, agencyId)))
+        .where(
+          and(
+            eq(agencyCommissionSettlements.id, input.settlementId),
+            eq(agencyCommissionSettlements.agencyId, agencyId),
+          ),
+        )
         .limit(1);
-      if (!settlement) throw new TRPCError({ code: 'NOT_FOUND', message: 'Commission settlement not found' });
+      if (!settlement)
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Commission settlement not found' });
       if (String(settlement.status) !== 'disputed') {
-        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Only disputed settlements can be resolved.' });
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Only disputed settlements can be resolved.',
+        });
       }
 
       const payments = await db
         .select({ amount: agencyCommissionSettlementPayments.amountReceived })
         .from(agencyCommissionSettlementPayments)
-        .where(and(
-          eq(agencyCommissionSettlementPayments.agencyId, agencyId),
-          eq(agencyCommissionSettlementPayments.settlementId, settlement.id),
-        ));
-      const amountReceived = payments.reduce((total, payment) => total + decimalToNumber(payment.amount), 0);
-      const nextStatus = settlementStatusFromPayments(decimalToNumber(settlement.expectedCommission), amountReceived);
+        .where(
+          and(
+            eq(agencyCommissionSettlementPayments.agencyId, agencyId),
+            eq(agencyCommissionSettlementPayments.settlementId, settlement.id),
+          ),
+        );
+      const amountReceived = payments.reduce(
+        (total, payment) => total + decimalToNumber(payment.amount),
+        0,
+      );
+      const nextStatus = settlementStatusFromPayments(
+        decimalToNumber(settlement.expectedCommission),
+        amountReceived,
+      );
       const now = nowAsDbTimestamp();
       await db.transaction(async tx => {
-        await tx.update(agencyCommissionSettlements).set({
-          status: nextStatus,
-          varianceReason: input.resolutionNote,
-          approvedByUserId: user.id,
-          approvedAt: now,
-          updatedAt: now,
-        } as any).where(and(eq(agencyCommissionSettlements.id, settlement.id), eq(agencyCommissionSettlements.agencyId, agencyId)));
+        await tx
+          .update(agencyCommissionSettlements)
+          .set({
+            status: nextStatus,
+            varianceReason: input.resolutionNote,
+            approvedByUserId: user.id,
+            approvedAt: now,
+            updatedAt: now,
+          } as any)
+          .where(
+            and(
+              eq(agencyCommissionSettlements.id, settlement.id),
+              eq(agencyCommissionSettlements.agencyId, agencyId),
+            ),
+          );
         await createTransactionActivity({
           db: tx as AgencyDb,
           agencyId,
@@ -6761,7 +7121,12 @@ export const agencyRouter = router({
           userId: user.id,
           eventType: 'commission_dispute_resolved',
           description: `Commission dispute resolved; settlement returned to ${nextStatus.replace(/_/g, ' ')}. ${input.resolutionNote}`,
-          metadata: { settlementId: settlement.id, amountReceived, nextStatus, resolutionNote: input.resolutionNote },
+          metadata: {
+            settlementId: settlement.id,
+            amountReceived,
+            nextStatus,
+            resolutionNote: input.resolutionNote,
+          },
         });
       });
       return { success: true, status: nextStatus };
@@ -6771,105 +7136,266 @@ export const agencyRouter = router({
     .input(z.object({ listingId: z.number().int().positive() }))
     .query(async ({ ctx, input }) => {
       const db = await getDb();
-      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+      if (!db)
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
       const user = requireUser(ctx);
       const agencyId = requireAgencyId(user);
       await requirePerformanceListingAccess(db, user, input.listingId);
       const [snapshot, reviews] = await Promise.all([
         createListingPerformanceSnapshot(db, agencyId, input.listingId),
-        db.select().from(agencyListingPerformanceReviews).where(and(eq(agencyListingPerformanceReviews.agencyId, agencyId), eq(agencyListingPerformanceReviews.listingId, input.listingId))).orderBy(desc(agencyListingPerformanceReviews.createdAt)),
+        db
+          .select()
+          .from(agencyListingPerformanceReviews)
+          .where(
+            and(
+              eq(agencyListingPerformanceReviews.agencyId, agencyId),
+              eq(agencyListingPerformanceReviews.listingId, input.listingId),
+            ),
+          )
+          .orderBy(desc(agencyListingPerformanceReviews.createdAt)),
       ]);
-      const revisionIds = reviews.map(review => Number(review.canonicalRevisionListingId || 0)).filter(Boolean);
-      const revisionRows = revisionIds.length ? await db.select({ id: listings.id, status: listings.status, rejectionReason: listings.rejectionReason }).from(listings).where(inArray(listings.id, revisionIds)) : [];
+      const revisionIds = reviews
+        .map(review => Number(review.canonicalRevisionListingId || 0))
+        .filter(Boolean);
+      const revisionRows = revisionIds.length
+        ? await db
+            .select({
+              id: listings.id,
+              status: listings.status,
+              rejectionReason: listings.rejectionReason,
+            })
+            .from(listings)
+            .where(inArray(listings.id, revisionIds))
+        : [];
       const revisionById = new Map(revisionRows.map(row => [row.id, row]));
       return {
         listingId: input.listingId,
         live: snapshot,
-        reviews: reviews.map(review => ({ ...review, canonicalRevision: review.canonicalRevisionListingId ? revisionById.get(Number(review.canonicalRevisionListingId)) || null : null })),
-        reportBoundary: 'Metrics reflect Property Listify activity only. They are operational engagement data, not all market activity, a CMA, or a valuation certificate.',
+        reviews: reviews.map(review => ({
+          ...review,
+          canonicalRevision: review.canonicalRevisionListingId
+            ? revisionById.get(Number(review.canonicalRevisionListingId)) || null
+            : null,
+        })),
+        reportBoundary:
+          'Metrics reflect Property Listify activity only. They are operational engagement data, not all market activity, a CMA, or a valuation certificate.',
       };
     }),
 
   getListingPerformanceQueue: protectedProcedure.query(async ({ ctx }) => {
     const db = await getDb();
-    if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+    if (!db)
+      throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
     const user = requireUser(ctx);
     const agencyId = requireAgencyId(user);
-    const rows = await db.select({ listing: listings, agent: agents })
+    const rows = await db
+      .select({ listing: listings, agent: agents })
       .from(listings)
       .leftJoin(agents, eq(listings.agentId, agents.id))
       .where(and(eq(listings.agencyId, agencyId), eq(listings.status, 'published')))
       .orderBy(desc(listings.updatedAt));
-    const visible = user.role === 'agent'
-      ? rows.filter(row => row.agent?.userId === user.id || row.listing.ownerId === user.id)
-      : rows;
-    return Promise.all(visible.map(async row => {
-      const live = await createListingPerformanceSnapshot(db, agencyId, row.listing.id);
-      const [latestReview] = await db.select().from(agencyListingPerformanceReviews)
-        .where(and(eq(agencyListingPerformanceReviews.agencyId, agencyId), eq(agencyListingPerformanceReviews.listingId, row.listing.id)))
-        .orderBy(desc(agencyListingPerformanceReviews.createdAt)).limit(1);
-      const flags = live.flags;
-      const due = latestReview?.nextReviewAt ? new Date(latestReview.nextReviewAt) : null;
-      const overdue = Boolean(due && due.getTime() < Date.now());
-      const reason = overdue ? `Seller review overdue by ${Math.max(1, Math.ceil((Date.now() - due!.getTime()) / 86_400_000))} day${Math.ceil((Date.now() - due!.getTime()) / 86_400_000) === 1 ? '' : 's'}.`
-        : flags.includes('views_without_enquiries') ? `Listing has ${live.metrics.views} views but no enquiries.`
-        : flags.includes('enquiries_without_viewings') ? `Listing has ${live.metrics.enquiries} enquiries without a viewing request.`
-        : flags.includes('viewings_without_offers') ? `Listing has ${live.metrics.completedViewings} completed viewing${live.metrics.completedViewings === 1 ? '' : 's'} but no offers.`
-        : flags.includes('no_engagement') ? `No engagement recorded in ${live.metrics.daysLive} days live.`
-        : flags.includes('missing_media') ? 'Listing-quality blocker: no media is attached.'
-        : 'No immediate action is due.';
-      return {
-        listing: { id: row.listing.id, title: row.listing.title, address: row.listing.address, city: row.listing.city, askingPrice: row.listing.askingPrice, publishedAt: row.listing.publishedAt },
-        responsibleAgent: row.agent ? { id: row.agent.id, name: row.agent.displayName || [row.agent.firstName, row.agent.lastName].filter(Boolean).join(' ') || 'Assigned agent' } : null,
-        live, latestReview: latestReview || null, reason, actionable: overdue || flags.length > 0,
-      };
-    }));
+    const visible =
+      user.role === 'agent'
+        ? rows.filter(row => row.agent?.userId === user.id || row.listing.ownerId === user.id)
+        : rows;
+    return Promise.all(
+      visible.map(async row => {
+        const live = await createListingPerformanceSnapshot(db, agencyId, row.listing.id);
+        const [latestReview] = await db
+          .select()
+          .from(agencyListingPerformanceReviews)
+          .where(
+            and(
+              eq(agencyListingPerformanceReviews.agencyId, agencyId),
+              eq(agencyListingPerformanceReviews.listingId, row.listing.id),
+            ),
+          )
+          .orderBy(desc(agencyListingPerformanceReviews.createdAt))
+          .limit(1);
+        const flags = live.flags;
+        const due = latestReview?.nextReviewAt ? new Date(latestReview.nextReviewAt) : null;
+        const overdue = Boolean(due && due.getTime() < Date.now());
+        const reason = overdue
+          ? `Seller review overdue by ${Math.max(1, Math.ceil((Date.now() - due!.getTime()) / 86_400_000))} day${Math.ceil((Date.now() - due!.getTime()) / 86_400_000) === 1 ? '' : 's'}.`
+          : flags.includes('views_without_enquiries')
+            ? `Listing has ${live.metrics.views} views but no enquiries.`
+            : flags.includes('enquiries_without_viewings')
+              ? `Listing has ${live.metrics.enquiries} enquiries without a viewing request.`
+              : flags.includes('viewings_without_offers')
+                ? `Listing has ${live.metrics.completedViewings} completed viewing${live.metrics.completedViewings === 1 ? '' : 's'} but no offers.`
+                : flags.includes('no_engagement')
+                  ? `No engagement recorded in ${live.metrics.daysLive} days live.`
+                  : flags.includes('missing_media')
+                    ? 'Listing-quality blocker: no media is attached.'
+                    : 'No immediate action is due.';
+        return {
+          listing: {
+            id: row.listing.id,
+            title: row.listing.title,
+            address: row.listing.address,
+            city: row.listing.city,
+            askingPrice: row.listing.askingPrice,
+            publishedAt: row.listing.publishedAt,
+          },
+          responsibleAgent: row.agent
+            ? {
+                id: row.agent.id,
+                name:
+                  row.agent.displayName ||
+                  [row.agent.firstName, row.agent.lastName].filter(Boolean).join(' ') ||
+                  'Assigned agent',
+              }
+            : null,
+          live,
+          latestReview: latestReview || null,
+          reason,
+          actionable: overdue || flags.length > 0,
+        };
+      }),
+    );
   }),
 
   getListingPerformanceReport: protectedProcedure
     .input(z.object({ reviewId: z.number().int().positive() }))
     .query(async ({ ctx, input }) => {
       const db = await getDb();
-      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
-      const user = requireUser(ctx); const agencyId = requireAgencyId(user);
-      const [review] = await db.select().from(agencyListingPerformanceReviews).where(and(eq(agencyListingPerformanceReviews.id, input.reviewId), eq(agencyListingPerformanceReviews.agencyId, agencyId))).limit(1);
+      if (!db)
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+      const user = requireUser(ctx);
+      const agencyId = requireAgencyId(user);
+      const [review] = await db
+        .select()
+        .from(agencyListingPerformanceReviews)
+        .where(
+          and(
+            eq(agencyListingPerformanceReviews.id, input.reviewId),
+            eq(agencyListingPerformanceReviews.agencyId, agencyId),
+          ),
+        )
+        .limit(1);
       if (!review) throw new TRPCError({ code: 'NOT_FOUND', message: 'Seller review not found' });
       const listing = await requirePerformanceListingAccess(db, user, review.listingId);
-      const [agency] = await db.select({ name: agencies.name }).from(agencies).where(eq(agencies.id, agencyId)).limit(1);
-      const [agent] = review.responsibleAgentId ? await db.select({ displayName: agents.displayName, firstName: agents.firstName, lastName: agents.lastName }).from(agents).where(eq(agents.id, review.responsibleAgentId)).limit(1) : [];
-      return { agencyName: agency?.name || 'Property Listify agency', agentName: agent?.displayName || [agent?.firstName, agent?.lastName].filter(Boolean).join(' ') || 'Assigned agent', listing: { title: listing.title, address: listing.address, city: listing.city, reference: `Listing ${listing.id}`, currentPrice: priceForListing(listing as any) }, review, limitations: ['Metrics reflect activity recorded within Property Listify.', 'Activity from external portals and offline marketing may not be included.', 'This report is not an automated valuation.', 'This report is not a formal CMA or valuation certificate.'] };
+      const [agency] = await db
+        .select({ name: agencies.name })
+        .from(agencies)
+        .where(eq(agencies.id, agencyId))
+        .limit(1);
+      const [agent] = review.responsibleAgentId
+        ? await db
+            .select({
+              displayName: agents.displayName,
+              firstName: agents.firstName,
+              lastName: agents.lastName,
+            })
+            .from(agents)
+            .where(eq(agents.id, review.responsibleAgentId))
+            .limit(1)
+        : [];
+      return {
+        agencyName: agency?.name || 'Property Listify agency',
+        agentName:
+          agent?.displayName ||
+          [agent?.firstName, agent?.lastName].filter(Boolean).join(' ') ||
+          'Assigned agent',
+        listing: {
+          title: listing.title,
+          address: listing.address,
+          city: listing.city,
+          reference: `Listing ${listing.id}`,
+          currentPrice: priceForListing(listing as any),
+        },
+        review,
+        limitations: [
+          'Metrics reflect activity recorded within Property Listify.',
+          'Activity from external portals and offline marketing may not be included.',
+          'This report is not an automated valuation.',
+          'This report is not a formal CMA or valuation certificate.',
+        ],
+      };
     }),
 
   recordListingPerformanceReview: protectedProcedure
     .input(performanceReviewInputSchema)
     .mutation(async ({ ctx, input }) => {
       const db = await getDb();
-      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+      if (!db)
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
       const user = requireUser(ctx);
       const agencyId = requireAgencyId(user);
       const listing = await requirePerformanceListingAccess(db, user, input.listingId);
-      if (String(listing.status) !== 'published') throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'Seller reviews can only be recorded for published listings.' });
-      if (input.sellerDecision !== 'unable_to_contact' && !input.contactDate) throw new TRPCError({ code: 'BAD_REQUEST', message: 'A contact date is required unless the seller could not be reached.' });
-      if (input.recommendation === 'change_price' && (input.proposedPrice == null || !input.recommendationReason)) throw new TRPCError({ code: 'BAD_REQUEST', message: 'A proposed price and rationale are required for a price recommendation.' });
-      if (['deferred', 'unable_to_contact', 'pending'].includes(input.sellerDecision) && !input.nextReviewAt) throw new TRPCError({ code: 'BAD_REQUEST', message: 'A next review date is required when follow-up is needed.' });
+      if (String(listing.status) !== 'published')
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message: 'Seller reviews can only be recorded for published listings.',
+        });
+      if (input.sellerDecision !== 'unable_to_contact' && !input.contactDate)
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'A contact date is required unless the seller could not be reached.',
+        });
+      if (
+        input.recommendation === 'change_price' &&
+        (input.proposedPrice == null || !input.recommendationReason)
+      )
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'A proposed price and rationale are required for a price recommendation.',
+        });
+      if (
+        ['deferred', 'unable_to_contact', 'pending'].includes(input.sellerDecision) &&
+        !input.nextReviewAt
+      )
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'A next review date is required when follow-up is needed.',
+        });
       const snapshot = await createListingPerformanceSnapshot(db, agencyId, input.listingId);
-      const [agent] = await db.select({ id: agents.id }).from(agents).where(and(eq(agents.userId, user.id), eq(agents.agencyId, agencyId))).limit(1);
+      const [agent] = await db
+        .select({ id: agents.id })
+        .from(agents)
+        .where(and(eq(agents.userId, user.id), eq(agents.agencyId, agencyId)))
+        .limit(1);
       const now = nowAsDbTimestamp();
       const [result] = await db.insert(agencyListingPerformanceReviews).values({
-        agencyId, listingId: input.listingId, responsibleAgentId: listing.agentId || agent?.id || null, createdByUserId: user.id,
+        agencyId,
+        listingId: input.listingId,
+        responsibleAgentId: listing.agentId || agent?.id || null,
+        createdByUserId: user.id,
         reviewStatus: input.sellerDecision === 'pending' ? 'scheduled' : 'completed',
         contactDate: input.contactDate ? toDbTimestampRequired(input.contactDate) : null,
         contactChannel: input.contactChannel || null,
         // Review-period boundaries describe the immutable activity snapshot, not when the seller was contacted.
-        reviewPeriodStart: snapshot.metrics.reviewPeriodStart, reviewPeriodEnd: snapshot.metrics.reviewPeriodEnd, metricsSnapshot: snapshot.metrics, healthFlagsSnapshot: snapshot.flags,
-        agentAssessment: input.agentAssessment || null, buyerFeedbackThemes: input.buyerFeedbackThemes || null,
-        recommendation: input.recommendation, recommendationReason: input.recommendationReason || null,
-        sellerFeedback: [input.sellerFeedback, input.followUpNote].filter(Boolean).join('\n\nFollow-up: ') || null, sellerDecision: input.sellerDecision,
-        proposedPrice: toDecimalString(input.proposedPrice), effectiveDate: input.effectiveDate ? toDbTimestampRequired(input.effectiveDate) : null,
+        reviewPeriodStart: snapshot.metrics.reviewPeriodStart,
+        reviewPeriodEnd: snapshot.metrics.reviewPeriodEnd,
+        metricsSnapshot: snapshot.metrics,
+        healthFlagsSnapshot: snapshot.flags,
+        agentAssessment: input.agentAssessment || null,
+        buyerFeedbackThemes: input.buyerFeedbackThemes || null,
+        recommendation: input.recommendation,
+        recommendationReason: input.recommendationReason || null,
+        sellerFeedback:
+          [input.sellerFeedback, input.followUpNote].filter(Boolean).join('\n\nFollow-up: ') ||
+          null,
+        sellerDecision: input.sellerDecision,
+        proposedPrice: toDecimalString(input.proposedPrice),
+        effectiveDate: input.effectiveDate ? toDbTimestampRequired(input.effectiveDate) : null,
         nextReviewAt: input.nextReviewAt ? toDbTimestampRequired(input.nextReviewAt) : null,
       } as any);
       const reviewId = insertResultId(result);
-      await db.insert(agencyListingPerformanceActivity).values({ agencyId, reviewId, userId: user.id, eventType: 'seller_review_recorded', description: 'Seller performance review recorded.', metadata: { sellerDecision: input.sellerDecision, recommendation: input.recommendation, flags: snapshot.flags } });
+      await db
+        .insert(agencyListingPerformanceActivity)
+        .values({
+          agencyId,
+          reviewId,
+          userId: user.id,
+          eventType: 'seller_review_recorded',
+          description: 'Seller performance review recorded.',
+          metadata: {
+            sellerDecision: input.sellerDecision,
+            recommendation: input.recommendation,
+            flags: snapshot.flags,
+          },
+        });
       return { success: true, reviewId, snapshot };
     }),
 
@@ -6877,32 +7403,118 @@ export const agencyRouter = router({
     .input(z.object({ reviewId: z.number().int().positive() }))
     .mutation(async ({ ctx, input }) => {
       const db = await getDb();
-      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
-      const user = requireUser(ctx); const agencyId = requireAgencyId(user);
-      const [review] = await db.select().from(agencyListingPerformanceReviews).where(and(eq(agencyListingPerformanceReviews.id, input.reviewId), eq(agencyListingPerformanceReviews.agencyId, agencyId))).limit(1);
-      if (!review) throw new TRPCError({ code: 'NOT_FOUND', message: 'Performance review not found' });
+      if (!db)
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+      const user = requireUser(ctx);
+      const agencyId = requireAgencyId(user);
+      const [review] = await db
+        .select()
+        .from(agencyListingPerformanceReviews)
+        .where(
+          and(
+            eq(agencyListingPerformanceReviews.id, input.reviewId),
+            eq(agencyListingPerformanceReviews.agencyId, agencyId),
+          ),
+        )
+        .limit(1);
+      if (!review)
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Performance review not found' });
       await requirePerformanceListingAccess(db, user, review.listingId);
-      if (review.recommendation !== 'change_price' || review.sellerDecision !== 'accepted' || !review.proposedPrice) throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'Only an accepted price recommendation with a proposed price can start a revision.' });
+      if (
+        review.recommendation !== 'change_price' ||
+        review.sellerDecision !== 'accepted' ||
+        !review.proposedPrice
+      )
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message:
+            'Only an accepted price recommendation with a proposed price can start a revision.',
+        });
       if (review.canonicalRevisionListingId) {
-        const [existing] = await db.select({ id: listings.id, status: listings.status }).from(listings).where(eq(listings.id, review.canonicalRevisionListingId)).limit(1);
-        if (existing) return { success: true, status: existing.status, revisionListingId: existing.id, duplicate: true };
+        const [existing] = await db
+          .select({ id: listings.id, status: listings.status })
+          .from(listings)
+          .where(eq(listings.id, review.canonicalRevisionListingId))
+          .limit(1);
+        if (existing)
+          return {
+            success: true,
+            status: existing.status,
+            revisionListingId: existing.id,
+            duplicate: true,
+          };
       }
-      const [source] = await db.select().from(listings).where(and(eq(listings.id, review.listingId), eq(listings.agencyId, agencyId))).limit(1);
-      if (!source || String(source.status) !== 'published') throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'A private revision can only be created from an active published listing.' });
-      const [otherRevision] = await db.select({ id: listings.id, status: listings.status }).from(listings).where(and(eq(listings.revisionOfListingId, source.id), inArray(listings.status, ['draft', 'pending_review'] as any))).limit(1);
-      if (otherRevision) throw new TRPCError({ code: 'CONFLICT', message: 'Another listing revision is already in progress. Open that revision to continue.' });
-      const { id: _id, createdAt: _createdAt, updatedAt: _updatedAt, publishedAt: _publishedAt, reviewedBy: _reviewedBy, reviewedAt: _reviewedAt, rejectionReason: _rejectionReason, rejectionReasons: _rejectionReasons, rejectionNote: _rejectionNote, ...draftFields } = source as any;
+      const [source] = await db
+        .select()
+        .from(listings)
+        .where(and(eq(listings.id, review.listingId), eq(listings.agencyId, agencyId)))
+        .limit(1);
+      if (!source || String(source.status) !== 'published')
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message: 'A private revision can only be created from an active published listing.',
+        });
+      const [otherRevision] = await db
+        .select({ id: listings.id, status: listings.status })
+        .from(listings)
+        .where(
+          and(
+            eq(listings.revisionOfListingId, source.id),
+            inArray(listings.status, ['draft', 'pending_review'] as any),
+          ),
+        )
+        .limit(1);
+      if (otherRevision)
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message:
+            'Another listing revision is already in progress. Open that revision to continue.',
+        });
+      const {
+        id: _id,
+        createdAt: _createdAt,
+        updatedAt: _updatedAt,
+        publishedAt: _publishedAt,
+        reviewedBy: _reviewedBy,
+        reviewedAt: _reviewedAt,
+        rejectionReason: _rejectionReason,
+        rejectionReasons: _rejectionReasons,
+        rejectionNote: _rejectionNote,
+        ...draftFields
+      } = source as any;
       const [draftResult] = await db.insert(listings).values({
         ...draftFields,
         askingPrice: review.proposedPrice,
-        status: 'draft', approvalStatus: 'pending', revisionOfListingId: source.id,
+        status: 'draft',
+        approvalStatus: 'pending',
+        revisionOfListingId: source.id,
         slug: `${source.slug}-revision-${review.id}`.slice(0, 255),
-        publishedAt: null, archivedAt: null, rejectionReason: null, rejectionReasons: null, rejectionNote: null,
+        publishedAt: null,
+        archivedAt: null,
+        rejectionReason: null,
+        rejectionReasons: null,
+        rejectionNote: null,
         updatedAt: nowAsDbTimestamp(),
       } as any);
       const revisionListingId = insertResultId(draftResult);
-      await db.update(agencyListingPerformanceReviews).set({ revisionRequestedAt: nowAsDbTimestamp(), canonicalRevisionListingId: revisionListingId }).where(eq(agencyListingPerformanceReviews.id, review.id));
-      await db.insert(agencyListingPerformanceActivity).values({ agencyId, reviewId: review.id, userId: user.id, eventType: 'price_revision_draft_created', description: 'Private canonical listing revision draft created from the accepted seller price action.', metadata: { proposedPrice: review.proposedPrice, revisionListingId } });
+      await db
+        .update(agencyListingPerformanceReviews)
+        .set({
+          revisionRequestedAt: nowAsDbTimestamp(),
+          canonicalRevisionListingId: revisionListingId,
+        })
+        .where(eq(agencyListingPerformanceReviews.id, review.id));
+      await db
+        .insert(agencyListingPerformanceActivity)
+        .values({
+          agencyId,
+          reviewId: review.id,
+          userId: user.id,
+          eventType: 'price_revision_draft_created',
+          description:
+            'Private canonical listing revision draft created from the accepted seller price action.',
+          metadata: { proposedPrice: review.proposedPrice, revisionListingId },
+        });
       return { success: true, status: 'draft', revisionListingId, duplicate: false };
     }),
 
@@ -7042,7 +7654,7 @@ export const agencyRouter = router({
               or(
                 isNull(listings.agentId),
                 inArray(listings.status, ['draft', 'pending_review', 'rejected'] as any),
-                sql`${listings.readinessScore} < 75`,
+                sql`${listings.readinessScore} < ${LISTING_SUBMISSION_READINESS_THRESHOLD}`,
               )!,
             ),
           )
@@ -7065,10 +7677,12 @@ export const agencyRouter = router({
             and(
               eq(agencyDealOfferVersions.agencyId, agencyId),
               eq(agencyDeals.agencyId, agencyId),
-              inArray(
-                agencyDealOfferVersions.status,
-                ['draft', 'submitted', 'under_review', 'countered'] as any,
-              ),
+              inArray(agencyDealOfferVersions.status, [
+                'draft',
+                'submitted',
+                'under_review',
+                'countered',
+              ] as any),
               sql`${agencyDealOfferVersions.offerExpiry} IS NOT NULL AND ${agencyDealOfferVersions.offerExpiry} < ${bounds.endDb}`,
             ),
           )
@@ -7096,10 +7710,11 @@ export const agencyRouter = router({
             and(
               eq(agencyTransactionConditions.agencyId, agencyId),
               eq(agencyTransactions.agencyId, agencyId),
-              inArray(
-                agencyTransactionConditions.status,
-                ['pending', 'in_progress', 'blocked'] as any,
-              ),
+              inArray(agencyTransactionConditions.status, [
+                'pending',
+                'in_progress',
+                'blocked',
+              ] as any),
               sql`${agencyTransactionConditions.dueAt} IS NOT NULL AND ${agencyTransactionConditions.dueAt} < ${bounds.endDb}`,
             ),
           )
@@ -7127,10 +7742,11 @@ export const agencyRouter = router({
             and(
               eq(agencyTransactionMilestones.agencyId, agencyId),
               eq(agencyTransactions.agencyId, agencyId),
-              inArray(
-                agencyTransactionMilestones.status,
-                ['pending', 'in_progress', 'blocked'] as any,
-              ),
+              inArray(agencyTransactionMilestones.status, [
+                'pending',
+                'in_progress',
+                'blocked',
+              ] as any),
               sql`${agencyTransactionMilestones.dueAt} IS NOT NULL AND ${agencyTransactionMilestones.dueAt} < ${bounds.endDb}`,
             ),
           )
@@ -7262,46 +7878,130 @@ export const agencyRouter = router({
       const mandateWorkRows = await db
         .select({ operation: sellerMandateOperations, prospect: sellerProspects, agent: agents })
         .from(sellerMandateOperations)
-        .innerJoin(sellerProspects, eq(sellerMandateOperations.sellerProspectId, sellerProspects.id))
+        .innerJoin(
+          sellerProspects,
+          eq(sellerMandateOperations.sellerProspectId, sellerProspects.id),
+        )
         .leftJoin(agents, eq(sellerProspects.assignedAgentId, agents.id))
-        .where(and(
-          eq(sellerMandateOperations.agencyId, agencyId),
-          user.role === 'agent' ? eq(agents.userId, user.id) : undefined,
-          ne(sellerMandateOperations.status, 'withdrawn'),
-          notInArray(sellerProspects.stage, SELLER_PROSPECT_TERMINAL_STAGE_VALUES as any),
-        ))
+        .where(
+          and(
+            eq(sellerMandateOperations.agencyId, agencyId),
+            user.role === 'agent' ? eq(agents.userId, user.id) : undefined,
+            ne(sellerMandateOperations.status, 'withdrawn'),
+            notInArray(sellerProspects.stage, SELLER_PROSPECT_TERMINAL_STAGE_VALUES as any),
+          ),
+        )
         .orderBy(asc(sellerProspects.mandateExpiresAt), desc(sellerMandateOperations.updatedAt))
         .limit(limit);
       const mandateWork = mandateWorkRows.map((row: any) => {
-        const expiry = row.prospect.mandateExpiresAt ? new Date(row.prospect.mandateExpiresAt) : null;
+        const expiry = row.prospect.mandateExpiresAt
+          ? new Date(row.prospect.mandateExpiresAt)
+          : null;
         const expired = Boolean(expiry && expiry.getTime() < bounds.start.getTime());
-        const expiringSoon = Boolean(expiry && expiry.getTime() < bounds.start.getTime() + 14 * 86_400_000);
+        const expiringSoon = Boolean(
+          expiry && expiry.getTime() < bounds.start.getTime() + 14 * 86_400_000,
+        );
         const requirements = (row.operation.requirements || {}) as Record<string, unknown>;
         const incomplete = Object.values(requirements).some(value => value !== true);
-        const type = expired ? 'mandate_expired' : expiringSoon ? 'mandate_expiring_soon' : row.operation.documentStatus === 'pending' ? 'mandate_document_outstanding' : incomplete ? 'mandate_requirements_incomplete' : row.operation.status === 'awaiting_seller' ? 'mandate_awaiting_seller' : row.operation.status === 'onboarding' ? 'seller_onboarding_incomplete' : row.operation.status === 'listing_ready' ? 'listing_ready_not_started' : 'mandate_next_action';
-        return { id: `mandate:${row.operation.id}`, type, sellerProspectId: row.prospect.id, ownerName: row.prospect.ownerName, propertyAddress: row.prospect.propertyAddress, dueAt: expired || expiringSoon ? row.prospect.mandateExpiresAt : row.operation.priceReviewAt, nextAction: row.operation.nextAction || 'Complete mandate requirements', status: row.operation.status, expired, assignedAgent: mapSellerProspect(row).assignedAgent };
+        const type = expired
+          ? 'mandate_expired'
+          : expiringSoon
+            ? 'mandate_expiring_soon'
+            : row.operation.documentStatus === 'pending'
+              ? 'mandate_document_outstanding'
+              : incomplete
+                ? 'mandate_requirements_incomplete'
+                : row.operation.status === 'awaiting_seller'
+                  ? 'mandate_awaiting_seller'
+                  : row.operation.status === 'onboarding'
+                    ? 'seller_onboarding_incomplete'
+                    : row.operation.status === 'listing_ready'
+                      ? 'listing_ready_not_started'
+                      : 'mandate_next_action';
+        return {
+          id: `mandate:${row.operation.id}`,
+          type,
+          sellerProspectId: row.prospect.id,
+          ownerName: row.prospect.ownerName,
+          propertyAddress: row.prospect.propertyAddress,
+          dueAt:
+            expired || expiringSoon ? row.prospect.mandateExpiresAt : row.operation.priceReviewAt,
+          nextAction: row.operation.nextAction || 'Complete mandate requirements',
+          status: row.operation.status,
+          expired,
+          assignedAgent: mapSellerProspect(row).assignedAgent,
+        };
       });
 
       // A review is one personal work item, regardless of how many signals it contains.
-      const performanceReviewRows = await db.select({ review: agencyListingPerformanceReviews, listing: listings, agent: agents })
+      const performanceReviewRows = await db
+        .select({ review: agencyListingPerformanceReviews, listing: listings, agent: agents })
         .from(agencyListingPerformanceReviews)
         .innerJoin(listings, eq(agencyListingPerformanceReviews.listingId, listings.id))
         .leftJoin(agents, eq(agencyListingPerformanceReviews.responsibleAgentId, agents.id))
-        .where(and(
-          eq(agencyListingPerformanceReviews.agencyId, agencyId),
-          user.role === 'agent' ? eq(agents.userId, user.id) : undefined,
-          or(
-            sql`${agencyListingPerformanceReviews.nextReviewAt} IS NOT NULL AND ${agencyListingPerformanceReviews.nextReviewAt} < ${bounds.endDb}`,
-            and(eq(agencyListingPerformanceReviews.recommendation, 'change_price'), eq(agencyListingPerformanceReviews.sellerDecision, 'accepted'), isNull(agencyListingPerformanceReviews.revisionRequestedAt)),
-            eq(agencyListingPerformanceReviews.sellerDecision, 'unavailable'),
-          )!,
-        )).orderBy(asc(agencyListingPerformanceReviews.nextReviewAt), desc(agencyListingPerformanceReviews.createdAt)).limit(limit);
+        .where(
+          and(
+            eq(agencyListingPerformanceReviews.agencyId, agencyId),
+            user.role === 'agent' ? eq(agents.userId, user.id) : undefined,
+            or(
+              sql`${agencyListingPerformanceReviews.nextReviewAt} IS NOT NULL AND ${agencyListingPerformanceReviews.nextReviewAt} < ${bounds.endDb}`,
+              and(
+                eq(agencyListingPerformanceReviews.recommendation, 'change_price'),
+                eq(agencyListingPerformanceReviews.sellerDecision, 'accepted'),
+                isNull(agencyListingPerformanceReviews.revisionRequestedAt),
+              ),
+              eq(agencyListingPerformanceReviews.sellerDecision, 'unavailable'),
+            )!,
+          ),
+        )
+        .orderBy(
+          asc(agencyListingPerformanceReviews.nextReviewAt),
+          desc(agencyListingPerformanceReviews.createdAt),
+        )
+        .limit(limit);
       const performanceReviewWork = performanceReviewRows.map((row: any) => {
         const dueAt = row.review.nextReviewAt || row.review.createdAt;
-        const overdue = row.review.nextReviewAt && new Date(row.review.nextReviewAt).getTime() < bounds.start.getTime();
-        const type = row.review.sellerDecision === 'unavailable' ? 'listing_unavailable_still_public' : row.review.recommendation === 'change_price' && row.review.sellerDecision === 'accepted' && !row.review.revisionRequestedAt ? 'accepted_price_change_awaiting_revision' : overdue ? 'seller_review_overdue' : 'seller_review_due';
-        const reason = type === 'listing_unavailable_still_public' ? 'Seller reported the property unavailable; confirm its public listing status.' : type === 'accepted_price_change_awaiting_revision' ? 'Seller accepted a price change; create the listing revision.' : overdue ? 'Seller review is overdue.' : 'Seller review is due today.';
-        return { id: `listing-performance:${row.review.id}`, reviewId: row.review.id, listingId: row.listing.id, property: row.listing.title || row.listing.address, responsibleAgent: row.agent?.displayName || [row.agent?.firstName, row.agent?.lastName].filter(Boolean).join(' ') || 'Assigned agent', dueAt, overdue: Boolean(overdue), type, reason, resolution: type === 'accepted_price_change_awaiting_revision' ? 'Clear when the canonical revision handoff is created.' : type === 'listing_unavailable_still_public' ? 'Clear when the listing is no longer public or the seller decision is corrected.' : 'Clear when a later seller review resolves or reschedules the due action.' };
+        const overdue =
+          row.review.nextReviewAt &&
+          new Date(row.review.nextReviewAt).getTime() < bounds.start.getTime();
+        const type =
+          row.review.sellerDecision === 'unavailable'
+            ? 'listing_unavailable_still_public'
+            : row.review.recommendation === 'change_price' &&
+                row.review.sellerDecision === 'accepted' &&
+                !row.review.revisionRequestedAt
+              ? 'accepted_price_change_awaiting_revision'
+              : overdue
+                ? 'seller_review_overdue'
+                : 'seller_review_due';
+        const reason =
+          type === 'listing_unavailable_still_public'
+            ? 'Seller reported the property unavailable; confirm its public listing status.'
+            : type === 'accepted_price_change_awaiting_revision'
+              ? 'Seller accepted a price change; create the listing revision.'
+              : overdue
+                ? 'Seller review is overdue.'
+                : 'Seller review is due today.';
+        return {
+          id: `listing-performance:${row.review.id}`,
+          reviewId: row.review.id,
+          listingId: row.listing.id,
+          property: row.listing.title || row.listing.address,
+          responsibleAgent:
+            row.agent?.displayName ||
+            [row.agent?.firstName, row.agent?.lastName].filter(Boolean).join(' ') ||
+            'Assigned agent',
+          dueAt,
+          overdue: Boolean(overdue),
+          type,
+          reason,
+          resolution:
+            type === 'accepted_price_change_awaiting_revision'
+              ? 'Clear when the canonical revision handoff is created.'
+              : type === 'listing_unavailable_still_public'
+                ? 'Clear when the listing is no longer public or the seller decision is corrected.'
+                : 'Clear when a later seller review resolves or reschedules the due action.',
+        };
       });
 
       return {
@@ -7547,7 +8247,7 @@ export const agencyRouter = router({
         throw error;
       }
 
-      if (Number(listing.readinessScore || 0) < 75) {
+      if (Number(listing.readinessScore || 0) < LISTING_SUBMISSION_READINESS_THRESHOLD) {
         throw new TRPCError({
           code: 'PRECONDITION_FAILED',
           message: `Listing is not ready for submission (${Number(listing.readinessScore || 0)}%).`,
@@ -7787,12 +8487,10 @@ export const agencyRouter = router({
           agentId: targetAgent?.id || null,
         });
 
-        let reassignTo:
-          | {
-              user: typeof users.$inferSelect;
-              agent: typeof agents.$inferSelect;
-            }
-          | null = null;
+        let reassignTo: {
+          user: typeof users.$inferSelect;
+          agent: typeof agents.$inferSelect;
+        } | null = null;
 
         if (input.reassignToUserId) {
           if (input.reassignToUserId === targetUser.id) {
@@ -7918,8 +8616,14 @@ export const agencyRouter = router({
         return { success: true };
       }
 
-      const nextRole = input.role || (targetUser.role === 'agency_admin' ? 'agency_admin' : 'agent');
-      const agentId = await ensureAgentProfileForAgencyMember(db, targetUser, agencyId, authUser.id);
+      const nextRole =
+        input.role || (targetUser.role === 'agency_admin' ? 'agency_admin' : 'agent');
+      const agentId = await ensureAgentProfileForAgencyMember(
+        db,
+        targetUser,
+        agencyId,
+        authUser.id,
+      );
 
       if (agentId) {
         await establishCanonicalAgencyMembership({

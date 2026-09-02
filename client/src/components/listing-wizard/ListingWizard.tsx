@@ -52,6 +52,7 @@ import {
   createDefaultRentalTerms,
   normalizeRentalTerms,
 } from '@/../../shared/rental-terms-contract';
+import { LISTING_SUBMISSION_READINESS_THRESHOLD } from '@/../../shared/listing-workflow-types';
 
 const ListingWizard: React.FC = () => {
   const store = useListingWizardStore();
@@ -63,6 +64,7 @@ const ListingWizard: React.FC = () => {
   const [wizardKey, setWizardKey] = useState(0); // Force re-render on reset
   const [isSavingDraft, setIsSavingDraft] = useState(false);
   const [draftSaved, setDraftSaved] = useState(false);
+  const [serverDraftId, setServerDraftId] = useState<number | null>(null);
   const [apiError, setApiError] = useState<AppError | null>(null);
   const [retryAttempt, setRetryAttempt] = useState(0);
   const [validationErrors, setValidationErrors] = useState<ValidationErrorResult | null>(null);
@@ -135,6 +137,7 @@ const ListingWizard: React.FC = () => {
         : user?.role === 'property_developer'
           ? { href: '/developer/dashboard', label: 'Back to developer workspace' }
           : { href: '/dashboard', label: 'Back to dashboard' };
+  const serverDraftStorageKey = user?.id ? `listing-wizard-server-draft:${user.id}` : null;
 
   // Fetch existing listing if in edit mode
   const { data: existingListing, isLoading: isLoadingExisting } = trpc.listing.getById.useQuery(
@@ -354,6 +357,29 @@ const ListingWizard: React.FC = () => {
     }
   }, [isEditMode, preflight]);
 
+  useEffect(() => {
+    if (isEditMode || !serverDraftStorageKey) return;
+
+    const storedId = Number(window.localStorage.getItem(serverDraftStorageKey));
+    if (Number.isInteger(storedId) && storedId > 0) {
+      setServerDraftId(storedId);
+    }
+  }, [isEditMode, serverDraftStorageKey]);
+
+  const rememberServerDraft = (listingId: number) => {
+    setServerDraftId(listingId);
+    if (serverDraftStorageKey) {
+      window.localStorage.setItem(serverDraftStorageKey, String(listingId));
+    }
+  };
+
+  const forgetServerDraft = () => {
+    setServerDraftId(null);
+    if (serverDraftStorageKey) {
+      window.localStorage.removeItem(serverDraftStorageKey);
+    }
+  };
+
   const [isInitialized, setIsInitialized] = useState(false);
 
   // Check for draft on mount and show resume dialog
@@ -390,6 +416,9 @@ const ListingWizard: React.FC = () => {
 
   const handleStartFresh = () => {
     setShowResumeDraftDialog(false);
+    // Starting fresh must never overwrite a previous private server draft.
+    // That draft remains available from the listings workspace.
+    forgetServerDraft();
     store.reset();
     setWizardKey(prev => prev + 1); // Force re-render
   };
@@ -400,8 +429,9 @@ const ListingWizard: React.FC = () => {
     setDraftSaved(false);
 
     try {
-      // The draft is already auto-saved via Zustand persist
-      // This is just for user feedback
+      // Browser recovery is intentionally labelled as device-only. A durable
+      // server draft is created only after a complete listing payload reaches
+      // the canonical listing lifecycle.
       await new Promise(resolve => setTimeout(resolve, 500)); // Simulate save
 
       setDraftSaved(true);
@@ -453,8 +483,16 @@ const ListingWizard: React.FC = () => {
           updateResult?.status !== 'pending_review' && !wasAlreadyPendingReview;
         result = { id: Number(editId) };
         console.log('Listing updated:', result);
+      } else if (serverDraftId) {
+        await updateListingMutation.mutateAsync({
+          id: serverDraftId,
+          ...listingData,
+        });
+        result = { id: serverDraftId };
+        console.log('Private server draft updated:', result);
       } else {
         result = await createListingMutation.mutateAsync(listingData);
+        rememberServerDraft(result.id);
         console.log('Listing created:', result);
       }
 
@@ -471,6 +509,7 @@ const ListingWizard: React.FC = () => {
         toast.success('Listing submitted for review successfully!');
 
         // Reset wizard state for next listing
+        forgetServerDraft();
         store.reset();
 
         // Agency inventory is the canonical return surface for agency-admin authoring.
@@ -507,10 +546,10 @@ const ListingWizard: React.FC = () => {
         });
         setApiError(appError);
 
-        toast.error('Listing saved as a private draft.', {
+        toast.error('Your private server draft is ready to continue.', {
           description:
             appError.message ||
-            'Resolve the publication requirement shown above, then submit the saved draft again.',
+            'Resolve the publication requirement, then retry the same saved draft without duplicating it.',
         });
         // Keep as draft and stay on page
       }
@@ -539,8 +578,9 @@ const ListingWizard: React.FC = () => {
 
         // Show appropriate toast based on error type
         if (appError.type === 'network') {
-          toast.error('Connection lost. Your draft has been saved.', {
-            description: 'You can retry when your connection is restored.',
+          toast.error('Connection lost. Your browser recovery copy is still available.', {
+            description:
+              'Reconnect and retry. A server draft is created only after the listing reaches Property Listify.',
           });
         } else if (appError.type === 'session') {
           // Handle session expiry with draft restoration
@@ -719,7 +759,8 @@ const ListingWizard: React.FC = () => {
           </DialogHeader>
           <div className="space-y-4">
             <p className="text-sm text-slate-700">
-              Your listing flow is paused until required contact details are completed.
+              Resolve these account and publishing requirements before starting a new listing. This
+              keeps your authoring time focused on inventory that can move to review.
             </p>
             <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
               {(preflight?.blockers || []).map(blocker => (
@@ -727,15 +768,22 @@ const ListingWizard: React.FC = () => {
               ))}
             </div>
             <div className="flex flex-wrap gap-2">
-              <Button
-                onClick={() => {
-                  const actionPath = preflight?.blockers?.[0]?.actionPath || '/agent/settings';
-                  setLocation(actionPath);
-                }}
-                className="bg-amber-600 hover:bg-amber-700"
-              >
-                {preflight?.blockers?.[0]?.actionLabel || 'Update Profile'}
-              </Button>
+              {Array.from(
+                new Map(
+                  (preflight?.blockers || []).map(blocker => [
+                    `${blocker.actionPath}:${blocker.actionLabel}`,
+                    blocker,
+                  ]),
+                ).values(),
+              ).map(blocker => (
+                <Button
+                  key={`${blocker.actionPath}:${blocker.actionLabel}`}
+                  onClick={() => setLocation(blocker.actionPath)}
+                  className="bg-amber-600 hover:bg-amber-700"
+                >
+                  {blocker.actionLabel}
+                </Button>
+              ))}
               <Button variant="outline" onClick={() => setLocation('/agent/dashboard')}>
                 Back to Dashboard
               </Button>
@@ -814,7 +862,7 @@ const ListingWizard: React.FC = () => {
                   </div>
                   <div>
                     <p className="text-xs font-semibold text-slate-700">
-                      Readiness {readiness.score}% / 90%
+                      Readiness {readiness.score}% / {LISTING_SUBMISSION_READINESS_THRESHOLD}%
                     </p>
                     <p className="text-[11px] text-slate-500">Required before submission</p>
                   </div>
@@ -858,7 +906,8 @@ const ListingWizard: React.FC = () => {
                   <div className="flex items-center gap-2">
                     <ListChecks className="h-4 w-4 text-slate-600" />
                     <p className="text-sm font-semibold text-slate-800">
-                      Readiness Checklist ({readiness.score}% / required 90%)
+                      Readiness Checklist ({readiness.score}% / required{' '}
+                      {LISTING_SUBMISSION_READINESS_THRESHOLD}%)
                     </p>
                   </div>
                   <p className="text-xs text-slate-500">
@@ -884,6 +933,25 @@ const ListingWizard: React.FC = () => {
               </div>
             )}
 
+            {serverDraftId && !isEditMode && (
+              <div className="mb-8 flex flex-col gap-3 rounded-2xl border border-blue-200 bg-blue-50/70 p-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm font-semibold text-blue-950">Private server draft saved</p>
+                  <p className="mt-1 text-sm text-blue-800">
+                    Your next review attempt will update this same draft, so it will not create a
+                    duplicate listing.
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  className="border-blue-300 bg-white text-blue-900 hover:bg-blue-100"
+                  onClick={() => setLocation(`/listings/create?id=${serverDraftId}&edit=true`)}
+                >
+                  Open saved draft
+                </Button>
+              </div>
+            )}
+
             {/* Navigation */}
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex flex-wrap gap-2">
@@ -896,7 +964,7 @@ const ListingWizard: React.FC = () => {
                   Previous
                 </Button>
 
-                {/* Local-only draft checkpoint until durable server drafts are implemented. */}
+                {/* Browser recovery protects in-progress work. A completed payload becomes a private server draft. */}
                 <Button
                   variant="outline"
                   onClick={handleSaveDraft}
@@ -928,16 +996,19 @@ const ListingWizard: React.FC = () => {
                 </Button>
               ) : (
                 <div className="flex self-end flex-col items-end gap-2 sm:self-auto">
-                  {readiness.score < 90 && (
+                  {readiness.score < LISTING_SUBMISSION_READINESS_THRESHOLD && (
                     <span className="text-xs text-amber-600 font-medium">
-                      Readiness is {readiness.score}%. Complete checklist items to reach 90%.
+                      Readiness is {readiness.score}%. Complete checklist items to reach{' '}
+                      {LISTING_SUBMISSION_READINESS_THRESHOLD}%.
                     </span>
                   )}
                   <Button
                     onClick={handleSubmit}
-                    disabled={isSubmitting || readiness.score < 90}
+                    disabled={
+                      isSubmitting || readiness.score < LISTING_SUBMISSION_READINESS_THRESHOLD
+                    }
                     className={
-                      isSubmitting || readiness.score < 90
+                      isSubmitting || readiness.score < LISTING_SUBMISSION_READINESS_THRESHOLD
                         ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
                         : 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 shadow-lg'
                     }

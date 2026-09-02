@@ -3,11 +3,13 @@ import { useLocation } from 'wouter';
 import { AgentAppShell } from '@/components/agent/AgentAppShell';
 import { agentPageStyles } from '@/components/agent/agentPageStyles';
 import { AgentFeatureLockedState } from '@/components/agent/AgentFeatureLockedState';
+import { AgentJourneyStatusErrorState } from '@/components/agent/AgentJourneyStatusErrorState';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAgentOnboardingStatus } from '@/hooks/useAgentOnboardingStatus';
+import { getAgentJourneyAction, isAgentProfileJourneyStep } from '@/lib/agentJourney';
 import { trpc } from '@/lib/trpc';
 import { cn } from '@/lib/utils';
 import { ArrowRight, Bell, CalendarDays, CheckCircle, Clock, MapPin } from 'lucide-react';
@@ -138,12 +140,25 @@ function productivityTabFromLocation(location: string) {
     : 'tasks';
 }
 
+function leadWorkspaceHref(leadId: number) {
+  return `/agent/leads?leadId=${encodeURIComponent(String(leadId))}`;
+}
+
 export default function AgentProductivity() {
   const [location, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState(() => productivityTabFromLocation(location));
-  const { isLoading: statusLoading } = useAgentOnboardingStatus({
+  const {
+    status,
+    isLoading: statusLoading,
+    error: statusError,
+    retry: retryStatus,
+  } = useAgentOnboardingStatus({
     requireDashboardUnlocked: true,
   });
+  const productivityLocked = !statusLoading && !status?.fullFeaturesUnlocked;
+  const operationalDataEnabled = !statusLoading && !productivityLocked;
+  const journeyAction = getAgentJourneyAction(status);
+  const needsProfileCompletion = isAgentProfileJourneyStep(status);
 
   useEffect(() => {
     setActiveTab(productivityTabFromLocation(location));
@@ -167,7 +182,7 @@ export default function AgentProductivity() {
       status: 'all',
     },
     {
-      enabled: !statusLoading,
+      enabled: operationalDataEnabled,
       retry: false,
       refetchOnWindowFocus: false,
     },
@@ -180,21 +195,21 @@ export default function AgentProductivity() {
         unreadOnly: false,
       },
       {
-        enabled: !statusLoading,
+        enabled: operationalDataEnabled,
         retry: false,
         refetchOnWindowFocus: false,
       },
     );
 
   const { data: unreadCount } = trpc.agent.getUnreadNotificationCount.useQuery(undefined, {
-    enabled: !statusLoading,
+    enabled: operationalDataEnabled,
     retry: false,
     refetchOnWindowFocus: false,
   });
   const { data: followUps = [], isLoading: followUpsLoading } = trpc.agent.getMyFollowUps.useQuery(
     { limit: 20 },
     {
-      enabled: !statusLoading,
+      enabled: operationalDataEnabled,
       retry: false,
       refetchOnWindowFocus: false,
     },
@@ -279,7 +294,7 @@ export default function AgentProductivity() {
           ? 'Overdue'
           : 'Follow-up',
       actionLabel: 'Open CRM',
-      onAction: () => setLocation('/agent/leads'),
+      onAction: () => setLocation(leadWorkspaceHref(followUp.id)),
     }));
     const showingActions = upcomingShowings.slice(0, 4).map(showing => ({
       id: `showing-${showing.id}`,
@@ -326,6 +341,25 @@ export default function AgentProductivity() {
             actionLabel="Loading"
             onAction={() => {}}
             isLoading
+          />
+        ) : statusError ? (
+          <AgentJourneyStatusErrorState onRetry={retryStatus} />
+        ) : productivityLocked ? (
+          <AgentFeatureLockedState
+            title={
+              needsProfileCompletion
+                ? 'Complete your profile before using your calendar'
+                : journeyAction.title
+            }
+            description={
+              needsProfileCompletion
+                ? 'Finish your professional profile, then activate Launch Access to schedule showings and work follow-ups.'
+                : journeyAction.description
+            }
+            actionLabel={journeyAction.waiting ? 'Return to dashboard' : journeyAction.label}
+            onAction={() =>
+              setLocation(journeyAction.waiting ? '/agent/dashboard' : journeyAction.href)
+            }
           />
         ) : (
           <>
@@ -610,7 +644,7 @@ export default function AgentProductivity() {
                               <Button
                                 variant="outline"
                                 className={agentPageStyles.ghostButton}
-                                onClick={() => setLocation('/agent/leads')}
+                                onClick={() => setLocation(leadWorkspaceHref(followUp.id))}
                               >
                                 Open CRM
                               </Button>

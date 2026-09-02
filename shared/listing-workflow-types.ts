@@ -1,13 +1,14 @@
-import type {
-  ListingAction,
-  PropertyType,
-  ListingWizardState,
-} from './listing-types';
+import type { ListingAction, PropertyType, ListingWizardState } from './listing-types';
 
-export type ListingWorkflowId =
-  | 'listing_sell'
-  | 'listing_rent'
-  | 'listing_auction';
+/**
+ * A private listing may be sent to review once its persisted readiness reaches
+ * this score. Keep every authoring surface and server-side submission gate on
+ * the same threshold so agents are never asked to complete extra work that
+ * the review workflow does not require.
+ */
+export const LISTING_SUBMISSION_READINESS_THRESHOLD = 75;
+
+export type ListingWorkflowId = 'listing_sell' | 'listing_rent' | 'listing_auction';
 
 export type ListingStepId =
   | 'action'
