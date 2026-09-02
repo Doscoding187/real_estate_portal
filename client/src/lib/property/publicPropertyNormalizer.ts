@@ -11,6 +11,7 @@ import {
   LandPlot,
   MapPin,
   Maximize,
+  Ruler,
   Shield,
   Sparkles,
   Trees,
@@ -452,7 +453,7 @@ export function getPropertyFacts(property: PropertyLike): PropertyFact[] {
       key: 'house-size',
       label: isTownhouse ? 'Unit Size' : 'House Size',
       value: formatM2(size ?? 0),
-      icon: Home,
+      icon: Ruler,
       priority: 10,
     });
   } else if (isLand) {
@@ -504,7 +505,7 @@ export function getPropertyFacts(property: PropertyLike): PropertyFact[] {
     key: 'erf-size',
     label: 'Erf Size',
     value: formatM2(erfSize ?? 0),
-    icon: Maximize,
+    icon: LandPlot,
     priority: 40,
   });
 
@@ -512,6 +513,7 @@ export function getPropertyFacts(property: PropertyLike): PropertyFact[] {
     key: 'parking',
     label: isCommercial ? 'Parking Bays' : 'Parking',
     value: parkingLabel!,
+    shortValue: parkingCount ? `${parkingCount} Parking` : parkingLabel!,
     icon: Car,
     priority: 50,
   });

@@ -76,6 +76,7 @@ import {
   checkPublicLeadRateLimit,
   getPublicLeadClientIp,
 } from './services/publicLeadRateLimitService';
+import type { SearchCardResult } from '../shared/types';
 
 console.log('[DEV ROUTER LOADED] build stamp', new Date().toISOString());
 
@@ -813,6 +814,7 @@ export const developerRouter = router({
         area?: number | null;
         yardSize?: number | null;
         unitSize?: number | null;
+        parkingCount?: number | null;
         propertyType?: string | null;
         developmentName?: string | null;
         developmentKey?: string | null;
@@ -995,7 +997,10 @@ export const developerRouter = router({
           : normalizedType;
       };
 
-      const mapListing = (prop: any): ListingFeedItem => ({
+      const mapListing = (
+        prop: any,
+        card?: Pick<SearchCardResult, 'parking'>,
+      ): ListingFeedItem => ({
         id: String(prop.id),
         kind: 'listing' as const,
         title: buildListingTitle(prop),
@@ -1010,6 +1015,11 @@ export const developerRouter = router({
         bathrooms: Number(prop.bathrooms || 0) || null,
         area: Number(prop.floorSize || prop.area || 0) || null,
         yardSize: Number(prop.erfSize || prop.yardSize || 0) || null,
+        // The card result is the public presentation boundary for parking.
+        // Keep the home rail on that canonical compact fact rather than
+        // re-interpreting listing JSON in this mapper.
+        parkingCount: Number(card?.parking?.compactValue || 0) || null,
+        propertyType: String(prop.propertyType || '').trim() || null,
         developmentName:
           String(prop.development?.name || prop.developmentName || '').trim() || null,
         badges: Array.isArray(prop.badges)
@@ -1087,7 +1097,12 @@ export const developerRouter = router({
           ),
         ]);
 
-        const listingItems = (listingResults.properties || []).map(mapListing);
+        const listingCardsById = new Map(
+          (listingResults.cards || []).map(card => [String(card.id), card]),
+        );
+        const listingItems = (listingResults.properties || []).map(prop =>
+          mapListing(prop, listingCardsById.get(String(prop.id))),
+        );
         const developmentUnitItems = (derivedDevelopmentListings.items || []).map(mapUnitListing);
         const { items, source } = composeResidentialHomeFeedItems(
           listingItems,
@@ -1164,68 +1179,18 @@ export const developerRouter = router({
             ? 'province'
             : 'national';
 
-      const locationCandidates: Array<{ scope: LocationScope; filters: LocationFilter }> = [];
-
-      if (requestedSuburb) {
-        locationCandidates.push({
-          scope: 'suburb',
-          filters: {
-            province: requestedProvince,
-            city: requestedCity,
-            suburb: requestedSuburb,
-          },
-        });
-      }
-
-      if (requestedCity) {
-        locationCandidates.push({
-          scope: 'city',
-          filters: {
-            province: requestedProvince,
-            city: requestedCity,
-          },
-        });
-      }
-
-      if (requestedProvince) {
-        locationCandidates.push({
-          scope: 'province',
-          filters: {
-            province: requestedProvince,
-          },
-        });
-      }
-
-      locationCandidates.push({ scope: 'national', filters: {} });
-
-      const dedupedCandidates = locationCandidates.filter(
-        (candidate, idx, all) =>
-          all.findIndex(
-            c =>
-              c.scope === candidate.scope &&
-              (c.filters.province || '') === (candidate.filters.province || '') &&
-              (c.filters.city || '') === (candidate.filters.city || '') &&
-              (c.filters.suburb || '') === (candidate.filters.suburb || ''),
-          ) === idx,
-      );
-
-      let items: FeedItem[] = [];
-      let source: 'developments' | 'listings' | 'units' | 'mixed' | 'shared_living' | 'land' =
-        'developments';
-      let selectedScope: LocationScope = requestedScope;
-
-      for (const candidate of dedupedCandidates) {
-        const result = await fetchTabItems(candidate.filters);
-        if (result.items.length > 0 || candidate.scope === 'national') {
-          items = result.items;
-          source = result.source;
-          selectedScope = candidate.scope;
-          break;
-        }
-      }
-
-      const usedFallback = requestedScope !== selectedScope;
-      const fallbackLevel = usedFallback ? `${requestedScope}_to_${selectedScope}` : 'none';
+      // The heading names the selected geography. Returning a nearby parent or
+      // nationwide card rail when that geography is empty breaks that promise,
+      // so this entry point always retains the submitted scope.
+      const exactLocationFilter: LocationFilter = {
+        province: requestedProvince,
+        city: requestedCity,
+        suburb: requestedSuburb,
+      };
+      const { items, source } = await fetchTabItems(exactLocationFilter);
+      const selectedScope = requestedScope;
+      const usedFallback = false;
+      const fallbackLevel = 'none';
 
       return {
         items,

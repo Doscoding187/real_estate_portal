@@ -1,4 +1,5 @@
 import { trpc } from '@/lib/trpc';
+import { useAuth } from '@/_core/hooks/useAuth';
 import { SimpleDevelopmentCard } from '@/components/SimpleDevelopmentCard';
 import { SimpleDevelopmentUnitCard } from '@/components/SimpleDevelopmentUnitCard';
 import { SimpleHomeListingCard } from '@/components/SimpleHomeListingCard';
@@ -15,6 +16,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { HeroTab } from '@/types/hero';
+import { useLocation } from 'wouter';
+import { toast } from 'sonner';
 
 type HomeTrendingSectionProps = {
   selectedProvince: string;
@@ -39,6 +42,7 @@ type TrendingItem = {
   area?: number | null;
   yardSize?: number | null;
   unitSize?: number | null;
+  parkingCount?: number | null;
   propertyType?: string | null;
   developmentName?: string | null;
   transactionType?: 'for_sale' | 'for_rent';
@@ -110,6 +114,24 @@ export function HomeTrendingSection({
   onProvinceChange,
   activeHeroTab,
 }: HomeTrendingSectionProps) {
+  const [, setLocation] = useLocation();
+  const { isAuthenticated } = useAuth();
+  const utils = trpc.useUtils();
+  const { data: favorites = [] } = trpc.properties.getFavorites.useQuery(undefined, {
+    enabled: isAuthenticated,
+  });
+  const toggleFavoriteMutation = trpc.properties.toggleFavorite.useMutation({
+    onSuccess: result => {
+      void utils.properties.getFavorites.invalidate();
+      toast.success(
+        result.favorited ? 'Property saved to your homes.' : 'Property removed from saved homes.',
+      );
+    },
+    onError: () => toast.error('Unable to update saved homes. Please try again.'),
+  });
+  const savedPropertyIds = new Set(
+    (Array.isArray(favorites) ? favorites : []).map(favorite => Number(favorite.propertyId)),
+  );
   const developmentsJourneyEnabled = isHomepageHeroJourneyEnabled('developments');
   const railLimit = 10;
   // Commercial consumer intent is owned by the dedicated Commercial Leasing
@@ -121,6 +143,10 @@ export function HomeTrendingSection({
   // province label in this legacy rail is display state, so it must not be
   // translated into a broader Shared Living query.
   const sharedLivingHandsOff = activeHeroTab === 'shared_living';
+  // Land requires one explicit, governed geography authority. The homepage
+  // province selector is display state rather than a typed city/province pair
+  // or canonical location, so this rail must hand off to the Land journey.
+  const plotLandHandsOff = activeHeroTab === 'plot_land';
   const heroContent = {
     title: `${TAB_COPY[activeHeroTab].titleBase} in ${selectedProvince}`,
     subtitle: MOBILE_FRIENDLY_SUBTITLES[activeHeroTab] || TAB_COPY[activeHeroTab].subtitleBase,
@@ -142,6 +168,7 @@ export function HomeTrendingSection({
       enabled:
         !commercialHandsOff &&
         !sharedLivingHandsOff &&
+        !plotLandHandsOff &&
         (activeHeroTab !== 'developments' || developmentsJourneyEnabled),
     },
   );
@@ -192,7 +219,40 @@ export function HomeTrendingSection({
     );
   }
 
+  if (plotLandHandsOff) {
+    return (
+      <section className="home-section">
+        <div className="home-section-header">
+          <h2 className="home-section-title max-w-[20.5rem] text-[1.125rem] font-bold text-slate-900 sm:max-w-none sm:text-xl md:text-[26px]">
+            Plots &amp; Land
+          </h2>
+          <p className="max-w-[21rem] text-[13px] leading-5 text-slate-600 sm:max-w-2xl sm:text-sm sm:leading-6 md:max-w-2xl md:text-sm md:leading-6">
+            Choose a city or exact location in the dedicated Land journey to keep the search
+            boundary precise.
+          </p>
+        </div>
+        <a
+          href="/plots-and-land"
+          className="inline-flex items-center rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700"
+        >
+          Browse plots and land
+        </a>
+      </section>
+    );
+  }
+
   const trendingItems = ((trendingData?.items || []) as TrendingItem[]).slice(0, railLimit);
+  const handleFavorite = (propertyId: number) => {
+    if (!isAuthenticated) {
+      toast.info('Sign in to save this property to your account.');
+      setLocation(
+        `/login?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`,
+      );
+      return;
+    }
+    if (toggleFavoriteMutation.isPending) return;
+    toggleFavoriteMutation.mutate({ propertyId });
+  };
 
   return (
     <section className="home-section">
@@ -234,10 +294,10 @@ export function HomeTrendingSection({
           aria-label="Loading published property"
         >
           <div className="flex gap-2">
-            {[0, 1, 2].map(index => (
+            {[0, 1, 2, 3].map(index => (
               <div
                 key={index}
-                className="min-w-0 flex-[0_0_77%] rounded-xl border border-slate-200 bg-white p-3 sm:flex-[0_0_48%] lg:flex-[0_0_32%]"
+                className="min-w-0 flex-[0_0_77%] rounded-xl border border-slate-200 bg-white p-3 sm:flex-[0_0_48%] lg:flex-1"
                 data-testid="home-property-skeleton"
               >
                 <Skeleton className="h-32 w-full rounded-lg sm:h-44" />
@@ -284,13 +344,17 @@ export function HomeTrendingSection({
           </div>
         </div>
       ) : trendingItems.length > 0 ? (
-        <div className="group/carousel relative w-full">
-          <Carousel opts={{ align: 'start', loop: trendingItems.length > 4 }} className="w-full">
+        <div className="group/rail relative w-full" data-testid="home-property-carousel">
+          <Carousel
+            opts={{ align: 'start', loop: trendingItems.length > 4 }}
+            className="w-full lg:px-12"
+            aria-label="Explore property carousel"
+          >
             <CarouselContent className="-ml-2 pb-2 justify-start">
               {trendingItems.map(item => (
                 <CarouselItem
                   key={item.id}
-                  className="basis-[77%] pl-2 sm:basis-[64%] md:basis-1/2 lg:basis-1/3 xl:basis-1/4"
+                  className="basis-[77%] pl-2 sm:basis-[64%] md:basis-1/2 lg:basis-1/4"
                 >
                   <div className="relative">
                     {item.kind === 'listing' ? (
@@ -306,9 +370,16 @@ export function HomeTrendingSection({
                         bathrooms={item.bathrooms}
                         area={item.area}
                         yardSize={item.yardSize}
+                        parkingCount={item.parkingCount}
                         propertyType={item.propertyType}
                         listingType={item.listingType}
-                        badgeLabel={item.listingType === 'rent' ? 'Property listing' : 'Resale'}
+                        badgeLabel={item.listingType === 'rent' ? 'To rent' : 'For sale'}
+                        isSaved={savedPropertyIds.has(Number(item.id))}
+                        favoritePending={
+                          toggleFavoriteMutation.isPending &&
+                          Number(toggleFavoriteMutation.variables?.propertyId) === Number(item.id)
+                        }
+                        onFavoriteClick={() => handleFavorite(Number(item.id))}
                       />
                     ) : item.kind === 'land' ? (
                       <SimpleHomeListingCard
@@ -378,8 +449,8 @@ export function HomeTrendingSection({
                 </CarouselItem>
               ))}
             </CarouselContent>
-            <CarouselPrevious className="-left-4 lg:left-0 opacity-0 group-hover/carousel:opacity-100 transition-all duration-300 bg-white/95 shadow-lg border-gray-100 translate-x-1/2" />
-            <CarouselNext className="-right-4 lg:right-0 opacity-0 group-hover/carousel:opacity-100 transition-all duration-300 bg-white/95 shadow-lg border-gray-100 -translate-x-1/2" />
+            <CarouselPrevious className="hidden size-10 border-slate-200 bg-white opacity-0 shadow-md transition-opacity duration-200 group-hover/rail:opacity-100 group-focus-within/rail:opacity-100 focus-visible:opacity-100 disabled:invisible lg:inline-flex lg:left-0" />
+            <CarouselNext className="hidden size-10 border-slate-200 bg-white opacity-0 shadow-md transition-opacity duration-200 group-hover/rail:opacity-100 group-focus-within/rail:opacity-100 focus-visible:opacity-100 disabled:invisible lg:inline-flex lg:right-0" />
           </Carousel>
         </div>
       ) : (

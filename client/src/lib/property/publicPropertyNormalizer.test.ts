@@ -1,5 +1,10 @@
+import { LandPlot, Ruler } from 'lucide-react';
 import { describe, expect, it } from 'vitest';
-import { getPropertyCardPrice, getPropertyRunningCostFacts } from './publicPropertyNormalizer';
+import {
+  getCompactPropertyFacts,
+  getPropertyCardPrice,
+  getPropertyRunningCostFacts,
+} from './publicPropertyNormalizer';
 
 describe('public pricing normalization', () => {
   it('keeps Sale cards on asking price when a legacy rent column is also present', () => {
@@ -72,5 +77,45 @@ describe('public pricing normalization', () => {
       ]),
     );
     expect(facts.find(fact => fact.key === 'rates-and-taxes')?.value).toContain('0');
+  });
+
+  it('uses a compact, standard fact order for a house without displacing erf size', () => {
+    const facts = getCompactPropertyFacts(
+      {
+        propertyType: 'house',
+        area: 150,
+        bedrooms: 3,
+        bathrooms: 2,
+        yardSize: 300,
+        parkingCount: 2,
+      },
+      4,
+    );
+
+    expect(facts.map(fact => fact.key)).toEqual([
+      'house-size',
+      'bedrooms',
+      'bathrooms',
+      'erf-size',
+    ]);
+    expect(facts[0]?.icon).toBe(Ruler);
+    expect(facts[3]?.icon).toBe(LandPlot);
+  });
+
+  it('uses parking as the fourth compact fact for apartments', () => {
+    const facts = getCompactPropertyFacts(
+      {
+        propertyType: 'apartment',
+        area: 90,
+        bedrooms: 2,
+        bathrooms: 2,
+        parkingCount: 2,
+        parkingType: 'covered',
+      },
+      4,
+    );
+
+    expect(facts.map(fact => fact.key)).toEqual(['unit-size', 'bedrooms', 'bathrooms', 'parking']);
+    expect(facts[3]).toMatchObject({ value: '2 Covered', shortValue: '2 Parking' });
   });
 });
