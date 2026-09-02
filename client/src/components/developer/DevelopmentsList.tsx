@@ -55,7 +55,8 @@ export default function DevelopmentsList() {
     onError: error => toast.error(error.message || 'Failed to delete development'),
   });
 
-  const developments = homeQuery.data?.developments ?? [];
+  const developmentRows = homeQuery.data?.developments;
+  const developments = useMemo(() => developmentRows ?? [], [developmentRows]);
   const filteredDevelopments = useMemo(() => {
     const query = searchTerm.trim().toLowerCase();
     if (!query) return developments;
@@ -74,6 +75,16 @@ export default function DevelopmentsList() {
       return;
     }
     deleteMutation.mutate({ id });
+  };
+
+  const canDelete = (development: (typeof developments)[number]) => {
+    const state = development.lifecycle.state;
+    const isPrivateLifecycle =
+      state === 'draft_ready_to_submit' ||
+      state === 'draft_action_required' ||
+      state === 'rejected' ||
+      state === 'approved_private';
+    return isPrivateLifecycle && development.leads.capturedLeadCount === 0;
   };
 
   if (homeQuery.isLoading) {
@@ -160,14 +171,20 @@ export default function DevelopmentsList() {
                   >
                     Edit
                   </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    disabled={deleteMutation.isPending}
-                    onClick={() => handleDelete(development.identity.id, development.identity.name)}
-                  >
-                    <Trash2 className="h-4 w-4 text-rose-600" />
-                  </Button>
+                  {canDelete(development) && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      aria-label={`Delete ${development.identity.name}`}
+                      title="Delete private development"
+                      disabled={deleteMutation.isPending}
+                      onClick={() =>
+                        handleDelete(development.identity.id, development.identity.name)
+                      }
+                    >
+                      <Trash2 className="h-4 w-4 text-rose-600" />
+                    </Button>
+                  )}
                 </div>
               </div>
             </CardHeader>

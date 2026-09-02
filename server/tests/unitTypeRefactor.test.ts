@@ -83,13 +83,16 @@ describeWithDb('Unit Type Refactoring Integration', () => {
       email: `unit-type-refactor-dev-${Date.now()}@example.com`,
     });
 
-    // Cleanup any leftovers.
+    // Cleanup only rows owned by this exact ephemeral developer context. A
+    // fixture must never use a magic user id to bypass developer ownership.
     const existing = await db
       .select()
       .from(developments)
       .where(eq(developments.name, TEST_DEV_NAME));
     for (const dev of existing) {
-      await developmentService.deleteDevelopment(dev.id, -1);
+      if (dev.cataloguePublisherId === developerContext.cataloguePublisherId) {
+        await developmentService.deleteDevelopment(dev.id, testUserId);
+      }
     }
   });
 

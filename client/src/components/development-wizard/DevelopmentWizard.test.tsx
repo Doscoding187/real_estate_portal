@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const testState = vi.hoisted(() => {
@@ -50,6 +50,7 @@ const testState = vi.hoisted(() => {
     useDevelopmentWizardMock,
     wizardState,
     getDevelopmentQueryResult: { current: null as unknown },
+    editRefetch: vi.fn(),
     searchParams: { current: '' },
   };
 });
@@ -105,8 +106,11 @@ vi.mock('@/lib/trpc', () => ({
         useQuery: () =>
           typeof testState.getDevelopmentQueryResult.current === 'object' &&
           testState.getDevelopmentQueryResult.current !== null
-            ? (testState.getDevelopmentQueryResult.current as Record<string, unknown>)
-            : { data: null, error: null, isLoading: false },
+            ? {
+                refetch: testState.editRefetch,
+                ...(testState.getDevelopmentQueryResult.current as Record<string, unknown>),
+              }
+            : { data: null, error: null, isLoading: false, refetch: testState.editRefetch },
       },
     },
     superAdminPublisher: {
@@ -142,6 +146,7 @@ describe('DevelopmentWizard publisher context initialization', () => {
     testState.wizardState.workflowId = null;
     testState.wizardState.currentStepId = null;
     testState.wizardState.listingIdentity = null;
+    testState.getDevelopmentQueryResult.current = null;
   });
 
   it('renders the curated create wizard with a platform-reference publisher context', async () => {
@@ -235,5 +240,28 @@ describe('DevelopmentWizard edit-mode lifecycle truth', () => {
       expect(screen.getByText(/Reviewer feedback:/i)).toBeInTheDocument();
       expect(screen.getByText(/Add at least three development highlights\./)).toBeInTheDocument();
     });
+  });
+
+  it('blocks the editor instead of falling through to a blank creation flow when the read fails', async () => {
+    testState.getDevelopmentQueryResult.current = {
+      data: null,
+      error: new Error('Database temporarily unavailable'),
+      isLoading: false,
+    };
+
+    render(<DevelopmentWizard />);
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole('heading', { name: 'Unable to open this development' }),
+      ).toBeInTheDocument();
+    });
+    expect(screen.queryByRole('heading', { name: 'Project Setup' })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(testState.editRefetch).toHaveBeenCalledOnce();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Back to developments' }));
+    expect(testState.setLocation).toHaveBeenCalledWith('/developer/developments');
   });
 });

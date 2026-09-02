@@ -36,7 +36,6 @@ vi.mock('@/components/developer/TeamManagement', () => ({ default: () => 'Team' 
 vi.mock('@/components/developer/AnalyticsPanel', () => ({ default: () => 'Analytics' }));
 vi.mock('@/components/developer/BillingPanel', () => ({ default: () => 'Billing' }));
 vi.mock('@/pages/CreateDevelopment', () => ({ default: () => 'Create development' }));
-vi.mock('@/pages/DeveloperPerformancePage', () => ({ default: () => 'Performance' }));
 vi.mock('@/pages/DeveloperPlans', () => ({ default: () => 'Plans' }));
 vi.mock('@/pages/DeveloperPublisherPage', () => ({ default: () => 'Publisher' }));
 vi.mock('@/pages/developer/DevelopmentHome', () => ({ default: () => 'Development Home' }));

@@ -1,15 +1,15 @@
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ReactNode } from 'react';
 
-const { setLocationMock, getProfileResult, authMeResult, createProfileMutateAsync } = vi.hoisted(
-  () => ({
+const { setLocationMock, getProfileResult, authMeResult, createProfileMutateAsync, refetchMock } =
+  vi.hoisted(() => ({
     setLocationMock: vi.fn(),
     getProfileResult: { current: null as unknown },
     authMeResult: { current: { data: { email: 'owner@example.com' } } as unknown },
     createProfileMutateAsync: vi.fn(),
-  }),
-);
+    refetchMock: vi.fn(),
+  }));
 
 vi.mock('wouter', () => ({
   useLocation: () => ['/developer/setup', setLocationMock],
@@ -180,5 +180,25 @@ describe('Developer setup wizard identity states', () => {
 
     expect(screen.queryByText('Resume draft dialog')).not.toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Application under review' })).toBeInTheDocument();
+  });
+
+  it('does not reopen registration when the organisation read fails unexpectedly', () => {
+    getProfileResult.current = {
+      data: undefined,
+      isLoading: false,
+      isError: true,
+      error: { data: { code: 'INTERNAL_SERVER_ERROR' }, message: 'Database unavailable' },
+      refetch: refetchMock,
+    };
+
+    render(<DeveloperSetupWizardEnhanced />);
+
+    expect(
+      screen.getByRole('heading', { name: 'Unable to verify your organisation' }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText('Basic info step')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(refetchMock).toHaveBeenCalledOnce();
   });
 });

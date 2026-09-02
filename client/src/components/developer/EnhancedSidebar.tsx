@@ -11,12 +11,10 @@ import {
   Building2,
   Users,
   TrendingUp,
-  Target,
   Settings,
   ChevronDown,
   ChevronRight,
   BarChart3,
-  UserPlus,
   FileEdit,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -82,24 +80,12 @@ const MENU_SECTIONS: MenuSection[] = [
         icon: TrendingUp,
         path: '/developer/analytics',
       },
-      {
-        id: 'performance',
-        label: 'Performance',
-        icon: Target,
-        path: '/developer/performance',
-      },
     ],
   },
   {
     id: 'settings',
     label: 'SETTINGS',
     items: [
-      {
-        id: 'team',
-        label: 'Team',
-        icon: UserPlus,
-        path: '/developer/settings/team',
-      },
       {
         id: 'subscription',
         label: 'Subscription',

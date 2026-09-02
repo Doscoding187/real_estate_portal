@@ -1,398 +1,224 @@
-// @ts-nocheck
-import React, { useState } from 'react';
+import { useLocation } from 'wouter';
+import { Building2, ExternalLink, Globe2, RefreshCw, ShieldCheck, Users } from 'lucide-react';
+
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { trpc } from '@/lib/trpc';
-import { useCommercialCatalog } from '@/hooks/useCommercialCatalog';
-import { formatCommercialPrice } from '@/lib/commercialCatalog';
-import { toast } from 'sonner';
-import { RefreshCw, Building2 } from 'lucide-react';
 
-const SettingsPanel: React.FC = () => {
-  const [isSyncing, setIsSyncing] = useState(false);
+type ProfileRecord = Record<string, unknown>;
 
-  // Get subscription data
-  const { data: subscription, refetch: refetchSubscription } =
-    trpc.developer.getSubscription.useQuery(undefined, {
-      staleTime: 0, // Always refetch on access
-      refetchOnMount: true,
-    });
-  const { data: catalog } = useCommercialCatalog('developer');
+function readableValue(value: unknown, fallback = 'Not provided'): string {
+  if (typeof value !== 'string') return fallback;
+  const trimmed = value.trim();
+  return trimmed || fallback;
+}
 
-  // Reset development count mutation
-  const resetCountMutation = trpc.developer.resetDevelopmentCount.useMutation({
-    onSuccess: data => {
-      toast.success(data.message);
-      refetchSubscription();
-    },
-    onError: error => {
-      toast.error(error.message || 'Failed to sync usage');
-    },
-  });
+function statusLabel(status: unknown): string {
+  if (status === 'approved') return 'Approved';
+  if (status === 'pending') return 'Under review';
+  if (status === 'rejected') return 'Changes requested';
+  return 'Not recorded';
+}
 
-  const handleSyncUsage = async () => {
-    setIsSyncing(true);
-    try {
-      await resetCountMutation.mutateAsync();
-    } finally {
-      setIsSyncing(false);
-    }
-  };
-
-  const [companyDetails, setCompanyDetails] = useState({
-    companyName: 'Skyline Developments',
-    registrationNumber: '2021/123456/07',
-    vatNumber: '4123456789',
-    contactPerson: 'James Mitchell',
-    email: 'contact@skyline-developments.co.za',
-    phone: '+27 11 123 4567',
-    website: 'www.skyline-developments.co.za',
-    address: '123 Construction Avenue, Sandton, Johannesburg, 2196',
-    bio: 'Leading property developers specializing in high-end residential and commercial projects across South Africa.',
-  });
-
-  const currentProduct = catalog?.products.find(
-    product => product.source.planId === subscription?.commercial?.planId,
-  );
-  const billingInfo = {
-    plan: subscription?.commercial?.planDisplayName || 'No canonical developer plan',
-    nextBilling: subscription?.commercial?.trialEndsAt
-      ? new Date(subscription.commercial.trialEndsAt).toLocaleDateString('en-ZA')
-      : subscription?.currentPeriodEnd
-        ? new Date(subscription.currentPeriodEnd).toLocaleDateString('en-ZA')
-        : 'Not scheduled',
-    amount: formatCommercialPrice(currentProduct?.pricing.basePrice) || 'Pricing unavailable',
-    paymentMethod: 'Manual EFT — finance verification',
-  };
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setCompanyDetails(prev => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    // In a real app, this would save the settings
-    console.log('Settings saved:', companyDetails);
-  };
-
+function Field({ label, value }: { label: string; value: string }) {
   return (
-    <div className="space-y-6">
-      <h2 className="typ-h2">Settings</h2>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Company Details Form */}
-        <div className="lg:col-span-2 space-y-6">
-          <div className="card">
-            <h3 className="typ-h3 mb-4">Company Details</h3>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Company Name
-                  </label>
-                  <input
-                    type="text"
-                    name="companyName"
-                    value={companyDetails.companyName}
-                    onChange={handleInputChange}
-                    className="input w-full"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Registration Number
-                  </label>
-                  <input
-                    type="text"
-                    name="registrationNumber"
-                    value={companyDetails.registrationNumber}
-                    onChange={handleInputChange}
-                    className="input w-full"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">VAT Number</label>
-                  <input
-                    type="text"
-                    name="vatNumber"
-                    value={companyDetails.vatNumber}
-                    onChange={handleInputChange}
-                    className="input w-full"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Contact Person
-                  </label>
-                  <input
-                    type="text"
-                    name="contactPerson"
-                    value={companyDetails.contactPerson}
-                    onChange={handleInputChange}
-                    className="input w-full"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                  <input
-                    type="email"
-                    name="email"
-                    value={companyDetails.email}
-                    onChange={handleInputChange}
-                    className="input w-full"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-                  <input
-                    type="tel"
-                    name="phone"
-                    value={companyDetails.phone}
-                    onChange={handleInputChange}
-                    className="input w-full"
-                  />
-                </div>
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Website</label>
-                  <input
-                    type="url"
-                    name="website"
-                    value={companyDetails.website}
-                    onChange={handleInputChange}
-                    className="input w-full"
-                  />
-                </div>
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
-                  <input
-                    type="text"
-                    name="address"
-                    value={companyDetails.address}
-                    onChange={handleInputChange}
-                    className="input w-full"
-                  />
-                </div>
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Company Bio
-                  </label>
-                  <textarea
-                    name="bio"
-                    value={companyDetails.bio}
-                    onChange={handleInputChange}
-                    rows={3}
-                    className="input w-full"
-                  />
-                </div>
-              </div>
-              <div className="flex justify-end">
-                <button type="submit" className="btn btn-primary">
-                  Save Changes
-                </button>
-              </div>
-            </form>
-          </div>
-
-          {/* Team Members */}
-          <div className="card">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="typ-h3">Team Members</h3>
-              <button className="btn btn-secondary">+ Add Member</button>
-            </div>
-            <div className="space-y-3">
-              {[
-                {
-                  name: 'James Mitchell',
-                  role: 'Administrator',
-                  email: 'james@skyline-developments.co.za',
-                  status: 'Active',
-                },
-                {
-                  name: 'Sarah Johnson',
-                  role: 'Project Manager',
-                  email: 'sarah@skyline-developments.co.za',
-                  status: 'Active',
-                },
-                {
-                  name: 'Michael Chen',
-                  role: 'Sales Agent',
-                  email: 'michael@skyline-developments.co.za',
-                  status: 'Active',
-                },
-                {
-                  name: 'Emma Rodriguez',
-                  role: 'Marketing Specialist',
-                  email: 'emma@skyline-developments.co.za',
-                  status: 'Away',
-                },
-              ].map((member, index) => (
-                <div
-                  key={index}
-                  className="flex items-center justify-between p-3 border border-gray-200 rounded-16"
-                >
-                  <div className="flex items-center">
-                    <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-medium mr-3">
-                      {member.name
-                        .split(' ')
-                        .map(n => n[0])
-                        .join('')}
-                    </div>
-                    <div>
-                      <div className="font-medium">{member.name}</div>
-                      <div className="text-sm text-gray-500">{member.role}</div>
-                    </div>
-                  </div>
-                  <div className="flex items-center">
-                    <div className="text-sm text-gray-500 mr-4">{member.email}</div>
-                    <span
-                      className={`px-2 py-1 rounded-full text-xs ${
-                        member.status === 'Active'
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-yellow-100 text-yellow-800'
-                      }`}
-                    >
-                      {member.status}
-                    </span>
-                    <button className="ml-4 text-gray-500 hover:text-gray-700">
-                      <svg
-                        className="w-5 h-5"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"
-                        />
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Right Sidebar - Subscription & Billing */}
-        <div className="space-y-6">
-          {/* Subscription Usage */}
-          <div className="card">
-            <h3 className="typ-h3 mb-4 flex items-center gap-2">
-              <Building2 className="w-5 h-5 text-blue-600" />
-              Subscription Usage
-            </h3>
-            <div className="space-y-4">
-              <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-16">
-                <div className="text-sm text-gray-500">Current Plan</div>
-                <div className="font-medium text-lg capitalize">
-                  {subscription?.commercial?.planDisplayName || 'No canonical developer plan'}
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between p-3 border border-gray-200 rounded-12">
-                <div>
-                  <div className="text-sm text-gray-500">Developments</div>
-                  <div className="font-medium">
-                    {subscription ? (subscription.usage?.developmentsCount ?? 0) : '—'} /{' '}
-                    {subscription?.limits?.developmentPortfolioUnlimited
-                      ? 'Unlimited portfolio'
-                      : (subscription?.limits?.maxDevelopments ?? '—')}
-                  </div>
-                </div>
-                <button
-                  onClick={handleSyncUsage}
-                  disabled={isSyncing}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-lg transition-colors disabled:opacity-50"
-                >
-                  <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
-                  {isSyncing ? 'Syncing...' : 'Sync'}
-                </button>
-              </div>
-
-              <div className="p-3 border border-gray-200 rounded-12">
-                <div className="text-sm text-gray-500">Leads This Month</div>
-                <div className="font-medium">
-                  {subscription ? (subscription.usage?.leadsThisMonth ?? 0) : '—'} /{' '}
-                  {subscription?.limits?.maxLeadsPerMonth ?? '—'}
-                </div>
-              </div>
-
-              <div className="p-3 border border-gray-200 rounded-12">
-                <div className="text-sm text-gray-500">Team Members</div>
-                <div className="font-medium">
-                  {subscription ? (subscription.usage?.teamMembersCount ?? 0) : '—'} /{' '}
-                  {subscription?.limits?.maxTeamMembers ?? '—'}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Billing Summary */}
-          <div className="card">
-            <h3 className="typ-h3 mb-4">Billing Summary</h3>
-            <div className="space-y-4">
-              <div className="p-4 bg-blue-50 rounded-16">
-                <div className="text-sm text-gray-500">Current Plan</div>
-                <div className="font-medium text-lg">{billingInfo.plan}</div>
-              </div>
-
-              <div>
-                <div className="text-sm text-gray-500">Next Billing Date</div>
-                <div className="font-medium">{billingInfo.nextBilling}</div>
-              </div>
-
-              <div>
-                <div className="text-sm text-gray-500">Amount</div>
-                <div className="font-medium text-lg">{billingInfo.amount}</div>
-              </div>
-
-              <div>
-                <div className="text-sm text-gray-500">Payment Method</div>
-                <div className="font-medium">{billingInfo.paymentMethod}</div>
-              </div>
-
-              <button className="btn btn-secondary w-full">Update Payment Method</button>
-              <button className="btn btn-outline w-full">View Billing History</button>
-            </div>
-          </div>
-
-          {/* Notifications */}
-          <div className="card">
-            <h3 className="typ-h3 mb-4">Notifications</h3>
-            <div className="space-y-3">
-              {[
-                {
-                  title: 'New Lead Assigned',
-                  description: 'You have been assigned a new lead for Riverside Apartments',
-                  time: '2 hours ago',
-                },
-                {
-                  title: 'Document Approved',
-                  description: 'Your building plans for Skyline Towers have been approved',
-                  time: '1 day ago',
-                },
-                {
-                  title: 'Payment Received',
-                  description: 'Payment of R150,000 received from client',
-                  time: '2 days ago',
-                },
-              ].map((notification, index) => (
-                <div key={index} className="p-3 border border-gray-200 rounded-16">
-                  <div className="font-medium">{notification.title}</div>
-                  <div className="text-sm text-gray-500 mt-1">{notification.description}</div>
-                  <div className="text-xs text-gray-400 mt-2">{notification.time}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
+    <div>
+      <dt className="text-xs font-medium uppercase tracking-wide text-slate-500">{label}</dt>
+      <dd className="mt-1 break-words text-sm text-slate-900">{value}</dd>
     </div>
   );
-};
+}
 
-export default SettingsPanel;
+/**
+ * Developer identity is reviewed before it can represent an organisation on
+ * public developments. This page intentionally shows the real identity and
+ * change boundary instead of a local-only form with invented company data.
+ */
+export default function SettingsPanel() {
+  const [, setLocation] = useLocation();
+  const profileQuery = trpc.developer.getProfile.useQuery(undefined, {
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
+
+  if (profileQuery.isLoading) {
+    return <div className="h-64 animate-pulse rounded-2xl bg-slate-100" />;
+  }
+
+  if (profileQuery.error || !profileQuery.data) {
+    return (
+      <Card className="mx-auto max-w-xl">
+        <CardContent className="space-y-4 py-10 text-center">
+          <Building2 className="mx-auto h-10 w-10 text-blue-600" />
+          <div>
+            <h1 className="text-lg font-semibold text-slate-900">
+              Unable to load organisation settings
+            </h1>
+            <p className="mt-2 text-sm text-slate-600">
+              Your organisation has not been changed. Retry when the connection is available.
+            </p>
+          </div>
+          <Button variant="outline" onClick={() => profileQuery.refetch()}>
+            <RefreshCw className="mr-2 h-4 w-4" />
+            Retry
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const profile = profileQuery.data as ProfileRecord;
+  const organisation = (profile.organisation ?? profile) as ProfileRecord;
+  const membership = (profile.membership ?? {}) as ProfileRecord;
+  const publisher = (profile.publisher ?? profile) as ProfileRecord;
+  const organisationName = readableValue(
+    organisation.name ?? profile.companyName ?? publisher.name ?? publisher.brandName,
+    'Developer organisation',
+  );
+  const publisherSlug = readableValue(publisher.slug, '');
+  const publisherVisible = Number(publisher.isVisible ?? 0) === 1;
+  const location = [organisation.city, organisation.province].filter(Boolean).join(', ');
+  const specializations = Array.isArray(organisation.specializations)
+    ? organisation.specializations.filter((value: unknown) => typeof value === 'string').join(', ')
+    : '';
+
+  return (
+    <div className="mx-auto max-w-5xl space-y-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="text-sm font-medium text-blue-700">Developer workspace</p>
+          <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-950">
+            Organisation settings
+          </h1>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
+            Review the organisation identity that owns your developments and public publisher
+            presence.
+          </p>
+        </div>
+        <Badge variant="outline" className="w-fit">
+          {statusLabel(organisation.status)}
+        </Badge>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Building2 className="h-5 w-5 text-blue-600" />
+            Organisation identity
+          </CardTitle>
+          <CardDescription>
+            These are the details supplied during Developer onboarding and protected by the
+            organisation review process.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <dl className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            <Field label="Organisation" value={organisationName} />
+            <Field label="Status" value={statusLabel(organisation.status)} />
+            <Field label="Category" value={readableValue(organisation.category)} />
+            <Field label="Email" value={readableValue(organisation.email)} />
+            <Field label="Phone" value={readableValue(organisation.phone)} />
+            <Field label="Location" value={location || 'Not provided'} />
+            <Field
+              label="Website"
+              value={readableValue(organisation.website ?? publisher.websiteUrl)}
+            />
+            <Field
+              label="Established"
+              value={
+                organisation.establishedYear ? String(organisation.establishedYear) : 'Not provided'
+              }
+            />
+            <Field label="Specialisations" value={specializations || 'Not provided'} />
+          </dl>
+        </CardContent>
+      </Card>
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Globe2 className="h-5 w-5 text-blue-600" />
+              Public publisher presence
+            </CardTitle>
+            <CardDescription>
+              This publisher identity is carried by approved developments and their enquiries.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="rounded-lg bg-slate-50 p-4">
+              <p className="text-sm font-medium text-slate-900">
+                {readableValue(publisher.name ?? publisher.brandName, organisationName)}
+              </p>
+              <p className="mt-1 text-sm text-slate-600">
+                {publisherVisible
+                  ? 'This publisher is visible to the public.'
+                  : 'This publisher is not yet visible to the public.'}
+              </p>
+            </div>
+            {publisherVisible && publisherSlug && (
+              <Button variant="outline" onClick={() => setLocation(`/developer/${publisherSlug}`)}>
+                View public publisher page
+                <ExternalLink className="ml-2 h-4 w-4" />
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5 text-blue-600" />
+              Team access
+            </CardTitle>
+            <CardDescription>
+              Your current membership is shown below. Self-service invitations, role changes, and
+              removals are not enabled in this MVP.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="rounded-lg bg-slate-50 p-4 text-sm text-slate-700">
+              <p>
+                <span className="font-medium text-slate-900">Your role:</span>{' '}
+                {readableValue(membership.role, 'Organisation member')}
+              </p>
+              <p className="mt-1">
+                <span className="font-medium text-slate-900">Membership:</span>{' '}
+                {readableValue(membership.status, 'Active')}
+              </p>
+            </div>
+            <Button variant="outline" onClick={() => setLocation('/contact')}>
+              Request controlled team access
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card className="border-blue-200 bg-blue-50/60">
+        <CardContent className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex gap-3">
+            <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-blue-700" />
+            <div>
+              <p className="font-medium text-slate-950">Identity changes stay review-protected</p>
+              <p className="mt-1 text-sm leading-6 text-slate-700">
+                Correct a rejected application in onboarding. For an approved organisation, contact
+                Property Listify so public ownership and lead custody remain coherent.
+              </p>
+            </div>
+          </div>
+          <div className="flex shrink-0 flex-wrap gap-2">
+            {organisation.status === 'rejected' && (
+              <Button variant="outline" onClick={() => setLocation('/developer/setup')}>
+                Correct application
+              </Button>
+            )}
+            <Button onClick={() => setLocation('/developer/subscription')}>
+              Billing and access
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
