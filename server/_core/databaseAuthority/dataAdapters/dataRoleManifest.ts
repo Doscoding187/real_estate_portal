@@ -12,6 +12,10 @@ import {
   LISTING_PREVIEW_FIXTURE_VERSION,
 } from './listingPreviewFixture';
 import {
+  HOMEPAGE_JOURNEY_PREVIEW_DIGEST,
+  HOMEPAGE_JOURNEY_PREVIEW_VERSION,
+} from './homepageJourneyPreviewFixture';
+import {
   PLE_PUBLICATION_ENTITLEMENT_DIGEST,
   PLE_PUBLICATION_ENTITLEMENT_VERSION,
 } from './plePublicationEntitlement';
@@ -100,6 +104,22 @@ export const DATA_ROLE_MANIFEST: Readonly<{
       transaction: 'bounded',
       schemaMutation: false,
       requiredFor: ['listing-preview'],
+    },
+    {
+      key: 'demo.homepage-journey-preview',
+      role: 'demo',
+      adapter: 'homepage-journey-preview',
+      adapterPath: 'server/_core/databaseAuthority/dataAdapters/homepageJourneyPreviewFixture.ts',
+      version: HOMEPAGE_JOURNEY_PREVIEW_VERSION,
+      digest: HOMEPAGE_JOURNEY_PREVIEW_DIGEST,
+      prepareCommand: 'db:homepage-preview:prepare',
+      verifyCommand: 'db:homepage-preview:verify',
+      prepareOperation: 'demo-seed',
+      verifyOperation: 'verification',
+      targetClasses: DISPOSABLE_TARGETS,
+      transaction: 'bounded',
+      schemaMutation: false,
+      requiredFor: ['homepage-manual-preview', 'local-journey-review'],
     },
     {
       key: 'scenario.search-to-lead',

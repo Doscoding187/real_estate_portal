@@ -17,6 +17,7 @@ describe('Database Authority data-role manifest', () => {
       'reference.geography',
       'foundation.launch-access',
       'demo.listing-preview-authentication',
+      'demo.homepage-journey-preview',
       'scenario.search-to-lead',
       'test-fixture.ple-publication-entitlement',
       'test-fixture.ple-reviewer',

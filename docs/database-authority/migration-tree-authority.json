@@ -246,6 +246,7 @@
       "server/_core/databaseAuthority/dataAdapters/canonicalFoundation.ts",
       "server/_core/databaseAuthority/dataAdapters/canonicalGeography.ts",
       "server/_core/databaseAuthority/dataAdapters/dataRoleManifest.ts",
+      "server/_core/databaseAuthority/dataAdapters/homepageJourneyPreviewFixture.ts",
       "server/_core/databaseAuthority/dataAdapters/listingPreviewFixture.ts",
       "server/_core/databaseAuthority/dataAdapters/plePublicationEntitlement.ts",
       "server/_core/databaseAuthority/dataAdapters/pleReviewerFixture.ts",

@@ -136,6 +136,7 @@ describe('Developer Engine S0 containment contracts', () => {
     );
     expect(dataRoleManifest).toContain("key: 'foundation.launch-access'");
     expect(dataRoleManifest).toContain("key: 'demo.listing-preview-authentication'");
+    expect(dataRoleManifest).toContain("key: 'demo.homepage-journey-preview'");
     expect(dataRoleManifest).toContain("key: 'scenario.search-to-lead'");
     expect(dataRoleManifest).not.toContain('LOCAL_SEED_ALLOWED');
     expect(existsSync(resolve(repoRoot, 'server/emulatorRouter.ts'))).toBe(false);

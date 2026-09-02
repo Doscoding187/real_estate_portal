@@ -38,6 +38,10 @@ import {
   verifyListingPreviewFixture,
 } from '../server/_core/databaseAuthority/dataAdapters/listingPreviewFixture';
 import {
+  prepareHomepageJourneyPreviewFixture,
+  verifyHomepageJourneyPreviewFixture,
+} from '../server/_core/databaseAuthority/dataAdapters/homepageJourneyPreviewFixture';
+import {
   preparePlePublicationEntitlement,
   verifyPlePublicationEntitlement,
 } from '../server/_core/databaseAuthority/dataAdapters/plePublicationEntitlement';
@@ -93,6 +97,8 @@ type Command =
   | 'scenario:verify'
   | 'listing-preview:prepare'
   | 'listing-preview:verify'
+  | 'homepage-preview:prepare'
+  | 'homepage-preview:verify'
   | 'ple-publication-entitlement:prepare'
   | 'ple-publication-entitlement:verify'
   | 'ple-reviewer:prepare'
@@ -314,7 +320,9 @@ async function run(command: Command): Promise<void> {
     command === 'scenario:prepare' ||
     command === 'scenario:verify' ||
     command === 'listing-preview:prepare' ||
-    command === 'listing-preview:verify'
+    command === 'listing-preview:verify' ||
+    command === 'homepage-preview:prepare' ||
+    command === 'homepage-preview:verify'
   ) {
     if (command.startsWith('listing-preview:')) {
       const isPrepare = command.endsWith(':prepare');
@@ -326,6 +334,23 @@ async function run(command: Command): Promise<void> {
         const evidence = isPrepare
           ? await prepareListingPreviewFixture({ authority, decision, connection })
           : await verifyListingPreviewFixture({ authority, decision, connection });
+        print(evidence);
+      } finally {
+        await connection.end();
+      }
+      return;
+    }
+
+    if (command.startsWith('homepage-preview:')) {
+      const isPrepare = command.endsWith(':prepare');
+      const operation = isPrepare ? 'demo-seed' : 'verification';
+      const authority = authorityFor(operation, isPrepare ? 'local-owner' : undefined);
+      const decision = authorizationFor(authority);
+      const connection = await createAuthoritySqlConnection(authority, decision);
+      try {
+        const evidence = isPrepare
+          ? await prepareHomepageJourneyPreviewFixture({ authority, decision, connection })
+          : await verifyHomepageJourneyPreviewFixture({ authority, decision, connection });
         print(evidence);
       } finally {
         await connection.end();
@@ -445,6 +470,8 @@ const commands = new Set<Command>([
   'scenario:verify',
   'listing-preview:prepare',
   'listing-preview:verify',
+  'homepage-preview:prepare',
+  'homepage-preview:verify',
   'ple-publication-entitlement:prepare',
   'ple-publication-entitlement:verify',
   'ple-reviewer:prepare',

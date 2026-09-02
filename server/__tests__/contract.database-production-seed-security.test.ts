@@ -158,6 +158,7 @@ describe('database production seed security authority', () => {
     expect(roleManifest).toContain("key: 'reference.geography'");
     expect(roleManifest).toContain("key: 'foundation.launch-access'");
     expect(roleManifest).toContain("key: 'demo.listing-preview-authentication'");
+    expect(roleManifest).toContain("key: 'demo.homepage-journey-preview'");
     expect(roleManifest).toContain("key: 'scenario.search-to-lead'");
     expect(roleManifest).toContain("prepareOperation: 'foundation-seed'");
     expect(roleManifest).toContain('schemaMutation: false');

@@ -105,6 +105,8 @@
     "db:scenario:verify": "tsx scripts/databaseAuthorityCli.ts scenario:verify",
     "db:listing-preview:prepare": "cross-env NODE_ENV=development APP_ENV=development tsx scripts/databaseAuthorityCli.ts listing-preview:prepare",
     "db:listing-preview:verify": "cross-env NODE_ENV=development APP_ENV=development tsx scripts/databaseAuthorityCli.ts listing-preview:verify",
+    "db:homepage-preview:prepare": "cross-env NODE_ENV=development APP_ENV=development tsx scripts/databaseAuthorityCli.ts homepage-preview:prepare",
+    "db:homepage-preview:verify": "cross-env NODE_ENV=development APP_ENV=development tsx scripts/databaseAuthorityCli.ts homepage-preview:verify",
     "db:ple-publication-entitlement:prepare": "cross-env NODE_ENV=development APP_ENV=development tsx scripts/databaseAuthorityCli.ts ple-publication-entitlement:prepare",
     "db:ple-publication-entitlement:verify": "cross-env NODE_ENV=development APP_ENV=development tsx scripts/databaseAuthorityCli.ts ple-publication-entitlement:verify",
     "db:ple-reviewer:prepare": "cross-env NODE_ENV=development APP_ENV=development tsx scripts/databaseAuthorityCli.ts ple-reviewer:prepare",

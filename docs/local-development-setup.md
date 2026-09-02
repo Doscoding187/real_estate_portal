@@ -318,9 +318,44 @@ this workflow does not create the retired agency demo seed or fixed
 The supported data lanes are intentionally separate. `db:reference:*` owns
 canonical geography, `db:foundation:*` owns Launch Access products and
 entitlements, `db:listing-preview:*` owns the small listing-preview auth demo,
+`db:homepage-preview:*` owns the full manual homepage journey preview,
 `db:scenario:*` owns Search-to-Lead acceptance rows, and the two
 `db:ple-*:*` commands own their isolated PLE test fixtures. Inspect their
 independent versions and digests with `pnpm db:data:manifest`.
+
+### Homepage manual journey preview
+
+After the authority-owned worktree has its current schema, canonical geography,
+and Launch Access foundation data, prepare only the dedicated homepage lane:
+
+```bash
+pnpm db:homepage-preview:prepare
+pnpm db:homepage-preview:verify
+pnpm dev
+```
+
+This produces ten published sale homes and one published rental in the exact
+Gauteng / Johannesburg / Sandton hierarchy. It also creates machine-local
+logins for `home-preview-agent@listify.local`,
+`home-preview-agency@listify.local`, and
+`home-preview-developer@listify.local`; each uses the centrally configured
+local demo password, which is intentionally never printed by the command.
+
+Manual acceptance path:
+
+- On the homepage, keep **Buy** and **Gauteng** selected: the Explore Property
+  rail has ten published cards, four visible at desktop width, exterior
+  controls, save controls, and canonical facts.
+- Switch to **Rent**: the dedicated rental card appears without being mixed
+  into Buy.
+- Sign in as the agent or agency administrator, create and publish a new
+  property through the normal product workflow, then return to the Gauteng
+  homepage to confirm it appears only at its exact public location.
+- Sign in as the developer to review the owned Preview Residences development
+  and its active unit inventory.
+
+The fixture is restricted to the exact disposable worktree database; it does
+not access `listify_local`, staging, or production.
 
 2. Open `http://localhost:3009/login`.
 
