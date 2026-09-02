@@ -28,6 +28,7 @@ import {
   developmentDrafts,
   developmentApprovalQueue,
   developmentSupersessions,
+  leads,
   locations,
   distributionPrograms,
 } from '../../drizzle/schema';
@@ -664,10 +665,7 @@ export async function listPublicDevelopments(options: {
     const rawFrom = isRental ? unit.monthlyRentFrom : unit.basePriceFrom;
     const rawTo = isRental ? unit.monthlyRentTo : unit.basePriceTo;
     const priceFrom = rawFrom != null && Number(rawFrom) > 0 ? Number(rawFrom) : null;
-    const priceTo =
-      rawTo != null && Number(rawTo) > 0
-        ? Number(rawTo)
-        : priceFrom;
+    const priceTo = rawTo != null && Number(rawTo) > 0 ? Number(rawTo) : priceFrom;
     unitsByDevelopment.get(devId)!.push({
       bedrooms: unit.bedrooms != null ? Number(unit.bedrooms) : 0,
       label,
@@ -1782,7 +1780,7 @@ export async function updateDeveloperUnitAvailability(
     throw new TRPCError({ code: 'FORBIDDEN', message: 'Developer profile not found' });
   }
 
-  return db.transaction(async (tx: any) => {
+  return db.transaction(async tx => {
     const [development] = await tx
       .select({
         id: developments.id,
@@ -2234,35 +2232,37 @@ async function persistDevelopmentPhases(
 }
 
 // ===========================================================================
-// GET DEVELOPMENT WITH PHASES (unchanged core, but safe parses)
+// GET DEVELOPMENT WITH PHASES
 // ===========================================================================
 
-export async function getDevelopmentWithPhases(id: number) {
+/**
+ * Read one development aggregate for editing.
+ *
+ * A caller that supplies a publisher id receives an ownership-scoped read so
+ * a foreign development is indistinguishable from a missing one. Related
+ * inventory and phase reads deliberately fail visibly: returning an empty
+ * aggregate after a database error would let an editor mistake unavailable
+ * data for a valid blank state and subsequently remove inventory.
+ */
+export async function getDevelopmentWithPhases(id: number, cataloguePublisherId?: number) {
   console.log('[getDevelopmentWithPhases] Loading development:', id);
   const db = await getDb();
   if (!db) throw new Error('Database not available');
 
-  const [dev] = await db.select().from(developments).where(eq(developments.id, id)).limit(1);
-  if (!dev) throw new Error('Development not found');
+  const ownershipPredicate = cataloguePublisherId
+    ? and(eq(developments.id, id), eq(developments.cataloguePublisherId, cataloguePublisherId))
+    : eq(developments.id, id);
+  const [dev] = await db.select().from(developments).where(ownershipPredicate).limit(1);
+  if (!dev) return null;
 
-  let unitTypesData: any[] = [];
-  let phasesData: any[] = [];
+  const [unitTypesData, phasesData] = await Promise.all([
+    db.select().from(unitTypes).where(eq(unitTypes.developmentId, id)),
+    db.select().from(developmentPhases).where(eq(developmentPhases.developmentId, id)),
+  ]);
 
-  try {
-    const [unitTypesRes, phasesRes] = await Promise.all([
-      db.select().from(unitTypes).where(eq(unitTypes.developmentId, id)),
-      db.select().from(developmentPhases).where(eq(developmentPhases.developmentId, id)),
-    ]);
-
-    unitTypesData = unitTypesRes || [];
-    phasesData = phasesRes || [];
-
-    console.log(
-      `[getDevelopmentWithPhases] Loaded ${unitTypesData.length} units, ${phasesData.length} phases`,
-    );
-  } catch (err: any) {
-    console.error('[getDevelopmentWithPhases] Failed to load related data:', err);
-  }
+  console.log(
+    `[getDevelopmentWithPhases] Loaded ${unitTypesData.length} units, ${phasesData.length} phases`,
+  );
 
   const parse = (val: any, def: any) => {
     if (!val) return def;
@@ -3521,9 +3521,43 @@ export async function saveDraft(
 // DELETE DEVELOPMENT
 // ===========================================================================
 
+/**
+ * Hard deletion is only safe for a non-public project that is not currently
+ * under review and has no prospect records. Published projects must be
+ * unpublished instead so public discovery and lead custody are never removed
+ * by a portfolio-management click.
+ */
+export function assertDevelopmentDeletionAllowed(
+  development: Pick<DevelopmentRow, 'approvalStatus' | 'isPublished'>,
+) {
+  if (Number(development.isPublished) === 1) {
+    throw new TRPCError({
+      code: 'PRECONDITION_FAILED',
+      message:
+        'A live development cannot be deleted. Unpublish it first so public discovery stops while its project record is retained.',
+    });
+  }
+
+  if (development.approvalStatus === 'pending') {
+    throw new TRPCError({
+      code: 'PRECONDITION_FAILED',
+      message:
+        'A development under review cannot be deleted. Wait for the review decision or contact Property Listify.',
+    });
+  }
+
+  if (!['draft', 'rejected', 'approved'].includes(development.approvalStatus ?? '')) {
+    throw new TRPCError({
+      code: 'PRECONDITION_FAILED',
+      message:
+        'Only private drafts, rejected developments, or unpublished approved developments can be deleted.',
+    });
+  }
+}
+
 async function deleteDevelopment(
   id: number,
-  userId?: number,
+  userId: number,
   operatingContext?: { cataloguePublisherId: number } | null,
 ) {
   const db = await getDb();
@@ -3531,95 +3565,78 @@ async function deleteDevelopment(
 
   console.log('[deleteDevelopment] Input params:', { id, userId, operatingContext });
 
-  // Check user role FIRST before any validation (same pattern as publishDevelopment)
-  if (userId !== undefined && userId !== -1) {
-    const user = await db.query.users.findFirst({
-      where: (u, { eq }) => eq(u.id, userId),
-      columns: { id: true, role: true },
-    });
+  let authorisedPublisherId: number | null = null;
 
-    // A super admin operates only within a server-resolved Catalogue Publisher context.
-    if (user?.role === 'super_admin' && operatingContext?.cataloguePublisherId) {
-      console.log('[deleteDevelopment] SUPER ADMIN MODE - Using Catalogue Publisher authority');
+  // Resolve the caller's authority before the destructive transaction. A
+  // platform curator must carry an explicit server-derived publisher context;
+  // a developer can only act within their own first-party publisher.
+  const user = await db.query.users.findFirst({
+    where: (u, { eq }) => eq(u.id, userId),
+    columns: { id: true, role: true },
+  });
 
-      const [owned] = await db
-        .select({ id: developments.id })
-        .from(developments)
-        .where(
-          and(
-            eq(developments.id, id),
-            eq(developments.cataloguePublisherId, operatingContext.cataloguePublisherId),
-          ),
-        )
-        .limit(1);
-
-      if (!owned) {
-        const [exists] = await db
-          .select({ id: developments.id })
-          .from(developments)
-          .where(eq(developments.id, id))
-          .limit(1);
-
-        if (!exists) throw new TRPCError({ code: 'NOT_FOUND', message: 'Development not found' });
-
-        throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: 'Unauthorized: Development belongs to a different Catalogue Publisher',
-        });
-      }
-
-      console.log('[deleteDevelopment] Catalogue Publisher authority verified');
-    } else {
-      // Real developer mode - check developer ownership
-      const devProfile = await developerIdentityService.getDeveloperByUserId(userId);
-
-      if (!devProfile) {
-        throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: 'Unauthorized: developer profile not found',
-        });
-      }
-
-      const [owned] = await db
-        .select({ id: developments.id })
-        .from(developments)
-        .where(
-          and(
-            eq(developments.id, id),
-            eq(developments.cataloguePublisherId, devProfile.publisherId),
-          ),
-        )
-        .limit(1);
-
-      if (!owned) {
-        const [exists] = await db
-          .select({ id: developments.id })
-          .from(developments)
-          .where(eq(developments.id, id))
-          .limit(1);
-
-        if (!exists) throw new TRPCError({ code: 'NOT_FOUND', message: 'Development not found' });
-
-        throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: 'Unauthorized: You do not own this development',
-        });
-      }
+  if (user?.role === 'super_admin') {
+    if (!operatingContext?.cataloguePublisherId) {
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message: 'Select a publisher context before deleting a development.',
+      });
     }
+    authorisedPublisherId = operatingContext.cataloguePublisherId;
+  } else {
+    const devProfile = await developerIdentityService.getDeveloperByUserId(userId);
+    if (!devProfile) {
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message: 'Unauthorized: developer profile not found',
+      });
+    }
+    authorisedPublisherId = devProfile.publisherId;
   }
 
-  await db.delete(unitTypes).where(eq(unitTypes.developmentId, id));
-  await db.delete(developmentPhases).where(eq(developmentPhases.developmentId, id));
-  try {
-    await db
+  return db.transaction(async (tx: any) => {
+    const ownershipConditions = [eq(developments.id, id)];
+    if (authorisedPublisherId !== null) {
+      ownershipConditions.push(eq(developments.cataloguePublisherId, authorisedPublisherId));
+    }
+    const [owned] = await tx
+      .select({
+        id: developments.id,
+        approvalStatus: developments.approvalStatus,
+        isPublished: developments.isPublished,
+      })
+      .from(developments)
+      .where(and(...ownershipConditions))
+      .limit(1)
+      .for('update');
+
+    if (!owned) {
+      // Do not reveal whether an out-of-scope development exists.
+      throw new TRPCError({ code: 'NOT_FOUND', message: 'Development not found' });
+    }
+    assertDevelopmentDeletionAllowed(owned);
+
+    const [existingLead] = await tx
+      .select({ id: leads.id })
+      .from(leads)
+      .where(eq(leads.developmentId, id))
+      .limit(1)
+      .for('update');
+    if (existingLead) {
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message:
+          'A development with recorded enquiries cannot be deleted. Keep the project record so lead custody and history remain intact.',
+      });
+    }
+
+    await tx.delete(unitTypes).where(eq(unitTypes.developmentId, id));
+    await tx.delete(developmentPhases).where(eq(developmentPhases.developmentId, id));
+    await tx
       .delete(developmentDrafts)
       .where(sql`JSON_EXTRACT(${developmentDrafts.draftData}, '$.id') = ${id}`);
-  } catch (err) {
-    console.warn('Failed to delete associated drafts:', err);
-    // Continue with deletion of development even if draft cleanup fails
-  }
-
-  return db.delete(developments).where(eq(developments.id, id));
+    return tx.delete(developments).where(eq(developments.id, id));
+  });
 }
 
 async function getDevelopmentById(id: number) {

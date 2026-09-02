@@ -100,6 +100,7 @@ export default function DeveloperSetupWizardEnhanced() {
     refetchOnWindowFocus: false,
   });
   const { data: user } = trpc.auth.me.useQuery();
+  const profileIsExplicitlyAbsent = getProfile.error?.data?.code === 'NOT_FOUND';
 
   const formValues = watch();
 
@@ -405,6 +406,31 @@ export default function DeveloperSetupWizardEnhanced() {
             <Building2 className="w-8 h-8 text-white" />
           </div>
           <p className="text-gray-600">Loading your profile...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // A missing profile is the expected first-time setup state. Any other
+  // failure must remain visible instead of inviting an established developer
+  // to submit a second organisation while the identity read is unavailable.
+  if (getProfile.error && !profileIsExplicitlyAbsent) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 px-4">
+        <div className="w-full max-w-lg rounded-2xl border border-white bg-white/90 p-8 text-center shadow-xl">
+          <FileText className="mx-auto mb-4 h-8 w-8 text-blue-600" />
+          <h1 className="text-2xl font-bold text-slate-900">Unable to verify your organisation</h1>
+          <p className="mt-3 text-sm leading-6 text-gray-600">
+            We could not load your Developer Organisation. No application has been changed. Retry
+            when the connection is available.
+          </p>
+          <button
+            type="button"
+            onClick={() => getProfile.refetch()}
+            className="mt-6 inline-flex items-center justify-center rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
+          >
+            Retry
+          </button>
         </div>
       </div>
     );

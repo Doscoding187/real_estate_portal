@@ -15,7 +15,6 @@ import TeamManagement from '@/components/developer/TeamManagement';
 import AnalyticsPanel from '@/components/developer/AnalyticsPanel';
 import BillingPanel from '@/components/developer/BillingPanel';
 import CreateDevelopment from '@/pages/CreateDevelopment';
-import DeveloperPerformancePage from '@/pages/DeveloperPerformancePage';
 import DeveloperPlans from '@/pages/DeveloperPlans';
 import DeveloperPublisherPage from '@/pages/DeveloperPublisherPage';
 import DevelopmentHome from '@/pages/developer/DevelopmentHome';
@@ -193,7 +192,9 @@ export default function DeveloperRoutes() {
 
         {/* Growth */}
         <Route path="/developer/analytics" component={AnalyticsPanel} />
-        <Route path="/developer/performance" component={DeveloperPerformancePage} />
+        <Route path="/developer/performance">
+          <Redirect to="/developer/analytics" />
+        </Route>
 
         {/* Settings */}
         <Route path="/developer/settings" component={SettingsPanel} />

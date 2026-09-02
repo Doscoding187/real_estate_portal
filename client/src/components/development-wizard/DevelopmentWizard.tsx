@@ -300,6 +300,7 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
     data: developerEditData,
     isLoading: isDeveloperEditLoading,
     error: developerLoadError,
+    refetch: refetchDeveloperEdit,
   } = trpc.developer.getDevelopment.useQuery(
     { id: editId! },
     {
@@ -313,6 +314,7 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
     data: publisherEditData,
     isLoading: isPublisherEditLoading,
     error: publisherLoadError,
+    refetch: refetchPublisherEdit,
   } = trpc.superAdminPublisher.getDevelopmentById.useQuery(
     {
       cataloguePublisherId: publisherContext?.cataloguePublisherId ?? -1,
@@ -328,6 +330,7 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
   const editData = shouldUsePublisherApi ? publisherEditData : developerEditData;
   const isEditLoading = shouldUsePublisherApi ? isPublisherEditLoading : isDeveloperEditLoading;
   const loadError = shouldUsePublisherApi ? publisherLoadError : developerLoadError;
+  const refetchEdit = shouldUsePublisherApi ? refetchPublisherEdit : refetchDeveloperEdit;
   const activeLoadedDraft = shouldUsePublisherApi ? loadedPublisherDraft : loadedDraft;
   const activeDraftError = shouldUsePublisherApi ? publisherDraftError : draftError;
 
@@ -389,17 +392,6 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
     setWorkflowStep,
   ]);
 
-  // If edit mode cannot load data, force a clean state to avoid stale persisted wizard bleed-through.
-  useEffect(() => {
-    if (!persistReady || !isEditMode || isHydrated) return;
-    if (isEditLoading) return;
-    if (editData) return;
-
-    reset();
-    setIsHydrated(true);
-    toast.error('Unable to load development for editing.');
-  }, [persistReady, isEditMode, isHydrated, isEditLoading, editData, reset]);
-
   // --- Draft hydration (gated by persist rehydrate; never in edit mode) ---
   useEffect(() => {
     if (!persistReady) return;
@@ -453,11 +445,7 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
 
     reset();
     setLocation(
-      shouldUsePublisherApi
-        ? '/admin/publisher'
-        : isSuperAdmin
-          ? '/admin/overview'
-          : '/developer',
+      shouldUsePublisherApi ? '/admin/publisher' : isSuperAdmin ? '/admin/overview' : '/developer',
     );
   };
 
@@ -483,6 +471,42 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
         <div className="flex flex-col items-center justify-center h-screen bg-slate-50 text-gray-500">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4" />
           <p>Loading development data...</p>
+        </div>
+      );
+    }
+
+    // Never turn a failed or unauthorized edit read into a blank creation
+    // wizard. That would make a transient failure look like an empty
+    // development and could lead the developer to save a duplicate or lose
+    // confidence in the state of their existing project.
+    if (isEditMode && !editData) {
+      return (
+        <div className="flex min-h-[60vh] items-center justify-center bg-slate-50 p-6">
+          <div className="max-w-md rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
+            <h1 className="text-xl font-semibold text-slate-900">
+              Unable to open this development
+            </h1>
+            <p className="mt-3 text-sm leading-6 text-slate-600">
+              The development could not be loaded. No changes have been made. It may no longer be
+              available in your organisation, or there may be a temporary connection problem.
+            </p>
+            <div className="mt-6 flex flex-wrap justify-center gap-3">
+              <button
+                type="button"
+                onClick={() => refetchEdit()}
+                className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
+              >
+                Retry
+              </button>
+              <button
+                type="button"
+                onClick={() => setLocation('/developer/developments')}
+                className="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:border-slate-400"
+              >
+                Back to developments
+              </button>
+            </div>
+          </div>
         </div>
       );
     }

@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { render, screen, waitFor } from '@testing-library/react';
 import { createElement, type ReactNode } from 'react';
@@ -43,7 +43,6 @@ vi.mock('@/components/developer/BillingPanel', () => ({ default: () => 'Billing'
 vi.mock('@/pages/CreateDevelopment', () => ({
   default: () => 'Canonical creation flow',
 }));
-vi.mock('@/pages/DeveloperPerformancePage', () => ({ default: () => 'Performance' }));
 vi.mock('@/pages/DeveloperPlans', () => ({ default: () => 'Plans' }));
 vi.mock('@/pages/DeveloperPublisherPage', () => ({ default: () => 'Catalogue Publisher' }));
 vi.mock('@/pages/developer/DevelopmentHome', () => ({
@@ -107,5 +106,16 @@ describe('Development Home route registration', () => {
     expect(source).toContain(
       'setLocation(`/developer/create-development?id=${development.identity.id}`)',
     );
+  });
+
+  it('redirects the retired static performance page to working analytics', () => {
+    const routes = readRepoFile('client/src/pages/DeveloperRoutes.tsx');
+
+    expect(routes).toContain('<Route path="/developer/performance">');
+    expect(routes).toContain('<Redirect to="/developer/analytics" />');
+    expect(routes).not.toContain('DeveloperPerformancePage');
+    expect(
+      existsSync(path.resolve(process.cwd(), 'client/src/pages/DeveloperPerformancePage.tsx')),
+    ).toBe(false);
   });
 });

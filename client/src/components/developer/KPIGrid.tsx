@@ -4,7 +4,7 @@
  * Requirements: 2.3, 2.4
  */
 
-import { Users, UserCheck, TrendingUp, Home, DollarSign, Target } from 'lucide-react';
+import { Users, UserCheck, TrendingUp, Home, Target } from 'lucide-react';
 import { KPICard } from './KPICard';
 import { trpc } from '@/lib/trpc';
 
@@ -49,7 +49,7 @@ export function KPIGrid({ timeRange = '30d' }: KPIGridProps) {
   };
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
+    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
       {/* Total Leads */}
       <KPICard
         title="Total Leads"
@@ -102,21 +102,9 @@ export function KPIGrid({ timeRange = '30d' }: KPIGridProps) {
         loading={isLoading}
       />
 
-      {/* Affordability Match */}
+      {/* Lead progression */}
       <KPICard
-        title="Affordability Match"
-        value={isLoading ? '...' : formatPercentage(kpis?.affordabilityMatchPercent || 0)}
-        change={kpis?.trends.affordabilityMatchPercent}
-        trend={getTrend(kpis?.trends.affordabilityMatchPercent || 0)}
-        icon={DollarSign}
-        gradientFrom="from-teal-500"
-        gradientTo="to-teal-600"
-        loading={isLoading}
-      />
-
-      {/* Marketing Performance */}
-      <KPICard
-        title="Marketing Score"
+        title="Lead progression score"
         value={isLoading ? '...' : Math.round(kpis?.marketingPerformanceScore || 0)}
         change={kpis?.trends.marketingPerformanceScore}
         trend={getTrend(kpis?.trends.marketingPerformanceScore || 0)}

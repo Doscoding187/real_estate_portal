@@ -111,6 +111,7 @@ async function verifyApprovalWorkflow() {
 
   // 5. Cleanup
   console.log('\n--- Cleanup ---');
+  await developmentService.unpublishDevelopment(newDev.id, dev.id);
   await developmentService.deleteDevelopment(newDev.id, dev.id);
   console.log('Test development deleted.');
 

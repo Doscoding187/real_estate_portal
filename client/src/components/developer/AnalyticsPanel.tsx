@@ -4,7 +4,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   TrendingUp,
   Users,
-  Eye,
   MousePointerClick,
   Calendar,
   BarChart3,
@@ -55,7 +54,7 @@ const AnalyticsPanel: React.FC = () => {
         <div>
           <h1 className="text-3xl font-bold text-foreground mb-2">Analytics</h1>
           <p className="text-muted-foreground">
-            Track your development performance and marketing metrics
+            Track inventory, captured enquiries, and recorded outcomes for your developments
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -105,7 +104,7 @@ const AnalyticsPanel: React.FC = () => {
               icon={MousePointerClick}
             />
             <MetricCard
-              title="Marketing Score"
+              title="Lead progression score"
               value={`${kpis?.marketingPerformanceScore || 0}/100`}
               change={`${kpis?.trends.marketingPerformanceScore > 0 ? '+' : ''}${kpis?.trends.marketingPerformanceScore}%`}
               changeType={kpis?.trends.marketingPerformanceScore >= 0 ? 'positive' : 'negative'}
@@ -124,7 +123,7 @@ const AnalyticsPanel: React.FC = () => {
 
       {/* Traffic overview returns when a real time-series API exists. */}
 
-      {/* Traffic Sources */}
+      {/* Lead and outcome reporting */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card className="col-span-1 lg:col-span-2">
           <CardHeader>
@@ -148,22 +147,15 @@ const AnalyticsPanel: React.FC = () => {
                     {kpis?.trends.conversionRate}%
                   </span>
                 </div>
-                <p className="text-xs text-slate-400">Leads converting to sales</p>
+                <p className="text-xs text-slate-400">Captured leads closed as sales</p>
               </div>
               <div className="space-y-2">
-                <h4 className="font-medium text-sm text-slate-500">Affordability Match</h4>
-                <div className="flex items-end gap-2">
-                  <span className="text-2xl font-bold text-slate-900">
-                    {kpis?.affordabilityMatchPercent}%
-                  </span>
-                  <span
-                    className={`text-xs mb-1 ${kpis?.trends.affordabilityMatchPercent >= 0 ? 'text-green-600' : 'text-red-600'}`}
-                  >
-                    {kpis?.trends.affordabilityMatchPercent > 0 ? '+' : ''}
-                    {kpis?.trends.affordabilityMatchPercent}%
-                  </span>
-                </div>
-                <p className="text-xs text-slate-400">Leads matching price range</p>
+                <h4 className="font-medium text-sm text-slate-500">Reporting scope</h4>
+                <p className="text-sm leading-6 text-slate-600">
+                  This view reports enquiries captured through Property Listify and the workflow
+                  outcomes you record. Visitor traffic, channel attribution, and automated
+                  affordability scoring are not included in this MVP.
+                </p>
               </div>
             </div>
           </CardContent>
