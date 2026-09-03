@@ -17,6 +17,7 @@ function productionEnv(overrides: NodeJS.ProcessEnv = {}): NodeJS.ProcessEnv {
     NEXT_PUBLIC_APP_URL: 'https://propertylistifysa.co.za',
     VITE_APP_URL: 'https://propertylistifysa.co.za',
     VITE_API_URL: 'https://api.propertylistifysa.co.za',
+    TRUST_PROXY: '1',
     AWS_REGION: 'af-south-1',
     AWS_ACCESS_KEY_ID: 'AKIAPRODUCTIONKEY',
     AWS_SECRET_ACCESS_KEY: 'production-media-secret',
@@ -79,6 +80,24 @@ describe('launch preflight contract', () => {
     expect(failedIds).toContain('manual-eft-billing');
     expect(failedIds).toContain('billing-proof-storage');
     expect(failedIds).toContain('transactional-email');
+  });
+
+  it('refuses a production browser boundary with a wildcard-like origin or missing proxy topology', () => {
+    const result = runLaunchPreflight({
+      runtimeEnv: 'production',
+      env: productionEnv({
+        CORS_ALLOWED_ORIGINS: 'https://*.vercel.app',
+        TRUST_PROXY: 'false',
+      }),
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.checks.find(check => check.id === 'browser-origin-boundary')).toMatchObject({
+      ok: false,
+    });
+    expect(result.checks.find(check => check.id === 'trusted-proxy-boundary')).toMatchObject({
+      ok: false,
+    });
   });
 
   it('does not let production runtime or host naming classify an unknown database as production', () => {

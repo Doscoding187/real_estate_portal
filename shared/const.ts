@@ -1,4 +1,6 @@
-export const COOKIE_NAME = 'app_session_id';
+// Versioned, host-only session cookie. Changing the name retires legacy
+// domain-wide cookies before the beta launch rather than accepting ambiguity.
+export const COOKIE_NAME = 'pl_session_v2';
 export const ONE_YEAR_MS = 1000 * 60 * 60 * 24 * 365;
 export const AXIOS_TIMEOUT_MS = 30_000;
 export const UNAUTHED_ERR_MSG = 'Please login (10001)';

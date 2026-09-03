@@ -1,6 +1,5 @@
 import { randomUUID } from 'crypto';
 
-import { sql } from 'drizzle-orm';
 import express from 'express';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
@@ -21,6 +20,18 @@ import developmentSupersessionRedirectRouter from '../routes/developmentSuperses
 import agentOnboardingRouter from '../routes/agentOnboarding';
 import { ENV } from './env';
 import { registerLocalMediaRoutes } from './localMediaRoutes';
+import { createAuthRateLimitStore } from './authRateLimitStore';
+import {
+  applyApiSecurityHeaders,
+  assertBrowserSecurityPolicy,
+  createStateChangingOriginGuard,
+  isAllowedCorsOrigin,
+  resolveBrowserSecurityPolicy,
+} from './browserSecurity';
+import {
+  assertDeployedTrustProxyConfiguration,
+  resolveTrustProxySetting,
+} from './runtimeBootstrap';
 
 // -------------------- BOOT-SAFE OPTIONAL ROUTER LOADER --------------------
 async function mountOptionalRouter(app: express.Express, mountPath: string, importPath: string) {
@@ -90,57 +101,47 @@ async function startServer() {
     );
   }
 
+  const browserSecurityPolicy = resolveBrowserSecurityPolicy();
+  assertBrowserSecurityPolicy(browserSecurityPolicy);
+  assertDeployedTrustProxyConfiguration();
+
   const app = express();
+  app.set('trust proxy', resolveTrustProxySetting());
   const server = createServer(app);
 
-  const authRateLimitMax = Number(
-    process.env.AUTH_RATE_LIMIT_MAX || (ENV.isProduction ? 5 : 50),
-  );
+  const isDeployedRuntime =
+    browserSecurityPolicy.runtimeEnv === 'production' ||
+    browserSecurityPolicy.runtimeEnv === 'staging';
+  const authRateLimitMax = Number(process.env.AUTH_RATE_LIMIT_MAX || (isDeployedRuntime ? 5 : 50));
 
   const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: Number.isFinite(authRateLimitMax) && authRateLimitMax > 0 ? authRateLimitMax : 5,
-    message: 'Too many login attempts, please try again later',
+    message: 'Too many authentication requests, please try again later.',
     standardHeaders: true,
     legacyHeaders: false,
+    store: createAuthRateLimitStore({ runtimeEnv: browserSecurityPolicy.runtimeEnv }),
   });
 
-  const allowedOrigins = [
-    'http://localhost:5173',
-    'http://localhost:3000',
-    'http://localhost:5000',
-    'https://real-estate-portal-xi.vercel.app',
-    'https://realestateportal-production-8e32.up.railway.app',
-    'https://realestateportal-production-9bb8.up.railway.app',
-    'https://www.propertylistifysa.co.za',
-    'https://propertylistifysa.co.za',
-    'http://localhost:3009',
-  ];
+  app.use((req, res, next) => {
+    const headerRequestId = req.headers['x-request-id'];
+    const requestId =
+      typeof headerRequestId === 'string' && /^[A-Za-z0-9._-]{8,128}$/.test(headerRequestId)
+        ? headerRequestId
+        : randomUUID();
+
+    (req as any).requestId = requestId;
+    res.setHeader('x-request-id', requestId);
+    next();
+  });
+
+  app.use((req, res, next) => applyApiSecurityHeaders(browserSecurityPolicy, req, res, next));
 
   app.use(
     cors({
       origin: (origin, callback) => {
         if (!origin) return callback(null, true);
-
-        const originHost = (() => {
-          try {
-            return new URL(origin).hostname;
-          } catch {
-            return '';
-          }
-        })();
-
-        const isPropertyListifyOrigin =
-          originHost === 'propertylistifysa.co.za' ||
-          originHost.endsWith('.propertylistifysa.co.za');
-
-        if (isPropertyListifyOrigin || allowedOrigins.includes(origin) || origin.endsWith('.vercel.app')) {
-          console.log(`✅ CORS: Allowed origin: ${origin}`);
-          callback(null, true);
-        } else {
-          console.warn(`❌ CORS: Blocked origin: ${origin}`);
-          callback(new Error('Not allowed by CORS'));
-        }
+        callback(null, isAllowedCorsOrigin(browserSecurityPolicy, origin));
       },
       credentials: true,
       methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
@@ -151,37 +152,30 @@ async function startServer() {
         'x-operating-as-publisher',
         'x-request-id',
       ],
-      exposedHeaders: ['Set-Cookie'],
       maxAge: 86400,
     }),
   );
 
+  app.use(createStateChangingOriginGuard(browserSecurityPolicy));
+
   // Apply auth rate limits after CORS so even 429 responses include CORS headers.
-  app.use('/api/auth/login', authLimiter);
-  app.use('/api/auth/register', authLimiter);
+  for (const authPath of [
+    '/api/auth/login',
+    '/api/auth/register',
+    '/api/auth/forgot-password',
+    '/api/auth/reset-password',
+    '/api/auth/resend-verification',
+  ]) {
+    app.use(authPath, authLimiter);
+  }
 
   app.use(express.json({ limit: '50mb' }));
   app.use(express.urlencoded({ limit: '50mb', extended: true }));
   registerLocalMediaRoutes(app);
 
-  app.use((req, res, next) => {
-    const headerRequestId = req.headers['x-request-id'];
-    const requestId =
-      typeof headerRequestId === 'string' && headerRequestId.trim().length > 0
-        ? headerRequestId
-        : randomUUID();
-
-    (req as any).requestId = requestId;
-    res.setHeader('x-request-id', requestId);
-    next();
-  });
-
   // Force WWW redirect for the main production domain.
   app.use((req, res, next) => {
-    const forwardedHost = String(req.headers['x-forwarded-host'] || '')
-      .split(',')[0]
-      .trim();
-    const host = (forwardedHost || req.get('host') || '').split(':')[0];
+    const host = req.hostname.toLowerCase();
 
     if (host === 'propertylistifysa.co.za') {
       return res.redirect(301, `https://www.propertylistifysa.co.za${req.originalUrl}`);
@@ -200,39 +194,17 @@ async function startServer() {
   registerHealthEndpoint(app);
   registerVersionEndpoint(app);
 
-  app.get('/api/test', async (req, res) => {
-    try {
-      const { db } = await import('../db');
-      await db.execute(sql`SELECT 1`);
-      res.json({
-        message: 'Backend is running!',
-        database: 'Connected',
-        timestamp: new Date().toISOString(),
-      });
-    } catch (error: any) {
-      console.error('DB Check Failed:', error);
-      res.status(500).json({
-        message: 'Backend is running but Database is unavailable',
-        database: 'Error',
-        error: error.message,
-        timestamp: new Date().toISOString(),
-      });
-    }
-  });
-
   app.use(
     '/api/trpc',
     createExpressMiddleware({
       router: appRouter,
       createContext,
-      onError({ error, path, type }) {
-        console.error('❌ tRPC Error:', {
+      onError({ error, path, type, req }) {
+        console.error('[tRPC] Request failed', {
+          requestId: (req as any)?.requestId || 'unknown',
           path,
           type,
           code: error.code,
-          message: error.message,
-          stack: error.stack,
-          cause: (error as any).cause,
         });
       },
     }),
@@ -250,7 +222,8 @@ async function startServer() {
   await mountOptionalRouter(app, '/api/topics', '../topicsRouter');
   // Legacy partner subscription routes are intentionally disabled.
   // They require canonical authentication, ownership, and entitlement controls before remounting.
-  await mountOptionalRouter(app, '/api/boosts', '../partnerBoostCampaignRouter');
+  // Legacy boost campaign routes are intentionally disabled. They lack canonical
+  // publisher ownership, entitlement, billing, and abuse controls.
   // Legacy partner-lead routes are intentionally disabled. They bypass the
   // canonical public lead-capture consent, rate-limit, routing, and custody boundary.
 

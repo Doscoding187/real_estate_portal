@@ -1,4 +1,5 @@
 import { resolveDatabaseAuthority } from './databaseAuthority/context';
+import { resolveBrowserSecurityPolicy } from './browserSecurity';
 import type { AppRuntimeEnv } from './runtimeBootstrap';
 import { resolveAppRuntimeEnv } from './runtimeBootstrap';
 
@@ -118,11 +119,7 @@ function databaseCheck(env: EnvLike, runtimeEnv: AppRuntimeEnv) {
       credentialClass: 'read-only',
     });
     const expectedTargetClass =
-      runtimeEnv === 'production'
-        ? 'production'
-        : runtimeEnv === 'staging'
-          ? 'staging'
-          : null;
+      runtimeEnv === 'production' ? 'production' : runtimeEnv === 'staging' ? 'staging' : null;
     if (!expectedTargetClass || authority.context.targetClass !== expectedTargetClass) {
       throw new Error(
         `Database release context refused: ${runtimeEnv} requires an exact ${expectedTargetClass ?? 'protected'} target class.`,
@@ -202,6 +199,40 @@ function urlChecks(env: EnvLike) {
   }
 
   return checks;
+}
+
+function browserSecurityCheck(env: EnvLike, runtimeEnv: AppRuntimeEnv) {
+  const policy = resolveBrowserSecurityPolicy({ env, runtimeEnv });
+  return makeCheck({
+    id: 'browser-origin-boundary',
+    level: 'required',
+    ok: policy.configurationErrors.length === 0 && policy.allowedCorsOrigins.size > 0,
+    message:
+      policy.configurationErrors[0] ||
+      'Browser CORS and state-changing requests are limited to exact configured origins.',
+    missing:
+      policy.configurationErrors.length > 0
+        ? [...policy.configurationErrors]
+        : policy.allowedCorsOrigins.size === 0
+          ? ['APP_URL, FRONTEND_URL, BASE_URL, NEXT_PUBLIC_APP_URL, or VITE_APP_URL']
+          : undefined,
+  });
+}
+
+function trustedProxyCheck(env: EnvLike, runtimeEnv: AppRuntimeEnv) {
+  const rawValue = readEnv(env, 'TRUST_PROXY');
+  const requiresProxy = runtimeEnv === 'production' || runtimeEnv === 'staging';
+  const valid = /^[1-9]\d*$/.test(rawValue);
+
+  return makeCheck({
+    id: 'trusted-proxy-boundary',
+    level: 'required',
+    ok: !requiresProxy || valid,
+    message: requiresProxy
+      ? 'TRUST_PROXY must be the exact positive number of trusted reverse proxies.'
+      : 'Trust-proxy configuration is not required outside deployed environments.',
+    missing: !requiresProxy || valid ? undefined : ['TRUST_PROXY (positive proxy-hop count)'],
+  });
 }
 
 function publicMediaStorageCheck(env: EnvLike) {
@@ -293,15 +324,17 @@ export function runLaunchPreflight(options?: {
     databaseCheck(env, runtimeEnv),
     jwtSecretCheck(env),
     ...urlChecks(env),
+    browserSecurityCheck(env, runtimeEnv),
+    trustedProxyCheck(env, runtimeEnv),
     publicMediaStorageCheck(env),
     manualEftCheck(env),
     billingProofStorageCheck(env),
     emailCheck(env),
-    recommendedPresenceCheck(
+    requiredPresenceCheck(
       env,
-      'redis-cache',
+      'distributed-auth-rate-limit',
       ['REDIS_URL'],
-      'Redis is recommended before launch for stable cache and rate-limit behavior.',
+      'REDIS_URL is required so authentication rate limits remain shared across instances.',
     ),
     recommendedPresenceCheck(
       env,
