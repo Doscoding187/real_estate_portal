@@ -73,3 +73,34 @@ The next evaluation must use paired, real implementation tasks and compare the
 same task with and without the relevant skill against canonical authority,
 focused validation, review findings, and tool use. A new capability may be
 proposed only when those results show a repeated material benefit.
+
+## 2026-09-03 delivery-convergence routing revision
+
+**Skill and version:** `property-listify-change-routing` 0.1.1.
+
+**Task class and baseline:** a real local-preview versus hosted-product
+discrepancy. Before the revision, an agent could describe a visible local
+screen as "truth" without separating the approved source SHA, build-time
+configuration, provider runtime health, and database/data state.
+
+**Observed improvement:** the revised routing rule directs the task to the
+delivery contract and requires a four-part snapshot: `origin/main`, local
+control `main`, integration preview, and relevant provider deployment
+SHA/health. It classifies a mismatch rather than assuming it is code: in the
+observed case, a frontend build-time release configuration and a separate
+backend runtime failure could be investigated independently.
+
+**Observed regression or added cost:** the snapshot adds a small read-only
+inspection step. It does not add a new tool, provider credential, hook,
+background process, persistent memory, or external mutation.
+
+**Evidence source:** the delivery contract, the routing revision, structural
+governance validation, and the focused repository contract test introduced
+with this revision.
+
+**Decision:** retain this narrow Tier 0 routing revision. It is an authority
+clarification, not a performance claim or a new deployment capability. A
+future paired delivery task should test whether the record remains concise and
+prevents a material misclassification.
+
+**Next review date:** 2026-12-03.

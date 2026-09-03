@@ -28,6 +28,40 @@ that its associated worktree is clean or task-owned.
 Read-only investigation may use the current worktree. This rule applies when
 creating a change intended for review, commit, or pull request.
 
+## Delivery authority and release convergence
+
+For any task involving a feature branch, pull request, `main`, a local
+integration preview, Vercel, Railway, or a discrepancy between environments,
+read `docs/architecture/delivery-authority-and-release-convergence.md` before
+calling any environment the current product truth or taking a delivery action.
+
+The normal promotion path is:
+
+`feature worktree → reviewed pull request → GitHub main → exact-SHA provider deployment`
+
+`origin/main` is the approved code-source authority after merge. A feature
+worktree is only a candidate. The integration preview is a local acceptance
+mirror only when it is clean and at the exact `origin/main` SHA; it is not a
+second code authority or a drifting release branch.
+
+For a material delivery claim, report the exact `origin/main` SHA, local
+control-`main` SHA and cleanliness, integration-preview SHA and cleanliness,
+and the Vercel/Railway deployment SHA and health where hosted behaviour is in
+scope. Classify any mismatch as code, build-time configuration, runtime/data,
+or unknown; do not infer parity from similar screens or a successful deploy
+badge alone.
+
+Do not directly commit, merge, rebase, reset, or resolve conflicts in `main`
+or the integration-preview worktree. A requested synchronization may only
+fast-forward a clean control worktree to the verified `origin/main` SHA. Push,
+pull-request creation, merge, provider deployment, hosted-variable changes,
+and database mutation each require explicit owner authorization.
+
+Matching code SHAs are necessary but not sufficient: hosted build-time
+configuration, hosted runtime configuration, service health, and governed
+database state remain separate evidence. Treat a failed API health check as a
+runtime discrepancy even when the provider reports a deployment as active.
+
 ## Agent capability governance
 
 For work that adds, changes, evaluates, or integrates agent skills, agent

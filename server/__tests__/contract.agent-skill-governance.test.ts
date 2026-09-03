@@ -83,6 +83,20 @@ describe('agent skill governance', () => {
     expect(governance).toContain('one reviewable outcome per feature branch and pull request');
   });
 
+  it('keeps delivery convergence attached to the always-loaded repository instructions', () => {
+    const instructions = read('AGENTS.md').replace(/\s+/g, ' ');
+    const deliveryContract = read(
+      'docs/architecture/delivery-authority-and-release-convergence.md',
+    ).replace(/\s+/g, ' ');
+
+    expect(instructions).toContain('Delivery authority and release convergence');
+    expect(instructions).toContain('delivery-authority-and-release-convergence.md');
+    expect(instructions).toContain('origin/main');
+    expect(deliveryContract).toContain('GitHub `main`');
+    expect(deliveryContract).toContain('not a second code authority');
+    expect(deliveryContract).toContain('exact-SHA provider deployment');
+  });
+
   it('admits only the bounded local integrity helper above Tier 0', () => {
     const registry = JSON.parse(read('.agent/skills/registry.json'));
     const tierZeroSkills = registry.skills.filter(
