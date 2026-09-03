@@ -250,7 +250,8 @@ async function startServer() {
   await mountOptionalRouter(app, '/api/topics', '../topicsRouter');
   // Legacy partner subscription routes are intentionally disabled.
   // They require canonical authentication, ownership, and entitlement controls before remounting.
-  await mountOptionalRouter(app, '/api/boosts', '../partnerBoostCampaignRouter');
+  // Legacy boost campaign routes are intentionally disabled. They lack canonical
+  // publisher ownership, entitlement, billing, and abuse controls.
   await mountOptionalRouter(app, '/api/leads', '../partnerLeadRouter');
 
   await mountOptionalRouter(app, '/api/explore', '../routes/exploreShorts');
