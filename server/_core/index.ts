@@ -224,7 +224,8 @@ async function startServer() {
   // They require canonical authentication, ownership, and entitlement controls before remounting.
   // Legacy boost campaign routes are intentionally disabled. They lack canonical
   // publisher ownership, entitlement, billing, and abuse controls.
-  await mountOptionalRouter(app, '/api/leads', '../partnerLeadRouter');
+  // Legacy partner-lead routes are intentionally disabled. They bypass the
+  // canonical public lead-capture consent, rate-limit, routing, and custody boundary.
 
   await mountOptionalRouter(app, '/api/explore', '../routes/exploreShorts');
   await mountOptionalRouter(app, '/api/explore/video', '../routes/exploreVideoUpload');
