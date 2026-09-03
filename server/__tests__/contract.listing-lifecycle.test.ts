@@ -307,6 +307,47 @@ describe('listing lifecycle — canonical identity contract', () => {
     expect(mockDb.getListingMedia).not.toHaveBeenCalled();
   });
 
+  it('allows the exact agency manager to read private agency inventory', async () => {
+    const caller = makeCaller({
+      id: 77,
+      email: 'manager@test.com',
+      role: 'agency_admin',
+      agencyId: 20,
+    });
+    vi.mocked(mockDb.getListingById).mockResolvedValue(
+      mockListing({ agencyId: 20, ownerId: ownerUser.id }),
+    );
+
+    await expect(caller.listing.getById({ id: 1001 })).resolves.toMatchObject({
+      property: { id: 1001 },
+    });
+  });
+
+  it('allows an approved assigned agent with the exact agency attribution to edit', async () => {
+    const caller = makeCaller({
+      id: 78,
+      email: 'assigned-agent@test.com',
+      role: 'agent',
+      agencyId: 20,
+    });
+    vi.mocked(mockDb.getListingById).mockResolvedValue(
+      mockListing({ agencyId: 20, ownerId: ownerUser.id, agentId: 56 }),
+    );
+    vi.mocked(mockDb.getAgentByUserId).mockResolvedValue({
+      id: 56,
+      userId: 78,
+      agencyId: 20,
+      status: 'approved',
+    });
+
+    await caller.listing.update({ id: 1001, title: 'Updated by assigned agent' });
+
+    expect(mockDb.updateListing).toHaveBeenCalledWith(
+      1001,
+      expect.objectContaining({ title: 'Updated by assigned agent' }),
+    );
+  });
+
   // -----------------------------------------------------------------------
   // 3.1 Draft Creation
   // -----------------------------------------------------------------------
@@ -727,6 +768,94 @@ describe('listing lifecycle — canonical identity contract', () => {
 
     // The router resolves the listing and then looks up leads by propertyId
     expect(mockDb.getListingById).toHaveBeenCalledWith(LISTING_ID);
+  });
+
+  // -----------------------------------------------------------------------
+  // 3.8a Private analytics and media custody
+  // -----------------------------------------------------------------------
+  it('denies listing analytics to an unrelated authenticated user', async () => {
+    const caller = makeCaller({ id: 999, email: 'other@test.com', role: 'agent' });
+
+    await withSilencedConsoleError(async () => {
+      await expect(caller.listing.getAnalytics({ listingId: 1001 })).rejects.toMatchObject({
+        code: 'FORBIDDEN',
+        message: 'Not authorized to view analytics for this listing',
+      });
+    });
+
+    expect(mockDb.getListingAnalytics).not.toHaveBeenCalled();
+  });
+
+  it('allows an approved assigned agent to view listing analytics', async () => {
+    const caller = makeCaller({
+      id: 78,
+      email: 'assigned-agent@test.com',
+      role: 'agent',
+      agencyId: 20,
+    });
+    vi.mocked(mockDb.getListingById).mockResolvedValue(
+      mockListing({ agencyId: 20, ownerId: ownerUser.id, agentId: 56 }),
+    );
+    vi.mocked(mockDb.getAgentByUserId).mockResolvedValue({
+      id: 56,
+      userId: 78,
+      agencyId: 20,
+      status: 'approved',
+    });
+    vi.mocked(mockDb.getListingAnalytics).mockResolvedValue({ totalViews: 12 });
+
+    await expect(caller.listing.getAnalytics({ listingId: 1001 })).resolves.toMatchObject({
+      totalViews: 12,
+    });
+  });
+
+  it('denies a cross-tenant user before issuing a Listing media reservation', async () => {
+    const caller = makeCaller({ id: 999, email: 'other@test.com', role: 'agent' });
+
+    await expect(
+      caller.listing.uploadMedia({
+        listingId: 1001,
+        type: 'image',
+        filename: 'foreign.jpg',
+        contentType: 'image/jpeg',
+      }),
+    ).rejects.toMatchObject({
+      code: 'FORBIDDEN',
+      message: 'Not authorized to upload media for this listing',
+    });
+  });
+
+  it('rechecks current custody before confirming a previously issued media reservation', async () => {
+    const caller = makeCaller({
+      id: 78,
+      email: 'removed-agent@test.com',
+      role: 'agent',
+      agencyId: 20,
+    });
+    vi.mocked(mockDb.getListingById).mockResolvedValue(
+      mockListing({ agencyId: 20, ownerId: ownerUser.id, agentId: 56 }),
+    );
+    // The signed reservation belongs to this user, but their live agent
+    // profile is no longer the Listing assignment.
+    vi.mocked(mockDb.getAgentByUserId).mockResolvedValue({
+      id: 57,
+      userId: 78,
+      agencyId: 20,
+      status: 'approved',
+    });
+    const uploadToken = createListingMediaUploadToken({
+      key: 'properties/1001/previously-issued.jpg',
+      mediaType: 'image',
+      contentType: 'image/jpeg',
+      fileName: 'previously-issued.jpg',
+      userId: 78,
+      listingId: 1001,
+    });
+
+    await expect(caller.listing.confirmMediaUpload({ uploadToken })).rejects.toMatchObject({
+      code: 'FORBIDDEN',
+      message: 'Not authorized to confirm media for this listing',
+    });
   });
 
   // -----------------------------------------------------------------------

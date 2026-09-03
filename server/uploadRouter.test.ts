@@ -108,4 +108,13 @@ describe('legacy upload.presign local adapter convergence', () => {
     env.ENV.isProduction = false;
     env.ENV.mediaStorageAdapter = 'local';
   });
+
+  it('rejects unsupported content types before issuing an upload target', async () => {
+    await expect(
+      caller.presign({ filename: 'unexpected.txt', contentType: 'text/plain' }),
+    ).rejects.toMatchObject({
+      code: 'BAD_REQUEST',
+      message: 'Media uploads require an image, video, or PDF content type.',
+    });
+  });
 });
