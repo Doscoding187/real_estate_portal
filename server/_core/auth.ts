@@ -20,10 +20,18 @@ export type SessionPayload = {
   userId: number;
   email: string;
   name: string;
+  sessionVersion: number;
 };
 
 const isNonEmptyString = (value: unknown): value is string =>
   typeof value === 'string' && value.length > 0;
+
+const isPositiveInteger = (value: unknown): value is number =>
+  typeof value === 'number' && Number.isSafeInteger(value) && value > 0;
+
+const EMAIL_VERIFICATION_TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
+
+const hashOpaqueToken = (token: string) => crypto.createHash('sha256').update(token).digest('hex');
 
 const getRequestId = (req: Request): string => {
   const value = (req as any)?.requestId;
@@ -37,7 +45,7 @@ export const normalizeAuthRole = (role: unknown): User['role'] => {
   return (role as User['role']) || 'visitor';
 };
 
-class AuthService {
+export class AuthService {
   private getSessionSecret() {
     const secret = ENV.cookieSecret;
     if (!secret) {
@@ -68,8 +76,13 @@ class AuthService {
     userId: number,
     email: string,
     name: string,
+    sessionVersion: number,
     options: { expiresInMs?: number } = {},
   ): Promise<string> {
+    if (!isPositiveInteger(sessionVersion)) {
+      throw new Error('Cannot create a session without a valid session version.');
+    }
+
     const issuedAt = Date.now();
     const expiresInMs = options.expiresInMs ?? ONE_YEAR_MS;
     const expirationSeconds = Math.floor((issuedAt + expiresInMs) / 1000);
@@ -79,6 +92,7 @@ class AuthService {
       userId,
       email,
       name,
+      sessionVersion,
     })
       .setProtectedHeader({ alg: 'HS256', typ: 'JWT' })
       .setIssuedAt(Math.floor(issuedAt / 1000))
@@ -91,10 +105,9 @@ class AuthService {
    */
   async verifySession(
     cookieValue: string | undefined | null,
-    requestId = 'unknown',
+    _requestId = 'unknown',
   ): Promise<SessionPayload | null> {
     if (!cookieValue) {
-      console.warn('[Auth][Session] Cookie missing', { requestId });
       return null;
     }
 
@@ -104,14 +117,13 @@ class AuthService {
         algorithms: ['HS256'],
       });
 
-      const { userId, email, name } = payload as Record<string, unknown>;
+      const { userId, email, name, sessionVersion } = payload as Record<string, unknown>;
 
-      if (typeof userId !== 'number' || !isNonEmptyString(email)) {
-        console.warn('[Auth][Session] Payload missing required fields', {
-          requestId,
-          hasUserId: typeof userId === 'number',
-          hasEmail: isNonEmptyString(email),
-        });
+      if (
+        typeof userId !== 'number' ||
+        !isNonEmptyString(email) ||
+        !isPositiveInteger(sessionVersion)
+      ) {
         return null;
       }
 
@@ -119,25 +131,25 @@ class AuthService {
         userId,
         email,
         name: isNonEmptyString(name) ? name : email, // Use email as fallback if name is missing
+        sessionVersion,
       };
-    } catch (error: any) {
-      // Provide specific error messages for common JWT issues
-      if (error?.code === 'ERR_JWS_SIGNATURE_VERIFICATION_FAILED') {
-        console.error('[Auth][Session] JWT signature verification failed', {
-          requestId,
-          code: error?.code || null,
-        });
-      } else if (error?.code === 'ERR_JWT_EXPIRED') {
-        console.warn('[Auth][Session] JWT expired', { requestId });
-      } else {
-        console.warn('[Auth][Session] Verification failed', {
-          requestId,
-          message: error?.message || String(error),
-          code: error?.code || null,
-          name: error?.name || null,
-        });
-      }
+    } catch {
       return null;
+    }
+  }
+
+  private async assertAgentAccountIsAvailable(user: Pick<User, 'id' | 'role'>): Promise<void> {
+    if (normalizeAuthRole(user.role) !== 'agent') return;
+
+    const agentProfile = await db.getAgentByUserId(user.id);
+    if (!agentProfile) return;
+
+    if (agentProfile.status === 'rejected') {
+      const reason = agentProfile.rejectionReason || 'No reason provided';
+      throw ForbiddenError(`Your agent application was rejected. Reason: ${reason}`);
+    }
+    if (agentProfile.status === 'suspended') {
+      throw ForbiddenError('Your agent account has been suspended. Please contact support.');
     }
   }
 
@@ -160,30 +172,20 @@ class AuthService {
     const requestId = getRequestId(req);
     const cookies = this.parseCookies(req.headers.cookie);
     const sessionCookie = cookies.get(COOKIE_NAME);
-    console.info('[Auth][Session] authenticateRequest', {
-      requestId,
-      hasCookieHeader: Boolean(req.headers.cookie),
-      cookieCount: cookies.size,
-      hasSessionCookie: Boolean(sessionCookie),
-    });
-
     const session = await this.verifySession(sessionCookie, requestId);
 
     if (!session) {
-      console.warn('[Auth][Session] No valid session', { requestId });
       throw ForbiddenError('Invalid or missing session cookie');
     }
 
     // Get user from database using userId from session
     const user = await db.getUserById(session.userId);
-    console.info('[Auth][Session] User lookup', {
-      requestId,
-      userId: session.userId,
-      userFound: Boolean(user),
-    });
-
     if (!user) {
       throw ForbiddenError('User not found');
+    }
+
+    if (!isPositiveInteger(user.sessionVersion) || user.sessionVersion !== session.sessionVersion) {
+      throw ForbiddenError('Session has been revoked. Please sign in again.');
     }
 
     const normalizedRole = normalizeAuthRole(user.role);
@@ -191,6 +193,8 @@ class AuthService {
       ...user,
       role: normalizedRole,
     } as User;
+
+    await this.assertAgentAccountIsAvailable(normalizedUser);
 
     // Update last signed in timestamp
     await db.updateUserLastSignIn(normalizedUser.id);
@@ -208,7 +212,11 @@ class AuthService {
     }
 
     const verificationToken = crypto.randomBytes(32).toString('hex');
-    await db.updateUserEmailVerificationToken(user.id, verificationToken);
+    await db.updateUserEmailVerificationTokenHash(
+      user.id,
+      hashOpaqueToken(verificationToken),
+      new Date(Date.now() + EMAIL_VERIFICATION_TOKEN_TTL_MS),
+    );
 
     await sendVerificationEmail({
       to: user.email,
@@ -262,7 +270,11 @@ class AuthService {
       loginMethod: 'email',
       role: role, // Use requested role
       isSubaccount: 0,
-      emailVerificationToken,
+      emailVerificationToken: hashOpaqueToken(emailVerificationToken),
+      emailVerificationTokenExpiresAt: new Date(Date.now() + EMAIL_VERIFICATION_TOKEN_TTL_MS)
+        .toISOString()
+        .slice(0, 19)
+        .replace('T', ' '),
     });
 
     const normalizedAgentProfile =
@@ -315,7 +327,10 @@ class AuthService {
       console.log('[Auth] Verification email sent successfully');
       verificationEmailSent = true;
     } catch (emailError) {
-      console.error('[Auth] Failed to send verification email:', emailError);
+      console.error('[Auth] Failed to send verification email', {
+        code: (emailError as any)?.code || null,
+        name: (emailError as any)?.name || null,
+      });
     }
 
     return { userId, verificationEmailSent };
@@ -356,19 +371,7 @@ class AuthService {
       throw ForbiddenError('Please verify your email address before logging in.');
     }
 
-    // Check agent status if user is an agent
-    if (normalizedUser.role === 'agent') {
-      const agentProfile = await db.getAgentByUserId(normalizedUser.id);
-      if (agentProfile) {
-        if (agentProfile.status === 'rejected') {
-          const reason = agentProfile.rejectionReason || 'No reason provided';
-          throw new Error(`Your agent application was rejected. Reason: ${reason}`);
-        }
-        if (agentProfile.status === 'suspended') {
-          throw new Error('Your agent account has been suspended. Please contact support.');
-        }
-      }
-    }
+    await this.assertAgentAccountIsAvailable(normalizedUser);
 
     // Update last signed in timestamp
     await db.updateUserLastSignIn(normalizedUser.id);
@@ -382,6 +385,7 @@ class AuthService {
       normalizedUser.id,
       normalizedUser.email!,
       normalizedUser.name || normalizedUser.email!,
+      normalizedUser.sessionVersion,
       { expiresInMs },
     );
 
@@ -490,9 +494,13 @@ class AuthService {
    * Verify email address using a token
    */
   async verifyEmail(token: string): Promise<User> {
-    const user = await db.getUserByEmailVerificationToken(token);
+    const user = await db.getUserByEmailVerificationTokenHash(hashOpaqueToken(token));
 
-    if (!user) {
+    if (
+      !user ||
+      !user.emailVerificationTokenExpiresAt ||
+      new Date(user.emailVerificationTokenExpiresAt).getTime() <= Date.now()
+    ) {
       throw new Error('Invalid or expired email verification token.');
     }
 
@@ -512,6 +520,7 @@ class AuthService {
       ...user,
       emailVerified: 1,
       emailVerificationToken: null,
+      emailVerificationTokenExpiresAt: null,
       role: normalizeAuthRole(user.role),
     } as User;
   }
@@ -528,13 +537,7 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
     // Attach user to request for use in route handlers
     (req as any).user = user;
     next();
-  } catch (error) {
-    console.warn('[AuthMiddleware] Unauthorized access attempt', {
-      requestId: getRequestId(req),
-      message: (error as any)?.message || String(error),
-      code: (error as any)?.code || null,
-      name: (error as any)?.name || null,
-    });
+  } catch {
     res.status(401).json({ error: 'Unauthorized' });
   }
 };

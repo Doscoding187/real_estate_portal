@@ -12,11 +12,6 @@ const getRequestId = (req: Request): string => {
   return typeof requestId === 'string' && requestId.trim().length > 0 ? requestId : 'unknown';
 };
 
-const isDatabaseQueryError = (message: string): boolean =>
-  message.includes('Failed query:') ||
-  message.includes('ECONNREFUSED') ||
-  message.includes('connect');
-
 const getPostVerificationPath = (role: string | null | undefined): string => {
   switch (role) {
     case 'super_admin':
@@ -128,7 +123,11 @@ export function registerAuthRoutes(app: Express) {
           : 'Account created, but we could not send the verification email right now. Please use resend verification before logging in.',
       });
     } catch (error: any) {
-      console.error('[Auth] Registration failed', error);
+      console.error('[Auth] Registration failed', {
+        requestId: getRequestId(req),
+        code: error?.code || null,
+        name: error?.name || null,
+      });
 
       if (
         error.message?.includes('already exists') ||
@@ -164,26 +163,25 @@ export function registerAuthRoutes(app: Express) {
         return res.status(400).json({ error: 'Invalid input types' });
       }
 
-      console.info('[Auth][Login] Attempt', { requestId, email: normalizedEmail });
+      console.info('[Auth][Login] Attempt', { requestId });
 
       // Login user
       const { user, sessionToken } = await authService.login(email, password, rememberMe);
       console.info('[Auth][Login] Success', {
         requestId,
         userId: user.id,
-        email: user.email || null,
       });
 
       let identityFlags = { hasReferrerIdentity: false, hasManagerIdentity: false };
       try {
         identityFlags = await getActiveDistributionIdentityFlags(user.id);
-      } catch (identityError) {
+      } catch {
         // Authentication remains available if this optional projection is unavailable. The client
         // receives explicit false flags rather than stale or partially-resolved identity data.
-        console.warn(
-          '[Auth] Distribution identity projection failed; returning false flags.',
-          identityError,
-        );
+        console.warn('[Auth] Distribution identity projection failed; returning false flags.', {
+          requestId,
+          userId: user.id,
+        });
       }
 
       // Feature 4: "Remember Me" Functionality
@@ -212,13 +210,9 @@ export function registerAuthRoutes(app: Express) {
     } catch (error: any) {
       // Handle specific error cases with appropriate status codes
       const errorMessage = error?.message || 'Unknown error';
-      const dbErrorMessage = isDatabaseQueryError(errorMessage) ? errorMessage : null;
 
       console.error('[Auth][Login] Failure', {
         requestId,
-        email: normalizedEmail,
-        errorMessage,
-        dbErrorMessage,
         code: error?.code || null,
         name: error?.name || null,
       });
@@ -302,7 +296,11 @@ export function registerAuthRoutes(app: Express) {
         message: 'If an account with that email exists, a password reset link has been sent.',
       });
     } catch (error: any) {
-      console.error('[Auth] Forgot password failed', error);
+      console.warn('[Auth] Forgot password failed', {
+        requestId: getRequestId(req),
+        code: error?.code || null,
+        name: error?.name || null,
+      });
       // Do not reveal internal errors to the client
       res.json({
         success: true,
@@ -338,10 +336,12 @@ export function registerAuthRoutes(app: Express) {
 
       res.json({ success: true, message: 'Your password has been reset successfully.' });
     } catch (error: any) {
-      console.error('[Auth] Reset password failed', error);
-      res
-        .status(400)
-        .json({ error: error.message || 'The password reset token is invalid or has expired.' });
+      console.warn('[Auth] Reset password failed', {
+        requestId: getRequestId(req),
+        code: error?.code || null,
+        name: error?.name || null,
+      });
+      res.status(400).json({ error: 'The password reset token is invalid or has expired.' });
     }
   });
 
@@ -367,6 +367,7 @@ export function registerAuthRoutes(app: Express) {
         user.id,
         user.email || '',
         user.name || user.email || 'User',
+        user.sessionVersion,
         { expiresInMs: VERIFIED_SESSION_MAX_AGE_MS },
       );
 
@@ -378,11 +379,15 @@ export function registerAuthRoutes(app: Express) {
 
       res.redirect(`${ENV.appUrl}${getPostVerificationPath(user.role)}`);
     } catch (error: any) {
-      console.error('[Auth] Email verification failed', error);
+      console.warn('[Auth] Email verification failed', {
+        requestId: getRequestId(req),
+        code: error?.code || null,
+        name: error?.name || null,
+      });
       res
         .status(400)
         .send(
-          `<h1>Email Verification Failed</h1><p>${error.message || 'The verification link is invalid or has expired.'}</p>`,
+          '<h1>Email Verification Failed</h1><p>The verification link is invalid or has expired.</p>',
         );
     }
   });
@@ -407,7 +412,11 @@ export function registerAuthRoutes(app: Express) {
         message: 'If this account exists and is unverified, a verification email has been sent.',
       });
     } catch (error: any) {
-      console.error('[Auth] Resend verification failed', error);
+      console.warn('[Auth] Resend verification failed', {
+        requestId: getRequestId(req),
+        code: error?.code || null,
+        name: error?.name || null,
+      });
       res.status(503).json({
         error: 'Verification email could not be sent right now. Please try again later.',
       });

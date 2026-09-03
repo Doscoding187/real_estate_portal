@@ -356,7 +356,7 @@ export const AUTH_LOGIN_USER_COLUMNS = {
   name: users.name,
   emailVerified: users.emailVerified,
   role: users.role,
-  emailVerificationToken: users.emailVerificationToken,
+  sessionVersion: users.sessionVersion,
 } as const;
 
 // Explicit canonical user columns required by the session boundary.
@@ -377,9 +377,7 @@ export const AUTH_SESSION_USER_COLUMNS = {
   createdAt: users.createdAt,
   updatedAt: users.updatedAt,
   lastSignedIn: users.lastSignedIn,
-  passwordResetToken: users.passwordResetToken,
-  passwordResetTokenExpiresAt: users.passwordResetTokenExpiresAt,
-  emailVerificationToken: users.emailVerificationToken,
+  sessionVersion: users.sessionVersion,
 } as const;
 
 function parseSessionUserId(sessionId: string): number {
@@ -651,14 +649,17 @@ export async function updateUserPassword(userId: number, passwordHash: string): 
       passwordHash,
       passwordResetToken: null,
       passwordResetTokenExpiresAt: null,
+      sessionVersion: sql`${users.sessionVersion} + 1`,
     })
     .where(eq(users.id, userId));
 }
 
 /**
- * Get user by email verification token
+ * Get user by the stored SHA-256 email verification token digest.
  */
-export async function getUserByEmailVerificationToken(token: string): Promise<User | undefined> {
+export async function getUserByEmailVerificationTokenHash(
+  tokenHash: string,
+): Promise<User | undefined> {
   const db = await getDb();
   if (!db) {
     console.warn('[Database] Cannot get user: database not available');
@@ -668,7 +669,7 @@ export async function getUserByEmailVerificationToken(token: string): Promise<Us
   const result = await db
     .select()
     .from(users)
-    .where(eq(users.emailVerificationToken, token))
+    .where(eq(users.emailVerificationToken, tokenHash))
     .limit(1);
   return result.length > 0 ? result[0] : undefined;
 }
@@ -685,16 +686,18 @@ export async function verifyUserEmail(userId: number): Promise<void> {
     .set({
       emailVerified: 1,
       emailVerificationToken: null,
+      emailVerificationTokenExpiresAt: null,
     })
     .where(eq(users.id, userId));
 }
 
 /**
- * Rotate or set a user's email verification token.
+ * Rotate or set a user's hashed, time-bounded email verification token.
  */
-export async function updateUserEmailVerificationToken(
+export async function updateUserEmailVerificationTokenHash(
   userId: number,
-  token: string,
+  tokenHash: string,
+  expiresAt: Date,
 ): Promise<void> {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
@@ -702,7 +705,8 @@ export async function updateUserEmailVerificationToken(
   await db
     .update(users)
     .set({
-      emailVerificationToken: token,
+      emailVerificationToken: tokenHash,
+      emailVerificationTokenExpiresAt: expiresAt,
     })
     .where(eq(users.id, userId));
 }
