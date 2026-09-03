@@ -8,7 +8,7 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { randomUUID } from 'crypto';
 import { db } from '../db';
 import { exploreContent, properties, developments } from '../../drizzle/schema';
-import { eq, and } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import type { ExplorePublishingEligibility } from './explorePublishingEligibilityService';
 
 // Initialize S3 client
@@ -214,35 +214,4 @@ export async function createExploreVideo(
     videoUrl,
     thumbnailUrl,
   };
-}
-
-/**
- * Update video analytics (now stored directly on explore_content)
- */
-export async function updateVideoAnalytics(
-  contentId: number,
-  analytics: {
-    views?: number;
-    watchTime?: number;
-    completionRate?: number;
-    saves?: number;
-    shares?: number;
-    clickThroughs?: number;
-  },
-): Promise<void> {
-  const updates: Record<string, any> = {};
-
-  if (analytics.views !== undefined) updates.viewCount = analytics.views;
-  if (analytics.watchTime !== undefined) updates.totalWatchTime = analytics.watchTime;
-  if (analytics.completionRate !== undefined) updates.completionRate = analytics.completionRate;
-  if (analytics.saves !== undefined) updates.saveCount = analytics.saves;
-  if (analytics.shares !== undefined) updates.shareCount = analytics.shares;
-  if (analytics.clickThroughs !== undefined) updates.clickThroughCount = analytics.clickThroughs;
-
-  if (Object.keys(updates).length === 0) return;
-
-  await db
-    .update(exploreContent)
-    .set(updates)
-    .where(and(eq(exploreContent.id, contentId), eq(exploreContent.contentType, 'video')));
 }
