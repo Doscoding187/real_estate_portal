@@ -66,6 +66,7 @@ import {
   DATABASE_OPERATIONS,
   type DatabaseCredentialClass,
   type DatabaseOperation,
+  type ResolvedDatabaseAuthority,
 } from '../server/_core/databaseAuthority/types';
 import { loadAndValidateMigrationManifest } from '../server/migrations/migrationManifest';
 import { runRejectedZeroStatementRecovery } from '../server/migrations/recoverRejectedZeroStatementMigration';
@@ -150,6 +151,61 @@ function print(value: unknown): void {
   console.log(JSON.stringify(value, null, 2));
 }
 
+type LocalServiceContextReport =
+  | {
+      applicability: 'local';
+      host: string;
+      port: number;
+      directory: string;
+      dataDirectory: string;
+      fingerprint: string;
+      legacyHomeDirectory: string;
+      legacyPathPolicy: string;
+    }
+  | {
+      applicability: 'not-applicable';
+      reason: string;
+    };
+
+function localServiceContextReport(): Extract<
+  LocalServiceContextReport,
+  { applicability: 'local' }
+> {
+  return {
+    applicability: 'local',
+    host: LOCAL_SERVICE_HOST,
+    port: LOCAL_SERVICE_PORT,
+    directory: localServiceRoot(),
+    dataDirectory: localServiceDataDir(),
+    fingerprint: localServiceFingerprint(),
+    legacyHomeDirectory: localServiceLegacyRoot(),
+    legacyPathPolicy: 'inactive-residue-only; never adopted or deleted automatically',
+  };
+}
+
+/**
+ * Context diagnostics never connect to a database. Local-service metadata is
+ * meaningful only for the authority-owned loopback target, so hosted
+ * deployments must not derive a UID-bound local path merely to print context.
+ */
+export function databaseAuthorityContextReport(
+  authority: ResolvedDatabaseAuthority,
+  localServiceReport: () => Extract<
+    LocalServiceContextReport,
+    { applicability: 'local' }
+  > = localServiceContextReport,
+): ResolvedDatabaseAuthority['context'] & { localService: LocalServiceContextReport } {
+  return {
+    ...authority.context,
+    localService: authority.context.local
+      ? localServiceReport()
+      : {
+          applicability: 'not-applicable',
+          reason: 'The resolved database target is not local; no local-service path was evaluated.',
+        },
+  };
+}
+
 async function run(command: Command): Promise<void> {
   if (command === 'manifest') {
     const manifest = loadAndValidateMigrationManifest();
@@ -177,18 +233,7 @@ async function run(command: Command): Promise<void> {
 
   if (command === 'context') {
     const authority = authorityFor(operationOption('read-only-connect'));
-    print({
-      ...authority.context,
-      localService: {
-        host: LOCAL_SERVICE_HOST,
-        port: LOCAL_SERVICE_PORT,
-        directory: localServiceRoot(),
-        dataDirectory: localServiceDataDir(),
-        fingerprint: localServiceFingerprint(),
-        legacyHomeDirectory: localServiceLegacyRoot(),
-        legacyPathPolicy: 'inactive-residue-only; never adopted or deleted automatically',
-      },
-    });
+    print(databaseAuthorityContextReport(authority));
     return;
   }
 
