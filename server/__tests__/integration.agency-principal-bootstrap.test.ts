@@ -2,8 +2,22 @@ import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import dotenv from 'dotenv';
-import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { and, eq, inArray } from 'drizzle-orm';
+
+const { deliveredVerificationEmails } = vi.hoisted(() => ({
+  deliveredVerificationEmails: [] as Array<{ to: string; verificationToken: string }>,
+}));
+
+vi.mock('../_core/email', () => ({
+  sendVerificationEmail: vi.fn(async (input: { to: string; verificationToken: string }) => {
+    deliveredVerificationEmails.push({
+      to: input.to,
+      verificationToken: input.verificationToken,
+    });
+    return { success: true, messageId: 'test-verification-message' };
+  }),
+}));
 
 import { appRouter } from '../routers';
 import { authService } from '../_core/auth';
@@ -173,8 +187,15 @@ async function registerPrincipal(suffix: string) {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
   const [unverified] = await db.select().from(users).where(eq(users.id, result.userId)).limit(1);
-  if (!unverified?.emailVerificationToken) throw new Error('Expected verification token');
-  return { user: unverified, verificationToken: unverified.emailVerificationToken, email };
+  const delivered = [...deliveredVerificationEmails].reverse().find(item => item.to === email);
+  if (
+    !unverified?.emailVerificationToken ||
+    !unverified.emailVerificationTokenExpiresAt ||
+    !delivered?.verificationToken
+  ) {
+    throw new Error('Expected a stored verification digest and a delivered verification token');
+  }
+  return { user: unverified, verificationToken: delivered.verificationToken, email };
 }
 
 beforeAll(() => {

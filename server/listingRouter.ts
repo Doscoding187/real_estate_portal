@@ -60,6 +60,7 @@ import {
   privateAddressSchema,
 } from '../shared/location-contract';
 import {
+  assertSupportedListingMediaContentType,
   createListingMediaUploadToken,
   confirmListingMediaUploadToken,
   isExistingListingMediaToken,
@@ -72,7 +73,7 @@ import {
 import {
   buildLocalMediaPublicUrl,
   buildLocalMediaUploadUrl,
-  createLocalMediaKey,
+  createMediaStorageKey,
   getMediaStorageAdapter,
   resolveMediaDeliveryUrl,
 } from './_core/mediaStorage';
@@ -81,6 +82,7 @@ import {
   isCommercialMarketingPropertyType,
 } from '../shared/commercial-domain';
 import { assertCommercialMarketingMediaCustody } from './services/commercialOfficeService';
+import { canManageListingContent } from './services/listingContentCustody';
 
 function rejectGenericCommercialWorkflow(propertyType: unknown): void {
   if (!isCommercialMarketingPropertyType(propertyType)) return;
@@ -88,6 +90,71 @@ function rejectGenericCommercialWorkflow(propertyType: unknown): void {
     code: 'BAD_REQUEST',
     message: COMMERCIAL_INVENTORY_MANAGEMENT_MESSAGE,
   });
+}
+
+type ListingContentRecord = {
+  ownerId?: number | string | null;
+  agentId?: number | string | null;
+  agencyId?: number | string | null;
+};
+
+/**
+ * Keep private generic Listing reads, edits, performance data, and media
+ * reservations on one exact materialized-custody rule.  In particular, an
+ * assigned agent cannot retain access after their assigned profile or agency
+ * no longer agrees with the Listing.
+ */
+async function assertListingContentCustody(
+  listing: ListingContentRecord,
+  user: ReturnType<typeof requireUser>,
+  message: string,
+): Promise<void> {
+  const isDirectOwner = Number(listing.ownerId) === user.id;
+  const isAssignedAgent = String(user.role || '').toLowerCase() === 'agent' && !isDirectOwner;
+  const agent = isAssignedAgent ? await db.getAgentByUserId(user.id) : null;
+
+  if (
+    !canManageListingContent(listing, {
+      userId: user.id,
+      role: user.role,
+      agencyId: user.agencyId,
+      agent: agent
+        ? {
+            id: agent.id,
+            userId: agent.userId,
+            agencyId: agent.agencyId,
+            status: agent.status,
+          }
+        : null,
+    })
+  ) {
+    throw new TRPCError({ code: 'FORBIDDEN', message });
+  }
+}
+
+async function assertListingMediaCustody(
+  listingId: number,
+  user: ReturnType<typeof requireUser>,
+  message: string,
+) {
+  const listing = await db.getListingById(listingId);
+  if (!listing) {
+    throw new TRPCError({ code: 'FORBIDDEN', message });
+  }
+
+  if (isCommercialMarketingPropertyType(listing.propertyType)) {
+    // Commercial media has a stricter active-link authority. Do not let the
+    // generic Listing content rule widen that specialised supplier boundary.
+    try {
+      await assertCommercialMarketingMediaCustody({ listingId, userId: user.id });
+    } catch {
+      throw new TRPCError({ code: 'FORBIDDEN', message });
+    }
+    return listing;
+  }
+
+  await assertListingContentCustody(listing, user, message);
+  return listing;
 }
 
 function publicationPreflightAction(
@@ -777,14 +844,20 @@ export const listingRouter = router({
       }
 
       try {
-        // Verify ownership
+        // Private content remains available to the canonical owner, the
+        // approved assigned agent, and the exact agency manager scope.
         const listing = await db.getListingById(input.id);
-        if (!listing || listing.userId !== userId) {
+        if (!listing) {
           throw new TRPCError({
             code: 'FORBIDDEN',
             message: 'Not authorized to update this listing',
           });
         }
+        await assertListingContentCustody(
+          listing,
+          requireUser(ctx),
+          'Not authorized to update this listing',
+        );
         rejectGenericCommercialWorkflow(listing.propertyType);
         // A general listing cannot be reclassified into Commercial. Commercial
         // identity is created atomically with its Asset → Space → Availability
@@ -1093,18 +1166,11 @@ export const listingRouter = router({
         return null; // Return null instead of throwing for consistency with properties.getById
       }
 
-      const user = requireUser(ctx);
-      const isOwner =
-        Number((listing as any).userId || 0) === user.id ||
-        Number((listing as any).ownerId || 0) === user.id;
-      const isSuperAdmin = user.role === 'super_admin';
-
-      if (!isOwner && !isSuperAdmin) {
-        throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: 'Not authorized to view this listing',
-        });
-      }
+      await assertListingContentCustody(
+        listing,
+        requireUser(ctx),
+        'Not authorized to view this listing',
+      );
 
       // Fetch media
       const rawMedia = await db.getListingMedia(input.id);
@@ -1319,37 +1385,23 @@ export const listingRouter = router({
       try {
         const user = requireUser(ctx);
         if (input.listingId !== undefined) {
-          const listing = await db.getListingById(input.listingId);
-          const isOwner =
-            listing &&
-            (Number((listing as any).userId || 0) === user.id ||
-              Number((listing as any).ownerId || 0) === user.id);
-          if (listing && isCommercialMarketingPropertyType((listing as any).propertyType)) {
-            // Commercial media is mutated only through the linked canonical
-            // marketing Listing.  Even the legacy generic upload reservation
-            // cannot be issued for an unlinked or stale Commercial mirror.
-            try {
-              await assertCommercialMarketingMediaCustody({
-                listingId: input.listingId,
-                userId: user.id,
-              });
-            } catch {
-              throw new TRPCError({
-                code: 'FORBIDDEN',
-                message: 'Not authorized to upload media for this listing',
-              });
-            }
-          } else if (!listing || (!isOwner && user.role !== 'super_admin')) {
-            throw new TRPCError({
-              code: 'FORBIDDEN',
-              message: 'Not authorized to upload media for this listing',
-            });
-          }
+          // An upload reservation is not durable authority. Recheck the
+          // Listing's current custody before issuing it.
+          await assertListingMediaCustody(
+            input.listingId,
+            user,
+            'Not authorized to upload media for this listing',
+          );
         }
+
+        // Validate before issuing a provider URL. Otherwise an unsupported
+        // content type could still consume a signed S3 write despite failing
+        // later when the browser tries to obtain its Listing-media token.
+        assertSupportedListingMediaContentType(input.type, input.contentType);
 
         const storageScope = input.listingId?.toString() || `draft-${user.id}`;
         if (getMediaStorageAdapter() === 'local') {
-          const key = createLocalMediaKey(input.filename, storageScope);
+          const key = createMediaStorageKey(input.filename, storageScope);
           const uploadToken = createListingMediaUploadToken({
             key,
             mediaType: input.type,
@@ -1421,20 +1473,14 @@ export const listingRouter = router({
           requireConfirmed: false,
         });
         if (reservation.listingId !== null) {
-          const listing = await db.getListingById(reservation.listingId);
-          if (listing && isCommercialMarketingPropertyType((listing as any).propertyType)) {
-            try {
-              await assertCommercialMarketingMediaCustody({
-                listingId: reservation.listingId,
-                userId: user.id,
-              });
-            } catch {
-              throw new TRPCError({
-                code: 'FORBIDDEN',
-                message: 'Not authorized to confirm media for this listing',
-              });
-            }
-          }
+          // A token may outlive a reassignment, agency change, or Listing
+          // deletion. Confirmation therefore rechecks the live custody
+          // boundary before accepting the stored object.
+          await assertListingMediaCustody(
+            reservation.listingId,
+            user,
+            'Not authorized to confirm media for this listing',
+          );
         }
         const { assertUploadedMediaObject } = await import('./_core/imageUpload');
         const verifiedObject = await assertUploadedMediaObject(
@@ -1474,6 +1520,12 @@ export const listingRouter = router({
           throw new TRPCError({ code: 'NOT_FOUND', message: 'Listing not found' });
         }
 
+        await assertListingContentCustody(
+          listing,
+          requireUser(ctx),
+          'Not authorized to view analytics for this listing',
+        );
+
         // Fetch analytics
         const analytics = await db.getListingAnalytics(input.listingId);
 
@@ -1504,6 +1556,7 @@ export const listingRouter = router({
 
         return analytics;
       } catch (error) {
+        if (error instanceof TRPCError) throw error;
         console.error('Error fetching analytics:', error);
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',

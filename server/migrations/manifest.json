@@ -4,7 +4,7 @@
   "historyTable": "sql_migration_history",
   "attemptTable": "sql_migration_attempts",
   "lockName": "property_listify_manifest_migrations",
-  "expectedHead": "0063_agent_launch_access_earnings_feature.sql",
+  "expectedHead": "0065_auth_verification_token_cleanup.sql",
   "migrations": [
     {
       "sequence": 0,
@@ -655,6 +655,26 @@
       "checksum": "b3e8227ba6224de1b7d7426fdafbd8e872dd53f9191a77b271ed1a61dae44cef",
       "parent": "0062_agent_launch_access_full_capabilities.sql",
       "parentChecksum": "de1e31655ebb152af383c18197bf299cacee4b365ee9639f35c0ec3257915eff",
+      "kind": "transactional-data",
+      "statementPolicy": "transactional-dml",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 64,
+      "filename": "0064_auth_session_security.sql",
+      "checksum": "8c5add9fe3c7cc2739738975c2067a73a5c6db7a4c160d40f260988ae72eac5d",
+      "parent": "0063_agent_launch_access_earnings_feature.sql",
+      "parentChecksum": "b3e8227ba6224de1b7d7426fdafbd8e872dd53f9191a77b271ed1a61dae44cef",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 65,
+      "filename": "0065_auth_verification_token_cleanup.sql",
+      "checksum": "0cd1523e5467f73dd0534a04116d25a974e9e2b9a900692e6c3933a67a3182eb",
+      "parent": "0064_auth_session_security.sql",
+      "parentChecksum": "8c5add9fe3c7cc2739738975c2067a73a5c6db7a4c160d40f260988ae72eac5d",
       "kind": "transactional-data",
       "statementPolicy": "transactional-dml",
       "requiredReferenceDataVersion": null
