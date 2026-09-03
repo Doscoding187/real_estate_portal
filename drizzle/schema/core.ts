@@ -71,9 +71,11 @@ export const users = mysqlTable(
     createdAt: timestamp({ mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
     lastSignedIn: timestamp({ mode: 'string' }).defaultNow().notNull(),
+    sessionVersion: int().default(1).notNull(),
     passwordResetToken: varchar({ length: 255 }),
     passwordResetTokenExpiresAt: timestamp({ mode: 'string' }),
     emailVerificationToken: varchar({ length: 255 }),
+    emailVerificationTokenExpiresAt: timestamp({ mode: 'string' }),
   },
   table => [index('email_idx').on(table.email), index('role_idx').on(table.role)],
 );

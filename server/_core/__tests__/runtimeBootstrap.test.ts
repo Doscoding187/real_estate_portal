@@ -3,7 +3,11 @@ import os from 'os';
 import path from 'path';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { loadAppRuntimeEnv, resolveAppRuntimeEnv } from '../runtimeBootstrap';
+import {
+  assertDeployedTrustProxyConfiguration,
+  loadAppRuntimeEnv,
+  resolveAppRuntimeEnv,
+} from '../runtimeBootstrap';
 
 const tempDirs: string[] = [];
 
@@ -58,6 +62,18 @@ describe('resolveAppRuntimeEnv', () => {
         NODE_ENV: 'development',
       } as NodeJS.ProcessEnv),
     ).toBe('production');
+  });
+});
+
+describe('assertDeployedTrustProxyConfiguration', () => {
+  it('requires an explicit positive hop count in production', () => {
+    expect(() =>
+      assertDeployedTrustProxyConfiguration({ APP_ENV: 'production', TRUST_PROXY: 'false' }),
+    ).toThrow('TRUST_PROXY must be the exact positive number');
+
+    expect(() =>
+      assertDeployedTrustProxyConfiguration({ APP_ENV: 'production', TRUST_PROXY: '1' }),
+    ).not.toThrow();
   });
 });
 
