@@ -16,6 +16,10 @@ type WorktreeIdentityMaterial = {
   clean?: boolean;
 };
 
+type RuntimeIdentityOptions = {
+  env?: NodeJS.ProcessEnv;
+};
+
 function sha256(value: string): string {
   return createHash('sha256').update(value).digest('hex');
 }
@@ -30,9 +34,7 @@ function readableSlug(worktreePath: string): string {
   return slug || 'worktree';
 }
 
-export function deriveGitWorktreeIdentity(
-  material: WorktreeIdentityMaterial,
-): GitWorktreeIdentity {
+export function deriveGitWorktreeIdentity(material: WorktreeIdentityMaterial): GitWorktreeIdentity {
   const repositoryRoot = realpathSync(material.repositoryRoot);
   const gitCommonDirectory = realpathSync(material.gitCommonDirectory);
   const worktreePath = realpathSync(material.worktreePath);
@@ -57,6 +59,54 @@ export function deriveGitWorktreeIdentity(
     clean: material.clean ?? true,
     ownershipKey,
     expectedWorktreeDatabase,
+  });
+}
+
+function hasRailwayDeploymentIdentity(env: NodeJS.ProcessEnv): boolean {
+  return [
+    env.RAILWAY_GIT_COMMIT_SHA,
+    env.RAILWAY_ENVIRONMENT,
+    env.RAILWAY_ENVIRONMENT_NAME,
+    env.RAILWAY_PUBLIC_DOMAIN,
+  ].some(value => Boolean(String(value ?? '').trim()));
+}
+
+function railwayDeploymentLabel(env: NodeJS.ProcessEnv): string {
+  const value = String(
+    env.RAILWAY_GIT_BRANCH ??
+      env.RAILWAY_ENVIRONMENT_NAME ??
+      env.RAILWAY_ENVIRONMENT ??
+      'deployment',
+  ).trim();
+  return value || 'deployment';
+}
+
+function railwayDeploymentHead(env: NodeJS.ProcessEnv): string {
+  const value = String(
+    env.RAILWAY_GIT_COMMIT_SHA ?? env.GITHUB_SHA ?? env.SOURCE_VERSION ?? 'railway-artifact',
+  ).trim();
+  return value || 'railway-artifact';
+}
+
+/**
+ * Railway's production artifact is deliberately not a Git checkout. Remote
+ * targets do not use worktree ownership for authorization, but the resolved
+ * context still needs a stable, non-local identity for audit evidence.
+ */
+export function deriveRailwayDeploymentIdentity(
+  cwd = process.cwd(),
+  env: NodeJS.ProcessEnv = process.env,
+): GitWorktreeIdentity {
+  const deploymentRoot = realpathSync(cwd);
+
+  return deriveGitWorktreeIdentity({
+    repositoryRoot: deploymentRoot,
+    gitCommonDirectory: deploymentRoot,
+    worktreePath: deploymentRoot,
+    branch: `railway/${railwayDeploymentLabel(env)}`,
+    head: railwayDeploymentHead(env),
+    registered: false,
+    clean: false,
   });
 }
 
@@ -100,11 +150,30 @@ export function readGitWorktreeIdentity(cwd = process.cwd()): GitWorktreeIdentit
     worktreePath,
     branch: git(cwd, ['branch', '--show-current'], true),
     head: git(cwd, ['rev-parse', 'HEAD']),
-    upstream: git(cwd, ['rev-parse', '--abbrev-ref', '--symbolic-full-name', '@{upstream}'], true) || null,
+    upstream:
+      git(cwd, ['rev-parse', '--abbrev-ref', '--symbolic-full-name', '@{upstream}'], true) || null,
     originMainHead: git(cwd, ['rev-parse', 'origin/main'], true) || null,
     registered: registeredPaths.includes(worktreePath),
     clean: git(cwd, ['status', '--porcelain']).length === 0,
   });
+}
+
+/**
+ * Resolve the identity appropriate to the runtime artifact. Local and CI
+ * callers retain the Git-backed identity and fail closed when Git metadata is
+ * unavailable. Railway production uses its deployment metadata instead:
+ * Railpack does not include a Git executable or checkout in the runtime image.
+ */
+export function readRuntimeWorktreeIdentity(
+  cwd = process.cwd(),
+  options: RuntimeIdentityOptions = {},
+): GitWorktreeIdentity {
+  const env = options.env ?? process.env;
+  if (hasRailwayDeploymentIdentity(env)) {
+    return deriveRailwayDeploymentIdentity(cwd, env);
+  }
+
+  return readGitWorktreeIdentity(cwd);
 }
 
 export function isProtectedIntegrationBranch(branch: string): boolean {

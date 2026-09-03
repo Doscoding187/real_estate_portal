@@ -2,7 +2,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { buildMysqlConnectionSecurityConfig } from '../databaseTls';
 import { storeDatabaseCredentialUrl, readDatabaseCredentialUrl } from './credentialVault';
 import { resolveDatabaseEnvironment } from './environment';
-import { isProtectedIntegrationBranch, readGitWorktreeIdentity } from './worktreeIdentity';
+import { isProtectedIntegrationBranch, readRuntimeWorktreeIdentity } from './worktreeIdentity';
 import { readWorktreeDatabaseProfile } from './worktreeProfile';
 import type {
   DatabaseCredentialClass,
@@ -88,10 +88,11 @@ export function resolveDatabaseAuthority(input: {
   profileRoot?: string;
 }): ResolvedDatabaseAuthority {
   const cwd = input.cwd ?? process.cwd();
-  const identity = input.gitIdentity ?? readGitWorktreeIdentity(cwd);
+  const processEnv = input.processEnv ?? process.env;
+  const identity = input.gitIdentity ?? readRuntimeWorktreeIdentity(cwd, { env: processEnv });
   const environment = resolveDatabaseEnvironment({
     cwd,
-    processEnv: input.processEnv,
+    processEnv,
     explicitDatabaseUrl: input.explicitDatabaseUrl,
     centralPath: input.centralPath,
   });
