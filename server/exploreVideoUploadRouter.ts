@@ -12,7 +12,6 @@ import {
   createExploreVideo,
   validateVideoMetadata,
   validateVideoDuration,
-  updateVideoAnalytics,
 } from './services/exploreVideoService';
 import { requireUser } from './_core/requireUser';
 import { getDb } from './db';
@@ -24,8 +23,8 @@ import {
 } from './services/explorePublishingEligibilityService';
 import {
   processUploadedVideo,
-  updateTranscodedUrls,
-  type TranscodedVideo,
+  getTranscodingStatus as getVideoTranscodingStatus,
+  validateVideoFile as validateUploadedVideoFile,
 } from './services/videoProcessingService';
 
 async function requireExplorePublisher(ctx: Parameters<typeof requireUser>[0]) {
@@ -148,33 +147,6 @@ export const exploreVideoUploadRouter = router({
     }),
 
   /**
-   * Update video analytics
-   * Requirements 8.6: Provide analytics on views, watch time, saves, and click-throughs
-   */
-  updateAnalytics: protectedProcedure
-    .input(
-      z.object({
-        exploreVideoId: z.number(),
-        analytics: z.object({
-          views: z.number().optional(),
-          watchTime: z.number().optional(),
-          completionRate: z.number().min(0).max(100).optional(),
-          saves: z.number().optional(),
-          shares: z.number().optional(),
-          clickThroughs: z.number().optional(),
-        }),
-      }),
-    )
-    .mutation(async ({ input }) => {
-      await updateVideoAnalytics(input.exploreVideoId, input.analytics);
-
-      return {
-        success: true,
-        message: 'Analytics updated successfully',
-      };
-    }),
-
-  /**
    * Validate video metadata before upload
    * Requirements 8.1: Validate required metadata
    */
@@ -222,34 +194,6 @@ export const exploreVideoUploadRouter = router({
     }),
 
   /**
-   * Update transcoded video URLs
-   * Called by transcoding service webhook when processing completes
-   * Requirements 8.2: Store processed video URLs
-   */
-  updateTranscodedUrls: protectedProcedure
-    .input(
-      z.object({
-        exploreVideoId: z.number(),
-        transcodedVideos: z.array(
-          z.object({
-            quality: z.string(),
-            url: z.string().url(),
-            width: z.number(),
-            height: z.number(),
-          }),
-        ),
-      }),
-    )
-    .mutation(async ({ input }) => {
-      await updateTranscodedUrls(input.exploreVideoId, input.transcodedVideos);
-
-      return {
-        success: true,
-        message: 'Transcoded URLs updated successfully',
-      };
-    }),
-
-  /**
    * Get transcoding status for a video
    * Requirements 8.2: Track video processing status
    */
@@ -259,9 +203,9 @@ export const exploreVideoUploadRouter = router({
         exploreVideoId: z.number(),
       }),
     )
-    .query(async ({ input }) => {
-      const { getTranscodingStatus } = await import('./services/videoProcessingService');
-      const status = await getTranscodingStatus(input.exploreVideoId);
+    .query(async ({ ctx, input }) => {
+      await requireExplorePublisher(ctx);
+      const status = await getVideoTranscodingStatus(input.exploreVideoId);
 
       return {
         success: true,
@@ -280,9 +224,9 @@ export const exploreVideoUploadRouter = router({
         duration: z.number().optional(),
       }),
     )
-    .query(async ({ input }) => {
-      const { validateVideoFile } = await import('./services/videoProcessingService');
-      const validation = await validateVideoFile(input.videoUrl, input.duration);
+    .query(async ({ ctx, input }) => {
+      await requireExplorePublisher(ctx);
+      const validation = await validateUploadedVideoFile(input.videoUrl, input.duration);
 
       return {
         valid: validation.valid,
