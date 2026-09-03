@@ -11,7 +11,6 @@ import {
   createExploreVideo,
   validateVideoMetadata,
   validateVideoDuration,
-  updateVideoAnalytics,
   type VideoMetadata,
 } from '../services/exploreVideoService';
 import { getDb } from '../db';
@@ -69,18 +68,6 @@ const createVideoSchema = z.object({
     location: z.string().optional(),
     beds: z.number().optional(),
     baths: z.number().optional(),
-  }),
-});
-
-const updateAnalyticsSchema = z.object({
-  exploreVideoId: z.number(),
-  analytics: z.object({
-    views: z.number().optional(),
-    watchTime: z.number().optional(),
-    completionRate: z.number().min(0).max(100).optional(),
-    saves: z.number().optional(),
-    shares: z.number().optional(),
-    clickThroughs: z.number().optional(),
   }),
 });
 
@@ -187,45 +174,6 @@ router.post('/create', async (req, res) => {
     console.error('[ExploreVideoUpload] Create video error:', error);
     res.status(500).json({
       error: 'Failed to create video',
-      message: error.message,
-    });
-  }
-});
-
-/**
- * POST /api/explore/video/analytics
- * Update video analytics
- * Requirements 8.6: Provide analytics on views, watch time, saves, and click-throughs
- */
-router.post('/analytics', async (req, res) => {
-  try {
-    // Check authentication
-    if (!req.user) {
-      return res.status(401).json({ error: 'Authentication required' });
-    }
-
-    // Validate request body
-    const validation = updateAnalyticsSchema.safeParse(req.body);
-    if (!validation.success) {
-      return res.status(400).json({
-        error: 'Invalid request',
-        details: validation.error.errors,
-      });
-    }
-
-    const { exploreVideoId, analytics } = validation.data;
-
-    // Update analytics
-    await updateVideoAnalytics(exploreVideoId, analytics);
-
-    res.json({
-      success: true,
-      message: 'Analytics updated successfully',
-    });
-  } catch (error: any) {
-    console.error('[ExploreVideoUpload] Update analytics error:', error);
-    res.status(500).json({
-      error: 'Failed to update analytics',
       message: error.message,
     });
   }

@@ -149,6 +149,11 @@ describe('local listing media storage boundary', () => {
     expect(() => mediaStorage.assertSafeLocalMediaKey('../etc/passwd')).toThrow();
     expect(() => mediaStorage.assertSafeLocalMediaKey('/etc/passwd')).toThrow();
     expect(() => mediaStorage.assertSafeLocalMediaKey('properties/draft-42/a.meta.json')).toThrow();
+    expect(() => mediaStorage.createMediaStorageKey('house.png', '../../private')).toThrow();
+    expect(() => mediaStorage.createMediaStorageKey('  ', 'draft-42')).toThrow();
+    expect(mediaStorage.createMediaStorageKey('house.png', 'draft-42')).toMatch(
+      /^properties\/draft-42\/[^/]+\.png$/,
+    );
 
     const traversalResponse = await fetch(
       `${baseUrl}/api/local-media/object?key=${encodeURIComponent('../../etc/passwd')}`,

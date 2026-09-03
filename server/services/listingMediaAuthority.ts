@@ -41,7 +41,10 @@ function sign(encodedPayload: string, secret: string): string {
   return createHmac('sha256', secret).update(encodedPayload).digest('base64url');
 }
 
-function assertSupportedContentType(mediaType: MediaType, contentType: string): string {
+export function assertSupportedListingMediaContentType(
+  mediaType: MediaType,
+  contentType: string,
+): string {
   const normalized = contentType.trim().toLowerCase();
   const isImage = /^image\/(jpeg|png|webp|gif|avif)$/.test(normalized);
   const isVideo = /^video\/(mp4|webm|quicktime|x-matroska)$/.test(normalized);
@@ -96,7 +99,7 @@ export function createListingMediaUploadToken(
     throw new Error('Invalid listing media listing id.');
   }
   const scope = listingId === null ? `draft-${input.userId}` : String(listingId);
-  const contentType = assertSupportedContentType(input.mediaType, input.contentType);
+  const contentType = assertSupportedListingMediaContentType(input.mediaType, input.contentType);
   const key = assertSafeMediaKey(input.key, scope);
   const now = Math.floor((options?.now ?? Date.now()) / 1000);
   const payload: ListingMediaUploadTokenPayload = {
@@ -165,7 +168,7 @@ export function verifyListingMediaUploadToken(
   }
 
   const scope = payload.listingId === null ? `draft-${payload.userId}` : String(payload.listingId);
-  assertSupportedContentType(payload.mediaType, payload.contentType);
+  assertSupportedListingMediaContentType(payload.mediaType, payload.contentType);
   assertSafeMediaKey(payload.key, scope);
 
   if (options?.requireConfirmed && !payload.confirmed) {
