@@ -217,7 +217,8 @@ async function startServer() {
 
   console.log('[Routes] ℹ️  /api/partners is handled by tRPC, skipping Express mount');
 
-  await mountOptionalRouter(app, '/api/partner-analytics', '../partnerAnalyticsRouter');
+  // Legacy partner analytics routes are intentionally disabled. They expose
+  // commercial analytics without canonical partner identity or ownership checks.
   await mountOptionalRouter(app, '/api/content', '../contentRouter');
   await mountOptionalRouter(app, '/api/topics', '../topicsRouter');
   // Legacy partner subscription routes are intentionally disabled.
