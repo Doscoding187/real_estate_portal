@@ -3585,6 +3585,7 @@ const adminDistributionRouter = router({
         .set({
           emailVerified: 1,
           emailVerificationToken: null,
+          emailVerificationTokenExpiresAt: null,
         })
         .where(eq(users.id, userId));
 
@@ -3727,6 +3728,7 @@ const adminDistributionRouter = router({
         .set({
           emailVerified: 1,
           emailVerificationToken: null,
+          emailVerificationTokenExpiresAt: null,
         })
         .where(eq(users.id, userId));
 

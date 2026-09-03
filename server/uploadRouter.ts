@@ -4,17 +4,16 @@ import { requireUser } from './_core/requireUser';
 import {
   buildLocalMediaPublicUrl,
   buildLocalMediaUploadUrl,
-  createLocalMediaKey,
+  createMediaStorageKey,
   getMediaStorageAdapter,
   resolveMediaDeliveryUrl,
 } from './_core/mediaStorage';
 import { createListingMediaUploadToken } from './services/listingMediaAuthority';
-import { randomUUID } from 'crypto';
 import { TRPCError } from '@trpc/server';
 
 type LocalUploadMediaType = 'image' | 'video' | 'pdf';
 
-function inferLocalUploadMediaType(contentType: string): LocalUploadMediaType | null {
+function inferUploadMediaType(contentType: string): LocalUploadMediaType | null {
   const normalized = contentType.trim().toLowerCase();
   if (/^image\/(jpeg|png|webp|gif|avif)$/.test(normalized)) return 'image';
   if (/^video\/(mp4|webm|quicktime|x-matroska)$/.test(normalized)) return 'video';
@@ -39,6 +38,8 @@ export const uploadRouter = router({
       z.object({
         filename: z.string(),
         contentType: z.string(),
+        // Kept only for wire compatibility with older clients. It is never
+        // used as a storage scope without a Listing-level custody assertion.
         propertyId: z.string().optional(),
       }),
     )
@@ -48,20 +49,21 @@ export const uploadRouter = router({
       );
       try {
         const user = requireUser(ctx);
+        const mediaType = inferUploadMediaType(input.contentType);
+        if (!mediaType) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Media uploads require an image, video, or PDF content type.',
+          });
+        }
+
+        // This legacy endpoint does not receive a Listing ID with an
+        // authorization proof. Its objects must remain within the caller's
+        // draft namespace for every adapter, including S3.
+        const storageScope = `draft-${user.id}`;
 
         if (getMediaStorageAdapter() === 'local') {
-          const mediaType = inferLocalUploadMediaType(input.contentType);
-          if (!mediaType) {
-            throw new TRPCError({
-              code: 'BAD_REQUEST',
-              message: 'Local media uploads require an image, video, or PDF content type.',
-            });
-          }
-
-          // The legacy endpoint does not receive an authorized listing ID. Keep
-          // its local objects user-scoped rather than trusting the optional,
-          // historically client-controlled propertyId for storage authority.
-          const key = createLocalMediaKey(input.filename, `draft-${user.id}`);
+          const key = createMediaStorageKey(input.filename, storageScope);
           const uploadToken = createListingMediaUploadToken({
             key,
             mediaType,
@@ -79,15 +81,12 @@ export const uploadRouter = router({
           };
         }
 
-        // Generate a unique property ID if not provided
-        const propertyId = input.propertyId || randomUUID();
-
         // Import the S3 helper only for the explicitly selected S3 adapter.
         const { generatePresignedUploadUrl } = await import('./_core/imageUpload');
         const result = await generatePresignedUploadUrl(
           input.filename,
           input.contentType,
-          propertyId,
+          storageScope,
         );
 
         console.log(`[UploadRouter] generated presigned URL successfully`);

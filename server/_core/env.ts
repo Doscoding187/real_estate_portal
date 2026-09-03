@@ -10,18 +10,12 @@ if (rawPublicAppUrl && rawPublicAppUrl.trim() !== normalizedPublicAppUrl) {
   );
 }
 
-// Debug logging to verify environment variables are loaded
-console.log('----------------------------------------');
-console.log('[ENV] Configuration Loaded:');
-console.log(`[ENV] NODE_ENV: ${process.env.NODE_ENV}`);
-console.log(`[ENV] AWS_REGION: ${process.env.AWS_REGION}`);
-console.log(`[ENV] S3_BUCKET_NAME: ${process.env.S3_BUCKET_NAME}`);
-const awsKey = process.env.AWS_ACCESS_KEY_ID;
-console.log(
-  `[ENV] AWS_ACCESS_KEY_ID: ${awsKey ? `${awsKey.slice(0, 4)}...${awsKey.slice(-4)}` : 'MISSING'}`,
-);
-console.log(`[ENV] CLOUDFRONT_URL: ${process.env.CLOUDFRONT_URL}`);
-console.log('----------------------------------------');
+console.log('[ENV] Runtime configuration loaded', {
+  nodeEnv: process.env.NODE_ENV || 'development',
+  hasDatabaseUrl: Boolean(process.env.DATABASE_URL),
+  hasMediaStorageConfiguration: Boolean(process.env.S3_BUCKET_NAME),
+  hasTransactionalEmailConfiguration: Boolean(process.env.RESEND_API_KEY),
+});
 
 export const ENV = {
   appId: process.env.VITE_APP_ID ?? '',

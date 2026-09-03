@@ -57,6 +57,23 @@ export function resolveTrustProxySetting(
   return false;
 }
 
+/**
+ * Deployed environments must state the exact reverse-proxy hop count. This
+ * keeps req.ip, req.protocol, and host redirects from trusting client-supplied
+ * forwarding headers by accident.
+ */
+export function assertDeployedTrustProxyConfiguration(env: NodeJS.ProcessEnv = process.env): void {
+  const runtimeEnv = resolveAppRuntimeEnv(env);
+  if (runtimeEnv !== 'production' && runtimeEnv !== 'staging') return;
+
+  const rawValue = String(env.TRUST_PROXY ?? '').trim();
+  if (!/^[1-9]\d*$/.test(rawValue)) {
+    throw new Error(
+      'TRUST_PROXY must be the exact positive number of trusted reverse-proxy hops in deployed environments.',
+    );
+  }
+}
+
 export function loadAppRuntimeEnv(options?: { cwd?: string; env?: NodeJS.ProcessEnv }) {
   const cwd = options?.cwd ?? process.cwd();
   const env = options?.env ?? process.env;
@@ -79,12 +96,10 @@ export function loadAppRuntimeEnv(options?: { cwd?: string; env?: NodeJS.Process
 
   const explicitDatabaseUrl = env.DATABASE_URL;
   const explicitE2eDatabaseUrl = env.LISTIFY_E2E_DATABASE_URL;
-  if (
-    explicitE2eDatabaseUrl &&
-    runtimeEnv !== 'development' &&
-    runtimeEnv !== 'test'
-  ) {
-    throw new Error('LISTIFY_E2E_DATABASE_URL is permitted only in development or test environments.');
+  if (explicitE2eDatabaseUrl && runtimeEnv !== 'development' && runtimeEnv !== 'test') {
+    throw new Error(
+      'LISTIFY_E2E_DATABASE_URL is permitted only in development or test environments.',
+    );
   }
   if (
     explicitDatabaseUrl &&

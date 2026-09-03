@@ -16,7 +16,11 @@ import {
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import sharp from 'sharp';
 import { randomUUID } from 'crypto';
-import { getMediaStorageAdapter, inspectLocalMediaObject } from './mediaStorage';
+import {
+  createMediaStorageKey,
+  getMediaStorageAdapter,
+  inspectLocalMediaObject,
+} from './mediaStorage';
 
 // The PLE listing route selects its storage adapter before reaching this
 // helper. Keep the legacy helper aligned with that selection so local
@@ -217,7 +221,7 @@ export async function deletePropertyImages(imageUrls: string[]): Promise<void> {
  * Generate presigned URL for S3 upload
  * @param filename - Name of the file to upload
  * @param contentType - MIME type of the file
- * @param propertyId - Property ID for organizing uploads
+ * @param propertyId - Server-authorized Listing or user-draft storage scope
  * @returns Object containing upload URL and key
  */
 export async function generatePresignedUploadUrl(
@@ -232,9 +236,10 @@ export async function generatePresignedUploadUrl(
   }
 
   try {
-    // Generate a unique key for the file
-    const fileExtension = filename.split('.').pop() || 'jpg';
-    const key = `properties/${propertyId}/${Date.now()}-${randomUUID()}.${fileExtension}`;
+    // Scope and filename are validated by the shared adapter-neutral helper.
+    // S3 has no path traversal semantics, but an unchecked key prefix would
+    // still let a caller write into another tenant's logical namespace.
+    const key = createMediaStorageKey(filename, propertyId);
 
     console.log(`[S3] Generating presigned URL for: ${key}`);
 

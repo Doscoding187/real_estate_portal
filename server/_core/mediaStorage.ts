@@ -164,9 +164,29 @@ function safeFileExtension(filename: string): string {
   return /^\.[a-z0-9]{1,12}$/.test(extension) ? extension : '.bin';
 }
 
-export function createLocalMediaKey(filename: string, scope: string): string {
+function assertUploadFilename(filename: string): string {
+  const normalized = filename.trim();
+  if (!normalized || normalized.length > 255) {
+    throw new Error('Invalid listing media filename.');
+  }
+  return normalized;
+}
+
+/**
+ * Create an object key for either supported media adapter. The scope is
+ * server-authorized before this helper is reached; validating it here keeps a
+ * later adapter change from turning a client-supplied path into storage
+ * authority.
+ */
+export function createMediaStorageKey(filename: string, scope: string): string {
   const safeScope = assertSafeMediaScope(scope);
-  return `properties/${safeScope}/${Date.now()}-${randomUUID()}${safeFileExtension(filename)}`;
+  const safeFilename = assertUploadFilename(filename);
+  return `properties/${safeScope}/${Date.now()}-${randomUUID()}${safeFileExtension(safeFilename)}`;
+}
+
+/** @deprecated Use createMediaStorageKey so local and S3 keys share a boundary. */
+export function createLocalMediaKey(filename: string, scope: string): string {
+  return createMediaStorageKey(filename, scope);
 }
 
 export function getLocalMediaMaxBytes(mediaType: keyof typeof LOCAL_MEDIA_MAX_BYTES): number {
