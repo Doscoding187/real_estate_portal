@@ -357,6 +357,7 @@ export const invitationRouter = router({
         updatedUser.id,
         updatedUser.email!,
         updatedUser.name || updatedUser.email!,
+        updatedUser.sessionVersion,
       );
 
       ctx.res.cookie(COOKIE_NAME, sessionToken, getSessionCookieOptions(ctx.req));

@@ -1066,6 +1066,16 @@
       "path": "server/migrations/0063_agent_launch_access_earnings_feature.sql",
       "classification": "canonical active",
       "purpose": "Agent Launch Access: expose the supported commission and earnings workspace in the canonical product feature set."
+    },
+    {
+      "path": "server/migrations/0064_auth_session_security.sql",
+      "classification": "canonical active",
+      "purpose": "Adds durable session-version revocation and bounded email-verification-token expiry to the canonical user authority."
+    },
+    {
+      "path": "server/migrations/0065_auth_verification_token_cleanup.sql",
+      "classification": "canonical active",
+      "purpose": "Retires unbounded legacy verification-token state so verification is issued only through the bounded canonical flow."
     }
   ],
   "prohibitedPaths": [

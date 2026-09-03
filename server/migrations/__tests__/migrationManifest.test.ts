@@ -178,6 +178,12 @@ describe('canonical migration manifest', () => {
     const earningsFeature = manifest.orderedMigrations.find(
       entry => entry.filename === '0063_agent_launch_access_earnings_feature.sql',
     );
+    const authSessionSecurity = manifest.orderedMigrations.find(
+      entry => entry.filename === '0064_auth_session_security.sql',
+    );
+    const authVerificationTokenCleanup = manifest.orderedMigrations.find(
+      entry => entry.filename === '0065_auth_verification_token_cleanup.sql',
+    );
     expect(fullCapabilities).toMatchObject({
       sequence: 62,
       parent: '0061_sl_messages_authorship.sql',
@@ -194,7 +200,23 @@ describe('canonical migration manifest', () => {
       kind: 'transactional-data',
       statementPolicy: 'transactional-dml',
     });
-    expect(manifest.expectedHead.filename).toBe('0063_agent_launch_access_earnings_feature.sql');
+    expect(authSessionSecurity).toMatchObject({
+      sequence: 64,
+      parent: '0063_agent_launch_access_earnings_feature.sql',
+      parentChecksum: 'b3e8227ba6224de1b7d7426fdafbd8e872dd53f9191a77b271ed1a61dae44cef',
+      checksum: '8c5add9fe3c7cc2739738975c2067a73a5c6db7a4c160d40f260988ae72eac5d',
+      kind: 'ddl',
+      statementPolicy: 'single-ddl',
+    });
+    expect(authVerificationTokenCleanup).toMatchObject({
+      sequence: 65,
+      parent: '0064_auth_session_security.sql',
+      parentChecksum: '8c5add9fe3c7cc2739738975c2067a73a5c6db7a4c160d40f260988ae72eac5d',
+      checksum: '0cd1523e5467f73dd0534a04116d25a974e9e2b9a900692e6c3933a67a3182eb',
+      kind: 'transactional-data',
+      statementPolicy: 'transactional-dml',
+    });
+    expect(manifest.expectedHead.filename).toBe('0065_auth_verification_token_cleanup.sql');
   });
 
   it('plans the identity-and-custody migration chain from the integrated 0007 head', () => {
@@ -210,11 +232,11 @@ describe('canonical migration manifest', () => {
         checksum: item.checksum,
       })),
       acceptedOldHead: currentIntegratedHead.filename,
-      expectedNewHead: '0063_agent_launch_access_earnings_feature.sql',
+      expectedNewHead: '0065_auth_verification_token_cleanup.sql',
     });
 
     expect(plan.acceptedOldHead).toBe('0007_paid_launch_access_invoice_term.sql');
-    expect(plan.pending).toHaveLength(56);
+    expect(plan.pending).toHaveLength(58);
     expect(plan.pending.map(item => item.filename)).toEqual([
       '0008_developer_organisations.sql',
       '0009_developer_organisation_memberships.sql',
@@ -272,8 +294,10 @@ describe('canonical migration manifest', () => {
       '0061_sl_messages_authorship.sql',
       '0062_agent_launch_access_full_capabilities.sql',
       '0063_agent_launch_access_earnings_feature.sql',
+      '0064_auth_session_security.sql',
+      '0065_auth_verification_token_cleanup.sql',
     ]);
-    expect(plan.expectedNewHead).toBe('0063_agent_launch_access_earnings_feature.sql');
+    expect(plan.expectedNewHead).toBe('0065_auth_verification_token_cleanup.sql');
   });
 
   it('accepts an isolated 0000 -> 0001 -> 0002 progression in ancestry order', () => {
