@@ -122,6 +122,7 @@ import { landPublicRouter } from './landPublicRouter';
 import { commercialRouter } from './commercialOfficeRouter';
 import { sharedLivingRouter } from './sharedLivingRouter';
 import { homeMarketInsightsRouter } from './homeMarketInsightsRouter';
+import { founderRouter } from './founderRouter';
 
 const appRouterConfig = {
   system: systemRouter,
@@ -174,6 +175,7 @@ const appRouterConfig = {
   demand: demandRouter,
   servicesEngine: servicesEngineRouter,
   discovery: discoveryRouter,
+  founder: founderRouter,
 
   propertyResults: propertyResultsRouter,
 

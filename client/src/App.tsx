@@ -135,6 +135,11 @@ const DeveloperRouteBoundary = lazy(() =>
   })),
 );
 // Import MyDrafts removed to prevent circular dependency with DeveloperLayout's lazy load
+const FounderRouteBoundary = lazy(() =>
+  import('./pages/founder/FounderRouteBoundary').then(module => ({
+    default: module.FounderRouteBoundary,
+  })),
+);
 const DeveloperDirectoryPage = lazy(() => import('./pages/DeveloperDirectoryPage'));
 const DeveloperPublisherPage = lazy(() => import('./pages/DeveloperPublisherPage'));
 
@@ -242,6 +247,13 @@ function Router() {
           <Route path="/developers" component={DeveloperDirectoryPage} />
           {/* Governed public publisher projection - MUST be after all /developer/* routes */}
           <Route path="/developer/:slug" component={DeveloperPublisherPage} />
+
+          {/* ============================================================== */}
+          {/* 1C. FOUNDER COMMAND CENTRE ROUTES                              */}
+          {/* All /founder/* routes handled by FounderRouteBoundary          */}
+          {/* ============================================================== */}
+          <Route path="/founder/:rest*" component={FounderRouteBoundary} />
+          <Route path="/founder" component={FounderRouteBoundary} />
 
           {/* ============================================================== */}
           {/* 1B. PUBLIC AND LEGACY PRODUCT ROUTES                           */}
