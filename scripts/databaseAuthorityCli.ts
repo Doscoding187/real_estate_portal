@@ -71,6 +71,7 @@ import {
 import { loadAndValidateMigrationManifest } from '../server/migrations/migrationManifest';
 import { runRejectedZeroStatementRecovery } from '../server/migrations/recoverRejectedZeroStatementMigration';
 import { runRejectedReleaseZeroStatementRecovery } from '../server/migrations/recoverRejectedReleaseZeroStatementMigration';
+import { runRejectedReleaseCommercialQuoteTermsRecovery } from '../server/migrations/recoverRejectedReleaseCommercialQuoteTermsMigration';
 import { runSqlMigrations } from '../server/migrations/runSqlMigrations';
 
 type Command =
@@ -86,6 +87,8 @@ type Command =
   | 'migration-recovery:apply'
   | 'release-migration-recovery:plan'
   | 'release-migration-recovery:apply'
+  | 'release-commercial-quote-terms-recovery:plan'
+  | 'release-commercial-quote-terms-recovery:apply'
   | 'release:plan'
   | 'release:apply'
   | 'release-reference:plan'
@@ -300,6 +303,28 @@ async function run(command: Command): Promise<void> {
       authority,
       authorization: decision,
       attemptId: requiredOption('attempt-id'),
+      approvalReference: requiredOption('approval-reference'),
+      approvalActor: requiredOption('approval-actor'),
+      expectedPlanDigest: planOnly ? undefined : requiredOption('plan-digest'),
+    });
+    print(result);
+    return;
+  }
+
+  if (
+    command === 'release-commercial-quote-terms-recovery:plan' ||
+    command === 'release-commercial-quote-terms-recovery:apply'
+  ) {
+    const planOnly = command.endsWith(':plan');
+    const authority = authorityFor(
+      planOnly ? 'release-plan' : 'release-apply',
+      planOnly ? 'read-only' : 'migration',
+    );
+    const decision = authorizationFor(authority, option('ack'));
+    const result = await runRejectedReleaseCommercialQuoteTermsRecovery({
+      mode: planOnly ? 'plan' : 'apply',
+      authority,
+      authorization: decision,
       approvalReference: requiredOption('approval-reference'),
       approvalActor: requiredOption('approval-actor'),
       expectedPlanDigest: planOnly ? undefined : requiredOption('plan-digest'),
@@ -525,6 +550,8 @@ const commands = new Set<Command>([
   'migration-recovery:apply',
   'release-migration-recovery:plan',
   'release-migration-recovery:apply',
+  'release-commercial-quote-terms-recovery:plan',
+  'release-commercial-quote-terms-recovery:apply',
   'release:plan',
   'release:apply',
   'release-reference:plan',

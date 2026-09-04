@@ -493,6 +493,11 @@
       "purpose": "Validates canonical migration membership, lineage, statement policy, and TiDB-safe additive DDL sequencing before any plan or apply operation."
     },
     {
+      "path": "server/migrations/recoverRejectedReleaseCommercialQuoteTermsMigration.ts",
+      "classification": "canonical supporting",
+      "purpose": "Provides the bounded protected release recovery for the reviewed zero-statement TiDB 0046 quote-terms failure; it changes only durable review evidence and never executes rejected SQL."
+    },
+    {
       "path": "server/migrations/0001_public_search_to_lead_reliability_sequenced.sql",
       "classification": "canonical active",
       "purpose": "Reviewed TiDB-safe additive consent, idempotency, and lead-delivery state for the public search-to-lead journey, with the unique index applied after its new columns."
@@ -718,9 +723,9 @@
       "purpose": "Enforces that known rentable and usable Commercial Space areas are positive physical quantities."
     },
     {
-      "path": "server/migrations/0046_commercial_office_quote_terms.sql",
+      "path": "server/migrations/0046_commercial_office_quote_terms_sequenced.sql",
       "classification": "canonical active",
-      "purpose": "Adds explicit Commercial quote mode and VAT treatment for Office leasing."
+      "purpose": "Adds explicit Commercial quote mode and VAT treatment for Office leasing through separately executable TiDB-safe column expansions."
     },
     {
       "path": "server/migrations/0047_commercial_gross_rental_component.sql",
@@ -751,6 +756,11 @@
       "path": "server/migrations/_archived/rejected-zero-statement/0001_public_search_to_lead_reliability.sql",
       "classification": "archived historical",
       "purpose": "Preserves the unchanged checksum evidence for the TiDB-incompatible same-ALTER unique-index migration rejected after a zero-statement production attempt; it is never executable authority."
+    },
+    {
+      "path": "server/migrations/_archived/rejected-zero-statement/0046_commercial_office_quote_terms.sql",
+      "classification": "archived historical",
+      "purpose": "Preserves the unchanged checksum evidence for the TiDB-incompatible same-ALTER quote-terms migration rejected after a zero-statement production attempt; it is never executable authority."
     },
     {
       "path": "server/migrations/_archived/**",

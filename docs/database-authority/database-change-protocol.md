@@ -132,6 +132,26 @@ only the failed attempt review state and adds replacement evidence; the normal
 replacement migration. Its `--approval-reference` and `--approval-actor` must
 exactly match the protected-target approval used to authorize the command.
 
+For the separately reviewed production `0046` Commercial Office quote-terms
+failure, use its own bounded release recovery. It is permanently scoped to
+attempt `198ffda9d58670ea351d733d-0046`, the archived original, and the
+sequenced replacement; it is not a generic recovery facility:
+
+```text
+pnpm db:release-commercial-quote-terms-recovery:plan -- --approval-reference=<reference> --approval-actor=<actor>
+pnpm db:release-commercial-quote-terms-recovery:apply -- --approval-reference=<reference> --approval-actor=<actor> --plan-digest=<exact-plan-digest> --ack=<exact-release-ack>
+```
+
+The plan proves the exact failed plan digest and `ER_BAD_FIELD_ERROR` evidence,
+the accepted successful prefix through `0045_commercial_space_positive_area_integrity.sql`,
+the archive checksum, and the physical proof that `transaction_type` exists
+while `pricing_mode` and `vat_treatment` do not. Apply changes only the failed
+attempt review state and appends review evidence. It never executes the archived
+SQL or manual DDL. After it succeeds, run a fresh normal `release:plan` and
+`release:apply` with the accepted old head set to
+`0045_commercial_space_positive_area_integrity.sql` so that only the active
+sequenced replacement and later canonical migrations may run.
+
 Never:
 
 - Do not use `db:push` or manual DDL as canonical authority;

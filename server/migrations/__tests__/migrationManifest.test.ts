@@ -194,9 +194,22 @@ describe('canonical migration manifest', () => {
     const authSessionSecurity = manifest.orderedMigrations.find(
       entry => entry.filename === '0064_auth_session_security.sql',
     );
+    const commercialQuoteTerms = manifest.orderedMigrations.find(
+      entry => entry.filename === '0046_commercial_office_quote_terms_sequenced.sql',
+    );
     const authVerificationTokenCleanup = manifest.orderedMigrations.find(
       entry => entry.filename === '0065_auth_verification_token_cleanup.sql',
     );
+    expect(commercialQuoteTerms).toMatchObject({
+      sequence: 46,
+      parent: '0045_commercial_space_positive_area_integrity.sql',
+      parentChecksum: 'f3708a6df7c6ec47d0665f4b9d012cc7004b4f01cc63c4d8864b9c2475636a28',
+      checksum: '827c59f6e441fa0d9cbaacd0ff9411fa19eb525b8b7938856c3f14d1a5f1046c',
+      kind: 'exceptional',
+      statementPolicy: 'approved-exception',
+      approvalReference: 'DBX-TIDB-0046-QUOTE-TERMS-RECOVERY-2026-09-04-Edward',
+    });
+    expect(commercialQuoteTerms?.statementCount).toBe(2);
     expect(fullCapabilities).toMatchObject({
       sequence: 62,
       parent: '0061_sl_messages_authorship.sql',
@@ -307,7 +320,7 @@ describe('canonical migration manifest', () => {
       '0043_commercial_specification_value_state_integrity.sql',
       '0044_commercial_positive_availability_provenance.sql',
       '0045_commercial_space_positive_area_integrity.sql',
-      '0046_commercial_office_quote_terms.sql',
+      '0046_commercial_office_quote_terms_sequenced.sql',
       '0047_commercial_gross_rental_component.sql',
       '0048_commercial_lease_terms.sql',
       '0049_commercial_lead_contexts.sql',

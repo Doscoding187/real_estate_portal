@@ -102,7 +102,9 @@
   ],
   "releaseMigrationRecoveryCommands": [
     "db:release-migration-recovery:plan",
-    "db:release-migration-recovery:apply"
+    "db:release-migration-recovery:apply",
+    "db:release-commercial-quote-terms-recovery:plan",
+    "db:release-commercial-quote-terms-recovery:apply"
   ],
   "acceptanceScenarioAdapter": "server/_core/databaseAuthority/dataAdapters/searchToLeadScenario.ts",
   "plePublicationEntitlementAdapter": "server/_core/databaseAuthority/dataAdapters/plePublicationEntitlement.ts",

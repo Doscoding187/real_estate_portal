@@ -487,20 +487,21 @@
     },
     {
       "sequence": 46,
-      "filename": "0046_commercial_office_quote_terms.sql",
-      "checksum": "db6a114745bf8295bfe33a0b2081596ac61f5efcb1e694fd2380ed3480fe5a72",
+      "filename": "0046_commercial_office_quote_terms_sequenced.sql",
+      "checksum": "827c59f6e441fa0d9cbaacd0ff9411fa19eb525b8b7938856c3f14d1a5f1046c",
       "parent": "0045_commercial_space_positive_area_integrity.sql",
       "parentChecksum": "f3708a6df7c6ec47d0665f4b9d012cc7004b4f01cc63c4d8864b9c2475636a28",
-      "kind": "ddl",
-      "statementPolicy": "single-ddl",
-      "requiredReferenceDataVersion": null
+      "kind": "exceptional",
+      "statementPolicy": "approved-exception",
+      "requiredReferenceDataVersion": null,
+      "approvalReference": "DBX-TIDB-0046-QUOTE-TERMS-RECOVERY-2026-09-04-Edward"
     },
     {
       "sequence": 47,
       "filename": "0047_commercial_gross_rental_component.sql",
       "checksum": "d773c7fc0be6fd271315b53f030c63d3b6cb24d363447452d4ce23baf51f3d71",
-      "parent": "0046_commercial_office_quote_terms.sql",
-      "parentChecksum": "db6a114745bf8295bfe33a0b2081596ac61f5efcb1e694fd2380ed3480fe5a72",
+      "parent": "0046_commercial_office_quote_terms_sequenced.sql",
+      "parentChecksum": "827c59f6e441fa0d9cbaacd0ff9411fa19eb525b8b7938856c3f14d1a5f1046c",
       "kind": "exceptional",
       "statementPolicy": "approved-exception",
       "requiredReferenceDataVersion": null,

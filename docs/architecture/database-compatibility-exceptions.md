@@ -116,6 +116,61 @@ and the release recovery evidence is retained as historical incident evidence.
 
 Removal workstream: Database cutover recovery closure.
 
+### Exception ID: DBX-TIDB-0046-QUOTE-TERMS-RECOVERY-2026-09-04-Edward
+
+Status: Approved for the bounded production recovery of the 0046 zero-statement failure
+
+Owner: Property Listify senior product engineering
+
+Approved by Edward on: 2026-09-04, through the production cutover recovery authorization
+
+Business reason: TiDB rejected the original Commercial Office quote-terms migration
+because a single `ALTER TABLE` job tried to place `vat_treatment` after
+`pricing_mode` while both columns were being introduced by that same job. The
+replacement preserves the canonical model while adding `pricing_mode` and then
+`vat_treatment` in independently executable statements.
+
+Canonical authority: `drizzle/schema/commercial.ts` remains the desired model;
+the active sequenced replacement is the only executable schema authority. The
+rejected SQL remains unchanged under the zero-statement evidence archive and is
+never executed.
+
+Exact files: `server/migrations/0046_commercial_office_quote_terms_sequenced.sql`,
+`server/migrations/manifest.json`,
+`server/migrations/_archived/rejected-zero-statement/0046_commercial_office_quote_terms.sql`,
+`server/migrations/recoverRejectedReleaseCommercialQuoteTermsMigration.ts`, and
+the protected release CLI/docs/tests that invoke it.
+
+Tables and columns: `commercial_availabilities.pricing_mode` and
+`commercial_availabilities.vat_treatment`, anchored after the already-present
+`commercial_availabilities.transaction_type` column.
+
+Permitted read direction: None; this is an additive schema replacement only.
+
+Permitted write direction: The protected release recovery may change only the
+durable zero-statement attempt state from `failed` to `failed_replaced` and
+append its separate review-evidence row. The sequenced replacement DDL then
+runs through `release:apply`.
+
+Failure and observability behavior: Recovery requires exact protected release
+approval, the exact target acknowledgement for apply, the exact failed attempt
+and failure digest, an unchanged archive checksum, an exact successful-history
+prefix through `0045_commercial_space_positive_area_integrity.sql`, and
+read-only proof that `transaction_type` exists while both replacement columns
+are absent. Any mismatch fails closed; no ledger history is created for the
+rejected SQL and no attempt evidence is deleted.
+
+Automated evidence: Quote-terms release-recovery unit tests, migration
+manifest/checksum tests, database-authority static/contract tests, and the
+post-recovery schema-congruency and readiness checks.
+
+Expiry or objective removal condition: Remove this exception after the
+production zero-statement attempt is reviewed, the sequenced replacement reaches
+the canonical head, and the release recovery evidence is retained as historical
+incident evidence.
+
+Removal workstream: Database cutover recovery closure.
+
 ### Exception ID: DBX-TIDB-INCREMENTAL-DDL-SEQUENCING-2026-09-04-Edward
 
 Status: Approved for the bounded pre-launch TiDB migration-lineage correction
