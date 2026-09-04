@@ -415,6 +415,15 @@ export function normalizeSqlExpression(value: string): string {
       break;
     }
   }
+  // MySQL serializes a chained numeric count of NULL predicates as a
+  // left-associated binary tree. The canonical migration renders the same
+  // count as one additive chain. Normalize only this exact boolean-count
+  // grammar (parenthesized `column IS [NOT] NULL` operands and an integer
+  // equality) rather than treating arbitrary numeric addition as associative.
+  normalized = normalized.replace(
+    /\(\((\(`[^`]+` is (?:not )?null\)(?: \+ \(`[^`]+` is (?:not )?null\))*)\) \+ (\(`[^`]+` is (?:not )?null\))\) = ([0-9]+)/g,
+    '($1 + $2 = $3)',
+  );
   const hasSingleOuterGroup = (expression: string): boolean => {
     if (!expression.startsWith('(') || !expression.endsWith(')')) return false;
     let depth = 0;

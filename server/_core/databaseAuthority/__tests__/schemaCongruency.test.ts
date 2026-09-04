@@ -72,6 +72,13 @@ describe('normalized schema congruency', () => {
       normalizeSqlExpression("(`label` = _utf8mb4\\'O\\'Brien\\')"),
     ).toBe("`label` = 'O\\'Brien'");
     expect(
+      normalizeSqlExpression(
+        "(`value_state` = 'known' AND (((`numeric_value` IS NOT NULL) + (`text_value` IS NOT NULL)) + (`boolean_value` IS NOT NULL)) = 1) OR (`value_state` IN ('unknown','unavailable','not_applicable') AND `numeric_value` IS NULL AND `text_value` IS NULL AND `boolean_value` IS NULL)",
+      ),
+    ).toBe(
+      "(`value_state` = 'known' and ((`numeric_value` is not null) + (`text_value` is not null) + (`boolean_value` is not null) = 1)) or (`value_state` in ('unknown','unavailable','not_applicable') and `numeric_value` is null and `text_value` is null and `boolean_value` is null)",
+    );
+    expect(
       normalizeSqlExpression("(`label` = 'literal _utf8mb4`source`.`column`')"),
     ).toBe("`label` = 'literal _utf8mb4`source`.`column`'");
     expect(normalizeSqlExpression("(`label` = 'literal (value)')")).toBe(
