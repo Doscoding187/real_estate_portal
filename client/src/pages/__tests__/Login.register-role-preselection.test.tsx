@@ -56,19 +56,23 @@ describe('Login register role preselection', () => {
     expect(screen.queryByLabelText('Owner name')).not.toBeInTheDocument();
   });
 
-  it('keeps the visitor card as the default register entry without a role parameter', () => {
+  it('keeps the neutral role chooser as the default register entry without a role parameter', () => {
     searchMock.mockReturnValue('?mode=register');
     render(<Login />);
 
-    expect(screen.getByText('Full name')).toBeInTheDocument();
-    expect(screen.queryByLabelText('Owner name')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Choose your role/i })).toBeInTheDocument();
+    expect(screen.getAllByText('Buyer / User').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Real Estate Agent').length).toBeGreaterThan(0);
+    expect(screen.queryByText('Full name')).not.toBeInTheDocument();
   });
 
-  it('ignores unknown or unavailable role parameters and falls back to visitor', () => {
+  it('ignores unknown or unavailable role parameters and keeps the neutral chooser', () => {
     searchMock.mockReturnValue('?mode=register&role=super_admin');
     render(<Login />);
 
-    expect(screen.getByText('Full name')).toBeInTheDocument();
-    expect(screen.queryByLabelText('Owner name')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Choose your role/i })).toBeInTheDocument();
+    expect(screen.getAllByText('Buyer / User').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Real Estate Agent').length).toBeGreaterThan(0);
+    expect(screen.queryByText('Full name')).not.toBeInTheDocument();
   });
 });
