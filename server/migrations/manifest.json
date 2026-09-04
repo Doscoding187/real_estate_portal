@@ -18,20 +18,21 @@
     },
     {
       "sequence": 1,
-      "filename": "0001_public_search_to_lead_reliability.sql",
-      "checksum": "adb04a6e5655e4812ddd594d2b85cb5b218c6f54cb2fc0c029ecdc76325da5a0",
+      "filename": "0001_public_search_to_lead_reliability_sequenced.sql",
+      "checksum": "510ae023e9c3bc04a7d92f7a533843939412f82d4f04cd1bf11c312fb89bc4a3",
       "parent": "0000_canonical_launch_baseline.sql",
       "parentChecksum": "19362611af5751c60bbb6e041e9f456c09aa1cc8ef77f9f5c62fbc92fa8e8e88",
-      "kind": "ddl",
-      "statementPolicy": "single-ddl",
-      "requiredReferenceDataVersion": null
+      "kind": "exceptional",
+      "statementPolicy": "approved-exception",
+      "requiredReferenceDataVersion": null,
+      "approvalReference": "DBX-TIDB-0001-REPLACEMENT-2026-09-04-Edward"
     },
     {
       "sequence": 2,
       "filename": "0002_canonical_property_taxonomy.sql",
       "checksum": "a0ac7ae582fa0b1910211bc20d99ba13064e74ac00d3413681b77a1476808801",
-      "parent": "0001_public_search_to_lead_reliability.sql",
-      "parentChecksum": "adb04a6e5655e4812ddd594d2b85cb5b218c6f54cb2fc0c029ecdc76325da5a0",
+      "parent": "0001_public_search_to_lead_reliability_sequenced.sql",
+      "parentChecksum": "510ae023e9c3bc04a7d92f7a533843939412f82d4f04cd1bf11c312fb89bc4a3",
       "kind": "exceptional",
       "statementPolicy": "approved-exception",
       "requiredReferenceDataVersion": null,
@@ -40,30 +41,31 @@
     {
       "sequence": 3,
       "filename": "0003_canonical_property_measurements.sql",
-      "checksum": "773c8488b1b574b958b92d484b2e20b504175ffa30aa035f5608d9d3716fe76c",
+      "checksum": "e0b199683c211064257cc8b1b518ab2323120c48140e55d4e1df2dee43761aa7",
       "parent": "0002_canonical_property_taxonomy.sql",
       "parentChecksum": "a0ac7ae582fa0b1910211bc20d99ba13064e74ac00d3413681b77a1476808801",
-      "kind": "ddl",
-      "statementPolicy": "single-ddl",
-      "requiredReferenceDataVersion": null
+      "kind": "exceptional",
+      "statementPolicy": "approved-exception",
+      "requiredReferenceDataVersion": null,
+      "approvalReference": "DBX-TIDB-INCREMENTAL-DDL-SEQUENCING-2026-09-04-Edward"
     },
     {
       "sequence": 4,
       "filename": "0004_canonical_listing_location.sql",
-      "checksum": "b772082a269b7e30ed514d9850b129192ddc0bd05842a558f46af017b3726dbe",
+      "checksum": "10a1ab6089c2b066e3565b8c5d061d4f7a70bf577974db8d2ce9388139cf8a6e",
       "parent": "0003_canonical_property_measurements.sql",
-      "parentChecksum": "773c8488b1b574b958b92d484b2e20b504175ffa30aa035f5608d9d3716fe76c",
+      "parentChecksum": "e0b199683c211064257cc8b1b518ab2323120c48140e55d4e1df2dee43761aa7",
       "kind": "exceptional",
       "statementPolicy": "approved-exception",
       "requiredReferenceDataVersion": null,
-      "approvalReference": "PLE-6B-2026-08-10-Edward"
+      "approvalReference": "DBX-TIDB-INCREMENTAL-DDL-SEQUENCING-2026-09-04-Edward"
     },
     {
       "sequence": 5,
       "filename": "0005_manual_location_without_coordinates.sql",
       "checksum": "8f1e3c8481dc606a89d3fc8e01ffc72fecd02e7aa15cfb4b889a7a78d4abf51b",
       "parent": "0004_canonical_listing_location.sql",
-      "parentChecksum": "b772082a269b7e30ed514d9850b129192ddc0bd05842a558f46af017b3726dbe",
+      "parentChecksum": "10a1ab6089c2b066e3565b8c5d061d4f7a70bf577974db8d2ce9388139cf8a6e",
       "kind": "exceptional",
       "statementPolicy": "approved-exception",
       "requiredReferenceDataVersion": null,
@@ -122,69 +124,75 @@
     {
       "sequence": 11,
       "filename": "0011_catalogue_publisher_developments.sql",
-      "checksum": "3280f827ed6f445cb527ed88b68a09650c9fe1763fd65de6b93e2d436d2d647d",
+      "checksum": "f06441ca010c12dba136a94674a18c787e02ed70cc8057423a437955a47be88e",
       "parent": "0010_catalogue_publishers.sql",
       "parentChecksum": "85615de8976ceda3a3099d87659ee39e9bd83016a0da8b33c2d5a9ff78cfdb90",
-      "kind": "ddl",
-      "statementPolicy": "single-ddl",
-      "requiredReferenceDataVersion": null
+      "kind": "exceptional",
+      "statementPolicy": "approved-exception",
+      "requiredReferenceDataVersion": null,
+      "approvalReference": "DBX-TIDB-INCREMENTAL-DDL-SEQUENCING-2026-09-04-Edward"
     },
     {
       "sequence": 12,
       "filename": "0012_catalogue_publisher_properties.sql",
-      "checksum": "5c3723dca45d86b2743e3b60ffe9a394da22b70c3f825a3ebc3b7bd2d2cade14",
+      "checksum": "460e85e804d8ba329f944e904fbb007eae040635517d101fee2c23d58ab55bac",
       "parent": "0011_catalogue_publisher_developments.sql",
-      "parentChecksum": "3280f827ed6f445cb527ed88b68a09650c9fe1763fd65de6b93e2d436d2d647d",
-      "kind": "ddl",
-      "statementPolicy": "single-ddl",
-      "requiredReferenceDataVersion": null
+      "parentChecksum": "f06441ca010c12dba136a94674a18c787e02ed70cc8057423a437955a47be88e",
+      "kind": "exceptional",
+      "statementPolicy": "approved-exception",
+      "requiredReferenceDataVersion": null,
+      "approvalReference": "DBX-TIDB-INCREMENTAL-DDL-SEQUENCING-2026-09-04-Edward"
     },
     {
       "sequence": 13,
       "filename": "0013_catalogue_publisher_leads.sql",
-      "checksum": "d65e0656b6e3649eee24f9189362f4819294a06c1e2eef999c22dff467cfcbe3",
+      "checksum": "ea8301469107b5c21acfad99038a68c157b80de98124936970e84492e3c9e3ef",
       "parent": "0012_catalogue_publisher_properties.sql",
-      "parentChecksum": "5c3723dca45d86b2743e3b60ffe9a394da22b70c3f825a3ebc3b7bd2d2cade14",
-      "kind": "ddl",
-      "statementPolicy": "single-ddl",
-      "requiredReferenceDataVersion": null
+      "parentChecksum": "460e85e804d8ba329f944e904fbb007eae040635517d101fee2c23d58ab55bac",
+      "kind": "exceptional",
+      "statementPolicy": "approved-exception",
+      "requiredReferenceDataVersion": null,
+      "approvalReference": "DBX-TIDB-INCREMENTAL-DDL-SEQUENCING-2026-09-04-Edward"
     },
     {
       "sequence": 14,
       "filename": "0014_catalogue_publisher_drafts.sql",
-      "checksum": "fc575c0fbf16a148cf912caec5bcc5f5baa3f30facfea2b5c68909219e503e48",
+      "checksum": "577a3f6f13555b5c8c31118d911f2e1a0d85878f9976772dd48358437d7453df",
       "parent": "0013_catalogue_publisher_leads.sql",
-      "parentChecksum": "d65e0656b6e3649eee24f9189362f4819294a06c1e2eef999c22dff467cfcbe3",
-      "kind": "ddl",
-      "statementPolicy": "single-ddl",
-      "requiredReferenceDataVersion": null
+      "parentChecksum": "ea8301469107b5c21acfad99038a68c157b80de98124936970e84492e3c9e3ef",
+      "kind": "exceptional",
+      "statementPolicy": "approved-exception",
+      "requiredReferenceDataVersion": null,
+      "approvalReference": "DBX-TIDB-INCREMENTAL-DDL-SEQUENCING-2026-09-04-Edward"
     },
     {
       "sequence": 15,
       "filename": "0015_catalogue_publisher_distribution_partnerships.sql",
-      "checksum": "bdd9a8ad9d91b6828d6810fb5fdc71a01455bbe348677ea9cb15d4b9ebc264ca",
+      "checksum": "914bbd9cdeafbd14e2a26e7875d1c73f97ece4d8680790a0b4a3ed9ff2a55468",
       "parent": "0014_catalogue_publisher_drafts.sql",
-      "parentChecksum": "fc575c0fbf16a148cf912caec5bcc5f5baa3f30facfea2b5c68909219e503e48",
-      "kind": "ddl",
-      "statementPolicy": "single-ddl",
-      "requiredReferenceDataVersion": null
+      "parentChecksum": "577a3f6f13555b5c8c31118d911f2e1a0d85878f9976772dd48358437d7453df",
+      "kind": "exceptional",
+      "statementPolicy": "approved-exception",
+      "requiredReferenceDataVersion": null,
+      "approvalReference": "DBX-TIDB-INCREMENTAL-DDL-SEQUENCING-2026-09-04-Edward"
     },
     {
       "sequence": 16,
       "filename": "0016_catalogue_publisher_distribution_access.sql",
-      "checksum": "7560231c39e3acbc2462d9bbe4aaf65aa16e49c1d598fa29e68d44ca9729f66f",
+      "checksum": "20efcd11ae3b307bdb54c72cc846c0151644f9f0edc6f7a11a678198e4607531",
       "parent": "0015_catalogue_publisher_distribution_partnerships.sql",
-      "parentChecksum": "bdd9a8ad9d91b6828d6810fb5fdc71a01455bbe348677ea9cb15d4b9ebc264ca",
-      "kind": "ddl",
-      "statementPolicy": "single-ddl",
-      "requiredReferenceDataVersion": null
+      "parentChecksum": "914bbd9cdeafbd14e2a26e7875d1c73f97ece4d8680790a0b4a3ed9ff2a55468",
+      "kind": "exceptional",
+      "statementPolicy": "approved-exception",
+      "requiredReferenceDataVersion": null,
+      "approvalReference": "DBX-TIDB-INCREMENTAL-DDL-SEQUENCING-2026-09-04-Edward"
     },
     {
       "sequence": 17,
       "filename": "0017_distribution_publisher_authority.sql",
       "checksum": "b8ffe0ccb705b7f88196b944869539be7fb9976f7536fa2c84a7e92f868daa45",
       "parent": "0016_catalogue_publisher_distribution_access.sql",
-      "parentChecksum": "7560231c39e3acbc2462d9bbe4aaf65aa16e49c1d598fa29e68d44ca9729f66f",
+      "parentChecksum": "20efcd11ae3b307bdb54c72cc846c0151644f9f0edc6f7a11a678198e4607531",
       "kind": "exceptional",
       "statementPolicy": "approved-exception",
       "requiredReferenceDataVersion": null,
@@ -354,19 +362,20 @@
     {
       "sequence": 34,
       "filename": "0034_listing_lead_association.sql",
-      "checksum": "7d6d03852721892d3ee3284344c7263b25813d19e71d0997df9dad04ab712ea9",
+      "checksum": "e78443e685cc860a42095c47c51e5f3cdb5ec87c93136c5d9f98047b7d65dca5",
       "parent": "0033_land_evidence_access_audit.sql",
       "parentChecksum": "92515db6c2f291b5aed0674a242e25ac4e0c3950e83cf519cb1ba59cf470be9f",
-      "kind": "ddl",
-      "statementPolicy": "single-ddl",
-      "requiredReferenceDataVersion": null
+      "kind": "exceptional",
+      "statementPolicy": "approved-exception",
+      "requiredReferenceDataVersion": null,
+      "approvalReference": "DBX-TIDB-INCREMENTAL-DDL-SEQUENCING-2026-09-04-Edward"
     },
     {
       "sequence": 35,
       "filename": "0035_commercial_assets.sql",
       "checksum": "93145dd09355fb3d7b86e5ad91abe6f5c76edfd2a547864e369493842a32dff2",
       "parent": "0034_listing_lead_association.sql",
-      "parentChecksum": "7d6d03852721892d3ee3284344c7263b25813d19e71d0997df9dad04ab712ea9",
+      "parentChecksum": "e78443e685cc860a42095c47c51e5f3cdb5ec87c93136c5d9f98047b7d65dca5",
       "kind": "ddl",
       "statementPolicy": "single-ddl",
       "requiredReferenceDataVersion": null
@@ -520,20 +529,20 @@
     {
       "sequence": 50,
       "filename": "0050_commercial_asset_physical_location.sql",
-      "checksum": "20e950381cf082d94b3dca1fcc1b79b0d601f4dea2a65873829a0672f962e4f3",
+      "checksum": "131b4cbb8f785d401d905a6becde2afc8c716604bf2bc25e07c51c7ef6bf0c64",
       "parent": "0049_commercial_lead_contexts.sql",
       "parentChecksum": "ff17f3d19065138ae82a94ecb4c8e6ff7904439c25f095e1cc552e0560055df5",
       "kind": "exceptional",
       "statementPolicy": "approved-exception",
       "requiredReferenceDataVersion": null,
-      "approvalReference": "COMM-S1-commercial-asset-physical-location-2026-08-21-Edward"
+      "approvalReference": "DBX-TIDB-INCREMENTAL-DDL-SEQUENCING-2026-09-04-Edward"
     },
     {
       "sequence": 51,
       "filename": "0051_sl_places.sql",
       "checksum": "47fe0393ff7d3bf8badbe6b115baf0179641b1319a05468314d0aa6514d2369c",
       "parent": "0050_commercial_asset_physical_location.sql",
-      "parentChecksum": "20e950381cf082d94b3dca1fcc1b79b0d601f4dea2a65873829a0672f962e4f3",
+      "parentChecksum": "131b4cbb8f785d401d905a6becde2afc8c716604bf2bc25e07c51c7ef6bf0c64",
       "kind": "ddl",
       "statementPolicy": "single-ddl",
       "requiredReferenceDataVersion": null

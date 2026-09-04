@@ -11,10 +11,7 @@ import {
   type ResolvedDatabaseContext,
 } from './types';
 
-export type OwnershipRequirement =
-  | 'none'
-  | 'registered-local-worktree'
-  | 'exact-local-owner';
+export type OwnershipRequirement = 'none' | 'registered-local-worktree' | 'exact-local-owner';
 export type ApprovalRequirement = 'none' | 'protected-target';
 export type AcknowledgementRequirement = 'none' | 'exact-target';
 
@@ -66,6 +63,7 @@ export type AuthorizedDatabaseOperation = {
   targetClass: DatabaseTargetClass;
   credentialClass: DatabaseCredentialClass;
   approvalReference: string | null;
+  approvalActor: string | null;
   evidenceRule: string;
 };
 
@@ -134,7 +132,9 @@ function assertOwnership(
 ): void {
   if (requirement === 'none' || !context.local) return;
   if (!context.worktree.registered) {
-    throw new Error('Database operation refused: current directory is not a registered Git worktree.');
+    throw new Error(
+      'Database operation refused: current directory is not a registered Git worktree.',
+    );
   }
   if (requirement === 'registered-local-worktree') return;
   if (context.targetClass === 'clean-main-local') {
@@ -183,7 +183,9 @@ export function authorizeDatabaseOperation(
   const rule = policy.operations[context.operation];
 
   if (policy.denyTargetClasses.includes(context.targetClass)) {
-    throw new Error(`Database operation refused: target class ${context.targetClass} fails closed.`);
+    throw new Error(
+      `Database operation refused: target class ${context.targetClass} fails closed.`,
+    );
   }
   if (!rule.allowedTargetClasses.includes(context.targetClass)) {
     throw new Error(
@@ -220,6 +222,7 @@ export function authorizeDatabaseOperation(
     targetClass: context.targetClass,
     credentialClass: context.credentialClass,
     approvalReference: input.approval?.reference ?? null,
+    approvalActor: input.approval?.actor ?? null,
     evidenceRule: rule.evidence,
   });
   authorizationDecisions.add(decision);
@@ -238,6 +241,8 @@ export function assertAuthorizedDatabaseOperation(
     decision.operation !== authority.context.operation ||
     (allowedOperations && !allowedOperations.includes(decision.operation))
   ) {
-    throw new Error('Database connection refused: operation authorization is absent or mismatched.');
+    throw new Error(
+      'Database connection refused: operation authorization is absent or mismatched.',
+    );
   }
 }

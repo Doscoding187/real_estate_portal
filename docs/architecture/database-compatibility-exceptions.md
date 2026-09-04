@@ -64,6 +64,121 @@ gain approval from historical presence.
 Such code remains audit debt until Edward explicitly approves and registers it,
 or an approved workstream removes it.
 
+### Exception ID: DBX-TIDB-0001-sequenced-unique-index-replacement
+
+Status: Approved for the bounded production recovery of the 0001 zero-statement failure
+
+Owner: Property Listify senior product engineering
+
+Approved by Edward on: 2026-09-04, through the production cutover recovery authorization
+
+Business reason: TiDB rejected the original search-to-lead migration because its single
+`ALTER TABLE` attempted to create a unique index over columns introduced by that same
+DDL job. The replacement preserves the canonical model while sequencing the additive
+column expansion and unique-index expansion as independently executable statements.
+
+Canonical authority: `drizzle/schema/leads.ts` remains the desired model; the active
+replacement migration is the only executable schema authority. The rejected SQL remains
+unchanged under the zero-statement evidence archive and is never executed.
+
+Exact files: `server/migrations/0001_public_search_to_lead_reliability_sequenced.sql`,
+`server/migrations/manifest.json`,
+`server/migrations/_archived/rejected-zero-statement/0001_public_search_to_lead_reliability.sql`,
+`server/migrations/recoverRejectedReleaseZeroStatementMigration.ts`, and the protected
+release CLI/docs/tests that invoke it.
+
+Tables and columns: `leads.capture_request_id`, `leads.consent_captured_at`,
+`leads.consent_version`, `leads.consent_source`, `leads.delivery_status`,
+`leads.delivery_attempts`, `leads.delivery_last_attempt_at`,
+`leads.delivery_next_attempt_at`, `leads.delivery_last_error`,
+`leads.delivery_provider_reference`, and unique index
+`leads.uq_leads_capture_request`.
+
+Permitted read direction: None; this is an additive schema replacement only.
+
+Permitted write direction: The protected release recovery may change only the durable
+zero-statement attempt state from `failed` to `failed_replaced` and append its separate
+review-evidence row. The replacement DDL then runs through `release:apply`.
+
+Failure and observability behavior: Recovery requires exact protected release approval,
+the exact target acknowledgement for apply, the exact failed attempt and failure class,
+an unchanged archive checksum, an exact accepted history prefix, and read-only proof that
+all rejected columns and the unique index are absent. Any mismatch fails closed; no ledger
+history is created for the rejected SQL and no attempt evidence is deleted.
+
+Automated evidence: Release recovery unit tests, migration manifest/checksum tests,
+database-authority static/contract tests, and the post-recovery schema-congruency and
+readiness checks.
+
+Expiry or objective removal condition: Remove this exception after the production
+zero-statement attempt is reviewed, the sequenced replacement reaches the canonical head,
+and the release recovery evidence is retained as historical incident evidence.
+
+Removal workstream: Database cutover recovery closure.
+
+### Exception ID: DBX-TIDB-INCREMENTAL-DDL-SEQUENCING-2026-09-04-Edward
+
+Status: Approved for the bounded pre-launch TiDB migration-lineage correction
+
+Owner: Property Listify senior product engineering
+
+Approved by Edward on: 2026-09-04, through the ongoing production-cutover authorization to make the canonical local lineage the production authority
+
+Business reason: The zero-statement `0001` failure exposed a TiDB DDL rule that
+also affected ten later, still-unapplied migrations. Each combined newly added
+columns with their dependent indexes or foreign-key constraints inside one
+`ALTER TABLE` job. The corrected lineage preserves every approved schema object
+and sequences its column expansion before its dependent objects can be created.
+
+Canonical authority: The canonical Drizzle models and the active SQL manifest
+remain authoritative. This exception changes execution sequencing only; it does
+not introduce a legacy schema, alternate runtime query, data fallback, or
+parallel migration lineage.
+
+Exact files: `server/migrations/0003_canonical_property_measurements.sql`,
+`server/migrations/0004_canonical_listing_location.sql`,
+`server/migrations/0011_catalogue_publisher_developments.sql`,
+`server/migrations/0012_catalogue_publisher_properties.sql`,
+`server/migrations/0013_catalogue_publisher_leads.sql`,
+`server/migrations/0014_catalogue_publisher_drafts.sql`,
+`server/migrations/0015_catalogue_publisher_distribution_partnerships.sql`,
+`server/migrations/0016_catalogue_publisher_distribution_access.sql`,
+`server/migrations/0034_listing_lead_association.sql`,
+`server/migrations/0050_commercial_asset_physical_location.sql`,
+`server/migrations/manifest.json`, and
+`server/migrations/migrationManifest.ts`.
+
+Tables and columns: additive measurements on `properties`; geography lifecycle
+and canonical location fields on `provinces`, `cities`, `suburbs`, and
+`listings`; Catalogue Publisher identifiers on `developments`, `properties`,
+`leads`, `development_drafts`, `distribution_brand_partnerships`, and
+`distribution_development_access`; `leads.listing_id`; and canonical physical
+location fields on `commercial_assets`, with their already-approved indexes and
+foreign-key constraints.
+
+Permitted read direction: None; this is SQL execution sequencing only.
+
+Permitted write direction: Only the normal canonical migration runner may
+apply the amended, still-unapplied active migrations. No manual TiDB DDL,
+ledger editing, schema guessing, or historical migration replay is permitted.
+
+Failure and observability behavior: The manifest validator rejects any future
+`ALTER TABLE` statement that introduces columns alongside indexes, keys, or
+constraints. If any separately sequenced statement fails, the durable attempt
+records its exact progress and blocks ordinary continuation for reviewed
+recovery; it is never silently retried.
+
+Automated evidence: TiDB compatibility guard tests, migration-manifest and
+lineage validation, release recovery tests, Database Authority static checks,
+and the post-release schema-congruency/readiness checks.
+
+Expiry or objective removal condition: This exception has no runtime surface.
+Its operational relevance ends once the canonical production target reaches
+the manifest head; retain this record with the release evidence to explain why
+the historical migration statements are deliberately sequenced.
+
+Removal workstream: Database cutover recovery closure.
+
 ## Required exception record
 
 Every approved exception must contain:

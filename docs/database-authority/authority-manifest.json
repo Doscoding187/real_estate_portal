@@ -100,6 +100,10 @@
     "db:release:reference:apply",
     "db:release:reference:verify"
   ],
+  "releaseMigrationRecoveryCommands": [
+    "db:release-migration-recovery:plan",
+    "db:release-migration-recovery:apply"
+  ],
   "acceptanceScenarioAdapter": "server/_core/databaseAuthority/dataAdapters/searchToLeadScenario.ts",
   "plePublicationEntitlementAdapter": "server/_core/databaseAuthority/dataAdapters/plePublicationEntitlement.ts",
   "pleReviewerFixtureAdapter": "server/_core/databaseAuthority/dataAdapters/pleReviewerFixture.ts"

@@ -19,8 +19,10 @@ is non-executable evidence.
 4. Add one lowercase top-level SQL file and one manifest entry with exact
    checksum and parent checksum.
 5. For `incremental-ddl`, use exactly one independently verifiable DDL
-   statement. For `transactional-data`, use DML only. Exceptional entries need
-   an explicit approval contract.
+   statement. On TiDB, do not add columns and their indexes, keys, or
+   constraints in the same `ALTER TABLE`; use separately sequenced statements
+   under an approved exceptional contract. For `transactional-data`, use DML
+   only.
 6. Prove malformed identity, duplicate number, membership drift, checksum
    drift, broken ancestry, cycle, multiple heads, archive execution, and unsafe
    statement policy all fail.

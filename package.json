@@ -82,6 +82,8 @@
     "db:migrate:apply": "tsx scripts/databaseAuthorityCli.ts migration:apply",
     "db:migration-recovery:plan": "tsx scripts/databaseAuthorityCli.ts migration-recovery:plan",
     "db:migration-recovery:apply": "tsx scripts/databaseAuthorityCli.ts migration-recovery:apply",
+    "db:release-migration-recovery:plan": "tsx scripts/databaseAuthorityCli.ts release-migration-recovery:plan",
+    "db:release-migration-recovery:apply": "tsx scripts/databaseAuthorityCli.ts release-migration-recovery:apply",
     "db:release:plan": "tsx scripts/databaseAuthorityCli.ts release:plan",
     "db:release:ack": "tsx scripts/databaseAuthorityCli.ts worktree:ack --operation=release-apply --credential=migration",
     "db:release:apply": "tsx scripts/databaseAuthorityCli.ts release:apply",
