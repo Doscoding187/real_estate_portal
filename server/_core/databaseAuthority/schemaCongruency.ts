@@ -102,6 +102,12 @@ export function normalizeSqlExpression(value: string): string {
   // a materially different CHECK predicate into an apparently equal one.
   let normalized = '';
   let quote: "'" | '"' | '`' | null = null;
+  // MySQL can serialize a charset-prefixed CHECK literal as
+  // `_utf8mb4\'value\'`. That backslash is a metadata-rendering delimiter,
+  // not an escaped apostrophe inside the SQL literal. Track that form only
+  // when we consumed its exact introducer so ordinary SQL literals such as
+  // `'O\\'Brien'` retain their literal semantics.
+  let escapedSingleQuoteDelimiter = false;
   let pendingWhitespace = false;
   const appendPendingWhitespace = (nextCharacter: string): void => {
     if (!pendingWhitespace) return;
@@ -134,6 +140,19 @@ export function normalizeSqlExpression(value: string): string {
     const character = value[index];
     const next = value[index + 1];
     if (quote) {
+      if (
+        quote === "'" &&
+        escapedSingleQuoteDelimiter &&
+        character === '\\' &&
+        next === "'" &&
+        !/[a-z0-9_$]/i.test(value[index + 2] ?? '')
+      ) {
+        normalized += "'";
+        quote = null;
+        escapedSingleQuoteDelimiter = false;
+        index += 1;
+        continue;
+      }
       normalized += character;
       if (character === '\\' && next) {
         normalized += next;
@@ -146,6 +165,7 @@ export function normalizeSqlExpression(value: string): string {
           index += 1;
         } else {
           quote = null;
+          escapedSingleQuoteDelimiter = false;
         }
       }
       continue;
@@ -166,6 +186,7 @@ export function normalizeSqlExpression(value: string): string {
       appendPendingWhitespace("'");
       normalized += "'";
       quote = "'";
+      escapedSingleQuoteDelimiter = charsetIntroducer[0].endsWith("\\'");
       index += charsetIntroducer[0].length - 1;
       continue;
     }
@@ -192,6 +213,7 @@ export function normalizeSqlExpression(value: string): string {
       appendPendingWhitespace(character);
       normalized += character;
       quote = character;
+      escapedSingleQuoteDelimiter = false;
       continue;
     }
     if (pendingWhitespace) {

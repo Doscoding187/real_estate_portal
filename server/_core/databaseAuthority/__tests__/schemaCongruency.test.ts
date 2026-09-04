@@ -59,6 +59,19 @@ describe('normalized schema congruency', () => {
       normalizeSqlExpression("(`schema`.`column` = _utf8mb4'Known Value')"),
     ).toBe("`column` = 'Known Value'");
     expect(
+      normalizeSqlExpression(
+        "(((`authority_kind` = _utf8mb4\\'platform_reference\\') AND (`developer_organisation_id` IS NULL)) OR ((`authority_kind` = _utf8mb4\\'developer_first_party\\') AND (`developer_organisation_id` IS NOT NULL)))",
+      ),
+    ).toBe(
+      "(`authority_kind` = 'platform_reference' and `developer_organisation_id` is null) or (`authority_kind` = 'developer_first_party' and `developer_organisation_id` is not null)",
+    );
+    expect(normalizeSqlExpression("(`label` = 'O\\'Brien')")).toBe(
+      "`label` = 'O\\'Brien'",
+    );
+    expect(
+      normalizeSqlExpression("(`label` = _utf8mb4\\'O\\'Brien\\')"),
+    ).toBe("`label` = 'O\\'Brien'");
+    expect(
       normalizeSqlExpression("(`label` = 'literal _utf8mb4`source`.`column`')"),
     ).toBe("`label` = 'literal _utf8mb4`source`.`column`'");
     expect(normalizeSqlExpression("(`label` = 'literal (value)')")).toBe(
