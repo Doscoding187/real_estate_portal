@@ -53,6 +53,8 @@ pnpm db:migrate:plan
 pnpm db:migrate:apply -- --accepted-old-head=<head-or-none> --expected-new-head=<manifest-head>
 pnpm db:release:plan
 pnpm db:release:apply -- --ack=<exact-release-ack>
+pnpm db:release-tidb-check-constraint-convergence:plan -- --approval-reference=<reference> --approval-actor=<actor>
+pnpm db:release-tidb-check-constraint-convergence:apply -- --approval-reference=<reference> --approval-actor=<actor> --plan-digest=<exact-plan-digest> --ack=<exact-release-ack>
 pnpm db:schema:congruency
 pnpm db:readiness
 ```
@@ -75,3 +77,11 @@ pnpm db:release-commercial-quote-terms-recovery:apply -- --approval-reference=<r
 Never execute the archived SQL or repair the attempt ledger manually. After
 recovery, create a fresh protected `db:release:plan` from the accepted `0045`
 head before applying the active replacement and later migrations.
+
+The TiDB CHECK-constraint convergence is separately bounded to the 22 desired
+Drizzle checks that were absent because the target capability was disabled. Its
+plan proves the canonical migration head, each named constraint, and zero
+violating rows before apply. Apply enables the TiDB capability and adds only
+the named missing checks under the ordinary release lock. It records durable
+progress rather than modifying migration history. Normal TiDB migration apply
+fails closed while the capability is disabled.

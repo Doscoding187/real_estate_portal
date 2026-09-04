@@ -3,7 +3,10 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { afterEach, describe, expect, it } from 'vitest';
-import { authorizeDatabaseOperation } from '../../_core/databaseAuthority/authorization';
+import {
+  authorizeDatabaseOperation,
+  expectedDatabaseAcknowledgement,
+} from '../../_core/databaseAuthority/authorization';
 import { resolveDatabaseAuthority } from '../../_core/databaseAuthority/context';
 import type { AuthoritySqlConnection } from '../../_core/databaseAuthority/connectionAuthority';
 import { deriveGitWorktreeIdentity } from '../../_core/databaseAuthority/worktreeIdentity';
@@ -49,6 +52,32 @@ function authorityFor(mode: 'plan' | 'apply') {
     processEnv: { NODE_ENV: 'development', APP_ENV: 'development' },
   });
   const authorization = authorizeDatabaseOperation(authority, { root: process.cwd() });
+  return { authority, authorization };
+}
+
+function protectedAuthorityFor(mode: 'plan' | 'apply') {
+  const identity = fixtureIdentity();
+  const operation = mode === 'plan' ? 'release-plan' : 'release-apply';
+  const authority = resolveDatabaseAuthority({
+    operation,
+    cwd: identity.worktreePath,
+    gitIdentity: identity,
+    explicitDatabaseUrl:
+      'mysql://release-user:private@gateway01.ap-northeast-1.prod.aws.tidbcloud.com:4000/listify_property_sa',
+    credentialClass: mode === 'plan' ? 'read-only' : 'migration',
+    processEnv: { NODE_ENV: 'production', APP_ENV: 'production' },
+  });
+  const authorization = authorizeDatabaseOperation(authority, {
+    root: process.cwd(),
+    approval: {
+      reference: 'TEST-TIDB-CHECK-GUARD',
+      actor: 'Edward',
+      operation,
+      targetFingerprintHash: authority.context.targetFingerprintHash,
+    },
+    acknowledgement:
+      mode === 'apply' ? expectedDatabaseAcknowledgement(authority.context) : undefined,
+  });
   return { authority, authorization };
 }
 
@@ -112,6 +141,7 @@ class FakeMigrationConnection implements AuthoritySqlConnection {
   failStatement?: RegExp;
   failFailureUpdate = false;
   rejectPreparedControlStatements = false;
+  tidbCheckConstraintsEnabled = false;
   ended = false;
   connectionId = '314';
   lockOwnerConnectionId = '314';
@@ -132,6 +162,14 @@ class FakeMigrationConnection implements AuthoritySqlConnection {
     }
     if (statement.startsWith('SELECT DATABASE()')) {
       return [[{ database_name: this.selectedDatabase }]];
+    }
+    if (statement.startsWith('SHOW GLOBAL VARIABLES LIKE')) {
+      return [[
+        {
+          Variable_name: 'tidb_enable_check_constraint',
+          Value: this.tidbCheckConstraintsEnabled ? 'ON' : 'OFF',
+        },
+      ]];
     }
     if (statement.includes('information_schema.tables') && statement.includes('table_name IN')) {
       const rows = [];
@@ -278,6 +316,29 @@ describe('migration connection security', () => {
 });
 
 describe('manifest migration planning and durable attempts', () => {
+  it('blocks ordinary TiDB release apply while CHECK enforcement is disabled', async () => {
+    const fixture = migrationFixture(false);
+    const { authority, authorization } = protectedAuthorityFor('apply');
+    const connection = new FakeMigrationConnection(authority.context.databaseName);
+
+    await expect(
+      runSqlMigrations({
+        mode: 'apply',
+        operation: 'release-apply',
+        migrationsDir: fixture.root,
+        manifestPath: fixture.manifestPath,
+        authority,
+        authorization,
+        acceptedOldHead: null,
+        expectedNewHead: fixture.entries[0].filename,
+        connectionFactory: async () => connection,
+      }),
+    ).rejects.toThrow('TiDB CHECK-constraint enforcement is disabled');
+    expect(connection.calls.some(call => call.statement.includes('GET_LOCK'))).toBe(false);
+    expect(connection.calls.some(call => call.statement.startsWith('CREATE TABLE'))).toBe(false);
+    expect(connection.ended).toBe(true);
+  });
+
   it('plans explicit old and new heads without migration or control-table mutation', async () => {
     const fixture = migrationFixture();
     const { authority, authorization } = authorityFor('plan');

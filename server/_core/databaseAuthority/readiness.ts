@@ -32,6 +32,7 @@ import {
   normalizedDesiredSchema,
   normalizedPhysicalSchema,
 } from './schemaCongruency';
+import { readTiDbCheckConstraintCapability } from './tidbCheckConstraintCapability';
 import * as canonicalSchema from '../../../drizzle/schema';
 import {
   buildMigrationPlan,
@@ -184,6 +185,7 @@ function targetOwnershipLayer(authority: ResolvedDatabaseAuthority): ReadinessLa
 async function schemaCongruencyLayer(
   connection: AuthoritySqlConnection,
   root: string,
+  provider: ResolvedDatabaseAuthority['context']['provider'],
 ): Promise<ReadinessLayer> {
   if (!existsSync(resolve(root, 'drizzle/schema/index.ts'))) {
     return layer(
@@ -197,17 +199,26 @@ async function schemaCongruencyLayer(
       normalizedDesiredSchema(canonicalSchema),
       await normalizedPhysicalSchema(connection),
     );
-    return report.congruent
-      ? layer(
-          'ready',
-          'schema-congruent',
-          `Physical schema matches canonical digest ${report.desiredDigest}.`,
-        )
-      : layer(
-          'not-ready',
-          'schema-not-congruent',
-          `Physical schema differs from canonical digest ${report.desiredDigest}; ${report.differences.length} difference(s) found.`,
-        );
+    if (!report.congruent) {
+      return layer(
+        'not-ready',
+        'schema-not-congruent',
+        `Physical schema differs from canonical digest ${report.desiredDigest}; ${report.differences.length} difference(s) found.`,
+      );
+    }
+    const capability = await readTiDbCheckConstraintCapability(connection, provider);
+    if (capability.applicable && !capability.enabled) {
+      return layer(
+        'not-ready',
+        'tidb-check-constraints-disabled',
+        `TiDB CHECK-constraint enforcement is disabled (${capability.variable}=${capability.value}).`,
+      );
+    }
+    return layer(
+      'ready',
+      'schema-congruent',
+      `Physical schema matches canonical digest ${report.desiredDigest}.`,
+    );
   } catch (error) {
     return layer(
       'not-ready',
@@ -361,7 +372,7 @@ export async function assessAuthorizedDatabaseReadiness(input: {
   const serviceAvailable = targetConnectivity;
   const targetOwned = targetOwnershipLayer(input.authority);
   const schemaMigrated = migrationHead;
-  const schemaCongruent = await schemaCongruencyLayer(input.connection, root);
+  const schemaCongruent = await schemaCongruencyLayer(input.connection, root, context.provider);
   let canonicalReferenceData = layer(
     'not-evaluated',
     'reference-not-evaluated',

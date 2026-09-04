@@ -152,6 +152,29 @@ SQL or manual DDL. After it succeeds, run a fresh normal `release:plan` and
 `0045_commercial_space_positive_area_integrity.sql` so that only the active
 sequenced replacement and later canonical migrations may run.
 
+### Reviewed TiDB CHECK-constraint convergence
+
+The 2026-09-04 production cutover found TiDB's
+`tidb_enable_check_constraint` capability disabled after the canonical
+migration head had been reached. That setting can allow CHECK syntax to be
+accepted without retaining the constraints, so this is handled by one named,
+bounded convergence—not by replaying migrations or editing history.
+
+```text
+pnpm db:release-tidb-check-constraint-convergence:plan -- --approval-reference=DBX-TIDB-CHECK-CONSTRAINT-CONVERGENCE-2026-09-04-Edward --approval-actor=<actor>
+pnpm db:release-tidb-check-constraint-convergence:apply -- --approval-reference=DBX-TIDB-CHECK-CONSTRAINT-CONVERGENCE-2026-09-04-Edward --approval-actor=<actor> --plan-digest=<exact-plan-digest> --ack=<exact-release-ack>
+```
+
+The plan is read-only. It requires the exact canonical migration head, proves
+the global TiDB capability, obtains check metadata through
+`information_schema.TIDB_CHECK_CONSTRAINTS`, compares the fixed 22 definitions
+to Drizzle's desired model, and counts violations of every missing predicate.
+Apply uses the ordinary release authorization and named migration lock, enables
+the TiDB capability, adds only a verified missing listed constraint, and records
+durable per-constraint progress. A failed or ambiguous attempt blocks normal
+continuation; it is never retried or repaired manually. Ordinary migration
+apply refuses a TiDB target while this capability is disabled.
+
 Never:
 
 - Do not use `db:push` or manual DDL as canonical authority;

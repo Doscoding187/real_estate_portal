@@ -130,6 +130,7 @@
       "scripts/show-create-unit-types.ts",
       "scripts/verify-schema.ts",
       "server/create-test-db.ts",
+      "server/migrations/recoverTidbCheckConstraintConvergence.ts",
       "server/scripts/apply-approval-schema.ts",
       "server/scripts/create-local-db.ts",
       "server/scripts/debug-schema.ts",
@@ -224,6 +225,9 @@
       ],
       "deferred schema executor": [],
       "controlled data repair": [],
+      "approved protected release recovery": [
+        "server/migrations/recoverTidbCheckConstraintConvergence.ts"
+      ],
       "verification or diagnostic": [
         "scripts/db-contract-verify.ts",
         "scripts/schema-sanity-check.mjs"
@@ -237,6 +241,9 @@
       "scripts/db-contract-verify.ts",
       "scripts/db-verify-distribution-schema.ts",
       "scripts/schema-sanity-check.mjs"
+    ],
+    "approvedProtectedReleaseRecoveries": [
+      "server/migrations/recoverTidbCheckConstraintConvergence.ts"
     ],
     "approvedLocalTestInitialization": [
       "docker/mysql-local/init/01-create-local-databases.sql",
@@ -496,6 +503,11 @@
       "path": "server/migrations/recoverRejectedReleaseCommercialQuoteTermsMigration.ts",
       "classification": "canonical supporting",
       "purpose": "Provides the bounded protected release recovery for the reviewed zero-statement TiDB 0046 quote-terms failure; it changes only durable review evidence and never executes rejected SQL."
+    },
+    {
+      "path": "server/migrations/recoverTidbCheckConstraintConvergence.ts",
+      "classification": "canonical supporting",
+      "purpose": "Provides the one reviewed protected TiDB CHECK-constraint convergence: it verifies the canonical head and violation-free physical state, enables TiDB CHECK enforcement, and adds only the 22 canonical checks under the migration lock with durable evidence."
     },
     {
       "path": "server/migrations/0001_public_search_to_lead_reliability_sequenced.sql",

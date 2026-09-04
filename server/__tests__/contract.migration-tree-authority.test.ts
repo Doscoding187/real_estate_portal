@@ -50,6 +50,7 @@ type ManualUtilityAuthority = {
   knownManualSchemaExecutorCandidates: string[];
   directSchemaCandidateClasses: Record<string, string[]>;
   approvedMigrationVerification: string[];
+  approvedProtectedReleaseRecoveries: string[];
   approvedLocalTestInitialization: string[];
   approvedReadOnlyDiagnostics: string[];
   controlledDataRepairUtilities: string[];
@@ -212,6 +213,7 @@ function nonCanonicalRunnerSignals(source: string): string[] {
 function manualUtilityGroups(manual: ManualUtilityAuthority): Array<[string, string[]]> {
   return [
     ['approved migration verification', manual.approvedMigrationVerification],
+    ['approved protected release recovery', manual.approvedProtectedReleaseRecoveries],
     ['approved local/test initialization', manual.approvedLocalTestInitialization],
     ['approved read-only diagnostics', manual.approvedReadOnlyDiagnostics],
     ['controlled data repair', manual.controlledDataRepairUtilities],
@@ -578,6 +580,18 @@ describe('migration tree authority', () => {
     expect([...manual.prohibitedManualSchemaExecutors].sort()).toEqual(
       [...manual.retiredPaths].sort(),
     );
+    expect(manual.approvedProtectedReleaseRecoveries).toEqual([
+      'server/migrations/recoverTidbCheckConstraintConvergence.ts',
+    ]);
+    expect(
+      manual.directSchemaCandidateClasses['approved protected release recovery'],
+    ).toEqual(manual.approvedProtectedReleaseRecoveries);
+
+    const boundedRecovery = read('server/migrations/recoverTidbCheckConstraintConvergence.ts');
+    expect(boundedRecovery).toContain('assertAuthorizedDatabaseOperation');
+    expect(boundedRecovery).toContain('assertRunnerConnectionTarget');
+    expect(boundedRecovery).toContain('acquireMigrationLock');
+    expect(boundedRecovery).toContain('TIDB_CHECK_CONSTRAINT_CONVERGENCE.approvalReference');
 
     for (const retiredPath of manual.retiredPaths) {
       expect(paths, `Retired manual schema executor returned: ${retiredPath}`).not.toContain(

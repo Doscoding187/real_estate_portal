@@ -96,23 +96,167 @@ function normalizedAction(value: unknown): string {
     .replace(/\s+/g, ' ');
 }
 
-function normalizedExpression(value: string): string {
-  let normalized = value.trim().replace(/\s+/g, ' ').toLowerCase();
+export function normalizeSqlExpression(value: string): string {
+  // Normalize SQL surface spelling without touching the contents of string
+  // literals. Collapsing whitespace or lower-casing inside a literal can turn
+  // a materially different CHECK predicate into an apparently equal one.
+  let normalized = '';
+  let quote: "'" | '"' | '`' | null = null;
+  let pendingWhitespace = false;
+  const appendPendingWhitespace = (nextCharacter: string): void => {
+    if (!pendingWhitespace) return;
+    const previous = normalized[normalized.length - 1] ?? '';
+    // SQL punctuation does not need a separator. All other boundaries keep
+    // one separator, preserving token boundaries such as `IS NOT NULL`.
+    if (
+      normalized.length > 0 &&
+      previous !== '(' &&
+      previous !== ',' &&
+      nextCharacter !== ')' &&
+      nextCharacter !== ','
+    ) {
+      normalized += ' ';
+    }
+    pendingWhitespace = false;
+  };
+  const quotedIdentifierEnd = (start: number): number => {
+    for (let cursor = start + 1; cursor < value.length; cursor += 1) {
+      if (value[cursor] !== '`') continue;
+      if (value[cursor + 1] === '`') {
+        cursor += 1;
+        continue;
+      }
+      return cursor;
+    }
+    return -1;
+  };
+  for (let index = 0; index < value.length; index += 1) {
+    const character = value[index];
+    const next = value[index + 1];
+    if (quote) {
+      normalized += character;
+      if (character === '\\' && next) {
+        normalized += next;
+        index += 1;
+        continue;
+      }
+      if (character === quote) {
+        if (next === quote) {
+          normalized += next;
+          index += 1;
+        } else {
+          quote = null;
+        }
+      }
+      continue;
+    }
+    if (/\s/.test(character)) {
+      pendingWhitespace = true;
+      continue;
+    }
+    // MySQL/TiDB can prefix a string literal with its character set. Drop the
+    // provider rendering only when it appears outside a literal and at a token
+    // boundary; literal content such as 'note _utf8mb4' must stay untouched.
+    const charsetIntroducer = value.slice(index).match(/^_utf8mb4\\?'/i);
+    const previousSourceCharacter = value[index - 1] ?? '';
+    if (
+      charsetIntroducer &&
+      (index === 0 || !/[a-z0-9_$]/i.test(previousSourceCharacter))
+    ) {
+      appendPendingWhitespace("'");
+      normalized += "'";
+      quote = "'";
+      index += charsetIntroducer[0].length - 1;
+      continue;
+    }
+    // Physical metadata can qualify a column while Drizzle renders it without
+    // the table prefix. Remove that qualifier only in SQL syntax, never from
+    // a string literal. The actual column identifier is processed normally on
+    // the next iteration.
+    if (character === '`') {
+      const identifierEnd = quotedIdentifierEnd(index);
+      if (identifierEnd >= 0) {
+        let cursor = identifierEnd + 1;
+        while (/\s/.test(value[cursor] ?? '')) cursor += 1;
+        if (value[cursor] === '.') {
+          cursor += 1;
+          while (/\s/.test(value[cursor] ?? '')) cursor += 1;
+          if (value[cursor] === '`') {
+            index = cursor - 1;
+            continue;
+          }
+        }
+      }
+    }
+    if (character === "'" || character === '"' || character === '`') {
+      appendPendingWhitespace(character);
+      normalized += character;
+      quote = character;
+      continue;
+    }
+    if (pendingWhitespace) {
+      appendPendingWhitespace(character);
+    }
+    normalized += character.toLowerCase();
+  }
+  normalized = normalized.trim();
   // MySQL/MariaDB expose CHECK clauses with table qualifiers removed,
   // character-set introducers added to string literals, and redundant
-  // grouping parentheses around simple predicates. Canonicalize those
-  // provider renderings so the Drizzle model and physical schema compare on
-  // the actual constraint meaning.
-  normalized = normalized
-    .replace(/`[^`]+`\.`([^`]+)`/g, '`$1`')
-    .replace(/_utf8mb4\\?'/g, "'")
-    .replace(/\\'/g, "'")
-    .replace(/\(\s+/g, '(')
-    .replace(/\s+\)/g, ')');
+  // grouping parentheses around simple predicates. The token-level handling
+  // above canonicalizes the first two without modifying quoted text.
+  const previousWord = (expression: string, opening: number): string | null => {
+    let cursor = opening - 1;
+    while (cursor >= 0 && /\s/.test(expression[cursor] ?? '')) cursor -= 1;
+    const end = cursor + 1;
+    while (cursor >= 0 && /[a-z0-9_]/i.test(expression[cursor] ?? '')) cursor -= 1;
+    return end > cursor + 1 ? expression.slice(cursor + 1, end) : null;
+  };
+  const isGroupingOpening = (expression: string, opening: number): boolean => {
+    let cursor = opening - 1;
+    while (cursor >= 0 && /\s/.test(expression[cursor] ?? '')) cursor -= 1;
+    const previous = expression[cursor] ?? '';
+    if (!previous) return true;
+    if (/[a-z0-9_]/i.test(previous)) {
+      const word = previousWord(expression, opening);
+      // Boolean conjunction/disjunction can safely contain a single
+      // predicate without changing its precedence. NOT is deliberately
+      // excluded: `NOT (predicate)` is not equivalent to `NOT predicate` in
+      // SQL's precedence grammar, and the grouping may be the only boundary
+      // between NOT and a comparison expression. SQL collection/function
+      // syntax (IN (...), COALESCE(...), and similar) also retains its
+      // parentheses.
+      return word === 'and' || word === 'or';
+    }
+    // Do not infer that a parenthesized operand following an arithmetic,
+    // comparison, or other symbolic operator is redundant. For example,
+    // removing the grouping in `a * (b + c)` changes its meaning. A nested
+    // group is safe to inspect because its containing parentheses remain.
+    return previous === '(';
+  };
   const hasTopLevelBooleanOperator = (expression: string): boolean => {
     let depth = 0;
+    let quote: "'" | '"' | '`' | null = null;
     for (let index = 0; index < expression.length; index += 1) {
       const character = expression[index];
+      const next = expression[index + 1];
+      if (quote) {
+        if (character === '\\' && next) {
+          index += 1;
+          continue;
+        }
+        if (character === quote) {
+          if (next === quote) {
+            index += 1;
+          } else {
+            quote = null;
+          }
+        }
+        continue;
+      }
+      if (character === "'" || character === '"' || character === '`') {
+        quote = character;
+        continue;
+      }
       if (character === '(') depth += 1;
       if (character === ')') depth -= 1;
       if (depth === 0 && /[a-z]/i.test(character)) {
@@ -122,6 +266,76 @@ function normalizedExpression(value: string): string {
     }
     return false;
   };
+  const hasTopLevelComma = (expression: string): boolean => {
+    let depth = 0;
+    let quote: "'" | '"' | '`' | null = null;
+    for (let index = 0; index < expression.length; index += 1) {
+      const character = expression[index];
+      const next = expression[index + 1];
+      if (quote) {
+        if (character === '\\' && next) {
+          index += 1;
+          continue;
+        }
+        if (character === quote) {
+          if (next === quote) {
+            index += 1;
+          } else {
+            quote = null;
+          }
+        }
+        continue;
+      }
+      if (character === "'" || character === '"' || character === '`') {
+        quote = character;
+        continue;
+      }
+      if (character === '(') depth += 1;
+      if (character === ')') depth -= 1;
+      if (depth === 0 && character === ',') return true;
+    }
+    return false;
+  };
+  const hasTopLevelArithmeticOperator = (expression: string): boolean => {
+    let depth = 0;
+    let quote: "'" | '"' | '`' | null = null;
+    for (let index = 0; index < expression.length; index += 1) {
+      const character = expression[index];
+      const next = expression[index + 1];
+      if (quote) {
+        if (character === '\\' && next) {
+          index += 1;
+          continue;
+        }
+        if (character === quote) {
+          if (next === quote) {
+            index += 1;
+          } else {
+            quote = null;
+          }
+        }
+        continue;
+      }
+      if (character === "'" || character === '"' || character === '`') {
+        quote = character;
+        continue;
+      }
+      if (character === '(') depth += 1;
+      if (character === ')') depth -= 1;
+      if (depth === 0 && /[+\-*/%]/.test(character)) return true;
+    }
+    return false;
+  };
+  const significantBefore = (expression: string, position: number): string => {
+    let cursor = position - 1;
+    while (cursor >= 0 && /\s/.test(expression[cursor] ?? '')) cursor -= 1;
+    return expression[cursor] ?? '';
+  };
+  const significantAfter = (expression: string, position: number): string => {
+    let cursor = position + 1;
+    while (cursor < expression.length && /\s/.test(expression[cursor] ?? '')) cursor += 1;
+    return expression[cursor] ?? '';
+  };
 
   // Remove only grouping parentheses around a single predicate. Parentheses
   // belonging to SQL functions (for example TRIM(...)) and boolean groups
@@ -130,8 +344,28 @@ function normalizedExpression(value: string): string {
   while (changed) {
     changed = false;
     const stack: number[] = [];
+    let quote: "'" | '"' | '`' | null = null;
     for (let index = 0; index < normalized.length; index += 1) {
       const character = normalized[index];
+      const next = normalized[index + 1];
+      if (quote) {
+        if (character === '\\' && next) {
+          index += 1;
+          continue;
+        }
+        if (character === quote) {
+          if (next === quote) {
+            index += 1;
+          } else {
+            quote = null;
+          }
+        }
+        continue;
+      }
+      if (character === "'" || character === '"' || character === '`') {
+        quote = character;
+        continue;
+      }
       if (character === '(') {
         stack.push(index);
         continue;
@@ -139,18 +373,60 @@ function normalizedExpression(value: string): string {
       if (character !== ')' || stack.length === 0) continue;
 
       const opening = stack.pop()!;
-      const previousCharacter = normalized[opening - 1] ?? '';
-      if (/[a-z0-9_]/i.test(previousCharacter)) continue;
+      if (!isGroupingOpening(normalized, opening)) continue;
 
       const inner = normalized.slice(opening + 1, index);
-      if (hasTopLevelBooleanOperator(inner)) continue;
+      // Parentheses that contain arithmetic, or that sit directly beside an
+      // arithmetic operator, may be precedence-bearing operands. Keep them
+      // even when their contents are a single predicate (for example the
+      // `IS NOT NULL` operands in a boolean-count expression).
+      if (
+        hasTopLevelBooleanOperator(inner) ||
+        hasTopLevelComma(inner) ||
+        hasTopLevelArithmeticOperator(inner) ||
+        /[+\-*/%]/.test(significantBefore(normalized, opening)) ||
+        /[+\-*/%]/.test(significantAfter(normalized, index))
+      ) continue;
 
       normalized = `${normalized.slice(0, opening)}${inner}${normalized.slice(index + 1)}`;
       changed = true;
       break;
     }
   }
-  while (normalized.startsWith('(') && normalized.endsWith(')')) {
+  const hasSingleOuterGroup = (expression: string): boolean => {
+    if (!expression.startsWith('(') || !expression.endsWith(')')) return false;
+    let depth = 0;
+    let quote: "'" | '"' | '`' | null = null;
+    for (let index = 0; index < expression.length; index += 1) {
+      const character = expression[index];
+      const next = expression[index + 1];
+      if (quote) {
+        if (character === '\\' && next) {
+          index += 1;
+          continue;
+        }
+        if (character === quote) {
+          if (next === quote) {
+            index += 1;
+          } else {
+            quote = null;
+          }
+        }
+        continue;
+      }
+      if (character === "'" || character === '"' || character === '`') {
+        quote = character;
+        continue;
+      }
+      if (character === '(') depth += 1;
+      if (character === ')') {
+        depth -= 1;
+        if (depth === 0 && index !== expression.length - 1) return false;
+      }
+    }
+    return depth === 0 && quote === null;
+  };
+  while (hasSingleOuterGroup(normalized)) {
     normalized = normalized.slice(1, -1).trim();
   }
   if (normalized === 'now()' || normalized === 'current_timestamp()') {
@@ -178,7 +454,7 @@ function desiredDefault(column: any, type: string): string | null {
     if (rendered.params.length === 1 && rendered.sql.trim() === '?') {
       return normalizeDefaultForType(String(rendered.params[0]), type);
     }
-    return normalizedExpression(rendered.sql);
+    return normalizeSqlExpression(rendered.sql);
   }
   return normalizeDefaultForType(String(column.default), type);
 }
@@ -195,7 +471,7 @@ function actualDefault(value: unknown, type: string): string | null {
 function indexColumnName(value: any): string {
   if (typeof value?.name === 'string') return value.name;
   if (typeof value?.config?.name === 'string') return value.config.name;
-  if (is(value, SQL)) return normalizedExpression(dialect.sqlToQuery(value).sql);
+  if (is(value, SQL)) return normalizeSqlExpression(dialect.sqlToQuery(value).sql);
   throw new Error('Canonical Drizzle index contains an unsupported column expression.');
 }
 
@@ -315,7 +591,7 @@ export function normalizedDesiredSchema(schemaExports: Record<string, unknown>):
     });
     const checks: NormalizedCheck[] = (config.checks as any[]).map(check => ({
       name: check.name,
-      expression: normalizedExpression(dialect.sqlToQuery(check.value).sql),
+      expression: normalizeSqlExpression(dialect.sqlToQuery(check.value).sql),
     }));
 
     return {
@@ -440,21 +716,71 @@ export async function normalizedPhysicalSchema(
     tables.get(tableNameValue)!.foreignKeys.push(normalized);
   }
 
+  const checksByIdentity = new Map<string, Record<string, unknown>>();
+  const addCheckRows = (rows: Array<Record<string, unknown>>): void => {
+    for (const row of rows) {
+      const tableName = String(rowValue(row, 'table_name') ?? '');
+      const constraintName = String(rowValue(row, 'constraint_name') ?? '');
+      const checkClause = String(rowValue(row, 'check_clause') ?? '').trim();
+      if (!tableName || !constraintName || !checkClause) {
+        throw new Error('Physical CHECK inventory returned malformed metadata.');
+      }
+      if (!tables.has(tableName)) {
+        throw new Error(`Physical CHECK inventory references unknown table ${tableName}.`);
+      }
+      const identity = `${tableName}\0${constraintName}`;
+      const existing = checksByIdentity.get(identity);
+      if (
+        existing &&
+        normalizeSqlExpression(String(rowValue(existing, 'check_clause') ?? '')) !==
+          normalizeSqlExpression(String(rowValue(row, 'check_clause') ?? ''))
+      ) {
+        throw new Error(`CHECK inventory disagrees about ${tableName}.${constraintName}.`);
+      }
+      checksByIdentity.set(identity, row);
+    }
+  };
+  let portableCheckRows: Array<Record<string, unknown>> = [];
+  let portableInventoryError: unknown = null;
   try {
-    const checkRows = await queryRows(
+    portableCheckRows = await queryRows(
       connection,
       "SELECT tc.TABLE_NAME AS table_name, tc.CONSTRAINT_NAME AS constraint_name, cc.CHECK_CLAUSE AS check_clause FROM information_schema.TABLE_CONSTRAINTS tc INNER JOIN information_schema.CHECK_CONSTRAINTS cc ON cc.CONSTRAINT_SCHEMA = tc.CONSTRAINT_SCHEMA AND cc.CONSTRAINT_NAME = tc.CONSTRAINT_NAME WHERE tc.CONSTRAINT_SCHEMA = DATABASE() AND tc.CONSTRAINT_TYPE = 'CHECK' ORDER BY tc.TABLE_NAME, tc.CONSTRAINT_NAME",
     );
-    for (const row of checkRows) {
-      const table = tables.get(String(rowValue(row, 'table_name') ?? ''));
-      if (!table) continue;
-      table.checks.push({
-        name: String(rowValue(row, 'constraint_name') ?? ''),
-        expression: normalizedExpression(String(rowValue(row, 'check_clause') ?? '')),
-      });
-    }
-  } catch {
-    // MySQL/TiDB variants without CHECK_CONSTRAINTS are supported when the desired model has no checks.
+  } catch (error) {
+    // Some TiDB versions do not support the portable MySQL CHECK inventory;
+    // retain the failure and require the provider inventory to supply proof.
+    portableInventoryError = error;
+  }
+  addCheckRows(portableCheckRows);
+  // TiDB's provider-specific inventory includes the owning table. Merge it
+  // with the portable catalog instead of treating a partial portable result as
+  // authoritative. MySQL-compatible providers that do not expose this view
+  // simply reject the read and retain their portable evidence.
+  let tidbCheckRows: Array<Record<string, unknown>> = [];
+  let tidbInventoryError: unknown = null;
+  try {
+    tidbCheckRows = await queryRows(
+      connection,
+      'SELECT TABLE_NAME AS table_name, CONSTRAINT_NAME AS constraint_name, CHECK_CLAUSE AS check_clause FROM information_schema.TIDB_CHECK_CONSTRAINTS WHERE CONSTRAINT_SCHEMA = DATABASE() ORDER BY TABLE_NAME, CONSTRAINT_NAME',
+    );
+  } catch (error) {
+    // Non-TiDB providers do not expose this inventory. It is safe to rely on
+    // the portable inventory only when that inventory itself was readable.
+    tidbInventoryError = error;
+  }
+  if (portableInventoryError && tidbInventoryError) {
+    throw new Error(
+      'Physical CHECK metadata could not be read from either the portable or TiDB inventory.',
+    );
+  }
+  addCheckRows(tidbCheckRows);
+  for (const row of checksByIdentity.values()) {
+    const table = tables.get(String(rowValue(row, 'table_name') ?? ''))!;
+    table.checks.push({
+      name: String(rowValue(row, 'constraint_name') ?? ''),
+      expression: normalizeSqlExpression(String(rowValue(row, 'check_clause') ?? '')),
+    });
   }
 
   for (const table of tables.values()) {
