@@ -7,7 +7,11 @@ ALTER TABLE `commercial_assets`
   ADD COLUMN `location_confirmation_state` ENUM('confirmed','needs_confirmation') NOT NULL DEFAULT 'needs_confirmation',
   ADD COLUMN `public_location_precision` ENUM('approximate','exact') NOT NULL DEFAULT 'approximate',
   ADD COLUMN `location_confirmed_by_user_id` INT NULL,
-  ADD COLUMN `location_confirmed_at` TIMESTAMP NULL,
-  ADD INDEX `idx_commercial_assets_location_confirmation` (`location_confirmation_state`),
+  ADD COLUMN `location_confirmed_at` TIMESTAMP NULL;
+
+CREATE INDEX `idx_commercial_assets_location_confirmation`
+  ON `commercial_assets` (`location_confirmation_state`);
+
+ALTER TABLE `commercial_assets`
   ADD CONSTRAINT `fk_commercial_assets_location_confirmed_by`
-    FOREIGN KEY (`location_confirmed_by_user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL;
+  FOREIGN KEY (`location_confirmed_by_user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL;

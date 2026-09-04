@@ -57,7 +57,9 @@ A normal incremental DDL entry must:
 
 The active-manifest validator rejects TiDB-unsupported stored-program
 primitives (triggers, procedures, functions, events, and client `DELIMITER`
-directives). Local MySQL acceptance is not deployment-dialect proof. CHECK
+directives), and an `ALTER TABLE` that introduces columns alongside indexes,
+keys, or constraints. TiDB must receive those dependent objects in later
+statements. Local MySQL acceptance is not deployment-dialect proof. CHECK
 constraints are defence in depth only unless the target TiDB environment has
 separately proven `tidb_enable_check_constraint` enforcement; launch-critical
 business transitions must also be enforced by their domain command authority.
@@ -113,6 +115,22 @@ Generic migration commands accept only local disposable or quarantined
 read-only plan targets. Protected targets use `pnpm db:release:plan` and
 `pnpm db:release:apply`; the latter requires the exact target acknowledgement
 in addition to protected approval evidence.
+
+For the reviewed production `0001` failure, the bounded release recovery uses
+the same protected release authorization without widening generic local
+recovery:
+
+```text
+pnpm db:release-migration-recovery:plan -- --attempt-id=<id> --approval-reference=<reference> --approval-actor=<actor>
+pnpm db:release-migration-recovery:apply -- --attempt-id=<id> --approval-reference=<reference> --approval-actor=<actor> --plan-digest=<exact-plan-digest> --ack=<exact-release-ack>
+```
+
+This command is permanently scoped to the archived zero-statement `0001`
+attempt, its TiDB-safe replacement, and a staging/production target. It changes
+only the failed attempt review state and adds replacement evidence; the normal
+`release:plan`/`release:apply` sequence remains responsible for applying the
+replacement migration. Its `--approval-reference` and `--approval-actor` must
+exactly match the protected-target approval used to authorize the command.
 
 Never:
 

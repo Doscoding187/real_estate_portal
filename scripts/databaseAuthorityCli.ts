@@ -70,6 +70,7 @@ import {
 } from '../server/_core/databaseAuthority/types';
 import { loadAndValidateMigrationManifest } from '../server/migrations/migrationManifest';
 import { runRejectedZeroStatementRecovery } from '../server/migrations/recoverRejectedZeroStatementMigration';
+import { runRejectedReleaseZeroStatementRecovery } from '../server/migrations/recoverRejectedReleaseZeroStatementMigration';
 import { runSqlMigrations } from '../server/migrations/runSqlMigrations';
 
 type Command =
@@ -83,6 +84,8 @@ type Command =
   | 'migration:apply'
   | 'migration-recovery:plan'
   | 'migration-recovery:apply'
+  | 'release-migration-recovery:plan'
+  | 'release-migration-recovery:apply'
   | 'release:plan'
   | 'release:apply'
   | 'release-reference:plan'
@@ -265,14 +268,34 @@ async function run(command: Command): Promise<void> {
     return;
   }
 
-  if (
-    command === 'migration-recovery:plan' ||
-    command === 'migration-recovery:apply'
-  ) {
+  if (command === 'migration-recovery:plan' || command === 'migration-recovery:apply') {
     const planOnly = command.endsWith(':plan');
     const authority = authorityFor(planOnly ? 'migration-plan' : 'migration-apply');
     const decision = authorizationFor(authority);
     const result = await runRejectedZeroStatementRecovery({
+      mode: planOnly ? 'plan' : 'apply',
+      authority,
+      authorization: decision,
+      attemptId: requiredOption('attempt-id'),
+      approvalReference: requiredOption('approval-reference'),
+      approvalActor: requiredOption('approval-actor'),
+      expectedPlanDigest: planOnly ? undefined : requiredOption('plan-digest'),
+    });
+    print(result);
+    return;
+  }
+
+  if (
+    command === 'release-migration-recovery:plan' ||
+    command === 'release-migration-recovery:apply'
+  ) {
+    const planOnly = command.endsWith(':plan');
+    const authority = authorityFor(
+      planOnly ? 'release-plan' : 'release-apply',
+      planOnly ? 'read-only' : 'migration',
+    );
+    const decision = authorizationFor(authority, option('ack'));
+    const result = await runRejectedReleaseZeroStatementRecovery({
       mode: planOnly ? 'plan' : 'apply',
       authority,
       authorization: decision,
@@ -425,9 +448,9 @@ async function run(command: Command): Promise<void> {
           ? isPrepare
             ? await prepareCanonicalFoundation({ authority, decision, connection })
             : await verifyCanonicalFoundation({ authority, decision, connection })
-        : isPrepare
-          ? await prepareSearchToLeadScenario({ authority, decision, connection })
-          : await verifySearchToLeadScenario({ authority, decision, connection });
+          : isPrepare
+            ? await prepareSearchToLeadScenario({ authority, decision, connection })
+            : await verifySearchToLeadScenario({ authority, decision, connection });
       print(evidence);
     } finally {
       await connection.end();
@@ -500,6 +523,8 @@ const commands = new Set<Command>([
   'migration:apply',
   'migration-recovery:plan',
   'migration-recovery:apply',
+  'release-migration-recovery:plan',
+  'release-migration-recovery:apply',
   'release:plan',
   'release:apply',
   'release-reference:plan',

@@ -143,11 +143,13 @@ class FakeMigrationConnection implements AuthoritySqlConnection {
       return [[...this.history].map(([filename, checksum]) => ({ filename, checksum }))];
     }
     if (statement.startsWith('SELECT attempt_id')) {
-      return [[...this.attempts].flatMap(([attempt_id, attempt]) =>
-        ['running', 'failed', 'blocked'].includes(attempt.state)
-          ? [{ attempt_id, migration_filename: attempt.filename, state: attempt.state }]
-          : [],
-      )];
+      return [
+        [...this.attempts].flatMap(([attempt_id, attempt]) =>
+          ['running', 'failed', 'blocked'].includes(attempt.state)
+            ? [{ attempt_id, migration_filename: attempt.filename, state: attempt.state }]
+            : [],
+        ),
+      ];
     }
     if (statement.startsWith('SELECT COUNT(*)')) {
       return this.applicationTableCount === null
@@ -156,10 +158,14 @@ class FakeMigrationConnection implements AuthoritySqlConnection {
     }
     if (statement.includes('GET_LOCK')) return [[{ lock_status: 1 }]];
     if (statement.includes('CONNECTION_ID()') && statement.includes('IS_USED_LOCK')) {
-      return [[{
-        connection_id: this.connectionId,
-        lock_owner_connection_id: this.lockOwnerConnectionId,
-      }]];
+      return [
+        [
+          {
+            connection_id: this.connectionId,
+            lock_owner_connection_id: this.lockOwnerConnectionId,
+          },
+        ],
+      ];
     }
     if (statement.includes('RELEASE_LOCK')) return [[{ released: 1 }]];
     if (statement.startsWith('CREATE TABLE IF NOT EXISTS `sql_migration_history`')) {
@@ -294,7 +300,9 @@ describe('manifest migration planning and durable attempts', () => {
     expect(result.plan.acceptedOldHead).toBe(fixture.entries[0].filename);
     expect(result.plan.pending.map(item => item.filename)).toEqual([fixture.entries[1].filename]);
     expect(result.plan.expectedNewHead).toBe(fixture.entries[1].filename);
-    expect(connection.calls.some(call => /CREATE|INSERT|UPDATE|ALTER/.test(call.statement))).toBe(false);
+    expect(connection.calls.some(call => /CREATE|INSERT|UPDATE|ALTER/.test(call.statement))).toBe(
+      false,
+    );
   });
 
   it('applies a locked plan, records success history, and retains succeeded attempt evidence', async () => {
@@ -617,6 +625,7 @@ describe('manifest migration planning and durable attempts', () => {
           targetClass: authority.context.targetClass,
           credentialClass: authority.context.credentialClass,
           approvalReference: null,
+          approvalActor: null,
           evidenceRule: 'forged',
         },
         connectionFactory: async () => {
@@ -687,10 +696,6 @@ describe('legacy pure guards retained as compatibility adapters', () => {
         '0000_canonical_launch_baseline.sql',
         '0001_first.sql',
       ]),
-    ).toEqual([
-      '0000_canonical_launch_baseline.sql',
-      '0001_first.sql',
-      '0002_second.sql',
-    ]);
+    ).toEqual(['0000_canonical_launch_baseline.sql', '0001_first.sql', '0002_second.sql']);
   });
 });

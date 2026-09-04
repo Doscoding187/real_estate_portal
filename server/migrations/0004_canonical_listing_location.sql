@@ -3,18 +3,21 @@
 
 ALTER TABLE `provinces`
   ADD COLUMN `status` enum('verified','provisional','retired') NOT NULL DEFAULT 'verified',
-  ADD COLUMN `origin` enum('internal','provider','manual') NOT NULL DEFAULT 'internal',
-  ADD INDEX `idx_provinces_status` (`status`);
+  ADD COLUMN `origin` enum('internal','provider','manual') NOT NULL DEFAULT 'internal';
+
+CREATE INDEX `idx_provinces_status` ON `provinces` (`status`);
 
 ALTER TABLE `cities`
   ADD COLUMN `status` enum('verified','provisional','retired') NOT NULL DEFAULT 'verified',
-  ADD COLUMN `origin` enum('internal','provider','manual') NOT NULL DEFAULT 'internal',
-  ADD INDEX `idx_cities_status` (`status`);
+  ADD COLUMN `origin` enum('internal','provider','manual') NOT NULL DEFAULT 'internal';
+
+CREATE INDEX `idx_cities_status` ON `cities` (`status`);
 
 ALTER TABLE `suburbs`
   ADD COLUMN `status` enum('verified','provisional','retired') NOT NULL DEFAULT 'verified',
-  ADD COLUMN `origin` enum('internal','provider','manual') NOT NULL DEFAULT 'internal',
-  ADD INDEX `idx_suburbs_status` (`status`);
+  ADD COLUMN `origin` enum('internal','provider','manual') NOT NULL DEFAULT 'internal';
+
+CREATE INDEX `idx_suburbs_status` ON `suburbs` (`status`);
 
 CREATE TABLE `location_provider_mappings` (
   `id` int AUTO_INCREMENT NOT NULL,
@@ -52,14 +55,23 @@ ALTER TABLE `listings`
   ADD COLUMN `private_address` json NULL,
   ADD COLUMN `coordinate_source` enum('autocomplete','map','manual_confirmed') NULL,
   ADD COLUMN `location_confirmation_state` enum('confirmed','needs_confirmation') NOT NULL DEFAULT 'needs_confirmation',
-  ADD COLUMN `public_location_precision` enum('approximate','exact') NOT NULL DEFAULT 'approximate',
-  ADD INDEX `idx_listings_province_id` (`province_id`),
-  ADD INDEX `idx_listings_city_id` (`city_id`),
-  ADD INDEX `idx_listings_suburb_id` (`suburb_id`),
+  ADD COLUMN `public_location_precision` enum('approximate','exact') NOT NULL DEFAULT 'approximate';
+
+CREATE INDEX `idx_listings_province_id` ON `listings` (`province_id`);
+
+CREATE INDEX `idx_listings_city_id` ON `listings` (`city_id`);
+
+CREATE INDEX `idx_listings_suburb_id` ON `listings` (`suburb_id`);
+
+ALTER TABLE `listings`
   ADD CONSTRAINT `listings_province_id_fk`
-    FOREIGN KEY (`province_id`) REFERENCES `provinces`(`id`) ON DELETE SET NULL ON UPDATE NO ACTION,
+    FOREIGN KEY (`province_id`) REFERENCES `provinces`(`id`) ON DELETE SET NULL ON UPDATE NO ACTION;
+
+ALTER TABLE `listings`
   ADD CONSTRAINT `listings_city_id_fk`
-    FOREIGN KEY (`city_id`) REFERENCES `cities`(`id`) ON DELETE SET NULL ON UPDATE NO ACTION,
+    FOREIGN KEY (`city_id`) REFERENCES `cities`(`id`) ON DELETE SET NULL ON UPDATE NO ACTION;
+
+ALTER TABLE `listings`
   ADD CONSTRAINT `listings_suburb_id_fk`
     FOREIGN KEY (`suburb_id`) REFERENCES `suburbs`(`id`) ON DELETE SET NULL ON UPDATE NO ACTION;
 

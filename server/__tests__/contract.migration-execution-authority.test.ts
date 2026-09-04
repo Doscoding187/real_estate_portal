@@ -10,6 +10,8 @@ const APPROVED_OPERATIONAL_ENTRYPOINTS = new Set([
   'db:migrate:apply',
   'db:migration-recovery:plan',
   'db:migration-recovery:apply',
+  'db:release-migration-recovery:plan',
+  'db:release-migration-recovery:apply',
   'db:migrate:test',
   'db:migrate:local',
   'db:release:plan',
@@ -97,6 +99,8 @@ function resolvePackageScript(
         'migration:apply',
         'migration-recovery:plan',
         'migration-recovery:apply',
+        'release-migration-recovery:plan',
+        'release-migration-recovery:apply',
         'release:plan',
         'release:apply',
       ].includes(authorityCliCommand);
@@ -299,7 +303,7 @@ describe('migration execution authority', () => {
     );
     const launchAccess = executionManifest.migrations.find(entry => entry.sequence === 7);
     expect(incremental).toMatchObject({
-      filename: '0001_public_search_to_lead_reliability.sql',
+      filename: '0001_public_search_to_lead_reliability_sequenced.sql',
       parent: baseline?.filename,
       parentChecksum: baseline?.checksum,
     });
@@ -315,14 +319,14 @@ describe('migration execution authority', () => {
       filename: '0003_canonical_property_measurements.sql',
       parent: taxonomy?.filename,
       parentChecksum: taxonomy?.checksum,
-      checksum: '773c8488b1b574b958b92d484b2e20b504175ffa30aa035f5608d9d3716fe76c',
+      checksum: 'e0b199683c211064257cc8b1b518ab2323120c48140e55d4e1df2dee43761aa7',
     });
     expect(location).toMatchObject({
       sequence: 4,
       filename: '0004_canonical_listing_location.sql',
       parent: measurements?.filename,
       parentChecksum: measurements?.checksum,
-      checksum: 'b772082a269b7e30ed514d9850b129192ddc0bd05842a558f46af017b3726dbe',
+      checksum: '10a1ab6089c2b066e3565b8c5d061d4f7a70bf577974db8d2ce9388139cf8a6e',
     });
     expect(manualLocation).toMatchObject({
       sequence: 5,
@@ -347,7 +351,7 @@ describe('migration execution authority', () => {
     });
     expect(manifestFiles).toEqual([
       '0000_canonical_launch_baseline.sql',
-      '0001_public_search_to_lead_reliability.sql',
+      '0001_public_search_to_lead_reliability_sequenced.sql',
       '0002_canonical_property_taxonomy.sql',
       '0003_canonical_property_measurements.sql',
       '0004_canonical_listing_location.sql',

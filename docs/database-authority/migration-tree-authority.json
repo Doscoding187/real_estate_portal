@@ -6,6 +6,7 @@
     "localCommand": "pnpm db:migrate:apply",
     "runner": "server/migrations/runSqlMigrations.ts",
     "manifest": "server/migrations/manifest.json",
+    "migrationManifestValidator": "server/migrations/migrationManifest.ts",
     "activeSqlDirectory": "server/migrations",
     "ledger": "sql_migration_history",
     "attemptLedger": "sql_migration_attempts",
@@ -252,9 +253,7 @@
       "server/_core/databaseAuthority/dataAdapters/pleReviewerFixture.ts",
       "server/_core/databaseAuthority/dataAdapters/searchToLeadScenario.ts"
     ],
-    "approvedReadOnlyDiagnostics": [
-      "scripts/print-db-target.ts"
-    ],
+    "approvedReadOnlyDiagnostics": ["scripts/print-db-target.ts"],
     "controlledDataRepairUtilities": [],
     "localTestSeedOrFixtureUtilities": [
       "scripts/run-listing-performance-e2e.ts",
@@ -457,9 +456,7 @@
         "disposition": "superseded"
       }
     ],
-    "historicalDocumentationRoots": [
-      ".kiro/**"
-    ],
+    "historicalDocumentationRoots": [".kiro/**"],
     "historicalDocumentationFiles": [
       "COMPLETE_DELIVERY_SUMMARY.md",
       "EXPLORE_QUICK_REFERENCE.md",
@@ -491,9 +488,14 @@
       "purpose": "The sole executable launch baseline."
     },
     {
-      "path": "server/migrations/0001_public_search_to_lead_reliability.sql",
+      "path": "server/migrations/migrationManifest.ts",
+      "classification": "canonical supporting",
+      "purpose": "Validates canonical migration membership, lineage, statement policy, and TiDB-safe additive DDL sequencing before any plan or apply operation."
+    },
+    {
+      "path": "server/migrations/0001_public_search_to_lead_reliability_sequenced.sql",
       "classification": "canonical active",
-      "purpose": "Bounded additive consent, idempotency, and lead-delivery state for the public search-to-lead journey."
+      "purpose": "Reviewed TiDB-safe additive consent, idempotency, and lead-delivery state for the public search-to-lead journey, with the unique index applied after its new columns."
     },
     {
       "path": "server/migrations/0002_canonical_property_taxonomy.sql",
@@ -746,6 +748,11 @@
       "purpose": "Preserves the unchanged checksum evidence for the TiDB-incompatible trigger migration rejected after a zero-statement local attempt; it is never executable authority."
     },
     {
+      "path": "server/migrations/_archived/rejected-zero-statement/0001_public_search_to_lead_reliability.sql",
+      "classification": "archived historical",
+      "purpose": "Preserves the unchanged checksum evidence for the TiDB-incompatible same-ALTER unique-index migration rejected after a zero-statement production attempt; it is never executable authority."
+    },
+    {
       "path": "server/migrations/_archived/**",
       "classification": "archived historical",
       "purpose": "Historical evidence only; the runner must never discover it.",
@@ -962,9 +969,7 @@
       "path": "backups/**",
       "classification": "archived historical",
       "purpose": "Backup evidence; never an application migration source.",
-      "approvedFiles": [
-        "backups/cleanup-backup-2026-01-29T20-02-35-220Z.sql"
-      ]
+      "approvedFiles": ["backups/cleanup-backup-2026-01-29T20-02-35-220Z.sql"]
     },
     {
       "path": "docker-compose.local-db.yml",

@@ -19,7 +19,7 @@ describe('PLE-6B canonical listing location migration', () => {
       parent: '0003_canonical_property_measurements.sql',
       kind: 'exceptional',
       statementPolicy: 'approved-exception',
-      approvalReference: 'PLE-6B-2026-08-10-Edward',
+      approvalReference: 'DBX-TIDB-INCREMENTAL-DDL-SEQUENCING-2026-09-04-Edward',
     });
     expect(manifest.expectedHead.filename).toBe('0065_auth_verification_token_cleanup.sql');
   });
@@ -29,10 +29,10 @@ describe('PLE-6B canonical listing location migration', () => {
     const statements = parseSqlStatements(sql);
     const normalized = sql.toLowerCase();
 
-    expect(statements).toHaveLength(6);
-    expect(statements.every(statement => /^(alter table|create table)\b/i.test(statement))).toBe(
-      true,
-    );
+    expect(statements).toHaveLength(15);
+    expect(
+      statements.every(statement => /^(alter table|create table|create index)\b/i.test(statement)),
+    ).toBe(true);
     expect(normalized).not.toMatch(/\b(drop|insert|truncate)\b/);
     expect(normalized).toContain("enum('verified','provisional','retired')");
     expect(normalized).toContain("enum('internal','provider','manual')");
@@ -46,5 +46,8 @@ describe('PLE-6B canonical listing location migration', () => {
     expect(normalized).toContain('foreign key (`province_id`) references `provinces`');
     expect(normalized).toContain('foreign key (`city_id`) references `cities`');
     expect(normalized).toContain('foreign key (`suburb_id`) references `suburbs`');
+    expect(
+      statements.some(statement => /create index `idx_listings_city_id`/i.test(statement)),
+    ).toBe(true);
   });
 });

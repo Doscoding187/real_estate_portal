@@ -81,6 +81,7 @@ type AuthorityManifest = {
     testCommand: string;
     localCommand: string;
     runner: string;
+    migrationManifestValidator: string;
     activeSqlDirectory: string;
     ledger: string;
   };
@@ -231,9 +232,14 @@ function manualSchemaUtilitySignals(source: string): string[] {
   return patterns.flatMap(pattern => Array.from(source.matchAll(pattern), match => match[0]));
 }
 
-function isManualSchemaExecutorCandidate(path: string, source: string): boolean {
+function isManualSchemaExecutorCandidate(
+  path: string,
+  source: string,
+  canonicalSupportingPaths: readonly string[] = [],
+): boolean {
   if (
     path === CANONICAL_RUNNER ||
+    canonicalSupportingPaths.includes(path) ||
     path.startsWith('server/__tests__/') ||
     path.includes('/__tests__/')
   ) {
@@ -375,6 +381,9 @@ describe('migration tree authority', () => {
     const runner = read(CANONICAL_RUNNER);
 
     expect(manifest.canonicalAuthority.runner).toBe(CANONICAL_RUNNER);
+    expect(manifest.canonicalAuthority.migrationManifestValidator).toBe(
+      'server/migrations/migrationManifest.ts',
+    );
     expect(manifest.canonicalAuthority.activeSqlDirectory).toBe('server/migrations');
     expect(activeSql).toEqual([...manifestFiles].sort());
     expect(executionManifest.expectedHead).toBe(manifestFiles.at(-1));
@@ -551,6 +560,7 @@ describe('migration tree authority', () => {
     const paths = workingTreePaths();
     const classified = manualUtilityGroups(manual);
     const approved = classified.flatMap(([, entries]) => entries);
+    const canonicalSupportingPaths = [manifest.canonicalAuthority.migrationManifestValidator];
 
     expect(
       manual.canonicalMigrationExecutor,
@@ -587,7 +597,7 @@ describe('migration tree authority', () => {
 
     for (const path of paths.filter(path => /\.(?:[cm]?[jt]sx?|ps1|sh)$/.test(path))) {
       const source = read(path);
-      if (isManualSchemaExecutorCandidate(path, source)) {
+      if (isManualSchemaExecutorCandidate(path, source, canonicalSupportingPaths)) {
         expect(
           manual.knownManualSchemaExecutorCandidates,
           `Unclassified manual schema executor: ${path}`,

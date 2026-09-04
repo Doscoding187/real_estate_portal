@@ -65,6 +65,7 @@ export type AuthorityManifest = {
   dataRoleManifest: string;
   canonicalCommercialReleaseEntrypoint: string;
   canonicalCommercialReleaseCommands: string[];
+  releaseMigrationRecoveryCommands: string[];
   acceptanceScenarioAdapter: string;
 };
 
@@ -148,6 +149,7 @@ export function validateAuthorityManifest(manifest: AuthorityManifest, root = pr
     ...manifest.approvedLocalCommands,
     ...manifest.destructiveLocalCommands,
     ...manifest.canonicalCommercialReleaseCommands,
+    ...manifest.releaseMigrationRecoveryCommands,
   ].filter(script => !scripts[script]);
   const invalid = [
     manifest.authorityVersion !== 3 ? 'authority version must be 3' : '',
