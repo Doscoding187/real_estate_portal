@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import { router, superAdminProcedure } from './_core/trpc';
 import { getDb } from './db';
 import {
@@ -7,8 +8,18 @@ import {
   countPendingListings,
   countPendingDevelopments,
 } from './db';
-import { leads, developments, cataloguePublishers, developerOrganisations } from '../drizzle/schema';
-import { desc, sql, and, eq, gte, isNotNull } from 'drizzle-orm';
+import {
+  leads,
+  developments,
+  cataloguePublishers,
+  developerOrganisations,
+  users,
+  agents,
+  agencies,
+  developers,
+  listings,
+} from '../drizzle/schema';
+import { desc, sql, and, eq, gte, isNotNull, asc, count } from 'drizzle-orm';
 import { assessRuntimeDatabaseReadiness } from './_core/databaseAuthority/readiness';
 import { getCacheHealth } from './_core/cache/redis';
 import { savedSearchDeliveryScheduler } from './services/savedSearchDeliveryScheduler';
@@ -383,6 +394,352 @@ export const founderRouter = router({
 
     return { items };
   }),
+
+  /**
+   * Founder Attention: detail view for a selected attention candidate.
+   *
+   * Supports two modes:
+   *   - Entity detail: developer_lead with a real lead ID
+   *   - Aggregate queue detail: agent_approval, listing_approval, development_approval
+   *
+   * Type is the authoritative discriminator. Type/ID pairing is explicitly validated.
+   */
+  getAttentionDetail: superAdminProcedure
+    .input(
+      z.object({
+        type: z.enum(['developer_lead', 'agent_approval', 'listing_approval', 'development_approval']),
+        id: z.number(),
+      }),
+    )
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) return null;
+
+      // --- Entity detail: developer lead ---
+      if (input.type === 'developer_lead') {
+        if (input.id <= 0) return null;
+
+        const now = new Date();
+        const rows = await db
+          .select({
+            id: leads.id,
+            name: leads.name,
+            email: leads.email,
+            phone: leads.phone,
+            status: leads.status,
+            leadType: leads.leadType,
+            source: leads.source,
+            qualificationScore: leads.qualificationScore,
+            qualificationStatus: leads.qualificationStatus,
+            nextAction: leads.nextAction,
+            nextFollowUp: leads.nextFollowUp,
+            firstRespondedAt: leads.firstRespondedAt,
+            lastContactedAt: leads.lastContactedAt,
+            assignedTo: leads.assignedTo,
+            agentId: leads.agentId,
+            developmentId: leads.developmentId,
+            createdAt: leads.createdAt,
+            devName: developments.name,
+            devCity: developments.city,
+            devProvince: developments.province,
+          })
+          .from(leads)
+          .leftJoin(developments, eq(leads.developmentId, developments.id))
+          .where(eq(leads.id, input.id))
+          .limit(1);
+
+        const lead = rows[0];
+        if (!lead) return null;
+
+        const created = new Date(lead.createdAt);
+        const waitingHours = Math.round((now.getTime() - created.getTime()) / (1000 * 60 * 60));
+
+        // Resolve ownership: assignedTo → agentId → null
+        let operationalOwner: string | null = null;
+        let ownerLabel = 'No owner identified';
+
+        if (lead.assignedTo) {
+          const ownerUser = await db.select({ name: users.name }).from(users).where(eq(users.id, lead.assignedTo)).limit(1);
+          if (ownerUser[0]) {
+            operationalOwner = ownerUser[0].name;
+            ownerLabel = `Assigned to ${ownerUser[0].name}`;
+          }
+        } else if (lead.agentId) {
+          const ownerAgent = await db
+            .select({ name: agents.displayName })
+            .from(agents)
+            .where(eq(agents.id, lead.agentId))
+            .limit(1);
+          if (ownerAgent[0]?.name) {
+            operationalOwner = ownerAgent[0].name;
+            ownerLabel = `Owned by agent ${ownerAgent[0].name}`;
+          }
+        }
+
+        // Suggested action: prefer canonical nextAction, then narrow fallback
+        let suggestedAction = 'Review lead activity';
+        if (lead.nextAction && String(lead.nextAction).trim()) {
+          suggestedAction = String(lead.nextAction).trim();
+        } else if (!lead.assignedTo && !lead.agentId) {
+          suggestedAction = 'Assign owner';
+        } else if (lead.status === 'new') {
+          suggestedAction = 'Make first contact';
+        } else if (lead.status === 'contacted') {
+          suggestedAction = 'Qualify lead';
+        } else if (lead.status === 'qualified') {
+          suggestedAction = 'Schedule viewing';
+        } else if (lead.status === 'viewing_scheduled') {
+          suggestedAction = 'Capture viewing outcome';
+        } else if (lead.status === 'offer_sent') {
+          suggestedAction = 'Track offer';
+        }
+
+        return {
+          type: 'developer_lead' as const,
+          kind: 'entity' as const,
+          lead: {
+            id: lead.id,
+            name: lead.name,
+            email: lead.email,
+            phone: lead.phone,
+            status: lead.status,
+            leadType: lead.leadType,
+            source: lead.source,
+            qualificationScore: lead.qualificationScore,
+            qualificationStatus: lead.qualificationStatus,
+            nextAction: lead.nextAction,
+            nextFollowUp: lead.nextFollowUp,
+            firstRespondedAt: lead.firstRespondedAt,
+            lastContactedAt: lead.lastContactedAt,
+            createdAt: lead.createdAt,
+            waitingHours,
+          },
+          development: lead.devName
+            ? { id: lead.developmentId!, name: lead.devName, city: lead.devCity, province: lead.devProvince }
+            : null,
+          ownership: { operationalOwner, ownerLabel },
+          suggestedAction,
+          operationalRoute: null,
+        };
+      }
+
+      // --- Aggregate queue detail ---
+      const AGGREGATE_IDS: Record<string, number> = {
+        agent_approval: -1,
+        listing_approval: -2,
+        development_approval: -3,
+      };
+
+      const expectedId = AGGREGATE_IDS[input.type];
+      if (expectedId === undefined || input.id !== expectedId) return null;
+
+      if (input.type === 'agent_approval') {
+        try {
+          const totalResult = await db.select({ c: count() }).from(agents).where(eq(agents.status, 'pending'));
+          const totalPending = totalResult[0]?.c ?? 0;
+
+          let oldestWaitingHours: number | null = null;
+          let oldestWaitingSince: string | null = null;
+          let preview: Array<{ id: number; name: string; agencyName: string | null; role: string; createdAt: string; waitingHours: number }> = [];
+          let previewUnavailable = false;
+
+          if (totalPending > 0) {
+            const oldest = await db.select({ createdAt: agents.createdAt }).from(agents).where(eq(agents.status, 'pending')).orderBy(asc(agents.createdAt)).limit(1);
+            if (oldest[0]) {
+              oldestWaitingSince = oldest[0].createdAt;
+              oldestWaitingHours = Math.round((Date.now() - new Date(oldest[0].createdAt).getTime()) / (1000 * 60 * 60));
+            }
+
+            try {
+              const previewRows = await db
+                .select({
+                  id: agents.id,
+                  firstName: agents.firstName,
+                  lastName: agents.lastName,
+                  role: agents.role,
+                  createdAt: agents.createdAt,
+                  agencyId: agents.agencyId,
+                })
+                .from(agents)
+                .where(eq(agents.status, 'pending'))
+                .orderBy(asc(agents.createdAt))
+                .limit(5);
+
+              const agencyIds = [...new Set(previewRows.map(r => r.agencyId).filter(Boolean))] as number[];
+              const agencyNames = agencyIds.length > 0
+                ? await db.select({ id: agencies.id, name: agencies.name }).from(agencies).where(sql`${agencies.id} IN ${agencyIds}`)
+                : [];
+              const agencyMap = new Map(agencyNames.map(a => [a.id, a.name]));
+
+              const now = Date.now();
+              preview = previewRows.map(r => ({
+                id: r.id,
+                name: `${r.firstName} ${r.lastName}`,
+                agencyName: agencyMap.get(r.agencyId) ?? null,
+                role: r.role,
+                createdAt: r.createdAt,
+                waitingHours: Math.round((now - new Date(r.createdAt).getTime()) / (1000 * 60 * 60)),
+              }));
+            } catch (err) {
+              console.error('[FounderAttention] Agent preview query failed:', err);
+              previewUnavailable = true;
+            }
+          }
+
+          return {
+            type: 'agent_approval' as const,
+            kind: 'aggregate' as const,
+            summary: { totalPending, oldestWaitingHours, oldestWaitingSince },
+            preview,
+            previewUnavailable,
+            ownership: { operationalOwner: null, ownerLabel: 'Platform approval queue' },
+            suggestedAction: 'Review pending agent registrations',
+            operationalRoute: '/admin/agent-approvals',
+          };
+        } catch (err) {
+          console.error('[FounderAttention] Agent aggregate query failed:', err);
+          return null;
+        }
+      }
+
+      if (input.type === 'listing_approval') {
+        try {
+          const totalResult = await db.select({ c: count() }).from(listings).where(eq(listings.status, 'pending_review'));
+          const totalPending = totalResult[0]?.c ?? 0;
+
+          let oldestWaitingHours: number | null = null;
+          let oldestWaitingSince: string | null = null;
+          let preview: Array<{ id: number; title: string; action: string; propertyType: string; city: string; askingPrice: string | null; createdAt: string; waitingHours: number }> = [];
+          let previewUnavailable = false;
+
+          if (totalPending > 0) {
+            const oldest = await db.select({ createdAt: listings.createdAt }).from(listings).where(eq(listings.status, 'pending_review')).orderBy(asc(listings.createdAt)).limit(1);
+            if (oldest[0]) {
+              oldestWaitingSince = oldest[0].createdAt;
+              oldestWaitingHours = Math.round((Date.now() - new Date(oldest[0].createdAt).getTime()) / (1000 * 60 * 60));
+            }
+
+            try {
+              const now = Date.now();
+              const previewRows = await db
+                .select({
+                  id: listings.id,
+                  title: listings.title,
+                  action: listings.action,
+                  propertyType: listings.propertyType,
+                  city: listings.city,
+                  askingPrice: listings.askingPrice,
+                  createdAt: listings.createdAt,
+                })
+                .from(listings)
+                .where(eq(listings.status, 'pending_review'))
+                .orderBy(asc(listings.createdAt))
+                .limit(5);
+
+              preview = previewRows.map(r => ({
+                id: r.id,
+                title: r.title,
+                action: r.action,
+                propertyType: r.propertyType,
+                city: r.city,
+                askingPrice: r.askingPrice,
+                createdAt: r.createdAt,
+                waitingHours: Math.round((now - new Date(r.createdAt).getTime()) / (1000 * 60 * 60)),
+              }));
+            } catch (err) {
+              console.error('[FounderAttention] Listing preview query failed:', err);
+              previewUnavailable = true;
+            }
+          }
+
+          return {
+            type: 'listing_approval' as const,
+            kind: 'aggregate' as const,
+            summary: { totalPending, oldestWaitingHours, oldestWaitingSince },
+            preview,
+            previewUnavailable,
+            ownership: { operationalOwner: null, ownerLabel: 'Platform approval queue' },
+            suggestedAction: 'Review pending listings',
+            operationalRoute: '/admin/listing-approvals',
+          };
+        } catch (err) {
+          console.error('[FounderAttention] Listing aggregate query failed:', err);
+          return null;
+        }
+      }
+
+      if (input.type === 'development_approval') {
+        try {
+          const totalResult = await db.select({ c: count() }).from(developments).where(eq(developments.approvalStatus, 'pending'));
+          const totalPending = totalResult[0]?.c ?? 0;
+
+          let oldestWaitingHours: number | null = null;
+          let oldestWaitingSince: string | null = null;
+          let preview: Array<{ id: number; name: string; developmentType: string; city: string; province: string; totalUnits: number | null; priceFrom: number | null; priceTo: number | null; createdAt: string; waitingHours: number }> = [];
+          let previewUnavailable = false;
+
+          if (totalPending > 0) {
+            const oldest = await db.select({ createdAt: developments.createdAt }).from(developments).where(eq(developments.approvalStatus, 'pending')).orderBy(asc(developments.createdAt)).limit(1);
+            if (oldest[0]) {
+              oldestWaitingSince = oldest[0].createdAt;
+              oldestWaitingHours = Math.round((Date.now() - new Date(oldest[0].createdAt).getTime()) / (1000 * 60 * 60));
+            }
+
+            try {
+              const now = Date.now();
+              const previewRows = await db
+                .select({
+                  id: developments.id,
+                  name: developments.name,
+                  developmentType: developments.developmentType,
+                  city: developments.city,
+                  province: developments.province,
+                  totalUnits: developments.totalUnits,
+                  priceFrom: developments.priceFrom,
+                  priceTo: developments.priceTo,
+                  createdAt: developments.createdAt,
+                })
+                .from(developments)
+                .where(eq(developments.approvalStatus, 'pending'))
+                .orderBy(asc(developments.createdAt))
+                .limit(5);
+
+              preview = previewRows.map(r => ({
+                id: r.id,
+                name: r.name,
+                developmentType: r.developmentType,
+                city: r.city,
+                province: r.province,
+                totalUnits: r.totalUnits,
+                priceFrom: r.priceFrom,
+                priceTo: r.priceTo,
+                createdAt: r.createdAt,
+                waitingHours: Math.round((now - new Date(r.createdAt).getTime()) / (1000 * 60 * 60)),
+              }));
+            } catch (err) {
+              console.error('[FounderAttention] Development preview query failed:', err);
+              previewUnavailable = true;
+            }
+          }
+
+          return {
+            type: 'development_approval' as const,
+            kind: 'aggregate' as const,
+            summary: { totalPending, oldestWaitingHours, oldestWaitingSince },
+            preview,
+            previewUnavailable,
+            ownership: { operationalOwner: null, ownerLabel: 'Platform approval queue' },
+            suggestedAction: 'Review development submissions',
+            operationalRoute: '/admin/development-approvals',
+          };
+        } catch (err) {
+          console.error('[FounderAttention] Development aggregate query failed:', err);
+          return null;
+        }
+      }
+
+      return null;
+    }),
 
   /**
    * Company Map: ecosystem node data for the visual business model.
