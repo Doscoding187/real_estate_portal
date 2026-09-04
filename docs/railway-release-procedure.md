@@ -43,7 +43,7 @@ canonical reference preparation automatically.
 
 ## 3) Deploy to Railway
 
-- Keep Railway start command set to `pnpm start:prod:with-migrations`.
+- Keep Railway start command set to `pnpm start:prod` (the value pinned in `railway.json`).
 - Trigger deploy after successful predeploy step.
 
 ## 4) Post-deploy smoke check
@@ -54,10 +54,23 @@ Run:
 pnpm release:smoke:production
 ```
 
+Then run the auth-boundary smoke from the deployed browser/API pair:
+
+```bash
+AUTH_BOUNDARY_SMOKE_API_URL=https://api.propertylistifysa.co.za \
+AUTH_BOUNDARY_SMOKE_ORIGIN=https://www.propertylistifysa.co.za \
+pnpm release:smoke:auth-boundary
+```
+
+The second check performs no account creation. It requires `OPTIONS
+/api/auth/register` to return the exact browser CORS origin and an empty
+`POST /api/auth/register` to reach validation with `400`. A timeout, `503`, or
+missing CORS header is a release failure, not a browser-only issue.
+
 Then verify in browser/network logs:
 
 - `https://api.propertylistifysa.co.za/api/trpc/auth.me` responds without `502`
-- no repeated CORS + `502` pattern
+- registration, login, password recovery, and resend-verification do not show repeated CORS/network failures
 - frontend at `https://www.propertylistifysa.co.za` can load authenticated session state
 
 ## 5) If incident happens
@@ -65,5 +78,6 @@ Then verify in browser/network logs:
 Immediate containment:
 
 1. Roll back to last known-good commit/deployment.
-2. Confirm Railway start command remains `pnpm start:prod:with-migrations`.
-3. Re-run predeploy on a fix branch and redeploy only after green.
+2. Confirm Railway start command remains `pnpm start:prod`.
+3. For `AUTH_RATE_LIMIT_STORE_UNAVAILABLE`, inspect the Railway Redis service health and its `REDIS_URL` binding without exposing credentials. Do not add an in-memory production limiter or loosen CORS to mask the failure.
+4. Re-run predeploy and `release:smoke:auth-boundary` on a fix branch; redeploy only after both are green.
