@@ -1,7 +1,6 @@
 import { Router } from 'express';
 import type { NextFunction, Request, Response } from 'express';
 import { exploreFeedService } from '../services/exploreFeedService';
-import { exploreInteractionService } from '../services/exploreInteractionService';
 
 const router = Router();
 
@@ -240,51 +239,16 @@ router.get(
 
 /**
  * POST /api/explore/interaction
- * Record user interaction with a short
+ * Legacy engagement boundary. Browser-originated ranking signals are owned by
+ * the governed discovery.engage workflow.
  */
-router.post(
-  '/interaction',
-  optionalAuth,
-  rateLimit(500, 60000),
-  async (req: Request, res: Response) => {
-    try {
-      const { shortId, interactionType, duration, feedType, feedContext, deviceType } = req.body;
-
-      if (!shortId || !interactionType || !feedType || !deviceType) {
-        return res.status(400).json({ error: 'Missing required fields' });
-      }
-
-      const sessionId = (req as any).sessionID || `guest-${Date.now()}-${Math.random()}`;
-
-      await exploreInteractionService.recordInteraction({
-        contentId: shortId, // Pass the shortId as contentId
-        userId: req.user?.id,
-        sessionId,
-        interactionType,
-        duration,
-        feedType,
-        feedContext,
-        deviceType,
-        userAgent: req.headers['user-agent'],
-        ipAddress: req.ip || req.socket.remoteAddress || undefined,
-      } as any);
-
-      res.json({ success: true });
-    } catch (err) {
-      console.error('[Explore API] Failed to record interaction:', err);
-
-      res.status(500).json({
-        error: 'Failed to record interaction',
-        details:
-          process.env.NODE_ENV !== 'production'
-            ? err instanceof Error
-              ? err.message
-              : String(err)
-            : undefined,
-      });
-    }
-  },
-);
+router.post('/interaction', optionalAuth, rateLimit(500, 60000), (_req: Request, res: Response) => {
+  return res.status(410).json({
+    error: 'Explore interaction tracking is unavailable in the legacy workflow.',
+    code: 'CAPABILITY_UNAVAILABLE',
+    message: 'Use the governed discovery.engage workflow.',
+  });
+});
 
 /**
  * POST /api/explore/save/:propertyId
@@ -304,39 +268,19 @@ router.post(
 );
 
 /**
- * POST /api/explore/share/:propertyId
+ * Legacy share boundary. Browser-originated ranking signals are owned by the
+ * governed discovery.engage workflow.
  */
 router.post(
   '/share/:propertyId',
   optionalAuth,
   rateLimit(100, 60000),
-  async (req: Request, res: Response) => {
-    try {
-      const { propertyId } = req.params;
-      const { platform } = req.body;
-      const sessionId = (req as any).sessionID || `guest-${Date.now()}-${Math.random()}`;
-
-      await exploreInteractionService.shareProperty(
-        Number(propertyId),
-        req.user?.id,
-        sessionId,
-        platform,
-      );
-
-      res.json({ success: true, propertyId: Number(propertyId), platform });
-    } catch (err) {
-      console.error('[Explore API] Failed to record share:', err);
-
-      res.status(500).json({
-        error: 'Failed to record share',
-        details:
-          process.env.NODE_ENV !== 'production'
-            ? err instanceof Error
-              ? err.message
-              : String(err)
-            : undefined,
-      });
-    }
+  (_req: Request, res: Response) => {
+    return res.status(410).json({
+      error: 'Explore sharing is unavailable in the legacy workflow.',
+      code: 'CAPABILITY_UNAVAILABLE',
+      message: 'Use the governed discovery.engage workflow.',
+    });
   },
 );
 

@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { appRouter } from '../routers';
 
@@ -36,5 +38,33 @@ describe('legacy Explore capability boundary', () => {
     ).rejects.toMatchObject({
       code: 'PRECONDITION_FAILED',
     });
+  });
+
+  it('does not expose legacy tRPC score writers beside governed discovery engagement', async () => {
+    await expect(
+      publicCaller.explore.recordInteraction({
+        contentId: 101,
+        interactionType: 'view',
+        feedType: 'recommended',
+      }),
+    ).rejects.toMatchObject({
+      code: 'PRECONDITION_FAILED',
+    });
+
+    await expect(
+      publicCaller.explore.shareProperty({
+        contentId: 101,
+      }),
+    ).rejects.toMatchObject({
+      code: 'PRECONDITION_FAILED',
+    });
+  });
+
+  it('keeps the legacy Express interaction and share routes from reaching the ranking writer', () => {
+    const legacyRoutes = readFileSync(resolve('server/routes/exploreShorts.ts'), 'utf8');
+
+    expect(legacyRoutes).not.toContain('exploreInteractionService.recordInteraction');
+    expect(legacyRoutes).not.toContain('exploreInteractionService.shareProperty');
+    expect(legacyRoutes).toContain("code: 'CAPABILITY_UNAVAILABLE'");
   });
 });

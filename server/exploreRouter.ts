@@ -3,7 +3,6 @@ import { TRPCError } from '@trpc/server';
 import { publicProcedure, protectedProcedure, router } from './_core/trpc';
 import { getDb } from './db';
 import { exploreFeedService } from './services/exploreFeedService';
-import { exploreInteractionService } from './services/exploreInteractionService';
 import { requireUser } from './_core/requireUser';
 import {
   assertExploreReferenceOwnership,
@@ -121,7 +120,8 @@ export const exploreRouter = router({
       }
     }),
 
-  // Record interaction
+  // Legacy engagement writes are retired. The governed discovery.engage
+  // boundary owns browser-originated Explore ranking signals.
   recordInteraction: publicProcedure
     .input(
       z
@@ -147,25 +147,12 @@ export const exploreRouter = router({
           message: 'Either contentId or shortId must be provided',
         }),
     )
-    .mutation(async ({ input, ctx }) => {
-      const userId = ctx.user?.id;
-      const sessionId = `session-${Date.now()}`; // Generate session ID
-      const resolvedContentId = input.contentId ?? input.shortId!;
-
-      await exploreInteractionService.recordInteraction({
-        contentId: resolvedContentId,
-        userId,
-        sessionId,
-        interactionType: input.interactionType,
-        duration: input.duration,
-        feedType: input.feedType,
-        feedContext: input.feedContext || {},
-        deviceType: input.deviceType,
-        userAgent: ctx.req.headers['user-agent'] || '',
-        ipAddress: ctx.req.ip || '',
+    .mutation(async () => {
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message:
+          'Legacy Explore engagement tracking is unavailable. Use the governed discovery.engage workflow.',
       });
-
-      return { success: true };
     }),
 
   // Legacy save path. Property saves are owned by properties.toggleFavorite.
@@ -214,7 +201,7 @@ export const exploreRouter = router({
       };
     }),
 
-  // Share property
+  // Legacy share writes are retired with the direct interaction writer.
   shareProperty: publicProcedure
     .input(
       z
@@ -227,19 +214,12 @@ export const exploreRouter = router({
           message: 'Either contentId or shortId must be provided',
         }),
     )
-    .mutation(async ({ input, ctx }) => {
-      const userId = ctx.user?.id;
-      const sessionId = `session-${Date.now()}`;
-      const resolvedContentId = input.contentId ?? input.shortId!;
-
-      await exploreInteractionService.shareProperty(
-        resolvedContentId,
-        userId,
-        sessionId,
-        input.platform,
-      );
-
-      return { success: true };
+    .mutation(async () => {
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message:
+          'Legacy Explore sharing is unavailable. Use the governed discovery.engage workflow.',
+      });
     }),
 
   // Get highlight tags
