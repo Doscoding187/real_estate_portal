@@ -2,7 +2,6 @@ import { trpc } from '@/lib/trpc';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
-  Users,
   Building2,
   UserCheck,
   Factory,
@@ -11,20 +10,21 @@ import {
   Clock,
   AlertTriangle,
   Activity,
+  Target,
+  Server,
+  CheckCircle2,
+  AlertCircle,
+  XCircle,
 } from 'lucide-react';
 
 function MetricCard({
   label,
   value,
   icon: Icon,
-  trend,
-  trendLabel,
 }: {
   label: string;
   value: string | number;
   icon: React.ElementType;
-  trend?: 'up' | 'down';
-  trendLabel?: string;
 }) {
   return (
     <Card>
@@ -33,16 +33,6 @@ function MetricCard({
           <div>
             <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">{label}</p>
             <p className="text-2xl font-bold text-slate-900 mt-1">{value}</p>
-            {trend && trendLabel && (
-              <p
-                className={`text-xs mt-1 font-medium ${
-                  trend === 'up' ? 'text-emerald-600' : 'text-red-600'
-                }`}
-              >
-                {trend === 'up' ? '+' : ''}
-                {trendLabel} this month
-              </p>
-            )}
           </div>
           <div className="p-2 bg-slate-100 rounded-lg">
             <Icon className="h-4 w-4 text-slate-600" />
@@ -53,13 +43,62 @@ function MetricCard({
   );
 }
 
-function DataUnavailable({ label }: { label: string }) {
-  return (
-    <div className="text-center py-8 text-slate-400">
-      <Activity className="h-8 w-8 mx-auto mb-2 opacity-40" />
-      <p className="text-sm">{label}</p>
-      <p className="text-xs mt-1">Not yet connected</p>
-    </div>
+const STATUS_ICONS: Record<string, React.ElementType> = {
+  operational: CheckCircle2,
+  degraded: AlertCircle,
+  unavailable: XCircle,
+};
+
+const STATUS_COLORS: Record<string, string> = {
+  operational: 'text-emerald-600',
+  degraded: 'text-amber-600',
+  unavailable: 'text-slate-400',
+};
+
+const STATUS_BG: Record<string, string> = {
+  operational: 'bg-emerald-50',
+  degraded: 'bg-amber-50',
+  unavailable: 'bg-slate-50',
+};
+
+const PIPELINE_LABELS: Record<string, string> = {
+  new: 'New',
+  contacted: 'Contacted',
+  qualified: 'Qualified',
+  viewing_scheduled: 'Viewing Scheduled',
+  offer_sent: 'Offer Sent',
+  converted: 'Converted',
+  closed: 'Closed',
+  lost: 'Lost',
+};
+
+const PIPELINE_COLORS: Record<string, string> = {
+  new: 'bg-blue-500',
+  contacted: 'bg-indigo-500',
+  qualified: 'bg-violet-500',
+  viewing_scheduled: 'bg-purple-500',
+  offer_sent: 'bg-amber-500',
+  converted: 'bg-emerald-500',
+  closed: 'bg-emerald-700',
+  lost: 'bg-red-400',
+};
+
+function relativeTime(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime();
+  if (Number.isNaN(diff)) return iso;
+  const mins = Math.floor(diff / 60_000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  return `${days}d ago`;
+}
+
+function humanizeDetail(detail: string): string {
+  return detail.replace(
+    /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z/g,
+    ts => relativeTime(ts),
   );
 }
 
@@ -68,8 +107,12 @@ export default function CockpitHome() {
     trpc.founder.getDashboardMetrics.useQuery();
   const { data: attentionData, isLoading: attentionLoading } =
     trpc.founder.getAttentionCandidates.useQuery();
+  const { data: pipeline, isLoading: pipelineLoading } =
+    trpc.founder.getLeadPipeline.useQuery();
+  const { data: health, isLoading: healthLoading } =
+    trpc.founder.getOperationalHealth.useQuery();
 
-  const platform = metrics?.platform;
+  const cockpit = metrics?.cockpit;
   const pending = metrics?.pendingApprovals;
   const attentionCount = attentionData?.items?.length ?? 0;
 
@@ -83,7 +126,7 @@ export default function CockpitHome() {
         </p>
       </div>
 
-      {/* Platform Metrics */}
+      {/* KPI Row: Leads · Agents · Agencies · Developers · Listings · Revenue */}
       <div>
         <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">
           Platform Snapshot
@@ -104,39 +147,35 @@ export default function CockpitHome() {
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
             <MetricCard
-              label="Total Users"
-              value={platform?.totalUsers ?? 0}
-              icon={Users}
-              trend={platform?.userGrowth ? 'up' : undefined}
-              trendLabel={platform?.userGrowth ? `+${platform.userGrowth}` : undefined}
+              label="Leads (30d)"
+              value={cockpit?.totalLeadsRecent ?? 0}
+              icon={Target}
             />
             <MetricCard
               label="Active Agents"
-              value={platform?.totalAgents ?? 0}
+              value={cockpit?.activeAgents ?? 0}
               icon={UserCheck}
             />
             <MetricCard
-              label="Agencies"
-              value={platform?.totalAgencies ?? 0}
+              label="Active Agencies"
+              value={cockpit?.activeAgencies ?? 0}
               icon={Building2}
             />
             <MetricCard
-              label="Developers"
-              value={platform?.totalDevelopers ?? 0}
+              label="Active Developers"
+              value={cockpit?.activeDevelopers ?? 0}
               icon={Factory}
             />
             <MetricCard
               label="Active Listings"
-              value={platform?.activeListings ?? 0}
+              value={cockpit?.activeListings ?? 0}
               icon={Home}
-              trend={platform?.propertyGrowth ? 'up' : undefined}
-              trendLabel={platform?.propertyGrowth ? `+${platform.propertyGrowth}` : undefined}
             />
             <MetricCard
-              label="Monthly Revenue"
+              label="Revenue (30d)"
               value={
-                platform?.monthlyRevenue
-                  ? `R ${platform.monthlyRevenue.toLocaleString()}`
+                cockpit?.monthlyRevenue
+                  ? `R ${cockpit.monthlyRevenue.toLocaleString()}`
                   : 'R 0'
               }
               icon={TrendingUp}
@@ -144,6 +183,83 @@ export default function CockpitHome() {
           </div>
         )}
       </div>
+
+      {/* Lead Pipeline */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm font-semibold flex items-center gap-2">
+            <Target className="h-4 w-4 text-violet-500" />
+            Lead Pipeline
+            <span className="text-xs font-normal text-slate-400 ml-1">
+              Current lead distribution by stage
+            </span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {pipelineLoading ? (
+            <div className="space-y-2">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="animate-pulse h-6 bg-slate-100 rounded" />
+              ))}
+            </div>
+          ) : pipeline && pipeline.stages.length > 0 ? (
+            <div className="space-y-3">
+              {pipeline.stages
+                .filter(s => s.status !== 'lost')
+                .map(stage => (
+                  <div key={stage.status} className="flex items-center gap-3">
+                    <span className="text-sm text-slate-600 w-36 shrink-0">
+                      {PIPELINE_LABELS[stage.status] ?? stage.status}
+                    </span>
+                    <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full ${PIPELINE_COLORS[stage.status] ?? 'bg-slate-400'}`}
+                        style={{
+                          width: pipeline.total > 0
+                            ? `${Math.max((stage.count / pipeline.total) * 100, stage.count > 0 ? 2 : 0)}%`
+                            : '0%',
+                        }}
+                      />
+                    </div>
+                    <span className="text-sm font-medium text-slate-900 w-12 text-right">
+                      {stage.count}
+                    </span>
+                  </div>
+                ))}
+              <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
+                <span className="text-xs text-slate-500">Total leads</span>
+                <span className="text-sm font-semibold text-slate-900">{pipeline.total}</span>
+              </div>
+              {pipeline.stages.some(s => s.status === 'lost') && (
+                <>
+                  <div className="border-t border-dashed border-slate-200 pt-3">
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm text-slate-500 w-36 shrink-0">
+                        Exited (Lost)
+                      </span>
+                      <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
+                        <div
+                          className="h-full rounded-full bg-red-400"
+                          style={{
+                            width: pipeline.total > 0
+                              ? `${Math.max((pipeline.stages.find(s => s.status === 'lost')?.count ?? 0) / pipeline.total * 100, 0)}%`
+                              : '0%',
+                          }}
+                        />
+                      </div>
+                      <span className="text-sm font-medium text-slate-900 w-12 text-right">
+                        {pipeline.stages.find(s => s.status === 'lost')?.count ?? 0}
+                      </span>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          ) : (
+            <p className="text-sm text-slate-400 text-center py-4">No lead data available</p>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Two-column layout */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -245,7 +361,7 @@ export default function CockpitHome() {
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-semibold flex items-center gap-2">
               <Activity className="h-4 w-4 text-emerald-500" />
-              Ecosystem Health
+              Ecosystem Snapshot
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -283,29 +399,48 @@ export default function CockpitHome() {
                 />
               </>
             ) : (
-              <DataUnavailable label="Ecosystem data unavailable" />
+              <p className="text-sm text-slate-400 text-center py-4">Ecosystem data unavailable</p>
             )}
           </CardContent>
         </Card>
       </div>
 
-      {/* Traffic & Analytics — Not Connected */}
+      {/* Operational Health Footer */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-semibold">Traffic & Analytics</CardTitle>
+          <CardTitle className="text-sm font-semibold flex items-center gap-2">
+            <Server className="h-4 w-4 text-slate-500" />
+            Operational Health
+          </CardTitle>
         </CardHeader>
         <CardContent>
-          <DataUnavailable label="Traffic analytics not connected" />
-        </CardContent>
-      </Card>
-
-      {/* System Health — Not Connected */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-semibold">System Health</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <DataUnavailable label="System health monitoring not connected" />
+          {healthLoading ? (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="animate-pulse h-16 bg-slate-100 rounded-lg" />
+              ))}
+            </div>
+          ) : health && health.services.length > 0 ? (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {health.services.map(service => {
+                const StatusIcon = STATUS_ICONS[service.status] ?? XCircle;
+                return (
+                  <div
+                    key={service.name}
+                    className={`rounded-lg p-3 ${STATUS_BG[service.status] ?? 'bg-slate-50'}`}
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <StatusIcon className={`h-3.5 w-3.5 ${STATUS_COLORS[service.status] ?? 'text-slate-400'}`} />
+                      <span className="text-xs font-medium text-slate-700">{service.name}</span>
+                    </div>
+                    <p className="text-xs text-slate-500 leading-relaxed">{humanizeDetail(service.detail)}</p>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="text-sm text-slate-400 text-center py-4">Health data unavailable</p>
+          )}
         </CardContent>
       </Card>
     </div>

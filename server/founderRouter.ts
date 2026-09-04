@@ -9,6 +9,20 @@ import {
 } from './db';
 import { leads, developments, cataloguePublishers, developerOrganisations } from '../drizzle/schema';
 import { desc, sql, and, eq, gte, isNotNull } from 'drizzle-orm';
+import { assessRuntimeDatabaseReadiness } from './_core/databaseAuthority/readiness';
+import { getCacheHealth } from './_core/cache/redis';
+import { savedSearchDeliveryScheduler } from './services/savedSearchDeliveryScheduler';
+
+const LEAD_PIPELINE_ORDER = [
+  'new',
+  'contacted',
+  'qualified',
+  'viewing_scheduled',
+  'offer_sent',
+  'converted',
+  'closed',
+  'lost',
+] as const;
 
 /**
  * Founder Command Centre Router — read-only aggregation layer.
@@ -20,18 +34,35 @@ import { desc, sql, and, eq, gte, isNotNull } from 'drizzle-orm';
 export const founderRouter = router({
   /**
    * Cockpit: platform snapshot with real metrics from existing analytics.
+   *
+   * KPI composition (V2):
+   *   Leads · Active Agents · Active Agencies · Active Developers · Active Listings · Revenue
+   *
+   * Uses getPlatformAnalytics() for all metrics — no duplicate SQL.
    */
   getDashboardMetrics: superAdminProcedure.query(async () => {
-    const [analytics, ecosystem, pendingAgents, pendingListings, pendingDevelopments] =
+    const db = await getDb();
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const [analytics, ecosystem, pendingAgents, pendingListings, pendingDevelopments, recentLeadCount] =
       await Promise.all([
         getPlatformAnalytics(),
         getEcosystemStats(),
         countPendingAgents(),
         countPendingListings(),
         countPendingDevelopments(),
+        db
+          ? db
+              .select({ count: sql<number>`count(*)` })
+              .from(leads)
+              .where(sql`${leads.createdAt} >= ${thirtyDaysAgo}`)
+              .then(r => r[0]?.count ?? 0)
+          : Promise.resolve(0),
       ]);
 
     return {
+      // V1 response contract — preserved exactly as at commit cd7d504b
       platform: {
         totalUsers: analytics.totalUsers,
         totalAgencies: analytics.totalAgencies,
@@ -43,6 +74,15 @@ export const founderRouter = router({
         userGrowth: analytics.userGrowth,
         propertyGrowth: analytics.propertyGrowth,
       },
+      // V2 Cockpit fields — added, not replacing V1 fields
+      cockpit: {
+        totalLeadsRecent: recentLeadCount,
+        activeAgents: ecosystem.agents.active,
+        activeAgencies: ecosystem.agencies.active,
+        activeDevelopers: ecosystem.developers.active,
+        activeListings: analytics.activeProperties,
+        monthlyRevenue: analytics.monthlyRevenue,
+      },
       ecosystem,
       pendingApprovals: {
         agents: pendingAgents,
@@ -50,6 +90,157 @@ export const founderRouter = router({
         developments: pendingDevelopments,
       },
     };
+  }),
+
+  /**
+   * Cockpit: Lead Pipeline — current lead distribution by canonical status.
+   *
+   * Groups leads by the 8 canonical statuses defined in drizzle/schema/leads.ts.
+   * Does NOT compute stage-to-stage conversion rates from snapshot counts.
+   * Shows lost separately as exited/lost leads.
+   */
+  getLeadPipeline: superAdminProcedure.query(async () => {
+    const db = await getDb();
+    if (!db) return { stages: [], total: 0 };
+
+    const rows = await db
+      .select({
+        status: leads.status,
+        count: sql<number>`count(*)`,
+      })
+      .from(leads)
+      .groupBy(leads.status);
+
+    const statusCounts = new Map<string, number>();
+    for (const row of rows) {
+      statusCounts.set(row.status, row.count);
+    }
+
+    const stages = LEAD_PIPELINE_ORDER.map(status => ({
+      status,
+      count: statusCounts.get(status) ?? 0,
+    }));
+
+    const total = stages.reduce((sum, s) => sum + s.count, 0);
+
+    return { stages, total };
+  }),
+
+  /**
+   * Cockpit: Operational Health — aggregated health from existing authorities.
+   *
+   * This procedure reuses existing health endpoints. It does NOT create new
+   * health checks or invent new monitoring. Each source is displayed only if
+   * it genuinely provides health data.
+   *
+   * Sources:
+   *   1. Database readiness — assessRuntimeDatabaseReadiness() (17-layer TiDB probe)
+   *   2. Cache — getCacheHealth() (Redis connection, fallback mode)
+   *   3. Saved Search Scheduler — savedSearchDeliveryScheduler.getStatus()
+   *   4. Google Places API — internal REST health check (usage, errors, latency)
+   *
+   * Services without health sources are shown as explicitly unavailable.
+   */
+  getOperationalHealth: superAdminProcedure.query(async () => {
+    const services: Array<{
+      name: string;
+      status: 'operational' | 'degraded' | 'unavailable';
+      detail: string;
+    }> = [];
+
+    // 1. Database readiness (TiDB)
+    try {
+      const dbReadiness = await assessRuntimeDatabaseReadiness();
+      services.push({
+        name: 'Database',
+        status: dbReadiness.applicationReady ? 'operational' : 'degraded',
+        detail: dbReadiness.applicationReady
+          ? 'TiDB connected — all schema layers verified'
+          : `Readiness check failed`,
+      });
+    } catch {
+      services.push({
+        name: 'Database',
+        status: 'unavailable',
+        detail: 'Health check not available',
+      });
+    }
+
+    // 2. Cache (Redis)
+    try {
+      const cacheHealth = await getCacheHealth();
+      services.push({
+        name: 'Cache',
+        status: cacheHealth.status === 'healthy' ? 'operational' : cacheHealth.status === 'degraded' ? 'degraded' : 'unavailable',
+        detail: cacheHealth.status === 'healthy'
+          ? 'Redis connected'
+          : cacheHealth.status === 'degraded'
+            ? 'Running in in-memory fallback mode'
+            : 'Connection issues detected',
+      });
+    } catch {
+      services.push({
+        name: 'Cache',
+        status: 'unavailable',
+        detail: 'Health check not available',
+      });
+    }
+
+    // 3. Saved Search Scheduler
+    try {
+      const schedulerStatus = savedSearchDeliveryScheduler.getStatus();
+      services.push({
+        name: 'Saved Search Scheduler',
+        status: schedulerStatus.enabled && !schedulerStatus.lastError
+          ? 'operational'
+          : schedulerStatus.lastError
+            ? 'degraded'
+            : 'unavailable',
+        detail: schedulerStatus.enabled
+          ? schedulerStatus.lastError
+            ? `Last run had errors: ${schedulerStatus.lastError}`
+            : `Running — last completed ${schedulerStatus.lastRunCompletedAt ?? 'never'}`
+          : 'Scheduler disabled',
+      });
+    } catch {
+      services.push({
+        name: 'Saved Search Scheduler',
+        status: 'unavailable',
+        detail: 'Health check not available',
+      });
+    }
+
+    // 4. Google Places API (internal REST call)
+    try {
+      const port = process.env.PORT || process.env.API_PORT || 5000;
+      const response = await fetch(`http://127.0.0.1:${port}/api/google-places-monitoring/health`, {
+        signal: AbortSignal.timeout(5000),
+      });
+      if (response.ok) {
+        const data = await response.json();
+        services.push({
+          name: 'Google Places API',
+          status: data.status === 'healthy' ? 'operational' : data.status === 'degraded' ? 'degraded' : 'unavailable',
+          detail: data.status === 'healthy'
+            ? 'Usage within limits'
+            : `Degraded — usage ${data.metrics?.usagePercentage ?? 'unknown'}%, error rate ${data.metrics?.errorRate ?? 'unknown'}%`,
+        });
+      } else {
+        services.push({
+          name: 'Google Places API',
+          status: 'unavailable',
+          detail: 'Health endpoint returned an error',
+        });
+      }
+    } catch {
+      services.push({
+        name: 'Google Places API',
+        status: 'unavailable',
+        detail: 'Not connected',
+      });
+    }
+
+    return { services };
   }),
 
   /**
