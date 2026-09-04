@@ -92,6 +92,7 @@ describe('health and readiness endpoints', () => {
       expect(payload.db.applicationReady).toBe(false);
       expect(payload.db.layers.targetConnectivity.code).toBe('database-unreachable');
       expect(payload.cache.ok).toBe(true);
+      expect(payload.authRateLimit).toEqual({ ok: true, mode: 'memory' });
       expect(response.headers.get('x-build-sha')).toBe('deadbeefcafebabe');
     } finally {
       server.close();

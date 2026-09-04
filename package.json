@@ -65,6 +65,7 @@
     "db:migrate": "pnpm db:migrate:apply",
     "release:predeploy:production": "pnpm launch:preflight && cross-env NODE_ENV=production APP_ENV=production pnpm db:release:plan && cross-env NODE_ENV=production APP_ENV=production pnpm db:release:reference:plan && cross-env NODE_ENV=production APP_ENV=production pnpm db:release:reference:verify",
     "release:smoke:production": "cross-env NODE_ENV=production APP_ENV=production pnpm db:target && cross-env NODE_ENV=production APP_ENV=production pnpm db:verify:distribution",
+    "release:smoke:auth-boundary": "tsx scripts/smokeAuthBoundary.ts",
     "db:local:start": "bash scripts/local-db.sh start",
     "db:local:wait": "bash scripts/local-db.sh wait",
     "db:local:status": "bash scripts/local-db.sh status",
