@@ -39,6 +39,8 @@ describe('database authority agent entry contract', () => {
     expect(manifest.releaseMigrationRecoveryCommands).toEqual([
       'db:release-migration-recovery:plan',
       'db:release-migration-recovery:apply',
+      'db:release-commercial-quote-terms-recovery:plan',
+      'db:release-commercial-quote-terms-recovery:apply',
     ]);
     expect(manifest.migrationManifest).toBe('server/migrations/manifest.json');
     expect(manifest.migrationAttemptLedger).toBe('sql_migration_attempts');

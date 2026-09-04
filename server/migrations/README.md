@@ -62,3 +62,16 @@ migration commands reject staging and production. Protected targets require
 the explicit release operation, exact protected-target approval, and release
 evidence; apply additionally requires exact acknowledgement. The current
 `listify_local` is quarantined and cannot be migrated.
+
+The reviewed TiDB `0046` zero-statement incident has a separately bounded
+release recovery. It archives the rejected SQL, records review evidence only,
+and leaves the canonical runner responsible for the sequenced replacement:
+
+```sh
+pnpm db:release-commercial-quote-terms-recovery:plan -- --approval-reference=<reference> --approval-actor=<actor>
+pnpm db:release-commercial-quote-terms-recovery:apply -- --approval-reference=<reference> --approval-actor=<actor> --plan-digest=<exact-plan-digest> --ack=<exact-release-ack>
+```
+
+Never execute the archived SQL or repair the attempt ledger manually. After
+recovery, create a fresh protected `db:release:plan` from the accepted `0045`
+head before applying the active replacement and later migrations.
