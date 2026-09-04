@@ -18,6 +18,13 @@ import {
   agencies,
   developers,
   listings,
+  commissions,
+  savedSearches,
+  favorites,
+  recentlyViewed,
+  slPlaces,
+  slSpaces,
+  slLeadContexts,
 } from '../drizzle/schema';
 import { desc, sql, and, eq, gte, isNotNull, asc, count } from 'drizzle-orm';
 import { assessRuntimeDatabaseReadiness } from './_core/databaseAuthority/readiness';
@@ -746,50 +753,258 @@ export const founderRouter = router({
    * Returns real counts from existing ecosystem stats.
    */
   getCompanyMapData: superAdminProcedure.query(async () => {
+    const db = await getDb();
     const ecosystem = await getEcosystemStats();
+
+    // Shared Living: count places by status
+    let slPublished = 0;
+    let slTotal = 0;
+    if (db) {
+      try {
+        const [totalResult, publishedResult] = await Promise.all([
+          db.select({ c: count() }).from(slPlaces),
+          db.select({ c: count() }).from(slPlaces).where(eq(slPlaces.status, 'published')),
+        ]);
+        slTotal = totalResult[0]?.c ?? 0;
+        slPublished = publishedResult[0]?.c ?? 0;
+      } catch {
+        // Shared Living tables may not exist in all environments
+      }
+    }
 
     return {
       nodes: [
         {
-          id: 'agents',
+          id: 'agents' as const,
           label: 'Agents',
+          approved: ecosystem.agents.active,
           total: ecosystem.agents.total,
-          active: ecosystem.agents.active,
-          growth: ecosystem.agents.growth,
-          status: ecosystem.agents.active > 0 ? 'healthy' : 'attention',
+          newInPeriod: ecosystem.agents.growth,
+          periodLabel: 'Last 30 days',
         },
         {
-          id: 'agencies',
+          id: 'agencies' as const,
           label: 'Agencies',
+          verified: ecosystem.agencies.active,
           total: ecosystem.agencies.total,
-          active: ecosystem.agencies.active,
-          growth: ecosystem.agencies.growth,
-          status: ecosystem.agencies.active > 0 ? 'healthy' : 'attention',
+          newInPeriod: ecosystem.agencies.growth,
+          periodLabel: 'Last 30 days',
         },
         {
-          id: 'developers',
+          id: 'developers' as const,
           label: 'Developers',
+          approved: ecosystem.developers.active,
           total: ecosystem.developers.total,
-          active: ecosystem.developers.active,
-          growth: ecosystem.developers.growth,
-          status: ecosystem.developers.active > 0 ? 'healthy' : 'attention',
+          newInPeriod: ecosystem.developers.growth,
+          periodLabel: 'Last 30 days',
         },
         {
-          id: 'buyers',
+          id: 'buyers' as const,
           label: 'Buyers',
+          registered: ecosystem.users.total,
           total: ecosystem.users.total,
-          active: ecosystem.users.active,
-          growth: ecosystem.users.growth,
-          status: ecosystem.users.total > 0 ? 'healthy' : 'attention',
+          newInPeriod: ecosystem.users.growth,
+          periodLabel: 'Last 30 days',
+        },
+        {
+          id: 'shared_living' as const,
+          label: 'Shared Living',
+          published: slPublished,
+          total: slTotal,
+          newInPeriod: 0,
+          periodLabel: 'Last 30 days',
         },
       ],
       foundations: {
-        technology: { status: 'not_connected', label: 'Technology Platform' },
-        data: { status: 'not_connected', label: 'Data & Intelligence' },
-        marketing: { status: 'not_connected', label: 'Marketing & Traffic' },
-        payments: { status: 'not_connected', label: 'Payments & Revenue' },
-        operations: { status: 'not_connected', label: 'Operations' },
+        technology: { status: 'not_connected' as const, label: 'Technology Platform' },
+        data: { status: 'not_connected' as const, label: 'Data & Intelligence' },
+        marketing: { status: 'not_connected' as const, label: 'Marketing & Traffic' },
+        payments: { status: 'not_connected' as const, label: 'Payments & Revenue' },
+        operations: { status: 'not_connected' as const, label: 'Operations' },
       },
     };
   }),
+
+  /**
+   * Company Map: detail view for a selected ecosystem node.
+   *
+   * Returns factual metrics only — no health scoring, no interpretation.
+   * Each node type has a discriminated response shape.
+   */
+  getCompanyNodeDetail: superAdminProcedure
+    .input(z.object({ nodeId: z.enum(['agents', 'agencies', 'developers', 'buyers', 'shared_living']) }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) return null;
+
+      const now = new Date();
+      const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      const dateStr = thirtyDaysAgo.toISOString();
+
+      // --- Agents ---
+      if (input.nodeId === 'agents') {
+        const [totalResult, approvedResult, newResult] = await Promise.all([
+          db.select({ c: count() }).from(agents),
+          db.select({ c: count() }).from(agents).where(eq(agents.status, 'approved')),
+          db.select({ c: count() }).from(agents).where(sql`${agents.createdAt} > ${dateStr}`),
+        ]);
+
+        const total = totalResult[0]?.c ?? 0;
+        const approved = approvedResult[0]?.c ?? 0;
+        const newInPeriod = newResult[0]?.c ?? 0;
+
+        // Value: listings, leads, commissions
+        const [listingsResult, leadsResult, commissionsPendingResult, commissionsPaidResult] = await Promise.all([
+          db.select({ c: count() }).from(listings).where(sql`${listings.agentId} IS NOT NULL`),
+          db.select({ c: count() }).from(leads).where(sql`${leads.agentId} IS NOT NULL`),
+          db.select({ c: count() }).from(commissions).where(eq(commissions.status, 'pending')),
+          db.select({ c: sql<number>`coalesce(sum(${commissions.amount}), 0)` }).from(commissions).where(eq(commissions.status, 'paid')),
+        ]);
+
+        return {
+          type: 'agents' as const,
+          scale: { approved, total },
+          movement: { newInPeriod, periodLabel: 'Last 30 days' },
+          value: {
+            listingsCount: listingsResult[0]?.c ?? 0,
+            leadsCount: leadsResult[0]?.c ?? 0,
+            commissionsPendingCount: commissionsPendingResult[0]?.c ?? 0,
+            commissionsPaidTotal: Number(commissionsPaidResult[0]?.c ?? 0),
+          },
+          operationalRoute: '/admin/agents',
+        };
+      }
+
+      // --- Agencies ---
+      if (input.nodeId === 'agencies') {
+        const [totalResult, verifiedResult, newResult] = await Promise.all([
+          db.select({ c: count() }).from(agencies),
+          db.select({ c: count() }).from(agencies).where(eq(agencies.isVerified, 1)),
+          db.select({ c: count() }).from(agencies).where(sql`${agencies.createdAt} > ${dateStr}`),
+        ]);
+
+        const total = totalResult[0]?.c ?? 0;
+        const verified = verifiedResult[0]?.c ?? 0;
+        const newInPeriod = newResult[0]?.c ?? 0;
+
+        // Value: agents, listings, leads
+        const [agentsResult, listingsResult, leadsResult] = await Promise.all([
+          db.select({ c: count() }).from(agents).where(sql`${agents.agencyId} IS NOT NULL`),
+          db.select({ c: count() }).from(listings).where(sql`${listings.agencyId} IS NOT NULL`),
+          db.select({ c: count() }).from(leads).where(sql`${leads.agencyId} IS NOT NULL`),
+        ]);
+
+        return {
+          type: 'agencies' as const,
+          scale: { verified, total },
+          movement: { newInPeriod, periodLabel: 'Last 30 days' },
+          value: {
+            agentsCount: agentsResult[0]?.c ?? 0,
+            listingsCount: listingsResult[0]?.c ?? 0,
+            leadsCount: leadsResult[0]?.c ?? 0,
+          },
+          operationalRoute: '/admin/agencies',
+        };
+      }
+
+      // --- Developers (catalogue_publishers authority) ---
+      if (input.nodeId === 'developers') {
+        const firstPartyPublisher = eq(cataloguePublishers.authorityKind, 'developer_first_party');
+
+        const [totalResult, approvedResult, newResult] = await Promise.all([
+          db.select({ c: count() }).from(cataloguePublishers).where(firstPartyPublisher),
+          db.select({ c: count() }).from(cataloguePublishers)
+            .innerJoin(developerOrganisations, eq(cataloguePublishers.developerOrganisationId, developerOrganisations.id))
+            .where(and(firstPartyPublisher, eq(developerOrganisations.status, 'approved'))),
+          db.select({ c: count() }).from(cataloguePublishers)
+            .where(and(firstPartyPublisher, sql`${cataloguePublishers.createdAt} > ${dateStr}`)),
+        ]);
+
+        const total = totalResult[0]?.c ?? 0;
+        const approved = approvedResult[0]?.c ?? 0;
+        const newInPeriod = newResult[0]?.c ?? 0;
+
+        return {
+          type: 'developers' as const,
+          scale: { approved, total },
+          movement: { newInPeriod, periodLabel: 'Last 30 days' },
+          value: {},
+          note: 'Developer scale currently reflects approved first-party publishing identities. Development and lead metrics are not yet connected to this view.',
+          operationalRoute: '/admin/developers',
+        };
+      }
+
+      // --- Buyers (users with role = visitor) ---
+      if (input.nodeId === 'buyers') {
+        const visitorRole = eq(users.role, 'visitor');
+
+        const [totalResult, newResult] = await Promise.all([
+          db.select({ c: count() }).from(users).where(visitorRole),
+          db.select({ c: count() }).from(users).where(and(visitorRole, sql`${users.createdAt} > ${dateStr}`)),
+        ]);
+
+        const total = totalResult[0]?.c ?? 0;
+        const newInPeriod = newResult[0]?.c ?? 0;
+
+        // Value: saved searches, favorites, recently viewed
+        const [savedSearchesResult, favoritesResult, recentlyViewedResult] = await Promise.all([
+          db.select({ c: count() }).from(savedSearches),
+          db.select({ c: count() }).from(favorites),
+          db.select({ c: count() }).from(recentlyViewed),
+        ]);
+
+        return {
+          type: 'buyers' as const,
+          scale: { registered: total },
+          movement: { newInPeriod, periodLabel: 'Last 30 days' },
+          value: {
+            savedSearchesCount: savedSearchesResult[0]?.c ?? 0,
+            favoritesCount: favoritesResult[0]?.c ?? 0,
+            recentlyViewedCount: recentlyViewedResult[0]?.c ?? 0,
+          },
+          operationalRoute: '/admin/users',
+        };
+      }
+
+      // --- Shared Living ---
+      if (input.nodeId === 'shared_living') {
+        const [totalResult, publishedResult, newResult] = await Promise.all([
+          db.select({ c: count() }).from(slPlaces),
+          db.select({ c: count() }).from(slPlaces).where(eq(slPlaces.status, 'published')),
+          db.select({ c: count() }).from(slPlaces).where(sql`${slPlaces.createdAt} > ${dateStr}`),
+        ]);
+
+        const total = totalResult[0]?.c ?? 0;
+        const published = publishedResult[0]?.c ?? 0;
+        const newInPeriod = newResult[0]?.c ?? 0;
+
+        // Value: spaces, available spaces, leads
+        let spacesCount = 0;
+        let availableSpacesCount = 0;
+        let leadsCount = 0;
+        try {
+          const [spacesResult, availableResult, leadsResult] = await Promise.all([
+            db.select({ c: count() }).from(slSpaces),
+            db.select({ c: count() }).from(slSpaces).where(eq(slSpaces.status, 'available')),
+            db.select({ c: count() }).from(slLeadContexts),
+          ]);
+          spacesCount = spacesResult[0]?.c ?? 0;
+          availableSpacesCount = availableResult[0]?.c ?? 0;
+          leadsCount = leadsResult[0]?.c ?? 0;
+        } catch {
+          // Shared Living value tables may not exist
+        }
+
+        return {
+          type: 'shared_living' as const,
+          scale: { published, total },
+          movement: { newInPeriod, periodLabel: 'Last 30 days' },
+          value: { spacesCount, availableSpacesCount, leadsCount },
+          emptyState: total === 0 ? 'No data yet' : undefined,
+          operationalRoute: null,
+        };
+      }
+
+      return null;
+    }),
 });
