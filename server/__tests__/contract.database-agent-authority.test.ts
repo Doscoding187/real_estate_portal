@@ -41,6 +41,8 @@ describe('database authority agent entry contract', () => {
       'db:release-migration-recovery:apply',
       'db:release-commercial-quote-terms-recovery:plan',
       'db:release-commercial-quote-terms-recovery:apply',
+      'db:release-tidb-check-constraint-convergence:plan',
+      'db:release-tidb-check-constraint-convergence:apply',
     ]);
     expect(manifest.migrationManifest).toBe('server/migrations/manifest.json');
     expect(manifest.migrationAttemptLedger).toBe('sql_migration_attempts');

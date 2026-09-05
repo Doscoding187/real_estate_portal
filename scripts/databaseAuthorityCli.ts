@@ -54,6 +54,7 @@ import {
   normalizedDesiredSchema,
   normalizedPhysicalSchema,
 } from '../server/_core/databaseAuthority/schemaCongruency';
+import { readTiDbCheckConstraintCapability } from '../server/_core/databaseAuthority/tidbCheckConstraintCapability';
 import {
   LOCAL_SERVICE_HOST,
   LOCAL_SERVICE_PORT,
@@ -72,6 +73,7 @@ import { loadAndValidateMigrationManifest } from '../server/migrations/migration
 import { runRejectedZeroStatementRecovery } from '../server/migrations/recoverRejectedZeroStatementMigration';
 import { runRejectedReleaseZeroStatementRecovery } from '../server/migrations/recoverRejectedReleaseZeroStatementMigration';
 import { runRejectedReleaseCommercialQuoteTermsRecovery } from '../server/migrations/recoverRejectedReleaseCommercialQuoteTermsMigration';
+import { runTidbCheckConstraintConvergence } from '../server/migrations/recoverTidbCheckConstraintConvergence';
 import { runSqlMigrations } from '../server/migrations/runSqlMigrations';
 
 type Command =
@@ -89,6 +91,8 @@ type Command =
   | 'release-migration-recovery:apply'
   | 'release-commercial-quote-terms-recovery:plan'
   | 'release-commercial-quote-terms-recovery:apply'
+  | 'release-tidb-check-constraint-convergence:plan'
+  | 'release-tidb-check-constraint-convergence:apply'
   | 'release:plan'
   | 'release:apply'
   | 'release-reference:plan'
@@ -334,6 +338,28 @@ async function run(command: Command): Promise<void> {
   }
 
   if (
+    command === 'release-tidb-check-constraint-convergence:plan' ||
+    command === 'release-tidb-check-constraint-convergence:apply'
+  ) {
+    const planOnly = command.endsWith(':plan');
+    const authority = authorityFor(
+      planOnly ? 'release-plan' : 'release-apply',
+      planOnly ? 'read-only' : 'migration',
+    );
+    const decision = authorizationFor(authority, option('ack'));
+    const result = await runTidbCheckConstraintConvergence({
+      mode: planOnly ? 'plan' : 'apply',
+      authority,
+      authorization: decision,
+      approvalReference: requiredOption('approval-reference'),
+      approvalActor: requiredOption('approval-actor'),
+      expectedPlanDigest: planOnly ? undefined : requiredOption('plan-digest'),
+    });
+    print(result);
+    return;
+  }
+
+  if (
     command === 'migration:plan' ||
     command === 'migration:apply' ||
     command === 'release:plan' ||
@@ -523,14 +549,23 @@ async function run(command: Command): Promise<void> {
     const desired = normalizedDesiredSchema(schema);
     const actual = await normalizedPhysicalSchema(connection);
     const report = compareNormalizedSchemas(desired, actual);
+    const checkConstraintEnforcement = await readTiDbCheckConstraintCapability(
+      connection,
+      authority.context.provider,
+    );
+    const congruent =
+      report.congruent &&
+      (!checkConstraintEnforcement.applicable || checkConstraintEnforcement.enabled === true);
     print({
       targetFingerprintHash: authority.context.targetFingerprintHash,
       targetClass: authority.context.targetClass,
       ...report,
+      congruent,
+      checkConstraintEnforcement,
       differences: report.differences.slice(0, 100),
       omittedDifferenceCount: Math.max(0, report.differences.length - 100),
     });
-    if (!report.congruent) process.exitCode = 1;
+    if (!congruent) process.exitCode = 1;
   } finally {
     await connection.end();
   }
@@ -552,6 +587,8 @@ const commands = new Set<Command>([
   'release-migration-recovery:apply',
   'release-commercial-quote-terms-recovery:plan',
   'release-commercial-quote-terms-recovery:apply',
+  'release-tidb-check-constraint-convergence:plan',
+  'release-tidb-check-constraint-convergence:apply',
   'release:plan',
   'release:apply',
   'release-reference:plan',

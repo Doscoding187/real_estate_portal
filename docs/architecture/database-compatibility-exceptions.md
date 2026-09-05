@@ -234,6 +234,91 @@ the historical migration statements are deliberately sequenced.
 
 Removal workstream: Database cutover recovery closure.
 
+### Exception ID: DBX-TIDB-CHECK-CONSTRAINT-CONVERGENCE-2026-09-04-Edward
+
+Status: Approved for the bounded production convergence of CHECK constraints
+
+Owner: Property Listify senior product engineering
+
+Approved by Edward on: 2026-09-04, through the production-cutover authorization
+to make the canonical local model the production authority
+
+Business reason: The canonical release was applied to TiDB while the global
+`tidb_enable_check_constraint` capability was `OFF`. TiDB accepted the historical
+DDL but did not retain the 22 canonical CHECK constraints. The successful
+migration history is immutable, so ordinary migration replay or ledger edits
+would not be authoritative or safe.
+
+Canonical authority: The Drizzle models, immutable baseline, active migration
+manifest, and `sql_migration_history` remain the only schema authority. The
+bounded convergence command verifies its fixed 22 definitions directly against
+the canonical Drizzle model; it does not create a parallel migration lineage.
+
+Protected target and preservation evidence: Production TiDB database
+`listify_property_sa` on `gateway01.ap-northeast-1.prod.aws.tidbcloud.com:4000`,
+with sanitized fingerprint hash
+`68f2582a6dc7af8c54cf6f31a396e8abe4c4030696c923b0ea3b1679ba6f5b5e`.
+Before this operation, Edward completed and downloaded TiDB Cloud SQL export
+`property-listify-production-pre-cutover-2026-09-04`. The downloaded export is
+the retained, out-of-repository preservation artifact; this convergence does
+not delete or rewrite application data.
+
+Exact files: `server/migrations/recoverTidbCheckConstraintConvergence.ts`,
+`server/_core/databaseAuthority/tidbCheckConstraintCapability.ts`,
+`server/_core/databaseAuthority/schemaCongruency.ts`,
+`server/_core/databaseAuthority/readiness.ts`,
+`server/migrations/runSqlMigrations.ts`,
+`scripts/databaseAuthorityCli.ts`, and their focused tests and release
+documentation.
+
+Tables and columns: The exact 22 canonical CHECK constraints on
+`catalogue_publishers`, `commercial_availabilities`,
+`commercial_availability_economics`, `commercial_availability_lease_terms`,
+`commercial_space_specifications`, `commercial_spaces`,
+`development_supersessions`, `land_claims`, `land_conflict_cases`, and
+`location_provider_mappings`. No tables, columns, data rows, or migration
+history rows are created, removed, or rewritten.
+
+Permitted read direction: The protected plan reads only the canonical migration
+head, TiDB's global CHECK capability, the TiDB check-constraint inventory, and
+the preflight count of rows violating each exact canonical predicate.
+
+Permitted write direction: After an exact reviewed protected release plan,
+apply may set `tidb_enable_check_constraint = ON`, add only a missing listed
+canonical CHECK constraint, and append/update one durable convergence attempt
+record. It may not mutate application data, alter an existing constraint,
+change migration history, or run arbitrary SQL.
+
+Failure and observability behavior: Plan fails closed unless the target is an
+approved TiDB staging/production release target at the canonical migration
+head, all canonical tables exist, every existing named check has the exact
+canonical expression, and no existing row violates a missing check. Apply
+requires the exact plan digest, protected approval reference/actor, and release
+acknowledgement; it records durable progress under the canonical migration
+lock. Any failed or ambiguous DDL leaves durable evidence and blocks ordinary
+continuation for a separately reviewed recovery. Normal release application,
+schema congruency, and readiness fail closed whenever the TiDB capability is
+OFF.
+
+Containment and forward recovery: The plan reports all missing checks and
+preflight violations without mutation. Apply holds the canonical migration
+lock, creates a durable running attempt before changing the TiDB capability or
+adding a check, and records each successful constraint. A failure leaves that
+attempt in place and blocks normal continuation; it must be handled by a new,
+separately approved recovery rather than retries or manual SQL.
+
+Automated evidence: Capability, schema-congruency, convergence-plan/apply,
+failure-path, CLI, manifest-authority, and database-authority static tests;
+post-apply `db:schema:congruency`, `db:verify:distribution`, and release
+readiness evidence.
+
+Expiry or objective removal condition: Retain the incident evidence after the
+one protected production apply. Retire this operational exception once a fresh
+TiDB establishment test proves the release flow with CHECK enforcement enabled
+before baseline application and no supported target has pending convergence.
+
+Removal workstream: TiDB release-capability admission and cutover closure.
+
 ## Required exception record
 
 Every approved exception must contain:

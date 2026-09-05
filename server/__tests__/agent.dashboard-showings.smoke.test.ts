@@ -109,8 +109,11 @@ describeWithDb('agent dashboard showings smoke', () => {
     const email = `agent-dashboard-smoke-${suffix}@example.com`;
     const buyerEmail = `agent-dashboard-buyer-${suffix}@example.com`;
     const buyerName = `Smoke Buyer ${suffix}`;
+    // This is a "today" dashboard fixture, not a future-showing fixture.
+    // Keeping it at local noon avoids crossing the next-day boundary when CI
+    // happens to start this test shortly before midnight.
     const scheduledAt = new Date();
-    scheduledAt.setMinutes(scheduledAt.getMinutes() + 5);
+    scheduledAt.setHours(12, 0, 0, 0);
     const showingNotes = 'Smoke-test showing for migrated schema';
 
     const [userInsert] = await db!.execute(sql`
