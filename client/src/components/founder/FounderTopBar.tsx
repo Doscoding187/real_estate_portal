@@ -1,16 +1,28 @@
 import { useAuth } from '@/_core/hooks/useAuth';
-import { LogOut } from 'lucide-react';
+import { LogOut, Menu } from 'lucide-react';
 
-export function FounderTopBar() {
+export function FounderTopBar({
+  onOpenMobileNav,
+}: {
+  onOpenMobileNav?: () => void;
+}) {
   const { user, logout } = useAuth();
 
   return (
-    <header className="h-14 border-b border-slate-200 bg-white flex items-center justify-between px-6">
-      <div className="flex items-center gap-3">
-        <h1 className="text-base font-semibold text-slate-800">
+    <header className="h-14 border-b border-slate-200 bg-white flex items-center justify-between px-4 sm:px-6">
+      <div className="flex min-w-0 items-center gap-3">
+        <button
+          type="button"
+          className="lg:hidden p-2 -ml-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
+          onClick={onOpenMobileNav}
+          aria-label="Open navigation"
+        >
+          <Menu className="h-5 w-5" />
+        </button>
+        <h1 className="min-w-0 truncate text-base font-semibold text-slate-800">
           Property Listify — Founder Command Centre
         </h1>
-        <span className="text-[10px] font-medium text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
+        <span className="hidden sm:inline text-[10px] font-medium text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full flex-shrink-0">
           v0.1
         </span>
       </div>
