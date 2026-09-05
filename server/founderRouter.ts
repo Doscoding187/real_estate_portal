@@ -279,6 +279,7 @@ export const founderRouter = router({
       type: 'decision' | 'opportunity' | 'escalation' | 'awareness';
       title: string;
       summary: string;
+      whyItMatters: string;
       source: string;
       sourceReference: string | null;
       workstream: string;
@@ -320,6 +321,7 @@ export const founderRouter = router({
           type: score >= 80 ? 'opportunity' : 'escalation',
           title: `Developer lead: ${lead.name}`,
           summary: `New inquiry (score ${score}/100) awaiting response.`,
+          whyItMatters: `Qualification score ${score}/100, waiting ${hours}h for a response.`,
           source: 'leads',
           sourceReference: `/developer/leads`,
           workstream: 'Commercial',
@@ -339,8 +341,9 @@ export const founderRouter = router({
         items.push({
           id: -1,
           type: 'escalation',
-          title: `${pendingAgentCount} agent registration(s) pending approval`,
+          title: `${pendingAgentCount} agent registration${pendingAgentCount > 1 ? 's' : ''} pending approval`,
           summary: 'Agent registrations awaiting platform review.',
+          whyItMatters: `${pendingAgentCount} agent registration${pendingAgentCount > 1 ? 's' : ''} awaiting approval.`,
           source: 'admin',
           sourceReference: '/admin/agent-approvals',
           workstream: 'Operations',
@@ -360,8 +363,9 @@ export const founderRouter = router({
         items.push({
           id: -2,
           type: 'escalation',
-          title: `${pendingListingCount} listing(s) pending review`,
+          title: `${pendingListingCount} listing${pendingListingCount > 1 ? 's' : ''} pending review`,
           summary: 'Property listings awaiting verification.',
+          whyItMatters: `${pendingListingCount} listing${pendingListingCount > 1 ? 's' : ''} awaiting review.`,
           source: 'admin',
           sourceReference: '/admin/listing-approvals',
           workstream: 'Operations',
@@ -381,8 +385,9 @@ export const founderRouter = router({
         items.push({
           id: -3,
           type: 'decision',
-          title: `${pendingDevCount} development(s) awaiting approval`,
+          title: `${pendingDevCount} development${pendingDevCount > 1 ? 's' : ''} awaiting approval`,
           summary: 'Developer submissions pending platform review.',
+          whyItMatters: `${pendingDevCount} development submission${pendingDevCount > 1 ? 's' : ''} awaiting approval.`,
           source: 'admin',
           sourceReference: '/admin/development-approvals',
           workstream: 'Commercial',
