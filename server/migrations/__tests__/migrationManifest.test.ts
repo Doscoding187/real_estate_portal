@@ -216,7 +216,7 @@ describe('canonical migration manifest', () => {
       kind: 'transactional-data',
       statementPolicy: 'transactional-dml',
     });
-    expect(manifest.expectedHead.filename).toBe('0065_auth_verification_token_cleanup.sql');
+    expect(manifest.expectedHead.filename).toBe('0068_add_strategic_planning_targets.sql');
   });
 
   it('plans the identity-and-custody migration chain from the integrated 0007 head', () => {
@@ -232,11 +232,11 @@ describe('canonical migration manifest', () => {
         checksum: item.checksum,
       })),
       acceptedOldHead: currentIntegratedHead.filename,
-      expectedNewHead: '0065_auth_verification_token_cleanup.sql',
+      expectedNewHead: '0068_add_strategic_planning_targets.sql',
     });
 
     expect(plan.acceptedOldHead).toBe('0007_paid_launch_access_invoice_term.sql');
-    expect(plan.pending).toHaveLength(58);
+    expect(plan.pending).toHaveLength(61);
     expect(plan.pending.map(item => item.filename)).toEqual([
       '0008_developer_organisations.sql',
       '0009_developer_organisation_memberships.sql',
@@ -296,8 +296,11 @@ describe('canonical migration manifest', () => {
       '0063_agent_launch_access_earnings_feature.sql',
       '0064_auth_session_security.sql',
       '0065_auth_verification_token_cleanup.sql',
+      '0066_add_strategic_planning_periods.sql',
+      '0067_add_strategic_planning_objectives.sql',
+      '0068_add_strategic_planning_targets.sql',
     ]);
-    expect(plan.expectedNewHead).toBe('0065_auth_verification_token_cleanup.sql');
+    expect(plan.expectedNewHead).toBe('0068_add_strategic_planning_targets.sql');
   });
 
   it('accepts an isolated 0000 -> 0001 -> 0002 progression in ancestry order', () => {

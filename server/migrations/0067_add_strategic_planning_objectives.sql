@@ -1,0 +1,20 @@
+CREATE TABLE `strategic_planning_objectives` (
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `title` VARCHAR(200) NOT NULL,
+  `description` TEXT,
+  `status` ENUM('draft','active','completed','cancelled') NOT NULL DEFAULT 'draft',
+  `owner_user_id` INT,
+  `planning_period_id` INT NOT NULL,
+  `created_by_user_id` INT NOT NULL,
+  `updated_by_user_id` INT NOT NULL,
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_spp_obj_period_status` (`planning_period_id`,`status`),
+  KEY `idx_spp_obj_owner_status` (`owner_user_id`,`status`),
+  CONSTRAINT `fk_spp_obj_period` FOREIGN KEY (`planning_period_id`) REFERENCES `strategic_planning_periods` (`id`) ON DELETE RESTRICT,
+  CONSTRAINT `fk_spp_obj_owner` FOREIGN KEY (`owner_user_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT,
+  CONSTRAINT `fk_spp_obj_created_by` FOREIGN KEY (`created_by_user_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT,
+  CONSTRAINT `fk_spp_obj_updated_by` FOREIGN KEY (`updated_by_user_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT,
+  CONSTRAINT `spp_obj_owner_required` CHECK ((`status` IN ('active','completed') AND `owner_user_id` IS NOT NULL) OR `status` IN ('draft','cancelled'))
+);

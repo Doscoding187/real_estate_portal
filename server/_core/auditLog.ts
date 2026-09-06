@@ -1,6 +1,6 @@
 import type { Request } from 'express';
 import { getDb } from '../db';
-import { auditLogs, type InsertAuditLog } from '../../drizzle/schema';
+import { auditLogs, managerialAuditLogs, type InsertAuditLog } from '../../drizzle/schema';
 
 /**
  * Log super_admin and sensitive actions for audit trail
@@ -56,6 +56,38 @@ function getClientIP(req: Request): string | null {
 }
 
 /**
+ * Log to managerial_audit_logs within an existing transaction.
+ *
+ * This function MUST be called inside an active Drizzle transaction.
+ * It does not create its own connection or catch failures — if audit
+ * insertion fails, the calling transaction must roll back the business
+ * mutation.
+ *
+ * beforeData/afterData/metadata are passed as plain objects; Drizzle's
+ * MySQL JSON mapper handles serialization. Do NOT pre-stringify.
+ */
+export async function logManagerialAudit(params: {
+  executor: any;
+  actorUserId: number;
+  action: string;
+  targetType: string;
+  targetId: number;
+  beforeData: Record<string, any> | null;
+  afterData: Record<string, any> | null;
+  metadata?: Record<string, any>;
+}): Promise<void> {
+  await params.executor.insert(managerialAuditLogs).values({
+    actorUserId: params.actorUserId,
+    action: params.action,
+    targetType: params.targetType,
+    targetId: params.targetId,
+    beforeData: params.beforeData ?? undefined,
+    afterData: params.afterData ?? undefined,
+    metadata: params.metadata ?? undefined,
+  });
+}
+
+/**
  * Audit log action types (for consistency)
  */
 export const AuditActions = {
@@ -80,4 +112,16 @@ export const AuditActions = {
   UPDATE_SUBSCRIPTION: 'update_subscription',
   EXPORT_DATA: 'export_data',
   UPDATE_DEVELOPMENT: 'update_development',
+
+  // Strategic Planning
+  STRATEGIC_PERIOD_CREATE: 'period_create',
+  STRATEGIC_PERIOD_UPDATE: 'period_update',
+  STRATEGIC_OBJECTIVE_CREATE: 'objective_create',
+  STRATEGIC_OBJECTIVE_UPDATE: 'objective_update',
+  STRATEGIC_OBJECTIVE_ACTIVATE: 'objective_activate',
+  STRATEGIC_OBJECTIVE_COMPLETE: 'objective_complete',
+  STRATEGIC_OBJECTIVE_CANCEL: 'objective_cancel',
+  STRATEGIC_TARGET_CREATE: 'target_create',
+  STRATEGIC_TARGET_UPDATE: 'target_update',
+  STRATEGIC_TARGET_REMOVE: 'target_remove',
 } as const;

@@ -412,8 +412,11 @@ describe('migration execution authority', () => {
       '0063_agent_launch_access_earnings_feature.sql',
       '0064_auth_session_security.sql',
       '0065_auth_verification_token_cleanup.sql',
+      '0066_add_strategic_planning_periods.sql',
+      '0067_add_strategic_planning_objectives.sql',
+      '0068_add_strategic_planning_targets.sql',
     ]);
-    expect(executionManifest.expectedHead).toBe('0065_auth_verification_token_cleanup.sql');
+    expect(executionManifest.expectedHead).toBe('0068_add_strategic_planning_targets.sql');
     expect(archivedSqlFiles.length).toBeGreaterThan(0);
     expect(activeSqlFiles.some(file => file.includes('_archived'))).toBe(false);
     expect(executionManifest.historyTable).toBe('sql_migration_history');

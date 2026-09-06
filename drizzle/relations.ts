@@ -88,6 +88,9 @@ import {
   userSubscriptions,
   videos,
   videoLikes,
+  strategicPlanningPeriods,
+  strategicPlanningObjectives,
+  strategicPlanningTargets,
 } from './schema/index';
 
 export const activitiesRelations = relations(activities, ({ one }) => ({
@@ -187,6 +190,21 @@ export const usersRelations = relations(users, ({ one, many }) => ({
     references: [agencies.id],
   }),
   videoLikes: many(videoLikes),
+  spp_objectives_owned: many(strategicPlanningObjectives, {
+    relationName: 'spp_obj_owner_userId',
+  }),
+  spp_objectives_created: many(strategicPlanningObjectives, {
+    relationName: 'spp_obj_createdBy_userId',
+  }),
+  spp_objectives_updated: many(strategicPlanningObjectives, {
+    relationName: 'spp_obj_updatedBy_userId',
+  }),
+  spp_targets_created: many(strategicPlanningTargets, {
+    relationName: 'spp_tgt_createdBy_userId',
+  }),
+  spp_targets_updated: many(strategicPlanningTargets, {
+    relationName: 'spp_tgt_updatedBy_userId',
+  }),
 }));
 
 export const agencyBrandingRelations = relations(agencyBranding, ({ one }) => ({
@@ -1166,3 +1184,53 @@ export const videosRelations = relations(videos, ({ one, many }) => ({
     references: [developments.id],
   }),
 }));
+
+export const strategicPlanningPeriodsRelations = relations(strategicPlanningPeriods, ({ many }) => ({
+  objectives: many(strategicPlanningObjectives),
+}));
+
+export const strategicPlanningObjectivesRelations = relations(
+  strategicPlanningObjectives,
+  ({ one, many }) => ({
+    planningPeriod: one(strategicPlanningPeriods, {
+      fields: [strategicPlanningObjectives.planningPeriodId],
+      references: [strategicPlanningPeriods.id],
+    }),
+    owner_user: one(users, {
+      fields: [strategicPlanningObjectives.ownerUserId],
+      references: [users.id],
+      relationName: 'spp_obj_owner_userId',
+    }),
+    createdBy_user: one(users, {
+      fields: [strategicPlanningObjectives.createdByUserId],
+      references: [users.id],
+      relationName: 'spp_obj_createdBy_userId',
+    }),
+    updatedBy_user: one(users, {
+      fields: [strategicPlanningObjectives.updatedByUserId],
+      references: [users.id],
+      relationName: 'spp_obj_updatedBy_userId',
+    }),
+    targets: many(strategicPlanningTargets),
+  }),
+);
+
+export const strategicPlanningTargetsRelations = relations(
+  strategicPlanningTargets,
+  ({ one }) => ({
+    objective: one(strategicPlanningObjectives, {
+      fields: [strategicPlanningTargets.objectiveId],
+      references: [strategicPlanningObjectives.id],
+    }),
+    createdBy_user: one(users, {
+      fields: [strategicPlanningTargets.createdByUserId],
+      references: [users.id],
+      relationName: 'spp_tgt_createdBy_userId',
+    }),
+    updatedBy_user: one(users, {
+      fields: [strategicPlanningTargets.updatedByUserId],
+      references: [users.id],
+      relationName: 'spp_tgt_updatedBy_userId',
+    }),
+  }),
+);

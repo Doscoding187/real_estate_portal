@@ -4,7 +4,7 @@
   "historyTable": "sql_migration_history",
   "attemptTable": "sql_migration_attempts",
   "lockName": "property_listify_manifest_migrations",
-  "expectedHead": "0065_auth_verification_token_cleanup.sql",
+  "expectedHead": "0068_add_strategic_planning_targets.sql",
   "migrations": [
     {
       "sequence": 0,
@@ -677,6 +677,36 @@
       "parentChecksum": "8c5add9fe3c7cc2739738975c2067a73a5c6db7a4c160d40f260988ae72eac5d",
       "kind": "transactional-data",
       "statementPolicy": "transactional-dml",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 66,
+      "filename": "0066_add_strategic_planning_periods.sql",
+      "checksum": "b3a813b18dec5f9067da963d296d9507c0840184da8209c09714ece1a451d01a",
+      "parent": "0065_auth_verification_token_cleanup.sql",
+      "parentChecksum": "0cd1523e5467f73dd0534a04116d25a974e9e2b9a900692e6c3933a67a3182eb",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 67,
+      "filename": "0067_add_strategic_planning_objectives.sql",
+      "checksum": "70bff1651728262670cf9898cfd8b618afaa619d655b30d5937e3c9095075d7d",
+      "parent": "0066_add_strategic_planning_periods.sql",
+      "parentChecksum": "b3a813b18dec5f9067da963d296d9507c0840184da8209c09714ece1a451d01a",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 68,
+      "filename": "0068_add_strategic_planning_targets.sql",
+      "checksum": "fc16818450c13813052fc091e643eb385eeb3d96410564552dfb7dc35e6b3038",
+      "parent": "0067_add_strategic_planning_objectives.sql",
+      "parentChecksum": "70bff1651728262670cf9898cfd8b618afaa619d655b30d5937e3c9095075d7d",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
       "requiredReferenceDataVersion": null
     }
   ]

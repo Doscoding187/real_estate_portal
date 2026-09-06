@@ -123,6 +123,7 @@ import { commercialRouter } from './commercialOfficeRouter';
 import { sharedLivingRouter } from './sharedLivingRouter';
 import { homeMarketInsightsRouter } from './homeMarketInsightsRouter';
 import { founderRouter } from './founderRouter';
+import { strategicPlanningRouter } from './strategicPlanningRouter';
 
 const appRouterConfig = {
   system: systemRouter,
@@ -176,6 +177,7 @@ const appRouterConfig = {
   servicesEngine: servicesEngineRouter,
   discovery: discoveryRouter,
   founder: founderRouter,
+  strategicPlanning: strategicPlanningRouter,
 
   propertyResults: propertyResultsRouter,
 

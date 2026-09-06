@@ -22,6 +22,7 @@ export * from './listingPerformance';
 export * from './land';
 export * from './commercial';
 export * from './sharedLiving';
+export * from './strategicPlanning';
 
 // Type helpers (schema surface)
 import type { users, auditLogs } from './core';

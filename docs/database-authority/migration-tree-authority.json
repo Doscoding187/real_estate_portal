@@ -1076,6 +1076,21 @@
       "path": "server/migrations/0065_auth_verification_token_cleanup.sql",
       "classification": "canonical active",
       "purpose": "Retires unbounded legacy verification-token state so verification is issued only through the bounded canonical flow."
+    },
+    {
+      "path": "server/migrations/0066_add_strategic_planning_periods.sql",
+      "classification": "canonical active",
+      "purpose": "Strategic Planning: creates governed planning period lifecycle for time-bounded organisational strategy."
+    },
+    {
+      "path": "server/migrations/0067_add_strategic_planning_objectives.sql",
+      "classification": "canonical active",
+      "purpose": "Strategic Planning: creates governed strategic objective authority linked to planning periods."
+    },
+    {
+      "path": "server/migrations/0068_add_strategic_planning_targets.sql",
+      "classification": "canonical active",
+      "purpose": "Strategic Planning: creates measurable strategic targets linked to objectives and planning periods."
     }
   ],
   "prohibitedPaths": [
