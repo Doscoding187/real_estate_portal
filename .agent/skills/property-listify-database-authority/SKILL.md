@@ -4,7 +4,7 @@ description: Route Property Listify database-bearing work through the canonical 
 allowed-tools: Read, Grep, Glob, Bash, Edit, Write
 metadata:
   owner: property-listify
-  version: 1.0.0
+  version: 1.1.0
   status: active
   risk_tier: instruction-only
   provenance: original
@@ -83,6 +83,32 @@ Required evidence before completion:
 ```
 
 If any field is unknown, the task is in **inspect**, not **apply**.
+
+## Credential channels are part of the authority boundary
+
+`DATABASE_CREDENTIAL_CLASS` declares the intended permission class; it does
+not choose a username, grant privileges, or turn a runtime credential into a
+migration credential. The connection authority is the only component allowed
+to select the credential URL.
+
+For a `staging` or `production` operation using the `migration` credential
+class, the authority requires `DATABASE_MIGRATION_URL` in the current process
+environment. That URL must:
+
+- use the approved MySQL/TiDB target with the identical host, port, and
+  database fingerprint as `DATABASE_URL`;
+- use a distinct non-empty database username and password from the runtime
+  URL; and
+- satisfy the protected TLS and certificate-verification policy.
+
+`DATABASE_MIGRATION_URL` is an ephemeral operator/release input. Do not put it
+in a repository file, `.env`/`.env.production`, a screenshot, shell history,
+CI log, or persistent Railway service variable. Enter it with a hidden prompt
+when the named release command requires it, and close the protected shell when
+the operation and evidence capture are complete. A missing, malformed,
+different-target, or same-user value is a deliberate fail-closed result. Do
+not work around it by relabelling `DATABASE_CREDENTIAL_CLASS`, copying the
+runtime URL, or using a provider SQL console.
 
 ## Classify the task once
 

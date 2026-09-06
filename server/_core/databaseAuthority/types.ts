@@ -50,6 +50,12 @@ export const DATABASE_CREDENTIAL_CLASSES = [
 
 export type DatabaseCredentialClass = (typeof DATABASE_CREDENTIAL_CLASSES)[number];
 
+/**
+ * Sanitized evidence of the credential channel selected for an operation.
+ * The URL and its username/password remain private to the credential vault.
+ */
+export type DatabaseCredentialSource = 'database-url' | 'protected-migration-url';
+
 export type DatabaseEnvironmentSource =
   | 'explicit-caller'
   | 'explicit-process'
@@ -100,6 +106,7 @@ export type ResolvedDatabaseContext = {
     certificateVerificationRequired: boolean;
   };
   credentialClass: DatabaseCredentialClass;
+  credentialSource: DatabaseCredentialSource;
   repository: {
     root: string;
     gitCommonDirectoryFingerprint: string;
@@ -124,5 +131,8 @@ export type DatabaseCredentialHandle = {
 
 export type ResolvedDatabaseAuthority = {
   context: ResolvedDatabaseContext;
+  /** Private handle for the canonical target URL used to resolve context. */
+  targetCredential: DatabaseCredentialHandle;
+  /** Private handle for the credential selected by the connection authority. */
   credential: DatabaseCredentialHandle;
 };
