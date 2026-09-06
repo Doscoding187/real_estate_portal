@@ -160,6 +160,18 @@ policy, stop. Never upgrade a read-only session in place to bypass a refusal,
 and never put credentials in source control, screenshots, shell history, or
 the evidence packet.
 
+For protected `staging` or `production` operations, the `migration` class has
+an additional channel requirement. `DATABASE_CREDENTIAL_CLASS=migration` is
+only an assertion of intent; it does not select a privileged account. The
+connection authority requires a current-process `DATABASE_MIGRATION_URL` and
+checks that it has the exact same host, port, and database fingerprint as the
+runtime `DATABASE_URL`, a distinct non-empty username/password, and strict
+TLS. The migration URL is a temporary release-session input. Never add it to
+Railway service variables, `.env` files, CI output, shell history, tickets, or
+screenshots. Use a hidden prompt and close the shell after the operation. A
+missing or mismatched URL is a safety stop, not a reason to reuse the runtime
+URL.
+
 ### Operation routing table
 
 | Intent | Read-only phase | Apply/verify path |
@@ -358,7 +370,10 @@ TiDB export or backup) before any approved live mutation.
 2. Generate or copy the acknowledgement for this operation only.
 3. Set the process credential class required by the command; read-only is for
    inspection/plan/verify, migration is for an approved apply. Never put a
-   password or full URL in the command transcript.
+   password or full URL in the command transcript. For a staging or production
+   migration apply, provide the distinct same-target `DATABASE_MIGRATION_URL`
+   only in the current protected process (use a hidden prompt; do not save it
+   as a service variable).
 4. Apply once with the exact plan digest and acknowledgement.
 5. If the command fails, stop. Preserve its durable attempt ID and failure
    digest and route to the named recovery contract.

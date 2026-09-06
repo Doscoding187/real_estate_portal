@@ -19,6 +19,8 @@ import {
 const roots: string[] = [];
 const targetUrl =
   'mysql://release-user:private@gateway01.ap-northeast-1.prod.aws.tidbcloud.com:4000/listify_property_sa';
+const migrationTargetUrl =
+  'mysql://release-migration:private@gateway01.ap-northeast-1.prod.aws.tidbcloud.com:4000/listify_property_sa';
 const review = {
   approvalReference: TIDB_CHECK_CONSTRAINT_CONVERGENCE.approvalReference,
   approvalActor: 'Edward',
@@ -49,7 +51,14 @@ function authorityFor(mode: 'plan' | 'apply', gitIdentity = identity()) {
     gitIdentity,
     explicitDatabaseUrl: targetUrl,
     credentialClass: mode === 'plan' ? 'read-only' : 'migration',
-    processEnv: { NODE_ENV: 'production', APP_ENV: 'production' },
+    processEnv:
+      mode === 'plan'
+        ? { NODE_ENV: 'production', APP_ENV: 'production' }
+        : {
+            NODE_ENV: 'production',
+            APP_ENV: 'production',
+            DATABASE_MIGRATION_URL: migrationTargetUrl,
+          },
   });
   const approval = {
     reference: review.approvalReference,

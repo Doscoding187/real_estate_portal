@@ -31,7 +31,7 @@ in `authority-manifest.json`; operation permissions are in `operation-policy.jso
 | Isolated Search-to-Lead scenario    | `dataAdapters/searchToLeadScenario.ts`                    |
 | Remaining connection paths          | `connection-path-inventory.json`                          |
 
-The credential-bearing URL is private to connection creation. Commands and reports may emit a sanitized fingerprint and hash, never credentials or a complete URL.
+The credential-bearing URL is private to connection creation. Commands and reports may emit a sanitized fingerprint and hash, never credentials or a complete URL. A credential class is a permission assertion, not a credential selector: for a staging or production migration-class operation, the authority requires a distinct `DATABASE_MIGRATION_URL` supplied by the current protected process. It must identify the exact same target as `DATABASE_URL`; it must never be stored in the repository, a worktree environment file, or a persistent application service variable.
 
 ## Start every database operation
 

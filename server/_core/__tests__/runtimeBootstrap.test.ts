@@ -123,4 +123,17 @@ describe('loadAppRuntimeEnv', () => {
     expect(result.loadedFiles).toEqual(['.env', '.env.production']);
     expect(env.DATABASE_URL).toBe('mysql://user:pass@host/prod');
   });
+
+  it('never promotes a migration credential from a runtime environment file', () => {
+    const cwd = createTempEnvDir({
+      '.env.production':
+        'DATABASE_URL=mysql://user:pass@host/prod\nDATABASE_MIGRATION_URL=mysql://migration:secret@host/prod\n',
+    });
+    const env = { NODE_ENV: 'production' } as NodeJS.ProcessEnv;
+
+    loadAppRuntimeEnv({ cwd, env });
+
+    expect(env.DATABASE_URL).toBe('mysql://user:pass@host/prod');
+    expect(env.DATABASE_MIGRATION_URL).toBeUndefined();
+  });
 });

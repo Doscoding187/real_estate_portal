@@ -104,7 +104,7 @@ describe('Property Listify Database Authority skill contract', () => {
     expect(agents).toContain('The skill is an operating guide only; repository');
     expect(databaseSkill).toMatchObject({
       name: 'property-listify-database-authority',
-      version: '1.0.0',
+      version: '1.1.0',
       status: 'active',
       riskTier: 'instruction-only',
       capabilities: {

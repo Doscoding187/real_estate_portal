@@ -294,6 +294,8 @@ async function main() {
   console.log(`Sanitized Target: ${authority.context.targetFingerprint}`);
   console.log(`Target Fingerprint Hash: ${authority.context.targetFingerprintHash}`);
   console.log(`Target Classification: ${authority.context.targetClass}`);
+  console.log(`Credential Source: ${authority.context.credentialSource}`);
+  console.log(`Credential Class: ${authority.context.credentialClass}`);
   console.log(`Local Service Host: ${LOCAL_SERVICE_HOST}`);
   console.log(`Local Service Port: ${LOCAL_SERVICE_PORT}`);
   console.log(`Local Service Directory: ${localServiceRoot()}`);

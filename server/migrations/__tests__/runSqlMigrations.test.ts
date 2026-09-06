@@ -58,14 +58,23 @@ function authorityFor(mode: 'plan' | 'apply') {
 function protectedAuthorityFor(mode: 'plan' | 'apply') {
   const identity = fixtureIdentity();
   const operation = mode === 'plan' ? 'release-plan' : 'release-apply';
+  const runtimeTarget =
+    'mysql://release-user:private@gateway01.ap-northeast-1.prod.aws.tidbcloud.com:4000/listify_property_sa';
   const authority = resolveDatabaseAuthority({
     operation,
     cwd: identity.worktreePath,
     gitIdentity: identity,
-    explicitDatabaseUrl:
-      'mysql://release-user:private@gateway01.ap-northeast-1.prod.aws.tidbcloud.com:4000/listify_property_sa',
+    explicitDatabaseUrl: runtimeTarget,
     credentialClass: mode === 'plan' ? 'read-only' : 'migration',
-    processEnv: { NODE_ENV: 'production', APP_ENV: 'production' },
+    processEnv:
+      mode === 'plan'
+        ? { NODE_ENV: 'production', APP_ENV: 'production' }
+        : {
+            NODE_ENV: 'production',
+            APP_ENV: 'production',
+            DATABASE_MIGRATION_URL:
+              'mysql://release-migration:private@gateway01.ap-northeast-1.prod.aws.tidbcloud.com:4000/listify_property_sa',
+          },
   });
   const authorization = authorizeDatabaseOperation(authority, {
     root: process.cwd(),

@@ -111,6 +111,11 @@ export function loadAppRuntimeEnv(options?: { cwd?: string; env?: NodeJS.Process
     );
   }
   for (const [key, value] of Object.entries(fileValues)) {
+    // A protected migration credential is an ephemeral release-session input;
+    // it may never be promoted from a repository/runtime environment file into
+    // process.env. The database authority accepts it only when supplied by
+    // the current process explicitly.
+    if (key === 'DATABASE_MIGRATION_URL') continue;
     if (key === 'DATABASE_URL' && explicitE2eDatabaseUrl) continue;
     if (env[key] === undefined) env[key] = value;
   }
