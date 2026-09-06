@@ -14,7 +14,7 @@ function read(relativePath: string): string {
 }
 
 describe('Property Listify Database Authority skill contract', () => {
-  it('is a thin, correctly activated operating guide', () => {
+  it('is a correctly activated governed operating guide', () => {
     expect(existsSync(skillPath)).toBe(true);
 
     const skill = read('.agent/skills/property-listify-database-authority/SKILL.md');
@@ -32,8 +32,19 @@ describe('Property Listify Database Authority skill contract', () => {
     expect(skill).toContain(
       'docs/database-authority/00-database-authority-agent-entry.md',
     );
+    expect(skill).toContain(
+      'docs/database-authority/01-database-operating-playbook.md',
+    );
     expect(skill).toContain('docs/database-authority/authority-manifest.json');
     expect(skill).toContain('pnpm db:authority:status');
+    expect(skill).toContain(
+      'classify → resolve target → inspect authority → plan → review → apply → verify → handoff',
+    );
+    expect(skill).toContain('This is a registered Tier 0 operating guide');
+    expect(skill).toContain('It does not authorize a');
+    expect(skill).toContain('plan digest');
+    expect(skill).toContain('Never retry');
+    expect(skill).toContain('merging to `main`');
     for (const classification of [
       'Database-independent work',
       'Local-data workflow',
@@ -69,14 +80,39 @@ describe('Property Listify Database Authority skill contract', () => {
     const architect = read('.agent/agents/database-architect.md');
     const architecture = read('.agent/ARCHITECTURE.md');
     const agents = read('AGENTS.md');
+    const registry = JSON.parse(read('.agent/skills/registry.json')) as {
+      skills: Array<Record<string, unknown>>;
+    };
+    const databaseSkill = registry.skills.find(
+      skill => skill.name === 'property-listify-database-authority',
+    );
 
     expect(architect).toContain('property-listify-database-authority');
+    expect(architect).toContain('Database Operating Playbook');
+    expect(architect).toContain('MySQL-compatible TiDB');
     expect(architecture).toContain('property-listify-database-authority');
     expect(architecture).toContain('## 🧠 Skills (41)');
-    expect(architecture).toContain('database-design and prisma-expert (generic toolkit skills)');
+    expect(architecture).toContain(
+      'generic database-design/prisma-expert material is optional, non-authoritative technique',
+    );
     expect(agents).toContain('.agent/skills/property-listify-database-authority/SKILL.md');
     expect(agents).toContain('docs/database-authority/00-database-authority-agent-entry.md');
+    expect(agents).toContain(
+      'docs/database-authority/01-database-operating-playbook.md',
+    );
     expect(agents).toContain('pnpm db:authority:status');
     expect(agents).toContain('The skill is an operating guide only; repository');
+    expect(databaseSkill).toMatchObject({
+      name: 'property-listify-database-authority',
+      version: '1.0.0',
+      status: 'active',
+      riskTier: 'instruction-only',
+      capabilities: {
+        networkAccess: false,
+        mcp: false,
+        hooks: false,
+        persistentState: false,
+      },
+    });
   });
 });

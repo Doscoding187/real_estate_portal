@@ -12,6 +12,7 @@ describe('database governance authority', () => {
   const agentInstructions = read('AGENTS.md');
   const policy = read('docs/architecture/database-authority-policy.md');
   const exceptions = read('docs/architecture/database-compatibility-exceptions.md');
+  const playbook = read('docs/database-authority/01-database-operating-playbook.md');
 
   it('requires every repository agent to use canonical database authority', () => {
     expect(agentInstructions).toContain('docs/architecture/database-authority-policy.md');
@@ -20,6 +21,20 @@ describe('database governance authority', () => {
     expect(agentInstructions).toContain('runtime schema guessing');
     expect(agentInstructions).toContain('catch-and-retry SQL');
     expect(agentInstructions).toContain('Edward has not explicitly approved');
+    expect(agentInstructions).toContain(
+      'docs/database-authority/01-database-operating-playbook.md',
+    );
+    expect(agentInstructions).toContain('classify the task');
+    expect(agentInstructions).toContain('Do not treat a merged PR');
+  });
+
+  it('keeps delivery, release, and readiness as separate database claims', () => {
+    expect(playbook).toContain('Merge the approved PR to `main`');
+    expect(playbook).toContain('Railway and Vercel deploy the exact merged commit');
+    expect(playbook).toContain('For a protected database, run a separate named release operation');
+    expect(playbook).toContain('`/api/health` proves process liveness');
+    expect(playbook).toContain('A read-only plan does not');
+    expect(playbook).toContain('Do not hand-author provider DDL');
   });
 
   it('defines canonical-first database engineering rules', () => {

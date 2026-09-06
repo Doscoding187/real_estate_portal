@@ -37,7 +37,7 @@ Specialist AI personas for different domains.
 | `project-planner` | Discovery, task planning | brainstorming, plan-writing, architecture |
 | `frontend-specialist` | Web UI/UX | frontend-design, react-patterns, tailwind-patterns |
 | `backend-specialist` | API, business logic | api-patterns, nodejs-best-practices, database-design |
-| `database-architect` | Schema, SQL | property-listify-database-authority, database-design, prisma-expert |
+| `database-architect` | Canonical schema, migrations, data roles, and protected releases | property-listify-database-authority (governed authority); clean-code |
 | `mobile-developer` | iOS, Android, RN | mobile-design |
 | `game-developer` | Game logic, mechanics | game-development |
 | `devops-engineer` | CI/CD, Docker | deployment-procedures, docker-expert |
@@ -78,7 +78,7 @@ Domain-specific knowledge modules. Skills are loaded on-demand based on task con
 |-------|-------------|
 | `database-design` | Schema design, optimization |
 | `prisma-expert` | Prisma ORM, migrations |
-| `property-listify-database-authority` | Project-specific database operating skill; repository DBA-S4 authority remains canonical |
+| `property-listify-database-authority` | Governed Tier 0 database routing and operating playbook; repository authority remains canonical |
 
 ### TypeScript/JavaScript
 | Skill | Description |
@@ -219,7 +219,7 @@ skill-name/
 | Web App | `frontend-specialist` | react-patterns, nextjs-best-practices |
 | API | `backend-specialist` | api-patterns, nodejs-best-practices |
 | Mobile | `mobile-developer` | mobile-design |
-| Database | `database-architect` | property-listify-database-authority; database-design and prisma-expert (generic toolkit skills) |
+| Database | `database-architect` | property-listify-database-authority and its operating playbook; generic database-design/prisma-expert material is optional, non-authoritative technique |
 | Security | `security-auditor` | vulnerability-scanner |
 | Testing | `test-engineer` | testing-patterns, webapp-testing |
 | Debug | `debugger` | systematic-debugging |

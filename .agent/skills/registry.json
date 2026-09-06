@@ -6,7 +6,7 @@
       "name": "property-listify-change-routing",
       "path": ".agent/skills/property-listify-change-routing/SKILL.md",
       "owner": "property-listify",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "status": "active",
       "riskTier": "instruction-only",
       "allowedTools": ["Read", "Glob", "Grep"],
@@ -95,6 +95,31 @@
       },
       "reviewedAt": "2026-09-02",
       "nextReview": "2026-12-01"
+    },
+    {
+      "name": "property-listify-database-authority",
+      "path": ".agent/skills/property-listify-database-authority/SKILL.md",
+      "owner": "property-listify",
+      "version": "1.0.0",
+      "status": "active",
+      "riskTier": "instruction-only",
+      "allowedTools": ["Read", "Grep", "Glob", "Bash", "Edit", "Write"],
+      "capabilities": {
+        "networkAccess": false,
+        "mcp": false,
+        "hooks": false,
+        "persistentState": false
+      },
+      "provenance": {
+        "kind": "original",
+        "informedBy": [
+          "Property Listify Database Authority v3",
+          "2026-09-04 TiDB production cutover recovery review"
+        ],
+        "copiedThirdPartyTextOrCode": false
+      },
+      "reviewedAt": "2026-09-05",
+      "nextReview": "2026-12-05"
     }
   ]
 }
