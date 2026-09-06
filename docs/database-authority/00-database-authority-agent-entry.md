@@ -2,9 +2,9 @@
 
 **Status:** Database Authority v3 control-plane entry
 
-Read this file before any database-bearing work. The machine-readable pointers
-are in `authority-manifest.json`; operation permissions are in
-`operation-policy.json`.
+Read this file before any database-bearing work. Then read the mandatory
+procedure in `01-database-operating-playbook.md`. Machine-readable pointers are
+in `authority-manifest.json`; operation permissions are in `operation-policy.json`.
 
 ## Authority spine
 
@@ -22,6 +22,7 @@ are in `authority-manifest.json`; operation permissions are in
 | Generated model evidence            | `drizzle/schema/canonical-model-inventory.json`           |
 | Physical-schema comparison          | `schemaCongruency.ts`                                     |
 | Layered readiness                   | `readiness.ts`                                            |
+| Operating procedure                  | `01-database-operating-playbook.md`                       |
 | Local service lifecycle             | `scripts/local-db.sh`, `localServicePaths.ts`             |
 | Canonical geography reference data  | `dataAdapters/canonicalGeography.ts`                      |
 | Canonical commercial reference data | `dataAdapters/canonicalCommercial.ts`                     |
@@ -40,9 +41,7 @@ pnpm db:authority:manifest
 pnpm db:authority:context
 ```
 
-Status is read-only. In a feature worktree, central local credentials resolve to that registered worktree's collision-resistant database identity; they do not resolve to `listify_local`.
-
-The current `listify_local` is quarantined evidence. It may receive sanitized,
+Status is read-only. In a feature worktree, central local credentials resolve to that registered worktree's collision-resistant database identity; they do not resolve to `listify_local`. The current `listify_local` is quarantined evidence. It may receive sanitized,
 read-only diagnostics only. Runtime mutation, migration, seed, fixture, reset,
 rebuild, import, restore, repair, and ledger editing are not authorized.
 

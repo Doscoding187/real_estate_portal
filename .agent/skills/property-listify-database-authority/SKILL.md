@@ -1,151 +1,244 @@
 ---
 name: property-listify-database-authority
-description: Property Listify operating guide for schema and migration work, missing tables or columns, database-backed runtime queries, seeds and fixtures, local database setup, browser validation requiring seeded data, schema-consumer drift, migration-ledger verification, database contract tests, and database authority or compatibility questions. Do not use for frontend-only styling, components, copy, or visual work that does not require database data.
+description: Route Property Listify database-bearing work through the canonical authority, target controls, planning, release, verification, and handoff workflow. Use for schema, migrations, runtime queries, data roles, database services, database tests, or protected database releases; do not use for frontend-only work.
 allowed-tools: Read, Grep, Glob, Bash, Edit, Write
+metadata:
+  owner: property-listify
+  version: 1.0.0
+  status: active
+  risk_tier: instruction-only
+  provenance: original
 ---
 
 # Property Listify Database Authority
 
-> **This skill is an operating guide, not the database authority. Repository-native authority always wins.**
+> **This is a registered Tier 0 operating guide. It does not authorize a
+> connection, a credential, a migration, a data write, or a release.
+> Repository-native authority always wins.**
 
-## Precedence
+Use this skill for schema and migration work, missing tables or columns,
+database-backed runtime queries, seeds and fixtures, local database setup,
+browser validation requiring seeded data, schema-consumer drift,
+migration-ledger verification, database contract tests, database incidents, or
+database authority and compatibility questions. Do not use for frontend-only
+styling, components, copy, or visual work that does not require database data.
+
+## One operating flow
+
+Every database-bearing task follows this order:
 
 ```text
-Repository AGENTS.md
+classify → resolve target → inspect authority → plan → review → apply → verify → handoff
+```
+
+Do not skip forward because a branch merged, a deployment completed, a console
+is open, or a command appears familiar. A database change is complete only
+when its required evidence says it is complete.
+
+## Authority order
+
+```text
+User instruction and AGENTS.md
         ↓
 Database Authority Agent Entry Contract
         ↓
-Authority Manifest
+Database Operating Playbook and Authority Manifest
+        ↓
+Database Authority Policy, exception register, and change protocol
         ↓
 Canonical migrations and Drizzle models
         ↓
-This skill’s operating instructions
+This skill’s activation instructions
         ↓
 Generic database skills and assumptions
 ```
 
-Use these repository authorities; do not copy or replace them:
+Read and obey these repository authorities; do not copy, replace, or weaken
+them:
 
 - `docs/database-authority/00-database-authority-agent-entry.md`
+- `docs/database-authority/01-database-operating-playbook.md`
 - `docs/database-authority/authority-manifest.json`
-- `docs/database-authority/index.md`
+- `docs/database-authority/operation-policy.json`
 - `docs/architecture/database-authority-policy.md`
 - `docs/architecture/database-compatibility-exceptions.md`
+- `docs/database-authority/database-change-protocol.md`
 
 Archived migrations are historical evidence only. Generic PostgreSQL, Prisma,
 or schema-design advice never overrides Property Listify’s MySQL/TiDB, Drizzle,
-and migration-led authority.
+manifest, and migration-led authority.
 
-## Classify the task
+## Start with a short routing record
 
-Choose exactly one category before reading database files.
+Before editing or running a database-bearing command, state this internally or
+in the working update:
+
+```text
+Task outcome:
+Classification:
+Target class: disposable local | isolated CI | protected release | no database
+Current phase: inspect | plan | review | apply | verify
+Canonical sources to inspect:
+Required evidence before completion:
+```
+
+If any field is unknown, the task is in **inspect**, not **apply**.
+
+## Classify the task once
+
+Choose the narrowest category. Do not combine categories to obtain broader
+permission.
 
 1. **Database-independent work** — styling, frontend components, copy, visual
    refinement, or unrelated static documentation. Do not inspect migrations,
    Drizzle schema, or database audits. Do not initialize or bootstrap a database.
 
 2. **Local-data workflow** — browser validation requiring seeded accounts,
-   listings, developments, agents, buyers, or authenticated dashboards. Run:
-
-   ```sh
-   pnpm db:authority:status
-   pnpm db:authority:bootstrap:local
-   ```
-
-   Then continue product validation. Do not reconstruct credentials or
+   listings, developments, agents, buyers, or authenticated dashboards. Follow
+   the local recipe in the operating playbook. `pnpm db:authority:bootstrap:local`
+   may be used only after target/status checks; never reconstruct credentials or
    `DATABASE_URL` manually.
 
 3. **Database consumer work** — runtime query, service, repository, seed,
    fixture, helper, database-backed API, or missing-table/column failure. Read
-   only the Entry Contract, manifest, affected consumer and tests, matching
-   canonical Drizzle model, and matching active migration when required.
-   Reconcile a stale consumer to canonical schema; never restore retired schema.
+   the affected consumer, its focused test, the matching canonical Drizzle
+   model, and an active migration only when needed. Repair a stale consumer;
+   never recreate a retired schema to make a test pass.
 
 4. **Schema-authority work** — table, column, relationship, index, constraint,
    migration runner, baseline, ledger, canonical Drizzle model, or approved
-   compatibility exception. Use a dedicated database-authority branch/worktree;
-   read policy and exception register; run the full migration-authority review.
-   Never use ad hoc DDL, `db:push`, or mix this work into an unrelated feature PR.
+   compatibility exception. Use a dedicated database-authority branch/worktree.
+   Read the policy, exception register, and change protocol before authoring
+   anything. Never use ad hoc DDL, `db:push`, or mix this work into an unrelated
+   feature PR.
 
-## Startup for categories 2–4
+5. **Protected release or recovery** — staging, production, Railway, or TiDB
+   target; live reference data; release migration; provider capability; failed
+   attempt; import, restore, repair, or convergence. Treat it as protected even
+   when a browser console or container shell is available. A read-only plan is
+   not approval to apply.
 
-1. Read the Entry Contract.
+## Mandatory startup for categories 2–5
+
+1. Read the Agent Entry Contract and the Database Operating Playbook.
 2. Run `pnpm db:authority:status`.
-3. Confirm manifest validation, authority paths, approved target classification,
-   and safe local-environment state where applicable.
-4. Stop before database work for a remote, unknown, production, staging,
-   Railway, or TiDB target without explicit approval; unsafe permissions;
-   conflicting `.env.local`; missing/placeholder required values; or disagreeing
+3. For a database consumer or schema change, also read the policy and
+   compatibility exception register before editing.
+4. Resolve the approved command, operation, target class, credential class,
+   and manifest head through repository authority. Do not derive them from a
+   pasted connection command or a remembered environment variable.
+5. Stop before a remote, unknown, production, staging, Railway, or TiDB target
+   without explicit operation/fingerprint approval; unsafe permissions;
+   conflicting local configuration; missing required values; or disagreeing
    authority files. Never print secrets or complete credential-bearing URLs.
 
-The manifest owns approved and destructive command lists. Use its commands;
-the normal authority workflows include `pnpm db:authority:bootstrap:local`,
-`pnpm db:authority:consumer-contract`, and `pnpm db:verify:ci`. Prohibit
-`db:push`, schema push, unapproved generation, manual DDL, archived migration
-execution, remote access, and destructive local commands without acknowledgement.
+The manifest owns approved and destructive command lists. Use its commands.
+Prohibit `db:push`, schema push, unapproved generation, manual DDL, archived
+migration execution, remote access, and destructive local commands without the
+required acknowledgement.
 
-## Consumer-drift procedure
+## Keep code delivery and database release separate
 
-For an unknown table, column, enum, or relationship: identify the consumer;
-read its matching canonical Drizzle model; read the active migration only if
-needed; then decide whether the consumer is stale. Repair a stale consumer,
-add focused coverage, and run the fresh-schema consumer contract. If a genuine
-schema requirement exists, stop unrelated work and open a dedicated
-schema-authority workstream. Never revive retired fields from archived migrations.
+- A feature worktree produces a reviewable PR.
+- Passing review and merging to `main` makes the code and migration manifest
+  the repository release candidate.
+- Railway and Vercel deploy an exact merged commit. A successful deployment
+  proves only that that artifact started or served its defined health checks.
+- A protected database release is a separate, named operation. It requires its
+  own read-only plan, review, protected-target approval, exact acknowledgement,
+  and post-apply verification.
+- Application startup must never silently establish, migrate, seed, repair, or
+  converge a protected database.
 
-## Local environment
+Do not describe a merge, deployment, or health endpoint as proof that a schema
+is current. Do not describe a successful migration head as proof that every
+provider capability, physical constraint, reference-data role, and readiness
+layer is current.
 
-Local configuration is owned by `~/.config/property-listify/local.env`; each
-worktree should have the ignored link `.env.local -> ~/.config/property-listify/local.env`.
-Use bootstrap to establish or validate it. Do not reveal values, recreate
-passwords, copy remote credentials, overwrite a normal `.env.local`, or weaken
-the `0600` requirement.
+## Planning and applying
 
-## Local Runtime
+**Inspect before changing.** Read the smallest authority set that can answer
+the question. Do not read the whole repository, every migration, or archived
+migrations unless the entry contract requires an audit.
 
-Inspect the Database Authority status, manifest, and context before any
-database-bearing command. Treat service start as potentially mutating: it may
-establish or initialize the authority-owned runtime directory even though it
-does not create an application database. Obtain the required approval before
-database creation, migrations, reference/scenario writes, disposal, or other
-destructive cleanup.
+**Plan before review.** A plan must identify the sanitized target
+classification and fingerprint, old and expected heads, ordered pending work,
+durable attempt state, and plan digest where the operation supplies one. A
+plan performs no schema or data mutation.
 
-System MySQL on host port `3306` is unrelated and prohibited. The local
-Database Authority service uses only `127.0.0.1:3307` and the authority-derived
-AppArmor-compatible runtime directory
-`/var/tmp/property-listify-<uid>/mysql-3307`. Do not improvise a
-home-directory MySQL datadir, and do not modify or disable AppArmor. Service
-readiness, database readiness, schema readiness, canonical reference-data
-readiness, scenario-data readiness, and application readiness are separate
-claims. If the first runtime stage or any later stage fails, stop the sequence
-and preserve the service, target, and sanitized logs as evidence; do not retry
-migrations, edit ledgers, or repair data manually. Machine-local security
-changes require separate founder authorization. AppArmor may mediate signals
-independently of ordinary UID ownership: never assume a same-user shell can
-signal a confined `mysqld`. Canonical shutdown uses the exact validated Unix
-socket and `mysqladmin shutdown`; signal or privileged fallback requires
-separate founder authorization. A first shutdown failure preserves evidence
-and stops the workflow.
+**Review before apply.** For protected work, review the plan output against the
+requested operation and preserve the plan digest. Explicit human approval is
+operation- and target-specific; it is never inherited from a PR, merge,
+previous session, or different target.
 
-Adapter SQL control statements must use the driver's supported transaction or
-non-prepared query path. Keep parameterized data statements on prepared
-execution, and require real-MySQL protocol proof before declaring a new data
-adapter runtime-ready.
+**Apply once through the named authority.** Use the exact plan digest and exact
+acknowledgement emitted by the named release path. Never hand-author SQL in a
+provider console, edit migration ledgers, replay archived SQL, or silently
+retry an ambiguous action.
+
+**Verify independently.** Re-run the correct plan or verifier, then use the
+schema, distribution, reference-data, readiness, consumer, and deployment
+checks required by the task. A liveness endpoint and a schema-congruency result
+answer different questions.
+
+## Failure rules
+
+Stop and preserve sanitized evidence when any command reports a failed,
+running, blocked, incomplete, foreign, unknown, or non-congruent state.
+
+- Never retry a failed migration or provider DDL just because it made zero
+  visible progress.
+- Never repair a ledger row, delete attempt evidence, or import data to make a
+  dashboard look healthy.
+- A zero-statement rejected migration can proceed only through its explicitly
+  reviewed named recovery path in the change protocol.
+- A TiDB capability mismatch or missing CHECK constraint is a provider
+  convergence incident, not permission to replay history or weaken a model.
+- If canonical authority and runtime code disagree, stop product work long
+  enough to audit and reconcile the consumer to the canonical model.
+
+## Local safety and data roles
+
+The current `listify_local` is quarantined evidence. A feature worktree gets
+its own authority-derived disposable target. Fixed `listify_test` is only for
+isolated CI. System MySQL on host port `3306` is not a substitute for the
+authority-owned local service.
+
+Reference, foundation, scenario, demo, and fixture data are separate declared
+roles. Service start does not seed them. A local browser journey is not ready
+until the relevant role verifier and application readiness succeed. Do not
+promote a disposable scenario into shared or production data.
+
+## Completion evidence
+
+Return a concise evidence packet:
+
+Always report a sanitized target classification and fingerprint hash; never
+include a secret or complete credential-bearing URL.
+
+```text
+Task and classification:
+Worktree, branch, and reviewed commit:
+Canonical sources used:
+Sanitized target classification and fingerprint hash:
+Plan/attempt/recovery state and exact head:
+Approval and acknowledgement scope, if protected:
+Files changed and stale behavior removed:
+Verification commands and real results:
+Deployment artifact and smoke result, if applicable:
+Protected access, data mutation, or remaining blocker:
+```
+
+For database-independent work, say only that database initialization was not
+required when relevant. For a blocked protected operation, hand off the plan
+and stop condition; do not invent a workaround.
 
 ## Token discipline
 
-- Do not read the whole repository, every migration, or archived migrations.
-- Use the manifest to locate authority and the affected consumer/model only.
-- Do not reread detailed DBA audits when the Entry Contract resolves the task.
-- Expand scope only after authority validation fails or schema-authority work is real.
-- Do not load generic database references unless repository authority leaves a real question.
-
-## Evidence output
-
-For database execution return: task classification; authority contract used;
-sanitized target classification; files inspected and changed; commands; tests
-and results; consumer/schema conclusion; confirmation no remote target or secret
-was exposed; whether schema authority changed; and any blocker or next action.
-
-For database-independent work, state only that database initialization was not
-required when relevant.
+- Start from the routing record and manifest, not broad repository search.
+- Load only the affected consumer/model/migration and focused tests.
+- Reuse a recent, valid sanitized plan only for explanation; re-plan before an
+  apply if target state or session boundaries could have changed.
+- Do not expand one incident into a speculative schema rewrite.
+- Do not load generic database references unless canonical authority leaves a
+  real unanswered question.

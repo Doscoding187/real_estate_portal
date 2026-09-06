@@ -65,6 +65,7 @@ export type AuthorityManifest = {
   dataRoleManifest: string;
   canonicalCommercialReleaseEntrypoint: string;
   canonicalCommercialReleaseCommands: string[];
+  operatingPlaybook: string;
   releaseMigrationRecoveryCommands: string[];
   acceptanceScenarioAdapter: string;
 };
@@ -137,6 +138,7 @@ export function validateAuthorityManifest(manifest: AuthorityManifest, root = pr
     manifest.canonicalCommercialReferenceDataAdapter,
     manifest.dataRoleManifest,
     manifest.canonicalCommercialReleaseEntrypoint,
+    manifest.operatingPlaybook,
     manifest.acceptanceScenarioAdapter,
   ];
   const missingPaths = paths.filter(path => !existsSync(resolve(root, path)));
@@ -310,6 +312,7 @@ async function main() {
   console.log(`Requested Runtime: ${readiness.requestedRuntime}`);
   console.log(`Application Readiness: ${readiness.applicationReady ? 'ready' : 'not-ready'}`);
   console.log(`Authority Contract Path: ${manifest.agentEntryContract}`);
+  console.log(`Operating Playbook Path: ${manifest.operatingPlaybook}`);
   console.log(`Prohibited Operations: ${manifest.prohibitedCommandCategories.join('; ')}`);
 }
 
