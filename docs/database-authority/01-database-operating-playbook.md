@@ -344,6 +344,11 @@ evidence. Do not reset, rebuild, or retry by changing the database name.
 6. Run static manifest, model-inventory, authority, and focused contract gates.
 7. Open a PR. Do not apply a protected target from the feature worktree.
 
+For a TiDB target, run `pnpm db:schema:tidb-audit` before planning a provider
+convergence. Any CHECK/FK overlap is a review item; a successful MySQL test
+does not admit the same DDL on TiDB. Resolve every item in the plan evidence
+before requesting protected approval.
+
 An unapplied migration is not production truth because it exists on a branch.
 An applied migration is not permission to alter its checksum or rewrite its
 history.

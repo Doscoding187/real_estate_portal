@@ -55,6 +55,7 @@ import {
   normalizedPhysicalSchema,
 } from '../server/_core/databaseAuthority/schemaCongruency';
 import { readTiDbCheckConstraintCapability } from '../server/_core/databaseAuthority/tidbCheckConstraintCapability';
+import { auditTidbStructuralAdmission } from '../server/_core/databaseAuthority/tidbStructuralAdmission';
 import {
   LOCAL_SERVICE_HOST,
   LOCAL_SERVICE_PORT,
@@ -100,6 +101,7 @@ type Command =
   | 'release-reference:verify'
   | 'readiness'
   | 'schema:check'
+  | 'schema:tidb-audit'
   | 'reference:prepare'
   | 'reference:verify'
   | 'foundation:prepare'
@@ -542,6 +544,14 @@ async function run(command: Command): Promise<void> {
     return;
   }
 
+  if (command === 'schema:tidb-audit') {
+    // Offline audit: never resolves credentials or opens a connection.
+    const report = auditTidbStructuralAdmission(normalizedDesiredSchema(schema));
+    print(report);
+    if (!report.admitted) process.exitCode = 1;
+    return;
+  }
+
   const authority = authorityFor('diagnostics');
   const decision = authorizationFor(authority);
   const connection = await createAuthoritySqlConnection(authority, decision);
@@ -596,6 +606,7 @@ const commands = new Set<Command>([
   'release-reference:verify',
   'readiness',
   'schema:check',
+  'schema:tidb-audit',
   'reference:prepare',
   'reference:verify',
   'foundation:prepare',
