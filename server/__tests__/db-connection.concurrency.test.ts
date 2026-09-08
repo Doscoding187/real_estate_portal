@@ -1,4 +1,14 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+// This suite tests pool ownership using mocks, not a migrated database. The
+// shared setup's beforeAll otherwise calls our mocked getDb dependency before
+// any test has configured it when CI supplies DATABASE_URL.
+const previousSkipDbInit = process.env.SKIP_DB_INIT;
+process.env.SKIP_DB_INIT = '1';
+afterAll(() => {
+  if (previousSkipDbInit === undefined) delete process.env.SKIP_DB_INIT;
+  else process.env.SKIP_DB_INIT = previousSkipDbInit;
+});
 
 const mocks = vi.hoisted(() => ({ create: vi.fn(), drizzle: vi.fn() }));
 vi.mock('drizzle-orm/mysql2', () => ({ drizzle: mocks.drizzle }));

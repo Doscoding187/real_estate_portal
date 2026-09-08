@@ -98,7 +98,7 @@ describe('agent skill governance', () => {
         expect.objectContaining({
           name: 'property-listify-database-authority',
           riskTier: 'instruction-only',
-          version: '1.1.0',
+          version: '1.2.0',
         }),
       ]),
     );
