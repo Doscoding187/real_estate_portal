@@ -159,3 +159,23 @@ invalid inventory/input. The fake models commit/rollback; it does not prove MySQ
 row locking. Database uniqueness across every writer remains open. Six favorites
 boundary tests also pass. Type checking is still pending; no new schema or remote
 database changes were made.
+
+### Constraint admission finding
+
+A uniqueness design was prototyped but not admitted: the repository's integration
+contracts intentionally require the current 0065 head and a serialized manifest
+review. The prototype was reverted without applying SQL. The invariant remains a
+required future change, with duplicate cleanup and migration admission to be
+completed against the current integration base.
+
+### Prospect favorite cardinality
+
+`prospect_favorites` has nullable `listingId` and `developmentId` with no
+exclusive-or invariant or uniqueness. Current runtime writes only listing
+favorites, while the schema permits an unidentifiable favorite, a development
+favorite, or both references simultaneously. This is a model defect, not a
+consumer compatibility requirement. The future state should use explicit
+favorite subject typing (or separate listing/development tables) with a required
+subject and per-prospect uniqueness. It requires a formally admitted migration
+after duplicate inventory is measured; no schema mutation was made in this
+phase.
