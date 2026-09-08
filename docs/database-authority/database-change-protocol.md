@@ -154,6 +154,22 @@ sequenced replacement and later canonical migrations may run.
 
 ### Reviewed TiDB CHECK-constraint convergence
 
+Before any provider convergence plan is approved, run the offline structural
+admission audit:
+
+```text
+pnpm db:schema:tidb-audit
+```
+
+This audit derives dependencies from the canonical Drizzle model. It treats a
+CHECK that references a foreign-key column as unresolved until provider proof
+exists. `information_schema.REFERENTIAL_CONSTRAINTS` reports the effective
+action, but cannot prove whether `NO ACTION` was explicitly authored; therefore
+even `RESTRICT`/`NO ACTION` relationships require an explicit-action review.
+`CASCADE`, `SET NULL`, and `SET DEFAULT` relationships require a domain
+lifecycle decision and must not be rewritten automatically. The command is an
+admission report, not a DDL executor.
+
 The 2026-09-04 production cutover found TiDB's
 `tidb_enable_check_constraint` capability disabled after the canonical
 migration head had been reached. That setting can allow CHECK syntax to be

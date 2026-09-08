@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 const ROOT = process.cwd();
 const CANONICAL_RUNNER = 'server/migrations/runSqlMigrations.ts';
 const APPROVED_OPERATIONAL_ENTRYPOINTS = new Set([
+  'db:authority:check',
   'db:migrate',
   'db:migrate:plan',
   'db:migrate:apply',
@@ -20,7 +21,10 @@ const APPROVED_OPERATIONAL_ENTRYPOINTS = new Set([
   'db:release:apply',
   'release:predeploy:production',
 ]);
-const APPROVED_TEST_ENTRYPOINTS = new Set(['db:authority:consumer-contract']);
+const APPROVED_TEST_ENTRYPOINTS = new Set([
+  'db:authority:consumer-contract',
+  'db:authority:lifecycle',
+]);
 
 type PackageManifest = { scripts: Record<string, string> };
 
@@ -218,7 +222,7 @@ describe('migration execution authority', () => {
         if (!manifest.scripts[reference]) continue;
         if (!isMigrationCapable(reference, manifest)) continue;
         expect(
-          ['db:migrate:test', 'db:authority:consumer-contract', 'db:verify:ci'],
+          ['db:migrate:test', 'db:authority:check', 'db:authority:consumer-contract', 'db:authority:lifecycle', 'db:verify:ci'],
           `${workflow} may only invoke an approved canonical CI migration or verification wrapper.`,
         ).toContain(reference);
       }

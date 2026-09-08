@@ -13,8 +13,12 @@ import { resolveDatabaseAuthority } from './_core/databaseAuthority/context';
 // Connection state
 export let _db: any = null;
 let runtimePool: AuthorityRuntimePool | null = null;
+let initialization: Promise<any> | null = null;
+let connectionGeneration = 0;
 
 export function resetDb() {
+  connectionGeneration += 1;
+  initialization = null;
   _db = null;
   const pool = runtimePool;
   runtimePool = null;
@@ -358,23 +362,49 @@ export async function getDb() {
     return _db;
   }
 
+  if (initialization) return initialization;
+  const generation = connectionGeneration;
+  const pending = (async () => {
+    try {
+      const authority = resolveDatabaseAuthority({
+        operation: 'runtime-connect',
+        credentialClass: (process.env.DATABASE_CREDENTIAL_CLASS as any) ?? undefined,
+      });
+      const decision = authorizeDatabaseOperation(authority, {
+        approval: protectedDatabaseApprovalFromEnvironment(authority),
+      });
+      const createdPool = await createAuthorityRuntimePool(authority, decision);
+      if (generation !== connectionGeneration) {
+        await createdPool.end();
+        throw new Error('Database initialization was cancelled by reset.');
+      }
+      let database;
+      try {
+        database = drizzle(createdPool.pool, { schema, mode: 'default' });
+      } catch (error) {
+        // Ownership is not published until the ORM is ready. Preserve the
+        // original initialization failure even if closing the pool also fails.
+        await createdPool.end().catch(() => undefined);
+        throw error;
+      }
+      runtimePool = createdPool;
+      _db = database;
+      console.log(
+        `[Database] Authorized runtime target ${authority.context.targetFingerprintHash.slice(0, 16)} is connected.`,
+      );
+      return _db;
+    } catch (error) {
+      if (generation === connectionGeneration) {
+        _db = null;
+        runtimePool = null;
+      }
+      throw error;
+    }
+  })();
+  initialization = pending;
   try {
-    const authority = resolveDatabaseAuthority({
-      operation: 'runtime-connect',
-      credentialClass: (process.env.DATABASE_CREDENTIAL_CLASS as any) ?? undefined,
-    });
-    const decision = authorizeDatabaseOperation(authority, {
-      approval: protectedDatabaseApprovalFromEnvironment(authority),
-    });
-    runtimePool = await createAuthorityRuntimePool(authority, decision);
-    _db = drizzle(runtimePool.pool, { schema, mode: 'default' });
-    console.log(
-      `[Database] Authorized runtime target ${authority.context.targetFingerprintHash.slice(0, 16)} is connected.`,
-    );
-    return _db;
-  } catch (error) {
-    _db = null;
-    runtimePool = null;
-    throw error;
+    return await pending;
+  } finally {
+    if (initialization === pending) initialization = null;
   }
 }

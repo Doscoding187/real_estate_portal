@@ -4,7 +4,7 @@ description: Route Property Listify database-bearing work through the canonical 
 allowed-tools: Read, Grep, Glob, Bash, Edit, Write
 metadata:
   owner: property-listify
-  version: 1.1.0
+  version: 1.2.0
   status: active
   risk_tier: instruction-only
   provenance: original
@@ -52,6 +52,17 @@ This skill’s activation instructions
         ↓
 Generic database skills and assumptions
 ```
+
+## Local-to-production contract
+
+The worktree database is disposable proof, not the source of truth. The
+reviewed Git change is authoritative: Drizzle model, generated inventory,
+active migration, manifest checksum, runtime consumers, and tests must agree.
+Production is a deployed instance of that contract and changes only through
+the named protected release path. Follow
+`docs/database-authority/02-local-to-production-schema-lifecycle.md` for the
+environment boundaries and junior-developer checklist. Run
+`pnpm db:authority:lifecycle` when reviewing the repository contract.
 
 Read and obey these repository authorities; do not copy, replace, or weaken
 them:
