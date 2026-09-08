@@ -22,6 +22,10 @@ const CHECKS: Check[] = [
     command: 'pnpm',
     args: ['schema:inventory:check'],
   },
+  {
+    command: 'pnpm',
+    args: ['db:authority:lifecycle'],
+  },
 ];
 
 function staticOnlyEnvironment(): NodeJS.ProcessEnv {
