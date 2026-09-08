@@ -1141,9 +1141,11 @@ const REGISTER_ROLE_VALUES = new Set([
 ]);
 
 /**
- * Build the auth href used by commercial funnels. `registerRole` preselects the
+ * Build an auth href for a public entry point. `registerRole` preselects the
  * matching registration audience on the login surface and is ignored unless the
- * mode is register and the value is a known registration role.
+ * mode is register and the value is a known registration role. When no role is
+ * supplied, registration remains on the neutral role chooser; callers must only
+ * preselect a role when the entry-point context establishes that audience.
  */
 export function getAccountAuthHref(
   mode: 'signin' | 'register',

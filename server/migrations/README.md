@@ -19,8 +19,10 @@ is non-executable evidence.
 4. Add one lowercase top-level SQL file and one manifest entry with exact
    checksum and parent checksum.
 5. For `incremental-ddl`, use exactly one independently verifiable DDL
-   statement. For `transactional-data`, use DML only. Exceptional entries need
-   an explicit approval contract.
+   statement. On TiDB, do not add columns and their indexes, keys, or
+   constraints in the same `ALTER TABLE`; use separately sequenced statements
+   under an approved exceptional contract. For `transactional-data`, use DML
+   only.
 6. Prove malformed identity, duplicate number, membership drift, checksum
    drift, broken ancestry, cycle, multiple heads, archive execution, and unsafe
    statement policy all fail.
@@ -51,6 +53,8 @@ pnpm db:migrate:plan
 pnpm db:migrate:apply -- --accepted-old-head=<head-or-none> --expected-new-head=<manifest-head>
 pnpm db:release:plan
 pnpm db:release:apply -- --ack=<exact-release-ack>
+pnpm db:release-tidb-check-constraint-convergence:plan -- --approval-reference=<reference> --approval-actor=<actor>
+pnpm db:release-tidb-check-constraint-convergence:apply -- --approval-reference=<reference> --approval-actor=<actor> --plan-digest=<exact-plan-digest> --ack=<exact-release-ack>
 pnpm db:schema:congruency
 pnpm db:readiness
 ```
@@ -60,3 +64,24 @@ migration commands reject staging and production. Protected targets require
 the explicit release operation, exact protected-target approval, and release
 evidence; apply additionally requires exact acknowledgement. The current
 `listify_local` is quarantined and cannot be migrated.
+
+The reviewed TiDB `0046` zero-statement incident has a separately bounded
+release recovery. It archives the rejected SQL, records review evidence only,
+and leaves the canonical runner responsible for the sequenced replacement:
+
+```sh
+pnpm db:release-commercial-quote-terms-recovery:plan -- --approval-reference=<reference> --approval-actor=<actor>
+pnpm db:release-commercial-quote-terms-recovery:apply -- --approval-reference=<reference> --approval-actor=<actor> --plan-digest=<exact-plan-digest> --ack=<exact-release-ack>
+```
+
+Never execute the archived SQL or repair the attempt ledger manually. After
+recovery, create a fresh protected `db:release:plan` from the accepted `0045`
+head before applying the active replacement and later migrations.
+
+The TiDB CHECK-constraint convergence is separately bounded to the 22 desired
+Drizzle checks that were absent because the target capability was disabled. Its
+plan proves the canonical migration head, each named constraint, and zero
+violating rows before apply. Apply enables the TiDB capability and adds only
+the named missing checks under the ordinary release lock. It records durable
+progress rather than modifying migration history. Normal TiDB migration apply
+fails closed while the capability is disabled.

@@ -232,6 +232,21 @@ export function assertTidbCompatibleMigrationSql(sql: string): void {
       `TiDB compatibility guard: ${storedProgram[1].toLowerCase()} definitions are unsupported.`,
     );
   }
+
+  for (const statement of parseSqlStatements(sql)) {
+    const statementSurface = withoutStringLiterals(statement);
+    const altersTable = /^\s*alter\s+table\b/i.test(statementSurface);
+    const addsColumn = /\badd\s+column\b/i.test(statementSurface);
+    const addsDependentObject =
+      /\badd\s+(?:(?:unique|primary)\s+)?(?:key|index)\b|\badd\s+constraint\b/i.test(
+        statementSurface,
+      );
+    if (altersTable && addsColumn && addsDependentObject) {
+      throw new Error(
+        'TiDB compatibility guard: an ALTER TABLE statement may not introduce columns and add dependent indexes, keys, or constraints in the same DDL job; sequence them as separate statements.',
+      );
+    }
+  }
 }
 
 function withoutStringLiterals(statement: string): string {

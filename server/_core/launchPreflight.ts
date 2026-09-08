@@ -1,4 +1,5 @@
 import { resolveDatabaseAuthority } from './databaseAuthority/context';
+import { isValidAuthRateLimitRedisUrl } from './authRateLimitStore';
 import { resolveBrowserSecurityPolicy } from './browserSecurity';
 import type { AppRuntimeEnv } from './runtimeBootstrap';
 import { resolveAppRuntimeEnv } from './runtimeBootstrap';
@@ -303,6 +304,38 @@ function emailCheck(env: EnvLike) {
   });
 }
 
+function distributedAuthRateLimitCheck(env: EnvLike) {
+  const redisUrl = readEnv(env, 'REDIS_URL');
+  const failures: string[] = [];
+
+  if (!redisUrl) {
+    failures.push('REDIS_URL');
+  } else if (!isValidAuthRateLimitRedisUrl(redisUrl)) {
+    failures.push('REDIS_URL (valid redis:// or rediss:// URL)');
+  }
+
+  for (const [key, minimum, maximum] of [
+    ['AUTH_RATE_LIMIT_STORE_TIMEOUT_MS', 250, 5_000],
+    ['AUTH_RATE_LIMIT_STORE_COOLDOWN_MS', 1_000, 60_000],
+  ] as const) {
+    const value = readEnv(env, key);
+    if (!value) continue;
+    const parsed = Number(value);
+    if (!Number.isInteger(parsed) || parsed < minimum || parsed > maximum) {
+      failures.push(`${key} (integer ${minimum}-${maximum})`);
+    }
+  }
+
+  return makeCheck({
+    id: 'distributed-auth-rate-limit',
+    level: 'required',
+    ok: failures.length === 0,
+    message:
+      'Authentication requires a valid Redis-backed shared limiter configuration with bounded connection and retry settings.',
+    missing: failures,
+  });
+}
+
 function recommendedPresenceCheck(env: EnvLike, id: string, keys: string[], message: string) {
   const missing = missingKeys(env, keys);
   return makeCheck({
@@ -330,12 +363,7 @@ export function runLaunchPreflight(options?: {
     manualEftCheck(env),
     billingProofStorageCheck(env),
     emailCheck(env),
-    requiredPresenceCheck(
-      env,
-      'distributed-auth-rate-limit',
-      ['REDIS_URL'],
-      'REDIS_URL is required so authentication rate limits remain shared across instances.',
-    ),
+    distributedAuthRateLimitCheck(env),
     recommendedPresenceCheck(
       env,
       'maps',

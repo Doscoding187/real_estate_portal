@@ -21,6 +21,7 @@ import agentOnboardingRouter from '../routes/agentOnboarding';
 import { ENV } from './env';
 import { registerLocalMediaRoutes } from './localMediaRoutes';
 import { createAuthRateLimitStore } from './authRateLimitStore';
+import { handleAuthRateLimitStoreUnavailable } from './authRateLimitBoundary';
 import {
   applyApiSecurityHeaders,
   assertBrowserSecurityPolicy,
@@ -114,13 +115,20 @@ async function startServer() {
     browserSecurityPolicy.runtimeEnv === 'staging';
   const authRateLimitMax = Number(process.env.AUTH_RATE_LIMIT_MAX || (isDeployedRuntime ? 5 : 50));
 
+  const authRateLimitStore = createAuthRateLimitStore({
+    runtimeEnv: browserSecurityPolicy.runtimeEnv,
+  });
   const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: Number.isFinite(authRateLimitMax) && authRateLimitMax > 0 ? authRateLimitMax : 5,
     message: 'Too many authentication requests, please try again later.',
     standardHeaders: true,
     legacyHeaders: false,
-    store: createAuthRateLimitStore({ runtimeEnv: browserSecurityPolicy.runtimeEnv }),
+    // Keep the security boundary fail-closed. The adjacent error middleware
+    // converts the store's bounded availability failure into a CORS-bearing
+    // retryable response instead of silently allowing unrate-limited auth.
+    passOnStoreError: false,
+    store: authRateLimitStore,
   });
 
   app.use((req, res, next) => {
@@ -158,7 +166,8 @@ async function startServer() {
 
   app.use(createStateChangingOriginGuard(browserSecurityPolicy));
 
-  // Apply auth rate limits after CORS so even 429 responses include CORS headers.
+  // Apply auth rate limits after CORS so both 429 and a bounded fail-closed
+  // dependency response include browser CORS headers.
   for (const authPath of [
     '/api/auth/login',
     '/api/auth/register',
@@ -166,7 +175,7 @@ async function startServer() {
     '/api/auth/reset-password',
     '/api/auth/resend-verification',
   ]) {
-    app.use(authPath, authLimiter);
+    app.use(authPath, authLimiter, handleAuthRateLimitStoreUnavailable);
   }
 
   app.use(express.json({ limit: '50mb' }));
@@ -191,7 +200,7 @@ async function startServer() {
   app.use('/', developmentSupersessionRedirectRouter);
   registerAuthRoutes(app);
   app.use('/api/agent', agentOnboardingRouter);
-  registerHealthEndpoint(app);
+  registerHealthEndpoint(app, { authRateLimitStore });
   registerVersionEndpoint(app);
 
   app.use(

@@ -17,7 +17,7 @@ describe('PLE-6C manual location without coordinates migration', () => {
     expect(migration).toMatchObject({
       sequence: 5,
       parent: '0004_canonical_listing_location.sql',
-      parentChecksum: 'b772082a269b7e30ed514d9850b129192ddc0bd05842a558f46af017b3726dbe',
+      parentChecksum: '10a1ab6089c2b066e3565b8c5d061d4f7a70bf577974db8d2ce9388139cf8a6e',
       checksum: '8f1e3c8481dc606a89d3fc8e01ffc72fecd02e7aa15cfb4b889a7a78d4abf51b',
       kind: 'exceptional',
       statementPolicy: 'approved-exception',

@@ -284,6 +284,9 @@ function AccountMenu({
   const [logoutPending, setLogoutPending] = useState(false);
   const [logoutError, setLogoutError] = useState<string | null>(null);
   const accountMenuCloseTimerRef = useRef<number | null>(null);
+  // Only the visitor auth menu (Log in/Create account) needs pointer-travel
+  // persistence. Keep the existing hover dismissal for authenticated workspaces.
+  const isVisitor = !user;
   const accountName = getAccountDisplayName(user);
   const accountDestination = getCanonicalAccountDestination(user);
   const accountRole = getAccountRoleLabel(user);
@@ -319,11 +322,14 @@ function AccountMenu({
 
   const handleTriggerMouseEnter = () => {
     cancelHoverClose();
+    // Account access is click-opened. Keep the visitor auth menu open while
+    // the pointer travels to an auth action; sibling navigation still closes
+    // it through the parent's closeSignal coordination.
     onTriggerMouseEnter?.();
   };
 
   const scheduleHoverClose = () => {
-    if (!open) return;
+    if (isVisitor || !open) return;
 
     cancelHoverClose();
     accountMenuCloseTimerRef.current = window.setTimeout(() => {
@@ -349,14 +355,14 @@ function AccountMenu({
   };
 
   return (
-    <DropdownMenu open={open} onOpenChange={handleOpenChange}>
+    <DropdownMenu modal={!isVisitor} open={open} onOpenChange={handleOpenChange}>
       <DropdownMenuTrigger asChild>
         {mobile ? (
           <button
             type="button"
             className="public-navbar__account-trigger public-navbar__account-trigger--mobile"
             onMouseEnter={handleTriggerMouseEnter}
-            onMouseLeave={scheduleHoverClose}
+            onMouseLeave={isVisitor ? undefined : scheduleHoverClose}
             aria-label={
               user ? `Open account menu for ${accountName}` : 'Open login and account menu'
             }
@@ -381,7 +387,7 @@ function AccountMenu({
             type="button"
             className="public-navbar__account-trigger"
             onMouseEnter={handleTriggerMouseEnter}
-            onMouseLeave={scheduleHoverClose}
+            onMouseLeave={isVisitor ? undefined : scheduleHoverClose}
             aria-label={
               user ? `Open account menu for ${accountName}` : 'Open login and account menu'
             }
@@ -398,8 +404,8 @@ function AccountMenu({
         align="end"
         sideOffset={8}
         className="public-navbar__account-menu-content"
-        onMouseEnter={cancelHoverClose}
-        onMouseLeave={scheduleHoverClose}
+        onMouseEnter={isVisitor ? undefined : cancelHoverClose}
+        onMouseLeave={isVisitor ? undefined : scheduleHoverClose}
       >
         {user ? (
           <>

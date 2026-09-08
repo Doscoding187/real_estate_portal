@@ -54,6 +54,8 @@ jobs:
 
       - name: Run static database authority gate
         run: pnpm db:authority:check
+      - name: Verify database lifecycle contract
+        run: pnpm db:authority:lifecycle
 
       - name: Validate migration/schema consistency
         run: pnpm run schema:sanity

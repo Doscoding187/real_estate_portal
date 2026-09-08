@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { afterEach, describe, expect, it } from 'vitest';
 import { authorizeDatabaseOperation, expectedDatabaseAcknowledgement } from '../authorization';
-import { resolveDatabaseAuthority } from '../context';
+import { databaseAuthorityChildEnvironment, resolveDatabaseAuthority } from '../context';
 import { deriveGitWorktreeIdentity } from '../worktreeIdentity';
 
 const temporaryRoots: string[] = [];
@@ -66,6 +66,7 @@ describe('immutable resolved database context and operation authorization', () =
     expect(authority.context.environmentSource).toBe('explicit-caller');
     expect(authority.context.databaseName).toBe(identity.expectedWorktreeDatabase);
     expect(authority.context.targetClass).toBe('disposable-worktree');
+    expect(authority.context.credentialSource).toBe('database-url');
     expect(Object.isFrozen(authority.context)).toBe(true);
   });
 
@@ -150,6 +151,110 @@ describe('immutable resolved database context and operation authorization', () =
       message = error instanceof Error ? error.message : String(error);
     }
     expect(message).not.toContain('sensitive-password');
+  });
+
+  it('requires a distinct, same-target migration credential for protected applies', () => {
+    const identity = fixtureIdentity();
+    const runtimeUrl =
+      'mysql://runtime-user:runtime-password@gateway01.ap-northeast-1.prod.aws.tidbcloud.com:4000/listify_property_sa';
+    const input = {
+      operation: 'release-apply' as const,
+      cwd: identity.worktreePath,
+      gitIdentity: identity,
+      explicitDatabaseUrl: runtimeUrl,
+      credentialClass: 'migration' as const,
+    };
+
+    expect(() =>
+      resolveDatabaseAuthority({
+        ...input,
+        processEnv: { NODE_ENV: 'production', APP_ENV: 'production' },
+      }),
+    ).toThrow('DATABASE_MIGRATION_URL is required');
+
+    expect(() =>
+      resolveDatabaseAuthority({
+        ...input,
+        processEnv: {
+          NODE_ENV: 'production',
+          APP_ENV: 'production',
+          DATABASE_MIGRATION_URL:
+            'mysql://migration-user:migration-password@other.example.com:4000/listify_property_sa',
+        },
+      }),
+    ).toThrow('must exactly match the approved runtime target');
+
+    expect(() =>
+      resolveDatabaseAuthority({
+        ...input,
+        processEnv: {
+          NODE_ENV: 'production',
+          APP_ENV: 'production',
+          DATABASE_MIGRATION_URL:
+            'mysql://runtime-user:another-password@gateway01.ap-northeast-1.prod.aws.tidbcloud.com:4000/listify_property_sa',
+        },
+      }),
+    ).toThrow('distinct nonempty database username and password');
+
+    expect(() =>
+      resolveDatabaseAuthority({
+        ...input,
+        processEnv: {
+          NODE_ENV: 'production',
+          APP_ENV: 'production',
+          DATABASE_MIGRATION_URL:
+            'mysql://runtime%2Duser:another-password@gateway01.ap-northeast-1.prod.aws.tidbcloud.com:4000/listify_property_sa',
+        },
+      }),
+    ).toThrow('distinct nonempty database username and password');
+
+    const authority = resolveDatabaseAuthority({
+      ...input,
+      processEnv: {
+        NODE_ENV: 'production',
+        APP_ENV: 'production',
+        DATABASE_MIGRATION_URL:
+          'mysql://migration-user:migration-password@gateway01.ap-northeast-1.prod.aws.tidbcloud.com:4000/listify_property_sa',
+      },
+    });
+
+    expect(authority.context.credentialSource).toBe('protected-migration-url');
+    const output = JSON.stringify(authority);
+    expect(output).not.toContain('runtime-user');
+    expect(output).not.toContain('runtime-password');
+    expect(output).not.toContain('migration-user');
+    expect(output).not.toContain('migration-password');
+
+    const child = resolveDatabaseAuthority({
+      ...input,
+      processEnv: databaseAuthorityChildEnvironment(authority, {
+        DATABASE_MIGRATION_URL:
+          'mysql://stale-user:stale-password@wrong.example.com/listify_property_sa',
+      }),
+    });
+    expect(child.context.targetFingerprintHash).toBe(authority.context.targetFingerprintHash);
+    expect(child.context.credentialSource).toBe('protected-migration-url');
+  });
+
+  it('does not load a protected migration credential from a repository environment file', () => {
+    const identity = fixtureIdentity();
+    const runtimeUrl =
+      'mysql://runtime-user:runtime-password@gateway01.ap-northeast-1.prod.aws.tidbcloud.com:4000/listify_property_sa';
+    writeFileSync(
+      join(identity.worktreePath, '.env.production'),
+      'DATABASE_MIGRATION_URL=mysql://migration-user:migration-password@gateway01.ap-northeast-1.prod.aws.tidbcloud.com:4000/listify_property_sa\n',
+    );
+
+    expect(() =>
+      resolveDatabaseAuthority({
+        operation: 'release-apply',
+        cwd: identity.worktreePath,
+        gitIdentity: identity,
+        explicitDatabaseUrl: runtimeUrl,
+        credentialClass: 'migration',
+        processEnv: { NODE_ENV: 'production', APP_ENV: 'production' },
+      }),
+    ).toThrow('DATABASE_MIGRATION_URL is required');
   });
 
   it('fails closed for unknown and remote targets and varies permissions by operation', () => {
@@ -419,13 +524,19 @@ describe('immutable resolved database context and operation authorization', () =
   it('routes protected migration work only through exact release operations', () => {
     const identity = fixtureIdentity();
     const target = 'mysql://release-user:private@db.prod.example.com/listify_property_sa';
+    const protectedProcessEnv = {
+      NODE_ENV: 'production',
+      APP_ENV: 'production',
+      DATABASE_MIGRATION_URL:
+        'mysql://release-migration:private@db.prod.example.com/listify_property_sa',
+    };
     const generic = resolveDatabaseAuthority({
       operation: 'migration-apply',
       cwd: identity.worktreePath,
       gitIdentity: identity,
       explicitDatabaseUrl: target,
       credentialClass: 'migration',
-      processEnv: { NODE_ENV: 'production', APP_ENV: 'production' },
+      processEnv: protectedProcessEnv,
     });
     const genericApproval = {
       reference: 'CHANGE-123',
@@ -446,7 +557,7 @@ describe('immutable resolved database context and operation authorization', () =
       gitIdentity: identity,
       explicitDatabaseUrl: target,
       credentialClass: 'migration',
-      processEnv: { NODE_ENV: 'production', APP_ENV: 'production' },
+      processEnv: protectedProcessEnv,
     });
     const approval = {
       reference: 'CHANGE-123',
@@ -469,6 +580,12 @@ describe('immutable resolved database context and operation authorization', () =
   it('authorizes canonical commercial reference release operations without widening disposable reference seeding', () => {
     const identity = fixtureIdentity();
     const target = 'mysql://release-user:private@db.prod.example.com/listify_property_sa';
+    const protectedProcessEnv = {
+      NODE_ENV: 'production',
+      APP_ENV: 'production',
+      DATABASE_MIGRATION_URL:
+        'mysql://release-migration:private@db.prod.example.com/listify_property_sa',
+    };
     const plan = resolveDatabaseAuthority({
       operation: 'release-reference-plan',
       cwd: identity.worktreePath,
@@ -493,7 +610,7 @@ describe('immutable resolved database context and operation authorization', () =
       gitIdentity: identity,
       explicitDatabaseUrl: target,
       credentialClass: 'migration',
-      processEnv: { NODE_ENV: 'production', APP_ENV: 'production' },
+      processEnv: protectedProcessEnv,
     });
     const applyApproval = {
       reference: 'CHANGE-456',

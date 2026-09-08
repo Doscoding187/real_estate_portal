@@ -36,6 +36,14 @@ describe('database authority agent entry contract', () => {
     expect(manifest.approvedLocalCommands).toContain('db:authority:service:recover');
     expect(manifest.approvedLocalCommands).toContain('db:migration-recovery:plan');
     expect(manifest.approvedLocalCommands).toContain('db:migration-recovery:apply');
+    expect(manifest.releaseMigrationRecoveryCommands).toEqual([
+      'db:release-migration-recovery:plan',
+      'db:release-migration-recovery:apply',
+      'db:release-commercial-quote-terms-recovery:plan',
+      'db:release-commercial-quote-terms-recovery:apply',
+      'db:release-tidb-check-constraint-convergence:plan',
+      'db:release-tidb-check-constraint-convergence:apply',
+    ]);
     expect(manifest.migrationManifest).toBe('server/migrations/manifest.json');
     expect(manifest.migrationAttemptLedger).toBe('sql_migration_attempts');
     expect(manifest.consumerContractEntrypoint).toBe(
@@ -47,6 +55,9 @@ describe('database authority agent entry contract', () => {
     expect(manifest.staticAuthorityCheck).toBe('scripts/databaseAuthorityCheck.ts');
     expect(manifest.databaseChangeProtocol).toBe(
       'docs/database-authority/database-change-protocol.md',
+    );
+    expect(manifest.operatingPlaybook).toBe(
+      'docs/database-authority/01-database-operating-playbook.md',
     );
     expect(manifest.localServicePathAuthority).toBe(
       'server/_core/databaseAuthority/localServicePaths.ts',
@@ -156,6 +167,10 @@ describe('database authority agent entry contract', () => {
       resolve(ROOT, 'docs/database-authority/database-change-protocol.md'),
       'utf8',
     );
+    const playbook = readFileSync(
+      resolve(ROOT, 'docs/database-authority/01-database-operating-playbook.md'),
+      'utf8',
+    );
 
     expect(entry.split('\n').length).toBeLessThanOrEqual(250);
     expect(entry).toContain(
@@ -167,6 +182,11 @@ describe('database authority agent entry contract', () => {
     expect(entry).toContain('quarantined evidence');
     expect(index.indexOf('Agent Entry Contract')).toBeLessThan(index.indexOf('Machine Manifest'));
     expect(index).toContain('Database Change Protocol');
+    expect(index).toContain('Database Operating Playbook');
+    expect(playbook).toContain('## 2. The delivery boundary');
+    expect(playbook).toContain('## 6. Protected release recipe');
+    expect(playbook).toContain('## 7. Recovery and incident routing');
+    expect(playbook).toContain('## 10. Standard decision record');
     expect(protocol).toContain('Exceptional repair/backfill contract');
     expect(protocol).toContain('Reopening criteria');
   });

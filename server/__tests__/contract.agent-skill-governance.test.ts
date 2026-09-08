@@ -92,7 +92,16 @@ describe('agent skill governance', () => {
       (skill: { riskTier: string }) => skill.riskTier === 'local-helper-script',
     );
 
-    expect(tierZeroSkills).toHaveLength(3);
+    expect(tierZeroSkills).toHaveLength(4);
+    expect(tierZeroSkills).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          name: 'property-listify-database-authority',
+          riskTier: 'instruction-only',
+          version: '1.2.0',
+        }),
+      ]),
+    );
     expect(tierOneSkills).toEqual([
       expect.objectContaining({
         name: 'property-listify-skill-governance',
@@ -112,7 +121,7 @@ describe('agent skill governance', () => {
       encoding: 'utf8',
     });
 
-    expect(output).toContain('3 instruction-only skill(s), 1 local-helper-script skill(s).');
+    expect(output).toContain('4 instruction-only skill(s), 1 local-helper-script skill(s).');
   });
 
   it('rejects non-calendar registry dates instead of normalizing them', () => {

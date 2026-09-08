@@ -136,7 +136,7 @@ describe('database final closure residual executor authority', () => {
 
   it('keeps live schema probing in the centralized authority service', () => {
     const probePattern =
-      /db\.execute\(\s*sql`[\s\S]{0,1200}?\binformation_schema\b|\.execute\(\s*['"`]\s*(?:SHOW|DESCRIBE)\b/i;
+      /db\.execute\(\s*sql`[\s\S]{0,1200}?\binformation_schema\b|\.(?:execute|query)\(\s*['"`]\s*(?:SHOW|DESCRIBE)\b/i;
 
     const probeFiles = collectServerSourceFiles('server')
       .filter(
@@ -157,6 +157,9 @@ describe('database final closure residual executor authority', () => {
       })
       .sort();
 
-    expect(probeFiles).toEqual(['server/services/' + 'runtimeSchemaCapabilities.ts']);
+    expect(probeFiles).toEqual([
+      'server/_core/databaseAuthority/' + 'tidbCheckConstraintCapability.ts',
+      'server/services/' + 'runtimeSchemaCapabilities.ts',
+    ]);
   });
 });

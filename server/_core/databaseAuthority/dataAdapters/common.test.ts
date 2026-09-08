@@ -36,6 +36,7 @@ function authority(): ResolvedDatabaseAuthority {
         cleanMainOwnershipMatches: false,
       },
     },
+    targetCredential: { handleId: 'common-guard-target-test' },
     credential: { handleId: 'common-guard-test' },
   } as ResolvedDatabaseAuthority;
 }

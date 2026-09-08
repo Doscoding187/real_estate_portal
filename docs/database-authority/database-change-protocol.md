@@ -57,7 +57,9 @@ A normal incremental DDL entry must:
 
 The active-manifest validator rejects TiDB-unsupported stored-program
 primitives (triggers, procedures, functions, events, and client `DELIMITER`
-directives). Local MySQL acceptance is not deployment-dialect proof. CHECK
+directives), and an `ALTER TABLE` that introduces columns alongside indexes,
+keys, or constraints. TiDB must receive those dependent objects in later
+statements. Local MySQL acceptance is not deployment-dialect proof. CHECK
 constraints are defence in depth only unless the target TiDB environment has
 separately proven `tidb_enable_check_constraint` enforcement; launch-critical
 business transitions must also be enforced by their domain command authority.
@@ -113,6 +115,81 @@ Generic migration commands accept only local disposable or quarantined
 read-only plan targets. Protected targets use `pnpm db:release:plan` and
 `pnpm db:release:apply`; the latter requires the exact target acknowledgement
 in addition to protected approval evidence.
+
+For the reviewed production `0001` failure, the bounded release recovery uses
+the same protected release authorization without widening generic local
+recovery:
+
+```text
+pnpm db:release-migration-recovery:plan -- --attempt-id=<id> --approval-reference=<reference> --approval-actor=<actor>
+pnpm db:release-migration-recovery:apply -- --attempt-id=<id> --approval-reference=<reference> --approval-actor=<actor> --plan-digest=<exact-plan-digest> --ack=<exact-release-ack>
+```
+
+This command is permanently scoped to the archived zero-statement `0001`
+attempt, its TiDB-safe replacement, and a staging/production target. It changes
+only the failed attempt review state and adds replacement evidence; the normal
+`release:plan`/`release:apply` sequence remains responsible for applying the
+replacement migration. Its `--approval-reference` and `--approval-actor` must
+exactly match the protected-target approval used to authorize the command.
+
+For the separately reviewed production `0046` Commercial Office quote-terms
+failure, use its own bounded release recovery. It is permanently scoped to
+attempt `198ffda9d58670ea351d733d-0046`, the archived original, and the
+sequenced replacement; it is not a generic recovery facility:
+
+```text
+pnpm db:release-commercial-quote-terms-recovery:plan -- --approval-reference=<reference> --approval-actor=<actor>
+pnpm db:release-commercial-quote-terms-recovery:apply -- --approval-reference=<reference> --approval-actor=<actor> --plan-digest=<exact-plan-digest> --ack=<exact-release-ack>
+```
+
+The plan proves the exact failed plan digest and `ER_BAD_FIELD_ERROR` evidence,
+the accepted successful prefix through `0045_commercial_space_positive_area_integrity.sql`,
+the archive checksum, and the physical proof that `transaction_type` exists
+while `pricing_mode` and `vat_treatment` do not. Apply changes only the failed
+attempt review state and appends review evidence. It never executes the archived
+SQL or manual DDL. After it succeeds, run a fresh normal `release:plan` and
+`release:apply` with the accepted old head set to
+`0045_commercial_space_positive_area_integrity.sql` so that only the active
+sequenced replacement and later canonical migrations may run.
+
+### Reviewed TiDB CHECK-constraint convergence
+
+Before any provider convergence plan is approved, run the offline structural
+admission audit:
+
+```text
+pnpm db:schema:tidb-audit
+```
+
+This audit derives dependencies from the canonical Drizzle model. It treats a
+CHECK that references a foreign-key column as unresolved until provider proof
+exists. `information_schema.REFERENTIAL_CONSTRAINTS` reports the effective
+action, but cannot prove whether `NO ACTION` was explicitly authored; therefore
+even `RESTRICT`/`NO ACTION` relationships require an explicit-action review.
+`CASCADE`, `SET NULL`, and `SET DEFAULT` relationships require a domain
+lifecycle decision and must not be rewritten automatically. The command is an
+admission report, not a DDL executor.
+
+The 2026-09-04 production cutover found TiDB's
+`tidb_enable_check_constraint` capability disabled after the canonical
+migration head had been reached. That setting can allow CHECK syntax to be
+accepted without retaining the constraints, so this is handled by one named,
+bounded convergence—not by replaying migrations or editing history.
+
+```text
+pnpm db:release-tidb-check-constraint-convergence:plan -- --approval-reference=DBX-TIDB-CHECK-CONSTRAINT-CONVERGENCE-2026-09-04-Edward --approval-actor=<actor>
+pnpm db:release-tidb-check-constraint-convergence:apply -- --approval-reference=DBX-TIDB-CHECK-CONSTRAINT-CONVERGENCE-2026-09-04-Edward --approval-actor=<actor> --plan-digest=<exact-plan-digest> --ack=<exact-release-ack>
+```
+
+The plan is read-only. It requires the exact canonical migration head, proves
+the global TiDB capability, obtains check metadata through
+`information_schema.TIDB_CHECK_CONSTRAINTS`, compares the fixed 22 definitions
+to Drizzle's desired model, and counts violations of every missing predicate.
+Apply uses the ordinary release authorization and named migration lock, enables
+the TiDB capability, adds only a verified missing listed constraint, and records
+durable per-constraint progress. A failed or ambiguous attempt blocks normal
+continuation; it is never retried or repaired manually. Ordinary migration
+apply refuses a TiDB target while this capability is disabled.
 
 Never:
 

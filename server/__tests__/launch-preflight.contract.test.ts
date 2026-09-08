@@ -100,6 +100,27 @@ describe('launch preflight contract', () => {
     });
   });
 
+  it('refuses malformed Redis configuration or unsafe auth-limiter availability tuning', () => {
+    const result = runLaunchPreflight({
+      runtimeEnv: 'production',
+      env: productionEnv({
+        REDIS_URL: 'https://cache.propertylistifysa.co.za',
+        AUTH_RATE_LIMIT_STORE_TIMEOUT_MS: '0',
+        AUTH_RATE_LIMIT_STORE_COOLDOWN_MS: 'never',
+      }),
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.checks.find(check => check.id === 'distributed-auth-rate-limit')).toMatchObject({
+      ok: false,
+      missing: [
+        'REDIS_URL (valid redis:// or rediss:// URL)',
+        'AUTH_RATE_LIMIT_STORE_TIMEOUT_MS (integer 250-5000)',
+        'AUTH_RATE_LIMIT_STORE_COOLDOWN_MS (integer 1000-60000)',
+      ],
+    });
+  });
+
   it('does not let production runtime or host naming classify an unknown database as production', () => {
     const result = runLaunchPreflight({
       runtimeEnv: 'production',

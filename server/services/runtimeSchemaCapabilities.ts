@@ -284,57 +284,45 @@ function normalizeRows(result: any): Array<Record<string, unknown>> {
 }
 
 function readCount(rows: Array<Record<string, unknown>>): number {
-  const row = rows[0] || {};
-  const explicit =
-    row.count_value ??
-    row.count ??
-    row.COUNT ??
-    row['COUNT(*)'] ??
-    row['COUNT(1)'] ??
-    Object.values(row)[0];
-  const parsed = Number(explicit ?? 0);
-  return Number.isFinite(parsed) ? parsed : 0;
+  const row = rows[0];
+  const value = row?.count_value;
+  // Both queries select this exact alias. A missing or malformed result is
+  // failed evidence, not proof that an object is absent.
+  if (
+    rows.length !== 1 ||
+    !['number', 'string', 'bigint'].includes(typeof value) ||
+    !/^\d+$/.test(String(value))
+  ) {
+    throw new Error('Schema metadata count returned malformed evidence.');
+  }
+  const parsed = Number(value);
+  if (!Number.isSafeInteger(parsed) || parsed < 0) {
+    throw new Error('Schema metadata count returned malformed evidence.');
+  }
+  return parsed;
 }
 
 async function tableExists(tableName: string): Promise<boolean> {
-  try {
-    const db = await getDb();
-    const result = await db.execute(sql`
+  const db = await getDb();
+  const result = await db.execute(sql`
       SELECT COUNT(*) AS count_value
       FROM information_schema.tables
       WHERE table_schema = DATABASE()
         AND table_name = ${tableName}
     `);
-    return readCount(normalizeRows(result)) > 0;
-  } catch (error) {
-    warnSchemaCapabilityOnce(
-      `schema-table-exists-${tableName}`,
-      `[SchemaCapabilities] Failed table existence check for "${tableName}". Assuming missing.`,
-      error,
-    );
-    return false;
-  }
+  return readCount(normalizeRows(result)) > 0;
 }
 
 async function columnExists(tableName: string, columnName: string): Promise<boolean> {
-  try {
-    const db = await getDb();
-    const result = await db.execute(sql`
+  const db = await getDb();
+  const result = await db.execute(sql`
       SELECT COUNT(*) AS count_value
       FROM information_schema.columns
       WHERE table_schema = DATABASE()
         AND table_name = ${tableName}
         AND column_name = ${columnName}
     `);
-    return readCount(normalizeRows(result)) > 0;
-  } catch (error) {
-    warnSchemaCapabilityOnce(
-      `schema-column-exists-${tableName}-${columnName}`,
-      `[SchemaCapabilities] Failed column existence check for "${tableName}.${columnName}". Assuming missing.`,
-      error,
-    );
-    return false;
-  }
+  return readCount(normalizeRows(result)) > 0;
 }
 
 export async function getRuntimeSchemaCapabilities(

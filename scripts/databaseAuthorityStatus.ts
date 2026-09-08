@@ -65,6 +65,8 @@ export type AuthorityManifest = {
   dataRoleManifest: string;
   canonicalCommercialReleaseEntrypoint: string;
   canonicalCommercialReleaseCommands: string[];
+  operatingPlaybook: string;
+  releaseMigrationRecoveryCommands: string[];
   acceptanceScenarioAdapter: string;
 };
 
@@ -136,6 +138,7 @@ export function validateAuthorityManifest(manifest: AuthorityManifest, root = pr
     manifest.canonicalCommercialReferenceDataAdapter,
     manifest.dataRoleManifest,
     manifest.canonicalCommercialReleaseEntrypoint,
+    manifest.operatingPlaybook,
     manifest.acceptanceScenarioAdapter,
   ];
   const missingPaths = paths.filter(path => !existsSync(resolve(root, path)));
@@ -148,6 +151,7 @@ export function validateAuthorityManifest(manifest: AuthorityManifest, root = pr
     ...manifest.approvedLocalCommands,
     ...manifest.destructiveLocalCommands,
     ...manifest.canonicalCommercialReleaseCommands,
+    ...manifest.releaseMigrationRecoveryCommands,
   ].filter(script => !scripts[script]);
   const invalid = [
     manifest.authorityVersion !== 3 ? 'authority version must be 3' : '',
@@ -290,6 +294,8 @@ async function main() {
   console.log(`Sanitized Target: ${authority.context.targetFingerprint}`);
   console.log(`Target Fingerprint Hash: ${authority.context.targetFingerprintHash}`);
   console.log(`Target Classification: ${authority.context.targetClass}`);
+  console.log(`Credential Source: ${authority.context.credentialSource}`);
+  console.log(`Credential Class: ${authority.context.credentialClass}`);
   console.log(`Local Service Host: ${LOCAL_SERVICE_HOST}`);
   console.log(`Local Service Port: ${LOCAL_SERVICE_PORT}`);
   console.log(`Local Service Directory: ${localServiceRoot()}`);
@@ -308,6 +314,7 @@ async function main() {
   console.log(`Requested Runtime: ${readiness.requestedRuntime}`);
   console.log(`Application Readiness: ${readiness.applicationReady ? 'ready' : 'not-ready'}`);
   console.log(`Authority Contract Path: ${manifest.agentEntryContract}`);
+  console.log(`Operating Playbook Path: ${manifest.operatingPlaybook}`);
   console.log(`Prohibited Operations: ${manifest.prohibitedCommandCategories.join('; ')}`);
 }
 

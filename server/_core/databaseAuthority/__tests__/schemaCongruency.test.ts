@@ -9,6 +9,7 @@ import {
 import type { AuthoritySqlConnection } from '../connectionAuthority';
 import {
   compareNormalizedSchemas,
+  normalizeSqlExpression,
   normalizedDesiredSchema,
   normalizedPhysicalSchema,
   type NormalizedSchema,
@@ -39,6 +40,52 @@ function clone(schema: NormalizedSchema): NormalizedSchema {
 }
 
 describe('normalized schema congruency', () => {
+  it('preserves SQL collection parentheses while removing redundant predicate grouping', () => {
+    expect(
+      normalizeSqlExpression("((`state` NOT IN ('available_confirmed', 'available_upcoming')))")
+    ).toBe("`state` not in ('available_confirmed','available_upcoming')");
+    expect(normalizeSqlExpression('((`id` > 0))')).toBe('`id` > 0');
+    expect(normalizeSqlExpression('NOT (`id` > 0)')).toBe('not (`id` > 0)');
+    expect(normalizeSqlExpression('((`left` + `right`) = (`a`,`b`))')).toBe(
+      '(`left` + `right`) = (`a`,`b`)',
+    );
+    expect(normalizeSqlExpression('(`a` * (`b` + `c`) > 0)')).toBe(
+      '`a` * (`b` + `c`) > 0',
+    );
+    expect(normalizeSqlExpression("(`value` IN ('A  B', 'C'))")).toBe(
+      "`value` in ('A  B','C')",
+    );
+    expect(
+      normalizeSqlExpression("(`schema`.`column` = _utf8mb4'Known Value')"),
+    ).toBe("`column` = 'Known Value'");
+    expect(
+      normalizeSqlExpression(
+        "(((`authority_kind` = _utf8mb4\\'platform_reference\\') AND (`developer_organisation_id` IS NULL)) OR ((`authority_kind` = _utf8mb4\\'developer_first_party\\') AND (`developer_organisation_id` IS NOT NULL)))",
+      ),
+    ).toBe(
+      "(`authority_kind` = 'platform_reference' and `developer_organisation_id` is null) or (`authority_kind` = 'developer_first_party' and `developer_organisation_id` is not null)",
+    );
+    expect(normalizeSqlExpression("(`label` = 'O\\'Brien')")).toBe(
+      "`label` = 'O\\'Brien'",
+    );
+    expect(
+      normalizeSqlExpression("(`label` = _utf8mb4\\'O\\'Brien\\')"),
+    ).toBe("`label` = 'O\\'Brien'");
+    expect(
+      normalizeSqlExpression(
+        "(`value_state` = 'known' AND (((`numeric_value` IS NOT NULL) + (`text_value` IS NOT NULL)) + (`boolean_value` IS NOT NULL)) = 1) OR (`value_state` IN ('unknown','unavailable','not_applicable') AND `numeric_value` IS NULL AND `text_value` IS NULL AND `boolean_value` IS NULL)",
+      ),
+    ).toBe(
+      "(`value_state` = 'known' and ((`numeric_value` is not null) + (`text_value` is not null) + (`boolean_value` is not null) = 1)) or (`value_state` in ('unknown','unavailable','not_applicable') and `numeric_value` is null and `text_value` is null and `boolean_value` is null)",
+    );
+    expect(
+      normalizeSqlExpression("(`label` = 'literal _utf8mb4`source`.`column`')"),
+    ).toBe("`label` = 'literal _utf8mb4`source`.`column`'");
+    expect(normalizeSqlExpression("(`label` = 'literal (value)')")).toBe(
+      "`label` = 'literal (value)'",
+    );
+  });
+
   it('derives deterministic desired evidence directly from canonical Drizzle metadata', () => {
     const first = normalizedDesiredSchema({ parents, children });
     const second = normalizedDesiredSchema({ children, parents });
@@ -137,5 +184,179 @@ describe('normalized schema congruency', () => {
       'sql_migration_history',
       'sql_migration_attempts',
     ]);
+  });
+
+  it('uses TiDB CHECK_CONSTRAINTS inventory when the portable view is empty', async () => {
+    const connection: AuthoritySqlConnection = {
+      async execute(statement: string) {
+        if (statement.includes('information_schema.tables')) {
+          return [[{ table_name: 'fixture_parents' }]];
+        }
+        if (statement.includes('information_schema.TIDB_CHECK_CONSTRAINTS')) {
+          return [
+            [
+              {
+                table_name: 'fixture_parents',
+                constraint_name: 'fixture_parents_positive_id',
+                check_clause: '(`id` > 0)',
+              },
+            ],
+          ];
+        }
+        return [[]];
+      },
+      async query(statement: string) {
+        return connection.execute(statement);
+      },
+      async end() {},
+    };
+
+    const physical = await normalizedPhysicalSchema(connection);
+    expect(physical.tables[0].checks).toEqual([
+      { name: 'fixture_parents_positive_id', expression: '`id` > 0' },
+    ]);
+  });
+
+  it('falls back to TiDB CHECK_CONSTRAINTS when the portable view is unsupported', async () => {
+    const connection: AuthoritySqlConnection = {
+      async execute(statement: string) {
+        if (statement.includes('information_schema.tables')) {
+          return [[{ table_name: 'fixture_parents' }]];
+        }
+        if (statement.includes('information_schema.TABLE_CONSTRAINTS')) {
+          throw new Error('portable CHECK inventory unsupported');
+        }
+        if (statement.includes('information_schema.TIDB_CHECK_CONSTRAINTS')) {
+          return [
+            [
+              {
+                table_name: 'fixture_parents',
+                constraint_name: 'fixture_parents_positive_id',
+                check_clause: '(`id` > 0)',
+              },
+            ],
+          ];
+        }
+        return [[]];
+      },
+      async query(statement: string) {
+        return connection.execute(statement);
+      },
+      async end() {},
+    };
+
+    const physical = await normalizedPhysicalSchema(connection);
+    expect(physical.tables[0].checks).toEqual([
+      { name: 'fixture_parents_positive_id', expression: '`id` > 0' },
+    ]);
+  });
+
+  it('fails closed when neither CHECK metadata inventory is readable', async () => {
+    const connection: AuthoritySqlConnection = {
+      async execute(statement: string) {
+        if (statement.includes('information_schema.tables')) {
+          return [[{ table_name: 'fixture_parents' }]];
+        }
+        if (
+          statement.includes('information_schema.TABLE_CONSTRAINTS') ||
+          statement.includes('information_schema.TIDB_CHECK_CONSTRAINTS')
+        ) {
+          throw new Error('CHECK metadata inventory unavailable');
+        }
+        return [[]];
+      },
+      async query(statement: string) {
+        return connection.execute(statement);
+      },
+      async end() {},
+    };
+
+    await expect(normalizedPhysicalSchema(connection)).rejects.toThrow(
+      'Physical CHECK metadata could not be read from either the portable or TiDB inventory',
+    );
+  });
+
+  it('merges the TiDB CHECK inventory when the portable inventory is partial', async () => {
+    const connection: AuthoritySqlConnection = {
+      async execute(statement: string) {
+        if (statement.includes('information_schema.tables')) {
+          return [[{ table_name: 'fixture_parents' }]];
+        }
+        if (statement.includes('information_schema.TABLE_CONSTRAINTS')) {
+          return [
+            [
+              {
+                table_name: 'fixture_parents',
+                constraint_name: 'fixture_parents_positive_id',
+                check_clause: '(`id` > 0)',
+              },
+            ],
+          ];
+        }
+        if (statement.includes('information_schema.TIDB_CHECK_CONSTRAINTS')) {
+          return [
+            [
+              {
+                table_name: 'fixture_parents',
+                constraint_name: 'fixture_parents_nonempty_code',
+                check_clause: "(CHAR_LENGTH(TRIM(`code`)) > 0)",
+              },
+            ],
+          ];
+        }
+        return [[]];
+      },
+      async query(statement: string) {
+        return connection.execute(statement);
+      },
+      async end() {},
+    };
+
+    const physical = await normalizedPhysicalSchema(connection);
+    expect(physical.tables[0].checks).toEqual([
+      { name: 'fixture_parents_nonempty_code', expression: 'char_length(trim(`code`)) > 0' },
+      { name: 'fixture_parents_positive_id', expression: '`id` > 0' },
+    ]);
+  });
+
+  it('fails closed when the portable and TiDB CHECK inventories disagree', async () => {
+    const connection: AuthoritySqlConnection = {
+      async execute(statement: string) {
+        if (statement.includes('information_schema.tables')) {
+          return [[{ table_name: 'fixture_parents' }]];
+        }
+        if (statement.includes('information_schema.TABLE_CONSTRAINTS')) {
+          return [
+            [
+              {
+                table_name: 'fixture_parents',
+                constraint_name: 'fixture_parents_positive_id',
+                check_clause: '(`id` > 0)',
+              },
+            ],
+          ];
+        }
+        if (statement.includes('information_schema.TIDB_CHECK_CONSTRAINTS')) {
+          return [
+            [
+              {
+                table_name: 'fixture_parents',
+                constraint_name: 'fixture_parents_positive_id',
+                check_clause: '(`id` > 1)',
+              },
+            ],
+          ];
+        }
+        return [[]];
+      },
+      async query(statement: string) {
+        return connection.execute(statement);
+      },
+      async end() {},
+    };
+
+    await expect(normalizedPhysicalSchema(connection)).rejects.toThrow(
+      'CHECK inventory disagrees about fixture_parents.fixture_parents_positive_id',
+    );
   });
 });

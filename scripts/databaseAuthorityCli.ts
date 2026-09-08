@@ -54,6 +54,8 @@ import {
   normalizedDesiredSchema,
   normalizedPhysicalSchema,
 } from '../server/_core/databaseAuthority/schemaCongruency';
+import { readTiDbCheckConstraintCapability } from '../server/_core/databaseAuthority/tidbCheckConstraintCapability';
+import { auditTidbStructuralAdmission } from '../server/_core/databaseAuthority/tidbStructuralAdmission';
 import {
   LOCAL_SERVICE_HOST,
   LOCAL_SERVICE_PORT,
@@ -70,6 +72,9 @@ import {
 } from '../server/_core/databaseAuthority/types';
 import { loadAndValidateMigrationManifest } from '../server/migrations/migrationManifest';
 import { runRejectedZeroStatementRecovery } from '../server/migrations/recoverRejectedZeroStatementMigration';
+import { runRejectedReleaseZeroStatementRecovery } from '../server/migrations/recoverRejectedReleaseZeroStatementMigration';
+import { runRejectedReleaseCommercialQuoteTermsRecovery } from '../server/migrations/recoverRejectedReleaseCommercialQuoteTermsMigration';
+import { runTidbCheckConstraintConvergence } from '../server/migrations/recoverTidbCheckConstraintConvergence';
 import { runSqlMigrations } from '../server/migrations/runSqlMigrations';
 
 type Command =
@@ -83,6 +88,12 @@ type Command =
   | 'migration:apply'
   | 'migration-recovery:plan'
   | 'migration-recovery:apply'
+  | 'release-migration-recovery:plan'
+  | 'release-migration-recovery:apply'
+  | 'release-commercial-quote-terms-recovery:plan'
+  | 'release-commercial-quote-terms-recovery:apply'
+  | 'release-tidb-check-constraint-convergence:plan'
+  | 'release-tidb-check-constraint-convergence:apply'
   | 'release:plan'
   | 'release:apply'
   | 'release-reference:plan'
@@ -90,6 +101,7 @@ type Command =
   | 'release-reference:verify'
   | 'readiness'
   | 'schema:check'
+  | 'schema:tidb-audit'
   | 'reference:prepare'
   | 'reference:verify'
   | 'foundation:prepare'
@@ -265,10 +277,7 @@ async function run(command: Command): Promise<void> {
     return;
   }
 
-  if (
-    command === 'migration-recovery:plan' ||
-    command === 'migration-recovery:apply'
-  ) {
+  if (command === 'migration-recovery:plan' || command === 'migration-recovery:apply') {
     const planOnly = command.endsWith(':plan');
     const authority = authorityFor(planOnly ? 'migration-plan' : 'migration-apply');
     const decision = authorizationFor(authority);
@@ -277,6 +286,73 @@ async function run(command: Command): Promise<void> {
       authority,
       authorization: decision,
       attemptId: requiredOption('attempt-id'),
+      approvalReference: requiredOption('approval-reference'),
+      approvalActor: requiredOption('approval-actor'),
+      expectedPlanDigest: planOnly ? undefined : requiredOption('plan-digest'),
+    });
+    print(result);
+    return;
+  }
+
+  if (
+    command === 'release-migration-recovery:plan' ||
+    command === 'release-migration-recovery:apply'
+  ) {
+    const planOnly = command.endsWith(':plan');
+    const authority = authorityFor(
+      planOnly ? 'release-plan' : 'release-apply',
+      planOnly ? 'read-only' : 'migration',
+    );
+    const decision = authorizationFor(authority, option('ack'));
+    const result = await runRejectedReleaseZeroStatementRecovery({
+      mode: planOnly ? 'plan' : 'apply',
+      authority,
+      authorization: decision,
+      attemptId: requiredOption('attempt-id'),
+      approvalReference: requiredOption('approval-reference'),
+      approvalActor: requiredOption('approval-actor'),
+      expectedPlanDigest: planOnly ? undefined : requiredOption('plan-digest'),
+    });
+    print(result);
+    return;
+  }
+
+  if (
+    command === 'release-commercial-quote-terms-recovery:plan' ||
+    command === 'release-commercial-quote-terms-recovery:apply'
+  ) {
+    const planOnly = command.endsWith(':plan');
+    const authority = authorityFor(
+      planOnly ? 'release-plan' : 'release-apply',
+      planOnly ? 'read-only' : 'migration',
+    );
+    const decision = authorizationFor(authority, option('ack'));
+    const result = await runRejectedReleaseCommercialQuoteTermsRecovery({
+      mode: planOnly ? 'plan' : 'apply',
+      authority,
+      authorization: decision,
+      approvalReference: requiredOption('approval-reference'),
+      approvalActor: requiredOption('approval-actor'),
+      expectedPlanDigest: planOnly ? undefined : requiredOption('plan-digest'),
+    });
+    print(result);
+    return;
+  }
+
+  if (
+    command === 'release-tidb-check-constraint-convergence:plan' ||
+    command === 'release-tidb-check-constraint-convergence:apply'
+  ) {
+    const planOnly = command.endsWith(':plan');
+    const authority = authorityFor(
+      planOnly ? 'release-plan' : 'release-apply',
+      planOnly ? 'read-only' : 'migration',
+    );
+    const decision = authorizationFor(authority, option('ack'));
+    const result = await runTidbCheckConstraintConvergence({
+      mode: planOnly ? 'plan' : 'apply',
+      authority,
+      authorization: decision,
       approvalReference: requiredOption('approval-reference'),
       approvalActor: requiredOption('approval-actor'),
       expectedPlanDigest: planOnly ? undefined : requiredOption('plan-digest'),
@@ -425,9 +501,9 @@ async function run(command: Command): Promise<void> {
           ? isPrepare
             ? await prepareCanonicalFoundation({ authority, decision, connection })
             : await verifyCanonicalFoundation({ authority, decision, connection })
-        : isPrepare
-          ? await prepareSearchToLeadScenario({ authority, decision, connection })
-          : await verifySearchToLeadScenario({ authority, decision, connection });
+          : isPrepare
+            ? await prepareSearchToLeadScenario({ authority, decision, connection })
+            : await verifySearchToLeadScenario({ authority, decision, connection });
       print(evidence);
     } finally {
       await connection.end();
@@ -468,6 +544,14 @@ async function run(command: Command): Promise<void> {
     return;
   }
 
+  if (command === 'schema:tidb-audit') {
+    // Offline audit: never resolves credentials or opens a connection.
+    const report = auditTidbStructuralAdmission(normalizedDesiredSchema(schema));
+    print(report);
+    if (!report.admitted) process.exitCode = 1;
+    return;
+  }
+
   const authority = authorityFor('diagnostics');
   const decision = authorizationFor(authority);
   const connection = await createAuthoritySqlConnection(authority, decision);
@@ -475,14 +559,23 @@ async function run(command: Command): Promise<void> {
     const desired = normalizedDesiredSchema(schema);
     const actual = await normalizedPhysicalSchema(connection);
     const report = compareNormalizedSchemas(desired, actual);
+    const checkConstraintEnforcement = await readTiDbCheckConstraintCapability(
+      connection,
+      authority.context.provider,
+    );
+    const congruent =
+      report.congruent &&
+      (!checkConstraintEnforcement.applicable || checkConstraintEnforcement.enabled === true);
     print({
       targetFingerprintHash: authority.context.targetFingerprintHash,
       targetClass: authority.context.targetClass,
       ...report,
+      congruent,
+      checkConstraintEnforcement,
       differences: report.differences.slice(0, 100),
       omittedDifferenceCount: Math.max(0, report.differences.length - 100),
     });
-    if (!report.congruent) process.exitCode = 1;
+    if (!congruent) process.exitCode = 1;
   } finally {
     await connection.end();
   }
@@ -500,6 +593,12 @@ const commands = new Set<Command>([
   'migration:apply',
   'migration-recovery:plan',
   'migration-recovery:apply',
+  'release-migration-recovery:plan',
+  'release-migration-recovery:apply',
+  'release-commercial-quote-terms-recovery:plan',
+  'release-commercial-quote-terms-recovery:apply',
+  'release-tidb-check-constraint-convergence:plan',
+  'release-tidb-check-constraint-convergence:apply',
   'release:plan',
   'release:apply',
   'release-reference:plan',
@@ -507,6 +606,7 @@ const commands = new Set<Command>([
   'release-reference:verify',
   'readiness',
   'schema:check',
+  'schema:tidb-audit',
   'reference:prepare',
   'reference:verify',
   'foundation:prepare',

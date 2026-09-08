@@ -1,9 +1,12 @@
 import type express from 'express';
+import type { Store } from 'express-rate-limit';
 import {
   assessRuntimeDatabaseReadiness,
   type LayeredDatabaseReadiness,
 } from './databaseAuthority/readiness';
 import { getCacheHealth } from './cache/redis';
+import { getAuthRateLimitStoreHealth, type AuthRateLimitStoreHealth } from './authRateLimitStore';
+import { resolveAppRuntimeEnv } from './runtimeBootstrap';
 
 export interface ApiHealthResponse {
   ok: true;
@@ -22,6 +25,7 @@ export interface ApiReadinessResponse {
   build: ApiHealthResponse['build'];
   db: LayeredDatabaseReadiness;
   cache: { ok: boolean; mode: 'redis' | 'memory' };
+  authRateLimit: AuthRateLimitStoreHealth;
   s3: { ok: boolean; required: boolean };
 }
 
@@ -87,15 +91,20 @@ export function buildApiHealthResponse(): ApiHealthResponse {
   };
 }
 
-export async function buildApiReadinessResponse(): Promise<ApiReadinessResponse> {
-  const [db, cache] = await Promise.all([
+export async function buildApiReadinessResponse(
+  options: {
+    authRateLimitStore?: Store;
+  } = {},
+): Promise<ApiReadinessResponse> {
+  const [db, cache, authRateLimit] = await Promise.all([
     assessRuntimeDatabaseReadiness(),
     checkCacheStatus(),
+    getAuthRateLimitStoreHealth(options.authRateLimitStore, resolveAppRuntimeEnv()),
   ]);
   const s3Required = process.env.NODE_ENV === 'production';
   const s3Ok = isS3Configured();
   return {
-    ok: db.applicationReady && cache.ok && (!s3Required || s3Ok),
+    ok: db.applicationReady && cache.ok && authRateLimit.ok && (!s3Required || s3Ok),
     kind: 'readiness',
     env: process.env.NODE_ENV || 'development',
     build: {
@@ -104,11 +113,15 @@ export async function buildApiReadinessResponse(): Promise<ApiReadinessResponse>
     },
     db,
     cache,
+    authRateLimit,
     s3: { ok: s3Ok, required: s3Required },
   };
 }
 
-export function registerHealthEndpoint(app: express.Express): void {
+export function registerHealthEndpoint(
+  app: express.Express,
+  options: { authRateLimitStore?: Store } = {},
+): void {
   app.get('/api/health', (_req, res) => {
     const payload = buildApiHealthResponse();
     res.setHeader('x-build-sha', payload.build.sha);
@@ -116,7 +129,7 @@ export function registerHealthEndpoint(app: express.Express): void {
   });
 
   app.get('/api/readiness', async (_req, res) => {
-    const payload = await buildApiReadinessResponse();
+    const payload = await buildApiReadinessResponse(options);
     res.setHeader('x-build-sha', payload.build.sha);
     res.status(payload.ok ? 200 : 503).json(payload);
   });

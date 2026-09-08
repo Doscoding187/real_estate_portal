@@ -3,7 +3,10 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { afterEach, describe, expect, it } from 'vitest';
-import { authorizeDatabaseOperation } from '../../_core/databaseAuthority/authorization';
+import {
+  authorizeDatabaseOperation,
+  expectedDatabaseAcknowledgement,
+} from '../../_core/databaseAuthority/authorization';
 import { resolveDatabaseAuthority } from '../../_core/databaseAuthority/context';
 import type { AuthoritySqlConnection } from '../../_core/databaseAuthority/connectionAuthority';
 import { deriveGitWorktreeIdentity } from '../../_core/databaseAuthority/worktreeIdentity';
@@ -49,6 +52,41 @@ function authorityFor(mode: 'plan' | 'apply') {
     processEnv: { NODE_ENV: 'development', APP_ENV: 'development' },
   });
   const authorization = authorizeDatabaseOperation(authority, { root: process.cwd() });
+  return { authority, authorization };
+}
+
+function protectedAuthorityFor(mode: 'plan' | 'apply') {
+  const identity = fixtureIdentity();
+  const operation = mode === 'plan' ? 'release-plan' : 'release-apply';
+  const runtimeTarget =
+    'mysql://release-user:private@gateway01.ap-northeast-1.prod.aws.tidbcloud.com:4000/listify_property_sa';
+  const authority = resolveDatabaseAuthority({
+    operation,
+    cwd: identity.worktreePath,
+    gitIdentity: identity,
+    explicitDatabaseUrl: runtimeTarget,
+    credentialClass: mode === 'plan' ? 'read-only' : 'migration',
+    processEnv:
+      mode === 'plan'
+        ? { NODE_ENV: 'production', APP_ENV: 'production' }
+        : {
+            NODE_ENV: 'production',
+            APP_ENV: 'production',
+            DATABASE_MIGRATION_URL:
+              'mysql://release-migration:private@gateway01.ap-northeast-1.prod.aws.tidbcloud.com:4000/listify_property_sa',
+          },
+  });
+  const authorization = authorizeDatabaseOperation(authority, {
+    root: process.cwd(),
+    approval: {
+      reference: 'TEST-TIDB-CHECK-GUARD',
+      actor: 'Edward',
+      operation,
+      targetFingerprintHash: authority.context.targetFingerprintHash,
+    },
+    acknowledgement:
+      mode === 'apply' ? expectedDatabaseAcknowledgement(authority.context) : undefined,
+  });
   return { authority, authorization };
 }
 
@@ -112,6 +150,7 @@ class FakeMigrationConnection implements AuthoritySqlConnection {
   failStatement?: RegExp;
   failFailureUpdate = false;
   rejectPreparedControlStatements = false;
+  tidbCheckConstraintsEnabled = false;
   ended = false;
   connectionId = '314';
   lockOwnerConnectionId = '314';
@@ -133,6 +172,14 @@ class FakeMigrationConnection implements AuthoritySqlConnection {
     if (statement.startsWith('SELECT DATABASE()')) {
       return [[{ database_name: this.selectedDatabase }]];
     }
+    if (statement.startsWith('SHOW GLOBAL VARIABLES LIKE')) {
+      return [[
+        {
+          Variable_name: 'tidb_enable_check_constraint',
+          Value: this.tidbCheckConstraintsEnabled ? 'ON' : 'OFF',
+        },
+      ]];
+    }
     if (statement.includes('information_schema.tables') && statement.includes('table_name IN')) {
       const rows = [];
       if (this.historyTablePresent) rows.push({ table_name: 'sql_migration_history' });
@@ -143,11 +190,13 @@ class FakeMigrationConnection implements AuthoritySqlConnection {
       return [[...this.history].map(([filename, checksum]) => ({ filename, checksum }))];
     }
     if (statement.startsWith('SELECT attempt_id')) {
-      return [[...this.attempts].flatMap(([attempt_id, attempt]) =>
-        ['running', 'failed', 'blocked'].includes(attempt.state)
-          ? [{ attempt_id, migration_filename: attempt.filename, state: attempt.state }]
-          : [],
-      )];
+      return [
+        [...this.attempts].flatMap(([attempt_id, attempt]) =>
+          ['running', 'failed', 'blocked'].includes(attempt.state)
+            ? [{ attempt_id, migration_filename: attempt.filename, state: attempt.state }]
+            : [],
+        ),
+      ];
     }
     if (statement.startsWith('SELECT COUNT(*)')) {
       return this.applicationTableCount === null
@@ -156,10 +205,14 @@ class FakeMigrationConnection implements AuthoritySqlConnection {
     }
     if (statement.includes('GET_LOCK')) return [[{ lock_status: 1 }]];
     if (statement.includes('CONNECTION_ID()') && statement.includes('IS_USED_LOCK')) {
-      return [[{
-        connection_id: this.connectionId,
-        lock_owner_connection_id: this.lockOwnerConnectionId,
-      }]];
+      return [
+        [
+          {
+            connection_id: this.connectionId,
+            lock_owner_connection_id: this.lockOwnerConnectionId,
+          },
+        ],
+      ];
     }
     if (statement.includes('RELEASE_LOCK')) return [[{ released: 1 }]];
     if (statement.startsWith('CREATE TABLE IF NOT EXISTS `sql_migration_history`')) {
@@ -272,6 +325,29 @@ describe('migration connection security', () => {
 });
 
 describe('manifest migration planning and durable attempts', () => {
+  it('blocks ordinary TiDB release apply while CHECK enforcement is disabled', async () => {
+    const fixture = migrationFixture(false);
+    const { authority, authorization } = protectedAuthorityFor('apply');
+    const connection = new FakeMigrationConnection(authority.context.databaseName);
+
+    await expect(
+      runSqlMigrations({
+        mode: 'apply',
+        operation: 'release-apply',
+        migrationsDir: fixture.root,
+        manifestPath: fixture.manifestPath,
+        authority,
+        authorization,
+        acceptedOldHead: null,
+        expectedNewHead: fixture.entries[0].filename,
+        connectionFactory: async () => connection,
+      }),
+    ).rejects.toThrow('TiDB CHECK-constraint enforcement is disabled');
+    expect(connection.calls.some(call => call.statement.includes('GET_LOCK'))).toBe(false);
+    expect(connection.calls.some(call => call.statement.startsWith('CREATE TABLE'))).toBe(false);
+    expect(connection.ended).toBe(true);
+  });
+
   it('plans explicit old and new heads without migration or control-table mutation', async () => {
     const fixture = migrationFixture();
     const { authority, authorization } = authorityFor('plan');
@@ -294,7 +370,9 @@ describe('manifest migration planning and durable attempts', () => {
     expect(result.plan.acceptedOldHead).toBe(fixture.entries[0].filename);
     expect(result.plan.pending.map(item => item.filename)).toEqual([fixture.entries[1].filename]);
     expect(result.plan.expectedNewHead).toBe(fixture.entries[1].filename);
-    expect(connection.calls.some(call => /CREATE|INSERT|UPDATE|ALTER/.test(call.statement))).toBe(false);
+    expect(connection.calls.some(call => /CREATE|INSERT|UPDATE|ALTER/.test(call.statement))).toBe(
+      false,
+    );
   });
 
   it('applies a locked plan, records success history, and retains succeeded attempt evidence', async () => {
@@ -617,6 +695,7 @@ describe('manifest migration planning and durable attempts', () => {
           targetClass: authority.context.targetClass,
           credentialClass: authority.context.credentialClass,
           approvalReference: null,
+          approvalActor: null,
           evidenceRule: 'forged',
         },
         connectionFactory: async () => {
@@ -687,10 +766,6 @@ describe('legacy pure guards retained as compatibility adapters', () => {
         '0000_canonical_launch_baseline.sql',
         '0001_first.sql',
       ]),
-    ).toEqual([
-      '0000_canonical_launch_baseline.sql',
-      '0001_first.sql',
-      '0002_second.sql',
-    ]);
+    ).toEqual(['0000_canonical_launch_baseline.sql', '0001_first.sql', '0002_second.sql']);
   });
 });

@@ -13,7 +13,8 @@ This server requires specific environment variables to function correctly.
 ### Production
 
 - **Secrets must be placed in `.env.production`** (or your platform's secret manager).
-- Run `pnpm launch:preflight` before production deploys. Railway startup also runs this gate through `pnpm start:prod:with-migrations`.
+- Run `pnpm launch:preflight` before production deploys. Railway starts the API with `pnpm start:prod`; release preflight and protected migration operations stay explicit and outside application startup.
+- Production and staging authentication require a managed `REDIS_URL`. After deploy, run `pnpm release:smoke:auth-boundary` with the exact API URL and browser origin to prove CORS and the shared auth limiter together.
 
 ### Example `.env.local`
 

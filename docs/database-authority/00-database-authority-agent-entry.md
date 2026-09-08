@@ -2,9 +2,9 @@
 
 **Status:** Database Authority v3 control-plane entry
 
-Read this file before any database-bearing work. The machine-readable pointers
-are in `authority-manifest.json`; operation permissions are in
-`operation-policy.json`.
+Read this file before any database-bearing work. Then read the mandatory
+procedure in `01-database-operating-playbook.md`. Machine-readable pointers are
+in `authority-manifest.json`; operation permissions are in `operation-policy.json`.
 
 ## Authority spine
 
@@ -22,15 +22,16 @@ are in `authority-manifest.json`; operation permissions are in
 | Generated model evidence            | `drizzle/schema/canonical-model-inventory.json`           |
 | Physical-schema comparison          | `schemaCongruency.ts`                                     |
 | Layered readiness                   | `readiness.ts`                                            |
+| Operating procedure                  | `01-database-operating-playbook.md`                       |
 | Local service lifecycle             | `scripts/local-db.sh`, `localServicePaths.ts`             |
 | Canonical geography reference data  | `dataAdapters/canonicalGeography.ts`                      |
 | Canonical commercial reference data | `dataAdapters/canonicalCommercial.ts`                     |
-| Data-role versions and boundaries   | `dataAdapters/dataRoleManifest.ts`                       |
+| Data-role versions and boundaries   | `dataAdapters/dataRoleManifest.ts`                        |
 | Canonical commercial release        | `scripts/databaseAuthorityCli.ts` (`release-reference:*`) |
 | Isolated Search-to-Lead scenario    | `dataAdapters/searchToLeadScenario.ts`                    |
 | Remaining connection paths          | `connection-path-inventory.json`                          |
 
-The credential-bearing URL is private to connection creation. Commands and reports may emit a sanitized fingerprint and hash, never credentials or a complete URL.
+The credential-bearing URL is private to connection creation. Commands and reports may emit a sanitized fingerprint and hash, never credentials or a complete URL. A credential class is a permission assertion, not a credential selector: for a staging or production migration-class operation, the authority requires a distinct `DATABASE_MIGRATION_URL` supplied by the current protected process. It must identify the exact same target as `DATABASE_URL`; it must never be stored in the repository, a worktree environment file, or a persistent application service variable.
 
 ## Start every database operation
 
@@ -40,9 +41,7 @@ pnpm db:authority:manifest
 pnpm db:authority:context
 ```
 
-Status is read-only. In a feature worktree, central local credentials resolve to that registered worktree's collision-resistant database identity; they do not resolve to `listify_local`.
-
-The current `listify_local` is quarantined evidence. It may receive sanitized,
+Status is read-only. In a feature worktree, central local credentials resolve to that registered worktree's collision-resistant database identity; they do not resolve to `listify_local`. The current `listify_local` is quarantined evidence. It may receive sanitized,
 read-only diagnostics only. Runtime mutation, migration, seed, fixture, reset,
 rebuild, import, restore, repair, and ledger editing are not authorized.
 
@@ -138,6 +137,8 @@ unaccepted migration head fail closed. No release-reference apply runs during
 application startup, and the actual production apply remains an explicitly
 authorized release action.
 
+The reviewed protected zero-statement `0001` failure uses the dedicated release recovery commands after its TiDB replacement is active.
+
 Provisioning is idempotent only when its mode-0600 ownership profile exactly
 matches the canonical worktree realpath and Git common-directory identity.
 Branch names are labels, not ownership.
@@ -178,8 +179,8 @@ acknowledgement between targets or operations.
 - `0000_canonical_launch_baseline.sql` is immutable.
 - Archived SQL is evidence only and can never enter the active plan.
 - An ordinary future DDL migration contains one independently verifiable table
-  or index expansion. Cross-schema/database lifecycle SQL fails; destructive or
-  shape-changing DDL requires the approved exceptional contract.
+  or index expansion. A TiDB `ALTER TABLE` that introduces columns must not add
+  indexes, keys, or constraints; sequence those objects separately. Cross-schema/database lifecycle SQL fails; destructive or shape-changing DDL requires the approved exceptional contract.
 - Transactional-data migrations contain DML only.
 - Apply proves the named-lock owner connection and records that owner with each
   durable attempt.

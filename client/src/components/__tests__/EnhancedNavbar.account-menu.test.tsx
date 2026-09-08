@@ -204,7 +204,7 @@ describe('EnhancedNavbar account menu', () => {
     await waitFor(() => expect(screen.queryByRole('menu')).not.toBeInTheDocument());
   });
 
-  it('closes after the pointer leaves the account trigger and menu', async () => {
+  it('keeps the visitor login menu available while the pointer travels to its action', async () => {
     mockUseAuth.mockReturnValue({ user: null, logout: vi.fn() });
 
     render(<EnhancedNavbar />);
@@ -214,10 +214,36 @@ describe('EnhancedNavbar account menu', () => {
     await user.click(trigger);
     const menu = screen.getByRole('menu');
     fireEvent.mouseLeave(trigger);
+    await new Promise(resolve => window.setTimeout(resolve, 260));
+    expect(screen.getByRole('menu')).toBeInTheDocument();
     fireEvent.mouseEnter(menu);
+    expect(screen.getByRole('menuitem', { name: 'Log in' })).toBeInTheDocument();
+  });
+
+  it('closes the account menu when another top-level action is hovered', async () => {
+    mockUseAuth.mockReturnValue({ user: null, logout: vi.fn() });
+
+    render(<EnhancedNavbar />);
+    const user = userEvent.setup();
+    await user.click(screen.getAllByRole('button', { name: accountTriggerName })[0]);
     expect(screen.getByRole('menu')).toBeInTheDocument();
 
-    fireEvent.mouseLeave(menu);
+    await user.hover(document.getElementById('public-navbar-trigger-advertise')!);
+    await waitFor(() => expect(screen.queryByRole('menu')).not.toBeInTheDocument());
+  });
+
+  it('keeps the existing pointer-leave dismissal for authenticated workspaces', async () => {
+    mockUseAuth.mockReturnValue({
+      user: { firstName: 'Ava', lastName: 'Agent', role: 'agent' },
+      logout: vi.fn(),
+    });
+
+    render(<EnhancedNavbar />);
+    const user = userEvent.setup();
+    const trigger = screen.getAllByRole('button', { name: accountTriggerName })[0];
+
+    await user.click(trigger);
+    fireEvent.mouseLeave(trigger);
     await waitFor(() => expect(screen.queryByRole('menu')).not.toBeInTheDocument());
   });
 

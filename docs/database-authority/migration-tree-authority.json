@@ -6,6 +6,7 @@
     "localCommand": "pnpm db:migrate:apply",
     "runner": "server/migrations/runSqlMigrations.ts",
     "manifest": "server/migrations/manifest.json",
+    "migrationManifestValidator": "server/migrations/migrationManifest.ts",
     "activeSqlDirectory": "server/migrations",
     "ledger": "sql_migration_history",
     "attemptLedger": "sql_migration_attempts",
@@ -129,6 +130,7 @@
       "scripts/show-create-unit-types.ts",
       "scripts/verify-schema.ts",
       "server/create-test-db.ts",
+      "server/migrations/recoverTidbCheckConstraintConvergence.ts",
       "server/scripts/apply-approval-schema.ts",
       "server/scripts/create-local-db.ts",
       "server/scripts/debug-schema.ts",
@@ -223,6 +225,9 @@
       ],
       "deferred schema executor": [],
       "controlled data repair": [],
+      "approved protected release recovery": [
+        "server/migrations/recoverTidbCheckConstraintConvergence.ts"
+      ],
       "verification or diagnostic": [
         "scripts/db-contract-verify.ts",
         "scripts/schema-sanity-check.mjs"
@@ -236,6 +241,9 @@
       "scripts/db-contract-verify.ts",
       "scripts/db-verify-distribution-schema.ts",
       "scripts/schema-sanity-check.mjs"
+    ],
+    "approvedProtectedReleaseRecoveries": [
+      "server/migrations/recoverTidbCheckConstraintConvergence.ts"
     ],
     "approvedLocalTestInitialization": [
       "docker/mysql-local/init/01-create-local-databases.sql",
@@ -252,9 +260,7 @@
       "server/_core/databaseAuthority/dataAdapters/pleReviewerFixture.ts",
       "server/_core/databaseAuthority/dataAdapters/searchToLeadScenario.ts"
     ],
-    "approvedReadOnlyDiagnostics": [
-      "scripts/print-db-target.ts"
-    ],
+    "approvedReadOnlyDiagnostics": ["scripts/print-db-target.ts"],
     "controlledDataRepairUtilities": [],
     "localTestSeedOrFixtureUtilities": [
       "scripts/run-listing-performance-e2e.ts",
@@ -457,9 +463,7 @@
         "disposition": "superseded"
       }
     ],
-    "historicalDocumentationRoots": [
-      ".kiro/**"
-    ],
+    "historicalDocumentationRoots": [".kiro/**"],
     "historicalDocumentationFiles": [
       "COMPLETE_DELIVERY_SUMMARY.md",
       "EXPLORE_QUICK_REFERENCE.md",
@@ -491,9 +495,24 @@
       "purpose": "The sole executable launch baseline."
     },
     {
-      "path": "server/migrations/0001_public_search_to_lead_reliability.sql",
+      "path": "server/migrations/migrationManifest.ts",
+      "classification": "canonical supporting",
+      "purpose": "Validates canonical migration membership, lineage, statement policy, and TiDB-safe additive DDL sequencing before any plan or apply operation."
+    },
+    {
+      "path": "server/migrations/recoverRejectedReleaseCommercialQuoteTermsMigration.ts",
+      "classification": "canonical supporting",
+      "purpose": "Provides the bounded protected release recovery for the reviewed zero-statement TiDB 0046 quote-terms failure; it changes only durable review evidence and never executes rejected SQL."
+    },
+    {
+      "path": "server/migrations/recoverTidbCheckConstraintConvergence.ts",
+      "classification": "canonical supporting",
+      "purpose": "Provides the one reviewed protected TiDB CHECK-constraint convergence: it verifies the canonical head and violation-free physical state, enables TiDB CHECK enforcement, and adds only the 22 canonical checks under the migration lock with durable evidence."
+    },
+    {
+      "path": "server/migrations/0001_public_search_to_lead_reliability_sequenced.sql",
       "classification": "canonical active",
-      "purpose": "Bounded additive consent, idempotency, and lead-delivery state for the public search-to-lead journey."
+      "purpose": "Reviewed TiDB-safe additive consent, idempotency, and lead-delivery state for the public search-to-lead journey, with the unique index applied after its new columns."
     },
     {
       "path": "server/migrations/0002_canonical_property_taxonomy.sql",
@@ -716,9 +735,9 @@
       "purpose": "Enforces that known rentable and usable Commercial Space areas are positive physical quantities."
     },
     {
-      "path": "server/migrations/0046_commercial_office_quote_terms.sql",
+      "path": "server/migrations/0046_commercial_office_quote_terms_sequenced.sql",
       "classification": "canonical active",
-      "purpose": "Adds explicit Commercial quote mode and VAT treatment for Office leasing."
+      "purpose": "Adds explicit Commercial quote mode and VAT treatment for Office leasing through separately executable TiDB-safe column expansions."
     },
     {
       "path": "server/migrations/0047_commercial_gross_rental_component.sql",
@@ -744,6 +763,16 @@
       "path": "server/migrations/_archived/rejected-zero-statement/0019_catalogue_publisher_authority_immutability.sql",
       "classification": "archived historical",
       "purpose": "Preserves the unchanged checksum evidence for the TiDB-incompatible trigger migration rejected after a zero-statement local attempt; it is never executable authority."
+    },
+    {
+      "path": "server/migrations/_archived/rejected-zero-statement/0001_public_search_to_lead_reliability.sql",
+      "classification": "archived historical",
+      "purpose": "Preserves the unchanged checksum evidence for the TiDB-incompatible same-ALTER unique-index migration rejected after a zero-statement production attempt; it is never executable authority."
+    },
+    {
+      "path": "server/migrations/_archived/rejected-zero-statement/0046_commercial_office_quote_terms.sql",
+      "classification": "archived historical",
+      "purpose": "Preserves the unchanged checksum evidence for the TiDB-incompatible same-ALTER quote-terms migration rejected after a zero-statement production attempt; it is never executable authority."
     },
     {
       "path": "server/migrations/_archived/**",
@@ -962,9 +991,7 @@
       "path": "backups/**",
       "classification": "archived historical",
       "purpose": "Backup evidence; never an application migration source.",
-      "approvedFiles": [
-        "backups/cleanup-backup-2026-01-29T20-02-35-220Z.sql"
-      ]
+      "approvedFiles": ["backups/cleanup-backup-2026-01-29T20-02-35-220Z.sql"]
     },
     {
       "path": "docker-compose.local-db.yml",

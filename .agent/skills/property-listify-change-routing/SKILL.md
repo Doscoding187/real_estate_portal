@@ -4,7 +4,7 @@ description: Route a Property Listify task to its owning authority before planni
 allowed-tools: Read, Glob, Grep
 metadata:
   owner: property-listify
-  version: 0.1.0
+  version: 0.1.1
   status: active
   risk_tier: instruction-only
   provenance: original
@@ -20,7 +20,7 @@ the routing decision before proposing a cross-domain implementation.
 | Surface                                                                      | First authority to read                                                      | Routing rule                                                                   |
 | ---------------------------------------------------------------------------- | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
 | Public Land search or authoring                                              | `docs/architecture/land-consumer-journey-contract.md`                        | One geography authority per request. Do not merge or widen scopes.             |
-| Schema, migrations, runtime DB access, seeds, fixtures, or DB contract tests | `AGENTS.md`, then `property-listify-database-authority`                      | Follow the mandatory Database Authority startup exactly.                       |
+| Schema, migrations, runtime DB access, seeds, fixtures, or DB contract tests | `AGENTS.md`, then `property-listify-database-authority`                      | Follow the mandatory Database Authority startup and `01-database-operating-playbook.md` phase flow exactly. |
 | Product journey, route, ownership, or lifecycle                              | `docs/architecture/product-workflow-authority.md`                            | Reuse the owning workflow; do not introduce a parallel state machine.          |
 | Agent skill, plugin, hook, MCP, memory, or agent config                      | `docs/architecture/agent-skill-governance.md`                                | Use `property-listify-agent-security` and `property-listify-skill-governance`. |
 | Validation scope or final evidence                                           | `property-listify-test-selection` or `property-listify-verification-handoff` | Choose the smallest sufficient evidence set without weakening required gates.  |

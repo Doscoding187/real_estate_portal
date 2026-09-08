@@ -100,6 +100,15 @@
     "db:release:reference:apply",
     "db:release:reference:verify"
   ],
+  "operatingPlaybook": "docs/database-authority/01-database-operating-playbook.md",
+  "releaseMigrationRecoveryCommands": [
+    "db:release-migration-recovery:plan",
+    "db:release-migration-recovery:apply",
+    "db:release-commercial-quote-terms-recovery:plan",
+    "db:release-commercial-quote-terms-recovery:apply",
+    "db:release-tidb-check-constraint-convergence:plan",
+    "db:release-tidb-check-constraint-convergence:apply"
+  ],
   "acceptanceScenarioAdapter": "server/_core/databaseAuthority/dataAdapters/searchToLeadScenario.ts",
   "plePublicationEntitlementAdapter": "server/_core/databaseAuthority/dataAdapters/plePublicationEntitlement.ts",
   "pleReviewerFixtureAdapter": "server/_core/databaseAuthority/dataAdapters/pleReviewerFixture.ts"

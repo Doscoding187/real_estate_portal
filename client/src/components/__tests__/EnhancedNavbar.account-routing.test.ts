@@ -57,4 +57,10 @@ describe('Main Platform Navigation account routing', () => {
     );
     expect(getAccountAuthHref('signin', '/login?mode=signin')).toBe('/login?mode=signin');
   });
+
+  it('keeps global registration entry neutral until a role is chosen', () => {
+    const href = getAccountAuthHref('register', '/');
+    expect(href).toBe('/login?mode=register&next=%2F');
+    expect(new URLSearchParams(href.split('?')[1]).has('role')).toBe(false);
+  });
 });

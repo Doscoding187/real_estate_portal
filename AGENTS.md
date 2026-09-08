@@ -55,9 +55,14 @@ or global agent configuration changes as a default.
 
 For database-related agent work, load
 `.agent/skills/property-listify-database-authority/SKILL.md`, then read
-`docs/database-authority/00-database-authority-agent-entry.md` and run
+`docs/database-authority/00-database-authority-agent-entry.md` and its mandatory
+procedural companion `docs/database-authority/01-database-operating-playbook.md`,
+then run
 `pnpm db:authority:status`. The skill is an operating guide only; repository
-authority remains canonical.
+authority remains canonical. At the start of the work, classify the task,
+resolve the target, and declare whether the current phase is inspect, plan,
+review, apply, or verify. Do not treat a merged PR, a `main` deployment, or a
+health endpoint as permission or proof of a protected database release.
 
 Before changing schemas, migrations, runtime database queries, database
 services, seeds, fixtures, or database contract tests, read:

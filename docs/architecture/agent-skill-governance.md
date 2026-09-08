@@ -43,7 +43,7 @@ Do not infer a clean, task-owned worktree from a new conversation. Inspect the
 actual Git worktree and branch state before editing, and create a dedicated
 feature worktree when no suitable one exists.
 
-## Initial governed tier
+## Active governed tier
 
 | Skill                               | Purpose                                                                   | Runtime capability  |
 | ----------------------------------- | ------------------------------------------------------------------------- | ------------------- |
@@ -51,13 +51,15 @@ feature worktree when no suitable one exists.
 | `property-listify-agent-security`   | Reviews agent-tool, prompt-injection, plugin, hook, MCP, and memory risk. | Instruction only    |
 | `property-listify-skill-governance` | Admits, changes, reviews, or retires skills safely.                       | Tier 1 static check |
 | `property-listify-skill-evaluation` | Measures whether a skill improves real work before promotion.             | Instruction only    |
+| `property-listify-database-authority` | Routes database-bearing work through the canonical target, migration, release, and verification protocol. | Instruction only |
 
 The registry is validated by `pnpm agent:skills:check`.
 
 The governance skill's sole Tier 1 helper is the project-local,
 read-only `pnpm agent:skills:check` structural validator. It has no network,
 hook, MCP, persistent-state, package-installation, or user-work execution
-capability. The other three initial skills remain Tier 0.
+capability. The four instruction-only skills remain Tier 0; the database skill
+adds no runtime, network, MCP, hook, credential, or persistent-state capability.
 
 ## Admission and change rules
 
@@ -111,3 +113,9 @@ The initial safety-and-authority pilot is recorded in
 `docs/architecture/agent-skill-pilot-evaluation-2026-09-02.md`. It is evidence
 for retaining the small core, not a claim of performance improvement or a
 reason to add capabilities automatically.
+
+The database-authority admission review is recorded in
+`docs/architecture/agent-skill-evaluation-database-authority-2026-09-05.md`.
+It documents the production cutover decisions that exposed the need for a
+single procedural playbook. The admission remains Tier 0: it improves routing
+and review clarity but does not grant operational access or automate a release.
