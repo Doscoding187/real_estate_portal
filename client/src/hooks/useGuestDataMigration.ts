@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 export function useGuestDataMigration() {
   const { isAuthenticated, loading } = useAuth();
   const { getGuestData, clearGuestData, getActivityCounts } = useGuestActivity();
+  const utils = trpc.useUtils();
 
   const migrationMutation = trpc.guestMigration.migrateGuestData.useMutation({
     onSuccess: result => {
@@ -18,6 +19,11 @@ export function useGuestDataMigration() {
           `Welcome back! We've saved your ${result.migratedViews} viewed properties and ${result.migratedFavorites} favorites.`,
         );
       }
+      // The detail page may have enabled its authenticated favorites query
+      // before this transfer completed. Invalidate that cache only after the
+      // transaction succeeds so the visible control reflects canonical state
+      // without requiring a navigation or reload.
+      void utils.properties.getFavorites.invalidate();
       clearGuestData();
     },
     onError: error => {

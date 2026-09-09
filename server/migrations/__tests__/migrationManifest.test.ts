@@ -218,6 +218,9 @@ describe('canonical migration manifest', () => {
     const recentlyViewedRecency = manifest.orderedMigrations.find(
       entry => entry.filename === '0071_recently_viewed_user_recency_index.sql',
     );
+    const recentlyViewedPrecision = manifest.orderedMigrations.find(
+      entry => entry.filename === '0075_recently_viewed_microsecond_recency.sql',
+    );
     expect(commercialQuoteTerms).toMatchObject({
       sequence: 46,
       parent: '0045_commercial_space_positive_area_integrity.sql',
@@ -309,6 +312,16 @@ describe('canonical migration manifest', () => {
       kind: 'ddl',
       statementPolicy: 'single-ddl',
     });
+    expect(recentlyViewedPrecision).toMatchObject({
+      sequence: 75,
+      parent: '0074_retire_legacy_prospects.sql',
+      parentChecksum: 'b0d6cbab8f0ac521d478a371dab62e0e23a7c0e35f8d304a42394eb43cefed14',
+      checksum: 'e205efe19a742dced7bd1e18cf4dd75f4f37074cae62e8373e7e6b9687d30938',
+      kind: 'exceptional',
+      statementPolicy: 'approved-exception',
+      approvalReference: 'DBX-PRELAUNCH-CONSUMER-ACTIVITY-RECENCY-2026-09-09-Edward',
+    });
+    expect(recentlyViewedPrecision?.statementCount).toBe(1);
     const tidbSequenced = manifest.orderedMigrations.filter(
       entry => entry.approvalReference === 'DBX-TIDB-INCREMENTAL-DDL-SEQUENCING-2026-09-04-Edward',
     );
@@ -327,7 +340,7 @@ describe('canonical migration manifest', () => {
     expect(tidbSequenced.map(entry => entry.statementCount)).toEqual([
       4, 15, 3, 3, 3, 4, 3, 3, 3, 3,
     ]);
-    expect(manifest.expectedHead.filename).toBe('0074_retire_legacy_prospects.sql');
+    expect(manifest.expectedHead.filename).toBe('0075_recently_viewed_microsecond_recency.sql');
   });
 
   it('plans the identity-and-custody migration chain from the integrated 0007 head', () => {
@@ -343,11 +356,11 @@ describe('canonical migration manifest', () => {
         checksum: item.checksum,
       })),
       acceptedOldHead: currentIntegratedHead.filename,
-      expectedNewHead: '0074_retire_legacy_prospects.sql',
+      expectedNewHead: '0075_recently_viewed_microsecond_recency.sql',
     });
 
     expect(plan.acceptedOldHead).toBe('0007_paid_launch_access_invoice_term.sql');
-    expect(plan.pending).toHaveLength(67);
+    expect(plan.pending).toHaveLength(68);
     expect(plan.pending.map(item => item.filename)).toEqual([
       '0008_developer_organisations.sql',
       '0009_developer_organisation_memberships.sql',
@@ -416,8 +429,9 @@ describe('canonical migration manifest', () => {
       '0072_retire_legacy_prospect_favorites.sql',
       '0073_retire_legacy_scheduled_viewings.sql',
       '0074_retire_legacy_prospects.sql',
+      '0075_recently_viewed_microsecond_recency.sql',
     ]);
-    expect(plan.expectedNewHead).toBe('0074_retire_legacy_prospects.sql');
+    expect(plan.expectedNewHead).toBe('0075_recently_viewed_microsecond_recency.sql');
   });
 
   it('accepts an isolated 0000 -> 0001 -> 0002 progression in ancestry order', () => {

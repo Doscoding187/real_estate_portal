@@ -19,6 +19,7 @@ const mocks = vi.hoisted(() => ({
     mutate: vi.fn(),
     isPending: false,
   },
+  favoritesInvalidate: vi.fn(),
   useMutation: vi.fn(),
   mutationOptions: undefined as
     | {
@@ -38,6 +39,13 @@ vi.mock('@/contexts/GuestActivityContext', () => ({
 
 vi.mock('@/lib/trpc', () => ({
   trpc: {
+    useUtils: () => ({
+      properties: {
+        getFavorites: {
+          invalidate: mocks.favoritesInvalidate,
+        },
+      },
+    }),
     guestMigration: {
       migrateGuestData: {
         useMutation: (options: typeof mocks.mutationOptions) => {
@@ -61,6 +69,7 @@ describe('useGuestDataMigration persistence contract', () => {
     mocks.authState.isAuthenticated = true;
     mocks.authState.loading = false;
     mocks.mutation.isPending = false;
+    mocks.favoritesInvalidate.mockReset();
     mocks.mutationOptions = undefined;
     mocks.guestState.getActivityCounts.mockReturnValue({ viewed: 1, favorites: 1, searches: 0 });
     mocks.guestState.getGuestData.mockReturnValue({
@@ -84,6 +93,7 @@ describe('useGuestDataMigration persistence contract', () => {
     mocks.mutationOptions?.onError?.(new Error('injected transfer failure'));
 
     expect(mocks.guestState.clearGuestData).not.toHaveBeenCalled();
+    expect(mocks.favoritesInvalidate).not.toHaveBeenCalled();
     expect(mocks.guestState.getGuestData()).toMatchObject({
       viewedProperties: [990001],
       favoriteProperties: [990001],
@@ -96,5 +106,6 @@ describe('useGuestDataMigration persistence contract', () => {
 
     mocks.mutationOptions?.onSuccess?.({ migratedViews: 1, migratedFavorites: 1 });
     expect(mocks.guestState.clearGuestData).toHaveBeenCalledTimes(1);
+    expect(mocks.favoritesInvalidate).toHaveBeenCalledTimes(1);
   });
 });

@@ -4,7 +4,7 @@
   "historyTable": "sql_migration_history",
   "attemptTable": "sql_migration_attempts",
   "lockName": "property_listify_manifest_migrations",
-  "expectedHead": "0074_retire_legacy_prospects.sql",
+  "expectedHead": "0075_recently_viewed_microsecond_recency.sql",
   "migrations": [
     {
       "sequence": 0,
@@ -782,6 +782,17 @@
       "statementPolicy": "approved-exception",
       "requiredReferenceDataVersion": null,
       "approvalReference": "DBX-PRELAUNCH-LEGACY-CONSUMER-PROFILE-RETIREMENT-2026-09-09-Edward"
+    },
+    {
+      "sequence": 75,
+      "filename": "0075_recently_viewed_microsecond_recency.sql",
+      "checksum": "e205efe19a742dced7bd1e18cf4dd75f4f37074cae62e8373e7e6b9687d30938",
+      "parent": "0074_retire_legacy_prospects.sql",
+      "parentChecksum": "b0d6cbab8f0ac521d478a371dab62e0e23a7c0e35f8d304a42394eb43cefed14",
+      "kind": "exceptional",
+      "statementPolicy": "approved-exception",
+      "requiredReferenceDataVersion": null,
+      "approvalReference": "DBX-PRELAUNCH-CONSUMER-ACTIVITY-RECENCY-2026-09-09-Edward"
     }
   ]
 }

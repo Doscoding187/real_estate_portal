@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { protectedProcedure, router } from './_core/trpc';
-import { getDb } from './db';
+import { allocateUserRecentViewTimestamp, getDb } from './db';
 import { favorites, recentlyViewed, users } from '../drizzle/schema';
 import { and, eq, inArray } from 'drizzle-orm';
 import { TRPCError } from '@trpc/server';
@@ -106,9 +106,14 @@ export async function migrateGuestActivity(
             )
         : [];
       const existingViewIds = new Set(existingViews.map((row: any) => row.listingId));
-      const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
-      for (const row of viewRows.filter(row => !existingViewIds.has(row.listingId))) {
-        await tx.insert(recentlyViewed).values({ ...row, viewedAt: now });
+      const insertedViewRows = viewRows.filter(row => !existingViewIds.has(row.listingId));
+      // Guest history is stored newest-first. Allocate timestamps oldest-first
+      // so the authenticated list preserves that observed order exactly.
+      for (const row of [...insertedViewRows].reverse()) {
+        await tx.insert(recentlyViewed).values({
+          ...row,
+          viewedAt: await allocateUserRecentViewTimestamp(tx, command.userId),
+        });
       }
 
       const existingFavorites = favoriteIds.length
@@ -127,10 +132,9 @@ export async function migrateGuestActivity(
         await tx.insert(favorites).values({
           userId: command.userId,
           propertyId,
-          createdAt: now,
         });
       }
-      const migratedViews = viewRows.filter(row => !existingViewIds.has(row.listingId)).length;
+      const migratedViews = insertedViewRows.length;
       const migratedFavorites = favoriteIds.filter(id => !existingFavoriteIds.has(id)).length;
 
       return {

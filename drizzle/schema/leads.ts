@@ -195,7 +195,9 @@ export const recentlyViewed = mysqlTable('recently_viewed', {
   listingId: int()
     .notNull()
     .references(() => listings.id, { onDelete: 'cascade' }),
-  viewedAt: timestamp({ mode: 'string' }).defaultNow().notNull(),
+  // This fact is updated when a user revisits a listing. Microsecond precision
+  // is therefore part of the ordering contract, rather than display detail.
+  viewedAt: timestamp({ mode: 'string', fsp: 6 }).default(sql`CURRENT_TIMESTAMP(6)`).notNull(),
 }, table => [
   unique('uq_recently_viewed_user_listing').on(table.userId, table.listingId),
   index('idx_recently_viewed_user_viewed_at').on(table.userId, table.viewedAt),

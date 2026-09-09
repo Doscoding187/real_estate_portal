@@ -1,8 +1,10 @@
+import { sql } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import {
   index,
   int,
   mysqlTable,
+  timestamp,
   uniqueIndex,
   varchar,
 } from 'drizzle-orm/mysql-core';
@@ -34,6 +36,13 @@ const children = mysqlTable(
     labelUnique: uniqueIndex('fixture_children_label_unique').on(table.label),
   }),
 );
+
+const timestampFacts = mysqlTable('fixture_timestamp_facts', {
+  id: int('id').autoincrement().notNull().primaryKey(),
+  recordedAt: timestamp('recorded_at', { mode: 'string', fsp: 6 })
+    .default(sql`CURRENT_TIMESTAMP(6)`)
+    .notNull(),
+});
 
 function clone(schema: NormalizedSchema): NormalizedSchema {
   return JSON.parse(JSON.stringify(schema)) as NormalizedSchema;
@@ -96,6 +105,60 @@ describe('normalized schema congruency', () => {
       'fixture_parents',
     ]);
     expect(compareNormalizedSchemas(first, clone(first)).congruent).toBe(true);
+  });
+
+  it('normalizes precision-bearing current-time defaults from MySQL metadata', async () => {
+    const connection: AuthoritySqlConnection = {
+      async execute(statement: string) {
+        if (statement.includes('information_schema.tables')) {
+          return [[{ table_name: 'fixture_timestamp_facts' }]];
+        }
+        if (statement.includes('information_schema.columns')) {
+          return [[
+            {
+              table_name: 'fixture_timestamp_facts',
+              column_name: 'id',
+              ordinal_position: 1,
+              column_type: 'int',
+              is_nullable: 'NO',
+              column_default: null,
+              extra: 'auto_increment',
+            },
+            {
+              table_name: 'fixture_timestamp_facts',
+              column_name: 'recorded_at',
+              ordinal_position: 2,
+              column_type: 'timestamp(6)',
+              is_nullable: 'NO',
+              column_default: 'CURRENT_TIMESTAMP(6)',
+              extra: '',
+            },
+          ]];
+        }
+        if (statement.includes('information_schema.statistics')) {
+          return [[
+            {
+              table_name: 'fixture_timestamp_facts',
+              index_name: 'PRIMARY',
+              non_unique: 0,
+              sequence_in_index: 1,
+              column_name: 'id',
+            },
+          ]];
+        }
+        return [[]];
+      },
+      async query(statement: string) {
+        return connection.execute(statement);
+      },
+      async end() {},
+    };
+
+    const desired = normalizedDesiredSchema({ timestampFacts });
+    const physical = await normalizedPhysicalSchema(connection);
+    expect(desired.tables[0].columns[1].default).toBe('current_timestamp(6)');
+    expect(physical.tables[0].columns[1].default).toBe('current_timestamp(6)');
+    expect(compareNormalizedSchemas(desired, physical).congruent).toBe(true);
   });
 
   it.each([

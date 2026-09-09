@@ -378,7 +378,73 @@ historical record with the immutable lineage.
 
 Removal workstream: Pre-launch consumer activity integrity closure.
 
-+### Exception ID: DBX-PRELAUNCH-LEGACY-CONSUMER-PROFILE-RETIREMENT-2026-09-09-Edward
+### Exception ID: DBX-PRELAUNCH-CONSUMER-ACTIVITY-RECENCY-2026-09-09-Edward
+
+Status: Approved for the pre-launch consumer recent-view ordering correction
+
+Owner: Property Listify senior product engineering
+
+Approved by Edward on: 2026-09-09, through the explicit pre-launch database
+architecture takeover authorization
+
+Business reason: A recent-view fact is updated when an authenticated user
+revisits a listing. The prior second-precision `TIMESTAMP` could not represent
+the order of rapid committed revisits to different listings, and row-ID order
+cannot repair that ambiguity when an existing fact is updated in place. The
+correction gives the canonical fact six fractional-second digits and makes the
+runtime allocate a strictly increasing UTC fact time while it holds the
+existing per-account mutex.
+
+Canonical authority: `drizzle/schema/leads.ts` defines `recently_viewed.viewedAt`
+as `timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6)`. The canonical
+authenticated view writer and guest-transfer writer use one database-derived
+monotonic timestamp allocation under the locked `users` row. There is no
+application-clock fallback, legacy activity table, or alternate ordering path.
+
+Exact files: `drizzle/schema/leads.ts`,
+`drizzle/schema/canonical-model-inventory.json`,
+`server/migrations/0075_recently_viewed_microsecond_recency.sql`,
+`server/migrations/manifest.json`,
+`docs/database-authority/migration-tree-authority.json`, `server/db.ts`,
+`server/guestMigrationRouter.ts`, and the consumer-activity physical and
+contract tests.
+
+Tables and columns: `recently_viewed.viewedAt`; its existing
+`idx_recently_viewed_user_viewed_at` recency index remains the query authority.
+
+Permitted read direction: Recent views remain readable only through the
+authenticated account's facts, ordered by `viewedAt DESC, id DESC`, then
+resolved to currently eligible public projections. No retired consumer-profile
+or display-text geography may be read.
+
+Permitted write direction: The canonical migration runner may modify only
+`recently_viewed.viewedAt` from `timestamp` to `timestamp(6)` with an explicit
+microsecond UTC default. Runtime writes may set that column only through the
+locked canonical recent-view writers. The task-owned disposable target may be
+used for the reviewed migration and proof; no hosted or protected target is
+included.
+
+Failure and observability behavior: Manifest planning and application fail
+closed on lineage, target, ownership, checksum, or attempt-state mismatch. The
+timestamp allocator rejects an invalid database result rather than replacing it
+with a host timestamp. The physical suite proves column precision, UTC format,
+rapid committed ordering, the clock-ahead branch, guest-history order, and
+independent-pool serialization.
+
+Automated evidence: Manifest and migration-tree validation, generated schema
+inventory, schema sanity and congruency, authority static checks, the P1
+physical consumer-activity suite, guest-transfer contract suite, fresh
+consumer contract, and the TiDB structural audit.
+
+Expiry or objective removal condition: Retire the exceptional migration
+classification after fresh canonical establishment and consumer-contract
+evidence reaches `0075_recently_viewed_microsecond_recency.sql`; retain this
+record as immutable historical evidence. No runtime compatibility exception
+remains.
+
+Removal workstream: Pre-launch consumer activity integrity closure.
+
+### Exception ID: DBX-PRELAUNCH-LEGACY-CONSUMER-PROFILE-RETIREMENT-2026-09-09-Edward
 
 Status: Approved for the pre-launch retirement of disconnected consumer-profile tables
 

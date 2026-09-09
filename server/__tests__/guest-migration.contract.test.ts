@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { favorites, recentlyViewed, users } from '../../drizzle/schema';
 const mocked = vi.hoisted(() => ({
   getDb: vi.fn(),
+  allocateUserRecentViewTimestamp: vi.fn(),
   resolvePublicPropertyEligibilities: vi.fn(),
 }));
 vi.mock('../db', () => mocked);
@@ -69,6 +70,11 @@ const publicResolution = (overrides: Record<string, unknown> = {}) => ({
 describe('guest transfer transaction', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    let allocation = 0;
+    mocked.allocateUserRecentViewTimestamp.mockImplementation(async () => {
+      allocation += 1;
+      return `2026-09-09 00:00:00.${String(allocation).padStart(6, '0')}`;
+    });
     mocked.resolvePublicPropertyEligibilities.mockResolvedValue(
       new Map([[10, publicResolution()]]),
     );
@@ -82,9 +88,7 @@ describe('guest transfer transaction', () => {
       migratedFavorites: 1,
     });
     expect(db.state.views).toEqual([{ userId: 5, listingId: 77, viewedAt: expect.any(String) }]);
-    expect(db.state.favorites).toEqual([
-      { userId: 5, propertyId: 10, createdAt: expect.any(String) },
-    ]);
+    expect(db.state.favorites).toEqual([{ userId: 5, propertyId: 10 }]);
   });
   it('does not commit views if a later favorite write fails', async () => {
     const db = database();

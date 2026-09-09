@@ -1141,7 +1141,10 @@ export async function getUserFavoriteFacts(userId: number) {
     })
     .from(favorites)
     .where(eq(favorites.userId, userId))
-    .orderBy(desc(favorites.createdAt));
+    // `createdAt` has second precision in the current canonical favorite
+    // model. The account transaction lock makes the primary key a stable
+    // committed-order tie breaker for saves that share a second.
+    .orderBy(desc(favorites.createdAt), desc(favorites.id));
 }
 
 // ==================== AGENTS ====================
@@ -1414,6 +1417,38 @@ export async function getAgencyDashboardStats(agencyId: number) {
   };
 }
 
+/**
+ * Allocates the next recent-view time for an account while that account's
+ * `users` row is locked by the caller. The database clock, rather than an
+ * application host clock, defines UTC time. If a preceding committed fact is
+ * at or ahead of that clock, advancing the fact by one microsecond preserves
+ * strict recency despite clock resolution or regression.
+ */
+export async function allocateUserRecentViewTimestamp(
+  transaction: any,
+  userId: number,
+): Promise<string> {
+  const [row] = await transaction
+    .select({
+      viewedAt: sql<string | null>`DATE_FORMAT(
+        CASE
+          WHEN MAX(${recentlyViewed.viewedAt}) IS NULL
+            OR UTC_TIMESTAMP(6) > MAX(${recentlyViewed.viewedAt})
+          THEN UTC_TIMESTAMP(6)
+          ELSE DATE_ADD(MAX(${recentlyViewed.viewedAt}), INTERVAL 1 MICROSECOND)
+        END,
+        '%Y-%m-%d %H:%i:%s.%f'
+      )`,
+    })
+    .from(recentlyViewed)
+    .where(eq(recentlyViewed.userId, userId));
+  const viewedAt = String(row?.viewedAt ?? '');
+  if (!/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{6}$/.test(viewedAt)) {
+    throw new Error('Canonical recent-view timestamp allocation failed.');
+  }
+  return viewedAt;
+}
+
 // Consumer activity facts use the canonical authored-listing identity.
 // The properties router resolves public eligibility before calling this
 // persistence boundary, so it cannot turn a projection ID into a listing ID
@@ -1431,7 +1466,7 @@ export async function recordUserListingViewFactWithDatabase(
       .for('update');
     if (!owner) throw new Error('User not found');
 
-    const viewedAt = toMysqlDateTime();
+    const viewedAt = await allocateUserRecentViewTimestamp(tx, userId);
     const [existing] = await tx
       .select({ id: recentlyViewed.id })
       .from(recentlyViewed)

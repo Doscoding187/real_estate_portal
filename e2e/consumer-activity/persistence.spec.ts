@@ -13,7 +13,7 @@ type Row = Record<string, unknown>;
 
 const scenario = SEARCH_TO_LEAD_SCENARIO_IDS;
 const password = 'P1Browser!Disposable9';
-let connection: AuthoritySqlConnection;
+let connection: AuthoritySqlConnection | undefined;
 let userId = 0;
 let email = '';
 let propertyTitle = '';
@@ -23,8 +23,13 @@ function rowsFrom(result: unknown): Row[] {
   return Array.isArray(first) ? (first as Row[]) : [];
 }
 
+async function execute(statement: string, values: readonly unknown[] = []): Promise<unknown> {
+  if (!connection) throw new Error('P1 browser fixture connection is not initialized.');
+  return connection.execute(statement, values);
+}
+
 async function query(statement: string, values: readonly unknown[] = []): Promise<Row[]> {
-  return rowsFrom(await connection.execute(statement, values));
+  return rowsFrom(await execute(statement, values));
 }
 
 async function signIn(page: Page): Promise<void> {
@@ -64,7 +69,7 @@ test.describe('consumer activity browser persistence (P1)', () => {
 
     email = `p1-browser-${randomUUID()}@invalid.example`;
     const passwordHash = await bcrypt.hash(password, 10);
-    const insert = await connection.execute(
+    const insert = await execute(
       'INSERT INTO users (email, passwordHash, name, loginMethod, emailVerified, role) VALUES (?, ?, ?, ?, ?, ?)',
       [email, passwordHash, 'P1 browser visitor', 'email', 1, 'visitor'],
     );
@@ -75,11 +80,11 @@ test.describe('consumer activity browser persistence (P1)', () => {
 
   test.afterAll(async () => {
     if (userId > 0) {
-      await connection.execute('DELETE FROM favorites WHERE user_id = ?', [userId]);
-      await connection.execute('DELETE FROM recently_viewed WHERE userId = ?', [userId]);
-      await connection.execute('DELETE FROM users WHERE id = ?', [userId]);
+      await execute('DELETE FROM favorites WHERE user_id = ?', [userId]);
+      await execute('DELETE FROM recently_viewed WHERE userId = ?', [userId]);
+      await execute('DELETE FROM users WHERE id = ?', [userId]);
     }
-    await connection.end();
+    await connection?.end();
   });
 
   test('transfers guest activity, persists save/remove across reloads, and keeps a canonical recent view', async ({

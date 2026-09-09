@@ -132,9 +132,10 @@ export async function createAuthorityRuntimePool(
     throw new Error('Runtime connection refused: only the approved MySQL dialect is supported.');
   }
   const databaseUrl = readDatabaseCredentialUrl(authority.credential);
+  let pool: mysql.Pool | undefined;
   try {
     const config = buildMysqlConnectionSecurityConfig(databaseUrl, authority.context.runtimeMode);
-    const pool = mysql.createPool({
+    const createdPool = mysql.createPool({
       ...config,
       timezone: 'Z',
       connectionLimit: 10,
@@ -143,23 +144,25 @@ export async function createAuthorityRuntimePool(
       enableKeepAlive: true,
       keepAliveInitialDelay: 0,
     });
+    pool = createdPool;
     // mysql2 emits `connection` before a newly created socket is leased from
     // the pool. Queueing this command here establishes UTC for every physical
     // connection, not only the verifier connection below.
-    pool.on('connection', connection => {
+    createdPool.on('connection', connection => {
       connection.query(`SET time_zone = '${UTC_SESSION_TIME_ZONE}'`, error => {
         if (error) connection.destroy();
       });
     });
     const verifier: AuthoritySqlConnection = {
-      execute: statement => pool.execute(statement),
-      query: statement => pool.query(statement),
-      end: () => pool.end(),
+      execute: statement => createdPool.execute(statement),
+      query: statement => createdPool.query(statement),
+      end: () => createdPool.end(),
     };
     await configureUtcSession(verifier);
     await verifySelectedTarget(verifier, authority);
-    return { pool, end: () => pool.end() };
+    return { pool: createdPool, end: () => createdPool.end() };
   } catch (error) {
+    if (pool) await pool.end().catch(() => undefined);
     if (error instanceof DatabaseTargetMismatchError) throw error;
     throw new Error(
       `Runtime database connection failed for authorized fingerprint ${authority.context.targetFingerprintHash.slice(0, 16)}.`,

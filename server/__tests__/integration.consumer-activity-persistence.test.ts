@@ -67,15 +67,17 @@ function twoPartyBarrier() {
 }
 
 /**
- * Only transaction admission is delayed. Once both independent pools have
- * reached the gate, the application transaction itself runs unchanged.
+ * Only the application callback is delayed. Both independent pools have
+ * already begun their real MySQL transactions when the gate releases, then
+ * the unchanged application transaction body contends on its account lock.
  */
 function databaseWithTransactionGate(database: any, gate: ReturnType<typeof twoPartyBarrier>) {
   return {
-    transaction: async (run: (transaction: any) => Promise<unknown>) => {
-      await gate.wait();
-      return database.transaction(run);
-    },
+    transaction: async (run: (transaction: any) => Promise<unknown>) =>
+      database.transaction(async (transaction: any) => {
+        await gate.wait();
+        return run(transaction);
+      }),
   };
 }
 
@@ -279,7 +281,7 @@ describeDatabase('consumer activity physical persistence (P1)', () => {
     expect(facts).toEqual([{ user_id: userId, property_id: scenario.property }]);
   }, 20_000);
 
-  it('serializes recent views, stores UTC, and returns newest activity first', async () => {
+  it('serializes recent views, stores strict microsecond UTC recency, and returns committed order', async () => {
     const userId = await createUser('concurrent-view');
     const gate = twoPartyBarrier();
 
@@ -297,24 +299,68 @@ describeDatabase('consumer activity physical persistence (P1)', () => {
     ]);
 
     expect(gate.arrivals()).toBe(2);
+    const [precision] = await query(
+      "SELECT DATETIME_PRECISION AS datetime_precision FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'recently_viewed' AND column_name = 'viewedAt'",
+    );
+    expect(Number(precision.datetime_precision)).toBe(6);
     const [stored] = await query(
-      "SELECT id, DATE_FORMAT(viewedAt, '%Y-%m-%d %H:%i:%s') AS viewed_at, TIMESTAMPDIFF(SECOND, viewedAt, UTC_TIMESTAMP()) AS utc_age_seconds FROM recently_viewed WHERE userId = ? AND listingId = ?",
+      "SELECT id, DATE_FORMAT(viewedAt, '%Y-%m-%d %H:%i:%s.%f') AS viewed_at, TIMESTAMPDIFF(MICROSECOND, viewedAt, UTC_TIMESTAMP(6)) AS utc_age_microseconds FROM recently_viewed WHERE userId = ? AND listingId = ?",
       [userId, scenario.agentListing],
     );
     expect(stored).toBeDefined();
     expect(writes.map(write => write.viewedAt)).toContain(String(stored.viewed_at));
-    expect(Math.abs(Number(stored.utc_age_seconds))).toBeLessThanOrEqual(5);
+    expect(String(stored.viewed_at)).toMatch(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{6}$/);
+    expect(Math.abs(Number(stored.utc_age_microseconds))).toBeLessThanOrEqual(5_000_000);
 
-    await new Promise(resolve => setTimeout(resolve, 1100));
-    await recordUserListingViewFactWithDatabase(databaseA, userId, scenario.agencyListing);
+    // No sleep: the order must survive rapid commits and a repeat view of an
+    // existing fact, whose row ID deliberately does not change.
+    const first = await recordUserListingViewFactWithDatabase(
+      databaseA,
+      userId,
+      scenario.agentListing,
+    );
+    const second = await recordUserListingViewFactWithDatabase(
+      databaseA,
+      userId,
+      scenario.agencyListing,
+    );
+    const third = await recordUserListingViewFactWithDatabase(
+      databaseA,
+      userId,
+      scenario.agentListing,
+    );
+    expect(first.viewedAt < second.viewedAt).toBe(true);
+    expect(second.viewedAt < third.viewedAt).toBe(true);
     const recency = await getUserRecentViewFacts(userId, 2);
     expect(recency.map(fact => Number(fact.listingId))).toEqual([
-      scenario.agencyListing,
       scenario.agentListing,
+      scenario.agencyListing,
+    ]);
+
+    // A preceding timestamp at or ahead of the database clock must not make
+    // a later committed view sort backwards. This drives the allocator's
+    // microsecond advancement branch with a valid canonical fact.
+    await fixtureConnection.execute(
+      'UPDATE recently_viewed SET viewedAt = DATE_ADD(UTC_TIMESTAMP(6), INTERVAL 1 SECOND) WHERE userId = ? AND listingId = ?',
+      [userId, scenario.agencyListing],
+    );
+    const [future] = await query(
+      "SELECT DATE_FORMAT(viewedAt, '%Y-%m-%d %H:%i:%s.%f') AS viewed_at FROM recently_viewed WHERE userId = ? AND listingId = ?",
+      [userId, scenario.agencyListing],
+    );
+    const afterFuture = await recordUserListingViewFactWithDatabase(
+      databaseB,
+      userId,
+      scenario.agentListing,
+    );
+    expect(afterFuture.viewedAt > String(future.viewed_at)).toBe(true);
+    expect((await getUserRecentViewFacts(userId, 2)).map(fact => Number(fact.listingId))).toEqual([
+      scenario.agentListing,
+      scenario.agencyListing,
     ]);
   }, 20_000);
 
-  it('makes concurrent guest transfers idempotent across independent pools', async () => {
+  it('makes concurrent guest transfers idempotent and preserves newest-first guest history', async () => {
     const userId = await createUser('concurrent-guest-transfer');
     const gate = twoPartyBarrier();
     const resolvePublicProperties: NonNullable<
@@ -324,7 +370,8 @@ describeDatabase('consumer activity physical persistence (P1)', () => {
         propertyIds.map(propertyId => [
           propertyId,
           {
-            sourceListingId: scenario.agentListing,
+            sourceListingId:
+              propertyId === scenario.property ? scenario.agentListing : scenario.agencyListing,
             property: { id: propertyId, propertyType: 'house' },
           },
         ]),
@@ -332,14 +379,22 @@ describeDatabase('consumer activity physical persistence (P1)', () => {
 
     const results = await Promise.all([
       migrateGuestActivity(
-        { userId, viewedProperties: [scenario.property], favoriteProperties: [scenario.property] },
+        {
+          userId,
+          viewedProperties: [scenario.property, scenario.agencyProperty],
+          favoriteProperties: [scenario.property, scenario.agencyProperty],
+        },
         {
           database: databaseWithTransactionGate(databaseA, gate),
           resolvePublicProperties,
         },
       ),
       migrateGuestActivity(
-        { userId, viewedProperties: [scenario.property], favoriteProperties: [scenario.property] },
+        {
+          userId,
+          viewedProperties: [scenario.property, scenario.agencyProperty],
+          favoriteProperties: [scenario.property, scenario.agencyProperty],
+        },
         {
           database: databaseWithTransactionGate(databaseB, gate),
           resolvePublicProperties,
@@ -348,20 +403,18 @@ describeDatabase('consumer activity physical persistence (P1)', () => {
     ]);
 
     expect(gate.arrivals()).toBe(2);
-    expect(results.reduce((total, result) => total + result.migratedViews, 0)).toBe(1);
-    expect(results.reduce((total, result) => total + result.migratedFavorites, 0)).toBe(1);
+    expect(results.reduce((total, result) => total + result.migratedViews, 0)).toBe(2);
+    expect(results.reduce((total, result) => total + result.migratedFavorites, 0)).toBe(2);
     expect(
-      await query('SELECT id FROM recently_viewed WHERE userId = ? AND listingId = ?', [
-        userId,
-        scenario.agentListing,
-      ]),
-    ).toHaveLength(1);
+      (await getUserRecentViewFacts(userId, 2)).map(fact => Number(fact.listingId)),
+    ).toEqual([scenario.agentListing, scenario.agencyListing]);
     expect(
-      await query('SELECT id FROM favorites WHERE user_id = ? AND property_id = ?', [
+      await query('SELECT id FROM favorites WHERE user_id = ? AND property_id IN (?, ?)', [
         userId,
         scenario.property,
+        scenario.agencyProperty,
       ]),
-    ).toHaveLength(1);
+    ).toHaveLength(2);
   }, 20_000);
 
   it('rolls back an earlier real write when a later guest-transfer write fails', async () => {

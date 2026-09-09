@@ -1148,6 +1148,11 @@
       "path": "server/migrations/0074_retire_legacy_prospects.sql",
       "classification": "canonical active",
       "purpose": "Retires the unused CRM-era prospect profile table after consumer activity moved to authenticated user facts and prospect identities."
+    },
+    {
+      "path": "server/migrations/0075_recently_viewed_microsecond_recency.sql",
+      "classification": "canonical active",
+      "purpose": "Gives canonical recent-view facts microsecond UTC precision so revisits retain strict account recency ordering."
     }
   ],
   "prohibitedPaths": [
