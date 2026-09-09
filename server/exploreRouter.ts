@@ -11,7 +11,6 @@ import {
   getExplorePublishingEligibility,
 } from './services/explorePublishingEligibilityService';
 import { exploreContent } from '../drizzle/schema';
-import { getUserFavorites } from './db';
 
 async function requireExplorePublisher(ctx: Parameters<typeof requireUser>[0]) {
   const db = await getDb();
@@ -155,7 +154,7 @@ export const exploreRouter = router({
       });
     }),
 
-  // Legacy save path. Property saves are owned by properties.toggleFavorite.
+  // Legacy save path. Property saves are owned by properties.setFavorite.
   saveProperty: protectedProcedure
     .input(
       z
@@ -171,34 +170,8 @@ export const exploreRouter = router({
       throw new TRPCError({
         code: 'PRECONDITION_FAILED',
         message:
-          'Explore property saves are not available in the legacy Explore workflow. Use properties.toggleFavorite.',
+          'Explore property saves are not available in the legacy Explore workflow. Use properties.setFavorite.',
       });
-    }),
-
-  // Saved properties use the canonical property-favorites workflow.
-  getSavedProperties: protectedProcedure
-    .input(
-      z.object({
-        limit: z.number().min(1).max(100).default(20),
-        offset: z.number().min(0).default(0),
-      }),
-    )
-    .query(async ({ ctx, input }) => {
-      const saved = await getUserFavorites(requireUser(ctx).id);
-      const start = input.offset;
-      const end = start + input.limit;
-
-      return {
-        data: {
-          items: saved.slice(start, end).map(item => ({
-            id: item.id,
-            propertyId: item.propertyId,
-            property: item.property,
-            savedAt: item.createdAt,
-          })),
-          total: saved.length,
-        },
-      };
     }),
 
   // Legacy share writes are retired with the direct interaction writer.

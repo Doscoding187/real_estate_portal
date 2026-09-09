@@ -1,12 +1,18 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { favorites, recentlyViewed, properties, users } from '../../drizzle/schema';
-const mocked = vi.hoisted(() => ({ getDb: vi.fn() }));
+import { favorites, recentlyViewed, users } from '../../drizzle/schema';
+const mocked = vi.hoisted(() => ({
+  getDb: vi.fn(),
+  resolvePublicPropertyEligibilities: vi.fn(),
+}));
 vi.mock('../db', () => mocked);
+vi.mock('../services/publicPropertyEligibilityService', () => ({
+  resolvePublicPropertyEligibilities: mocked.resolvePublicPropertyEligibilities,
+}));
 import { guestMigrationRouter } from '../guestMigrationRouter';
 
 // Model commit/rollback and table identity, not query call order. Real MySQL
 // locking and isolation still need integration evidence.
-function database(rows = [{ id: 10, sourceListingId: 77, propertyType: 'house' }]) {
+function database() {
   const state = { views: [] as any[], favorites: [] as any[] };
   let failFavorites = false;
   let tail = Promise.resolve();
@@ -28,7 +34,6 @@ function database(rows = [{ id: 10, sourceListingId: 77, propertyType: 'house' }
           from: (table: unknown) => ({
             where: () => {
               if (table === users) return { for: async () => [{ id: 5 }] };
-              if (table === properties) return Promise.resolve(rows);
               if (table === recentlyViewed) return Promise.resolve(draft.views);
               if (table === favorites) return Promise.resolve(draft.favorites);
               throw new Error('Unexpected table');
@@ -55,9 +60,19 @@ function database(rows = [{ id: 10, sourceListingId: 77, propertyType: 'house' }
 const caller = (user: any = { id: 5 }) =>
   guestMigrationRouter.createCaller({ user, req: {}, res: {} } as any);
 const input = { viewedProperties: [10, 10], favoriteProperties: [10, 10] };
+const publicResolution = (overrides: Record<string, unknown> = {}) => ({
+  sourceListingId: 77,
+  property: { id: 10, propertyType: 'house' },
+  ...overrides,
+});
 
 describe('guest transfer transaction', () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocked.resolvePublicPropertyEligibilities.mockResolvedValue(
+      new Map([[10, publicResolution()]]),
+    );
+  });
   it('uses source listing identity and preserves property identity for favorites', async () => {
     const db = database();
     mocked.getDb.mockResolvedValue(db);
@@ -91,14 +106,18 @@ describe('guest transfer transaction', () => {
     });
   });
   it.each([
-    { rows: [] },
-    { rows: [{ id: 10, sourceListingId: null, propertyType: 'house' }] },
-    { rows: [{ id: 10, sourceListingId: 77, propertyType: 'commercial' }] },
-  ])('rejects unsupported identity without committing', async ({ rows }) => {
-    const db = database(rows as any);
+    { resolution: new Map() },
+    { resolution: new Map([[10, publicResolution({ sourceListingId: null })]]) },
+    {
+      resolution: new Map([[10, publicResolution({ property: { id: 10, propertyType: 'commercial' } })]]),
+    },
+  ])('rejects unsupported public activity without committing', async ({ resolution }) => {
+    const db = database();
     mocked.getDb.mockResolvedValue(db);
+    mocked.resolvePublicPropertyEligibilities.mockResolvedValue(resolution);
     await expect(caller().migrateGuestData(input)).rejects.toMatchObject({ code: 'BAD_REQUEST' });
     expect(db.state).toEqual({ views: [], favorites: [] });
+    expect(db.transaction).not.toHaveBeenCalled();
   });
   it('rejects invalid and oversized inputs before opening the database', async () => {
     for (const ids of [[-1], [1.2], Array(501).fill(10)]) {

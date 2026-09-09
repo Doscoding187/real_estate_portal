@@ -5,6 +5,7 @@ import {
   agents,
   cataloguePublishers,
   listings,
+  properties,
   subscriptions,
   users,
 } from '../../drizzle/schema';
@@ -124,6 +125,9 @@ export interface PublicPropertyEligibilityDependencies {
   loadSupplyEvidence?: (
     approvals: readonly ApprovedPublicPropertyResolution[],
   ) => Promise<Map<number, PublicPropertySupplyEvidence>>;
+  loadPropertyProjectionLinksBySourceListingIds?: (
+    sourceListingIds: readonly number[],
+  ) => Promise<Array<{ id: number; sourceListingId: number | null }>>;
 }
 
 function positiveId(value: unknown): number | null {
@@ -665,6 +669,19 @@ async function loadDefaultSupplyEvidence(
   return evidenceByPropertyId;
 }
 
+async function loadDefaultPropertyProjectionLinksBySourceListingIds(
+  sourceListingIds: readonly number[],
+): Promise<Array<{ id: number; sourceListingId: number | null }>> {
+  const database = await getDb();
+  if (!database) throw new Error('Database not available');
+  return loadRowsInBoundedBatches(sourceListingIds, batchIds =>
+    database
+      .select({ id: properties.id, sourceListingId: properties.sourceListingId })
+      .from(properties)
+      .where(inArray(properties.sourceListingId, [...batchIds])),
+  );
+}
+
 export async function resolvePublicPropertyEligibilities(
   propertyIds: readonly number[],
   dependencies: PublicPropertyEligibilityDependencies = {},
@@ -726,4 +743,48 @@ export async function resolvePublicPropertyEligibilityIds(
 ): Promise<number[]> {
   const resolutions = await resolvePublicPropertyEligibilities(propertyIds, dependencies);
   return propertyIds.filter(propertyId => resolutions.has(Number(propertyId)));
+}
+
+/**
+ * Resolves activity subjects back to the one public projection for each
+ * authored listing. Ambiguous projection links fail closed; choosing one by
+ * insertion order would make a consumer's history nondeterministic.
+ */
+export async function resolvePublicPropertyEligibilitiesBySourceListingIds(
+  sourceListingIds: readonly number[],
+  dependencies: PublicPropertyEligibilityDependencies = {},
+): Promise<Map<number, PublicPropertyEligibilityResolution>> {
+  const uniqueListingIds = distinctPositiveIds(sourceListingIds);
+  if (uniqueListingIds.length === 0) return new Map();
+
+  const rows = await (
+    dependencies.loadPropertyProjectionLinksBySourceListingIds ||
+    loadDefaultPropertyProjectionLinksBySourceListingIds
+  )(uniqueListingIds);
+  const requestedListingIds = new Set(uniqueListingIds);
+  const propertyIdsByListing = new Map<number, number[]>();
+  for (const row of rows) {
+    const listingId = positiveId(row.sourceListingId);
+    const propertyId = positiveId(row.id);
+    if (listingId === null || propertyId === null || !requestedListingIds.has(listingId)) {
+      continue;
+    }
+    const propertyIds = propertyIdsByListing.get(listingId) || [];
+    if (!propertyIds.includes(propertyId)) propertyIds.push(propertyId);
+    propertyIdsByListing.set(listingId, propertyIds);
+  }
+
+  const unambiguousPropertyIds = [...propertyIdsByListing.values()]
+    .filter(propertyIds => propertyIds.length === 1)
+    .map(propertyIds => propertyIds[0]);
+  const resolutions = await resolvePublicPropertyEligibilities(unambiguousPropertyIds, dependencies);
+  const result = new Map<number, PublicPropertyEligibilityResolution>();
+  for (const [listingId, propertyIds] of propertyIdsByListing) {
+    if (propertyIds.length !== 1) continue;
+    const resolution = resolutions.get(propertyIds[0]);
+    if (resolution && positiveId(resolution.sourceListingId) === listingId) {
+      result.set(listingId, resolution);
+    }
+  }
+  return result;
 }

@@ -231,7 +231,7 @@ describe('protected release commercial quote-terms zero-statement migration reco
     expect(result.plan).toMatchObject({
       status: 'pending',
       acceptedSuccessfulHead: '0045_commercial_space_positive_area_integrity.sql',
-      canonicalHead: '0065_auth_verification_token_cleanup.sql',
+      canonicalHead: '0074_retire_legacy_prospects.sql',
       rejectedAttempt: {
         attemptId: REJECTED_COMMERCIAL_OFFICE_QUOTE_TERMS.attemptId,
         acceptedOldHead: '0000_canonical_launch_baseline.sql',

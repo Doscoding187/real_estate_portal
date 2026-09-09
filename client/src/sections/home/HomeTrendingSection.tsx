@@ -120,11 +120,11 @@ export function HomeTrendingSection({
   const { data: favorites = [] } = trpc.properties.getFavorites.useQuery(undefined, {
     enabled: isAuthenticated,
   });
-  const toggleFavoriteMutation = trpc.properties.toggleFavorite.useMutation({
+  const setFavoriteMutation = trpc.properties.setFavorite.useMutation({
     onSuccess: result => {
       void utils.properties.getFavorites.invalidate();
       toast.success(
-        result.favorited ? 'Property saved to your homes.' : 'Property removed from saved homes.',
+        result.saved ? 'Property saved to your homes.' : 'Property removed from saved homes.',
       );
     },
     onError: () => toast.error('Unable to update saved homes. Please try again.'),
@@ -250,8 +250,8 @@ export function HomeTrendingSection({
       );
       return;
     }
-    if (toggleFavoriteMutation.isPending) return;
-    toggleFavoriteMutation.mutate({ propertyId });
+    if (setFavoriteMutation.isPending) return;
+    setFavoriteMutation.mutate({ propertyId, saved: !savedPropertyIds.has(propertyId) });
   };
 
   return (
@@ -376,8 +376,8 @@ export function HomeTrendingSection({
                         badgeLabel={item.listingType === 'rent' ? 'To rent' : 'For sale'}
                         isSaved={savedPropertyIds.has(Number(item.id))}
                         favoritePending={
-                          toggleFavoriteMutation.isPending &&
-                          Number(toggleFavoriteMutation.variables?.propertyId) === Number(item.id)
+                          setFavoriteMutation.isPending &&
+                          Number(setFavoriteMutation.variables?.propertyId) === Number(item.id)
                         }
                         onFavoriteClick={() => handleFavorite(Number(item.id))}
                       />

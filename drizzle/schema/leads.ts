@@ -13,7 +13,6 @@ import {
   timestamp,
   decimal,
   date,
-  datetime,
   mysqlView,
   tinyint,
   bigint,
@@ -26,10 +25,7 @@ import { cataloguePublishers } from './developerIdentity';
 import { agencies, agents } from './agencies';
 import { commercialAssets, commercialAvailabilities, commercialSpaces } from './commercial';
 
-/**
- * Platform-owned identity for the private prospect journey. This deliberately
- * sits beside, rather than replaces, the legacy `prospects` CRM-era table.
- */
+/** Platform-owned identity for the private prospect journey. */
 export const prospectIdentities = mysqlTable(
   'prospect_identities',
   {
@@ -191,37 +187,19 @@ export const commercialLeadContexts = mysqlTable(
   ],
 );
 
-export const prospects = mysqlTable('prospects', {
-  id: int().autoincrement().primaryKey(),
-  userId: int()
-    .notNull()
-    .references(() => users.id, { onDelete: 'cascade' }),
-  status: mysqlEnum(['active', 'inactive', 'banned']).default('active').notNull(),
-  preferences: json(),
-  lastActiveAt: timestamp({ mode: 'string' }),
-  createdAt: timestamp({ mode: 'string' }).defaultNow().notNull(),
-  updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
-});
-
-export const prospectFavorites = mysqlTable('prospect_favorites', {
-  id: int().autoincrement().primaryKey(),
-  prospectId: int()
-    .notNull()
-    .references(() => prospects.id, { onDelete: 'cascade' }),
-  listingId: int().references(() => listings.id, { onDelete: 'cascade' }),
-  developmentId: int().references(() => developments.id, { onDelete: 'cascade' }),
-  notes: text(),
-  createdAt: timestamp({ mode: 'string' }).defaultNow().notNull(),
-});
-
 export const recentlyViewed = mysqlTable('recently_viewed', {
   id: int().autoincrement().primaryKey(),
   userId: int()
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),
-  listingId: int().references(() => listings.id, { onDelete: 'cascade' }),
+  listingId: int()
+    .notNull()
+    .references(() => listings.id, { onDelete: 'cascade' }),
   viewedAt: timestamp({ mode: 'string' }).defaultNow().notNull(),
-});
+}, table => [
+  unique('uq_recently_viewed_user_listing').on(table.userId, table.listingId),
+  index('idx_recently_viewed_user_viewed_at').on(table.userId, table.viewedAt),
+]);
 
 export const offers = mysqlTable('offers', {
   id: int().autoincrement().primaryKey(),
@@ -326,32 +304,6 @@ export const prospectActionClaimTokens = mysqlTable(
   ],
 );
 
-export const scheduledViewings = mysqlTable(
-  'scheduled_viewings',
-  {
-    id: int().autoincrement().primaryKey(),
-    propertyId: int('property_id')
-      .notNull()
-      .references(() => properties.id),
-    userId: int('user_id')
-      .notNull()
-      .references(() => users.id),
-    scheduledDate: datetime('scheduled_date', { mode: 'string' }).notNull(),
-    status: mysqlEnum(['pending', 'confirmed', 'cancelled', 'completed', 'declined'])
-      .default('pending')
-      .notNull(),
-    notes: text(),
-    agentNotes: text('agent_notes'),
-    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
-    updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
-  },
-  table => [
-    index('idx_viewings_property').on(table.propertyId),
-    index('idx_viewings_user').on(table.userId),
-    index('idx_viewings_date').on(table.scheduledDate),
-  ],
-);
-
 export const favorites = mysqlTable(
   'favorites',
   {
@@ -365,7 +317,7 @@ export const favorites = mysqlTable(
     createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
   },
   table => [
-    index('idx_favorites_user').on(table.userId),
+    unique('uq_favorites_user_property').on(table.userId, table.propertyId),
     index('idx_favorites_property').on(table.propertyId),
   ],
 );

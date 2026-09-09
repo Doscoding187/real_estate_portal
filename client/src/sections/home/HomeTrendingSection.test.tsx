@@ -12,7 +12,7 @@ const testState = vi.hoisted(() => ({
   isAuthenticated: false,
   favorites: [] as Array<{ propertyId: number }>,
   favoritePending: false,
-  favoriteVariables: undefined as { propertyId?: number } | undefined,
+  favoriteVariables: undefined as { propertyId?: number; saved?: boolean } | undefined,
 }));
 
 vi.mock('@/lib/trpc', () => ({
@@ -22,7 +22,7 @@ vi.mock('@/lib/trpc', () => ({
     }),
     properties: {
       getFavorites: { useQuery: () => ({ data: testState.favorites }) },
-      toggleFavorite: {
+      setFavorite: {
         useMutation: () => ({
           isPending: testState.favoritePending,
           variables: testState.favoriteVariables,
@@ -230,7 +230,7 @@ describe('HomeTrendingSection request states', () => {
     renderSection();
     fireEvent.click(screen.getByRole('button', { name: 'Save property' }));
 
-    expect(testState.mutateFavorite).toHaveBeenCalledWith({ propertyId: 41 });
+    expect(testState.mutateFavorite).toHaveBeenCalledWith({ propertyId: 41, saved: true });
   });
 
   it('takes an unauthenticated user to sign-in without losing their current location', () => {

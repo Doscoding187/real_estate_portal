@@ -3,12 +3,12 @@
   "formatVersion": 2,
   "generatedFrom": "drizzle/schema/index.ts via drizzle-orm 0.44 normalized metadata",
   "generator": "scripts/generateCanonicalModelInventory.ts",
-  "structuralDigest": "ab209b83c69d0667c6a63aa4c53dd46fb3e208e7ee18ca4568acd7f5c8343722",
+  "structuralDigest": "845a2cf0fae772496af2a313e3be11dbec82a1550b1dfaf9c0e43d497e2a653d",
   "excludedRunnerControlTables": [
     "sql_migration_history",
     "sql_migration_attempts"
   ],
-  "tableCount": 216,
+  "tableCount": 213,
   "tables": [
     "activities",
     "affordability_assessments",
@@ -175,9 +175,7 @@
     "property_similarity_index",
     "prospect_action_attributions",
     "prospect_action_claim_tokens",
-    "prospect_favorites",
     "prospect_identities",
-    "prospects",
     "provinces",
     "qualification_pack_exports",
     "recent_searches",
@@ -189,7 +187,6 @@
     "reviews",
     "saved_search_delivery_history",
     "saved_searches",
-    "scheduled_viewings",
     "seller_mandate_comparables",
     "seller_mandate_operations",
     "seller_prospect_activities",

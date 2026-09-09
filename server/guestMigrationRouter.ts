@@ -1,11 +1,12 @@
 import { z } from 'zod';
 import { protectedProcedure, router } from './_core/trpc';
 import { getDb } from './db';
-import { favorites, recentlyViewed, properties, users } from '../drizzle/schema';
+import { favorites, recentlyViewed, users } from '../drizzle/schema';
 import { and, eq, inArray } from 'drizzle-orm';
 import { TRPCError } from '@trpc/server';
 import { requireUser } from './_core/requireUser';
 import { isCommercialMarketingPropertyType } from '../shared/commercial-domain';
+import { resolvePublicPropertyEligibilities } from './services/publicPropertyEligibilityService';
 
 export const guestMigrationRouter = router({
   // Migrate guest activity data to user account
@@ -18,6 +19,46 @@ export const guestMigrationRouter = router({
     )
     .mutation(async ({ input, ctx }) => {
       const userId = requireUser(ctx).id;
+      const viewedIds = [...new Set(input.viewedProperties ?? [])];
+      const favoriteIds = [...new Set(input.favoriteProperties ?? [])];
+      const propertyIds = [...new Set([...viewedIds, ...favoriteIds])];
+
+      // Guest activity is admitted only through the same public projection and
+      // source-listing authority used by authenticated activity. A missing,
+      // stale, ambiguous, or commercial projection is rejected before any
+      // account row is written.
+      const publicResolutions = await resolvePublicPropertyEligibilities(propertyIds);
+      const missing = propertyIds.filter(id => !publicResolutions.has(id));
+      if (missing.length) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Guest activity references inventory that is not publicly available.',
+        });
+      }
+
+      if (
+        [...publicResolutions.values()].some(resolution =>
+          isCommercialMarketingPropertyType(resolution.property.propertyType),
+        )
+      ) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Commercial activity requires the Commercial journey.',
+        });
+      }
+
+      const listingByProperty = new Map<number, number>();
+      for (const [propertyId, resolution] of publicResolutions) {
+        const listingId = Number(resolution.sourceListingId);
+        if (!Number.isSafeInteger(listingId) || listingId <= 0) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Guest activity has no canonical authored listing.',
+          });
+        }
+        listingByProperty.set(propertyId, listingId);
+      }
+
       const db = await getDb();
       if (!db) throw new Error('Database not available');
 
@@ -30,43 +71,9 @@ export const guestMigrationRouter = router({
             .where(eq(users.id, userId))
             .for('update');
           if (!owner) throw new TRPCError({ code: 'UNAUTHORIZED' });
-          const viewedIds = [...new Set(input.viewedProperties ?? [])];
-          const favoriteIds = [...new Set(input.favoriteProperties ?? [])];
-          const propertyIds = [...new Set([...viewedIds, ...favoriteIds])];
-          const propertyRows = propertyIds.length
-            ? await tx
-                .select({
-                  id: properties.id,
-                  sourceListingId: properties.sourceListingId,
-                  propertyType: properties.propertyType,
-                })
-                .from(properties)
-                .where(inArray(properties.id, propertyIds))
-            : [];
-          const byId = new Map(propertyRows.map(row => [row.id, row]));
-          const missing = propertyIds.filter(id => !byId.has(id));
-          if (missing.length)
-            throw new TRPCError({
-              code: 'BAD_REQUEST',
-              message: 'Guest activity references unknown properties.',
-            });
-
-          if (propertyRows.some(row => isCommercialMarketingPropertyType(row.propertyType))) {
-            throw new TRPCError({
-              code: 'BAD_REQUEST',
-              message: 'Commercial activity requires the Commercial journey.',
-            });
-          }
-          if (viewedIds.some(id => byId.get(id)?.sourceListingId == null)) {
-            throw new TRPCError({
-              code: 'BAD_REQUEST',
-              message: 'Viewed property is not backed by a listing.',
-            });
-          }
-
-          // Property IDs are public projection identities. Prospect activity is
-          // listing-owned, so only an explicit sourceListingId may cross this boundary.
-          const listingByProperty = new Map(propertyRows.map(row => [row.id, row.sourceListingId]));
+          // Property IDs are public projection identities. Consumer activity is
+          // listing-owned, so only the resolver's explicit sourceListingId may
+          // cross this boundary.
           const viewRows = [...new Set(viewedIds.map(id => listingByProperty.get(id)!))].map(
             listingId => ({ userId, listingId }),
           );

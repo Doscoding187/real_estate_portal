@@ -236,7 +236,7 @@ describe('protected release zero-statement migration recovery', () => {
     expect(result.plan).toMatchObject({
       status: 'pending',
       acceptedSuccessfulHead: '0000_canonical_launch_baseline.sql',
-      canonicalHead: '0065_auth_verification_token_cleanup.sql',
+      canonicalHead: '0074_retire_legacy_prospects.sql',
       rejectedAttempt: {
         acceptedOldHead: null,
         completedStatementCount: 0,

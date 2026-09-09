@@ -319,6 +319,93 @@ before baseline application and no supported target has pending convergence.
 
 Removal workstream: TiDB release-capability admission and cutover closure.
 
+### Exception ID: DBX-PRELAUNCH-CONSUMER-ACTIVITY-INTEGRITY-2026-09-09-Edward
+
+Status: Approved for the pre-launch consumer-activity integrity correction
+
+Owner: Property Listify senior product engineering
+
+Approved by Edward on: 2026-09-09, through the explicit pre-launch database
+architecture takeover authorization
+
+Business reason: \`recently_viewed.listingId\` was nullable even though a recent
+view has no valid meaning without its authored-listing subject. The existing
+rows could also contain duplicate user/listing facts. The correction removes
+those ambiguous rows and enforces the one durable subject required by the
+consumer activity model before launch.
+
+Canonical authority: \`drizzle/schema/leads.ts\` defines one non-null authored
+listing subject for each recent-view row. \`server/migrations/0068\` through
+\`0071\` are the only active migration path to that model. The public property is
+resolved from its canonical \`sourceListingId\`; no display-text or alternate
+subject fallback is permitted.
+
+Exact files: \`server/migrations/0068_recently_viewed_activity_cleanup.sql\`,
+\`server/migrations/0069_recently_viewed_listing_required.sql\`,
+\`server/migrations/0070_recently_viewed_user_listing_unique.sql\`,
+\`server/migrations/0071_recently_viewed_user_recency_index.sql\`,
+\`server/migrations/manifest.json\`, \`drizzle/schema/leads.ts\`, and the
+authenticated consumer-activity service and contract tests.
+
+Tables and columns: \`recently_viewed.listingId\`, unique index
+\`uq_recently_viewed_user_listing\`, and recency index
+\`idx_recently_viewed_user_viewed_at\`.
+
+Permitted read direction: Consumer recent-view reads resolve only
+\`recently_viewed.listingId\` to a public property whose \`sourceListingId\` is the
+same canonical listing. Rows with no listing subject are not readable facts.
+
+Permitted write direction: The canonical migration runner may delete
+subjectless and duplicate pre-launch activity rows, make \`listingId\` required,
+and add the exact named indexes. Runtime writes may only set the current view
+time for one authenticated user/listing fact. No manual SQL, legacy session
+fallback, or alternate activity subject is permitted.
+
+Failure and observability behavior: Planning and apply fail closed if the
+manifest lineage, migration target, or ownership is inconsistent. Cleanup
+precedes the non-null and unique constraints; a DDL failure leaves the durable
+migration attempt record for investigation. The authenticated service
+validates the public-property to authored-listing mapping before writing.
+
+Automated evidence: Migration manifest and migration-tree validation,
+consumer-activity service tests, static public-inventory contract tests,
+schema-congruency, and a fresh canonical consumer-contract run.
+
+Expiry or objective removal condition: This record has no runtime fallback.
+Retire the exceptional migration classification after the fresh canonical
+establishment and consumer-contract evidence reaches \`0071\`; retain the
+historical record with the immutable lineage.
+
+Removal workstream: Pre-launch consumer activity integrity closure.
+
++### Exception ID: DBX-PRELAUNCH-LEGACY-CONSUMER-PROFILE-RETIREMENT-2026-09-09-Edward
+
+Status: Approved for the pre-launch retirement of disconnected consumer-profile tables
+
+Owner: Property Listify senior product engineering
+
+Approved by Edward on: 2026-09-09, through the explicit pre-launch database architecture takeover authorization
+
+Business reason: The CRM-era `prospects`, `prospect_favorites`, and `scheduled_viewings` tables have no reachable runtime consumer. They duplicate the canonical authenticated consumer facts, prospect identities, and showing workflow while permitting ambiguous ownership and subject relationships. Pre-launch data preservation is not a design requirement.
+
+Canonical authority: `drizzle/schema/` contains the active `favorites`, `recently_viewed`, `prospect_identities`, and `showings` models. The active migration lineage is `0072` through `0074`; no runtime fallback or parallel table authority is permitted.
+
+Exact files: `drizzle/schema/leads.ts`, `server/db.ts`, `drizzle/relations.ts` (removed), `server/migrations/0072_retire_legacy_prospect_favorites.sql`, `server/migrations/0073_retire_legacy_scheduled_viewings.sql`, `server/migrations/0074_retire_legacy_prospects.sql`, `server/migrations/manifest.json`, and the migration-tree and contract evidence.
+
+Tables and columns: `prospect_favorites` (all columns), `scheduled_viewings` (all columns), and `prospects` (all columns). The task-owned disposable target was measured at zero rows in each table before contraction.
+
+Permitted read direction: None after migration 0074. Consumer saved inventory reads `favorites`, recent activity reads `recently_viewed`, private prospect identity reads `prospect_identities`, and scheduling reads the canonical `showings` workflow.
+
+Permitted write direction: Only the canonical migration runner may drop these three tables in child-before-parent order. Runtime code must not recreate, read, write, or fall back to them. The exceptional operation is authorized for the task-owned disposable pre-launch target; no hosted or protected target is included.
+
+Failure and observability behavior: Manifest validation proves the exact parent chain, checksums, and approval reference. Apply uses the canonical lock, owner connection, durable attempt ledger, and exact expected head. A failed or ambiguous DDL attempt remains recorded and blocks continuation; it is not retried with alternate SQL.
+
+Automated evidence: Static reachability audit, TypeScript and lint checks, migration-manifest tests, schema inventory generation, schema congruency, disposable-target readiness, and a fresh canonical consumer-contract run at migration 0074.
+
+Expiry or objective removal condition: The destructive classification is complete once the fresh canonical establishment and consumer-contract evidence reaches `0074_retire_legacy_prospects.sql`. Retain this record as immutable historical evidence; no runtime compatibility exception is created.
+
+Removal workstream: Pre-launch legacy consumer-profile retirement.
+
 ## Required exception record
 
 Every approved exception must contain:

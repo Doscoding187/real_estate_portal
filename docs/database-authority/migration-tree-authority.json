@@ -1,5 +1,5 @@
 {
-  "version": 7,
+  "version": 9,
   "canonicalAuthority": {
     "productionCommand": "pnpm db:release:apply",
     "testCommand": "pnpm db:migrate:test",
@@ -1103,6 +1103,51 @@
       "path": "server/migrations/0065_auth_verification_token_cleanup.sql",
       "classification": "canonical active",
       "purpose": "Retires unbounded legacy verification-token state so verification is issued only through the bounded canonical flow."
+    },
+    {
+      "path": "server/migrations/0066_favorites_user_property_deduplicate.sql",
+      "classification": "canonical active",
+      "purpose": "Collapses duplicate saved-property facts before the canonical user/property cardinality is enforced."
+    },
+    {
+      "path": "server/migrations/0067_favorites_user_property_unique.sql",
+      "classification": "canonical active",
+      "purpose": "Makes a saved property an idempotent user/property fact."
+    },
+    {
+      "path": "server/migrations/0068_recently_viewed_activity_cleanup.sql",
+      "classification": "canonical active",
+      "purpose": "Removes ambiguous and duplicate consumer-activity rows before a durable authored-listing subject is required."
+    },
+    {
+      "path": "server/migrations/0069_recently_viewed_listing_required.sql",
+      "classification": "canonical active",
+      "purpose": "Requires every authenticated recent-view activity row to identify one authored listing."
+    },
+    {
+      "path": "server/migrations/0070_recently_viewed_user_listing_unique.sql",
+      "classification": "canonical active",
+      "purpose": "Makes recent activity one updatable user/listing fact instead of an unbounded event duplicate."
+    },
+    {
+      "path": "server/migrations/0071_recently_viewed_user_recency_index.sql",
+      "classification": "canonical active",
+      "purpose": "Indexes consumer recency reads by user and view timestamp."
+    },
+    {
+      "path": "server/migrations/0072_retire_legacy_prospect_favorites.sql",
+      "classification": "canonical active",
+      "purpose": "Retires the disconnected legacy prospect favorite table after its runtime write and read paths were removed."
+    },
+    {
+      "path": "server/migrations/0073_retire_legacy_scheduled_viewings.sql",
+      "classification": "canonical active",
+      "purpose": "Retires the disconnected legacy scheduled-viewing table; the canonical showing workflow remains in showings."
+    },
+    {
+      "path": "server/migrations/0074_retire_legacy_prospects.sql",
+      "classification": "canonical active",
+      "purpose": "Retires the unused CRM-era prospect profile table after consumer activity moved to authenticated user facts and prospect identities."
     }
   ],
   "prohibitedPaths": [

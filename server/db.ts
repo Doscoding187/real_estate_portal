@@ -39,9 +39,6 @@ import {
   listingViewings,
   sellerProspectActivities,
   sellerProspects,
-  prospects,
-  prospectFavorites,
-  scheduledViewings,
   recentlyViewed,
   developerOrganisationMemberships,
   developerOrganisations,
@@ -345,7 +342,6 @@ export type InsertUser = InferInsertModel<typeof users>;
 export type Property = InferSelectModel<typeof properties>;
 export type InsertProperty = InferInsertModel<typeof properties>;
 export type InsertPropertyImage = InferInsertModel<typeof propertyImages>;
-export type Prospect = InferSelectModel<typeof prospects>;
 
 // Explicit canonical user columns required by the login boundary.
 export const AUTH_LOGIN_USER_COLUMNS = {
@@ -379,14 +375,6 @@ export const AUTH_SESSION_USER_COLUMNS = {
   lastSignedIn: users.lastSignedIn,
   sessionVersion: users.sessionVersion,
 } as const;
-
-function parseSessionUserId(sessionId: string): number {
-  const parsed = Number(sessionId);
-  if (!Number.isFinite(parsed) || parsed <= 0) {
-    throw new Error('Invalid sessionId format. Expected numeric user id.');
-  }
-  return parsed;
-}
 
 function toMysqlDateTime(value: Date | string = new Date()): string {
   const date = value instanceof Date ? value : new Date(value);
@@ -1093,57 +1081,59 @@ export async function incrementPropertyViews(id: number) {
     .where(eq(properties.id, id));
 }
 
-// Favorites queries
-export async function addFavorite(userId: number, propertyId: number) {
-  const db = await getDb();
-  if (!db) throw new Error('Database not available');
+// Consumer saved-inventory facts
+//
+// Public eligibility is established by the properties router before this
+// persistence boundary is called. This function owns only the idempotent
+// user/property fact and serializes competing commands for one account.
+export async function setUserFavoriteFact(
+  userId: number,
+  propertyId: number,
+  saved: boolean,
+): Promise<{ propertyId: number; saved: boolean }> {
+  const database = await getDb();
+  if (!database) throw new Error('Database not available');
 
-  const [property] = await db
-    .select({ propertyType: properties.propertyType })
-    .from(properties)
-    .where(eq(properties.id, propertyId))
-    .limit(1);
-  if (!property) throw new Error('Property not found');
-  if (isCommercialMarketingPropertyType(property.propertyType)) {
-    throw new Error(COMMERCIAL_PUBLIC_JOURNEY_HANDOFF_MESSAGE);
-  }
+  return database.transaction(async (tx: any) => {
+    const [owner] = await tx
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.id, userId))
+      .for('update');
+    if (!owner) throw new Error('User not found');
 
-  await db.insert(favorites).values({ userId, propertyId });
+    if (!saved) {
+      await tx
+        .delete(favorites)
+        .where(and(eq(favorites.userId, userId), eq(favorites.propertyId, propertyId)));
+      return { propertyId, saved: false };
+    }
+
+    const [existing] = await tx
+      .select({ id: favorites.id })
+      .from(favorites)
+      .where(and(eq(favorites.userId, userId), eq(favorites.propertyId, propertyId)))
+      .limit(1);
+    if (!existing) {
+      await tx.insert(favorites).values({ userId, propertyId });
+    }
+
+    return { propertyId, saved: true };
+  });
 }
 
-export async function removeFavorite(userId: number, propertyId: number) {
-  const db = await getDb();
-  if (!db) throw new Error('Database not available');
-  await db
-    .delete(favorites)
-    .where(and(eq(favorites.userId, userId), eq(favorites.propertyId, propertyId)));
-}
-
-export async function getUserFavorites(userId: number) {
+export async function getUserFavoriteFacts(userId: number) {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
   return await db
     .select({
       id: favorites.id,
       propertyId: favorites.propertyId,
-      property: properties,
       createdAt: favorites.createdAt,
     })
     .from(favorites)
-    .innerJoin(properties, eq(favorites.propertyId, properties.id))
-    .where(and(eq(favorites.userId, userId), ne(properties.propertyType, 'commercial')))
+    .where(eq(favorites.userId, userId))
     .orderBy(desc(favorites.createdAt));
-}
-
-export async function isFavorite(userId: number, propertyId: number) {
-  const db = await getDb();
-  if (!db) throw new Error('Database not available');
-  const result = await db
-    .select()
-    .from(favorites)
-    .where(and(eq(favorites.userId, userId), eq(favorites.propertyId, propertyId)))
-    .limit(1);
-  return result.length > 0;
 }
 
 // ==================== AGENTS ====================
@@ -1416,337 +1406,63 @@ export async function getAgencyDashboardStats(agencyId: number) {
   };
 }
 
-// ==================== PROSPECT MANAGEMENT ====================
+// Consumer activity facts use the canonical authored-listing identity.
+// The properties router resolves public eligibility before calling this
+// persistence boundary, so it cannot turn a projection ID into a listing ID
+// by coincidence.
+export async function recordUserListingViewFact(
+  userId: number,
+  listingId: number,
+): Promise<{ listingId: number; viewedAt: string }> {
+  const database = await getDb();
+  if (!database) throw new Error('Database not available');
 
-export async function createProspect(prospectData: any) {
-  const db = await getDb();
-  if (!db) throw new Error('Database not available');
+  return database.transaction(async (tx: any) => {
+    const [owner] = await tx
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.id, userId))
+      .for('update');
+    if (!owner) throw new Error('User not found');
 
-  const result = await db.insert(prospects).values(prospectData);
-  return result[0].insertId;
+    const viewedAt = toMysqlDateTime();
+    const [existing] = await tx
+      .select({ id: recentlyViewed.id })
+      .from(recentlyViewed)
+      .where(and(eq(recentlyViewed.userId, userId), eq(recentlyViewed.listingId, listingId)))
+      .limit(1);
+
+    if (existing) {
+      await tx
+        .update(recentlyViewed)
+        .set({ viewedAt })
+        .where(eq(recentlyViewed.id, existing.id));
+    } else {
+      await tx.insert(recentlyViewed).values({ userId, listingId, viewedAt });
+    }
+
+    return { listingId, viewedAt };
+  });
 }
 
-export async function updateProspect(sessionId: string, updates: any) {
-  const db = await getDb();
-  if (!db) throw new Error('Database not available');
-  const userId = parseSessionUserId(sessionId);
-
-  await db
-    .update(prospects)
-    .set({
-      preferences: updates?.preferences ?? null,
-      lastActiveAt: new Date() as any,
-      updatedAt: new Date(),
-    })
-    .where(eq(prospects.userId, userId));
-
-  return { success: true };
-}
-
-export async function getProspect(sessionId: string): Promise<Prospect | undefined> {
-  const db = await getDb();
-  if (!db) return undefined;
-  const userId = parseSessionUserId(sessionId);
-
-  const result = await db.select().from(prospects).where(eq(prospects.userId, userId)).limit(1);
-  return result[0];
-}
-
-export async function addProspectFavorite(sessionId: string, propertyId: number) {
-  const db = await getDb();
-  if (!db) throw new Error('Database not available');
-
-  // Get prospect ID from sessionId
-  const prospect = await getProspect(sessionId);
-  if (!prospect) throw new Error('Prospect not found');
-
-  const [property] = await db
-    .select({ sourceListingId: properties.sourceListingId })
-    .from(properties)
-    .where(eq(properties.id, propertyId))
-    .limit(1);
-  if (!property?.sourceListingId) throw new Error('Property is not backed by a listing');
-
-  await db
-    .insert(prospectFavorites)
-    .values({ prospectId: prospect.id, listingId: property.sourceListingId });
-  return { success: true };
-}
-
-export async function removeProspectFavorite(sessionId: string, propertyId: number) {
-  const db = await getDb();
-  if (!db) throw new Error('Database not available');
-
-  // Get prospect ID from sessionId
-  const prospect = await getProspect(sessionId);
-  if (!prospect) throw new Error('Prospect not found');
-
-  const [property] = await db
-    .select({ sourceListingId: properties.sourceListingId })
-    .from(properties)
-    .where(eq(properties.id, propertyId))
-    .limit(1);
-  if (!property?.sourceListingId) throw new Error('Property is not backed by a listing');
-  await db
-    .delete(prospectFavorites)
-    .where(
-      and(
-        eq(prospectFavorites.prospectId, prospect.id),
-        eq(prospectFavorites.listingId, property.sourceListingId),
-      ),
-    );
-
-  return { success: true };
-}
-
-export async function getProspectFavorites(sessionId: string) {
-  const db = await getDb();
-  if (!db) throw new Error('Database not available');
-
-  // First get the prospect by sessionId
-  const prospect = await getProspect(sessionId);
-  if (!prospect) {
-    console.log('[getProspectFavorites] No prospect found for sessionId:', sessionId);
-    return [];
+export async function getUserRecentViewFacts(userId: number, limit = 50) {
+  const database = await getDb();
+  if (!database) throw new Error('Database not available');
+  if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100) {
+    throw new Error('Recent-view limit must be an integer between 1 and 100');
   }
 
-  const results = await db
-    .select({
-      id: prospectFavorites.id,
-      listingId: prospectFavorites.listingId,
-      listing: listings,
-      createdAt: prospectFavorites.createdAt,
-    })
-    .from(prospectFavorites)
-    .innerJoin(listings, eq(prospectFavorites.listingId, listings.id))
-    .where(eq(prospectFavorites.prospectId, prospect.id))
-    .orderBy(desc(prospectFavorites.createdAt));
-
-  // Ensure we always return an array, even if results is null/undefined
-  return Array.isArray(results) ? results : [];
-}
-export async function scheduleViewing(viewingData: any) {
-  const db = await getDb();
-  if (!db) throw new Error('Database not available');
-
-  const result = await db.insert(scheduledViewings).values(viewingData);
-  return result[0].insertId;
-}
-
-export async function getScheduledViewings(sessionId: string) {
-  const db = await getDb();
-  if (!db) throw new Error('Database not available');
-  const userId = parseSessionUserId(sessionId);
-
-  const results = await db
-    .select({
-      id: scheduledViewings.id,
-      propertyId: scheduledViewings.propertyId,
-      property: properties,
-      scheduledAt: scheduledViewings.scheduledDate,
-      status: scheduledViewings.status,
-      notes: scheduledViewings.notes,
-      createdAt: scheduledViewings.createdAt,
-    })
-    .from(scheduledViewings)
-    .innerJoin(properties, eq(scheduledViewings.propertyId, properties.id))
-    .where(eq(scheduledViewings.userId, userId))
-    .orderBy(scheduledViewings.scheduledDate);
-
-  return Array.isArray(results) ? results : [];
-}
-export async function updateViewingStatus(viewingId: number, status: string) {
-  const db = await getDb();
-  if (!db) throw new Error('Database not available');
-
-  await db
-    .update(scheduledViewings)
-    .set({
-      status: status as any,
-      updatedAt: new Date(),
-    })
-    .where(eq(scheduledViewings.id, viewingId));
-
-  return { success: true };
-}
-
-export async function trackPropertyView(sessionId: string, propertyId: number) {
-  const db = await getDb();
-  if (!db) throw new Error('Database not available');
-  const userId = parseSessionUserId(sessionId);
-
-  // Public callers provide a projection property ID. Resolve its canonical
-  // authored listing explicitly; never equate IDs from separate tables.
-  const [property] = await db
-    .select({ sourceListingId: properties.sourceListingId })
-    .from(properties)
-    .where(eq(properties.id, propertyId))
-    .limit(1);
-  if (!property?.sourceListingId) throw new Error('Property is not backed by a listing');
-  const listingId = property.sourceListingId;
-
-  const existing = await db
-    .select()
-    .from(recentlyViewed)
-    .where(and(eq(recentlyViewed.userId, userId), eq(recentlyViewed.listingId, listingId)))
-    .limit(1);
-
-  if (existing.length > 0) {
-    // Update the viewedAt timestamp
-    await db
-      .update(recentlyViewed)
-      .set({
-        viewedAt: new Date(),
-      })
-      .where(and(eq(recentlyViewed.userId, userId), eq(recentlyViewed.listingId, listingId)));
-  } else {
-    // Insert new record
-    await db.insert(recentlyViewed).values({
-      userId,
-      listingId,
-      viewedAt: new Date(),
-    });
-  }
-
-  return { success: true };
-}
-
-export async function getRecentlyViewed(sessionId: string) {
-  const db = await getDb();
-  if (!db) throw new Error('Database not available');
-  const userId = parseSessionUserId(sessionId);
-
-  const results = await db
+  return database
     .select({
       id: recentlyViewed.id,
       listingId: recentlyViewed.listingId,
-      listing: listings,
       viewedAt: recentlyViewed.viewedAt,
     })
     .from(recentlyViewed)
-    .innerJoin(listings, eq(recentlyViewed.listingId, listings.id))
     .where(eq(recentlyViewed.userId, userId))
-    .orderBy(desc(recentlyViewed.viewedAt))
-    .limit(10);
-
-  // Ensure we always return an array, even if results is null/undefined
-  return Array.isArray(results) ? results : [];
+    .orderBy(desc(recentlyViewed.viewedAt), desc(recentlyViewed.id))
+    .limit(limit);
 }
-export async function updateProspectProgress(
-  sessionId: string,
-  progress: number,
-  badges?: string[],
-) {
-  const db = await getDb();
-  if (!db) throw new Error('Database not available');
-  const userId = parseSessionUserId(sessionId);
-
-  const [current] = await db
-    .select({ preferences: prospects.preferences })
-    .from(prospects)
-    .where(eq(prospects.userId, userId))
-    .limit(1);
-
-  const currentPreferences =
-    current?.preferences && typeof current.preferences === 'object'
-      ? (current.preferences as Record<string, unknown>)
-      : {};
-  const nextPreferences: Record<string, unknown> = {
-    ...currentPreferences,
-    profileProgress: progress,
-  };
-
-  if (badges) {
-    nextPreferences.badges = badges;
-  }
-
-  const updateData = {
-    preferences: nextPreferences as any,
-    lastActiveAt: new Date() as any,
-    updatedAt: new Date(),
-  };
-
-  await db.update(prospects).set(updateData).where(eq(prospects.userId, userId));
-  return { success: true };
-}
-
-export async function earnBadge(sessionId: string, badge: string) {
-  const db = await getDb();
-  if (!db) throw new Error('Database not available');
-
-  const prospect = await getProspect(sessionId);
-  if (!prospect) throw new Error('Prospect not found');
-  const prefs =
-    prospect.preferences && typeof prospect.preferences === 'object'
-      ? (prospect.preferences as Record<string, unknown>)
-      : {};
-  const currentBadges = Array.isArray(prefs.badges) ? [...(prefs.badges as string[])] : [];
-  if (!currentBadges.includes(badge)) {
-    currentBadges.push(badge);
-    const nextPreferences = {
-      ...prefs,
-      badges: currentBadges,
-    };
-    const userId = parseSessionUserId(sessionId);
-    await db
-      .update(prospects)
-      .set({
-        preferences: nextPreferences as any,
-        lastActiveAt: new Date() as any,
-        updatedAt: new Date(),
-      })
-      .where(eq(prospects.userId, userId));
-  }
-
-  return { success: true, badges: currentBadges };
-}
-
-export async function getRecommendedProperties(prospect: Prospect, limit: number = 10) {
-  const db = await getDb();
-  if (!db) return [];
-
-  const prefs =
-    prospect.preferences && typeof prospect.preferences === 'object'
-      ? (prospect.preferences as Record<string, unknown>)
-      : {};
-  const affordabilityMax = Number(prefs.affordabilityMax || 0);
-  const affordabilityMin = Number(prefs.affordabilityMin || 0);
-  const preferredPropertyType =
-    typeof prefs.preferredPropertyType === 'string' ? prefs.preferredPropertyType : null;
-  const preferredLocation =
-    typeof prefs.preferredLocation === 'string' ? prefs.preferredLocation : null;
-
-  if (!affordabilityMax) return [];
-
-  // Build query conditions based on prospect preferences and affordability
-  const conditions: SQL[] = [
-    eq(properties.status, 'available' as any),
-    ne(properties.propertyType, 'commercial'),
-    lte(properties.price, affordabilityMax),
-  ];
-
-  if (affordabilityMin) {
-    conditions.push(gte(properties.price, affordabilityMin));
-  }
-
-  if (preferredPropertyType) {
-    conditions.push(eq(properties.propertyType, preferredPropertyType as any));
-  }
-
-  if (preferredLocation) {
-    conditions.push(like(properties.city, `%${preferredLocation}%`));
-  }
-
-  let query = db
-    .select()
-    .from(properties)
-    .where(and(...conditions));
-
-  query = query.orderBy(desc(properties.featured), desc(properties.createdAt)).limit(limit);
-
-  return await query;
-}
-
 export async function getAgencyPerformanceData(agencyId: number, months: number = 6) {
   const db = await getDb();
   if (!db) return [];
