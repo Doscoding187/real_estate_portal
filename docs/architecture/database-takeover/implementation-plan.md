@@ -2,6 +2,14 @@
 
 Status: planning handoff, 2026-09-09. Owner of architectural decisions and final review: the senior reviewing agent. Implementer: the junior agent assigned an individual packet by Edward.
 
+Current execution state: P0 is complete and P1 is accepted after senior
+review. The accepted P1 correction is `c378e12ce21362cb25047f2ba6c660bf2507cbe4`;
+the disposable target is at migration head
+`0075_recently_viewed_microsecond_recency.sql` with model digest
+`f6416d31d84609203c96e00f7b2455acd78b3a4d0b2c0d8aaa232a2c44b30328`.
+P2 is the next implementation packet. The starting-point facts below are
+intentionally historical and are retained to make the handoff auditable.
+
 ## Mandate and working arrangement
 
 Read the original takeover brief:
@@ -213,4 +221,3 @@ Review all packet findings and deferred items. A missing runtime trace, skipped 
 ## Copyable first assignment
 
 Read this plan and the original takeover brief. Execute P0 in an isolated task-owned worktree based on the agreed takeover lineage. Produce coverage-register.md, architecture-decisions.md, and an accurate assessment.md. Inspect overlapping delivery work before proposing P2 changes. Do not modify application code or database schema in P0. Return the commit SHA and review packet for senior review. After P0 acceptance, implement P1, then P2, using the acceptance criteria above.
-

@@ -1,6 +1,6 @@
 # Database takeover architecture decisions
 
-Status: **P1 implementation complete; senior review pending.**
+Status: **P1 implementation accepted after senior review; P2 implementation open.**
 This record belongs to `feat/database-architecture-takeover` at
 the post-P0 implementation commit. It is the decision index for the coverage
 register and the implementation packets in `implementation-plan.md`.
@@ -9,17 +9,18 @@ register and the implementation packets in `implementation-plan.md`.
 
 - The canonical schema authority is `drizzle/schema/index.ts` and its
   exported module files. The generated inventory contains 213 physical tables
-  with structural digest
-  `845a2cf0fae772496af2a313e3be11dbec82a1550b1dfaf9c0e43d497e2a653d`.
+  with current structural digest
+  `f6416d31d84609203c96e00f7b2455acd78b3a4d0b2c0d8aaa232a2c44b30328`.
 - No Drizzle `mysqlView` export or inventory view is present at P0. A future
   view must be registered in the same inventory and receive an owning packet.
 - The exact task-owned target was resolved with
   `pnpm db:authority:status`: local disposable MySQL, expected migration head
-  `0074_retire_legacy_prospects.sql`, no incomplete attempts, and congruent
-  schema. No remote or protected database was accessed.
-- The fresh consumer contract had already established the disposable schema
-  through 0074 before this documentation packet. P0 itself performs no schema
-  or data mutation.
+  `0075_recently_viewed_microsecond_recency.sql`, no incomplete attempts, and
+  congruent schema. No remote or protected database was accessed.
+- A fresh consumer contract established the disposable schema from empty
+  through 0075 (plan `0b8448faf4e0955992a0f305`, target fingerprint
+  `806c61e7e0d23daf1c70942dc80e91884d2778cc31d6c95ebef8a2023ea207ca`).
+  P0's historical evidence remains below where explicitly labeled.
 - The delivery-authority release-convergence branch
   (`aacb6220`, `feat/delivery-authority-release-convergence`) is based on a
   different integration point and contains a broad older consumer/schema

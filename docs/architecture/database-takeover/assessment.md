@@ -1,6 +1,6 @@
 # Database architecture takeover assessment
 
-Status: **P1 implemented; senior review pending**. This is the current
+Status: **P1 accepted after senior review; P2 implementation open**. This is the current
 assessment for the task-owned worktree `property-listify-database-architecture`,
 branch `feat/database-architecture-takeover`.
 Completion requires the packet sequence in
@@ -26,21 +26,22 @@ database where concurrency or integrity matters.
 ## Current baseline
 
 - `drizzle/schema/index.ts` exports 24 schema modules and 213 physical
-  tables. The canonical inventory structural digest is
-  `845a2cf0fae772496af2a313e3be11dbec82a1550b1dfaf9c0e43d497e2a653d`.
+  tables. The current canonical inventory structural digest is
+  `f6416d31d84609203c96e00f7b2455acd78b3a4d0b2c0d8aaa232a2c44b30328`.
 - No Drizzle `mysqlView` export or inventory view is present.
 - The database-authority status resolves the exact task-owned disposable local
   MySQL target at port 3307. Its expected migration head is
-  `0074_retire_legacy_prospects.sql`; there are no incomplete attempts and
+  `0075_recently_viewed_microsecond_recency.sql`; there are no incomplete attempts and
   the schema is congruent. No remote/protected target was accessed.
-- A fresh disposable consumer contract previously passed from an empty target
-  through 0074, including canonical foundation/geography/scenario,
-  schema-congruency, distribution, and search-to-lead readiness checks. The
-  acknowledgement and target fingerprint are evidence for that run only and
-  must be re-resolved after later schema changes.
-- Static database-authority validation previously passed 271 tests in 33
-  files, including utility-authority classification. Mocked consumer tests are
-  not physical concurrency proof.
+- A fresh disposable consumer contract passed from an empty target through
+  0075, including canonical foundation/geography/scenario,
+  schema-congruency, distribution, and Search-to-Lead readiness checks. The
+  run used target fingerprint
+  `806c61e7e0d23daf1c70942dc80e91884d2778cc31d6c95ebef8a2023ea207ca` and
+  migration plan `0b8448faf4e0955992a0f305`.
+- Static database-authority validation passes 272 tests in 33 files, including
+  utility-authority classification. Mocked consumer tests remain distinct
+  from physical concurrency proof.
 
 ## Findings that are implemented at the baseline
 
@@ -107,15 +108,15 @@ explicit evidence gaps are in
 index and relationship diagram are in
 `docs/architecture/database-takeover/architecture-decisions.md`.
 
-P0 is complete and committed. P1 is the first behavioral packet and awaits
-review of its exact implementation commit. P2 through P8 remain mandatory
+P0 is complete and committed. P1 is the first behavioral packet and is
+accepted after review of its implementation and correction commits. P2 through P8 remain mandatory
 domain coverage; an “open” row means that the owning packet must trace it, not
 that the model is automatically wrong.
 
 | Packet                         | Current status                            | Next evidence                                                                       |
 | ------------------------------ | ----------------------------------------- | ----------------------------------------------------------------------------------- |
 | P0 baseline                    | Complete and committed                    | Packet record and current inventory are committed at `3d842600`                     |
-| P1 consumer integrity          | Implemented; senior review pending        | Reproduce independent-pool and browser evidence from `reviews/P1-implementation.md` |
+| P1 consumer integrity          | Accepted after senior review               | Evidence and disposition in `reviews/P1-implementation.md` and `reviews/P1-senior-review.md` |
 | P2 lead delivery               | Decision established, implementation open | Relational state machine, worker/recovery, provider uncertainty                     |
 | P3 listings/projection         | Boundary identified, audit open           | Mapping/cardinality, publish/withdraw/rebuild                                       |
 | P4 account/tenant              | Open                                      | Membership, revocation, ownership, token lifecycle                                  |
@@ -143,7 +144,7 @@ that the model is automatically wrong.
   register requires reachability classification before a writer is treated as
   active or removed.
 
-## Verification record for this baseline
+## Historical P0 verification record
 
 The following evidence was recorded before this P0 documentation change:
 

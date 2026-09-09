@@ -1,18 +1,21 @@
 # P1 implementation packet — consumer activity integrity
 
-Status: **implemented; senior review pending**
+Status: **implemented; senior review correction complete**
 
 ## Commit and scope
 
 - Base commit: `3d842600953c688c526d74add48eae384cfce129` (P0 baseline)
 - Implementation commit: `05868f470` (`test: prove consumer activity persistence under concurrency`)
+- Senior-review correction commit: `c378e12ce21362cb25047f2ba6c660bf2507cbe4`
+  (`fix: make consumer recency ordering authoritative`)
 - Branch: `feat/database-architecture-takeover`
 - Worktree: `/home/edwardspc/Desktop/Dev/worktrees/property-listify-database-architecture`
 - Scope: physical consumer favorites/recent-view concurrency, guest transfer
   atomicity and replay, public withdrawal behavior, account isolation, UTC
   connection sessions, and real browser save/login/reload behavior.
-- Schema/migrations: no schema or migration files changed in P1. Existing
-  uniqueness and canonical-listing migrations remain the authority.
+- Schema/migrations: P1 adds the admitted `0075` precision correction to the
+  existing canonical recent-view model. The migration and runtime change are
+  reviewed together; no compatibility table or alternate writer was added.
 
 ## Selected target and data handling
 
@@ -22,8 +25,9 @@ by Database Authority:
 - Sanitized URL: `mysql://127.0.0.1:3307/listify_wt_database_architecture_03a7cfff648c`
 - Target fingerprint: `806c61e7e0d23daf1c70942dc80e91884d2778cc31d6c95ebef8a2023ea207ca`
 - Classification: `disposable-worktree`; ownership: `exact-worktree-owned`
-- Migration head: `0074_retire_legacy_prospects.sql`
-- Model digest: `845a2cf0fae772496af2a313e3be11dbec82a1550b1dfaf9c0e43d497e2a653d`
+- Migration head: `0075_recently_viewed_microsecond_recency.sql`
+- Model digest: `f6416d31d84609203c96e00f7b2455acd78b3a4d0b2c0d8aaa232a2c44b30328`
+- Manifest digest: `a9314a64f9e6015e34cbcaa8c6139d9b73a15b67f639aa96e704f476c71103b0`
 - Provider/dialect: local MySQL
 
 The integration and browser fixtures create unique visitor accounts and remove
@@ -55,7 +59,31 @@ After P1:
   public favorites/recent-view responses.
 - The browser proof performs real login, guest transfer, removal/save, and
   reload assertions. Guest local storage is cleared only after success and an
-  empty persistence effect cannot recreate the cleared key.
+  empty persistence effect cannot recreate the cleared key. Successful
+  migration also invalidates the authenticated favorites query so the detail
+  page reflects the committed transfer immediately.
+
+## Senior-review correction
+
+The review of the initial implementation found four implementation issues and
+one cache issue, all corrected in `c378e12c`: the concurrency barrier was
+outside the real transaction, runtime-pool setup could leak a pool when
+verification failed, the browser fixture used a row-only helper for an INSERT,
+second-precision recent-view timestamps could not preserve rapid committed
+ordering, and the authenticated favorites query could remain stale after
+transfer. The correction moves
+the barrier inside already-open MySQL transactions, closes failed pools,
+separates browser `execute` from row reads, and adds migration `0075` plus a
+database-clock microsecond allocator under the locked account row. The review
+also invalidates the authenticated favorites query after a successful guest
+transfer.
+
+Migration `0075_recently_viewed_microsecond_recency.sql` is the single
+`MODIFY COLUMN` statement admitted under
+`DBX-PRELAUNCH-CONSUMER-ACTIVITY-RECENCY-2026-09-09-Edward`; its SHA-256 is
+`e205efe19a742dced7bd1e18cf4dd75f4f37074cae62e8373e7e6b9687d30938`, parent
+`0074_retire_legacy_prospects.sql` with checksum
+`b0d6cbab8f0ac521d478a371dab62e0e23a7c0e35f8d304a42394eb43cefed14`.
 
 ## Changed surfaces and ownership
 
@@ -111,23 +139,24 @@ printed by the authority runner was `806c61e7e0d23daf1c70942dc80e91884d2778cc31d
 
 | Command | Result | Evidence |
 | --- | --- | --- |
-| `pnpm test:authority -- server/__tests__/integration.consumer-activity-persistence.test.ts` | PASS — 1 file, 9 tests | `server/__tests__/integration.consumer-activity-persistence.test.ts` |
+| `pnpm test:authority -- server/__tests__/integration.consumer-activity-persistence.test.ts` | PASS — 1 file, 9 tests; independent pools, transaction barriers, rollback and withdrawal evidence | `server/__tests__/integration.consumer-activity-persistence.test.ts` |
 | `pnpm test:authority -- server/__tests__/guest-migration.contract.test.ts server/__tests__/contract.public-inventory-authority-safety.test.ts` | PASS — 2 files, 16 tests | existing authority contract suites |
 | `pnpm exec vitest run --config vitest.client.config.ts client/src/hooks/__tests__/useGuestDataMigration.persistence.test.tsx` | PASS — 1 file, 2 tests | `client/src/hooks/__tests__/useGuestDataMigration.persistence.test.tsx` |
-| `pnpm test:browser:authority -- --config=playwright.consumer-activity.config.ts` | PASS — 1 browser test | `e2e/consumer-activity/persistence.spec.ts` |
+| `pnpm test:browser:authority -- --config=playwright.consumer-activity.config.ts --reporter=list` | PASS — 1 browser test; real login, guest transfer, immediate save/remove, and reload persistence | `e2e/consumer-activity/persistence.spec.ts` |
 | `pnpm db:scenario:prepare` / `pnpm db:scenario:verify` | PASS — scenario v3; 3 eligible properties, 1 development; replay and authorization checks pass | authority scenario output; digest `96e652b225d1762cba59da922343bb4e70a1df1e17c23a4c341c161cc75832c8` |
 | `pnpm check` | PASS — TypeScript no errors | terminal completion |
-| `pnpm lint:check` | PASS — 0 errors, 10,608 pre-existing warnings | terminal completion |
+| `pnpm lint:check` | PASS — 0 errors, 10,640 warnings | terminal completion |
 | `pnpm schema:inventory:check` | PASS — deterministic/current | terminal completion |
-| `pnpm schema:sanity` | PASS — 213 canonical tables, 75 active SQL files | terminal completion |
+| `pnpm schema:sanity` | PASS — 213 canonical tables, 76 active SQL files | terminal completion |
 | `pnpm db:authority:check` | PASS — 33 files, 271 tests; 118 utility surfaces; lifecycle contract passed | terminal completion |
 | `git diff --check` | PASS | terminal completion before commit |
-| `pnpm db:authority:status` | PASS — target connected, exact-worktree-owned, schema-congruent, head 0074 | terminal completion |
+| `pnpm db:authority:status` | PASS — target connected, exact-worktree-owned, schema-congruent, head 0075 | terminal completion |
+| `pnpm db:authority:consumer-contract` | PASS — fresh exact disposable target; migration plan `0b8448faf4e0955992a0f305`; all canonical establishment, scenario, congruency, distribution, and readiness steps completed | terminal completion; target fingerprint `806c61e7e0d23daf1c70942dc80e91884d2778cc31d6c95ebef8a2023ea207ca` |
 
-No migration plan/apply or fresh empty-schema contract was needed for this
-packet because P1 changes no schema or migration lineage. The P0 fresh-schema
-proof through 0074 remains the schema evidence; P1 adds behavior evidence on
-that established target.
+The fresh contract disposed and recreated the exact task-owned target, then
+applied the complete manifest from an empty schema through 0075. The canonical
+scenario and readiness checks were rerun after that establishment. The
+pre-launch target is disposable; no live or protected data was accessed.
 
 ## Limits and follow-up
 
@@ -138,6 +167,5 @@ that established target.
 - P2 remains responsible for replacing lead delivery JSON with relational
   obligations and attempts. P3–P8 remain open domain packets.
 
-Senior review must inspect commit `05868f470`, re-run the decisive physical and
-browser tests, and record findings and disposition in this file or a linked
-review record.
+The senior findings and acceptance disposition are recorded in
+`reviews/P1-senior-review.md` against correction commit `c378e12c`.
