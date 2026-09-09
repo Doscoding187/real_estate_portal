@@ -44,7 +44,12 @@ function truthfulPlatformAcknowledgement(lead: {
     : lead.message === 'Your enquiry has been recorded. Property Listify will review the request.';
 }
 
-const SCENARIO_IDS = Object.freeze({
+/**
+ * Stable identities in the contained Search-to-Lead acceptance fixture.
+ * Runtime tests use these only after the scenario adapter has prepared the
+ * task-owned disposable database; application code must never depend on them.
+ */
+export const SEARCH_TO_LEAD_SCENARIO_IDS = Object.freeze({
   developerUser: 990001,
   agentUser: 990002,
   agencyOnlyUser: 990003,
@@ -106,6 +111,8 @@ const SCENARIO_IDS = Object.freeze({
   rentalPropertyImage: 993009,
   unit: '00000000-0000-4000-8000-000000000001',
 });
+
+const SCENARIO_IDS = SEARCH_TO_LEAD_SCENARIO_IDS;
 
 export const SEARCH_TO_LEAD_DETERMINISTIC_USER_IDS = Object.freeze([
   SCENARIO_IDS.developerUser,

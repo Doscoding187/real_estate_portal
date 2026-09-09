@@ -1,9 +1,9 @@
 # Database takeover architecture decisions
 
-Status: **P0 baseline and decision register; implementation remains in progress.**
+Status: **P1 implementation complete; senior review pending.**
 This record belongs to `feat/database-architecture-takeover` at
-`a14fec15`. It is the decision index for the coverage register and the
-implementation packets in `implementation-plan.md`.
+the post-P0 implementation commit. It is the decision index for the coverage
+register and the implementation packets in `implementation-plan.md`.
 
 ## Authority and evidence
 
@@ -75,9 +75,25 @@ The authenticated favorites fact is a protected desired-state set keyed by
 different. Public reads use a filtered DTO and public eligibility rules.
 Guest transfer resolves each public property to one available source listing,
 rejects unknown or ambiguous identities, validates before writing, locks the
-user, and rolls back on a later failure. These decisions are implemented in
-`a14fec15`; P1 still requires independent-connection proof of races,
-isolation, rollback, and withdrawal behavior.
+user, and rolls back on a later failure. Every authority-created MySQL
+connection now establishes a UTC session before durable timestamps are read or
+written; `TIMESTAMP` values must never be interpreted through the host's local
+timezone.
+
+P1 defines public withdrawal at the activity-admission boundary. If public
+eligibility is established and a withdrawal commits before the corresponding
+private activity transaction, the private favorite or view may persist as a
+historical account fact. It is never exposed as public inventory: every
+favorites or recently-viewed read resolves current public eligibility again
+and fails closed. This avoids pretending that a public read performed before
+an independent withdrawal transaction remains a live-public assertion.
+
+The P1 physical suite creates two separately authorized runtime pools, uses a
+controlled admission barrier, and verifies cardinality, rollback, ownership,
+UTC timestamps, ambiguity rejection, committed-order save/remove behavior,
+and the withdrawal rule against MySQL. Its browser proof exercises real login,
+guest transfer, favorite removal/save, and reload persistence. The test-owned
+visitor and facts are removed after each run.
 
 ### Retired disconnected consumer models
 
@@ -120,16 +136,16 @@ not become that fact's owner.
 
 ## Unresolved decisions and owning packets
 
-| Decision | Why it is open | Owner |
-| --- | --- | --- |
-| Relational lead delivery names, recipient FKs, state transitions, lease fencing, retry and provider uncertainty | Current JSON is shared by capture, correction, audit, reports, publisher delivery, and admin queries | P2 |
-| Whether every public property has exactly one source listing, and how development/commercial/shared-living supply maps | Existing supply families may have different lifecycles; non-null links cannot be imposed before the census | P3 |
-| Account, organisation, agency, developer, and membership tenant predicates | Existing routes include owner/agent fallbacks whose authority and revocation behavior need proof | P4 |
-| Billing/subscription/invoice/payment family boundaries and monetary units | Similar names may represent separate products or competing authorities; webhook ordering is unproven | P5 |
-| Agency deals, distribution deals, referrals, commissions, and showing transitions | Relationships and assignments cross tenant and inventory boundaries; duplicate workflows must not be removed by name | P6 |
-| Canonical geography versus provider/display metadata, Land journey authority, Commercial value states, Shared Living moderation | Domain contracts require one geography authority and explicit classification/provenance semantics | P7 |
-| Explore/media/marketplace/service/demand event identity, durable jobs, and analytics rebuildability | Engagements, notifications, service leads, and aggregates require retention and idempotency proof | P8 |
-| Full physical/query-plan and product-journey closure | Each packet needs independent database evidence and actual user-flow verification | P9 |
+| Decision                                                                                                                        | Why it is open                                                                                                       | Owner |
+| ------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- | ----- |
+| Relational lead delivery names, recipient FKs, state transitions, lease fencing, retry and provider uncertainty                 | Current JSON is shared by capture, correction, audit, reports, publisher delivery, and admin queries                 | P2    |
+| Whether every public property has exactly one source listing, and how development/commercial/shared-living supply maps          | Existing supply families may have different lifecycles; non-null links cannot be imposed before the census           | P3    |
+| Account, organisation, agency, developer, and membership tenant predicates                                                      | Existing routes include owner/agent fallbacks whose authority and revocation behavior need proof                     | P4    |
+| Billing/subscription/invoice/payment family boundaries and monetary units                                                       | Similar names may represent separate products or competing authorities; webhook ordering is unproven                 | P5    |
+| Agency deals, distribution deals, referrals, commissions, and showing transitions                                               | Relationships and assignments cross tenant and inventory boundaries; duplicate workflows must not be removed by name | P6    |
+| Canonical geography versus provider/display metadata, Land journey authority, Commercial value states, Shared Living moderation | Domain contracts require one geography authority and explicit classification/provenance semantics                    | P7    |
+| Explore/media/marketplace/service/demand event identity, durable jobs, and analytics rebuildability                             | Engagements, notifications, service leads, and aggregates require retention and idempotency proof                    | P8    |
+| Full physical/query-plan and product-journey closure                                                                            | Each packet needs independent database evidence and actual user-flow verification                                    | P9    |
 
 No unresolved decision may be closed by a schema-only change. A packet must
 update the coverage register, trace readers and writers, specify authorization

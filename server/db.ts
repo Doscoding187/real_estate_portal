@@ -1086,14 +1086,12 @@ export async function incrementPropertyViews(id: number) {
 // Public eligibility is established by the properties router before this
 // persistence boundary is called. This function owns only the idempotent
 // user/property fact and serializes competing commands for one account.
-export async function setUserFavoriteFact(
+export async function setUserFavoriteFactWithDatabase(
+  database: any,
   userId: number,
   propertyId: number,
   saved: boolean,
 ): Promise<{ propertyId: number; saved: boolean }> {
-  const database = await getDb();
-  if (!database) throw new Error('Database not available');
-
   return database.transaction(async (tx: any) => {
     const [owner] = await tx
       .select({ id: users.id })
@@ -1120,6 +1118,16 @@ export async function setUserFavoriteFact(
 
     return { propertyId, saved: true };
   });
+}
+
+export async function setUserFavoriteFact(
+  userId: number,
+  propertyId: number,
+  saved: boolean,
+): Promise<{ propertyId: number; saved: boolean }> {
+  const database = await getDb();
+  if (!database) throw new Error('Database not available');
+  return setUserFavoriteFactWithDatabase(database, userId, propertyId, saved);
 }
 
 export async function getUserFavoriteFacts(userId: number) {
@@ -1410,13 +1418,11 @@ export async function getAgencyDashboardStats(agencyId: number) {
 // The properties router resolves public eligibility before calling this
 // persistence boundary, so it cannot turn a projection ID into a listing ID
 // by coincidence.
-export async function recordUserListingViewFact(
+export async function recordUserListingViewFactWithDatabase(
+  database: any,
   userId: number,
   listingId: number,
 ): Promise<{ listingId: number; viewedAt: string }> {
-  const database = await getDb();
-  if (!database) throw new Error('Database not available');
-
   return database.transaction(async (tx: any) => {
     const [owner] = await tx
       .select({ id: users.id })
@@ -1443,6 +1449,15 @@ export async function recordUserListingViewFact(
 
     return { listingId, viewedAt };
   });
+}
+
+export async function recordUserListingViewFact(
+  userId: number,
+  listingId: number,
+): Promise<{ listingId: number; viewedAt: string }> {
+  const database = await getDb();
+  if (!database) throw new Error('Database not available');
+  return recordUserListingViewFactWithDatabase(database, userId, listingId);
 }
 
 export async function getUserRecentViewFacts(userId: number, limit = 50) {

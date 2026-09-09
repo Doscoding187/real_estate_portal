@@ -1,8 +1,8 @@
 # Database architecture takeover assessment
 
-Status: **in progress**. This is the current assessment for the task-owned
-worktree `property-listify-database-architecture`, branch
-`feat/database-architecture-takeover`, at baseline HEAD `a14fec15`.
+Status: **P1 implemented; senior review pending**. This is the current
+assessment for the task-owned worktree `property-listify-database-architecture`,
+branch `feat/database-architecture-takeover`.
 Completion requires the packet sequence in
 `docs/architecture/database-takeover/implementation-plan.md`; this document
 does not claim that the full database is correct.
@@ -58,9 +58,19 @@ public property identities to one available source listing, locks the
 authenticated user during the transfer, deduplicates resolved IDs, bounds
 inputs, and rolls back if a later write fails. Anonymous requests, invalid
 inventory, unavailable or ambiguous projections, and unsupported Commercial
-identity are rejected. The contract tests cover these decisions with a fake
-transaction boundary; P1 still needs independent database connections and
-row-level race evidence.
+identity are rejected. P1 adds independent-pool MySQL evidence for duplicate
+saves and views, guest-transfer replay, a later-write rollback, account
+isolation, unavailable removal, projection ambiguity, committed save/remove
+ordering, and public withdrawal. It also establishes UTC on every canonical
+database connection: the local MySQL service had a non-UTC `SYSTEM` timezone,
+which would otherwise shift application-written `TIMESTAMP` strings.
+
+The withdrawal rule is explicit. A private activity fact admitted while the
+projection is public may finish after a concurrent withdrawal, but public
+readers resolve current eligibility and hide it. Browser verification logs in
+through the real UI, transfers guest activity, clears the transferred local
+storage record only after success, and proves save/remove persistence across
+reloads.
 
 ### Retired disconnected models
 
@@ -97,30 +107,29 @@ explicit evidence gaps are in
 index and relationship diagram are in
 `docs/architecture/database-takeover/architecture-decisions.md`.
 
-P0 is complete when those artifacts are committed with a review packet and the
-repository checks below have terminal completion. P1 is the first behavioral
-packet. P2 through P8 remain mandatory domain coverage; an “open” row means
-that the owning packet must trace it, not that the model is automatically
-wrong.
+P0 is complete and committed. P1 is the first behavioral packet and awaits
+review of its exact implementation commit. P2 through P8 remain mandatory
+domain coverage; an “open” row means that the owning packet must trace it, not
+that the model is automatically wrong.
 
-| Packet | Current status | Next evidence |
-| --- | --- | --- |
-| P0 baseline | Docs and inventory reconciliation in progress | Register every table and active execution surface; commit review packet |
-| P1 consumer integrity | Implemented behavior, physical proof open | Independent-connection races, isolation, rollback, withdrawal |
-| P2 lead delivery | Decision established, implementation open | Relational state machine, worker/recovery, provider uncertainty |
-| P3 listings/projection | Boundary identified, audit open | Mapping/cardinality, publish/withdraw/rebuild |
-| P4 account/tenant | Open | Membership, revocation, ownership, token lifecycle |
-| P5 billing | Open | Monetary facts, provider idempotency, entitlement transitions |
-| P6 agency/distribution | Open | Workflow states, assignment, commission and showing consistency |
-| P7 domain supply/geography | Open | Land authority contract, geography, development, Commercial, Shared Living |
-| P8 platform/supporting domains | Open | Durable jobs, media/content, services, demand, analytics rebuildability |
-| P9 closure | Not started | Full physical, query-plan, journey and release review |
+| Packet                         | Current status                            | Next evidence                                                                       |
+| ------------------------------ | ----------------------------------------- | ----------------------------------------------------------------------------------- |
+| P0 baseline                    | Complete and committed                    | Packet record and current inventory are committed at `3d842600`                     |
+| P1 consumer integrity          | Implemented; senior review pending        | Reproduce independent-pool and browser evidence from `reviews/P1-implementation.md` |
+| P2 lead delivery               | Decision established, implementation open | Relational state machine, worker/recovery, provider uncertainty                     |
+| P3 listings/projection         | Boundary identified, audit open           | Mapping/cardinality, publish/withdraw/rebuild                                       |
+| P4 account/tenant              | Open                                      | Membership, revocation, ownership, token lifecycle                                  |
+| P5 billing                     | Open                                      | Monetary facts, provider idempotency, entitlement transitions                       |
+| P6 agency/distribution         | Open                                      | Workflow states, assignment, commission and showing consistency                     |
+| P7 domain supply/geography     | Open                                      | Land authority contract, geography, development, Commercial, Shared Living          |
+| P8 platform/supporting domains | Open                                      | Durable jobs, media/content, services, demand, analytics rebuildability             |
+| P9 closure                     | Not started                               | Full physical, query-plan, journey and release review                               |
 
 ## Known risks carried into implementation
 
-- The current consumer unit and contract tests do not establish MySQL/TiDB
-  locking or isolation behavior. P1 must use independent connections and
-  controlled barriers.
+- P1 establishes MySQL locking and UTC behavior only. TiDB concurrency and
+  session-timezone semantics remain an explicit provider-validation item for
+  P9 or any migration that changes these facts.
 - Lead delivery has claim, external-provider, retry, and route-correction
   uncertainty. A provider acceptance cannot be described as recipient delivery,
   and a crash window cannot be hidden by a success flag.
@@ -138,14 +147,14 @@ wrong.
 
 The following evidence was recorded before this P0 documentation change:
 
-| Command/evidence | Result | Limit |
-| --- | --- | --- |
-| `pnpm db:authority:status` | Task-owned disposable target, head 0074, congruent schema | Target must be re-resolved after mutation |
-| Fresh consumer contract | Passed through 0074 from an empty disposable database | Does not prove packet-specific races |
-| `pnpm db:authority:check` | 271 static authority tests passed in the prior baseline run | Static checks do not prove product invariants |
-| Consumer contract tests | Favorite and guest transfer contracts passed | Mock transaction boundary; physical locking remains open |
-| `pnpm check` | Passed at the prior baseline | Re-run after P0 artifacts |
-| `pnpm lint:check` | Prior terminal exit was not captured | Must be run to completion before claiming green |
+| Command/evidence           | Result                                                      | Limit                                                    |
+| -------------------------- | ----------------------------------------------------------- | -------------------------------------------------------- |
+| `pnpm db:authority:status` | Task-owned disposable target, head 0074, congruent schema   | Target must be re-resolved after mutation                |
+| Fresh consumer contract    | Passed through 0074 from an empty disposable database       | Does not prove packet-specific races                     |
+| `pnpm db:authority:check`  | 271 static authority tests passed in the prior baseline run | Static checks do not prove product invariants            |
+| Consumer contract tests    | Favorite and guest transfer contracts passed                | Mock transaction boundary; physical locking remains open |
+| `pnpm check`               | Passed at the prior baseline                                | Re-run after P0 artifacts                                |
+| `pnpm lint:check`          | Prior terminal exit was not captured                        | Must be run to completion before claiming green          |
 
 P0's documentation files do not change schema or runtime behavior. After this
 packet is committed, run `pnpm check`, `pnpm lint:check`,
