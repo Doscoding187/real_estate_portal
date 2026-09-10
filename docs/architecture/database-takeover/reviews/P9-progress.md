@@ -59,3 +59,10 @@ invitation acceptance, canonical membership, listing publication, public lead
 capture, assignment, agent response, and operating-home coherence. This is
 API/integration evidence; a browser-rendered journey and the remaining
 provider/rebuild audits are still required.
+
+Browser verification attempt: `pnpm test:browser:authority --
+e2e/consumer-activity/persistence.spec.ts --project='Desktop Chrome'` did
+not execute a test. The governed Playwright runner timed out waiting 120 seconds
+for its `pnpm dev:backend` web server at `http://localhost:5000`; a direct
+health check also found no listener. Generated report artifacts were restored.
+Browser readiness therefore remains unevaluated and is not claimed as passed.
