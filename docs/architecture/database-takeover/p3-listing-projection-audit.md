@@ -43,3 +43,10 @@ expired-access visibility, owner isolation, concurrent review decisions,
 atomic publication rejection, listing readiness, and agency attribution.
 Duplicate projection writer census and an explicit projection rebuild
 comparison remain open P3 evidence items.
+
+The writer census found no active callers of the legacy `createProperty` or
+`createPropertyImage` facade exports. Those direct writers were removed in
+`5de2d1bf`; the retirement contract now asserts they are absent. The only
+runtime `properties` insert remaining outside governed fixtures is the
+source-linked `upsertCanonicalPublicPropertyProjection` path, which rejects
+multiple existing mirrors before writing.
