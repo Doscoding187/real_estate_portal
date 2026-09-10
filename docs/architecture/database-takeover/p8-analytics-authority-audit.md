@@ -47,3 +47,12 @@ assignments, matches, status transitions, and notifications in one transaction.
 A failure in the assignment branch rolls back the complete routing graph. A
 physical failure-injection test remains required to prove that rollback on the
 disposable target.
+
+Media evidence currently covers canonical listing-media reconciliation and
+property-card projection reads: `pnpm test:authority --
+server/__tests__/integration.listing-media-reconciliation.test.ts
+server/__tests__/integration.property-card-data-flow.test.ts` passed four
+physical tests against the disposable target. The upload boundary contract
+also proves that a client-supplied property namespace cannot escape the
+authenticated draft scope. Cross-tenant media denial and a complete public
+media rebuild proof remain P8/P9 review items.
