@@ -18,6 +18,12 @@ legacy logging and zero-count analytics paths now write and read that table.
 The migration is registered as the active manifest head and included in the
 generated canonical model inventory.
 
+The unmounted `partnerLeadRouter` and its stub `leadGenerationService` were
+removed. Their disconnected `partner_leads` table was retired by migration
+0078 after a repository-wide reachability search found no runtime imports or
+route registration. The active partner and lead journeys use the canonical
+`partners`, `leads`, and `lead_deliveries` authorities.
+
 Replay deduplication for browser events remains a separate P8 requirement; the
 current event contract has no client event identity, so a unique database key
 cannot be introduced without first defining that product-level identity.

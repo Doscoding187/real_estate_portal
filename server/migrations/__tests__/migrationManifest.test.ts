@@ -353,7 +353,7 @@ describe('canonical migration manifest', () => {
     expect(tidbSequenced.map(entry => entry.statementCount)).toEqual([
       4, 15, 3, 3, 3, 4, 3, 3, 3, 3,
     ]);
-    expect(manifest.expectedHead.filename).toBe('0077_bundle_attribution_relational_authority.sql');
+    expect(manifest.expectedHead.filename).toBe('0078_retire_unreachable_partner_leads.sql');
   });
 
   it('plans the identity-and-custody migration chain from the integrated 0007 head', () => {
@@ -369,11 +369,11 @@ describe('canonical migration manifest', () => {
         checksum: item.checksum,
       })),
       acceptedOldHead: currentIntegratedHead.filename,
-      expectedNewHead: '0077_bundle_attribution_relational_authority.sql',
+      expectedNewHead: '0078_retire_unreachable_partner_leads.sql',
     });
 
     expect(plan.acceptedOldHead).toBe('0007_paid_launch_access_invoice_term.sql');
-    expect(plan.pending).toHaveLength(70);
+    expect(plan.pending).toHaveLength(71);
     expect(plan.pending.map(item => item.filename)).toEqual([
       '0008_developer_organisations.sql',
       '0009_developer_organisation_memberships.sql',
@@ -445,8 +445,9 @@ describe('canonical migration manifest', () => {
       '0075_recently_viewed_microsecond_recency.sql',
       '0076_lead_delivery_relational_authority.sql',
       '0077_bundle_attribution_relational_authority.sql',
+      '0078_retire_unreachable_partner_leads.sql',
     ]);
-    expect(plan.expectedNewHead).toBe('0077_bundle_attribution_relational_authority.sql');
+    expect(plan.expectedNewHead).toBe('0078_retire_unreachable_partner_leads.sql');
   });
 
   it('accepts an isolated 0000 -> 0001 -> 0002 progression in ancestry order', () => {

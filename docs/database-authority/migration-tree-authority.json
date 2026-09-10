@@ -1163,6 +1163,11 @@
       "path": "server/migrations/0077_bundle_attribution_relational_authority.sql",
       "classification": "canonical active",
       "purpose": "Establishes the relational bundle attribution event table used by marketplace attribution tracking and analytics."
+    },
+    {
+      "path": "server/migrations/0078_retire_unreachable_partner_leads.sql",
+      "classification": "canonical active",
+      "purpose": "Retires the unmounted partner lead router's stub table; canonical lead custody remains in leads and lead_deliveries."
     }
   ],
   "prohibitedPaths": [

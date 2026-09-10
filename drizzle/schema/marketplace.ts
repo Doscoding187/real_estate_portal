@@ -27,29 +27,6 @@ import { videos } from './media';
 import { exploreContent } from './explore';
 import { partners } from './partners';
 
-export const partnerLeads = mysqlTable(
-  'partner_leads',
-  {
-    id: int().autoincrement().primaryKey(),
-    partnerId: int('partner_id')
-      .notNull()
-      .references(() => partners.id),
-    userId: int('user_id').references(() => users.id),
-    customerName: varchar('customer_name', { length: 255 }).notNull(),
-    customerEmail: varchar('customer_email', { length: 320 }).notNull(),
-    customerPhone: varchar('customer_phone', { length: 50 }),
-    serviceRequested: varchar('service_requested', { length: 100 }),
-    message: text(),
-    status: mysqlEnum(['new', 'contacted', 'quoted', 'converted', 'closed']).default('new'),
-    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow(),
-    updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow(),
-  },
-  table => [
-    index('idx_partner_leads_partner').on(table.partnerId),
-    index('idx_partner_leads_status').on(table.status),
-  ],
-);
-
 export const marketplaceBundles = mysqlTable('marketplace_bundles', {
   id: int().autoincrement().primaryKey(),
   name: varchar({ length: 255 }).notNull(),
