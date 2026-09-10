@@ -28,3 +28,12 @@ duplicate approval, partial-payment non-activation, proof-document access, and
 provider-independent lifecycle rules. These tests do not remove the
 polymorphic-owner modelling gap; an explicit billable-account design remains
 the next schema decision.
+
+The billing/provider-independent contract suites were rerun after the 0080
+lineage update: `pnpm vitest run
+server/__tests__/billing.provider-independent.contract.test.ts
+server/__tests__/developer.subscription-commercial.contract.test.ts` passed
+14 tests. The suites continue to validate explicit owner scope, provider
+identity handling, entitlement gating, and the absence of listing-media
+coupling in billing authority. Entitlement race proof remains a P5 review
+item.

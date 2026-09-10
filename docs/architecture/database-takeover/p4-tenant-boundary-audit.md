@@ -20,3 +20,10 @@ and an owner-authored listing with `agency_id` and `agent_id` cleared remains
 invisible to the other agency. The rule is enforced at the scoped query
 boundary; no schema change is justified because the ownership relationship is
 intentionally reassigned over the listing lifecycle.
+
+Additional authority-run evidence on the disposable target:
+`pnpm test:authority -- server/__tests__/integration.agency-membership-authority.test.ts
+server/__tests__/integration.agency-principal-bootstrap.test.ts` passed 12
+physical tests. These cover membership suspension/reactivation windows,
+revoked attribution, invitation acceptance, concurrent bootstrap
+serialization, and mid-bootstrap rollback with clean retry.
