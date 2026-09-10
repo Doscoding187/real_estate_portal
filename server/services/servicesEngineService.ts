@@ -826,8 +826,10 @@ export class ServicesEngineService {
       };
     }
 
-    await db.transaction(async tx => {
-      for (const providerId of targetProviderIds) {
+    let idempotent = false;
+    try {
+      await db.transaction(async tx => {
+        for (const providerId of targetProviderIds) {
       const tier = providerId
         ? (subscriptionMap.get(providerId)?.tier as
             | 'directory'
@@ -875,15 +877,30 @@ export class ServicesEngineService {
           billingEligible,
         },
       });
+        }
+      });
+    } catch (error) {
+      const databaseError = (error as { cause?: unknown })?.cause || error;
+      const errno = Number((databaseError as { errno?: unknown })?.errno);
+      if (errno !== 1062 && String((databaseError as { code?: unknown })?.code || '') !== 'ER_DUP_ENTRY') {
+        throw error;
       }
-    });
+      const replayed = await db
+        .select({ id: serviceLeads.id })
+        .from(serviceLeads)
+        .where(inArray(serviceLeads.requestId, requestKeys));
+      if (replayed.length !== requestKeys.length) throw error;
+      leadIds.length = 0;
+      leadIds.push(...replayed.map(lead => Number(lead.id)));
+      idempotent = true;
+    }
 
     return {
       leadIds,
       providerIds: providerIds,
       unmatched: providerIds.length === 0,
       requestId,
-      idempotent: false,
+      idempotent,
     };
   }
 
