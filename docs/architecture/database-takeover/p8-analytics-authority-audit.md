@@ -42,9 +42,8 @@ discovery boundary. Migration 0079 adds the nullable historical-compatible
 column and unique key; current service writes always provide an ID, and a
 duplicate key is treated as an idempotent replay without incrementing metrics.
 
-The demand engine currently reads candidates and then writes a demand lead,
-customer leads, assignments, matches, status transitions, and notifications
-through separate database operations. A failure after the root demand lead is
-inserted can therefore leave a partial routing graph. This is an identified
-P8 defect; its correction requires one transaction covering the complete
-assignment branch and a physical rollback test.
+The demand engine now wraps the demand lead, candidate reads, customer leads,
+assignments, matches, status transitions, and notifications in one transaction.
+A failure in the assignment branch rolls back the complete routing graph. A
+physical failure-injection test remains required to prove that rollback on the
+disposable target.
