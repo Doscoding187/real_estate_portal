@@ -5,6 +5,7 @@ import {
   classifyLeadRouting,
   type LeadRoutingAuditRow,
 } from './leadRoutingAuditService';
+import { getLeadDeliverySnapshotsForLeadIds } from './leadDeliveryService';
 
 type LeadStatus =
   | 'new'
@@ -207,7 +208,6 @@ export async function getLeadRoutingConversionReport(input?: {
       brandLeadStatus: leads.brandLeadStatus,
       leadDeliveryMethod: leads.leadDeliveryMethod,
       deliveryStatus: leads.deliveryStatus,
-      deliveryAttempts: leads.deliveryAttempts,
       propertyOwnerId: properties.ownerId,
       propertyOwnerRole: users.role,
       status: leads.status,
@@ -243,8 +243,13 @@ export async function getLeadRoutingConversionReport(input?: {
     }
   }
 
+  const deliverySnapshots = await getLeadDeliverySnapshotsForLeadIds({
+    database: db,
+    leadIds,
+  });
   const rows: LeadRoutingConversionRow[] = leadRows.map(row => ({
     ...(row as unknown as LeadRoutingAuditRow),
+    deliverySnapshot: deliverySnapshots.get(Number(row.id)) || null,
     status: (row.status as LeadStatus) || null,
     corrected: correctedLeadIds.has(Number(row.id)),
   }));

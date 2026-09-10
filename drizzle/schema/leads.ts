@@ -21,7 +21,7 @@ import { sql } from 'drizzle-orm';
 import { users } from './core';
 import { properties, listings } from './listings';
 import { developments, developerBrandProfiles } from './developments';
-import { cataloguePublishers } from './developerIdentity';
+import { cataloguePublishers, developerOrganisations } from './developerIdentity';
 import { agencies, agents } from './agencies';
 import { commercialAssets, commercialAvailabilities, commercialSpaces } from './commercial';
 
@@ -136,7 +136,6 @@ export const leads = mysqlTable(
     ])
       .default('pending')
       .notNull(),
-    deliveryAttempts: json('delivery_attempts'),
     deliveryLastAttemptAt: timestamp('delivery_last_attempt_at', { mode: 'string' }),
     deliveryNextAttemptAt: timestamp('delivery_next_attempt_at', { mode: 'string' }),
     deliveryLastError: text('delivery_last_error'),
@@ -149,6 +148,160 @@ export const leads = mysqlTable(
     listingId: int('listing_id').references(() => listings.id, { onDelete: 'restrict' }),
   },
   table => [unique('uq_leads_capture_request').on(table.captureRequestId), index('idx_leads_listing_id').on(table.listingId)],
+);
+
+export const LEAD_DELIVERY_PURPOSES = [
+  'primary_custody',
+  'notification',
+  'platform_action',
+] as const;
+export const LEAD_DELIVERY_CHANNELS = ['crm_export', 'email', 'manual', 'none'] as const;
+export const LEAD_DELIVERY_RECIPIENT_TYPES = ['agent', 'agency', 'developer', 'manual'] as const;
+export const LEAD_DELIVERY_STATES = [
+  'queued',
+  'claimed',
+  'accepted',
+  'completed',
+  'retryable_failed',
+  'exhausted',
+  'unknown',
+  'cancelled',
+  'superseded',
+] as const;
+export const LEAD_DELIVERY_ATTEMPT_STATES = [
+  'queued',
+  'claimed',
+  'accepted',
+  'completed',
+  'retryable_failed',
+  'exhausted',
+  'unknown',
+  'expired',
+] as const;
+
+/**
+ * One durable obligation to hand a captured lead to one explicit destination.
+ * Operational history belongs in leadDeliveryAttempts; this row is the
+ * current routing revision and scheduling authority.
+ */
+export const leadDeliveries = mysqlTable(
+  'lead_deliveries',
+  {
+    id: int('id').autoincrement().primaryKey(),
+    leadId: int('lead_id')
+      .notNull()
+      .references(() => leads.id, { onDelete: 'cascade' }),
+    purpose: mysqlEnum('purpose', LEAD_DELIVERY_PURPOSES as unknown as [string, ...string[]]).notNull(),
+    routingRevision: int('routing_revision').default(1).notNull(),
+    channel: mysqlEnum('channel', LEAD_DELIVERY_CHANNELS as unknown as [string, ...string[]]).notNull(),
+    recipientType: mysqlEnum(
+      'recipient_type',
+      LEAD_DELIVERY_RECIPIENT_TYPES as unknown as [string, ...string[]],
+    ).notNull(),
+    recipientUserId: int('recipient_user_id').references(() => users.id, { onDelete: 'set null' }),
+    recipientAgentId: int('recipient_agent_id').references(() => agents.id, { onDelete: 'set null' }),
+    recipientAgencyId: int('recipient_agency_id').references(() => agencies.id, { onDelete: 'set null' }),
+    recipientDeveloperOrganisationId: int('recipient_developer_organisation_id').references(
+      () => developerOrganisations.id,
+      { onDelete: 'set null' },
+    ),
+    recipientPublisherId: int('recipient_publisher_id').references(() => cataloguePublishers.id, {
+      onDelete: 'set null',
+    }),
+    destinationName: varchar('destination_name', { length: 255 }),
+    destinationAddress: varchar('destination_address', { length: 320 }),
+    destinationSnapshot: json('destination_snapshot'),
+    supplyOrigin: mysqlEnum('supply_origin', [
+      'customer_managed',
+      'platform_curated',
+      'shared_living',
+    ]).notNull(),
+    leadCustody: mysqlEnum('lead_custody', [
+      'verified_customer_recipient',
+      'platform_managed',
+      'attention_required',
+    ]).notNull(),
+    state: mysqlEnum('state', LEAD_DELIVERY_STATES as unknown as [string, ...string[]])
+      .default('queued')
+      .notNull(),
+    idempotencyKey: varchar('idempotency_key', { length: 255 }).notNull(),
+    dueAt: timestamp('due_at', { mode: 'string', fsp: 6 })
+      .default(sql`CURRENT_TIMESTAMP(6)`)
+      .notNull(),
+    maxAttempts: int('max_attempts').default(3).notNull(),
+    completedAt: timestamp('completed_at', { mode: 'string', fsp: 6 }),
+    supersededAt: timestamp('superseded_at', { mode: 'string', fsp: 6 }),
+    createdAt: timestamp('created_at', { mode: 'string', fsp: 6 })
+      .default(sql`CURRENT_TIMESTAMP(6)`)
+      .notNull(),
+    updatedAt: timestamp('updated_at', { mode: 'string', fsp: 6 })
+      .default(sql`CURRENT_TIMESTAMP(6)`)
+      .onUpdateNow()
+      .notNull(),
+  },
+  table => [
+    unique('uq_lead_deliveries_idempotency').on(table.idempotencyKey),
+    unique('uq_lead_deliveries_lead_purpose_revision').on(
+      table.leadId,
+      table.purpose,
+      table.routingRevision,
+    ),
+    index('idx_lead_deliveries_due').on(table.state, table.dueAt),
+    index('idx_lead_deliveries_lead_current').on(
+      table.leadId,
+      table.purpose,
+      table.routingRevision,
+      table.state,
+    ),
+    index('idx_lead_deliveries_recipient_agent').on(table.recipientAgentId, table.state),
+    index('idx_lead_deliveries_recipient_agency').on(table.recipientAgencyId, table.state),
+    index('idx_lead_deliveries_recipient_developer').on(
+      table.recipientDeveloperOrganisationId,
+      table.state,
+    ),
+    index('idx_lead_deliveries_recipient_user').on(table.recipientUserId, table.state),
+  ],
+);
+
+/** Append-only claim/provider history for a delivery obligation. */
+export const leadDeliveryAttempts = mysqlTable(
+  'lead_delivery_attempts',
+  {
+    id: int('id').autoincrement().primaryKey(),
+    deliveryId: int('delivery_id')
+      .notNull()
+      .references(() => leadDeliveries.id, { onDelete: 'cascade' }),
+    attemptNumber: int('attempt_number').notNull(),
+    state: mysqlEnum(
+      'state',
+      LEAD_DELIVERY_ATTEMPT_STATES as unknown as [string, ...string[]],
+    )
+      .default('queued')
+      .notNull(),
+    leaseToken: varchar('lease_token', { length: 128 }),
+    leaseGeneration: int('lease_generation').default(0).notNull(),
+    claimedAt: timestamp('claimed_at', { mode: 'string', fsp: 6 }),
+    leaseExpiresAt: timestamp('lease_expires_at', { mode: 'string', fsp: 6 }),
+    acceptedAt: timestamp('accepted_at', { mode: 'string', fsp: 6 }),
+    completedAt: timestamp('completed_at', { mode: 'string', fsp: 6 }),
+    providerReference: varchar('provider_reference', { length: 255 }),
+    errorCode: varchar('error_code', { length: 100 }),
+    errorMessage: varchar('error_message', { length: 1000 }),
+    createdAt: timestamp('created_at', { mode: 'string', fsp: 6 })
+      .default(sql`CURRENT_TIMESTAMP(6)`)
+      .notNull(),
+    updatedAt: timestamp('updated_at', { mode: 'string', fsp: 6 })
+      .default(sql`CURRENT_TIMESTAMP(6)`)
+      .onUpdateNow()
+      .notNull(),
+  },
+  table => [
+    unique('uq_lead_delivery_attempt_number').on(table.deliveryId, table.attemptNumber),
+    unique('uq_lead_delivery_attempt_lease').on(table.leaseToken),
+    index('idx_lead_delivery_attempts_delivery').on(table.deliveryId, table.attemptNumber),
+    index('idx_lead_delivery_attempts_claim_expiry').on(table.state, table.leaseExpiresAt),
+    index('idx_lead_delivery_attempts_provider_reference').on(table.providerReference),
+  ],
 );
 
 export const leadActivities = mysqlTable('lead_activities', {

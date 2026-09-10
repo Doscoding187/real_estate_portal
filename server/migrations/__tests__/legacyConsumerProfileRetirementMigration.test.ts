@@ -51,8 +51,8 @@ describe('pre-launch legacy consumer-profile retirement', () => {
         approvalReference: 'DBX-PRELAUNCH-LEGACY-CONSUMER-PROFILE-RETIREMENT-2026-09-09-Edward',
       });
     });
-    expect(manifest.expectedHead.filename).toBe('0075_recently_viewed_microsecond_recency.sql');
-    expect(manifest.expectedHead.parent).toBe(retirement.at(-1)?.filename);
+    expect(manifest.expectedHead.filename).toBe('0076_lead_delivery_relational_authority.sql');
+    expect(manifest.expectedHead.parent).toBe('0075_recently_viewed_microsecond_recency.sql');
   });
 
   it('drops exactly one explicitly named legacy table per migration', () => {

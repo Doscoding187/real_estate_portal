@@ -434,8 +434,9 @@ describe('migration execution authority', () => {
       '0073_retire_legacy_scheduled_viewings.sql',
       '0074_retire_legacy_prospects.sql',
       '0075_recently_viewed_microsecond_recency.sql',
+      '0076_lead_delivery_relational_authority.sql',
     ]);
-    expect(executionManifest.expectedHead).toBe('0075_recently_viewed_microsecond_recency.sql');
+    expect(executionManifest.expectedHead).toBe('0076_lead_delivery_relational_authority.sql');
     expect(archivedSqlFiles.length).toBeGreaterThan(0);
     expect(activeSqlFiles.some(file => file.includes('_archived'))).toBe(false);
     expect(executionManifest.historyTable).toBe('sql_migration_history');

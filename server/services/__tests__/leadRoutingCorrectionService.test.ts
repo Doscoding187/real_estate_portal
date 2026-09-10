@@ -6,6 +6,7 @@ import {
   requirePlatformOperationsCustody,
 } from '../leadRoutingCorrectionService';
 import type { ResolvedLeadOwnership } from '../publicLeadCaptureService';
+import type { LeadDeliveryRecord } from '../leadDeliveryService';
 
 function customerResolution(
   overrides: Partial<ResolvedLeadOwnership> = {},
@@ -123,36 +124,47 @@ describe('leadRoutingCorrectionService', () => {
   });
 
   it('allows completion only when the latest durable attempt proves platform custody', () => {
-    const platformAttempt = {
-      id: 'delivery-platform',
-      deliveryKey: 'manual:platform',
-      recipientType: 'manual' as const,
+    const platformDelivery: LeadDeliveryRecord = {
+      id: 700,
+      leadId: 8,
+      purpose: 'primary_custody',
+      routingRevision: 1,
+      channel: 'manual',
+      recipientType: 'manual',
       recipientId: null,
-      channel: 'manual' as const,
-      status: 'attention_required' as const,
-      attemptCount: 1,
+      recipientUserId: null,
+      recipientAgentId: null,
+      recipientAgencyId: null,
+      recipientDeveloperOrganisationId: null,
+      recipientPublisherId: null,
+      destinationName: null,
+      destinationAddress: null,
+      destinationSnapshot: null,
+      idempotencyKey: 'manual:platform',
+      state: 'queued',
+      dueAt: '2026-08-17 10:00:00.000000',
       maxAttempts: 3,
-      attemptedAt: '2026-08-17 10:00:00',
-      deliveredAt: null,
-      createdAt: '2026-08-17 10:00:00',
-      updatedAt: '2026-08-17 10:00:00',
-      supplyOrigin: 'platform_curated' as const,
-      leadCustody: 'platform_managed' as const,
+      completedAt: null,
+      supersededAt: null,
+      createdAt: '2026-08-17 10:00:00.000000',
+      updatedAt: '2026-08-17 10:00:00.000000',
+      supplyOrigin: 'platform_curated',
+      leadCustody: 'platform_managed',
     };
 
     expect(
       requirePlatformOperationsCustody({
         deliveryStatus: 'attention_required',
-        deliveryAttempts: [platformAttempt],
+        delivery: platformDelivery,
         agentId: null,
         agencyId: null,
-      }).latestAttempt,
-    ).toMatchObject({ id: 'delivery-platform', leadCustody: 'platform_managed' });
+      }).delivery,
+    ).toMatchObject({ id: 700, leadCustody: 'platform_managed' });
 
     expect(() =>
       requirePlatformOperationsCustody({
         deliveryStatus: 'attention_required',
-        deliveryAttempts: [],
+        delivery: null,
         agentId: null,
         agencyId: null,
       }),

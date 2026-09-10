@@ -1,7 +1,11 @@
 import { desc, eq, gte } from 'drizzle-orm';
 import { getDb } from '../db';
 import { leads, properties, users } from '../../drizzle/schema';
-import { parseDeliveryAttempts } from './leadDeliveryService';
+import {
+  getLeadDeliverySnapshotsForLeadIds,
+  publicStatusForDelivery,
+  type LeadDeliverySnapshot,
+} from './leadDeliveryService';
 
 type UserRole = 'visitor' | 'agent' | 'agency_admin' | 'property_developer' | 'super_admin' | null;
 type LeadDeliveryMethod = 'email' | 'crm_export' | 'manual' | 'none' | null;
@@ -22,7 +26,8 @@ export interface LeadRoutingAuditRow {
   brandLeadStatus: string | null;
   leadDeliveryMethod: LeadDeliveryMethod;
   deliveryStatus: LeadDeliveryStatus;
-  deliveryAttempts: unknown;
+  /** Relational custody and attempt evidence for the current primary route. */
+  deliverySnapshot?: LeadDeliverySnapshot | null;
   propertyOwnerId: number | null;
   propertyOwnerRole: UserRole;
 }
@@ -82,23 +87,37 @@ function normalizeSource(value?: string | null) {
 
 export function classifyLeadRouting(row: LeadRoutingAuditRow): LeadRoutingClassification {
   const normalizedSource = normalizeSource(row.leadSource || row.source);
-  const attempts = parseDeliveryAttempts(row.deliveryAttempts);
-  const latestAttempt = attempts[attempts.length - 1];
+  const currentDelivery = row.deliverySnapshot?.current || null;
+  const attempts = row.deliverySnapshot?.attempts || [];
+  const latestAttempt = attempts[attempts.length - 1] || null;
+  const custody = currentDelivery?.leadCustody || latestAttempt?.leadCustody;
+  const recipientType = currentDelivery?.recipientType || latestAttempt?.recipientType;
+  const recipientId = currentDelivery?.recipientId ?? latestAttempt?.recipientId;
+  const deliveryStatus = currentDelivery
+    ? publicStatusForDelivery(currentDelivery)
+    : row.deliveryStatus;
+  const deliveryMethod = currentDelivery?.channel || row.leadDeliveryMethod;
+  const attemptDelivered = Boolean(
+    latestAttempt &&
+      (latestAttempt.status === 'delivered' ||
+        latestAttempt.state === 'completed' ||
+        latestAttempt.state === 'accepted'),
+  );
 
-  if (latestAttempt?.leadCustody === 'platform_managed') {
+  if (custody === 'platform_managed') {
     return {
       routeType: row.cataloguePublisherId ? 'brand' : 'direct',
       recipientType: 'platform',
       normalizedSource,
-      issue: row.deliveryStatus === 'attention_required' ? 'platform_custody_review' : null,
+      issue: deliveryStatus === 'attention_required' ? 'platform_custody_review' : null,
     };
   }
 
   if (
-    latestAttempt?.leadCustody === 'verified_customer_recipient' &&
-    latestAttempt.status === 'delivered' &&
-    latestAttempt.recipientType === 'agent' &&
-    Number(latestAttempt.recipientId) === Number(row.agentId)
+    custody === 'verified_customer_recipient' &&
+    attemptDelivered &&
+    recipientType === 'agent' &&
+    Number(recipientId) === Number(row.agentId)
   ) {
     return {
       routeType: 'direct',
@@ -109,10 +128,10 @@ export function classifyLeadRouting(row: LeadRoutingAuditRow): LeadRoutingClassi
   }
 
   if (
-    latestAttempt?.leadCustody === 'verified_customer_recipient' &&
-    latestAttempt.status === 'delivered' &&
-    latestAttempt.recipientType === 'agency' &&
-    Number(latestAttempt.recipientId) === Number(row.agencyId)
+    custody === 'verified_customer_recipient' &&
+    attemptDelivered &&
+    recipientType === 'agency' &&
+    Number(recipientId) === Number(row.agencyId)
   ) {
     return {
       routeType: 'direct',
@@ -123,9 +142,9 @@ export function classifyLeadRouting(row: LeadRoutingAuditRow): LeadRoutingClassi
   }
 
   if (
-    latestAttempt?.leadCustody === 'verified_customer_recipient' &&
-    latestAttempt.status === 'delivered' &&
-    latestAttempt.recipientType === 'developer' &&
+    custody === 'verified_customer_recipient' &&
+    attemptDelivered &&
+    recipientType === 'developer' &&
     row.cataloguePublisherId
   ) {
     return {
@@ -136,7 +155,7 @@ export function classifyLeadRouting(row: LeadRoutingAuditRow): LeadRoutingClassi
     };
   }
 
-  if (row.cataloguePublisherId && row.leadDeliveryMethod === 'none') {
+  if (row.cataloguePublisherId && deliveryMethod === 'none') {
     return {
       routeType: 'brand',
       recipientType: 'brand',
@@ -156,7 +175,7 @@ export function classifyLeadRouting(row: LeadRoutingAuditRow): LeadRoutingClassi
       routeType: row.cataloguePublisherId ? 'brand' : 'direct',
       recipientType: 'context_only',
       normalizedSource,
-      issue: latestAttempt ? 'recipient_evidence_missing' : 'direct_context_without_owner',
+      issue: attempts.length ? 'recipient_evidence_missing' : 'direct_context_without_owner',
     };
   }
 
@@ -200,9 +219,10 @@ export function buildLeadRoutingAudit(
 
     if (classification.routeType === 'brand') {
       summary.brandRoute += 1;
-      if (row.leadDeliveryMethod === 'email') summary.brandDeliveredEmail += 1;
-      if (row.leadDeliveryMethod === 'crm_export') summary.brandDeliveredSubscriber += 1;
-      if (row.leadDeliveryMethod === 'none') summary.brandCapturedOnly += 1;
+      const deliveryMethod = row.deliverySnapshot?.current?.channel || row.leadDeliveryMethod;
+      if (deliveryMethod === 'email') summary.brandDeliveredEmail += 1;
+      if (deliveryMethod === 'crm_export') summary.brandDeliveredSubscriber += 1;
+      if (deliveryMethod === 'none') summary.brandCapturedOnly += 1;
       if (row.agentId || row.agencyId) summary.brandWithAgentContext += 1;
     } else if (classification.routeType === 'direct') {
       summary.directRoute += 1;
@@ -272,7 +292,6 @@ export async function getLeadRoutingAudit(input?: {
       brandLeadStatus: leads.brandLeadStatus,
       leadDeliveryMethod: leads.leadDeliveryMethod,
       deliveryStatus: leads.deliveryStatus,
-      deliveryAttempts: leads.deliveryAttempts,
       propertyOwnerId: properties.ownerId,
       propertyOwnerRole: users.role,
     })
@@ -282,5 +301,15 @@ export async function getLeadRoutingAudit(input?: {
     .where(gte(leads.createdAt, cutoff))
     .orderBy(desc(leads.createdAt));
 
-  return buildLeadRoutingAudit(rows as LeadRoutingAuditRow[], { days, attentionLimit });
+  const leadIds = rows.map(row => Number(row.id)).filter(id => Number.isSafeInteger(id) && id > 0);
+  const deliverySnapshots = await getLeadDeliverySnapshotsForLeadIds({
+    database: db,
+    leadIds,
+  });
+  const enrichedRows: LeadRoutingAuditRow[] = rows.map(row => ({
+    ...(row as LeadRoutingAuditRow),
+    deliverySnapshot: deliverySnapshots.get(Number(row.id)) || null,
+  }));
+
+  return buildLeadRoutingAudit(enrichedRows, { days, attentionLimit });
 }

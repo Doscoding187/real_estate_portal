@@ -1153,6 +1153,11 @@
       "path": "server/migrations/0075_recently_viewed_microsecond_recency.sql",
       "classification": "canonical active",
       "purpose": "Gives canonical recent-view facts microsecond UTC precision so revisits retain strict account recency ordering."
+    },
+    {
+      "path": "server/migrations/0076_lead_delivery_relational_authority.sql",
+      "classification": "canonical active",
+      "purpose": "Replaces JSON lead delivery history with relational delivery obligations and append-only attempt recovery state."
     }
   ],
   "prohibitedPaths": [

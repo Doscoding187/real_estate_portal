@@ -4,6 +4,11 @@ import {
   classifyLeadRouting,
   type LeadRoutingAuditRow,
 } from '../leadRoutingAuditService';
+import type {
+  LeadDeliveryAttemptRecord,
+  LeadDeliveryRecord,
+  LeadDeliverySnapshot,
+} from '../leadDeliveryService';
 
 function makeRow(overrides: Partial<LeadRoutingAuditRow> = {}): LeadRoutingAuditRow {
   return {
@@ -21,7 +26,7 @@ function makeRow(overrides: Partial<LeadRoutingAuditRow> = {}): LeadRoutingAudit
     brandLeadStatus: null,
     leadDeliveryMethod: null,
     deliveryStatus: null,
-    deliveryAttempts: [],
+    deliverySnapshot: null,
     propertyOwnerId: null,
     propertyOwnerRole: null,
     ...overrides,
@@ -33,27 +38,58 @@ function deliveryEvidence(input: {
   recipientId: number | null;
   leadCustody: 'verified_customer_recipient' | 'platform_managed';
   status?: 'delivered' | 'attention_required';
-}) {
+}): LeadDeliverySnapshot {
   const status = input.status ?? 'delivered';
-  return [
-    {
-      id: `attempt-${input.recipientType}`,
-      deliveryKey: `test:${input.recipientType}:${input.recipientId ?? 'manual'}`,
-      recipientType: input.recipientType,
-      recipientId: input.recipientId,
-      channel: input.recipientType === 'manual' ? 'manual' : 'crm_export',
-      status,
-      attemptCount: 1,
-      maxAttempts: 3,
-      attemptedAt: '2026-03-25 08:00:00',
-      deliveredAt: status === 'delivered' ? '2026-03-25 08:00:00' : null,
-      createdAt: '2026-03-25 08:00:00',
-      updatedAt: '2026-03-25 08:00:00',
-      supplyOrigin:
-        input.leadCustody === 'platform_managed' ? 'platform_curated' : 'customer_managed',
-      leadCustody: input.leadCustody,
-    },
-  ];
+  const deliveryId = 100 + (input.recipientId || 0);
+  const deliveryKey = `lead:1:${input.recipientType}:${input.recipientId ?? 'manual'}`;
+  const delivered = status === 'delivered';
+  const delivery: LeadDeliveryRecord = {
+    id: deliveryId,
+    leadId: 1,
+    purpose: 'primary_custody',
+    routingRevision: 1,
+    channel: input.recipientType === 'manual' ? 'manual' : 'crm_export',
+    recipientType: input.recipientType,
+    recipientId: input.recipientId,
+    recipientUserId: null,
+    recipientAgentId: input.recipientType === 'agent' ? input.recipientId : null,
+    recipientAgencyId: input.recipientType === 'agency' ? input.recipientId : null,
+    recipientDeveloperOrganisationId: input.recipientType === 'developer' ? input.recipientId : null,
+    recipientPublisherId: null,
+    destinationName: null,
+    destinationAddress: null,
+    destinationSnapshot: null,
+    supplyOrigin:
+      input.leadCustody === 'platform_managed' ? 'platform_curated' : 'customer_managed',
+    leadCustody: input.leadCustody,
+    state: delivered ? 'completed' : 'unknown',
+    idempotencyKey: deliveryKey,
+    dueAt: '2026-03-25 08:00:00.000000',
+    maxAttempts: 3,
+    completedAt: delivered ? '2026-03-25 08:00:00.000000' : null,
+    supersededAt: null,
+    createdAt: '2026-03-25 08:00:00.000000',
+    updatedAt: '2026-03-25 08:00:00.000000',
+  };
+  const attempt: LeadDeliveryAttemptRecord = {
+    id: String(deliveryId),
+    deliveryId,
+    deliveryKey,
+    recipientType: input.recipientType,
+    recipientId: input.recipientId,
+    channel: delivery.channel,
+    status: delivered ? 'delivered' : 'attention_required',
+    attemptCount: 1,
+    maxAttempts: 3,
+    attemptedAt: '2026-03-25 08:00:00.000000',
+    deliveredAt: delivered ? '2026-03-25 08:00:00.000000' : null,
+    createdAt: '2026-03-25 08:00:00.000000',
+    updatedAt: '2026-03-25 08:00:00.000000',
+    supplyOrigin: delivery.supplyOrigin,
+    leadCustody: delivery.leadCustody,
+    state: delivered ? 'completed' : 'unknown',
+  };
+  return { current: delivery, attempts: [attempt] };
 }
 
 describe('leadRoutingAuditService', () => {
@@ -80,7 +116,7 @@ describe('leadRoutingAuditService', () => {
           cataloguePublisherId: 99,
           leadDeliveryMethod: 'crm_export',
           deliveryStatus: 'delivered',
-          deliveryAttempts: deliveryEvidence({
+          deliverySnapshot: deliveryEvidence({
             recipientType: 'developer',
             recipientId: 6,
             leadCustody: 'verified_customer_recipient',
@@ -91,7 +127,7 @@ describe('leadRoutingAuditService', () => {
           agentId: 15,
           leadSource: 'search_results',
           deliveryStatus: 'delivered',
-          deliveryAttempts: deliveryEvidence({
+          deliverySnapshot: deliveryEvidence({
             recipientType: 'agent',
             recipientId: 15,
             leadCustody: 'verified_customer_recipient',
@@ -102,7 +138,7 @@ describe('leadRoutingAuditService', () => {
           propertyId: 70,
           leadSource: 'property_detail',
           deliveryStatus: 'attention_required',
-          deliveryAttempts: deliveryEvidence({
+          deliverySnapshot: deliveryEvidence({
             recipientType: 'manual',
             recipientId: null,
             leadCustody: 'platform_managed',
@@ -162,7 +198,7 @@ describe('leadRoutingAuditService', () => {
         makeRow({
           propertyId: 77,
           deliveryStatus: 'attention_required',
-          deliveryAttempts: deliveryEvidence({
+          deliverySnapshot: deliveryEvidence({
             recipientType: 'manual',
             recipientId: null,
             leadCustody: 'platform_managed',
@@ -184,7 +220,7 @@ describe('leadRoutingAuditService', () => {
           propertyId: 77,
           agentId: 900,
           deliveryStatus: 'delivered',
-          deliveryAttempts: deliveryEvidence({
+          deliverySnapshot: deliveryEvidence({
             recipientType: 'agency',
             recipientId: 44,
             leadCustody: 'verified_customer_recipient',

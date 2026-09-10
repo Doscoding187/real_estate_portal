@@ -10,6 +10,8 @@ const {
   mockResolvePublicPropertyEligibility,
   mockResolvePublicLandLeadCustody,
   mockResolvePublicCommercialLeadCustody,
+  mockCreateLeadDeliveryInTransaction,
+  mockGetLeadDeliverySnapshot,
 } = vi.hoisted(() => ({
   mockGetDb: vi.fn(),
   mockRecordAgentOsEventForAgentId: vi.fn(),
@@ -19,6 +21,8 @@ const {
   mockResolvePublicPropertyEligibility: vi.fn(),
   mockResolvePublicLandLeadCustody: vi.fn(),
   mockResolvePublicCommercialLeadCustody: vi.fn(),
+  mockCreateLeadDeliveryInTransaction: vi.fn(),
+  mockGetLeadDeliverySnapshot: vi.fn(),
 }));
 
 vi.mock('../../db', () => ({
@@ -53,20 +57,36 @@ vi.mock('../commercialOfficeService', () => ({
   resolvePublicCommercialLeadCustody: mockResolvePublicCommercialLeadCustody,
 }));
 
+vi.mock('../leadDeliveryService', () => ({
+  createLeadDeliveryInTransaction: mockCreateLeadDeliveryInTransaction,
+  getLeadDeliverySnapshot: mockGetLeadDeliverySnapshot,
+  publicStatusForDelivery: (delivery: { state: string; leadCustody: string }) =>
+    delivery.state === 'completed' || delivery.state === 'accepted'
+      ? 'delivered'
+      : delivery.state === 'retryable_failed'
+        ? 'failed'
+        : delivery.state === 'unknown' || delivery.state === 'exhausted' ||
+            delivery.leadCustody === 'platform_managed' ||
+            delivery.leadCustody === 'attention_required'
+          ? 'attention_required'
+          : 'pending',
+  toMySqlDateTime: (value: Date | string = new Date()) =>
+    value instanceof Date ? value.toISOString().replace('T', ' ').replace('Z', '') : String(value),
+}));
+
 import { capturePublicLead } from '../publicLeadCaptureService';
 
 type FakeDatabaseOptions = {
   selectResults?: unknown[];
   insertId?: number;
+  deliverySnapshots?: unknown[];
+  defaultDeliverySnapshot?: unknown;
 };
 
 function makeFakeDatabase(options: FakeDatabaseOptions = {}) {
   const selectResults = [...(options.selectResults || [])];
-  const state = { deliveryAttempts: [] as unknown[] };
-  const insertValues = vi.fn().mockImplementation(async (values: any) => {
-    state.deliveryAttempts = Array.isArray(values?.deliveryAttempts) ? values.deliveryAttempts : [];
-    return [{ insertId: options.insertId || 456 }];
-  });
+  const state = { deliveryRows: [] as unknown[] };
+  const insertValues = vi.fn().mockResolvedValue([{ insertId: options.insertId || 456 }]);
   const updateWhere = vi.fn().mockResolvedValue(undefined);
   const updateSet = vi.fn().mockReturnValue({ where: updateWhere });
 
@@ -93,35 +113,91 @@ function makeFakeDatabase(options: FakeDatabaseOptions = {}) {
 
   const transaction = vi.fn(async (callback: (tx: any) => Promise<unknown>) => {
     const tx = {
+      __database: fakeDatabase,
       execute: vi.fn().mockResolvedValue([]),
       insert: vi.fn(() => ({ values: insertValues })),
       select: vi.fn(() => {
         const query: any = {
           from: vi.fn(() => query),
           where: vi.fn(() => query),
-          limit: vi.fn(async () => [{ deliveryAttempts: state.deliveryAttempts }]),
+          limit: vi.fn(async () => []),
         };
         return query;
       }),
       update: vi.fn(() => ({
-        set: vi.fn((patch: { deliveryAttempts?: unknown[] }) => ({
-          where: vi.fn(async () => {
-            if (patch.deliveryAttempts) state.deliveryAttempts = patch.deliveryAttempts;
-            return undefined;
-          }),
-        })),
+        set: vi.fn(() => ({ where: vi.fn().mockResolvedValue(undefined) })),
       })),
     };
     return callback(tx);
   });
 
-  return {
+  const fakeDatabase = {
     select: vi.fn(() => makeQuery()),
     insert: vi.fn(() => ({ values: insertValues })),
     update: vi.fn(() => ({ set: updateSet })),
     transaction,
     insertValues,
     state,
+    deliverySnapshots: [...(options.deliverySnapshots || [])],
+    defaultDeliverySnapshot: options.defaultDeliverySnapshot,
+  };
+  return fakeDatabase;
+}
+
+let nextDeliveryId = 10_000;
+let deliveryStates = new WeakMap<object, Map<number, any>>();
+
+function syntheticDeliverySnapshot(leadId: number) {
+  const deliveryId = nextDeliveryId++;
+  const delivery = {
+    id: deliveryId,
+    leadId,
+    purpose: 'primary_custody',
+    routingRevision: 1,
+    channel: 'crm_export',
+    recipientType: 'agent',
+    recipientId: 33,
+    recipientUserId: null,
+    recipientAgentId: 33,
+    recipientAgencyId: null,
+    recipientDeveloperOrganisationId: null,
+    recipientPublisherId: null,
+    destinationName: null,
+    destinationAddress: null,
+    destinationSnapshot: null,
+    supplyOrigin: 'customer_managed',
+    leadCustody: 'verified_customer_recipient',
+    state: 'completed',
+    idempotencyKey: `test:lead:${leadId}`,
+    dueAt: '2026-08-02 00:00:00.000000',
+    maxAttempts: 3,
+    completedAt: '2026-08-02 00:00:00.000000',
+    supersededAt: null,
+    createdAt: '2026-08-02 00:00:00.000000',
+    updatedAt: '2026-08-02 00:00:00.000000',
+  };
+  return {
+    current: delivery,
+    attempts: [
+      {
+        id: `attempt-${deliveryId}`,
+        deliveryId,
+        deliveryKey: delivery.idempotencyKey,
+        recipientType: 'agent',
+        recipientId: 33,
+        channel: 'crm_export',
+        status: 'delivered',
+        attemptCount: 1,
+        maxAttempts: 3,
+        attemptedAt: delivery.createdAt,
+        deliveredAt: delivery.completedAt,
+        createdAt: delivery.createdAt,
+        updatedAt: delivery.updatedAt,
+        supplyOrigin: 'customer_managed',
+        leadCustody: 'verified_customer_recipient',
+        state: 'completed',
+      },
+    ],
   };
 }
 
@@ -171,16 +247,6 @@ function existingLead(overrides: Record<string, unknown> = {}) {
     consentSource: consent.source,
     leadDeliveryMethod: 'crm_export',
     deliveryStatus: 'delivered',
-    deliveryAttempts: [
-      {
-        id: 'attempt-1',
-        recipientType: 'agent',
-        recipientId: 33,
-        status: 'delivered',
-        supplyOrigin: 'customer_managed',
-        leadCustody: 'verified_customer_recipient',
-      },
-    ],
     brandLeadStatus: null,
     ...overrides,
   } as any;
@@ -189,6 +255,89 @@ function existingLead(overrides: Record<string, unknown> = {}) {
 describe('publicLeadCaptureService contract', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    nextDeliveryId = 10_000;
+    deliveryStates = new WeakMap();
+    mockCreateLeadDeliveryInTransaction.mockImplementation(async (tx: any, input: any) => {
+      const deliveryId = nextDeliveryId++;
+      const state =
+        input.initialStatus === 'delivered'
+          ? 'completed'
+          : input.initialStatus === 'failed'
+            ? 'retryable_failed'
+            : 'queued';
+      const timestamp = '2026-08-02 00:00:00.000000';
+      const delivery = {
+        id: deliveryId,
+        leadId: input.leadId,
+        purpose: input.purpose || 'primary_custody',
+        routingRevision: input.routingRevision || 1,
+        channel: input.channel,
+        recipientType: input.recipientType,
+        recipientId:
+          input.recipientType === 'agent'
+            ? input.recipientAgentId
+            : input.recipientType === 'agency'
+              ? input.recipientAgencyId
+              : input.recipientType === 'developer'
+                ? input.recipientDeveloperOrganisationId
+                : input.recipientUserId || null,
+        recipientUserId: input.recipientUserId || null,
+        recipientAgentId: input.recipientAgentId || null,
+        recipientAgencyId: input.recipientAgencyId || null,
+        recipientDeveloperOrganisationId: input.recipientDeveloperOrganisationId || null,
+        recipientPublisherId: input.recipientPublisherId || null,
+        destinationName: input.destinationName || null,
+        destinationAddress: input.destinationAddress || null,
+        destinationSnapshot: input.destinationSnapshot || null,
+        supplyOrigin: input.supplyOrigin,
+        leadCustody: input.leadCustody,
+        state,
+        idempotencyKey: input.idempotencyKey,
+        dueAt: timestamp,
+        maxAttempts: input.maxAttempts || 3,
+        completedAt: state === 'completed' ? timestamp : null,
+        supersededAt: null,
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      };
+      const attempt =
+        state === 'completed' || state === 'retryable_failed'
+          ? {
+              id: `attempt-${deliveryId}`,
+              deliveryId,
+              deliveryKey: delivery.idempotencyKey,
+              recipientType: delivery.recipientType,
+              recipientId: delivery.recipientId,
+              channel: delivery.channel,
+              status: state === 'completed' ? 'delivered' : 'failed',
+              attemptCount: 1,
+              maxAttempts: delivery.maxAttempts,
+              attemptedAt: timestamp,
+              deliveredAt: state === 'completed' ? timestamp : null,
+              createdAt: timestamp,
+              updatedAt: timestamp,
+              supplyOrigin: delivery.supplyOrigin,
+              leadCustody: delivery.leadCustody,
+              state,
+            }
+          : null;
+      const ownerDatabase = tx.__database;
+      const entries = deliveryStates.get(ownerDatabase) || new Map<number, any>();
+      entries.set(input.leadId, { current: delivery, attempts: attempt ? [attempt] : [] });
+      deliveryStates.set(ownerDatabase, entries);
+      ownerDatabase.state.deliveryRows.push(delivery);
+      return { delivery, attempt, duplicate: false };
+    });
+    mockGetLeadDeliverySnapshot.mockImplementation(async ({ leadId, database: snapshotDatabase }: any) => {
+      if (snapshotDatabase.deliverySnapshots?.length) {
+        return snapshotDatabase.deliverySnapshots.shift();
+      }
+      if (snapshotDatabase.defaultDeliverySnapshot !== undefined) {
+        return snapshotDatabase.defaultDeliverySnapshot;
+      }
+      const entries = deliveryStates.get(snapshotDatabase);
+      return entries?.get(Number(leadId)) || syntheticDeliverySnapshot(Number(leadId));
+    });
     mockRecordAgentOsEventForAgentId.mockResolvedValue(undefined);
     mockGetOrCreateProspectIdentity.mockResolvedValue({
       id: 'prospect-identity-001',
@@ -618,11 +767,14 @@ describe('publicLeadCaptureService contract', () => {
       recipientId: null,
     });
     expect(database.insertValues).toHaveBeenCalledWith(
+      expect.objectContaining({ listingId: 704, agentId: null, agencyId: null }),
+    );
+    expect(mockCreateLeadDeliveryInTransaction).toHaveBeenCalledWith(
+      expect.anything(),
       expect.objectContaining({
-        listingId: 704,
-        agentId: null,
-        agencyId: null,
-        deliveryStatus: 'attention_required',
+        leadId: 907,
+        leadCustody: 'attention_required',
+        initialStatus: 'attention_required',
       }),
     );
   });
@@ -685,14 +837,20 @@ describe('publicLeadCaptureService contract', () => {
         captureRequestId: 'capture-request-001',
         consentVersion: '2026-08-02',
         leadDeliveryMethod: 'manual',
-        deliveryStatus: 'attention_required',
         agentId: null,
         agencyId: null,
       }),
     );
-    expect(database.state.deliveryAttempts).toHaveLength(1);
-    expect(database.state.deliveryAttempts[0]).toMatchObject({
-      status: 'attention_required',
+    expect(mockCreateLeadDeliveryInTransaction).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        leadId: 901,
+        leadCustody: 'platform_managed',
+        initialStatus: 'attention_required',
+      }),
+    );
+    expect(database.state.deliveryRows).toHaveLength(1);
+    expect(database.state.deliveryRows[0]).toMatchObject({
       supplyOrigin: 'platform_curated',
       leadCustody: 'platform_managed',
       recipientType: 'manual',
@@ -735,7 +893,7 @@ describe('publicLeadCaptureService contract', () => {
       capturePublicLead(baseInput({ developmentId: 77, unitId: 'unit-1' })),
     ).rejects.toMatchObject({ code: 'NOT_FOUND' });
     expect(database.insertValues).not.toHaveBeenCalled();
-    expect(database.state.deliveryAttempts).toHaveLength(0);
+    expect(database.state.deliveryRows).toHaveLength(0);
   });
 
   it('routes a registered, approved development to its matching developer recipient', async () => {
@@ -1172,8 +1330,17 @@ describe('publicLeadCaptureService contract', () => {
   });
 
   it('accepts a development replay when canonical brand attribution was omitted', async () => {
+    const developerSnapshot = syntheticDeliverySnapshot(812);
+    developerSnapshot.current.recipientType = 'developer';
+    developerSnapshot.current.recipientId = 7;
+    developerSnapshot.current.recipientAgentId = null;
+    developerSnapshot.current.recipientDeveloperOrganisationId = 7;
+    developerSnapshot.current.channel = 'crm_export';
+    developerSnapshot.attempts[0].recipientType = 'developer';
+    developerSnapshot.attempts[0].recipientId = 7;
     mockGetDb.mockResolvedValue(
       makeFakeDatabase({
+        defaultDeliverySnapshot: developerSnapshot,
         selectResults: [
           [
             existingLead({
@@ -1183,16 +1350,6 @@ describe('publicLeadCaptureService contract', () => {
               agentId: null,
               source: 'development_detail',
               leadSource: 'development_detail_contact',
-              deliveryAttempts: [
-                {
-                  id: 'attempt-1',
-                  recipientType: 'developer',
-                  recipientId: 7,
-                  status: 'delivered',
-                  supplyOrigin: 'customer_managed',
-                  leadCustody: 'verified_customer_recipient',
-                },
-              ],
             }),
           ],
         ],
@@ -1256,14 +1413,15 @@ describe('publicLeadCaptureService contract', () => {
         }),
       ),
     ).resolves.toMatchObject({ leadId: 905, deliveryStatus: 'delivered' });
-    expect(database.state.deliveryAttempts).toHaveLength(1);
+    expect(database.state.deliveryRows).toHaveLength(1);
   });
 
   it('resumes a missing delivery attempt on an idempotent replay', async () => {
-    const replayLead = existingLead({ deliveryAttempts: [], deliveryStatus: 'delivered' });
+    const replayLead = existingLead({ deliveryStatus: 'delivered' });
     const finalizedReplayLead = existingLead();
     const database = makeFakeDatabase({
       selectResults: [[replayLead], [finalizedReplayLead]],
+      deliverySnapshots: [{ current: null, attempts: [] }],
     });
     mockGetDb.mockResolvedValue(database);
 
@@ -1277,9 +1435,8 @@ describe('publicLeadCaptureService contract', () => {
         }),
       ),
     ).resolves.toMatchObject({ leadId: 812, duplicate: true });
-    expect(database.state.deliveryAttempts).toHaveLength(1);
-    expect(database.state.deliveryAttempts[0]).toMatchObject({
-      status: 'delivered',
+    expect(database.state.deliveryRows).toHaveLength(1);
+    expect(database.state.deliveryRows[0]).toMatchObject({
       recipientType: 'agent',
       recipientId: 33,
     });

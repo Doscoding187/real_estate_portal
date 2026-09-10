@@ -7,10 +7,11 @@ import {
   cataloguePublishers,
   developmentDrafts,
   developments,
+  leadDeliveries,
   leads,
   properties,
 } from '../drizzle/schema';
-import { eq, desc, and, isNull, sql } from 'drizzle-orm';
+import { eq, desc, and, inArray, isNull, sql } from 'drizzle-orm';
 import { developmentService } from './services/developmentService';
 import { resolveOperatingIdentity } from './_core/identityResolver';
 import type { EnhancedTRPCContext } from './_core/publisherContext';
@@ -713,18 +714,21 @@ export const superAdminPublisherRouter = router({
       }
 
       const queueConditions = and(
-        eq(leads.deliveryStatus, 'attention_required'),
+        eq(leadDeliveries.purpose, 'primary_custody'),
+        eq(leadDeliveries.leadCustody, 'platform_managed'),
+        eq(leadDeliveries.recipientType, 'manual'),
+        inArray(leadDeliveries.state, ['queued', 'claimed', 'unknown', 'exhausted']),
         isNull(leads.agentId),
         isNull(leads.agencyId),
-        sql`JSON_LENGTH(${leads.deliveryAttempts}) > 0`,
-        sql`JSON_UNQUOTE(JSON_EXTRACT(
-          ${leads.deliveryAttempts},
-          CONCAT('$[', JSON_LENGTH(${leads.deliveryAttempts}) - 1, '].leadCustody')
-        )) = 'platform_managed'`,
-        sql`JSON_UNQUOTE(JSON_EXTRACT(
-          ${leads.deliveryAttempts},
-          CONCAT('$[', JSON_LENGTH(${leads.deliveryAttempts}) - 1, '].recipientType')
-        )) = 'manual'`,
+        // The greatest non-cancelled primary routing revision is authoritative.
+        sql`NOT EXISTS (
+          SELECT 1
+          FROM lead_deliveries AS newer_delivery
+          WHERE newer_delivery.lead_id = ${leadDeliveries.leadId}
+            AND newer_delivery.purpose = 'primary_custody'
+            AND newer_delivery.routing_revision > ${leadDeliveries.routingRevision}
+            AND newer_delivery.state NOT IN ('superseded', 'cancelled')
+        )`,
       );
       const rows = await dbConn
         .select({
@@ -749,6 +753,7 @@ export const superAdminPublisherRouter = router({
           publisherName: cataloguePublishers.name,
         })
         .from(leads)
+        .leftJoin(leadDeliveries, eq(leads.id, leadDeliveries.leadId))
         .leftJoin(properties, eq(leads.propertyId, properties.id))
         .leftJoin(developments, eq(leads.developmentId, developments.id))
         .leftJoin(cataloguePublishers, eq(leads.cataloguePublisherId, cataloguePublishers.id))
@@ -760,6 +765,7 @@ export const superAdminPublisherRouter = router({
       const [countRow] = await dbConn
         .select({ total: sql<number>`count(*)` })
         .from(leads)
+        .leftJoin(leadDeliveries, eq(leads.id, leadDeliveries.leadId))
         .where(queueConditions);
 
       return {

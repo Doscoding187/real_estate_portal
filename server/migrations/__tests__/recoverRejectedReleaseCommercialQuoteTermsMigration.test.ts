@@ -231,7 +231,7 @@ describe('protected release commercial quote-terms zero-statement migration reco
     expect(result.plan).toMatchObject({
       status: 'pending',
       acceptedSuccessfulHead: '0045_commercial_space_positive_area_integrity.sql',
-      canonicalHead: '0075_recently_viewed_microsecond_recency.sql',
+      canonicalHead: '0076_lead_delivery_relational_authority.sql',
       rejectedAttempt: {
         attemptId: REJECTED_COMMERCIAL_OFFICE_QUOTE_TERMS.attemptId,
         acceptedOldHead: '0000_canonical_launch_baseline.sql',

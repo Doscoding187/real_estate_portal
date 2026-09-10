@@ -23,6 +23,7 @@ import { capturePublicLead } from './publicLeadCaptureService';
 import {
   appendLeadDeliveryRetryAttempt,
   claimLeadDeliveryAttempt,
+  getLeadDeliverySnapshot,
   updateLeadDeliveryAttempt,
   type LeadDeliveryStatus,
 } from './leadDeliveryService';
@@ -138,33 +139,30 @@ async function routePublisherLeadToEmail(
     return false;
   }
 
-  try {
-    // Send lead notification email
-    await EmailService.sendBrandLeadNotification(
-      publisher.publicContactEmail,
-      publisher.brandName,
-      {
-        leadId,
-        name: leadData.name,
-        email: leadData.email,
-        phone: leadData.phone || 'Not provided',
-        message: leadData.message || 'No message',
-        developmentId: leadData.developmentId,
-        propertyId: leadData.propertyId,
-      },
-    );
+  // Let provider exceptions escape. The caller records an `unknown` outcome
+  // when the process cannot establish whether the provider accepted the
+  // message; converting that exception to `false` would incorrectly authorize
+  // an automatic retry and risk a duplicate external delivery.
+  const accepted = await EmailService.sendBrandLeadNotification(
+    publisher.publicContactEmail,
+    publisher.brandName,
+    {
+      leadId,
+      name: leadData.name,
+      email: leadData.email,
+      phone: leadData.phone || 'Not provided',
+      message: leadData.message || 'No message',
+      developmentId: leadData.developmentId,
+      propertyId: leadData.propertyId,
+    },
+  );
 
-    // Update lead delivery status
-    await db
-      .update(leads)
-      .set({ brandLeadStatus: 'delivered_unsubscribed' })
-      .where(eq(leads.id, leadId));
+  // The shared email API collapses transport exceptions and rejections into
+  // false. Until a structured provider result is available, that result cannot
+  // prove non-acceptance and must not authorize an automatic retry.
+  if (!accepted) throw new Error('Email provider acceptance could not be established.');
 
-    return true;
-  } catch (error) {
-    console.error('Failed to route lead via email:', error);
-    return false;
-  }
+  return true;
 }
 
 async function retryPublisherLeadDelivery(leadId: number) {
@@ -182,44 +180,70 @@ async function retryPublisherLeadDelivery(leadId: number) {
     return { success: false as const, status: 'attention_required' as const };
   }
 
-  const attempt = await appendLeadDeliveryRetryAttempt({
-    leadId,
-    deliveryKey: `publisher:${lead.cataloguePublisherId}`,
-  });
+  const snapshot = await getLeadDeliverySnapshot({ leadId });
+  const delivery = snapshot.current;
+  if (!delivery || delivery.channel !== 'email' || delivery.recipientPublisherId !== lead.cataloguePublisherId) {
+    return { success: false as const, status: lead.deliveryStatus };
+  }
+
+  const attempt = await appendLeadDeliveryRetryAttempt({ deliveryId: delivery.id });
   if (!attempt) {
     return { success: false as const, status: lead.deliveryStatus };
   }
 
   const claimedAttempt = await claimLeadDeliveryAttempt({
-    leadId,
+    deliveryId: delivery.id,
     attemptId: attempt.id,
   });
   if (!claimedAttempt) {
     return { success: false as const, status: lead.deliveryStatus };
   }
 
-  const delivered = await routePublisherLeadToEmail(leadId, profile, {
-    cataloguePublisherId: lead.cataloguePublisherId,
-    developmentId: lead.developmentId || undefined,
-    propertyId: lead.propertyId || undefined,
-    unitId: lead.unitId || undefined,
-    unitName: lead.unitName || undefined,
-    name: lead.name,
-    email: lead.email,
-    phone: lead.phone || undefined,
-    message: lead.message || undefined,
-  });
+  let delivered = false;
+  let providerError: string | null = null;
+  let providerOutcomeUnknown = false;
+  try {
+    delivered = await routePublisherLeadToEmail(leadId, profile, {
+      cataloguePublisherId: lead.cataloguePublisherId,
+      developmentId: lead.developmentId || undefined,
+      propertyId: lead.propertyId || undefined,
+      unitId: lead.unitId || undefined,
+      unitName: lead.unitName || undefined,
+      name: lead.name,
+      email: lead.email,
+      phone: lead.phone || undefined,
+      message: lead.message || undefined,
+    });
+    if (!delivered) providerError = 'The configured email provider did not accept the lead notification.';
+  } catch (error) {
+    providerOutcomeUnknown = true;
+    providerError = error instanceof Error ? error.message : 'Provider outcome is unknown.';
+  }
   const updated = await updateLeadDeliveryAttempt({
     leadId,
-    attemptId: attempt.id,
-    status: delivered ? 'delivered' : 'failed',
-    error: delivered ? null : 'The configured email provider did not accept the lead notification.',
+    deliveryId: delivery.id,
+    attemptId: claimedAttempt.id,
+    leaseToken: claimedAttempt.leaseToken,
+    routingRevision: claimedAttempt.routingRevision,
+    status: delivered ? 'delivered' : providerOutcomeUnknown ? 'attention_required' : 'failed',
+    error: providerError,
   });
+
+  // The relational delivery state is authoritative. This legacy brand field
+  // remains a read projection and is advanced only after durable completion,
+  // so a crash cannot advertise delivery before the attempt is recorded.
+  if (updated?.status === 'delivered') {
+    await db
+      .update(leads)
+      .set({ brandLeadStatus: 'delivered_unsubscribed' })
+      .where(eq(leads.id, leadId));
+  }
 
   return {
     success: delivered,
     status: updated?.status || (delivered ? 'delivered' : 'failed'),
-    attemptId: attempt.id,
+    deliveryId: delivery.id,
+    attemptId: claimedAttempt.id,
   };
 }
 

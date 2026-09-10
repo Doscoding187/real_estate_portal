@@ -30,6 +30,7 @@
     "test": "vitest --run",
     "test:ci": "vitest --run --reporter=basic",
     "test:authority": "cross-env NODE_ENV=test APP_ENV=test tsx scripts/runTestsUnderDatabaseAuthority.mts",
+    "lead-delivery:worker": "cross-env NODE_ENV=production APP_ENV=production tsx scripts/runLeadDeliveryWorker.ts",
     "test:browser:authority": "cross-env NODE_ENV=test APP_ENV=test tsx scripts/runPlaywrightUnderDatabaseAuthority.mts",
     "test:db-authority:static": "vitest run --no-cache --config vitest.database-authority-static.config.ts --workspace vitest.database-authority-static.workspace.ts --project database-authority-static --reporter=basic",
     "test:watch": "vitest",

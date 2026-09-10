@@ -472,6 +472,72 @@ Expiry or objective removal condition: The destructive classification is complet
 
 Removal workstream: Pre-launch legacy consumer-profile retirement.
 
+### Exception ID: DBX-PRELAUNCH-LEAD-DELIVERY-RELATIONAL-2026-09-09-Edward
+
+Status: Approved for the pre-launch replacement of JSON lead delivery history
+
+Owner: Property Listify senior product engineering
+
+Approved by Edward on: 2026-09-09, through the explicit pre-launch database architecture takeover authorization
+
+Business reason: `leads.delivery_attempts` is a shared mutable JSON array that
+cannot enforce delivery identity, typed recipient ownership, due-work indexes,
+attempt cardinality, or lease fencing. The product is pre-launch and the
+task-owned target is disposable, so preserving old JSON history is not a
+reason to retain a structurally unsound authority.
+
+Canonical authority: `drizzle/schema/leads.ts` defines `lead_deliveries` as
+the routing and scheduling authority and `lead_delivery_attempts` as
+append-only claim/provider history. The `leads` delivery summary fields are a
+single-writer transactional read projection maintained by
+`server/services/leadDeliveryService.ts`; JSON is not read or written at
+runtime.
+
+Exact files: `drizzle/schema/leads.ts`,
+`server/migrations/0076_lead_delivery_relational_authority.sql`,
+`server/migrations/manifest.json`,
+`docs/database-authority/migration-tree-authority.json`,
+`server/services/leadDeliveryService.ts`,
+`server/services/publicLeadCaptureService.ts`,
+`server/services/publisherLeadService.ts`,
+`server/services/leadRoutingCorrectionService.ts`, and the P2 physical and
+contract evidence.
+
+Tables and columns: creates `lead_deliveries` and
+`lead_delivery_attempts`; removes `leads.delivery_attempts`. Retained
+`leads.delivery_status`, last-attempt, next-attempt, error, and provider
+columns are derived summaries only and have no independent writer.
+
+Permitted read direction: Runtime readers obtain current custody and attempts
+from the relational tables or the documented lead summary projection. No
+runtime reader may parse, query, or reconstruct an array tail from
+`delivery_attempts`.
+
+Permitted write direction: Public capture, route correction, worker claim,
+provider completion, retry recovery, and platform action write only through
+the canonical delivery service in the same transaction as the relational
+state. The canonical migration runner may drop the obsolete JSON column on the
+exact task-owned disposable target. No backfill, dual write, or alternate
+schema shape is permitted.
+
+Failure and observability behavior: Manifest planning and application fail
+closed on target, lineage, checksum, ownership, or attempt-ledger mismatch.
+Lease tokens and routing revisions fence stale completion. Provider ambiguity
+is represented as `unknown` for operations reconciliation, rather than a false
+success or automatic exactly-once retry.
+
+Automated evidence: Migration-manifest/tree validation, schema inventory and
+congruency, fresh canonical establishment, P2 independent-worker race and
+recovery tests, capture rollback tests, authorization contracts, and relevant
+browser or scenario journeys.
+
+Expiry or objective removal condition: The exceptional migration is complete
+once fresh canonical establishment and the P2 physical contract pass through
+`0076_lead_delivery_relational_authority.sql`. Retain this record as
+historical migration evidence; no runtime compatibility exception remains.
+
+Removal workstream: Pre-launch P2 lead-delivery relational authority cutover.
+
 ## Required exception record
 
 Every approved exception must contain:
