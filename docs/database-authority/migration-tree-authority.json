@@ -1168,6 +1168,11 @@
       "path": "server/migrations/0078_retire_unreachable_partner_leads.sql",
       "classification": "canonical active",
       "purpose": "Retires the unmounted partner lead router's stub table; canonical lead custody remains in leads and lead_deliveries."
+    },
+    {
+      "path": "server/migrations/0079_explore_engagement_event_identity.sql",
+      "classification": "canonical active",
+      "purpose": "Adds a client event identity and unique key so Explore engagement retries cannot create duplicate facts."
     }
   ],
   "prohibitedPaths": [

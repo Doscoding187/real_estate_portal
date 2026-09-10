@@ -1,6 +1,7 @@
 import { db } from '../db';
 import { exploreContent, exploreEngagements } from '../../drizzle/schema';
 import { eq, sql, and, count, desc } from 'drizzle-orm';
+import { randomUUID } from 'node:crypto';
 import type { InteractionType, DeviceType, FeedType } from '../../shared/types';
 
 /**
@@ -16,6 +17,7 @@ import type { InteractionType, DeviceType, FeedType } from '../../shared/types';
 
 export interface RecordInteractionOptions {
   contentId: number;
+  eventId?: string;
   userId?: number;
   sessionId: string;
   interactionType: InteractionType;
@@ -39,6 +41,7 @@ export class ExploreInteractionService {
   async recordInteraction(options: RecordInteractionOptions): Promise<void> {
     const {
       contentId,
+      eventId = randomUUID(),
       userId,
       sessionId,
       interactionType,
@@ -64,6 +67,7 @@ export class ExploreInteractionService {
 
       await db.insert(exploreEngagements).values({
         contentId,
+        eventId,
         userId: userId ?? null,
         sessionId: sessionId ?? '',
         interactionType,
@@ -85,6 +89,7 @@ export class ExploreInteractionService {
         console.error('Error updating content metrics:', err);
       });
     } catch (error: any) {
+      if (Number(error?.errno) === 1062 || error?.code === 'ER_DUP_ENTRY') return;
       console.error('[ENG_INSERT_FAIL]', {
         contentId,
         interactionType,
@@ -107,6 +112,7 @@ export class ExploreInteractionService {
     try {
       const values = interactions.map(i => ({
         contentId: i.contentId,
+        eventId: i.eventId || randomUUID(),
         userId: i.userId ?? null,
         sessionId: i.sessionId ?? '',
         interactionType: i.interactionType,

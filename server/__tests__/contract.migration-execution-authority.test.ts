@@ -437,8 +437,9 @@ describe('migration execution authority', () => {
       '0076_lead_delivery_relational_authority.sql',
       '0077_bundle_attribution_relational_authority.sql',
       '0078_retire_unreachable_partner_leads.sql',
+      '0079_explore_engagement_event_identity.sql',
     ]);
-    expect(executionManifest.expectedHead).toBe('0078_retire_unreachable_partner_leads.sql');
+    expect(executionManifest.expectedHead).toBe('0079_explore_engagement_event_identity.sql');
     expect(archivedSqlFiles.length).toBeGreaterThan(0);
     expect(activeSqlFiles.some(file => file.includes('_archived'))).toBe(false);
     expect(executionManifest.historyTable).toBe('sql_migration_history');

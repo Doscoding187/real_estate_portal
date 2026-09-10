@@ -74,6 +74,10 @@ export const exploreContent = mysqlTable('explore_content', {
 export const exploreEngagements = mysqlTable('explore_engagements', {
   id: int('id').autoincrement().primaryKey(),
 
+  // Client event identity makes browser retries idempotent. Historical rows
+  // may remain null; all current service writes supply an identity.
+  eventId: varchar('event_id', { length: 64 }),
+
   contentId: int('content_id')
     .notNull()
     .references(() => exploreContent.id),
@@ -99,7 +103,7 @@ export const exploreEngagements = mysqlTable('explore_engagements', {
   metadata: json('metadata'),
 
   createdAt: timestamp('created_at').defaultNow(), // nullable in DB
-});
+}, table => [uniqueIndex('uq_explore_engagement_event_id').on(table.eventId)]);
 
 /**
  * topics

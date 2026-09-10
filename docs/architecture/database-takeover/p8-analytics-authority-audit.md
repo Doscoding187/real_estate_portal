@@ -15,7 +15,7 @@ Marketplace bundle attribution is now backed by the canonical relational
 `bundle_attributions` table introduced by migration 0077. Bundle view,
 partner-engagement, and lead-attribution writes use the Drizzle schema, and the
 legacy logging and zero-count analytics paths now write and read that table.
-The migration is registered as the active manifest head and included in the
+The migration is registered in the active manifest lineage and included in the
 generated canonical model inventory.
 
 The unmounted `partnerLeadRouter` and its stub `leadGenerationService` were
@@ -24,11 +24,15 @@ removed. Their disconnected `partner_leads` table was retired by migration
 route registration. The active partner and lead journeys use the canonical
 `partners`, `leads`, and `lead_deliveries` authorities.
 
+Migration 0079 is the current manifest head and adds the canonical client
+event identity for browser engagement retries.
+
 Partner analytics no longer probes the retired table or converts schema errors
 into zero-valued reports. Explore content metrics are read from their canonical
 tables, while lead counts remain explicitly unavailable until a governed
 cross-domain attribution relation is defined.
 
-Replay deduplication for browser events remains a separate P8 requirement; the
-current event contract has no client event identity, so a unique database key
-cannot be introduced without first defining that product-level identity.
+Browser engagement events now require a client event identity at the governed
+discovery boundary. Migration 0079 adds the nullable historical-compatible
+column and unique key; current service writes always provide an ID, and a
+duplicate key is treated as an idempotent replay without incrementing metrics.

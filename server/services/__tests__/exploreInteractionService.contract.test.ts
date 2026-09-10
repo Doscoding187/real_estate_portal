@@ -6,5 +6,7 @@ describe('Explore interaction metric authority', () => {
     expect(source.ExploreInteractionService.toString()).toContain('COUNT(DISTINCT CASE');
     expect(source.ExploreInteractionService.toString()).toContain("CONCAT('user:'");
     expect(source.ExploreInteractionService.toString()).toContain("CONCAT('session:'");
+    expect(source.ExploreInteractionService.toString()).toContain('eventId');
+    expect(source.ExploreInteractionService.toString()).toContain('randomUUID');
   });
 });

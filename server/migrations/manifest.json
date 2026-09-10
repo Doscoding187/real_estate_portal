@@ -4,7 +4,7 @@
   "historyTable": "sql_migration_history",
   "attemptTable": "sql_migration_attempts",
   "lockName": "property_listify_manifest_migrations",
-  "expectedHead": "0078_retire_unreachable_partner_leads.sql",
+  "expectedHead": "0079_explore_engagement_event_identity.sql",
   "migrations": [
     {
       "sequence": 0,
@@ -826,6 +826,17 @@
       "statementPolicy": "approved-exception",
       "requiredReferenceDataVersion": null,
       "approvalReference": "DBX-PRELAUNCH-RETIRE-UNREACHABLE-PARTNER-LEADS-2026-09-10-Edward"
+    },
+    {
+      "sequence": 79,
+      "filename": "0079_explore_engagement_event_identity.sql",
+      "checksum": "56135df6ebdf7098815524d995561bd1b1e0fa53802c756418cf805b3363cc09",
+      "parent": "0078_retire_unreachable_partner_leads.sql",
+      "parentChecksum": "f990ce8953e28746b4ab9555603b3a0cbbdb530d983f9ac49bf03e1cb2a7ae45",
+      "kind": "exceptional",
+      "statementPolicy": "approved-exception",
+      "requiredReferenceDataVersion": null,
+      "approvalReference": "DBX-PRELAUNCH-EXPLORE-EVENT-IDEMPOTENCY-2026-09-10-Edward"
     }
   ]
 }
