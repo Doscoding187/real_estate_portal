@@ -6200,6 +6200,25 @@ export const agencyRouter = router({
       let transactionId = 0;
 
       await db.transaction(async tx => {
+        // Serialize acceptance on the deal row. The preflight read above is
+        // advisory; concurrent acceptors must re-check the unique transaction
+        // authority while holding the same lock before mutating offer state.
+        await tx.execute(sql`SELECT id FROM agency_deals WHERE id = ${deal.id} FOR UPDATE`);
+        const [existingTransactionInLock] = await tx
+          .select({ id: agencyTransactions.id })
+          .from(agencyTransactions)
+          .where(
+            and(
+              eq(agencyTransactions.dealId, deal.id),
+              eq(agencyTransactions.agencyId, agencyId),
+            ),
+          )
+          .limit(1);
+        if (existingTransactionInLock) {
+          transactionId = Number(existingTransactionInLock.id);
+          return;
+        }
+
         await tx
           .update(agencyDealOfferVersions)
           .set({ status: 'superseded', updatedAt: now } as any)
