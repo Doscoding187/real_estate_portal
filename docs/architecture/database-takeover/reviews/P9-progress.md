@@ -89,3 +89,10 @@ of a `Basic Info`/`Step 1` heading failed because the current wizard entry
 requires authenticated developer context; the backend logged expected
 `UNAUTHORIZED` responses for developer queries. This is recorded as a
 journey-contract mismatch, not as a database-authority failure.
+
+On 2026-09-11, `pnpm db:authority:status` resolved the exact disposable
+worktree target (`806c61e7…`) with manifest-head-ready, schema-congruent
+state, and application readiness ready. `pnpm db:authority:check` passed all
+33 static authority suites and 272 tests. This revalidation did not evaluate
+reference or scenario data, so it does not replace the fresh consumer
+contract evidence above.
