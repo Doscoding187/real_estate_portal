@@ -4,7 +4,7 @@ Status: planning handoff, 2026-09-09. Owner of architectural decisions and final
 
 Current execution state: P0 is complete and P1 is accepted after senior
 review. P2 is implemented but remains review-open; P3–P8 remain mandatory
-domain packets and P9 is not started. The task-owned disposable target is at
+domain packets and P9 is in closure audit. The task-owned disposable target is at
 manifest head `0080_service_lead_request_idempotency.sql`, with matching
 physical/model digest
 `69f4bf73e6ac9dc81b2be8b2cc36333e33d7a1ec6917ea392cbcc68466ac73fd`.
@@ -12,6 +12,11 @@ The relational lead-delivery cutover, consumer changes, seven physical
 delivery tests, service-lead request idempotency, and atomic demand routing
 are implemented. Current authority verification passes 33 static suites and
 272 tests, plus utility, schema sanity, inventory, and lifecycle gates.
+
+P9 currently has fresh-establishment evidence and a passing authority-injected
+Desktop Chrome consumer-activity journey. Provider admission, projection
+rebuild equivalence, packet review, and broader public/private journey coverage
+remain open.
 
 Outstanding review work includes independent provider crash/replay,
 reconciliation and authorization evidence for P2; duplicate-writer and
@@ -52,18 +57,18 @@ The worktree list also contains a delivery-authority release-convergence branch.
 
 ## Execution order
 
-| Packet | Outcome | Depends on |
-| --- | --- | --- |
-| P0 | Current coverage register and reconciled baseline | Starting commit |
-| P1 | Physical concurrency proof for implemented consumer activity | P0 |
-| P2 | Relational lead delivery, truthful delivery state, recoverable notifications | P0 and overlap reconciliation |
-| P3 | Inventory source/projection ownership and lifecycle correction | P0; coordinate lead references with P2 |
-| P4 | Account, organisation, membership, and tenant boundaries | P0 |
-| P5 | Billing and entitlements with verified monetary transitions | P4 |
-| P6 | Agency workflow, deals, distribution, and referrals | P3–P5 as relevant |
-| P7 | Development, geography, Land, Commercial, Shared Living | P3–P4 as relevant |
-| P8 | Explore, media, services, marketplace, demand, analytics | Relevant upstream identity and inventory packets |
-| P9 | Whole-system validation and final takeover review | All packets |
+| Packet | Outcome                                                                      | Depends on                                       |
+| ------ | ---------------------------------------------------------------------------- | ------------------------------------------------ |
+| P0     | Current coverage register and reconciled baseline                            | Starting commit                                  |
+| P1     | Physical concurrency proof for implemented consumer activity                 | P0                                               |
+| P2     | Relational lead delivery, truthful delivery state, recoverable notifications | P0 and overlap reconciliation                    |
+| P3     | Inventory source/projection ownership and lifecycle correction               | P0; coordinate lead references with P2           |
+| P4     | Account, organisation, membership, and tenant boundaries                     | P0                                               |
+| P5     | Billing and entitlements with verified monetary transitions                  | P4                                               |
+| P6     | Agency workflow, deals, distribution, and referrals                          | P3–P5 as relevant                                |
+| P7     | Development, geography, Land, Commercial, Shared Living                      | P3–P4 as relevant                                |
+| P8     | Explore, media, services, marketplace, demand, analytics                     | Relevant upstream identity and inventory packets |
+| P9     | Whole-system validation and final takeover review                            | All packets                                      |
 
 Work one coherent packet at a time. P4–P8 are mandatory coverage areas, not permission to redesign their tables without evidence. Split a packet into named subpackets when one review cannot cover it; record dependencies and retain every original requirement. Each independently deliverable change includes schema, runtime readers/writers, fixtures, and verification. Do not hand off a schema-only cutover with broken consumers.
 
@@ -169,14 +174,14 @@ Acceptance: fresh schema, incremental transition, runtime workflow, independent-
 
 For EACH row below, use the P0 register to produce a specific change list before implementation. Every retained model needs positive justification; every changed model needs migrated consumers; every removed model needs reachability and replacement evidence.
 
-| Packet and schema coverage | Decisions and implementation obligations | Required behavior evidence |
-| --- | --- | --- |
-| P3: listings.ts | Authored listing vs public projection identity, one-to-one mapping where appropriate, publication/revision/archive, rebuildability, price/media ownership. Inspect inventoryLinkResolver and projection writers. Do not enforce non-null source links until all supply types are mapped. | Differing IDs; duplicate projection prevention; concurrent publish; withdrawn source disappears from public surfaces; rebuild produces equivalent public facts. |
-| P4: core.ts, agencies.ts, developerIdentity.ts | User/account lifecycle; credential/session ownership; organisation membership and roles; exact tenant scope. Trace agencyListingScopeCondition and owner/agent fallback predicates; replace stale authority where unjustified. | Cross-tenant denial; membership revocation; reassignment; concurrent membership edits; no orphan owned records; bounded token lifecycle. |
-| P5: billing.ts and subscription/entitlement consumers | Identify actual product and subscription authorities. Define money units/currency/precision, invoice/payment identity, webhook idempotency, entitlement start/end/revocation. Do not merge similarly named tables without lifecycle proof. | Duplicate/out-of-order provider events; renewal/cancellation races; exact monetary totals; expired entitlement denies gated publication; no duplicate grants. |
-| P6: agencyDeals.ts, distribution.ts, referrals.ts, canvassing.ts, listingPerformance.ts | Lead/showing/deal relationships, state machines, assignments, commission attribution and ownership. Remove competing workflow tables only after full call-path analysis. | Invalid transitions rejected; concurrent assignment/booking; deal/commission consistency; tenant-scoped reports; cancellation and reassignment history. |
-| P7: developments.ts, locations.ts, googlePlacesMonitoring.ts, land.ts, commercial.ts, sharedLiving.ts | Development/unit/phase identity and availability; canonical geography vs provider/display metadata; domain-specific marketing links, provenance, evidence, and freshness. Read each applicable domain contract, including land-consumer-journey-contract.md. | Mixed Land geography rejected; public classification allow-list; unit availability races; Commercial economics states; Shared Living ownership/moderation; precision and private-address protection. |
-| P8: explore.ts, media.ts, marketplace.ts, partners.ts, servicesEngine.ts, demand.ts, analytics.ts | Content/media ownership; relationship integrity; job and service-request lifecycle; engagement dedupe/abuse; analytic facts vs rebuildable aggregates; indexes and retention. | Cross-tenant media denial; duplicate event handling; durable service requests; correct aggregate rebuild; bounded feeds/reports with query plans. |
+| Packet and schema coverage                                                                            | Decisions and implementation obligations                                                                                                                                                                                                                                                 | Required behavior evidence                                                                                                                                                                           |
+| ----------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| P3: listings.ts                                                                                       | Authored listing vs public projection identity, one-to-one mapping where appropriate, publication/revision/archive, rebuildability, price/media ownership. Inspect inventoryLinkResolver and projection writers. Do not enforce non-null source links until all supply types are mapped. | Differing IDs; duplicate projection prevention; concurrent publish; withdrawn source disappears from public surfaces; rebuild produces equivalent public facts.                                      |
+| P4: core.ts, agencies.ts, developerIdentity.ts                                                        | User/account lifecycle; credential/session ownership; organisation membership and roles; exact tenant scope. Trace agencyListingScopeCondition and owner/agent fallback predicates; replace stale authority where unjustified.                                                           | Cross-tenant denial; membership revocation; reassignment; concurrent membership edits; no orphan owned records; bounded token lifecycle.                                                             |
+| P5: billing.ts and subscription/entitlement consumers                                                 | Identify actual product and subscription authorities. Define money units/currency/precision, invoice/payment identity, webhook idempotency, entitlement start/end/revocation. Do not merge similarly named tables without lifecycle proof.                                               | Duplicate/out-of-order provider events; renewal/cancellation races; exact monetary totals; expired entitlement denies gated publication; no duplicate grants.                                        |
+| P6: agencyDeals.ts, distribution.ts, referrals.ts, canvassing.ts, listingPerformance.ts               | Lead/showing/deal relationships, state machines, assignments, commission attribution and ownership. Remove competing workflow tables only after full call-path analysis.                                                                                                                 | Invalid transitions rejected; concurrent assignment/booking; deal/commission consistency; tenant-scoped reports; cancellation and reassignment history.                                              |
+| P7: developments.ts, locations.ts, googlePlacesMonitoring.ts, land.ts, commercial.ts, sharedLiving.ts | Development/unit/phase identity and availability; canonical geography vs provider/display metadata; domain-specific marketing links, provenance, evidence, and freshness. Read each applicable domain contract, including land-consumer-journey-contract.md.                             | Mixed Land geography rejected; public classification allow-list; unit availability races; Commercial economics states; Shared Living ownership/moderation; precision and private-address protection. |
+| P8: explore.ts, media.ts, marketplace.ts, partners.ts, servicesEngine.ts, demand.ts, analytics.ts     | Content/media ownership; relationship integrity; job and service-request lifecycle; engagement dedupe/abuse; analytic facts vs rebuildable aggregates; indexes and retention.                                                                                                            | Cross-tenant media denial; duplicate event handling; durable service requests; correct aggregate rebuild; bounded feeds/reports with query plans.                                                    |
 
 Deliverables per domain: updated coverage register, decision record, schema/runtime/fixture changes, targeted tests, physical evidence, and review packet. If there is nothing to change, show actual traces, constraints, negative tests, and query evidence supporting “keep.”
 
