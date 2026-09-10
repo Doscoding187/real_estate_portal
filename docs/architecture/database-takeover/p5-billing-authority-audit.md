@@ -22,4 +22,9 @@ cancellation races, and denial of publication after entitlement loss.
 The proof submission boundary now requires positive safe integer minor units at
 both the router and service layers. Fractional values are rejected instead of
 being silently rounded into a different payment amount. Billing acceptance
-and launch-access contract suites continue to pass.
+and launch-access contract suites continue to pass. The authority-run billing
+acceptance and provider-independent suites currently pass 10 tests, covering
+duplicate approval, partial-payment non-activation, proof-document access, and
+provider-independent lifecycle rules. These tests do not remove the
+polymorphic-owner modelling gap; an explicit billable-account design remains
+the next schema decision.
