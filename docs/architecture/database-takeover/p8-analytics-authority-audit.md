@@ -65,3 +65,10 @@ active membership, matching property, and active campaign, then fails after
 the routing callback; `demand_leads`, `demand_lead_assignments`,
 `demand_lead_matches`, `leads`, and `notifications` are all absent after
 rollback.
+
+The media authority unit and listing lifecycle contracts were rerun:
+`pnpm vitest run server/services/__tests__/listingMediaAuthority.test.ts
+server/__tests__/contract.listing-lifecycle.test.ts` passed 47 tests. This
+includes token scope/content validation, cross-tenant reservation denial,
+confirmation custody rechecks, and approval-time media mirroring. Physical
+cross-tenant media denial remains an integration-level review item.
