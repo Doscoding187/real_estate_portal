@@ -16,13 +16,20 @@ authored listing, so saved private facts do not lose their subject identity.
 
 No schema change is admitted in this packet. Adding a unique constraint would
 break existing valid manual and domain-specific projection paths before all
-supply types are mapped. The next implementation step is a physical P3 test
-packet covering duplicate prevention at each writer, concurrent publication,
-withdrawal visibility, and rebuild equivalence. Until that evidence exists,
+supply types are mapped. The current physical property-card and agency
+attribution flows prove listing-backed attribution, missing-media fail-closed
+behavior, and refusal to fall back to mutable source identity. The next
+implementation step is a physical P3 test packet covering duplicate
+prevention at each writer, concurrent publication, withdrawal visibility, and
+rebuild equivalence. Until that evidence exists,
 `sourceListingId` remains nullable and duplicate detection remains an explicit
 failure state.
 
-The focused contract suite `server/services/__tests__/inventoryLinkResolver.contract.test.ts`
+The authority-run suites
+`server/__tests__/integration.property-card-data-flow.test.ts` and
+`server/__tests__/integration.agency-listing-attribution.test.ts` provide the
+current physical attribution evidence. The focused contract suite
+`server/services/__tests__/inventoryLinkResolver.contract.test.ts`
 proves all three resolver outcomes: one valid projection resolves, a missing
 projection fails closed, and duplicate projections fail closed without choosing
 a row.
