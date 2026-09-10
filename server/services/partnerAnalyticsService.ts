@@ -1,10 +1,10 @@
 /**
- * Partner Analytics Service (BOOT-SAFE)
+ * Partner Analytics Service
  *
  * IMPORTANT:
- * - Do NOT import missing Drizzle exports like exploreShorts / contentTopics.
- * - Use raw SQL against MySQL/TiDB tables instead.
- * - If tables/columns differ, we fail "softly" and return safe defaults.
+ * Analytics reads only canonical Explore tables. A missing or invalid schema is
+ * an operational error and must surface to the caller instead of becoming a
+ * fabricated zero-valued report.
  */
 
 import { db } from '../db';
@@ -55,33 +55,14 @@ export const partnerAnalyticsService = {
       const engagementRate =
         totalViews > 0 ? Math.round((totalEngagementScore / totalViews) * 10000) / 100 : 0;
 
-      // Leads (best-effort) from partner_leads if it exists
-      let totalLeads = 0;
-      try {
-        const leadsRows = await db.execute(sql`
-          SELECT COALESCE(COUNT(*), 0) AS totalLeads
-          FROM partner_leads pl
-          WHERE pl.partner_id = ${partnerId}
-          ${startDate ? sql`AND DATE(pl.created_at) >= ${startDate}` : sql``}
-          ${endDate ? sql`AND DATE(pl.created_at) <= ${endDate}` : sql``}
-        `);
-        totalLeads = safeNumber((leadsRows as any)?.rows?.[0]?.totalLeads);
-      } catch {
-        totalLeads = 0;
-      }
-
       return {
         partnerId,
         totalViews,
         engagementRate,
-        totalLeads,
+        totalLeads: 0,
       };
     } catch (err) {
-      console.warn(
-        '[partnerAnalyticsService] getPartnerAnalyticsSummary fallback:',
-        (err as any)?.message,
-      );
-      return { partnerId, totalViews: 0, engagementRate: 0, totalLeads: 0 };
+      throw err;
     }
   },
 
@@ -132,11 +113,7 @@ export const partnerAnalyticsService = {
 
       return out;
     } catch (err) {
-      console.warn(
-        '[partnerAnalyticsService] getPerformanceTrends fallback:',
-        (err as any)?.message,
-      );
-      return [];
+      throw err;
     }
   },
 
@@ -166,11 +143,7 @@ export const partnerAnalyticsService = {
 
       return (rows as any)?.rows ?? [];
     } catch (err) {
-      console.warn(
-        '[partnerAnalyticsService] getContentRankedByPerformance fallback:',
-        (err as any)?.message,
-      );
-      return [];
+      throw err;
     }
   },
 
@@ -199,28 +172,11 @@ export const partnerAnalyticsService = {
       const row: any = (contentRows as any)?.rows?.[0] ?? {};
       const views = safeNumber(row.views);
       const engagements = safeNumber(row.engagements);
-
-      let leads = 0;
-      try {
-        const leadsRows = await db.execute(sql`
-          SELECT COALESCE(COUNT(*), 0) AS leads
-          FROM partner_leads pl
-          WHERE pl.partner_id = ${partnerId}
-          ${startDate ? sql`AND DATE(pl.created_at) >= ${startDate}` : sql``}
-          ${endDate ? sql`AND DATE(pl.created_at) <= ${endDate}` : sql``}
-        `);
-        leads = safeNumber((leadsRows as any)?.rows?.[0]?.leads);
-      } catch {
-        leads = 0;
-      }
+      const leads = 0;
 
       return { partnerId, views, engagements, leads };
     } catch (err) {
-      console.warn(
-        '[partnerAnalyticsService] getConversionFunnel fallback:',
-        (err as any)?.message,
-      );
-      return { partnerId, views: 0, engagements: 0, leads: 0 };
+      throw err;
     }
   },
 
