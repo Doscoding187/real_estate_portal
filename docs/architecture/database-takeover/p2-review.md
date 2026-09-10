@@ -31,6 +31,14 @@ ordinary retries and the runnable worker refuse to dispatch them. The worker is
 a supervised one-shot entrypoint at `scripts/runLeadDeliveryWorker.ts` and is
 invoked by `pnpm lead-delivery:worker`.
 
-P2 remains review-open for stable idempotency-key support in each external
-provider adapter and durable optional-notification intent. Unsupported provider
-channels are explicitly quarantined as `attention_required`.
+The publisher email adapter now passes the delivery idempotency key through to
+Resend's provider request options, and the supervised worker dispatches only
+claims with that supported contract. Unsupported channels remain explicitly
+quarantined as `attention_required`.
+
+Optional agent and Shared Living in-app notification intent is now inserted in
+the same capture transaction as the lead and primary delivery obligation;
+optional email alerts run only after that durable intent commits.
+
+P2 remains review-open for independent provider crash/replay evidence against
+the live adapter and for the final reconciliation and authorization packet.

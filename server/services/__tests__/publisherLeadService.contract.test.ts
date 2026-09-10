@@ -117,7 +117,14 @@ describe('publisherLeadService canonical custody contract', () => {
       988,
       { brandName: 'Publisher', publicContactEmail: 'publisher@example.com', isContactVerified: 1 },
       { cataloguePublisherId: 13, name: 'Sam Buyer', email: 'sam@example.com', consent },
+      { idempotencyKey: 'lead:988:primary:publisher:13' },
     )).rejects.toThrow('Email provider acceptance could not be established.');
     expect(mockSendEmail).toHaveBeenCalledOnce();
+    expect(mockSendEmail).toHaveBeenCalledWith(
+      'publisher@example.com',
+      'Publisher',
+      expect.objectContaining({ leadId: 988 }),
+      { idempotencyKey: 'lead:988:primary:publisher:13' },
+    );
   });
 });

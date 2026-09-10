@@ -26,6 +26,7 @@ import {
   getLeadDeliverySnapshot,
   updateLeadDeliveryAttempt,
   type LeadDeliveryStatus,
+  type ClaimedLeadDeliveryAttempt,
 } from './leadDeliveryService';
 
 // ============================================================================
@@ -126,6 +127,7 @@ async function routePublisherLeadToEmail(
     isContactVerified: number;
   },
   leadData: CapturePublisherLeadInput,
+  options?: { idempotencyKey?: string },
 ): Promise<boolean> {
   if (!publisher.publicContactEmail) {
     console.warn(`Catalogue Publisher has no delivery email; lead ${leadId} remains undelivered.`);
@@ -155,6 +157,7 @@ async function routePublisherLeadToEmail(
       developmentId: leadData.developmentId,
       propertyId: leadData.propertyId,
     },
+    options,
   );
 
   // The shared email API collapses transport exceptions and rejections into
@@ -163,6 +166,47 @@ async function routePublisherLeadToEmail(
   if (!accepted) throw new Error('Email provider acceptance could not be established.');
 
   return true;
+}
+
+/**
+ * Dispatches a claimed publisher email obligation. The delivery key is passed
+ * unchanged to Resend's idempotency option, so a worker restart cannot create
+ * a second provider request for the same obligation.
+ */
+export async function dispatchPublisherLeadDelivery(
+  claim: ClaimedLeadDeliveryAttempt,
+  database: typeof db = db,
+): Promise<{ status: 'delivered' | 'pending'; providerReference?: string | null }> {
+  if (claim.channel !== 'email' || !claim.recipientPublisherId) {
+    return { status: 'pending' };
+  }
+
+  const [lead] = await database.select().from(leads).where(eq(leads.id, claim.leadId)).limit(1);
+  if (!lead || lead.cataloguePublisherId !== claim.recipientPublisherId) {
+    throw new Error('Claimed publisher delivery does not match the lead recipient.');
+  }
+
+  const profile = await cataloguePublisherService.getPublisherById(claim.recipientPublisherId);
+  if (!profile || !profile.publicContactEmail || profile.ownerType === 'platform') {
+    throw new Error('Claimed publisher has no eligible email destination.');
+  }
+
+  await routePublisherLeadToEmail(
+    lead.id,
+    profile,
+    {
+      cataloguePublisherId: claim.recipientPublisherId,
+      developmentId: lead.developmentId || undefined,
+      propertyId: lead.propertyId || undefined,
+      name: lead.name,
+      email: lead.email,
+      phone: lead.phone || undefined,
+      message: lead.message || undefined,
+    },
+    { idempotencyKey: claim.deliveryKey },
+  );
+
+  return { status: 'delivered', providerReference: null };
 }
 
 async function retryPublisherLeadDelivery(leadId: number) {
@@ -349,6 +393,7 @@ export const publisherLeadService = {
 
   // Lead routing
   routePublisherLeadToEmail,
+  dispatchPublisherLeadDelivery,
   retryPublisherLeadDelivery,
 
   // Lead visibility (Refinement #4)

@@ -578,24 +578,13 @@ async function isRecipientCommerciallyDeliverable(
   return { eligible: false, reason: 'The marketing authority has no deliverable recipient.' };
 }
 
-async function notifyAgentOfNewLead(
-  database: NonNullable<Awaited<ReturnType<typeof getDb>>>,
-  input: {
-    agentId: number;
-    leadId: number;
-    leadName: string;
-    leadEmail: string;
-    message?: string | null;
-    propertyId?: number | null;
-  },
+/** Persists the in-app notification in the capture transaction. */
+async function persistAgentLeadNotification(
+  database: any,
+  input: { agentId: number; leadId: number; leadName: string; propertyId?: number | null },
 ): Promise<void> {
   const [agent] = await database
-    .select({
-      userId: agents.userId,
-      email: agents.email,
-      displayName: agents.displayName,
-      firstName: agents.firstName,
-    })
+    .select({ userId: agents.userId })
     .from(agents)
     .where(eq(agents.id, input.agentId))
     .limit(1);
@@ -611,24 +600,43 @@ async function notifyAgentOfNewLead(
     if (property?.title) propertyTitle = property.title;
   }
 
-  const agentName = agent.displayName || [agent.firstName].filter(Boolean).join(' ') || 'there';
-
   await database.insert(notifications).values({
     userId: agent.userId,
     type: 'lead_assigned',
     title: `New enquiry from ${input.leadName}`,
     content: `${input.leadName} enquired about ${propertyTitle}. Respond while the interest is warm.`,
-    data: JSON.stringify({
-      leadId: input.leadId,
-      propertyId: input.propertyId ?? null,
-      actionUrl: '/agent/leads',
-    }),
+    data: JSON.stringify({ leadId: input.leadId, propertyId: input.propertyId ?? null, actionUrl: '/agent/leads' }),
     isRead: 0,
   });
+}
 
+/** Sends the optional email alert after the durable in-app intent commits. */
+async function sendAgentLeadEmail(
+  database: NonNullable<Awaited<ReturnType<typeof getDb>>>,
+  input: {
+    agentId: number;
+    leadId: number;
+    leadName: string;
+    leadEmail: string;
+    message?: string | null;
+    propertyId?: number | null;
+  },
+): Promise<void> {
+  const [agent] = await database
+    .select({ email: agents.email, displayName: agents.displayName, firstName: agents.firstName })
+    .from(agents)
+    .where(eq(agents.id, input.agentId))
+    .limit(1);
+  if (!agent) return;
+  let propertyTitle = 'your listing';
+  if (input.propertyId) {
+    const [property] = await database.select({ title: properties.title }).from(properties)
+      .where(eq(properties.id, input.propertyId)).limit(1);
+    if (property?.title) propertyTitle = property.title;
+  }
   await EmailService.sendNewLeadNotificationEmail(
     agent.email || '',
-    agentName,
+    agent.displayName || agent.firstName || 'there',
     input.leadName,
     input.leadEmail,
     propertyTitle,
@@ -1628,6 +1636,22 @@ export async function capturePublicLead(
           body: input.message?.trim() || 'New Shared Living enquiry received.',
         });
       }
+      if (resolved.agentId) {
+        await persistAgentLeadNotification(tx, {
+          agentId: resolved.agentId,
+          leadId: Number(insertResult.insertId),
+          leadName: input.name,
+          propertyId: resolved.propertyId ?? null,
+        });
+      }
+      if (resolved.sharedLivingContext?.ownerUserId) {
+        await notifySharedLivingLister(tx, {
+          ownerUserId: resolved.sharedLivingContext.ownerUserId,
+          leadId: Number(insertResult.insertId),
+          placeId: resolved.sharedLivingContext.placeId,
+          spaceLabel: resolved.sharedLivingContext.spaceLabelSnapshot,
+        });
+      }
     };
     // A capture acknowledgement is valid only when the lead, consent,
     // context, and primary delivery obligation commit together.
@@ -1684,7 +1708,7 @@ export async function capturePublicLead(
       utmCampaign: input.utmCampaign,
     }),
     resolved.agentId
-      ? notifyAgentOfNewLead(database, {
+      ? sendAgentLeadEmail(database, {
           agentId: resolved.agentId,
           leadId,
           leadName: input.name,
@@ -1693,14 +1717,7 @@ export async function capturePublicLead(
           propertyId: resolved.propertyId ?? null,
         })
       : Promise.resolve(),
-    resolved.sharedLivingContext?.ownerUserId
-      ? notifySharedLivingLister(database, {
-          ownerUserId: resolved.sharedLivingContext.ownerUserId,
-          leadId,
-          placeId: resolved.sharedLivingContext.placeId,
-          spaceLabel: resolved.sharedLivingContext.spaceLabelSnapshot,
-        })
-      : Promise.resolve(),
+    Promise.resolve(),
   ]);
   optionalSideEffects.forEach((result, index) => {
     if (result.status === 'rejected') {

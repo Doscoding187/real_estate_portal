@@ -16,9 +16,8 @@ as unknown provider outcomes; automatic retry cannot establish non-acceptance.
 Unused JSON compatibility helpers have been removed. Publisher email adapter
 failures no longer produce a false delivered result.
 
-Outstanding P2 acceptance work: persist optional notification intent, provide
-and test the runnable worker/provider adapter with stable idempotency keys,
-finish reconciliation and authorization evidence, reproduce fresh canonical
+Outstanding P2 acceptance work: finish independent provider crash/replay,
+reconciliation and authorization evidence, reproduce fresh canonical
 establishment, and complete the packet review. P3–P9 remain open. The
 starting-point facts below are
 intentionally historical and are retained to make the handoff auditable.

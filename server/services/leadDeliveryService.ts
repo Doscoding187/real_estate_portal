@@ -37,10 +37,12 @@ export type LeadDeliveryAttemptState =
 export interface LeadDeliveryAttemptRecord {
   /** String for existing API consumers; it is the relational attempt primary key. */
   id: string;
+  leadId: number;
   deliveryId: number;
   deliveryKey: string;
   recipientType: LeadDeliveryRecipientType;
   recipientId: number | null;
+  recipientPublisherId: number | null;
   channel: LeadDeliveryChannel;
   status: LeadDeliveryStatus;
   attemptCount: number;
@@ -310,10 +312,12 @@ function mapDelivery(row: DeliveryRow): LeadDeliveryRecord {
 function mapAttempt(row: AttemptRow, delivery: LeadDeliveryRecord): LeadDeliveryAttemptRecord {
   return {
     id: String(row.id),
+    leadId: delivery.leadId,
     deliveryId: delivery.id,
     deliveryKey: delivery.idempotencyKey,
     recipientType: delivery.recipientType,
     recipientId: delivery.recipientId,
+    recipientPublisherId: delivery.recipientPublisherId,
     channel: delivery.channel,
     status:
       row.state === 'completed' || row.state === 'accepted'

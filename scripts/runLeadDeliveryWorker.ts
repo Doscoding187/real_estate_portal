@@ -3,15 +3,20 @@ import {
   runLeadDeliveryWorker,
   type LeadDeliveryDispatcher,
 } from '../server/services/leadDeliveryService';
+import { dispatchPublisherLeadDelivery } from '../server/services/publisherLeadService';
 
 /**
  * One-shot delivery worker entrypoint. Scheduling is owned by the deployment
  * supervisor; this process never creates an in-process timer. Provider adapters
- * are registered explicitly as they gain stable idempotency support.
+ * are registered explicitly only when their provider contract supports stable
+ * idempotency keys.
  */
 const dispatcher: LeadDeliveryDispatcher = async claim => {
   if (claim.channel === 'none' || claim.channel === 'manual' || claim.leadCustody === 'platform_managed') {
     return { status: 'attention_required', error: 'Manual/platform custody requires operations reconciliation.' };
+  }
+  if (claim.channel === 'email' && claim.recipientPublisherId) {
+    return dispatchPublisherLeadDelivery(claim);
   }
   return {
     status: 'attention_required',

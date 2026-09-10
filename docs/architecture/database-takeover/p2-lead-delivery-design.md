@@ -77,8 +77,10 @@ calling a real provider.
 Public capture inserts the lead, consent, required primary delivery, and any
 domain context in one transaction. A repeated `captureRequestId` returns the
 same lead and delivery idempotently; a changed payload conflicts. Optional
-analytics and notification side effects remain after the custody commit and
-cannot change its acknowledgement.
+analytics remain after the custody commit and cannot change its
+acknowledgement. In-app agent and Shared Living notification intent is persisted
+inside the capture transaction; provider email alerts run afterward and are
+never treated as custody evidence.
 
 All delivery readers and writers must use the relational service:
 
