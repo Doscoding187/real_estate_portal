@@ -2,6 +2,11 @@
 
 Status: incomplete; packet review and required journey/provider evidence remain open.
 
+P3 rebuild evidence is now physical: the authority-enabled
+`integration.agency-listing-performance-mvp.test.ts` passed on the disposable
+target, covering revision approval, public projection refresh, and preservation
+of the canonical projection identity.
+
 The exact task-owned disposable target was rechecked on 2026-09-10:
 
 - `pnpm db:schema:congruency` passed. Desired and actual digest:
@@ -103,8 +108,3 @@ unrelated queued scenario obligations; the worker now supports an explicit
 lead scope and the suite passes all 7 tests, including provider-unknown crash
 recovery. Live-provider replay and final reconciliation/authorization review
 remain open.
-
-P3 rebuild evidence is now physical: the authority-enabled
-`integration.agency-listing-performance-mvp.test.ts` passed on the disposable
-target, covering revision approval, public projection refresh, and preservation
-of the canonical projection identity.

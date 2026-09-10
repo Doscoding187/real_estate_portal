@@ -32,6 +32,14 @@ now admits `listify_wt_*` disposable authority targets, and an authority run
 on the current target passed the full persisted workflow (including revision,
 publication, access, and projection identity checks).
 
+The existing `integration.agency-listing-performance-mvp.test.ts` contains the
+closest rebuild-equivalence assertions: a revision approval updates the live
+listing and public projection while preserving the original projection ID.
+Its authority run on the current worktree profile was skipped by the suite's
+profile gate, so those assertions are not counted as physical P3 evidence.
+An authority-enabled disposable run remains required before rebuild
+equivalence can be accepted.
+
 The authority-run suites
 `server/__tests__/integration.property-card-data-flow.test.ts` and
 `server/__tests__/integration.agency-listing-attribution.test.ts` provide the
