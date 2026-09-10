@@ -28,7 +28,6 @@ export const partnerAnalyticsService = {
    * Summary: total views, engagement rate, lead conversions
    */
   async getPartnerAnalyticsSummary(partnerId: string, start?: Date, end?: Date) {
-    try {
       const startDate = start ? toISODate(start) : null;
       const endDate = end ? toISODate(end) : null;
 
@@ -61,9 +60,6 @@ export const partnerAnalyticsService = {
         engagementRate,
         totalLeads: 0,
       };
-    } catch (err) {
-      throw err;
-    }
   },
 
   /**
@@ -76,7 +72,6 @@ export const partnerAnalyticsService = {
     start: Date,
     end: Date,
   ): Promise<TrendPoint[]> {
-    try {
       const startDate = toISODate(start);
       const endDate = toISODate(end);
 
@@ -112,9 +107,6 @@ export const partnerAnalyticsService = {
       }));
 
       return out;
-    } catch (err) {
-      throw err;
-    }
   },
 
   /**
@@ -122,7 +114,6 @@ export const partnerAnalyticsService = {
    * Top content ranked by engagement
    */
   async getContentRankedByPerformance(partnerId: string, limit: number = 10) {
-    try {
       const rows = await db.execute(sql`
         SELECT
           ec.id,
@@ -142,9 +133,6 @@ export const partnerAnalyticsService = {
       `);
 
       return (rows as any)?.rows ?? [];
-    } catch (err) {
-      throw err;
-    }
   },
 
   /**
@@ -152,7 +140,6 @@ export const partnerAnalyticsService = {
    * Funnel: view → engagement → lead
    */
   async getConversionFunnel(partnerId: string, start?: Date, end?: Date) {
-    try {
       const startDate = start ? toISODate(start) : null;
       const endDate = end ? toISODate(end) : null;
 
@@ -175,9 +162,6 @@ export const partnerAnalyticsService = {
       const leads = 0;
 
       return { partnerId, views, engagements, leads };
-    } catch (err) {
-      throw err;
-    }
   },
 
   /**
