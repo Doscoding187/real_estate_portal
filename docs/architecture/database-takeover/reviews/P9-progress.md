@@ -82,3 +82,10 @@ ran after navigation, the focused Desktop Chrome journey passed with
 `--retries=0`; the disposable target remained the authority-injected runtime
 database throughout. Browser acceptance is now evidenced for this P1 journey,
 while the broader browser and provider/rebuild audits remain open.
+
+The existing unauthenticated development-wizard smoke was also run under the
+same authority. It reached the application shell, but its legacy expectation
+of a `Basic Info`/`Step 1` heading failed because the current wizard entry
+requires authenticated developer context; the backend logged expected
+`UNAUTHORIZED` responses for developer queries. This is recorded as a
+journey-contract mismatch, not as a database-authority failure.
