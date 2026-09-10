@@ -182,10 +182,7 @@ describeDatabase('relational lead delivery authority (P2)', () => {
     expect(gate.arrivals()).toBe(2);
     expect(winner).toHaveLength(1);
 
-    const invokeProvider = async () => ({
-      status: 'delivered' as const,
-      providerReference: 'p2-race-provider-1',
-    });
+    const invokeProvider = async () => ({ status: 'delivered' as const, providerReference: 'p2-race-provider-1' });
     const providerResults = await Promise.all(winner.map(invokeProvider));
     expect(providerResults).toHaveLength(1);
 
@@ -225,9 +222,7 @@ describeDatabase('relational lead delivery authority (P2)', () => {
       }),
     ).rejects.toThrow('P2 injected post-delivery capture failure');
 
-    const leadsAfterRollback = await query('SELECT id FROM leads WHERE capture_request_id = ?', [
-      captureRequestId,
-    ]);
+    const leadsAfterRollback = await query('SELECT id FROM leads WHERE capture_request_id = ?', [captureRequestId]);
     const deliveriesAfterRollback = await query(
       'SELECT d.id FROM lead_deliveries d JOIN leads l ON l.id = d.lead_id WHERE l.capture_request_id = ?',
       [captureRequestId],
@@ -289,9 +284,7 @@ describeDatabase('relational lead delivery authority (P2)', () => {
     const snapshot = await getLeadDeliverySnapshot({ leadId, database: databaseA });
     expect(snapshot.current?.state).toBe('unknown');
     expect(snapshot.attempts.map(attempt => attempt.state)).toEqual(['unknown']);
-    await expect(
-      appendLeadDeliveryRetryAttempt({ database: databaseB, deliveryId: recorded.delivery.id }),
-    ).resolves.toBeNull();
+    await expect(appendLeadDeliveryRetryAttempt({ database: databaseB, deliveryId: recorded.delivery.id })).resolves.toBeNull();
   });
 
   it('records an ambiguous provider crash as unknown and does not auto-retry it', async () => {
@@ -312,10 +305,7 @@ describeDatabase('relational lead delivery authority (P2)', () => {
     expect(worker).toMatchObject({ claimed: 1, unknown: 1 });
     const snapshot = await getLeadDeliverySnapshot({ leadId, database: databaseA });
     expect(snapshot.current).toMatchObject({ id: recorded.delivery.id, state: 'unknown' });
-    expect(snapshot.attempts.at(-1)).toMatchObject({
-      state: 'unknown',
-      status: 'attention_required',
-    });
+    expect(snapshot.attempts.at(-1)).toMatchObject({ state: 'unknown', status: 'attention_required' });
     await expect(
       appendLeadDeliveryRetryAttempt({ database: databaseA, deliveryId: recorded.delivery.id }),
     ).resolves.toBeNull();
@@ -340,9 +330,7 @@ describeDatabase('relational lead delivery authority (P2)', () => {
       database: databaseA,
     });
     expect(notification.delivery.purpose).toBe('notification');
-    const summaryAfterNotification = await query('SELECT delivery_status FROM leads WHERE id = ?', [
-      leadId,
-    ]);
+    const summaryAfterNotification = await query('SELECT delivery_status FROM leads WHERE id = ?', [leadId]);
     expect(summaryAfterNotification).toEqual([{ delivery_status: 'delivered' }]);
 
     const queuedSnapshot = await getLeadDeliverySnapshot({ leadId, database: databaseB });
@@ -356,10 +344,7 @@ describeDatabase('relational lead delivery authority (P2)', () => {
       ...primaryDeliveryInput(retryLeadId, { maxAttempts: 2 }),
       database: databaseA,
     });
-    const first = await claimLeadDeliveryAttempt({
-      database: databaseA,
-      deliveryId: retryDelivery.delivery.id,
-    });
+    const first = await claimLeadDeliveryAttempt({ database: databaseA, deliveryId: retryDelivery.delivery.id });
     expect(first).not.toBeNull();
     await updateLeadDeliveryAttempt({
       database: databaseA,
@@ -376,10 +361,7 @@ describeDatabase('relational lead delivery authority (P2)', () => {
       dueAt: new Date(Date.now() - 1_000),
     });
     expect(retry).toMatchObject({ attemptCount: 2, state: 'queued' });
-    const second = await claimLeadDeliveryAttempt({
-      database: databaseB,
-      deliveryId: retryDelivery.delivery.id,
-    });
+    const second = await claimLeadDeliveryAttempt({ database: databaseB, deliveryId: retryDelivery.delivery.id });
     expect(second).not.toBeNull();
     await updateLeadDeliveryAttempt({
       database: databaseB,
@@ -393,14 +375,9 @@ describeDatabase('relational lead delivery authority (P2)', () => {
     const exhausted = await getLeadDeliverySnapshot({ leadId: retryLeadId, database: databaseA });
     expect(exhausted.current).toMatchObject({ state: 'exhausted' });
     await expect(
-      appendLeadDeliveryRetryAttempt({
-        database: databaseA,
-        deliveryId: retryDelivery.delivery.id,
-      }),
+      appendLeadDeliveryRetryAttempt({ database: databaseA, deliveryId: retryDelivery.delivery.id }),
     ).resolves.toBeNull();
-    expect(toMySqlDateTime(new Date('2026-09-09T12:34:56.789Z'))).toBe(
-      '2026-09-09 12:34:56.789000',
-    );
+    expect(toMySqlDateTime(new Date('2026-09-09T12:34:56.789Z'))).toBe('2026-09-09 12:34:56.789000');
   });
 
   it('preserves route history while exposing only the superseding current custody', async () => {

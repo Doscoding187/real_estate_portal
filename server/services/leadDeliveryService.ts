@@ -149,8 +149,7 @@ export function toMySqlDateTime(value: Date | string = new Date()): string {
   // Values read from MySQL are UTC text without a zone suffix. Parse those
   // explicitly so a worker's host TZ cannot change a persisted deadline.
   const date = value instanceof Date ? value : parseMySqlUtcDateTime(value) || new Date(value);
-  if (Number.isNaN(date.getTime()))
-    return String(value).replace('T', ' ').replace('Z', '').slice(0, 26);
+  if (Number.isNaN(date.getTime())) return String(value).replace('T', ' ').replace('Z', '').slice(0, 26);
   const iso = date.toISOString();
   return `${iso.slice(0, 19).replace('T', ' ')}.${iso.slice(20, 23)}000`;
 }
@@ -244,9 +243,7 @@ function assertRecipientShape(input: CreateLeadDeliveryInput): void {
   }
   if (input.recipientType === 'developer') {
     if (!developer || user || agent || agency) {
-      throw new Error(
-        'Lead delivery developer recipient must use recipientDeveloperOrganisationId.',
-      );
+      throw new Error('Lead delivery developer recipient must use recipientDeveloperOrganisationId.');
     }
     return;
   }
@@ -543,9 +540,7 @@ async function updateLeadSummary(
       deliveryStatus: status,
       deliveryLastAttemptAt: latestAttempt?.attemptedAt || null,
       deliveryNextAttemptAt:
-        delivery.state === 'queued' || delivery.state === 'retryable_failed'
-          ? delivery.dueAt
-          : null,
+        delivery.state === 'queued' || delivery.state === 'retryable_failed' ? delivery.dueAt : null,
       deliveryLastError: latestAttempt?.lastError || null,
       deliveryProviderReference: latestAttempt?.providerReference || null,
     })
@@ -581,19 +576,11 @@ function insertValuesForDelivery(input: CreateLeadDeliveryInput, state: LeadDeli
 export async function createLeadDeliveryInTransaction(
   tx: LeadTransaction,
   input: CreateLeadDeliveryInput,
-): Promise<{
-  delivery: LeadDeliveryRecord;
-  attempt: LeadDeliveryAttemptRecord | null;
-  duplicate: boolean;
-}> {
+): Promise<{ delivery: LeadDeliveryRecord; attempt: LeadDeliveryAttemptRecord | null; duplicate: boolean }> {
   assertRecipientShape(input);
   const existing = await selectDeliveryByKeyForUpdate(tx, input.idempotencyKey);
   if (existing) {
-    return {
-      delivery: existing,
-      attempt: await selectLatestAttemptForUpdate(tx, existing),
-      duplicate: true,
-    };
+    return { delivery: existing, attempt: await selectLatestAttemptForUpdate(tx, existing), duplicate: true };
   }
 
   const state = stateForInitialStatus(input.initialStatus);
@@ -601,23 +588,20 @@ export async function createLeadDeliveryInTransaction(
   const [result] = await tx.insert(leadDeliveries).values(values as any);
   const deliveryId = asNumber((result as any)?.insertId);
   if (!deliveryId) throw new Error('Lead delivery insert did not return a durable identifier.');
-  const delivery =
-    (await selectDeliveryForUpdate(tx, deliveryId)) ||
-    ({
-      id: deliveryId,
-      ...values,
-      recipientId: recipientIdForDelivery(values),
-      completedAt: values.completedAt,
-      supersededAt: null,
-      createdAt: currentTimestamp(),
-      updatedAt: currentTimestamp(),
-    } as LeadDeliveryRecord);
+  const delivery = (await selectDeliveryForUpdate(tx, deliveryId)) || ({
+    id: deliveryId,
+    ...values,
+    recipientId: recipientIdForDelivery(values),
+    completedAt: values.completedAt,
+    supersededAt: null,
+    createdAt: currentTimestamp(),
+    updatedAt: currentTimestamp(),
+  } as LeadDeliveryRecord);
 
   let attempt: LeadDeliveryAttemptRecord | null = null;
   if (state === 'completed' || state === 'retryable_failed') {
     const timestamp = currentTimestamp();
-    const attemptState: LeadDeliveryAttemptState =
-      state === 'completed' ? 'completed' : 'retryable_failed';
+    const attemptState: LeadDeliveryAttemptState = state === 'completed' ? 'completed' : 'retryable_failed';
     const [attemptResult] = await tx.insert(leadDeliveryAttempts).values({
       deliveryId,
       attemptNumber: 1,
@@ -628,11 +612,7 @@ export async function createLeadDeliveryInTransaction(
     } as any);
     const attemptId = asNumber((attemptResult as any)?.insertId);
     const [attemptRow] = attemptId
-      ? await tx
-          .select()
-          .from(leadDeliveryAttempts)
-          .where(eq(leadDeliveryAttempts.id, attemptId))
-          .limit(1)
+      ? await tx.select().from(leadDeliveryAttempts).where(eq(leadDeliveryAttempts.id, attemptId)).limit(1)
       : [];
     if (attemptRow) attempt = mapAttempt(attemptRow, delivery);
   }
@@ -641,9 +621,7 @@ export async function createLeadDeliveryInTransaction(
   return { delivery, attempt, duplicate: false };
 }
 
-export async function recordInitialLeadDelivery(
-  input: CreateLeadDeliveryInput & { database?: LeadDatabase },
-) {
+export async function recordInitialLeadDelivery(input: CreateLeadDeliveryInput & { database?: LeadDatabase }) {
   const database = input.database || db;
   return database.transaction(async (tx: LeadTransaction) => {
     await lockLead(tx, input.leadId);
@@ -660,27 +638,18 @@ async function ensureQueuedAttemptInTransaction(
   if (latest?.state === 'claimed') return null;
   if (latest && latest.attemptCount >= delivery.maxAttempts) {
     const exhausted = { ...delivery, state: 'exhausted' as const };
-    await tx
-      .update(leadDeliveries)
-      .set({ state: 'exhausted' })
-      .where(eq(leadDeliveries.id, delivery.id));
+    await tx.update(leadDeliveries).set({ state: 'exhausted' }).where(eq(leadDeliveries.id, delivery.id));
     await updateLeadSummary(tx, exhausted, latest);
     return null;
   }
 
   const attemptNumber = (latest?.attemptCount || 0) + 1;
   const [result] = await tx.insert(leadDeliveryAttempts).values({
-    deliveryId: delivery.id,
-    attemptNumber,
-    state: 'queued',
+    deliveryId: delivery.id, attemptNumber, state: 'queued',
   } as any);
   const attemptId = asNumber((result as any)?.insertId);
   const [row] = attemptId
-    ? await tx
-        .select()
-        .from(leadDeliveryAttempts)
-        .where(eq(leadDeliveryAttempts.id, attemptId))
-        .limit(1)
+    ? await tx.select().from(leadDeliveryAttempts).where(eq(leadDeliveryAttempts.id, attemptId)).limit(1)
     : [];
   return row ? mapAttempt(row, delivery) : null;
 }
@@ -695,32 +664,20 @@ export async function claimLeadDeliveryAttempt(input: {
 }): Promise<ClaimedLeadDeliveryAttempt | null> {
   const database = input.database || db;
   return database.transaction(async (tx: LeadTransaction) => {
-    let delivery: LeadDeliveryRecord | null = input.deliveryId
-      ? await selectDeliveryForUpdate(tx, input.deliveryId)
-      : null;
+    let delivery: LeadDeliveryRecord | null = input.deliveryId ? await selectDeliveryForUpdate(tx, input.deliveryId) : null;
     if (!delivery && input.attemptId) {
-      const [attempt] = await tx
-        .select({ deliveryId: leadDeliveryAttempts.deliveryId })
-        .from(leadDeliveryAttempts)
-        .where(eq(leadDeliveryAttempts.id, asNumber(input.attemptId)))
-        .limit(1);
+      const [attempt] = await tx.select({ deliveryId: leadDeliveryAttempts.deliveryId }).from(leadDeliveryAttempts)
+        .where(eq(leadDeliveryAttempts.id, asNumber(input.attemptId))).limit(1);
       if (attempt) delivery = await selectDeliveryForUpdate(tx, asNumber(attempt.deliveryId));
     }
-    if (!delivery && input.leadId)
-      delivery = await getCurrentPrimaryDeliveryForUpdateInTransaction(tx, input.leadId);
+    if (!delivery && input.leadId) delivery = await getCurrentPrimaryDeliveryForUpdateInTransaction(tx, input.leadId);
     if (!delivery || delivery.state !== 'queued') return null;
 
     // `delivery` came from a locking read above. Re-read through the same
     // current-read path after any preliminary lookup to avoid a stale snapshot.
     delivery = await selectDeliveryForUpdate(tx, delivery.id);
     const dueAtMs = delivery ? timestampMilliseconds(delivery.dueAt) : Number.NaN;
-    if (
-      !delivery ||
-      delivery.state !== 'queued' ||
-      !Number.isFinite(dueAtMs) ||
-      dueAtMs > Date.now()
-    )
-      return null;
+    if (!delivery || delivery.state !== 'queued' || !Number.isFinite(dueAtMs) || dueAtMs > Date.now()) return null;
 
     let attempt: LeadDeliveryAttemptRecord | null = null;
     if (input.attemptId) {
@@ -733,29 +690,12 @@ export async function claimLeadDeliveryAttempt(input: {
     const timestamp = currentTimestamp();
     const leaseToken = randomUUID();
     const leaseGeneration = (attempt.leaseGeneration || 0) + 1;
-    const leaseExpiresAt = toMySqlDateTime(
-      new Date(Date.now() + Math.max(1_000, input.leaseTimeoutMs || DELIVERY_CLAIM_TIMEOUT_MS)),
-    );
-    await tx
-      .update(leadDeliveryAttempts)
-      .set({
-        state: 'claimed',
-        leaseToken,
-        leaseGeneration,
-        claimedAt: timestamp,
-        leaseExpiresAt,
-        errorCode: null,
-        errorMessage: null,
-      })
-      .where(
-        and(
-          eq(leadDeliveryAttempts.id, asNumber(attempt.id)),
-          eq(leadDeliveryAttempts.state, 'queued'),
-        ),
-      );
-    await tx
-      .update(leadDeliveries)
-      .set({ state: 'claimed' })
+    const leaseExpiresAt = toMySqlDateTime(new Date(Date.now() + Math.max(1_000, input.leaseTimeoutMs || DELIVERY_CLAIM_TIMEOUT_MS)));
+    await tx.update(leadDeliveryAttempts).set({
+      state: 'claimed', leaseToken, leaseGeneration, claimedAt: timestamp, leaseExpiresAt,
+      errorCode: null, errorMessage: null,
+    }).where(and(eq(leadDeliveryAttempts.id, asNumber(attempt.id)), eq(leadDeliveryAttempts.state, 'queued')));
+    await tx.update(leadDeliveries).set({ state: 'claimed' })
       .where(and(eq(leadDeliveries.id, delivery.id), eq(leadDeliveries.state, 'queued')));
 
     const claimedDelivery = { ...delivery, state: 'claimed' as const };
@@ -790,93 +730,48 @@ export async function updateLeadDeliveryAttempt(input: {
   const database = input.database || db;
   return database.transaction(async (tx: LeadTransaction) => {
     const attemptId = asNumber(input.attemptId);
-    const [attemptRow] = await tx
-      .select()
-      .from(leadDeliveryAttempts)
-      .where(eq(leadDeliveryAttempts.id, attemptId))
-      .limit(1);
+    const [attemptRow] = await tx.select().from(leadDeliveryAttempts).where(eq(leadDeliveryAttempts.id, attemptId)).limit(1);
     if (!attemptRow) return null;
     const delivery = await selectDeliveryForUpdate(tx, asNumber(attemptRow.deliveryId));
-    if (
-      !delivery ||
-      (input.deliveryId && delivery.id !== input.deliveryId) ||
-      (input.leadId && delivery.leadId !== input.leadId)
-    )
-      return null;
+    if (!delivery || (input.deliveryId && delivery.id !== input.deliveryId) || (input.leadId && delivery.leadId !== input.leadId)) return null;
 
     const lockedAttempt = await selectAttemptForUpdate(tx, attemptId);
     const lockedDelivery = await selectDeliveryForUpdate(tx, delivery.id);
     if (!lockedAttempt || !lockedDelivery || lockedDelivery.state !== 'claimed') return null;
-    if (
-      input.routingRevision !== undefined &&
-      lockedDelivery.routingRevision !== input.routingRevision
-    )
-      return null;
-    if (
-      lockedAttempt.state !== 'claimed' ||
-      !lockedAttempt.leaseToken ||
-      !input.leaseToken ||
-      lockedAttempt.leaseToken !== input.leaseToken
-    )
-      return null;
+    if (input.routingRevision !== undefined && lockedDelivery.routingRevision !== input.routingRevision) return null;
+    if (lockedAttempt.state !== 'claimed' || !lockedAttempt.leaseToken || !input.leaseToken || lockedAttempt.leaseToken !== input.leaseToken) return null;
     const leaseExpiry = timestampMilliseconds(lockedAttempt.leaseExpiresAt);
     if (!Number.isFinite(leaseExpiry) || leaseExpiry <= Date.now()) return null;
 
     const attemptState = resultStateForLegacyStatus(input.status);
     const timestamp = currentTimestamp();
     const attemptNumber = asNumber(lockedAttempt.attemptNumber);
-    const exhausted =
-      attemptState === 'retryable_failed' && attemptNumber >= lockedDelivery.maxAttempts;
-    const deliveryState: LeadDeliveryState =
-      attemptState === 'completed'
-        ? 'completed'
-        : attemptState === 'accepted'
-          ? 'accepted'
-          : attemptState === 'retryable_failed'
-            ? exhausted
-              ? 'exhausted'
-              : 'queued'
-            : 'unknown';
-    const dueAt =
-      attemptState === 'retryable_failed' && !exhausted ? retryDueAt() : lockedDelivery.dueAt;
-    await tx
-      .update(leadDeliveryAttempts)
-      .set({
-        state: attemptState,
-        acceptedAt: attemptState === 'accepted' || attemptState === 'completed' ? timestamp : null,
-        completedAt: attemptState === 'completed' ? timestamp : null,
-        providerReference: input.providerReference ?? lockedAttempt.providerReference ?? null,
-        errorCode:
-          attemptState === 'retryable_failed'
-            ? exhausted
-              ? 'retry_budget_exhausted'
-              : 'provider_rejected'
-            : attemptState === 'unknown'
-              ? 'provider_unknown'
-              : null,
-        errorMessage: boundedError(input.error),
-      })
-      .where(
-        and(
-          eq(leadDeliveryAttempts.id, attemptId),
-          eq(leadDeliveryAttempts.leaseToken, input.leaseToken),
-        ),
-      );
-    await tx
-      .update(leadDeliveries)
-      .set({
-        state: deliveryState,
-        dueAt,
-        completedAt: deliveryState === 'completed' ? timestamp : null,
-      })
-      .where(and(eq(leadDeliveries.id, lockedDelivery.id), eq(leadDeliveries.state, 'claimed')));
+    const exhausted = attemptState === 'retryable_failed' && attemptNumber >= lockedDelivery.maxAttempts;
+    const deliveryState: LeadDeliveryState = attemptState === 'completed' ? 'completed'
+      : attemptState === 'accepted' ? 'accepted'
+      : attemptState === 'retryable_failed' ? (exhausted ? 'exhausted' : 'queued')
+      : 'unknown';
+    const dueAt = attemptState === 'retryable_failed' && !exhausted ? retryDueAt() : lockedDelivery.dueAt;
+    await tx.update(leadDeliveryAttempts).set({
+      state: attemptState,
+      acceptedAt: attemptState === 'accepted' || attemptState === 'completed' ? timestamp : null,
+      completedAt: attemptState === 'completed' ? timestamp : null,
+      providerReference: input.providerReference ?? lockedAttempt.providerReference ?? null,
+      errorCode: attemptState === 'retryable_failed'
+        ? exhausted
+          ? 'retry_budget_exhausted'
+          : 'provider_rejected'
+        : attemptState === 'unknown'
+          ? 'provider_unknown'
+          : null,
+      errorMessage: boundedError(input.error),
+    }).where(and(eq(leadDeliveryAttempts.id, attemptId), eq(leadDeliveryAttempts.leaseToken, input.leaseToken)));
+    await tx.update(leadDeliveries).set({
+      state: deliveryState, dueAt, completedAt: deliveryState === 'completed' ? timestamp : null,
+    }).where(and(eq(leadDeliveries.id, lockedDelivery.id), eq(leadDeliveries.state, 'claimed')));
 
-    const nextDelivery = {
-      ...lockedDelivery,
-      state: deliveryState,
-      dueAt,
-      completedAt: deliveryState === 'completed' ? timestamp : lockedDelivery.completedAt,
-    };
+    const nextDelivery = { ...lockedDelivery, state: deliveryState, dueAt,
+      completedAt: deliveryState === 'completed' ? timestamp : lockedDelivery.completedAt };
     const nextAttemptRow = await selectAttemptForUpdate(tx, attemptId);
     if (!nextAttemptRow) return null;
     const nextAttempt = mapAttempt(nextAttemptRow, nextDelivery);
@@ -895,40 +790,24 @@ export async function appendLeadDeliveryRetryAttempt(input: {
 }): Promise<LeadDeliveryAttemptRecord | null> {
   const database = input.database || db;
   return database.transaction(async (tx: LeadTransaction) => {
-    let delivery: LeadDeliveryRecord | null = input.deliveryId
-      ? await selectDeliveryForUpdate(tx, input.deliveryId)
-      : null;
-    if (!delivery && input.deliveryKey)
-      delivery = await selectDeliveryByKeyForUpdate(tx, input.deliveryKey);
-    if (!delivery && input.leadId)
-      delivery = await getCurrentPrimaryDeliveryForUpdateInTransaction(tx, input.leadId);
+    let delivery: LeadDeliveryRecord | null = input.deliveryId ? await selectDeliveryForUpdate(tx, input.deliveryId) : null;
+    if (!delivery && input.deliveryKey) delivery = await selectDeliveryByKeyForUpdate(tx, input.deliveryKey);
+    if (!delivery && input.leadId) delivery = await getCurrentPrimaryDeliveryForUpdateInTransaction(tx, input.leadId);
     if (!delivery) return null;
     delivery = await selectDeliveryForUpdate(tx, delivery.id);
-    if (
-      !delivery ||
-      ['completed', 'accepted', 'cancelled', 'superseded', 'unknown', 'exhausted'].includes(
-        delivery.state,
-      )
-    )
-      return null;
+    if (!delivery || ['completed', 'accepted', 'cancelled', 'superseded', 'unknown', 'exhausted'].includes(delivery.state)) return null;
     const latest = await selectLatestAttemptForUpdate(tx, delivery);
     if (latest?.state === 'claimed') return null;
     if (latest && !['retryable_failed', 'expired'].includes(latest.state || '')) return null;
     if (latest && latest.attemptCount >= delivery.maxAttempts) {
       const exhausted = { ...delivery, state: 'exhausted' as const };
-      await tx
-        .update(leadDeliveries)
-        .set({ state: 'exhausted' })
-        .where(eq(leadDeliveries.id, delivery.id));
+      await tx.update(leadDeliveries).set({ state: 'exhausted' }).where(eq(leadDeliveries.id, delivery.id));
       await updateLeadSummary(tx, exhausted, latest);
       return null;
     }
     const dueAt = toMySqlDateTime(input.dueAt || new Date());
     const queued = { ...delivery, state: 'queued' as const, dueAt };
-    await tx
-      .update(leadDeliveries)
-      .set({ state: 'queued', dueAt })
-      .where(eq(leadDeliveries.id, delivery.id));
+    await tx.update(leadDeliveries).set({ state: 'queued', dueAt }).where(eq(leadDeliveries.id, delivery.id));
     const attempt = await ensureQueuedAttemptInTransaction(tx, queued);
     await updateLeadSummary(tx, queued, latest);
     return attempt;
@@ -936,24 +815,15 @@ export async function appendLeadDeliveryRetryAttempt(input: {
 }
 
 /** An expired claim has an ambiguous provider outcome and requires reconciliation. */
-export async function recoverExpiredLeadDeliveryAttempts(
-  input: {
-    database?: LeadDatabase;
-    limit?: number;
-    now?: Date;
-  } = {},
-): Promise<{ recovered: number; unknown: number }> {
+export async function recoverExpiredLeadDeliveryAttempts(input: {
+  database?: LeadDatabase;
+  limit?: number;
+  now?: Date;
+} = {}): Promise<{ recovered: number; unknown: number }> {
   const database = input.database || db;
   const now = input.now || new Date();
-  const rows = await database
-    .select({ id: leadDeliveryAttempts.id, deliveryId: leadDeliveryAttempts.deliveryId })
-    .from(leadDeliveryAttempts)
-    .where(
-      and(
-        eq(leadDeliveryAttempts.state, 'claimed'),
-        lte(leadDeliveryAttempts.leaseExpiresAt, toMySqlDateTime(now)),
-      ),
-    )
+  const rows = await database.select({ id: leadDeliveryAttempts.id, deliveryId: leadDeliveryAttempts.deliveryId }).from(leadDeliveryAttempts)
+    .where(and(eq(leadDeliveryAttempts.state, 'claimed'), lte(leadDeliveryAttempts.leaseExpiresAt, toMySqlDateTime(now))))
     .orderBy(asc(leadDeliveryAttempts.leaseExpiresAt), asc(leadDeliveryAttempts.id))
     .limit(Math.min(Math.max(input.limit || 50, 1), 250));
 
@@ -965,52 +835,26 @@ export async function recoverExpiredLeadDeliveryAttempts(
       if (!delivery) return 'none' as const;
       const lockedAttempt = await selectAttemptForUpdate(tx, asNumber(candidate.id));
       const lockedDelivery = await selectDeliveryForUpdate(tx, delivery.id);
-      const leaseExpiry = lockedAttempt
-        ? timestampMilliseconds(lockedAttempt.leaseExpiresAt)
-        : Number.NaN;
-      if (
-        !lockedAttempt ||
-        !lockedDelivery ||
-        lockedDelivery.state !== 'claimed' ||
-        lockedAttempt.state !== 'claimed' ||
-        !Number.isFinite(leaseExpiry) ||
-        leaseExpiry > now.getTime()
-      )
-        return 'none' as const;
+      const leaseExpiry = lockedAttempt ? timestampMilliseconds(lockedAttempt.leaseExpiresAt) : Number.NaN;
+      if (!lockedAttempt || !lockedDelivery || lockedDelivery.state !== 'claimed' || lockedAttempt.state !== 'claimed' || !Number.isFinite(leaseExpiry) || leaseExpiry > now.getTime()) return 'none' as const;
 
       // A process may have died after provider acceptance. Lease expiry alone
       // never authorizes another external invocation.
-      await tx
-        .update(leadDeliveryAttempts)
-        .set({
-          state: 'unknown',
-          errorCode: 'lease_expired_outcome_unknown',
-          errorMessage: STALE_CLAIM_ERROR,
-        })
-        .where(eq(leadDeliveryAttempts.id, asNumber(candidate.id)));
+      await tx.update(leadDeliveryAttempts).set({
+        state: 'unknown', errorCode: 'lease_expired_outcome_unknown', errorMessage: STALE_CLAIM_ERROR,
+      }).where(eq(leadDeliveryAttempts.id, asNumber(candidate.id)));
       const uncertainDelivery = { ...lockedDelivery, state: 'unknown' as const };
-      const uncertainAttempt = mapAttempt(
-        { ...lockedAttempt, state: 'unknown', errorMessage: STALE_CLAIM_ERROR } as AttemptRow,
-        uncertainDelivery,
-      );
-      await tx
-        .update(leadDeliveries)
-        .set({ state: 'unknown' })
-        .where(eq(leadDeliveries.id, lockedDelivery.id));
+      const uncertainAttempt = mapAttempt({ ...lockedAttempt, state: 'unknown', errorMessage: STALE_CLAIM_ERROR } as AttemptRow, uncertainDelivery);
+      await tx.update(leadDeliveries).set({ state: 'unknown' }).where(eq(leadDeliveries.id, lockedDelivery.id));
       await updateLeadSummary(tx, uncertainDelivery, uncertainAttempt);
       return 'unknown' as const;
     });
-    if (outcome === 'unknown') {
-      recovered += 1;
-      unknown += 1;
-    }
+    if (outcome === 'unknown') { recovered += 1; unknown += 1; }
   }
   return { recovered, unknown };
 }
 
-export type LeadDeliveryDispatcher = (
-  claim: ClaimedLeadDeliveryAttempt,
-) => Promise<
+export type LeadDeliveryDispatcher = (claim: ClaimedLeadDeliveryAttempt) => Promise<
   | { status: 'delivered' | 'pending'; providerReference?: string | null }
   | { status: 'failed' | 'attention_required'; error: string; providerReference?: string | null }
 >;
@@ -1021,28 +865,17 @@ export async function runLeadDeliveryWorker(input: {
   database?: LeadDatabase;
   limit?: number;
   leadId?: number;
-}): Promise<{
-  claimed: number;
-  completed: number;
-  failed: number;
-  unknown: number;
-  recovered: number;
-}> {
+}): Promise<{ claimed: number; completed: number; failed: number; unknown: number; recovered: number }> {
   const database = input.database || db;
   const limit = Math.min(Math.max(input.limit || 25, 1), 100);
   const recovery = await recoverExpiredLeadDeliveryAttempts({ database, limit });
-  const due = await database
-    .select({ id: leadDeliveries.id })
-    .from(leadDeliveries)
-    .where(
-      and(
-        eq(leadDeliveries.state, 'queued'),
-        lte(leadDeliveries.dueAt, currentTimestamp()),
-        ...(input.leadId === undefined ? [] : [eq(leadDeliveries.leadId, input.leadId)]),
-      ),
-    )
-    .orderBy(asc(leadDeliveries.dueAt), asc(leadDeliveries.id))
-    .limit(limit);
+  const due = await database.select({ id: leadDeliveries.id }).from(leadDeliveries)
+    .where(and(
+      eq(leadDeliveries.state, 'queued'),
+      lte(leadDeliveries.dueAt, currentTimestamp()),
+      ...(input.leadId === undefined ? [] : [eq(leadDeliveries.leadId, input.leadId)]),
+    ))
+    .orderBy(asc(leadDeliveries.dueAt), asc(leadDeliveries.id)).limit(limit);
   let claimed = 0;
   let completed = 0;
   let failed = 0;
@@ -1054,13 +887,8 @@ export async function runLeadDeliveryWorker(input: {
     try {
       const result = await input.dispatcher(claim);
       const updated = await updateLeadDeliveryAttempt({
-        database,
-        deliveryId: claim.deliveryId,
-        attemptId: claim.id,
-        leaseToken: claim.leaseToken,
-        routingRevision: claim.routingRevision,
-        status: result.status,
-        providerReference: result.providerReference,
+        database, deliveryId: claim.deliveryId, attemptId: claim.id, leaseToken: claim.leaseToken,
+        routingRevision: claim.routingRevision, status: result.status, providerReference: result.providerReference,
         error: 'error' in result ? result.error : null,
       });
       if (updated?.status === 'delivered') completed += 1;
@@ -1068,12 +896,8 @@ export async function runLeadDeliveryWorker(input: {
       else unknown += 1;
     } catch (error) {
       const updated = await updateLeadDeliveryAttempt({
-        database,
-        deliveryId: claim.deliveryId,
-        attemptId: claim.id,
-        leaseToken: claim.leaseToken,
-        routingRevision: claim.routingRevision,
-        status: 'attention_required',
+        database, deliveryId: claim.deliveryId, attemptId: claim.id, leaseToken: claim.leaseToken,
+        routingRevision: claim.routingRevision, status: 'attention_required',
         error: error instanceof Error ? error.message : 'Provider outcome is unknown.',
       });
       if (updated) unknown += 1;
@@ -1086,19 +910,10 @@ export async function getCurrentPrimaryDeliveryInTransaction(
   tx: LeadTransaction,
   leadId: number,
 ): Promise<LeadDeliveryRecord | null> {
-  const [row] = await tx
-    .select()
-    .from(leadDeliveries)
-    .where(
-      and(
-        eq(leadDeliveries.leadId, leadId),
-        eq(leadDeliveries.purpose, 'primary_custody'),
-        ne(leadDeliveries.state, 'superseded'),
-        ne(leadDeliveries.state, 'cancelled'),
-      ),
-    )
-    .orderBy(desc(leadDeliveries.routingRevision), desc(leadDeliveries.id))
-    .limit(1);
+  const [row] = await tx.select().from(leadDeliveries).where(and(
+    eq(leadDeliveries.leadId, leadId), eq(leadDeliveries.purpose, 'primary_custody'),
+    ne(leadDeliveries.state, 'superseded'), ne(leadDeliveries.state, 'cancelled'),
+  )).orderBy(desc(leadDeliveries.routingRevision), desc(leadDeliveries.id)).limit(1);
   return row ? mapDelivery(row) : null;
 }
 
@@ -1116,30 +931,17 @@ export async function getLeadDeliverySnapshot(input: {
 export async function supersedePrimaryDeliveryInTransaction(
   tx: LeadTransaction,
   input: Omit<CreateLeadDeliveryInput, 'purpose' | 'routingRevision'>,
-): Promise<{
-  delivery: LeadDeliveryRecord;
-  attempt: LeadDeliveryAttemptRecord | null;
-  duplicate: boolean;
-}> {
+): Promise<{ delivery: LeadDeliveryRecord; attempt: LeadDeliveryAttemptRecord | null; duplicate: boolean }> {
   await lockLead(tx, input.leadId);
   const existing = await selectDeliveryByKeyForUpdate(tx, input.idempotencyKey);
-  if (existing)
-    return {
-      delivery: existing,
-      attempt: await selectLatestAttemptForUpdate(tx, existing),
-      duplicate: true,
-    };
+  if (existing) return { delivery: existing, attempt: await selectLatestAttemptForUpdate(tx, existing), duplicate: true };
   const current = await getCurrentPrimaryDeliveryForUpdateInTransaction(tx, input.leadId);
   if (current) {
-    await tx
-      .update(leadDeliveries)
-      .set({ state: 'superseded', supersededAt: currentTimestamp() })
+    await tx.update(leadDeliveries).set({ state: 'superseded', supersededAt: currentTimestamp() })
       .where(eq(leadDeliveries.id, current.id));
   }
   return createLeadDeliveryInTransaction(tx, {
-    ...input,
-    purpose: 'primary_custody',
-    routingRevision: (current?.routingRevision || 0) + 1,
+    ...input, purpose: 'primary_custody', routingRevision: (current?.routingRevision || 0) + 1,
   });
 }
 
@@ -1147,55 +949,28 @@ export async function supersedePrimaryDeliveryInTransaction(
 export async function completePlatformDeliveryInTransaction(
   tx: LeadTransaction,
   input: { leadId: number; actionKey: string },
-): Promise<{
-  delivery: LeadDeliveryRecord;
-  attempt: LeadDeliveryAttemptRecord;
-  duplicate: boolean;
-}> {
+): Promise<{ delivery: LeadDeliveryRecord; attempt: LeadDeliveryAttemptRecord; duplicate: boolean }> {
   await lockLead(tx, input.leadId);
   const delivery = await getCurrentPrimaryDeliveryForUpdateInTransaction(tx, input.leadId);
-  if (
-    !delivery ||
-    delivery.recipientType !== 'manual' ||
-    delivery.leadCustody !== 'platform_managed'
-  ) {
+  if (!delivery || delivery.recipientType !== 'manual' || delivery.leadCustody !== 'platform_managed') {
     throw new Error('Only current platform-managed custody may be completed by operations.');
   }
   const lockedDelivery = await selectDeliveryForUpdate(tx, delivery.id);
   if (!lockedDelivery) throw new Error('Current platform delivery disappeared during completion.');
   const latest = await selectLatestAttemptForUpdate(tx, lockedDelivery);
-  const priorAction = await selectCompletedAttemptByProviderReference(
-    tx,
-    lockedDelivery,
-    input.actionKey,
-  );
+  const priorAction = await selectCompletedAttemptByProviderReference(tx, lockedDelivery, input.actionKey);
   if (priorAction) return { delivery: lockedDelivery, attempt: priorAction, duplicate: true };
   const attemptNumber = (latest?.attemptCount || 0) + 1;
   const timestamp = currentTimestamp();
   const [result] = await tx.insert(leadDeliveryAttempts).values({
-    deliveryId: lockedDelivery.id,
-    attemptNumber,
-    state: 'completed',
-    acceptedAt: timestamp,
-    completedAt: timestamp,
-    providerReference: input.actionKey,
+    deliveryId: lockedDelivery.id, attemptNumber, state: 'completed', acceptedAt: timestamp,
+    completedAt: timestamp, providerReference: input.actionKey,
   } as any);
   const attemptId = asNumber((result as any)?.insertId);
-  const [attemptRow] = await tx
-    .select()
-    .from(leadDeliveryAttempts)
-    .where(eq(leadDeliveryAttempts.id, attemptId))
-    .limit(1);
+  const [attemptRow] = await tx.select().from(leadDeliveryAttempts).where(eq(leadDeliveryAttempts.id, attemptId)).limit(1);
   if (!attemptRow) throw new Error('Platform action attempt was not persisted.');
-  const completedDelivery = {
-    ...lockedDelivery,
-    state: 'completed' as const,
-    completedAt: timestamp,
-  };
-  await tx
-    .update(leadDeliveries)
-    .set({ state: 'completed', completedAt: timestamp })
-    .where(eq(leadDeliveries.id, lockedDelivery.id));
+  const completedDelivery = { ...lockedDelivery, state: 'completed' as const, completedAt: timestamp };
+  await tx.update(leadDeliveries).set({ state: 'completed', completedAt: timestamp }).where(eq(leadDeliveries.id, lockedDelivery.id));
   const attempt = mapAttempt(attemptRow, completedDelivery);
   await updateLeadSummary(tx, completedDelivery, attempt);
   return { delivery: completedDelivery, attempt, duplicate: false };
