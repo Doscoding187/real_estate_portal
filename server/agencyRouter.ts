@@ -6198,6 +6198,7 @@ export const agencyRouter = router({
       const template = workflowTemplates(deal.transactionType as DealTransactionType);
       const now = nowAsDbTimestamp();
       let transactionId = 0;
+      let idempotentAcceptance = false;
 
       await db.transaction(async tx => {
         // Serialize acceptance on the deal row. The preflight read above is
@@ -6216,6 +6217,7 @@ export const agencyRouter = router({
           .limit(1);
         if (existingTransactionInLock) {
           transactionId = Number(existingTransactionInLock.id);
+          idempotentAcceptance = true;
           return;
         }
 
@@ -6412,6 +6414,10 @@ export const agencyRouter = router({
       });
 
       const refreshed = await recomputeTransactionNextStep(db, agencyId, transactionId);
+
+      if (idempotentAcceptance) {
+        return { success: true, idempotent: true, transactionId, dealId: deal.id };
+      }
 
       await logAudit({
         userId: user.id,

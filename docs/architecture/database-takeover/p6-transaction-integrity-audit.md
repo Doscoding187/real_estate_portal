@@ -13,5 +13,8 @@ acceptor returns the existing transaction ID, while only the first mutates the
 offer and creates milestones, conditions, parties, and the settlement.
 
 The existing agency lifecycle suites cover the surrounding tenant and offer
-state rules. A dedicated independent-connection acceptance race remains a P6
-acceptance requirement before any further commission schema changes.
+state rules. The authority-run agency deal integration now exercises two
+concurrent caller requests and proves one durable transaction with one
+idempotent response; the transactional lock and in-lock recheck are therefore
+covered by physical evidence. Further commission schema changes still require
+their own lifecycle proof.

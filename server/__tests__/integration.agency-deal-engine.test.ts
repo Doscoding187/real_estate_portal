@@ -983,7 +983,7 @@ describeWithDb('agency deal engine persisted workflow', () => {
       id: seed.adminUserId,
       role: 'agency_admin',
       agencyId: seed.agencyId,
-    });
+  });
 
     const createdDeal = await caller.createDeal({
       leadId: seed.leadId,
@@ -1063,4 +1063,48 @@ describeWithDb('agency deal engine persisted workflow', () => {
       ),
     ).toBe(0);
   }, 45_000);
+
+  it('serializes concurrent offer acceptance across independent caller requests', async () => {
+    const seed = await seedAgencyFixture('acceptance-race');
+    const callerA = createCaller({ id: seed.adminUserId, role: 'agency_admin', agencyId: seed.agencyId });
+    const callerB = createCaller({ id: seed.adminUserId, role: 'agency_admin', agencyId: seed.agencyId });
+    const createdDeal = await callerA.createDeal({
+      leadId: seed.leadId,
+      sourceViewingId: seed.viewingId,
+      listingId: seed.listingId,
+      propertyId: seed.propertyId,
+      responsibleAgentId: seed.agentId,
+      transactionType: 'sale',
+      interestStatus: 'wants_offer',
+      terms: { amount: 1_500_000, offerExpiry: futureIso(1), conditionsSummary: 'Concurrent acceptance.' },
+    });
+    createdState.dealIds.push(createdDeal.dealId);
+    createdState.offerVersionIds.push(Number(createdDeal.offerVersionId));
+    await callerA.submitOfferVersion({ offerVersionId: Number(createdDeal.offerVersionId) });
+
+    const input = {
+      offerVersionId: Number(createdDeal.offerVersionId),
+      commissionBasis: 'percentage' as const,
+      commissionPercentage: 5,
+      commissionVatTreatment: 'exclusive' as const,
+      agencySharePercentage: 50,
+      transferDutyVatTreatment: 'transfer_duty' as const,
+    };
+    const [first, second] = await Promise.all([
+      callerA.acceptOfferVersion(input),
+      callerB.acceptOfferVersion(input),
+    ]);
+    expect([first.idempotent, second.idempotent].sort()).toEqual([false, true]);
+    expect(first.transactionId).toBe(second.transactionId);
+    createdState.transactionIds.push(first.transactionId);
+
+    const db = await getDb();
+    if (!db) throw new Error('Database not available');
+    expect(
+      await countRows(
+        agencyTransactions,
+        and(eq(agencyTransactions.agencyId, seed.agencyId), eq(agencyTransactions.dealId, createdDeal.dealId)),
+      ),
+    ).toBe(1);
+  });
 });
