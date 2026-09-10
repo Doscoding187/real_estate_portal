@@ -19,8 +19,12 @@ projection, router, Search Area authority, and geography contract surfaces.
 
 The Commercial office contract suite now passes 20 tests, including ordered
 availability provenance and strict UTC microsecond timestamp normalization.
+The authority-run Shared Living integration passes 6 tests covering private
+owner and practitioner authoring, current mandate and membership checks,
+moderation publication, private-address protection, durable enquiry inbox
+delivery, retry idempotency, and scoped replies.
 This packet is not closed. A complete P7 acceptance still needs independent
 physical evidence for mixed-authority Land requests against the running public
-journey, plus dedicated Commercial economics and Shared Living ownership and
-moderation proofs. The current evidence supports retaining the existing
-canonical geography and domain tables while those tests are added.
+journey and a broader Commercial economics proof. The current evidence
+supports retaining the existing canonical geography and domain tables while
+those tests are added.
