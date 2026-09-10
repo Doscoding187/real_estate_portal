@@ -51,9 +51,10 @@ describe('canonical paid-entitlement row predicate', () => {
 describe('activation-to-renewal continuity wiring', () => {
   it('notifies and emails the solo agent on captured organic enquiries', () => {
     const capture = readRepoFile('server/services/publicLeadCaptureService.ts');
-    expect(capture).toContain('notifyAgentOfNewLead');
+    expect(capture).toContain('persistAgentLeadNotification');
     expect(capture).toContain("type: 'lead_assigned'");
-    expect(capture).toContain('sendNewLeadNotificationEmail');
+    expect(capture).toContain('sendAgentLeadEmail');
+    expect(capture).toContain('EmailService.sendNewLeadNotificationEmail');
   });
 
   it('runs the launch-expiry notice scheduler on boot with idempotent notices', () => {
