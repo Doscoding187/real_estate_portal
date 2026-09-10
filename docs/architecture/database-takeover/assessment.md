@@ -1,6 +1,6 @@
 # Database architecture takeover assessment
 
-Status: **P1 accepted after senior review; P2 implementation open**. This is the current
+Status: **P1 accepted after senior review; P2 implementation and P3–P8 packet review open**. This is the current
 assessment for the task-owned worktree `property-listify-database-architecture`,
 branch `feat/database-architecture-takeover`.
 Completion requires the packet sequence in
@@ -25,16 +25,16 @@ database where concurrency or integrity matters.
 
 ## Current baseline
 
-- `drizzle/schema/index.ts` exports 24 schema modules and 213 physical
+- `drizzle/schema/index.ts` exports 24 schema modules and 215 canonical
   tables. The current canonical inventory structural digest is
-  `f6416d31d84609203c96e00f7b2455acd78b3a4d0b2c0d8aaa232a2c44b30328`.
+  `92b13e96e153f413c9459380ee2711f5cac3ff663505473018ba447f2fc1b381`.
 - No Drizzle `mysqlView` export or inventory view is present.
 - The database-authority status resolves the exact task-owned disposable local
   MySQL target at port 3307. Its expected migration head is
-  `0075_recently_viewed_microsecond_recency.sql`; there are no incomplete attempts and
+  `0079_explore_engagement_event_identity.sql`; there are no incomplete attempts and
   the schema is congruent. No remote/protected target was accessed.
 - A fresh disposable consumer contract passed from an empty target through
-  0075, including canonical foundation/geography/scenario,
+  the current admitted lineage, including canonical foundation/geography/scenario,
   schema-congruency, distribution, and Search-to-Lead readiness checks. The
   run used target fingerprint
   `806c61e7e0d23daf1c70942dc80e91884d2778cc31d6c95ebef8a2023ea207ca` and
@@ -91,14 +91,13 @@ mapping, publication/revision, withdrawal, and projection rebuild proof.
 
 ### Lead delivery
 
-`leads` remains the capture, consent, and custody root, but its
-`deliveryAttempts` JSON array is an unresolved operational authority. It
-currently serves capture, publisher delivery, routing correction, custody
-audit, conversion reporting, developer funnel, agent views, and super-admin
-filters. JSON cannot enforce delivery uniqueness, typed recipient ownership,
-indexed due work, or lease fencing. P2 is the next high-impact implementation
-packet and must replace this shared mutable structure with a relational
-delivery/attempt model and update every consumer.
+The relational `lead_deliveries` and append-only `lead_delivery_attempts`
+tables now own capture, publisher delivery, routing correction, custody audit,
+conversion reporting, developer funnel, agent views, and super-admin filters.
+The old `deliveryAttempts` JSON authority was removed from the active model.
+P2 remains review-open for independent live-provider replay evidence and final
+reconciliation/authorization review; injected-provider crash tests prove the
+durable unknown-outcome fence.
 
 ## Coverage status
 
@@ -117,13 +116,13 @@ that the model is automatically wrong.
 | ------------------------------ | ----------------------------------------- | ----------------------------------------------------------------------------------- |
 | P0 baseline                    | Complete and committed                    | Packet record and current inventory are committed at `3d842600`                     |
 | P1 consumer integrity          | Accepted after senior review               | Evidence and disposition in `reviews/P1-implementation.md` and `reviews/P1-senior-review.md` |
-| P2 lead delivery               | Decision established, implementation open | Relational state machine, worker/recovery, provider uncertainty                     |
-| P3 listings/projection         | Boundary identified, audit open           | Mapping/cardinality, publish/withdraw/rebuild                                       |
-| P4 account/tenant              | Open                                      | Membership, revocation, ownership, token lifecycle                                  |
-| P5 billing                     | Open                                      | Monetary facts, provider idempotency, entitlement transitions                       |
-| P6 agency/distribution         | Open                                      | Workflow states, assignment, commission and showing consistency                     |
+| P2 lead delivery               | Implemented; review open                  | Live-provider replay, reconciliation, authorization                                 |
+| P3 listings/projection         | Boundary implemented; audit open          | Duplicate writers, concurrent publish, withdrawal, rebuild                          |
+| P4 account/tenant              | Core evidence implemented; audit open     | Broader ownership and token lifecycle census                                        |
+| P5 billing                     | Core evidence implemented; audit open     | Explicit billable-account model and entitlement race proof                          |
+| P6 agency/distribution         | Acceptance race fixed; audit open         | Assignment, commission and showing consistency                                      |
 | P7 domain supply/geography     | Open                                      | Land authority contract, geography, development, Commercial, Shared Living          |
-| P8 platform/supporting domains | Open                                      | Durable jobs, media/content, services, demand, analytics rebuildability             |
+| P8 platform/supporting domains | Partial corrections implemented; open    | Durable jobs, media/content, services, demand, analytics rebuildability             |
 | P9 closure                     | Not started                               | Full physical, query-plan, journey and release review                               |
 
 ## Known risks carried into implementation
