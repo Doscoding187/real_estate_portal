@@ -66,3 +66,11 @@ not execute a test. The governed Playwright runner timed out waiting 120 seconds
 for its `pnpm dev:backend` web server at `http://localhost:5000`; a direct
 health check also found no listener. Generated report artifacts were restored.
 Browser readiness therefore remains unevaluated and is not claimed as passed.
+
+Diagnostic follow-up found the startup refusal: running the backend with the
+central local environment directly reached boot, but its runtime schema probes
+resolved the protected `clean-main-local` target and refused database access.
+This confirms browser startup needs an authority-injected child environment;
+no protected database was mutated or accessed. The governed browser runner
+still requires a runtime fix or an explicitly authorized test-server launch
+before browser evidence can be collected.
