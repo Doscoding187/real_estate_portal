@@ -17,6 +17,8 @@ active unit-type rows before validating and writing the counters.
 Focused Land and geography suites pass 47 tests across the public service,
 projection, router, Search Area authority, and geography contract surfaces.
 
+The Commercial office contract suite now passes 20 tests, including ordered
+availability provenance and strict UTC microsecond timestamp normalization.
 This packet is not closed. A complete P7 acceptance still needs independent
 physical evidence for mixed-authority Land requests against the running public
 journey, plus dedicated Commercial economics and Shared Living ownership and
