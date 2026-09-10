@@ -37,3 +37,6 @@ server/__tests__/developer.subscription-commercial.contract.test.ts` passed
 identity handling, entitlement gating, and the absence of listing-media
 coupling in billing authority. Entitlement race proof remains a P5 review
 item.
+
+
+Fresh authority-run evidence: `pnpm test:authority -- server/__tests__/billing.foundation.acceptance.integration.test.ts` passed both physical billing acceptance tests against the disposable target. The scenarios verify agency EFT activation, duplicate approval idempotency, private proof-document handling, rejection/correction behavior, and partial-payment non-activation.
