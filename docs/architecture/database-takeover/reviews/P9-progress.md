@@ -60,17 +60,24 @@ capture, assignment, agent response, and operating-home coherence. This is
 API/integration evidence; a browser-rendered journey and the remaining
 provider/rebuild audits are still required.
 
-Browser verification attempt: `pnpm test:browser:authority --
+Earlier browser verification attempt: `pnpm test:browser:authority --
 e2e/consumer-activity/persistence.spec.ts --project='Desktop Chrome'` did
 not execute a test. The governed Playwright runner timed out waiting 120 seconds
 for its `pnpm dev:backend` web server at `http://localhost:5000`; a direct
 health check also found no listener. Generated report artifacts were restored.
-Browser readiness therefore remains unevaluated and is not claimed as passed.
+Browser readiness was therefore initially unevaluated and was not claimed as
+passed.
 
 Diagnostic follow-up found the startup refusal: running the backend with the
 central local environment directly reached boot, but its runtime schema probes
 resolved the protected `clean-main-local` target and refused database access.
-This confirms browser startup needs an authority-injected child environment;
-no protected database was mutated or accessed. The governed browser runner
-still requires a runtime fix or an explicitly authorized test-server launch
-before browser evidence can be collected.
+This confirmed browser startup needed an authority-injected child environment;
+no protected database was mutated or accessed.
+
+Browser launch was corrected on the current branch: Playwright now probes
+`/api/health` on IPv4 and launches the authority-injected backend with the
+development Vite shell enabled. A rerun reached the canonical property page
+and executed the P1 journey, but the journey still failed during its
+save/sign-in sequence; this is now an application-flow failure rather than a
+database-authority or web-server readiness failure. Generated artifacts remain
+diagnostic only and browser acceptance is still open.
