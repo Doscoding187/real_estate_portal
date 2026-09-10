@@ -7,6 +7,11 @@ P3 rebuild evidence is now physical: the authority-enabled
 target, covering revision approval, public projection refresh, and preservation
 of the canonical projection identity.
 
+After the subsequent empty-target rebuild, the same authority-injected Desktop
+Chrome P1 browser journey was rerun with `--retries=0` and passed. This proves
+the browser persistence path remains valid after canonical migration and
+scenario re-establishment, rather than relying on pre-existing target state.
+
 The exact task-owned disposable target was rechecked on 2026-09-10:
 
 - `pnpm db:schema:congruency` passed. Desired and actual digest:
