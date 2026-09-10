@@ -40,3 +40,13 @@ The target is populated again by this contract, as expected. This proves
 fresh canonical establishment and the governed Search-to-Lead acceptance
 scenario; it does not close browser, provider-specific, packet-review, or
 projection-rebuild requirements.
+
+Provider audit result: `pnpm db:schema:tidb-audit` completed with
+`admitted: false`. The structural audit reports 12 FK/check-constraint
+interactions requiring explicit DDL-action provenance or domain lifecycle
+review, spanning catalogue publisher authority shape, development
+supersession lifecycle checks, Land claim/conflict checks, and exact-target
+location provider mappings. MySQL disposable acceptance does not establish
+TiDB behavior for these interactions; the provider audit remains an explicit
+P9 blocker until those decisions and deployment-provider verification are
+recorded.
