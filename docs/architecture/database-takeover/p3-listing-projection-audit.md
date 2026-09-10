@@ -32,6 +32,10 @@ now admits `listify_wt_*` disposable authority targets, and an authority run
 on the current target passed the full persisted workflow (including revision,
 publication, access, and projection identity checks).
 
+Following the empty-target rebuild, the broader physical lifecycle packet was
+rerun on the same authority: development publication lifecycle, listing
+publication readiness, and agency attribution passed 25 tests.
+
 The existing `integration.agency-listing-performance-mvp.test.ts` contains the
 closest rebuild-equivalence assertions: a revision approval updates the live
 listing and public projection while preserving the original projection ID.

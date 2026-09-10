@@ -12,6 +12,12 @@ Chrome P1 browser journey was rerun with `--retries=0` and passed. This proves
 the browser persistence path remains valid after canonical migration and
 scenario re-establishment, rather than relying on pre-existing target state.
 
+The rebuilt target also passed the three physical listing/development authority
+suites (`development-publication-lifecycle`, `listing-publication-readiness`,
+and `agency-listing-attribution`): 25 tests passed. This revalidates publication
+gating, withdrawal/readiness behavior, projection identity, and agency
+attribution after a fresh canonical migration.
+
 The exact task-owned disposable target was rechecked on 2026-09-10:
 
 - `pnpm db:schema:congruency` passed. Desired and actual digest:
