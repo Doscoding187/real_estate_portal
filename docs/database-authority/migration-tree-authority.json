@@ -260,7 +260,9 @@
       "server/_core/databaseAuthority/dataAdapters/pleReviewerFixture.ts",
       "server/_core/databaseAuthority/dataAdapters/searchToLeadScenario.ts"
     ],
-    "approvedReadOnlyDiagnostics": ["scripts/print-db-target.ts"],
+    "approvedReadOnlyDiagnostics": [
+      "scripts/print-db-target.ts"
+    ],
     "controlledDataRepairUtilities": [],
     "localTestSeedOrFixtureUtilities": [
       "scripts/run-listing-performance-e2e.ts",
@@ -463,7 +465,9 @@
         "disposition": "superseded"
       }
     ],
-    "historicalDocumentationRoots": [".kiro/**"],
+    "historicalDocumentationRoots": [
+      ".kiro/**"
+    ],
     "historicalDocumentationFiles": [
       "COMPLETE_DELIVERY_SUMMARY.md",
       "EXPLORE_QUICK_REFERENCE.md",
@@ -991,7 +995,9 @@
       "path": "backups/**",
       "classification": "archived historical",
       "purpose": "Backup evidence; never an application migration source.",
-      "approvedFiles": ["backups/cleanup-backup-2026-01-29T20-02-35-220Z.sql"]
+      "approvedFiles": [
+        "backups/cleanup-backup-2026-01-29T20-02-35-220Z.sql"
+      ]
     },
     {
       "path": "docker-compose.local-db.yml",
@@ -1173,6 +1179,11 @@
       "path": "server/migrations/0079_explore_engagement_event_identity.sql",
       "classification": "canonical active",
       "purpose": "Adds a client event identity and unique key so Explore engagement retries cannot create duplicate facts."
+    },
+    {
+      "path": "server/migrations/0080_service_lead_request_idempotency.sql",
+      "classification": "canonical active",
+      "purpose": "Adds a durable request identity and unique key so service-lead retries replay existing rows instead of duplicating requests."
     }
   ],
   "prohibitedPaths": [

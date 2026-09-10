@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { and, desc, eq, inArray } from 'drizzle-orm';
 import {
   partners,
@@ -189,6 +190,7 @@ type RecommendProvidersInput = {
 };
 
 type CreateServiceLeadInput = {
+  requestId?: string | null;
   requesterUserId?: number | null;
   providerId?: number | null;
   category: ServiceCategory;
@@ -789,6 +791,7 @@ export class ServicesEngineService {
       providerIds = recommendations.map(item => item.provider.providerId);
     }
 
+    const requestId = normalizeText(input.requestId) || randomUUID();
     const leadIds: number[] = [];
     const subscriptionMap = new Map<number,
       { tier: 'directory' | 'directory_explore' | 'ecosystem_pro' | null }
@@ -808,7 +811,23 @@ export class ServicesEngineService {
     }
 
     const targetProviderIds = providerIds.length > 0 ? providerIds : [null];
-    for (const providerId of targetProviderIds) {
+    const requestKeys = targetProviderIds.map(providerId => `${requestId}:${providerId || 'unmatched'}`);
+    const existingLeads = await db
+      .select({ id: serviceLeads.id, requestId: serviceLeads.requestId })
+      .from(serviceLeads)
+      .where(inArray(serviceLeads.requestId, requestKeys));
+    if (existingLeads.length === requestKeys.length) {
+      return {
+        leadIds: existingLeads.map(lead => Number(lead.id)),
+        providerIds,
+        unmatched: providerIds.length === 0,
+        requestId,
+        idempotent: true,
+      };
+    }
+
+    await db.transaction(async tx => {
+      for (const providerId of targetProviderIds) {
       const tier = providerId
         ? (subscriptionMap.get(providerId)?.tier as
             | 'directory'
@@ -820,7 +839,9 @@ export class ServicesEngineService {
         ? isBillingEligibleForTier(tier || 'directory', input.sourceSurface)
         : false;
 
-      const insertResult = await db.insert(serviceLeads).values({
+      const requestKey = `${requestId}:${providerId || 'unmatched'}`;
+      const insertResult = await tx.insert(serviceLeads).values({
+        requestId: requestKey,
         requesterUserId: input.requesterUserId || null,
         providerId: providerId || null,
         serviceCategory: input.category,
@@ -843,7 +864,7 @@ export class ServicesEngineService {
       if (!leadId) continue;
       leadIds.push(leadId);
 
-      await db.insert(serviceLeadEvents).values({
+      await tx.insert(serviceLeadEvents).values({
         leadId,
         eventType: 'created',
         actorUserId: input.requesterUserId || null,
@@ -854,12 +875,15 @@ export class ServicesEngineService {
           billingEligible,
         },
       });
-    }
+      }
+    });
 
     return {
       leadIds,
       providerIds: providerIds,
       unmatched: providerIds.length === 0,
+      requestId,
+      idempotent: false,
     };
   }
 

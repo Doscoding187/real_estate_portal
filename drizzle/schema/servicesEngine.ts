@@ -246,6 +246,7 @@ export const serviceLeads = mysqlTable(
   'service_leads',
   {
     id: int('id').autoincrement().primaryKey(),
+    requestId: varchar('request_id', { length: 96 }),
     requesterUserId: int('requester_user_id').references(() => users.id, {
       onDelete: 'set null',
     }),
@@ -292,6 +293,7 @@ export const serviceLeads = mysqlTable(
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
   },
   table => [
+    unique('ux_service_leads_request_id').on(table.requestId),
     index('idx_service_leads_provider').on(table.providerId),
     index('idx_service_leads_status').on(table.status),
     index('idx_service_leads_source').on(table.sourceSurface),

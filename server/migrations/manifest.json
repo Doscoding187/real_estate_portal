@@ -4,7 +4,7 @@
   "historyTable": "sql_migration_history",
   "attemptTable": "sql_migration_attempts",
   "lockName": "property_listify_manifest_migrations",
-  "expectedHead": "0079_explore_engagement_event_identity.sql",
+  "expectedHead": "0080_service_lead_request_idempotency.sql",
   "migrations": [
     {
       "sequence": 0,
@@ -837,6 +837,17 @@
       "statementPolicy": "approved-exception",
       "requiredReferenceDataVersion": null,
       "approvalReference": "DBX-PRELAUNCH-EXPLORE-EVENT-IDEMPOTENCY-2026-09-10-Edward"
+    },
+    {
+      "sequence": 80,
+      "filename": "0080_service_lead_request_idempotency.sql",
+      "checksum": "d23c0d5e5c527c09d116bbf390424cf0e5559cd583c8d284f1d1ef0e265f220e",
+      "parent": "0079_explore_engagement_event_identity.sql",
+      "parentChecksum": "56135df6ebdf7098815524d995561bd1b1e0fa53802c756418cf805b3363cc09",
+      "kind": "exceptional",
+      "statementPolicy": "approved-exception",
+      "requiredReferenceDataVersion": null,
+      "approvalReference": "DBX-PRELAUNCH-SERVICE-LEAD-IDEMPOTENCY-2026-09-11-Edward"
     }
   ]
 }

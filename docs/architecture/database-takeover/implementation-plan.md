@@ -8,8 +8,8 @@ the disposable target is at migration head
 `0075_recently_viewed_microsecond_recency.sql` with model digest
 `f6416d31d84609203c96e00f7b2455acd78b3a4d0b2c0d8aaa232a2c44b30328`.
 P2 is in progress and is not yet accepted. The disposable target is now at
-`0079_explore_engagement_event_identity.sql`, with matching physical/model
-digest `92b13e96e153f413c9459380ee2711f5cac3ff663505473018ba447f2fc1b381`.
+`0080_service_lead_request_idempotency.sql`, with matching physical/model
+digest `69f4bf73e6ac9dc81b2be8b2cc36333e33d7a1ec6917ea392cbcc68466ac73fd`.
 The relational cutover, consumer changes, and seven physical delivery tests
 are implemented. The latest recovery correction quarantines expired claims
 as unknown provider outcomes; automatic retry cannot establish non-acceptance.

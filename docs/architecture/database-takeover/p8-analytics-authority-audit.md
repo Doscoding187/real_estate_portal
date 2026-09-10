@@ -24,8 +24,13 @@ removed. Their disconnected `partner_leads` table was retired by migration
 route registration. The active partner and lead journeys use the canonical
 `partners`, `leads`, and `lead_deliveries` authorities.
 
-Migration 0079 is the current manifest head and adds the canonical client
-event identity for browser engagement retries.
+Migration 0079 adds the canonical client event identity for browser engagement
+retries. Migration 0080 is now the current manifest head.
+
+Migration 0080 adds a durable request identity for service-lead fan-out. Each
+provider obligation is keyed from the request identity, and creation of the
+lead plus its initial `created` event now commits in one transaction. A retry
+returns the existing lead IDs instead of creating duplicate service requests.
 
 Partner analytics no longer probes the retired table or converts schema errors
 into zero-valued reports. Explore content metrics are read from their canonical
