@@ -3101,11 +3101,15 @@ async function syncPublishedListingMediaToPropertyMirrorWithDatabase(
   // action. This prevents repair/compatibility callers bypassing entitlement.
   await assertListingPublicationEntitled(database, { listingId, operation: 'public_media_sync' });
 
-  const [mirroredProperty] = await database
+  const mirroredProperties = await database
     .select({ id: properties.id })
     .from(properties)
     .where(eq(properties.sourceListingId, listingId))
-    .limit(1);
+    .limit(2);
+  if (mirroredProperties.length > 1) {
+    return { synced: false, reason: 'duplicate_property_mirrors' as const };
+  }
+  const mirroredProperty = mirroredProperties[0];
 
   if (!mirroredProperty) {
     return { synced: false, reason: 'property_mirror_not_found' as const };
@@ -3536,11 +3540,15 @@ async function upsertCanonicalPublicPropertyProjection(
     );
   }
 
-  const [existingProperty] = await database
+  const existingProperties = await database
     .select({ id: properties.id })
     .from(properties)
     .where(eq(properties.sourceListingId, Number(propertyValues.sourceListingId)))
-    .limit(1);
+    .limit(2);
+  if (existingProperties.length > 1) {
+    throw new Error('Cannot publish: duplicate public projections exist for this listing.');
+  }
+  const existingProperty = existingProperties[0];
 
   if (existingProperty) {
     await database
