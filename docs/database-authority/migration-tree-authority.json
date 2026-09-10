@@ -1158,6 +1158,11 @@
       "path": "server/migrations/0076_lead_delivery_relational_authority.sql",
       "classification": "canonical active",
       "purpose": "Replaces JSON lead delivery history with relational delivery obligations and append-only attempt recovery state."
+    },
+    {
+      "path": "server/migrations/0077_bundle_attribution_relational_authority.sql",
+      "classification": "canonical active",
+      "purpose": "Establishes the relational bundle attribution event table used by marketplace attribution tracking and analytics."
     }
   ],
   "prohibitedPaths": [

@@ -76,6 +76,33 @@ export const bundlePartners = mysqlTable('bundle_partners', {
   createdAt: timestamp({ mode: 'string' }).defaultNow().notNull(),
 });
 
+export const bundleAttributions = mysqlTable(
+  'bundle_attributions',
+  {
+    id: varchar('id', { length: 36 }).primaryKey(),
+    bundleId: varchar('bundle_id', { length: 64 }).notNull(),
+    partnerId: varchar('partner_id', { length: 64 }),
+    userId: varchar('user_id', { length: 128 }),
+    eventType: mysqlEnum('event_type', [
+      'bundle_view',
+      'partner_click',
+      'profile_view',
+      'lead_generated',
+      'lead_converted',
+    ]).notNull(),
+    contentId: varchar('content_id', { length: 128 }),
+    leadId: varchar('lead_id', { length: 128 }),
+    metadata: json(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
+  },
+  table => [
+    index('idx_bundle_attributions_bundle').on(table.bundleId, table.createdAt),
+    index('idx_bundle_attributions_partner').on(table.partnerId, table.createdAt),
+    index('idx_bundle_attributions_user').on(table.userId, table.createdAt),
+    index('idx_bundle_attributions_event').on(table.eventType, table.createdAt),
+  ],
+);
+
 export const boostCampaigns = mysqlTable(
   'boost_campaigns',
   {

@@ -4,7 +4,7 @@
   "historyTable": "sql_migration_history",
   "attemptTable": "sql_migration_attempts",
   "lockName": "property_listify_manifest_migrations",
-  "expectedHead": "0076_lead_delivery_relational_authority.sql",
+  "expectedHead": "0077_bundle_attribution_relational_authority.sql",
   "migrations": [
     {
       "sequence": 0,
@@ -804,6 +804,17 @@
       "statementPolicy": "approved-exception",
       "requiredReferenceDataVersion": null,
       "approvalReference": "DBX-PRELAUNCH-LEAD-DELIVERY-RELATIONAL-2026-09-09-Edward"
+    },
+    {
+      "sequence": 77,
+      "filename": "0077_bundle_attribution_relational_authority.sql",
+      "checksum": "ceb4873a45f054f426ba7f12d12fe4dbf96754e65dd5c826b2411b40683ef4c5",
+      "parent": "0076_lead_delivery_relational_authority.sql",
+      "parentChecksum": "1dd8bcedad1517191b4f1701ce11dd6c9ca8c58cc45a9fe44361a36f35472a39",
+      "kind": "exceptional",
+      "statementPolicy": "approved-exception",
+      "requiredReferenceDataVersion": null,
+      "approvalReference": "DBX-PRELAUNCH-BUNDLE-ATTRIBUTION-RELATIONAL-2026-09-10-Edward"
     }
   ]
 }

@@ -11,6 +11,13 @@ unique metric, while total `viewCount` remains the raw event counter. The
 focused contract verifies that both identity branches are present in the
 authoritative query.
 
+Marketplace bundle attribution is now backed by the canonical relational
+`bundle_attributions` table introduced by migration 0077. Bundle view,
+partner-engagement, and lead-attribution writes use the Drizzle schema, and the
+legacy logging and zero-count analytics paths now write and read that table.
+The migration is registered as the active manifest head and included in the
+generated canonical model inventory.
+
 Replay deduplication for browser events remains a separate P8 requirement; the
 current event contract has no client event identity, so a unique database key
 cannot be introduced without first defining that product-level identity.

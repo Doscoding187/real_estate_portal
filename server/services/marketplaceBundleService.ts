@@ -14,6 +14,7 @@
  */
 
 import { db } from '../db';
+import { bundleAttributions } from '../../drizzle/schema';
 import { nanoid } from 'nanoid';
 
 // ============================================================================
@@ -455,17 +456,20 @@ export class MarketplaceBundleService {
     userId: string,
     engagementType: 'view' | 'click' | 'contact',
   ): Promise<void> {
-    // In a full implementation, this would insert into a bundle_engagements table
-    // For now, we'll log it
-    console.log(
-      `[BUNDLE ENGAGEMENT] Bundle: ${bundleId}, Partner: ${partnerId}, User: ${userId}, Type: ${engagementType}`,
-    );
+    const eventType =
+      engagementType === 'view'
+        ? 'bundle_view'
+        : engagementType === 'click'
+          ? 'partner_click'
+          : 'lead_generated';
 
-    // This would be used for:
-    // 1. Attribution tracking
-    // 2. Partner performance scoring
-    // 3. Bundle effectiveness analytics
-    // 4. Partner billing/commission
+    await db.insert(bundleAttributions).values({
+      id: nanoid(),
+      bundleId,
+      partnerId,
+      userId,
+      eventType,
+    });
   }
 
   /**
@@ -487,8 +491,11 @@ export class MarketplaceBundleService {
 
     const categoryCoverage = Array.from(new Set(partners.map(p => p.category)));
 
-    // In a full implementation, this would query bundle_engagements table
-    const engagementCount = 0;
+    const engagementResult = await db.execute(
+      `SELECT COUNT(*) AS engagementCount FROM bundle_attributions WHERE bundle_id = ?`,
+      [bundleId],
+    );
+    const engagementCount = Number((engagementResult.rows as any[])[0]?.engagementCount || 0);
 
     return {
       totalPartners,
