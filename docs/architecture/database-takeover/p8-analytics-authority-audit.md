@@ -72,3 +72,11 @@ server/__tests__/contract.listing-lifecycle.test.ts` passed 47 tests. This
 includes token scope/content validation, cross-tenant reservation denial,
 confirmation custody rechecks, and approval-time media mirroring. Physical
 cross-tenant media denial remains an integration-level review item.
+
+Physical media custody evidence now covers the live router boundary:
+`pnpm test:authority --
+server/__tests__/integration.listing-media-tenant-boundary.test.ts` passed
+against the disposable target. An unrelated user was denied before a Listing
+media reservation was issued, and the owner listing retained zero media rows.
+Confirmation after reassignment/deletion and public media rebuild equivalence
+remain separate review items.
