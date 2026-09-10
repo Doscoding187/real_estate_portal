@@ -22,3 +22,21 @@ packet-level results into senior acceptance. Projection rebuild equivalence,
 provider-specific semantics, unresolved billable-owner modelling, remaining
 packet review findings, and the complete public/private journey audit remain
 required before P9 can close.
+
+Fresh establishment evidence was completed after disposing and recreating the
+owned target:
+
+- `pnpm db:authority:consumer-contract` passed from an empty database.
+- All migrations through `0080_service_lead_request_idempotency.sql` applied.
+- Canonical geography, Launch Access foundation, and Search-to-Lead scenario
+  preparation and verification passed.
+- The scenario exercised Search-to-Lead replay idempotency, conflicting replay
+  rejection, lead custody, public eligibility negatives, and owner-versus-
+  unrelated-user authorization.
+- Schema congruency and Search-to-Lead readiness both passed with digest
+  `69f4bf73e6ac9dc81b2be8b2cc36333e33d7a1ec6917ea392cbcc68466ac73fd`.
+
+The target is populated again by this contract, as expected. This proves
+fresh canonical establishment and the governed Search-to-Lead acceptance
+scenario; it does not close browser, provider-specific, packet-review, or
+projection-rebuild requirements.
