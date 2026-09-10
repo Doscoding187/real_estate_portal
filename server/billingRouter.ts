@@ -57,7 +57,9 @@ const startManualCheckoutSchema = z.object({
 
 const submitPaymentProofSchema = z.object({
   invoiceId: z.number().int().positive(),
-  amount: z.number().positive(),
+  // Billing amounts are integer minor units (cents), never rounded rand
+  // values. This keeps invoice/payment arithmetic exact at the API boundary.
+  amount: z.number().int().positive().safe(),
   bankReference: z.string().max(120).optional(),
   payerName: z.string().max(160).optional(),
   paymentDate: z.string().optional(),

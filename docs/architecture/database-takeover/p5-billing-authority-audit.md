@@ -18,3 +18,8 @@ database-enforced shape), followed by a migration of subscription, invoice,
 payment, audit, and entitlement consumers. Required proof includes duplicate
 and out-of-order payment events, exact minor-unit totals, expiry and
 cancellation races, and denial of publication after entitlement loss.
+
+The proof submission boundary now requires positive safe integer minor units at
+both the router and service layers. Fractional values are rejected instead of
+being silently rounded into a different payment amount. Billing acceptance
+and launch-access contract suites continue to pass.

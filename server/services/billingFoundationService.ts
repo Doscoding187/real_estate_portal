@@ -1585,10 +1585,10 @@ export async function submitPaidLaunchAccessPaymentProof(input: LaunchPaymentPro
   if (input.file.sizeBytes <= 0 || input.file.sizeBytes > MAX_PROOF_BYTES) {
     throw new TRPCError({ code: 'BAD_REQUEST', message: 'Proof-of-payment file is too large.' });
   }
-  if (!Number.isFinite(input.amount) || input.amount <= 0) {
+  if (!Number.isSafeInteger(input.amount) || input.amount <= 0) {
     throw new TRPCError({
       code: 'BAD_REQUEST',
-      message: 'Payment amount must be greater than zero.',
+      message: 'Payment amount must be a positive integer minor-unit value.',
     });
   }
 
@@ -1807,10 +1807,10 @@ export async function submitAgencyPaymentProof(input: LaunchPaymentProofInput) {
   if (input.file.sizeBytes <= 0 || input.file.sizeBytes > MAX_PROOF_BYTES) {
     throw new TRPCError({ code: 'BAD_REQUEST', message: 'Proof-of-payment file is too large.' });
   }
-  if (!Number.isFinite(input.amount) || input.amount <= 0) {
+  if (!Number.isSafeInteger(input.amount) || input.amount <= 0) {
     throw new TRPCError({
       code: 'BAD_REQUEST',
-      message: 'Payment amount must be greater than zero.',
+      message: 'Payment amount must be a positive integer minor-unit value.',
     });
   }
 
