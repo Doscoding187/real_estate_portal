@@ -341,7 +341,6 @@ export type User = InferSelectModel<typeof users>;
 export type InsertUser = InferInsertModel<typeof users>;
 export type Property = InferSelectModel<typeof properties>;
 export type InsertProperty = InferInsertModel<typeof properties>;
-export type InsertPropertyImage = InferInsertModel<typeof propertyImages>;
 
 // Explicit canonical user columns required by the login boundary.
 export const AUTH_LOGIN_USER_COLUMNS = {
@@ -697,52 +696,6 @@ export async function updateUserEmailVerificationTokenHash(
       emailVerificationTokenExpiresAt: expiresAt,
     })
     .where(eq(users.id, userId));
-}
-
-// Property queries
-export async function createProperty(property: InsertProperty) {
-  const db = await getDb();
-  if (!db) throw new Error('Database not available');
-
-  // Normalize location fields for consistent querying
-  const normalizedProperty = normalizeLocationFields(property);
-
-  // Validate location if publishing
-  const validationError = validateLocationForPublish(normalizedProperty);
-  if (validationError) {
-    throw new Error(validationError);
-  }
-
-  // Resolve and populate location IDs if text fields are provided
-  // This ensures new properties have proper ID references
-  try {
-    if (normalizedProperty.province && !normalizedProperty.provinceId) {
-      const locationIds = await locationResolver.getLocationIds({
-        provinceSlug: normalizedProperty.province,
-        citySlug: normalizedProperty.city || undefined,
-      });
-
-      if (locationIds.provinceId) {
-        normalizedProperty.provinceId = locationIds.provinceId;
-      }
-      if (locationIds.cityId) {
-        normalizedProperty.cityId = locationIds.cityId;
-      }
-    }
-  } catch (error) {
-    // If location resolution fails, continue without IDs
-    // The text-based fallback will still work
-    console.warn('[createProperty] Location ID resolution failed:', error);
-  }
-
-  const result = await db.insert(properties).values(normalizedProperty);
-  return result[0].insertId;
-}
-
-export async function createPropertyImage(image: InsertPropertyImage) {
-  const db = await getDb();
-  if (!db) throw new Error('Database not available');
-  await db.insert(propertyImages).values(image);
 }
 
 export async function getPropertyById(id: number) {

@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { mockDb } = vi.hoisted(() => ({
@@ -36,6 +38,12 @@ const callerFor = (role: string) =>
 describe('properties.create retirement contract', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  it('removes the unreachable direct property and image writers from the database facade', () => {
+    const databaseSource = readFileSync(path.resolve(process.cwd(), 'server/db.ts'), 'utf8');
+    expect(databaseSource).not.toContain('export async function createProperty(');
+    expect(databaseSource).not.toContain('export async function createPropertyImage(');
   });
 
   it.each(['agent', 'agency_admin', 'super_admin'])(
