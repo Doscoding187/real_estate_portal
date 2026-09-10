@@ -8,10 +8,10 @@ columns are transactional summaries of the current primary custody row.
 
 The disposable worktree target is fingerprint
 `806c61e7e0d23daf1c70942dc80e91884d2778cc31d6c95ebef8a2023ea207ca`, at
-manifest head `0079_explore_engagement_event_identity.sql`. The P2 relational
+manifest head `0080_service_lead_request_idempotency.sql`. The P2 relational
 cutover itself is migration `0076_lead_delivery_relational_authority.sql`;
 the current desired and physical schema digest is
-`92b13e96e153f413c9459380ee2711f5cac3ff663505473018ba447f2fc1b381`.
+`69f4bf73e6ac9dc81b2be8b2cc36333e33d7a1ec6917ea392cbcc68466ac73fd`.
 
 Evidence completed:
 

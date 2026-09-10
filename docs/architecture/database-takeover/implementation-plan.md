@@ -3,22 +3,20 @@
 Status: planning handoff, 2026-09-09. Owner of architectural decisions and final review: the senior reviewing agent. Implementer: the junior agent assigned an individual packet by Edward.
 
 Current execution state: P0 is complete and P1 is accepted after senior
-review. The accepted P1 correction is `c378e12ce21362cb25047f2ba6c660bf2507cbe4`;
-the disposable target is at migration head
-`0075_recently_viewed_microsecond_recency.sql` with model digest
-`f6416d31d84609203c96e00f7b2455acd78b3a4d0b2c0d8aaa232a2c44b30328`.
-P2 is in progress and is not yet accepted. The disposable target is now at
-`0080_service_lead_request_idempotency.sql`, with matching physical/model
-digest `69f4bf73e6ac9dc81b2be8b2cc36333e33d7a1ec6917ea392cbcc68466ac73fd`.
-The relational cutover, consumer changes, and seven physical delivery tests
-are implemented. The latest recovery correction quarantines expired claims
-as unknown provider outcomes; automatic retry cannot establish non-acceptance.
-Unused JSON compatibility helpers have been removed. Publisher email adapter
-failures no longer produce a false delivered result.
+review. P2 is implemented but remains review-open; P3–P8 remain mandatory
+domain packets and P9 is not started. The task-owned disposable target is at
+manifest head `0080_service_lead_request_idempotency.sql`, with matching
+physical/model digest
+`69f4bf73e6ac9dc81b2be8b2cc36333e33d7a1ec6917ea392cbcc68466ac73fd`.
+The relational lead-delivery cutover, consumer changes, seven physical
+delivery tests, service-lead request idempotency, and atomic demand routing
+are implemented. Current authority verification passes 33 static suites and
+272 tests, plus utility, schema sanity, inventory, and lifecycle gates.
 
-Outstanding P2 acceptance work: finish independent provider crash/replay,
-reconciliation and authorization evidence, reproduce fresh canonical
-establishment, and complete the packet review. P3–P9 remain open. The
+Outstanding review work includes independent provider crash/replay,
+reconciliation and authorization evidence for P2; duplicate-writer and
+rebuild evidence for P3; the remaining packet-specific P4–P8 behavioral
+proof; and the full P9 closure audit. The
 starting-point facts below are
 intentionally historical and are retained to make the handoff auditable.
 

@@ -1,6 +1,6 @@
 # Database architecture takeover assessment
 
-Status: **P1 accepted after senior review; P2 implementation and P3–P8 packet review open**. This is the current
+Status: **P1 accepted after senior review; P2 implemented and review-open; P3–P8 packet review open; P9 not started**. This is the current
 assessment for the task-owned worktree `property-listify-database-architecture`,
 branch `feat/database-architecture-takeover`.
 Completion requires the packet sequence in
@@ -27,11 +27,11 @@ database where concurrency or integrity matters.
 
 - `drizzle/schema/index.ts` exports 24 schema modules and 215 canonical
   tables. The current canonical inventory structural digest is
-  `92b13e96e153f413c9459380ee2711f5cac3ff663505473018ba447f2fc1b381`.
+  `69f4bf73e6ac9dc81b2be8b2cc36333e33d7a1ec6917ea392cbcc68466ac73fd`.
 - No Drizzle `mysqlView` export or inventory view is present.
 - The database-authority status resolves the exact task-owned disposable local
   MySQL target at port 3307. Its expected migration head is
-  `0079_explore_engagement_event_identity.sql`; there are no incomplete attempts and
+  `0080_service_lead_request_idempotency.sql`; there are no incomplete attempts and
   the schema is congruent. No remote/protected target was accessed.
 - A fresh disposable consumer contract passed from an empty target through
   the current admitted lineage, including canonical foundation/geography/scenario,
