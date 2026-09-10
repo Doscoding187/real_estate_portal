@@ -46,3 +46,10 @@ against the configured live adapter and for the final reconciliation and
 authorization packet. The database worker and injected-dispatcher evidence
 establishes the durable uncertainty fence; it does not claim exactly-once
 delivery from a provider that lacks a stable idempotency contract.
+
+The independent disposable rerun exposed test-worker contamination from other
+queued obligations in the shared scenario database. `runLeadDeliveryWorker`
+now accepts an optional `leadId` scope for deterministic reconciliation and
+targeted worker verification; production-wide behavior remains unchanged when
+the scope is omitted. The authority test passes all 7 cases, including the
+provider-unknown crash path, with the scoped worker.

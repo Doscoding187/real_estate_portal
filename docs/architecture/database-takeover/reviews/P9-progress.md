@@ -96,3 +96,10 @@ state, and application readiness ready. `pnpm db:authority:check` passed all
 33 static authority suites and 272 tests. This revalidation did not evaluate
 reference or scenario data, so it does not replace the fresh consumer
 contract evidence above.
+
+The P2 authority packet was independently rerun on the same target. The
+7-test lead-delivery suite initially revealed that an unscoped worker consumed
+unrelated queued scenario obligations; the worker now supports an explicit
+lead scope and the suite passes all 7 tests, including provider-unknown crash
+recovery. Live-provider replay and final reconciliation/authorization review
+remain open.
