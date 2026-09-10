@@ -25,10 +25,14 @@ the current head is `0080_service_lead_request_idempotency.sql`.
 - `pnpm schema:inventory:check` and `pnpm schema:sanity` — passed; 215 canonical tables and 81 active SQL migrations.
 - Migration and authority contract tests — 19 focused tests passed after updating the current-head expectations.
 
-## Remaining evidence
+## Physical replay evidence
 
-The service-specific physical replay test is still required: two independent
-requests with the same client request ID should produce one lead per provider,
-one event per lead, and identical returned IDs. The current packet proves the
-database constraint and transactional implementation but does not claim that
-physical replay behavior until that integration test is added.
+`pnpm test:authority -- server/__tests__/integration.services-engine-idempotency.test.ts`
+passes against the disposable target. Two concurrent service requests with the
+same client request ID return the same lead ID, report one idempotent replay,
+persist one lead row, and persist exactly one `created` event. The test also
+exercises the duplicate-key recovery path when both transactions race before
+the uniqueness check becomes visible.
+
+The broader P8 packet remains open for media, demand, and aggregate
+rebuildability review.
