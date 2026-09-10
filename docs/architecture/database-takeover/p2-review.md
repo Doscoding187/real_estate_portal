@@ -8,16 +8,17 @@ columns are transactional summaries of the current primary custody row.
 
 The disposable worktree target is fingerprint
 `806c61e7e0d23daf1c70942dc80e91884d2778cc31d6c95ebef8a2023ea207ca`, at
-manifest head `0076_lead_delivery_relational_authority.sql`. Desired and
-physical schema digest is
-`7e2387a47326e2ee289910c4a64a4336b1a56ec00a0ca1feef3cc08d612061f9`.
+manifest head `0079_explore_engagement_event_identity.sql`. The P2 relational
+cutover itself is migration `0076_lead_delivery_relational_authority.sql`;
+the current desired and physical schema digest is
+`92b13e96e153f413c9459380ee2711f5cac3ff663505473018ba447f2fc1b381`.
 
 Evidence completed:
 
 - `pnpm db:authority:status`
 - `pnpm db:authority:check`
 - `pnpm db:schema:congruency`
-- `pnpm test:authority -- server/__tests__/integration.lead-delivery-authority.test.ts` — 7 tests passed
+- `pnpm test:authority -- server/__tests__/integration.lead-delivery-authority.test.ts` — 7 tests passed against the disposable target, including provider-crash uncertainty and lease recovery
 - focused delivery, capture, correction, audit, conversion, and publisher contracts — 77 tests passed across the reviewed runs
 - `pnpm check`
 - `pnpm lint:check`
@@ -40,5 +41,8 @@ Optional agent and Shared Living in-app notification intent is now inserted in
 the same capture transaction as the lead and primary delivery obligation;
 optional email alerts run only after that durable intent commits.
 
-P2 remains review-open for independent provider crash/replay evidence against
-the live adapter and for the final reconciliation and authorization packet.
+P2 remains review-open for an independent provider crash/replay exercise
+against the configured live adapter and for the final reconciliation and
+authorization packet. The database worker and injected-dispatcher evidence
+establishes the durable uncertainty fence; it does not claim exactly-once
+delivery from a provider that lacks a stable idempotency contract.
