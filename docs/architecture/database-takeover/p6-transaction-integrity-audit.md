@@ -18,3 +18,11 @@ concurrent caller requests and proves one durable transaction with one
 idempotent response; the transactional lock and in-lock recheck are therefore
 covered by physical evidence. Further commission schema changes still require
 their own lifecycle proof.
+
+Fresh authority-run evidence: `pnpm test:authority --
+server/__tests__/integration.agency-deal-engine.test.ts
+server/__tests__/integration.agency-canvassing-mvp.test.ts` passed four deal
+engine tests and skipped the canvassing suite because that suite requires the
+protected `listify_local` acceptance profile. Deal evidence includes complete
+commission creation, generated-transaction rollback, and independent
+concurrent acceptance serialization.
