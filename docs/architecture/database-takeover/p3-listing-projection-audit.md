@@ -21,3 +21,8 @@ packet covering duplicate prevention at each writer, concurrent publication,
 withdrawal visibility, and rebuild equivalence. Until that evidence exists,
 `sourceListingId` remains nullable and duplicate detection remains an explicit
 failure state.
+
+The focused contract suite `server/services/__tests__/inventoryLinkResolver.contract.test.ts`
+proves all three resolver outcomes: one valid projection resolves, a missing
+projection fails closed, and duplicate projections fail closed without choosing
+a row.
