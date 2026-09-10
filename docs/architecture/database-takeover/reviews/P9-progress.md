@@ -102,6 +102,13 @@ state, and application readiness ready. `pnpm db:authority:check` passed all
 reference or scenario data, so it does not replace the fresh consumer
 contract evidence above.
 
+The disposable target was then explicitly disposed and recreated with the
+required fingerprint acknowledgement. `pnpm db:authority:consumer-contract`
+completed from the empty schema, reapplied migrations through 0080, restored
+canonical reference/foundation/scenario data, and returned the target to
+schema-congruent/application-ready state. This is a fresh-establishment
+rerun, not evidence against the still-open TiDB provider gate.
+
 The P2 authority packet was independently rerun on the same target. The
 7-test lead-delivery suite initially revealed that an unscoped worker consumed
 unrelated queued scenario obligations; the worker now supports an explicit
