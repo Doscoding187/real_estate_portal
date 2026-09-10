@@ -136,6 +136,9 @@ guardedDescribe('agency listing performance MVP persisted integration', () => {
     expect(legacyOrderingSnapshot.live.metrics.views).toBe(73);
     await expect(unassigned.agency.recordListingPerformanceReview({ listingId: canonical.id, recommendation: 'review_later', sellerDecision: 'accepted', contactDate: '2026-07-13T09:00' })).rejects.toMatchObject({ code: 'FORBIDDEN' });
     await expect(outsider.agency.getListingPerformance({ listingId: canonical.id })).rejects.toMatchObject({ code: 'NOT_FOUND' });
+    const outsideOwned = await publishedListing(outsideManagerId, outsideAgencyId, assignedAgentId, `${suffix}-outside-owner`);
+    await db.update(listings).set({ agencyId: null, agentId: null } as any).where(eq(listings.id, outsideOwned.id));
+    await expect(manager.agency.getListingPerformance({ listingId: outsideOwned.id })).rejects.toMatchObject({ code: 'NOT_FOUND' });
     await expect(assigned.agency.recordListingPerformanceReview({ listingId: canonical.id, recommendation: 'change_price', sellerDecision: 'accepted', contactDate: '2026-07-13T09:00' })).rejects.toMatchObject({ code: 'BAD_REQUEST' });
     const saved = await assigned.agency.recordListingPerformanceReview({ listingId: canonical.id, contactChannel: 'call', contactDate: '2026-07-13T09:00', agentAssessment: 'Interest is present but the price is preventing offers.', buyerFeedbackThemes: 'Price sensitivity; competing stock.', recommendation: 'change_price', recommendationReason: 'Comparable activity supports a measured reduction.', sellerFeedback: 'Seller accepted the recommendation.', sellerDecision: 'accepted', proposedPrice: 1_850_000, nextReviewAt: '2026-07-20T09:00' });
     ids.reviews.push(saved.reviewId);

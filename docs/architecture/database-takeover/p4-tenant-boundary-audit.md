@@ -12,9 +12,11 @@ assignment checks require both the agent's agency and approved status. The
 existing integration suite covers membership reactivation and inactive-member
 rejection.
 
-One boundary remains deliberately open for implementation: `agencyListingScopeCondition`
-allows an agency to see owner-authored listings when the owner is linked to the
-agency or the listing's agent is linked to it. This is a product rule, not a
-database foreign-key invariant, and needs explicit cross-tenant negative tests
-before P4 can be accepted. No schema change is justified until that rule is
-resolved against agency ownership and reassignment semantics.
+`agencyListingScopeCondition` allows an agency to see owner-authored listings
+when the owner is linked to the agency, or when an unassigned listing's agent is
+linked to it. This product rule is now covered by the persisted listing
+performance integration: an outside agency cannot read an assigned listing,
+and an owner-authored listing with `agency_id` and `agent_id` cleared remains
+invisible to the other agency. The rule is enforced at the scoped query
+boundary; no schema change is justified because the ownership relationship is
+intentionally reassigned over the listing lifecycle.
