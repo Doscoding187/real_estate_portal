@@ -5,6 +5,7 @@ import { eq } from 'drizzle-orm';
 import { listingApprovalQueue, listingAnalytics, listingMedia, listings, users } from '../../drizzle/schema';
 import { appRouter } from '../routers';
 import { createListing, getDb } from '../db';
+import { createListingMediaUploadToken } from '../services/listingMediaAuthority';
 
 const describeDatabase = process.env.DATABASE_URL ? describe : describe.skip;
 
@@ -88,5 +89,63 @@ describeDatabase('listing media tenant boundary', () => {
       .from(listingMedia)
       .where(eq(listingMedia.listingId, listingId));
     expect(mediaRows).toHaveLength(0);
+  }, 30_000);
+
+  it('rejects confirmation when the listing is deleted after token issuance', async () => {
+    const db = await getDb();
+    if (!db) throw new Error('Database not available');
+    const suffix = randomUUID();
+
+    const [ownerInsert] = await db.insert(users).values({
+      email: `media-delete-owner-${suffix}@invalid.example`,
+      name: 'Media Delete Owner',
+      role: 'agent',
+      emailVerified: 1,
+    } as any);
+    ownerId = Number(ownerInsert.insertId);
+
+    listingId = await createListing({
+      userId: ownerId,
+      action: 'sell',
+      propertyType: 'house',
+      title: `Deleted listing ${suffix}`,
+      description: 'Listing used for token invalidation proof.',
+      pricing: { askingPrice: 1_500_000 },
+      propertyDetails: { bedrooms: 3, bathrooms: 2, houseAreaM2: 140 },
+      address: '2 Deleted Listing Street',
+      latitude: -26.1076,
+      longitude: 28.0567,
+      city: 'Johannesburg',
+      province: 'Gauteng',
+      postalCode: '2001',
+      placeId: null,
+      slug: `deleted-listing-${suffix}`,
+      media: [],
+    });
+
+    const token = createListingMediaUploadToken({
+      key: `properties/${listingId}/expired.jpg`,
+      mediaType: 'image',
+      contentType: 'image/jpeg',
+      fileName: 'expired.jpg',
+      userId: ownerId,
+      listingId,
+    });
+
+    await db.delete(listingAnalytics).where(eq(listingAnalytics.listingId, listingId));
+    await db.delete(listingApprovalQueue).where(eq(listingApprovalQueue.listingId, listingId));
+    await db.delete(listingMedia).where(eq(listingMedia.listingId, listingId));
+    await db.delete(listings).where(eq(listings.id, listingId));
+    listingId = 0;
+
+    const owner = appRouter.createCaller({
+      req: { headers: {} },
+      res: {},
+      user: { id: ownerId, email: `media-delete-owner-${suffix}@invalid.example`, role: 'agent' },
+    } as any);
+
+    await expect(owner.listing.confirmMediaUpload({ uploadToken: token })).rejects.toMatchObject({
+      code: 'FORBIDDEN',
+    });
   }, 30_000);
 });
