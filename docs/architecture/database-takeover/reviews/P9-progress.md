@@ -50,3 +50,12 @@ location provider mappings. MySQL disposable acceptance does not establish
 TiDB behavior for these interactions; the provider audit remains an explicit
 P9 blocker until those decisions and deployment-provider verification are
 recorded.
+
+Running agency journey evidence also passed on the current disposable target:
+`pnpm test:authority --
+server/__tests__/integration.launch-readiness-walkthrough.test.ts` passed 11
+physical tests. The walkthrough covers onboarding, billing activation,
+invitation acceptance, canonical membership, listing publication, public lead
+capture, assignment, agent response, and operating-home coherence. This is
+API/integration evidence; a browser-rendered journey and the remaining
+provider/rebuild audits are still required.
