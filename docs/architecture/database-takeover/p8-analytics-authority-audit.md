@@ -80,3 +80,8 @@ against the disposable target. An unrelated user was denied before a Listing
 media reservation was issued, and the owner listing retained zero media rows.
 Confirmation after reassignment/deletion and public media rebuild equivalence
 remain separate review items.
+
+The same physical media boundary suite now also proves token invalidation after
+listing deletion. A token minted for the owner is rejected with `FORBIDDEN`
+by the confirmation route after the listing is removed, before storage-object
+verification.
