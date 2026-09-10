@@ -24,6 +24,11 @@ removed. Their disconnected `partner_leads` table was retired by migration
 route registration. The active partner and lead journeys use the canonical
 `partners`, `leads`, and `lead_deliveries` authorities.
 
+Partner analytics no longer probes the retired table or converts schema errors
+into zero-valued reports. Explore content metrics are read from their canonical
+tables, while lead counts remain explicitly unavailable until a governed
+cross-domain attribution relation is defined.
+
 Replay deduplication for browser events remains a separate P8 requirement; the
 current event contract has no client event identity, so a unique database key
 cannot be introduced without first defining that product-level identity.
