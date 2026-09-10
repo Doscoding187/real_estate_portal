@@ -33,3 +33,13 @@ current physical attribution evidence. The focused contract suite
 proves all three resolver outcomes: one valid projection resolves, a missing
 projection fails closed, and duplicate projections fail closed without choosing
 a row.
+
+Additional authority-run evidence on the disposable target:
+`pnpm test:authority -- server/__tests__/integration.development-publication-lifecycle.test.ts
+server/__tests__/integration.listing-publication-readiness.test.ts
+server/__tests__/integration.agency-listing-attribution.test.ts` passed 25
+physical tests. These cover approval/publication gating, withdrawal and
+expired-access visibility, owner isolation, concurrent review decisions,
+atomic publication rejection, listing readiness, and agency attribution.
+Duplicate projection writer census and an explicit projection rebuild
+comparison remain open P3 evidence items.
