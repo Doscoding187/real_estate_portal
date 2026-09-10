@@ -103,3 +103,8 @@ unrelated queued scenario obligations; the worker now supports an explicit
 lead scope and the suite passes all 7 tests, including provider-unknown crash
 recovery. Live-provider replay and final reconciliation/authorization review
 remain open.
+
+P3 rebuild evidence is now physical: the authority-enabled
+`integration.agency-listing-performance-mvp.test.ts` passed on the disposable
+target, covering revision approval, public projection refresh, and preservation
+of the canonical projection identity.
