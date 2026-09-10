@@ -41,3 +41,10 @@ Browser engagement events now require a client event identity at the governed
 discovery boundary. Migration 0079 adds the nullable historical-compatible
 column and unique key; current service writes always provide an ID, and a
 duplicate key is treated as an idempotent replay without incrementing metrics.
+
+The demand engine currently reads candidates and then writes a demand lead,
+customer leads, assignments, matches, status transitions, and notifications
+through separate database operations. A failure after the root demand lead is
+inserted can therefore leave a partial routing graph. This is an identified
+P8 defect; its correction requires one transaction covering the complete
+assignment branch and a physical rollback test.
