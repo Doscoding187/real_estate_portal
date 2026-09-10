@@ -56,3 +56,12 @@ physical tests against the disposable target. The upload boundary contract
 also proves that a client-supplied property namespace cannot escape the
 authenticated draft scope. Cross-tenant media denial and a complete public
 media rebuild proof remain P8/P9 review items.
+
+Demand routing now has physical failure-injection evidence:
+`pnpm test:authority --
+server/__tests__/integration.demand-routing-rollback.test.ts` passed against
+the disposable target. The test creates a real verified agency recipient,
+active membership, matching property, and active campaign, then fails after
+the routing callback; `demand_leads`, `demand_lead_assignments`,
+`demand_lead_matches`, `leads`, and `notifications` are all absent after
+rollback.
