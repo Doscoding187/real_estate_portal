@@ -294,6 +294,22 @@ export class ExploreInteractionService {
           ),
         );
 
+      const [uniqueViews] = await db
+        .select({
+          count: sql<number>`COUNT(DISTINCT CASE
+            WHEN ${exploreEngagements.userId} IS NOT NULL
+              THEN CONCAT('user:', ${exploreEngagements.userId})
+            ELSE CONCAT('session:', COALESCE(${exploreEngagements.sessionId}, ''))
+          END)`,
+        })
+        .from(exploreEngagements)
+        .where(
+          and(
+            eq(exploreEngagements.contentId, contentId),
+            eq(exploreEngagements.interactionType, 'view'),
+          ),
+        );
+
       return {
         contentId,
 
@@ -301,7 +317,7 @@ export class ExploreInteractionService {
         shortId: contentId,
 
         viewCount: content[0]?.viewCount ?? 0,
-        uniqueViewCount: content[0]?.viewCount ?? 0, // placeholder for future dedupe logic
+        uniqueViewCount: Number(uniqueViews?.count || 0),
         saveCount: saves?.count ?? 0,
         shareCount: shares?.count ?? 0,
         skipCount: skips?.count ?? 0,
