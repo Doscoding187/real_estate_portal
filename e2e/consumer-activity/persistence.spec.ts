@@ -48,7 +48,6 @@ async function signIn(page: Page): Promise<void> {
     .last()
     .click();
   await expect((await loginResponse).ok()).toBe(true);
-  await passwordField.fill('');
   await expect(page).toHaveURL(new RegExp(`/property/${scenario.property}$`));
 }
 

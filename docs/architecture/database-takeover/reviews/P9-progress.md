@@ -77,7 +77,8 @@ no protected database was mutated or accessed.
 Browser launch was corrected on the current branch: Playwright now probes
 `/api/health` on IPv4 and launches the authority-injected backend with the
 development Vite shell enabled. A rerun reached the canonical property page
-and executed the P1 journey, but the journey still failed during its
-save/sign-in sequence; this is now an application-flow failure rather than a
-database-authority or web-server readiness failure. Generated artifacts remain
-diagnostic only and browser acceptance is still open.
+and executed the P1 journey. After removing a stale locator interaction that
+ran after navigation, the focused Desktop Chrome journey passed with
+`--retries=0`; the disposable target remained the authority-injected runtime
+database throughout. Browser acceptance is now evidenced for this P1 journey,
+while the broader browser and provider/rebuild audits remain open.
