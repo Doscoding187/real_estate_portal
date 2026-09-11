@@ -94,10 +94,10 @@ campaign or reports success until an admitted campaign/billing authority exists.
 The placeholder `revenueCenterSync.ts` module was removed after a repository-
 wide caller census found no remaining imports. A canonical campaign/billing
 authority is still required before campaign launch can be implemented.
-The remaining marketing router procedures still reference placeholder campaign
-tables, but all nine database-backed procedures are now gated with the same
-`PRECONDITION_FAILED` authority boundary. They require a separate retirement
-or canonical migration decision and must not be treated as database-backed
-functionality. The unregistered `campaignBoost.ts` search integration was also
-removed; generic property search no longer catches its failed placeholder query
-and silently returns an unverified ranking.
+The marketing router's former placeholder campaign procedures have been
+replaced by typed `PRECONDITION_FAILED` gates, preserving client procedure
+names without any fabricated database objects. They require a separate
+retirement or canonical migration decision and must not be treated as
+database-backed functionality. The unregistered `campaignBoost.ts` search
+integration was also removed; generic property search no longer catches its
+failed placeholder query and silently returns an unverified ranking.
