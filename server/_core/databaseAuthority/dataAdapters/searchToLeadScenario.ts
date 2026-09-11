@@ -2085,13 +2085,20 @@ async function ensureAgentLaunchAccess(connection: AuthoritySqlConnection): Prom
     throw new Error('Search-to-Lead scenario requires the canonical agent Launch Access plan.');
   }
   const planId = asId({ id: rowValue(planRows[0], 'id') }, 'agent Launch Access plan');
+  const accountRows = await queryRows(
+    connection,
+    `SELECT id FROM billable_accounts WHERE account_kind = 'agent' AND user_id = ? ORDER BY id`,
+    [SCENARIO_IDS.agentUser],
+  );
+  if (accountRows.length !== 1) throw new Error('Search-to-Lead scenario requires exactly one agent billable account.');
+  const billableAccountId = rowValue(accountRows[0], 'id');
   const subscriptionRows = await queryRows(
     connection,
     `SELECT id, plan_id, status, current_period_end
        FROM subscriptions
-      WHERE owner_type = 'agent' AND owner_id = ?
+      WHERE billable_account_id = ?
       ORDER BY id`,
-    [SCENARIO_IDS.agentUser],
+    [billableAccountId],
   );
   if (subscriptionRows.length > 1) {
     throw new Error('Search-to-Lead scenario found duplicate agent Launch Access subscriptions.');
@@ -2111,14 +2118,15 @@ async function ensureAgentLaunchAccess(connection: AuthoritySqlConnection): Prom
   }
   await connection.execute(
     `INSERT INTO subscriptions
-      (owner_type, owner_id, plan_id, status, trial_ends_at,
+      (owner_type, owner_id, billable_account_id, plan_id, status, trial_ends_at,
        current_period_start, current_period_end, grace_ends_at,
        cancel_at_period_end, billing_cycle_anchor, metadata, created_by, updated_by)
-     VALUES ('agent', ?, ?, 'active', NULL, CURRENT_TIMESTAMP,
+     VALUES ('agent', ?, ?, ?, 'active', NULL, CURRENT_TIMESTAMP,
              DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 90 DAY), NULL, 0,
              DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 90 DAY), CAST(? AS JSON), ?, ?)`,
     [
       SCENARIO_IDS.agentUser,
+      billableAccountId,
       planId,
       JSON.stringify({
         fixture: SEARCH_TO_LEAD_SCENARIO_VERSION,
@@ -2148,13 +2156,20 @@ async function ensureDeveloperLaunchAccess(connection: AuthoritySqlConnection): 
     throw new Error('Search-to-Lead scenario requires the canonical developer Launch Access plan.');
   }
   const planId = asId({ id: rowValue(planRows[0], 'id') }, 'developer Launch Access plan');
+  const accountRows = await queryRows(
+    connection,
+    `SELECT id FROM billable_accounts WHERE account_kind = 'developer' AND developer_organisation_id = ? ORDER BY id`,
+    [SCENARIO_IDS.developerOrganisation],
+  );
+  if (accountRows.length !== 1) throw new Error('Search-to-Lead scenario requires exactly one developer billable account.');
+  const billableAccountId = rowValue(accountRows[0], 'id');
   const subscriptionRows = await queryRows(
     connection,
     `SELECT id, plan_id, status, current_period_end
        FROM subscriptions
-      WHERE owner_type = 'developer' AND owner_id = ?
+      WHERE billable_account_id = ?
       ORDER BY id`,
-    [SCENARIO_IDS.developerOrganisation],
+    [billableAccountId],
   );
   if (subscriptionRows.length > 1) {
     throw new Error(
@@ -2176,14 +2191,15 @@ async function ensureDeveloperLaunchAccess(connection: AuthoritySqlConnection): 
   }
   await connection.execute(
     `INSERT INTO subscriptions
-      (owner_type, owner_id, plan_id, status, trial_ends_at,
+      (owner_type, owner_id, billable_account_id, plan_id, status, trial_ends_at,
        current_period_start, current_period_end, grace_ends_at,
        cancel_at_period_end, billing_cycle_anchor, metadata, created_by, updated_by)
-     VALUES ('developer', ?, ?, 'active', NULL, CURRENT_TIMESTAMP,
+     VALUES ('developer', ?, ?, ?, 'active', NULL, CURRENT_TIMESTAMP,
              DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 90 DAY), NULL, 0,
              DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 90 DAY), CAST(? AS JSON), ?, ?)`,
     [
       SCENARIO_IDS.developerOrganisation,
+      billableAccountId,
       planId,
       JSON.stringify({
         fixture: SEARCH_TO_LEAD_SCENARIO_VERSION,

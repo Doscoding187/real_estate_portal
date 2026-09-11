@@ -689,3 +689,8 @@ through the invoice's typed billable account instead of polymorphic owner pairs.
 The governed publication-entitlement adapter now requires the exact typed agency
 billable account and writes its subscription foreign key, preventing canonical
 fixtures from introducing null staged ownership.
+
+The homepage journey preview and Search-to-Lead scenario adapters now require
+typed agent, agency, and developer accounts and populate subscription foreign
+keys when creating fixture access. The complete static authority suite remains
+green at 33 suites and 272 tests.
