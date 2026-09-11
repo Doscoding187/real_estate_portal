@@ -1050,7 +1050,8 @@ export async function requestPaidLaunchAccessInvoice(input: {
           inArray(billingInvoices.status, ['issued', 'submitted', 'partially_paid', 'overdue']),
         ),
       )
-      .orderBy(desc(billingInvoices.createdAt));
+      .orderBy(desc(billingInvoices.createdAt))
+      .for('update');
     const outstandingInvoice = outstandingInvoices[0];
     if (outstandingInvoice) {
       const sameTerms =
@@ -1332,7 +1333,8 @@ export async function startAgencyManualCheckout(input: {
             inArray(billingInvoices.status, outstandingStatuses),
           ),
         )
-        .orderBy(desc(billingInvoices.createdAt));
+        .orderBy(desc(billingInvoices.createdAt))
+        .for('update');
       const outstandingInvoice = outstandingInvoices[0];
 
       if (outstandingInvoice) {
@@ -1365,6 +1367,7 @@ export async function startAgencyManualCheckout(input: {
           .select()
           .from(billingInvoices)
           .where(eq(billingInvoices.id, observedOutstandingInvoice.id))
+          .for('update')
           .limit(1);
         const isSettledRetry =
           settledObservedInvoice?.status === 'paid' &&
