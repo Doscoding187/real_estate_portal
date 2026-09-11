@@ -653,3 +653,13 @@ public-lead contract and agent launch journey passed 51 tests after the change.
 The developer billing workspace now scopes its subscription, invoice, and
 payment reads through the typed billable-account foreign key. Developer billing
 contracts remain green; remaining billing report and adapter readers are open.
+
+The foundation billing workspaces now scope agency and independent-agent
+subscription and invoice reads through the typed account foreign key as well.
+The pre-lock outstanding-invoice observation uses that same account identity,
+closing the workspace/report owner-pair read path.
+
+Agency invitation delivery now gates effective paid access through the typed
+agency billable-account identity. The invitation delivery and commercial-access
+authority contracts pass 13 tests; legacy billing report and adapter readers
+remain open.

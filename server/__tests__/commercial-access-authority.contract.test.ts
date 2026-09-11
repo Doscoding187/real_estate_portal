@@ -54,7 +54,8 @@ describe('agency commercial access authority', () => {
   });
 
   it('gates agency invitation delivery on effective canonical entitlement', () => {
-    expect(invitationSource).toContain("eq(subscriptions.ownerType, 'agency')");
+    expect(invitationSource).toContain('billableAccounts');
+    expect(invitationSource).toContain('account.account_kind = \'agency\'');
     expect(invitationSource).toContain('hasEffectiveAgencyPaidAccess');
     expect(invitationSource).toContain('currentPeriodEnd: subscriptions.currentPeriodEnd');
     expect(invitationSource).toContain('graceEndsAt: subscriptions.graceEndsAt');

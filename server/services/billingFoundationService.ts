@@ -1267,13 +1267,13 @@ export async function startAgencyManualCheckout(input: {
   // stale retry return the invoice it originally observed when finance settles
   // it while the checkout is waiting for the agency lock. It is revalidated
   // under lock and never authorizes a general reuse of terminal invoices.
+  const observedBillableAccountId = await resolveBillableAccountId(db, 'agency', agencyId);
   const [observedOutstandingInvoice] = await db
     .select()
     .from(billingInvoices)
     .where(
       and(
-        eq(billingInvoices.ownerType, 'agency'),
-        eq(billingInvoices.ownerId, agencyId),
+        eq(billingInvoices.billableAccountId, observedBillableAccountId),
         inArray(billingInvoices.status, ['issued', 'submitted', 'partially_paid', 'overdue']),
       ),
     )
@@ -1535,19 +1535,20 @@ export async function getAgencyBillingWorkspace(user: BillingUser) {
 
   const agencyId = assertAgencyAdmin(user);
   const agency = await getAgencyOrThrow(db, agencyId);
+  const billableAccountId = await resolveBillableAccountId(db, 'agency', agencyId);
   const planRows = await listBillingPlans('agency');
 
   const [subscriptionWithPlan] = await db
     .select({ subscription: subscriptions, plan: plans })
     .from(subscriptions)
     .leftJoin(plans, eq(subscriptions.planId, plans.id))
-    .where(and(eq(subscriptions.ownerType, 'agency'), eq(subscriptions.ownerId, agencyId)))
+    .where(eq(subscriptions.billableAccountId, billableAccountId))
     .limit(1);
 
   const invoiceRows = await db
     .select()
     .from(billingInvoices)
-    .where(and(eq(billingInvoices.ownerType, 'agency'), eq(billingInvoices.ownerId, agencyId)))
+    .where(eq(billingInvoices.billableAccountId, billableAccountId))
     .orderBy(desc(billingInvoices.createdAt))
     .limit(25);
 
@@ -1588,16 +1589,17 @@ export async function getAgentBillingWorkspace(user: BillingUser) {
   if (owner.ownerType !== 'agent') {
     throw new TRPCError({ code: 'FORBIDDEN', message: 'Agent billing workspace is agent-only.' });
   }
+  const billableAccountId = await resolveBillableAccountId(db, 'agent', owner.ownerId);
   const [subscriptionWithPlan] = await db
     .select({ subscription: subscriptions, plan: plans })
     .from(subscriptions)
     .leftJoin(plans, eq(subscriptions.planId, plans.id))
-    .where(and(eq(subscriptions.ownerType, 'agent'), eq(subscriptions.ownerId, owner.ownerId)))
+    .where(eq(subscriptions.billableAccountId, billableAccountId))
     .limit(1);
   const invoiceRows = await db
     .select()
     .from(billingInvoices)
-    .where(and(eq(billingInvoices.ownerType, 'agent'), eq(billingInvoices.ownerId, owner.ownerId)))
+    .where(eq(billingInvoices.billableAccountId, billableAccountId))
     .orderBy(desc(billingInvoices.createdAt))
     .limit(25);
   const invoiceIds = invoiceRows.map(invoice => invoice.id);
