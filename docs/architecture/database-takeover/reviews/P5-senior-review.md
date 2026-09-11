@@ -30,6 +30,8 @@ duplicate and out-of-order provider event handling, entitlement
 expiry/cancellation races, and a verified retirement order are not yet proven.
 The remaining cutover design is recorded in
 `p5-billing-authority-decision.md` and `p5-billing-consumer-mapping.md`.
+The legacy-family disposition and retirement evidence requirements are recorded
+in `p5-legacy-family-disposition.md`.
 
 Finding: incomplete evidence, severity high for future integrity. The typed
 identity and active manual-EFT writes are now implemented; required follow-up
