@@ -73,3 +73,9 @@ the initial rebuild and asserts that the same projection ID remains attached to
 the canonical listing while public price and status facts are refreshed. Its
 authority run passed 1 physical test. This closes repeated canonical-listing
 rebuild identity; cross-supply rebuild equivalence remains open.
+
+The lower-level lifecycle contract also passes 35 tests and explicitly proves
+the Commercial path publishes through its dedicated authority without creating
+a generic property mirror. This closes the Commercial-to-generic projection
+boundary; development and Shared Living rebuild equivalence still require
+their own physical comparison.
