@@ -682,3 +682,6 @@ account and resolves its subscription through that account identity.
 
 Agency manual-EFT outstanding-invoice locking now uses the subscription's typed
 billable-account foreign key for both SQL locking and row selection.
+
+The finance payment queue now resolves agency and developer display entities
+through the invoice's typed billable account instead of polymorphic owner pairs.

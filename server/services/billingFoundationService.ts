@@ -2133,6 +2133,7 @@ export async function getAdminFinanceQueue(input: {
     })
     .from(billingPayments)
     .innerJoin(billingInvoices, eq(billingPayments.invoiceId, billingInvoices.id))
+    .leftJoin(billableAccounts, eq(billingInvoices.billableAccountId, billableAccounts.id))
     .leftJoin(
       billingPaymentDocuments,
       and(
@@ -2142,13 +2143,13 @@ export async function getAdminFinanceQueue(input: {
     )
     .leftJoin(
       agencies,
-      and(eq(billingInvoices.ownerType, 'agency'), eq(agencies.id, billingInvoices.ownerId)),
+      and(eq(billableAccounts.accountKind, 'agency'), eq(agencies.id, billableAccounts.agencyId)),
     )
     .leftJoin(
       developerOrganisations,
       and(
-        eq(billingInvoices.ownerType, 'developer'),
-        eq(developerOrganisations.id, billingInvoices.ownerId),
+        eq(billableAccounts.accountKind, 'developer'),
+        eq(developerOrganisations.id, billableAccounts.developerOrganisationId),
       ),
     )
     .where(conditions)
