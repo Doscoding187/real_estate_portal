@@ -1,4 +1,3 @@
-import { randomUUID } from 'node:crypto';
 import { and, desc, eq, inArray } from 'drizzle-orm';
 import {
   partners,
@@ -219,11 +218,7 @@ export class ServicesEngineService {
     const db = await getDb();
     if (!db) throw new Error('Database not available');
 
-    const [provider] = await db
-      .select()
-      .from(partners)
-      .where(eq(partners.id, providerId))
-      .limit(1);
+    const [provider] = await db.select().from(partners).where(eq(partners.id, providerId)).limit(1);
 
     return provider || null;
   }
@@ -232,11 +227,7 @@ export class ServicesEngineService {
     const db = await getDb();
     if (!db) throw new Error('Database not available');
 
-    const [provider] = await db
-      .select()
-      .from(partners)
-      .where(eq(partners.userId, userId))
-      .limit(1);
+    const [provider] = await db.select().from(partners).where(eq(partners.userId, userId)).limit(1);
 
     return provider || null;
   }
@@ -429,14 +420,10 @@ export class ServicesEngineService {
       isActive: 1,
     });
 
-    const providerId = Number(
-      (insertResult as any)?.[0]?.insertId || 0,
-    );
+    const providerId = Number((insertResult as any)?.[0]?.insertId || 0);
 
     if (!providerId) {
-      throw new Error(
-        'Failed to create canonical Service Partner identity.',
-      );
+      throw new Error('Failed to create canonical Service Partner identity.');
     }
 
     await db.insert(serviceProviderProfiles).values({
@@ -597,10 +584,7 @@ export class ServicesEngineService {
         subscriptionTier: serviceProviderSubscriptions.tier,
       })
       .from(partners)
-      .innerJoin(
-        serviceProviderProfiles,
-        eq(serviceProviderProfiles.providerId, partners.id),
-      )
+      .innerJoin(serviceProviderProfiles, eq(serviceProviderProfiles.providerId, partners.id))
       .leftJoin(
         serviceProviderSubscriptions,
         eq(serviceProviderSubscriptions.providerId, partners.id),
@@ -773,10 +757,7 @@ export class ServicesEngineService {
     if (!db) throw new Error('Database not available');
 
     let providerIds: number[] = [];
-    if (
-      Number.isInteger(input.providerId) &&
-      Number(input.providerId) > 0
-    ) {
+    if (Number.isInteger(input.providerId) && Number(input.providerId) > 0) {
       providerIds = [Number(input.providerId)];
     } else {
       const recommendations = await this.recommendProviders({
@@ -791,9 +772,13 @@ export class ServicesEngineService {
       providerIds = recommendations.map(item => item.provider.providerId);
     }
 
-    const requestId = normalizeText(input.requestId) || randomUUID();
+    const requestId = normalizeText(input.requestId);
+    if (!requestId) {
+      throw new Error('requestId is required for canonical service-lead idempotency.');
+    }
     const leadIds: number[] = [];
-    const subscriptionMap = new Map<number,
+    const subscriptionMap = new Map<
+      number,
       { tier: 'directory' | 'directory_explore' | 'ecosystem_pro' | null }
     >();
 
@@ -811,7 +796,9 @@ export class ServicesEngineService {
     }
 
     const targetProviderIds = providerIds.length > 0 ? providerIds : [null];
-    const requestKeys = targetProviderIds.map(providerId => `${requestId}:${providerId || 'unmatched'}`);
+    const requestKeys = targetProviderIds.map(
+      providerId => `${requestId}:${providerId || 'unmatched'}`,
+    );
     const existingLeads = await db
       .select({ id: serviceLeads.id, requestId: serviceLeads.requestId })
       .from(serviceLeads)
@@ -830,59 +817,62 @@ export class ServicesEngineService {
     try {
       await db.transaction(async tx => {
         for (const providerId of targetProviderIds) {
-      const tier = providerId
-        ? (subscriptionMap.get(providerId)?.tier as
-            | 'directory'
-            | 'directory_explore'
-            | 'ecosystem_pro'
-            | null) || 'directory'
-        : null;
-      const billingEligible = providerId
-        ? isBillingEligibleForTier(tier || 'directory', input.sourceSurface)
-        : false;
+          const tier = providerId
+            ? (subscriptionMap.get(providerId)?.tier as
+                | 'directory'
+                | 'directory_explore'
+                | 'ecosystem_pro'
+                | null) || 'directory'
+            : null;
+          const billingEligible = providerId
+            ? isBillingEligibleForTier(tier || 'directory', input.sourceSurface)
+            : false;
 
-      const requestKey = `${requestId}:${providerId || 'unmatched'}`;
-      const insertResult = await tx.insert(serviceLeads).values({
-        requestId: requestKey,
-        requesterUserId: input.requesterUserId || null,
-        providerId: providerId || null,
-        serviceCategory: input.category,
-        sourceSurface: input.sourceSurface,
-        intentStage: input.intentStage,
-        propertyId: input.propertyId ?? null,
-        listingId: input.listingId ?? null,
-        developmentId: input.developmentId ?? null,
-        geoProvince: normalizeText(input.province) || null,
-        geoCity: normalizeText(input.city) || null,
-        geoSuburb: normalizeText(input.suburb) || null,
-        notes: normalizeText(input.notes) || null,
-        contextJson: input.context || null,
-        status: 'new',
-        billingEligible: billingEligible ? 1 : 0,
-        billingTierSnapshot: tier || null,
-      });
+          const requestKey = `${requestId}:${providerId || 'unmatched'}`;
+          const insertResult = await tx.insert(serviceLeads).values({
+            requestId: requestKey,
+            requesterUserId: input.requesterUserId || null,
+            providerId: providerId || null,
+            serviceCategory: input.category,
+            sourceSurface: input.sourceSurface,
+            intentStage: input.intentStage,
+            propertyId: input.propertyId ?? null,
+            listingId: input.listingId ?? null,
+            developmentId: input.developmentId ?? null,
+            geoProvince: normalizeText(input.province) || null,
+            geoCity: normalizeText(input.city) || null,
+            geoSuburb: normalizeText(input.suburb) || null,
+            notes: normalizeText(input.notes) || null,
+            contextJson: input.context || null,
+            status: 'new',
+            billingEligible: billingEligible ? 1 : 0,
+            billingTierSnapshot: tier || null,
+          });
 
-      const leadId = Number((insertResult as any)?.[0]?.insertId || 0);
-      if (!leadId) continue;
-      leadIds.push(leadId);
+          const leadId = Number((insertResult as any)?.[0]?.insertId || 0);
+          if (!leadId) continue;
+          leadIds.push(leadId);
 
-      await tx.insert(serviceLeadEvents).values({
-        leadId,
-        eventType: 'created',
-        actorUserId: input.requesterUserId || null,
-        payload: {
-          providerId,
-          sourceSurface: input.sourceSurface,
-          intentStage: input.intentStage,
-          billingEligible,
-        },
-      });
+          await tx.insert(serviceLeadEvents).values({
+            leadId,
+            eventType: 'created',
+            actorUserId: input.requesterUserId || null,
+            payload: {
+              providerId,
+              sourceSurface: input.sourceSurface,
+              intentStage: input.intentStage,
+              billingEligible,
+            },
+          });
         }
       });
     } catch (error) {
       const databaseError = (error as { cause?: unknown })?.cause || error;
       const errno = Number((databaseError as { errno?: unknown })?.errno);
-      if (errno !== 1062 && String((databaseError as { code?: unknown })?.code || '') !== 'ER_DUP_ENTRY') {
+      if (
+        errno !== 1062 &&
+        String((databaseError as { code?: unknown })?.code || '') !== 'ER_DUP_ENTRY'
+      ) {
         throw error;
       }
       const replayed = await db
@@ -962,10 +952,7 @@ export class ServicesEngineService {
     }
 
     const payload: Record<string, unknown> = {};
-    if (
-      Number.isInteger(input.providerId) &&
-      Number(input.providerId) > 0
-    ) {
+    if (Number.isInteger(input.providerId) && Number(input.providerId) > 0) {
       payload.providerId = Number(input.providerId);
     }
     if (input.metadata && Object.keys(input.metadata).length > 0) payload.metadata = input.metadata;

@@ -3638,12 +3638,21 @@ async function withCanonicalAgencySubscriptionStatus<
   const [billableAccount] = await db
     .select({ id: billableAccounts.id })
     .from(billableAccounts)
-    .where(and(eq(billableAccounts.accountKind, 'agency'), eq(billableAccounts.agencyId, agency.id)))
+    .where(
+      and(eq(billableAccounts.accountKind, 'agency'), eq(billableAccounts.agencyId, agency.id)),
+    )
     .limit(1);
   const [subscription] = await db
     .select({ status: subscriptions.status })
     .from(subscriptions)
-    .where(billableAccount ? eq(subscriptions.billableAccountId, billableAccount.id) : sql`1 = 0`)
+    .where(
+      billableAccount
+        ? and(
+            eq(subscriptions.billableAccountId, billableAccount.id),
+            eq(subscriptions.ownerType, 'agency'),
+          )
+        : sql`1 = 0`,
+    )
     .limit(1);
 
   return {
@@ -3950,7 +3959,12 @@ export const agencyRouter = router({
     const [agencyAccount] = await db
       .select({ id: billableAccounts.id })
       .from(billableAccounts)
-      .where(and(eq(billableAccounts.accountKind, 'agency'), eq(billableAccounts.agencyId, user.agencyId)))
+      .where(
+        and(
+          eq(billableAccounts.accountKind, 'agency'),
+          eq(billableAccounts.agencyId, user.agencyId),
+        ),
+      )
       .limit(1);
     const [canonicalSubscription] = await db
       .select({
@@ -4084,35 +4098,38 @@ export const agencyRouter = router({
         }
 
         if (principal.agencyId) {
-          const [[existingAgency], [existingBranding], [agencyAccount], [existingSubscription]] = await Promise.all([
-            tx.select().from(agencies).where(eq(agencies.id, principal.agencyId)).limit(1),
-            tx
-              .select()
-              .from(agencyBranding)
-              .where(eq(agencyBranding.agencyId, principal.agencyId))
-              .limit(1),
-            tx
-              .select({ id: billableAccounts.id })
-              .from(billableAccounts)
-              .where(
-                and(
-                  eq(billableAccounts.accountKind, 'agency'),
-                  eq(billableAccounts.agencyId, principal.agencyId),
-                ),
-              )
-              .limit(1),
-            tx
-              .select()
-              .from(subscriptions)
-              .where(sql`EXISTS (
+          const [[existingAgency], [existingBranding], [agencyAccount], [existingSubscription]] =
+            await Promise.all([
+              tx.select().from(agencies).where(eq(agencies.id, principal.agencyId)).limit(1),
+              tx
+                .select()
+                .from(agencyBranding)
+                .where(eq(agencyBranding.agencyId, principal.agencyId))
+                .limit(1),
+              tx
+                .select({ id: billableAccounts.id })
+                .from(billableAccounts)
+                .where(
+                  and(
+                    eq(billableAccounts.accountKind, 'agency'),
+                    eq(billableAccounts.agencyId, principal.agencyId),
+                  ),
+                )
+                .limit(1),
+              tx
+                .select()
+                .from(subscriptions)
+                .where(
+                  sql`EXISTS (
                 SELECT 1
                 FROM ${billableAccounts} account
                 WHERE account.id = ${subscriptions.billableAccountId}
                   AND account.account_kind = 'agency'
                   AND account.agency_id = ${principal.agencyId}
-              )`)
-              .limit(1),
-          ]);
+              )`,
+                )
+                .limit(1),
+            ]);
           if (
             !existingAgency ||
             !existingBranding ||
@@ -6244,10 +6261,7 @@ export const agencyRouter = router({
           .select({ id: agencyTransactions.id })
           .from(agencyTransactions)
           .where(
-            and(
-              eq(agencyTransactions.dealId, deal.id),
-              eq(agencyTransactions.agencyId, agencyId),
-            ),
+            and(eq(agencyTransactions.dealId, deal.id), eq(agencyTransactions.agencyId, agencyId)),
           )
           .limit(1);
         if (existingTransactionInLock) {
@@ -6748,7 +6762,8 @@ export const agencyRouter = router({
             stage: input.stage || lockedTransaction.stage,
             status: nextStatus,
             riskStatus,
-            nextAction: input.nextAction === undefined ? lockedTransaction.nextAction : input.nextAction,
+            nextAction:
+              input.nextAction === undefined ? lockedTransaction.nextAction : input.nextAction,
             nextDeadline:
               input.nextDeadline === undefined
                 ? lockedTransaction.nextDeadline
@@ -6759,9 +6774,13 @@ export const agencyRouter = router({
                 : parseOptionalDbTimestamp(input.expectedPaymentDate),
             commissionStatus,
             completedAt:
-              nextStatus === 'completed' ? lockedTransaction.completedAt || now : lockedTransaction.completedAt,
+              nextStatus === 'completed'
+                ? lockedTransaction.completedAt || now
+                : lockedTransaction.completedAt,
             cancelledAt:
-              nextStatus === 'cancelled' ? lockedTransaction.cancelledAt || now : lockedTransaction.cancelledAt,
+              nextStatus === 'cancelled'
+                ? lockedTransaction.cancelledAt || now
+                : lockedTransaction.cancelledAt,
             updatedByUserId: user.id,
             updatedAt: now,
           } as any)
@@ -6801,7 +6820,8 @@ export const agencyRouter = router({
                   ? 'cancelled'
                   : 'transaction_progression',
             riskStatus,
-            nextAction: input.nextAction === undefined ? lockedTransaction.nextAction : input.nextAction,
+            nextAction:
+              input.nextAction === undefined ? lockedTransaction.nextAction : input.nextAction,
             nextDeadline:
               input.nextDeadline === undefined
                 ? lockedTransaction.nextDeadline
@@ -7474,20 +7494,18 @@ export const agencyRouter = router({
         nextReviewAt: input.nextReviewAt ? toDbTimestampRequired(input.nextReviewAt) : null,
       } as any);
       const reviewId = insertResultId(result);
-      await db
-        .insert(agencyListingPerformanceActivity)
-        .values({
-          agencyId,
-          reviewId,
-          userId: user.id,
-          eventType: 'seller_review_recorded',
-          description: 'Seller performance review recorded.',
-          metadata: {
-            sellerDecision: input.sellerDecision,
-            recommendation: input.recommendation,
-            flags: snapshot.flags,
-          },
-        });
+      await db.insert(agencyListingPerformanceActivity).values({
+        agencyId,
+        reviewId,
+        userId: user.id,
+        eventType: 'seller_review_recorded',
+        description: 'Seller performance review recorded.',
+        metadata: {
+          sellerDecision: input.sellerDecision,
+          recommendation: input.recommendation,
+          flags: snapshot.flags,
+        },
+      });
       return { success: true, reviewId, snapshot };
     }),
 
@@ -7596,17 +7614,15 @@ export const agencyRouter = router({
           canonicalRevisionListingId: revisionListingId,
         })
         .where(eq(agencyListingPerformanceReviews.id, review.id));
-      await db
-        .insert(agencyListingPerformanceActivity)
-        .values({
-          agencyId,
-          reviewId: review.id,
-          userId: user.id,
-          eventType: 'price_revision_draft_created',
-          description:
-            'Private canonical listing revision draft created from the accepted seller price action.',
-          metadata: { proposedPrice: review.proposedPrice, revisionListingId },
-        });
+      await db.insert(agencyListingPerformanceActivity).values({
+        agencyId,
+        reviewId: review.id,
+        userId: user.id,
+        eventType: 'price_revision_draft_created',
+        description:
+          'Private canonical listing revision draft created from the accepted seller price action.',
+        metadata: { proposedPrice: review.proposedPrice, revisionListingId },
+      });
       return { success: true, status: 'draft', revisionListingId, duplicate: false };
     }),
 
