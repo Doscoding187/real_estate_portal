@@ -347,3 +347,10 @@ canonical disposable target lacked the test's `agency-new-buyer@listify.local`
 fixture. The exploratory test edit was reverted, generated artifacts were
 restored, and agency browser acceptance remains unverified pending a governed
 fixture migration or replacement journey contract.
+
+An authority-injected rerun of `e2e/developer/development-home.authenticated.spec.ts`
+did not execute the journey because its fixture loader hard-codes the
+`listify_test` database. The current authority runner correctly injects the
+owned disposable worktree target. Generated browser artifacts were restored;
+developer browser acceptance remains unverified pending a governed fixture
+migration or replacement journey contract.
