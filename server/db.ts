@@ -1259,10 +1259,7 @@ export async function getLocationsByType(type: string) {
 
 // ==================== AGENCY DASHBOARD ANALYTICS ====================
 
-/**
- * Canonical agency inventory is owned by listings. The owner/agent joins are
- * compatibility fallbacks for records created before listings.agencyId existed.
- */
+/** Canonical agency inventory is owned by the listing's agency identity. */
 function agencyListingScopeCondition(agencyId: number) {
   return eq(listings.agencyId, agencyId);
 }
