@@ -809,3 +809,7 @@ with TypeScript validation passing.
 Admin revenue analytics now fails explicitly until canonical billing analytics
 is approved, removing an empty-object success response. Its authority contract
 and TypeScript validation passed.
+
+Feed ranking now propagates campaign, quality-score, and partner-trust query
+failures instead of silently ranking with empty maps. Its authority contract
+passed 1 test and TypeScript validation passed.

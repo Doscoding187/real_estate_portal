@@ -202,3 +202,8 @@ The active admin revenue analytics procedure no longer returns an empty object
 as successful data. It now fails explicitly until a canonical billing analytics
 authority is approved, with an authority contract test and TypeScript check
 passing.
+
+Feed ranking no longer converts campaign, quality-score, or partner-trust
+query failures into neutral empty maps. Those failures now propagate so ranking
+cannot silently claim a degraded result. The feed-ranking authority contract
+passed 1 test with TypeScript validation passing.
