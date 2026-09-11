@@ -28,3 +28,10 @@ acceptance and require separate evidence before the full takeover closes.
 Finding: none for the scoped race correction. Recommendation: retain the
 unique transaction constraint and in-lock recheck as the sole acceptance
 serialization boundary.
+
+Follow-up authority correction: `ensureCommissionEntryForDeal` no longer
+swallows missing or incompatible commission-schema errors. A deal transition
+now rolls back when its commission fact cannot be persisted, preventing a
+financially incomplete stage change from being acknowledged. Unit and router
+transaction-boundary suites pass 15 tests after this change. Broader P6
+commission settlement and referral lifecycle evidence remains open.

@@ -763,3 +763,9 @@ The P8 media boundary was extended with reassignment invalidation evidence:
 passed 3 tests on the exact disposable target. A token issued to the former
 owner is rejected after listing custody changes; public media rebuild
 equivalence remains open.
+
+The P6 distribution transition boundary was tightened so commission-schema
+failures abort the enclosing deal transaction instead of returning a successful
+stage change without a commission fact. The focused commission and router
+transaction suites passed 15 tests; broader commission settlement lifecycle
+coverage remains open.
