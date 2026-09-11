@@ -13,5 +13,12 @@ describe('price insights authority boundary', () => {
     expect(source).not.toContain('WHERE cityId =');
     expect(source).not.toContain('Return empty structure on error');
     expect(source).not.toContain("console.error('Error fetching heatmap data:', error);\n        return []");
+
+    const service = readFileSync(
+      path.resolve(process.cwd(), 'server/services/priceInsightsService.ts'),
+      'utf8',
+    );
+    expect(service).toContain('Error fetching micromarkets for city ${cityId}:`, error);');
+    expect(service).toContain('      throw error;');
   });
 });

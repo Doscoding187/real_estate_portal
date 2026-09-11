@@ -316,7 +316,7 @@ class PriceInsightsService {
       }));
     } catch (error) {
       console.error(`Error fetching micromarkets for city ${cityId}:`, error);
-      return [];
+      throw error;
     }
   }
 

@@ -63,3 +63,8 @@ snake_case location columns, plus query-error responses that fabricated empty
 tabs, aggregates, or heatmaps. The router now uses the canonical physical
 columns and fails with `PRECONDITION_FAILED` for unavailable reads. Its focused
 authority contract and TypeScript check pass; query-plan evidence remains open.
+
+The price-insights service micromarket query also swallowed database errors as
+an empty result. It now propagates the error to the router's explicit
+`PRECONDITION_FAILED` boundary, with the authority contract covering the
+behavior.

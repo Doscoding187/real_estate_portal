@@ -260,3 +260,6 @@ Price insights runtime schema guessing and error-to-empty responses were also
 removed. Hierarchy queries now use canonical physical location columns and
 unavailable reads fail with `PRECONDITION_FAILED`; the focused price-insights
 authority contract and TypeScript check pass. Query-plan evidence remains open.
+
+The underlying micromarket query no longer swallows database errors as an
+empty result; errors reach the router's explicit unavailable-state boundary.
