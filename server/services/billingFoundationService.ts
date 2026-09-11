@@ -660,8 +660,8 @@ async function syncAgencyBillingShadow(
     })
     .where(eq(agencies.id, input.agencyId));
 
-  // Do not create legacy agency_subscriptions rows here: that table is Stripe-shaped and has
-  // non-null provider columns. It remains a compatibility read shadow only when it already exists.
+  // The historical agency_subscriptions table was retired before launch. These agency columns
+  // are display snapshots only; canonical access remains in subscriptions.
   return legacyStatus;
 }
 
