@@ -76,6 +76,11 @@ The rebuilt target also passed the authenticated agency workspace smoke test:
 login/session-cookie issuance, current-user resolution, tenant-scoped agency
 data access, and logout all completed successfully.
 
+The rebuilt target also passed the agency viewings workflow: 4 physical tests
+covered tenancy, lifecycle transitions, rescheduling, notification idempotency,
+reassignment permissions, timezone day boundaries, and structured lead
+follow-up.
+
 After all physical packet runs, `pnpm db:schema:congruency` still reports an
 exact match: desired and actual digest
 `69f4bf73e6ac9dc81b2be8b2cc36333e33d7a1ec6917ea392cbcc68466ac73fd`, with no
