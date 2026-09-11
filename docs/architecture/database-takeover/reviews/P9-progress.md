@@ -493,6 +493,12 @@ Post-migration verification also completed `pnpm lint:check` with exit 0. The
 repository reports 11,229 pre-existing warnings and zero errors; no warning
 cleanup was included in this takeover packet.
 
+`pnpm db:schema:tidb-audit` was rerun at the 0081 digest and remains
+intentionally non-admitted. It reports the existing 12 FK/CHECK interaction
+reviews across catalogue publishers, development supersessions, Land claims
+and conflicts, and provider-location mappings; no new interaction was added by
+the analytics index migration.
+
 The P2 relational delivery packet was rerun after migration 0081: its
 authority-injected independent-connection suite passed 8 tests, and the
 lead-delivery/public-capture contract suites passed 53 tests. These cover
