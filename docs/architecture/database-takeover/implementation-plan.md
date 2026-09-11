@@ -13,15 +13,15 @@ delivery tests, service-lead request idempotency, and atomic demand routing
 are implemented. Current authority verification passes 33 static suites and
 272 tests, plus utility, schema sanity, inventory, and lifecycle gates.
 
-P9 currently has fresh-establishment evidence and a passing authority-injected
-Desktop Chrome consumer-activity journey. Provider admission, projection
-rebuild equivalence, packet review, and broader public/private journey coverage
-remain open.
+P9 currently has fresh-establishment evidence, rebuilt-target P1–P8 packet
+runs, and a passing authority-injected Desktop Chrome consumer-activity
+journey. Provider admission, packet review, and broader public/private journey
+coverage remain open.
 
 Outstanding review work includes independent provider crash/replay,
-reconciliation and authorization evidence for P2; duplicate-writer and
-rebuild evidence for P3; the remaining packet-specific P4–P8 behavioral
-proof; and the full P9 closure audit. The
+reconciliation and authorization evidence for P2; final senior review of the
+P3–P8 packets (including unresolved billing-owner and domain-lifecycle
+decisions); and the full P9 closure audit. The
 starting-point facts below are
 intentionally historical and are retained to make the handoff auditable.
 
