@@ -59,6 +59,11 @@ Cross-cutting verification was rerun after the rebuilt-target packet sweep:
 authority suites (272 tests). No authority-contract regression was introduced
 by the packet changes.
 
+The protected release boundary was also exercised: the TiDB convergence
+release-plan command refused the disposable worktree with
+`release-plan is not allowed for disposable-worktree`. This confirms release
+planning remains isolated from pre-launch disposable validation.
+
 The rebuilt target's launch-readiness agency walkthrough was rerun and passed
 all 11 physical tests, covering onboarding, billing activation, invitation
 acceptance, membership, listing publication, public lead capture, assignment,
