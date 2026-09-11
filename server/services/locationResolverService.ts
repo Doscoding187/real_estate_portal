@@ -392,7 +392,7 @@ export class LocationResolverService {
     suburbSlug?: string;
   }): Promise<ResolvedLocation | null> {
     const db = await getDb();
-    if (!db) return null;
+    if (!db) throw new Error('Database not available');
 
     const { provinceSlug, citySlug, suburbSlug } = opts;
 
@@ -596,7 +596,7 @@ export class LocationResolverService {
    */
   async getCitiesInProvince(provinceSlug: string): Promise<ResolvedCity[]> {
     const db = await getDb();
-    if (!db) return [];
+    if (!db) throw new Error('Database not available');
 
     const location = await this.resolveLocation({ provinceSlug });
     if (!location) return [];
@@ -629,7 +629,7 @@ export class LocationResolverService {
    */
   async getSuburbsInCity(provinceSlug: string, citySlug: string): Promise<ResolvedSuburb[]> {
     const db = await getDb();
-    if (!db) return [];
+    if (!db) throw new Error('Database not available');
 
     const location = await this.resolveLocation({ provinceSlug, citySlug });
     if (!location?.city) return [];
@@ -670,7 +670,7 @@ export class LocationResolverService {
     longitude?: string;
   }): Promise<number | null> {
     const db = await getDb();
-    if (!db) return null;
+    if (!db) throw new Error('Database not available');
 
     const { provinceSlug, citySlug, suburbName, suburbSlug, latitude, longitude } = opts;
     const slug = suburbSlug || this.slugify(suburbName);
