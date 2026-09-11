@@ -446,3 +446,9 @@ returned `applicationReady: true`. Ownership, connectivity, migration head
 required-data checks are ready. Commercial reference, consumer API, browser,
 release, and full-diagnostics layers remain intentionally separate and
 unevaluated.
+
+The combined authority physical packet was rerun on the same target: billing
+foundation (2 tests), Shared Living (6 tests), and development publication
+lifecycle (21 tests) passed, 29 tests total. This revalidates billing proof
+state, Shared Living publication/privacy, and development approval,
+publication, withdrawal, and ownership behavior after the latest changes.
