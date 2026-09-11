@@ -441,6 +441,12 @@ tables fail with `PRECONDITION_FAILED` instead of being acknowledged as a
 successful event; duplicate event IDs remain idempotent. The interaction
 authority and discovery engagement suites pass 5 tests with `pnpm check`.
 
+Explore aggregate metrics no longer load the complete engagement event set into
+application memory. The service now computes counts, distinct viewers/sessions,
+clicks, and JSON watch-time totals in one SQL aggregate query while preserving
+the existing metric contract. The focused analytics and authority suites pass
+3 tests with `pnpm check`; provider-backed query-plan evidence remains open.
+
 The authority gate was rerun after the latest billing boundary work: all 33
 static suites (272 tests), 118 utility surfaces, 215 canonical tables, 81 active
 migrations, deterministic inventory, and lifecycle checks passed again. No
