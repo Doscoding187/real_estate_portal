@@ -126,10 +126,11 @@ including demand rollback, media tenant isolation and deletion invalidation,
 and agency deal acceptance races. The identified P6 offer-acceptance race is
 now accepted in `reviews/P6-senior-review.md`; broader P6 lifecycle coverage
 remains open. P5's billable-owner alternatives and recommended future model
-are recorded in `p5-billing-authority-decision.md`, but implementation is not
-complete. P5 also has an explicit incomplete senior review in
-`reviews/P5-senior-review.md`; billable-account migration and entitlement race
-proof remain open. P3 has an explicit incomplete-evidence senior review in
+are recorded in `p5-billing-authority-decision.md`; the typed billable-account
+cutover and provider lease fencing are implemented and physically exercised.
+P5 also has an explicit incomplete senior review in
+`reviews/P5-senior-review.md`; entitlement race proof and legacy-family
+retirement evidence remain open. P3 has an explicit incomplete-evidence senior review in
 `reviews/P3-senior-review.md`; its writer census and cross-supply rebuild proof
 remain open. P4's exercised tenant and principal boundaries are accepted in
 `reviews/P4-senior-review.md`; account, credential, and complete fallback-path
@@ -714,9 +715,9 @@ Physical commercial-capacity and agency-operating-home fixtures now create and
 attach typed agency/agent billable accounts before inserting subscriptions.
 
 The exact disposable target had zero null staged account references across all
-five active billing tables. Migration 0086 now enforces those columns as
+five active billing tables. Migrations 0086 and 0087 now enforce those columns as
 non-null, and authority status reports manifest-head-ready and schema-congruent
-at migration head 0086.
+at migration head 0087.
 
 Additional physical agency fixtures (performance, scorecard, and attribution)
 now create typed billable accounts and populate subscription foreign keys, so
