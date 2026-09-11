@@ -64,6 +64,30 @@ export const planEntitlements = mysqlTable(
   ],
 );
 
+/** Durable provider-event identity and processing ledger. */
+export const billingProviderEvents = mysqlTable(
+  'billing_provider_events',
+  {
+    id: bigint('id', { mode: 'number' }).autoincrement().primaryKey(),
+    provider: varchar('provider', { length: 40 }).notNull(),
+    providerEventId: varchar('provider_event_id', { length: 255 }).notNull(),
+    eventType: varchar('event_type', { length: 120 }).notNull(),
+    status: mysqlEnum('status', ['received', 'processing', 'applied', 'ignored', 'failed'])
+      .default('received')
+      .notNull(),
+    payload: json('payload').notNull(),
+    occurredAt: timestamp('occurred_at', { mode: 'string' }),
+    processedAt: timestamp('processed_at', { mode: 'string' }),
+    failureReason: text('failure_reason'),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+  },
+  table => [
+    unique('uq_billing_provider_events_identity').on(table.provider, table.providerEventId),
+    index('idx_billing_provider_events_status').on(table.status, table.createdAt),
+  ],
+);
+
 export const subscriptions = mysqlTable(
   'subscriptions',
   {

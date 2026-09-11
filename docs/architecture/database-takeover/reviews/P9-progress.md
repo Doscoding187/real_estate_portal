@@ -536,3 +536,12 @@ the 0082 migration: billing foundation (2 tests), provider-independent billing
 17 tests total. These validate the current agency EFT and entitlement
 boundaries, but the polymorphic owner-key model and provider event semantics
 remain unresolved; this evidence does not constitute P5 acceptance.
+
+Migration 0083 (`0083_billing_provider_event_identity.sql`) establishes the
+canonical `billing_provider_events` ledger. Provider and event identity are
+unique, payload and lifecycle state are durable, and processing timestamps and
+failure reasons are explicit. The migration was applied through the governed
+runner after 0082 on the exact disposable target. Its physical uniqueness
+contract passed under `pnpm test:authority`, proving duplicate provider events
+are rejected; provider webhook consumer wiring and out-of-order event
+semantics remain intentionally open for the subsequent P5 cutover.

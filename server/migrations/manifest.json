@@ -4,7 +4,7 @@
   "historyTable": "sql_migration_history",
   "attemptTable": "sql_migration_attempts",
   "lockName": "property_listify_manifest_migrations",
-  "expectedHead": "0082_explore_engagement_retention_indexes.sql",
+  "expectedHead": "0083_billing_provider_event_identity.sql",
   "migrations": [
     {
       "sequence": 0,
@@ -870,6 +870,17 @@
       "statementPolicy": "approved-exception",
       "requiredReferenceDataVersion": null,
       "approvalReference": "DBX-PRELAUNCH-EXPLORE-ENGAGEMENT-RETENTION-INDEXES-2026-09-11-Edward"
+    },
+    {
+      "sequence": 83,
+      "filename": "0083_billing_provider_event_identity.sql",
+      "checksum": "da15119312017f652c2353aa972c5046cdab622f2fa086b92866955635f6fdde",
+      "parent": "0082_explore_engagement_retention_indexes.sql",
+      "parentChecksum": "e7fed7481e2c5471731fcc22b7f7917ec0316bf05235cd040ae592f06bd8f60e",
+      "kind": "exceptional",
+      "statementPolicy": "approved-exception",
+      "requiredReferenceDataVersion": null,
+      "approvalReference": "DBX-PRELAUNCH-BILLING-PROVIDER-EVENT-IDENTITY-2026-09-11-Edward"
     }
   ]
 }

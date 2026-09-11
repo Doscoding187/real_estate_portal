@@ -1194,6 +1194,11 @@
       "path": "server/migrations/0082_explore_engagement_retention_indexes.sql",
       "classification": "canonical active",
       "purpose": "Adds time-leading session and user indexes for bounded Explore engagement history scans."
+    },
+    {
+      "path": "server/migrations/0083_billing_provider_event_identity.sql",
+      "classification": "canonical active",
+      "purpose": "Establishes unique provider event identity and durable processing states for billing webhook replay safety."
     }
   ],
   "prohibitedPaths": [
