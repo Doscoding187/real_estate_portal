@@ -10,6 +10,9 @@ Independent verification on the task-owned disposable target:
   — 2 physical tests passed.
 - `pnpm test:authority -- server/__tests__/billing.provider-independent.contract.test.ts server/__tests__/developer.subscription-commercial.contract.test.ts`
   — 14 tests passed.
+- `pnpm test:authority -- server/__tests__/integration.billing-provider-event-identity.test.ts`
+  — 4 physical tests passed, covering duplicate identity, claim fencing,
+  retry recovery, and bounded exhaustion.
 
 These tests prove agency EFT proof handling, duplicate approval idempotency,
 partial-payment non-activation, rejection/correction behavior, provider
@@ -26,9 +29,10 @@ now resolves or transactionally admits the typed account before writing
 subscriptions, invoices, payments, payment documents, and audit events.
 Plan-access entitlement reads and subscription writes now resolve the same
 typed account identity as well.
-Database-enforced billable ownership,
-duplicate and out-of-order provider event handling, entitlement
-expiry/cancellation races, and a verified retirement order are not yet proven.
+Database-enforced billable ownership and provider-event identity/lease fencing
+are now exercised on the disposable target. Entitlement expiry/cancellation
+races and a verified retirement order for the distinct legacy billing families
+are not yet proven.
 The remaining cutover design is recorded in
 `p5-billing-authority-decision.md` and `p5-billing-consumer-mapping.md`.
 The legacy-family disposition and retirement evidence requirements are recorded
