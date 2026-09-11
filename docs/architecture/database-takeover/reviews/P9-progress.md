@@ -379,3 +379,10 @@ The search-routing rerun was captured with an explicit terminal exit code and
 confirmed 9 failures out of 11 tests (2 passed). The failures are real route or
 fixture integration gaps: province/city/suburb entry remained at `/` or lacked
 expected query parameters. No browser artifacts remain in the worktree.
+
+The task-owned disposable target was disposed, recreated, and freshly established
+through `pnpm db:authority:consumer-contract` before rerunning search routing.
+The rerun still failed 9 of 11 tests (2 passed), proving the failures are not
+caused by missing reference data. The current implementation uses the governed
+location-authority flow, while this suite expects legacy keyword/quick-link
+routing; reconciliation or replacement of that route contract remains open.
