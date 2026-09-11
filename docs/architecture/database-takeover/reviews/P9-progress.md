@@ -577,3 +577,10 @@ that Commercial, Development, and Shared Living remain on their dedicated
 public projection identities and cannot call the generic property writer. This
 closes the authority-boundary regression risk; physical repeated-rebuild
 equivalence is still required for P3 acceptance.
+
+After adding the billing provider-event table, the full Database Authority gate
+was rerun successfully: 33 static suites (272 tests), 118 utility surfaces,
+216 canonical tables, 84 active migrations, deterministic inventory, and
+lifecycle checks all passed. The gate initially caught a stale hard-coded
+215-table expectation; that authority contract now reflects the canonical 216
+table inventory.
