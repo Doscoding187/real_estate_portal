@@ -837,3 +837,13 @@ Duplicate event IDs remain idempotent, but single and batch writes no longer
 swallow schema or infrastructure failures. The interaction authority contract
 passed 3 tests with TypeScript validation; retention and abuse controls remain
 open.
+
+The disconnected boost-campaign authority is now retired. The repository census
+found no mounted campaign router or reachable campaign writer, and the exact
+disposable target contained zero `boost_campaigns` rows. The orphan ranking read,
+service, router, and documentation were removed; migration 0090 dropped the
+table through the canonical runner. Schema congruency, migration-tree and
+manifest validation, and the full 33-suite authority gate passed at 212 tables
+and 91 active migrations. Future paid placement requires a new authority that
+defines ownership, entitlement, billing, delivery, attribution, and reporting
+together. Broader P8 retention and abuse controls remain open.

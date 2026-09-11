@@ -235,3 +235,10 @@ writer still treats duplicate event identities as idempotent, while schema and
 infrastructure errors abort single and batch writes instead of being logged and
 discarded. The interaction authority contract passed 3 tests with TypeScript
 validation; retention and abuse controls remain open.
+
+The empty, disconnected `boost_campaigns` table and its unmounted duplicate
+service/router were retired through migration 0090 after an exact disposable
+target row audit. The orphan feed-ranking read was removed with the runtime
+authority, and the canonical inventory now contains 212 tables. The authority
+gate and schema-congruency check passed after application; any future sponsored
+placement capability requires a new, unified commercial authority.
