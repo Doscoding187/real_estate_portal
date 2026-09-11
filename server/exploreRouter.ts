@@ -213,7 +213,7 @@ export const exploreRouter = router({
   }),
 
   getFollowedItems: protectedProcedure.query(async () => {
-    return { items: { neighbourhoods: [], creators: [] } };
+    return unavailableExploreCatalog('Followed Explore items');
   }),
 
   // Get topics
