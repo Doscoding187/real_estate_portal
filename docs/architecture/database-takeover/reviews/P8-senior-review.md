@@ -23,10 +23,11 @@ schema-error-to-zero reporting path is accepted.
 The review found and corrected an active launch path that dynamically imported
 `revenueCenterSync.ts`, where revenue and failed-payment tables are placeholder
 objects. The path now fails with `PRECONDITION_FAILED` before any activation or
-success response; a contract test covers the gate. Replacing the placeholder
-module was completed after a caller census found no remaining imports. A
-canonical campaign/billing authority remains required before campaign launch is
-implemented.
+success response; a contract test covers the gate. The placeholder module and
+the companion boost integration were removed in commits `7aec6eb2` and
+`aee4fdac`, and the typed marketing router gates were consolidated in
+`5cf3c477`. A canonical campaign/billing authority remains required before
+campaign launch is implemented.
 
 Finding: incomplete evidence, severity medium. Required follow-up is a public
 media rebuild comparison, analytics aggregate rebuild proof with bounded query
