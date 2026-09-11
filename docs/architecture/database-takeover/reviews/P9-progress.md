@@ -726,3 +726,7 @@ The physical billable-account invariant now verifies exact typed-owner shape and
 non-null account references for every active billing fact. It no longer assumes
 every newly created non-billable user or organisation must have an account;
 runtime admission remains explicit at the first billing operation.
+
+Payment-proof mutations now consume the invoice's mandatory typed account
+reference directly; the former null-account resolution fallback was removed
+after migration 0086.

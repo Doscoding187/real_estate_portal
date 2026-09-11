@@ -1698,9 +1698,7 @@ export async function submitPaidLaunchAccessPaymentProof(input: LaunchPaymentPro
       });
     }
 
-    const billableAccountId =
-      invoice.billableAccountId ??
-      (await resolveBillableAccountId(tx, toBillingOwnerType(invoice.ownerType), invoice.ownerId));
+    const billableAccountId = invoice.billableAccountId;
     const idempotencyKey = `manual_eft:${invoice.id}:${randomUUID()}`;
     const [paymentInsert] = await tx
       .insert(billingPayments)
@@ -1919,9 +1917,7 @@ export async function submitAgencyPaymentProof(input: LaunchPaymentProofInput) {
       });
     }
 
-    const billableAccountId =
-      invoice.billableAccountId ??
-      (await resolveBillableAccountId(tx, toBillingOwnerType(invoice.ownerType), invoice.ownerId));
+    const billableAccountId = invoice.billableAccountId;
     const idempotencyKey = `manual_eft:${invoice.id}:${randomUUID()}`;
     const [paymentInsert] = await tx
       .insert(billingPayments)
