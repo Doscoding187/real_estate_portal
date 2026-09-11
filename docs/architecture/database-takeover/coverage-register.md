@@ -5,6 +5,16 @@ physical baseline below is retained as a P0 historical snapshot. A pending
 cell is an evidence gap, not a claim of safety or disuse. Owning packets must
 replace pending cells with traced runtime evidence.
 
+## Current takeover state (2026-09-11)
+
+The historical rows below are retained for audit continuity. Current authority
+is the accepted packet reviews and the disposable target: migration head
+`0088_retire_obsolete_billing_families.sql`, 214 canonical tables, and model
+digest `0d50ae2d489fa91529de0c158870ccd445c1ab6d1b6d3fd438c1be87135dddec`.
+P5 canonical Launch Access is accepted; its three obsolete billing families
+were retired by migration 0088. Remaining pending cells belong to open P2–P4,
+P6–P8, and P9 review work and are not silently treated as complete.
+
 ## Current P1 state
 
 | Evidence | Result |
