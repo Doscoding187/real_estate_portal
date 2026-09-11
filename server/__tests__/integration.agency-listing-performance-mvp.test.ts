@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { and, eq } from 'drizzle-orm';
 
 import {
-  agencies, agencyBranding, agents, agencyDealOfferVersions, agencyDeals, agencyListingPerformanceActivity,
+  agencies, agencyBranding, agents, billableAccounts, agencyDealOfferVersions, agencyDeals, agencyListingPerformanceActivity,
   agencyListingPerformanceReviews, cities, listingAnalytics, listingApprovalQueue, listingLeads, listings,
   planEntitlements, plans, properties, provinces, showings, suburbs, subscriptions, users,
 } from '../../drizzle/schema';
@@ -76,7 +76,9 @@ async function makeAgencyPublicationReady(agencyId: number, suffix: string) {
   const [entitlementResult] = await db.insert(planEntitlements).values({ planId, featureKey: 'max_active_listings', valueJson: 50 } as any);
   ids.planEntitlements.push(idOf(entitlementResult));
   const now = new Date();
-  const [subscriptionResult] = await db.insert(subscriptions).values({ ownerType: 'agency', ownerId: agencyId, planId, status: 'active', currentPeriodStart: toMySqlTimestamp(now), currentPeriodEnd: toMySqlTimestamp(new Date(now.getTime() + 86_400_000)), cancelAtPeriodEnd: 0 } as any);
+  const [account] = await db.select({ id: billableAccounts.id }).from(billableAccounts).where(eq(billableAccounts.agencyId, agencyId)).limit(1);
+  if (!account) throw new Error(`Missing agency billable account ${agencyId}`);
+  const [subscriptionResult] = await db.insert(subscriptions).values({ ownerType: 'agency', ownerId: agencyId, billableAccountId: account.id, planId, status: 'active', currentPeriodStart: toMySqlTimestamp(now), currentPeriodEnd: toMySqlTimestamp(new Date(now.getTime() + 86_400_000)), cancelAtPeriodEnd: 0 } as any);
   ids.subscriptions.push(idOf(subscriptionResult));
 }
 async function publishedListing(ownerId: number, agencyId: number, agentId: number, suffix: string, price = 2_000_000) {
@@ -114,7 +116,7 @@ guardedDescribe('agency listing performance MVP persisted integration', () => {
   it('keeps canonical performance, review, revision, access, and publication contracts intact', async () => {
     const db = await getDb(); if (!db) throw new Error('Database not available');
     const suffix = `${Date.now()}-${randomUUID().slice(0, 8)}`;
-    const makeAgency = async (name: string) => { const [r] = await db.insert(agencies).values({ name, slug: `${name}-${suffix}`.toLowerCase().replace(/[^a-z0-9-]/g, '-'), email: `${name}-${suffix}@example.test`, city: 'Johannesburg', province: 'Gauteng', subscriptionPlan: 'premium', subscriptionStatus: 'active', isVerified: 1 } as any); const id = idOf(r); ids.agencies.push(id); return id; };
+    const makeAgency = async (name: string) => { const [r] = await db.insert(agencies).values({ name, slug: `${name}-${suffix}`.toLowerCase().replace(/[^a-z0-9-]/g, '-'), email: `${name}-${suffix}@example.test`, city: 'Johannesburg', province: 'Gauteng', subscriptionPlan: 'premium', subscriptionStatus: 'active', isVerified: 1 } as any); const id = idOf(r); ids.agencies.push(id); await db.insert(billableAccounts).values({ accountKind: 'agency', agencyId: id } as any); return id; };
     const agencyId = await makeAgency('Performance Agency'); const outsideAgencyId = await makeAgency('Outside Performance Agency');
     await makeAgencyPublicationReady(agencyId, suffix);
     const managerId = await user(agencyId, 'agency_admin', suffix, 'Manager'); const assignedUserId = await user(agencyId, 'agent', suffix, 'Assigned'); const unassignedUserId = await user(agencyId, 'agent', suffix, 'Unassigned'); const outsideManagerId = await user(outsideAgencyId, 'agency_admin', suffix, 'Outside');

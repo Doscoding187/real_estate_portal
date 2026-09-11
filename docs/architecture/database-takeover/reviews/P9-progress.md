@@ -717,3 +717,7 @@ The exact disposable target had zero null staged account references across all
 five active billing tables. Migration 0086 now enforces those columns as
 non-null, and authority status reports manifest-head-ready and schema-congruent
 at migration head 0086.
+
+Additional physical agency fixtures (performance, scorecard, and attribution)
+now create typed billable accounts and populate subscription foreign keys, so
+real-database runs remain compatible with the non-null authority.

@@ -7,6 +7,7 @@ import { and, eq } from 'drizzle-orm';
 import {
   agencies,
   agencyBranding,
+  billableAccounts,
   cities,
   leads,
   listingAnalytics,
@@ -143,9 +144,12 @@ async function makeAgencyPublicationReady(
   created.planEntitlementId = insertId(entitlementResult);
 
   const now = new Date();
+  const [account] = await db.select({ id: billableAccounts.id }).from(billableAccounts).where(eq(billableAccounts.agencyId, agencyId)).limit(1);
+  if (!account) throw new Error(`Missing agency billable account ${agencyId}`);
   const [subscriptionResult] = await db.insert(subscriptions).values({
     ownerType: 'agency',
     ownerId: agencyId,
+    billableAccountId: account.id,
     planId: created.planId,
     status: 'active',
     currentPeriodStart: toMySqlTimestamp(now),
@@ -211,6 +215,7 @@ describeWithDb('agency principal listing attribution', () => {
       isVerified: 1,
     } as any);
     created.agencyId = insertId(agencyResult);
+    await db.insert(billableAccounts).values({ accountKind: 'agency', agencyId: created.agencyId } as any);
     await makeAgencyPublicationReady(db, created.agencyId, suffix);
     const location = await canonicalSandtonLocation(db);
 
