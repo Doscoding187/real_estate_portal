@@ -1,6 +1,6 @@
 # P6 implementation review packet
 
-Status: implemented, senior review pending.
+Status: implemented; scoped race correction accepted by senior review.
 
 - Base commit: `a483e4ea`
 - Final commit: `eee15f2e`
@@ -46,7 +46,7 @@ semantics beyond the existing lifecycle suite.
 
 ## Review state
 
-The race correction is ready for independent senior re-review. P6 remains
-open for any additional assignment, booking, referral, or commission lifecycle
-proof required by the full takeover; this packet only accepts the identified
-transaction-acceptance race.
+The scoped race correction is accepted by the senior review recorded in
+`reviews/P6-senior-review.md`. P6 remains open for any additional assignment,
+booking, referral, or commission lifecycle proof required by the full takeover;
+this packet only accepts the identified transaction-acceptance race.
