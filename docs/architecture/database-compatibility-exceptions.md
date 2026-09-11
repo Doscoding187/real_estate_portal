@@ -607,6 +607,37 @@ Expiry or objective removal condition: remove if the engagement authority is
 retired or replaced with a stronger retention/index design.
 Removal workstream: P8 Explore retention and abuse-control closure.
 
+## DBX-PRELAUNCH-BILLING-PROVIDER-RETRY-BUDGET-2026-09-11-Edward
+
+Status: approved for the pre-launch disposable worktree only.
+Owner: database takeover workstream.
+Approved by Edward on: 2026-09-11.
+Business reason: make provider-event recovery finite and observable by storing
+an explicit attempt count and bounded retry budget on the canonical event
+identity ledger.
+Canonical authority: `drizzle/schema/billing.ts`, service
+`server/services/billingProviderEventService.ts`, and migration manifest.
+Exact files: `server/migrations/0084_billing_provider_event_retry_budget.sql`,
+`drizzle/schema/billing.ts`, and billing provider-event contract/physical tests.
+Tables and columns: `billing_provider_events.attempt_count` and
+`billing_provider_events.max_attempts`.
+Permitted read direction: provider-event claiming may inspect the retry budget
+and attempt count to refuse exhausted work.
+Permitted write direction: only the canonical migration runner and the governed
+provider-event lifecycle service may update these columns on the exact
+task-owned disposable target.
+Failure and observability behavior: claim is transactional and lock-protected;
+each claim increments the attempt count, completion/failure use a
+processing-state compare-and-set, and exhausted events fail closed. Migration
+planning/application verifies the 0083 parent, manifest checksum, target
+ownership, and durable attempt state.
+Automated evidence: migration-manifest validation, schema inventory,
+schema-congruency, billing provider-event contract tests, and four physical
+identity/lifecycle tests including retry exhaustion.
+Expiry or objective removal condition: remove when the provider-event
+authority is retired or replaced by a stronger durable retry/work-queue model.
+Removal workstream: P5 billing provider-event lifecycle closure.
+
 ## Required exception record
 
 Every approved exception must contain:
