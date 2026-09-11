@@ -306,7 +306,7 @@ export async function createDeveloperOrganisation(input: CreateDeveloperOrganisa
 
 export async function getDeveloperByUserId(userId: number): Promise<DeveloperIdentity | null> {
   const database = await getDb();
-  if (!database) return null;
+  if (!database) throw new Error('Database not available');
   const memberships = await database
     .select({ id: developerOrganisationMemberships.id })
     .from(developerOrganisationMemberships)
@@ -487,7 +487,7 @@ export async function resubmitRejectedDeveloperOrganisation(
 
 export async function getPublisherById(id: number) {
   const database = await getDb();
-  if (!database) return null;
+  if (!database) throw new Error('Database not available');
   const [publisher] = await database
     .select()
     .from(cataloguePublishers)
@@ -498,7 +498,7 @@ export async function getPublisherById(id: number) {
 
 export async function getPublisherBySlug(slug: string, visibleOnly = true) {
   const database = await getDb();
-  if (!database) return null;
+  if (!database) throw new Error('Database not available');
   const conditions = [eq(cataloguePublishers.slug, slug.trim())];
   if (visibleOnly) conditions.push(eq(cataloguePublishers.isVisible, 1));
   const [publisher] = await database
@@ -538,7 +538,7 @@ function publicPublisherAuthorityCondition() {
 
 export async function getPublicPublisherById(id: number) {
   const database = await getDb();
-  if (!database) return null;
+  if (!database) throw new Error('Database not available');
   const rows = await database
     .select({ publisher: cataloguePublishers })
     .from(cataloguePublishers)
@@ -559,7 +559,7 @@ export async function getPublicPublisherById(id: number) {
 
 export async function getPublicPublisherBySlug(slug: string) {
   const database = await getDb();
-  if (!database) return null;
+  if (!database) throw new Error('Database not available');
   const rows = await database
     .select({ publisher: cataloguePublishers })
     .from(cataloguePublishers)
@@ -580,7 +580,7 @@ export async function getPublicPublisherBySlug(slug: string) {
 
 export async function listCataloguePublishers(filters: PublisherFilters = {}) {
   const database = await getDb();
-  if (!database) return [];
+  if (!database) throw new Error('Database not available');
   const conditions: any[] = [];
   if (filters.isVisible !== undefined)
     conditions.push(eq(cataloguePublishers.isVisible, filters.isVisible ? 1 : 0));
@@ -630,7 +630,7 @@ export async function listCataloguePublishers(filters: PublisherFilters = {}) {
 
 export async function listPublicCataloguePublishers(filters: PublisherFilters = {}) {
   const database = await getDb();
-  if (!database) return [];
+  if (!database) throw new Error('Database not available');
   const conditions: any[] = [
     eq(cataloguePublishers.isVisible, 1),
     publicPublisherAuthorityCondition(),
@@ -694,7 +694,7 @@ export async function listPublicPublishersByProvince(
   limit = 10,
 ): Promise<LocalPublisherDiscovery[]> {
   const database = await getDb();
-  if (!database) return [];
+  if (!database) throw new Error('Database not available');
 
   const rows = await database
     .select({
@@ -780,7 +780,7 @@ export async function setPublisherVisibility(id: number, visible: boolean) {
 
 export async function getPublisherDevelopments(publisherId: number) {
   const database = await getDb();
-  if (!database) return [];
+  if (!database) throw new Error('Database not available');
   return database
     .select()
     .from(developments)
@@ -790,7 +790,7 @@ export async function getPublisherDevelopments(publisherId: number) {
 
 export async function getPublisherLeadStats(publisherId: number) {
   const database = await getDb();
-  if (!database) return null;
+  if (!database) throw new Error('Database not available');
   const publisher = await getPublisherById(publisherId);
   if (!publisher) return null;
   const [total] = await database
