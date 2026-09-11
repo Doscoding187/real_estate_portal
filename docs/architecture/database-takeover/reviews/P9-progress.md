@@ -825,3 +825,9 @@ replacement updates the source manifest, and two explicit mirror rebuilds
 produce identical public image rows. The agency attribution integration test
 passed under `pnpm test:authority`; aggregate rebuild and retention/abuse
 evidence remain open.
+
+Explore analytics now has physical aggregate rebuild evidence on the exact
+disposable target. A fixed event sequence was aggregated, deleted, replayed
+under new event identities, and aggregated again to the same complete metrics
+contract. The event facts, rather than a retired aggregate table, are the sole
+authority. Retention and abuse controls remain open.

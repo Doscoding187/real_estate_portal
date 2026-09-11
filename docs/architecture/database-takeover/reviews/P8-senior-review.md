@@ -221,3 +221,11 @@ the public-media rebuild twice. Both rebuilds produce the same one-image mirror
 with the canonical URL, display order, and primary flag. The authority-backed
 test passed on the exact disposable target. Analytics aggregate rebuild and
 retention/abuse review remain open.
+
+Explore aggregate rebuildability is now physical. An isolated Explore content
+row receives a fixed event set, the SQL aggregate is read, the event set is
+deleted and replayed with new idempotency keys, and the aggregate result is
+identical: two views, two distinct viewers and sessions, 50 seconds of watch
+time, and 50 percent completion and engagement rates. The authority-backed
+test passed on the exact disposable target. Retention and abuse controls remain
+open.
