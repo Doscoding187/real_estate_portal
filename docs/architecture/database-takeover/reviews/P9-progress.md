@@ -476,3 +476,15 @@ foundation (2 tests), Shared Living (6 tests), and development publication
 lifecycle (21 tests) passed, 29 tests total. This revalidates billing proof
 state, Shared Living publication/privacy, and development approval,
 publication, withdrawal, and ownership behavior after the latest changes.
+
+The approved analytics performance follow-up is now implemented as migration
+0081 (`0081_explore_analytics_query_index.sql`). The Drizzle model, migration
+manifest, migration-tree authority, and compatibility-exception register agree
+on the composite `explore_engagements(created_at, content_id)` index. The
+governed runner applied it to the exact disposable worktree target, advancing
+the ledger from 0080; schema congruency now matches digest
+`3ee40c54f68e8d30f4498743f12ff7429d2a601434d989557fbb1e27f56ce370` and
+readiness reports `applicationReady: true`. A provider-backed EXPLAIN contract
+passed under `pnpm test:authority`, confirming the index is visible to the
+period-filtered aggregate query. TiDB admission and protected-environment
+verification remain open.

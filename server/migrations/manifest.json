@@ -4,7 +4,7 @@
   "historyTable": "sql_migration_history",
   "attemptTable": "sql_migration_attempts",
   "lockName": "property_listify_manifest_migrations",
-  "expectedHead": "0080_service_lead_request_idempotency.sql",
+  "expectedHead": "0081_explore_analytics_query_index.sql",
   "migrations": [
     {
       "sequence": 0,
@@ -848,6 +848,17 @@
       "statementPolicy": "approved-exception",
       "requiredReferenceDataVersion": null,
       "approvalReference": "DBX-PRELAUNCH-SERVICE-LEAD-IDEMPOTENCY-2026-09-11-Edward"
+    },
+    {
+      "sequence": 81,
+      "filename": "0081_explore_analytics_query_index.sql",
+      "checksum": "7a88bc44b45d58655b9f36b62450277093080481feb447d795c41c7612c71ac3",
+      "parent": "0080_service_lead_request_idempotency.sql",
+      "parentChecksum": "d23c0d5e5c527c09d116bbf390424cf0e5559cd583c8d284f1d1ef0e265f220e",
+      "kind": "exceptional",
+      "statementPolicy": "approved-exception",
+      "requiredReferenceDataVersion": null,
+      "approvalReference": "DBX-PRELAUNCH-EXPLORE-ANALYTICS-QUERY-INDEX-2026-09-11-Edward"
     }
   ]
 }

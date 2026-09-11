@@ -103,7 +103,10 @@ export const exploreEngagements = mysqlTable('explore_engagements', {
   metadata: json('metadata'),
 
   createdAt: timestamp('created_at').defaultNow(), // nullable in DB
-}, table => [uniqueIndex('uq_explore_engagement_event_id').on(table.eventId)]);
+}, table => [
+  uniqueIndex('uq_explore_engagement_event_id').on(table.eventId),
+  index('idx_explore_engagements_created_content').on(table.createdAt, table.contentId),
+]);
 
 /**
  * topics

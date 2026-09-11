@@ -1184,6 +1184,11 @@
       "path": "server/migrations/0080_service_lead_request_idempotency.sql",
       "classification": "canonical active",
       "purpose": "Adds a durable request identity and unique key so service-lead retries replay existing rows instead of duplicating requests."
+    },
+    {
+      "path": "server/migrations/0081_explore_analytics_query_index.sql",
+      "classification": "canonical active",
+      "purpose": "Adds a composite created-at/content index for period-filtered Explore engagement aggregates."
     }
   ],
   "prohibitedPaths": [

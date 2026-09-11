@@ -538,6 +538,52 @@ historical migration evidence; no runtime compatibility exception remains.
 
 Removal workstream: Pre-launch P2 lead-delivery relational authority cutover.
 
+### Exception ID: DBX-PRELAUNCH-EXPLORE-ANALYTICS-QUERY-INDEX-2026-09-11-Edward
+
+Status: approved for the pre-launch disposable-worktree analytics index
+addition.
+
+Owner: Property Listify senior product engineering
+
+Approved by Edward on: 2026-09-11, through the explicit pre-launch database
+architecture takeover authorization.
+
+Business reason: SQL aggregate analytics now filters engagement events by time
+and joins content. The canonical event table lacked a composite access path for
+that query, creating an avoidable full scan as engagement volume grows.
+
+Canonical authority: `drizzle/schema/explore.ts` and migration
+`server/migrations/0081_explore_analytics_query_index.sql`.
+
+Exact files: `drizzle/schema/explore.ts`,
+`server/migrations/0081_explore_analytics_query_index.sql`,
+`server/migrations/manifest.json`, and analytics contract tests.
+
+Tables and columns: `explore_engagements.created_at` and
+`explore_engagements.content_id`, index
+`idx_explore_engagements_created_content`.
+
+Permitted read direction: analytics aggregation may use the composite index;
+event identity and engagement semantics remain unchanged.
+
+Permitted write direction: only the canonical migration runner may create this
+index on the exact task-owned disposable target. No manual DDL or protected
+target is included.
+
+Failure and observability behavior: migration planning/application must verify
+the 0080 parent, manifest checksum, target ownership, and durable attempt
+state. Provider-specific admission remains separately required.
+
+Automated evidence: migration-manifest validation, schema inventory,
+schema-congruency, analytics aggregation unit/contract tests, and a provider
+EXPLAIN check after application.
+
+Expiry or objective removal condition: retain the index while the SQL aggregate
+query exists; remove only if that query authority is retired or replaced by a
+stronger indexed design.
+
+Removal workstream: P8 analytics query-performance closure.
+
 ## Required exception record
 
 Every approved exception must contain:
