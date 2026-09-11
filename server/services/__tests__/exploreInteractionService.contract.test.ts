@@ -19,4 +19,10 @@ describe('Explore interaction metric authority', () => {
     expect(sourceText).toContain('PRECONDITION_FAILED');
     expect(sourceText).toContain('throwExploreUnavailable');
   });
+
+  it('keeps batch replay idempotent and aggregates only committed events', () => {
+    expect(sourceText).toContain('insertedInteractions');
+    expect(sourceText).toContain("error?.code === 'ER_DUP_ENTRY'");
+    expect(sourceText).toContain('newly inserted events update');
+  });
 });

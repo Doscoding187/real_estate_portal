@@ -127,30 +127,42 @@ export class ExploreInteractionService {
     if (!interactions.length) return;
 
     try {
-      const values = interactions.map(i => ({
-        contentId: i.contentId,
-        eventId: i.eventId || randomUUID(),
-        userId: i.userId ?? null,
-        sessionId: i.sessionId ?? '',
-        interactionType: i.interactionType,
-        metadata: {
-          duration: i.duration,
-          feedType: i.feedType,
-          feedContext: i.feedContext,
-          deviceType: i.deviceType,
-          userAgent: i.userAgent,
-          ipAddress: i.ipAddress,
-          ...i.metadata,
-        },
-      }));
+      // Insert each event independently so one browser replay cannot discard
+      // unrelated events in the batch. The unique event identity makes a
+      // duplicate a successful no-op, and only newly inserted events update
+      // the non-authoritative counters below.
+      const insertedInteractions: RecordInteractionOptions[] = [];
+      for (const interaction of interactions) {
+        try {
+          await db.insert(exploreEngagements).values({
+            contentId: interaction.contentId,
+            eventId: interaction.eventId || randomUUID(),
+            userId: interaction.userId ?? null,
+            sessionId: interaction.sessionId ?? '',
+            interactionType: interaction.interactionType,
+            metadata: {
+              duration: interaction.duration,
+              feedType: interaction.feedType,
+              feedContext: interaction.feedContext,
+              deviceType: interaction.deviceType,
+              userAgent: interaction.userAgent,
+              ipAddress: interaction.ipAddress,
+              ...interaction.metadata,
+            },
+          });
+          insertedInteractions.push(interaction);
+        } catch (error: any) {
+          if (isMissingExploreSchema(error)) throwExploreUnavailable(error);
+          if (Number(error?.errno) === 1062 || error?.code === 'ER_DUP_ENTRY') continue;
+          console.error('Error recording batch interaction:', error);
+        }
+      }
 
-      await db.insert(exploreEngagements).values(values);
-
-      // Aggregate per content item
-      const contentIds = Array.from(new Set(interactions.map(i => i.contentId)));
+      // Aggregate per content item for events that actually committed.
+      const contentIds = Array.from(new Set(insertedInteractions.map(i => i.contentId)));
 
       for (const contentId of contentIds) {
-        const last = interactions.filter(i => i.contentId === contentId).pop();
+        const last = insertedInteractions.filter(i => i.contentId === contentId).pop();
         this.updateContentMetrics(contentId, (last?.interactionType as any) ?? 'view').catch(
           console.error,
         );

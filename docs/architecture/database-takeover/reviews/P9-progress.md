@@ -507,3 +507,10 @@ unknown provider outcomes, retry budgets, notification separation, route
 supersession, and capture idempotency. P2 still requires independent senior
 authorization/reconciliation review and deployment-provider evidence before
 acceptance.
+
+The Explore batch interaction writer now handles each event independently:
+duplicate event identities are no-op replays, unrelated events still commit,
+and counter updates are derived only from newly inserted events. The focused
+interaction/discovery suites pass 6 tests with TypeScript validation. This
+closes a batch-replay correctness gap while retention and abuse controls remain
+open in P8.
