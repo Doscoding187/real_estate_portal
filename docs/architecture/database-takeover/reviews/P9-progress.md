@@ -374,3 +374,8 @@ A compact rerun of `e2e/provincial-discovery.spec.ts` under the authority browse
 runner completed with exit code 0: all 21 Desktop Chrome tests passed in 1.2
 minutes. This is fresh public journey evidence; authenticated journeys and
 search-routing contracts remain open as recorded above.
+
+The search-routing rerun was captured with an explicit terminal exit code and
+confirmed 9 failures out of 11 tests (2 passed). The failures are real route or
+fixture integration gaps: province/city/suburb entry remained at `/` or lacked
+expected query parameters. No browser artifacts remain in the worktree.
