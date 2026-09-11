@@ -1870,17 +1870,7 @@ export async function getAllPlatformSettings() {
 export async function getPlatformAnalytics() {
   const db = await getDb();
   if (!db) {
-    return {
-      totalUsers: 0,
-      totalAgencies: 0,
-      totalProperties: 0,
-      activeProperties: 0,
-      totalAgents: 0,
-      paidSubscriptions: 0,
-      monthlyRevenue: 0,
-      userGrowth: 0,
-      propertyGrowth: 0,
-    };
+    throw new Error('Database not available');
   }
 
   // Schema tables are already imported at top level
