@@ -44,8 +44,10 @@ export const locationInsightsService = {
       console.log(`Generating AI insights for ${suburbName}, ${cityName}...`);
 
       if (!process.env.OPENAI_API_KEY) {
-        console.warn('OPENAI_API_KEY not found, returning mock insights');
-        return this.getMockInsights();
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message: 'Location insights are unavailable until the AI provider is configured',
+        });
       }
 
       const completion = await openai.chat.completions.create({
@@ -86,30 +88,8 @@ export const locationInsightsService = {
       };
     } catch (error) {
       console.error('Failed to generate AI insights:', error);
-      return this.getMockInsights();
+      throw error;
     }
-  },
-
-  /**
-   * Verification/Fallback data if AI fails or key is missing
-   */
-  getMockInsights() {
-    return {
-      pros: [
-        'Strong community spirit',
-        'Close to major amenities',
-        'Good investment potential',
-        'Family-friendly atmosphere',
-        'Access to schools',
-      ],
-      cons: [
-        'Traffic during peak hours',
-        'Limited nightlife options',
-        'Distance from CBD',
-        'Construction noise in developing areas',
-      ],
-      source: 'mock',
-    };
   },
 
   /**

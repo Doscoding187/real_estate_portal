@@ -180,3 +180,8 @@ Partner analytics tier benchmarks and boost ROI stubs no longer return empty
 success arrays. They now fail explicitly until canonical benchmark, campaign,
 and billing attribution authorities are approved. The monetization smoke suite
 passed 36 tests with TypeScript validation passing.
+
+Location insights no longer emit fabricated mock pros/cons when the AI provider
+is missing or fails. The service now reports an explicit unavailable error;
+the location authority and hierarchy tests passed 9 tests with TypeScript
+validation passing.

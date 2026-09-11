@@ -792,3 +792,7 @@ and TypeScript validation passed.
 Unimplemented partner analytics benchmark and boost-ROI procedures now fail
 explicitly instead of returning empty success data. The monetization smoke suite
 passed 36 tests and TypeScript validation passed.
+
+Location insights now fail explicitly when their AI provider is unavailable or
+fails, rather than returning fabricated mock content. Focused authority and
+hierarchy tests passed 9 tests with TypeScript validation passing.

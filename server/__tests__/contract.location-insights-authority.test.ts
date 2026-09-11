@@ -13,5 +13,7 @@ describe('location insights authority boundary', () => {
     expect(source).toContain('canonical schema is approved');
     expect(source).not.toContain('Reviews temporarily disabled');
     expect(source).not.toContain('submitReview called but disabled');
+    expect(source).not.toContain('returning mock insights');
+    expect(source).not.toContain("source: 'mock'");
   });
 });
