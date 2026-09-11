@@ -64,6 +64,10 @@ release-plan command refused the disposable worktree with
 `release-plan is not allowed for disposable-worktree`. This confirms release
 planning remains isolated from pre-launch disposable validation.
 
+A combined rerun of consumer persistence and services-engine idempotency also
+passed all 10 physical tests on the rebuilt target, confirming the P1/P8
+durable-write paths do not interfere when exercised in one authority run.
+
 The rebuilt target's launch-readiness agency walkthrough was rerun and passed
 all 11 physical tests, covering onboarding, billing activation, invitation
 acceptance, membership, listing publication, public lead capture, assignment,
