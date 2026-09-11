@@ -28,7 +28,7 @@ describe('ExploreAnalyticsService.getAggregatedMetrics', () => {
     vi.clearAllMocks();
   });
 
-  it('returns zeroed metrics when explore analytics tables are not migrated yet', async () => {
+  it('fails closed when explore analytics tables are not available', async () => {
     const missingSchemaError = new Error('Failed query');
     (missingSchemaError as any).cause = {
       code: 'ER_NO_SUCH_TABLE',
@@ -36,14 +36,9 @@ describe('ExploreAnalyticsService.getAggregatedMetrics', () => {
     };
     mockSelect.mockReturnValue(makeQuery(missingSchemaError));
 
-    await expect(exploreAnalyticsService.getAggregatedMetrics('month')).resolves.toEqual({
-      totalViews: 0,
-      totalUniqueViewers: 0,
-      totalWatchTime: 0,
-      totalSessions: 0,
-      averageSessionDuration: 0,
-      averageCompletionRate: 0,
-      engagementRate: 0,
+    await expect(exploreAnalyticsService.getAggregatedMetrics('month')).rejects.toMatchObject({
+      code: 'PRECONDITION_FAILED',
+      message: 'Explore analytics is unavailable until its canonical schema is established',
     });
   });
 
