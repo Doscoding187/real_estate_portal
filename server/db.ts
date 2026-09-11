@@ -893,7 +893,7 @@ export interface PropertySearchParams {
 
 export async function searchProperties(params: PropertySearchParams) {
   const db = await getDb();
-  if (!db) return [];
+  if (!db) throw new Error('Database not available');
 
   const conditions: SQL[] = [ne(properties.propertyType, 'commercial')];
 
@@ -1784,7 +1784,7 @@ export async function getAgentPerformanceLeaderboard(agencyId: number, months: n
 
 export async function getPlatformSetting(key: string) {
   const db = await getDb();
-  if (!db) return null;
+  if (!db) throw new Error('Database not available');
 
   const result: any = await db.execute(
     sql.raw(`
@@ -4267,7 +4267,7 @@ interface ListingSearchParams {
  */
 export async function searchListings(params: ListingSearchParams) {
   const db = await getDb();
-  if (!db) return [];
+  if (!db) throw new Error('Database not available');
 
   const conditions: SQL[] = [ne(listings.propertyType, 'commercial')];
 
@@ -4426,7 +4426,7 @@ export async function searchListings(params: ListingSearchParams) {
  */
 export async function getFeaturedListings(limit: number = 6) {
   const db = await getDb();
-  if (!db) return [];
+  if (!db) throw new Error('Database not available');
 
   const results = await db
     .select()
