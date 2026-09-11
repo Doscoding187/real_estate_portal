@@ -1083,14 +1083,14 @@ export async function getUserFavoriteFacts(userId: number) {
 
 export async function getAllAgents() {
   const db = await getDb();
-  if (!db) return [];
+  if (!db) throw new Error('Database not available');
 
   return await db.select().from(agents);
 }
 
 export async function getAgentById(id: number) {
   const db = await getDb();
-  if (!db) return undefined;
+  if (!db) throw new Error('Database not available');
 
   const result = await db.select().from(agents).where(eq(agents.id, id)).limit(1);
   return result.length > 0 ? result[0] : undefined;
@@ -1098,7 +1098,7 @@ export async function getAgentById(id: number) {
 
 export async function getFeaturedAgents(limit: number = 6) {
   const db = await getDb();
-  if (!db) return [];
+  if (!db) throw new Error('Database not available');
 
   return await db.select().from(agents).where(eq(agents.isFeatured, 1)).limit(limit);
 }
@@ -1107,14 +1107,14 @@ export async function getFeaturedAgents(limit: number = 6) {
 
 export async function getAllDevelopments() {
   const db = await getDb();
-  if (!db) return [];
+  if (!db) throw new Error('Database not available');
 
   return await db.select().from(developments);
 }
 
 export async function getDevelopmentById(id: number) {
   const db = await getDb();
-  if (!db) return undefined;
+  if (!db) throw new Error('Database not available');
 
   const result = await db.select().from(developments).where(eq(developments.id, id)).limit(1);
   return result.length > 0 ? result[0] : undefined;
@@ -1122,14 +1122,14 @@ export async function getDevelopmentById(id: number) {
 
 export async function getFeaturedDevelopments(limit: number = 6) {
   const db = await getDb();
-  if (!db) return [];
+  if (!db) throw new Error('Database not available');
 
   return await db.select().from(developments).where(eq(developments.isFeatured, 1)).limit(limit);
 }
 
 export async function getDevelopmentProperties(developmentId: number) {
   const db = await getDb();
-  if (!db) return [];
+  if (!db) throw new Error('Database not available');
 
   return await db.select().from(properties).where(eq(properties.developmentId, developmentId));
 }
@@ -1139,7 +1139,7 @@ export async function getDevelopmentProperties(developmentId: number) {
  */
 export async function searchDevelopers(query: string, limit: number = 10) {
   const db = await getDb();
-  if (!db) return [];
+  if (!db) throw new Error('Database not available');
 
   return await db
     .select({
@@ -1172,7 +1172,7 @@ export async function searchDevelopers(query: string, limit: number = 10) {
 
 export async function getAllServices() {
   const db = await getDb();
-  if (!db) return [];
+  if (!db) throw new Error('Database not available');
 
   // services table would need to be imported at top if used
   return await db.select().from(services);
@@ -1180,7 +1180,7 @@ export async function getAllServices() {
 
 export async function getServicesByCategory(category: string) {
   const db = await getDb();
-  if (!db) return [];
+  if (!db) throw new Error('Database not available');
 
   const categoryId = Number(category);
   if (!Number.isFinite(categoryId) || categoryId <= 0) {
@@ -1193,7 +1193,7 @@ export async function getServicesByCategory(category: string) {
 
 export async function getReviewsByTarget(reviewType: string, targetId: number) {
   const db = await getDb();
-  if (!db) return [];
+  if (!db) throw new Error('Database not available');
 
   // reviews table would need to be imported at top if used
   return await db
