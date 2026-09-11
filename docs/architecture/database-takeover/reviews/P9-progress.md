@@ -709,3 +709,6 @@ subscriptions through typed billable accounts rather than owner-pair predicates.
 Public property eligibility now relies on the typed personal-agent account
 match itself rather than treating the polymorphic subscription owner type as an
 independent authority. Its 12 public inventory contract tests remain green.
+
+Physical commercial-capacity and agency-operating-home fixtures now create and
+attach typed agency/agent billable accounts before inserting subscriptions.

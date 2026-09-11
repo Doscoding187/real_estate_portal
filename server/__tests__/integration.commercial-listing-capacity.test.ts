@@ -4,6 +4,7 @@ import {
   agencies,
   agencyBranding,
   agents,
+  billableAccounts,
   listingApprovalQueue,
   listings,
   plans,
@@ -60,6 +61,7 @@ async function insertUser(
   } as any);
   const id = insertId(result);
   created.users.push(id);
+  await db.insert(billableAccounts).values({ accountKind: 'agent', userId: id } as any);
   return id;
 }
 
@@ -79,6 +81,7 @@ async function insertAgency(label: string) {
   } as any);
   const id = insertId(result);
   created.agencies.push(id);
+  await db.insert(billableAccounts).values({ accountKind: 'agency', agencyId: id } as any);
   await db.insert(agencyBranding).values({
     agencyId: id,
     companyName: `${label} Agency`,
@@ -126,9 +129,19 @@ async function attachCanonicalPlan(ownerType: 'agent' | 'agency', ownerId: numbe
     .where(eq(plans.name, planName))
     .limit(1);
   if (!plan) throw new Error(`Canonical ${planName} plan is missing.`);
+  const accountPredicate = ownerType === 'agent'
+    ? eq(billableAccounts.userId, ownerId)
+    : eq(billableAccounts.agencyId, ownerId);
+  const [account] = await db
+    .select({ id: billableAccounts.id })
+    .from(billableAccounts)
+    .where(and(eq(billableAccounts.accountKind, ownerType), accountPredicate))
+    .limit(1);
+  if (!account) throw new Error(`Missing ${ownerType} billable account ${ownerId}.`);
   const [subscriptionResult] = await db.insert(subscriptions).values({
     ownerType,
     ownerId,
+    billableAccountId: account.id,
     planId: plan.id,
     status: 'active',
     currentPeriodStart: timestampFromNow(-1),
