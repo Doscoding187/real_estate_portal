@@ -679,9 +679,7 @@ async function upsertPendingSubscription(
   const [existing] = await db
     .select()
     .from(subscriptions)
-    .where(
-      and(eq(subscriptions.ownerType, input.ownerType), eq(subscriptions.ownerId, input.ownerId)),
-    )
+    .where(eq(subscriptions.billableAccountId, billableAccountId))
     .limit(1);
 
   if (
@@ -720,9 +718,7 @@ async function upsertPendingSubscription(
   const [subscription] = await db
     .select()
     .from(subscriptions)
-    .where(
-      and(eq(subscriptions.ownerType, input.ownerType), eq(subscriptions.ownerId, input.ownerId)),
-    )
+    .where(eq(subscriptions.billableAccountId, billableAccountId))
     .limit(1);
 
   if (!subscription) {
@@ -886,6 +882,7 @@ async function lockLaunchBillingState(tx: BillingTx, owner: LaunchBillingOwner) 
     return lockAgencyBillingState(tx, owner.ownerId);
   }
 
+  const billableAccountId = await resolveBillableAccountId(tx, owner.ownerType, owner.ownerId);
   if (owner.ownerType === 'agent') {
     await tx.execute(sql`SELECT id FROM users WHERE id = ${owner.ownerId} FOR UPDATE`);
   } else {
@@ -896,14 +893,14 @@ async function lockLaunchBillingState(tx: BillingTx, owner: LaunchBillingOwner) 
   await tx.execute(sql`
     SELECT id
     FROM subscriptions
-    WHERE owner_type = ${owner.ownerType} AND owner_id = ${owner.ownerId}
+    WHERE billable_account_id = ${billableAccountId}
     FOR UPDATE
   `);
   const [subscription] = await tx
     .select()
     .from(subscriptions)
     .where(
-      and(eq(subscriptions.ownerType, owner.ownerType), eq(subscriptions.ownerId, owner.ownerId)),
+      eq(subscriptions.billableAccountId, billableAccountId),
     )
     .limit(1);
   return { subscription: subscription || null };
@@ -1048,8 +1045,7 @@ export async function requestPaidLaunchAccessInvoice(input: {
       .from(billingInvoices)
       .where(
         and(
-          eq(billingInvoices.ownerType, owner.ownerType),
-          eq(billingInvoices.ownerId, owner.ownerId),
+          eq(billingInvoices.billableAccountId, subscriptionResult.subscription.billableAccountId),
           eq(billingInvoices.subscriptionId, subscriptionResult.subscription.id),
           inArray(billingInvoices.status, ['issued', 'submitted', 'partially_paid', 'overdue']),
         ),
@@ -2839,12 +2835,7 @@ export async function requestAgencyCancellationAtPeriodEnd(user: BillingUser) {
   const agencyId = assertAgencyAdmin(user);
 
   return db.transaction(async tx => {
-    await lockAgencyBillingState(tx, agencyId);
-    const [subscription] = await tx
-      .select()
-      .from(subscriptions)
-      .where(and(eq(subscriptions.ownerType, 'agency'), eq(subscriptions.ownerId, agencyId)))
-      .limit(1);
+    const { subscription } = await lockAgencyBillingState(tx, agencyId);
 
     if (!subscription) {
       throw new TRPCError({ code: 'NOT_FOUND', message: 'No agency subscription found.' });
@@ -2900,12 +2891,7 @@ export async function restoreAgencySubscription(user: BillingUser) {
   const agencyId = assertAgencyAdmin(user);
 
   return db.transaction(async tx => {
-    await lockAgencyBillingState(tx, agencyId);
-    const [subscription] = await tx
-      .select()
-      .from(subscriptions)
-      .where(and(eq(subscriptions.ownerType, 'agency'), eq(subscriptions.ownerId, agencyId)))
-      .limit(1);
+    const { subscription } = await lockAgencyBillingState(tx, agencyId);
 
     if (!subscription) {
       throw new TRPCError({ code: 'NOT_FOUND', message: 'No agency subscription found.' });

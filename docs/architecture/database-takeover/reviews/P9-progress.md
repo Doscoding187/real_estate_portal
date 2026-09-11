@@ -671,3 +671,8 @@ and the agency operating-home/commercial authority contracts remain green.
 Public property eligibility now admits only personal-agent subscriptions whose
 typed billable account matches the agent user. The public inventory authority
 contracts pass 12 tests after this read-path cutover.
+
+Core billing subscription upserts, launch-state locks, outstanding-invoice
+checks, and agency cancellation/restore flows now use the typed account foreign
+key for reads and locking. Type-checks plus provider-independent and developer
+subscription contracts pass 15 tests.
