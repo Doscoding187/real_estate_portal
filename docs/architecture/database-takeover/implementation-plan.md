@@ -4,8 +4,8 @@ Status: planning handoff, 2026-09-09. Owner of architectural decisions and final
 
 Current execution state: P0 is complete and P1 is accepted after senior
 review. The scoped P6 offer-acceptance race is accepted, while P2 remains
-review-open, P3 has an incomplete-evidence senior review, and P4 has a scoped
-senior acceptance; P5–P8 remain mandatory
+review-open, P3 has an incomplete-evidence senior review, P4 has a scoped
+senior acceptance, and P5 has an incomplete senior review; P6–P8 remain mandatory
 domain packets and P9 is in closure audit. The task-owned disposable target is at
 manifest head `0080_service_lead_request_idempotency.sql`, with matching
 physical/model digest

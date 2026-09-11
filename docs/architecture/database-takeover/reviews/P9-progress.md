@@ -120,7 +120,9 @@ and agency deal acceptance races. The identified P6 offer-acceptance race is
 now accepted in `reviews/P6-senior-review.md`; broader P6 lifecycle coverage
 remains open. P5's billable-owner alternatives and recommended future model
 are recorded in `p5-billing-authority-decision.md`, but implementation is not
-complete. P3 has an explicit incomplete-evidence senior review in
+complete. P5 also has an explicit incomplete senior review in
+`reviews/P5-senior-review.md`; billable-account migration and entitlement race
+proof remain open. P3 has an explicit incomplete-evidence senior review in
 `reviews/P3-senior-review.md`; its writer census and cross-supply rebuild proof
 remain open. P4's exercised tenant and principal boundaries are accepted in
 `reviews/P4-senior-review.md`; account, credential, and complete fallback-path
