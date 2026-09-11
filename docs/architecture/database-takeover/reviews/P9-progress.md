@@ -685,3 +685,7 @@ billable-account foreign key for both SQL locking and row selection.
 
 The finance payment queue now resolves agency and developer display entities
 through the invoice's typed billable account instead of polymorphic owner pairs.
+
+The governed publication-entitlement adapter now requires the exact typed agency
+billable account and writes its subscription foreign key, preventing canonical
+fixtures from introducing null staged ownership.
