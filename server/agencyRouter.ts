@@ -46,6 +46,24 @@ import {
   sellerMandateOperations,
   SELLER_PROSPECT_TERMINAL_STAGE_VALUES,
 } from '../drizzle/schema';
+
+async function withDeadlockRetry(operation: () => Promise<any>): Promise<any> {
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      return await operation();
+    } catch (error) {
+      const code =
+        (error as { cause?: { code?: string }; code?: string })?.cause?.code ??
+        (error as { code?: string })?.code;
+      if (
+        attempt >= 1 ||
+        !['ER_LOCK_DEADLOCK', 'ER_LOCK_WAIT_TIMEOUT', '40001'].includes(code ?? '')
+      ) {
+        throw error;
+      }
+    }
+  }
+}
 import {
   eq,
   like,
@@ -4034,284 +4052,289 @@ export const agencyRouter = router({
       }
       const authenticatedUser = requireUser(ctx);
 
-      const result = await db.transaction(async tx => {
-        await tx.execute(sql`SELECT id FROM users WHERE id = ${authenticatedUser.id} FOR UPDATE`);
-        const [principal] = await tx
-          .select()
-          .from(users)
-          .where(eq(users.id, authenticatedUser.id))
-          .limit(1);
-        if (!principal) {
-          throw new TRPCError({
-            code: 'FORBIDDEN',
-            message: 'Agency onboarding requires a valid principal account.',
-          });
-        }
-        if (Number(principal.emailVerified) !== 1) {
-          throw new TRPCError({
-            code: 'PRECONDITION_FAILED',
-            message: 'Verify your email before creating an agency.',
-          });
-        }
-        if (principal.role !== 'agency_admin') {
-          throw new TRPCError({
-            code: 'FORBIDDEN',
-            message: 'Only a registered agency principal can create an agency.',
-          });
-        }
-        const normalizedTeamEmails = Array.from(
-          new Set(
-            input.teamEmails
-              .map(email => email.trim().toLowerCase())
-              .filter(Boolean)
-              .filter(
-                email =>
-                  email !==
-                  String(principal.email || '')
-                    .trim()
-                    .toLowerCase(),
-              ),
-          ),
-        );
+      const result = await withDeadlockRetry(() =>
+        db.transaction(async tx => {
+          await tx.execute(sql`SELECT id FROM users WHERE id = ${authenticatedUser.id} FOR UPDATE`);
+          const [principal] = await tx
+            .select()
+            .from(users)
+            .where(eq(users.id, authenticatedUser.id))
+            .limit(1);
+          if (!principal) {
+            throw new TRPCError({
+              code: 'FORBIDDEN',
+              message: 'Agency onboarding requires a valid principal account.',
+            });
+          }
+          if (Number(principal.emailVerified) !== 1) {
+            throw new TRPCError({
+              code: 'PRECONDITION_FAILED',
+              message: 'Verify your email before creating an agency.',
+            });
+          }
+          if (principal.role !== 'agency_admin') {
+            throw new TRPCError({
+              code: 'FORBIDDEN',
+              message: 'Only a registered agency principal can create an agency.',
+            });
+          }
+          const normalizedTeamEmails = Array.from(
+            new Set(
+              input.teamEmails
+                .map(email => email.trim().toLowerCase())
+                .filter(Boolean)
+                .filter(
+                  email =>
+                    email !==
+                    String(principal.email || '')
+                      .trim()
+                      .toLowerCase(),
+                ),
+            ),
+          );
 
-        const linkedAgents = await tx
-          .select({ id: agents.id, agencyId: agents.agencyId })
-          .from(agents)
-          .where(eq(agents.userId, principal.id));
-        if (linkedAgents.length) {
-          const memberships = await tx
-            .select({ id: agencyAgentMemberships.id })
-            .from(agencyAgentMemberships)
-            .where(
-              inArray(
-                agencyAgentMemberships.agentId,
-                linkedAgents.map(agent => agent.id),
-              ),
-            );
-          throw new TRPCError({
-            code: 'CONFLICT',
-            message:
-              memberships.length || linkedAgents.some(agent => agent.agencyId)
-                ? 'This account already has an agency membership and cannot create a new agency.'
-                : 'This account is already an agent identity and cannot become an agency principal through onboarding.',
-          });
-        }
+          const linkedAgents = await tx
+            .select({ id: agents.id, agencyId: agents.agencyId })
+            .from(agents)
+            .where(eq(agents.userId, principal.id));
+          if (linkedAgents.length) {
+            const memberships = await tx
+              .select({ id: agencyAgentMemberships.id })
+              .from(agencyAgentMemberships)
+              .where(
+                inArray(
+                  agencyAgentMemberships.agentId,
+                  linkedAgents.map(agent => agent.id),
+                ),
+              );
+            throw new TRPCError({
+              code: 'CONFLICT',
+              message:
+                memberships.length || linkedAgents.some(agent => agent.agencyId)
+                  ? 'This account already has an agency membership and cannot create a new agency.'
+                  : 'This account is already an agent identity and cannot become an agency principal through onboarding.',
+            });
+          }
 
-        if (principal.agencyId) {
-          const [[existingAgency], [existingBranding], [agencyAccount], [existingSubscription]] =
-            await Promise.all([
-              tx.select().from(agencies).where(eq(agencies.id, principal.agencyId)).limit(1),
-              tx
-                .select()
-                .from(agencyBranding)
-                .where(eq(agencyBranding.agencyId, principal.agencyId))
-                .limit(1),
-              tx
-                .select({ id: billableAccounts.id })
-                .from(billableAccounts)
-                .where(
-                  and(
-                    eq(billableAccounts.accountKind, 'agency'),
-                    eq(billableAccounts.agencyId, principal.agencyId),
-                  ),
-                )
-                .limit(1),
-              tx
-                .select()
-                .from(subscriptions)
-                .where(
-                  sql`EXISTS (
+          if (principal.agencyId) {
+            const [[existingAgency], [existingBranding], [agencyAccount], [existingSubscription]] =
+              await Promise.all([
+                tx.select().from(agencies).where(eq(agencies.id, principal.agencyId)).limit(1),
+                tx
+                  .select()
+                  .from(agencyBranding)
+                  .where(eq(agencyBranding.agencyId, principal.agencyId))
+                  .limit(1),
+                tx
+                  .select({ id: billableAccounts.id })
+                  .from(billableAccounts)
+                  .where(
+                    and(
+                      eq(billableAccounts.accountKind, 'agency'),
+                      eq(billableAccounts.agencyId, principal.agencyId),
+                    ),
+                  )
+                  .limit(1),
+                tx
+                  .select()
+                  .from(subscriptions)
+                  .where(
+                    sql`EXISTS (
                 SELECT 1
                 FROM ${billableAccounts} account
                 WHERE account.id = ${subscriptions.billableAccountId}
                   AND account.account_kind = 'agency'
                   AND account.agency_id = ${principal.agencyId}
               )`,
-                )
-                .limit(1),
-            ]);
-          if (
-            !existingAgency ||
-            !existingBranding ||
-            !agencyAccount ||
-            !existingSubscription ||
-            !Number(existingSubscription.planId || 0)
-          ) {
+                  )
+                  .limit(1),
+              ]);
+            if (
+              !existingAgency ||
+              !existingBranding ||
+              !agencyAccount ||
+              !existingSubscription ||
+              !Number(existingSubscription.planId || 0)
+            ) {
+              throw new TRPCError({
+                code: 'CONFLICT',
+                message:
+                  'This account is linked to an incomplete agency onboarding record. Contact support to resolve it.',
+              });
+            }
+            return {
+              agencyId: Number(existingAgency.id),
+              slug: existingAgency.slug,
+              subscriptionId: Number(existingSubscription.id),
+              planId: Number(existingSubscription.planId || 0),
+              alreadyCreated: true,
+            };
+          }
+
+          const [plan] = await tx.select().from(plans).where(eq(plans.id, input.planId)).limit(1);
+          if (!plan || Number(plan.isActive) !== 1 || plan.segment !== 'agency') {
+            throw new TRPCError({
+              code: 'PRECONDITION_FAILED',
+              message: 'Select an active agency plan.',
+            });
+          }
+          const commercialTerm = resolveCommercialTerm(plan);
+          if (commercialTerm.kind === 'free_trial') {
+            throw new TRPCError({
+              code: 'PRECONDITION_FAILED',
+              message:
+                'Free agency trials are retired. Request Agency Launch Access and complete manual-EFT verification.',
+            });
+          }
+          if (commercialTerm.kind === 'paid_launch_access') {
+            if (
+              getCommercialProductKey(plan) !== 'agency_launch_access' ||
+              commercialTerm.durationDays !== 90 ||
+              commercialTerm.autoRenews ||
+              getConfiguredLaunchFeeMinor(plan) !== 99900
+            ) {
+              throw new TRPCError({
+                code: 'PRECONDITION_FAILED',
+                message:
+                  'The selected agency Launch Access product is not configured with its approved terms.',
+              });
+            }
+          } else {
+            if (!['month', 'year'].includes(String(plan.interval))) {
+              throw new TRPCError({
+                code: 'PRECONDITION_FAILED',
+                message: 'The selected agency plan has an unsupported billing interval.',
+              });
+            }
+            if (getManualEftBillingAmount(plan, 'monthly') <= 0) {
+              throw new TRPCError({
+                code: 'PRECONDITION_FAILED',
+                message: 'The selected agency plan has no valid manual-EFT price.',
+              });
+            }
+          }
+          const entitlementRows = await tx
+            .select({
+              featureKey: planEntitlements.featureKey,
+              valueJson: planEntitlements.valueJson,
+            })
+            .from(planEntitlements)
+            .where(eq(planEntitlements.planId, plan.id));
+          const entitlements = Object.fromEntries(
+            entitlementRows.map(row => [row.featureKey, row.valueJson]),
+          );
+          if (getEntitlementNumber(entitlements, 'max_active_listings', 0) <= 0) {
+            throw new TRPCError({
+              code: 'PRECONDITION_FAILED',
+              message: 'The selected agency plan does not include listing publication capacity.',
+            });
+          }
+
+          const existing = await tx
+            .select()
+            .from(agencies)
+            .where(
+              or(
+                eq(agencies.name, input.basicInfo.name),
+                eq(agencies.email, input.basicInfo.email),
+              ),
+            )
+            .limit(1);
+          if (existing.length) {
             throw new TRPCError({
               code: 'CONFLICT',
-              message:
-                'This account is linked to an incomplete agency onboarding record. Contact support to resolve it.',
+              message: 'Agency name or email already registered.',
             });
           }
-          return {
-            agencyId: Number(existingAgency.id),
-            slug: existingAgency.slug,
-            subscriptionId: Number(existingSubscription.id),
-            planId: Number(existingSubscription.planId || 0),
-            alreadyCreated: true,
-          };
-        }
 
-        const [plan] = await tx.select().from(plans).where(eq(plans.id, input.planId)).limit(1);
-        if (!plan || Number(plan.isActive) !== 1 || plan.segment !== 'agency') {
-          throw new TRPCError({
-            code: 'PRECONDITION_FAILED',
-            message: 'Select an active agency plan.',
+          const slug = input.basicInfo.name
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-|-$/g, '');
+          const [slugExists] = await tx
+            .select()
+            .from(agencies)
+            .where(eq(agencies.slug, slug))
+            .limit(1);
+          const finalSlug = slugExists ? `${slug}-${Date.now()}` : slug;
+          const [agencyResult] = await tx.insert(agencies).values({
+            name: input.basicInfo.name,
+            slug: finalSlug,
+            description: input.basicInfo.description,
+            email: input.basicInfo.email,
+            phone: input.basicInfo.phone || null,
+            website: input.basicInfo.website || null,
+            address: input.basicInfo.address,
+            city: input.basicInfo.city,
+            province: input.basicInfo.province,
+            logo: input.branding.logoUrl || null,
+            subscriptionPlan: 'free',
+            subscriptionStatus: 'pending_payment',
+            isVerified: 0,
           });
-        }
-        const commercialTerm = resolveCommercialTerm(plan);
-        if (commercialTerm.kind === 'free_trial') {
-          throw new TRPCError({
-            code: 'PRECONDITION_FAILED',
-            message:
-              'Free agency trials are retired. Request Agency Launch Access and complete manual-EFT verification.',
-          });
-        }
-        if (commercialTerm.kind === 'paid_launch_access') {
-          if (
-            getCommercialProductKey(plan) !== 'agency_launch_access' ||
-            commercialTerm.durationDays !== 90 ||
-            commercialTerm.autoRenews ||
-            getConfiguredLaunchFeeMinor(plan) !== 99900
-          ) {
-            throw new TRPCError({
-              code: 'PRECONDITION_FAILED',
-              message:
-                'The selected agency Launch Access product is not configured with its approved terms.',
-            });
-          }
-        } else {
-          if (!['month', 'year'].includes(String(plan.interval))) {
-            throw new TRPCError({
-              code: 'PRECONDITION_FAILED',
-              message: 'The selected agency plan has an unsupported billing interval.',
-            });
-          }
-          if (getManualEftBillingAmount(plan, 'monthly') <= 0) {
-            throw new TRPCError({
-              code: 'PRECONDITION_FAILED',
-              message: 'The selected agency plan has no valid manual-EFT price.',
-            });
-          }
-        }
-        const entitlementRows = await tx
-          .select({
-            featureKey: planEntitlements.featureKey,
-            valueJson: planEntitlements.valueJson,
-          })
-          .from(planEntitlements)
-          .where(eq(planEntitlements.planId, plan.id));
-        const entitlements = Object.fromEntries(
-          entitlementRows.map(row => [row.featureKey, row.valueJson]),
-        );
-        if (getEntitlementNumber(entitlements, 'max_active_listings', 0) <= 0) {
-          throw new TRPCError({
-            code: 'PRECONDITION_FAILED',
-            message: 'The selected agency plan does not include listing publication capacity.',
-          });
-        }
+          const agencyId = Number(agencyResult.insertId);
 
-        const existing = await tx
-          .select()
-          .from(agencies)
-          .where(
-            or(eq(agencies.name, input.basicInfo.name), eq(agencies.email, input.basicInfo.email)),
-          )
-          .limit(1);
-        if (existing.length) {
-          throw new TRPCError({
-            code: 'CONFLICT',
-            message: 'Agency name or email already registered.',
-          });
-        }
-
-        const slug = input.basicInfo.name
-          .toLowerCase()
-          .replace(/[^a-z0-9]+/g, '-')
-          .replace(/^-|-$/g, '');
-        const [slugExists] = await tx
-          .select()
-          .from(agencies)
-          .where(eq(agencies.slug, slug))
-          .limit(1);
-        const finalSlug = slugExists ? `${slug}-${Date.now()}` : slug;
-        const [agencyResult] = await tx.insert(agencies).values({
-          name: input.basicInfo.name,
-          slug: finalSlug,
-          description: input.basicInfo.description,
-          email: input.basicInfo.email,
-          phone: input.basicInfo.phone || null,
-          website: input.basicInfo.website || null,
-          address: input.basicInfo.address,
-          city: input.basicInfo.city,
-          province: input.basicInfo.province,
-          logo: input.branding.logoUrl || null,
-          subscriptionPlan: 'free',
-          subscriptionStatus: 'pending_payment',
-          isVerified: 0,
-        });
-        const agencyId = Number(agencyResult.insertId);
-
-        await tx.insert(agencyBranding).values({
-          agencyId,
-          primaryColor: input.branding.primaryColor,
-          secondaryColor: input.branding.secondaryColor,
-          companyName: input.branding.companyName,
-          tagline: input.branding.tagline || null,
-          logoUrl: input.branding.logoUrl || null,
-          isEnabled: 1,
-        });
-
-        const principalPhone = input.basicInfo.phone?.trim();
-        await tx
-          .update(users)
-          .set({
+          await tx.insert(agencyBranding).values({
             agencyId,
-            role: 'agency_admin',
-            ...(principalPhone ? { phone: principalPhone } : {}),
-            updatedAt: new Date(),
-          })
-          .where(eq(users.id, principal.id));
+            primaryColor: input.branding.primaryColor,
+            secondaryColor: input.branding.secondaryColor,
+            companyName: input.branding.companyName,
+            tagline: input.branding.tagline || null,
+            logoUrl: input.branding.logoUrl || null,
+            isEnabled: 1,
+          });
 
-        const subscription = await setSubscriptionPlanForOwner({
-          ownerType: 'agency',
-          ownerId: agencyId,
-          planId: plan.id,
-          status: 'pending_payment',
-          allowPendingPayment: commercialTerm.kind === 'paid_launch_access',
-          metadata: {
-            source: 'agency_onboarding',
-            legacy_agency_subscription_status: 'pending_payment',
-            commercial_term_kind: commercialTerm.kind,
-            commercial_product_key: getCommercialProductKey(plan),
-          },
-          actorUserId: principal.id,
-          db: tx,
-        });
-        if (!subscription) throw new Error('Unable to create the canonical agency subscription.');
-
-        if (normalizedTeamEmails.length) {
-          await tx.insert(invitations).values(
-            normalizedTeamEmails.map(email => ({
+          const principalPhone = input.basicInfo.phone?.trim();
+          await tx
+            .update(users)
+            .set({
               agencyId,
-              email,
-              invitedBy: principal.id,
-              role: 'agent',
-              token: randomBytes(32).toString('hex'),
-              status: 'pending' as const,
-              expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-            })),
-          );
-        }
+              role: 'agency_admin',
+              ...(principalPhone ? { phone: principalPhone } : {}),
+              updatedAt: new Date(),
+            })
+            .where(eq(users.id, principal.id));
 
-        return {
-          agencyId,
-          slug: finalSlug,
-          subscriptionId: subscription.id,
-          planId: plan.id,
-          alreadyCreated: false,
-        };
-      });
+          const subscription = await setSubscriptionPlanForOwner({
+            ownerType: 'agency',
+            ownerId: agencyId,
+            planId: plan.id,
+            status: 'pending_payment',
+            allowPendingPayment: commercialTerm.kind === 'paid_launch_access',
+            metadata: {
+              source: 'agency_onboarding',
+              legacy_agency_subscription_status: 'pending_payment',
+              commercial_term_kind: commercialTerm.kind,
+              commercial_product_key: getCommercialProductKey(plan),
+            },
+            actorUserId: principal.id,
+            db: tx,
+          });
+          if (!subscription) throw new Error('Unable to create the canonical agency subscription.');
+
+          if (normalizedTeamEmails.length) {
+            await tx.insert(invitations).values(
+              normalizedTeamEmails.map(email => ({
+                agencyId,
+                email,
+                invitedBy: principal.id,
+                role: 'agent',
+                token: randomBytes(32).toString('hex'),
+                status: 'pending' as const,
+                expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+              })),
+            );
+          }
+
+          return {
+            agencyId,
+            slug: finalSlug,
+            subscriptionId: subscription.id,
+            planId: plan.id,
+            alreadyCreated: false,
+          };
+        }),
+      );
 
       if (!result.alreadyCreated) {
         await logAudit({
