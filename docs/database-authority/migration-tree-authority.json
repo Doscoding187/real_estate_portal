@@ -1219,6 +1219,11 @@
       "path": "server/migrations/0087_billing_provider_event_leases.sql",
       "classification": "canonical active",
       "purpose": "Adds due-time and lease-token state to fence crashed billing provider workers and bound retry recovery."
+    },
+    {
+      "path": "server/migrations/0088_retire_obsolete_billing_families.sql",
+      "classification": "canonical active",
+      "purpose": "Removes empty, unreachable pre-launch agency, transaction, and historical invoice billing families."
     }
   ],
   "prohibitedPaths": [

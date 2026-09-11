@@ -717,7 +717,7 @@ attach typed agency/agent billable accounts before inserting subscriptions.
 The exact disposable target had zero null staged account references across all
 five active billing tables. Migrations 0086 and 0087 now enforce those columns as
 non-null, and authority status reports manifest-head-ready and schema-congruent
-at migration head 0087.
+at migration head 0088.
 
 Additional physical agency fixtures (performance, scorecard, and attribution)
 now create typed billable accounts and populate subscription foreign keys, so
@@ -740,3 +740,9 @@ tests pass.
 Payment-proof mutations now consume the invoice's mandatory typed account
 reference directly; the former null-account resolution fallback was removed
 after migration 0086.
+
+Migration 0088 retires the empty, unreachable `agency_subscriptions`,
+`billing_transactions`, and historical `invoices` families. The exact
+disposable target was verified at zero rows before application; schema
+congruency and the full authority gate pass with 214 canonical tables and 89
+active migrations.

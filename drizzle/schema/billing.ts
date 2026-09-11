@@ -21,7 +21,7 @@ import {
 } from 'drizzle-orm/mysql-core';
 import { sql } from 'drizzle-orm';
 import { users } from './core';
-import { agencies, agencySubscriptions } from './agencies';
+import { agencies } from './agencies';
 import { developerOrganisations } from './developerIdentity';
 
 export const plans = mysqlTable('plans', {
@@ -423,38 +423,6 @@ export const subscriptionEvents = mysqlTable(
   table => [index('idx_user').on(table.userId), index('idx_event_type').on(table.eventType)],
 );
 
-export const billingTransactions = mysqlTable(
-  'billing_transactions',
-  {
-    id: int().autoincrement().primaryKey(),
-    userId: int('user_id')
-      .notNull()
-      .references(() => users.id),
-    subscriptionId: int('subscription_id'),
-    transactionType: mysqlEnum('transaction_type', [
-      'subscription_create',
-      'subscription_renew',
-      'upgrade',
-      'downgrade',
-      'addon_purchase',
-      'refund',
-      'failed_payment',
-      'trial_conversion',
-    ]).notNull(),
-    amountZar: int('amount_zar').notNull(),
-    currency: varchar({ length: 3 }).default('ZAR'),
-    status: mysqlEnum(['pending', 'completed', 'failed', 'refunded']).default('pending'),
-    paymentGateway: mysqlEnum('payment_gateway', ['stripe', 'paystack', 'manual']).notNull(),
-    gatewayTransactionId: varchar('gateway_transaction_id', { length: 255 }),
-    gatewayInvoiceId: varchar('gateway_invoice_id', { length: 255 }),
-    description: text(),
-    metadata: json(),
-    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow(),
-    updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow(),
-  },
-  table => [index('idx_user').on(table.userId), index('idx_status').on(table.status)],
-);
-
 export const boostCredits = mysqlTable(
   'boost_credits',
   {
@@ -471,39 +439,6 @@ export const boostCredits = mysqlTable(
   },
   table => [index('idx_user').on(table.userId), index('unique_user_credits').on(table.userId)],
 );
-
-export const invoices = mysqlTable('invoices', {
-  id: int().autoincrement().primaryKey(),
-  agencyId: int()
-    .notNull()
-    .references(() => agencies.id, { onDelete: 'cascade' }),
-  subscriptionId: int().references(() => agencySubscriptions.id, { onDelete: 'set null' }),
-  stripeInvoiceId: varchar({ length: 100 }),
-  stripeCustomerId: varchar({ length: 100 }),
-  amount: int().notNull(),
-  currency: varchar({ length: 3 }).default('ZAR').notNull(),
-  status: mysqlEnum(['draft', 'open', 'paid', 'void', 'uncollectible']).default('draft').notNull(),
-  invoicePdf: text(),
-  hostedInvoiceUrl: text(),
-  invoiceNumber: varchar({ length: 50 }),
-  description: text(),
-  billingReason: mysqlEnum([
-    'subscription_cycle',
-    'subscription_create',
-    'subscription_update',
-    'subscription_finalize',
-    'manual',
-  ])
-    .default('subscription_cycle')
-    .notNull(),
-  periodStart: timestamp({ mode: 'string' }),
-  periodEnd: timestamp({ mode: 'string' }),
-  paidAt: timestamp({ mode: 'string' }),
-  dueDate: timestamp({ mode: 'string' }),
-  metadata: text(),
-  createdAt: timestamp({ mode: 'string' }).defaultNow().notNull(),
-  updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
-});
 
 export const paymentMethods = mysqlTable('payment_methods', {
   id: int().autoincrement().primaryKey(),

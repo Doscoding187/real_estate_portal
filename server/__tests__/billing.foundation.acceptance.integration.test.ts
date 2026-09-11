@@ -6,7 +6,6 @@ import { getDb } from '../db-connection';
 import {
   agencies,
   agencyBranding,
-  agencySubscriptions,
   billingAuditEvents,
   billingInvoices,
   billingPaymentDocuments,
@@ -234,7 +233,6 @@ describeWithDb('billing foundation persisted acceptance', () => {
       await db
         .delete(subscriptions)
         .where(and(eq(subscriptions.ownerType, 'agency'), inArray(subscriptions.ownerId, agencyIds)));
-      await db.delete(agencySubscriptions).where(inArray(agencySubscriptions.agencyId, agencyIds));
       await db.delete(agencyBranding).where(inArray(agencyBranding.agencyId, agencyIds));
     }
 

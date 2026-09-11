@@ -673,6 +673,23 @@ snapshots and make `billable_account_id` mandatory after all active billing
 writers/readers use the central identity.
 Removal workstream: P5 billable-account cutover.
 
+## DBX-PRELAUNCH-RETIRE-OBSOLETE-BILLING-2026-09-11-Edward
+
+Exception ID: DBX-PRELAUNCH-RETIRE-OBSOLETE-BILLING-2026-09-11-Edward
+Status: approved exceptional migration
+Owner: Database architecture takeover
+Approved by Edward on: 2026-09-11
+Business reason: remove empty, unreachable historical billing families before launch after the runtime census and disposable-target row audit.
+Canonical authority: the typed-account billing foundation and its `billing_*` tables.
+Exact files: `server/migrations/0088_retire_obsolete_billing_families.sql`, `drizzle/schema/agencies.ts`, `drizzle/schema/billing.ts`.
+Tables and columns: `agency_subscriptions`, `billing_transactions`, and `invoices`.
+Permitted read direction: no runtime reads; only governed verification before migration.
+Permitted write direction: canonical migration runner only, on the exact task-owned disposable target or an explicitly approved release target.
+Failure and observability behavior: migration planning requires the exact accepted head; checksum, ancestry, target, lock, and schema-congruency failures abort execution.
+Automated evidence: runtime reachability census, zero-row verification on the disposable target, migration manifest and authority gates.
+Expiry or objective removal condition: remove this exception when the retirement migration is superseded by the final closure record.
+Removal workstream: P5 legacy billing-family retirement.
+
 ## DBX-PRELAUNCH-BILLING-PROVIDER-LEASE-2026-09-11-Edward
 
 Exception ID: DBX-PRELAUNCH-BILLING-PROVIDER-LEASE-2026-09-11-Edward

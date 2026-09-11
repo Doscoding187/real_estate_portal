@@ -3,12 +3,12 @@
   "formatVersion": 2,
   "generatedFrom": "drizzle/schema/index.ts via drizzle-orm 0.44 normalized metadata",
   "generator": "scripts/generateCanonicalModelInventory.ts",
-  "structuralDigest": "bc560528c2198b99df25a71eb165f4fa3a81987466e90bf70ed6a6b500b53004",
+  "structuralDigest": "0d50ae2d489fa91529de0c158870ccd445c1ab6d1b6d3fd438c1be87135dddec",
   "excludedRunnerControlTables": [
     "sql_migration_history",
     "sql_migration_attempts"
   ],
-  "tableCount": 217,
+  "tableCount": 214,
   "tables": [
     "activities",
     "affordability_assessments",
@@ -23,7 +23,6 @@
     "agency_join_requests",
     "agency_listing_performance_activity",
     "agency_listing_performance_reviews",
-    "agency_subscriptions",
     "agency_transaction_activity",
     "agency_transaction_conditions",
     "agency_transaction_documents",
@@ -46,7 +45,6 @@
     "billing_payment_documents",
     "billing_payments",
     "billing_provider_events",
-    "billing_transactions",
     "boost_campaigns",
     "boost_credits",
     "bundle_attributions",
@@ -125,7 +123,6 @@
     "hero_campaigns",
     "invitations",
     "invites",
-    "invoices",
     "land_assertion_evidence",
     "land_asset_parcels",
     "land_assets",

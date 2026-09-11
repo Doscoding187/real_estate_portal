@@ -446,8 +446,9 @@ describe('migration execution authority', () => {
       '0085_billing_billable_accounts.sql',
       '0086_billing_billable_accounts_not_null.sql',
       '0087_billing_provider_event_leases.sql',
+      '0088_retire_obsolete_billing_families.sql',
     ]);
-    expect(executionManifest.expectedHead).toBe('0087_billing_provider_event_leases.sql');
+    expect(executionManifest.expectedHead).toBe('0088_retire_obsolete_billing_families.sql');
     expect(archivedSqlFiles.length).toBeGreaterThan(0);
     expect(activeSqlFiles.some(file => file.includes('_archived'))).toBe(false);
     expect(executionManifest.historyTable).toBe('sql_migration_history');

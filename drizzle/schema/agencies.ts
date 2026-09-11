@@ -85,37 +85,6 @@ export const agencyJoinRequests = mysqlTable('agency_join_requests', {
   reviewedAt: timestamp({ mode: 'string' }),
 });
 
-export const agencySubscriptions = mysqlTable('agency_subscriptions', {
-  id: int().autoincrement().primaryKey(),
-  agencyId: int()
-    .notNull()
-    .references(() => agencies.id, { onDelete: 'cascade' }),
-  planId: int().references(() => plans.id, { onDelete: 'set null' }),
-  stripeSubscriptionId: varchar({ length: 100 }),
-  stripeCustomerId: varchar({ length: 100 }).notNull(),
-  stripePriceId: varchar({ length: 100 }),
-  status: mysqlEnum([
-    'incomplete',
-    'incomplete_expired',
-    'trialing',
-    'active',
-    'past_due',
-    'canceled',
-    'unpaid',
-  ])
-    .default('incomplete')
-    .notNull(),
-  currentPeriodStart: timestamp({ mode: 'string' }),
-  currentPeriodEnd: timestamp({ mode: 'string' }),
-  trialEnd: timestamp({ mode: 'string' }),
-  cancelAtPeriodEnd: int().notNull(),
-  canceledAt: timestamp({ mode: 'string' }),
-  endedAt: timestamp({ mode: 'string' }),
-  metadata: text(),
-  createdAt: timestamp({ mode: 'string' }).defaultNow().notNull(),
-  updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
-});
-
 export const agents = mysqlTable(
   'agents',
   {

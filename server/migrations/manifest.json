@@ -4,7 +4,7 @@
   "historyTable": "sql_migration_history",
   "attemptTable": "sql_migration_attempts",
   "lockName": "property_listify_manifest_migrations",
-  "expectedHead": "0087_billing_provider_event_leases.sql",
+  "expectedHead": "0088_retire_obsolete_billing_families.sql",
   "migrations": [
     {
       "sequence": 0,
@@ -925,6 +925,17 @@
       "statementPolicy": "approved-exception",
       "requiredReferenceDataVersion": null,
       "approvalReference": "DBX-PRELAUNCH-BILLING-PROVIDER-LEASE-2026-09-11-Edward"
+    },
+    {
+      "sequence": 88,
+      "filename": "0088_retire_obsolete_billing_families.sql",
+      "checksum": "5dcb3481e8b1b772196b6e8cf9057457744ebde2586c7c7d2b302f7df7f54a7f",
+      "parent": "0087_billing_provider_event_leases.sql",
+      "parentChecksum": "2f2ac4999fa614ecc391f85b5b8bc4aac11b6c60559a634e72d7f222a478059c",
+      "kind": "exceptional",
+      "statementPolicy": "approved-exception",
+      "requiredReferenceDataVersion": null,
+      "approvalReference": "DBX-PRELAUNCH-RETIRE-OBSOLETE-BILLING-2026-09-11-Edward"
     }
   ]
 }
