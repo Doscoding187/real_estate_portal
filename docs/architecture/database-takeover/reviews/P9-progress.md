@@ -362,3 +362,10 @@ neutrality, canonical location/filter routing, refresh/back/forward behavior,
 responsive layouts, keyboard interaction, sparse states, and unavailable
 provinces. Expected unavailable monetization resolver responses were asserted
 by the journey; generated artifacts were restored.
+
+The governed Desktop Chrome search-routing suite was also run with a captured
+exit code. It failed 9 of 11 tests: province and city/suburb searches remained
+at `/` or produced null location query parameters, while 2 tests passed. This
+is a current route-contract failure, distinct from the authenticated fixture
+gaps, and requires a search-routing implementation review before P9 can close.
+Generated browser artifacts were restored.
