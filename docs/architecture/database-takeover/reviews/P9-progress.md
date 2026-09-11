@@ -323,3 +323,8 @@ TypeScript validation passed.
 The distribution catalogue listing endpoint no longer retries with a widened
 fallback query after an empty result. Its canonical publisher/publication/search
 scope is now applied once; schema-guard and authority contracts pass.
+
+Distribution router reads now require current primary-manager and current-tier
+rows; arbitrary active-manager and historical-tier fallbacks were removed.
+Provider-backed manager-checklist and referral suites passed 19 tests, with
+TypeScript passing.

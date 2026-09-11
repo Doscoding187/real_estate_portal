@@ -139,3 +139,8 @@ The distribution catalogue listing endpoint no longer retries with a widened
 fallback query after an empty result. Publisher, publication, and search
 conditions are applied once by the canonical query, preventing silent scope
 changes. Schema-guard and distribution authority contracts pass.
+
+Distribution router reads no longer fall back from a missing primary manager to
+an arbitrary active manager, or from a missing current agent tier to historical
+rows. Current assignment and tier records are authoritative. Provider-backed
+manager-checklist and referral suites passed 19 tests, with TypeScript passing.

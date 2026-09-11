@@ -773,25 +773,7 @@ async function getPrimaryManagerUserIdForProgram(db: any, programId: number) {
     .orderBy(desc(distributionManagerAssignments.assignedAt))
     .limit(1);
 
-  if (primary?.managerUserId) {
-    return Number(primary.managerUserId);
-  }
-
-  const [fallback] = await db
-    .select({
-      managerUserId: distributionManagerAssignments.managerUserId,
-    })
-    .from(distributionManagerAssignments)
-    .where(
-      and(
-        eq(distributionManagerAssignments.developmentId, Number(program.developmentId)),
-        eq(distributionManagerAssignments.isActive, 1),
-      ),
-    )
-    .orderBy(desc(distributionManagerAssignments.assignedAt))
-    .limit(1);
-
-  return fallback?.managerUserId ? Number(fallback.managerUserId) : null;
+  return primary?.managerUserId ? Number(primary.managerUserId) : null;
 }
 
 async function hasPrimaryActiveManagerAssignment(db: any, programId: number) {
@@ -836,27 +818,6 @@ async function getCurrentTierByAgentIds(db: any, agentIds: number[]) {
     .orderBy(desc(distributionAgentTiers.id));
 
   for (const row of currentRows) {
-    if (!result.has(row.agentId)) {
-      result.set(row.agentId, row.tier as DistributionTier);
-    }
-  }
-
-  const unresolvedIds = agentIds.filter(agentId => !result.has(agentId));
-  if (!unresolvedIds.length) {
-    return result;
-  }
-
-  const fallbackRows = await db
-    .select({
-      agentId: distributionAgentTiers.agentId,
-      tier: distributionAgentTiers.tier,
-      id: distributionAgentTiers.id,
-    })
-    .from(distributionAgentTiers)
-    .where(inArray(distributionAgentTiers.agentId, unresolvedIds))
-    .orderBy(desc(distributionAgentTiers.id));
-
-  for (const row of fallbackRows) {
     if (!result.has(row.agentId)) {
       result.set(row.agentId, row.tier as DistributionTier);
     }

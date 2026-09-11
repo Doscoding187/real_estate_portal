@@ -27,5 +27,7 @@ describe('distribution access authority boundary', () => {
     const router = readFileSync(path.resolve(process.cwd(), 'server/distributionRouter.ts'), 'utf8');
     expect(router).not.toContain('Fallback safety net');
     expect(router).not.toContain('fallbackConditions');
+    expect(router).not.toContain('const [fallback] = await db');
+    expect(router).not.toContain('const fallbackRows = await db');
   });
 });
