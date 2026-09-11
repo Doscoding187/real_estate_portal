@@ -80,34 +80,6 @@ export const bundleAttributions = mysqlTable(
   ],
 );
 
-export const boostCampaigns = mysqlTable(
-  'boost_campaigns',
-  {
-    id: varchar('id', { length: 36 }).notNull().primaryKey(),
-    partnerId: varchar('partner_id', { length: 36 }).notNull(),
-    contentId: varchar('content_id', { length: 36 }).notNull(),
-    topicId: varchar('topic_id', { length: 36 }).notNull(),
-    budget: decimal('budget', { precision: 10, scale: 2 }).notNull(),
-    spent: decimal('spent', { precision: 10, scale: 2 }).default('0.00'),
-    status: mysqlEnum('status', ['draft', 'active', 'paused', 'completed', 'depleted']).default(
-      'draft',
-    ),
-    startDate: date('start_date').notNull(),
-    endDate: date('end_date'),
-    impressions: int('impressions').default(0),
-    clicks: int('clicks').default(0),
-    costPerImpression: decimal('cost_per_impression', { precision: 6, scale: 4 }).default(
-      '0.1000',
-    ),
-    createdAt: timestamp('created_at', { mode: 'date' }).defaultNow(),
-  },
-  t => ({
-    topicIdx: index('idx_boost_campaigns_topic').on(t.topicId),
-    contentIdx: index('idx_boost_campaigns_content').on(t.contentId),
-    partnerIdx: index('idx_boost_campaigns_partner').on(t.partnerId),
-  }),
-);
-
 export const contentApprovalQueue = mysqlTable(
   'content_approval_queue',
   {

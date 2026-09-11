@@ -4,7 +4,7 @@
   "historyTable": "sql_migration_history",
   "attemptTable": "sql_migration_attempts",
   "lockName": "property_listify_manifest_migrations",
-  "expectedHead": "0089_retire_disconnected_analytics_aggregations.sql",
+  "expectedHead": "0090_retire_disconnected_boost_campaigns.sql",
   "migrations": [
     {
       "sequence": 0,
@@ -947,6 +947,17 @@
       "statementPolicy": "approved-exception",
       "requiredReferenceDataVersion": null,
       "approvalReference": "DBX-PRELAUNCH-RETIRE-DISCONNECTED-ANALYTICS-2026-09-11-Edward"
+    },
+    {
+      "sequence": 90,
+      "filename": "0090_retire_disconnected_boost_campaigns.sql",
+      "checksum": "767f3767f3a7f69d947ba150598cee45194ebfb64a11f52d7b3114c2b5467421",
+      "parent": "0089_retire_disconnected_analytics_aggregations.sql",
+      "parentChecksum": "a550f1c7c64c8f97e72accd21aeeed1abfe33a4ac298e4d11c7818864f58c207",
+      "kind": "exceptional",
+      "statementPolicy": "approved-exception",
+      "requiredReferenceDataVersion": null,
+      "approvalReference": "DBX-PRELAUNCH-RETIRE-DISCONNECTED-BOOST-CAMPAIGNS-2026-09-11-Edward"
     }
   ]
 }

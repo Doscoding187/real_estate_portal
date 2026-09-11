@@ -763,3 +763,20 @@ Failure and observability behavior: canonical migration runner requires the exac
 Automated evidence: repository census found no active readers or writers; exact disposable target contained zero rows; authority migration and schema checks pass.
 Expiry or objective removal condition: none; this exception records a completed pre-launch retirement.
 Removal workstream: P8 analytics authority.
+
+## DBX-PRELAUNCH-RETIRE-DISCONNECTED-BOOST-CAMPAIGNS-2026-09-11-Edward
+
+Exception ID: DBX-PRELAUNCH-RETIRE-DISCONNECTED-BOOST-CAMPAIGNS-2026-09-11-Edward
+Status: approved exceptional migration
+Owner: Database architecture takeover
+Approved by Edward on: 2026-09-11
+Business reason: retire an empty campaign table and duplicate, unmounted API that disagree with the canonical Explore identity model and have no authorized commercial delivery or billing lifecycle.
+Canonical authority: organic Explore ranking and canonical event facts. A sponsored-placement product requires a separately approved owner, entitlement, billing, delivery, attribution, and reporting model.
+Exact files: `server/migrations/0090_retire_disconnected_boost_campaigns.sql`, `drizzle/schema/marketplace.ts`, `server/services/feedRankingService.ts`.
+Tables and columns: `boost_campaigns` (entire table).
+Permitted read direction: none after migration 0090.
+Permitted write direction: none after migration 0090.
+Failure and observability behavior: the canonical migration runner verifies manifest ancestry, checksum, exact target ownership, lock, and durable attempt state before applying the drop.
+Automated evidence: repository reachability census, zero-row count on the exact disposable target, migration manifest and schema-congruency checks, and feed ranking contract coverage.
+Expiry or objective removal condition: none; retain this record as historical evidence. Any future paid-placement design begins with a new canonical authority.
+Removal workstream: P8 Explore commercial authority.

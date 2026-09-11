@@ -2,7 +2,7 @@
  * Monetization Features - Smoke Tests
  *
  * These tests verify that the monetization services
- * (QualityScoringService, PartnerSubscriptionService, PartnerBoostCampaignService,
+ * (QualityScoringService, PartnerSubscriptionService,
  * MarketplaceBundleService, PartnerAnalyticsService)
  * are properly instantiated and have their core methods available.
  *
@@ -15,7 +15,6 @@
 import { describe, it, expect } from 'vitest';
 import { qualityScoringService } from '../qualityScoringService';
 import { partnerSubscriptionService } from '../partnerSubscriptionService';
-import { partnerBoostCampaignService } from '../partnerBoostCampaignService';
 import { marketplaceBundleService } from '../marketplaceBundleService';
 import { partnerAnalyticsService } from '../partnerAnalyticsService';
 
@@ -102,52 +101,6 @@ describe('Monetization Features - Smoke Tests', () => {
     });
   });
 
-  describe('Partner Boost Campaign Service', () => {
-    it('should be properly instantiated', () => {
-      expect(partnerBoostCampaignService).toBeDefined();
-    });
-
-    it('should have createCampaign method', () => {
-      expect(partnerBoostCampaignService.createCampaign).toBeDefined();
-      expect(typeof partnerBoostCampaignService.createCampaign).toBe('function');
-    });
-
-    it('should have activateCampaign method', () => {
-      expect(partnerBoostCampaignService.activateCampaign).toBeDefined();
-      expect(typeof partnerBoostCampaignService.activateCampaign).toBe('function');
-    });
-
-    it('should have pauseCampaign method', () => {
-      expect(partnerBoostCampaignService.pauseCampaign).toBeDefined();
-      expect(typeof partnerBoostCampaignService.pauseCampaign).toBe('function');
-    });
-
-    it('should have recordImpression method', () => {
-      expect(partnerBoostCampaignService.recordImpression).toBeDefined();
-      expect(typeof partnerBoostCampaignService.recordImpression).toBe('function');
-    });
-
-    it('should have recordClick method', () => {
-      expect(partnerBoostCampaignService.recordClick).toBeDefined();
-      expect(typeof partnerBoostCampaignService.recordClick).toBe('function');
-    });
-
-    it('should have getActiveCampaignsForTopic method', () => {
-      expect(partnerBoostCampaignService.getActiveCampaignsForTopic).toBeDefined();
-      expect(typeof partnerBoostCampaignService.getActiveCampaignsForTopic).toBe('function');
-    });
-
-    it('should have getCampaignAnalytics method', () => {
-      expect(partnerBoostCampaignService.getCampaignAnalytics).toBeDefined();
-      expect(typeof partnerBoostCampaignService.getCampaignAnalytics).toBe('function');
-    });
-
-    it('should have validateBoostEligibility method', () => {
-      expect(partnerBoostCampaignService.validateBoostEligibility).toBeDefined();
-      expect(typeof partnerBoostCampaignService.validateBoostEligibility).toBe('function');
-    });
-  });
-
   describe('Marketplace Bundle Service', () => {
     it('should be properly instantiated', () => {
       expect(marketplaceBundleService).toBeDefined();
@@ -208,7 +161,6 @@ describe('Monetization Features - Smoke Tests', () => {
     it('should have all monetization services available for integration', () => {
       expect(qualityScoringService).toBeDefined();
       expect(partnerSubscriptionService).toBeDefined();
-      expect(partnerBoostCampaignService).toBeDefined();
       expect(marketplaceBundleService).toBeDefined();
       expect(partnerAnalyticsService).toBeDefined();
     });

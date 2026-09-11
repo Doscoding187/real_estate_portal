@@ -16,7 +16,6 @@ import {
   exploreContent,
   exploreShorts,
   explorePartners,
-  boostCampaigns,
   contentQualityScores,
 } from '../../drizzle/schema';
 import { eq, and, inArray, sql } from 'drizzle-orm';
@@ -51,19 +50,6 @@ export interface RankedContent {
   [key: string]: any;
 }
 
-export interface BoostCampaign {
-  id: string;
-  partnerId: string;
-  contentId: string;
-  topicId: string;
-  budget: number;
-  spent: number;
-  status: string;
-  impressions: number;
-  clicks: number;
-  costPerImpression: number;
-}
-
 // ============================================================================
 // Configuration
 // ============================================================================
@@ -75,13 +61,6 @@ const DEFAULT_WEIGHTS: RankingWeights = {
   localRelevance: 0.2,
   recency: 0.1,
   partnerTrust: 0.1,
-};
-
-// Boost multiplier configuration
-// Requirements: 10.6
-const BOOST_MULTIPLIER_RANGE = {
-  min: 1.2, // Minimum boost effect
-  max: 2.0, // Maximum boost effect (prevents domination)
 };
 
 // Boost ratio limit: 1 boosted per 10 organic
@@ -211,26 +190,6 @@ export class FeedRankingService {
   }
 
   /**
-   * Apply boost multiplier to ranking scores
-   * Ensure boosted content doesn't dominate
-   * Requirements: 10.6
-   */
-  applyBoostMultiplier(baseScore: number, boost?: BoostCampaign): number {
-    if (!boost || boost.status !== 'active') {
-      return 1.0; // No boost
-    }
-
-    // Calculate boost multiplier based on budget spent
-    // Higher budget = higher multiplier, but capped
-    const budgetFactor = Math.min(boost.budget / 1000, 1.0); // Normalize to 0-1
-    const multiplier =
-      BOOST_MULTIPLIER_RANGE.min +
-      budgetFactor * (BOOST_MULTIPLIER_RANGE.max - BOOST_MULTIPLIER_RANGE.min);
-
-    return multiplier;
-  }
-
-  /**
    * Rank feed items with weighted scoring
    * Requirements: 10.1, 10.2, 10.3, 10.4, 10.5, 10.6
    */
@@ -238,14 +197,13 @@ export class FeedRankingService {
     items: any[],
     userId: string,
     userLocation?: { lat: number; lng: number },
-    topicId?: string,
+    _topicId?: string,
   ): Promise<RankedContent[]> {
     if (items.length === 0) {
       return [];
     }
 
-    // Get active boost campaigns for this topic
-    const activeCampaigns = topicId ? await this.getActiveCampaignsForTopic(topicId) : [];
+    void _topicId;
 
     // Get quality scores for all content
     const contentIds = items.map(item => item.id.toString());
@@ -263,9 +221,6 @@ export class FeedRankingService {
         const contentId = item.id.toString();
         const partnerId = item.partnerId;
 
-        // Find boost campaign for this content
-        const boostCampaign = activeCampaigns.find(c => c.contentId === contentId);
-
       // Build ranking factors
       const factors: RankingFactors = {
         userInterestScore: userInterestScores[contentId] || 50,
@@ -276,7 +231,7 @@ export class FeedRankingService {
         ),
         recencyScore: this.calculateRecencyScore(new Date(item.createdAt)),
         trustScore: partnerId ? trustScores[partnerId] || 50 : 50,
-        boostMultiplier: this.applyBoostMultiplier(0, boostCampaign),
+        boostMultiplier: 1,
       };
 
       // Calculate final ranking score
@@ -286,8 +241,7 @@ export class FeedRankingService {
         ...item,
         contentId,
         rankingScore,
-        isBoosted: !!boostCampaign,
-        boostCampaignId: boostCampaign?.id,
+        isBoosted: false,
       };
     });
 
@@ -337,23 +291,6 @@ export class FeedRankingService {
     }
 
     return result;
-  }
-
-  /**
-   * Get active boost campaigns for a topic
-   */
-  private async getActiveCampaignsForTopic(topicId: string): Promise<BoostCampaign[]> {
-    try {
-      const campaigns = await db
-        .select()
-        .from(boostCampaigns)
-        .where(and(eq(boostCampaigns.topicId, topicId), eq(boostCampaigns.status, 'active')));
-
-      return campaigns as BoostCampaign[];
-    } catch (error) {
-      console.error('Error fetching boost campaigns:', error);
-      throw error;
-    }
   }
 
   /**

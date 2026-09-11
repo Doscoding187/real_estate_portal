@@ -1232,6 +1232,14 @@
       "approvedFiles": [
         "server/migrations/0089_retire_disconnected_analytics_aggregations.sql"
       ]
+    },
+    {
+      "path": "server/migrations/0090_retire_disconnected_boost_campaigns.sql",
+      "classification": "canonical active",
+      "purpose": "P8 retirement of disconnected boost campaign authority",
+      "approvedFiles": [
+        "server/migrations/0090_retire_disconnected_boost_campaigns.sql"
+      ]
     }
   ],
   "prohibitedPaths": [
