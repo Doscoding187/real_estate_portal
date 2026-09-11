@@ -255,3 +255,8 @@ The disabled suburb-review mutation was also changed from a nominal failure
 payload to an explicit `PRECONDITION_FAILED` before any write acknowledgement.
 The location-insights authority contract and TypeScript check pass; review
 storage and read-path authority remain open.
+
+Price insights runtime schema guessing and error-to-empty responses were also
+removed. Hierarchy queries now use canonical physical location columns and
+unavailable reads fail with `PRECONDITION_FAILED`; the focused price-insights
+authority contract and TypeScript check pass. Query-plan evidence remains open.

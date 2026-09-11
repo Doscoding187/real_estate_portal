@@ -57,3 +57,9 @@ payload from a public route. It now fails with `PRECONDITION_FAILED` before
 acknowledging a write; its declared response shape remains for generated client
 types. A focused location-insights authority contract and TypeScript check
 pass. Review storage and read-path authority remain unimplemented.
+
+Price insights also contained runtime schema guessing between camelCase and
+snake_case location columns, plus query-error responses that fabricated empty
+tabs, aggregates, or heatmaps. The router now uses the canonical physical
+columns and fails with `PRECONDITION_FAILED` for unavailable reads. Its focused
+authority contract and TypeScript check pass; query-plan evidence remains open.
