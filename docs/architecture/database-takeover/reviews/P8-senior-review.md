@@ -44,3 +44,10 @@ The same review found `getAggregatedMetrics` converting a missing Explore
 analytics table into zero-valued success data. That schema-error fallback now
 fails with `PRECONDITION_FAILED`, covered by the Explore analytics authority
 contract. Aggregate rebuildability and query-plan evidence remain open.
+
+Demand campaign listing and agent lead-summary queries were also returning
+empty/default success values when capability probing found the schema absent or
+when reads failed. Those paths now fail with `PRECONDITION_FAILED` and let
+unexpected read errors surface; a focused authority contract and TypeScript
+check pass. Demand rollback and broader lifecycle evidence remain part of the
+incomplete P8/P9 review.

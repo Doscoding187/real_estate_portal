@@ -245,3 +245,8 @@ The same follow-up removed an Explore analytics schema-error fallback that
 returned zero-valued aggregate metrics. Missing canonical analytics schema now
 produces an explicit `PRECONDITION_FAILED`; the focused authority contracts
 pass 8 tests combined. Aggregate rebuild and query-plan evidence remain open.
+
+Demand campaign listing and agent lead-summary queries likewise no longer
+return empty/default success data when the canonical schema is unavailable or
+a read fails. They now fail with `PRECONDITION_FAILED`; the focused demand
+authority contract passed and TypeScript check passed.
