@@ -2070,25 +2070,22 @@ export async function getDeveloperBillingWorkspace(user: BillingUser) {
     throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
 
   const developerId = await assertDeveloperOwner(db, user);
+  const billableAccountId = await resolveBillableAccountId(db, 'developer', developerId);
   const [subscriptionWithPlan] = await db
     .select({ subscription: subscriptions, plan: plans })
     .from(subscriptions)
     .leftJoin(plans, eq(subscriptions.planId, plans.id))
-    .where(and(eq(subscriptions.ownerType, 'developer'), eq(subscriptions.ownerId, developerId)))
+    .where(eq(subscriptions.billableAccountId, billableAccountId))
     .limit(1);
   const invoiceRows = await db
     .select()
     .from(billingInvoices)
-    .where(
-      and(eq(billingInvoices.ownerType, 'developer'), eq(billingInvoices.ownerId, developerId)),
-    )
+    .where(eq(billingInvoices.billableAccountId, billableAccountId))
     .orderBy(desc(billingInvoices.createdAt));
   const paymentRows = await db
     .select()
     .from(billingPayments)
-    .where(
-      and(eq(billingPayments.ownerType, 'developer'), eq(billingPayments.ownerId, developerId)),
-    )
+    .where(eq(billingPayments.billableAccountId, billableAccountId))
     .orderBy(desc(billingPayments.createdAt));
 
   return {
