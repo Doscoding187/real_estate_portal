@@ -12,6 +12,11 @@ key. The same shape appears in billing audit events. A subscription can
 therefore outlive or point at an invalid agency, agent, or developer unless
 every writer and reader performs the correct application check.
 
+The design decision and alternatives are recorded in
+`p5-billing-authority-decision.md`. It recommends an explicit
+`billable_accounts` identity while retaining the current families until their
+consumer and lifecycle census proves a safe retirement order.
+
 No partial schema change is admitted. The strongest future model needs an
 explicit billable-account identity (or separate typed owner columns with a
 database-enforced shape), followed by a migration of subscription, invoice,
