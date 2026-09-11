@@ -676,3 +676,6 @@ Core billing subscription upserts, launch-state locks, outstanding-invoice
 checks, and agency cancellation/restore flows now use the typed account foreign
 key for reads and locking. Type-checks plus provider-independent and developer
 subscription contracts pass 15 tests.
+
+Agency onboarding's existing-record integrity check now requires a typed agency
+account and resolves its subscription through that account identity.

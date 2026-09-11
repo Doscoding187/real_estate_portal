@@ -4077,7 +4077,7 @@ export const agencyRouter = router({
         }
 
         if (principal.agencyId) {
-          const [[existingAgency], [existingBranding], [existingSubscription]] = await Promise.all([
+          const [[existingAgency], [existingBranding], [agencyAccount], [existingSubscription]] = await Promise.all([
             tx.select().from(agencies).where(eq(agencies.id, principal.agencyId)).limit(1),
             tx
               .select()
@@ -4085,19 +4085,31 @@ export const agencyRouter = router({
               .where(eq(agencyBranding.agencyId, principal.agencyId))
               .limit(1),
             tx
-              .select()
-              .from(subscriptions)
+              .select({ id: billableAccounts.id })
+              .from(billableAccounts)
               .where(
                 and(
-                  eq(subscriptions.ownerType, 'agency'),
-                  eq(subscriptions.ownerId, principal.agencyId),
+                  eq(billableAccounts.accountKind, 'agency'),
+                  eq(billableAccounts.agencyId, principal.agencyId),
                 ),
               )
+              .limit(1),
+            tx
+              .select()
+              .from(subscriptions)
+              .where(sql`EXISTS (
+                SELECT 1
+                FROM ${billableAccounts} account
+                WHERE account.id = ${subscriptions.billableAccountId}
+                  AND account.account_kind = 'agency'
+                  AND account.agency_id = ${principal.agencyId}
+              )`)
               .limit(1),
           ]);
           if (
             !existingAgency ||
             !existingBranding ||
+            !agencyAccount ||
             !existingSubscription ||
             !Number(existingSubscription.planId || 0)
           ) {
