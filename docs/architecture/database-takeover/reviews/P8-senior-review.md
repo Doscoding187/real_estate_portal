@@ -133,6 +133,12 @@ retry loops that dropped `included_at`, `excluded_at`, or `paused_at` after an
 unknown-column error were removed. Canonical status/access tests and TypeScript
 validation pass.
 
+The listing-media tenant-boundary suite now also proves that a confirmation
+token issued before listing reassignment is rejected by the live router after
+custody changes. The disposable-target run passed 3 tests covering unrelated
+reservation denial, deletion invalidation, and reassignment invalidation.
+Public media rebuild equivalence remains open.
+
 The distribution access policy no longer synthesizes legacy partnership/access
 states from catalogue visibility or program presence. Only persisted canonical
 partnership and development-access rows establish authority; the legacy fallback

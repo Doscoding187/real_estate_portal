@@ -148,4 +148,66 @@ describeDatabase('listing media tenant boundary', () => {
       code: 'FORBIDDEN',
     });
   }, 30_000);
+
+  it('rejects confirmation when listing custody is reassigned after token issuance', async () => {
+    const db = await getDb();
+    if (!db) throw new Error('Database not available');
+    const suffix = randomUUID();
+
+    const [ownerInsert] = await db.insert(users).values({
+      email: `media-reassigned-owner-${suffix}@invalid.example`,
+      name: 'Media Reassigned Owner',
+      role: 'agent',
+      emailVerified: 1,
+    } as any);
+    ownerId = Number(ownerInsert.insertId);
+    const [newOwnerInsert] = await db.insert(users).values({
+      email: `media-reassigned-new-owner-${suffix}@invalid.example`,
+      name: 'Media Reassigned New Owner',
+      role: 'agent',
+      emailVerified: 1,
+    } as any);
+    outsiderId = Number(newOwnerInsert.insertId);
+
+    listingId = await createListing({
+      userId: ownerId,
+      action: 'sell',
+      propertyType: 'house',
+      title: `Reassigned listing ${suffix}`,
+      description: 'Listing used for reassignment token invalidation proof.',
+      pricing: { askingPrice: 1_500_000 },
+      propertyDetails: { bedrooms: 3, bathrooms: 2, houseAreaM2: 140 },
+      address: '3 Reassigned Listing Street',
+      latitude: -26.1076,
+      longitude: 28.0567,
+      city: 'Johannesburg',
+      province: 'Gauteng',
+      postalCode: '2001',
+      placeId: null,
+      slug: `reassigned-listing-${suffix}`,
+      media: [],
+    });
+
+    const token = createListingMediaUploadToken({
+      key: `properties/${listingId}/reassigned.jpg`,
+      mediaType: 'image',
+      contentType: 'image/jpeg',
+      fileName: 'reassigned.jpg',
+      userId: ownerId,
+      listingId,
+    });
+
+    await db.update(listings).set({ ownerId: outsiderId, agentId: null, agencyId: null } as any)
+      .where(eq(listings.id, listingId));
+
+    const owner = appRouter.createCaller({
+      req: { headers: {} },
+      res: {},
+      user: { id: ownerId, email: `media-reassigned-owner-${suffix}@invalid.example`, role: 'agent' },
+    } as any);
+
+    await expect(owner.listing.confirmMediaUpload({ uploadToken: token })).rejects.toMatchObject({
+      code: 'FORBIDDEN',
+    });
+  }, 30_000);
 });

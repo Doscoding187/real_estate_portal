@@ -757,3 +757,9 @@ The latest authority checkpoint confirms the exact disposable worktree target
 is target-owned and connected, has no incomplete migration attempts, is
 schema-congruent at manifest head 0088, and reports the canonical Launch Access
 foundation ready. Protected or shared databases were not accessed.
+
+The P8 media boundary was extended with reassignment invalidation evidence:
+`pnpm test:authority -- server/__tests__/integration.listing-media-tenant-boundary.test.ts`
+passed 3 tests on the exact disposable target. A token issued to the former
+owner is rejected after listing custody changes; public media rebuild
+equivalence remains open.
