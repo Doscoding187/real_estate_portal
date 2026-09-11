@@ -107,15 +107,7 @@ export class ExploreInteractionService {
     } catch (error: any) {
       if (isMissingExploreSchema(error)) throwExploreUnavailable(error);
       if (Number(error?.errno) === 1062 || error?.code === 'ER_DUP_ENTRY') return;
-      console.error('[ENG_INSERT_FAIL]', {
-        contentId,
-        interactionType,
-        message: error?.message,
-        code: error?.code,
-        name: error?.name,
-        stack: error?.stack,
-      });
-      // NEVER throw — analytics must not block UI or crash app
+      throw error;
     }
   }
 
@@ -154,7 +146,7 @@ export class ExploreInteractionService {
         } catch (error: any) {
           if (isMissingExploreSchema(error)) throwExploreUnavailable(error);
           if (Number(error?.errno) === 1062 || error?.code === 'ER_DUP_ENTRY') continue;
-          console.error('Error recording batch interaction:', error);
+          throw error;
         }
       }
 
@@ -169,7 +161,7 @@ export class ExploreInteractionService {
       }
     } catch (error) {
       if (isMissingExploreSchema(error)) throwExploreUnavailable(error);
-      console.error('Error recording batch interactions:', error);
+      throw error;
     }
   }
 
