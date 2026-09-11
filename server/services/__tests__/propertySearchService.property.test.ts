@@ -14,6 +14,7 @@ import { getDb } from '../../db';
 import { properties, users } from '../../../drizzle/schema';
 import { inArray } from 'drizzle-orm';
 import type { SortOption, PropertyFilters } from '../../../shared/types';
+import { redisCache } from '../../lib/redis';
 
 describe('PropertySearchService - Property-Based Tests', () => {
   let db: any;
@@ -159,6 +160,8 @@ describe('PropertySearchService - Property-Based Tests', () => {
         return;
       }
 
+      await redisCache.delByPattern('property:search:v10:*');
+
       const [ownerInsert] = await db.insert(users).values({
         email: `property-search-owner-${Date.now()}@example.test`,
         name: 'Property Search Owner',
@@ -184,6 +187,7 @@ describe('PropertySearchService - Property-Based Tests', () => {
   });
 
   afterAll(async () => {
+    await redisCache.delByPattern('property:search:v10:*');
     // Clean up test data
     if (db && insertedPropertyIds.length > 0) {
       try {
