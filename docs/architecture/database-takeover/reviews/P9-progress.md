@@ -354,3 +354,11 @@ did not execute the journey because its fixture loader hard-codes the
 owned disposable worktree target. Generated browser artifacts were restored;
 developer browser acceptance remains unverified pending a governed fixture
 migration or replacement journey contract.
+
+The authority-injected provincial discovery browser suite was rerun with a
+captured terminal exit code: all 21 Desktop Chrome tests passed in 1.2 minutes
+against the disposable target. The suite covered Gauteng and Western Cape
+neutrality, canonical location/filter routing, refresh/back/forward behavior,
+responsive layouts, keyboard interaction, sparse states, and unavailable
+provinces. Expected unavailable monetization resolver responses were asserted
+by the journey; generated artifacts were restored.
