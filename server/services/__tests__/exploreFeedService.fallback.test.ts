@@ -11,7 +11,7 @@ const { mockDb, mockCacheGet, mockCacheSet, mockRecommendedFeedKey } = vi.hoiste
     offset: vi.fn(),
   };
 
-  for (const method of ['select', 'from', 'leftJoin', 'where', 'orderBy', 'offset']) {
+  for (const method of ['select', 'from', 'leftJoin', 'where', 'orderBy', 'limit', 'offset']) {
     localDb[method].mockImplementation(() => localDb);
   }
 
