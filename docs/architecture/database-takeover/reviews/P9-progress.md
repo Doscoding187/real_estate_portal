@@ -18,6 +18,12 @@ and `agency-listing-attribution`): 25 tests passed. This revalidates publication
 gating, withdrawal/readiness behavior, projection identity, and agency
 attribution after a fresh canonical migration.
 
+The rebuilt target also passed the billing authority packet: the persisted
+foundation acceptance and provider-independent contract suites passed 10 tests
+(2 physical billing tests and 8 contract tests), covering EFT proof protection,
+entitlement activation, duplicate approval idempotency, rejection/correction,
+and partial-payment non-activation.
+
 The exact task-owned disposable target was rechecked on 2026-09-10:
 
 - `pnpm db:schema:congruency` passed. Desired and actual digest:
