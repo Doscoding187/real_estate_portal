@@ -667,3 +667,7 @@ remain open.
 Agency access-state, canonical-status, and onboarding checks now resolve the
 agency billable account before reading subscriptions. Foundation type-checks
 and the agency operating-home/commercial authority contracts remain green.
+
+Public property eligibility now admits only personal-agent subscriptions whose
+typed billable account matches the agent user. The public inventory authority
+contracts pass 12 tests after this read-path cutover.

@@ -1,9 +1,10 @@
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 
 import {
   agencies,
   agents,
   cataloguePublishers,
+  billableAccounts,
   listings,
   properties,
   subscriptions,
@@ -434,7 +435,17 @@ async function loadAgentPaidEntitledUserIds(
       })
       .from(subscriptions)
       .where(
-        and(inArray(subscriptions.ownerId, [...batchIds]), eq(subscriptions.ownerType, 'agent')),
+        and(
+          inArray(subscriptions.ownerId, [...batchIds]),
+          eq(subscriptions.ownerType, 'agent'),
+          sql`EXISTS (
+            SELECT 1
+            FROM ${billableAccounts} account
+            WHERE account.id = ${subscriptions.billableAccountId}
+              AND account.account_kind = 'agent'
+              AND account.user_id = ${subscriptions.ownerId}
+          )`,
+        ),
       ),
   );
   const now = new Date();
