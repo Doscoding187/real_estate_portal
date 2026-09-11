@@ -424,3 +424,8 @@ and database-enforced ownership remain required for P5 acceptance.
 After these changes, `pnpm db:authority:check` was rerun successfully: all 33
 static suites (272 tests), utility authority (118 surfaces), schema sanity (215
 tables / 81 migrations), deterministic inventory, and lifecycle checks passed.
+
+The billing provider-independent contract now includes a static guard for the
+closed interim owner allow-list and runtime validation of owner values. It
+passes 9 tests with `pnpm check`; this protects the boundary while the
+database-enforced account migration is prepared.
