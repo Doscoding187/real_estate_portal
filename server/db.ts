@@ -1230,7 +1230,7 @@ export async function createLead(leadData: any) {
 
 export async function getLeadsByAgent(agentId: number) {
   const db = await getDb();
-  if (!db) return [];
+  if (!db) throw new Error('Database not available');
 
   // leads already imported at top
   return await db.select().from(leads).where(eq(leads.agentId, agentId));
@@ -1240,7 +1240,7 @@ export async function getLeadsByAgent(agentId: number) {
 
 export async function getAllLocations() {
   const db = await getDb();
-  if (!db) return [];
+  if (!db) throw new Error('Database not available');
 
   // locations table would need to be imported at top if used
   return await db.select().from(locations);
@@ -1248,7 +1248,7 @@ export async function getAllLocations() {
 
 export async function getLocationsByType(type: string) {
   const db = await getDb();
-  if (!db) return [];
+  if (!db) throw new Error('Database not available');
 
   // locations table would need to be imported at top if used
   return await db
@@ -1264,18 +1264,12 @@ export async function getLocationsByType(type: string) {
  * compatibility fallbacks for records created before listings.agencyId existed.
  */
 function agencyListingScopeCondition(agencyId: number) {
-  return or(
-    eq(listings.agencyId, agencyId),
-    and(
-      isNull(listings.agencyId),
-      or(eq(users.agencyId, agencyId), and(isNull(users.agencyId), eq(agents.agencyId, agencyId))),
-    ),
-  )!;
+  return eq(listings.agencyId, agencyId);
 }
 
 async function getAgencyCanonicalListings(agencyId: number) {
   const db = await getDb();
-  if (!db) return [];
+  if (!db) throw new Error('Database not available');
 
   return db
     .select({ listing: listings })
@@ -1288,16 +1282,7 @@ async function getAgencyCanonicalListings(agencyId: number) {
 export async function getAgencyDashboardStats(agencyId: number) {
   const db = await getDb();
   if (!db) {
-    return {
-      totalListings: 0,
-      totalSales: 0,
-      totalLeads: 0,
-      totalAgents: 0,
-      activeListings: 0,
-      pendingListings: 0,
-      recentLeads: 0,
-      recentSales: 0,
-    };
+    throw new Error('Database not available');
   }
 
   const [agencyListingRows, agencyLeads] = await Promise.all([
@@ -1447,7 +1432,7 @@ export async function getUserRecentViewFacts(userId: number, limit = 50) {
 }
 export async function getAgencyPerformanceData(agencyId: number, months: number = 6) {
   const db = await getDb();
-  if (!db) return [];
+  if (!db) throw new Error('Database not available');
 
   // tables already imported at top
 
@@ -1501,7 +1486,7 @@ export async function getAgencyPerformanceData(agencyId: number, months: number 
 
 export async function getAgencyRecentLeads(agencyId: number, limit: number = 5) {
   const db = await getDb();
-  if (!db) return [];
+  if (!db) throw new Error('Database not available');
 
   // leads already imported at top
 
@@ -1530,7 +1515,7 @@ export async function getAgencyRecentLeads(agencyId: number, limit: number = 5) 
 
 export async function getAgencyRecentListings(agencyId: number, limit: number = 5) {
   const db = await getDb();
-  if (!db) return [];
+  if (!db) throw new Error('Database not available');
 
   const rows = await db
     .select({ listing: listings })
