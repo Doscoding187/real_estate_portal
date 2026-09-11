@@ -796,3 +796,7 @@ passed 36 tests and TypeScript validation passed.
 Location insights now fail explicitly when their AI provider is unavailable or
 fails, rather than returning fabricated mock content. Focused authority and
 hierarchy tests passed 9 tests with TypeScript validation passing.
+
+The similar-properties history route now fails explicitly until recent-view
+ranking is implemented, removing another fabricated empty success response.
+Its authority contract passed and TypeScript validation passed.

@@ -185,3 +185,8 @@ Location insights no longer emit fabricated mock pros/cons when the AI provider
 is missing or fails. The service now reports an explicit unavailable error;
 the location authority and hierarchy tests passed 9 tests with TypeScript
 validation passing.
+
+The similar-properties history endpoint no longer returns an empty successful
+feed while its recent-view ranking workflow is unimplemented. It now fails with
+an explicit precondition, protected by a new authority contract test; the
+TypeScript check passed.
