@@ -4,7 +4,7 @@
   "historyTable": "sql_migration_history",
   "attemptTable": "sql_migration_attempts",
   "lockName": "property_listify_manifest_migrations",
-  "expectedHead": "0086_billing_billable_accounts_not_null.sql",
+  "expectedHead": "0087_billing_provider_event_leases.sql",
   "migrations": [
     {
       "sequence": 0,
@@ -914,6 +914,17 @@
       "statementPolicy": "approved-exception",
       "requiredReferenceDataVersion": null,
       "approvalReference": "DBX-PRELAUNCH-BILLING-BILLABLE-ACCOUNT-NON-NULL-2026-09-11-Edward"
+    },
+    {
+      "sequence": 87,
+      "filename": "0087_billing_provider_event_leases.sql",
+      "checksum": "2f2ac4999fa614ecc391f85b5b8bc4aac11b6c60559a634e72d7f222a478059c",
+      "parent": "0086_billing_billable_accounts_not_null.sql",
+      "parentChecksum": "e3352b8aa270f840c7bd028b9466546fbf130c5aa01647a9e862b67221b6e8ea",
+      "kind": "exceptional",
+      "statementPolicy": "approved-exception",
+      "requiredReferenceDataVersion": null,
+      "approvalReference": "DBX-PRELAUNCH-BILLING-PROVIDER-LEASE-2026-09-11-Edward"
     }
   ]
 }

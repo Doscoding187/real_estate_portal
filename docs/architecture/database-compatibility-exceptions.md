@@ -673,6 +673,23 @@ snapshots and make `billable_account_id` mandatory after all active billing
 writers/readers use the central identity.
 Removal workstream: P5 billable-account cutover.
 
+## DBX-PRELAUNCH-BILLING-PROVIDER-LEASE-2026-09-11-Edward
+
+Exception ID: DBX-PRELAUNCH-BILLING-PROVIDER-LEASE-2026-09-11-Edward
+Status: approved exceptional migration
+Owner: Database architecture takeover
+Approved by Edward on: 2026-09-11
+Business reason: fence crashed provider workers and make retry work discoverable by due time.
+Canonical authority: `billing_provider_events` processing ledger.
+Exact files: `server/migrations/0087_billing_provider_event_leases.sql`, `server/services/billingProviderEventService.ts`.
+Tables and columns: `next_attempt_at`, `claim_token`, and `claim_expires_at` on `billing_provider_events`.
+Permitted read direction: supervisors may claim received, due failed, or expired processing events.
+Permitted write direction: only the active claim token may complete or fail an event.
+Failure and observability behavior: bounded attempts remain enforced; stale claims become reclaimable and rejected tokens cannot overwrite newer work.
+Automated evidence: migration manifest, authority static gate, and provider-event integration contract.
+Expiry or objective removal condition: none; retained as canonical provider processing state.
+Removal workstream: P5 provider-event reliability.
+
 ## Required exception record
 
 Every approved exception must contain:

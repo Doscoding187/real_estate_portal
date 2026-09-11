@@ -57,9 +57,9 @@ describeWithDb('billing provider event identity', () => {
       const firstClaim = await claimBillingProviderEvent(Number(recorded.event.id));
       expect(firstClaim?.status).toBe('processing');
       await expect(claimBillingProviderEvent(Number(recorded.event.id))).resolves.toBeNull();
-      await completeBillingProviderEvent(Number(recorded.event.id), 'applied');
+      await completeBillingProviderEvent(Number(recorded.event.id), firstClaim!.claimToken!, 'applied');
       await expect(
-        completeBillingProviderEvent(Number(recorded.event.id), 'ignored'),
+        completeBillingProviderEvent(Number(recorded.event.id), firstClaim!.claimToken!, 'ignored'),
       ).rejects.toThrow('not owned by a processing worker');
     } finally {
       const db = await getDb();
@@ -75,14 +75,13 @@ describeWithDb('billing provider event identity', () => {
       payload: { source: 'physical-test' },
     });
     try {
-      await expect(claimBillingProviderEvent(Number(recorded.event.id))).resolves.toMatchObject({
-        status: 'processing',
-      });
-      await failBillingProviderEvent(Number(recorded.event.id), 'temporary provider timeout');
-      await expect(claimBillingProviderEvent(Number(recorded.event.id))).resolves.toMatchObject({
-        status: 'processing',
-      });
-      await completeBillingProviderEvent(Number(recorded.event.id), 'ignored');
+      const firstClaim = await claimBillingProviderEvent(Number(recorded.event.id));
+      await failBillingProviderEvent(Number(recorded.event.id), firstClaim!.claimToken!, 'temporary provider timeout');
+      const db = await getDb();
+      await db!.update(billingProviderEvents).set({ nextAttemptAt: new Date().toISOString().slice(0, 19).replace('T', ' ') }).where(eq(billingProviderEvents.id, recorded.event.id));
+      const retryClaim = await claimBillingProviderEvent(Number(recorded.event.id));
+      expect(retryClaim).toMatchObject({ status: 'processing' });
+      await completeBillingProviderEvent(Number(recorded.event.id), retryClaim!.claimToken!, 'ignored');
       await expect(claimBillingProviderEvent(Number(recorded.event.id))).resolves.toBeNull();
     } finally {
       const db = await getDb();
@@ -100,11 +99,14 @@ describeWithDb('billing provider event identity', () => {
     });
     try {
       for (let attempt = 0; attempt < 2; attempt += 1) {
-        await expect(claimBillingProviderEvent(Number(recorded.event.id))).resolves.toMatchObject({
+        const claim = await claimBillingProviderEvent(Number(recorded.event.id));
+        expect(claim).toMatchObject({
           status: 'processing',
           attemptCount: attempt + 1,
         });
-        await failBillingProviderEvent(Number(recorded.event.id), `failure ${attempt + 1}`);
+        await failBillingProviderEvent(Number(recorded.event.id), claim!.claimToken!, `failure ${attempt + 1}`);
+        const db = await getDb();
+        await db!.update(billingProviderEvents).set({ nextAttemptAt: new Date().toISOString().slice(0, 19).replace('T', ' ') }).where(eq(billingProviderEvents.id, recorded.event.id));
       }
       await expect(claimBillingProviderEvent(Number(recorded.event.id))).resolves.toBeNull();
     } finally {

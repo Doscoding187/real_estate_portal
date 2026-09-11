@@ -1214,6 +1214,11 @@
       "path": "server/migrations/0086_billing_billable_accounts_not_null.sql",
       "classification": "canonical active",
       "purpose": "Enforces non-null typed billable-account ownership across active billing foundation tables after staged cutover."
+    },
+    {
+      "path": "server/migrations/0087_billing_provider_event_leases.sql",
+      "classification": "canonical active",
+      "purpose": "Adds due-time and lease-token state to fence crashed billing provider workers and bound retry recovery."
     }
   ],
   "prohibitedPaths": [

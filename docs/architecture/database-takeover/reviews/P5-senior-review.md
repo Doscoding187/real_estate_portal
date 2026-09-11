@@ -16,8 +16,8 @@ partial-payment non-activation, rejection/correction behavior, provider
 identity handling, entitlement gating, and positive integer minor-unit
 validation.
 
-P5 is not accepted because provider crash/replay semantics, independent
-entitlement race evidence, and retirement of distinct legacy subscription/
+P5 is not accepted because independent
+entitlement race evidence and retirement of distinct legacy subscription/
 invoice families remain open. Migration 0085 established the
 typed `billable_accounts` identity and staged foreign keys on the exact
 disposable target; migration 0086 now enforces those five account references as
@@ -36,6 +36,7 @@ in `p5-legacy-family-disposition.md`.
 
 Finding: incomplete evidence, severity high for future integrity. Typed
 identity, active manual-EFT writes, account-scoped readers, and non-null
-enforcement are implemented; required follow-up is provider crash/replay
-testing, entitlement expiry/cancellation race tests, and an independently
+enforcement are implemented. Migration 0087 now provides due-time provider
+leases and token-fenced completion; required follow-up is entitlement
+expiry/cancellation race tests and an independently
 verified retirement order for legacy billing families.

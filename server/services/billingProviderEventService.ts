@@ -1,4 +1,5 @@
-import { and, eq, inArray, sql } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
+import { randomUUID } from 'node:crypto';
 import { billingProviderEvents } from '../../drizzle/schema';
 import { getDb } from '../db-connection';
 
@@ -91,43 +92,69 @@ export async function claimBillingProviderEvent(eventId: number) {
       .where(
         and(
           eq(billingProviderEvents.id, eventId),
-          inArray(billingProviderEvents.status, ['received', 'failed']),
+          sql`(
+            (${billingProviderEvents.status} IN ('received', 'failed')
+              AND ${billingProviderEvents.nextAttemptAt} <= UTC_TIMESTAMP())
+            OR (${billingProviderEvents.status} = 'processing'
+              AND ${billingProviderEvents.claimExpiresAt} IS NOT NULL
+              AND ${billingProviderEvents.claimExpiresAt} <= UTC_TIMESTAMP())
+          )`,
         ),
       )
       .for('update')
       .limit(1);
     if (!event || event.attemptCount >= event.maxAttempts) return null;
+    const claimToken = randomUUID();
+    const claimExpiresAt = new Date(Date.now() + 5 * 60_000);
     await tx
       .update(billingProviderEvents)
       .set({
         status: 'processing',
         attemptCount: sql`${billingProviderEvents.attemptCount} + 1`,
         failureReason: null,
+        claimToken,
+        claimExpiresAt: mysqlTimestamp(claimExpiresAt),
       })
       .where(eq(billingProviderEvents.id, eventId));
-    return { ...event, attemptCount: event.attemptCount + 1, status: 'processing' as const };
+    return {
+      ...event,
+      attemptCount: event.attemptCount + 1,
+      status: 'processing' as const,
+      claimToken,
+      claimExpiresAt: mysqlTimestamp(claimExpiresAt),
+    };
   });
 }
 
-export async function completeBillingProviderEvent(eventId: number, status: 'applied' | 'ignored') {
+export async function completeBillingProviderEvent(
+  eventId: number,
+  claimToken: string,
+  status: 'applied' | 'ignored',
+) {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
   const result = await db
     .update(billingProviderEvents)
-    .set({ status, processedAt: mysqlTimestamp() })
-    .where(and(eq(billingProviderEvents.id, eventId), eq(billingProviderEvents.status, 'processing')));
+    .set({ status, processedAt: mysqlTimestamp(), claimToken: null, claimExpiresAt: null })
+    .where(and(eq(billingProviderEvents.id, eventId), eq(billingProviderEvents.status, 'processing'), eq(billingProviderEvents.claimToken, claimToken)));
   if (Number(result[0]?.affectedRows ?? result.affectedRows ?? 0) !== 1) {
     throw new Error('Provider event is not owned by a processing worker');
   }
 }
 
-export async function failBillingProviderEvent(eventId: number, reason: string) {
+export async function failBillingProviderEvent(eventId: number, claimToken: string, reason: string) {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
   const result = await db
     .update(billingProviderEvents)
-    .set({ status: 'failed', failureReason: reason.slice(0, 2000) })
-    .where(and(eq(billingProviderEvents.id, eventId), eq(billingProviderEvents.status, 'processing')));
+    .set({
+      status: 'failed',
+      failureReason: reason.slice(0, 2000),
+      claimToken: null,
+      claimExpiresAt: null,
+      nextAttemptAt: mysqlTimestamp(new Date(Date.now() + Math.min(60, 2 ** 1) * 60_000)),
+    })
+    .where(and(eq(billingProviderEvents.id, eventId), eq(billingProviderEvents.status, 'processing'), eq(billingProviderEvents.claimToken, claimToken)));
   if (Number(result[0]?.affectedRows ?? result.affectedRows ?? 0) !== 1) {
     throw new Error('Provider event is not owned by a processing worker');
   }

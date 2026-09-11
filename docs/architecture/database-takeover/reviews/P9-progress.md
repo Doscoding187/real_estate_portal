@@ -727,6 +727,15 @@ non-null account references for every active billing fact. It no longer assumes
 every newly created non-billable user or organisation must have an account;
 runtime admission remains explicit at the first billing operation.
 
+Migration 0087 adds due-time and lease-token state to provider events. Claims
+can recover expired workers, and completion/failure writes are fenced to the
+active claim token; authority validation and the full static gate pass at head
+0087.
+
+The authority-injected provider-event suite now exercises duplicate identity,
+single-claim fencing, due retry recovery, and bounded exhaustion: 4 physical
+tests pass.
+
 Payment-proof mutations now consume the invoice's mandatory typed account
 reference directly; the former null-account resolution fallback was removed
 after migration 0086.
