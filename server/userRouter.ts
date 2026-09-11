@@ -1,6 +1,7 @@
 import { z } from 'zod';
+import { TRPCError } from '@trpc/server';
 import { protectedProcedure, router, superAdminProcedure } from './_core/trpc';
-import { userOnboardingState, users } from '../drizzle/schema';
+import { billableAccounts, userOnboardingState, users } from '../drizzle/schema';
 import { eq, like, or, desc, and, isNull } from 'drizzle-orm';
 import type { SQL } from 'drizzle-orm';
 import { getDb } from './db';
@@ -412,6 +413,21 @@ export const userRouter = router({
         if (superAdmins.length === 1) {
           throw new Error('Cannot delete the last super admin');
         }
+      }
+
+      const [billableAccount] = await db
+        .select({ id: billableAccounts.id })
+        .from(billableAccounts)
+        .where(
+          and(eq(billableAccounts.accountKind, 'agent'), eq(billableAccounts.userId, input.userId)),
+        )
+        .limit(1);
+      if (billableAccount) {
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message:
+            'User cannot be deleted after billing has been initialized; retire the account through the governed lifecycle first.',
+        });
       }
 
       // Delete user
