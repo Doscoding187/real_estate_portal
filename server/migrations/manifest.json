@@ -4,7 +4,7 @@
   "historyTable": "sql_migration_history",
   "attemptTable": "sql_migration_attempts",
   "lockName": "property_listify_manifest_migrations",
-  "expectedHead": "0084_billing_provider_event_retry_budget.sql",
+  "expectedHead": "0085_billing_billable_accounts.sql",
   "migrations": [
     {
       "sequence": 0,
@@ -892,6 +892,17 @@
       "statementPolicy": "approved-exception",
       "requiredReferenceDataVersion": null,
       "approvalReference": "DBX-PRELAUNCH-BILLING-PROVIDER-RETRY-BUDGET-2026-09-11-Edward"
+    },
+    {
+      "sequence": 85,
+      "filename": "0085_billing_billable_accounts.sql",
+      "checksum": "b2f5af1567af3b4813406feec6a22bafb3e96cb510f397ba56f84f035226ece9",
+      "parent": "0084_billing_provider_event_retry_budget.sql",
+      "parentChecksum": "d1268fd0d268d8205c50cba3b3416613a00ba20af24d4c42daf011e7638a38e4",
+      "kind": "exceptional",
+      "statementPolicy": "approved-exception",
+      "requiredReferenceDataVersion": null,
+      "approvalReference": "DBX-PRELAUNCH-BILLING-BILLABLE-ACCOUNT-2026-09-11-Edward"
     }
   ]
 }

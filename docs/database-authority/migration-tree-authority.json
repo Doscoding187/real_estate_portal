@@ -1204,6 +1204,11 @@
       "path": "server/migrations/0084_billing_provider_event_retry_budget.sql",
       "classification": "canonical active",
       "purpose": "Adds bounded retry attempt state to the billing provider-event processing ledger."
+    },
+    {
+      "path": "server/migrations/0085_billing_billable_accounts.sql",
+      "classification": "canonical active",
+      "purpose": "Establishes typed billable-account ownership and staged foreign keys for the active billing foundation."
     }
   ],
   "prohibitedPaths": [

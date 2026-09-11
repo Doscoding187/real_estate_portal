@@ -17,10 +17,12 @@ import {
   mysqlView,
   tinyint,
   bigint,
+  check,
 } from 'drizzle-orm/mysql-core';
 import { sql } from 'drizzle-orm';
 import { users } from './core';
 import { agencies, agencySubscriptions } from './agencies';
+import { developerOrganisations } from './developerIdentity';
 
 export const plans = mysqlTable('plans', {
   id: int().autoincrement().primaryKey(),
@@ -90,12 +92,42 @@ export const billingProviderEvents = mysqlTable(
   ],
 );
 
+/** Central billing principal; owner snapshots remain historical display data. */
+export const billableAccounts = mysqlTable('billable_accounts', {
+    id: int().autoincrement().primaryKey(),
+    accountKind: mysqlEnum('account_kind', ['agent', 'agency', 'developer']).notNull(),
+    userId: int('user_id').references(() => users.id, { onDelete: 'cascade' }),
+    agencyId: int('agency_id').references(() => agencies.id, { onDelete: 'cascade' }),
+    developerOrganisationId: int('developer_organisation_id').references(
+      () => developerOrganisations.id,
+      { onDelete: 'cascade' },
+    ),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+  },
+  table => [
+    unique('uq_billable_accounts_user').on(table.userId),
+    unique('uq_billable_accounts_agency').on(table.agencyId),
+    unique('uq_billable_accounts_developer_organisation').on(table.developerOrganisationId),
+    index('idx_billable_accounts_kind').on(table.accountKind),
+    check(
+      'billable_accounts_exactly_one_owner',
+      sql`(\`account_kind\` = 'agent' AND \`user_id\` IS NOT NULL AND \`agency_id\` IS NULL AND \`developer_organisation_id\` IS NULL)
+        OR (\`account_kind\` = 'agency' AND \`user_id\` IS NULL AND \`agency_id\` IS NOT NULL AND \`developer_organisation_id\` IS NULL)
+        OR (\`account_kind\` = 'developer' AND \`user_id\` IS NULL AND \`agency_id\` IS NULL AND \`developer_organisation_id\` IS NOT NULL)`,
+    ),
+  ],
+);
+
 export const subscriptions = mysqlTable(
   'subscriptions',
   {
     id: int().autoincrement().primaryKey(),
     ownerType: mysqlEnum('owner_type', ['agent', 'agency', 'developer']).notNull(),
     ownerId: int('owner_id').notNull(),
+    billableAccountId: int('billable_account_id').references(() => billableAccounts.id, {
+      onDelete: 'restrict',
+    }),
     planId: int('plan_id').references(() => plans.id, { onDelete: 'set null' }),
     status: mysqlEnum([
       'trial',
@@ -136,6 +168,9 @@ export const billingInvoices = mysqlTable(
     id: int().autoincrement().primaryKey(),
     ownerType: varchar('owner_type', { length: 40 }).notNull(),
     ownerId: int('owner_id').notNull(),
+    billableAccountId: int('billable_account_id').references(() => billableAccounts.id, {
+      onDelete: 'restrict',
+    }),
     subscriptionId: int('subscription_id').references(() => subscriptions.id, {
       onDelete: 'set null',
     }),
@@ -195,6 +230,9 @@ export const billingPayments = mysqlTable(
     }),
     ownerType: varchar('owner_type', { length: 40 }).notNull(),
     ownerId: int('owner_id').notNull(),
+    billableAccountId: int('billable_account_id').references(() => billableAccounts.id, {
+      onDelete: 'restrict',
+    }),
     paymentMethod: mysqlEnum('payment_method', ['manual_eft', 'manual_adjustment', 'other'])
       .default('manual_eft')
       .notNull(),
@@ -246,6 +284,9 @@ export const billingPaymentDocuments = mysqlTable(
       .references(() => billingInvoices.id, { onDelete: 'cascade' }),
     ownerType: varchar('owner_type', { length: 40 }).notNull(),
     ownerId: int('owner_id').notNull(),
+    billableAccountId: int('billable_account_id').references(() => billableAccounts.id, {
+      onDelete: 'restrict',
+    }),
     storageKey: varchar('storage_key', { length: 512 }).notNull(),
     originalFileName: varchar('original_file_name', { length: 255 }).notNull(),
     mimeType: varchar('mime_type', { length: 120 }).notNull(),
@@ -271,6 +312,9 @@ export const billingAuditEvents = mysqlTable(
     id: int().autoincrement().primaryKey(),
     ownerType: varchar('owner_type', { length: 40 }).notNull(),
     ownerId: int('owner_id').notNull(),
+    billableAccountId: int('billable_account_id').references(() => billableAccounts.id, {
+      onDelete: 'restrict',
+    }),
     subscriptionId: int('subscription_id').references(() => subscriptions.id, {
       onDelete: 'set null',
     }),

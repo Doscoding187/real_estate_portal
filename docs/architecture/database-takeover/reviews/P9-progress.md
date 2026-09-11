@@ -603,3 +603,13 @@ stop once the configured budget is exhausted (bounded to 1–10 at intake), whil
 failed events remain reclaimable until then. Four authority-injected physical
 identity/lifecycle tests pass, including retry exhaustion. Schema congruency
 matches digest `1e98d8bbb1c4504fda1e45053218afde66c17ca7a291a3e3895fadbad6b810f5`.
+
+P5 billable-account cutover has now started with migration 0085
+(`0085_billing_billable_accounts.sql`). It establishes one typed
+`billable_accounts` identity per user, agency, or developer organisation,
+populates the exact disposable target, and adds foreign-key-backed transitional
+`billable_account_id` columns to the active foundation tables. The columns are
+intentionally nullable during this staged cutover; making them mandatory is
+blocked until every active writer and reader has been migrated and independently
+verified. The migration and exception record are registered in the manifest;
+provider event semantics and legacy-family retirement remain open.

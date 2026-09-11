@@ -638,6 +638,41 @@ Expiry or objective removal condition: remove when the provider-event
 authority is retired or replaced by a stronger durable retry/work-queue model.
 Removal workstream: P5 billing provider-event lifecycle closure.
 
+## DBX-PRELAUNCH-BILLING-BILLABLE-ACCOUNT-2026-09-11-Edward
+
+Status: approved for the pre-launch disposable worktree only.
+Owner: database takeover workstream.
+Approved by Edward on: 2026-09-11.
+Business reason: replace unenforced polymorphic billing ownership with one
+stable billable principal and typed foreign keys for account, agency, and
+developer organisation owners.
+Canonical authority: `drizzle/schema/billing.ts`, the P5 billing consumer
+mapping, and migration manifest.
+Exact files: `server/migrations/0085_billing_billable_accounts.sql` and
+`drizzle/schema/billing.ts`.
+Tables and columns: `billable_accounts` plus nullable transitional
+`billable_account_id` columns on subscriptions, invoices, payments, payment
+documents, and billing audit events.
+Permitted read direction: current billing consumers may use the mapped account
+identity while the staged cutover completes; owner snapshots remain display
+only.
+Permitted write direction: only the canonical migration runner may establish
+account mappings on the exact task-owned disposable target. No new consumer
+may use `(owner_type, owner_id)` as an authorization key.
+Failure and observability behavior: account creation is populated from typed
+owner tables, the exactly-one-owner check and typed foreign keys reject invalid
+principals, and migration application aborts on manifest/parent/target or
+unmappable-row failure.
+Automated evidence: migration-manifest validation, schema inventory,
+schema-congruency, account-owner constraint tests, and the P5 independent
+cross-account billing suite. The staged nullable columns remain explicitly
+open until all active writers are migrated and a follow-up migration makes
+them non-null.
+Expiry or objective removal condition: replace the staged columns' owner
+snapshots and make `billable_account_id` mandatory after all active billing
+writers/readers use the central identity.
+Removal workstream: P5 billable-account cutover.
+
 ## Required exception record
 
 Every approved exception must contain:
