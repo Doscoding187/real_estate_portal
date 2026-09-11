@@ -579,7 +579,7 @@ export async function resolveActiveDevelopmentSupersessionRedirect(pathname: str
   if (!sourcePath) return null;
 
   const db = await getDb();
-  if (!db) return null;
+  if (!db) throw new Error('Database not available');
   const [relationship] = await db
     .select({
       replacementDevelopmentId: developmentSupersessions.replacementDevelopmentId,

@@ -498,7 +498,7 @@ export async function getPublicDevelopmentBySlug(slugOrId: string) {
 
 export async function getPublicDevelopment(id: number) {
   const db = await getDb();
-  if (!db) return null;
+  if (!db) throw new Error('Database not available');
 
   const results = await db
     .select({
@@ -547,7 +547,7 @@ export async function listPublicDevelopments(options: {
   transactionType?: 'for_sale' | 'for_rent' | 'auction';
 }) {
   const db = await getDb();
-  if (!db) return [];
+  if (!db) throw new Error('Database not available');
 
   const {
     limit = 20,
@@ -726,7 +726,7 @@ export async function searchPublicDevelopments(options: {
   limit?: number;
 }) {
   const db = await getDb();
-  if (!db) return [];
+  if (!db) throw new Error('Database not available');
 
   const query = options.query.trim().toLowerCase();
   if (!query) return [];
@@ -2336,7 +2336,7 @@ export async function getDevelopmentWithPhases(id: number, cataloguePublisherId?
 
 async function getDevelopmentsByDeveloperId(developerProfileId: number) {
   const db = await getDb();
-  if (!db) return [];
+  if (!db) throw new Error('Database not available');
 
   const results = await db
     .select()
