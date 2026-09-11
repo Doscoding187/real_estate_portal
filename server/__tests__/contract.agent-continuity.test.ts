@@ -20,9 +20,32 @@ describe('canonical paid-entitlement row predicate', () => {
     ).toBe(true);
   });
 
-  it('accepts grace_period and a missing period end (matches established loaders)', () => {
+  it('requires a future grace deadline when the paid period end is absent', () => {
     expect(
       isPaidSubscriptionRowEntitled({ status: 'grace_period', currentPeriodEnd: null }, NOW),
+    ).toBe(false);
+    for (const graceEndsAt of [
+      null,
+      'not-a-date',
+      NOW.toISOString(),
+      new Date(NOW.getTime() - DAY).toISOString(),
+    ]) {
+      expect(
+        isPaidSubscriptionRowEntitled(
+          { status: 'grace_period', currentPeriodEnd: null, graceEndsAt },
+          NOW,
+        ),
+      ).toBe(false);
+    }
+    expect(
+      isPaidSubscriptionRowEntitled(
+        {
+          status: 'grace_period',
+          currentPeriodEnd: null,
+          graceEndsAt: new Date(NOW.getTime() + DAY).toISOString(),
+        },
+        NOW,
+      ),
     ).toBe(true);
     expect(isPaidSubscriptionRowEntitled({ status: 'active', currentPeriodEnd: null }, NOW)).toBe(
       true,

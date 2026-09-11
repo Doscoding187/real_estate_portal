@@ -51,8 +51,15 @@ describe('pre-launch legacy consumer-profile retirement', () => {
         approvalReference: 'DBX-PRELAUNCH-LEGACY-CONSUMER-PROFILE-RETIREMENT-2026-09-09-Edward',
       });
     });
-    expect(manifest.expectedHead.filename).toBe('0076_lead_delivery_relational_authority.sql');
-    expect(manifest.expectedHead.parent).toBe('0075_recently_viewed_microsecond_recency.sql');
+    const start = manifest.orderedMigrations.findIndex(
+      entry => entry.filename === retirement[0].filename,
+    );
+    expect(start).toBeGreaterThanOrEqual(0);
+    expect(
+      manifest.orderedMigrations
+        .slice(start, start + retirement.length)
+        .map(entry => entry.filename),
+    ).toEqual(retirement.map(entry => entry.filename));
   });
 
   it('drops exactly one explicitly named legacy table per migration', () => {
@@ -77,7 +84,9 @@ describe('pre-launch legacy consumer-profile retirement', () => {
 
     expect(databaseModule).toContain('recordUserListingViewFact');
     expect(databaseModule).toContain('setUserFavoriteFact');
-    expect(databaseModule).not.toMatch(/export async function (createProspect|updateProspect|getProspect|addProspectFavorite|removeProspectFavorite|getProspectFavorites|scheduleViewing|getScheduledViewings|updateViewingStatus|updateProspectProgress|earnBadge|getRecommendedProperties)\b/);
+    expect(databaseModule).not.toMatch(
+      /export async function (createProspect|updateProspect|getProspect|addProspectFavorite|removeProspectFavorite|getProspectFavorites|scheduleViewing|getScheduledViewings|updateViewingStatus|updateProspectProgress|earnBadge|getRecommendedProperties)\b/,
+    );
     expect(existsSync(resolve('drizzle/relations.ts'))).toBe(false);
   });
 });
