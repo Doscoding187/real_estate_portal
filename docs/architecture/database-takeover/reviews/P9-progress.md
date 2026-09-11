@@ -488,3 +488,7 @@ readiness reports `applicationReady: true`. A provider-backed EXPLAIN contract
 passed under `pnpm test:authority`, confirming the index is visible to the
 period-filtered aggregate query. TiDB admission and protected-environment
 verification remain open.
+
+Post-migration verification also completed `pnpm lint:check` with exit 0. The
+repository reports 11,229 pre-existing warnings and zero errors; no warning
+cleanup was included in this takeover packet.
