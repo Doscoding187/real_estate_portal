@@ -86,3 +86,8 @@ missing tables into zero counts or empty document lists. Those fallbacks are
 removed; canonical reads now propagate errors, while the mutation boundary
 continues to translate missing schema into `PRECONDITION_FAILED`. Updated
 service and distribution guard tests pass.
+
+Required-document reads no longer retry legacy columns or convert missing tables
+into empty/zero success data. Canonical reads propagate errors, while the
+mutation boundary retains explicit `PRECONDITION_FAILED` handling. Updated
+service and distribution guard tests pass.

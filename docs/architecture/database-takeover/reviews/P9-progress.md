@@ -277,3 +277,8 @@ Required-document reads no longer retry legacy columns or convert missing tables
 into empty/zero success data. Canonical reads propagate errors, and the write
 boundary retains its explicit `PRECONDITION_FAILED` response. Updated service
 and distribution guard tests pass.
+
+Required-document reads no longer retry legacy columns or convert missing tables
+into empty/zero success data. Canonical reads propagate errors, while the
+mutation boundary retains explicit `PRECONDITION_FAILED` handling. Updated
+service and distribution guard tests pass.
