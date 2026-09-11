@@ -3,6 +3,22 @@ import { exploreContent, exploreEngagements } from '../../drizzle/schema';
 import { eq, sql, and, count, desc } from 'drizzle-orm';
 import { randomUUID } from 'node:crypto';
 import type { InteractionType, DeviceType, FeedType } from '../../shared/types';
+import { TRPCError } from '@trpc/server';
+
+function isMissingExploreSchema(error: unknown) {
+  const err = error as { code?: string; message?: string; cause?: { code?: string; message?: string } };
+  const message = `${err.message || ''} ${err.cause?.message || ''}`;
+  const code = err.code || err.cause?.code;
+  return code === 'ER_NO_SUCH_TABLE' || /explore_(content|engagements)/i.test(message) && /does not exist|doesn't exist|unknown table/i.test(message);
+}
+
+function throwExploreUnavailable(error: unknown): never {
+  throw new TRPCError({
+    code: 'PRECONDITION_FAILED',
+    message: 'Explore engagement storage is unavailable until its canonical schema is established',
+    cause: error,
+  });
+}
 
 /**
  * Explore Interaction Service (BOOT-SAFE)
@@ -89,6 +105,7 @@ export class ExploreInteractionService {
         console.error('Error updating content metrics:', err);
       });
     } catch (error: any) {
+      if (isMissingExploreSchema(error)) throwExploreUnavailable(error);
       if (Number(error?.errno) === 1062 || error?.code === 'ER_DUP_ENTRY') return;
       console.error('[ENG_INSERT_FAIL]', {
         contentId,
@@ -139,6 +156,7 @@ export class ExploreInteractionService {
         );
       }
     } catch (error) {
+      if (isMissingExploreSchema(error)) throwExploreUnavailable(error);
       console.error('Error recording batch interactions:', error);
     }
   }
