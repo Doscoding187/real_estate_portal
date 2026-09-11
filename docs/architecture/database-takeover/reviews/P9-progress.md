@@ -369,3 +369,8 @@ at `/` or produced null location query parameters, while 2 tests passed. This
 is a current route-contract failure, distinct from the authenticated fixture
 gaps, and requires a search-routing implementation review before P9 can close.
 Generated browser artifacts were restored.
+
+A compact rerun of `e2e/provincial-discovery.spec.ts` under the authority browser
+runner completed with exit code 0: all 21 Desktop Chrome tests passed in 1.2
+minutes. This is fresh public journey evidence; authenticated journeys and
+search-routing contracts remain open as recorded above.
