@@ -6,8 +6,8 @@ Current execution state: P0 is complete and P1 is accepted after senior
 review. The scoped P6 offer-acceptance race is accepted, while P2 remains
 review-open, P3 has an incomplete-evidence senior review, P4 has a scoped
 senior acceptance, P5 has an incomplete senior review, P7 has an incomplete
-senior review, and P8 has an incomplete senior review; P6 remains mandatory
-domain packets and P9 is in closure audit. The task-owned disposable target is at
+senior review, and P8 has an incomplete senior review; broader P6 lifecycle
+coverage remains open and P9 is in closure audit. The task-owned disposable target is at
 manifest head `0080_service_lead_request_idempotency.sql`, with matching
 physical/model digest
 `69f4bf73e6ac9dc81b2be8b2cc36333e33d7a1ec6917ea392cbcc68466ac73fd`.
@@ -22,10 +22,9 @@ journey. Provider admission, packet review, and broader public/private journey
 coverage remain open.
 
 Outstanding review work includes independent provider crash/replay,
-reconciliation and authorization evidence for P2; final senior review of the
-P3–P8 packets (including implementation of the recorded billing-owner
-decision and remaining domain-lifecycle decisions); and the full P9 closure
-audit. The
+reconciliation and authorization evidence for P2; completion of the P3–P8
+findings (including implementation of the recorded billing-owner decision and
+remaining domain-lifecycle decisions); and the full P9 closure audit. The
 starting-point facts below are
 intentionally historical and are retained to make the handoff auditable.
 
