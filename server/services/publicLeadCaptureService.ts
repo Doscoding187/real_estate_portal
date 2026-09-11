@@ -7,6 +7,7 @@ import { listCurrentActiveMembershipAgentIds } from './agencyMembershipService';
 import {
   agencies,
   agents,
+  billableAccounts,
   cataloguePublishers,
   commercialLeadContexts,
   developerOrganisations,
@@ -514,7 +515,12 @@ async function isRecipientCommerciallyDeliverable(
       const [subscription] = await database
         .select({ status: subscriptions.status, currentPeriodEnd: subscriptions.currentPeriodEnd })
         .from(subscriptions)
-        .where(and(eq(subscriptions.ownerType, 'agent'), eq(subscriptions.ownerId, agent.userId)))
+        .where(sql`EXISTS (
+          SELECT 1 FROM ${billableAccounts} account
+          WHERE account.id = ${subscriptions.billableAccountId}
+            AND account.account_kind = 'agent'
+            AND account.user_id = ${agent.userId}
+        )`)
         .limit(1);
       entitled = isPaidSubscriptionRowEntitled(
         subscription ?? { status: null, currentPeriodEnd: null },
@@ -759,7 +765,12 @@ export async function resolveLeadOwnership(
       ? await database
           .select({ status: subscriptions.status, currentPeriodEnd: subscriptions.currentPeriodEnd })
           .from(subscriptions)
-          .where(and(eq(subscriptions.ownerType, 'agent'), eq(subscriptions.ownerId, agent.userId)))
+          .where(sql`EXISTS (
+            SELECT 1 FROM ${billableAccounts} account
+            WHERE account.id = ${subscriptions.billableAccountId}
+              AND account.account_kind = 'agent'
+              AND account.user_id = ${agent.userId}
+          )`)
           .limit(1)
       : [];
     const [agentUser] = agent.userId

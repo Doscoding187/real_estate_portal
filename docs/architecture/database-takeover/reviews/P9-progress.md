@@ -645,3 +645,7 @@ The public agent profile entitlement lookup now requires the personal agent
 subscription to resolve through the typed account identity. Its agent-serving,
 profile, and launch-journey contracts pass (27 tests); remaining lead and
 reporting readers still require migration.
+
+Public lead capture now checks personal agent entitlements through the typed
+billable-account identity in both assigned-agent eligibility paths. The
+public-lead contract and agent launch journey passed 51 tests after the change.
