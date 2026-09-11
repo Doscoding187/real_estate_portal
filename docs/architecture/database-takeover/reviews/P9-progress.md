@@ -394,3 +394,9 @@ direct-page assertions still fail (10 of 11 tests failed in that exploratory
 run). The helper change was reverted and browser artifacts restored. The clean
 branch then passed `pnpm check` and `pnpm lint:check` (0 errors; 11,220 existing
 warnings). No production behavior or test expectation was weakened.
+
+The Explore analytics unit contract had remained stale after the service was
+changed to fail closed on missing canonical schema. It now asserts the required
+`PRECONDITION_FAILED` response instead of fabricated zero metrics. The focused
+service suite passes 2 tests and `pnpm check` passes; aggregate rebuild and
+query-plan evidence remain open.
