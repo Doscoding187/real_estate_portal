@@ -694,3 +694,7 @@ The homepage journey preview and Search-to-Lead scenario adapters now require
 typed agent, agency, and developer accounts and populate subscription foreign
 keys when creating fixture access. The complete static authority suite remains
 green at 33 suites and 272 tests.
+
+Platform analytics paid-subscription counts now admit only subscriptions linked
+to typed agency billable accounts, removing the last broad dashboard count based
+solely on the polymorphic owner type.
