@@ -116,8 +116,12 @@ The exact task-owned disposable target was rechecked on 2026-09-10:
 
 The current branch has physical evidence packets for P1–P8 corrections,
 including demand rollback, media tenant isolation and deletion invalidation,
-and agency deal acceptance races. This document does not convert those
-packet-level results into senior acceptance. Projection rebuild equivalence,
+and agency deal acceptance races. The identified P6 offer-acceptance race is
+now accepted in `reviews/P6-senior-review.md`; broader P6 lifecycle coverage
+remains open. P5's billable-owner alternatives and recommended future model
+are recorded in `p5-billing-authority-decision.md`, but implementation is not
+complete. This document does not convert the remaining packet-level results
+into senior acceptance. Projection rebuild equivalence,
 provider-specific semantics, unresolved billable-owner modelling, remaining
 packet review findings, and the complete public/private journey audit remain
 required before P9 can close.
