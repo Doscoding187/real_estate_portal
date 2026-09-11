@@ -24,6 +24,11 @@ foundation acceptance and provider-independent contract suites passed 10 tests
 entitlement activation, duplicate approval idempotency, rejection/correction,
 and partial-payment non-activation.
 
+The rebuilt target also passed the agency deal engine packet: 4 physical tests
+covered immutable offer terms, generated transaction rollback, and concurrent
+offer-acceptance serialization. The separate canvassing integration remains
+profile-skipped on this worktree and is not counted as fresh physical evidence.
+
 The exact task-owned disposable target was rechecked on 2026-09-10:
 
 - `pnpm db:schema:congruency` passed. Desired and actual digest:
