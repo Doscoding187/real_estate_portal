@@ -46,6 +46,12 @@ describe('properties.create retirement contract', () => {
     expect(databaseSource).not.toContain('export async function createPropertyImage(');
   });
 
+  it('keeps the canonical projection insert behind one source-linked writer', () => {
+    const databaseSource = readFileSync(path.resolve(process.cwd(), 'server/db.ts'), 'utf8');
+    expect(databaseSource.match(/insert\(properties\)/g) || []).toHaveLength(1);
+    expect(databaseSource).toContain('async function upsertCanonicalPublicPropertyProjection(');
+  });
+
   it.each(['agent', 'agency_admin', 'super_admin'])(
     'denies an authenticated %s before property or media persistence',
     async role => {

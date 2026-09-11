@@ -61,3 +61,9 @@ The writer census found no active callers of the legacy `createProperty` or
 runtime `properties` insert remaining outside governed fixtures is the
 source-linked `upsertCanonicalPublicPropertyProjection` path, which rejects
 multiple existing mirrors before writing.
+
+The retirement contract now also asserts that `server/db.ts` contains exactly
+one `insert(properties)` call and that it remains inside the canonical
+source-linked projection writer. The authority run of that contract passed all
+5 tests. This protects the writer census against reintroducing a second runtime
+projection authority; cross-supply rebuild equivalence remains open.
