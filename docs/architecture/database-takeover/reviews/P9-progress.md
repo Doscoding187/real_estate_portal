@@ -328,3 +328,8 @@ Distribution router reads now require current primary-manager and current-tier
 rows; arbitrary active-manager and historical-tier fallbacks were removed.
 Provider-backed manager-checklist and referral suites passed 19 tests, with
 TypeScript passing.
+
+After the distribution authority cleanup, the full `pnpm db:authority:check`
+was rerun on 2026-09-11: 33 static suites and 272 tests passed; utility
+authority (118 surfaces), schema sanity (215 tables / 81 migrations),
+deterministic inventory, and lifecycle checks also passed.
