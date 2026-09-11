@@ -55,7 +55,7 @@ describe('agency commercial access authority', () => {
 
   it('gates agency invitation delivery on effective canonical entitlement', () => {
     expect(invitationSource).toContain('billableAccounts');
-    expect(invitationSource).toContain('account.account_kind = \'agency\'');
+    expect(invitationSource).toContain("account.account_kind = 'agency'");
     expect(invitationSource).toContain('hasEffectiveAgencyPaidAccess');
     expect(invitationSource).toContain('currentPeriodEnd: subscriptions.currentPeriodEnd');
     expect(invitationSource).toContain('graceEndsAt: subscriptions.graceEndsAt');
@@ -71,7 +71,10 @@ describe('agency commercial access authority', () => {
   });
 
   it('flushes queued invitations when a lifecycle override activates an agency', () => {
-    const lifecycle = extractFunction(billingSource, 'export async function updateSubscriptionLifecycle(');
+    const lifecycle = extractFunction(
+      billingSource,
+      'export async function updateSubscriptionLifecycle(',
+    );
 
     expect(lifecycle).toContain("'active' || input.status === 'grace_period'");
     expect(lifecycle).toContain('deliverPendingAgencyInvitations(subscriptionLookup.ownerId)');
@@ -98,7 +101,9 @@ describe('agency commercial access authority', () => {
   });
 
   it('does not seed retired trial state when a super-admin creates an agency', () => {
-    const createStart = agencyRouterSource.indexOf('create: superAdminProcedure.input(createAgencySchema)');
+    const createStart = agencyRouterSource.indexOf(
+      'create: superAdminProcedure.input(createAgencySchema)',
+    );
     expect(createStart).toBeGreaterThanOrEqual(0);
     const createBody = agencyRouterSource.slice(createStart, createStart + 2500);
 
@@ -113,6 +118,18 @@ describe('agency commercial access authority', () => {
     expect(agencyRouterSource).toMatch(
       /async function withCanonicalAgencySubscriptionStatus[\s\S]*?eq\(subscriptions\.ownerType, 'agency'\)/,
     );
-    expect(agencyRouterSource).toContain("subscriptionStatus: subscription?.status ?? 'not_started'");
+    expect(agencyRouterSource).toContain(
+      "subscriptionStatus: subscription?.status ?? 'not_started'",
+    );
+  });
+
+  it('protects initialized agency billing history from destructive deletion', () => {
+    const deleteStart = agencyRouterSource.indexOf('Delete agency (Super Admin only)');
+    expect(deleteStart).toBeGreaterThanOrEqual(0);
+    const deleteBody = agencyRouterSource.slice(deleteStart, deleteStart + 2600);
+    expect(deleteBody).toContain('billableAccounts');
+    expect(deleteBody).toContain("eq(billableAccounts.accountKind, 'agency')");
+    expect(deleteBody).toContain('Agency cannot be deleted after billing has been initialized');
+    expect(deleteBody).toContain("code: 'PRECONDITION_FAILED'");
   });
 });
