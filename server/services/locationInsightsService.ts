@@ -10,6 +10,7 @@ import { db } from '../db';
 import { suburbs } from '../../drizzle/schema';
 import { eq } from 'drizzle-orm';
 import { OpenAI } from 'openai';
+import { TRPCError } from '@trpc/server';
 
 // Initialize OpenAI client - assumes OPENAI_API_KEY is in env
 const openai = new OpenAI({
@@ -115,7 +116,7 @@ export const locationInsightsService = {
    * submitReview - STUBBED
    * suburbReviews table not available
    */
-  async submitReview(data: {
+  async submitReview(_data: {
     suburbId: number;
     userId?: number;
     rating: number;
@@ -123,12 +124,11 @@ export const locationInsightsService = {
     pros: string;
     cons: string;
     comment: string;
-  }) {
-    // STUB: No-op - suburbReviews table not available
-    console.debug(
-      '[locationInsightsService] submitReview called but disabled (no suburbReviews table)',
-    );
-    return { success: false, message: 'Reviews temporarily disabled' };
+  }): Promise<{ success: boolean; message: string }> {
+    throw new TRPCError({
+      code: 'PRECONDITION_FAILED',
+      message: 'Suburb reviews are unavailable until their canonical schema is approved',
+    });
   },
 
   /**

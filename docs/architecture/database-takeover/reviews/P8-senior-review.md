@@ -51,3 +51,9 @@ when reads failed. Those paths now fail with `PRECONDITION_FAILED` and let
 unexpected read errors surface; a focused authority contract and TypeScript
 check pass. Demand rollback and broader lifecycle evidence remain part of the
 incomplete P8/P9 review.
+
+The disabled suburb-review mutation also returned a nominal `{ success: false }`
+payload from a public route. It now fails with `PRECONDITION_FAILED` before
+acknowledging a write; its declared response shape remains for generated client
+types. A focused location-insights authority contract and TypeScript check
+pass. Review storage and read-path authority remain unimplemented.
