@@ -552,3 +552,9 @@ claims lock only received/failed rows, and completion/failure use
 compare-and-set updates from `processing`. Its authority contract and
 TypeScript validation pass. No webhook route is enabled yet; adapter wiring
 and out-of-order business-event semantics remain gated on the P5 cutover.
+
+The physical provider-event lifecycle test exposed and corrected a timestamp
+format defect: completion had written ISO-8601 `T...Z` text into a MySQL
+ timestamp column. The service now normalizes processing timestamps to UTC
+MySQL format. Duplicate-identity and claim/complete fencing tests both pass
+under `pnpm test:authority`, with TypeScript validation passing.

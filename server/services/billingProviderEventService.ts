@@ -2,6 +2,10 @@ import { and, eq, inArray } from 'drizzle-orm';
 import { billingProviderEvents } from '../../drizzle/schema';
 import { getDb } from '../db-connection';
 
+function mysqlTimestamp(value = new Date()): string {
+  return value.toISOString().slice(0, 19).replace('T', ' ');
+}
+
 export type BillingProviderEventStatus =
   | 'received'
   | 'processing'
@@ -80,7 +84,7 @@ export async function completeBillingProviderEvent(eventId: number, status: 'app
   if (!db) throw new Error('Database not available');
   const result = await db
     .update(billingProviderEvents)
-    .set({ status, processedAt: new Date().toISOString() })
+    .set({ status, processedAt: mysqlTimestamp() })
     .where(and(eq(billingProviderEvents.id, eventId), eq(billingProviderEvents.status, 'processing')));
   if (Number(result[0]?.affectedRows ?? result.affectedRows ?? 0) !== 1) {
     throw new Error('Provider event is not owned by a processing worker');

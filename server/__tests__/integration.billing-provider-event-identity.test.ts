@@ -3,6 +3,11 @@ import { describe, expect, it } from 'vitest';
 import { eq } from 'drizzle-orm';
 import { billingProviderEvents } from '../../drizzle/schema';
 import { getDb } from '../db-connection';
+import {
+  claimBillingProviderEvent,
+  completeBillingProviderEvent,
+  recordBillingProviderEvent,
+} from '../services/billingProviderEventService';
 
 const hasDb = Boolean(process.env.DATABASE_URL);
 const describeWithDb: typeof describe = hasDb
@@ -37,6 +42,27 @@ describeWithDb('billing provider event identity', () => {
       }
     } finally {
       await db.delete(billingProviderEvents).where(eq(billingProviderEvents.id, id));
+    }
+  });
+
+  it('allows one processing claim and fences replay completion', async () => {
+    const recorded = await recordBillingProviderEvent({
+      provider: 'test-provider',
+      providerEventId: `p5-lifecycle-${randomUUID()}`,
+      eventType: 'invoice.paid',
+      payload: { source: 'physical-test' },
+    });
+    try {
+      const firstClaim = await claimBillingProviderEvent(Number(recorded.event.id));
+      expect(firstClaim?.status).toBe('processing');
+      await expect(claimBillingProviderEvent(Number(recorded.event.id))).resolves.toBeNull();
+      await completeBillingProviderEvent(Number(recorded.event.id), 'applied');
+      await expect(
+        completeBillingProviderEvent(Number(recorded.event.id), 'ignored'),
+      ).rejects.toThrow('not owned by a processing worker');
+    } finally {
+      const db = await getDb();
+      await db?.delete(billingProviderEvents).where(eq(billingProviderEvents.id, recorded.event.id));
     }
   });
 });
