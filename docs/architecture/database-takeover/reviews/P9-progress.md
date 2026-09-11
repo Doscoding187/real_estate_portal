@@ -629,3 +629,8 @@ The agency billing router's subscription, invoice, and payment workspace reads
 now filter by the typed billable-account foreign key. Its focused authority-
 injected contract and billing acceptance checks pass; other billing reports and
 legacy-family readers remain open.
+
+Developer publication eligibility now requires the developer subscription to
+join through `billable_accounts`, and the dedicated developer publication
+access service applies the same typed-account predicate. The 21-test physical
+development publication lifecycle suite passes after this read-path change.

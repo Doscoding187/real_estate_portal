@@ -2,6 +2,7 @@ import { and, eq, ne, sql, type SQL } from 'drizzle-orm';
 
 import {
   cataloguePublishers,
+  billableAccounts,
   developmentSupersessions,
   developments,
   developerOrganisations,
@@ -146,9 +147,11 @@ export function publicDevelopmentEligibilityConditions(): SQL {
           AND EXISTS (
             SELECT 1
             FROM ${subscriptions} s
+            INNER JOIN ${billableAccounts} b ON b.id = s.billable_account_id
             INNER JOIN ${plans} launch_plan ON launch_plan.id = s.plan_id
             WHERE s.owner_type = 'developer'
-              AND s.owner_id = p.developer_organisation_id
+              AND b.account_kind = 'developer'
+              AND b.developer_organisation_id = p.developer_organisation_id
               AND s.status IN ('active', 'grace_period')
               AND s.current_period_end IS NOT NULL
               AND s.current_period_end > UTC_TIMESTAMP()
