@@ -53,9 +53,8 @@ export class TopicsService {
       `);
 
       return ((result as any).rows ?? []).map((t: any) => this.mapTopicFromDb(t));
-    } catch (e: any) {
-      console.warn('[TopicsService] getAllTopics fallback:', e?.message);
-      return [];
+    } catch (e) {
+      throw e;
     }
   }
 
@@ -73,9 +72,8 @@ export class TopicsService {
 
       const row = (result as any).rows?.[0];
       return row ? this.mapTopicFromDb(row) : null;
-    } catch (e: any) {
-      console.warn('[TopicsService] getTopicBySlug fallback:', e?.message);
-      return null;
+    } catch (e) {
+      throw e;
     }
   }
 
@@ -93,9 +91,8 @@ export class TopicsService {
 
       const row = (result as any).rows?.[0];
       return row ? this.mapTopicFromDb(row) : null;
-    } catch (e: any) {
-      console.warn('[TopicsService] getTopicById fallback:', e?.message);
-      return null;
+    } catch (e) {
+      throw e;
     }
   }
 
@@ -112,8 +109,8 @@ export class TopicsService {
       `);
 
       return Number((result as any).rows?.[0]?.cnt ?? 0);
-    } catch {
-      return 0;
+    } catch (e) {
+      throw e;
     }
   }
 
@@ -170,7 +167,7 @@ export class TopicsService {
    *
    * We attempt:
    * - If content_topics mapping exists: join to explore_content
-   * - Else: fallback to tag-based matching via JSON_CONTAINS on explore_content.tags
+   * - Content is read only through the canonical content_topics mapping.
    */
   async getContentForTopic(
     topicId: string,
@@ -210,58 +207,8 @@ export class TopicsService {
       `);
 
       return (result as any).rows ?? [];
-    } catch {
-      // ignore and fall back
-    }
-
-    // 2) Fallback: match by tags/features/categories in explore_content JSON fields
-    try {
-      const tagConds: any[] = [];
-
-      if (topic.contentTags?.length) {
-        for (const tag of topic.contentTags) {
-          tagConds.push(sql`JSON_CONTAINS(ec.tags, JSON_QUOTE(${tag}))`);
-        }
-      }
-
-      if (topic.propertyFeatures?.length) {
-        for (const feature of topic.propertyFeatures) {
-          tagConds.push(
-            sql`JSON_CONTAINS(ec.metadata, JSON_QUOTE(${feature}), '$.propertyFeatures')`,
-          );
-        }
-      }
-
-      if (topic.partnerCategories?.length) {
-        for (const category of topic.partnerCategories) {
-          tagConds.push(
-            sql`JSON_CONTAINS(ec.metadata, JSON_QUOTE(${category}), '$.partnerCategory')`,
-          );
-        }
-      }
-
-      const result = await db.execute(sql`
-        SELECT ec.*
-        FROM explore_content ec
-        WHERE ec.is_active = 1
-          ${tagConds.length ? sql`AND (${sql.join(tagConds, sql` OR `)})` : sql``}
-          ${
-            contentTypes.length
-              ? sql`AND ec.content_type IN (${sql.join(
-                  contentTypes.map(t => sql`${t}`),
-                  sql`, `,
-                )})`
-              : sql``
-          }
-          ${priceMin != null ? sql`AND ec.price_min >= ${priceMin}` : sql``}
-          ${priceMax != null ? sql`AND ec.price_max <= ${priceMax}` : sql``}
-        ORDER BY ec.engagement_score DESC, ec.created_at DESC
-        LIMIT ${limit} OFFSET ${offset}
-      `);
-
-      return (result as any).rows ?? [];
-    } catch {
-      return [];
+    } catch (e) {
+      throw e;
     }
   }
 
@@ -286,8 +233,8 @@ export class TopicsService {
       `);
 
       return (result as any).rows ?? [];
-    } catch {
-      return [];
+    } catch (e) {
+      throw e;
     }
   }
 
