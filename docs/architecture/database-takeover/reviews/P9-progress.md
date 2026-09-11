@@ -34,6 +34,11 @@ tests covered complete demand-routing rollback, media reconciliation, and
 tenant/deleted-listing authorization. These results remain independent of
 provider-specific TiDB admission.
 
+The rebuilt target also passed the tenant-boundary packet: agency membership
+maintenance and principal bootstrap passed 12 physical tests, including
+suspension/reactivation closure, invitation identity consistency, incompatible
+principal denial, concurrent bootstrap serialization, and rollback/retry.
+
 The rebuilt target also passed the full consumer activity persistence packet:
 9 physical tests covered concurrent save/view cardinality, guest-transfer
 idempotency and rollback, projection ambiguity, withdrawal removal, isolation,
