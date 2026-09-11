@@ -447,6 +447,11 @@ clicks, and JSON watch-time totals in one SQL aggregate query while preserving
 the existing metric contract. The focused analytics and authority suites pass
 3 tests with `pnpm check`; provider-backed query-plan evidence remains open.
 
+The analytics authority contract now guards that implementation shape: the
+aggregate path must contain SQL `COUNT(DISTINCT)`, conditional `SUM`, and JSON
+watch-time extraction, and must not regress to in-memory event filtering. The
+focused analytics/contract suites pass 4 tests with `pnpm check`.
+
 The authority gate was rerun after the latest billing boundary work: all 33
 static suites (272 tests), 118 utility surfaces, 215 canonical tables, 81 active
 migrations, deterministic inventory, and lifecycle checks passed again. No
