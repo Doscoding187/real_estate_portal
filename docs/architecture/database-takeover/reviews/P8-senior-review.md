@@ -96,3 +96,8 @@ Distribution access lookups no longer convert missing canonical tables into
 absent rows. This prevents an upsert from creating records against an unknown
 schema authority; missing-schema errors now propagate. Access-policy and
 repository authority contracts pass with TypeScript validation.
+
+Distribution access repository lookups now propagate missing-schema errors
+instead of treating an unavailable table as an absent row. This prevents an
+upsert from creating a new record against an unknown authority. Access-policy
+and repository authority tests pass.

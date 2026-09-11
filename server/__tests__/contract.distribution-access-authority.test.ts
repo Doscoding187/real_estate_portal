@@ -13,5 +13,6 @@ describe('distribution access authority boundary', () => {
     expect(source).not.toContain('if (isMissingSchemaError(error)) return null');
     expect(source).toContain('getBrandPartnershipByPublisherId');
     expect(source).toContain('getDevelopmentAccessByDevelopmentId');
+    expect(source).not.toContain('if (isMissingSchemaError(error)) return null');
   });
 });

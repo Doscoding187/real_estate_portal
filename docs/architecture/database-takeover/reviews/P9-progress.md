@@ -287,3 +287,8 @@ Distribution access lookups now propagate missing-schema errors instead of
 turning them into absent rows that could trigger an accidental upsert. Focused
 access-policy and repository authority contracts pass with TypeScript
 validation.
+
+Distribution access repository lookups now propagate missing-schema errors
+instead of treating an unavailable table as an absent row, preventing accidental
+upsert behavior against an unknown authority. Focused access-policy and
+repository authority tests pass.
