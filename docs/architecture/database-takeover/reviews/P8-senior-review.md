@@ -197,3 +197,8 @@ silent ID-domain mismatch. Its log-only engagement and default refined-weight
 stubs now fail explicitly until a canonical engagement authority exists. The
 similar-properties authority contract passed 2 tests with TypeScript
 validation passing.
+
+The active admin revenue analytics procedure no longer returns an empty object
+as successful data. It now fails explicitly until a canonical billing analytics
+authority is approved, with an authority contract test and TypeScript check
+passing.

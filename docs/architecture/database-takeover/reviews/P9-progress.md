@@ -805,3 +805,7 @@ Similar-properties media attribution now uses the canonical Explore
 `reference_id` property mapping. Log-only engagement and unimplemented weight
 refinement no longer acknowledge success; the authority contract passed 2 tests
 with TypeScript validation passing.
+
+Admin revenue analytics now fails explicitly until canonical billing analytics
+is approved, removing an empty-object success response. Its authority contract
+and TypeScript validation passed.

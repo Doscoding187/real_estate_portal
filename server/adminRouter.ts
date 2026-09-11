@@ -1608,8 +1608,10 @@ export const adminRouter = router({
     }),
 
   getRevenueAnalytics: superAdminProcedure.query(async () => {
-    // Frontend expects revenue analytics object
-    return {};
+    throw new TRPCError({
+      code: 'PRECONDITION_FAILED',
+      message: 'Revenue analytics is unavailable until a canonical billing analytics authority is approved.',
+    });
   }),
 
   /**
