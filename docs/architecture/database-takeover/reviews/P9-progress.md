@@ -784,3 +784,7 @@ hierarchy and location-insights tests passed 9 tests, with TypeScript passing.
 Explore feed query failures now propagate instead of being converted to empty
 success feeds. The missing-schema precondition remains explicit, and focused
 fallback/authority tests passed 5 tests with TypeScript validation passing.
+
+Location-page trending-suburb and suburb preview failures now propagate rather
+than presenting incomplete empty sections. The hierarchy suite passed 8 tests
+and TypeScript validation passed.

@@ -291,9 +291,10 @@ export const locationPagesService = {
         .slice(0, 10);
     } catch (error) {
       console.warn(
-        '[LocationPages] Trending suburbs query failed for province, returning empty',
+        '[LocationPages] Trending suburbs query failed for province',
         error,
       );
+      throw error;
     }
 
     const averagePrice = averagePropertyPrice(eligibleProperties);
@@ -560,7 +561,8 @@ export const locationPagesService = {
       try {
         localProperties = loadPropertyPreviews(eligibleProperties.slice(0, 12));
       } catch (error) {
-        console.warn('[LocationPages] Properties query failed for suburb, returning empty', error);
+        console.warn('[LocationPages] Properties preview projection failed for suburb', error);
+        throw error;
       }
     }
 

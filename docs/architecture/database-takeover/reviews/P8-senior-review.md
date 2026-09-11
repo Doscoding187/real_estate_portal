@@ -171,3 +171,7 @@ Explore recommended and area feeds no longer serve empty degraded success data
 when a canonical query fails. Missing-schema errors retain the explicit
 precondition boundary and other failures propagate. The fallback contract and
 Explore authority tests pass 5 tests with TypeScript validation passing.
+
+The remaining province trending-suburb query and suburb preview projection
+handlers now propagate failures instead of returning empty success sections.
+Location hierarchy tests passed 8 tests with TypeScript validation passing.
