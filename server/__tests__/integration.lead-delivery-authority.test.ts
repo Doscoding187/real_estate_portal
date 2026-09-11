@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { drizzle } from 'drizzle-orm/mysql2';
+import { eq } from 'drizzle-orm';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 import * as schema from '../../drizzle/schema';
@@ -309,6 +310,41 @@ describeDatabase('relational lead delivery authority (P2)', () => {
     await expect(
       appendLeadDeliveryRetryAttempt({ database: databaseA, deliveryId: recorded.delivery.id }),
     ).resolves.toBeNull();
+  });
+
+  it('keeps expired-claim recovery inside the worker lead scope', async () => {
+    const scopedLeadId = await createLead('scoped-worker');
+    const unrelatedLeadId = await createLead('unrelated-expired-claim');
+    const scopedDelivery = await recordInitialLeadDelivery({
+      ...primaryDeliveryInput(scopedLeadId),
+      database: databaseA,
+    });
+    const unrelatedDelivery = await recordInitialLeadDelivery({
+      ...primaryDeliveryInput(unrelatedLeadId),
+      database: databaseA,
+    });
+    const unrelatedClaim = await claimLeadDeliveryAttempt({
+      database: databaseA,
+      deliveryId: unrelatedDelivery.delivery.id,
+    });
+    expect(unrelatedClaim).not.toBeNull();
+    await databaseA
+      .update(schema.leadDeliveryAttempts)
+      .set({ leaseExpiresAt: toMySqlDateTime(new Date(Date.now() - 60_000)) } as any)
+      .where(eq(schema.leadDeliveryAttempts.id, unrelatedClaim!.id));
+
+    const worker = await runLeadDeliveryWorker({
+      database: databaseB,
+      leadId: scopedLeadId,
+      dispatcher: async () => ({ status: 'delivered' as const }),
+    });
+    expect(worker).toMatchObject({ claimed: 1, completed: 1, recovered: 0, unknown: 0 });
+
+    const unrelatedSnapshot = await getLeadDeliverySnapshot({ leadId: unrelatedLeadId, database: databaseB });
+    expect(unrelatedSnapshot.current).toMatchObject({ id: unrelatedDelivery.delivery.id, state: 'claimed' });
+    expect(unrelatedSnapshot.attempts.at(-1)).toMatchObject({ id: unrelatedClaim!.id, state: 'claimed' });
+    const scopedSnapshot = await getLeadDeliverySnapshot({ leadId: scopedLeadId, database: databaseB });
+    expect(scopedSnapshot.current).toMatchObject({ id: scopedDelivery.delivery.id, state: 'completed' });
   });
 
   it('stores UTC due work, enforces the retry budget, and keeps notification state out of primary custody summary', async () => {

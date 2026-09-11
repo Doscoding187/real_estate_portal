@@ -18,7 +18,7 @@ Evidence completed:
 - `pnpm db:authority:status`
 - `pnpm db:authority:check`
 - `pnpm db:schema:congruency`
-- `pnpm test:authority -- server/__tests__/integration.lead-delivery-authority.test.ts` — 7 tests passed against the disposable target, including provider-crash uncertainty and lease recovery
+- `pnpm test:authority -- server/__tests__/integration.lead-delivery-authority.test.ts` — 8 tests passed against the disposable target, including provider-crash uncertainty, lease recovery, and scoped expired-claim recovery
 - focused delivery, capture, correction, audit, conversion, and publisher contracts — 77 tests passed across the reviewed runs
 - `pnpm check`
 - `pnpm lint:check`
