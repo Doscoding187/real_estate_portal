@@ -775,3 +775,8 @@ P8 analytics authority cleanup retired the zero-row, unreachable
 found no active consumers. The canonical model inventory was regenerated and
 the retirement is recorded as an approved pre-launch exception. Retained
 aggregate rebuild and query-plan evidence remains open.
+
+The location-page authority boundary now propagates database failures for
+public eligibility, province inventory sections, and suburb price analytics,
+preventing incomplete data from being reported as a valid empty page. Focused
+hierarchy and location-insights tests passed 9 tests, with TypeScript passing.

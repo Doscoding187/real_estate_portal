@@ -161,3 +161,8 @@ retires it, removes its Drizzle authority, and records canonical event facts as
 the replacement source for rebuildable aggregates. Inventory and schema checks
 were regenerated; aggregate rebuild implementation and query-plan evidence
 for retained projections remain open.
+
+Location-page database reads were tightened: failures in public eligibility,
+province city/development inventory, and suburb price analytics now propagate
+instead of returning empty or null success data. Hierarchy and location-insights
+authority tests passed 9 tests with TypeScript validation passing.
