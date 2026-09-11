@@ -201,6 +201,18 @@ export function isPaidSubscriptionEntitled(status: SubscriptionStatus | null | u
   return status === 'active' || status === 'grace_period';
 }
 
+function parseEntitlementTimestamp(value: string | Date): number {
+  if (value instanceof Date) return value.getTime();
+  const normalized = value.trim();
+  // MySQL DATETIME values have no timezone marker; the database authority
+  // treats them as UTC so entitlement decisions are process-timezone safe.
+  const utcValue =
+    /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(?:\.\d+)?$/.test(normalized)
+      ? `${normalized.replace(' ', 'T')}Z`
+      : normalized;
+  return new Date(utcValue).getTime();
+}
+
 /**
  * Pure, write-free row-level commercial entitlement test. This is the single
  * canonical predicate for "is this paid term currently usable" across read
@@ -217,10 +229,10 @@ export function isPaidSubscriptionRowEntitled(
   now: Date = new Date(),
 ): boolean {
   if (!isPaidSubscriptionEntitled(row.status as SubscriptionStatus)) return false;
-  const end = row.currentPeriodEnd ? new Date(row.currentPeriodEnd).getTime() : null;
+  const end = row.currentPeriodEnd ? parseEntitlementTimestamp(row.currentPeriodEnd) : null;
   if (end !== null && (!Number.isFinite(end) || end <= now.getTime())) return false;
   if (row.status === 'grace_period') {
-    const graceEnd = row.graceEndsAt ? new Date(row.graceEndsAt).getTime() : null;
+    const graceEnd = row.graceEndsAt ? parseEntitlementTimestamp(row.graceEndsAt) : null;
     return graceEnd !== null && Number.isFinite(graceEnd) && graceEnd > now.getTime();
   }
   return true;
