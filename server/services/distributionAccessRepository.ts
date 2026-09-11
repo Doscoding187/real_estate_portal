@@ -13,7 +13,6 @@ const STATUS_VALUE_ERROR_CODES = new Set([
   'ER_TRUNCATED_WRONG_VALUE_FOR_FIELD',
   'ER_WRONG_VALUE_FOR_TYPE',
 ]);
-const UNKNOWN_COLUMN_ERROR_CODES = new Set(['ER_BAD_FIELD_ERROR']);
 
 function extractDbErrorCode(error: unknown): string {
   const candidate = error as { code?: string; cause?: unknown } | null;
@@ -37,14 +36,6 @@ function isStatusValueError(error: unknown): boolean {
   const code = extractDbErrorCode(error);
   if (!STATUS_VALUE_ERROR_CODES.has(code)) return false;
   return extractDbErrorMessage(error).includes('status');
-}
-
-function readUnknownColumnName(error: unknown): string | null {
-  const code = extractDbErrorCode(error);
-  if (!UNKNOWN_COLUMN_ERROR_CODES.has(code)) return null;
-  const message = extractDbErrorMessage(error);
-  const match = message.match(/unknown column '([^']+)'/i);
-  return match?.[1]?.toLowerCase() || null;
 }
 
 type PersistedBrandPartnershipRow = typeof distributionBrandPartnerships.$inferSelect;
@@ -194,9 +185,6 @@ export async function upsertDevelopmentAccess(
   const now = nowSqlDateTime();
 
   if (!existing) {
-    let includeIncludedAt = true;
-    let includeExcludedAt = true;
-    let includePausedAt = true;
     let insertResult: { insertId?: number } | null = null;
     let lastInsertError: unknown = null;
 
@@ -217,9 +205,9 @@ export async function upsertDevelopmentAccess(
           updatedBy: input.actorUserId,
         };
 
-        if (includeIncludedAt && input.status === 'included') values.includedAt = now;
-        if (includeExcludedAt && input.status === 'excluded') values.excludedAt = now;
-        if (includePausedAt && input.status === 'paused') values.pausedAt = now;
+        if (input.status === 'included') values.includedAt = now;
+        if (input.status === 'excluded') values.excludedAt = now;
+        if (input.status === 'paused') values.pausedAt = now;
 
         try {
           const [result] = await db.insert(distributionDevelopmentAccess).values(values);
@@ -227,19 +215,6 @@ export async function upsertDevelopmentAccess(
           break;
         } catch (error) {
           lastInsertError = error;
-          const unknownColumn = readUnknownColumnName(error);
-          if (unknownColumn === 'included_at' && includeIncludedAt) {
-            includeIncludedAt = false;
-            continue;
-          }
-          if (unknownColumn === 'excluded_at' && includeExcludedAt) {
-            includeExcludedAt = false;
-            continue;
-          }
-          if (unknownColumn === 'paused_at' && includePausedAt) {
-            includePausedAt = false;
-            continue;
-          }
           if (isStatusValueError(error) && statusCandidate !== input.status) {
             break;
           }
@@ -268,9 +243,6 @@ export async function upsertDevelopmentAccess(
     return normalizeDevelopmentAccessRow(inserted);
   }
 
-  let includeIncludedAt = true;
-  let includeExcludedAt = true;
-  let includePausedAt = true;
   let didUpdate = false;
   let lastUpdateError: unknown = null;
 
@@ -295,11 +267,11 @@ export async function upsertDevelopmentAccess(
       }
       if (input.reasonCode !== undefined) updateSet.reasonCode = input.reasonCode ?? null;
       if (input.notes !== undefined) updateSet.notes = input.notes ?? null;
-      if (includeIncludedAt && input.status === 'included' && !existing.includedAt) {
+      if (input.status === 'included' && !existing.includedAt) {
         updateSet.includedAt = now;
       }
-      if (includeExcludedAt && input.status === 'excluded') updateSet.excludedAt = now;
-      if (includePausedAt && input.status === 'paused') updateSet.pausedAt = now;
+      if (input.status === 'excluded') updateSet.excludedAt = now;
+      if (input.status === 'paused') updateSet.pausedAt = now;
 
       try {
         await db
@@ -310,19 +282,6 @@ export async function upsertDevelopmentAccess(
         break;
       } catch (error) {
         lastUpdateError = error;
-        const unknownColumn = readUnknownColumnName(error);
-        if (unknownColumn === 'included_at' && includeIncludedAt) {
-          includeIncludedAt = false;
-          continue;
-        }
-        if (unknownColumn === 'excluded_at' && includeExcludedAt) {
-          includeExcludedAt = false;
-          continue;
-        }
-        if (unknownColumn === 'paused_at' && includePausedAt) {
-          includePausedAt = false;
-          continue;
-        }
         if (isStatusValueError(error) && statusCandidate !== input.status) {
           break;
         }

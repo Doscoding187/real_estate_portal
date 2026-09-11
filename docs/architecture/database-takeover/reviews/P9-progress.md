@@ -310,3 +310,7 @@ combined under `pnpm test:authority`.
 Brand onboarding preset reads no longer turn a missing canonical column into a
 valid `null` preset. Schema errors propagate, with explicit write-path handling
 preserved. Preset service tests and TypeScript validation pass.
+
+Distribution access writes now require canonical lifecycle timestamp columns;
+unknown-column retries that silently omitted lifecycle timestamps were removed.
+Canonical status/access tests and TypeScript validation pass.

@@ -123,3 +123,8 @@ The brand onboarding preset reader no longer converts a missing canonical preset
 column into a valid `null` preset. Reads now propagate schema errors, while the
 write path retains its explicit unavailable response. Updated preset service
 tests and TypeScript validation pass.
+
+Distribution access writes now require canonical lifecycle timestamp columns;
+retry loops that dropped `included_at`, `excluded_at`, or `paused_at` after an
+unknown-column error were removed. Canonical status/access tests and TypeScript
+validation pass.
