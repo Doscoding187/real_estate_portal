@@ -307,7 +307,7 @@ function canonicalStageToUpdate(stage: LeadStage): Partial<typeof leads.$inferIn
     case 'archived':
       return { status: 'lost', lostReason: 'archived' };
     default:
-      return {};
+      throw new Error(`Unsupported canonical lead stage: ${String(stage)}`);
   }
 }
 
