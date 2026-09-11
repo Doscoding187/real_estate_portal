@@ -118,3 +118,8 @@ Additional provider-backed distribution evidence passed on the same target:
 partner-program terms (3 tests) and manager checklist (11 tests), 14 tests
 combined under `pnpm test:authority`. These validate canonical field reads and
 status/access lifecycle consumers.
+
+The brand onboarding preset reader no longer converts a missing canonical preset
+column into a valid `null` preset. Reads now propagate schema errors, while the
+write path retains its explicit unavailable response. Updated preset service
+tests and TypeScript validation pass.

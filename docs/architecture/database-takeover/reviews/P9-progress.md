@@ -306,3 +306,7 @@ acceptance evidence; TiDB/provider admission remains open.
 Additional provider-backed distribution evidence passed on the same target:
 partner-program terms (3 tests) and manager checklist (11 tests), 14 tests
 combined under `pnpm test:authority`.
+
+Brand onboarding preset reads no longer turn a missing canonical column into a
+valid `null` preset. Schema errors propagate, with explicit write-path handling
+preserved. Preset service tests and TypeScript validation pass.
