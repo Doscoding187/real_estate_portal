@@ -640,3 +640,8 @@ agency and independent-agent subscriptions. Publication readiness fixtures
 admit billable accounts explicitly, and the entitlement/readiness suites pass
 21 tests, preserving the adapter contract while removing owner-pair
 authorization from this gate.
+
+The public agent profile entitlement lookup now requires the personal agent
+subscription to resolve through the typed account identity. Its agent-serving,
+profile, and launch-journey contracts pass (27 tests); remaining lead and
+reporting readers still require migration.

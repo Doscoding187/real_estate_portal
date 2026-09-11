@@ -6,6 +6,7 @@ import { and, eq } from 'drizzle-orm';
 
 import {
   agents,
+  billableAccounts,
   cities,
   leads,
   listingAnalytics,
@@ -139,6 +140,10 @@ describeWithDb('independent agent launch journey (publish → receive)', () => {
     } as any);
     created.userId = insertId(userResult);
     expect(created.userId).toBeGreaterThan(0);
+    await db
+      .insert(billableAccounts)
+      .values({ accountKind: 'agent', userId: created.userId })
+      .onDuplicateKeyUpdate({ set: { accountKind: 'agent' } });
 
     const [agentResult] = await db.insert(agents).values({
       userId: created.userId,
@@ -194,6 +199,13 @@ describeWithDb('independent agent launch journey (publish → receive)', () => {
     const [subscriptionResult] = await db.insert(subscriptions).values({
       ownerType: 'agent',
       ownerId: created.userId,
+      billableAccountId: (
+        await db
+          .select({ id: billableAccounts.id })
+          .from(billableAccounts)
+          .where(eq(billableAccounts.userId, created.userId))
+          .limit(1)
+      )[0]?.id,
       planId: created.planId,
       status: 'active',
       currentPeriodStart: toMySqlTimestamp(now),
