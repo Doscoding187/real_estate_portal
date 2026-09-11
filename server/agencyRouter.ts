@@ -4544,6 +4544,21 @@ export const agencyRouter = router({
         throw new Error('Agency not found');
       }
 
+      const [billableAccount] = await db
+        .select({ id: billableAccounts.id })
+        .from(billableAccounts)
+        .where(
+          and(eq(billableAccounts.accountKind, 'agency'), eq(billableAccounts.agencyId, input.id)),
+        )
+        .limit(1);
+      if (billableAccount) {
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message:
+            'Agency cannot be deleted after billing has been initialized; retire the agency through the governed lifecycle first.',
+        });
+      }
+
       // Delete agency (cascade will handle related records)
       await db.delete(agencies).where(eq(agencies.id, input.id));
 
