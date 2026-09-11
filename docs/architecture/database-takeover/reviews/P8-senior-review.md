@@ -207,3 +207,9 @@ Feed ranking no longer converts campaign, quality-score, or partner-trust
 query failures into neutral empty maps. Those failures now propagate so ranking
 cannot silently claim a degraded result. The feed-ranking authority contract
 passed 1 test with TypeScript validation passing.
+
+The disconnected boost-campaign service no longer returns fabricated disabled
+analytics, empty campaign lists, zero expiry counts, or no-op tracking success.
+All methods now fail explicitly until campaign and billing authorities are
+approved. Feed-ranking and monetization authority tests passed 38 tests with
+TypeScript validation passing.

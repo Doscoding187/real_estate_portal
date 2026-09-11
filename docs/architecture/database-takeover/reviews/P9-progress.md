@@ -813,3 +813,8 @@ and TypeScript validation passed.
 Feed ranking now propagates campaign, quality-score, and partner-trust query
 failures instead of silently ranking with empty maps. Its authority contract
 passed 1 test and TypeScript validation passed.
+
+The retired boost-campaign service now fails explicitly for analytics, campaign
+lists, lifecycle mutations, tracking, and expiry checks instead of returning
+fabricated state. Focused authority and monetization tests passed 38 tests with
+TypeScript validation passing.

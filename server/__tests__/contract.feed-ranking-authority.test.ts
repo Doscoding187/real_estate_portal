@@ -16,4 +16,14 @@ describe('feed ranking authority boundary', () => {
     expect(source).not.toContain("console.error('Error fetching quality scores:', error);\n      return {};");
     expect(source).not.toContain("console.error('Error fetching partner trust scores:', error);\n      return {};");
   });
+
+  it('does not expose fabricated state from the retired boost service', () => {
+    const source = readFileSync(
+      path.resolve(process.cwd(), 'server/services/boostCampaignService.ts'),
+      'utf8',
+    );
+    expect(source).toContain('canonical campaign and billing authority');
+    expect(source).not.toContain('status: \'disabled\'');
+    expect(source).not.toContain('// No-op');
+  });
 });
