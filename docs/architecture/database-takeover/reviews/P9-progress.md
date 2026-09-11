@@ -559,6 +559,12 @@ format defect: completion had written ISO-8601 `T...Z` text into a MySQL
 MySQL format. Duplicate-identity and claim/complete fencing tests both pass
 under `pnpm test:authority`, with TypeScript validation passing.
 
+Provider-event intake now validates and normalizes provider identity, event
+type, payload shape, and optional occurrence timestamps before persistence.
+Malformed identities and timestamps cannot enter the billing ledger. Contract
+and physical lifecycle suites pass after this boundary hardening; provider
+adapter wiring remains gated on the full P5 ownership cutover.
+
 The P3 projection rerun on the current 0083 target passed the persisted agency
 attribution and performance/revision scenarios (2 physical tests). It confirms
 source-listing identity, public-field refresh after a revision, and ownership

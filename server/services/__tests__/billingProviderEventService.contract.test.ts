@@ -10,5 +10,8 @@ describe('billing provider event processing authority', () => {
     expect(source).toContain("inArray(billingProviderEvents.status, ['received', 'failed'])");
     expect(source).toContain(".for('update')");
     expect(source).toContain("eq(billingProviderEvents.status, 'processing')");
+    expect(source).toContain('normalizeIdentity(input.provider');
+    expect(source).toContain('Billing provider event payload must be an object');
+    expect(source).toContain('Invalid billing provider event timestamp');
   });
 });

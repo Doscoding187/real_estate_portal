@@ -6,6 +6,14 @@ function mysqlTimestamp(value = new Date()): string {
   return value.toISOString().slice(0, 19).replace('T', ' ');
 }
 
+function normalizeIdentity(value: string, field: string, maxLength: number): string {
+  const normalized = value.trim();
+  if (!normalized || normalized.length > maxLength) {
+    throw new Error(`Invalid billing provider ${field}.`);
+  }
+  return normalized;
+}
+
 export type BillingProviderEventStatus =
   | 'received'
   | 'processing'
@@ -20,15 +28,27 @@ export async function recordBillingProviderEvent(input: {
   payload: Record<string, unknown>;
   occurredAt?: string | null;
 }) {
+  const provider = normalizeIdentity(input.provider, 'name', 40);
+  const providerEventId = normalizeIdentity(input.providerEventId, 'event identity', 255);
+  const eventType = normalizeIdentity(input.eventType, 'event type', 120);
+  if (!input.payload || typeof input.payload !== 'object' || Array.isArray(input.payload)) {
+    throw new Error('Billing provider event payload must be an object.');
+  }
+  let occurredAt: string | null = null;
+  if (input.occurredAt != null) {
+    const parsed = new Date(input.occurredAt);
+    if (Number.isNaN(parsed.getTime())) throw new Error('Invalid billing provider event timestamp.');
+    occurredAt = mysqlTimestamp(parsed);
+  }
   const db = await getDb();
   if (!db) throw new Error('Database not available');
   try {
     const [result] = await db.insert(billingProviderEvents).values({
-      provider: input.provider,
-      providerEventId: input.providerEventId,
-      eventType: input.eventType,
+      provider,
+      providerEventId,
+      eventType,
       payload: input.payload,
-      occurredAt: input.occurredAt ?? null,
+      occurredAt,
     });
     const [event] = await db
       .select()
@@ -44,8 +64,8 @@ export async function recordBillingProviderEvent(input: {
       .from(billingProviderEvents)
       .where(
         and(
-          eq(billingProviderEvents.provider, input.provider),
-          eq(billingProviderEvents.providerEventId, input.providerEventId),
+          eq(billingProviderEvents.provider, provider),
+          eq(billingProviderEvents.providerEventId, providerEventId),
         ),
       )
       .limit(1);
