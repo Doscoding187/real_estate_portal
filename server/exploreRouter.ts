@@ -12,6 +12,13 @@ import {
 } from './services/explorePublishingEligibilityService';
 import { exploreContent } from '../drizzle/schema';
 
+function unavailableExploreCatalog(name: string): never {
+  throw new TRPCError({
+    code: 'PRECONDITION_FAILED',
+    message: `${name} is unavailable until its canonical Explore catalog is established`,
+  });
+}
+
 async function requireExplorePublisher(ctx: Parameters<typeof requireUser>[0]) {
   const db = await getDb();
   if (!db) {
@@ -197,12 +204,12 @@ export const exploreRouter = router({
 
   // Get highlight tags
   getHighlightTags: publicProcedure.query(async () => {
-    return [] as any[];
+    return unavailableExploreCatalog('Explore highlight tags');
   }),
 
   // Get categories
   getCategories: publicProcedure.query(async () => {
-    return exploreFeedService.getCategories();
+    return unavailableExploreCatalog('Explore categories');
   }),
 
   getFollowedItems: protectedProcedure.query(async () => {
@@ -211,7 +218,7 @@ export const exploreRouter = router({
 
   // Get topics
   getTopics: publicProcedure.query(async () => {
-    return exploreFeedService.getTopics();
+    return unavailableExploreCatalog('Explore topics');
   }),
 
   getPublishingEligibility: protectedProcedure.query(async ({ ctx }) => {
