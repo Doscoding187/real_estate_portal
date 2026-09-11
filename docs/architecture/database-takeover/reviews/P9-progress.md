@@ -624,3 +624,8 @@ authorization and retirement of the remaining billing families are still open.
 The plan-access entitlement projection and subscription writer now resolve the
 same typed account identity, while broader router and reporting readers remain
 to be migrated.
+
+The agency billing router's subscription, invoice, and payment workspace reads
+now filter by the typed billable-account foreign key. Its focused authority-
+injected contract and billing acceptance checks pass; other billing reports and
+legacy-family readers remain open.
