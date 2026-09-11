@@ -20,11 +20,12 @@ not yet proven. The durable service-lead migration is at manifest head 0080,
 with schema congruency verified separately. No retired-table fallback or
 schema-error-to-zero reporting path is accepted.
 
-The review also found an active launch path that dynamically imports
+The review found and corrected an active launch path that dynamically imported
 `revenueCenterSync.ts`, where revenue and failed-payment tables are placeholder
-objects. Its caught failure can leave campaign activation reporting success
-without a durable billing fact. This is a high-severity P8 finding requiring
-removal or migration to a canonical authority.
+objects. The path now fails with `PRECONDITION_FAILED` before any activation or
+success response; a contract test covers the gate. Replacing the placeholder
+module with a canonical authority remains required before campaign launch is
+implemented.
 
 Finding: incomplete evidence, severity medium. Required follow-up is a public
 media rebuild comparison, analytics aggregate rebuild proof with bounded query

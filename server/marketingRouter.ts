@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { router, protectedProcedure } from './_core/trpc';
+import { TRPCError } from '@trpc/server';
 import { getDb } from './db';
 import {} from // TODO: Re-enable when marketing campaign schema is added
 // marketingCampaigns,
@@ -382,62 +383,12 @@ export const marketingRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const db = await getDb();
-      if (!db) throw new Error('Database not available');
-
-      const campaign = await db.query.marketingCampaigns.findFirst({
-        where: eq(marketingCampaigns.id, input.campaignId),
+      void ctx;
+      void input;
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message:
+          'Campaign launch is unavailable until a canonical campaign and billing authority is implemented.',
       });
-
-      if (!campaign) throw new Error('Campaign not found');
-
-      // Verify ownership (simplified for now)
-      // In production, check if ctx.user.id matches ownerId or has admin rights
-
-      // Mock Payment Processing
-      // In production, integrate with Stripe using paymentMethodId
-
-      // Update status to active (or scheduled if start date is future)
-      const schedule = await db.query.campaignSchedules.findFirst({
-        where: eq(campaignSchedules.campaignId, input.campaignId),
-      });
-
-      let newStatus = 'active';
-      if (schedule?.startDate && new Date(schedule.startDate) > new Date()) {
-        newStatus = 'scheduled';
-      }
-
-      await db
-        .update(marketingCampaigns)
-        .set({ status: newStatus as any })
-        .where(eq(marketingCampaigns.id, input.campaignId));
-
-      // Sync to Revenue Center (Mocked)
-      try {
-        const { recordCampaignTransaction } = await import('./revenueCenterSync');
-
-        // Get budget amount
-        const budget = await db.query.campaignBudgets.findFirst({
-          where: eq(campaignBudgets.campaignId, input.campaignId),
-        });
-
-        if (budget && Number(budget.budgetAmount) > 0) {
-          // Determine agency ID
-          let agencyId = 0;
-          if (campaign.ownerType === 'agency') agencyId = campaign.ownerId;
-
-          await recordCampaignTransaction({
-            campaignId: campaign.id,
-            agencyId: agencyId,
-            amount: Number(budget.budgetAmount) * 100, // Convert to cents if budget is in currency
-            description: `Campaign Launch: ${campaign.campaignName}`,
-            metadata: { mockPayment: true, paymentMethodId: input.paymentMethodId },
-          });
-        }
-      } catch (err) {
-        console.error('Failed to sync campaign launch to Revenue Center:', err);
-      }
-
-      return { success: true, status: newStatus };
     }),
 });

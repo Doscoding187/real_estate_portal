@@ -86,9 +86,10 @@ listing deletion. A token minted for the owner is rejected with `FORBIDDEN`
 by the confirmation route after the listing is removed, before storage-object
 verification.
 
-The active `marketingRouter.launchCampaign` path still dynamically imports
-`revenueCenterSync.ts`, whose revenue and failed-payment tables are placeholder
-objects rather than canonical schema authorities. The call is wrapped in a
-catch, so a campaign can report success while revenue persistence fails. This
-is an unresolved P8 finding: the path must be removed or migrated to an
-admitted billing/marketing authority before launch readiness is claimed.
+The active `marketingRouter.launchCampaign` path previously dynamically
+imported `revenueCenterSync.ts`, whose revenue and failed-payment tables are
+placeholder objects rather than canonical schema authorities. That launch path
+is now explicitly gated with `PRECONDITION_FAILED` and no longer activates a
+campaign or reports success until an admitted campaign/billing authority exists.
+The placeholder module remains quarantined as historical reference and must be
+replaced or removed before campaign launch is implemented.
