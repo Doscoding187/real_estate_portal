@@ -240,3 +240,8 @@ canonical placement authority is approved; the admitted `getRecommendedAgents`
 resolver remains available. The focused agents-serving-location contract passed
 7 tests and TypeScript check passed. This removes a silent-fallback surface but
 does not close the outstanding P8 analytics/media/provider work.
+
+The same follow-up removed an Explore analytics schema-error fallback that
+returned zero-valued aggregate metrics. Missing canonical analytics schema now
+produces an explicit `PRECONDITION_FAILED`; the focused authority contracts
+pass 8 tests combined. Aggregate rebuild and query-plan evidence remain open.

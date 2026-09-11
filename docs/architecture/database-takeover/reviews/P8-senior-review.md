@@ -39,3 +39,8 @@ fail with `PRECONDITION_FAILED` until a canonical placement authority is
 approved. They no longer return fabricated empty/null success values. The
 admitted `getRecommendedAgents` resolver remains live and is covered by the
 agents-serving-location contract (7 tests passed).
+
+The same review found `getAggregatedMetrics` converting a missing Explore
+analytics table into zero-valued success data. That schema-error fallback now
+fails with `PRECONDITION_FAILED`, covered by the Explore analytics authority
+contract. Aggregate rebuildability and query-plan evidence remain open.

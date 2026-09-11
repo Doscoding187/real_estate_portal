@@ -12,6 +12,7 @@ import {
   exploreFeedSessions,
 } from '../../drizzle/schema';
 import { eq, and, gte, lte, sql } from 'drizzle-orm';
+import { TRPCError } from '@trpc/server';
 
 interface VideoAnalytics {
   videoId: string;
@@ -98,18 +99,6 @@ type AggregatedEngagementRow = {
   sessionId: string | null;
   contentId: number;
 };
-
-function emptyAggregatedMetrics(): AggregatedMetrics {
-  return {
-    totalViews: 0,
-    totalUniqueViewers: 0,
-    totalWatchTime: 0,
-    totalSessions: 0,
-    averageSessionDuration: 0,
-    averageCompletionRate: 0,
-    engagementRate: 0,
-  };
-}
 
 function getPeriodStart(period: AggregatedMetricsPeriod): Date | undefined {
   const now = new Date();
@@ -508,8 +497,11 @@ export class ExploreAnalyticsService {
         | Array<{ explore_engagements: AggregatedEngagementRow }>;
     } catch (error) {
       if (isMissingExploreAnalyticsSchema(error)) {
-        console.warn('[Analytics] Explore analytics schema missing; returning empty metrics.');
-        return emptyAggregatedMetrics();
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message: 'Explore analytics is unavailable until its canonical schema is established',
+          cause: error,
+        });
       }
       throw error;
     }
