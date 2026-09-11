@@ -8,7 +8,7 @@
  */
 
 import { db } from '../db';
-import { boostCampaigns, explorePartners } from '../../drizzle/schema';
+import { boostCampaigns, explorePartners, topics } from '../../drizzle/schema';
 import { eq, and, sql, lte } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 
@@ -57,38 +57,21 @@ export interface ValidationResult {
 }
 
 export class PartnerBoostCampaignService {
-  /**
-   * BOOT-SAFE topic existence check
-   * 1) If schema exports `topics`, use it.
-   * 2) Else try raw SQL against `topics` table.
-   * 3) Else skip validation (log + allow) so boot never breaks.
-   */
+  /** The canonical topic catalogue is required for every boost campaign. */
   private async topicExists(topicId: string): Promise<boolean> {
-    // Raw SQL fallback (boot-safe)
-    try {
-      const r = await db.execute(sql`
-        SELECT 1
-        FROM topics
-        WHERE id = ${topicId}
-        LIMIT 1
-      `);
-      const row = (r as any).rows?.[0];
-      return !!row;
-    } catch (e: any) {
-      console.warn(
-        '[PartnerBoostCampaign] topicExists() skipped: topics table/export not available:',
-        e?.message,
-      );
-      // 3) Boot-safe: do not block
-      return true;
-    }
+    const [topic] = await db
+      .select({ id: topics.id })
+      .from(topics)
+      .where(and(eq(topics.id, topicId), eq(topics.isActive, 1)))
+      .limit(1);
+    return Boolean(topic);
   }
 
   /**
    * Create a new boost campaign
    */
   async createCampaign(data: BoostCampaignCreate): Promise<BoostCampaign> {
-    // Validate topic exists (boot-safe)
+    // Every campaign must target an active canonical topic.
     const okTopic = await this.topicExists(data.topicId);
     if (!okTopic) {
       throw new Error('Topic not found. Topic selection is required for boost campaigns.');
