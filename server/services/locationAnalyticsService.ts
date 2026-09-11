@@ -697,7 +697,7 @@ export const locationAnalyticsService = {
       }));
     } catch (error) {
       console.error('[LocationAnalytics] Error getting trending suburbs:', error);
-      return [];
+      throw error;
     }
   },
 
@@ -957,7 +957,7 @@ export const locationAnalyticsService = {
       return resultsWithParents;
     } catch (error) {
       console.error('[LocationAnalytics] Error getting similar locations:', error);
-      return [];
+      throw error;
     }
   },
 };
