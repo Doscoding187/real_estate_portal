@@ -339,3 +339,11 @@ rerun with `pnpm test:browser:authority -- e2e/consumer-activity/persistence.spe
 --project='Desktop Chrome' --retries=0`; the single P1 test passed in 20 seconds,
 covering guest transfer, save/remove persistence, reload, and canonical recent
 view behavior. Broader browser journey coverage remains open.
+
+An authority-injected rerun of `e2e/agency/agency-workspace-smoke.spec.ts` did
+not execute the journey. Its fixture loader hard-codes the protected
+`listify_local` database; after an exploratory local-target adjustment, the
+canonical disposable target lacked the test's `agency-new-buyer@listify.local`
+fixture. The exploratory test edit was reverted, generated artifacts were
+restored, and agency browser acceptance remains unverified pending a governed
+fixture migration or replacement journey contract.
