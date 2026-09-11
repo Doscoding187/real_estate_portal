@@ -545,3 +545,10 @@ runner after 0082 on the exact disposable target. Its physical uniqueness
 contract passed under `pnpm test:authority`, proving duplicate provider events
 are rejected; provider webhook consumer wiring and out-of-order event
 semantics remain intentionally open for the subsequent P5 cutover.
+
+The new billing provider-event ledger now has an owned processing boundary in
+`billingProviderEventService.ts`: intake replays return the existing event,
+claims lock only received/failed rows, and completion/failure use
+compare-and-set updates from `processing`. Its authority contract and
+TypeScript validation pass. No webhook route is enabled yet; adapter wiring
+and out-of-order business-event semantics remain gated on the P5 cutover.
