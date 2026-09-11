@@ -209,12 +209,21 @@ export function isPaidSubscriptionEntitled(status: SubscriptionStatus | null | u
  * remains in getPlanAccessProjectionForUserId for authenticated contexts.
  */
 export function isPaidSubscriptionRowEntitled(
-  row: { status: string | null | undefined; currentPeriodEnd: string | Date | null | undefined },
+  row: {
+    status: string | null | undefined;
+    currentPeriodEnd: string | Date | null | undefined;
+    graceEndsAt?: string | Date | null | undefined;
+  },
   now: Date = new Date(),
 ): boolean {
   if (!isPaidSubscriptionEntitled(row.status as SubscriptionStatus)) return false;
   const end = row.currentPeriodEnd ? new Date(row.currentPeriodEnd).getTime() : null;
-  return end === null || (Number.isFinite(end) && end > now.getTime());
+  if (end !== null && (!Number.isFinite(end) || end <= now.getTime())) return false;
+  if (row.status === 'grace_period') {
+    const graceEnd = row.graceEndsAt ? new Date(row.graceEndsAt).getTime() : null;
+    return graceEnd !== null && Number.isFinite(graceEnd) && graceEnd > now.getTime();
+  }
+  return true;
 }
 
 function deriveTrialState(

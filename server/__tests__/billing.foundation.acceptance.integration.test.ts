@@ -258,6 +258,8 @@ describeWithDb('billing foundation persisted acceptance', () => {
     'persists the agency EFT flow, protects proof documents, activates entitlements, and keeps duplicate approval idempotent',
     async () => {
       const seed = await seedBillingAgency('primary');
+      const db = await getDb();
+      if (!db) throw new Error('Database not available');
       const agencyCaller = createCaller({
         id: seed.agencyUserId,
         role: 'agency_admin',
@@ -399,6 +401,18 @@ describeWithDb('billing foundation persisted acceptance', () => {
       expect(new Date(renewedRows.subscription.currentPeriodEnd!).getTime()).toBeGreaterThan(
         new Date(periodEndBeforeDuplicate!).getTime(),
       );
+
+      await db
+        .update(subscriptions)
+        .set({
+          status: 'active',
+          currentPeriodEnd: '2020-01-01 00:00:00',
+          graceEndsAt: null,
+        })
+        .where(eq(subscriptions.id, renewedRows.subscription.id));
+      const expiredAccess = await agencyCaller.agency.getAccessState();
+      expect(expiredAccess.billingStatus).toBe('active');
+      expect(expiredAccess.workspaceAccess.publishing).toBe(false);
     },
     45_000,
   );

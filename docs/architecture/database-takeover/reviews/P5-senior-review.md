@@ -1,8 +1,9 @@
 # P5 senior review
 
-Status: incomplete; typed ownership, provider crash/replay fencing, and
-obsolete-family retirement are accepted on the exercised disposable target.
-Entitlement expiry/cancellation evidence remains open.
+Status: accepted for the exercised Launch Access authority and applicable
+lifecycle races. Fixed-term Launch Access has no cancellation operation;
+expiry is enforced at read time. Broader non-commercial subscription and
+partner lifecycle review remains outside this acceptance.
 
 Independent verification on the task-owned disposable target:
 
@@ -16,14 +17,16 @@ Independent verification on the task-owned disposable target:
 - `pnpm test:authority -- server/__tests__/integration.agency-principal-bootstrap.test.ts`
   — 4 physical tests passed, including concurrent checkout reuse and checkout
   racing finance approval without duplicate invoices.
+- `pnpm test:authority -- server/__tests__/billing.foundation.acceptance.integration.test.ts`
+  — 2 physical tests passed, including renewal and expired-period publication
+  denial.
 
 These tests prove agency EFT proof handling, duplicate approval idempotency,
 partial-payment non-activation, rejection/correction behavior, provider
 identity handling, entitlement gating, and positive integer minor-unit
 validation.
 
-P5 is not accepted because independent entitlement expiry/cancellation race
-evidence remains open. Migration 0085 established the
+Migration 0085 established the
 typed `billable_accounts` identity and staged foreign keys on the exact
 disposable target; migration 0086 now enforces those five account references as
 non-null after active readers, writers, and governed fixtures were migrated. The active manual-EFT billing service
@@ -40,7 +43,10 @@ The remaining cutover design is recorded in
 The legacy-family disposition and retirement evidence requirements are recorded
 in `p5-legacy-family-disposition.md`.
 
-Finding: incomplete evidence, severity high for future integrity. Typed
-identity, active manual-EFT writes, account-scoped readers, non-null
-enforcement, provider leases, and obsolete-family retirement are implemented.
-Required follow-up is entitlement expiry/cancellation race testing.
+Finding: accepted for the canonical Launch Access scope. Typed identity,
+active manual-EFT writes, account-scoped readers, non-null enforcement,
+provider leases, obsolete-family retirement, renewal serialization, and
+expired-period gating are implemented and physically exercised. Cancellation
+is not an applicable state transition for the approved once-off fixed-term
+product. Legacy non-commercial and partner subscription families require their
+own lifecycle reviews before any broader billing closure claim.

@@ -81,6 +81,7 @@ import { requireUser } from './_core/requireUser';
 import {
   getEntitlementNumber,
   isPaidSubscriptionEntitled,
+  isPaidSubscriptionRowEntitled,
   setSubscriptionPlanForOwner,
 } from './services/planAccessService';
 import { getManualEftBillingAmount } from './services/billingFoundationService';
@@ -3600,7 +3601,13 @@ async function getAgencyAccessStateForUser(
     base.actionableReason = 'No canonical subscription exists for this agency.';
   }
 
-  const billingActive = isPaidSubscriptionEntitled(base.billingStatus as any);
+  const billingActive = canonical?.subscription
+    ? isPaidSubscriptionRowEntitled({
+        status: canonical.subscription.status,
+        currentPeriodEnd: canonical.subscription.currentPeriodEnd,
+        graceEndsAt: canonical.subscription.graceEndsAt,
+      })
+    : false;
   base.workspaceAccess = {
     listings: input.profileConfigured,
     publishing: billingActive && input.profileConfigured && input.brandingConfigured,

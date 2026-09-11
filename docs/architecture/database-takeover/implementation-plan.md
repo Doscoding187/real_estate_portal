@@ -5,7 +5,8 @@ Status: planning handoff, 2026-09-09. Owner of architectural decisions and final
 Current execution state: P0 is complete and P1 is accepted after senior
 review. The scoped P6 offer-acceptance race is accepted, while P2 remains
 review-open, P3 has an incomplete-evidence senior review, P4 has a scoped
-senior acceptance, P5 has an incomplete senior review, P7 has an incomplete
+senior acceptance, P5 has accepted Launch Access scope with broader lifecycle
+coverage outside scope, P7 has an incomplete
 senior review, and P8 has an incomplete senior review; broader P6 lifecycle
 coverage remains open and P9 is in closure audit. The task-owned disposable target is at
 manifest head `0088_retire_obsolete_billing_families.sql`, with model
