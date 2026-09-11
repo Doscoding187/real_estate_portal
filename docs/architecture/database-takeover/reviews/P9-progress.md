@@ -853,3 +853,9 @@ the database is unavailable. Login, session revalidation, password reset, and
 email verification can no longer interpret an unavailable user authority as a
 missing account. The auth mapping, session-security, and runtime-bootstrap
 tests passed 16 tests with TypeScript validation.
+
+Agency viewing creation now locks and re-reads the canonical lead inside its
+write transaction before validating the status transition. Concurrent lead
+updates can no longer create a showing from a stale preflight status. TypeScript
+validation passed; the disposable integration suite was correctly skipped when
+the test database environment was absent.
