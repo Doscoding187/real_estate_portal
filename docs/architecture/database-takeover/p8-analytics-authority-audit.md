@@ -98,4 +98,6 @@ The remaining marketing router procedures still reference placeholder campaign
 tables, but all nine database-backed procedures are now gated with the same
 `PRECONDITION_FAILED` authority boundary. They require a separate retirement
 or canonical migration decision and must not be treated as database-backed
-functionality.
+functionality. The unregistered `campaignBoost.ts` search integration was also
+removed; generic property search no longer catches its failed placeholder query
+and silently returns an unverified ranking.

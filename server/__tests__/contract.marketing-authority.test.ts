@@ -7,9 +7,12 @@ describe('marketing authority boundary', () => {
     const source = readFileSync(path.resolve(process.cwd(), 'server/marketingRouter.ts'), 'utf8');
     const launch = source.slice(source.indexOf('launchCampaign:'));
     expect(existsSync(path.resolve(process.cwd(), 'server/revenueCenterSync.ts'))).toBe(false);
+    expect(existsSync(path.resolve(process.cwd(), 'server/campaignBoost.ts'))).toBe(false);
     expect(launch).toContain('Campaign launch is unavailable until a canonical campaign and billing authority is implemented.');
     expect(launch).not.toContain("import('./revenueCenterSync')");
     expect(launch).not.toContain("return { success: true, status: newStatus }");
     expect((source.match(/campaignAuthorityUnavailable\(\);/g) || []).length).toBe(9);
+    const databaseSource = readFileSync(path.resolve(process.cwd(), 'server/db.ts'), 'utf8');
+    expect(databaseSource).not.toContain("import('./campaignBoost')");
   });
 });

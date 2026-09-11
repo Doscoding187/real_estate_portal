@@ -983,28 +983,6 @@ export async function searchProperties(params: PropertySearchParams) {
 
   const results = await query;
 
-  // Get boosted listings for search channel
-  try {
-    const { getBoostedListingsForChannel } = await import('./campaignBoost');
-    const boostedIds = await getBoostedListingsForChannel('search', 3);
-
-    if (boostedIds.length > 0) {
-      // Fetch boosted properties
-      const boostedProperties = await db
-        .select()
-        .from(properties)
-        .where(and(inArray(properties.id, boostedIds), ne(properties.propertyType, 'commercial')));
-
-      // Remove boosted from regular results to avoid duplicates
-      const filteredResults = results.filter((prop: any) => !boostedIds.includes(prop.id));
-
-      // Merge: boosted first, then regular
-      return [...boostedProperties, ...filteredResults].slice(0, params.limit || 20);
-    }
-  } catch (error) {
-    console.error('Error applying campaign boost:', error);
-  }
-
   return results;
 }
 
