@@ -864,3 +864,11 @@ Agency transaction updates now lock and re-read the canonical transaction row
 before deriving status, risk, commission, and settlement transitions. Concurrent
 operators therefore cannot overwrite newer commission state from a stale
 preflight read. TypeScript validation passed.
+
+The protected TiDB CHECK-convergence repair is now intentionally bounded to the
+22 checks proven absent in the reviewed production audit. It verifies every
+repair check against the current Drizzle definition without refusing later,
+unrelated canonical checks such as the billable-account ownership constraint.
+The two historical release-recovery fixtures now derive the current manifest
+head instead of freezing a former head. The protected recovery suites passed
+13 tests and TypeScript validation passed.

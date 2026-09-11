@@ -301,19 +301,17 @@ function assertReviewMatchesAuthorization(
 }
 
 function assertCanonicalDefinitions(): string {
-  const desired = normalizedDesiredSchema(canonicalSchema)
-    .tables.flatMap(table =>
-      table.checks.map(check => ({
-        tableName: table.name,
-        constraintName: check.name,
-        expression: check.expression,
-      })),
-    )
-    .sort((left, right) =>
-      `${left.tableName}.${left.constraintName}`.localeCompare(
-        `${right.tableName}.${right.constraintName}`,
-      ),
-    );
+  const desiredByKey = new Map(
+    normalizedDesiredSchema(canonicalSchema)
+      .tables.flatMap(table =>
+        table.checks.map(check => ({
+          tableName: table.name,
+          constraintName: check.name,
+          expression: check.expression,
+        })),
+      )
+      .map(definition => [`${definition.tableName}\0${definition.constraintName}`, definition]),
+  );
   const configured = TIDB_CANONICAL_CHECK_CONSTRAINTS.map(definition => ({
     tableName: definition.tableName,
     constraintName: definition.constraintName,
@@ -323,10 +321,24 @@ function assertCanonicalDefinitions(): string {
       `${right.tableName}.${right.constraintName}`,
     ),
   );
-  if (JSON.stringify(desired) !== JSON.stringify(configured)) {
-    throw new Error(
-      'TiDB CHECK-constraint convergence refused: bounded definitions no longer match the canonical Drizzle model.',
-    );
+  const configuredKeys = new Set<string>();
+  for (const definition of configured) {
+    const constraintKey = `${definition.tableName}\0${definition.constraintName}`;
+    if (configuredKeys.has(constraintKey)) {
+      throw new Error(
+        'TiDB CHECK-constraint convergence refused: bounded definitions contain a duplicate constraint identity.',
+      );
+    }
+    configuredKeys.add(constraintKey);
+    const desired = desiredByKey.get(constraintKey);
+    if (!desired || desired.expression !== definition.expression) {
+      throw new Error(
+        'TiDB CHECK-constraint convergence refused: bounded definitions no longer match the canonical Drizzle model.',
+      );
+    }
+  }
+  if (configured.length === 0) {
+    throw new Error('TiDB CHECK-constraint convergence refused: bounded definitions are empty.');
   }
   return sha256(configured);
 }
