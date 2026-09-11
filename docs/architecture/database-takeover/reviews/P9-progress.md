@@ -452,6 +452,13 @@ aggregate path must contain SQL `COUNT(DISTINCT)`, conditional `SUM`, and JSON
 watch-time extraction, and must not regress to in-memory event filtering. The
 focused analytics/contract suites pass 4 tests with `pnpm check`.
 
+The remaining query-plan audit found that `explore_engagements` currently has
+only its event-identity unique key; the aggregate's period and content join
+would benefit from a provider-verified `(created_at, content_id)` index. Adding
+that index requires a new manifest migration and TiDB admission review, so no
+manual or historical migration was altered. This is recorded as an explicit
+schema-performance follow-up rather than claimed as complete.
+
 The authority gate was rerun after the latest billing boundary work: all 33
 static suites (272 tests), 118 utility surfaces, 215 canonical tables, 81 active
 migrations, deterministic inventory, and lifecycle checks passed again. No
