@@ -1,6 +1,6 @@
 # Database architecture takeover assessment
 
-Status: **P1 accepted after senior review; P2 implemented and review-open; P3–P8 packet review open; P9 not started**. This is the current
+Status: **P1 accepted after senior review; P2 implemented and review-open; P3–P8 evidence collected with packet review open; P9 in closure audit**. This is the current
 assessment for the task-owned worktree `property-listify-database-architecture`,
 branch `feat/database-architecture-takeover`.
 Completion requires the packet sequence in
