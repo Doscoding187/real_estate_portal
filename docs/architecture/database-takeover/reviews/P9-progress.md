@@ -264,6 +264,10 @@ authority contract and TypeScript check pass. Query-plan evidence remains open.
 The underlying micromarket query no longer swallows database errors as an
 empty result; errors reach the router's explicit unavailable-state boundary.
 
+Distribution partner terms now require the canonical `brochure_config_json`
+field and no longer retry against an alternate schema or serve partial terms.
+Focused distribution contracts and TypeScript validation pass.
+
 Authenticated agency and super-admin dashboard analytics no longer convert
 database failures into zero-valued success data. Missing agency membership is
 also rejected explicitly. Dashboard authority and agency workspace smoke

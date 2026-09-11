@@ -9,10 +9,6 @@ import {
 import { getDb } from '../db';
 import { evaluateDevelopmentDistributionAccess } from './distributionAccessPolicy';
 import { listDevelopmentRequiredDocumentsOrEmpty } from './distributionRequiredDocumentsService';
-import {
-  getDistributionSchemaReadinessSnapshot,
-  warnSchemaCapabilityOnce,
-} from './runtimeSchemaCapabilities';
 
 type ListPartnerProgramTermsInput = {
   cataloguePublisherId?: number;
@@ -264,38 +260,6 @@ function withConditions(conditions: SQL[]) {
   return and(...conditions) as SQL;
 }
 
-function isMissingBrochureConfigColumnError(error: unknown) {
-  let cursor: any = error;
-  const visited = new Set<unknown>();
-  while (cursor && typeof cursor === 'object' && !visited.has(cursor)) {
-    visited.add(cursor);
-    const code = String(cursor?.code || '').trim();
-    const message = String(cursor?.sqlMessage || cursor?.message || '').toLowerCase();
-    if (code === 'ER_BAD_FIELD_ERROR' && message.includes('brochure_config_json')) {
-      return true;
-    }
-    if (message.includes('unknown column') && message.includes('brochure_config_json')) {
-      return true;
-    }
-    cursor = cursor?.cause;
-  }
-  return false;
-}
-
-async function canReadBrochureConfigColumn() {
-  try {
-    const snapshot = await getDistributionSchemaReadinessSnapshot();
-    return Boolean(snapshot.operations['distribution.admin.setDevelopmentBrochureConfig']?.ready);
-  } catch (error) {
-    warnSchemaCapabilityOnce(
-      'distribution-partner-terms-brochure-config-readiness',
-      '[DistributionPartnerTerms] Could not verify brochure_config_json readiness. Continuing without brochure overrides.',
-      error,
-    );
-    return false;
-  }
-}
-
 export async function listPartnerProgramTerms(
   input: ListPartnerProgramTermsInput,
 ): Promise<{ items: PartnerProgramTermsItem[] }> {
@@ -325,7 +289,7 @@ export async function listPartnerProgramTerms(
     );
   }
 
-  const selectPartnerRows = async (includeBrochureConfig: boolean) => {
+  const selectPartnerRows = async () => {
     const selectFields: Record<string, any> = {
       developmentId: developments.id,
       developmentName: developments.name,
@@ -354,9 +318,7 @@ export async function listPartnerProgramTerms(
       submissionAllowed: distributionDevelopmentAccess.submissionAllowed,
     };
 
-    if (includeBrochureConfig) {
-      selectFields.brochureConfigJson = distributionDevelopmentAccess.brochureConfigJson;
-    }
+    selectFields.brochureConfigJson = distributionDevelopmentAccess.brochureConfigJson;
 
     return (await db
       .select(selectFields)
@@ -372,22 +334,7 @@ export async function listPartnerProgramTerms(
     >;
   };
 
-  const includeBrochureConfig = await canReadBrochureConfigColumn();
-  let rows: Array<Record<string, any>>;
-  try {
-    rows = await selectPartnerRows(includeBrochureConfig);
-  } catch (error) {
-    if (!includeBrochureConfig || !isMissingBrochureConfigColumnError(error)) {
-      throw error;
-    }
-
-    warnSchemaCapabilityOnce(
-      'distribution-partner-terms-missing-brochure-config-column',
-      '[DistributionPartnerTerms] brochure_config_json is missing. Serving partner terms without brochure overrides because the connected database is behind the canonical schema authority.',
-      error,
-    );
-    rows = await selectPartnerRows(false);
-  }
+  const rows = await selectPartnerRows();
 
   if (!rows.length) {
     return { items: [] };

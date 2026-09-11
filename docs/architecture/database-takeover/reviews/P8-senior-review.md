@@ -69,6 +69,12 @@ an empty result. It now propagates the error to the router's explicit
 `PRECONDITION_FAILED` boundary, with the authority contract covering the
 behavior.
 
+Distribution partner terms had an unregistered compatibility path that probed
+`brochure_config_json`, retried the query without that canonical field, and
+served partial terms. The fallback and readiness probe are removed; the
+canonical field is now part of the single query authority. Distribution schema
+guard and authority contracts pass with TypeScript validation.
+
 Agency and super-admin dashboard analytics also converted database failures
 into zero-valued success data. Those authenticated reads now fail explicitly
 with `PRECONDITION_FAILED`; missing agency membership is rejected with
