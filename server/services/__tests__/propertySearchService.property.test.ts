@@ -11,13 +11,14 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import fc from 'fast-check';
 import { propertySearchService } from '../propertySearchService';
 import { getDb } from '../../db';
-import { properties } from '../../../drizzle/schema';
+import { properties, users } from '../../../drizzle/schema';
 import { inArray } from 'drizzle-orm';
 import type { SortOption, PropertyFilters } from '../../../shared/types';
 
 describe('PropertySearchService - Property-Based Tests', () => {
   let db: any;
   let skipTests = false;
+  let testOwnerId: number | null = null;
   const getInsertId = (insertResult: unknown): number => {
     const candidate = Array.isArray(insertResult) ? insertResult[0] : insertResult;
     if (candidate && typeof candidate === 'object' && 'insertId' in candidate) {
@@ -158,18 +159,27 @@ describe('PropertySearchService - Property-Based Tests', () => {
         return;
       }
 
-      // Insert test properties
+      const [ownerInsert] = await db.insert(users).values({
+        email: `property-search-owner-${Date.now()}@example.test`,
+        name: 'Property Search Owner',
+        role: 'agent',
+        emailVerified: 1,
+      });
+      testOwnerId = Number(ownerInsert.insertId);
+      if (!Number.isSafeInteger(testOwnerId) || testOwnerId <= 0) {
+        throw new Error('Property search fixture owner was not created.');
+      }
+
+      // Insert properties against the canonical owner foreign key.
       for (const prop of testProperties) {
-        const result = await db.insert(properties).values(prop);
+        const result = await db.insert(properties).values({ ...prop, ownerId: testOwnerId });
         const insertedId = getInsertId(result);
         if (Number.isFinite(insertedId)) {
           insertedPropertyIds.push(insertedId);
         }
       }
     } catch (error) {
-      console.warn('⚠️  Database connection failed. Skipping property search tests.');
-      console.warn('   Error:', error);
-      skipTests = true;
+      throw new Error('Property search fixture setup failed.', { cause: error });
     }
   });
 
@@ -181,6 +191,10 @@ describe('PropertySearchService - Property-Based Tests', () => {
       } catch (error) {
         console.warn('Failed to clean up test data:', error);
       }
+    }
+    if (db && testOwnerId) {
+      await db.delete(users).where(inArray(users.id, [testOwnerId]));
+      testOwnerId = null;
     }
   });
 
