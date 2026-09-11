@@ -101,3 +101,6 @@ retirement or canonical migration decision and must not be treated as
 database-backed functionality. The unregistered `campaignBoost.ts` search
 integration was also removed; generic property search no longer catches its
 failed placeholder query and silently returns an unverified ranking.
+The focused property-search, pagination, and development-listing contracts
+were rerun after the removal and passed 12 tests; they continue to exercise the
+canonical search projections without campaign-boost side effects.
