@@ -319,3 +319,7 @@ Distribution access policy no longer synthesizes legacy partnership/access state
 from visibility or program presence. Persisted canonical rows are the sole
 authority. Provider-backed referral and program-terms suites passed 11 tests;
 TypeScript validation passed.
+
+The distribution catalogue listing endpoint no longer retries with a widened
+fallback query after an empty result. Its canonical publisher/publication/search
+scope is now applied once; schema-guard and authority contracts pass.

@@ -134,3 +134,8 @@ states from catalogue visibility or program presence. Only persisted canonical
 partnership and development-access rows establish authority; the legacy fallback
 reason codes are no longer emitted. Provider-backed referral and program-terms
 suites passed 11 tests, with TypeScript validation passing.
+
+The distribution catalogue listing endpoint no longer retries with a widened
+fallback query after an empty result. Publisher, publication, and search
+conditions are applied once by the canonical query, preventing silent scope
+changes. Schema-guard and distribution authority contracts pass.

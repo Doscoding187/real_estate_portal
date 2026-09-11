@@ -24,5 +24,8 @@ describe('distribution access authority boundary', () => {
     expect(policy).not.toContain('deriveLegacyFallback');
     expect(policy).not.toContain('legacy_fallback_program_present');
     expect(policy).not.toContain('legacy_fallback_brand_linked_visible');
+    const router = readFileSync(path.resolve(process.cwd(), 'server/distributionRouter.ts'), 'utf8');
+    expect(router).not.toContain('Fallback safety net');
+    expect(router).not.toContain('fallbackConditions');
   });
 });
