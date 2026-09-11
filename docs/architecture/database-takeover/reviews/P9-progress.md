@@ -29,6 +29,11 @@ covered immutable offer terms, generated transaction rollback, and concurrent
 offer-acceptance serialization. The separate canvassing integration remains
 profile-skipped on this worktree and is not counted as fresh physical evidence.
 
+The rebuilt target also passed the P8 demand/media boundary packet: 4 physical
+tests covered complete demand-routing rollback, media reconciliation, and
+tenant/deleted-listing authorization. These results remain independent of
+provider-specific TiDB admission.
+
 The exact task-owned disposable target was rechecked on 2026-09-10:
 
 - `pnpm db:schema:congruency` passed. Desired and actual digest:
