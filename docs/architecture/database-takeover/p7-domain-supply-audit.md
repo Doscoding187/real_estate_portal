@@ -38,3 +38,13 @@ exercise.
 
 Those same three suites were rerun through the authority wrapper after the
 empty-target rebuild and passed all 24 tests on the disposable schema.
+
+## Provider decision, 2026-09-11
+
+The current TiDB audit is intentionally admission-blocked for 12
+foreign-key/CHECK interactions. The recommended decision is to retain the
+strong relational constraints for the canonical MySQL launch authority and
+require a reviewed TiDB DDL-action/provenance record before any TiDB release
+plan can be admitted. No constraint is weakened and no alternate schema is
+introduced to make the audit green. The open provider item is deployment
+evidence, not a runtime fallback requirement.
