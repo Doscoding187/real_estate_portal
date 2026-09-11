@@ -24,8 +24,8 @@ coverage remain open.
 Outstanding review work includes independent provider crash/replay,
 reconciliation and authorization evidence for P2; completion of the P3–P8
 findings (including implementation of the recorded billing-owner decision,
-retirement of the placeholder revenue-center path, and remaining domain-
-lifecycle decisions); and the full P9 closure audit. The
+remaining marketing-authority work, and remaining domain-lifecycle decisions);
+and the full P9 closure audit. The
 starting-point facts below are
 intentionally historical and are retained to make the handoff auditable.
 
