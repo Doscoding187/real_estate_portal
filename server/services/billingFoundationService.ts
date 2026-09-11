@@ -32,7 +32,22 @@ import {
   resolveCommercialTerm,
 } from './commercialTerm';
 
-export type BillingOwnerType = 'agent' | 'agency' | 'developer' | string;
+/**
+ * The only billing owner identities admitted by the current foundation.
+ *
+ * This remains a temporary application-level allow-list until billable_accounts
+ * provides database-enforced ownership; widening it would silently reintroduce
+ * an unregistered polymorphic owner.
+ */
+export type BillingOwnerType = 'agent' | 'agency' | 'developer';
+
+function toBillingOwnerType(value: string): BillingOwnerType {
+  if (value === 'agent' || value === 'agency' || value === 'developer') return value;
+  throw new TRPCError({
+    code: 'PRECONDITION_FAILED',
+    message: `Unregistered billing owner type: ${value}`,
+  });
+}
 export type BillingCycle = 'monthly' | 'annual';
 export type CanonicalSubscriptionStatus =
   | 'trial'
@@ -178,7 +193,7 @@ function isBillingFinanceAdmin(user: BillingUser) {
   return Boolean(user.role && BILLING_FINANCE_ROLES.has(user.role));
 }
 
-function ownerPrefix(ownerType: string) {
+function ownerPrefix(ownerType: BillingOwnerType) {
   const normalized = ownerType.toUpperCase().replace(/[^A-Z0-9]/g, '');
   if (normalized === 'AGENCY') return 'AG';
   if (normalized === 'AGENT') return 'AN';
@@ -194,11 +209,11 @@ function randomReferencePart(bytes = 3) {
   return randomBytes(bytes).toString('hex').toUpperCase();
 }
 
-function buildInvoiceNumber(ownerType: string, ownerId: number) {
+function buildInvoiceNumber(ownerType: BillingOwnerType, ownerId: number) {
   return `PLI-${referenceDatePart()}-${ownerPrefix(ownerType)}${ownerId}-${randomReferencePart(3)}`;
 }
 
-function buildPaymentReference(ownerType: string, ownerId: number) {
+function buildPaymentReference(ownerType: BillingOwnerType, ownerId: number) {
   return `PL${ownerPrefix(ownerType)}${ownerId}-${randomReferencePart(3)}`;
 }
 
@@ -428,7 +443,7 @@ async function lockInvoicePayment(tx: BillingTx, input: { paymentId: number; inv
 async function getInvoiceForOwnerOrThrow(
   db: DbOrTx,
   invoiceId: number,
-  ownerType: string,
+  ownerType: BillingOwnerType,
   ownerId: number,
 ) {
   const [invoice] = await db
@@ -460,7 +475,7 @@ async function getLatestInvoicePaymentTotal(db: DbOrTx, invoiceId: number) {
 async function logBillingEvent(
   db: DbOrTx,
   input: {
-    ownerType: string;
+    ownerType: BillingOwnerType;
     ownerId: number;
     subscriptionId?: number | null;
     invoiceId?: number | null;
@@ -1629,7 +1644,7 @@ export async function submitPaidLaunchAccessPaymentProof(input: LaunchPaymentPro
       .values({
         invoiceId: invoice.id,
         subscriptionId: invoice.subscriptionId || null,
-        ownerType: invoice.ownerType,
+        ownerType: toBillingOwnerType(invoice.ownerType),
         ownerId: invoice.ownerId,
         paymentMethod: 'manual_eft',
         state: 'under_review',
@@ -1677,7 +1692,7 @@ export async function submitPaidLaunchAccessPaymentProof(input: LaunchPaymentPro
       .values({
         paymentId,
         invoiceId: invoice.id,
-        ownerType: invoice.ownerType,
+        ownerType: toBillingOwnerType(invoice.ownerType),
         ownerId: invoice.ownerId,
         storageKey: storedDocument.storageKey,
         originalFileName: input.file.filename,
@@ -1739,7 +1754,7 @@ export async function submitPaidLaunchAccessPaymentProof(input: LaunchPaymentPro
     }
 
     await logBillingEvent(tx, {
-      ownerType: invoice.ownerType,
+      ownerType: toBillingOwnerType(invoice.ownerType),
       ownerId: invoice.ownerId,
       subscriptionId: invoice.subscriptionId,
       invoiceId: invoice.id,
@@ -1845,7 +1860,7 @@ export async function submitAgencyPaymentProof(input: LaunchPaymentProofInput) {
       .values({
         invoiceId: invoice.id,
         subscriptionId: invoice.subscriptionId || null,
-        ownerType: invoice.ownerType,
+        ownerType: toBillingOwnerType(invoice.ownerType),
         ownerId: invoice.ownerId,
         paymentMethod: 'manual_eft',
         state: 'under_review',
@@ -1892,7 +1907,7 @@ export async function submitAgencyPaymentProof(input: LaunchPaymentProofInput) {
       .values({
         paymentId,
         invoiceId: invoice.id,
-        ownerType: invoice.ownerType,
+        ownerType: toBillingOwnerType(invoice.ownerType),
         ownerId: invoice.ownerId,
         storageKey: storedDocument.storageKey,
         originalFileName: input.file.filename,
@@ -1946,7 +1961,7 @@ export async function submitAgencyPaymentProof(input: LaunchPaymentProofInput) {
     });
 
     await logBillingEvent(tx, {
-      ownerType: invoice.ownerType,
+      ownerType: toBillingOwnerType(invoice.ownerType),
       ownerId: invoice.ownerId,
       subscriptionId: invoice.subscriptionId,
       invoiceId: invoice.id,
@@ -2394,7 +2409,7 @@ export async function reviewManualPayment(input: {
       }
 
       await logBillingEvent(tx, {
-        ownerType: invoice.ownerType,
+        ownerType: toBillingOwnerType(invoice.ownerType),
         ownerId: invoice.ownerId,
         subscriptionId: invoice.subscriptionId,
         invoiceId: invoice.id,
@@ -2539,7 +2554,7 @@ export async function reviewManualPayment(input: {
     }
 
     await logBillingEvent(tx, {
-      ownerType: invoice.ownerType,
+      ownerType: toBillingOwnerType(invoice.ownerType),
       ownerId: invoice.ownerId,
       subscriptionId: invoice.subscriptionId,
       invoiceId: invoice.id,
