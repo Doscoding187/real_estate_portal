@@ -34,6 +34,12 @@ tests covered complete demand-routing rollback, media reconciliation, and
 tenant/deleted-listing authorization. These results remain independent of
 provider-specific TiDB admission.
 
+The rebuilt target also passed the full consumer activity persistence packet:
+9 physical tests covered concurrent save/view cardinality, guest-transfer
+idempotency and rollback, projection ambiguity, withdrawal removal, isolation,
+and committed save/remove ordering. The injected failure log is expected test
+evidence, and all assertions passed.
+
 The exact task-owned disposable target was rechecked on 2026-09-10:
 
 - `pnpm db:schema:congruency` passed. Desired and actual digest:
