@@ -1,6 +1,14 @@
 import { z } from 'zod';
 import { router, protectedProcedure } from './_core/trpc';
 import { requireUser } from './_core/requireUser';
+import { TRPCError } from '@trpc/server';
+
+const unavailable = () => {
+  throw new TRPCError({
+    code: 'PRECONDITION_FAILED',
+    message: 'Recommendation sessions are unavailable until their canonical persistence workflow is approved',
+  });
+};
 
 /**
  * Stabilization-safe router for recommendationEngine.*
@@ -18,13 +26,8 @@ export const recommendationEngineRouter = router({
         .optional(),
     )
     .mutation(async ({ ctx }) => {
-      return {
-        success: true,
-        data: {
-          sessionId: Date.now(),
-          userId: requireUser(ctx).id,
-        },
-      };
+      requireUser(ctx);
+      return unavailable();
     }),
 
   recordEngagement: protectedProcedure
@@ -40,12 +43,7 @@ export const recommendationEngineRouter = router({
         metadata: z.record(z.any()).optional(),
       }),
     )
-    .mutation(async () => {
-      return {
-        success: true,
-        data: { ok: true },
-      };
-    }),
+    .mutation(async () => unavailable()),
 
   closeSession: protectedProcedure
     .input(
@@ -53,10 +51,5 @@ export const recommendationEngineRouter = router({
         sessionId: z.union([z.string(), z.number()]),
       }),
     )
-    .mutation(async () => {
-      return {
-        success: true,
-        data: { ok: true },
-      };
-    }),
+    .mutation(async () => unavailable()),
 });
