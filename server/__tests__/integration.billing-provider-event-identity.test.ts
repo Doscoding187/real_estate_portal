@@ -6,6 +6,7 @@ import { getDb } from '../db-connection';
 import {
   claimBillingProviderEvent,
   completeBillingProviderEvent,
+  failBillingProviderEvent,
   recordBillingProviderEvent,
 } from '../services/billingProviderEventService';
 
@@ -60,6 +61,29 @@ describeWithDb('billing provider event identity', () => {
       await expect(
         completeBillingProviderEvent(Number(recorded.event.id), 'ignored'),
       ).rejects.toThrow('not owned by a processing worker');
+    } finally {
+      const db = await getDb();
+      await db?.delete(billingProviderEvents).where(eq(billingProviderEvents.id, recorded.event.id));
+    }
+  });
+
+  it('reclaims a failed event and permits a bounded retry', async () => {
+    const recorded = await recordBillingProviderEvent({
+      provider: 'test-provider',
+      providerEventId: `p5-retry-${randomUUID()}`,
+      eventType: 'invoice.paid',
+      payload: { source: 'physical-test' },
+    });
+    try {
+      await expect(claimBillingProviderEvent(Number(recorded.event.id))).resolves.toMatchObject({
+        status: 'processing',
+      });
+      await failBillingProviderEvent(Number(recorded.event.id), 'temporary provider timeout');
+      await expect(claimBillingProviderEvent(Number(recorded.event.id))).resolves.toMatchObject({
+        status: 'processing',
+      });
+      await completeBillingProviderEvent(Number(recorded.event.id), 'ignored');
+      await expect(claimBillingProviderEvent(Number(recorded.event.id))).resolves.toBeNull();
     } finally {
       const db = await getDb();
       await db?.delete(billingProviderEvents).where(eq(billingProviderEvents.id, recorded.event.id));

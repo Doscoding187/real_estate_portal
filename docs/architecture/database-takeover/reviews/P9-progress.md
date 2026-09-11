@@ -559,6 +559,12 @@ format defect: completion had written ISO-8601 `T...Z` text into a MySQL
 MySQL format. Duplicate-identity and claim/complete fencing tests both pass
 under `pnpm test:authority`, with TypeScript validation passing.
 
+The provider-event physical suite now also proves failed-event recovery: a
+failed claim can be reclaimed once, completed, and then remains fenced from
+further claims. Three lifecycle/identity tests pass against the disposable
+target, establishing durable retry behavior before any provider adapter is
+enabled.
+
 Provider-event intake now validates and normalizes provider identity, event
 type, payload shape, and optional occurrence timestamps before persistence.
 Malformed identities and timestamps cannot enter the billing ledger. Contract
