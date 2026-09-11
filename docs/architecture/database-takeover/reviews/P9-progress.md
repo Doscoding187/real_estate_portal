@@ -800,3 +800,8 @@ hierarchy tests passed 9 tests with TypeScript validation passing.
 The similar-properties history route now fails explicitly until recent-view
 ranking is implemented, removing another fabricated empty success response.
 Its authority contract passed and TypeScript validation passed.
+
+Similar-properties media attribution now uses the canonical Explore
+`reference_id` property mapping. Log-only engagement and unimplemented weight
+refinement no longer acknowledge success; the authority contract passed 2 tests
+with TypeScript validation passing.

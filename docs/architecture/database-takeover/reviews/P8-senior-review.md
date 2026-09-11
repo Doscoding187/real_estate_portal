@@ -190,3 +190,10 @@ The similar-properties history endpoint no longer returns an empty successful
 feed while its recent-view ranking workflow is unimplemented. It now fails with
 an explicit precondition, protected by a new authority contract test; the
 TypeScript check passed.
+
+The similar-properties service now resolves Explore media through
+`explore_content.reference_id` (the canonical property identity), fixing a
+silent ID-domain mismatch. Its log-only engagement and default refined-weight
+stubs now fail explicitly until a canonical engagement authority exists. The
+similar-properties authority contract passed 2 tests with TypeScript
+validation passing.

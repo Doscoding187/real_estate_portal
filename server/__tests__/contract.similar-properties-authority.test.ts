@@ -13,4 +13,16 @@ describe('similar-property history authority boundary', () => {
     expect(source).toContain('Similar-property history is not available');
     expect(source).not.toContain('For now, return empty array');
   });
+
+  it('anchors Explore media to property reference IDs and rejects log-only engagement', () => {
+    const service = readFileSync(
+      path.resolve(process.cwd(), 'server/services/similarPropertiesService.ts'),
+      'utf8',
+    );
+
+    expect(service).toContain('propertyId: exploreContent.referenceId');
+    expect(service).toContain('inArray(exploreContent.referenceId, propertyIds)');
+    expect(service).toContain('canonical engagement authority');
+    expect(service).not.toContain('For now, just log it');
+  });
 });
