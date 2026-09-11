@@ -847,3 +847,9 @@ manifest validation, and the full 33-suite authority gate passed at 212 tables
 and 91 active migrations. Future paid placement requires a new authority that
 defines ownership, entitlement, billing, delivery, attribution, and reporting
 together. Broader P8 retention and abuse controls remain open.
+
+Authentication user upsert and canonical user lookups now fail explicitly when
+the database is unavailable. Login, session revalidation, password reset, and
+email verification can no longer interpret an unavailable user authority as a
+missing account. The auth mapping, session-security, and runtime-bootstrap
+tests passed 16 tests with TypeScript validation.
