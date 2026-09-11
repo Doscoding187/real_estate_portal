@@ -48,6 +48,12 @@ The rebuilt target also passed Shared Living and Commercial office coverage:
 covering private practitioner/owner boundaries, moderation and enquiry
 delivery, and ordered commercial availability/economics semantics.
 
+The full database-takeover readiness gate was rerun after these packets and
+returned `applicationReady: true`: target ownership, connectivity, migration
+head 0080, schema congruency, canonical geography, Search-to-Lead scenario,
+and required-data checks were all ready. Commercial reference, consumer API,
+browser, release, and full-diagnostics layers remain intentionally separate.
+
 The rebuilt target also passed the full consumer activity persistence packet:
 9 physical tests covered concurrent save/view cardinality, guest-transfer
 idempotency and rollback, projection ambiguity, withdrawal removal, isolation,
