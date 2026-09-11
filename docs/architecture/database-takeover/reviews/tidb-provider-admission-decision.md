@@ -42,7 +42,9 @@ TiDB execution evidence, and MySQL congruency evidence all exist.
 The runtime census confirms that deletion currently relies on database cascade
 behavior: `agencyRouter.delete` describes related-record cleanup as cascade,
 and `deleteUserById`/the user-admin delete path issue a direct user delete.
-Therefore a provider migration cannot simply replace cascades with restrictive
-keys. Those paths need explicit, transactional retirement/cleanup workflows
-first, with audit and billing-history retention rules tested before the FK
-transition is implemented.
+The runtime now refuses agency deletion after an agency billable account exists,
+and refuses deletion of an agent user after an agent billable account exists;
+these guards are covered by authority contracts. Therefore a provider migration
+cannot simply replace cascades with restrictive keys. Those paths need explicit,
+transactional retirement/cleanup workflows first, with audit and
+billing-history retention rules tested before the FK transition is implemented.
