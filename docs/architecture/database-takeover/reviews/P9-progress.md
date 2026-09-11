@@ -386,3 +386,11 @@ The rerun still failed 9 of 11 tests (2 passed), proving the failures are not
 caused by missing reference data. The current implementation uses the governed
 location-authority flow, while this suite expects legacy keyword/quick-link
 routing; reconciliation or replacement of that route contract remains open.
+
+On 2026-09-11, a focused rerun after an exploratory canonical-suggestion test
+helper confirmed the same boundary rather than establishing a pass: canonical
+location suggestions resolve, but the legacy province SEO, quick-link, and
+direct-page assertions still fail (10 of 11 tests failed in that exploratory
+run). The helper change was reverted and browser artifacts restored. The clean
+branch then passed `pnpm check` and `pnpm lint:check` (0 errors; 11,220 existing
+warnings). No production behavior or test expectation was weakened.
