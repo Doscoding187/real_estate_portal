@@ -2080,6 +2080,9 @@ export const agentRouter = router({
     )
     .query(async ({ ctx, input }): Promise<(typeof leadActivities.$inferSelect)[]> => {
       const db = await getDb();
+      if (!db) {
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+      }
 
       const [agentRecord] = await db
         .select()
@@ -2119,6 +2122,9 @@ export const agentRouter = router({
     )
     .query(async ({ ctx, input }) => {
       const db = await getDb();
+      if (!db) {
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+      }
 
       const [agentRecord] = await db
         .select()
