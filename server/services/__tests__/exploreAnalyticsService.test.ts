@@ -46,32 +46,14 @@ describe('ExploreAnalyticsService.getAggregatedMetrics', () => {
     mockSelect.mockReturnValue(
       makeQuery([
         {
-          interactionType: 'view',
-          metadata: { watchTime: 30 },
-          userId: 11,
-          sessionId: 'session-a',
-          contentId: 101,
-        },
-        {
-          interactionType: 'view',
-          metadata: { duration: 20 },
-          userId: null,
-          sessionId: 'session-b',
-          contentId: 102,
-        },
-        {
-          interactionType: 'complete',
-          metadata: {},
-          userId: 11,
-          sessionId: 'session-a',
-          contentId: 101,
-        },
-        {
-          interactionType: 'save',
-          metadata: {},
-          userId: 11,
-          sessionId: 'session-a',
-          contentId: 101,
+          totalViews: 2,
+          totalUniqueViewers: 2,
+          totalCompletions: 1,
+          totalSaves: 1,
+          totalShares: 0,
+          totalClicks: 0,
+          totalSessions: 2,
+          totalWatchTime: 50,
         },
       ]),
     );
