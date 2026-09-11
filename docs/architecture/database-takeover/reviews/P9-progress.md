@@ -435,6 +435,12 @@ The legacy `explore.getFollowedItems` procedure now fails with
 returning an empty structure. The Explore capability boundary passes 7 tests
 and `pnpm check` passes.
 
+The governed discovery engagement writer now distinguishes missing canonical
+Explore engagement storage from ordinary best-effort write failures. Missing
+tables fail with `PRECONDITION_FAILED` instead of being acknowledged as a
+successful event; duplicate event IDs remain idempotent. The interaction
+authority and discovery engagement suites pass 5 tests with `pnpm check`.
+
 The authority gate was rerun after the latest billing boundary work: all 33
 static suites (272 tests), 118 utility surfaces, 215 canonical tables, 81 active
 migrations, deterministic inventory, and lifecycle checks passed again. No
