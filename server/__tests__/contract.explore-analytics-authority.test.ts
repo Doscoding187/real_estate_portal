@@ -14,4 +14,20 @@ describe('explore analytics authority boundary', () => {
     expect(source).not.toContain('returning empty metrics');
     expect(source).not.toContain('function emptyAggregatedMetrics');
   });
+
+  it('aggregates engagement metrics in SQL rather than loading event rows', () => {
+    const source = readFileSync(
+      path.resolve(process.cwd(), 'server/services/exploreAnalyticsService.ts'),
+      'utf8',
+    );
+    const aggregatePath = source.slice(
+      source.indexOf('async getAggregatedMetrics('),
+      source.indexOf('\n  }\n}\n\nexport const exploreAnalyticsService'),
+    );
+
+    expect(aggregatePath).toContain('COUNT(DISTINCT');
+    expect(aggregatePath).toContain('SUM(CASE WHEN');
+    expect(aggregatePath).toContain('JSON_EXTRACT');
+    expect(aggregatePath).not.toContain('engagements.filter');
+  });
 });
