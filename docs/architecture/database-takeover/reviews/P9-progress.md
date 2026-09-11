@@ -721,3 +721,8 @@ at migration head 0086.
 Additional physical agency fixtures (performance, scorecard, and attribution)
 now create typed billable accounts and populate subscription foreign keys, so
 real-database runs remain compatible with the non-null authority.
+
+The physical billable-account invariant now verifies exact typed-owner shape and
+non-null account references for every active billing fact. It no longer assumes
+every newly created non-billable user or organisation must have an account;
+runtime admission remains explicit at the first billing operation.
