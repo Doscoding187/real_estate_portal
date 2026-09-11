@@ -420,3 +420,7 @@ types fail with `PRECONDITION_FAILED` rather than entering another polymorphic
 path. The provider-independent billing contract passes 8 tests and `pnpm check`
 passes. This is an interim boundary; the approved `billable_accounts` migration
 and database-enforced ownership remain required for P5 acceptance.
+
+After these changes, `pnpm db:authority:check` was rerun successfully: all 33
+static suites (272 tests), utility authority (118 surfaces), schema sanity (215
+tables / 81 migrations), deterministic inventory, and lifecycle checks passed.
