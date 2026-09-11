@@ -24,6 +24,13 @@ geography, and Land lifecycle decisions. No schema change is accepted by this
 review until those decisions have explicit domain ownership and deployment
 evidence.
 
+The audit was rerun on 2026-09-11 at the current schema digest after migration
+0088. It remains deterministically refused (`admitted: false`) for the same
+12 interactions, including typed billable-account owner checks,
+development-supersession actor/endpoints, Land claim subjects/conflicts, and
+provider-mapped geography targets. This is a provider-admission finding; TiDB
+deployment evidence and explicit DDL-action provenance are still required.
+
 Finding: incomplete evidence, severity high for release admission. Required
 follow-up is the public mixed-authority journey, Commercial economics race
 proof, and reviewed provider-specific FK/CHECK behavior.
