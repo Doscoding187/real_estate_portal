@@ -14,5 +14,8 @@ describe('distribution access authority boundary', () => {
     expect(source).toContain('getBrandPartnershipByPublisherId');
     expect(source).toContain('getDevelopmentAccessByDevelopmentId');
     expect(source).not.toContain('if (isMissingSchemaError(error)) return null');
+    expect(source).not.toContain('LEGACY_STATUS_FALLBACKS');
+    expect(source).not.toContain('LEGACY_STATUS_NORMALIZATION');
+    expect(source).not.toContain('normalizeDevelopmentAccessStatus');
   });
 });

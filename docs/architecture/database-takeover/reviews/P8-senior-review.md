@@ -101,3 +101,9 @@ Distribution access repository lookups now propagate missing-schema errors
 instead of treating an unavailable table as an absent row. This prevents an
 upsert from creating a new record against an unknown authority. Access-policy
 and repository authority tests pass.
+
+Distribution access status handling now uses the canonical enum values directly.
+Legacy aliases are no longer normalized on reads or retried on writes, so stale
+status values cannot silently cross the state-machine authority. The repository
+contract and TypeScript checks pass; the provider integration suite was skipped
+in this shell because no disposable `DATABASE_URL` was configured.

@@ -14,19 +14,6 @@ const STATUS_VALUE_ERROR_CODES = new Set([
   'ER_WRONG_VALUE_FOR_TYPE',
 ]);
 const UNKNOWN_COLUMN_ERROR_CODES = new Set(['ER_BAD_FIELD_ERROR']);
-const LEGACY_STATUS_FALLBACKS: Record<string, string[]> = {
-  listed: ['active'],
-  included: ['active', 'listed'],
-  excluded: ['ended', 'inactive'],
-  paused: ['inactive'],
-};
-const LEGACY_STATUS_NORMALIZATION: Record<string, DistributionDevelopmentAccessRow['status']> = {
-  active: 'included',
-  pending: 'listed',
-  ended: 'excluded',
-  inactive: 'excluded',
-  revoked: 'excluded',
-};
 
 function extractDbErrorCode(error: unknown): string {
   const candidate = error as { code?: string; cause?: unknown } | null;
@@ -60,14 +47,6 @@ function readUnknownColumnName(error: unknown): string | null {
   return match?.[1]?.toLowerCase() || null;
 }
 
-function normalizeDevelopmentAccessStatus(status: string | null | undefined) {
-  if (!status) return status;
-  const normalized =
-    LEGACY_STATUS_NORMALIZATION[status.toLowerCase()] ||
-    (status as DistributionDevelopmentAccessRow['status']);
-  return normalized;
-}
-
 type PersistedBrandPartnershipRow = typeof distributionBrandPartnerships.$inferSelect;
 type PersistedDevelopmentAccessRow = typeof distributionDevelopmentAccess.$inferSelect;
 
@@ -93,13 +72,8 @@ function normalizeDevelopmentAccessRow(
   const { brandProfileId: _retiredPhysicalAlias, ...publisherAccess } = row;
   return {
     ...publisherAccess,
-    status: normalizeDevelopmentAccessStatus(String(row.status || '')) as DistributionDevelopmentAccessRow['status'],
+    status: row.status,
   };
-}
-
-function getDevelopmentAccessStatusCandidates(status: DistributionDevelopmentAccessRow['status']) {
-  const candidates = [status as string, ...(LEGACY_STATUS_FALLBACKS[status as string] || [])];
-  return Array.from(new Set(candidates));
 }
 
 export type UpsertBrandPartnershipInput = {
@@ -226,7 +200,7 @@ export async function upsertDevelopmentAccess(
     let insertResult: { insertId?: number } | null = null;
     let lastInsertError: unknown = null;
 
-    for (const statusCandidate of getDevelopmentAccessStatusCandidates(input.status)) {
+    for (const statusCandidate of [input.status]) {
       while (true) {
         const values: Partial<typeof distributionDevelopmentAccess.$inferInsert> = {
           developmentId: input.developmentId,
@@ -300,7 +274,7 @@ export async function upsertDevelopmentAccess(
   let didUpdate = false;
   let lastUpdateError: unknown = null;
 
-  for (const statusCandidate of getDevelopmentAccessStatusCandidates(input.status)) {
+  for (const statusCandidate of [input.status]) {
     while (true) {
       const updateSet: Partial<typeof distributionDevelopmentAccess.$inferInsert> = {
         brandPartnershipId: input.brandPartnershipId,
@@ -439,7 +413,7 @@ export async function listDevelopmentAccess(
     .then(rows =>
       rows.map(row => ({
         ...row,
-        accessStatus: normalizeDevelopmentAccessStatus(String(row.accessStatus || '')) as DistributionDevelopmentAccessRow['status'],
+        accessStatus: row.accessStatus,
       })),
     );
 }
