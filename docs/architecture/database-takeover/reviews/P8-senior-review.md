@@ -128,3 +128,9 @@ Distribution access writes now require canonical lifecycle timestamp columns;
 retry loops that dropped `included_at`, `excluded_at`, or `paused_at` after an
 unknown-column error were removed. Canonical status/access tests and TypeScript
 validation pass.
+
+The distribution access policy no longer synthesizes legacy partnership/access
+states from catalogue visibility or program presence. Only persisted canonical
+partnership and development-access rows establish authority; the legacy fallback
+reason codes are no longer emitted. Provider-backed referral and program-terms
+suites passed 11 tests, with TypeScript validation passing.

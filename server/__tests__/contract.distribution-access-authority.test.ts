@@ -17,5 +17,12 @@ describe('distribution access authority boundary', () => {
     expect(source).not.toContain('LEGACY_STATUS_FALLBACKS');
     expect(source).not.toContain('LEGACY_STATUS_NORMALIZATION');
     expect(source).not.toContain('normalizeDevelopmentAccessStatus');
+    const policy = readFileSync(
+      path.resolve(process.cwd(), 'server/services/distributionAccessPolicy.ts'),
+      'utf8',
+    );
+    expect(policy).not.toContain('deriveLegacyFallback');
+    expect(policy).not.toContain('legacy_fallback_program_present');
+    expect(policy).not.toContain('legacy_fallback_brand_linked_visible');
   });
 });

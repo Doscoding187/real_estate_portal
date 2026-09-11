@@ -84,52 +84,6 @@ function boolFromTinyInt(value: unknown) {
   return Number(value || 0) === 1;
 }
 
-function deriveLegacyFallback(input: {
-  cataloguePublisherId: number | null;
-  developmentVisible: boolean;
-  programExists: boolean;
-  programActive: boolean;
-  referralEnabled: boolean;
-}) {
-  if (!input.cataloguePublisherId) {
-    return {
-      partnershipStatus: null,
-      accessStatus: null,
-      submissionAllowed: false,
-      legacyFallbackUsed: false,
-      fallbackReason: null,
-    };
-  }
-
-  if (input.programExists) {
-    return {
-      partnershipStatus: 'active' as const,
-      accessStatus: 'included' as const,
-      submissionAllowed: input.programActive && input.referralEnabled,
-      legacyFallbackUsed: true,
-      fallbackReason: 'legacy_fallback_program_present',
-    };
-  }
-
-  if (input.developmentVisible) {
-    return {
-      partnershipStatus: 'pending' as const,
-      accessStatus: 'listed' as const,
-      submissionAllowed: false,
-      legacyFallbackUsed: true,
-      fallbackReason: 'legacy_fallback_brand_linked_visible',
-    };
-  }
-
-  return {
-    partnershipStatus: null,
-    accessStatus: null,
-    submissionAllowed: false,
-    legacyFallbackUsed: false,
-    fallbackReason: null,
-  };
-}
-
 // Catalogue Publisher visibility is not partnership truth.
 // Development inclusion is not readiness truth.
 // Only enabled developments may accept submissions.
@@ -510,22 +464,13 @@ export async function evaluateDevelopmentDistributionAccess(input: {
     : null;
   const access = await getDevelopmentAccessByDevelopmentId(input.db, input.developmentId);
 
-  const fallback =
-    input.channel === 'submission'
-      ? {
-          partnershipStatus: null,
-          accessStatus: null,
-          submissionAllowed: false,
-          legacyFallbackUsed: false,
-          fallbackReason: null,
-        }
-      : deriveLegacyFallback({
-          cataloguePublisherId,
-          developmentVisible,
-          programExists,
-          programActive,
-          referralEnabled,
-        });
+  const fallback = {
+    partnershipStatus: null,
+    accessStatus: null,
+    submissionAllowed: false,
+    legacyFallbackUsed: false,
+    fallbackReason: null,
+  } as const;
 
   const developmentId = Number(development.id);
   const [managerSummary] = programExists

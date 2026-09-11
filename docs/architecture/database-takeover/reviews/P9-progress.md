@@ -314,3 +314,8 @@ preserved. Preset service tests and TypeScript validation pass.
 Distribution access writes now require canonical lifecycle timestamp columns;
 unknown-column retries that silently omitted lifecycle timestamps were removed.
 Canonical status/access tests and TypeScript validation pass.
+
+Distribution access policy no longer synthesizes legacy partnership/access state
+from visibility or program presence. Persisted canonical rows are the sole
+authority. Provider-backed referral and program-terms suites passed 11 tests;
+TypeScript validation passed.
