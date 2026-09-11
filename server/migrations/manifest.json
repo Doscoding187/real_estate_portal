@@ -4,7 +4,7 @@
   "historyTable": "sql_migration_history",
   "attemptTable": "sql_migration_attempts",
   "lockName": "property_listify_manifest_migrations",
-  "expectedHead": "0083_billing_provider_event_identity.sql",
+  "expectedHead": "0084_billing_provider_event_retry_budget.sql",
   "migrations": [
     {
       "sequence": 0,
@@ -881,6 +881,17 @@
       "statementPolicy": "approved-exception",
       "requiredReferenceDataVersion": null,
       "approvalReference": "DBX-PRELAUNCH-BILLING-PROVIDER-EVENT-IDENTITY-2026-09-11-Edward"
+    },
+    {
+      "sequence": 84,
+      "filename": "0084_billing_provider_event_retry_budget.sql",
+      "checksum": "d1268fd0d268d8205c50cba3b3416613a00ba20af24d4c42daf011e7638a38e4",
+      "parent": "0083_billing_provider_event_identity.sql",
+      "parentChecksum": "da15119312017f652c2353aa972c5046cdab622f2fa086b92866955635f6fdde",
+      "kind": "exceptional",
+      "statementPolicy": "approved-exception",
+      "requiredReferenceDataVersion": null,
+      "approvalReference": "DBX-PRELAUNCH-BILLING-PROVIDER-RETRY-BUDGET-2026-09-11-Edward"
     }
   ]
 }

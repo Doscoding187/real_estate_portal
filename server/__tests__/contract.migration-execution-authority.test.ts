@@ -442,8 +442,9 @@ describe('migration execution authority', () => {
       '0081_explore_analytics_query_index.sql',
       '0082_explore_engagement_retention_indexes.sql',
       '0083_billing_provider_event_identity.sql',
+      '0084_billing_provider_event_retry_budget.sql',
     ]);
-    expect(executionManifest.expectedHead).toBe('0083_billing_provider_event_identity.sql');
+    expect(executionManifest.expectedHead).toBe('0084_billing_provider_event_retry_budget.sql');
     expect(archivedSqlFiles.length).toBeGreaterThan(0);
     expect(activeSqlFiles.some(file => file.includes('_archived'))).toBe(false);
     expect(executionManifest.historyTable).toBe('sql_migration_history');

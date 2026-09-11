@@ -8,9 +8,9 @@ review-open, P3 has an incomplete-evidence senior review, P4 has a scoped
 senior acceptance, P5 has an incomplete senior review, P7 has an incomplete
 senior review, and P8 has an incomplete senior review; broader P6 lifecycle
 coverage remains open and P9 is in closure audit. The task-owned disposable target is at
-manifest head `0083_billing_provider_event_identity.sql`, with matching
+manifest head `0084_billing_provider_event_retry_budget.sql`, with matching
 physical/model digest
-`894203f27644d7c25e42a78c85f1d7db0bae9cb1e8f1d23fb9700b0be605f5b5`.
+`1e98d8bbb1c4504fda1e45053218afde66c17ca7a291a3e3895fadbad6b810f5`.
 The relational lead-delivery cutover, consumer changes, seven physical
 delivery tests, service-lead request idempotency, and atomic demand routing
 are implemented. Current authority verification passes 33 static suites and

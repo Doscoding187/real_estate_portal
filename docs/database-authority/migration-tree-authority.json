@@ -1199,6 +1199,11 @@
       "path": "server/migrations/0083_billing_provider_event_identity.sql",
       "classification": "canonical active",
       "purpose": "Establishes unique provider event identity and durable processing states for billing webhook replay safety."
+    },
+    {
+      "path": "server/migrations/0084_billing_provider_event_retry_budget.sql",
+      "classification": "canonical active",
+      "purpose": "Adds bounded retry attempt state to the billing provider-event processing ledger."
     }
   ],
   "prohibitedPaths": [

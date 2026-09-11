@@ -75,6 +75,8 @@ export const billingProviderEvents = mysqlTable(
     status: mysqlEnum('status', ['received', 'processing', 'applied', 'ignored', 'failed'])
       .default('received')
       .notNull(),
+    attemptCount: int('attempt_count').default(0).notNull(),
+    maxAttempts: int('max_attempts').default(3).notNull(),
     payload: json('payload').notNull(),
     occurredAt: timestamp('occurred_at', { mode: 'string' }),
     processedAt: timestamp('processed_at', { mode: 'string' }),

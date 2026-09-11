@@ -89,4 +89,27 @@ describeWithDb('billing provider event identity', () => {
       await db?.delete(billingProviderEvents).where(eq(billingProviderEvents.id, recorded.event.id));
     }
   });
+
+  it('stops claiming after the configured retry budget is exhausted', async () => {
+    const recorded = await recordBillingProviderEvent({
+      provider: 'test-provider',
+      providerEventId: `p5-exhausted-${randomUUID()}`,
+      eventType: 'invoice.paid',
+      payload: { source: 'physical-test' },
+      maxAttempts: 2,
+    });
+    try {
+      for (let attempt = 0; attempt < 2; attempt += 1) {
+        await expect(claimBillingProviderEvent(Number(recorded.event.id))).resolves.toMatchObject({
+          status: 'processing',
+          attemptCount: attempt + 1,
+        });
+        await failBillingProviderEvent(Number(recorded.event.id), `failure ${attempt + 1}`);
+      }
+      await expect(claimBillingProviderEvent(Number(recorded.event.id))).resolves.toBeNull();
+    } finally {
+      const db = await getDb();
+      await db?.delete(billingProviderEvents).where(eq(billingProviderEvents.id, recorded.event.id));
+    }
+  });
 });

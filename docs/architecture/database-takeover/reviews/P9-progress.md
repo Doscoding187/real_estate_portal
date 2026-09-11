@@ -596,3 +596,10 @@ was rerun successfully: 33 static suites (272 tests), 118 utility surfaces,
 lifecycle checks all passed. The gate initially caught a stale hard-coded
 215-table expectation; that authority contract now reflects the canonical 216
 table inventory.
+
+Migration 0084 (`0084_billing_provider_event_retry_budget.sql`) adds explicit
+`attempt_count` and `max_attempts` to the provider-event ledger. Claims now
+stop once the configured budget is exhausted (bounded to 1–10 at intake), while
+failed events remain reclaimable until then. Four authority-injected physical
+identity/lifecycle tests pass, including retry exhaustion. Schema congruency
+matches digest `1e98d8bbb1c4504fda1e45053218afde66c17ca7a291a3e3895fadbad6b810f5`.

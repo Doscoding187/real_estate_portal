@@ -1,4 +1,4 @@
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 import { billingProviderEvents } from '../../drizzle/schema';
 import { getDb } from '../db-connection';
 
@@ -27,12 +27,17 @@ export async function recordBillingProviderEvent(input: {
   eventType: string;
   payload: Record<string, unknown>;
   occurredAt?: string | null;
+  maxAttempts?: number;
 }) {
   const provider = normalizeIdentity(input.provider, 'name', 40);
   const providerEventId = normalizeIdentity(input.providerEventId, 'event identity', 255);
   const eventType = normalizeIdentity(input.eventType, 'event type', 120);
   if (!input.payload || typeof input.payload !== 'object' || Array.isArray(input.payload)) {
     throw new Error('Billing provider event payload must be an object.');
+  }
+  const maxAttempts = input.maxAttempts ?? 3;
+  if (!Number.isSafeInteger(maxAttempts) || maxAttempts < 1 || maxAttempts > 10) {
+    throw new Error('Billing provider event max attempts must be between 1 and 10.');
   }
   let occurredAt: string | null = null;
   if (input.occurredAt != null) {
@@ -49,6 +54,7 @@ export async function recordBillingProviderEvent(input: {
       eventType,
       payload: input.payload,
       occurredAt,
+      maxAttempts,
     });
     const [event] = await db
       .select()
@@ -90,12 +96,16 @@ export async function claimBillingProviderEvent(eventId: number) {
       )
       .for('update')
       .limit(1);
-    if (!event) return null;
+    if (!event || event.attemptCount >= event.maxAttempts) return null;
     await tx
       .update(billingProviderEvents)
-      .set({ status: 'processing', failureReason: null })
+      .set({
+        status: 'processing',
+        attemptCount: sql`${billingProviderEvents.attemptCount} + 1`,
+        failureReason: null,
+      })
       .where(eq(billingProviderEvents.id, eventId));
-    return { ...event, status: 'processing' as const };
+    return { ...event, attemptCount: event.attemptCount + 1, status: 'processing' as const };
   });
 }
 
