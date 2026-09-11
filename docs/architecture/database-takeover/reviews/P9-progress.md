@@ -134,6 +134,10 @@ provider-specific semantics, unresolved billable-owner modelling, remaining
 packet review findings, and the complete public/private journey audit remain
 required before P9 can close.
 
+P8 now has an explicit incomplete senior review in
+`reviews/P8-senior-review.md`; public media rebuild, analytics rebuild/query
+proof, and retention/abuse controls remain open.
+
 Fresh establishment evidence was completed after disposing and recreating the
 owned target:
 
