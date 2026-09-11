@@ -819,11 +819,17 @@ export async function recoverExpiredLeadDeliveryAttempts(input: {
   database?: LeadDatabase;
   limit?: number;
   now?: Date;
+  leadId?: number;
 } = {}): Promise<{ recovered: number; unknown: number }> {
   const database = input.database || db;
   const now = input.now || new Date();
   const rows = await database.select({ id: leadDeliveryAttempts.id, deliveryId: leadDeliveryAttempts.deliveryId }).from(leadDeliveryAttempts)
-    .where(and(eq(leadDeliveryAttempts.state, 'claimed'), lte(leadDeliveryAttempts.leaseExpiresAt, toMySqlDateTime(now))))
+    .innerJoin(leadDeliveries, eq(leadDeliveries.id, leadDeliveryAttempts.deliveryId))
+    .where(and(
+      eq(leadDeliveryAttempts.state, 'claimed'),
+      lte(leadDeliveryAttempts.leaseExpiresAt, toMySqlDateTime(now)),
+      ...(input.leadId === undefined ? [] : [eq(leadDeliveries.leadId, input.leadId)]),
+    ))
     .orderBy(asc(leadDeliveryAttempts.leaseExpiresAt), asc(leadDeliveryAttempts.id))
     .limit(Math.min(Math.max(input.limit || 50, 1), 250));
 
@@ -868,7 +874,7 @@ export async function runLeadDeliveryWorker(input: {
 }): Promise<{ claimed: number; completed: number; failed: number; unknown: number; recovered: number }> {
   const database = input.database || db;
   const limit = Math.min(Math.max(input.limit || 25, 1), 100);
-  const recovery = await recoverExpiredLeadDeliveryAttempts({ database, limit });
+  const recovery = await recoverExpiredLeadDeliveryAttempts({ database, limit, leadId: input.leadId });
   const due = await database.select({ id: leadDeliveries.id }).from(leadDeliveries)
     .where(and(
       eq(leadDeliveries.state, 'queued'),
