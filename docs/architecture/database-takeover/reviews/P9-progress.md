@@ -272,3 +272,8 @@ Authenticated agency and super-admin dashboard analytics no longer convert
 database failures into zero-valued success data. Missing agency membership is
 also rejected explicitly. Dashboard authority and agency workspace smoke
 checks pass; broader analytics evidence remains open.
+
+Required-document reads no longer retry legacy columns or convert missing tables
+into empty/zero success data. Canonical reads propagate errors, and the write
+boundary retains its explicit `PRECONDITION_FAILED` response. Updated service
+and distribution guard tests pass.

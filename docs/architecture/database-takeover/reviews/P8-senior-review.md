@@ -80,3 +80,9 @@ into zero-valued success data. Those authenticated reads now fail explicitly
 with `PRECONDITION_FAILED`; missing agency membership is rejected with
 `FORBIDDEN`. The dashboard authority contract, agency workspace smoke, and
 TypeScript check pass.
+
+The required-documents service also retried legacy column shapes and converted
+missing tables into zero counts or empty document lists. Those fallbacks are
+removed; canonical reads now propagate errors, while the mutation boundary
+continues to translate missing schema into `PRECONDITION_FAILED`. Updated
+service and distribution guard tests pass.
