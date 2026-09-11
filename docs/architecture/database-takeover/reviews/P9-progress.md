@@ -514,3 +514,9 @@ and counter updates are derived only from newly inserted events. The focused
 interaction/discovery suites pass 6 tests with TypeScript validation. This
 closes a batch-replay correctness gap while retention and abuse controls remain
 open in P8.
+
+Commercial marketing-media attachment now treats a repeated confirmed upload
+key as an idempotent replay and returns the existing media ID before allocating
+another row. The focused Commercial boundary/idempotency contracts pass 5
+tests with TypeScript validation. This closes one public-media duplication path;
+cross-supply rebuild equivalence remains open.
