@@ -8,6 +8,7 @@ import {
   billingInvoices,
   billingPaymentDocuments,
   billingPayments,
+  billableAccounts,
   coupons,
   developerOrganisationMemberships,
   developerOrganisations,
@@ -388,6 +389,59 @@ async function getAgencyOrThrow(db: DbOrTx, agencyId: number) {
   return agency;
 }
 
+/** Resolve the typed billing principal; polymorphic owner keys are display-only during cutover. */
+async function resolveBillableAccountId(
+  db: DbOrTx,
+  ownerType: BillingOwnerType,
+  ownerId: number,
+) {
+  const predicate =
+    ownerType === 'agent'
+      ? eq(billableAccounts.userId, ownerId)
+      : ownerType === 'agency'
+        ? eq(billableAccounts.agencyId, ownerId)
+        : eq(billableAccounts.developerOrganisationId, ownerId);
+  const [account] = await db
+    .select({ id: billableAccounts.id })
+    .from(billableAccounts)
+    .where(and(eq(billableAccounts.accountKind, ownerType), predicate))
+    .limit(1);
+  if (account) return Number(account.id);
+
+  // New principals are admitted at the same transaction boundary as their
+  // first billing fact. Typed foreign keys reject unknown owners; the unique
+  // owner constraint makes concurrent admission idempotent.
+  try {
+    await db
+      .insert(billableAccounts)
+      .values(
+        ownerType === 'agent'
+          ? { accountKind: ownerType, userId: ownerId }
+          : ownerType === 'agency'
+            ? { accountKind: ownerType, agencyId: ownerId }
+            : { accountKind: ownerType, developerOrganisationId: ownerId },
+      )
+      .onDuplicateKeyUpdate({ set: { accountKind: ownerType } });
+  } catch {
+    throw new TRPCError({
+      code: 'PRECONDITION_FAILED',
+      message: `No billable account exists for ${ownerType}:${ownerId}.`,
+    });
+  }
+  const [created] = await db
+    .select({ id: billableAccounts.id })
+    .from(billableAccounts)
+    .where(and(eq(billableAccounts.accountKind, ownerType), predicate))
+    .limit(1);
+  if (!created) {
+    throw new TRPCError({
+      code: 'INTERNAL_SERVER_ERROR',
+      message: `Billable account admission did not produce ${ownerType}:${ownerId}.`,
+    });
+  }
+  return Number(created.id);
+}
+
 /**
  * Agency billing mutations share this lock order: agency, subscription, then
  * invoice/payment. Keeping the agency row first prevents checkout and finance
@@ -488,9 +542,11 @@ async function logBillingEvent(
     metadata?: Record<string, any> | null;
   },
 ) {
+  const billableAccountId = await resolveBillableAccountId(db, input.ownerType, input.ownerId);
   await db.insert(billingAuditEvents).values({
     ownerType: input.ownerType,
     ownerId: input.ownerId,
+    billableAccountId,
     subscriptionId: input.subscriptionId || null,
     invoiceId: input.invoiceId || null,
     paymentId: input.paymentId || null,
@@ -618,6 +674,7 @@ async function upsertPendingSubscription(
     metadata: Record<string, any>;
   },
 ) {
+  const billableAccountId = await resolveBillableAccountId(db, input.ownerType, input.ownerId);
   const [existing] = await db
     .select()
     .from(subscriptions)
@@ -642,6 +699,7 @@ async function upsertPendingSubscription(
     .values({
       ownerType: input.ownerType,
       ownerId: input.ownerId,
+      billableAccountId,
       planId: input.requestedPlanId,
       status: 'pending_payment',
       metadata: input.metadata,
@@ -654,6 +712,7 @@ async function upsertPendingSubscription(
         status: 'pending_payment',
         metadata: input.metadata,
         updatedBy: input.actorUserId,
+        billableAccountId,
       },
     });
 
@@ -1020,6 +1079,7 @@ export async function requestPaidLaunchAccessInvoice(input: {
       };
     }
 
+    const billableAccountId = await resolveBillableAccountId(tx, owner.ownerType, owner.ownerId);
     const invoiceNumber = buildInvoiceNumber(owner.ownerType, owner.ownerId);
     const paymentReference = buildPaymentReference(owner.ownerType, owner.ownerId);
     const priceSnapshot = buildInvoicePriceSnapshot({
@@ -1035,6 +1095,7 @@ export async function requestPaidLaunchAccessInvoice(input: {
       .values({
         ownerType: owner.ownerType,
         ownerId: owner.ownerId,
+        billableAccountId,
         subscriptionId: subscriptionResult.subscription.id,
         planId: plan.id,
         invoiceNumber,
@@ -1361,11 +1422,13 @@ export async function startAgencyManualCheckout(input: {
       couponCode: coupon?.code || null,
     });
 
+    const billableAccountId = await resolveBillableAccountId(tx, 'agency', agencyId);
     const [invoiceInsert] = await tx
       .insert(billingInvoices)
       .values({
         ownerType: 'agency',
         ownerId: agencyId,
+        billableAccountId,
         subscriptionId: subscriptionResult.subscription.id,
         planId: plan.id,
         invoiceNumber,
@@ -1638,6 +1701,9 @@ export async function submitPaidLaunchAccessPaymentProof(input: LaunchPaymentPro
       });
     }
 
+    const billableAccountId =
+      invoice.billableAccountId ??
+      (await resolveBillableAccountId(tx, toBillingOwnerType(invoice.ownerType), invoice.ownerId));
     const idempotencyKey = `manual_eft:${invoice.id}:${randomUUID()}`;
     const [paymentInsert] = await tx
       .insert(billingPayments)
@@ -1646,6 +1712,7 @@ export async function submitPaidLaunchAccessPaymentProof(input: LaunchPaymentPro
         subscriptionId: invoice.subscriptionId || null,
         ownerType: toBillingOwnerType(invoice.ownerType),
         ownerId: invoice.ownerId,
+        billableAccountId,
         paymentMethod: 'manual_eft',
         state: 'under_review',
         amount: Math.round(input.amount),
@@ -1694,6 +1761,7 @@ export async function submitPaidLaunchAccessPaymentProof(input: LaunchPaymentPro
         invoiceId: invoice.id,
         ownerType: toBillingOwnerType(invoice.ownerType),
         ownerId: invoice.ownerId,
+        billableAccountId,
         storageKey: storedDocument.storageKey,
         originalFileName: input.file.filename,
         mimeType,
@@ -1854,6 +1922,9 @@ export async function submitAgencyPaymentProof(input: LaunchPaymentProofInput) {
       });
     }
 
+    const billableAccountId =
+      invoice.billableAccountId ??
+      (await resolveBillableAccountId(tx, toBillingOwnerType(invoice.ownerType), invoice.ownerId));
     const idempotencyKey = `manual_eft:${invoice.id}:${randomUUID()}`;
     const [paymentInsert] = await tx
       .insert(billingPayments)
@@ -1862,6 +1933,7 @@ export async function submitAgencyPaymentProof(input: LaunchPaymentProofInput) {
         subscriptionId: invoice.subscriptionId || null,
         ownerType: toBillingOwnerType(invoice.ownerType),
         ownerId: invoice.ownerId,
+        billableAccountId,
         paymentMethod: 'manual_eft',
         state: 'under_review',
         amount: Math.round(input.amount),
@@ -1909,6 +1981,7 @@ export async function submitAgencyPaymentProof(input: LaunchPaymentProofInput) {
         invoiceId: invoice.id,
         ownerType: toBillingOwnerType(invoice.ownerType),
         ownerId: invoice.ownerId,
+        billableAccountId,
         storageKey: storedDocument.storageKey,
         originalFileName: input.file.filename,
         mimeType,

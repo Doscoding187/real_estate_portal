@@ -613,3 +613,11 @@ intentionally nullable during this staged cutover; making them mandatory is
 blocked until every active writer and reader has been migrated and independently
 verified. The migration and exception record are registered in the manifest;
 provider event semantics and legacy-family retirement remain open.
+
+The active manual-EFT billing service now resolves or admits a typed billable
+account inside its transaction before writing subscriptions, invoices, payment
+proof, and audit facts. The agency billing acceptance suite passed both physical
+scenarios after this cutover, and an authority-injected account suite proved
+owner cardinality and rejection of mismatched account kinds. Existing billing
+rows on the disposable target have no null staged account references; read-path
+authorization and retirement of the remaining billing families are still open.
