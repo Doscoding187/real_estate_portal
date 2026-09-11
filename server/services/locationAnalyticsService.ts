@@ -608,7 +608,7 @@ export const locationAnalyticsService = {
       return Math.round(normalizedScore);
     } catch (error) {
       console.error('[LocationAnalytics] Error calculating trending score:', error);
-      return 0;
+      throw error;
     }
   },
 

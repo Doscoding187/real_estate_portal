@@ -706,7 +706,7 @@ export class LocationResolverService {
       return Number(result[0].insertId);
     } catch (error) {
       console.error(`[LocationResolver] Failed to create suburb:`, error);
-      return null;
+      throw error;
     }
   }
 
