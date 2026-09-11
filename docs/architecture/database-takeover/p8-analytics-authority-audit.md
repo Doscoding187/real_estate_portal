@@ -94,3 +94,6 @@ campaign or reports success until an admitted campaign/billing authority exists.
 The placeholder `revenueCenterSync.ts` module was removed after a repository-
 wide caller census found no remaining imports. A canonical campaign/billing
 authority is still required before campaign launch can be implemented.
+The remaining marketing router procedures still reference placeholder campaign
+tables and require a separate retirement or canonical migration decision; they
+must not be treated as database-backed functionality.
