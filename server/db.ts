@@ -4503,7 +4503,7 @@ function projectDeveloperOrganisation(row: DeveloperOrganisationRow) {
 
 async function getDeveloperOrganisationRow(id: number): Promise<DeveloperOrganisationRow | null> {
   const database = await getDb();
-  if (!database) return null;
+  if (!database) throw new Error('Database not available');
   const rows = await database
     .select({
       organisation: developerOrganisations,
@@ -4543,7 +4543,7 @@ async function listDeveloperOrganisationRows(
   },
 ) {
   const database = await getDb();
-  if (!database) return [];
+  if (!database) throw new Error('Database not available');
   const conditions: SQL[] = [eq(cataloguePublishers.authorityKind, 'developer_first_party')];
   if (status) conditions.push(eq(developerOrganisations.status, status));
   if (filters?.category)
