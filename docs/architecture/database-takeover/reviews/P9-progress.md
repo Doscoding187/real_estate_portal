@@ -407,3 +407,8 @@ with `PRECONDITION_FAILED` instead of an empty degraded success feed; transient
 errors retain the existing explicit degraded response. The focused fallback
 contract passes 3 tests, including the missing-schema case, and `pnpm check`
 passes.
+
+The remaining legacy Explore catalog procedures (`getCategories`, `getTopics`,
+and `getHighlightTags`) now fail with an explicit `PRECONDITION_FAILED` until a
+canonical catalog authority exists; they no longer claim successful empty data.
+The legacy capability boundary passes 6 tests and `pnpm check` passes.
