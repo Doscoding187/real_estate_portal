@@ -8,6 +8,9 @@ Independent authority verification on the disposable target:
 - Service-engine request idempotency — 1 physical test passed.
 - Demand-routing rollback — 1 physical test passed.
 - Listing-media reconciliation and tenant boundary — 3 physical tests passed.
+- Current P8 durability/query rerun — 6 physical tests passed across media
+  reconciliation, tenant deletion invalidation, Explore analytics query plans,
+  service idempotency, and demand-routing rollback.
 
 The evidence proves duplicate service requests collapse to one durable lead
 and created event, demand routing rolls back its complete graph after an
