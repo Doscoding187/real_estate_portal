@@ -20,6 +20,12 @@ not yet proven. The durable service-lead migration is at manifest head 0080,
 with schema congruency verified separately. No retired-table fallback or
 schema-error-to-zero reporting path is accepted.
 
+The review also found an active launch path that dynamically imports
+`revenueCenterSync.ts`, where revenue and failed-payment tables are placeholder
+objects. Its caught failure can leave campaign activation reporting success
+without a durable billing fact. This is a high-severity P8 finding requiring
+removal or migration to a canonical authority.
+
 Finding: incomplete evidence, severity medium. Required follow-up is a public
 media rebuild comparison, analytics aggregate rebuild proof with bounded query
 evidence, and final packet/provider review.
