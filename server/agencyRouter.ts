@@ -5273,9 +5273,21 @@ export const agencyRouter = router({
       const scheduledAt = toDbTimestampRequired(showingDate);
       const now = nowAsDbTimestamp();
 
-      validateLeadTransition(lead, 'viewing_scheduled');
       let showingId = 0;
       await db.transaction(async tx => {
+        // Serialize viewing creation against every other lead transition. The
+        // preflight read above is only for authorization and inventory
+        // resolution; the transition decision must use the locked row.
+        const [lockedLead] = await tx
+          .select()
+          .from(leads)
+          .where(and(eq(leads.id, lead.id), eq(leads.agencyId, agencyId)))
+          .for('update')
+          .limit(1);
+        if (!lockedLead) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Lead not found' });
+        }
+        validateLeadTransition(lockedLead, 'viewing_scheduled');
         const [result] = await tx.insert(showings).values({
           listingId: inventory.listingId,
           propertyId: inventory.propertyId,
@@ -5284,8 +5296,8 @@ export const agencyRouter = router({
           scheduledAt,
           status: input.status,
           createdByUserId: user.id,
-          prospectIdentityId: lead.prospectIdentityId,
-          visitorName: lead.name,
+          prospectIdentityId: lockedLead.prospectIdentityId,
+          visitorName: lockedLead.name,
           durationMinutes: input.durationMinutes,
           notes: serializeViewingNotes({
             notes: input.notes,
@@ -5299,8 +5311,8 @@ export const agencyRouter = router({
           .update(leads)
           .set({
             agentId: showingAgent.id,
-            assignedTo: showingAgent.userId || lead.assignedTo,
-            assignedAt: lead.assignedAt || now,
+            assignedTo: showingAgent.userId || lockedLead.assignedTo,
+            assignedAt: lockedLead.assignedAt || now,
             status: 'viewing_scheduled',
             funnelStage: 'viewing',
             updatedAt: now,
@@ -5308,7 +5320,7 @@ export const agencyRouter = router({
           .where(and(eq(leads.id, input.leadId), eq(leads.agencyId, agencyId)));
 
         await tx.insert(leadActivities).values({
-          leadId: input.leadId,
+          leadId: lockedLead.id,
           userId: user.id,
           type: 'meeting',
           description: `Viewing ${input.status} for ${scheduledAt}.`,
