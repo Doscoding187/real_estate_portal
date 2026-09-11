@@ -448,8 +448,10 @@ async function resolveBillableAccountId(
  * review from taking the same records in opposite orders.
  */
 async function lockAgencyBillingState(tx: BillingTx, agencyId: number) {
-  const billableAccountId = await resolveBillableAccountId(tx, 'agency', agencyId);
+  // Resolve the billing principal only after the owner lock: its ordinary
+  // SELECT would otherwise establish a pre-lock REPEATABLE READ snapshot.
   await tx.execute(sql`SELECT id FROM agencies WHERE id = ${agencyId} FOR UPDATE`);
+  const billableAccountId = await resolveBillableAccountId(tx, 'agency', agencyId);
   const agency = await getAgencyOrThrow(tx, agencyId);
   await tx.execute(sql`
     SELECT id
@@ -882,7 +884,6 @@ async function lockLaunchBillingState(tx: BillingTx, owner: LaunchBillingOwner) 
     return lockAgencyBillingState(tx, owner.ownerId);
   }
 
-  const billableAccountId = await resolveBillableAccountId(tx, owner.ownerType, owner.ownerId);
   if (owner.ownerType === 'agent') {
     await tx.execute(sql`SELECT id FROM users WHERE id = ${owner.ownerId} FOR UPDATE`);
   } else {
@@ -890,6 +891,7 @@ async function lockLaunchBillingState(tx: BillingTx, owner: LaunchBillingOwner) 
       sql`SELECT id FROM developer_organisations WHERE id = ${owner.ownerId} FOR UPDATE`,
     );
   }
+  const billableAccountId = await resolveBillableAccountId(tx, owner.ownerType, owner.ownerId);
   await tx.execute(sql`
     SELECT id
     FROM subscriptions

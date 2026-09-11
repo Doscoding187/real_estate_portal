@@ -872,3 +872,11 @@ unrelated canonical checks such as the billable-account ownership constraint.
 The two historical release-recovery fixtures now derive the current manifest
 head instead of freezing a former head. The protected recovery suites passed
 13 tests and TypeScript validation passed.
+
+The full-suite checkout/approval race exposed a pre-lock snapshot introduced by
+billable-account resolution. Agency, agent, and developer billing now acquire
+the owner lock before resolving the account, so a waiting checkout reads the
+subscription state committed by finance. The agency principal bootstrap and
+billing foundation suites passed six physical tests on the disposable target,
+including concurrent checkout/approval and duplicate activation checks.
+This focused result does not close the remaining full-suite failures.
