@@ -649,3 +649,7 @@ reporting readers still require migration.
 Public lead capture now checks personal agent entitlements through the typed
 billable-account identity in both assigned-agent eligibility paths. The
 public-lead contract and agent launch journey passed 51 tests after the change.
+
+The developer billing workspace now scopes its subscription, invoice, and
+payment reads through the typed billable-account foreign key. Developer billing
+contracts remain green; remaining billing report and adapter readers are open.
