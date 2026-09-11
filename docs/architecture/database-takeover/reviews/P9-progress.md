@@ -120,7 +120,9 @@ and agency deal acceptance races. The identified P6 offer-acceptance race is
 now accepted in `reviews/P6-senior-review.md`; broader P6 lifecycle coverage
 remains open. P5's billable-owner alternatives and recommended future model
 are recorded in `p5-billing-authority-decision.md`, but implementation is not
-complete. This document does not convert the remaining packet-level results
+complete. P3 has an explicit incomplete-evidence senior review in
+`reviews/P3-senior-review.md`; its writer census and cross-supply rebuild proof
+remain open. This document does not convert the remaining packet-level results
 into senior acceptance. Projection rebuild equivalence,
 provider-specific semantics, unresolved billable-owner modelling, remaining
 packet review findings, and the complete public/private journey audit remain

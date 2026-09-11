@@ -36,14 +36,6 @@ Following the empty-target rebuild, the broader physical lifecycle packet was
 rerun on the same authority: development publication lifecycle, listing
 publication readiness, and agency attribution passed 25 tests.
 
-The existing `integration.agency-listing-performance-mvp.test.ts` contains the
-closest rebuild-equivalence assertions: a revision approval updates the live
-listing and public projection while preserving the original projection ID.
-Its authority run on the current worktree profile was skipped by the suite's
-profile gate, so those assertions are not counted as physical P3 evidence.
-An authority-enabled disposable run remains required before rebuild
-equivalence can be accepted.
-
 The authority-run suites
 `server/__tests__/integration.property-card-data-flow.test.ts` and
 `server/__tests__/integration.agency-listing-attribution.test.ts` provide the
