@@ -448,29 +448,30 @@ async function resolveBillableAccountId(
  * review from taking the same records in opposite orders.
  */
 async function lockAgencyBillingState(tx: BillingTx, agencyId: number) {
+  const billableAccountId = await resolveBillableAccountId(tx, 'agency', agencyId);
   await tx.execute(sql`SELECT id FROM agencies WHERE id = ${agencyId} FOR UPDATE`);
   const agency = await getAgencyOrThrow(tx, agencyId);
   await tx.execute(sql`
     SELECT id
     FROM subscriptions
-    WHERE owner_type = 'agency' AND owner_id = ${agencyId}
+    WHERE billable_account_id = ${billableAccountId}
     FOR UPDATE
   `);
   const [subscription] = await tx
     .select()
     .from(subscriptions)
-    .where(and(eq(subscriptions.ownerType, 'agency'), eq(subscriptions.ownerId, agencyId)))
+    .where(eq(subscriptions.billableAccountId, billableAccountId))
     .limit(1);
   return { agency, subscription: subscription || null };
 }
 
 async function lockAgencyInvoice(tx: BillingTx, input: { invoiceId: number; agencyId: number }) {
+  const billableAccountId = await resolveBillableAccountId(tx, 'agency', input.agencyId);
   await tx.execute(sql`
     SELECT id
     FROM billing_invoices
     WHERE id = ${input.invoiceId}
-      AND owner_type = 'agency'
-      AND owner_id = ${input.agencyId}
+      AND billable_account_id = ${billableAccountId}
     FOR UPDATE
   `);
   return getInvoiceForOwnerOrThrow(tx, input.invoiceId, 'agency', input.agencyId);
@@ -500,14 +501,14 @@ async function getInvoiceForOwnerOrThrow(
   ownerType: BillingOwnerType,
   ownerId: number,
 ) {
+  const billableAccountId = await resolveBillableAccountId(db, ownerType, ownerId);
   const [invoice] = await db
     .select()
     .from(billingInvoices)
     .where(
       and(
         eq(billingInvoices.id, invoiceId),
-        eq(billingInvoices.ownerType, ownerType),
-        eq(billingInvoices.ownerId, ownerId),
+        eq(billingInvoices.billableAccountId, billableAccountId),
       ),
     )
     .limit(1);
