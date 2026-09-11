@@ -529,3 +529,10 @@ it after 0081 on the exact disposable target; schema congruency matches digest
 readiness remains `applicationReady: true`. The authority-injected EXPLAIN
 contract now proves the content aggregate, session history, and user history
 queries all expose their intended indexes.
+
+P5 billing was independently rerun against the exact disposable target after
+the 0082 migration: billing foundation (2 tests), provider-independent billing
+(9 tests), and developer subscription/commercial contracts (6 tests) passed,
+17 tests total. These validate the current agency EFT and entitlement
+boundaries, but the polymorphic owner-key model and provider event semantics
+remain unresolved; this evidence does not constitute P5 acceptance.
