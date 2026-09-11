@@ -79,3 +79,15 @@ the Commercial path publishes through its dedicated authority without creating
 a generic property mirror. This closes the Commercial-to-generic projection
 boundary; development and Shared Living rebuild equivalence still require
 their own physical comparison.
+
+The cross-supply trace was refreshed on 2026-09-11. Commercial authoring and
+publication use `commercialOfficeService.ts` with the canonical `listings` and
+`listing_media` identities; its public path is a dedicated DTO and does not call
+the generic `properties` writer. Development publication uses the development
+identity, unit/media stores, and `developmentDerivedListingService.ts`; its
+derived public rows are rebuilt from development state rather than linked by a
+generic `properties.sourceListingId`. Shared Living similarly owns its public
+service and listing/media contract. These traces justify keeping
+`sourceListingId` nullable for now, but they do not prove repeated rebuild
+identity or withdrawal equivalence. A physical three-supply rebuild test remains
+required before P3 can be accepted.
