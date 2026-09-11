@@ -746,3 +746,9 @@ Migration 0088 retires the empty, unreachable `agency_subscriptions`,
 disposable target was verified at zero rows before application; schema
 congruency and the full authority gate pass with 214 canonical tables and 89
 active migrations.
+
+The current P8 physical rerun also passed 6 tests: listing-media reconciliation,
+tenant/deletion invalidation, Explore analytics query planning, service-lead
+idempotency, and demand-routing rollback. P8 remains open only for the
+unexercised public media rebuild comparison, aggregate rebuild proof, and
+retention/abuse review.
