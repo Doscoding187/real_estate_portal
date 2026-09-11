@@ -91,3 +91,9 @@ service and listing/media contract. These traces justify keeping
 `sourceListingId` nullable for now, but they do not prove repeated rebuild
 identity or withdrawal equivalence. A physical three-supply rebuild test remains
 required before P3 can be accepted.
+
+The cross-supply projection contract now executablely protects this boundary:
+Commercial, Development, and Shared Living source files cannot call the generic
+property projection writer, and their dedicated identity/service markers remain
+present. The contract passes 3 tests. This prevents authority collapse while
+the physical repeated-rebuild comparison is still pending.

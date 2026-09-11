@@ -571,3 +571,9 @@ authority (3), and Shared Living publication/privacy (6). These strengthen
 ownership, approval, availability, and withdrawal evidence across all four
 supplies, but they do not yet prove that a rebuild preserves projection row
 identity and fields for every supply family.
+
+The cross-supply projection-authority contract now passes 3 tests. It guards
+that Commercial, Development, and Shared Living remain on their dedicated
+public projection identities and cannot call the generic property writer. This
+closes the authority-boundary regression risk; physical repeated-rebuild
+equivalence is still required for P3 acceptance.
