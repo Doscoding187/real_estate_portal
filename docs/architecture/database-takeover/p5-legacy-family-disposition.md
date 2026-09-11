@@ -57,6 +57,14 @@ assertion, and disposable fixture cleanup. The unused `agencySubscriptions`
 and `invoices` imports were removed from `adminRouter.ts` in commit
 `8fa8c820`.
 
+Read-only verification on the exact task-owned disposable target returned zero
+rows in each of the seven legacy families (`agency_subscriptions`,
+`billing_transactions`, `invoices`, `user_subscriptions`,
+`subscription_plans`, `subscription_events`, and `partner_subscriptions`).
+This supports pre-launch retirement planning; it does not authorize dropping
+the retained non-commercial or partner families without their own ownership
+review.
+
 This is reachability evidence for the next retirement packet; it is not itself
 permission to drop the historical tables. That packet must still verify target
 row counts, scheduled jobs, provider callbacks, reports, and external
