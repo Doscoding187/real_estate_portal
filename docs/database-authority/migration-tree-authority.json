@@ -1189,6 +1189,11 @@
       "path": "server/migrations/0081_explore_analytics_query_index.sql",
       "classification": "canonical active",
       "purpose": "Adds a composite created-at/content index for period-filtered Explore engagement aggregates."
+    },
+    {
+      "path": "server/migrations/0082_explore_engagement_retention_indexes.sql",
+      "classification": "canonical active",
+      "purpose": "Adds time-leading session and user indexes for bounded Explore engagement history scans."
     }
   ],
   "prohibitedPaths": [

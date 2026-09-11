@@ -4,7 +4,7 @@
   "historyTable": "sql_migration_history",
   "attemptTable": "sql_migration_attempts",
   "lockName": "property_listify_manifest_migrations",
-  "expectedHead": "0081_explore_analytics_query_index.sql",
+  "expectedHead": "0082_explore_engagement_retention_indexes.sql",
   "migrations": [
     {
       "sequence": 0,
@@ -859,6 +859,17 @@
       "statementPolicy": "approved-exception",
       "requiredReferenceDataVersion": null,
       "approvalReference": "DBX-PRELAUNCH-EXPLORE-ANALYTICS-QUERY-INDEX-2026-09-11-Edward"
+    },
+    {
+      "sequence": 82,
+      "filename": "0082_explore_engagement_retention_indexes.sql",
+      "checksum": "e7fed7481e2c5471731fcc22b7f7917ec0316bf05235cd040ae592f06bd8f60e",
+      "parent": "0081_explore_analytics_query_index.sql",
+      "parentChecksum": "7a88bc44b45d58655b9f36b62450277093080481feb447d795c41c7612c71ac3",
+      "kind": "exceptional",
+      "statementPolicy": "approved-exception",
+      "requiredReferenceDataVersion": null,
+      "approvalReference": "DBX-PRELAUNCH-EXPLORE-ENGAGEMENT-RETENTION-INDEXES-2026-09-11-Edward"
     }
   ]
 }

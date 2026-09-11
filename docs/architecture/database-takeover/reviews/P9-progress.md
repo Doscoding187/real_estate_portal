@@ -520,3 +520,12 @@ key as an idempotent replay and returns the existing media ID before allocating
 another row. The focused Commercial boundary/idempotency contracts pass 5
 tests with TypeScript validation. This closes one public-media duplication path;
 cross-supply rebuild equivalence remains open.
+
+Migration 0082 (`0082_explore_engagement_retention_indexes.sql`) adds
+`(session_id, created_at)` and `(user_id, created_at)` indexes to bound Explore
+history scans used for retention and abuse review. The governed runner applied
+it after 0081 on the exact disposable target; schema congruency matches digest
+`7fcb8f0410fb14b023b679eb953caff71bcbb7057f64aa587fea9f7b7c6cce36`, and
+readiness remains `applicationReady: true`. The authority-injected EXPLAIN
+contract now proves the content aggregate, session history, and user history
+queries all expose their intended indexes.

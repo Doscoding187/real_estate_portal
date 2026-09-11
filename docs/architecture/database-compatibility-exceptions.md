@@ -584,6 +584,29 @@ stronger indexed design.
 
 Removal workstream: P8 analytics query-performance closure.
 
+## DBX-PRELAUNCH-EXPLORE-ENGAGEMENT-RETENTION-INDEXES-2026-09-11-Edward
+
+Status: approved for the pre-launch disposable worktree only.
+Owner: database takeover workstream.
+Approved by Edward on: 2026-09-11.
+Business reason: bound session- and user-history scans used for analytics,
+retention review, and abuse investigation without changing event semantics.
+Canonical authority: `drizzle/schema/explore.ts` and migration manifest.
+Exact files: `server/migrations/0082_explore_engagement_retention_indexes.sql`.
+Tables and columns: `explore_engagements(session_id, created_at)` and
+`explore_engagements(user_id, created_at)`.
+Permitted read direction: bounded history and retention queries may use these
+indexes.
+Permitted write direction: only the canonical migration runner may create them
+on the exact task-owned disposable target.
+Failure and observability behavior: planning/application must verify the 0081
+parent, checksum, target ownership, and durable migration attempt state.
+Automated evidence: migration-manifest, schema inventory, schema-congruency,
+and provider query-plan tests.
+Expiry or objective removal condition: remove if the engagement authority is
+retired or replaced with a stronger retention/index design.
+Removal workstream: P8 Explore retention and abuse-control closure.
+
 ## Required exception record
 
 Every approved exception must contain:

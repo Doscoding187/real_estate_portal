@@ -106,6 +106,8 @@ export const exploreEngagements = mysqlTable('explore_engagements', {
 }, table => [
   uniqueIndex('uq_explore_engagement_event_id').on(table.eventId),
   index('idx_explore_engagements_created_content').on(table.createdAt, table.contentId),
+  index('idx_explore_engagements_session_created').on(table.sessionId, table.createdAt),
+  index('idx_explore_engagements_user_created').on(table.userId, table.createdAt),
 ]);
 
 /**

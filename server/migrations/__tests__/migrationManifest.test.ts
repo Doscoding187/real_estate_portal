@@ -353,7 +353,7 @@ describe('canonical migration manifest', () => {
     expect(tidbSequenced.map(entry => entry.statementCount)).toEqual([
       4, 15, 3, 3, 3, 4, 3, 3, 3, 3,
     ]);
-    expect(manifest.expectedHead.filename).toBe('0081_explore_analytics_query_index.sql');
+    expect(manifest.expectedHead.filename).toBe('0082_explore_engagement_retention_indexes.sql');
   });
 
   it('plans the identity-and-custody migration chain from the integrated 0007 head', () => {
@@ -369,11 +369,11 @@ describe('canonical migration manifest', () => {
         checksum: item.checksum,
       })),
       acceptedOldHead: currentIntegratedHead.filename,
-      expectedNewHead: '0081_explore_analytics_query_index.sql',
+      expectedNewHead: '0082_explore_engagement_retention_indexes.sql',
     });
 
     expect(plan.acceptedOldHead).toBe('0007_paid_launch_access_invoice_term.sql');
-    expect(plan.pending).toHaveLength(74);
+    expect(plan.pending).toHaveLength(75);
     expect(plan.pending.map(item => item.filename)).toEqual([
       '0008_developer_organisations.sql',
       '0009_developer_organisation_memberships.sql',
@@ -449,8 +449,9 @@ describe('canonical migration manifest', () => {
       '0079_explore_engagement_event_identity.sql',
       '0080_service_lead_request_idempotency.sql',
       '0081_explore_analytics_query_index.sql',
+      '0082_explore_engagement_retention_indexes.sql',
     ]);
-    expect(plan.expectedNewHead).toBe('0081_explore_analytics_query_index.sql');
+    expect(plan.expectedNewHead).toBe('0082_explore_engagement_retention_indexes.sql');
   });
 
   it('accepts an isolated 0000 -> 0001 -> 0002 progression in ancestry order', () => {
