@@ -859,3 +859,8 @@ write transaction before validating the status transition. Concurrent lead
 updates can no longer create a showing from a stale preflight status. TypeScript
 validation passed; the disposable integration suite was correctly skipped when
 the test database environment was absent.
+
+Agency transaction updates now lock and re-read the canonical transaction row
+before deriving status, risk, commission, and settlement transitions. Concurrent
+operators therefore cannot overwrite newer commission state from a stale
+preflight read. TypeScript validation passed.
