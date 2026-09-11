@@ -229,3 +229,9 @@ identical: two views, two distinct viewers and sessions, 50 seconds of watch
 time, and 50 percent completion and engagement rates. The authority-backed
 test passed on the exact disposable target. Retention and abuse controls remain
 open.
+
+Explore engagement writes now propagate unexpected persistence failures. The
+writer still treats duplicate event identities as idempotent, while schema and
+infrastructure errors abort single and batch writes instead of being logged and
+discarded. The interaction authority contract passed 3 tests with TypeScript
+validation; retention and abuse controls remain open.

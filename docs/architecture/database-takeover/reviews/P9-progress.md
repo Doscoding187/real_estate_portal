@@ -831,3 +831,9 @@ disposable target. A fixed event sequence was aggregated, deleted, replayed
 under new event identities, and aggregated again to the same complete metrics
 contract. The event facts, rather than a retired aggregate table, are the sole
 authority. Retention and abuse controls remain open.
+
+Explore engagement persistence now fails closed on unexpected write errors.
+Duplicate event IDs remain idempotent, but single and batch writes no longer
+swallow schema or infrastructure failures. The interaction authority contract
+passed 3 tests with TypeScript validation; retention and abuse controls remain
+open.
