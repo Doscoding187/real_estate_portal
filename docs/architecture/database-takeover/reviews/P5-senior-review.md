@@ -23,6 +23,8 @@ disposable target, but its transitional columns remain nullable until all
 active readers and writers are migrated. The active manual-EFT billing service
 now resolves or transactionally admits the typed account before writing
 subscriptions, invoices, payments, payment documents, and audit events.
+Plan-access entitlement reads and subscription writes now resolve the same
+typed account identity as well.
 Database-enforced billable ownership,
 duplicate and out-of-order provider event handling, entitlement
 expiry/cancellation races, and a verified retirement order are not yet proven.

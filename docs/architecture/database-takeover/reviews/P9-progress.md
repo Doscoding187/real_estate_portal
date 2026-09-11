@@ -621,3 +621,6 @@ scenarios after this cutover, and an authority-injected account suite proved
 owner cardinality and rejection of mismatched account kinds. Existing billing
 rows on the disposable target have no null staged account references; read-path
 authorization and retirement of the remaining billing families are still open.
+The plan-access entitlement projection and subscription writer now resolve the
+same typed account identity, while broader router and reporting readers remain
+to be migrated.
