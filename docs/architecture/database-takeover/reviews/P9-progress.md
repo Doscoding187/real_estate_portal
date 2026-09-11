@@ -73,6 +73,13 @@ all 11 physical tests, covering onboarding, billing activation, invitation
 acceptance, membership, listing publication, public lead capture, assignment,
 agent response, and operating-home coherence.
 
+After the marketing-authority quarantine and placeholder-module removal,
+`pnpm db:readiness -- --purpose=database-takeover` was rerun and returned
+`applicationReady: true`. The target remains owned and schema-congruent at
+manifest head 0080 with canonical geography and Search-to-Lead data ready;
+consumer API, browser, release, and full-diagnostics layers remain separately
+unevaluated.
+
 The rebuilt target also passed the independent agent launch journey: its
 physical publish-to-receive test passed, covering approved paid solo-agent
 publication, public inventory attribution, and enquiry delivery.
