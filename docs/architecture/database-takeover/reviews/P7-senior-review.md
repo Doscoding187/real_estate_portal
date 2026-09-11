@@ -10,6 +10,8 @@ Independent authority verification on the disposable target:
 - Shared Living integration — 6 physical tests passed.
 - Commercial agency workflow, access, and capacity contracts — 16 tests passed
   in the focused rerun.
+- Current authority-injected boundary rerun — 53 tests passed across Land
+  router/public-service/workflow and Commercial domain/office suites.
 
 The evidence supports one governed Land geography authority per request,
 central public-classification enforcement, development review/publication and
