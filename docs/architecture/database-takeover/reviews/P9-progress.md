@@ -282,3 +282,8 @@ Required-document reads no longer retry legacy columns or convert missing tables
 into empty/zero success data. Canonical reads propagate errors, while the
 mutation boundary retains explicit `PRECONDITION_FAILED` handling. Updated
 service and distribution guard tests pass.
+
+Distribution access lookups now propagate missing-schema errors instead of
+turning them into absent rows that could trigger an accidental upsert. Focused
+access-policy and repository authority contracts pass with TypeScript
+validation.

@@ -28,15 +28,6 @@ const LEGACY_STATUS_NORMALIZATION: Record<string, DistributionDevelopmentAccessR
   revoked: 'excluded',
 };
 
-function isMissingSchemaError(error: unknown) {
-  const candidate = error as { code?: string; errno?: number; cause?: unknown } | null;
-  if (!candidate) return false;
-  if (candidate.code === 'ER_NO_SUCH_TABLE' || candidate.code === 'ER_BAD_FIELD_ERROR') return true;
-  if (candidate.errno === 1146 || candidate.errno === 1054) return true;
-  if (candidate.cause && candidate.cause !== error) return isMissingSchemaError(candidate.cause);
-  return false;
-}
-
 function extractDbErrorCode(error: unknown): string {
   const candidate = error as { code?: string; cause?: unknown } | null;
   if (!candidate) return '';
@@ -140,18 +131,13 @@ export async function getBrandPartnershipByPublisherId(
   db: DbHandle,
   cataloguePublisherId: number,
 ): Promise<DistributionBrandPartnershipRow | null> {
-  try {
-    const [row] = await db
-      .select()
-      .from(distributionBrandPartnerships)
-      .where(eq(distributionBrandPartnerships.cataloguePublisherId, cataloguePublisherId))
-      .limit(1);
+  const [row] = await db
+    .select()
+    .from(distributionBrandPartnerships)
+    .where(eq(distributionBrandPartnerships.cataloguePublisherId, cataloguePublisherId))
+    .limit(1);
 
-    return row ? projectBrandPartnershipRow(row) : null;
-  } catch (error) {
-    if (isMissingSchemaError(error)) return null;
-    throw error;
-  }
+  return row ? projectBrandPartnershipRow(row) : null;
 }
 
 export async function upsertBrandPartnership(
@@ -217,18 +203,13 @@ export async function getDevelopmentAccessByDevelopmentId(
   db: DbHandle,
   developmentId: number,
 ): Promise<DistributionDevelopmentAccessRow | null> {
-  try {
-    const [row] = await db
-      .select()
-      .from(distributionDevelopmentAccess)
-      .where(eq(distributionDevelopmentAccess.developmentId, developmentId))
-      .limit(1);
+  const [row] = await db
+    .select()
+    .from(distributionDevelopmentAccess)
+    .where(eq(distributionDevelopmentAccess.developmentId, developmentId))
+    .limit(1);
 
-    return row ? normalizeDevelopmentAccessRow(row) : null;
-  } catch (error) {
-    if (isMissingSchemaError(error)) return null;
-    throw error;
-  }
+  return row ? normalizeDevelopmentAccessRow(row) : null;
 }
 
 export async function upsertDevelopmentAccess(
