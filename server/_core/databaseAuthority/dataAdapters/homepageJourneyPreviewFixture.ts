@@ -1399,9 +1399,13 @@ async function verifyPreviewRows(
     connection,
     `SELECT owner_type, owner_id, status, cancel_at_period_end, current_period_end
        FROM subscriptions
-      WHERE (owner_type = 'agent' AND owner_id = ?)
-         OR (owner_type = 'agency' AND owner_id = ?)
-         OR (owner_type = 'developer' AND owner_id = ?)
+      WHERE EXISTS (
+        SELECT 1 FROM billable_accounts account
+         WHERE account.id = subscriptions.billable_account_id
+           AND ((account.account_kind = 'agent' AND account.user_id = ?)
+             OR (account.account_kind = 'agency' AND account.agency_id = ?)
+             OR (account.account_kind = 'developer' AND account.developer_organisation_id = ?))
+      )
       ORDER BY owner_type, owner_id`,
     [USERS.agent.id, AGENCY.id, IDS.developerOrganisation],
   );

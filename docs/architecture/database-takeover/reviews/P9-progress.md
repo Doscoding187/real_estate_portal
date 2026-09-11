@@ -702,3 +702,6 @@ solely on the polymorphic owner type.
 Developer test-context cleanup now deletes subscriptions through the typed
 developer account before removing the organisation, preserving FK ownership
 integrity in disposable test lifecycles.
+
+Homepage journey fixture verification now resolves its three Launch Access
+subscriptions through typed billable accounts rather than owner-pair predicates.
