@@ -35,3 +35,6 @@ server/__tests__/landSearchGeography.test.ts server/__tests__/landRouter.test.ts
 passed 24 tests. These are boundary and geography contract tests; they do not
 substitute for the still-required running public-journey mixed-authority
 exercise.
+
+Those same three suites were rerun through the authority wrapper after the
+empty-target rebuild and passed all 24 tests on the disposable schema.

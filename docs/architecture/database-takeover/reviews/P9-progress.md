@@ -39,6 +39,10 @@ maintenance and principal bootstrap passed 12 physical tests, including
 suspension/reactivation closure, invitation identity consistency, incompatible
 principal denial, concurrent bootstrap serialization, and rollback/retry.
 
+The rebuilt target also passed the Land/geography packet: the authority-run
+Land search geography, public router, and authoring router suites passed 24
+tests, including canonical-location resolution and mixed-authority rejection.
+
 The rebuilt target also passed the full consumer activity persistence packet:
 9 physical tests covered concurrent save/view cardinality, guest-transfer
 idempotency and rollback, projection ambiguity, withdrawal removal, isolation,
