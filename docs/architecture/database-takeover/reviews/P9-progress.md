@@ -297,3 +297,8 @@ Distribution access status handling now uses canonical enum values directly;
 legacy aliases are no longer normalized or retried. Repository contract and
 TypeScript checks pass. Provider integration evidence remains unrun because the
 current shell has no disposable `DATABASE_URL`.
+
+The exact disposable target was re-resolved and the distribution referral
+integration suite was rerun under `pnpm test:authority`; all 8 tests passed
+against the MySQL target. Distribution status behavior now has provider-backed
+acceptance evidence; TiDB/provider admission remains open.

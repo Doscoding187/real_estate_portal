@@ -107,3 +107,9 @@ Legacy aliases are no longer normalized on reads or retried on writes, so stale
 status values cannot silently cross the state-machine authority. The repository
 contract and TypeScript checks pass; the provider integration suite was skipped
 in this shell because no disposable `DATABASE_URL` was configured.
+
+The exact disposable target was re-resolved on 2026-09-11 and the provider-backed
+`distributionPartnerReferralSubmission.integration.test.ts` was rerun under
+`pnpm test:authority`; all 8 tests passed against the MySQL target. This closes
+the earlier unconfigured-shell limitation for the distribution access status
+change, while TiDB/provider admission remains separately open.
