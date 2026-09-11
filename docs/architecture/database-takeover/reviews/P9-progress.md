@@ -818,3 +818,10 @@ The retired boost-campaign service now fails explicitly for analytics, campaign
 lists, lifecycle mutations, tracking, and expiry checks instead of returning
 fabricated state. Focused authority and monetization tests passed 38 tests with
 TypeScript validation passing.
+
+Public media rebuild equivalence is now exercised on the exact disposable
+target. An approved agency listing projects its initial image, canonical media
+replacement updates the source manifest, and two explicit mirror rebuilds
+produce identical public image rows. The agency attribution integration test
+passed under `pnpm test:authority`; aggregate rebuild and retention/abuse
+evidence remain open.

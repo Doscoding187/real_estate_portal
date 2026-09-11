@@ -18,6 +18,7 @@ import {
   plans,
   provinces,
   properties,
+  propertyImages,
   suburbs,
   subscriptions,
   users,
@@ -27,7 +28,9 @@ import {
   createListing,
   getAgencyDashboardStats,
   getDb,
+  replaceListingMedia,
   submitListingForReview,
+  syncPublishedListingMediaToPropertyMirror,
 } from '../db';
 import { capturePublicLead } from '../services/publicLeadCaptureService';
 
@@ -259,7 +262,22 @@ describeWithDb('agency principal listing attribution', () => {
       locationConfirmationState: 'confirmed',
       publicLocationPrecision: 'approximate',
       slug: `agency-owned-family-home-${suffix}`.replace(/[^a-z0-9-]/g, '-'),
-      media: [],
+      media: [
+        {
+          url: `https://cdn.example.test/listings/${suffix}/front.jpg`,
+          type: 'image',
+          displayOrder: 0,
+          isPrimary: true,
+          processingStatus: 'completed',
+        },
+        {
+          url: `https://cdn.example.test/listings/${suffix}/tour.mp4`,
+          type: 'video',
+          displayOrder: 1,
+          isPrimary: false,
+          processingStatus: 'completed',
+        },
+      ],
     });
 
     const [draft] = await db
@@ -279,6 +297,50 @@ describeWithDb('agency principal listing attribution', () => {
       .limit(1);
     created.propertyId = Number(projection?.id || 0);
     expect(projection).toMatchObject({ sourceListingId: created.listingId, agentId: null });
+
+    const [initialImage] = await db
+      .select({ imageUrl: propertyImages.imageUrl, displayOrder: propertyImages.displayOrder, isPrimary: propertyImages.isPrimary })
+      .from(propertyImages)
+      .where(eq(propertyImages.propertyId, created.propertyId));
+    expect(initialImage).toMatchObject({
+      imageUrl: `https://cdn.example.test/listings/${suffix}/front.jpg`,
+      displayOrder: 0,
+      isPrimary: 1,
+    });
+
+    const kitchenKey = `https://cdn.example.test/listings/${suffix}/kitchen.jpg`;
+    const [video] = await db
+      .select({ id: listingMedia.id })
+      .from(listingMedia)
+      .where(and(eq(listingMedia.listingId, created.listingId), eq(listingMedia.mediaType, 'video')))
+      .limit(1);
+    expect(video).toBeDefined();
+    await replaceListingMedia(
+      created.listingId,
+      [
+        { id: kitchenKey, mediaType: 'image', processingStatus: 'completed' },
+        { id: `existing:${video!.id}`, mediaType: 'video' },
+      ],
+      kitchenKey,
+    );
+
+    const firstRebuild = await syncPublishedListingMediaToPropertyMirror(created.listingId);
+    const firstMirror = await db
+      .select({ imageUrl: propertyImages.imageUrl, displayOrder: propertyImages.displayOrder, isPrimary: propertyImages.isPrimary })
+      .from(propertyImages)
+      .where(eq(propertyImages.propertyId, created.propertyId))
+      .orderBy(propertyImages.displayOrder);
+    const secondRebuild = await syncPublishedListingMediaToPropertyMirror(created.listingId);
+    const secondMirror = await db
+      .select({ imageUrl: propertyImages.imageUrl, displayOrder: propertyImages.displayOrder, isPrimary: propertyImages.isPrimary })
+      .from(propertyImages)
+      .where(eq(propertyImages.propertyId, created.propertyId))
+      .orderBy(propertyImages.displayOrder);
+
+    expect(firstRebuild).toMatchObject({ synced: true, propertyId: created.propertyId, imageCount: 1 });
+    expect(secondRebuild).toMatchObject({ synced: true, propertyId: created.propertyId, imageCount: 1 });
+    expect(firstMirror).toEqual([{ imageUrl: kitchenKey, displayOrder: 0, isPrimary: 1 }]);
+    expect(secondMirror).toEqual(firstMirror);
 
     const lead = await capturePublicLead({
       propertyId: created.propertyId,

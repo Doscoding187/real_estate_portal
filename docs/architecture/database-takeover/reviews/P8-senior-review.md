@@ -213,3 +213,11 @@ analytics, empty campaign lists, zero expiry counts, or no-op tracking success.
 All methods now fail explicitly until campaign and billing authorities are
 approved. Feed-ranking and monetization authority tests passed 38 tests with
 TypeScript validation passing.
+
+The public media rebuild comparison is now physical. The agency publication
+fixture approves a listing with canonical image and video media, confirms the
+initial `property_images` mirror, replaces the canonical manifest, then runs
+the public-media rebuild twice. Both rebuilds produce the same one-image mirror
+with the canonical URL, display order, and primary flag. The authority-backed
+test passed on the exact disposable target. Analytics aggregate rebuild and
+retention/abuse review remain open.
