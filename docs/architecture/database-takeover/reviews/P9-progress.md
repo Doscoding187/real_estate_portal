@@ -127,7 +127,9 @@ proof remain open. P3 has an explicit incomplete-evidence senior review in
 remain open. P4's exercised tenant and principal boundaries are accepted in
 `reviews/P4-senior-review.md`; account, credential, and complete fallback-path
 closure remain P9 work. This document does not convert the remaining packet-level results
-into senior acceptance. Projection rebuild equivalence,
+into senior acceptance. P7 has an incomplete senior review in
+`reviews/P7-senior-review.md`; public mixed-authority journey, Commercial
+economics races, and provider validation remain open. Projection rebuild equivalence,
 provider-specific semantics, unresolved billable-owner modelling, remaining
 packet review findings, and the complete public/private journey audit remain
 required before P9 can close.
