@@ -333,3 +333,9 @@ After the distribution authority cleanup, the full `pnpm db:authority:check`
 was rerun on 2026-09-11: 33 static suites and 272 tests passed; utility
 authority (118 surfaces), schema sanity (215 tables / 81 migrations),
 deterministic inventory, and lifecycle checks also passed.
+
+On 2026-09-11, the authority-injected Desktop Chrome consumer journey was
+rerun with `pnpm test:browser:authority -- e2e/consumer-activity/persistence.spec.ts
+--project='Desktop Chrome' --retries=0`; the single P1 test passed in 20 seconds,
+covering guest transfer, save/remove persistence, reload, and canonical recent
+view behavior. Broader browser journey coverage remains open.
