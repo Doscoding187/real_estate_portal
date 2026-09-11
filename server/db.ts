@@ -1701,7 +1701,7 @@ export async function getAgencyCommissionStats(agencyId: number, months: number 
 
 export async function getAgentPerformanceLeaderboard(agencyId: number, months: number = 3) {
   const db = await getDb();
-  if (!db) return [];
+  if (!db) throw new Error('Database not available');
 
   // tables already imported at top
 
@@ -1843,7 +1843,7 @@ export async function setPlatformSetting(key: string, value: any, updatedBy?: nu
 
 export async function getAllPlatformSettings() {
   const db = await getDb();
-  if (!db) return [];
+  if (!db) throw new Error('Database not available');
 
   const result: any = await db.execute(
     sql.raw(`
