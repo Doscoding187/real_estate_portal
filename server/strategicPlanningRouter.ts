@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { router, superAdminProcedure } from './_core/trpc';
 import { TRPCError } from '@trpc/server';
 import * as spService from './services/strategicPlanningService';
-import { SUPPORTED_METRIC_KEYS, SUPPORTED_METRIC_KEY_VALUES } from '../drizzle/schema/strategicPlanning';
+import { SUPPORTED_METRIC_KEY_VALUES } from '../drizzle/schema/strategicPlanning';
 
 const metricKeyEnum = z.enum(SUPPORTED_METRIC_KEY_VALUES);
 const comparisonDirectionEnum = z.enum(['at_least', 'at_most']);
@@ -30,6 +30,24 @@ function toTrpcError(err: unknown): TRPCError {
 }
 
 export const strategicPlanningRouter = router({
+  /**
+   * Canonical metadata for authoring forms plus bounded owner lookup. The
+   * service intentionally returns no owners unless the caller supplies a
+   * search term or explicit IDs, so this cannot enumerate the user base.
+   */
+  getAuthoringReferenceData: superAdminProcedure
+    .input(
+      z
+        .object({
+          ownerSearch: z.string().trim().min(2).max(100).optional(),
+          ownerIds: z.array(z.number().int().positive()).max(50).optional(),
+        })
+        .optional(),
+    )
+    .query(async ({ input }) => {
+      return spService.getAuthoringReferenceData(input);
+    }),
+
   listPeriods: superAdminProcedure.query(async () => {
     return spService.listPeriods();
   }),

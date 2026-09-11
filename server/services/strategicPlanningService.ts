@@ -7,12 +7,125 @@ import {
   SUPPORTED_METRIC_KEYS,
 } from '../../drizzle/schema/strategicPlanning';
 import { users } from '../../drizzle/schema/core';
-import { eq, and, desc, sql } from 'drizzle-orm';
+import { eq, and, desc, asc, sql, or, inArray, like, type SQL } from 'drizzle-orm';
 import { logManagerialAudit, AuditActions } from '../_core/auditLog';
-import { resolveMetricValue, getMetricDefinition, isSupportedMetricKey } from './companyMetricsService';
+import {
+  resolveMetricValue,
+  getMetricDefinition,
+  isSupportedMetricKey,
+  SUPPORTED_METRICS,
+} from './companyMetricsService';
 
 export type ObjectiveStatus = 'draft' | 'active' | 'completed' | 'cancelled';
 export type ComparisonDirection = 'at_least' | 'at_most';
+
+export type AuthoringReferenceData = {
+  metrics: Array<{
+    key: SupportedMetricKey;
+    label: string;
+    description: string;
+    unit: 'count';
+    semanticKind: 'point_in_time_count';
+  }>;
+  owners: Array<{
+    id: number;
+    displayName: string;
+    email: string | null;
+  }>;
+};
+
+const AUTHORING_OWNER_SEARCH_LIMIT = 20;
+const AUTHORING_OWNER_ID_LIMIT = 50;
+
+function escapeLikeTerm(value: string): string {
+  return value.replace(/[\\%_]/g, '\\$&');
+}
+
+function ownerDisplayName(row: {
+  id: number;
+  name: string | null;
+  firstName: string | null;
+  lastName: string | null;
+  email: string | null;
+}): string {
+  const explicitName = row.name?.trim();
+  if (explicitName) return explicitName;
+
+  const fullName = [row.firstName?.trim(), row.lastName?.trim()].filter(Boolean).join(' ');
+  return fullName || row.email?.trim() || `User #${row.id}`;
+}
+
+/**
+ * Returns the canonical metric metadata and a deliberately bounded user
+ * projection for authoring forms. An empty owner query never falls back to a
+ * broad user listing; callers must provide a search term or explicit IDs.
+ */
+export async function getAuthoringReferenceData(input?: {
+  ownerSearch?: string;
+  ownerIds?: number[];
+}): Promise<AuthoringReferenceData> {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  const metrics = SUPPORTED_METRIC_KEYS.map(key => {
+    const definition = SUPPORTED_METRICS[key];
+    return {
+      key: definition.key,
+      label: definition.label,
+      description: definition.description,
+      unit: definition.unit,
+      semanticKind: definition.semanticKind,
+    };
+  });
+
+  const ownerSearch = input?.ownerSearch?.trim();
+  const ownerIds = Array.from(new Set(input?.ownerIds ?? []))
+    .filter(id => Number.isInteger(id) && id > 0)
+    .slice(0, AUTHORING_OWNER_ID_LIMIT);
+
+  if (!ownerSearch && ownerIds.length === 0) {
+    return { metrics, owners: [] };
+  }
+
+  const predicates: SQL[] = [];
+  if (ownerSearch) {
+    const term = `%${escapeLikeTerm(ownerSearch)}%`;
+    const searchPredicate = or(
+      like(users.name, term),
+      like(users.firstName, term),
+      like(users.lastName, term),
+      like(users.email, term),
+    );
+    if (searchPredicate) predicates.push(searchPredicate);
+  }
+  if (ownerIds.length > 0) {
+    predicates.push(inArray(users.id, ownerIds));
+  }
+
+  const rows = await db
+    .select({
+      id: users.id,
+      name: users.name,
+      firstName: users.firstName,
+      lastName: users.lastName,
+      email: users.email,
+    })
+    .from(users)
+    .where(predicates.length === 1 ? predicates[0] : or(...predicates))
+    .orderBy(asc(users.name), asc(users.firstName), asc(users.lastName), asc(users.email))
+    // Search is deliberately narrow; known owner IDs from the loaded objective
+    // list can be resolved together without a broad user enumeration.
+    .limit(ownerSearch ? AUTHORING_OWNER_SEARCH_LIMIT : ownerIds.length);
+
+  return {
+    metrics,
+    owners: rows.map(row => ({
+      id: row.id,
+      displayName: ownerDisplayName(row),
+      email: row.email,
+    })),
+  };
+}
 
 const VALID_LIFECYCLE_TRANSITIONS: Record<ObjectiveStatus, readonly ObjectiveStatus[]> = {
   draft: ['active', 'cancelled'],

@@ -5,6 +5,7 @@ import CockpitHome from './CockpitHome';
 import FounderAttention from './FounderAttention';
 import CompanyMap from './CompanyMap';
 import Today from './Today';
+import Strategy from './Strategy';
 
 function FounderRoutes() {
   return (
@@ -14,6 +15,7 @@ function FounderRoutes() {
         <Route path="/founder/attention" component={FounderAttention} />
         <Route path="/founder/company-map" component={CompanyMap} />
         <Route path="/founder/today" component={Today} />
+        <Route path="/founder/strategy" component={Strategy} />
         <Route>
           <Redirect to="/founder" />
         </Route>

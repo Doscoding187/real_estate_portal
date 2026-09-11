@@ -5,17 +5,19 @@ import {
   AlertTriangle,
   Map,
   CalendarCheck,
+  Target,
   ChevronLeft,
   ChevronRight,
   X,
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 const NAV_ITEMS = [
   { path: '/founder', label: 'Cockpit', icon: LayoutDashboard },
   { path: '/founder/attention', label: 'Founder Attention', icon: AlertTriangle },
   { path: '/founder/company-map', label: 'Company Map', icon: Map },
   { path: '/founder/today', label: 'Today', icon: CalendarCheck },
+  { path: '/founder/strategy', label: 'Strategy', icon: Target },
 ] as const;
 
 function SidebarBody({
