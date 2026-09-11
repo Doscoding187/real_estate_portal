@@ -564,3 +564,10 @@ attribution and performance/revision scenarios (2 physical tests). It confirms
 source-listing identity, public-field refresh after a revision, and ownership
 continuity for the exercised property supply. Cross-supply equivalence for
 Development, Commercial, Land, and Shared Living remains unproven.
+
+The broader supply lifecycle rerun passed 31 physical tests: Development
+publication (21), Commercial capacity/publication (1), Land marketing-media
+authority (3), and Shared Living publication/privacy (6). These strengthen
+ownership, approval, availability, and withdrawal evidence across all four
+supplies, but they do not yet prove that a rebuild preserves projection row
+identity and fields for every supply family.
