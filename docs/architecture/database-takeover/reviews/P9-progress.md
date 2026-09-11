@@ -705,3 +705,7 @@ integrity in disposable test lifecycles.
 
 Homepage journey fixture verification now resolves its three Launch Access
 subscriptions through typed billable accounts rather than owner-pair predicates.
+
+Public property eligibility now relies on the typed personal-agent account
+match itself rather than treating the polymorphic subscription owner type as an
+independent authority. Its 12 public inventory contract tests remain green.

@@ -437,7 +437,6 @@ async function loadAgentPaidEntitledUserIds(
       .where(
         and(
           inArray(subscriptions.ownerId, [...batchIds]),
-          eq(subscriptions.ownerType, 'agent'),
           sql`EXISTS (
             SELECT 1
             FROM ${billableAccounts} account
