@@ -96,23 +96,263 @@ function normalizedAction(value: unknown): string {
     .replace(/\s+/g, ' ');
 }
 
-function normalizedExpression(value: string): string {
-  let normalized = value.trim().replace(/\s+/g, ' ').toLowerCase();
-  // MySQL/MariaDB expose CHECK clauses with table qualifiers removed,
-  // character-set introducers added to string literals, and redundant
-  // grouping parentheses around simple predicates. Canonicalize those
-  // provider renderings so the Drizzle model and physical schema compare on
-  // the actual constraint meaning.
-  normalized = normalized
-    .replace(/`[^`]+`\.`([^`]+)`/g, '`$1`')
-    .replace(/_utf8mb4\\?'/g, "'")
-    .replace(/\\'/g, "'")
-    .replace(/\(\s+/g, '(')
-    .replace(/\s+\)/g, ')');
+type SqlExpressionNormalizationOptions = {
+  localColumns?: ReadonlySet<string>;
+  localTableName?: string;
+};
+
+const MYSQL_RESERVED_IDENTIFIER_WORDS = new Set([
+  'accessible',
+  'add',
+  'all',
+  'alter',
+  'and',
+  'as',
+  'asc',
+  'between',
+  'by',
+  'case',
+  'check',
+  'column',
+  'constraint',
+  'create',
+  'cross',
+  'current_date',
+  'current_time',
+  'current_timestamp',
+  'database',
+  'default',
+  'delete',
+  'desc',
+  'distinct',
+  'drop',
+  'else',
+  'end',
+  'exists',
+  'false',
+  'foreign',
+  'from',
+  'group',
+  'having',
+  'in',
+  'index',
+  'inner',
+  'insert',
+  'intersect',
+  'into',
+  'is',
+  'join',
+  'key',
+  'left',
+  'like',
+  'limit',
+  'match',
+  'natural',
+  'not',
+  'null',
+  'on',
+  'or',
+  'order',
+  'outer',
+  'primary',
+  'references',
+  'right',
+  'select',
+  'set',
+  'table',
+  'then',
+  'true',
+  'union',
+  'unique',
+  'update',
+  'using',
+  'values',
+  'when',
+  'where',
+  'with',
+]);
+
+/**
+ * Canonicalizes provider SQL spelling without changing literal content. The
+ * optional local-column set is deliberately available only to CHECK callers:
+ * it lets MySQL's harmless local-column backticks compare equal to Drizzle's
+ * unquoted local-column rendering without broad identifier rewriting.
+ */
+export function normalizeSqlExpression(
+  value: string,
+  options: SqlExpressionNormalizationOptions = {},
+): string {
+  const localColumns = new Set(
+    [...(options.localColumns ?? [])].map(column => column.toLowerCase()),
+  );
+  const localTableName = options.localTableName?.toLowerCase();
+  const isSafeLocalColumn = (identifier: string): boolean => {
+    const normalizedIdentifier = identifier.toLowerCase();
+    return Boolean(
+      localColumns?.has(normalizedIdentifier) &&
+      /^[a-z_][a-z0-9_$]*$/i.test(identifier) &&
+      !MYSQL_RESERVED_IDENTIFIER_WORDS.has(normalizedIdentifier),
+    );
+  };
+  const quotedIdentifierAt = (
+    source: string,
+    start: number,
+  ): { end: number; value: string } | null => {
+    if (source[start] !== '`') return null;
+    let identifier = '';
+    for (let cursor = start + 1; cursor < source.length; cursor += 1) {
+      const character = source[cursor];
+      if (character !== '`') {
+        identifier += character;
+        continue;
+      }
+      if (source[cursor + 1] === '`') {
+        identifier += '`';
+        cursor += 1;
+        continue;
+      }
+      return { end: cursor, value: identifier };
+    }
+    return null;
+  };
+
+  let normalized = '';
+  let quote: "'" | '"' | '`' | null = null;
+  let escapedSingleQuoteDelimiter = false;
+  let pendingWhitespace = false;
+  const appendPendingWhitespace = (nextCharacter: string): void => {
+    if (!pendingWhitespace) return;
+    const previous = normalized[normalized.length - 1] ?? '';
+    if (
+      normalized.length > 0 &&
+      previous !== '(' &&
+      previous !== ',' &&
+      nextCharacter !== ')' &&
+      nextCharacter !== ','
+    ) {
+      normalized += ' ';
+    }
+    pendingWhitespace = false;
+  };
+
+  for (let index = 0; index < value.length; index += 1) {
+    const character = value[index];
+    const next = value[index + 1];
+    if (quote) {
+      if (
+        quote === "'" &&
+        escapedSingleQuoteDelimiter &&
+        character === '\\' &&
+        next === "'" &&
+        !/[a-z0-9_$]/i.test(value[index + 2] ?? '')
+      ) {
+        normalized += "'";
+        quote = null;
+        escapedSingleQuoteDelimiter = false;
+        index += 1;
+        continue;
+      }
+      normalized += character;
+      if (character === '\\' && next) {
+        normalized += next;
+        index += 1;
+        continue;
+      }
+      if (character === quote) {
+        if (next === quote) {
+          normalized += next;
+          index += 1;
+        } else {
+          quote = null;
+          escapedSingleQuoteDelimiter = false;
+        }
+      }
+      continue;
+    }
+    if (/\s/.test(character)) {
+      pendingWhitespace = true;
+      continue;
+    }
+    const charsetIntroducer = value.slice(index).match(/^_utf8mb4\\?'/i);
+    const previousSourceCharacter = value[index - 1] ?? '';
+    if (charsetIntroducer && (index === 0 || !/[a-z0-9_$]/i.test(previousSourceCharacter))) {
+      appendPendingWhitespace("'");
+      normalized += "'";
+      quote = "'";
+      escapedSingleQuoteDelimiter = charsetIntroducer[0].endsWith("\\'");
+      index += charsetIntroducer[0].length - 1;
+      continue;
+    }
+    if (character === '`') {
+      const quotedIdentifier = quotedIdentifierAt(value, index);
+      if (quotedIdentifier) {
+        let cursor = quotedIdentifier.end + 1;
+        while (/\s/.test(value[cursor] ?? '')) cursor += 1;
+        if (value[cursor] === '.') {
+          cursor += 1;
+          while (/\s/.test(value[cursor] ?? '')) cursor += 1;
+          const qualifiedColumn = quotedIdentifierAt(value, cursor);
+          if (
+            qualifiedColumn &&
+            quotedIdentifier.value.toLowerCase() === localTableName &&
+            isSafeLocalColumn(qualifiedColumn.value)
+          ) {
+            appendPendingWhitespace(qualifiedColumn.value);
+            normalized += qualifiedColumn.value.toLowerCase();
+            index = qualifiedColumn.end;
+            continue;
+          }
+        }
+        let previousSignificantSourceCharacter = index - 1;
+        while (/\s/.test(value[previousSignificantSourceCharacter] ?? '')) {
+          previousSignificantSourceCharacter -= 1;
+        }
+        if (isSafeLocalColumn(quotedIdentifier.value)) {
+          if (value[previousSignificantSourceCharacter] !== '.') {
+            appendPendingWhitespace(quotedIdentifier.value);
+            normalized += quotedIdentifier.value.toLowerCase();
+            index = quotedIdentifier.end;
+            continue;
+          }
+        }
+      }
+    }
+    if (character === "'" || character === '"' || character === '`') {
+      appendPendingWhitespace(character);
+      normalized += character;
+      quote = character;
+      escapedSingleQuoteDelimiter = false;
+      continue;
+    }
+    appendPendingWhitespace(character);
+    normalized += character.toLowerCase();
+  }
+  normalized = normalized.trim();
+
   const hasTopLevelBooleanOperator = (expression: string): boolean => {
     let depth = 0;
+    let expressionQuote: "'" | '"' | '`' | null = null;
     for (let index = 0; index < expression.length; index += 1) {
       const character = expression[index];
+      const next = expression[index + 1];
+      if (expressionQuote) {
+        if (character === '\\' && next) {
+          index += 1;
+          continue;
+        }
+        if (character === expressionQuote) {
+          if (next === expressionQuote) {
+            index += 1;
+          } else {
+            expressionQuote = null;
+          }
+        }
+        continue;
+      }
+      if (character === "'" || character === '"' || character === '`') {
+        expressionQuote = character;
+        continue;
+      }
       if (character === '(') depth += 1;
       if (character === ')') depth -= 1;
       if (depth === 0 && /[a-z]/i.test(character)) {
@@ -130,8 +370,28 @@ function normalizedExpression(value: string): string {
   while (changed) {
     changed = false;
     const stack: number[] = [];
+    let expressionQuote: "'" | '"' | '`' | null = null;
     for (let index = 0; index < normalized.length; index += 1) {
       const character = normalized[index];
+      const next = normalized[index + 1];
+      if (expressionQuote) {
+        if (character === '\\' && next) {
+          index += 1;
+          continue;
+        }
+        if (character === expressionQuote) {
+          if (next === expressionQuote) {
+            index += 1;
+          } else {
+            expressionQuote = null;
+          }
+        }
+        continue;
+      }
+      if (character === "'" || character === '"' || character === '`') {
+        expressionQuote = character;
+        continue;
+      }
       if (character === '(') {
         stack.push(index);
         continue;
@@ -150,7 +410,40 @@ function normalizedExpression(value: string): string {
       break;
     }
   }
-  while (normalized.startsWith('(') && normalized.endsWith(')')) {
+  const hasSingleOuterGroup = (expression: string): boolean => {
+    if (!expression.startsWith('(') || !expression.endsWith(')')) return false;
+    let depth = 0;
+    let expressionQuote: "'" | '"' | '`' | null = null;
+    for (let index = 0; index < expression.length; index += 1) {
+      const character = expression[index];
+      const next = expression[index + 1];
+      if (expressionQuote) {
+        if (character === '\\' && next) {
+          index += 1;
+          continue;
+        }
+        if (character === expressionQuote) {
+          if (next === expressionQuote) {
+            index += 1;
+          } else {
+            expressionQuote = null;
+          }
+        }
+        continue;
+      }
+      if (character === "'" || character === '"' || character === '`') {
+        expressionQuote = character;
+        continue;
+      }
+      if (character === '(') depth += 1;
+      if (character === ')') {
+        depth -= 1;
+        if (depth === 0 && index !== expression.length - 1) return false;
+      }
+    }
+    return depth === 0 && expressionQuote === null;
+  };
+  while (hasSingleOuterGroup(normalized)) {
     normalized = normalized.slice(1, -1).trim();
   }
   if (normalized === 'now()' || normalized === 'current_timestamp()') {
@@ -178,7 +471,7 @@ function desiredDefault(column: any, type: string): string | null {
     if (rendered.params.length === 1 && rendered.sql.trim() === '?') {
       return normalizeDefaultForType(String(rendered.params[0]), type);
     }
-    return normalizedExpression(rendered.sql);
+    return normalizeSqlExpression(rendered.sql);
   }
   return normalizeDefaultForType(String(column.default), type);
 }
@@ -195,7 +488,7 @@ function actualDefault(value: unknown, type: string): string | null {
 function indexColumnName(value: any): string {
   if (typeof value?.name === 'string') return value.name;
   if (typeof value?.config?.name === 'string') return value.config.name;
-  if (is(value, SQL)) return normalizedExpression(dialect.sqlToQuery(value).sql);
+  if (is(value, SQL)) return normalizeSqlExpression(dialect.sqlToQuery(value).sql);
   throw new Error('Canonical Drizzle index contains an unsupported column expression.');
 }
 
@@ -313,9 +606,13 @@ export function normalizedDesiredSchema(schemaExports: Record<string, unknown>):
         onUpdate: normalizedAction(key.onUpdate),
       };
     });
+    const localColumnNames = new Set(columns.map(column => column.name.toLowerCase()));
     const checks: NormalizedCheck[] = (config.checks as any[]).map(check => ({
       name: check.name,
-      expression: normalizedExpression(dialect.sqlToQuery(check.value).sql),
+      expression: normalizeSqlExpression(dialect.sqlToQuery(check.value).sql, {
+        localColumns: localColumnNames,
+        localTableName: config.name,
+      }),
     }));
 
     return {
@@ -450,7 +747,10 @@ export async function normalizedPhysicalSchema(
       if (!table) continue;
       table.checks.push({
         name: String(rowValue(row, 'constraint_name') ?? ''),
-        expression: normalizedExpression(String(rowValue(row, 'check_clause') ?? '')),
+        expression: normalizeSqlExpression(String(rowValue(row, 'check_clause') ?? ''), {
+          localColumns: new Set(table.columns.map(column => column.name.toLowerCase())),
+          localTableName: table.name,
+        }),
       });
     }
   } catch {
