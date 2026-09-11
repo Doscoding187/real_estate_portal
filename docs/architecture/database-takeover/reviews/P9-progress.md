@@ -698,3 +698,7 @@ green at 33 suites and 272 tests.
 Platform analytics paid-subscription counts now admit only subscriptions linked
 to typed agency billable accounts, removing the last broad dashboard count based
 solely on the polymorphic owner type.
+
+Developer test-context cleanup now deletes subscriptions through the typed
+developer account before removing the organisation, preserving FK ownership
+integrity in disposable test lifecycles.
