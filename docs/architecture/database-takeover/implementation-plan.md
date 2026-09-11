@@ -9,7 +9,7 @@ senior acceptance, P5 has accepted Launch Access scope with broader lifecycle
 coverage outside scope, P7 has an incomplete
 senior review, and P8 has an incomplete senior review; broader P6 lifecycle
 coverage remains open and P9 is in closure audit. The task-owned disposable target is at
-manifest head `0088_retire_obsolete_billing_families.sql`, with model
+manifest head `0089_retire_disconnected_analytics_aggregations.sql`, with model
 structural digest
 `0d50ae2d489fa91529de0c158870ccd445c1ab6d1b6d3fd438c1be87135dddec`.
 The relational lead-delivery cutover, consumer changes, seven physical

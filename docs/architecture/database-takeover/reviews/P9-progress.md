@@ -769,3 +769,9 @@ failures abort the enclosing deal transaction instead of returning a successful
 stage change without a commission fact. The focused commission and router
 transaction suites passed 15 tests; broader commission settlement lifecycle
 coverage remains open.
+
+P8 analytics authority cleanup retired the zero-row, unreachable
+`analytics_aggregations` table through migration 0089 after a repository census
+found no active consumers. The canonical model inventory was regenerated and
+the retirement is recorded as an approved pre-launch exception. Retained
+aggregate rebuild and query-plan evidence remains open.

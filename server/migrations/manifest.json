@@ -4,7 +4,7 @@
   "historyTable": "sql_migration_history",
   "attemptTable": "sql_migration_attempts",
   "lockName": "property_listify_manifest_migrations",
-  "expectedHead": "0088_retire_obsolete_billing_families.sql",
+  "expectedHead": "0089_retire_disconnected_analytics_aggregations.sql",
   "migrations": [
     {
       "sequence": 0,
@@ -936,6 +936,17 @@
       "statementPolicy": "approved-exception",
       "requiredReferenceDataVersion": null,
       "approvalReference": "DBX-PRELAUNCH-RETIRE-OBSOLETE-BILLING-2026-09-11-Edward"
+    },
+    {
+      "sequence": 89,
+      "filename": "0089_retire_disconnected_analytics_aggregations.sql",
+      "checksum": "a550f1c7c64c8f97e72accd21aeeed1abfe33a4ac298e4d11c7818864f58c207",
+      "parent": "0088_retire_obsolete_billing_families.sql",
+      "parentChecksum": "5dcb3481e8b1b772196b6e8cf9057457744ebde2586c7c7d2b302f7df7f54a7f",
+      "kind": "exceptional",
+      "statementPolicy": "approved-exception",
+      "requiredReferenceDataVersion": null,
+      "approvalReference": "DBX-PRELAUNCH-RETIRE-DISCONNECTED-ANALYTICS-2026-09-11-Edward"
     }
   ]
 }

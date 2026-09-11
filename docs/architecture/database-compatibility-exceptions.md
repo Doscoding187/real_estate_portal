@@ -746,3 +746,20 @@ Failure and observability behavior: migration planning requires the exact accept
 Automated evidence: authority status reports manifest-head-ready and schema-congruent; migration manifest, static authority, and lifecycle gates pass.
 Expiry or objective removal condition: none; this exception is removed when the staged cutover record is superseded by the final billing authority closure review.
 Removal workstream: P5 billable-account cutover.
+
+## DBX-PRELAUNCH-RETIRE-DISCONNECTED-ANALYTICS-2026-09-11-Edward
+
+Exception ID: DBX-PRELAUNCH-RETIRE-DISCONNECTED-ANALYTICS-2026-09-11-Edward
+Status: approved exceptional migration
+Owner: Database architecture takeover
+Approved by Edward on: 2026-09-11
+Business reason: remove a zero-row, unreachable aggregate table that has no active runtime authority.
+Canonical authority: append-only canonical analytics event facts and explicitly governed rebuildable projections.
+Exact files: `server/migrations/0089_retire_disconnected_analytics_aggregations.sql`, `drizzle/schema/analytics.ts`.
+Tables and columns: `analytics_aggregations` (entire table).
+Permitted read direction: none; the table is retired.
+Permitted write direction: none; the table is retired.
+Failure and observability behavior: canonical migration runner requires the exact accepted head and fails on checksum, parent, target, lock, or execution errors.
+Automated evidence: repository census found no active readers or writers; exact disposable target contained zero rows; authority migration and schema checks pass.
+Expiry or objective removal condition: none; this exception records a completed pre-launch retirement.
+Removal workstream: P8 analytics authority.

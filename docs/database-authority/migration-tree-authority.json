@@ -1224,6 +1224,14 @@
       "path": "server/migrations/0088_retire_obsolete_billing_families.sql",
       "classification": "canonical active",
       "purpose": "Removes empty, unreachable pre-launch agency, transaction, and historical invoice billing families."
+    },
+    {
+      "path": "server/migrations/0089_retire_disconnected_analytics_aggregations.sql",
+      "classification": "canonical active",
+      "purpose": "P8 retirement of disconnected analytics aggregate authority",
+      "approvedFiles": [
+        "server/migrations/0089_retire_disconnected_analytics_aggregations.sql"
+      ]
     }
   ],
   "prohibitedPaths": [

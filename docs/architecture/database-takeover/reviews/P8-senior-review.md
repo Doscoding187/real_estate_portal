@@ -154,3 +154,10 @@ Distribution router reads no longer fall back from a missing primary manager to
 an arbitrary active manager, or from a missing current agent tier to historical
 rows. Current assignment and tier records are authoritative. Provider-backed
 manager-checklist and referral suites passed 19 tests, with TypeScript passing.
+
+The disconnected `analytics_aggregations` table had no active readers or
+writers and contained zero rows on the exact disposable target. Migration 0089
+retires it, removes its Drizzle authority, and records canonical event facts as
+the replacement source for rebuildable aggregates. Inventory and schema checks
+were regenerated; aggregate rebuild implementation and query-plan evidence
+for retained projections remain open.
