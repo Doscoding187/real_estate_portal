@@ -122,7 +122,9 @@ remains open. P5's billable-owner alternatives and recommended future model
 are recorded in `p5-billing-authority-decision.md`, but implementation is not
 complete. P3 has an explicit incomplete-evidence senior review in
 `reviews/P3-senior-review.md`; its writer census and cross-supply rebuild proof
-remain open. This document does not convert the remaining packet-level results
+remain open. P4's exercised tenant and principal boundaries are accepted in
+`reviews/P4-senior-review.md`; account, credential, and complete fallback-path
+closure remain P9 work. This document does not convert the remaining packet-level results
 into senior acceptance. Projection rebuild equivalence,
 provider-specific semantics, unresolved billable-owner modelling, remaining
 packet review findings, and the complete public/private journey audit remain
