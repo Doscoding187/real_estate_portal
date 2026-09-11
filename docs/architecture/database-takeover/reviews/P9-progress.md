@@ -54,6 +54,11 @@ head 0080, schema congruency, canonical geography, Search-to-Lead scenario,
 and required-data checks were all ready. Commercial reference, consumer API,
 browser, release, and full-diagnostics layers remain intentionally separate.
 
+Cross-cutting verification was rerun after the rebuilt-target packet sweep:
+`pnpm check` passed, and `pnpm db:authority:check` passed all 33 static
+authority suites (272 tests). No authority-contract regression was introduced
+by the packet changes.
+
 The rebuilt target also passed the full consumer activity persistence packet:
 9 physical tests covered concurrent save/view cardinality, guest-transfer
 idempotency and rollback, projection ambiguity, withdrawal removal, isolation,
