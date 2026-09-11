@@ -558,3 +558,9 @@ format defect: completion had written ISO-8601 `T...Z` text into a MySQL
  timestamp column. The service now normalizes processing timestamps to UTC
 MySQL format. Duplicate-identity and claim/complete fencing tests both pass
 under `pnpm test:authority`, with TypeScript validation passing.
+
+The P3 projection rerun on the current 0083 target passed the persisted agency
+attribution and performance/revision scenarios (2 physical tests). It confirms
+source-listing identity, public-field refresh after a revision, and ownership
+continuity for the exercised property supply. Cross-supply equivalence for
+Development, Commercial, Land, and Shared Living remains unproven.
