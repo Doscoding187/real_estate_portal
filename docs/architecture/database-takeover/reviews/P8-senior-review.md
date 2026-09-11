@@ -24,7 +24,8 @@ The review found and corrected an active launch path that dynamically imported
 `revenueCenterSync.ts`, where revenue and failed-payment tables are placeholder
 objects. The path now fails with `PRECONDITION_FAILED` before any activation or
 success response; a contract test covers the gate. Replacing the placeholder
-module with a canonical authority remains required before campaign launch is
+module was completed after a caller census found no remaining imports. A
+canonical campaign/billing authority remains required before campaign launch is
 implemented.
 
 Finding: incomplete evidence, severity medium. Required follow-up is a public

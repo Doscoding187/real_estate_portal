@@ -91,5 +91,6 @@ imported `revenueCenterSync.ts`, whose revenue and failed-payment tables are
 placeholder objects rather than canonical schema authorities. That launch path
 is now explicitly gated with `PRECONDITION_FAILED` and no longer activates a
 campaign or reports success until an admitted campaign/billing authority exists.
-The placeholder module remains quarantined as historical reference and must be
-replaced or removed before campaign launch is implemented.
+The placeholder `revenueCenterSync.ts` module was removed after a repository-
+wide caller census found no remaining imports. A canonical campaign/billing
+authority is still required before campaign launch can be implemented.
