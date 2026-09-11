@@ -38,3 +38,11 @@ The affected groups are:
 
 No provider admission claim is made until the domain decisions, migration,
 TiDB execution evidence, and MySQL congruency evidence all exist.
+
+The runtime census confirms that deletion currently relies on database cascade
+behavior: `agencyRouter.delete` describes related-record cleanup as cascade,
+and `deleteUserById`/the user-admin delete path issue a direct user delete.
+Therefore a provider migration cannot simply replace cascades with restrictive
+keys. Those paths need explicit, transactional retirement/cleanup workflows
+first, with audit and billing-history retention rules tested before the FK
+transition is implemented.
