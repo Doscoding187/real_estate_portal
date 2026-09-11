@@ -42,7 +42,7 @@ const billingCycleSchema = z.enum(['monthly', 'annual']);
 const commercialAudienceSchema = z.enum(COMMERCIAL_AUDIENCES);
 
 async function getAgencyBillableAccountId(db: Awaited<ReturnType<typeof getDb>>, agencyId: number) {
-  if (!db) return null;
+  if (!db) throw new Error('Database not available');
   const [account] = await db
     .select({ id: billableAccounts.id })
     .from(billableAccounts)

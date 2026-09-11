@@ -259,7 +259,7 @@ async function searchCanonicalLocationCatalog(
   level?: CanonicalLocationLevel,
 ): Promise<readonly CanonicalLocationCatalogRow[]> {
   const db = await getDb();
-  if (!db) return [];
+  if (!db) throw new Error('Database not available');
 
   const searchPattern = `%${query.toLowerCase()}%`;
   const publishedCount = sql<number>`COUNT(${properties.id})`;

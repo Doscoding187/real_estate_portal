@@ -24,7 +24,7 @@ function intervalFromEnv(): number {
 
 async function sendDueNotices(window: NoticeWindow): Promise<number> {
   const db = await getDb();
-  if (!db) return 0;
+  if (!db) throw new Error('Database not available');
 
   const now = new Date();
   const horizon = new Date(now.getTime() + window.daysRemaining * 24 * 60 * 60 * 1000);
