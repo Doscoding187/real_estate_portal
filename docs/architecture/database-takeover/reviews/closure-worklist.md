@@ -5,25 +5,22 @@ for the acceptance requirements in `../implementation-plan.md`.
 
 ## Immediate validation work
 
-1. Recover the complete failing-test inventory. The last complete run reported
-   six failed tests, 4,119 passed, and 67 skipped. Its console output was
-   truncated; only three failing suites were identified reliably. Do not claim
-   all remaining failures are stale fixtures.
+1. Recover the complete failing-test inventory. **Resolved:** the corrected
+   server authority run reports 359 suites and 2,220 tests passed, with 9
+   suites and 67 tests skipped. The prior failures were closed in commits
+   `9f4dc914` and `c9b86a06`.
 2. Verify the checkout/approval snapshot correction (`02b9ab57`) with the
    broader billing packet. Six focused physical tests passed; the owner lock
    now precedes the ordinary billable-account lookup for every owner type.
 3. The stale grace-deadline and retirement-head tests were corrected in
    `c7872bdd`; 13 focused tests passed. Grace access requires a future deadline.
 4. Repair `server/services/__tests__/propertySearchService.property.test.ts`:
-   fixture setup inserts projection rows with a hard-coded owner, catches any
-   failure, and makes test bodies return successfully. Use canonical source
-   fixtures and fail setup when an explicitly configured database fails.
-   Require non-empty exercised results where a property otherwise passes
-   vacuously. Cleanup failures must remain visible.
+   **Resolved:** fixtures use a canonical owner, fail setup errors, align
+   suburb ordering with the canonical projection, and clear the search-cache
+   namespace.
 5. Capture subsequent broad results to a persistent report before inspecting
-   console summaries. A server-only run was started with output at
-   `/tmp/takeover-server-results.json` and log `/tmp/takeover-server-run.log`;
-   these are temporary local artifacts, not committed acceptance evidence.
+   console summaries. **Resolved:** terminal evidence is recorded at
+   `/tmp/takeover-server-results-20260912-rerun.json`.
 
 ## Required domain closure
 
