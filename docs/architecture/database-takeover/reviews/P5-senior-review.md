@@ -15,14 +15,16 @@ partial-payment non-activation, rejection/correction behavior, provider
 identity handling, entitlement gating, and positive integer minor-unit
 validation.
 
-P5 is not accepted because the current model still uses polymorphic
-`(owner_type, owner_id)` keys and contains multiple subscription/invoice
-families with distinct lifecycle semantics. Database-enforced billable
-ownership, duplicate and out-of-order provider event handling, entitlement
+P5 is not accepted because active consumers still authorize through the
+polymorphic `(owner_type, owner_id)` pair and multiple subscription/invoice
+families retain distinct lifecycle semantics. Migration 0085 now establishes
+the typed `billable_accounts` identity and staged foreign keys on the exact
+disposable target, but its transitional columns remain nullable until all
+active readers and writers are migrated. Database-enforced billable ownership,
+duplicate and out-of-order provider event handling, entitlement
 expiry/cancellation races, and a verified retirement order are not yet proven.
-The recommended `billable_accounts` design is recorded in
-`p5-billing-authority-decision.md`; no schema migration is admitted until the
-consumer mapping is complete.
+The remaining cutover design is recorded in
+`p5-billing-authority-decision.md` and `p5-billing-consumer-mapping.md`.
 
 Finding: incomplete evidence, severity high for future integrity. Required
 follow-up is implementation of the billable-account identity, migration of
