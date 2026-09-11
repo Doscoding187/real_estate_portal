@@ -43,6 +43,11 @@ The rebuilt target also passed the Land/geography packet: the authority-run
 Land search geography, public router, and authoring router suites passed 24
 tests, including canonical-location resolution and mixed-authority rejection.
 
+The rebuilt target also passed Shared Living and Commercial office coverage:
+6 physical Shared Living tests and 20 Commercial office contract tests passed,
+covering private practitioner/owner boundaries, moderation and enquiry
+delivery, and ordered commercial availability/economics semantics.
+
 The rebuilt target also passed the full consumer activity persistence packet:
 9 physical tests covered concurrent save/view cardinality, guest-transfer
 idempotency and rollback, projection ambiguity, withdrawal removal, isolation,
