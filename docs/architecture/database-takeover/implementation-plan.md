@@ -3,7 +3,8 @@
 Status: planning handoff, 2026-09-09. Owner of architectural decisions and final review: the senior reviewing agent. Implementer: the junior agent assigned an individual packet by Edward.
 
 Current execution state: P0 is complete and P1 is accepted after senior
-review. P2 is implemented but remains review-open; P3–P8 remain mandatory
+review. The scoped P6 offer-acceptance race is accepted, while P2 remains
+review-open; P3–P8 remain mandatory
 domain packets and P9 is in closure audit. The task-owned disposable target is at
 manifest head `0080_service_lead_request_idempotency.sql`, with matching
 physical/model digest
@@ -20,8 +21,9 @@ coverage remain open.
 
 Outstanding review work includes independent provider crash/replay,
 reconciliation and authorization evidence for P2; final senior review of the
-P3–P8 packets (including unresolved billing-owner and domain-lifecycle
-decisions); and the full P9 closure audit. The
+P3–P8 packets (including implementation of the recorded billing-owner
+decision and remaining domain-lifecycle decisions); and the full P9 closure
+audit. The
 starting-point facts below are
 intentionally historical and are retained to make the handoff auditable.
 
