@@ -166,3 +166,8 @@ Location-page database reads were tightened: failures in public eligibility,
 province city/development inventory, and suburb price analytics now propagate
 instead of returning empty or null success data. Hierarchy and location-insights
 authority tests passed 9 tests with TypeScript validation passing.
+
+Explore recommended and area feeds no longer serve empty degraded success data
+when a canonical query fails. Missing-schema errors retain the explicit
+precondition boundary and other failures propagate. The fallback contract and
+Explore authority tests pass 5 tests with TypeScript validation passing.

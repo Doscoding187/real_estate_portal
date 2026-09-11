@@ -119,26 +119,6 @@ function makeEmptyFeedDebugTag() {
   return `ExploreEmptyFeed:${Date.now()}:${Math.random().toString(16).slice(2)}`;
 }
 
-function safeErrorMessage(error: unknown): string {
-  if (error instanceof Error) return error.message;
-  return String(error);
-}
-
-function buildEmptyFeed(
-  feedType: FeedType,
-  offset: number,
-  metadata: Record<string, any> = {},
-): FeedResult {
-  return {
-    items: [],
-    shorts: [],
-    feedType,
-    hasMore: false,
-    offset,
-    metadata,
-  };
-}
-
 async function logRecommendedEmptyDiagnostics(params: {
   tag: string;
   location?: string;
@@ -478,17 +458,7 @@ export class ExploreFeedService {
       return result;
     } catch (error) {
       if (isMissingExploreSchema(error)) throwExploreUnavailable(error);
-      console.error('[ExploreFeedService] recommended feed query failed; serving empty fallback', {
-        message: safeErrorMessage(error),
-        limit,
-        offset,
-        location: location ?? null,
-      });
-      return buildEmptyFeed('recommended', offset, {
-        personalized: false,
-        degraded: true,
-        fallbackReason: 'query_error',
-      });
+      throw error;
     }
   }
 
@@ -544,17 +514,7 @@ export class ExploreFeedService {
       };
     } catch (error) {
       if (isMissingExploreSchema(error)) throwExploreUnavailable(error);
-      console.error('[ExploreFeedService] area feed query failed; serving empty fallback', {
-        message: safeErrorMessage(error),
-        location,
-        limit,
-        offset,
-      });
-      return buildEmptyFeed('area', offset, {
-        location,
-        degraded: true,
-        fallbackReason: 'query_error',
-      });
+      throw error;
     }
   }
 

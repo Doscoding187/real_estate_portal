@@ -780,3 +780,7 @@ The location-page authority boundary now propagates database failures for
 public eligibility, province inventory sections, and suburb price analytics,
 preventing incomplete data from being reported as a valid empty page. Focused
 hierarchy and location-insights tests passed 9 tests, with TypeScript passing.
+
+Explore feed query failures now propagate instead of being converted to empty
+success feeds. The missing-schema precondition remains explicit, and focused
+fallback/authority tests passed 5 tests with TypeScript validation passing.
