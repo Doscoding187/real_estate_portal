@@ -36,6 +36,7 @@ import {
   agencyTransactions,
   agencyCommissionSettlements,
   agencyCommissionSettlementPayments,
+  billableAccounts,
   agencyTransactionMilestones,
   agencyTransactionConditions,
   agencyTransactionParties,
@@ -3551,6 +3552,11 @@ async function getAgencyAccessStateForUser(
   },
 ) {
   const agencyId = Number(input.user.agencyId || input.agency.id);
+  const [billableAccount] = await db
+    .select({ id: billableAccounts.id })
+    .from(billableAccounts)
+    .where(and(eq(billableAccounts.accountKind, 'agency'), eq(billableAccounts.agencyId, agencyId)))
+    .limit(1);
   const base = {
     onboardingComplete: Boolean(input.profileConfigured && input.brandingConfigured),
     billingStatus: 'not_started' as AgencyBillingStatus,
@@ -3574,7 +3580,7 @@ async function getAgencyAccessStateForUser(
     })
     .from(subscriptions)
     .leftJoin(plans, eq(subscriptions.planId, plans.id))
-    .where(and(eq(subscriptions.ownerType, 'agency'), eq(subscriptions.ownerId, agencyId)))
+    .where(billableAccount ? eq(subscriptions.billableAccountId, billableAccount.id) : sql`1 = 0`)
     .limit(1);
 
   if (canonical?.subscription) {
@@ -3622,10 +3628,15 @@ async function getAgencyAccessStateForUser(
 async function withCanonicalAgencySubscriptionStatus<
   T extends { id: number; subscriptionStatus: string | null },
 >(db: NonNullable<Awaited<ReturnType<typeof getDb>>>, agency: T): Promise<T> {
+  const [billableAccount] = await db
+    .select({ id: billableAccounts.id })
+    .from(billableAccounts)
+    .where(and(eq(billableAccounts.accountKind, 'agency'), eq(billableAccounts.agencyId, agency.id)))
+    .limit(1);
   const [subscription] = await db
     .select({ status: subscriptions.status })
     .from(subscriptions)
-    .where(and(eq(subscriptions.ownerType, 'agency'), eq(subscriptions.ownerId, agency.id)))
+    .where(billableAccount ? eq(subscriptions.billableAccountId, billableAccount.id) : sql`1 = 0`)
     .limit(1);
 
   return {
@@ -3929,6 +3940,11 @@ export const agencyRouter = router({
       brandingConfigured,
     });
 
+    const [agencyAccount] = await db
+      .select({ id: billableAccounts.id })
+      .from(billableAccounts)
+      .where(and(eq(billableAccounts.accountKind, 'agency'), eq(billableAccounts.agencyId, user.agencyId)))
+      .limit(1);
     const [canonicalSubscription] = await db
       .select({
         subscription: subscriptions,
@@ -3936,7 +3952,7 @@ export const agencyRouter = router({
       })
       .from(subscriptions)
       .leftJoin(plans, eq(subscriptions.planId, plans.id))
-      .where(and(eq(subscriptions.ownerType, 'agency'), eq(subscriptions.ownerId, user.agencyId)))
+      .where(agencyAccount ? eq(subscriptions.billableAccountId, agencyAccount.id) : sql`1 = 0`)
       .limit(1);
 
     const availablePlans = await db

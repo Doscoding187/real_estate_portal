@@ -663,3 +663,7 @@ Agency invitation delivery now gates effective paid access through the typed
 agency billable-account identity. The invitation delivery and commercial-access
 authority contracts pass 13 tests; legacy billing report and adapter readers
 remain open.
+
+Agency access-state, canonical-status, and onboarding checks now resolve the
+agency billable account before reading subscriptions. Foundation type-checks
+and the agency operating-home/commercial authority contracts remain green.
