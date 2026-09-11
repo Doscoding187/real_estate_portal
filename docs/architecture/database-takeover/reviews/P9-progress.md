@@ -412,3 +412,11 @@ The remaining legacy Explore catalog procedures (`getCategories`, `getTopics`,
 and `getHighlightTags`) now fail with an explicit `PRECONDITION_FAILED` until a
 canonical catalog authority exists; they no longer claim successful empty data.
 The legacy capability boundary passes 6 tests and `pnpm check` passes.
+
+Billing owner handling now uses an explicit `agent | agency | developer`
+allow-list throughout the foundation service. Rows read from the current
+varchar owner columns are validated before audit writes, and unregistered owner
+types fail with `PRECONDITION_FAILED` rather than entering another polymorphic
+path. The provider-independent billing contract passes 8 tests and `pnpm check`
+passes. This is an interim boundary; the approved `billable_accounts` migration
+and database-enforced ownership remain required for P5 acceptance.
