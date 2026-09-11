@@ -232,3 +232,11 @@ unrelated queued scenario obligations; the worker now supports an explicit
 lead scope and the suite passes all 8 tests, including provider-unknown crash
 recovery and scoped expired-claim recovery. Live-provider replay and final reconciliation/authorization review
 remain open.
+
+On 2026-09-11, a follow-up runtime census found three disabled monetization
+procedures returning fabricated empty/null values. `getAllRules`, `getHeroAd`,
+and `getFeaturedDevelopers` now fail closed with `PRECONDITION_FAILED` until a
+canonical placement authority is approved; the admitted `getRecommendedAgents`
+resolver remains available. The focused agents-serving-location contract passed
+7 tests and TypeScript check passed. This removes a silent-fallback surface but
+does not close the outstanding P8 analytics/media/provider work.

@@ -32,3 +32,10 @@ campaign launch is implemented.
 Finding: incomplete evidence, severity medium. Required follow-up is a public
 media rebuild comparison, analytics aggregate rebuild proof with bounded query
 evidence, and final packet/provider review.
+
+On 2026-09-11, the remaining disabled monetized-placement procedures were
+closed explicitly: `getAllRules`, `getHeroAd`, and `getFeaturedDevelopers` now
+fail with `PRECONDITION_FAILED` until a canonical placement authority is
+approved. They no longer return fabricated empty/null success values. The
+admitted `getRecommendedAgents` resolver remains live and is covered by the
+agents-serving-location contract (7 tests passed).
