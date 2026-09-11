@@ -68,13 +68,19 @@ export const monetizationRouter = router({
     .query(async ({ input }) => {
       const db = await getDb();
       if (!db) {
-        return [];
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message: 'Recommended-agent data is unavailable until the database is connected',
+        });
       }
       try {
         return await findAgentsServingLocation(db, input.locationType, input.locationId);
       } catch (error) {
-        console.error('[monetizationRouter] getRecommendedAgents failed closed', error);
-        return [];
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Recommended-agent lookup failed',
+          cause: error,
+        });
       }
     }),
 });
