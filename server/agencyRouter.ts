@@ -6708,41 +6708,60 @@ export const agencyRouter = router({
       const agencyId = requireAgencyId(user);
       const transaction = await requireAgencyTransaction(db, agencyId, input.transactionId);
       const now = nowAsDbTimestamp();
-      const nextStatus = input.status || transaction.status;
-      const commissionStatus =
-        input.commissionStatus ||
-        (nextStatus === 'completed' && transaction.commissionStatus === 'estimated'
-          ? 'payable'
-          : transaction.commissionStatus);
-      const riskStatus =
-        input.riskStatus ||
-        (nextStatus === 'completed'
-          ? 'complete'
-          : nextStatus === 'cancelled'
-            ? 'cancelled'
-            : transaction.riskStatus);
+      let nextStatus = input.status || transaction.status;
+      let commissionStatus = input.commissionStatus || transaction.commissionStatus;
+      let riskStatus = input.riskStatus || transaction.riskStatus;
 
       await db.transaction(async tx => {
+        // Serialize status and commission transitions against other agency
+        // operators. The preflight row is only an authorization check.
+        const [lockedTransaction] = await tx
+          .select()
+          .from(agencyTransactions)
+          .where(
+            and(
+              eq(agencyTransactions.id, transaction.id),
+              eq(agencyTransactions.agencyId, agencyId),
+            ),
+          )
+          .for('update')
+          .limit(1);
+        if (!lockedTransaction) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Transaction not found' });
+        }
+        nextStatus = input.status || lockedTransaction.status;
+        commissionStatus =
+          input.commissionStatus ||
+          (nextStatus === 'completed' && lockedTransaction.commissionStatus === 'estimated'
+            ? 'payable'
+            : lockedTransaction.commissionStatus);
+        riskStatus =
+          input.riskStatus ||
+          (nextStatus === 'completed'
+            ? 'complete'
+            : nextStatus === 'cancelled'
+              ? 'cancelled'
+              : lockedTransaction.riskStatus);
         await tx
           .update(agencyTransactions)
           .set({
-            stage: input.stage || transaction.stage,
+            stage: input.stage || lockedTransaction.stage,
             status: nextStatus,
             riskStatus,
-            nextAction: input.nextAction === undefined ? transaction.nextAction : input.nextAction,
+            nextAction: input.nextAction === undefined ? lockedTransaction.nextAction : input.nextAction,
             nextDeadline:
               input.nextDeadline === undefined
-                ? transaction.nextDeadline
+                ? lockedTransaction.nextDeadline
                 : parseOptionalDbTimestamp(input.nextDeadline),
             expectedPaymentDate:
               input.expectedPaymentDate === undefined
-                ? transaction.expectedPaymentDate
+                ? lockedTransaction.expectedPaymentDate
                 : parseOptionalDbTimestamp(input.expectedPaymentDate),
             commissionStatus,
             completedAt:
-              nextStatus === 'completed' ? transaction.completedAt || now : transaction.completedAt,
+              nextStatus === 'completed' ? lockedTransaction.completedAt || now : lockedTransaction.completedAt,
             cancelledAt:
-              nextStatus === 'cancelled' ? transaction.cancelledAt || now : transaction.cancelledAt,
+              nextStatus === 'cancelled' ? lockedTransaction.cancelledAt || now : lockedTransaction.cancelledAt,
             updatedByUserId: user.id,
             updatedAt: now,
           } as any)
@@ -6782,10 +6801,10 @@ export const agencyRouter = router({
                   ? 'cancelled'
                   : 'transaction_progression',
             riskStatus,
-            nextAction: input.nextAction === undefined ? transaction.nextAction : input.nextAction,
+            nextAction: input.nextAction === undefined ? lockedTransaction.nextAction : input.nextAction,
             nextDeadline:
               input.nextDeadline === undefined
-                ? transaction.nextDeadline
+                ? lockedTransaction.nextDeadline
                 : parseOptionalDbTimestamp(input.nextDeadline),
             updatedByUserId: user.id,
             updatedAt: now,
@@ -6800,7 +6819,7 @@ export const agencyRouter = router({
           description:
             input.note || `Transaction updated${input.status ? ` to ${input.status}` : ''}.`,
           metadata: {
-            previousStatus: transaction.status,
+            previousStatus: lockedTransaction.status,
             nextStatus,
             commissionStatus,
           },
