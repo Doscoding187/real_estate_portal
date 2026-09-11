@@ -37,3 +37,27 @@ written mapping to the canonical authority; name similarity is not sufficient.
 
 This disposition does not authorize compatibility reads, dual writes, schema
 guessing, or a backfill into `billable_accounts`.
+
+## Reachability audit, 2026-09-11
+
+The runtime census on `feat/database-architecture-takeover` found these active
+legacy consumers:
+
+- `subscriptionService.ts` and `subscriptionRouter.ts` read and write
+  `user_subscriptions`, `subscription_plans`, and `subscription_events` for
+  the retained non-commercial lifecycle. Agent, agency, and developer
+  commercial operations are rejected before those calls.
+- `partnerSubscriptionService.ts` and `partnerSubscriptionRouter.ts` read and
+  write `partner_subscriptions`, whose owner is the `partners` table.
+
+The census found no runtime read or write for `agency_subscriptions`,
+`billing_transactions`, or the historical `invoices` table. The only remaining
+references are the canonical baseline declarations, a negative governance
+assertion, and disposable fixture cleanup. The unused `agencySubscriptions`
+and `invoices` imports were removed from `adminRouter.ts` in commit
+`8fa8c820`.
+
+This is reachability evidence for the next retirement packet; it is not itself
+permission to drop the historical tables. That packet must still verify target
+row counts, scheduled jobs, provider callbacks, reports, and external
+reconciliation before removing them and must add a negative write contract.
