@@ -113,3 +113,8 @@ The exact disposable target was re-resolved on 2026-09-11 and the provider-backe
 `pnpm test:authority`; all 8 tests passed against the MySQL target. This closes
 the earlier unconfigured-shell limitation for the distribution access status
 change, while TiDB/provider admission remains separately open.
+
+Additional provider-backed distribution evidence passed on the same target:
+partner-program terms (3 tests) and manager checklist (11 tests), 14 tests
+combined under `pnpm test:authority`. These validate canonical field reads and
+status/access lifecycle consumers.

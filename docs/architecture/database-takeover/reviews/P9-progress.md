@@ -302,3 +302,7 @@ The exact disposable target was re-resolved and the distribution referral
 integration suite was rerun under `pnpm test:authority`; all 8 tests passed
 against the MySQL target. Distribution status behavior now has provider-backed
 acceptance evidence; TiDB/provider admission remains open.
+
+Additional provider-backed distribution evidence passed on the same target:
+partner-program terms (3 tests) and manager checklist (11 tests), 14 tests
+combined under `pnpm test:authority`.
