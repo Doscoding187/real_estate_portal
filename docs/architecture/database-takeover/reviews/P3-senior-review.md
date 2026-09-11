@@ -21,6 +21,9 @@ nullable/non-unique source link remains an intentional
 deferred decision until development, Commercial, and Shared Living mappings
 are proven. No schema change is authorized by this review.
 
+The performance authority test now proves repeated canonical-listing rebuild
+identity and public-field refresh; this does not cover every supply family.
+
 Finding: incomplete evidence, severity medium. Required follow-up is a
 cross-supply physical rebuild-equivalence test that records
 row identity, public fields, and withdrawal behavior for each supported supply

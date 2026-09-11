@@ -166,6 +166,15 @@ guardedDescribe('agency listing performance MVP persisted integration', () => {
     await approveListing(handoff.revisionListingId, managerId, 'Approved canonical performance revision');
     const [liveAfterApproval] = await db.select().from(listings).where(eq(listings.id, canonical.id)); const [publicAfterApproval] = await db.select().from(properties).where(eq(properties.id, canonical.propertyId)); const [archived] = await db.select().from(listings).where(eq(listings.id, handoff.revisionListingId));
     expect(liveAfterApproval.askingPrice).toBe('1850000.00'); expect(publicAfterApproval.price).toBe(1_850_000); expect(archived.status).toBe('archived');
+    const rebuildReview = await assigned.agency.recordListingPerformanceReview({ listingId: canonical.id, contactDate: '2026-07-14T09:00:00', recommendation: 'change_price', recommendationReason: 'Second rebuild equivalence pass.', sellerDecision: 'accepted', proposedPrice: 1_800_000 });
+    ids.reviews.push(rebuildReview.reviewId);
+    const rebuildHandoff = await assigned.agency.requestListingPerformancePriceRevision({ reviewId: rebuildReview.reviewId });
+    ids.listings.push(rebuildHandoff.revisionListingId);
+    await submitListingForReview(rebuildHandoff.revisionListingId);
+    await approveListing(rebuildHandoff.revisionListingId, managerId, 'Rebuilt canonical projection equivalence');
+    const [publicAfterRebuild] = await db.select().from(properties).where(eq(properties.id, canonical.propertyId));
+    expect(publicAfterRebuild).toMatchObject({ id: canonical.propertyId, sourceListingId: canonical.id, price: 1_800_000, status: 'available' });
+    expect(publicAfterRebuild?.id).toBe(publicAfterApproval.id);
     const conflictListing = await publishedListing(managerId, agencyId, assignedAgentId, `${suffix}-conflict`, 2_100_000);
     const conflictReview = await assigned.agency.recordListingPerformanceReview({ listingId: conflictListing.id, contactDate: '2026-07-13T09:00', recommendation: 'change_price', recommendationReason: 'Conflict coverage.', sellerDecision: 'accepted', proposedPrice: 1_900_000 }); ids.reviews.push(conflictReview.reviewId);
     const [competing] = await db.insert(listings).values({ ownerId: managerId, agentId: assignedAgentId, agencyId, action: 'sell', propertyType: 'house', title: 'Competing private revision', description: 'Private conflicting draft.', askingPrice: '1900000.00', address: '71 Snapshot Avenue', latitude: '-26.1076000', longitude: '28.0567000', city: 'Johannesburg', province: 'Gauteng', status: 'draft', approvalStatus: 'pending', slug: `competing-revision-${suffix}`.replace(/[^a-z0-9-]/g, '-'), revisionOfListingId: conflictListing.id } as any); ids.listings.push(idOf(competing));

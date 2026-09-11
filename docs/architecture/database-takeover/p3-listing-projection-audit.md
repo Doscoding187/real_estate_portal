@@ -67,3 +67,9 @@ one `insert(properties)` call and that it remains inside the canonical
 source-linked projection writer. The authority run of that contract passed all
 5 tests. This protects the writer census against reintroducing a second runtime
 projection authority; cross-supply rebuild equivalence remains open.
+
+The performance authority test now performs a second approved revision after
+the initial rebuild and asserts that the same projection ID remains attached to
+the canonical listing while public price and status facts are refreshed. Its
+authority run passed 1 physical test. This closes repeated canonical-listing
+rebuild identity; cross-supply rebuild equivalence remains open.
