@@ -492,3 +492,12 @@ verification remain open.
 Post-migration verification also completed `pnpm lint:check` with exit 0. The
 repository reports 11,229 pre-existing warnings and zero errors; no warning
 cleanup was included in this takeover packet.
+
+The P2 relational delivery packet was rerun after migration 0081: its
+authority-injected independent-connection suite passed 8 tests, and the
+lead-delivery/public-capture contract suites passed 53 tests. These cover
+claim races, capture rollback, queued restart visibility, lease recovery,
+unknown provider outcomes, retry budgets, notification separation, route
+supersession, and capture idempotency. P2 still requires independent senior
+authorization/reconciliation review and deployment-provider evidence before
+acceptance.
