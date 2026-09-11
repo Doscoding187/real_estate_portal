@@ -788,3 +788,7 @@ fallback/authority tests passed 5 tests with TypeScript validation passing.
 Location-page trending-suburb and suburb preview failures now propagate rather
 than presenting incomplete empty sections. The hierarchy suite passed 8 tests
 and TypeScript validation passed.
+
+Unimplemented partner analytics benchmark and boost-ROI procedures now fail
+explicitly instead of returning empty success data. The monetization smoke suite
+passed 36 tests and TypeScript validation passed.

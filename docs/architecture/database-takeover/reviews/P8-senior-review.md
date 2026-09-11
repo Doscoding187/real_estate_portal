@@ -175,3 +175,8 @@ Explore authority tests pass 5 tests with TypeScript validation passing.
 The remaining province trending-suburb query and suburb preview projection
 handlers now propagate failures instead of returning empty success sections.
 Location hierarchy tests passed 8 tests with TypeScript validation passing.
+
+Partner analytics tier benchmarks and boost ROI stubs no longer return empty
+success arrays. They now fail explicitly until canonical benchmark, campaign,
+and billing attribution authorities are approved. The monetization smoke suite
+passed 36 tests with TypeScript validation passing.

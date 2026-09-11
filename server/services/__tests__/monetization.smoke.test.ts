@@ -193,6 +193,15 @@ describe('Monetization Features - Smoke Tests', () => {
     it('should be properly instantiated', () => {
       expect(partnerAnalyticsService).toBeDefined();
     });
+
+    it('does not report unimplemented analytics as empty success data', async () => {
+      await expect(partnerAnalyticsService.getTierBenchmarks()).rejects.toThrow(
+        'canonical analytics authority',
+      );
+      await expect(partnerAnalyticsService.getBoostCampaignROI('partner-1')).rejects.toThrow(
+        'campaign attribution authority',
+      );
+    });
   });
 
   describe('Service Integration', () => {

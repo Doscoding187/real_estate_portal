@@ -166,17 +166,24 @@ export const partnerAnalyticsService = {
 
   /**
    * Requirement 13.5
-   * Tier benchmarks (boot-safe stub)
+   * Tier benchmarks are unavailable until a canonical benchmark authority is
+   * approved. Returning an empty list would be indistinguishable from a real
+   * zero-result report.
    */
   async getTierBenchmarks() {
-    return [];
+    throw new Error(
+      'Partner tier benchmarks are unavailable until a canonical analytics authority is approved.',
+    );
   },
 
   /**
    * Requirement 13.6
-   * Boost ROI (boot-safe stub)
+   * Boost ROI is unavailable until campaign attribution and billing authority
+   * are approved.
    */
   async getBoostCampaignROI(_partnerId: string) {
-    return [];
+    throw new Error(
+      'Partner boost ROI is unavailable until campaign attribution authority is approved.',
+    );
   },
 };
