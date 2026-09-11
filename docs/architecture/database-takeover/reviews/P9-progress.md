@@ -679,3 +679,6 @@ subscription contracts pass 15 tests.
 
 Agency onboarding's existing-record integrity check now requires a typed agency
 account and resolves its subscription through that account identity.
+
+Agency manual-EFT outstanding-invoice locking now uses the subscription's typed
+billable-account foreign key for both SQL locking and row selection.

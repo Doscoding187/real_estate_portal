@@ -1316,8 +1316,7 @@ export async function startAgencyManualCheckout(input: {
       await tx.execute(sql`
         SELECT id
         FROM billing_invoices
-        WHERE owner_type = 'agency'
-          AND owner_id = ${agencyId}
+        WHERE billable_account_id = ${lockedSubscription.billableAccountId}
           AND subscription_id = ${lockedSubscription.id}
           AND status IN ('issued', 'submitted', 'partially_paid', 'overdue')
         FOR UPDATE
@@ -1328,8 +1327,7 @@ export async function startAgencyManualCheckout(input: {
         .from(billingInvoices)
         .where(
           and(
-            eq(billingInvoices.ownerType, 'agency'),
-            eq(billingInvoices.ownerId, agencyId),
+            eq(billingInvoices.billableAccountId, lockedSubscription.billableAccountId),
             eq(billingInvoices.subscriptionId, lockedSubscription.id),
             inArray(billingInvoices.status, outstandingStatuses),
           ),
