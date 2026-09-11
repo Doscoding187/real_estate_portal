@@ -1563,7 +1563,7 @@ export async function getAgencyRecentListings(agencyId: number, limit: number = 
 
 export async function getAgencyAgents(agencyId: number) {
   const db = await getDb();
-  if (!db) return [];
+  if (!db) throw new Error('Database not available');
 
   // tables already imported at top
 
@@ -1592,7 +1592,7 @@ export async function getAgencyAgents(agencyId: number) {
 
 export async function getLeadConversionStats(agencyId: number, months: number = 6) {
   const db = await getDb();
-  if (!db) return { total: 0, converted: 0, conversionRate: 0, byStatus: [] };
+  if (!db) throw new Error('Database not available');
 
   // leads already imported at top
 
@@ -1645,8 +1645,7 @@ export async function getLeadConversionStats(agencyId: number, months: number = 
 
 export async function getAgencyCommissionStats(agencyId: number, months: number = 6) {
   const db = await getDb();
-  if (!db)
-    return { totalEarnings: 0, paidCommissions: 0, pendingCommissions: 0, monthlyBreakdown: [] };
+  if (!db) throw new Error('Database not available');
 
   // tables already imported at top
 
@@ -1953,7 +1952,7 @@ export async function getPlatformAnalytics() {
 
 export async function getListingStats() {
   const db = await getDb();
-  if (!db) return { pending: 0, approved: 0, rejected: 0, total: 0 };
+  if (!db) throw new Error('Database not available');
 
   // properties already imported at top
 
@@ -1981,7 +1980,7 @@ export async function getListingStats() {
 
 export async function getSubscriptionStats() {
   const db = await getDb();
-  if (!db) return { free: 0, basic: 0, premium: 0, enterprise: 0, total: 0 };
+  if (!db) throw new Error('Database not available');
 
   // agencies already imported at top
 
