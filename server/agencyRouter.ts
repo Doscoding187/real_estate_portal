@@ -4545,31 +4545,16 @@ export const agencyRouter = router({
    */
   getDashboardStats: agencyAdminProcedure.query(async ({ ctx }) => {
     if (!ctx.user.agencyId) {
-      return {
-        totalListings: 0,
-        totalSales: 0,
-        totalLeads: 0,
-        totalAgents: 0,
-        activeListings: 0,
-        pendingListings: 0,
-        recentLeads: 0,
-        recentSales: 0,
-      };
+      throw new TRPCError({ code: 'FORBIDDEN', message: 'An agency membership is required' });
     }
     try {
       return await getAgencyDashboardStats(ctx.user.agencyId);
     } catch (error) {
-      console.warn('[agency.getDashboardStats] Returning safe defaults due to error:', error);
-      return {
-        totalListings: 0,
-        totalSales: 0,
-        totalLeads: 0,
-        totalAgents: 0,
-        activeListings: 0,
-        pendingListings: 0,
-        recentLeads: 0,
-        recentSales: 0,
-      };
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message: 'Agency dashboard statistics are unavailable',
+        cause: error,
+      });
     }
   }),
 
@@ -4580,13 +4565,16 @@ export const agencyRouter = router({
     .input(z.object({ months: z.number().default(6) }).optional())
     .query(async ({ ctx, input }) => {
       if (!ctx.user.agencyId) {
-        return [];
+        throw new TRPCError({ code: 'FORBIDDEN', message: 'An agency membership is required' });
       }
       try {
         return await getAgencyPerformanceData(ctx.user.agencyId, input?.months || 6);
       } catch (error) {
-        console.warn('[agency.getPerformanceData] Returning safe defaults due to error:', error);
-        return [];
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message: 'Agency performance data is unavailable',
+          cause: error,
+        });
       }
     }),
 

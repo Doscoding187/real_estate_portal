@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { router, superAdminProcedure, agencyAdminProcedure } from './_core/trpc';
+import { TRPCError } from '@trpc/server';
 import {
   getDb,
   getPlatformAnalytics,
@@ -799,19 +800,11 @@ export const adminRouter = router({
     try {
       return await getPlatformAnalytics();
     } catch (error) {
-      console.warn('[admin.getAnalytics] Returning safe defaults due to error:', error);
-      return {
-        totalUsers: 0,
-        totalAgencies: 0,
-        totalProperties: 0,
-        activeProperties: 0,
-        totalAgents: 0,
-        totalDevelopers: 0,
-        paidSubscriptions: 0,
-        monthlyRevenue: 0,
-        userGrowth: 0,
-        propertyGrowth: 0,
-      };
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message: 'Platform analytics are unavailable',
+        cause: error,
+      });
     }
   }),
 
@@ -822,8 +815,11 @@ export const adminRouter = router({
     try {
       return await getListingStats();
     } catch (error) {
-      console.warn('[admin.getListingStats] Returning safe defaults due to error:', error);
-      return { pending: 0, approved: 0, rejected: 0, total: 0 };
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message: 'Listing statistics are unavailable',
+        cause: error,
+      });
     }
   }),
 

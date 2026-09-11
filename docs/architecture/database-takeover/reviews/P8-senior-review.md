@@ -68,3 +68,9 @@ The price-insights service micromarket query also swallowed database errors as
 an empty result. It now propagates the error to the router's explicit
 `PRECONDITION_FAILED` boundary, with the authority contract covering the
 behavior.
+
+Agency and super-admin dashboard analytics also converted database failures
+into zero-valued success data. Those authenticated reads now fail explicitly
+with `PRECONDITION_FAILED`; missing agency membership is rejected with
+`FORBIDDEN`. The dashboard authority contract, agency workspace smoke, and
+TypeScript check pass.

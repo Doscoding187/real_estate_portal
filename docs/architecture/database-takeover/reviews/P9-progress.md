@@ -263,3 +263,8 @@ authority contract and TypeScript check pass. Query-plan evidence remains open.
 
 The underlying micromarket query no longer swallows database errors as an
 empty result; errors reach the router's explicit unavailable-state boundary.
+
+Authenticated agency and super-admin dashboard analytics no longer convert
+database failures into zero-valued success data. Missing agency membership is
+also rejected explicitly. Dashboard authority and agency workspace smoke
+checks pass; broader analytics evidence remains open.
