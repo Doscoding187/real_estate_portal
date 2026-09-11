@@ -1209,6 +1209,11 @@
       "path": "server/migrations/0085_billing_billable_accounts.sql",
       "classification": "canonical active",
       "purpose": "Establishes typed billable-account ownership and staged foreign keys for the active billing foundation."
+    },
+    {
+      "path": "server/migrations/0086_billing_billable_accounts_not_null.sql",
+      "classification": "canonical active",
+      "purpose": "Enforces non-null typed billable-account ownership across active billing foundation tables after staged cutover."
     }
   ],
   "prohibitedPaths": [

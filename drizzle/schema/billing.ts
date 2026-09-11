@@ -125,7 +125,7 @@ export const subscriptions = mysqlTable(
     id: int().autoincrement().primaryKey(),
     ownerType: mysqlEnum('owner_type', ['agent', 'agency', 'developer']).notNull(),
     ownerId: int('owner_id').notNull(),
-    billableAccountId: int('billable_account_id').references(() => billableAccounts.id, {
+    billableAccountId: int('billable_account_id').notNull().references(() => billableAccounts.id, {
       onDelete: 'restrict',
     }),
     planId: int('plan_id').references(() => plans.id, { onDelete: 'set null' }),
@@ -168,7 +168,7 @@ export const billingInvoices = mysqlTable(
     id: int().autoincrement().primaryKey(),
     ownerType: varchar('owner_type', { length: 40 }).notNull(),
     ownerId: int('owner_id').notNull(),
-    billableAccountId: int('billable_account_id').references(() => billableAccounts.id, {
+    billableAccountId: int('billable_account_id').notNull().references(() => billableAccounts.id, {
       onDelete: 'restrict',
     }),
     subscriptionId: int('subscription_id').references(() => subscriptions.id, {
@@ -230,7 +230,7 @@ export const billingPayments = mysqlTable(
     }),
     ownerType: varchar('owner_type', { length: 40 }).notNull(),
     ownerId: int('owner_id').notNull(),
-    billableAccountId: int('billable_account_id').references(() => billableAccounts.id, {
+    billableAccountId: int('billable_account_id').notNull().references(() => billableAccounts.id, {
       onDelete: 'restrict',
     }),
     paymentMethod: mysqlEnum('payment_method', ['manual_eft', 'manual_adjustment', 'other'])
@@ -284,7 +284,7 @@ export const billingPaymentDocuments = mysqlTable(
       .references(() => billingInvoices.id, { onDelete: 'cascade' }),
     ownerType: varchar('owner_type', { length: 40 }).notNull(),
     ownerId: int('owner_id').notNull(),
-    billableAccountId: int('billable_account_id').references(() => billableAccounts.id, {
+    billableAccountId: int('billable_account_id').notNull().references(() => billableAccounts.id, {
       onDelete: 'restrict',
     }),
     storageKey: varchar('storage_key', { length: 512 }).notNull(),
@@ -312,7 +312,7 @@ export const billingAuditEvents = mysqlTable(
     id: int().autoincrement().primaryKey(),
     ownerType: varchar('owner_type', { length: 40 }).notNull(),
     ownerId: int('owner_id').notNull(),
-    billableAccountId: int('billable_account_id').references(() => billableAccounts.id, {
+    billableAccountId: int('billable_account_id').notNull().references(() => billableAccounts.id, {
       onDelete: 'restrict',
     }),
     subscriptionId: int('subscription_id').references(() => subscriptions.id, {

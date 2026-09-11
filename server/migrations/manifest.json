@@ -4,7 +4,7 @@
   "historyTable": "sql_migration_history",
   "attemptTable": "sql_migration_attempts",
   "lockName": "property_listify_manifest_migrations",
-  "expectedHead": "0085_billing_billable_accounts.sql",
+  "expectedHead": "0086_billing_billable_accounts_not_null.sql",
   "migrations": [
     {
       "sequence": 0,
@@ -903,6 +903,17 @@
       "statementPolicy": "approved-exception",
       "requiredReferenceDataVersion": null,
       "approvalReference": "DBX-PRELAUNCH-BILLING-BILLABLE-ACCOUNT-2026-09-11-Edward"
+    },
+    {
+      "sequence": 86,
+      "filename": "0086_billing_billable_accounts_not_null.sql",
+      "checksum": "e3352b8aa270f840c7bd028b9466546fbf130c5aa01647a9e862b67221b6e8ea",
+      "parent": "0085_billing_billable_accounts.sql",
+      "parentChecksum": "b2f5af1567af3b4813406feec6a22bafb3e96cb510f397ba56f84f035226ece9",
+      "kind": "exceptional",
+      "statementPolicy": "approved-exception",
+      "requiredReferenceDataVersion": null,
+      "approvalReference": "DBX-PRELAUNCH-BILLING-BILLABLE-ACCOUNT-NON-NULL-2026-09-11-Edward"
     }
   ]
 }

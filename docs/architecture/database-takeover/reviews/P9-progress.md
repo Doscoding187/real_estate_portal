@@ -712,3 +712,8 @@ independent authority. Its 12 public inventory contract tests remain green.
 
 Physical commercial-capacity and agency-operating-home fixtures now create and
 attach typed agency/agent billable accounts before inserting subscriptions.
+
+The exact disposable target had zero null staged account references across all
+five active billing tables. Migration 0086 now enforces those columns as
+non-null, and authority status reports manifest-head-ready and schema-congruent
+at migration head 0086.

@@ -17,10 +17,10 @@ validation.
 
 P5 is not accepted because active consumers still authorize through the
 polymorphic `(owner_type, owner_id)` pair and multiple subscription/invoice
-families retain distinct lifecycle semantics. Migration 0085 now establishes
-the typed `billable_accounts` identity and staged foreign keys on the exact
-disposable target, but its transitional columns remain nullable until all
-active readers and writers are migrated. The active manual-EFT billing service
+families retain distinct lifecycle semantics. Migration 0085 established the
+typed `billable_accounts` identity and staged foreign keys on the exact
+disposable target; migration 0086 now enforces those five account references as
+non-null after active readers, writers, and governed fixtures were migrated. The active manual-EFT billing service
 now resolves or transactionally admits the typed account before writing
 subscriptions, invoices, payments, payment documents, and audit events.
 Plan-access entitlement reads and subscription writes now resolve the same

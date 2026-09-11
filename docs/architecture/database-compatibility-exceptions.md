@@ -695,3 +695,20 @@ Removal workstream:
 ```
 
 An incomplete or unregistered exception has no architectural authority.
+
+## DBX-PRELAUNCH-BILLING-BILLABLE-ACCOUNT-NON-NULL-2026-09-11-Edward
+
+Exception ID: DBX-PRELAUNCH-BILLING-BILLABLE-ACCOUNT-NON-NULL-2026-09-11-Edward
+Status: approved exceptional migration
+Owner: Database architecture takeover
+Approved by Edward on: 2026-09-11
+Business reason: enforce the typed billable-account foreign key after all active foundation rows and admitted fixture writers are populated.
+Canonical authority: `subscriptions`, `billing_invoices`, `billing_payments`, `billing_payment_documents`, and `billing_audit_events` through `billable_accounts`.
+Exact files: `server/migrations/0086_billing_billable_accounts_not_null.sql`, `drizzle/schema/billing.ts`.
+Tables and columns: `billable_account_id` on the five active billing foundation tables.
+Permitted read direction: all active readers use the typed account identity; owner snapshots remain display-only.
+Permitted write direction: the canonical migration runner applies the five nullability changes on an exact disposable or explicitly approved release target.
+Failure and observability behavior: migration planning requires the exact accepted head; application aborts on checksum, parent, target, lock, or null-row failure.
+Automated evidence: authority status reports manifest-head-ready and schema-congruent; migration manifest, static authority, and lifecycle gates pass.
+Expiry or objective removal condition: none; this exception is removed when the staged cutover record is superseded by the final billing authority closure review.
+Removal workstream: P5 billable-account cutover.
