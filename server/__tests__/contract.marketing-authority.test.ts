@@ -10,5 +10,6 @@ describe('marketing authority boundary', () => {
     expect(launch).toContain('Campaign launch is unavailable until a canonical campaign and billing authority is implemented.');
     expect(launch).not.toContain("import('./revenueCenterSync')");
     expect(launch).not.toContain("return { success: true, status: newStatus }");
+    expect((source.match(/campaignAuthorityUnavailable\(\);/g) || []).length).toBe(9);
   });
 });

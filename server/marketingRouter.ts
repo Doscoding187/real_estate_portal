@@ -25,6 +25,13 @@ const campaignCreatives = {} as any;
 const campaignPerformance = {} as any;
 const campaignLeads = {} as any;
 
+function campaignAuthorityUnavailable(): void {
+  throw new TRPCError({
+    code: 'PRECONDITION_FAILED',
+    message: 'Campaign operations are unavailable until a canonical campaign authority is implemented.',
+  });
+}
+
 export const marketingRouter = router({
   /**
    * Create a new campaign (Draft)
@@ -48,6 +55,7 @@ export const marketingRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      campaignAuthorityUnavailable();
       const db = await getDb();
       if (!db) throw new Error('Database not available');
 
@@ -90,6 +98,7 @@ export const marketingRouter = router({
   getCampaign: protectedProcedure
     .input(z.object({ campaignId: z.number() }))
     .query(async ({ ctx, input }) => {
+      campaignAuthorityUnavailable();
       const db = await getDb();
       if (!db) throw new Error('Database not available');
 
@@ -144,6 +153,7 @@ export const marketingRouter = router({
       }),
     )
     .query(async ({ ctx, input }) => {
+      campaignAuthorityUnavailable();
       const db = await getDb();
       if (!db) throw new Error('Database not available');
 
@@ -185,6 +195,7 @@ export const marketingRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      campaignAuthorityUnavailable();
       const db = await getDb();
       if (!db) throw new Error('Database not available');
 
@@ -213,6 +224,7 @@ export const marketingRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      campaignAuthorityUnavailable();
       const db = await getDb();
       if (!db) throw new Error('Database not available');
 
@@ -239,6 +251,7 @@ export const marketingRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      campaignAuthorityUnavailable();
       const db = await getDb();
       if (!db) throw new Error('Database not available');
 
@@ -272,6 +285,7 @@ export const marketingRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      campaignAuthorityUnavailable();
       const db = await getDb();
       if (!db) throw new Error('Database not available');
 
@@ -307,6 +321,7 @@ export const marketingRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      campaignAuthorityUnavailable();
       const db = await getDb();
       if (!db) throw new Error('Database not available');
 
@@ -362,6 +377,7 @@ export const marketingRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      campaignAuthorityUnavailable();
       const db = await getDb();
       if (!db) throw new Error('Database not available');
 
