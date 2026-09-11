@@ -17,7 +17,8 @@ invalidates outstanding confirmation tokens.
 P8 remains incomplete. Public media rebuild equivalence, aggregate
 rebuildability/query plans, and complete analytics retention/abuse controls are
 not yet proven. The durable service-lead migration is at manifest head 0080,
-with schema congruency verified separately. No retired-table fallback or
+with schema congruency verified separately in the historical P8 run. The
+current takeover target is at manifest head 0088. No retired-table fallback or
 schema-error-to-zero reporting path is accepted.
 
 The review found and corrected an active launch path that dynamically imported
