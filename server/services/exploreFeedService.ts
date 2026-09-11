@@ -3,6 +3,7 @@ import { exploreContent, listings, developments } from '../../drizzle/schema';
 import { eq, and, desc, sql } from 'drizzle-orm';
 import type { FeedType } from '../../shared/types';
 import { cache, CacheKeys, CacheTTL } from '../lib/cache';
+import { TRPCError } from '@trpc/server';
 
 /* ------------------ TYPES ------------------ */
 
@@ -80,6 +81,21 @@ const normalizeSeenIds = (seenIds: unknown, max = 200): number[] => {
     .slice(0, max);
   return Array.from(new Set(nums));
 };
+
+function isMissingExploreSchema(error: unknown) {
+  const err = error as { code?: string; message?: string; cause?: { code?: string; message?: string } };
+  const message = `${err.message || ''} ${err.cause?.message || ''}`;
+  const code = err.code || err.cause?.code;
+  return code === 'ER_NO_SUCH_TABLE' || /explore_(content|engagements)/i.test(message) && /does not exist|doesn't exist|unknown table/i.test(message);
+}
+
+function throwExploreUnavailable(error: unknown): never {
+  throw new TRPCError({
+    code: 'PRECONDITION_FAILED',
+    message: 'Explore feed is unavailable until its canonical schema is established',
+    cause: error,
+  });
+}
 
 function normalizeSeed(seed?: string | null): string | null {
   const s = (seed ?? '').trim();
@@ -461,6 +477,7 @@ export class ExploreFeedService {
 
       return result;
     } catch (error) {
+      if (isMissingExploreSchema(error)) throwExploreUnavailable(error);
       console.error('[ExploreFeedService] recommended feed query failed; serving empty fallback', {
         message: safeErrorMessage(error),
         limit,
@@ -526,6 +543,7 @@ export class ExploreFeedService {
         metadata: { location },
       };
     } catch (error) {
+      if (isMissingExploreSchema(error)) throwExploreUnavailable(error);
       console.error('[ExploreFeedService] area feed query failed; serving empty fallback', {
         message: safeErrorMessage(error),
         location,

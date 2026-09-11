@@ -45,6 +45,9 @@ import { exploreFeedService } from '../exploreFeedService';
 describe('ExploreFeedService fallback behavior', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    for (const method of ['select', 'from', 'leftJoin', 'where', 'orderBy', 'offset']) {
+      mockDb[method].mockImplementation(() => mockDb);
+    }
   });
 
   it('returns empty recommended feed when query fails', async () => {
@@ -85,6 +88,20 @@ describe('ExploreFeedService fallback behavior', () => {
       location: 'Sandton',
       degraded: true,
       fallbackReason: 'query_error',
+    });
+  });
+
+  it('fails closed when the canonical Explore schema is missing', async () => {
+    const missingSchemaError = new Error('Failed query');
+    (missingSchemaError as any).cause = {
+      code: 'ER_NO_SUCH_TABLE',
+      message: "Table 'listify_local.explore_content' doesn't exist",
+    };
+    mockDb.limit.mockRejectedValueOnce(missingSchemaError);
+
+    await expect(exploreFeedService.getRecommendedFeed({ limit: 5, offset: 0 })).rejects.toMatchObject({
+      code: 'PRECONDITION_FAILED',
+      message: 'Explore feed is unavailable until its canonical schema is established',
     });
   });
 });
