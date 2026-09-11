@@ -634,3 +634,9 @@ Developer publication eligibility now requires the developer subscription to
 join through `billable_accounts`, and the dedicated developer publication
 access service applies the same typed-account predicate. The 21-test physical
 development publication lifecycle suite passes after this read-path change.
+
+Listing publication entitlement now uses a typed-account `EXISTS` predicate for
+agency and independent-agent subscriptions. Publication readiness fixtures
+admit billable accounts explicitly, and the entitlement/readiness suites pass
+21 tests, preserving the adapter contract while removing owner-pair
+authorization from this gate.
