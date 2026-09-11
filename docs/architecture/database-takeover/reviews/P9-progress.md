@@ -68,6 +68,10 @@ The rebuilt target also passed the independent agent launch journey: its
 physical publish-to-receive test passed, covering approved paid solo-agent
 publication, public inventory attribution, and enquiry delivery.
 
+The rebuilt target also passed the durable services-engine idempotency test,
+covering repeated service-lead requests and provider-scoped request identity
+against the relational service-lead schema.
+
 After all physical packet runs, `pnpm db:schema:congruency` still reports an
 exact match: desired and actual digest
 `69f4bf73e6ac9dc81b2be8b2cc36333e33d7a1ec6917ea392cbcc68466ac73fd`, with no
