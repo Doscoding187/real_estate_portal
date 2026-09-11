@@ -441,10 +441,7 @@ export async function upsertUser(user: InsertUser): Promise<void> {
   }
 
   const db = await getDb();
-  if (!db) {
-    console.warn('[Database] Cannot upsert user: database not available');
-    return;
-  }
+  if (!db) throw new Error('Database not available');
 
   try {
     const values: InsertUser = {
@@ -496,10 +493,7 @@ export async function upsertUser(user: InsertUser): Promise<void> {
 
 export async function getUser(openId: string) {
   const db = await getDb();
-  if (!db) {
-    console.warn('[Database] Cannot get user: database not available');
-    return undefined;
-  }
+  if (!db) throw new Error('Database not available');
 
   const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
 
@@ -511,10 +505,7 @@ export async function getUser(openId: string) {
  */
 export async function getUserById(id: number): Promise<User | undefined> {
   const db = await getDb();
-  if (!db) {
-    console.warn('[Database] Cannot get user: database not available');
-    return undefined;
-  }
+  if (!db) throw new Error('Database not available');
 
   const result = await db
     .select(AUTH_SESSION_USER_COLUMNS)
@@ -530,10 +521,7 @@ export async function getUserById(id: number): Promise<User | undefined> {
  */
 export async function getUserByEmail(email: string): Promise<User | undefined> {
   const db = await getDb();
-  if (!db) {
-    console.warn('[Database] Cannot get user: database not available');
-    return undefined;
-  }
+  if (!db) throw new Error('Database not available');
 
   const normalizedEmail = email.trim().toLowerCase();
   if (!normalizedEmail) return undefined;
@@ -615,10 +603,7 @@ export async function updateUserPasswordResetToken(
  */
 export async function getUserByPasswordResetToken(token: string): Promise<User | undefined> {
   const db = await getDb();
-  if (!db) {
-    console.warn('[Database] Cannot get user: database not available');
-    return undefined;
-  }
+  if (!db) throw new Error('Database not available');
 
   const result = await db.select().from(users).where(eq(users.passwordResetToken, token)).limit(1);
   return result.length > 0 ? result[0] : undefined;
