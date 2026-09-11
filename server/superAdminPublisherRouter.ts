@@ -782,7 +782,9 @@ export const superAdminPublisherRouter = router({
   getGlobalMetrics: superAdminProcedure.query(async () => {
     try {
       const dbConn = await db.getDb();
-      if (!dbConn) return { totalDevelopments: 0, totalLeads: 0 };
+      if (!dbConn) {
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+      }
 
       // Count total developments
       const [devCount] = await dbConn.select({ count: sql<number>`count(*)` }).from(developments);
@@ -795,11 +797,8 @@ export const superAdminPublisherRouter = router({
         totalLeads: Number(leadCount?.count || 0),
       };
     } catch (error) {
-      console.warn(
-        '[superAdminPublisher.getGlobalMetrics] Returning safe defaults due to error:',
-        error,
-      );
-      return { totalDevelopments: 0, totalLeads: 0 };
+      console.error('[superAdminPublisher.getGlobalMetrics] Query failed:', error);
+      throw error;
     }
   }),
 
