@@ -1,6 +1,6 @@
 # Database architecture takeover assessment
 
-Status: **P1 accepted after senior review; P2 implemented and review-open; P3–P8 evidence collected with packet review open; P9 in closure audit**. This is the current
+Status: **P1 accepted after senior review; P5 canonical Launch Access accepted; P2–P4 and P6–P8 review-open; P9 in closure audit**. This is the current
 assessment for the task-owned worktree `property-listify-database-architecture`,
 branch `feat/database-architecture-takeover`.
 Completion requires the packet sequence in
@@ -25,13 +25,13 @@ database where concurrency or integrity matters.
 
 ## Current baseline
 
-- `drizzle/schema/index.ts` exports 24 schema modules and 215 canonical
+- `drizzle/schema/index.ts` exports 24 schema modules and 214 canonical
   tables. The current canonical inventory structural digest is
-  `69f4bf73e6ac9dc81b2be8b2cc36333e33d7a1ec6917ea392cbcc68466ac73fd`.
+  `0d50ae2d489fa91529de0c158870ccd445c1ab6d1b6d3fd438c1be87135dddec`.
 - No Drizzle `mysqlView` export or inventory view is present.
 - The database-authority status resolves the exact task-owned disposable local
   MySQL target at port 3307. Its expected migration head is
-  `0080_service_lead_request_idempotency.sql`; there are no incomplete attempts and
+  `0088_retire_obsolete_billing_families.sql`; there are no incomplete attempts and
   the schema is congruent. No remote/protected target was accessed.
 - A fresh disposable consumer contract passed from an empty target through
   the current admitted lineage, including canonical foundation/geography/scenario,
@@ -119,11 +119,11 @@ that the model is automatically wrong.
 | P2 lead delivery               | Implemented; review open                  | Live-provider replay, reconciliation, authorization                                 |
 | P3 listings/projection         | Boundary implemented; audit open          | Duplicate writers, concurrent publish, withdrawal, rebuild                          |
 | P4 account/tenant              | Core evidence implemented; audit open     | Broader ownership and token lifecycle census                                        |
-| P5 billing                     | Core evidence implemented; audit open     | Explicit billable-account model and entitlement race proof                          |
+| P5 billing                     | Canonical Launch Access accepted; broader families separate | Non-commercial and partner lifecycle review only |
 | P6 agency/distribution         | Acceptance race fixed; audit open         | Assignment, commission and showing consistency                                      |
 | P7 domain supply/geography     | Open                                      | Land authority contract, geography, development, Commercial, Shared Living          |
 | P8 platform/supporting domains | Partial corrections implemented; open    | Durable jobs, media/content, services, demand, analytics rebuildability             |
-| P9 closure                     | Not started                               | Full physical, query-plan, journey and release review                               |
+| P9 closure                     | In closure audit                         | Full physical, query-plan, journey and release review                               |
 
 ## Known risks carried into implementation
 
