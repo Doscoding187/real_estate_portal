@@ -400,3 +400,10 @@ changed to fail closed on missing canonical schema. It now asserts the required
 `PRECONDITION_FAILED` response instead of fabricated zero metrics. The focused
 service suite passes 2 tests and `pnpm check` passes; aggregate rebuild and
 query-plan evidence remain open.
+
+The Explore recommended and area feed services now distinguish a missing
+canonical Explore table from a transient query failure. Missing schema fails
+with `PRECONDITION_FAILED` instead of an empty degraded success feed; transient
+errors retain the existing explicit degraded response. The focused fallback
+contract passes 3 tests, including the missing-schema case, and `pnpm check`
+passes.
