@@ -52,7 +52,7 @@ pnpm db:authority:manifest
 pnpm db:migrate:plan
 pnpm db:migrate:apply -- --accepted-old-head=<head-or-none> --expected-new-head=<manifest-head>
 pnpm db:release:plan
-pnpm db:release:apply -- --ack=<exact-release-ack>
+pnpm db:release:apply -- --accepted-old-head=<head-or-none> --expected-new-head=<head> --plan-digest=<exact-reviewed-plan-digest> --ack=<exact-release-ack>
 pnpm db:release-tidb-check-constraint-convergence:plan -- --approval-reference=<reference> --approval-actor=<actor>
 pnpm db:release-tidb-check-constraint-convergence:apply -- --approval-reference=<reference> --approval-actor=<actor> --plan-digest=<exact-plan-digest> --ack=<exact-release-ack>
 pnpm db:schema:congruency

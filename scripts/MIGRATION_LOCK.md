@@ -18,7 +18,7 @@ bind the approval and exact acknowledgement to the same target fingerprint,
 artifact, accepted old head, and expected new head before running:
 
 ```bash
-pnpm db:release:apply -- --accepted-old-head=<head-or-none> --expected-new-head=<head> --ack=<exact-ack>
+pnpm db:release:apply -- --accepted-old-head=<head-or-none> --expected-new-head=<head> --plan-digest=<exact-reviewed-plan-digest> --ack=<exact-ack>
 ```
 
 Generic `db:migrate:*` commands reject staging and production targets.

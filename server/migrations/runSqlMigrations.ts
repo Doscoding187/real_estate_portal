@@ -78,6 +78,8 @@ export type SqlMigrationOptions = {
   applicationArtifact?: string;
   approval?: ProtectedDatabaseApproval;
   acknowledgement?: string;
+  /** Required only for ordinary protected release application. */
+  expectedPlanDigest?: string;
   connectionFactory?: (
     authority: ResolvedDatabaseAuthority,
     decision: AuthorizedDatabaseOperation,
@@ -96,6 +98,26 @@ type MigrationControlState = 'coherent' | 'fresh-establishment';
 
 function planHash(value: unknown): string {
   return createHash('sha256').update(JSON.stringify(value)).digest('hex');
+}
+
+function assertExpectedReleasePlanDigest(
+  operation: SqlMigrationOptions['operation'],
+  expectedPlanDigest: string | undefined,
+): asserts expectedPlanDigest is string {
+  if (operation !== 'release-apply') return;
+  if (!expectedPlanDigest || !/^[a-f0-9]{64}$/.test(expectedPlanDigest)) {
+    throw new Error(
+      'Release migration apply refused: the exact reviewed plan digest is required.',
+    );
+  }
+}
+
+function assertReviewedReleasePlanDigest(plan: MigrationPlan, expectedPlanDigest: string): void {
+  if (plan.planDigest !== expectedPlanDigest) {
+    throw new Error(
+      'Release migration apply refused: reviewed plan digest does not match current evidence.',
+    );
+  }
 }
 
 export function sortMigrationFiles(files: string[]): string[] {
@@ -667,6 +689,7 @@ export async function runSqlMigrations(options: SqlMigrationOptions = {}) {
   if (mode === 'apply' && options.expectedNewHead === undefined) {
     throw new Error('Migration apply refused: expected new manifest head must be explicit.');
   }
+  assertExpectedReleasePlanDigest(operation, options.expectedPlanDigest);
   const connection = await (options.connectionFactory ?? createAuthoritySqlConnection)(
     authority,
     authorization,
@@ -675,15 +698,6 @@ export async function runSqlMigrations(options: SqlMigrationOptions = {}) {
   let lockEvidence: MigrationLockEvidence | null = null;
   try {
     await assertRunnerConnectionTarget(connection, authority);
-    if (mode === 'apply') {
-      // TiDB can accept CHECK syntax while enforcement is disabled and then
-      // silently omit those constraints. Fail closed before any ordinary
-      // release DDL; the reviewed convergence command is the only path that
-      // may enable the capability on an already-released target.
-      await assertTiDbCheckConstraintCapability(connection, authority.context.provider);
-      lockEvidence = await acquireMigrationLock(connection, manifest.document.lockName);
-      lockAcquired = true;
-    }
     const initialState = await readDatabaseMigrationState(connection, manifest);
     const initialControlState = assertMigrationControlState({
       state: initialState,
@@ -701,20 +715,32 @@ export async function runSqlMigrations(options: SqlMigrationOptions = {}) {
       expectedNewHead: options.expectedNewHead,
     });
 
+    if (operation === 'release-apply') {
+      assertReviewedReleasePlanDigest(plan, options.expectedPlanDigest!);
+    }
+
     if (mode === 'plan') {
       return { mode, plan, lock: null, applied: [] as string[] };
     }
 
-    if (initialControlState === 'fresh-establishment') {
-      await ensureControlTables(connection, manifest);
-    }
+    // TiDB can accept CHECK syntax while enforcement is disabled and then
+    // silently omit those constraints. Fail closed before any ordinary
+    // release DDL; the reviewed convergence command is the only path that
+    // may enable the capability on an already-released target.
+    await assertTiDbCheckConstraintCapability(connection, authority.context.provider);
+    lockEvidence = await acquireMigrationLock(connection, manifest.document.lockName);
+    lockAcquired = true;
+
     const lockedState = await readDatabaseMigrationState(connection, manifest);
-    assertMigrationControlState({
+    const lockedControlState = assertMigrationControlState({
       state: lockedState,
       manifest,
       acceptedOldHead: plan.acceptedOldHead,
-      allowFreshEstablishment: false,
+      allowFreshEstablishment: initialControlState === 'fresh-establishment',
     });
+    if (lockedControlState !== initialControlState) {
+      throw new Error('Migration apply blocked: migration control state changed after lock acquisition.');
+    }
     const lockedPlan = buildMigrationPlan({
       manifest,
       targetFingerprintHash: authority.context.targetFingerprintHash,
@@ -726,6 +752,12 @@ export async function runSqlMigrations(options: SqlMigrationOptions = {}) {
     });
     if (lockedPlan.planDigest !== plan.planDigest) {
       throw new Error('Migration apply blocked: plan changed after lock acquisition.');
+    }
+    if (operation === 'release-apply') {
+      assertReviewedReleasePlanDigest(lockedPlan, options.expectedPlanDigest!);
+    }
+    if (lockedControlState === 'fresh-establishment') {
+      await ensureControlTables(connection, manifest);
     }
     const applied = await applyPlan({
       authority,

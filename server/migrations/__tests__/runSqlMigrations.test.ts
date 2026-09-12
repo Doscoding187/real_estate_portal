@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -269,6 +269,30 @@ class FakeMigrationConnection implements AuthoritySqlConnection {
   }
 }
 
+async function reviewedProtectedPlan(
+  fixture: ReturnType<typeof migrationFixture>,
+  input: {
+    acceptedOldHead?: string | null;
+    expectedNewHead?: string;
+    configure?: (connection: FakeMigrationConnection) => void;
+  } = {},
+) {
+  const { authority, authorization } = protectedAuthorityFor('plan');
+  const connection = new FakeMigrationConnection(authority.context.databaseName);
+  input.configure?.(connection);
+  return runSqlMigrations({
+    mode: 'plan',
+    operation: 'release-plan',
+    migrationsDir: fixture.root,
+    manifestPath: fixture.manifestPath,
+    authority,
+    authorization,
+    acceptedOldHead: input.acceptedOldHead ?? null,
+    expectedNewHead: input.expectedNewHead ?? fixture.entries.at(-1)!.filename,
+    connectionFactory: async () => connection,
+  });
+}
+
 function transactionalMigrationFixture() {
   const root = mkdtempSync(join(tmpdir(), 'listify-runner-transactional-'));
   temporaryRoots.push(root);
@@ -327,6 +351,7 @@ describe('migration connection security', () => {
 describe('manifest migration planning and durable attempts', () => {
   it('blocks ordinary TiDB release apply while CHECK enforcement is disabled', async () => {
     const fixture = migrationFixture(false);
+    const reviewed = await reviewedProtectedPlan(fixture);
     const { authority, authorization } = protectedAuthorityFor('apply');
     const connection = new FakeMigrationConnection(authority.context.databaseName);
 
@@ -340,12 +365,178 @@ describe('manifest migration planning and durable attempts', () => {
         authorization,
         acceptedOldHead: null,
         expectedNewHead: fixture.entries[0].filename,
+        expectedPlanDigest: reviewed.plan.planDigest,
         connectionFactory: async () => connection,
       }),
     ).rejects.toThrow('TiDB CHECK-constraint enforcement is disabled');
     expect(connection.calls.some(call => call.statement.includes('GET_LOCK'))).toBe(false);
     expect(connection.calls.some(call => call.statement.startsWith('CREATE TABLE'))).toBe(false);
     expect(connection.ended).toBe(true);
+  });
+
+  it('requires the exact reviewed digest before ordinary protected release mutation', async () => {
+    const fixture = migrationFixture(false);
+    const reviewed = await reviewedProtectedPlan(fixture);
+    const { authority, authorization } = protectedAuthorityFor('apply');
+    let connected = false;
+
+    await expect(
+      runSqlMigrations({
+        mode: 'apply',
+        operation: 'release-apply',
+        migrationsDir: fixture.root,
+        manifestPath: fixture.manifestPath,
+        authority,
+        authorization,
+        acceptedOldHead: null,
+        expectedNewHead: fixture.entries[0].filename,
+        connectionFactory: async () => {
+          connected = true;
+          return new FakeMigrationConnection(authority.context.databaseName);
+        },
+      }),
+    ).rejects.toThrow('exact reviewed plan digest is required');
+    expect(connected).toBe(false);
+
+    const wrongDigestConnection = new FakeMigrationConnection(authority.context.databaseName);
+    wrongDigestConnection.tidbCheckConstraintsEnabled = true;
+    await expect(
+      runSqlMigrations({
+        mode: 'apply',
+        operation: 'release-apply',
+        migrationsDir: fixture.root,
+        manifestPath: fixture.manifestPath,
+        authority,
+        authorization,
+        acceptedOldHead: null,
+        expectedNewHead: fixture.entries[0].filename,
+        expectedPlanDigest: 'f'.repeat(64),
+        connectionFactory: async () => wrongDigestConnection,
+      }),
+    ).rejects.toThrow('reviewed plan digest does not match current evidence');
+    expect(wrongDigestConnection.calls.some(call => call.statement.includes('GET_LOCK'))).toBe(false);
+    expect(wrongDigestConnection.calls.some(call => call.statement.startsWith('CREATE TABLE'))).toBe(
+      false,
+    );
+
+    const appliedConnection = new FakeMigrationConnection(authority.context.databaseName);
+    appliedConnection.tidbCheckConstraintsEnabled = true;
+    const applied = await runSqlMigrations({
+      mode: 'apply',
+      operation: 'release-apply',
+      migrationsDir: fixture.root,
+      manifestPath: fixture.manifestPath,
+      authority,
+      authorization,
+      acceptedOldHead: null,
+      expectedNewHead: fixture.entries[0].filename,
+      expectedPlanDigest: reviewed.plan.planDigest,
+      connectionFactory: async () => appliedConnection,
+    });
+    expect(applied.applied).toEqual([fixture.entries[0].filename]);
+  });
+
+  it('refuses a reviewed release plan when the manifest changes without changing its head name', async () => {
+    const fixture = migrationFixture(false);
+    const reviewed = await reviewedProtectedPlan(fixture);
+    const changedBaseline = 'CREATE TABLE canonical_widget (id bigint);';
+    const manifest = JSON.parse(readFileSync(fixture.manifestPath, 'utf8')) as MigrationManifestDocument;
+    manifest.migrations[0].checksum = sha256(changedBaseline);
+    writeFileSync(join(fixture.root, fixture.entries[0].filename), changedBaseline);
+    writeFileSync(fixture.manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+
+    const { authority, authorization } = protectedAuthorityFor('apply');
+    const connection = new FakeMigrationConnection(authority.context.databaseName);
+    connection.tidbCheckConstraintsEnabled = true;
+    await expect(
+      runSqlMigrations({
+        mode: 'apply',
+        operation: 'release-apply',
+        migrationsDir: fixture.root,
+        manifestPath: fixture.manifestPath,
+        authority,
+        authorization,
+        acceptedOldHead: null,
+        expectedNewHead: fixture.entries[0].filename,
+        expectedPlanDigest: reviewed.plan.planDigest,
+        connectionFactory: async () => connection,
+      }),
+    ).rejects.toThrow('reviewed plan digest does not match current evidence');
+    expect(connection.calls.some(call => call.statement.includes('GET_LOCK'))).toBe(false);
+  });
+
+  it('revalidates a reviewed release plan after the lock when another release advances its ledger', async () => {
+    const fixture = migrationFixture();
+    const reviewed = await reviewedProtectedPlan(fixture, {
+      acceptedOldHead: fixture.entries[0].filename,
+      configure: connection => {
+        connection.historyTablePresent = true;
+        connection.attemptTablePresent = true;
+        connection.history.set(fixture.entries[0].filename, fixture.entries[0].checksum);
+      },
+    });
+    const { authority, authorization } = protectedAuthorityFor('apply');
+    const connection = new FakeMigrationConnection(authority.context.databaseName);
+    connection.tidbCheckConstraintsEnabled = true;
+    connection.historyTablePresent = true;
+    connection.attemptTablePresent = true;
+    connection.history.set(fixture.entries[0].filename, fixture.entries[0].checksum);
+    const execute = connection.execute.bind(connection);
+    let advanced = false;
+    connection.execute = async (statement, values = []) => {
+      const result = await execute(statement, values);
+      if (statement.includes('GET_LOCK') && !advanced) {
+        advanced = true;
+        connection.history.set(fixture.entries[1].filename, fixture.entries[1].checksum);
+      }
+      return result;
+    };
+
+    await expect(
+      runSqlMigrations({
+        mode: 'apply',
+        operation: 'release-apply',
+        migrationsDir: fixture.root,
+        manifestPath: fixture.manifestPath,
+        authority,
+        authorization,
+        acceptedOldHead: fixture.entries[0].filename,
+        expectedNewHead: fixture.entries[1].filename,
+        expectedPlanDigest: reviewed.plan.planDigest,
+        connectionFactory: async () => connection,
+      }),
+    ).rejects.toThrow('accepted old head');
+    expect(connection.calls.some(call => call.statement.startsWith('ALTER TABLE'))).toBe(false);
+  });
+
+  it('rejects an incomplete attempt that appeared after a protected plan was reviewed', async () => {
+    const fixture = migrationFixture(false);
+    const reviewed = await reviewedProtectedPlan(fixture);
+    const { authority, authorization } = protectedAuthorityFor('apply');
+    const connection = new FakeMigrationConnection(authority.context.databaseName);
+    connection.historyTablePresent = true;
+    connection.attemptTablePresent = true;
+    connection.attempts.set('reviewed-plan-now-blocked', {
+      filename: fixture.entries[0].filename,
+      state: 'failed',
+      completed: 0,
+    });
+
+    await expect(
+      runSqlMigrations({
+        mode: 'apply',
+        operation: 'release-apply',
+        migrationsDir: fixture.root,
+        manifestPath: fixture.manifestPath,
+        authority,
+        authorization,
+        acceptedOldHead: null,
+        expectedNewHead: fixture.entries[0].filename,
+        expectedPlanDigest: reviewed.plan.planDigest,
+        connectionFactory: async () => connection,
+      }),
+    ).rejects.toThrow('requires reviewed recovery');
+    expect(connection.calls.some(call => call.statement.includes('GET_LOCK'))).toBe(false);
   });
 
   it('plans explicit old and new heads without migration or control-table mutation', async () => {

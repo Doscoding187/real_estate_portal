@@ -122,7 +122,7 @@ For staging or production, the supported sequence is explicit:
 ```text
 release:plan
 → release-reference:plan
-→ release:apply (explicit migration acknowledgement)
+→ release:apply (exact reviewed plan digest and explicit migration acknowledgement)
 → release-reference:apply (explicit protected-target acknowledgement)
 → release-reference:verify
 → readiness/deployment smoke checks

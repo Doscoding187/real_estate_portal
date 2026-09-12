@@ -381,6 +381,8 @@ async function run(command: Command): Promise<void> {
       acceptedOldHead: option('accepted-old-head') === 'none' ? null : option('accepted-old-head'),
       expectedNewHead: option('expected-new-head'),
       acknowledgement: option('ack'),
+      expectedPlanDigest:
+        releaseOperation && !planOnly ? requiredOption('plan-digest') : undefined,
     });
     print({
       mode: result.mode,

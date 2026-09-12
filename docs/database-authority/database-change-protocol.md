@@ -113,8 +113,10 @@ for rejected SQL.
 
 Generic migration commands accept only local disposable or quarantined
 read-only plan targets. Protected targets use `pnpm db:release:plan` and
-`pnpm db:release:apply`; the latter requires the exact target acknowledgement
-in addition to protected approval evidence.
+`pnpm db:release:apply`; the latter requires the exact reviewed plan digest and
+target acknowledgement in addition to protected approval evidence. The runner
+compares the digest with a fresh plan before durable mutation and repeats the
+comparison after acquiring the migration lock.
 
 For the reviewed production `0001` failure, the bounded release recovery uses
 the same protected release authorization without widening generic local
