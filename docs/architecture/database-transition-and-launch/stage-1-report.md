@@ -24,6 +24,7 @@ remote, protected, or quarantined listify_local target was used.
 | Successor task branch / worktree | feat/database-transition-stage-1-fresh-establishment at /home/edwardspc/Desktop/Dev/worktrees/property-listify-database-transition-stage-1-fresh-establishment |
 | Successor source | 7a1b2a43daa0e167c1f51f0680759bf6d1228892; tree 769a180b5ff3459e606b4bf2a5c63185b680d1f5 |
 | Successor ancestry | `git merge-base --is-ancestor` returned 0 for both candidate integration `4d6b2ca…` and WP2 control `d308409…` |
+| Final successor Git status | Intended source and evidence changes are committed. The scoped browser test left four tracked Playwright report artifacts unstaged (two modified/deleted videos, its report index, and `.last-run.json`); they are generated test output, not candidate source, and are excluded from the review commits. |
 
 The original task worktree was clean before this report was added. The
 master-plan branch was merged only to place the authoritative plan, assignment,
