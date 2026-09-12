@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
   buildIsolatedCiGrantPlan,
@@ -73,5 +75,24 @@ describe('isolated CI physical credential boundary', () => {
     expect(isolatedCiCredentialClassForOperation('scenario-seed')).toBe('migration');
     expect(isolatedCiCredentialClassForOperation('verification')).toBe('read-only');
     expect(isolatedCiCredentialClassForOperation('runtime-connect')).toBe('runtime');
+  });
+
+  it('keeps CI role-bound steps explicit and bootstrap free of DATABASE_URL', () => {
+    const workflow = readFileSync(resolve(process.cwd(), '.github/workflows/ci.yml'), 'utf8');
+    const bootstrapBlocks = workflow.match(
+      /- name: Provision isolated CI migration identity[\s\S]*?run: pnpm db:ci:identities:bootstrap/g,
+    );
+    expect(bootstrapBlocks).toHaveLength(2);
+    const allBootstrapBlocks = workflow.match(
+      /- name: Provision isolated CI (?:migration identity|runtime identities)[\s\S]*?run: pnpm db:ci:identities:bootstrap/g,
+    );
+    expect(allBootstrapBlocks).toHaveLength(4);
+    for (const block of allBootstrapBlocks ?? []) {
+      expect(block).toContain("DATABASE_URL: ''");
+      expect(block).toContain("LISTIFY_E2E_DATABASE_URL: ''");
+      expect(block).toContain('DATABASE_BOOTSTRAP_URL:');
+    }
+    expect(workflow).toContain('export DATABASE_URL="${DATABASE_MIGRATION_URL}"');
+    expect(workflow).toContain('export DATABASE_URL="${DATABASE_VERIFIER_URL}"');
   });
 });

@@ -64,6 +64,8 @@ jobs:
 
       - name: Provision isolated CI migration identity
         env:
+          DATABASE_URL: ''
+          LISTIFY_E2E_DATABASE_URL: ''
           DATABASE_BOOTSTRAP_URL: mysql://root:test_password@127.0.0.1:3306/listify_test
           ISOLATED_CI_BOOTSTRAP_PHASE: migration-only
         run: pnpm db:ci:identities:bootstrap
@@ -73,6 +75,8 @@ jobs:
 
       - name: Provision isolated CI runtime identities
         env:
+          DATABASE_URL: ''
+          LISTIFY_E2E_DATABASE_URL: ''
           DATABASE_BOOTSTRAP_URL: mysql://root:test_password@127.0.0.1:3306/listify_test
           ISOLATED_CI_BOOTSTRAP_PHASE: full
         run: pnpm db:ci:identities:bootstrap
@@ -82,6 +86,8 @@ jobs:
           LOCAL_DEMO_AGENCY_PASSWORD: ci-local-demo-password
           DATABASE_CONSUMER_CONTRACT_PHASE: post-migration
         run: |
+          test -n "${DATABASE_MIGRATION_URL:-}"
+          export DATABASE_URL="${DATABASE_MIGRATION_URL}"
           set -o pipefail
           mkdir -p artifacts
           started_at=$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)
@@ -109,6 +115,8 @@ jobs:
 
       - name: Verify physical CI credential boundaries
         run: |
+          test -n "${DATABASE_VERIFIER_URL:-}"
+          export DATABASE_URL="${DATABASE_VERIFIER_URL}"
           set -o pipefail
           mkdir -p artifacts
           pnpm db:ci:identities:verify | tee artifacts/credential-boundary.json
@@ -125,6 +133,8 @@ jobs:
       - name: Run and capture schema congruency evidence
         if: always()
         run: |
+          test -n "${DATABASE_VERIFIER_URL:-}"
+          export DATABASE_URL="${DATABASE_VERIFIER_URL}"
           set -o pipefail
           mkdir -p artifacts
           pnpm --silent db:schema:congruency | tee artifacts/database-schema-congruency.json
@@ -148,7 +158,10 @@ jobs:
           retention-days: 7
 
       - name: Run full database contract verification
-        run: pnpm db:verify:ci
+        run: |
+          test -n "${DATABASE_VERIFIER_URL:-}"
+          export DATABASE_URL="${DATABASE_VERIFIER_URL}"
+          pnpm db:verify:ci
 
       - name: Run isolated CHECK/FK and lifecycle tests
         env:
@@ -237,6 +250,8 @@ jobs:
 
       - name: Provision isolated CI migration identity
         env:
+          DATABASE_URL: ''
+          LISTIFY_E2E_DATABASE_URL: ''
           DATABASE_BOOTSTRAP_URL: mysql://root:test_password@127.0.0.1:3306/listify_test
           ISOLATED_CI_BOOTSTRAP_PHASE: migration-only
         run: pnpm db:ci:identities:bootstrap
@@ -246,6 +261,8 @@ jobs:
 
       - name: Provision isolated CI runtime identities
         env:
+          DATABASE_URL: ''
+          LISTIFY_E2E_DATABASE_URL: ''
           DATABASE_BOOTSTRAP_URL: mysql://root:test_password@127.0.0.1:3306/listify_test
           ISOLATED_CI_BOOTSTRAP_PHASE: full
         run: pnpm db:ci:identities:bootstrap
