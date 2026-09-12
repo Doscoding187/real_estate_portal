@@ -46,6 +46,44 @@ afterEach(() => {
 });
 
 describe('immutable resolved database context and operation authorization', () => {
+  it('enforces the local runtime, migration, and verifier credential matrix', () => {
+    const identity = fixtureIdentity('listify-security-matrix');
+    const target = `mysql://local-user:local-password@127.0.0.1:3307/${identity.expectedWorktreeDatabase}`;
+    const authority = (
+      operation: 'runtime-connect' | 'migration-apply' | 'verification',
+      credentialClass: 'runtime' | 'migration' | 'read-only' | 'lifecycle-admin',
+    ) =>
+      resolveDatabaseAuthority({
+        operation,
+        cwd: identity.worktreePath,
+        gitIdentity: identity,
+        explicitDatabaseUrl: target,
+        credentialClass,
+        processEnv: { NODE_ENV: 'development', APP_ENV: 'development' },
+      });
+
+    const runtime = authority('runtime-connect', 'runtime');
+    const migration = authority('migration-apply', 'migration');
+    const verifier = authority('verification', 'read-only');
+
+    expect(() => authorizeDatabaseOperation(runtime, { root: process.cwd() })).not.toThrow();
+    expect(() => authorizeDatabaseOperation(migration, { root: process.cwd() })).not.toThrow();
+    expect(() => authorizeDatabaseOperation(verifier, { root: process.cwd() })).not.toThrow();
+
+    const runtimeAsVerifier = authority('runtime-connect', 'read-only');
+    const migrationAsRuntime = authority('migration-apply', 'runtime');
+    const verifierAsAdmin = authority('verification', 'lifecycle-admin');
+    expect(() => authorizeDatabaseOperation(runtimeAsVerifier, { root: process.cwd() })).toThrow(
+      'credential class read-only is not allowed for runtime-connect',
+    );
+    expect(() => authorizeDatabaseOperation(migrationAsRuntime, { root: process.cwd() })).toThrow(
+      'credential class runtime is not allowed for migration-apply',
+    );
+    expect(() => authorizeDatabaseOperation(verifierAsAdmin, { root: process.cwd() })).toThrow(
+      'credential class lifecycle-admin is not allowed for verification',
+    );
+  });
+
   it('preserves an explicit caller target over worktree and central files', () => {
     const identity = fixtureIdentity();
     const central = centralEnvironment(identity);

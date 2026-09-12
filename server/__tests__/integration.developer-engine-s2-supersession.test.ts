@@ -61,6 +61,40 @@ async function database() {
   return db;
 }
 
+function record(value: unknown): Record<string, unknown> | null {
+  return value !== null && typeof value === 'object' ? (value as Record<string, unknown>) : null;
+}
+
+function underlyingMySqlError(error: unknown): Record<string, unknown> {
+  let current: unknown = error;
+  for (let depth = 0; depth < 4; depth += 1) {
+    const candidate = record(current);
+    if (!candidate) break;
+    if (
+      typeof candidate.code === 'string' ||
+      typeof candidate.errno === 'number' ||
+      typeof candidate.sqlMessage === 'string'
+    ) {
+      return candidate;
+    }
+    current = candidate.cause;
+  }
+  throw new Error('Database constraint rejection did not expose the underlying MySQL error.');
+}
+
+async function expectMySqlConstraintViolation(
+  query: PromiseLike<unknown>,
+  expected: Record<string, unknown>,
+): Promise<void> {
+  const failure = await query.then(
+    () => {
+      throw new Error('Expected the database operation to be rejected by a constraint.');
+    },
+    error => error,
+  );
+  expect(underlyingMySqlError(failure)).toMatchObject(expected);
+}
+
 function suffix() {
   return `${Date.now()}-${randomUUID().slice(0, 8)}`;
 }
@@ -740,7 +774,7 @@ describeWithDb('Developer Engine S2 supersession lifecycle integration', () => {
     fixture.relationshipIds.push(Number(verified.id));
     const db = await database();
 
-    await expect(
+    await expectMySqlConstraintViolation(
       db.insert(developmentSupersessions).values({
         sourceDevelopmentId: pair.sourceId,
         replacementDevelopmentId: pair.sourceId,
@@ -749,20 +783,37 @@ describeWithDb('Developer Engine S2 supersession lifecycle integration', () => {
         verifiedByActorId: pair.superAdminId,
         verifiedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
       }),
-    ).rejects.toThrow();
+      {
+        code: 'ER_CHECK_CONSTRAINT_VIOLATED',
+        errno: 3819,
+        sqlMessage: expect.stringContaining('chk_development_supersessions_distinct_endpoints'),
+      },
+    );
 
-    await expect(
+    const orphanSourceDevelopmentId = -2147483648;
+    const [orphanParent] = await db
+      .select({ id: developments.id })
+      .from(developments)
+      .where(eq(developments.id, orphanSourceDevelopmentId))
+      .limit(1);
+    expect(orphanParent).toBeUndefined();
+    await expectMySqlConstraintViolation(
       db.insert(developmentSupersessions).values({
-        sourceDevelopmentId: -2147483648,
+        sourceDevelopmentId: orphanSourceDevelopmentId,
         replacementDevelopmentId: pair.replacementId,
         status: 'verified',
         verificationNote: 'orphan source endpoint',
         verifiedByActorId: pair.superAdminId,
         verifiedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
       }),
-    ).rejects.toThrow();
+      {
+        code: 'ER_NO_REFERENCED_ROW_2',
+        errno: 1452,
+        sqlMessage: expect.stringContaining('fk_development_supersessions_source_development'),
+      },
+    );
 
-    await expect(
+    await expectMySqlConstraintViolation(
       db.insert(developmentSupersessions).values({
         sourceDevelopmentId: pair.sourceId,
         replacementDevelopmentId: pair.replacementId,
@@ -771,22 +822,42 @@ describeWithDb('Developer Engine S2 supersession lifecycle integration', () => {
         verifiedByActorId: pair.superAdminId,
         verifiedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
       }),
-    ).rejects.toThrow();
+      {
+        code: 'ER_DUP_ENTRY',
+        errno: 1062,
+        sqlMessage: expect.stringContaining('uq_development_supersessions_pair'),
+      },
+    );
 
-    await expect(
+    await expectMySqlConstraintViolation(
       db.delete(developments).where(eq(developments.id, pair.sourceId)),
-    ).rejects.toThrow();
+      {
+        code: 'ER_ROW_IS_REFERENCED_2',
+        errno: 1451,
+        sqlMessage: expect.stringContaining('fk_development_supersessions_source_development'),
+      },
+    );
 
     const lifecyclePair = await insertPair('lifecycle-shape');
-    await expect(
+    const lifecycleTimestamp = new Date().toISOString().slice(0, 19).replace('T', ' ');
+    await expectMySqlConstraintViolation(
       db.insert(developmentSupersessions).values({
         sourceDevelopmentId: lifecyclePair.sourceId,
         replacementDevelopmentId: lifecyclePair.replacementId,
         status: 'active',
         verificationNote: 'invalid lifecycle',
         verifiedByActorId: lifecyclePair.superAdminId,
-        verifiedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
+        verifiedAt: lifecycleTimestamp,
+        activatedByActorId: lifecyclePair.superAdminId,
+        activatedAt: lifecycleTimestamp,
+        sourcePublicRootPath: `/s2/lifecycle-${suffix()}`,
+        reversalReason: 'active rows cannot carry a reversal reason',
       }),
-    ).rejects.toThrow();
+      {
+        code: 'ER_CHECK_CONSTRAINT_VIOLATED',
+        errno: 3819,
+        sqlMessage: expect.stringContaining('chk_development_supersessions_active_shape'),
+      },
+    );
   });
 });

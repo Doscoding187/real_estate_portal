@@ -18,6 +18,40 @@ const describeWithDb: typeof describe = hasDb
   ? describe
   : (((name, fn) => describe.skip(`${name} (requires DATABASE_URL)`, fn)) as typeof describe);
 
+function record(value: unknown): Record<string, unknown> | null {
+  return value !== null && typeof value === 'object' ? (value as Record<string, unknown>) : null;
+}
+
+function underlyingMySqlError(error: unknown): Record<string, unknown> {
+  let current: unknown = error;
+  for (let depth = 0; depth < 4; depth += 1) {
+    const candidate = record(current);
+    if (!candidate) break;
+    if (
+      typeof candidate.code === 'string' ||
+      typeof candidate.errno === 'number' ||
+      typeof candidate.sqlMessage === 'string'
+    ) {
+      return candidate;
+    }
+    current = candidate.cause;
+  }
+  throw new Error('Billable-account rejection did not expose the underlying MySQL error.');
+}
+
+async function expectMySqlConstraintViolation(
+  query: PromiseLike<unknown>,
+  expected: Record<string, unknown>,
+): Promise<void> {
+  const failure = await query.then(
+    () => {
+      throw new Error('Expected the database operation to be rejected by a constraint.');
+    },
+    error => error,
+  );
+  expect(underlyingMySqlError(failure)).toMatchObject(expected);
+}
+
 describeWithDb('billing billable-account authority', () => {
   it('keeps every central account attached to exactly one typed owner', async () => {
     const db = await getDb();
@@ -40,13 +74,24 @@ describeWithDb('billing billable-account authority', () => {
   it('rejects a mismatched account kind and typed owner', async () => {
     const db = await getDb();
     if (!db) throw new Error('Database not available');
-    const [agency] = await db.select({ id: agencies.id }).from(agencies).limit(1);
+    const [ownedAgency] = await db
+      .select({ id: agencies.id })
+      .from(agencies)
+      .innerJoin(billableAccounts, eq(billableAccounts.agencyId, agencies.id))
+      .where(eq(billableAccounts.accountKind, 'agency'))
+      .limit(1);
+    const agency = ownedAgency ? { id: ownedAgency.id } : undefined;
     expect(agency).toBeDefined();
     if (!agency) return;
 
-    await expect(
+    await expectMySqlConstraintViolation(
       db.insert(billableAccounts).values({ accountKind: 'agent', agencyId: agency.id }),
-    ).rejects.toThrow(/check|constraint|failed|cannot be null/i);
+      {
+        code: 'ER_CHECK_CONSTRAINT_VIOLATED',
+        errno: 3819,
+        sqlMessage: expect.stringContaining('billable_accounts_exactly_one_owner'),
+      },
+    );
 
     const [account] = await db
       .select({ id: billableAccounts.id })
@@ -67,7 +112,10 @@ describeWithDb('billing billable-account authority', () => {
     ] as const;
     for (const table of tables) {
       const [row] = await db
-        .select({ total: count(), nullAccounts: sql<number>`SUM(${table.billableAccountId} IS NULL)` })
+        .select({
+          total: count(),
+          nullAccounts: sql<number>`SUM(${table.billableAccountId} IS NULL)`,
+        })
         .from(table);
       expect(Number(row?.nullAccounts || 0)).toBe(0);
     }

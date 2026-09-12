@@ -44,56 +44,44 @@ export class TopicsService {
    * Get all active topics ordered by display order
    */
   async getAllTopics(): Promise<Topic[]> {
-    try {
-      const result = await db.execute(sql`
-        SELECT *
-        FROM topics
-        WHERE is_active = 1
-        ORDER BY COALESCE(display_order, 999999) ASC, name ASC
-      `);
+    const result = await db.execute(sql`
+      SELECT *
+      FROM topics
+      WHERE is_active = 1
+      ORDER BY COALESCE(display_order, 999999) ASC, name ASC
+    `);
 
-      return ((result as any).rows ?? []).map((t: any) => this.mapTopicFromDb(t));
-    } catch (e) {
-      throw e;
-    }
+    return ((result as any).rows ?? []).map((t: any) => this.mapTopicFromDb(t));
   }
 
   /**
    * Get a single topic by its slug
    */
   async getTopicBySlug(slug: string): Promise<Topic | null> {
-    try {
-      const result = await db.execute(sql`
-        SELECT *
-        FROM topics
-        WHERE slug = ${slug} AND is_active = 1
-        LIMIT 1
-      `);
+    const result = await db.execute(sql`
+      SELECT *
+      FROM topics
+      WHERE slug = ${slug} AND is_active = 1
+      LIMIT 1
+    `);
 
-      const row = (result as any).rows?.[0];
-      return row ? this.mapTopicFromDb(row) : null;
-    } catch (e) {
-      throw e;
-    }
+    const row = (result as any).rows?.[0];
+    return row ? this.mapTopicFromDb(row) : null;
   }
 
   /**
    * Get a single topic by ID
    */
   async getTopicById(topicId: string): Promise<Topic | null> {
-    try {
-      const result = await db.execute(sql`
-        SELECT *
-        FROM topics
-        WHERE id = ${topicId}
-        LIMIT 1
-      `);
+    const result = await db.execute(sql`
+      SELECT *
+      FROM topics
+      WHERE id = ${topicId}
+      LIMIT 1
+    `);
 
-      const row = (result as any).rows?.[0];
-      return row ? this.mapTopicFromDb(row) : null;
-    } catch (e) {
-      throw e;
-    }
+    const row = (result as any).rows?.[0];
+    return row ? this.mapTopicFromDb(row) : null;
   }
 
   /**
@@ -101,17 +89,13 @@ export class TopicsService {
    * If content_topics table doesn't exist yet, returns 0.
    */
   async getTopicContentCount(topicId: string): Promise<number> {
-    try {
-      const result = await db.execute(sql`
-        SELECT COUNT(*) AS cnt
-        FROM content_topics
-        WHERE topic_id = ${topicId}
-      `);
+    const result = await db.execute(sql`
+      SELECT COUNT(*) AS cnt
+      FROM content_topics
+      WHERE topic_id = ${topicId}
+    `);
 
-      return Number((result as any).rows?.[0]?.cnt ?? 0);
-    } catch (e) {
-      throw e;
-    }
+    return Number((result as any).rows?.[0]?.cnt ?? 0);
   }
 
   /**
@@ -185,31 +169,27 @@ export class TopicsService {
     const priceMax = filters?.priceMax;
 
     // 1) Try via content_topics mapping table
-    try {
-      const result = await db.execute(sql`
-        SELECT ec.*
-        FROM explore_content ec
-        JOIN content_topics ct ON ct.content_id = ec.id
-        WHERE ct.topic_id = ${topicId}
-          AND ec.is_active = 1
-          ${
-            contentTypes.length
-              ? sql`AND ec.content_type IN (${sql.join(
-                  contentTypes.map(t => sql`${t}`),
-                  sql`, `,
-                )})`
-              : sql``
-          }
-          ${priceMin != null ? sql`AND ec.price_min >= ${priceMin}` : sql``}
-          ${priceMax != null ? sql`AND ec.price_max <= ${priceMax}` : sql``}
-        ORDER BY ec.engagement_score DESC, ec.created_at DESC
-        LIMIT ${limit} OFFSET ${offset}
-      `);
+    const result = await db.execute(sql`
+      SELECT ec.*
+      FROM explore_content ec
+      JOIN content_topics ct ON ct.content_id = ec.id
+      WHERE ct.topic_id = ${topicId}
+        AND ec.is_active = 1
+        ${
+          contentTypes.length
+            ? sql`AND ec.content_type IN (${sql.join(
+                contentTypes.map(t => sql`${t}`),
+                sql`, `,
+              )})`
+            : sql``
+        }
+        ${priceMin != null ? sql`AND ec.price_min >= ${priceMin}` : sql``}
+        ${priceMax != null ? sql`AND ec.price_max <= ${priceMax}` : sql``}
+      ORDER BY ec.engagement_score DESC, ec.created_at DESC
+      LIMIT ${limit} OFFSET ${offset}
+    `);
 
-      return (result as any).rows ?? [];
-    } catch (e) {
-      throw e;
-    }
+    return (result as any).rows ?? [];
   }
 
   /**
@@ -221,21 +201,17 @@ export class TopicsService {
     const limit = Math.max(1, Math.min(100, pagination.limit));
     const offset = Math.max(0, (pagination.page - 1) * limit);
 
-    try {
-      const result = await db.execute(sql`
-        SELECT *
-        FROM explore_content
-        WHERE is_active = 1
-          AND topic_id = ${topicId}
-          AND content_type IN ('short', 'video')
-        ORDER BY engagement_score DESC, created_at DESC
-        LIMIT ${limit} OFFSET ${offset}
-      `);
+    const result = await db.execute(sql`
+      SELECT *
+      FROM explore_content
+      WHERE is_active = 1
+        AND topic_id = ${topicId}
+        AND content_type IN ('short', 'video')
+      ORDER BY engagement_score DESC, created_at DESC
+      LIMIT ${limit} OFFSET ${offset}
+    `);
 
-      return (result as any).rows ?? [];
-    } catch (e) {
-      throw e;
-    }
+    return (result as any).rows ?? [];
   }
 
   private mapTopicFromDb(dbTopic: any): Topic {

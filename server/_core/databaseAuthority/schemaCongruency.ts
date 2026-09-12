@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { is, SQL } from 'drizzle-orm';
 import { getTableConfig, MySqlDialect, MySqlTable } from 'drizzle-orm/mysql-core';
 import type { AuthoritySqlConnection } from './connectionAuthority';
+import { readTiDbCheckConstraintCapability } from './tidbCheckConstraintCapability';
 
 export const RUNNER_CONTROL_TABLES = Object.freeze([
   'sql_migration_history',
@@ -36,6 +37,12 @@ export type NormalizedForeignKey = {
 export type NormalizedCheck = {
   name: string;
   expression: string;
+  /**
+   * MySQL reports this per constraint. TiDB exposes enforcement as a cluster
+   * capability, so its value is applied consistently to every discovered
+   * constraint after the capability has been read.
+   */
+  enforced: boolean;
 };
 
 export type NormalizedTable = {
@@ -47,7 +54,7 @@ export type NormalizedTable = {
 };
 
 export type NormalizedSchema = {
-  formatVersion: 1;
+  formatVersion: 2;
   dialect: 'mysql';
   excludedControlTables: readonly string[];
   tables: NormalizedTable[];
@@ -75,6 +82,13 @@ export type SchemaCongruencyReport = {
   desiredDigest: string;
   actualDigest: string;
   differences: SchemaDifference[];
+};
+
+export type CheckConstraintEnforcementSummary = {
+  total: number;
+  enforced: number;
+  allEnforced: boolean;
+  unenforced: string[];
 };
 
 const dialect = new MySqlDialect();
@@ -179,10 +193,7 @@ export function normalizeSqlExpression(value: string): string {
     // boundary; literal content such as 'note _utf8mb4' must stay untouched.
     const charsetIntroducer = value.slice(index).match(/^_utf8mb4\\?'/i);
     const previousSourceCharacter = value[index - 1] ?? '';
-    if (
-      charsetIntroducer &&
-      (index === 0 || !/[a-z0-9_$]/i.test(previousSourceCharacter))
-    ) {
+    if (charsetIntroducer && (index === 0 || !/[a-z0-9_$]/i.test(previousSourceCharacter))) {
       appendPendingWhitespace("'");
       normalized += "'";
       quote = "'";
@@ -408,7 +419,8 @@ export function normalizeSqlExpression(value: string): string {
         hasTopLevelArithmeticOperator(inner) ||
         /[+\-*/%]/.test(significantBefore(normalized, opening)) ||
         /[+\-*/%]/.test(significantAfter(normalized, index))
-      ) continue;
+      )
+        continue;
 
       normalized = `${normalized.slice(0, opening)}${inner}${normalized.slice(index + 1)}`;
       changed = true;
@@ -500,9 +512,7 @@ function actualDefault(value: unknown, type: string): string | null {
   if (/^(?:current_timestamp(?:\(\))?|now\(\))$/i.test(text.trim())) {
     return 'current_timestamp';
   }
-  const preciseCurrentTime = text
-    .trim()
-    .match(/^\(?\s*(?:current_timestamp|now)\((\d+)\)\s*\)?$/i);
+  const preciseCurrentTime = text.trim().match(/^\(?\s*(?:current_timestamp|now)\((\d+)\)\s*\)?$/i);
   if (preciseCurrentTime) {
     return `current_timestamp(${preciseCurrentTime[1]})`;
   }
@@ -549,7 +559,7 @@ function finishSchema(tables: NormalizedTable[]): NormalizedSchema {
     };
   });
   const canonical = {
-    formatVersion: 1 as const,
+    formatVersion: 2 as const,
     dialect: 'mysql' as const,
     excludedControlTables: RUNNER_CONTROL_TABLES,
     tables: providerNormalizedTables.sort((left, right) =>
@@ -633,6 +643,7 @@ export function normalizedDesiredSchema(schemaExports: Record<string, unknown>):
     const checks: NormalizedCheck[] = (config.checks as any[]).map(check => ({
       name: check.name,
       expression: normalizeSqlExpression(dialect.sqlToQuery(check.value).sql),
+      enforced: true,
     }));
 
     return {
@@ -644,6 +655,27 @@ export function normalizedDesiredSchema(schemaExports: Record<string, unknown>):
     };
   });
   return finishSchema(tables);
+}
+
+export function summarizeCheckConstraintEnforcement(
+  schema: NormalizedSchema,
+): CheckConstraintEnforcementSummary {
+  const checks = schema.tables.flatMap(table =>
+    table.checks.map(check => ({
+      identity: `${table.name}.${check.name}`,
+      enforced: check.enforced,
+    })),
+  );
+  const unenforced = checks
+    .filter(check => !check.enforced)
+    .map(check => check.identity)
+    .sort((left, right) => left.localeCompare(right));
+  return {
+    total: checks.length,
+    enforced: checks.length - unenforced.length,
+    allEnforced: unenforced.length === 0,
+    unenforced,
+  };
 }
 
 function rowsFromResult(result: unknown): Array<Record<string, unknown>> {
@@ -665,8 +697,19 @@ async function queryRows(
   return rowsFromResult(await connection.execute(statement));
 }
 
+function normalizedCheckEnforcement(value: unknown): boolean | null {
+  const normalized = String(value ?? '')
+    .trim()
+    .toUpperCase();
+  if (!normalized) return null;
+  if (['YES', 'ON', 'TRUE', '1'].includes(normalized)) return true;
+  if (['NO', 'OFF', 'FALSE', '0'].includes(normalized)) return false;
+  throw new Error(`Physical CHECK inventory returned unknown enforcement state ${normalized}.`);
+}
+
 export async function normalizedPhysicalSchema(
   connection: AuthoritySqlConnection,
+  provider: 'mysql' | 'tidb' | 'unknown' = 'unknown',
 ): Promise<NormalizedSchema> {
   const excluded = new Set<string>(RUNNER_CONTROL_TABLES);
   const tableRows = await queryRows(
@@ -757,12 +800,19 @@ export async function normalizedPhysicalSchema(
     tables.get(tableNameValue)!.foreignKeys.push(normalized);
   }
 
-  const checksByIdentity = new Map<string, Record<string, unknown>>();
+  type CheckInventory = {
+    tableName: string;
+    constraintName: string;
+    checkClause: string;
+    enforced: boolean | null;
+  };
+  const checksByIdentity = new Map<string, CheckInventory>();
   const addCheckRows = (rows: Array<Record<string, unknown>>): void => {
     for (const row of rows) {
       const tableName = String(rowValue(row, 'table_name') ?? '');
       const constraintName = String(rowValue(row, 'constraint_name') ?? '');
       const checkClause = String(rowValue(row, 'check_clause') ?? '').trim();
+      const enforced = normalizedCheckEnforcement(rowValue(row, 'enforced'));
       if (!tableName || !constraintName || !checkClause) {
         throw new Error('Physical CHECK inventory returned malformed metadata.');
       }
@@ -773,12 +823,26 @@ export async function normalizedPhysicalSchema(
       const existing = checksByIdentity.get(identity);
       if (
         existing &&
-        normalizeSqlExpression(String(rowValue(existing, 'check_clause') ?? '')) !==
-          normalizeSqlExpression(String(rowValue(row, 'check_clause') ?? ''))
+        normalizeSqlExpression(existing.checkClause) !== normalizeSqlExpression(checkClause)
       ) {
         throw new Error(`CHECK inventory disagrees about ${tableName}.${constraintName}.`);
       }
-      checksByIdentity.set(identity, row);
+      if (
+        existing &&
+        existing.enforced !== null &&
+        enforced !== null &&
+        existing.enforced !== enforced
+      ) {
+        throw new Error(
+          `CHECK inventory disagrees about enforcement for ${tableName}.${constraintName}.`,
+        );
+      }
+      checksByIdentity.set(identity, {
+        tableName,
+        constraintName,
+        checkClause,
+        enforced: existing?.enforced ?? enforced,
+      });
     }
   };
   let portableCheckRows: Array<Record<string, unknown>> = [];
@@ -786,7 +850,7 @@ export async function normalizedPhysicalSchema(
   try {
     portableCheckRows = await queryRows(
       connection,
-      "SELECT tc.TABLE_NAME AS table_name, tc.CONSTRAINT_NAME AS constraint_name, cc.CHECK_CLAUSE AS check_clause FROM information_schema.TABLE_CONSTRAINTS tc INNER JOIN information_schema.CHECK_CONSTRAINTS cc ON cc.CONSTRAINT_SCHEMA = tc.CONSTRAINT_SCHEMA AND cc.CONSTRAINT_NAME = tc.CONSTRAINT_NAME WHERE tc.CONSTRAINT_SCHEMA = DATABASE() AND tc.CONSTRAINT_TYPE = 'CHECK' ORDER BY tc.TABLE_NAME, tc.CONSTRAINT_NAME",
+      "SELECT tc.TABLE_NAME AS table_name, tc.CONSTRAINT_NAME AS constraint_name, cc.CHECK_CLAUSE AS check_clause, tc.ENFORCED AS enforced FROM information_schema.TABLE_CONSTRAINTS tc INNER JOIN information_schema.CHECK_CONSTRAINTS cc ON cc.CONSTRAINT_SCHEMA = tc.CONSTRAINT_SCHEMA AND cc.CONSTRAINT_NAME = tc.CONSTRAINT_NAME WHERE tc.CONSTRAINT_SCHEMA = DATABASE() AND tc.CONSTRAINT_TYPE = 'CHECK' ORDER BY tc.TABLE_NAME, tc.CONSTRAINT_NAME",
     );
   } catch (error) {
     // Some TiDB versions do not support the portable MySQL CHECK inventory;
@@ -816,11 +880,25 @@ export async function normalizedPhysicalSchema(
     );
   }
   addCheckRows(tidbCheckRows);
+  const tidbCapability =
+    provider === 'tidb' ? await readTiDbCheckConstraintCapability(connection, provider) : null;
   for (const row of checksByIdentity.values()) {
-    const table = tables.get(String(rowValue(row, 'table_name') ?? ''))!;
+    const table = tables.get(row.tableName)!;
+    const enforced = provider === 'tidb' ? tidbCapability?.enabled === true : row.enforced;
+    if (provider === 'mysql' && enforced === null) {
+      throw new Error(
+        `MySQL CHECK enforcement metadata is unavailable for ${row.tableName}.${row.constraintName}.`,
+      );
+    }
+    if (enforced === null) {
+      throw new Error(
+        `CHECK enforcement could not be proven for ${row.tableName}.${row.constraintName}.`,
+      );
+    }
     table.checks.push({
-      name: String(rowValue(row, 'constraint_name') ?? ''),
-      expression: normalizeSqlExpression(String(rowValue(row, 'check_clause') ?? '')),
+      name: row.constraintName,
+      expression: normalizeSqlExpression(row.checkClause),
+      enforced,
     });
   }
 

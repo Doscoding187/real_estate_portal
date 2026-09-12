@@ -6,7 +6,12 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { authorizeDatabaseOperation } from '../authorization';
 import type { AuthoritySqlConnection } from '../connectionAuthority';
 import { resolveDatabaseAuthority } from '../context';
-import { assessAuthorizedDatabaseReadiness, assessRuntimeDatabaseReadiness } from '../readiness';
+import {
+  assessAuthorizedDatabaseReadiness,
+  assessRuntimeDatabaseReadiness,
+  schemaCongruencyReadinessLayer,
+} from '../readiness';
+import type { SchemaCongruencyReport } from '../schemaCongruency';
 import { deriveGitWorktreeIdentity } from '../worktreeIdentity';
 import { loadAndValidateMigrationManifest } from '../../../migrations/migrationManifest';
 
@@ -113,6 +118,39 @@ afterEach(() => {
 });
 
 describe('truthful layered readiness', () => {
+  it('fails readiness when a CHECK predicate is unchanged but enforcement is disabled', () => {
+    const report: SchemaCongruencyReport = {
+      congruent: false,
+      desiredDigest: 'd'.repeat(64),
+      actualDigest: 'a'.repeat(64),
+      differences: [
+        {
+          category: 'check',
+          path: 'fixture_parents.fixture_parents_positive_id',
+          expected: {
+            name: 'fixture_parents_positive_id',
+            expression: '`id` > 0',
+            enforced: true,
+          },
+          actual: {
+            name: 'fixture_parents_positive_id',
+            expression: '`id` > 0',
+            enforced: false,
+          },
+        },
+      ],
+    };
+
+    expect(
+      schemaCongruencyReadinessLayer(report, {
+        applicable: false,
+        variable: 'tidb_enable_check_constraint',
+        value: null,
+        enabled: null,
+      }),
+    ).toMatchObject({ state: 'not-ready', code: 'schema-not-congruent' });
+  });
+
   it('keeps process liveness green while an unreachable database is red', async () => {
     const value = fixture();
     const report = await assessRuntimeDatabaseReadiness({
