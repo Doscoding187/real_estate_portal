@@ -1,7 +1,7 @@
 # Property Listify Database Transition and Launch Master Plan
 
 **Status:** WP0 correction required; G0 is not approved; WP1 is blocked
-**Plan version:** 1.1 (correction of 83e9a57f)
+**Plan version:** 1.2 (correction of 0463ac2a; G0 remains unapproved)
 **Prepared:** 2026-09-12
 **Owner:** Principal architecture / database release authority
 
@@ -66,54 +66,54 @@ The following decisions are retained from the senior plan:
 
 ## Non-negotiable control bindings
 
-### Reviewed-plan-digest binding
+### Document and runner digest binding
 
-Every WP1–WP10 packet must record and bind these identities:
+The governing document and an executable release plan have separate identities.
+Every packet records the master-plan version, packet revision, source SHA/tree,
+manifest/model digests, target classification/fingerprint and evidence
+references. A material change invalidates the packet review and requires a new
+packet revision and gate decision.
 
-| Identity | Required value |
-| --- | --- |
-| Source | Exact application commit SHA and tree SHA |
-| Migration authority | Accepted old head, expected new head, manifest digest and model-inventory digest |
-| Plan | Exact reviewed-plan digest and packet revision |
-| Target | Sanitized target class, exact database name, host/port classification and target fingerprint |
-| Operation | Named Database Authority operation, credential class and acknowledgement, where required |
-| Evidence | Immutable artifact references, command output, timestamps and limitations |
+The runner-generated release-plan digest is different. A read-only protected
+`db:release:plan` derives it from the then-current target, accepted old head,
+expected new head, manifest, ledger and operation inputs. At WP0, ordinary
+protected apply does **not** yet accept a previously reviewed runner digest;
+only specialized recovery paths have that binding. This is a control gap, not a
+permission to pass a document digest to an existing command.
 
-The reviewed-plan digest is calculated from the approved plan and packet inputs.
-An implementation agent must stop if the plan text, packet, source SHA,
-manifest/model digest, target fingerprint or operation changes after review.
-The relevant plan or release command must receive the exact
-`--plan-digest=<reviewed-plan-digest>` value and re-resolve the target before a
-side effect. Protected apply also requires the exact target acknowledgement.
-An old digest or acknowledgement never authorizes a new operation. A changed
-digest requires principal review and a new gate decision.
+WP2 must implement and test an expected runner plan digest for ordinary
+protected apply. The runner must compare it with a freshly computed plan before
+durable mutation and revalidate it under the migration lock, while retaining
+the accepted old head, expected new head, target approval and acknowledgement
+checks. Required negative tests are missing/wrong digest, different target,
+changed manifest with the same head name, changed ledger/incomplete attempt,
+stale plan after another release, invalid acknowledgement and a migration
+credential targeting another database.
 
 ### CHECK and foreign-key enforcement
 
-The fixed 22 canonical CHECK definitions and their dependencies are an
-admission requirement. The audit identifies nine CHECKs with FK dependencies
-and 12 distinct affected keys. The five affected table families are
-`catalogue_publishers`, `development_supersessions`, `land_claims`,
-`land_conflict_cases` and `location_provider_mappings`.
+Constraint coverage is derived from the selected release revision's canonical
+Drizzle model and active manifest. WP1 records the complete release-specific
+inventory, affected consumers and FK lifecycle semantics; WP2 implements
+physical enforcement verification. The previously observed TiDB inventory of
+22 CHECK definitions, nine FK-dependent CHECKs and 12 affected keys is
+historical evidence only. It must not be treated as a fixed launch inventory.
+The provisional candidate also includes
+`billable_accounts_exactly_one_owner`, which must be included when its selected
+release revision is admitted.
 
-Provider admission must prove all of the following on the selected engine and
-on a temporary independently restored target:
+Provider admission must prove exact predicates, active foreign keys, rejection
+of invalid CHECK/orphan writes, deletion/update lifecycle semantics, fresh
+establishment, historical-head establishment where applicable, and normalized
+physical congruency. Metadata presence alone is insufficient: an unchanged
+expression that is unenforced must fail readiness.
 
-- the CHECK capability is explicitly enabled and remains enabled;
-- metadata contains the exact canonical 22 predicates and names;
-- an isolated invalid-write test rejects each predicate, including a valid
-  parent where an FK is involved;
-- valid writes and required parent deletion/update actions preserve the
-  canonical lifecycle semantics;
-- fresh creation and historical-head establishment both succeed; and
-- normalized physical metadata is congruent with the desired Drizzle model.
-
-Metadata presence alone is insufficient. `INFORMATION_SCHEMA` action names do
-not prove whether a restrictive FK action was explicitly authored, and the
-TiDB provider has no reliable `ENFORCED` metadata field. A provider failure,
-ambiguous action provenance or missing negative-write proof blocks G1/G4 and
-must be reported as `Blocked`, with no migration replay, ledger edit, manual
-DDL, or constraint-disabling workaround.
+Do not add disposable TiDB execution as a launch prerequisite. Existing TiDB
+experiments remain historical provider evidence. Local MySQL engine admission,
+Azure establishment and Azure enforcement verification are separate packets.
+An unproven constraint, lifecycle mismatch or enforcement failure blocks the
+relevant gate; it never permits replaying migrations, editing a ledger, manual
+DDL or constraint weakening.
 
 ### Credential and grant boundaries
 
@@ -136,90 +136,99 @@ by a copied URL or display label.
 
 ### Capacity thresholds
 
-These are the governing numerical acceptance thresholds. They are acceptance
-criteria, not observed results; measurements remain `Pending` until WP6.
-Any change requires principal review and a new plan digest.
+B1ms is a conditional controlled-launch option. These are proposed acceptance
+criteria pending the required evidence and approval, not observed results.
+Before testing, record the launch cohort, peak simultaneous sessions, 30- and
+90-day growth, request/worker mix, largest tenant, media/event growth and real
+hosting-to-database latency. Test at least twice the accepted 90-day data
+forecast. Until that forecast exists, use the senior plan's provisional fixture
+floor: 10,000 listings, 2,000 users, 100 developments, 50,000 leads and
+250,000 activity/provider/delivery events with realistic skew.
 
-| Measure | Required threshold for a B1ms controlled launch |
+Run realistic browser/API flows for at least 24 hours of representative traffic
+and background work, including two expected peak windows, a 30-minute test at
+twice planned peak, cold-cache, restart, retry and backlog-recovery exercises.
+The provisional workload is 5 application requests/second sustained and
+20/second during peaks; replace it only with a documented forecast before the
+test, never afterward to make a failed run pass.
+
+| Measure | Proposed B1ms GO threshold |
 | --- | --- |
-| Load shape | 2x forecast launch concurrency sustained for 60 minutes, followed by 3x forecast for 10 minutes |
-| CPU | Average below 70% over the sustained window; no more than 5 consecutive minutes above 85% |
-| CPU credits | No depletion and at least 20% of the starting credit balance remaining at test end |
-| Memory | Average used below 75%; at least 25% available at every 5-minute sample |
-| Connections | Peak below 70% of the provider limit; zero pool-exhaustion events or connection refusals |
-| Database/API latency | Read-path p95 ≤ 750 ms and p99 ≤ 1.5 s; write-path p95 ≤ 1 s and p99 ≤ 2 s |
-| Errors | Application/database error rate below 1%; zero integrity, authorization or data-loss errors |
-| Storage | Used storage below 70% and at least 30% free at test end; no I/O throttling or disk-full warning |
-| Recovery during test | Restart or failover readiness within the accepted RTO; no unbounded queue or lease accumulation |
+| Integrity/security | Zero lost accepted writes, duplicate durable outcomes, tenant leaks or enforcement failures |
+| Unexpected application errors | <0.1% during normal/peak load; no DB-attributable timeouts |
+| Read API latency | p95 ≤750 ms; p99 ≤2 seconds |
+| Write API latency | p95 ≤1 second; p99 ≤2 seconds, excluding separately measured external-provider latency |
+| Connection acquisition | p95 ≤250 ms; bounded queues; no exhaustion |
+| CPU credits | No progressive depletion over the representative daily cycle; ≥30% of measured full balance at the lowest point; recovery before the next peak |
+| Memory | Stable usage, p95 below 80%, no OOM/restart or upward leak trend |
+| Connections | Aggregate application/worker cap ≤40 with at least 10 operational connections reserved, subject to engine limit and measured memory cost |
+| Storage | ≥30% free and ≥90 days forecast headroom after logs and temporary work |
+| Workers/backlog | No duplicate effects; normal due work meets its agreed SLO; peak backlog drains within 15 minutes |
+| Restart/reconnection | Application recovers within five minutes without manual pool repair or lost accepted work |
+| Recovery | The proposed objectives below are demonstrated |
 
-The load model, forecast, query mix and sampling source must be included in
-the packet. A failed threshold blocks G5. Capacity may be accepted only on the
-measured target and exact release SHA; it cannot be inferred from connectivity,
-idle metrics or a different tier.
+Any threshold change, including a change to backlog criteria, requires
+principal review before acceptance. A failure blocks B1ms admission, not
+necessarily Azure as a provider; use the smallest General Purpose configuration
+that passes and re-test after scaling.
 
 ### RPO, RTO and backup policy
 
-The working launch objectives, pending measured acceptance by Edward and
-operations, are:
+The senior plan's proposed launch objectives require evidence and Edward's
+acceptance; they are not Azure guarantees:
 
-| Failure scope | RPO target | RTO target |
-| --- | ---: | ---: |
-| Database/service or zonal failure | ≤ 5 minutes | ≤ 60 minutes |
-| Regional failure and provider-region recovery | ≤ 15 minutes | ≤ 4 hours |
+| Incident | Proposed objective |
+| --- | --- |
+| Application deployment defect, database intact | Restore a compatible artifact or maintenance service within 30 minutes while preserving database writes |
+| Database corruption or unrecoverable in-region instance problem | RPO ≤15 minutes; RTO ≤4 hours |
+| Regional failure under the initial non-geo-redundant model | RPO ≤24 hours; RTO ≤24 hours, supported by an independently stored backup and demonstrated provisioning path |
+| TiDB-to-Azure transfer | Zero unexplained loss of required records from the frozen source snapshot |
 
-These objectives remain `Pending` until the owner decision D-007 is recorded in
-the launch register and the corresponding drill is observed. A drill that
-misses an objective blocks G5/G6; it does not justify silently relaxing the
-target.
+Start with 14-day automated Azure retention. Verify PITR points and freshness;
+produce encrypted logical backups on a scheduled basis with freshness below the
+regional RPO; retain an independent copy outside the primary region and outside
+the application runtime's deletion authority; and retain release metadata,
+grants/configuration definitions and recovery instructions independently.
+Backup existence is not recovery proof.
 
-The required backup policy is:
-
-- provider-managed automated backup and point-in-time recovery with at least
-  35 days of retention, subject to exact provider capability proof;
-- an encrypted logical backup at least daily while authoritative writes are
-  live, plus one immediately before each migration, final capture and cutover;
-- a separately retained weekly full export and a monthly restore drill to a
-  temporary isolated target;
-- checksum, row-count, schema-congruency and application-readiness evidence
-  after each restore drill; and
-- retention, access, encryption-key ownership, deletion and cross-region
-  placement recorded in the backup packet before production open.
-
-No backup is considered usable until a restore is observed. Backup files and
-logs must not contain credentials or personal data beyond the minimum approved
-test evidence.
+WP6 must restore the candidate to a new server, restrict access and rotate or
+revoke copied credentials, register/authorize the restored target, validate the
+matching application with external effects disabled, create governed known-time
+test transactions, perform PITR, exercise connection switching/pool draining/
+worker restart, and measure the complete recovery duration. It must separately
+restore a logical backup through its approved procedure. A missed objective
+blocks G5/G6 unless Edward explicitly accepts a revised objective through a
+revised plan.
 
 ### Cutover and recovery procedure
 
 The cutover packet must use this sequence and record an abort point after each
 stage:
 
-1. Confirm G6 approval, exact source/tree, reviewed-plan digest, target
-   fingerprint, backup freshness and operator/approver identities.
-2. Announce the bounded maintenance window and stop new TiDB writes through the
-   governed application/data-owner control. Do not edit migration history.
-3. Capture TiDB at the recorded position, produce the approved export, and
-   reconcile counts, checksums, identities, foreign keys, CHECK predicates and
-   classified exclusions on the temporary restore target.
-4. Run final Azure readiness, backup and credential-boundary checks. Keep the
-   Azure candidate non-authoritative until the cutover decision is recorded.
-5. Apply the exact approved release operation through Database Authority, then
-   enable authoritative Azure writes and route the application to that exact
-   target.
-6. Run layered service, schema, congruency, reference-data, scenario,
-   application, API and browser smoke checks. Record the observed result and
-   source/target identities before opening launch traffic.
-7. Keep TiDB read-only as preserved recovery evidence. Once Azure accepts
-   authoritative writes, do not switch back to TiDB. Recover forward from
-   Azure backups or a reviewed temporary target if a post-cutover defect occurs.
+1. Confirm G6 approval, final release SHA/artifacts/configuration, runner plan
+   digest, target fingerprint, backups, operators and staffed window.
+2. Put the old application into maintenance/read-only mode; stop workers,
+   schedulers, imports and administrative writers; revoke TiDB SQL writes;
+   handle inbound webhooks through verified retry/durable capture; drain and
+   prove stopped transactions.
+3. Record the freeze timestamp, capture the final consistent TiDB snapshot,
+   import it into the production Azure database and reconcile required records,
+   relationships, money, delivery states and media references there.
+4. Configure every API/worker process for the approved Azure target and deploy
+   pinned artifacts with public writes still closed.
+5. Run approved production readiness and smoke checks with traffic closed.
+6. Obtain the explicit go-live GO, then open writes and enable workers in a
+   controlled order while observing accepted writes, lead delivery,
+   authorization and Live payments where applicable.
+7. Keep TiDB read-only for 14 days, reviewing at days 7 and 14.
 
-Before Azure accepts authoritative writes, an aborted cutover may return to
-the last verified TiDB position only when the packet proves no authoritative
-Azure writes were accepted. After Azure writes exist, recovery is forward-only:
-stop or narrow affected traffic, preserve attempts and logs, restore or repair
-through a newly approved bounded packet, reconcile data, and reopen only after
-the same layered checks pass. Never use an unreviewed rollback import, generic
-down migration, ledger edit or old acknowledgement.
+Before Azure accepts authoritative writes, abort under the reviewed
+source-resumption procedure only when the old release is independently safe and
+its known constraint limitations are accepted. After Azure accepts writes,
+Azure remains authoritative: use a compatible application rollback, forward
+correction or Azure recovery. Do not redirect writers to TiDB or invent reverse
+synchronization. Never use an unreviewed rollback import, generic down
+migration, ledger edit or old acknowledgement.
 
 ## Release-source provenance
 
@@ -283,6 +292,30 @@ admission.
 | D-007 | Accept recovery objectives and regional-failure posture | Edward + operations | Restore/PITR/logical-backup drill with measured RPO/RTO | Open |
 | D-008 | Define Live/Pilot/Hidden launch scope | Edward + product authority | Updated central launch register and journey evidence | Open |
 
+## Live, Pilot and Hidden journey requirements
+
+The central launch register remains the sole disposition authority. WP0 records
+the inventory; WP3 proves every Live requirement on the selected release; WP7
+reconciles it before cutover. Removing navigation does not make a capability
+Hidden: Pilot and Hidden surfaces require enforceable backend access and worker
+boundaries.
+
+| Surface | Required evidence if Live |
+| --- | --- |
+| Registration, verification and authentication/recovery | Role onboarding, duplicate handling, expiry, replay protection, delivery configuration, session/revocation, reset expiry and enumeration resistance |
+| Authorization | Direct API denial, membership revocation, cross-tenant reads/writes and administrator boundaries |
+| Agents/agencies and developers/developments | Membership/organisation ownership, authored/publication lifecycle, public detail, lead visibility/attribution and deletion protections |
+| Listings, locations and Land | Draft/edit/publish/withdraw, media/source-public projection, withdrawn exclusion, canonical identity, one governed geography authority and the public classification allow-list |
+| Leads and workers | Consent, custody, recipient/attribution, durable delivery, crash/replay/reconciliation, bounded claims, leases, fencing, retries, idempotency and restart |
+| Entitlements, payments and webhooks | Server-side grant/expiry/revocation; provider authenticity, duplicate/out-of-order events, retry, reconciliation and recovery when paid launch is Live |
+| Founder/admin | Moderation, publication control, incident visibility, audit and safe operational commands |
+
+Service providers, Explore, paid checkout and incomplete marketplace,
+distribution, commission, sponsorship or boost capabilities remain Pilot or
+Hidden unless the launch register records their separate evidence and approval.
+Pilot features are limited to an approved cohort; Hidden features retain schema,
+security and worker isolation requirements.
+
 ## WP0 evidence record and current authorization
 
 WP0 is correction-only. Its purpose is to preserve the senior plan in the
@@ -329,8 +362,8 @@ remote, protected or shared target was accessed by this correction.
 | Field | Current record |
 | --- | --- |
 | Evidence | This corrected plan, WP0 provenance table, authority links, exact base/branch identity and final tracked-file checks |
-| Approver | Principal architect, after reviewing the corrected commit and coverage checklist |
-| Blockers | G0 review not yet granted; authority status command remains dependency-blocked; all pending decisions above |
+| Approver | Edward + principal architect, after reviewing the corrected commit and coverage checklist |
+| Blockers | G0 review not yet granted; incomplete plan/provenance/ownership record, validation defect, mixed worktree or missing budget/launch-disposition owner |
 | Recovery position | Remain in WP0 correction; preserve this branch and evidence; do not assign or start WP1 |
 | Current decision | **G0 not approved. WP1 is not authorized.** |
 
@@ -338,267 +371,237 @@ remote, protected or shared target was accessed by this correction.
 
 Every gate packet must use the authority evidence record fields: claim,
 mechanism, sequence, evidence, boundary, owner, status and next gate. A gate
-is complete only when its evidence is tied to the exact reviewed-plan digest,
-source/tree, target fingerprint and relevant manifest/model digest.
+is complete only when its evidence is tied to the packet revision, source/tree,
+target fingerprint and relevant manifest/model digest. Where a protected runner
+plan exists, its separately generated plan digest must also be recorded.
 
 | Gate | Required evidence | Approver | Blockers | Recovery position |
 | --- | --- | --- | --- | --- |
-| G0 scope/provenance | Corrected WP0 record; exact branch/base; authority links; WP0 provenance commands; digest candidate; coverage checklist; no mutation evidence | Principal architect | Incomplete specification, unverified provenance, validation defect, mixed worktree or missing owner | Return to WP0 correction; WP1 remains unassigned |
-| G1 migration/engine admission | Per-range `0066–0090` lineage/checksum/consumer packet; fresh-chain MySQL matrix; provider CHECK/FK proof; 22-check negative writes; model/physical congruency | Principal architect + database authority | Any lineage ambiguity, unsupported SQL, failed CHECK/FK proof, failed fresh creation or unresolved failed attempt | Stop; preserve logs/attempts; use only a reviewed recovery packet; no replay or ledger edit |
-| G2 authority/security controls | Target admission, exact fingerprint, role grants, credential separation, operation policy, secret-handling and break-glass records | Principal architect + security/release authority | Unknown/shared target, runtime DDL/grant/ledger access, secret exposure or missing acknowledgement | Do not connect or provision; revoke/quarantine unaccepted credentials and return to G2 packet |
-| G3 integrated release acceptance | One integrated release SHA; CI and supported checks; fresh local schema/readiness; consumer, API and application acceptance; launch-register linkage | Principal architect | Source drift, failed checks, stale schema consumer, readiness failure or unresolved launch finding | Keep candidate unpromoted; repair in a new bounded packet and invalidate the old digest |
-| G4 Azure establishment | Approved temporary/production-candidate resource classification; exact engine/version; empty/fresh-chain and restored-head proof; network, backup and readiness evidence | Release authority + database authority | Wrong target, engine mismatch, permission failure, CHECK enforcement gap or permanent staging drift | Dispose only exact owned temporary target through its acknowledgement; preserve evidence; no production apply |
-| G5 recovery/capacity proof | Backup policy evidence; observed restore/PITR; measured RPO/RTO; B1ms thresholds; representative load; alerting and runbook rehearsal | Edward + principal architect + operations | Any threshold miss, unobserved restore, RPO/RTO miss, data loss, throttling or incomplete telemetry | B1ms not accepted; resize/rework packet or hold launch; retain last verified target |
-| G6 cutover approval | Final capture/export reconciliation; TiDB read-only proof; fresh backup; exact change packet; abort points; operator/approver record; smoke plan | Edward + release authority | Unreconciled data, stale backup, writes still open, changed digest, missing recovery position or pending launch decision | Abort before Azure writes; retain TiDB authority. After Azure writes, forward recovery only |
-| G7 production open | Azure authoritative-write proof; layered readiness; application/API/browser smoke; launch-register decision and exact deployed SHA | Edward + product/release authority | Readiness or smoke failure, target mismatch, scope mismatch or unresolved L0/L1 issue | Keep traffic closed or narrow it; recover forward under approved packet |
-| G8 stabilization | 72-hour monitored evidence, error/latency/capacity/backup review, incident disposition and no unexplained integrity drift | Principal architect + operations | Alert breach, integrity mismatch, recovery incident or missing telemetry | Re-enter incident recovery; do not declare stable or retire TiDB |
-| G9 TiDB retirement | Accepted Azure history and backups; archive/export retention; TiDB writer revocation; dependency inventory; final launch-register and evidence closure | Edward + data owner + release authority | Unresolved retention/ownership, active consumer, missing restore evidence or recovery dependency | Retain TiDB read-only and defer retirement; no deletion |
+| G0 scope and inventory | Adopted plan; verified base/candidate; launch dispositions; TiDB inventory plan; owners and budget | Edward + principal architect | Incomplete scope, provenance, owner, budget or launch-disposition record | No database transition has occurred; return to WP0 |
+| G1 migration/engine admission | Per-migration dispositions; exact-engine local proof; lifecycle invariants; engine selection | Principal architect | Lineage ambiguity, unsupported historical step, failed local CHECK/FK proof or unresolved consumer/data disposition | Azure remains untouched; preserve evidence and escalate the architecture decision |
+| G2 authority/security readiness | Reviewed runner-digest binding, enforcement checks, target admission, identity/grant tests and protected operational routes | Principal architect + security reviewer | Any silent authority broadening, wrong target/credential, unenforced constraint or incomplete-attempt bypass | No protected establishment yet; correct WP2 |
+| G3 integrated release acceptance | Approved merged SHA; required CI/local tests; Live journeys pass; skipped tests dispositioned; release artifacts identified | Principal architect + Edward for product scope | Source drift, failed checks, missing Live evidence or unresolved launch disposition | Existing TiDB remains source if still active |
+| G4 Azure establishment | Exact approved plan applied once; correct head; no incomplete attempts; congruent enforced schema; launch data verified | Authorized release operator; principal architect reviews result | Target/engine mismatch, plan/acknowledgement failure, incomplete attempt, enforcement failure or invalid launch data | Candidate remains closed; preserve and recover failure evidence |
+| G5 recovery/capacity/security proof | Azure restore, PITR, logical recovery, hosting connectivity, rotation, browser/load evidence and B1ms decision | Mandatory principal architect + Edward | Restore, security, capacity, threshold, telemetry or recovery-objective failure | Production remains closed; temporary targets remain isolated |
+| G6 final cutover readiness | Final release record; import rehearsal; writer census; freeze/reconciliation plan; rollback-compatible artifact or maintenance fallback; staffed window | Mandatory principal architect + Edward | Stale release/configuration, incomplete rehearsal, unknown writer, missing final import/reconciliation or recovery position | TiDB remains available under existing controls |
+| G7 open production | Source frozen; final import reconciled; all services target Azure; production readiness and smoke pass | Edward's explicit go-live approval | Failed reconciliation, target mismatch, readiness/smoke failure or unapproved Live scope | Azure becomes sole authority only once writes open |
+| G8 stabilization acceptance | Live journey evidence; alerts operated; backups current; no unexplained data mismatch; actual capacity within envelope | Release owner; principal architect for deviations | Integrity mismatch, alert/backup failure, capacity breach or unresolved incident | Azure rollback/recovery only |
+| G9 TiDB retirement | 14-day retention satisfied; archive retrievable; no dependencies; reconciliation and recovery accepted | Edward following principal-architect closure review | Open incident/reconciliation, inaccessible archive, active dependency or recovery concern | Azure and independent archives remain recovery authorities; defer deletion |
 
 ## Work packages WP0–WP10
 
-The work packages are serialized. A later package may prepare read-only
-evidence while its predecessor is under review only when the assigned packet
-explicitly permits that preparation; it may not perform the predecessor's
-approval or side effect.
+Every packet reports its master-plan and packet revision, source SHA/tree,
+changed files, target class/fingerprint, credential class, manifest/model and
+runner-plan digests where applicable, command/test results, durable evidence,
+current safe state, remaining recovery options, requested gate and required
+approver. Packet assignment never authorizes a protected mutation.
 
-### WP0 — Correct and admit the governing plan
+### WP0 — Establish the governing release record
 
-**Prerequisites:** Task-owned clean worktree, recorded parent/base, senior-plan
-decisions available, no protected target operation.
+**Prerequisites and work:** None beyond the task-owned clean worktree. Record
+remote `main`, candidate ancestry and dirty-worktree findings; commit this plan,
+the decision/migration records, Live/Pilot/Hidden inventory, and operator,
+cost and recovery owners.
 
-**Execution:** Correct this record; preserve the decision and migration
-registers; link canonical authorities and the central launch register; record
-provenance, ownership, validation limits, controls, gates and recovery
-positions; repair tracked-file whitespace; commit documentation only.
+**Acceptance/report:** G0 has no implicit scope or ownership field, all
+provenance and validation limits are durable, `git show --check` passes and the
+report requests G0 only.
 
-**Acceptance:** This plan is committed on the task-owned branch; G0 has an
-actionable evidence/approver/blocker/recovery record; all WP0 fields are
-present; current status explicitly says G0 is not approved and WP1 is blocked;
-`git show --check <corrected-commit>` passes; final status is clean.
+**Failure handling:** Resolve documentary/source conflicts before database work.
+No database mutation is needed.
 
-**Failure handling:** Stop at documentation. Do not install dependencies,
-initialize a database, touch another worktree, run a migration, alter
-credentials or contact a protected target. Report the failed check and remain
-in WP0.
+### WP1 — Admit migration lineage and engine
 
-**Report:** Corrected commit SHA/tree, changed-file list, base/parent, command
-results, limitations, coverage checklist and G0 disposition.
+**Prerequisites:** G0 and a clean candidate worktree.
 
-### WP1 — Migration lineage and engine admission
+**Work:** Audit candidate migrations, historical applications and consumers;
+prove CHECK/FK and deletion semantics on isolated local MySQL 8.0/8.4 as
+needed; establish the selected engine or return a concrete blocker. Derive the
+complete selected-revision constraint inventory, including billable-account
+ownership where the candidate contains it.
 
-**Prerequisites:** G0 approved by the principal architect and a named WP1
-packet with a new reviewed-plan digest; dependency-complete authority status.
+**Acceptance/report:** A migration-by-migration disposition table, intact
+manifest/inventory evidence, fresh establishment, lifecycle/concurrency tests,
+consumer contract and engine evidence support G1.
 
-**Execution:** Validate manifest membership, contiguous identity, parent and
-checksum lineage; review `0066–0090` by range; run the structural TiDB audit;
-exercise fresh and historical chains on disposable MySQL/TiDB targets; prove
-the 22 CHECKs, FK actions, failed-attempt recovery position and consumer
-compatibility. Prefer MySQL 8.4 after proof; record any dated 8.0 decision.
+**Failure handling:** No Azure experimentation compensates for missing local
+proof. An unexecutable historical step requires architectural escalation; do
+not rewrite, renumber, omit or weaken migrations/constraints.
 
-**Acceptance:** One admitted expected head, intact checksums, no unresolved
-failed/running attempt, exact engine capability proof, fresh creation,
-historical establishment, physical congruency and per-range evidence all pass.
+### WP2 — Close release-control and target-security gaps
 
-**Failure handling:** Stop at the first unexpected result. Preserve sanitized
-logs and durable attempt evidence; do not retry ambiguous DDL, edit ledgers,
-rewrite applied SQL, execute archived SQL or weaken constraints.
+**Prerequisites:** G0 and WP1's admitted design for affected semantics.
 
-**Report:** Old/new heads, manifest/model/plan digests, target fingerprints,
-per-range findings, CHECK/FK results, attempt state, engine matrix,
-limitations and G1 recommendation.
+**Work:** Implement and test ordinary protected-apply binding to the reviewed
+runner plan digest; physical CHECK/FK enforcement verification; exact
+production/restored-target admission; target/credential denial tests; credential
+separation; and bounded protected routes for required data and smoke activity.
+Use the existing control plane, never a second runner.
 
-### WP2 — Target, credential and security authority
+**Acceptance/report:** Static authority checks and independent negative tests
+prove missing/wrong digest, wrong target/credential, unenforced CHECK,
+incomplete-attempt refusal, read-only-plan nonmutation and protected-seed
+refusal. Request G2 with changed authority files and test evidence.
 
-**Prerequisites:** G1 approval; exact target-admission packet; approved owner
-and operation; no unknown or shared remote target.
+**Failure handling:** Stop any route that silently broadens authority and retain
+existing controls until replacement behavior is proven.
 
-**Execution:** Classify the Azure candidate and temporary targets; resolve
-exact target identity through Database Authority; create or reference separate
-credential identities; verify grants, rotation, secret storage, network
-boundaries, audit logs and break-glass expiry.
+### WP3 — Integrate and prove the release locally
 
-**Acceptance:** Exact target fingerprint and database role are recorded; each
-credential passes its boundary; runtime lacks DDL, grant and ledger writes;
-read-only verification is demonstrably read-only; protected acknowledgement
-and approval references are present.
+**Prerequisites:** G1 and G2.
 
-**Failure handling:** Fail closed before connection or provisioning. Do not
-guess a target from a hostname, reuse a runtime secret, broaden grants or use
-the old plan digest. Quarantine/revoke unaccepted credentials through the
-approved owner and report the exact blocker.
+**Work:** Integrate the approved candidate into one release, close Live-scope
+findings, enforce Pilot/Hidden backend boundaries, run local acceptance and
+required CI checks, obtain review and rerun on the merged SHA.
 
-**Report:** Sanitized target class/fingerprint, grant fingerprints, credential
-classes, operation/acknowledgement references, secret-exposure check and G2
-recommendation.
+**Acceptance/report:** G3 identifies one approved SHA/tree and artifacts;
+required Live journeys pass, skipped tests are dispositioned, schema/readiness
+and application contracts pass, and the central launch register links every
+remaining launch decision.
 
-### WP3 — Integrated release and application acceptance
+**Failure handling:** Correct the candidate; do not deploy a partially
+integrated branch. Material source changes invalidate affected evidence.
 
-**Prerequisites:** G1 and G2 approval; one candidate release SHA; central launch
-register linkage; disposable local target available through authority.
+### WP4 — Classify TiDB data and prepare transfer
 
-**Execution:** Test the application, canonical schema, migration runner,
-readiness layers, consumers, API and acceptance scenario as one release unit.
-Run the supported repository checks and record their exact source identity.
+**Prerequisites:** G0, admitted target model and explicit approved read access
+before TiDB inspection.
 
-**Acceptance:** D-001 selects one SHA; checks and build pass; fresh local
-schema is congruent; readiness and Search-to-Lead/application contracts pass;
-no launch-register blocker is unowned; candidate tree equals the reviewed tree.
+**Work:** Inventory tables, counts, owners, sensitivity, external/media and
+financial references, writers and timestamps. Classify required business data,
+approved reference data, disposable data and historical/audit evidence. Build
+a bounded import with source snapshot/target fingerprint, versioned mappings,
+deterministic IDs, parent-before-child order, checkpoints, replay, rejected-row
+quarantine and owner-approved exclusions. Rehearse interruption, replay and
+constraint rejection; define archive, freeze and final-reconciliation runbook.
 
-**Failure handling:** Keep the candidate unpromoted. Repair only in a new
-bounded packet; invalidate the old plan digest when source or model changes.
-Do not hide a schema failure with fallback queries or stale fixtures.
+**Acceptance/report:** Required rows reconcile without unexplained loss,
+reconciliation is repeatable, exclusions have business-owner approval and the
+report provides the WP8 final-transfer inputs.
 
-**Report:** Candidate SHA/tree, check identities/results, schema/readiness
-evidence, launch-register references, known limitations and G3 recommendation.
+**Failure handling:** Quarantine rejected records and stop; do not import the
+TiDB schema/ledger, silently drop data or disable constraints.
 
-### WP4 — Azure establishment and provider validation
+### WP5 — Govern and establish the Azure production candidate
 
-**Prerequisites:** G3 approval; D-003/D-004 packet assignment; G2 target and
-credential evidence; temporary-target permission.
+**Prerequisites:** G3, Azure engine admission, WP2 controls and concrete
+infrastructure/release approvals.
 
-**Execution:** Establish only the exact approved Azure target class. Validate
-engine/version, database identity, network path, backup capability, fresh-chain
-creation, restored candidate chain, CHECK/FK enforcement, congruency and
-readiness. Keep the protected production candidate non-authoritative.
+**Work:** Verify resource/engine/settings; introduce separated identities;
+configure narrow access and 14-day automated backups; register production;
+apply the canonical schema once through the protected path; verify enforcement,
+ledger/attempts, data roles and read-only readiness; provision approved launch
+data. Public ingress and workers remain closed.
 
-**Acceptance:** G4 packet proves the selected engine and target, all provider
-controls, fresh and restored chains, exact target ownership and no permanent
-staging drift. No production writes are implied by a successful temporary
-validation.
+**Acceptance/report:** G4 records exact target, TLS, grants, runner digest and
+heads, enforcement, congruency, launch data and all side effects.
 
-**Failure handling:** Preserve the target and sanitized evidence; stop before
-the next stage. Do not alter provider settings as a workaround, replay
-migrations or promote a temporary target.
+**Failure handling:** Preserve attempt and physical evidence. Use reviewed
+recovery only; never reset the candidate automatically.
 
-**Report:** Provider/version/capability evidence, target fingerprint, schema
-and readiness results, backup capability, side effects, limitations and G4
-recommendation.
+### WP6 — Prove cloud operation, recovery and capacity
 
-### WP5 — Backup, restore and recovery proof
+**Prerequisites:** G4 plus approved temporary-resource budget and restore
+operations.
 
-**Prerequisites:** G4 approval; backup policy and retention owner; approved
-temporary restore target; exact release and plan digests.
+**Work:** Restore the candidate independently; isolate credentials/network/
+external effects; validate hosting/browser paths; run the full 24-hour capacity
+protocol and backlog exercises; perform timed PITR and logical restore; test
+rotation and application reconnection; recommend B1ms GO or an upgrade.
 
-**Execution:** Exercise provider PITR, encrypted logical backup, weekly-export
-restore and the cutover pre-backup. Measure restore completeness, integrity,
-RPO, RTO, operator sequence, logging and abort/recovery behavior.
+**Acceptance/report:** G5 includes restored-target admission, enforcement,
+duplicate-effect and alert tests, raw capacity artifacts, measured recovery
+objectives and the B1ms decision against the governing thresholds.
 
-**Acceptance:** Every restore is observed and passes schema, checksum, count,
-readiness and scenario checks. Primary RPO ≤5 minutes/RTO ≤60 minutes and
-regional RPO ≤15 minutes/RTO ≤4 hours are measured or explicitly blocked;
-backup retention and access controls are accepted by D-007 owners.
+**Failure handling:** Keep production closed. Stop destructive work on an
+unexpected target; preserve failed restore evidence. Code fixes return through
+integration and affected validation; scaling requires re-test.
 
-**Failure handling:** Do not claim backup readiness from a successful backup
-creation. Preserve failed restore artifacts and remain at G5; no cutover or
-capacity acceptance follows a missed objective.
+### WP7 — Assemble final launch approval
 
-**Report:** Backup type/retention, restore target fingerprint, measured RPO/RTO,
-checks, timestamps, data-integrity result, operator/approver and limitations.
+**Prerequisites:** G5 and WP4 acceptance.
 
-### WP6 — Capacity, observability and B1ms decision
+**Work:** Confirm final SHA/artifacts/configuration, reconcile all gates,
+operator access and current backups; record source freeze, import, webhook,
+smoke, compatible application rollback/recovery and staffed-window steps;
+verify every Live journey, Pilot/Hidden boundary and budget.
 
-**Prerequisites:** G4 and WP5 evidence; D-005 assignment; representative load
-model; telemetry and alerting on the exact target.
+**Acceptance/report:** A final launch packet with no stale SHA/digest/target
+reference, complete writer census and import rehearsal supports G6 after
+mandatory principal review and Edward's operational approval.
 
-**Execution:** Run the specified 2x/3x load profile and measure every capacity
-threshold, including CPU credits, memory, connections, latency, errors,
-storage, queue behavior and recovery during load.
+**Failure handling:** Correct the packet or return to its affected phase. A
+proposed launch date does not authorize a source freeze.
 
-**Acceptance:** All numerical thresholds pass for the exact SHA and target;
-alerts fire at the planned boundaries; no integrity or authorization errors;
-B1ms is accepted only by D-005 owners. A different tier requires a new packet.
+### WP8 — Freeze, transfer and open production
 
-**Failure handling:** Block G5/G6, preserve telemetry, and either resize or
-prepare a new capacity plan. Never infer acceptance from idle connectivity or
-discard an outlier without an owner decision.
+**Prerequisites:** G6 and an approved staffed cutover window.
 
-**Report:** Workload, query mix, source/target identity, raw metric artifact
-references, threshold table, incidents, recommendation and limitations.
+**Work:** Close/revoke every TiDB writer, capture the final source, import and
+reconcile it in production Azure, confirm the Azure target in every process,
+deploy pinned artifacts with public writes closed, run smoke checks, obtain
+explicit GO, then open writes and enable workers in controlled order.
 
-### WP7 — TiDB inventory, transfer rehearsal and reconciliation
+**Acceptance/report:** G7 records zero source writers, final reconciliation,
+readiness, direct API authorization, real lead delivery and Live payment checks
+where applicable.
 
-**Prerequisites:** G1–G5 evidence; D-006 owner assignment; approved TiDB
-read-only/inventory operation and temporary restore target.
+**Failure handling:** Before Azure writes, use the reviewed source-resumption
+procedure. After Azure writes, preserve Azure authority and invoke compatible
+application rollback or Azure recovery; never switch writers to TiDB.
 
-**Execution:** Inventory and classify TiDB data, owners, exclusions, CHECK/FK
-state, capture position and dependencies. Rehearse export/import on the
-temporary target; reconcile canonical identities, counts, checksums, foreign
-keys, classifications and application scenarios. Define archive and retention.
+### WP9 — Stabilize and retire TiDB
 
-**Acceptance:** D-006 accepts the mapping, exclusions, reconciliation and
-archive decision; TiDB can be placed read-only; no unsupported or unknown data
-is silently imported; final capture and cutover packet is reproducible.
+**Prerequisites:** G7.
 
-**Failure handling:** Stop transfer, preserve source and temporary evidence,
-and retain TiDB as authoritative until G6. No destructive cleanup or production
-import is allowed.
+**Work:** Monitor actual workload, CPU credits, errors, jobs, backups and Live
+journeys; compare reconciliation totals; resolve incidents; verify archive
+retrieval and dependencies; retain TiDB read-only for 14 days with day-7 and
+day-14 reviews; then retire TiDB and temporary resources only after approval.
 
-**Report:** Sanitized inventory, owner decisions, capture position, mapping,
-reconciliation, excluded-data treatment, target fingerprints and G6 inputs.
+**Acceptance/report:** G8 then G9 prove alert operation, current recovery
+points, no unexplained discrepancy, no active TiDB configuration/dependency and
+accepted archive/recovery evidence.
 
-### WP8 — Final capture and cutover approval
+**Failure handling:** Extend retention. Do not retire source evidence while
+reconciliation, incident or recovery questions remain open.
 
-**Prerequisites:** G5 pass; WP7 reconciliation; D-008 launch scope; fresh
-backup; approved maintenance window; exact cutover/recovery packet.
+### WP10 — Establish normal operating cadence
 
-**Execution:** Run the seven-stage cutover procedure above, stop TiDB writes,
-capture and reconcile, keep Azure non-authoritative through preflight, obtain
-G6 approval, then make Azure authoritative and run layered smoke checks.
+**Prerequisites:** G8; TiDB retirement may finish alongside documentation.
 
-**Acceptance:** G6 approvers sign the exact digest; final capture is complete;
-Azure accepts authoritative writes only after approval; TiDB is read-only;
-layered readiness and smoke evidence support G7.
+**Work:** Assign weekly capacity/storage/slow-query/credit/cost review; monthly
+restore verification and alert review; quarterly full application
+reconnection/recovery exercise and credential-access review; credential
+rotation, engine maintenance, release procedures, alert owners, budget triggers
+and incident records.
 
-**Failure handling:** Abort before Azure writes when any preflight fails. After
-Azure writes, use forward recovery only. Preserve all attempts, backups and
-logs; do not switch back to TiDB as a writer.
+**Acceptance/report:** Named owners and tested procedures show that each future
+release uses the canonical path. Report the operational calendar, evidence
+locations, open risks and any G9/retirement dependency.
 
-**Report:** Window, operators, approvals, capture/export hashes, reconciliation,
-target/source identities, write-authority transition, smoke evidence and
-recovery position.
+**Failure handling:** Escalate unowned alerts, stale backups, unsupported-engine
+exposure or repeated recovery failure to principal review.
 
-### WP9 — Production open and stabilization
+## Senior-plan correction comparison
 
-**Prerequisites:** G6 approval; successful cutover; G7 launch-register decision;
-exact deployed source/tree and target fingerprint.
+| Senior requirement | Document location | Proposed deviation |
+| --- | --- | --- |
+| 24-hour representative traffic, two peak windows, 30-minute 2× peak and backlog recovery | [Capacity thresholds](#capacity-thresholds) and WP6 | None |
+| `<0.1%` unexpected application errors; credits recover before next peak and remain ≥30% at their low point; backlog drains within 15 minutes | [Capacity thresholds](#capacity-thresholds) | None |
+| Proposed in-region recovery RPO ≤15 minutes/RTO ≤4 hours; regional RPO/RTO ≤24 hours; 14-day automated retention | [RPO, RTO and backup policy](#rpo-rto-and-backup-policy) and WP6 | None |
+| Document/packet identity remains separate from runner-generated release plan digest; ordinary protected apply binding must be implemented and tested | [Document and runner digest binding](#document-and-runner-digest-binding) and WP2 | None |
+| Constraint coverage derives from the selected revision; historical TiDB counts are not the current inventory; billable-account ownership is included | [CHECK and foreign-key enforcement](#check-and-foreign-key-enforcement) and WP1/WP2 | None |
+| Local engine admission precedes Azure establishment; disposable TiDB execution is not a launch prerequisite | G1/G4 and WP1/WP5 | None |
+| WP2 release controls, WP4 TiDB data, WP10 normal operating cadence | WP2, WP4 and WP10 | None |
+| Final production import/reconciliation occurs after writer freeze and before services/writes open | [Cutover and recovery procedure](#cutover-and-recovery-procedure) and WP8 | None |
+| Azure-authoritative recovery permits compatible application rollback; TiDB does not resume as a writer | [Cutover and recovery procedure](#cutover-and-recovery-procedure) and WP8 | None |
+| TiDB remains read-only for 14 days, reviewed at days 7 and 14 | [Cutover and recovery procedure](#cutover-and-recovery-procedure) and WP9 | None |
+| Live/Pilot/Hidden journey disposition has explicit backend/worker boundaries | [Live, Pilot and Hidden journey requirements](#live-pilot-and-hidden-journey-requirements) and WP3/WP7 | None |
 
-**Execution:** Open the approved Live/Pilot/Hidden scope, monitor layered
-readiness, errors, latency, capacity, backups, integrity and user journeys for
-72 hours, and reconcile incidents against the launch register.
-
-**Acceptance:** G7 production-open and G8 stabilization evidence are complete;
-no unexplained integrity drift or threshold breach remains; incidents have
-owners and recovery decisions; backups and operational alerts remain healthy.
-
-**Failure handling:** Narrow or close traffic, preserve Azure authoritative
-state, and execute the approved forward-recovery packet. Do not promote a
-different SHA or switch writers without a new gate decision.
-
-**Report:** Deployed SHA/tree, target fingerprint, scope, 72-hour telemetry,
-incidents, smoke results, launch-register status and remaining limitations.
-
-### WP10 — TiDB retirement and programme closure
-
-**Prerequisites:** G8 approval; accepted Azure backups and recovery evidence;
-data-owner/archive decision; no active TiDB consumer or writer dependency.
-
-**Execution:** Revoke TiDB writer access, preserve the approved read-only
-archive/export for its retention period, verify dependency removal, close
-launch-register records and record final source, target, backup and recovery
-identities. Dispose of temporary targets only through exact Database Authority
-acknowledgements.
-
-**Acceptance:** G9 approvers confirm retention, ownership, recovery usability,
-writer revocation, no active dependency, clean authority evidence and closure
-of D-001–D-008 or explicit residual owners/expiry conditions.
-
-**Failure handling:** Retain TiDB read-only and defer retirement. Do not delete
-data, branches, backups or targets while ownership, recovery or retention is
-unresolved.
-
-**Report:** Final target/source identities, revocations, archive/retention
-references, dependency search, disposal acknowledgements, open risks and final
-launch-register disposition.
+No proposed architectural deviation is approved by this correction. A future
+deviation must be recorded in this table, marked `Proposed — unapproved`, and
+returned for principal review before the dependent packet proceeds.
 
 ## Change-control boundary
 
@@ -625,7 +628,7 @@ packet assignment. The handoff below is a blocker statement, not permission.
 
 The governing sequence is:
 
-`G0 scope/provenance → G1 migration/engine admission → G2 authority/security
+`G0 scope/inventory → G1 migration/engine admission → G2 authority/security
 controls → G3 integrated release acceptance → G4 Azure establishment → G5
 recovery/capacity proof → G6 cutover approval → G7 production open → G8
 stabilization → G9 TiDB retirement`
@@ -645,7 +648,8 @@ WP0 is accepted only when all of the following are true:
 - the source, candidate, migration-head and branch relationship are recorded;
 - WP0–WP10 prerequisites, acceptance criteria, failure handling and reporting
   requirements are present;
-- reviewed-plan-digest binding, CHECK enforcement, grants, thresholds, RPO/RTO,
+- separate packet-version and runner-plan-digest binding, CHECK enforcement,
+  grants, thresholds, RPO/RTO,
   backup policy and cutover/recovery controls are explicit;
 - every gate names evidence, approver, blockers and recovery position;
 - pending facts and ownership decisions are marked `Pending`;
