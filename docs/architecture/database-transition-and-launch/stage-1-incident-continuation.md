@@ -1,6 +1,7 @@
 # Stage 1 incident continuation — service recovery and attempt inspection
 
-**Status:** SERVICE RECOVERY COMPLETE; MIGRATION RECOVERY BLOCKED.
+**Status:** SERVICE RECOVERY COMPLETE; PRESERVED TARGET QUARANTINED; ONE
+FRESH LOCAL ESTABLISHMENT AUTHORIZED.
 
 **Date:** 2026-09-12.
 
@@ -22,6 +23,45 @@ The local-service incident is most consistent with stale runtime metadata left
 after a prior service termination. The migration interruption itself has no
 retained original error output, so its cause remains unknown. The two events
 must not be treated as causally linked without further evidence.
+
+## Named decision — Stage 1 preserved incident and fresh establishment
+
+On 2026-09-12, the senior architectural decision recorded in
+[D-009 of the master plan](master-plan.md#d-009--stage-1-preserved-incident-and-fresh-establishment)
+authorized a single fresh disposable local establishment instead of repairing
+this partially applied target. The decision is bound to this incident-report
+commit `80bd90effd344ae48ec484e1dbe246fdfdfac4f7`, the preserved attempt
+`c242df81bf9eace7fe132d01-0000`, target fingerprint
+`5b75c0ec72db92fea58941cbedecf61579a049de9a3f4fccf938969bf5e733dc`, baseline
+checksum `19362611af5751c60bbb6e041e9f456c09aa1cc8ef77f9f5c62fbc92fa8e8e88`,
+manifest digest `a511e70ae06ffbae4027cf02b1de8cc0f586ff7c23cb7cb11a0990606cf728ed`,
+and physical-object census digest
+`81872a5c37b16b476cbea8c3954ed2bf7906e4cfa4276f2ac171486451b019db`.
+
+This decision does not recover the original attempt, infer its unknown cause,
+or permit an ordinary retry. It authorizes only one new task-owned Git
+worktree and its authority-derived disposable target, using the existing MySQL
+service root and data directory. The preserved target may receive no runtime
+writer, migration, seed, reset, disposal, ledger edit, repair, or copied
+partial schema. Its worktree, ownership profile, and diagnostic evidence
+remain operationally quarantined; this is not a claim that database permissions
+were changed.
+
+An exact authority-guarded read-only count census found all 180 preserved
+application tables empty, zero successful-ledger rows, and only the preserved
+attempt row. Consequently, no required business data needs transferring, and
+no physical object from this target may be copied into the fresh target. The
+new result will prove only fresh local establishment under the recorded
+conditions. It will not prove the original interruption's cause or production
+recovery.
+
+Before its single apply, the new worktree must retain private runner
+stdout/stderr, exit status, timestamps, and service-log snapshots, then publish
+sanitized evidence only. It must prove a different resolved fingerprint, a
+fresh target, the canonical plan, explicit old head `none`, and the expected
+manifest head. If it fails or becomes ambiguous, all work stops: the new
+attempt and physical state are preserved and no third target or automatic retry
+is authorized.
 
 ## Exact authority and preservation boundary
 

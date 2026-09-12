@@ -294,6 +294,54 @@ admission.
 | D-006 | Classify and transfer TiDB data | Edward + data owner | Sanitized inventory, mapping, reconciliation and archive decision | Open |
 | D-007 | Accept recovery objectives and regional-failure posture | Edward + operations | Restore/PITR/logical-backup drill with measured RPO/RTO | Open |
 | D-008 | Define Live/Pilot/Hidden launch scope | Edward + product authority | Updated central launch register and journey evidence | Open |
+| D-009 | Stage 1 preserved incident and fresh establishment | Edward / principal architect | Preserved-target quarantine, exact fresh-target provenance, one governed fresh-chain result, and linked Stage 1 evidence | Authorized — one disposable local establishment only |
+
+### D-009 — Stage 1 preserved incident and fresh establishment
+
+**Authority:** Explicit architectural decision recorded 2026-09-12 following
+review of the Stage 1 incident continuation at commit
+`80bd90effd344ae48ec484e1dbe246fdfdfac4f7`.
+
+**Decision:** The partially established disposable worktree target is preserved
+as incident evidence and will not be repaired. One, and only one, new
+task-owned Git worktree may be provisioned through the canonical worktree
+lifecycle and used for a governed fresh-chain local establishment. This is a
+narrow exception to the Stage 1 assignment's ordinary prohibition on creating
+another target after an ambiguous attempt. It does not permit a generic retry,
+a third target, a reset, a replacement service/data directory, manual DDL,
+ledger editing, copying physical schema, changing migrations, or any Azure or
+TiDB operation.
+
+**Bound preserved incident:**
+
+| Field | Bound evidence |
+| --- | --- |
+| Preserved worktree / branch | `/home/edwardspc/Desktop/Dev/worktrees/property-listify-database-transition-stage-1` / `feat/database-transition-stage-1` |
+| Preserved target fingerprint | `5b75c0ec72db92fea58941cbedecf61579a049de9a3f4fccf938969bf5e733dc` |
+| Preserved attempt | `c242df81bf9eace7fe132d01-0000`, still `running`, with 490 recorded statements |
+| Baseline / checksum | `0000_canonical_launch_baseline.sql` / `19362611af5751c60bbb6e041e9f456c09aa1cc8ef77f9f5c62fbc92fa8e8e88` |
+| Manifest digest | `a511e70ae06ffbae4027cf02b1de8cc0f586ff7c23cb7cb11a0990606cf728ed` |
+| Physical object census | 180 application tables; census digest `81872a5c37b16b476cbea8c3954ed2bf7906e4cfa4276f2ac171486451b019db` |
+| Business-data transfer decision | Exact read-only census found all 180 application tables empty, zero successful-ledger rows, and only the preserved attempt row; no business data or partial schema may be transferred |
+| Cause determination | Unknown; the new establishment neither explains the original interruption nor proves production recovery |
+
+The preserved target is operationally quarantined. No runtime writers,
+migrations, seeds, resets, disposal, ledger edits, repair, or partial-schema
+copying may run against it. Its existing ownership profile, worktree, and
+incident evidence remain intact; this decision does not claim a change to
+database permissions.
+
+The new worktree must descend from this recorded decision and retain explicit
+provenance for candidate integration commit `4d6b2ca57fb94c970e3516e3db2ce7a39c140eec`
+and WP2 control commit `d3084091d57d023e733f158ae8bcf79105de0880`.
+Before apply, it must prove a different authority-derived target fingerprint,
+service health on the existing service root/data directory, a fresh target,
+and the canonical plan with explicit old head `none` and expected manifest
+head. Runner stdout/stderr, exit status, timestamps, and service-log snapshots
+must be retained in access-restricted local evidence; only sanitized results
+may be committed or reported. If the one authorized apply fails or becomes
+ambiguous, stop immediately, preserve the new target and evidence, and request
+review. No further target or automatic retry is authorized.
 
 ## Live, Pilot and Hidden journey requirements
 
