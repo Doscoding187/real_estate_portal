@@ -1,8 +1,9 @@
 # Stage 1 local implementation and proof report
 
-**Status:** IN PROGRESS — D-009's one fresh local establishment executed with
-local evidence passing; Stage 1 review, gate approval, and the remaining
-non-local obligations are still pending.
+**Status:** EVIDENCE PASS — REVIEW PENDING for the bounded local closure
+packet. D-009's one fresh local establishment remains accepted as local
+evidence. G1, G2, and G3 remain open; no Azure, TiDB, merge, deployment, or
+third local target is authorized.
 
 **Plan authority:** [master plan version 1.3, amendment A-01](master-plan.md)
 and the [Stage 1 assignment](stage-1-assignment.md).
@@ -14,7 +15,7 @@ remote, protected, or quarantined listify_local target was used.
 
 | Item | Evidence |
 | --- | --- |
-| Task branch and worktree | feat/database-transition-stage-1 at /home/edwardspc/Desktop/Dev/worktrees/property-listify-database-transition-stage-1 |
+| Task branch and worktree | feat/database-transition-stage-1-fresh-establishment at /home/edwardspc/Desktop/Dev/worktrees/property-listify-database-transition-stage-1-fresh-establishment |
 | Integration base | origin/main at c2158b5d; tree cbf233163d0a686ee4c7eb92e842bca2327d4535 |
 | Assigned candidate | feat/database-architecture-takeover at b05e6569c02be4a47de8583bc9ed6197e528d035; tree 17353abc4a81361cd78db1a97862bbed6f217aae |
 | Candidate integration | 4d6b2ca57fb94c970e3516e3db2ce7a39c140eec; tree 17353abc4a81361cd78db1a97862bbed6f217aae |
@@ -23,8 +24,9 @@ remote, protected, or quarantined listify_local target was used.
 | D-009 decision source | 3991934edf563fd40444b64e5e16bd857140c9a6 |
 | Successor task branch / worktree | feat/database-transition-stage-1-fresh-establishment at /home/edwardspc/Desktop/Dev/worktrees/property-listify-database-transition-stage-1-fresh-establishment |
 | Successor source | 7a1b2a43daa0e167c1f51f0680759bf6d1228892; tree 769a180b5ff3459e606b4bf2a5c63185b680d1f5 |
+| Closure implementation | 4bce622bb4346a3302c066cd9fc7ca91bcf311d1; tree d59778f3558e2ac06c7c3bed5ce06426796358d4 |
 | Successor ancestry | `git merge-base --is-ancestor` returned 0 for both candidate integration `4d6b2ca…` and WP2 control `d308409…` |
-| Final successor Git status | Intended source and durable evidence changes are committed. The scoped browser test generated four tracked report artifacts; they were restored to their tracked baseline and excluded from the review commits, leaving the successor worktree clean. |
+| Final successor Git status | The bounded closure implementation is committed above, and this report is the accompanying closure artifact. No generated browser artifacts or unrelated files are included. |
 
 The original task worktree was clean before this report was added. The
 master-plan branch was merged only to place the authoritative plan, assignment,
@@ -105,12 +107,164 @@ The original incident remains linked in
 [the incident continuation](stage-1-incident-continuation.md); no raw runner
 output or credentials are published here.
 
+## Consolidated Stage 1 closure continuation
+
+This continuation records the bounded local work requested after review of the
+fresh establishment. It used the same exact successor target and existing
+authority-owned service only. It did not apply a migration, recover or resume
+an attempt, create a target or identity, grant or revoke a privilege, change a
+schema, reset data, or touch the preserved target.
+
+The original D-009 execution record correctly used normalized schema format 1
+and digest `59ad0020e367b82288e266a7964a0985463420ab25c24e7b93caa0c51c600e8c`.
+The closure change deliberately advances the inventory to format 2 so that a
+CHECK's enforced state is part of its canonical fingerprint. Current
+congruency on the same target is `true`, has no differences, and reports
+matching desired/actual digest
+`95f6c6b11056df70c0e1fd5639dcf0e9cb58e0616e01ac6f243564112dd24cea`.
+The format change is verification-source evidence; it did not mutate the
+established database.
+
+### Enforcement verification and constraint lifecycle
+
+`normalizedPhysicalSchema` now reads MySQL's per-constraint `ENFORCED`
+metadata and fails closed if that metadata is absent. TiDB continues to use its
+existing `tidb_enable_check_constraint` capability as the provider-level
+enforcement input. The canonical digest therefore changes if a physical CHECK
+has the same predicate but is disabled.
+
+| Evidence | Result |
+| --- | --- |
+| `pnpm db:schema:congruency` | PASS — 212 tables; 23 physical CHECKs, all 23 enforced; no unenforced identities; desired and actual format-2 digest `95f6…4cea` match. |
+| Static negative verifier coverage | PASS — a copied schema with the same `fixture_parents_positive_id` predicate but `enforced: false` is noncongruent; readiness returns `schema-not-congruent`. A MySQL physical fixture with `ENFORCED = NO` is also noncongruent, and missing MySQL enforcement metadata is refused. |
+| Selected real-MySQL lifecycle | PASS — `S2_DB_TESTS=1 pnpm test:authority -- server/__tests__/integration.developer-engine-s2-supersession.test.ts --reporter=basic`, 13/13. The test proves `ER_CHECK_CONSTRAINT_VIOLATED`/3819 for `chk_development_supersessions_distinct_endpoints` and `chk_development_supersessions_active_shape`; an otherwise-valid row with a proven absent `-2147483648` parent produces `ER_NO_REFERENCED_ROW_2`/1452 for `fk_development_supersessions_source_development`; duplicate and restrictive-delete cases assert their named MySQL constraints. |
+| Billable-account ownership | PASS — `pnpm test:authority -- server/__tests__/integration.billing-billable-account.test.ts --reporter=basic`, 3/3. It selects an agency with an existing canonical agency account, then asserts the otherwise-invalid `account_kind = agent`/`agency_id` row produces `ER_CHECK_CONSTRAINT_VIOLATED`/3819 for `billable_accounts_exactly_one_owner`. |
+
+No ad hoc DDL was issued against the established target. The behavioral writes
+above are authority-wrapped integration fixtures with their normal cleanup;
+the schema proof itself is metadata-only.
+
+### Local credential and grant evidence — explicit open security decision
+
+The source policy matrix is now covered by an additional static authorization
+test: runtime-connect/runtime, migration-apply/migration, and
+verification/read-only are allowed; runtime/read-only, migration/runtime, and
+verification/lifecycle-admin are denied before a connection opens. This is a
+necessary control-plane result, not proof that separate physical credentials
+are currently selected locally.
+
+Read-only `SHOW GRANTS` inspection of the actual successor connection profile
+found `listify_app@127.0.0.1` has `ALL PRIVILEGES` on this successor target.
+The sanitized target-grant fingerprint is
+`47fdcf9758b1b7648f394b3d6a0c48012d3d624646194248f79c8a002e32078f`.
+That identity can therefore not prove the required runtime denials for DDL,
+`GRANT`, or writes to `sql_migration_history` / `sql_migration_attempts`.
+Local runtime, migration, and verifier credential classes currently label the
+same local URL channel rather than binding three distinct least-privilege
+identities.
+
+| Matrix row | Policy evidence | Actual local grant conclusion |
+| --- | --- | --- |
+| Runtime | Permitted only as the runtime credential class; the wrong read-only class is denied. | **Not admitted** as a least-privilege runtime identity: current local account has target-level `ALL PRIVILEGES`. |
+| Migration | Permitted only as the migration/local-owner class; the runtime class is denied. | No distinct physical local migration identity was provisioned or tested. |
+| Read-only verifier | Permitted as read-only; lifecycle-admin is denied. | No distinct physical read-only local identity was provisioned or tested. |
+
+No probe was used to exploit the broad grants, and no temporary role recipe was
+substituted for the application's real credential binding. Altering the local
+lifecycle to create separate identities, revoking the existing broad account,
+or defining an alternate permanent grant model is a credential/grant-model
+change and remains for principal-architect and security review. This leaves
+the physical identity/grant portion of G2 **BLOCKED**, while preserving the
+working policy and target evidence.
+
+### Engine admission evidence and recommendation
+
+The authority-guarded successor diagnostics recorded local MySQL
+`8.0.46-0ubuntu0.24.04.3` on Linux x86_64 with InnoDB, `utf8mb4`,
+`utf8mb4_0900_ai_ci`, `lower_case_table_names=0`, and the recorded strict SQL
+mode. The native authority launcher invokes the ambient `mysqld`, so this is
+runtime evidence rather than a repository pin. CI is independently pinned to
+MySQL `8.0.44` by image digest and is the approved isolated route for the
+fresh consumer contract.
+
+**Recommendation for principal decision D-003:** select MySQL 8.4 for the
+launch candidate, subject to a clean 8.4 fresh-chain, constraint/lifecycle and
+readiness run plus Azure capability admission. Retain 8.0.46 only as evidence
+that this local chain works on 8.0; it is not Azure admission. Microsoft lists
+MySQL 8.0 community retirement as 2026-04-30 and Azure standard-support end as
+2026-12-31, while MySQL's 8.4 guidance requires an upgrade checker, application
+testing, and a rehearsed upgrade before production use. See [Azure's version
+support policy](https://learn.microsoft.com/en-us/azure/mysql/concepts-version-policy)
+and [MySQL's upgrade best practices](https://dev.mysql.com/doc/refman/8.4/en/upgrade-best-practices.html).
+
+The bounded source review found no active migration-SQL uses of obsolete auth
+plugins, obsolete SQL modes, `YEAR(2)`, old replication syntax, or
+`VALUES(column)` upserts. It did find three runtime `VALUES(column)` upsert
+review candidates in `server/services/qualityScoringService.ts`, `server/db.ts`,
+and `server/services/marketplaceBundleService.ts`; they are compatibility
+review items, not observed failures. The dormant alternate Compose files still
+specify floating `mysql:8.0` and `mysql_native_password`; they require an
+explicit 8.4 disposition and are not changed in this packet.
+
+### Consumer-contract route and D-008 acceptance map
+
+The existing successor is deliberately no longer fresh. A local
+`pnpm db:authority:consumer-contract` invocation correctly refused before
+mutation because tables already exist. The approved isolated route remains
+`.github/workflows/ci.yml`: it provisions clean `listify_test` on the pinned
+MySQL service and runs `pnpm db:authority:consumer-contract`. No third local
+target was created or repurposed. The fresh consumer-contract result is thus a
+required CI artifact, not a claim supplied by this populated successor.
+
+The central launch register has not resolved D-008, so the following is an
+evidence map, not a Live declaration:
+
+| Journey family | Local evidence in this packet | Dependency / remaining decision |
+| --- | --- | --- |
+| Registration, authentication, recovery | None newly rerun as a fresh consumer contract. | D-008 must say whether it is Live; then its complete journey evidence and CI result are required. |
+| Authorization | Search-to-Lead scenario verifies representative agent, agency, developer, platform, and unrelated-user visibility boundaries. | Not a blanket Live authorization claim; required scope and journey set depend on D-008. |
+| Agents, agencies, developers, developments | S2 lifecycle (13/13) verifies custody, publication/supersession, idempotency and restrictive deletion. | D-008 determines which surfaces are Live and what additional consumer evidence is required. |
+| Listings, locations, Land | Canonical geography/reference, Search-to-Lead scenario, distribution verification, and readiness pass locally. | Any Live Land scope still requires its canonical consumer journey evidence and D-008 disposition. |
+| Leads and workers | Scenario proves local lead custody, idempotency and selected delivery facts. | Worker/recovery requirements and Live scope remain open under D-008. |
+| Entitlements, payments, webhooks | Foundation and typed billable-account ownership pass locally. | Paid-launch/provider journey, reconciliation and Live/Pilot/Hidden status remain D-008-dependent. |
+| Founder/admin | No complete Live founder/admin journey is claimed. | D-008 and central register must identify the required scope and evidence. |
+
+Service providers, Explore, paid checkout, marketplace, distribution,
+commission, sponsorship, and boost remain Pilot/Hidden unless the central
+register records a separate approved scope and backend-boundary evidence.
+
+### Release checks and closure result
+
+The six fatal `no-useless-catch` findings in `server/services/topicsService.ts`
+were removed without changing SQL or return behavior. The bounded correction is
+separately reviewable with the authority and constraint changes. `pnpm
+lint:check` now exits 0 with zero errors (the repository's existing warning
+baseline remains warnings and is not represented as a passed error).
+
+| Check | Result |
+| --- | --- |
+| `pnpm db:authority:check` | PASS — 33 files, 277 tests; utility, schema inventory, and lifecycle checks passed. |
+| Focused CHECK/readiness/context tests | PASS — schema congruency 18/18, readiness 10/10, context authorization 21/21. |
+| `pnpm check` | PASS. |
+| `pnpm lint:check` | PASS (exit 0). |
+| Current `pnpm db:authority:status` | PASS — exact successor ownership, head 0090, no incomplete attempt, schema congruent. |
+| Current `pnpm db:readiness -- --purpose=search-to-lead` | PASS — application-ready for the requested local scenario. |
+
+**Closure disposition:** the fresh-chain, physical CHECK/FK, selected
+constraint-lifecycle, authority-policy, lint, and local scenario evidence is
+ready for consolidated review. G1 remains open for D-002/D-003 migration and
+engine admission, including a fresh 8.4/CI consumer result. G2 remains open
+because the actual local identity/grant matrix is not least-privilege. G3
+remains open for D-008, approved merged SHA, CI artifacts, and the declared
+Live journeys. Stage 2 remains blocked; no Azure or TiDB operation is requested.
+
 ## WP1 — migration lineage and engine admission
 
 **Package status:** EVIDENCE PASS — REVIEW PENDING for one fresh local MySQL
-chain. The preserved target remains blocked and is not repaired. No MySQL 8.0
-or 8.4 engine-version recommendation, Azure admission, historical-head proof,
-or G1 approval is requested.
+8.0 chain and the selected physical constraints. The preserved target remains
+blocked and is not repaired. The closure packet recommends MySQL 8.4 subject to
+its separate fresh-chain/provider evidence; it does not request Azure admission,
+historical-head proof, D-002/D-003 approval, or G1 approval.
 
 The active [manifest](../../../server/migrations/manifest.json) contains 91
 ordered files from 0000 through 0090; static authority checks confirm the tree,
@@ -156,15 +310,16 @@ about repairability of the preserved partial target.
 
 The canonical desired schema was deterministically derived by
 [normalizedDesiredSchema](../../../server/_core/databaseAuthority/schemaCongruency.ts)
-from the Drizzle exports. Its structural digest is
-59ad0020e367b82288e266a7964a0985463420ab25c24e7b93caa0c51c600e8c, with
+from the Drizzle exports. Its format-2 structural digest is
+95f6c6b11056df70c0e1fd5639dcf0e9cb58e0616e01ac6f243564112dd24cea, with
 212 application tables, 23 CHECK constraints, and 461 foreign keys. The
 generated [canonical model inventory](../../../drizzle/schema/canonical-model-inventory.json)
 is current. The normalized schema generator is the complete machine-readable
 foreign-key inventory for that digest. The successor's final normalized physical
-schema has the identical digest with no differences, and the focused real-MySQL
-test supplies behavioral CHECK, orphan-FK, and restrictive-delete rejection
-evidence. This does not substitute for Azure/TiDB provider admission.
+schema has the identical digest with no differences and all 23 physical CHECKs
+reported as enforced. The focused real-MySQL tests supply behavioral named
+CHECK, orphan-FK, billable-account, and restrictive-delete rejection evidence.
+This does not substitute for Azure/TiDB provider admission.
 
 The 23 static CHECK identities are:
 
@@ -187,9 +342,11 @@ admission. G1 is not requested.
 
 ## WP2 — release control and target-security gaps
 
-**Package status:** EVIDENCE PASS — REVIEW PENDING for the local control and
-physical-proof subset. G2 is not requested: protected identity/grant evidence,
-target admission, and principal/security review remain separate obligations.
+**Package status:** PARTIAL EVIDENCE — REVIEW PENDING for the local control and
+physical-enforcement subset. G2 is not requested: the closure inspection shows
+the current local account is not a least-privilege runtime identity, so the
+physical identity/grant packet remains blocked pending the required
+principal/security credential-model decision.
 
 The bounded code change makes ordinary protected release:apply require
 --plan-digest in the authority CLI. The runner requires a 64-character digest
@@ -211,10 +368,13 @@ suite includes the existing exact-target, invalid-acknowledgement, and wrong
 migration-credential denial coverage. No grant, identity, target, or security
 model was broadened.
 
-The successor evidence now includes 24 runner tests, 20 context-authorization
-tests, the 272-test static authority gate, physical CHECK/FK rejection and
+The successor evidence now includes 24 runner tests, 21 context-authorization
+tests, the 277-test static authority gate, physical CHECK/FK rejection and
 lifecycle proof, target-backed data-role preparation, readiness, and local
-smoke journeys. The original first enforcement-test run failed only because
+smoke journeys. The closure adds fail-closed CHECK-enforcement inventory and
+negative readiness coverage, but does not claim a physical local
+runtime/migration/verifier separation where the inspected current grant is
+broader than the required runtime boundary. The original first enforcement-test run failed only because
 the required Launch Access foundation was not yet prepared; it did not create a
 migration attempt. After canonical reference/foundation preparation, the test
 passed. The scenario adapter defect discovered during preparation was fixed at
@@ -230,11 +390,11 @@ persistence journey. This is local acceptance evidence only. The central launch
 register was not changed, no product scope was declared Live, and no hosted CI
 or merged-SHA evidence is claimed.
 
-The fresh-schema consumer-contract harness was intentionally not run after
-application because it requires an empty target and would invoke a fresh
-migration test. No existing local evidence closes every centrally classified
-Live journey while D-008 remains open. These limits are not waived; G3 is not
-requested.
+The fresh-schema consumer-contract harness was invoked locally and correctly
+refused before mutation because this established successor contains tables. Its
+approved clean route is the pinned CI MySQL service, not another local target.
+No existing local evidence closes every centrally classified Live journey while
+D-008 remains open. These limits are not waived; G3 is not requested.
 
 ## Commands and observed results
 
@@ -264,15 +424,16 @@ validation claims.
 | `pnpm db:migrate:plan` before apply | PASS | Fresh plan `688db4…ae15`; old head none, 91 pending files, expected head 0090. |
 | `pnpm db:migrate:apply -- --accepted-old-head=none --expected-new-head=0090_retire_disconnected_boost_campaigns.sql` | PASS | One governed apply, exit 0, 2026-09-12T12:35:27.507Z–12:38:38.791Z. |
 | final `pnpm db:authority:status` / `pnpm db:migrate:plan` | PASS | Exact successor ownership; head ready; no incomplete attempts; no pending files or lock. |
-| final `pnpm db:schema:congruency` / `pnpm db:verify:ci` | PASS | No normalized differences; 88/88 contract checks; complete checksummed ledger/attempt evidence. |
-| `S2_DB_TESTS=1 pnpm test:authority -- server/__tests__/integration.developer-engine-s2-supersession.test.ts` | PASS | 13/13 real-MySQL checks, including CHECK rejection, orphan endpoint rejection, and restrictive FK deletion; test uses the exact owned target and cleanup. |
+| final `pnpm db:schema:congruency` / `pnpm db:verify:ci` | PASS | No normalized differences; 88/88 contract checks; complete checksummed ledger/attempt evidence. Current closure rerun uses format-2 digest `95f6…4cea` and reports all 23 physical CHECKs enforced. |
+| `S2_DB_TESTS=1 pnpm test:authority -- server/__tests__/integration.developer-engine-s2-supersession.test.ts` | PASS | 13/13 real-MySQL checks with named MySQL CHECK/FK/unique/restrictive-delete assertions; test uses the exact owned target and cleanup. |
+| `pnpm test:authority -- server/__tests__/integration.billing-billable-account.test.ts` | PASS | 3/3, including the named `billable_accounts_exactly_one_owner` CHECK violation against an existing canonical agency account. |
 | `pnpm db:reference:prepare` / `verify`; `pnpm db:foundation:prepare` / `verify` | PASS | Canonical geography and Launch Access foundation admitted through owned-target adapters. |
 | `pnpm db:scenario:prepare` / `verify`; `pnpm db:verify:distribution`; `pnpm db:readiness -- --purpose=search-to-lead` | PASS | Search-to-Lead scenario and required data roles ready; readiness application-ready. |
 | `pnpm test:authority -- server/__tests__/integration.launch-readiness-walkthrough.test.ts` | PASS | 11/11 local agency journey tests. |
 | `pnpm test:browser:authority -- e2e/consumer-activity/persistence.spec.ts --project='Desktop Chrome' --retries=0` | PASS | 1/1 scoped browser persistence journey on the exact target. |
-| `pnpm db:authority:check`; focused runner/context tests | PASS | Static authority gate 272/272; runner test 24/24; context-authorization test 20/20. |
+| `pnpm db:authority:check`; focused runner/context tests | PASS | Static authority gate 277/277; runner test 24/24; context-authorization test 21/21. |
 | `pnpm check` / `pnpm build` | PASS | TypeScript check and Vite production build passed. |
-| `pnpm lint:check` | BLOCKED, exit 1 | Six existing `no-useless-catch` errors in unrelated `server/services/topicsService.ts`; 11241 existing warnings. This workstream did not alter that file. |
+| `pnpm lint:check` | PASS, exit 0 | Six `no-useless-catch` errors were removed through the bounded `topicsService.ts` correction; the pre-existing warning baseline remains warnings. |
 
 ## Recovery position and Stage 2 preparation packet
 
@@ -286,13 +447,14 @@ Stage 1 is not complete and requests no gate approval. The consolidated review
 must disposition the local fresh-chain evidence alongside these remaining
 items:
 
-1. The repository-wide lint baseline: six unrelated fatal errors in
-   `server/services/topicsService.ts` and its existing warning volume.
-2. G1 engine/version selection and any required MySQL 8.0/8.4 compatibility or
-   historical-head evidence; the local service result is not engine admission.
-3. G2 protected credential/grant separation, protected target admission, and
-   principal/security review of the runner controls and local enforcement proof.
-4. D-008 Live/Pilot/Hidden product disposition, the full required journey set,
+1. G1 migration/engine admission: D-002/D-003, a fresh MySQL 8.4 chain and
+   provider capability evidence, the CI fresh consumer-contract artifact, and
+   any required historical-head evidence. The local 8.0 result is not engine
+   admission.
+2. G2 protected credential/grant separation, including a reviewed identity
+   model that proves runtime cannot issue DDL, GRANT, or migration-ledger
+   writes. The current local `ALL PRIVILEGES` observation blocks that portion.
+3. D-008 Live/Pilot/Hidden product disposition, the full required journey set,
    hosted CI, and post-merge validation on the approved merged SHA for G3.
 
 Stage 2 remains unrequested and unauthorized. Its future preparation packet
