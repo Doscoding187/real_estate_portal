@@ -55,6 +55,21 @@ async function grantsFingerprint(connection: AuthoritySqlConnection): Promise<st
   return createHash('sha256').update(JSON.stringify(values)).digest('hex');
 }
 
+async function mysqlRuntimeVersion(
+  connection: AuthoritySqlConnection,
+): Promise<{ version: string; comment: string }> {
+  const result: any = await connection.query(
+    'SELECT VERSION() AS version, @@version_comment AS version_comment',
+  );
+  const row = Array.isArray(result?.[0]) ? result[0][0] : undefined;
+  const version = String(row?.version ?? '').trim();
+  const comment = String(row?.version_comment ?? '').trim();
+  if (!version || version.length > 128 || /[\r\n]/.test(version + comment)) {
+    throw new Error('Isolated CI credential verification received an invalid MySQL version.');
+  }
+  return { version, comment: comment.slice(0, 128) };
+}
+
 async function authorityConnection(operation: DatabaseOperation) {
   const authority = resolveDatabaseAuthority({ operation });
   const decision = authorizeDatabaseOperation(authority);
@@ -111,8 +126,10 @@ async function main(): Promise<void> {
   }
 
   const verifier = await authorityConnection('verification');
+  let runtimeVersion: { version: string; comment: string };
   try {
     await currentUser(verifier.connection, ISOLATED_CI_ROLE_USERS['read-only']);
+    runtimeVersion = await mysqlRuntimeVersion(verifier.connection);
     await verifier.connection.execute(
       'SELECT COUNT(*) AS table_count FROM information_schema.tables WHERE table_schema = DATABASE()',
     );
@@ -146,6 +163,8 @@ async function main(): Promise<void> {
   console.log(
     JSON.stringify({
       targetFingerprintHash: runtimeAuthority.context.targetFingerprintHash,
+      mysqlServerVersion: runtimeVersion.version,
+      mysqlServerVersionComment: runtimeVersion.comment,
       operationRoleBindings: {
         'runtime-connect': 'runtime',
         'worker-connect': 'worker',

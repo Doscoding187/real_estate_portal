@@ -98,7 +98,19 @@ jobs:
           exit "${exit_status}"
 
       - name: Verify physical CI credential boundaries
-        run: pnpm db:ci:identities:verify
+        run: |
+          set -o pipefail
+          mkdir -p artifacts
+          pnpm db:ci:identities:verify | tee artifacts/credential-boundary.json
+
+      - name: Upload credential boundary evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: database-credential-boundary-${{ github.run_id }}
+          path: artifacts/credential-boundary.json
+          if-no-files-found: warn
+          retention-days: 7
 
       - name: Run and capture schema congruency evidence
         if: always()
