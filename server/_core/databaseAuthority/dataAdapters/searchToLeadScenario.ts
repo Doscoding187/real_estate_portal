@@ -1446,7 +1446,9 @@ async function ensureAgentBillableAccount(connection: AuthoritySqlConnection): P
   return rowValue(rows[0], 'id');
 }
 
-async function ensureDeveloperBillableAccount(connection: AuthoritySqlConnection): Promise<unknown> {
+async function ensureDeveloperBillableAccount(
+  connection: AuthoritySqlConnection,
+): Promise<unknown> {
   const rows = await queryRows(
     connection,
     `SELECT id FROM billable_accounts
