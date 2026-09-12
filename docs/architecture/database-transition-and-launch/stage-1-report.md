@@ -45,14 +45,20 @@ attempt recorded an incomplete baseline attempt,
 c242df81bf9eace7fe132d01-0000. The preceding authority status reported
 manifest-head-behind and incomplete-migration-attempt.
 
-Per the assignment, no migration was retried, no database was reset or
-recreated, no alternate target was created, and no recovery command was run.
-The final read-only lifecycle snapshot returned exit 1 because the authority
-service detected a stale PID file at
+At the time of this initial report, no migration was retried, no database was
+reset or recreated, no alternate target was created, and no recovery command
+had run. The final read-only lifecycle snapshot returned exit 1 because the
+authority service detected a stale PID file at
 /var/tmp/property-listify-1000/mysql-3307/mysqld.pid and explicitly preserved
 it for review. A subsequent read-only db:migrate:plan could not reconnect, so
 it could not re-evaluate the ledger or attempts. This is additional preserved
 evidence, not a reason to bypass the incomplete-attempt control.
+
+The later, explicitly authorized service-status continuation is recorded in
+[the Stage 1 incident continuation](stage-1-incident-continuation.md). It
+recovered only safely classified stale local-service metadata, preserved the
+same target and attempt, and did not authorize migration recovery, retry,
+reset, replacement, manual DDL, or ledger modification.
 
 ## WP1 — migration lineage and engine admission
 
