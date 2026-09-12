@@ -51,7 +51,16 @@ async function main(): Promise<void> {
   if (process.env.CI !== 'true' || process.env.GITHUB_ACTIONS !== 'true') {
     throw new Error('Isolated CI identity provisioning refused: GitHub Actions CI is required.');
   }
-  const authority = resolveDatabaseAuthority({ operation: 'ci-identity-bootstrap' });
+  const bootstrapUrl = String(process.env.DATABASE_BOOTSTRAP_URL ?? '').trim();
+  if (!bootstrapUrl) {
+    throw new Error(
+      'Isolated CI identity provisioning refused: DATABASE_BOOTSTRAP_URL is required.',
+    );
+  }
+  const authority = resolveDatabaseAuthority({
+    operation: 'ci-identity-bootstrap',
+    explicitDatabaseUrl: bootstrapUrl,
+  });
   const decision = authorizeDatabaseOperation(authority);
   const connection = await createAuthoritySqlConnection(authority, decision);
   const plan = buildIsolatedCiGrantPlan();

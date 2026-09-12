@@ -64,7 +64,6 @@ jobs:
 
       - name: Provision isolated CI migration identity
         env:
-          DATABASE_URL: mysql://root:test_password@127.0.0.1:3306/listify_test
           DATABASE_BOOTSTRAP_URL: mysql://root:test_password@127.0.0.1:3306/listify_test
           ISOLATED_CI_BOOTSTRAP_PHASE: migration-only
         run: pnpm db:ci:identities:bootstrap
@@ -74,7 +73,6 @@ jobs:
 
       - name: Provision isolated CI runtime identities
         env:
-          DATABASE_URL: mysql://root:test_password@127.0.0.1:3306/listify_test
           DATABASE_BOOTSTRAP_URL: mysql://root:test_password@127.0.0.1:3306/listify_test
           ISOLATED_CI_BOOTSTRAP_PHASE: full
         run: pnpm db:ci:identities:bootstrap
@@ -239,7 +237,6 @@ jobs:
 
       - name: Provision isolated CI migration identity
         env:
-          DATABASE_URL: mysql://root:test_password@127.0.0.1:3306/listify_test
           DATABASE_BOOTSTRAP_URL: mysql://root:test_password@127.0.0.1:3306/listify_test
           ISOLATED_CI_BOOTSTRAP_PHASE: migration-only
         run: pnpm db:ci:identities:bootstrap
@@ -249,7 +246,6 @@ jobs:
 
       - name: Provision isolated CI runtime identities
         env:
-          DATABASE_URL: mysql://root:test_password@127.0.0.1:3306/listify_test
           DATABASE_BOOTSTRAP_URL: mysql://root:test_password@127.0.0.1:3306/listify_test
           ISOLATED_CI_BOOTSTRAP_PHASE: full
         run: pnpm db:ci:identities:bootstrap
