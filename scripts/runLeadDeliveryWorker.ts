@@ -1,4 +1,4 @@
-import { getDb, resetDb } from '../server/db-connection';
+import { getWorkerDb, resetDb } from '../server/db-connection';
 import {
   runLeadDeliveryWorker,
   type LeadDeliveryDispatcher,
@@ -12,8 +12,15 @@ import { dispatchPublisherLeadDelivery } from '../server/services/publisherLeadS
  * idempotency keys.
  */
 const dispatcher: LeadDeliveryDispatcher = async claim => {
-  if (claim.channel === 'none' || claim.channel === 'manual' || claim.leadCustody === 'platform_managed') {
-    return { status: 'attention_required', error: 'Manual/platform custody requires operations reconciliation.' };
+  if (
+    claim.channel === 'none' ||
+    claim.channel === 'manual' ||
+    claim.leadCustody === 'platform_managed'
+  ) {
+    return {
+      status: 'attention_required',
+      error: 'Manual/platform custody requires operations reconciliation.',
+    };
   }
   if (claim.channel === 'email' && claim.recipientPublisherId) {
     return dispatchPublisherLeadDelivery(claim);
@@ -24,7 +31,7 @@ const dispatcher: LeadDeliveryDispatcher = async claim => {
   };
 };
 
-const database = await getDb();
+const database = await getWorkerDb();
 if (!database) throw new Error('Database unavailable');
 try {
   const result = await runLeadDeliveryWorker({ database, dispatcher, limit: 25 });

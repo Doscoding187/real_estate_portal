@@ -1,6 +1,8 @@
 export const DATABASE_OPERATIONS = [
   'runtime-connect',
+  'worker-connect',
   'read-only-connect',
+  'ci-identity-bootstrap',
   'migration-plan',
   'migration-apply',
   'reference-seed',
@@ -40,8 +42,10 @@ export type DatabaseTargetClass = (typeof DATABASE_TARGET_CLASSES)[number];
 
 export const DATABASE_CREDENTIAL_CLASSES = [
   'runtime',
+  'worker',
   'read-only',
   'migration',
+  'bootstrap-admin',
   'lifecycle-admin',
   'local-owner',
   'test-owner',
@@ -54,7 +58,11 @@ export type DatabaseCredentialClass = (typeof DATABASE_CREDENTIAL_CLASSES)[numbe
  * Sanitized evidence of the credential channel selected for an operation.
  * The URL and its username/password remain private to the credential vault.
  */
-export type DatabaseCredentialSource = 'database-url' | 'protected-migration-url';
+export type DatabaseCredentialSource =
+  | 'database-url'
+  | 'protected-migration-url'
+  | 'isolated-ci-role-url'
+  | 'isolated-ci-bootstrap-url';
 
 export type DatabaseEnvironmentSource =
   | 'explicit-caller'

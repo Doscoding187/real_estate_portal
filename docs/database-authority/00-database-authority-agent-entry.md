@@ -22,7 +22,7 @@ in `authority-manifest.json`; operation permissions are in `operation-policy.jso
 | Generated model evidence            | `drizzle/schema/canonical-model-inventory.json`           |
 | Physical-schema comparison          | `schemaCongruency.ts`                                     |
 | Layered readiness                   | `readiness.ts`                                            |
-| Operating procedure                  | `01-database-operating-playbook.md`                       |
+| Operating procedure                 | `01-database-operating-playbook.md`                       |
 | Local service lifecycle             | `scripts/local-db.sh`, `localServicePaths.ts`             |
 | Canonical geography reference data  | `dataAdapters/canonicalGeography.ts`                      |
 | Canonical commercial reference data | `dataAdapters/canonicalCommercial.ts`                     |
@@ -239,7 +239,8 @@ pnpm build
 ```
 
 CI may use fixed `listify_test` only inside an isolated MySQL service job with
-`CI=true`, `NODE_ENV=test`, and `APP_ENV=test`. That exception is not valid on a
+`CI=true`, `GITHUB_ACTIONS=true`, `NODE_ENV=test`, and `APP_ENV=test`; it
+provisions separate roles and keeps bootstrap step-scoped. It is not valid on a
 developer server or across worktrees.
 
 Report the worktree, branch, HEAD, changed files, sanitized target hash/class,

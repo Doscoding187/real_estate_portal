@@ -47,10 +47,9 @@ export function assertFreshDisposableTestTarget(
     );
   }
   const authority = resolveDatabaseAuthority({
-    operation: 'test-fixture',
+    operation: 'verification',
     explicitDatabaseUrl: rawUrl,
     processEnv: env as NodeJS.ProcessEnv,
-    credentialClass: env.CI === 'true' ? 'test-owner' : undefined,
   });
   if (!['disposable-worktree', 'disposable-test'].includes(authority.context.targetClass)) {
     throw new Error(

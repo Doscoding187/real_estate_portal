@@ -538,6 +538,51 @@ describe('immutable resolved database context and operation authorization', () =
     expect(() => authorizeDatabaseOperation(child, { root: process.cwd() })).not.toThrow();
   });
 
+  it('binds GitHub Actions disposable CI operations to distinct physical role URLs', () => {
+    const identity = fixtureIdentity();
+    const processEnv = {
+      CI: 'true',
+      GITHUB_ACTIONS: 'true',
+      APP_ENV: 'test',
+      NODE_ENV: 'test',
+      DATABASE_RUNTIME_URL: 'mysql://listify_ci_app:app-secret@127.0.0.1:3306/listify_test',
+      DATABASE_WORKER_URL: 'mysql://listify_ci_worker:worker-secret@127.0.0.1:3306/listify_test',
+      DATABASE_VERIFIER_URL:
+        'mysql://listify_ci_verifier:verify-secret@127.0.0.1:3306/listify_test',
+      DATABASE_MIGRATION_URL:
+        'mysql://listify_ci_migration:migration-secret@127.0.0.1:3306/listify_test',
+    };
+    const resolve = (
+      operation: 'runtime-connect' | 'worker-connect' | 'verification' | 'migration-apply',
+    ) =>
+      resolveDatabaseAuthority({
+        operation,
+        cwd: identity.worktreePath,
+        gitIdentity: identity,
+        centralPath: join(identity.repositoryRoot, 'missing-central.env'),
+        explicitDatabaseUrl: 'mysql://listify_ci_app:app-secret@127.0.0.1:3306/listify_test',
+        processEnv,
+      });
+    expect(resolve('runtime-connect').context).toMatchObject({
+      credentialClass: 'runtime',
+      credentialSource: 'isolated-ci-role-url',
+    });
+    expect(resolve('worker-connect').context.credentialClass).toBe('worker');
+    expect(resolve('verification').context.credentialClass).toBe('read-only');
+    expect(resolve('migration-apply').context.credentialClass).toBe('migration');
+    expect(() =>
+      resolveDatabaseAuthority({
+        operation: 'runtime-connect',
+        cwd: identity.worktreePath,
+        gitIdentity: identity,
+        centralPath: join(identity.repositoryRoot, 'missing-central.env'),
+        explicitDatabaseUrl: 'mysql://listify_ci_app:app-secret@127.0.0.1:3306/listify_test',
+        credentialClass: 'migration',
+        processEnv,
+      }),
+    ).toThrow('credential class cannot override the operation role');
+  });
+
   it('requires exact target acknowledgement for disposal', () => {
     const identity = fixtureIdentity();
     const authority = resolveDatabaseAuthority({

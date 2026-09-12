@@ -44,6 +44,7 @@ export class DatabaseTargetMismatchError extends Error {
 }
 
 const SQL_CONNECTION_OPERATIONS: readonly DatabaseOperation[] = [
+  'ci-identity-bootstrap',
   'read-only-connect',
   'migration-plan',
   'migration-apply',
@@ -127,7 +128,7 @@ export async function createAuthorityRuntimePool(
   authority: ResolvedDatabaseAuthority,
   decision: AuthorizedDatabaseOperation,
 ): Promise<AuthorityRuntimePool> {
-  assertAuthorizedDatabaseOperation(authority, decision, ['runtime-connect']);
+  assertAuthorizedDatabaseOperation(authority, decision, ['runtime-connect', 'worker-connect']);
   if (authority.context.dialect !== 'mysql') {
     throw new Error('Runtime connection refused: only the approved MySQL dialect is supported.');
   }

@@ -1,5 +1,9 @@
 # Stage 1 incident continuation — service recovery and attempt inspection
 
+The subsequent bounded engine and credential admission packet is recorded in
+[the Stage 1 admission report](stage-1-admission-report.md). It preserves this
+incident and does not resume or repair its failed attempt.
+
 **Status:** SERVICE RECOVERY COMPLETE; PRESERVED TARGET QUARANTINED; ONE
 FRESH LOCAL ESTABLISHMENT EXECUTED; STAGE 1 IN PROGRESS.
 
@@ -113,18 +117,18 @@ engine admission, Azure/TiDB compatibility, or a launch gate.
 
 ## Exact authority and preservation boundary
 
-| Field | Evidence |
-| --- | --- |
-| Database | `listify_wt_database_transition_stage_1_d8173f13c5c4` |
-| Target fingerprint hash | `5b75c0ec72db92fea58941cbedecf61579a049de9a3f4fccf938969bf5e733dc` |
-| Classification / credential | `disposable-worktree` / `local-owner` |
-| Worktree ownership | Exact; key `d8173f13c5c4f84304c26a2d` |
-| Service fingerprint | `2425e54d0472ee5b308127a7c63380733f077ec7531767d6dba21a2c2a9177f2` |
-| Existing service root | `/var/tmp/property-listify-1000/mysql-3307` |
-| Existing data directory | `/var/tmp/property-listify-1000/mysql-3307/data` |
-| Root / data metadata before recovery | Both owned by UID/GID 1000, mode `0700`, inodes `2148735` / `2250230` |
-| Root / data metadata after recovery | The same paths, ownership, modes, and inodes; no replacement was initialized |
-| Identity marker | Mode `0600`; matched the service fingerprint before recovery and remained present afterward |
+| Field                                | Evidence                                                                                    |
+| ------------------------------------ | ------------------------------------------------------------------------------------------- |
+| Database                             | `listify_wt_database_transition_stage_1_d8173f13c5c4`                                       |
+| Target fingerprint hash              | `5b75c0ec72db92fea58941cbedecf61579a049de9a3f4fccf938969bf5e733dc`                          |
+| Classification / credential          | `disposable-worktree` / `local-owner`                                                       |
+| Worktree ownership                   | Exact; key `d8173f13c5c4f84304c26a2d`                                                       |
+| Service fingerprint                  | `2425e54d0472ee5b308127a7c63380733f077ec7531767d6dba21a2c2a9177f2`                          |
+| Existing service root                | `/var/tmp/property-listify-1000/mysql-3307`                                                 |
+| Existing data directory              | `/var/tmp/property-listify-1000/mysql-3307/data`                                            |
+| Root / data metadata before recovery | Both owned by UID/GID 1000, mode `0700`, inodes `2148735` / `2250230`                       |
+| Root / data metadata after recovery  | The same paths, ownership, modes, and inodes; no replacement was initialized                |
+| Identity marker                      | Mode `0600`; matched the service fingerprint before recovery and remained present afterward |
 
 Before recovery, `pnpm db:authority:service:status` stopped on a stale PID
 file rather than operating on it. The preserved `mysqld.pid` and socket-lock
@@ -137,12 +141,12 @@ sanitized evidence evaluated by the governed service-recovery safeguard.
 
 The pre-recovery MySQL error-log prefix was preserved before service startup:
 
-| Log evidence | Value |
-| --- | --- |
-| Original byte length | `199425` |
-| Original SHA-256 | `925766b47031e3d65e7fff8918d8d8fca60497c9a9029ac8d13cedb659c3690f` |
-| Original mtime | 2026-09-11 21:48:06 local time |
-| Post-start verification | The first `199425` bytes still hash to the same value |
+| Log evidence            | Value                                                              |
+| ----------------------- | ------------------------------------------------------------------ |
+| Original byte length    | `199425`                                                           |
+| Original SHA-256        | `925766b47031e3d65e7fff8918d8d8fca60497c9a9029ac8d13cedb659c3690f` |
+| Original mtime          | 2026-09-11 21:48:06 local time                                     |
+| Post-start verification | The first `199425` bytes still hash to the same value              |
 
 Its retained tail contained normal MySQL startup, InnoDB initialization, XA
 crash recovery completion, and `ready for connections` on 2026-09-11. It did
@@ -157,7 +161,7 @@ entry for the 2026-09-12 attempt window.
    service root, data directory, database, log, or identity marker.
 2. The canonical `service:start`, `service:wait`, and `service:status`
    commands then succeeded in order. Status reported `Service state:
-   available` on `127.0.0.1:3307` using the same service root and fingerprint.
+available` on `127.0.0.1:3307` using the same service root and fingerprint.
 3. The legacy home-service path was reported as inactive residue. It was not
    adopted or deleted.
 4. `db:authority:status` and `db:authority:context` re-resolved the exact
@@ -175,21 +179,21 @@ read-only diagnostics path with the exact database and fingerprint asserted
 before connection. A final read-only preservation check returned the same
 attempt fields and ledger count after all inspection.
 
-| Field | Observed value |
-| --- | --- |
-| Attempt ID | `c242df81bf9eace7fe132d01-0000` |
-| Attempt state | `running` |
-| Plan digest | `c242df81bf9eace7fe132d0113b76b9128e15fc7a3b58c7c4888e23abcb6351d` |
-| Attempt target fingerprint | `5b75c0ec72db92fea58941cbedecf61579a049de9a3f4fccf938969bf5e733dc` |
-| Migration | `0000_canonical_launch_baseline.sql` |
-| Migration checksum | `19362611af5751c60bbb6e041e9f456c09aa1cc8ef77f9f5c62fbc92fa8e8e88` |
-| Accepted old head | `null` |
-| Expected new head | `0090_retire_disconnected_boost_campaigns.sql` |
-| Started / finished | `2026-09-12T10:24:28.115Z` / `null` |
-| Completed statement count | `490` of the baseline's `948` parsed statements |
-| Last-statement digest | `d4fc9244d904b775dd4dd68f6c27e259787641d43a0807814c3f281f3c30c351` |
-| Failure class / digest | `null` / `null` |
-| Successful ledger count / head | `0` / `null` |
+| Field                           | Observed value                                                                                                      |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| Attempt ID                      | `c242df81bf9eace7fe132d01-0000`                                                                                     |
+| Attempt state                   | `running`                                                                                                           |
+| Plan digest                     | `c242df81bf9eace7fe132d0113b76b9128e15fc7a3b58c7c4888e23abcb6351d`                                                  |
+| Attempt target fingerprint      | `5b75c0ec72db92fea58941cbedecf61579a049de9a3f4fccf938969bf5e733dc`                                                  |
+| Migration                       | `0000_canonical_launch_baseline.sql`                                                                                |
+| Migration checksum              | `19362611af5751c60bbb6e041e9f456c09aa1cc8ef77f9f5c62fbc92fa8e8e88`                                                  |
+| Accepted old head               | `null`                                                                                                              |
+| Expected new head               | `0090_retire_disconnected_boost_campaigns.sql`                                                                      |
+| Started / finished              | `2026-09-12T10:24:28.115Z` / `null`                                                                                 |
+| Completed statement count       | `490` of the baseline's `948` parsed statements                                                                     |
+| Last-statement digest           | `d4fc9244d904b775dd4dd68f6c27e259787641d43a0807814c3f281f3c30c351`                                                  |
+| Failure class / digest          | `null` / `null`                                                                                                     |
+| Successful ledger count / head  | `0` / `null`                                                                                                        |
 | Manifest digest / expected head | `a511e70ae06ffbae4027cf02b1de8cc0f586ff7c23cb7cb11a0990606cf728ed` / `0090_retire_disconnected_boost_campaigns.sql` |
 
 Both runner-control tables physically exist as InnoDB tables:
@@ -234,13 +238,13 @@ or identify the underlying interruption.
 
 The canonical physical-schema diagnostic reported:
 
-| Inventory | Expected / actual |
-| --- | --- |
-| Schema digest | `59ad0020e367b82288e266a7964a0985463420ab25c24e7b93caa0c51c600e8c` / `2c54d8940267a143a21a1066be31fa7721aa3f737ddd47814ffbee3a16eca32b` |
-| Congruency / differences | `false` / `610` |
-| Application tables | `212` desired / `180` physical |
-| Physical columns / indexes / foreign keys / checks | `2585` / `222` / `311` / `0` |
-| Physical object-census digest | `81872a5c37b16b476cbea8c3954ed2bf7906e4cfa4276f2ac171486451b019db` |
+| Inventory                                          | Expected / actual                                                                                                                       |
+| -------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| Schema digest                                      | `59ad0020e367b82288e266a7964a0985463420ab25c24e7b93caa0c51c600e8c` / `2c54d8940267a143a21a1066be31fa7721aa3f737ddd47814ffbee3a16eca32b` |
+| Congruency / differences                           | `false` / `610`                                                                                                                         |
+| Application tables                                 | `212` desired / `180` physical                                                                                                          |
+| Physical columns / indexes / foreign keys / checks | `2585` / `222` / `311` / `0`                                                                                                            |
+| Physical object-census digest                      | `81872a5c37b16b476cbea8c3954ed2bf7906e4cfa4276f2ac171486451b019db`                                                                      |
 
 The object-census digest is SHA-256 over the sorted physical rows
 `{name, columns, indexes, foreignKeys, checks}`. It identifies the full

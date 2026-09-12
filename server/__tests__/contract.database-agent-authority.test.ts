@@ -208,12 +208,20 @@ describe('database authority agent entry contract', () => {
     expect(dbJobStart).toBeGreaterThanOrEqual(0);
     expect(dbJobEnd).toBeGreaterThan(dbJobStart);
     expect(dbJob).toContain(
-      "    env:\n      CI: 'true'\n      APP_ENV: test\n      NODE_ENV: test\n      DATABASE_CREDENTIAL_CLASS: test-owner",
+      "    env:\n      CI: 'true'\n      APP_ENV: test\n      NODE_ENV: test",
     );
     expect(dbJob.match(/\n {6}CI:/g)).toHaveLength(1);
     expect(dbJob.match(/\n {6}APP_ENV:/g)).toHaveLength(1);
     expect(dbJob.match(/\n {6}NODE_ENV:/g)).toHaveLength(1);
-    expect(dbJob.match(/\n {6}DATABASE_CREDENTIAL_CLASS:/g)).toHaveLength(1);
+    expect(dbJob).not.toContain('DATABASE_CREDENTIAL_CLASS:');
+    expect(dbJob).toContain(
+      'mysql:8.4.7@sha256:0426ec38c7a10aa45ba383887df7878f74ee70e2fd589c7b69207f3577901903',
+    );
+    expect(dbJob).toContain('pnpm db:ci:identities:bootstrap');
+    expect(dbJob).toContain('pnpm db:ci:identities:verify');
+    expect(dbJob).toContain('consumer-contract-observability.json');
+    expect(dbJob).toContain('exit_status=$?');
+    expect(dbJob).toContain('S2_DB_TESTS:');
     expect(dbJob).toContain('MYSQL_DATABASE: listify_test');
     expect(dbJob).toContain('- 3306:3306');
     expect(testJob).toContain('pnpm db:migrate:test');

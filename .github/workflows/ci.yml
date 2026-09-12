@@ -15,11 +15,10 @@ jobs:
       CI: 'true'
       APP_ENV: test
       NODE_ENV: test
-      DATABASE_CREDENTIAL_CLASS: test-owner
 
     services:
       mysql:
-        image: mysql:8.0.44@sha256:9c3380eac945af0736031b200027f581925927c81e010056214a4bd6b6693714
+        image: mysql:8.4.7@sha256:0426ec38c7a10aa45ba383887df7878f74ee70e2fd589c7b69207f3577901903
         env:
           MYSQL_ROOT_PASSWORD: test_password
           MYSQL_DATABASE: listify_test
@@ -63,16 +62,46 @@ jobs:
       - name: Run isolated database authority security contract
         run: pnpm test:db-authority:static
 
-      - name: Run fresh-schema database consumer contract
+      - name: Provision isolated CI database identities
         env:
           DATABASE_URL: mysql://root:test_password@127.0.0.1:3306/listify_test
+          DATABASE_BOOTSTRAP_URL: mysql://root:test_password@127.0.0.1:3306/listify_test
+        run: pnpm db:ci:identities:bootstrap
+
+      - name: Run fresh-schema database consumer contract
+        env:
           LOCAL_DEMO_AGENCY_PASSWORD: ci-local-demo-password
-        run: pnpm db:authority:consumer-contract
+        run: |
+          set -o pipefail
+          mkdir -p artifacts
+          started_at=$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)
+          service_id=$(docker ps --filter name=mysql --format '{{.ID}}' | head -n 1)
+          docker ps --filter name=mysql > artifacts/mysql-service-status.txt 2>&1 || true
+          set +e
+          pnpm db:authority:consumer-contract \
+            > >(tee artifacts/consumer-contract.stdout) \
+            2> >(tee artifacts/consumer-contract.stderr >&2)
+          exit_status=$?
+          set -e
+          finished_at=$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)
+          if [ -n "${service_id}" ]; then
+            docker logs "${service_id}" > artifacts/mysql-service.log 2>&1 || true
+          fi
+          stdout_sha=$(sha256sum artifacts/consumer-contract.stdout | cut -d ' ' -f 1)
+          stderr_sha=$(sha256sum artifacts/consumer-contract.stderr | cut -d ' ' -f 1)
+          service_status_sha=$(sha256sum artifacts/mysql-service-status.txt | cut -d ' ' -f 1)
+          service_log_sha=$(sha256sum artifacts/mysql-service.log 2>/dev/null | cut -d ' ' -f 1 || true)
+          printf '{"startedAt":"%s","finishedAt":"%s","exitStatus":%s,"stdoutSha256":"%s","stderrSha256":"%s","serviceStatusSha256":"%s","serviceLogSha256":"%s"}\n' \
+            "${started_at}" "${finished_at}" "${exit_status}" "${stdout_sha}" "${stderr_sha}" "${service_status_sha}" "${service_log_sha}" \
+            > artifacts/consumer-contract-observability.json
+          rm -f artifacts/consumer-contract.stdout artifacts/consumer-contract.stderr artifacts/mysql-service-status.txt artifacts/mysql-service.log
+          exit "${exit_status}"
+
+      - name: Verify physical CI credential boundaries
+        run: pnpm db:ci:identities:verify
 
       - name: Run and capture schema congruency evidence
         if: always()
-        env:
-          DATABASE_URL: mysql://root:test_password@127.0.0.1:3306/listify_test
         run: |
           set -o pipefail
           mkdir -p artifacts
@@ -87,10 +116,22 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
 
+      - name: Upload sanitized consumer execution evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: database-consumer-observability-${{ github.run_id }}
+          path: artifacts/consumer-contract-observability.json
+          if-no-files-found: warn
+          retention-days: 7
+
       - name: Run full database contract verification
-        env:
-          DATABASE_URL: mysql://root:test_password@127.0.0.1:3306/listify_test
         run: pnpm db:verify:ci
+
+      - name: Run isolated CHECK/FK and lifecycle tests
+        env:
+          S2_DB_TESTS: '1'
+        run: pnpm test:authority -- server/__tests__/integration.developer-engine-s2-supersession.test.ts server/__tests__/integration.billing-billable-account.test.ts --reporter=basic
 
   lint-and-typecheck:
     name: Lint & TypeCheck
@@ -132,9 +173,14 @@ jobs:
     runs-on: ubuntu-latest
     needs: db-contract-verification
 
+    env:
+      CI: 'true'
+      APP_ENV: test
+      NODE_ENV: test
+
     services:
       mysql:
-        image: mysql:8.0.44@sha256:9c3380eac945af0736031b200027f581925927c81e010056214a4bd6b6693714
+        image: mysql:8.4.7@sha256:0426ec38c7a10aa45ba383887df7878f74ee70e2fd589c7b69207f3577901903
         env:
           MYSQL_ROOT_PASSWORD: test_password
           MYSQL_DATABASE: listify_test
@@ -167,50 +213,29 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Apply canonical SQL migrations
+      - name: Provision isolated CI database identities
         env:
           DATABASE_URL: mysql://root:test_password@127.0.0.1:3306/listify_test
+          DATABASE_BOOTSTRAP_URL: mysql://root:test_password@127.0.0.1:3306/listify_test
+        run: pnpm db:ci:identities:bootstrap
+
+      - name: Apply canonical SQL migrations
         run: pnpm db:migrate:test
 
       - name: Prepare canonical disposable reference data
-        env:
-          CI: 'true'
-          APP_ENV: test
-          NODE_ENV: test
-          DATABASE_CREDENTIAL_CLASS: test-owner
-          DATABASE_URL: mysql://root:test_password@127.0.0.1:3306/listify_test
         run: pnpm db:reference:prepare
 
       - name: Verify canonical disposable reference data
-        env:
-          CI: 'true'
-          APP_ENV: test
-          NODE_ENV: test
-          DATABASE_CREDENTIAL_CLASS: test-owner
-          DATABASE_URL: mysql://root:test_password@127.0.0.1:3306/listify_test
         run: pnpm db:reference:verify
 
       - name: Prepare canonical disposable foundation data
-        env:
-          CI: 'true'
-          APP_ENV: test
-          NODE_ENV: test
-          DATABASE_CREDENTIAL_CLASS: test-owner
-          DATABASE_URL: mysql://root:test_password@127.0.0.1:3306/listify_test
         run: pnpm db:foundation:prepare
 
       - name: Verify canonical disposable foundation data
-        env:
-          CI: 'true'
-          APP_ENV: test
-          NODE_ENV: test
-          DATABASE_CREDENTIAL_CLASS: test-owner
-          DATABASE_URL: mysql://root:test_password@127.0.0.1:3306/listify_test
         run: pnpm db:foundation:verify
 
       - name: Run tests
         env:
-          DATABASE_URL: mysql://root:test_password@127.0.0.1:3306/listify_test
           NODE_OPTIONS: --max-old-space-size=12288
         run: |
           mapfile -t CLIENT_TESTS < <(

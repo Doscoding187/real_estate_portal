@@ -9,20 +9,8 @@
   },
   "scope": {
     "boundary": "Tracked and non-ignored repository source that can be manually invoked as a database-capable utility; this is not an inventory of ordinary runtime query consumers or historical documentation.",
-    "roots": [
-      "root-level executable source files",
-      "scripts/",
-      "server/scripts/"
-    ],
-    "extensions": [
-      ".ts",
-      ".tsx",
-      ".js",
-      ".mjs",
-      ".cjs",
-      ".ps1",
-      ".sh"
-    ],
+    "roots": ["root-level executable source files", "scripts/", "server/scripts/"],
+    "extensions": [".ts", ".tsx", ".js", ".mjs", ".cjs", ".ps1", ".sh"],
     "excluded": [
       "e2e/**",
       "scripts/__tests__/**",
@@ -43,6 +31,7 @@
   },
   "approvedAuthority": {
     "canonicalAndAuthoritySupport": [
+      "scripts/bootstrapIsolatedCiDatabaseIdentities.ts",
       "scripts/databaseAuthorityBootstrapLocal.ts",
       "scripts/databaseAuthorityCheck.ts",
       "scripts/databaseAuthorityCli.ts",
@@ -50,12 +39,10 @@
       "scripts/databaseAuthorityFreshTestApply.ts",
       "scripts/databaseAuthorityStatus.ts",
       "scripts/databaseUtilityAuthorityCheck.ts",
-      "scripts/generateCanonicalModelInventory.ts"
+      "scripts/generateCanonicalModelInventory.ts",
+      "scripts/verifyIsolatedCiDatabaseIdentities.ts"
     ],
-    "supportedDiagnostics": [
-      "scripts/print-db-target.ts",
-      "scripts/schema-sanity-check.mjs"
-    ],
+    "supportedDiagnostics": ["scripts/print-db-target.ts", "scripts/schema-sanity-check.mjs"],
     "supportedReplacements": [
       "scripts/db-contract-verify.ts",
       "scripts/db-verify-distribution-schema.ts",
@@ -305,13 +292,9 @@
       "presentAtStart": 130,
       "retainedAsEvidenceOnly": 127,
       "retiredOperationalExceptions": 3,
-      "retiredPaths": [
-        "database-check.ts",
-        "quick-check.ts",
-        "scripts/quick-check.ts"
-      ]
+      "retiredPaths": ["database-check.ts", "quick-check.ts", "scripts/quick-check.ts"]
     },
-    "guardedOperationalSurfaceCountAtClosure": 118,
+    "guardedOperationalSurfaceCountAtClosure": 119,
     "operationalSurfaceDefinition": "A current source path within the guard boundary that has direct database-client, execution, SQL mutation/inspection, or ambient-target capability signals. Historical documentation, ordinary runtime data access, migrations, tests and non-capable authority files are not counted as operational surfaces."
   },
   "policy": {

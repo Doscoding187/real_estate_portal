@@ -149,7 +149,11 @@ function credentialClass(fallback?: DatabaseCredentialClass): DatabaseCredential
 function authorityFor(operation: DatabaseOperation, fallbackCredential?: DatabaseCredentialClass) {
   return resolveDatabaseAuthority({
     operation,
-    credentialClass: credentialClass(fallbackCredential),
+    // The isolated GitHub service binds identity from the operation after
+    // target resolution. A local-owner fallback must never select its role.
+    credentialClass: credentialClass(
+      process.env.GITHUB_ACTIONS === 'true' ? undefined : fallbackCredential,
+    ),
   });
 }
 

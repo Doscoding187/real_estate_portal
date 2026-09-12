@@ -19,14 +19,12 @@
     "scripts/databaseAuthorityConsumerContract.ts",
     "scripts/databaseAuthorityFreshTestApply.ts",
     "scripts/db-contract-verify.ts",
-    "scripts/db-verify-distribution-schema.ts"
+    "scripts/db-verify-distribution-schema.ts",
+    "scripts/bootstrapIsolatedCiDatabaseIdentities.ts",
+    "scripts/verifyIsolatedCiDatabaseIdentities.ts"
   ],
-  "testInfrastructureRawConnectionSources": [
-    "server/test-utils/developmentIntegrationMutex.ts"
-  ],
-  "retiredDirectMutationSources": [
-    "scripts/testDbWorkflow.ts"
-  ],
+  "testInfrastructureRawConnectionSources": ["server/test-utils/developmentIntegrationMutex.ts"],
+  "retiredDirectMutationSources": ["scripts/testDbWorkflow.ts"],
   "legacyContainedDirectSources": [
     "scripts/check-agent-tables.ts",
     "scripts/check-bluespace-direct.ts",
