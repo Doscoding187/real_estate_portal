@@ -1,7 +1,8 @@
 # Stage 1 local implementation and proof report
 
-**Status:** BLOCKED — a principal-architect recovery decision is required before
-the local migration proof can continue.
+**Status:** IN PROGRESS — D-009's one fresh local establishment executed with
+local evidence passing; Stage 1 review, gate approval, and the remaining
+non-local obligations are still pending.
 
 **Plan authority:** [master plan version 1.3, amendment A-01](master-plan.md)
 and the [Stage 1 assignment](stage-1-assignment.md).
@@ -19,13 +20,19 @@ remote, protected, or quarantined listify_local target was used.
 | Candidate integration | 4d6b2ca57fb94c970e3516e3db2ce7a39c140eec; tree 17353abc4a81361cd78db1a97862bbed6f217aae |
 | WP2 control change | d3084091d57d023e733f158ae8bcf79105de0880; tree 7518a9c97aa6d8b3a0c09327ccfa0fb499591a58 |
 | Plan-document merge | 7ed4f463192ff0ac068537364701f97414877c10; tree d90d1778c78bec27e927e1505418ad14aad32547 |
+| D-009 decision source | 3991934edf563fd40444b64e5e16bd857140c9a6 |
+| Successor task branch / worktree | feat/database-transition-stage-1-fresh-establishment at /home/edwardspc/Desktop/Dev/worktrees/property-listify-database-transition-stage-1-fresh-establishment |
+| Successor source | 7a1b2a43daa0e167c1f51f0680759bf6d1228892; tree 769a180b5ff3459e606b4bf2a5c63185b680d1f5 |
+| Successor ancestry | `git merge-base --is-ancestor` returned 0 for both candidate integration `4d6b2ca…` and WP2 control `d308409…` |
 
-The task worktree was clean before this report was added. The master-plan branch
-was merged only to place the authoritative plan, assignment, and this report
-together; this remains the independent implementation branch required by the
-assignment. Final Git status is clean after this report is committed.
+The original task worktree was clean before this report was added. The
+master-plan branch was merged only to place the authoritative plan, assignment,
+and this report together; this remains the independent implementation branch
+required by the assignment. The D-009 successor is a separate task-owned
+worktree that carries that provenance forward; it did not modify the preserved
+worktree or its target.
 
-## Authority target and preserved failure evidence
+## Historical preserved target and failure evidence
 
 The Database Authority resolved an exact, local, disposable worktree target:
 
@@ -60,21 +67,61 @@ recovered only safely classified stale local-service metadata, preserved the
 same target and attempt, and did not authorize migration recovery, retry,
 reset, replacement, manual DDL, or ledger modification.
 
+## D-009 successor fresh establishment — execution record, not recovery
+
+The preserved target above was never resumed, written, seeded, reset, disposed,
+or repaired. D-009 instead authorized exactly one authority-derived successor:
+
+| Field | Recorded value |
+| --- | --- |
+| Target / credential class | disposable-worktree / local-owner |
+| Database identity | listify_wt_database_transition_stage_1_fr_4388046192b2 |
+| Target fingerprint hash | b121616eb803e0da7351ee3aa767f10d5f7f9c8585d9d3f83f3a41e07a86faf2 |
+| Fingerprint separation | Differs from preserved fingerprint 5b75c0ec72db92fea58941cbedecf61579a049de9a3f4fccf938969bf5e733dc |
+| Worktree ownership | exact; ownership key 4388046192b23980838607dc |
+| Local service | Existing authority-owned MySQL on 127.0.0.1:3307; unchanged fingerprint 2425e54d0472ee5b308127a7c63380733f077ec7531767d6dba21a2c2a9177f2, root, and data directory |
+| Fresh precondition | migration ledger and attempt authority missing; schema noncongruent |
+| Canonical pre-apply plan | 688db4f891290074be8feddc / 688db4f891290074be8feddc2cb9d1ddea51ad1187a30aced7a12c644743ae15; old head none; 91 pending files; expected head 0090_retire_disconnected_boost_campaigns.sql |
+| Governed apply | One apply, 2026-09-12T12:35:27.507Z–2026-09-12T12:38:38.791Z, exit 0; baseline attempt ...-0000 completed 948 statements; all 91 files have successful attempt evidence |
+| Final authority state | target-connected; exact-worktree-owned; manifest-head-ready; no-incomplete-attempts; final plan pending [] and lock null |
+| Final physical state | congruent true, no differences, desired and actual digest both 59ad0020e367b82288e266a7964a0985463420ab25c24e7b93caa0c51c600e8c |
+
+The equality above means the selected canonical physical inventory is present:
+212 application tables, 23 CHECK constraints, and 461 foreign keys. This is an
+inference from the normalized actual-to-desired equality, not a claim about
+Azure or TiDB. Behavioral proof on the same exact target passed 13/13 through
+the authority-wrapped real-MySQL supersession test, including rejected invalid
+CHECK shapes, an orphan endpoint write, and a referenced-row deletion under
+`ON DELETE RESTRICT`.
+
+Private runner stdout/stderr, timestamps, exit status, and service-log snapshots
+are retained under `/var/tmp/property-listify-stage-1-fresh-establishment-4388046192b2`
+(directory mode 0700, files mode 0600). Sanitized hashes: apply stdout
+`fd486f9fbe18188c4f022bcdba648729cab00ae97722b8ab1ed38e4fb60f3229`, empty
+stderr `e3b0c442…b855`, and matching before/after 200617-byte service logs
+`df07bf28a98b413ac264b23f7fcbde9e1cf6b02add12a691f361dc62e34285b6`.
+The original incident remains linked in
+[the incident continuation](stage-1-incident-continuation.md); no raw runner
+output or credentials are published here.
+
 ## WP1 — migration lineage and engine admission
 
-**Package status:** BLOCKED. Static lineage and model checks pass, but the
-fresh local chain stopped at the baseline attempt. Consequently, no physical
-MySQL 8.0/8.4, CHECK/FK, lifecycle, consumer, concurrency, or historical-head
-claim is made here, and no engine/version recommendation is requested.
+**Package status:** EVIDENCE PASS — REVIEW PENDING for one fresh local MySQL
+chain. The preserved target remains blocked and is not repaired. No MySQL 8.0
+or 8.4 engine-version recommendation, Azure admission, historical-head proof,
+or G1 approval is requested.
 
 The active [manifest](../../../server/migrations/manifest.json) contains 91
 ordered files from 0000 through 0090; static authority checks confirm the tree,
-checksums, and canonical baseline. Migrations 0000–0065 remain physically
-unadmitted on this target because the chain did not complete 0000.
+checksums, and canonical baseline. The D-009 successor applied all 91 files to
+the accepted manifest head. The statement below about the original target is
+historical preserved evidence, not a physical-admission claim about the
+successor.
 
 The assigned candidate delta has the following individual dispositions. Each
-has verified static membership and source presence, but its physical admission
-is BLOCKED — fresh chain incomplete.
+has verified static membership and source presence and is represented by a
+successful per-migration attempt on the D-009 successor; no conclusion is drawn
+about repairability of the preserved partial target.
 
 | Migration | Intent |
 | --- | --- |
@@ -113,8 +160,10 @@ from the Drizzle exports. Its structural digest is
 212 application tables, 23 CHECK constraints, and 461 foreign keys. The
 generated [canonical model inventory](../../../drizzle/schema/canonical-model-inventory.json)
 is current. The normalized schema generator is the complete machine-readable
-foreign-key inventory for that digest; physical inventory and enforcement
-remain unproven while the local attempt is blocked.
+foreign-key inventory for that digest. The successor's final normalized physical
+schema has the identical digest with no differences, and the focused real-MySQL
+test supplies behavioral CHECK, orphan-FK, and restrictive-delete rejection
+evidence. This does not substitute for Azure/TiDB provider admission.
 
 The 23 static CHECK identities are:
 
@@ -137,9 +186,9 @@ admission. G1 is not requested.
 
 ## WP2 — release control and target-security gaps
 
-**Package status:** BLOCKED overall. The runner-digest control is EVIDENCE PASS
-— REVIEW PENDING; physical enforcement and target-backed smoke evidence are
-blocked by the preserved local failure.
+**Package status:** EVIDENCE PASS — REVIEW PENDING for the local control and
+physical-proof subset. G2 is not requested: protected identity/grant evidence,
+target admission, and principal/security review remain separate obligations.
 
 The bounded code change makes ordinary protected release:apply require
 --plan-digest in the authority CLI. The runner requires a 64-character digest
@@ -161,26 +210,37 @@ suite includes the existing exact-target, invalid-acknowledgement, and wrong
 migration-credential denial coverage. No grant, identity, target, or security
 model was broadened.
 
-Unrun WP2 evidence is explicitly blocked: physical CHECK/FK rejection and
-lifecycle proof, local protected-data/smoke preparation, and target-backed
-readiness/congruency. G2 is not requested.
+The successor evidence now includes 24 runner tests, 20 context-authorization
+tests, the 272-test static authority gate, physical CHECK/FK rejection and
+lifecycle proof, target-backed data-role preparation, readiness, and local
+smoke journeys. The original first enforcement-test run failed only because
+the required Launch Access foundation was not yet prepared; it did not create a
+migration attempt. After canonical reference/foundation preparation, the test
+passed. The scenario adapter defect discovered during preparation was fixed at
+`7a1b2a43` so it creates typed accounts at the first scenario billing fact; its
+governed rerun and verification passed. G2 remains review pending.
 
 ## WP3 — integrated local acceptance
 
-**Package status:** BLOCKED. The static release candidate builds and its
-authority controls pass, but no database-backed consumer contract, readiness,
-congruency, browser, or Live/Pilot/Hidden journey was run after the incomplete
-attempt. The central launch register was not changed, no product scope was
-declared Live, and no hosted CI or merged-SHA evidence is claimed.
+**Package status:** IN PROGRESS. The successor passed canonical reference,
+foundation, and Search-to-Lead scenario verification; Search-to-Lead readiness;
+the 11-test authority-wrapped agency walkthrough; and the scoped P1 browser
+persistence journey. This is local acceptance evidence only. The central launch
+register was not changed, no product scope was declared Live, and no hosted CI
+or merged-SHA evidence is claimed.
 
-Skipped until a reviewed recovery outcome includes authority-wrapped consumer
-contract and physical checks, data-role preparation, readiness and congruency,
-and browser acceptance. These are not waived; G3 is not requested.
+The fresh-schema consumer-contract harness was intentionally not run after
+application because it requires an empty target and would invoke a fresh
+migration test. No existing local evidence closes every centrally classified
+Live journey while D-008 remains open. These limits are not waived; G3 is not
+requested.
 
 ## Commands and observed results
 
-All checks below ran on the task branch's local worktree. PASS means only the
-stated command succeeded; it is not gate approval.
+The first table is the historical pre-D-009 run on the preserved worktree.
+PASS means only the stated command succeeded; it is not gate approval. The
+second table is the current successor record and supersedes only the matching
+validation claims.
 
 | Command | Result | Notes |
 | --- | --- | --- |
@@ -195,31 +255,47 @@ stated command succeeded; it is not gate approval.
 | pnpm db:authority:service:status | BLOCKED, exit 1 | Stale PID evidence preserved for review; no recovery run. |
 | pnpm db:migrate:plan | BLOCKED, exit 1 | Cannot reconnect to the preserved target; no retry attempted. |
 
+### D-009 successor commands and observed results
+
+| Command | Result | Notes |
+| --- | --- | --- |
+| canonical `db:worktree:create` | PASS | Created the one authority-derived successor target; no hand-selected name or copied profile. |
+| `pnpm db:migrate:plan` before apply | PASS | Fresh plan `688db4…ae15`; old head none, 91 pending files, expected head 0090. |
+| `pnpm db:migrate:apply -- --accepted-old-head=none --expected-new-head=0090_retire_disconnected_boost_campaigns.sql` | PASS | One governed apply, exit 0, 2026-09-12T12:35:27.507Z–12:38:38.791Z. |
+| final `pnpm db:authority:status` / `pnpm db:migrate:plan` | PASS | Exact successor ownership; head ready; no incomplete attempts; no pending files or lock. |
+| final `pnpm db:schema:congruency` / `pnpm db:verify:ci` | PASS | No normalized differences; 88/88 contract checks; complete checksummed ledger/attempt evidence. |
+| `S2_DB_TESTS=1 pnpm test:authority -- server/__tests__/integration.developer-engine-s2-supersession.test.ts` | PASS | 13/13 real-MySQL checks, including CHECK rejection, orphan endpoint rejection, and restrictive FK deletion; test uses the exact owned target and cleanup. |
+| `pnpm db:reference:prepare` / `verify`; `pnpm db:foundation:prepare` / `verify` | PASS | Canonical geography and Launch Access foundation admitted through owned-target adapters. |
+| `pnpm db:scenario:prepare` / `verify`; `pnpm db:verify:distribution`; `pnpm db:readiness -- --purpose=search-to-lead` | PASS | Search-to-Lead scenario and required data roles ready; readiness application-ready. |
+| `pnpm test:authority -- server/__tests__/integration.launch-readiness-walkthrough.test.ts` | PASS | 11/11 local agency journey tests. |
+| `pnpm test:browser:authority -- e2e/consumer-activity/persistence.spec.ts --project='Desktop Chrome' --retries=0` | PASS | 1/1 scoped browser persistence journey on the exact target. |
+| `pnpm db:authority:check`; focused runner/context tests | PASS | Static authority gate 272/272; runner test 24/24; context-authorization test 20/20. |
+| `pnpm check` / `pnpm build` | PASS | TypeScript check and Vite production build passed. |
+| `pnpm lint:check` | BLOCKED, exit 1 | Six existing `no-useless-catch` errors in unrelated `server/services/topicsService.ts`; 11241 existing warnings. This workstream did not alter that file. |
+
 ## Recovery position and Stage 2 preparation packet
 
-This is the required stopping point. The senior decision needed is whether the
-stale local-service evidence and recorded incomplete attempt may be inspected
-and recovered through the existing reviewed recovery path. No recovery apply,
-reset, service-recovery command, alternate disposable target, or migration
-history change is authorized by this report.
+D-009 has been consumed successfully. The preserved target remains operationally
+quarantined with its `running` attempt and unknown cause; the successor did not
+repair, resume, copy, reset, dispose, or alter it. A future repair proposal for
+the preserved target would still require a separately reviewed object-by-object
+plan. No third target or automatic retry is authorized.
 
-If the principal architect authorizes the next local operation, it must first
-preserve and review the attempt evidence through the authority path, then use a
-reviewed recovery plan before any apply. A new target must not be used to hide
-this attempt. Only after that decision can the outstanding local MySQL engine,
-physical enforcement, lifecycle, consumer, and browser evidence be resumed.
+Stage 1 is not complete and requests no gate approval. The consolidated review
+must disposition the local fresh-chain evidence alongside these remaining
+items:
+
+1. The repository-wide lint baseline: six unrelated fatal errors in
+   `server/services/topicsService.ts` and its existing warning volume.
+2. G1 engine/version selection and any required MySQL 8.0/8.4 compatibility or
+   historical-head evidence; the local service result is not engine admission.
+3. G2 protected credential/grant separation, protected target admission, and
+   principal/security review of the runner controls and local enforcement proof.
+4. D-008 Live/Pilot/Hidden product disposition, the full required journey set,
+   hosted CI, and post-merge validation on the approved merged SHA for G3.
 
 Stage 2 remains unrequested and unauthorized. Its future preparation packet
-needs, at minimum:
-
-1. Principal-architect decisions on this recovery, G1 engine admission, and G2
-   enforcement/control review.
-2. Security review of separated identities and grant evidence once a permitted
-   protected target is in scope.
-3. Edward's disposition of remaining Live/Pilot/Hidden product choices and
-   approval of any Azure budget/target request.
-4. Explicit approved source-data access and reconciliation ownership before any
-   TiDB inventory or import work.
-
-No future target fingerprint, approval metadata, provider compatibility, or
+still requires explicit Azure resource/budget/target authority and approved
+source-data access, mapping, reconciliation ownership, and TiDB scope. No
+future target fingerprint, approval metadata, provider compatibility, or
 source-data result is invented here.

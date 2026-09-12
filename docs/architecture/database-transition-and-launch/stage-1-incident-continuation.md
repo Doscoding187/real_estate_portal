@@ -1,16 +1,18 @@
 # Stage 1 incident continuation — service recovery and attempt inspection
 
 **Status:** SERVICE RECOVERY COMPLETE; PRESERVED TARGET QUARANTINED; ONE
-FRESH LOCAL ESTABLISHMENT AUTHORIZED.
+FRESH LOCAL ESTABLISHMENT EXECUTED; STAGE 1 IN PROGRESS.
 
 **Date:** 2026-09-12.
 
 **Scope:** This is a continuation of the initial [Stage 1 report](stage-1-report.md),
-not a migration recovery. It records one authorized recovery of safely
-classified stale local-service metadata and read-only inspection of the
-preserved migration attempt. No migration was retried; no database or service
-root was recreated; no alternate target, reset, manual DDL, ledger edit,
-security change, or recovery-apply command was used.
+not a migration recovery. Its recovery-and-inspection chronology records one
+authorized recovery of safely classified stale local-service metadata and
+read-only inspection of the preserved migration attempt. During that chronology
+no migration was retried; no database or service root was recreated; no
+alternate target, reset, manual DDL, ledger edit, security change, or
+recovery-apply command was used. The later D-009 fresh establishment is a
+separate, explicitly bounded execution record below.
 
 ## Outcome
 
@@ -62,6 +64,52 @@ fresh target, the canonical plan, explicit old head `none`, and the expected
 manifest head. If it fails or becomes ambiguous, all work stops: the new
 attempt and physical state are preserved and no third target or automatic retry
 is authorized.
+
+## D-009 execution outcome — not recovery
+
+The one permitted successor worktree,
+`/home/edwardspc/Desktop/Dev/worktrees/property-listify-database-transition-stage-1-fresh-establishment`
+on `feat/database-transition-stage-1-fresh-establishment`, was provisioned
+through the canonical lifecycle. It descends from decision commit
+`3991934edf563fd40444b64e5e16bd857140c9a6` and records candidate integration
+`4d6b2ca57fb94c970e3516e3db2ce7a39c140eec` plus WP2 control
+`d3084091d57d023e733f158ae8bcf79105de0880` as verified ancestors. Its exact
+new local target fingerprint is
+`b121616eb803e0da7351ee3aa767f10d5f7f9c8585d9d3f83f3a41e07a86faf2`, distinct
+from the preserved target. The same service root, data directory, and service
+fingerprint recorded below remained in use.
+
+Before application, the new target had no migration ledger or attempt authority
+and was schema-noncongruent. The retained canonical plan was
+`688db4f891290074be8feddc` /
+`688db4f891290074be8feddc2cb9d1ddea51ad1187a30aced7a12c644743ae15`, with old
+head `none`, 91 pending migrations, and expected head
+`0090_retire_disconnected_boost_campaigns.sql`. One governed apply ran from
+`2026-09-12T12:35:27.507Z` to `2026-09-12T12:38:38.791Z` and exited `0`. Its
+successful baseline attempt completed all 948 parsed statements; the final
+ledger contains all 91 manifest files and the final attempt is `...-0090`.
+
+Final authority checks report the new target exact-worktree-owned,
+manifest-head-ready, with no incomplete attempt and no pending plan. Physical
+congruency reports no differences and matching desired/actual digest
+`59ad0020e367b82288e266a7964a0985463420ab25c24e7b93caa0c51c600e8c`. A
+governed real-MySQL test then passed 13/13 while rejecting invalid CHECK shapes,
+an orphan foreign-key endpoint, and a restrictive referenced-row deletion.
+The detailed local acceptance evidence and the limited remaining Stage 1
+blockers are recorded in the [updated Stage 1 report](stage-1-report.md).
+
+Runner stdout/stderr, timestamps, exit status, and service-log snapshots remain
+access-restricted at
+`/var/tmp/property-listify-stage-1-fresh-establishment-4388046192b2` (directory
+mode `0700`, artifacts `0600`). Sanitized hashes include apply stdout
+`fd486f9fbe18188c4f022bcdba648729cab00ae97722b8ab1ed38e4fb60f3229`, empty
+stderr `e3b0c442…b855`, and matching before/after 200617-byte service-log hash
+`df07bf28a98b413ac264b23f7fcbde9e1cf6b02add12a691f361dc62e34285b6`.
+
+This is evidence of a fresh disposable local chain only. The original target
+remains quarantined and its attempt remains `running` with unknown cause. This
+outcome does not establish original-error causation, production recovery,
+engine admission, Azure/TiDB compatibility, or a launch gate.
 
 ## Exact authority and preservation boundary
 
@@ -301,18 +349,17 @@ distinguish a client/process interruption, a server interruption, or a SQL
 failure after pre-existing physical DDL. No root cause is asserted from the
 last-statement or failure digests.
 
-The concrete next step is a principal-architect-approved, named recovery
-**plan** for this exact partially applied baseline attempt. It must bind the
-attempt ID, target fingerprint, migration checksum, manifest digest, physical
-object census, and retained-log result above. Before any recovery apply, that
-plan must reconcile every affected baseline object against physical state—not
-use `490` as a rollback or resume boundary—and define how the original attempt
-will remain immutable and linked to any new recovery evidence.
+The pre-D-009 recovery proposal above is retained as a historical contingency,
+not the current Stage 1 next step. D-009's one alternate disposable
+establishment has now been consumed and linked to this incident; it did not
+repair the original target. If repair of that target is ever proposed, it still
+requires a separate principal-architect-approved plan bound to this attempt,
+fingerprint, checksum, manifest digest, census, and retained-log result. Such a
+plan must reconcile every affected object against physical state and may not use
+`490` as a rollback or resume boundary.
 
-There is no applicable generic recovery command today: the existing named
-zero-statement recovery is for a different, explicitly rejected migration and
-requires a failed zero-statement attempt. It cannot authorize this `running`,
-490-statement baseline attempt. Until a reviewed, bounded replacement exists,
-the required position is to preserve this target and attempt unchanged. Do not
-retry, reset, recreate, manually alter the schema, edit the ledger, or use an
-alternate database to continue Stage 1.
+There remains no applicable generic recovery command for this `running`,
+490-statement baseline attempt. The original target and attempt must remain
+unchanged: no retry, reset, recreation, manual schema alteration, ledger edit,
+or repair is authorized. No third target or automatic retry is authorized
+either.

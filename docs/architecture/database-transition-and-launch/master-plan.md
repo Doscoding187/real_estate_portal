@@ -294,7 +294,7 @@ admission.
 | D-006 | Classify and transfer TiDB data | Edward + data owner | Sanitized inventory, mapping, reconciliation and archive decision | Open |
 | D-007 | Accept recovery objectives and regional-failure posture | Edward + operations | Restore/PITR/logical-backup drill with measured RPO/RTO | Open |
 | D-008 | Define Live/Pilot/Hidden launch scope | Edward + product authority | Updated central launch register and journey evidence | Open |
-| D-009 | Stage 1 preserved incident and fresh establishment | Edward / principal architect | Preserved-target quarantine, exact fresh-target provenance, one governed fresh-chain result, and linked Stage 1 evidence | Authorized — one disposable local establishment only |
+| D-009 | Stage 1 preserved incident and fresh establishment | Edward / principal architect | Preserved-target quarantine, exact fresh-target provenance, one governed fresh-chain result, and linked Stage 1 evidence | Executed — local evidence review pending |
 
 ### D-009 — Stage 1 preserved incident and fresh establishment
 
@@ -342,6 +342,42 @@ must be retained in access-restricted local evidence; only sanitized results
 may be committed or reported. If the one authorized apply fails or becomes
 ambiguous, stop immediately, preserve the new target and evidence, and request
 review. No further target or automatic retry is authorized.
+
+#### D-009 execution record — not original-attempt recovery
+
+The one permitted successor was established from this decision on
+`feat/database-transition-stage-1-fresh-establishment` at source commit
+`7a1b2a43daa0e167c1f51f0680759bf6d1228892` (tree
+`769a180b5ff3459e606b4bf2a5c63185b680d1f5`). It descends from decision
+commit `3991934edf563fd40444b64e5e16bd857140c9a6`; ancestry checks confirmed
+both candidate integration `4d6b2ca57fb94c970e3516e3db2ce7a39c140eec` and
+WP2 control `d3084091d57d023e733f158ae8bcf79105de0880` are ancestors.
+
+| Evidence | Recorded result |
+| --- | --- |
+| Successor worktree / ownership | `/home/edwardspc/Desktop/Dev/worktrees/property-listify-database-transition-stage-1-fresh-establishment`; exact ownership key `4388046192b23980838607dc` |
+| Authority-derived target | `listify_wt_database_transition_stage_1_fr_4388046192b2`; fingerprint `b121616eb803e0da7351ee3aa767f10d5f7f9c8585d9d3f83f3a41e07a86faf2`, which differs from preserved fingerprint `5b75c0ec72db92fea58941cbedecf61579a049de9a3f4fccf938969bf5e733dc` |
+| Service continuity | The existing MySQL service remained available on `127.0.0.1:3307`, fingerprint `2425e54d0472ee5b308127a7c63380733f077ec7531767d6dba21a2c2a9177f2`, root `/var/tmp/property-listify-1000/mysql-3307`, and existing data directory |
+| Fresh precondition | Before apply, authority reported missing migration ledger/attempt authority and a noncongruent schema; the canonical fresh plan `688db4f891290074be8feddc` / `688db4f891290074be8feddc2cb9d1ddea51ad1187a30aced7a12c644743ae15` named old head `none`, 91 pending files, and expected head `0090_retire_disconnected_boost_campaigns.sql` |
+| Governed apply | One local `migration:apply` ran from `2026-09-12T12:35:27.507Z` to `2026-09-12T12:38:38.791Z`, exit `0`, with the explicit heads above. Its successful-attempt records include baseline attempt `688db4f891290074be8feddc-0000` with 948 completed statements and final attempt `...-0090`; all 91 files are in the successful ledger |
+| Final migration state | Authority is target-connected and exact-worktree-owned; ledger is manifest-head-ready, no incomplete attempt exists, plan has `pending: []`, and no migration lock is held |
+| Physical model | Congruency returned `true`, no differences, and equal desired/actual digest `59ad0020e367b82288e266a7964a0985463420ab25c24e7b93caa0c51c600e8c`. Therefore the selected 212-table, 23-CHECK, 461-FK canonical inventory is physically matched on this local target |
+| Behavioral enforcement | The authority-wrapped real-MySQL supersession test passed 13/13 after asserting rejection of invalid CHECK shapes, an orphan endpoint write, and deletion through the `ON DELETE RESTRICT` relationship |
+| Local acceptance | Canonical geography, Launch Access foundation, and Search-to-Lead scenario preparation/verification passed; Search-to-Lead readiness was application-ready; the 11-test agency walkthrough and the scoped P1 browser persistence journey both passed |
+
+Raw runner stdout/stderr, timestamps, exit status, and before/after service-log
+snapshots are retained only in
+`/var/tmp/property-listify-stage-1-fresh-establishment-4388046192b2` (directory
+mode `0700`, artifacts mode `0600`). The apply stdout SHA-256 is
+`fd486f9fbe18188c4f022bcdba648729cab00ae97722b8ab1ed38e4fb60f3229`; its
+stderr is empty (`e3b0c442…b855`); both 200617-byte service snapshots have
+SHA-256 `df07bf28a98b413ac264b23f7fcbde9e1cf6b02add12a691f361dc62e34285b6`.
+Only these sanitized identities and digests are committed.
+
+This proves one disposable local establishment under the recorded conditions.
+It does not recover or explain the preserved attempt, prove production recovery,
+select an engine version, admit Azure or TiDB, approve G1/G2/G3, or authorize a
+third target, retry, reset, repair, or change to the preserved target.
 
 ## Live, Pilot and Hidden journey requirements
 
