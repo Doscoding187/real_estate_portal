@@ -116,7 +116,7 @@ describe('FPE-S1A foundation authority', () => {
 
     expect(home).toContain("from '@/components/ui/page-frame'");
     expect(favorites).toContain('trpc.properties.getFavorites.useQuery');
-    expect(favorites).toContain('trpc.properties.toggleFavorite.useMutation');
+    expect(favorites).toContain('trpc.properties.setFavorite.useMutation');
     expect(notFound).toContain("setLocation('/')");
   });
 });

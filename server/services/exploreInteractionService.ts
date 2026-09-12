@@ -1,7 +1,24 @@
 import { db } from '../db';
 import { exploreContent, exploreEngagements } from '../../drizzle/schema';
 import { eq, sql, and, count, desc } from 'drizzle-orm';
+import { randomUUID } from 'node:crypto';
 import type { InteractionType, DeviceType, FeedType } from '../../shared/types';
+import { TRPCError } from '@trpc/server';
+
+function isMissingExploreSchema(error: unknown) {
+  const err = error as { code?: string; message?: string; cause?: { code?: string; message?: string } };
+  const message = `${err.message || ''} ${err.cause?.message || ''}`;
+  const code = err.code || err.cause?.code;
+  return code === 'ER_NO_SUCH_TABLE' || /explore_(content|engagements)/i.test(message) && /does not exist|doesn't exist|unknown table/i.test(message);
+}
+
+function throwExploreUnavailable(error: unknown): never {
+  throw new TRPCError({
+    code: 'PRECONDITION_FAILED',
+    message: 'Explore engagement storage is unavailable until its canonical schema is established',
+    cause: error,
+  });
+}
 
 /**
  * Explore Interaction Service (BOOT-SAFE)
@@ -16,6 +33,7 @@ import type { InteractionType, DeviceType, FeedType } from '../../shared/types';
 
 export interface RecordInteractionOptions {
   contentId: number;
+  eventId?: string;
   userId?: number;
   sessionId: string;
   interactionType: InteractionType;
@@ -39,6 +57,7 @@ export class ExploreInteractionService {
   async recordInteraction(options: RecordInteractionOptions): Promise<void> {
     const {
       contentId,
+      eventId = randomUUID(),
       userId,
       sessionId,
       interactionType,
@@ -64,6 +83,7 @@ export class ExploreInteractionService {
 
       await db.insert(exploreEngagements).values({
         contentId,
+        eventId,
         userId: userId ?? null,
         sessionId: sessionId ?? '',
         interactionType,
@@ -85,15 +105,9 @@ export class ExploreInteractionService {
         console.error('Error updating content metrics:', err);
       });
     } catch (error: any) {
-      console.error('[ENG_INSERT_FAIL]', {
-        contentId,
-        interactionType,
-        message: error?.message,
-        code: error?.code,
-        name: error?.name,
-        stack: error?.stack,
-      });
-      // NEVER throw — analytics must not block UI or crash app
+      if (isMissingExploreSchema(error)) throwExploreUnavailable(error);
+      if (Number(error?.errno) === 1062 || error?.code === 'ER_DUP_ENTRY') return;
+      throw error;
     }
   }
 
@@ -105,35 +119,49 @@ export class ExploreInteractionService {
     if (!interactions.length) return;
 
     try {
-      const values = interactions.map(i => ({
-        contentId: i.contentId,
-        userId: i.userId ?? null,
-        sessionId: i.sessionId ?? '',
-        interactionType: i.interactionType,
-        metadata: {
-          duration: i.duration,
-          feedType: i.feedType,
-          feedContext: i.feedContext,
-          deviceType: i.deviceType,
-          userAgent: i.userAgent,
-          ipAddress: i.ipAddress,
-          ...i.metadata,
-        },
-      }));
+      // Insert each event independently so one browser replay cannot discard
+      // unrelated events in the batch. The unique event identity makes a
+      // duplicate a successful no-op, and only newly inserted events update
+      // the non-authoritative counters below.
+      const insertedInteractions: RecordInteractionOptions[] = [];
+      for (const interaction of interactions) {
+        try {
+          await db.insert(exploreEngagements).values({
+            contentId: interaction.contentId,
+            eventId: interaction.eventId || randomUUID(),
+            userId: interaction.userId ?? null,
+            sessionId: interaction.sessionId ?? '',
+            interactionType: interaction.interactionType,
+            metadata: {
+              duration: interaction.duration,
+              feedType: interaction.feedType,
+              feedContext: interaction.feedContext,
+              deviceType: interaction.deviceType,
+              userAgent: interaction.userAgent,
+              ipAddress: interaction.ipAddress,
+              ...interaction.metadata,
+            },
+          });
+          insertedInteractions.push(interaction);
+        } catch (error: any) {
+          if (isMissingExploreSchema(error)) throwExploreUnavailable(error);
+          if (Number(error?.errno) === 1062 || error?.code === 'ER_DUP_ENTRY') continue;
+          throw error;
+        }
+      }
 
-      await db.insert(exploreEngagements).values(values);
-
-      // Aggregate per content item
-      const contentIds = Array.from(new Set(interactions.map(i => i.contentId)));
+      // Aggregate per content item for events that actually committed.
+      const contentIds = Array.from(new Set(insertedInteractions.map(i => i.contentId)));
 
       for (const contentId of contentIds) {
-        const last = interactions.filter(i => i.contentId === contentId).pop();
+        const last = insertedInteractions.filter(i => i.contentId === contentId).pop();
         this.updateContentMetrics(contentId, (last?.interactionType as any) ?? 'view').catch(
           console.error,
         );
       }
     } catch (error) {
-      console.error('Error recording batch interactions:', error);
+      if (isMissingExploreSchema(error)) throwExploreUnavailable(error);
+      throw error;
     }
   }
 
@@ -294,6 +322,22 @@ export class ExploreInteractionService {
           ),
         );
 
+      const [uniqueViews] = await db
+        .select({
+          count: sql<number>`COUNT(DISTINCT CASE
+            WHEN ${exploreEngagements.userId} IS NOT NULL
+              THEN CONCAT('user:', ${exploreEngagements.userId})
+            ELSE CONCAT('session:', COALESCE(${exploreEngagements.sessionId}, ''))
+          END)`,
+        })
+        .from(exploreEngagements)
+        .where(
+          and(
+            eq(exploreEngagements.contentId, contentId),
+            eq(exploreEngagements.interactionType, 'view'),
+          ),
+        );
+
       return {
         contentId,
 
@@ -301,7 +345,7 @@ export class ExploreInteractionService {
         shortId: contentId,
 
         viewCount: content[0]?.viewCount ?? 0,
-        uniqueViewCount: content[0]?.viewCount ?? 0, // placeholder for future dedupe logic
+        uniqueViewCount: Number(uniqueViews?.count || 0),
         saveCount: saves?.count ?? 0,
         shareCount: shares?.count ?? 0,
         skipCount: skips?.count ?? 0,

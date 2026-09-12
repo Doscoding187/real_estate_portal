@@ -1,6 +1,6 @@
 import { and, desc, eq, inArray, ne, sql } from 'drizzle-orm';
 
-import { agencyAgentMemberships, agencies, agents, cities, listings, provinces, properties, suburbs, subscriptions } from '../../drizzle/schema';
+import { agencyAgentMemberships, agencies, agents, billableAccounts, cities, listings, provinces, properties, suburbs, subscriptions } from '../../drizzle/schema';
 import { slugify } from '../_core/utils/slug';
 import { isPaidSubscriptionRowEntitled } from './planAccessService';
 import { resolvePublicPropertyEligibilities } from './publicPropertyEligibilityService';
@@ -439,7 +439,16 @@ async function loadPersonallyEntitledAgentUserIds(
       })
       .from(subscriptions)
       .where(
-        and(inArray(subscriptions.ownerId, userIds), eq(subscriptions.ownerType, 'agent')),
+        and(
+          inArray(subscriptions.ownerId, userIds),
+          sql`EXISTS (
+            SELECT 1
+            FROM ${billableAccounts} account
+            WHERE account.id = ${subscriptions.billableAccountId}
+              AND account.account_kind = 'agent'
+              AND account.user_id = ${subscriptions.ownerId}
+          )`,
+        ),
       );
   const now = new Date();
   const entitled = new Set<number>();

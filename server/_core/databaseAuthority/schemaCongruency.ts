@@ -463,6 +463,10 @@ export function normalizeSqlExpression(value: string): string {
   if (normalized === 'now()' || normalized === 'current_timestamp()') {
     return 'current_timestamp';
   }
+  const preciseCurrentTime = normalized.match(/^(?:now|current_timestamp)\((\d+)\)$/);
+  if (preciseCurrentTime) {
+    return `current_timestamp(${preciseCurrentTime[1]})`;
+  }
   return normalized;
 }
 
@@ -495,6 +499,12 @@ function actualDefault(value: unknown, type: string): string | null {
   const text = String(value);
   if (/^(?:current_timestamp(?:\(\))?|now\(\))$/i.test(text.trim())) {
     return 'current_timestamp';
+  }
+  const preciseCurrentTime = text
+    .trim()
+    .match(/^\(?\s*(?:current_timestamp|now)\((\d+)\)\s*\)?$/i);
+  if (preciseCurrentTime) {
+    return `current_timestamp(${preciseCurrentTime[1]})`;
   }
   return normalizeDefaultForType(text, type);
 }

@@ -201,9 +201,10 @@ export const locationPagesService = {
       );
     } catch (error) {
       console.warn(
-        '[LocationPages] Public property eligibility failed for province, returning empty manual inventory',
+        '[LocationPages] Public property eligibility failed for province',
         error,
       );
+      throw error;
     }
 
     try {
@@ -233,7 +234,8 @@ export const locationPagesService = {
         )
         .slice(0, 12);
     } catch (error) {
-      console.warn('[LocationPages] City list query failed for province, returning empty', error);
+      console.warn('[LocationPages] City list query failed for province', error);
+      throw error;
     }
 
     try {
@@ -257,9 +259,10 @@ export const locationPagesService = {
         .limit(6);
     } catch (error) {
       console.warn(
-        '[LocationPages] Developments query failed for province, returning empty',
+        '[LocationPages] Developments query failed for province',
         error,
       );
+      throw error;
     }
 
     try {
@@ -288,9 +291,10 @@ export const locationPagesService = {
         .slice(0, 10);
     } catch (error) {
       console.warn(
-        '[LocationPages] Trending suburbs query failed for province, returning empty',
+        '[LocationPages] Trending suburbs query failed for province',
         error,
       );
+      throw error;
     }
 
     const averagePrice = averagePropertyPrice(eligibleProperties);
@@ -539,9 +543,10 @@ export const locationPagesService = {
       );
     } catch (error) {
       console.warn(
-        '[LocationPages] Public property eligibility failed for suburb, returning empty manual inventory',
+        '[LocationPages] Public property eligibility failed for suburb',
         error,
       );
+      throw error;
     }
 
     const rentalCount = eligibleProperties.filter(
@@ -556,7 +561,8 @@ export const locationPagesService = {
       try {
         localProperties = loadPropertyPreviews(eligibleProperties.slice(0, 12));
       } catch (error) {
-        console.warn('[LocationPages] Properties query failed for suburb, returning empty', error);
+        console.warn('[LocationPages] Properties preview projection failed for suburb', error);
+        throw error;
       }
     }
 
@@ -569,7 +575,8 @@ export const locationPagesService = {
         .where(eq(suburbPriceAnalytics.suburbId, suburb.id))
         .limit(1);
     } catch (error) {
-      console.warn('[LocationPages] suburbPriceAnalytics query failed, returning null', error);
+      console.warn('[LocationPages] suburbPriceAnalytics query failed', error);
+      throw error;
     }
 
     // 5. AI Insights & Reviews — wrap import + calls so module failures don't crash

@@ -14,7 +14,7 @@ describe('distributionRequiredDocumentsService', () => {
     ).toBe(true);
   });
 
-  it('returns zero readiness counts when the active-column schema is missing', async () => {
+  it('propagates an unavailable required-document schema', async () => {
     let callCount = 0;
     const db = {
       select() {
@@ -34,9 +34,8 @@ describe('distributionRequiredDocumentsService', () => {
       },
     };
 
-    await expect(getDevelopmentRequiredDocumentSummary(db, 60001)).resolves.toEqual({
-      requiredDocsCount: 0,
-      requiredRequiredDocsCount: 0,
+    await expect(getDevelopmentRequiredDocumentSummary(db, 60001)).rejects.toMatchObject({
+      code: 'ER_BAD_FIELD_ERROR',
     });
   });
 
@@ -61,7 +60,7 @@ describe('distributionRequiredDocumentsService', () => {
     });
   });
 
-  it('returns an empty document list when the required-documents table is missing', async () => {
+  it('propagates a missing required-documents table', async () => {
     const db = {
       select() {
         return {
@@ -80,10 +79,12 @@ describe('distributionRequiredDocumentsService', () => {
       },
     };
 
-    await expect(listDevelopmentRequiredDocumentsOrEmpty(db, 60001)).resolves.toEqual([]);
+    await expect(listDevelopmentRequiredDocumentsOrEmpty(db, 60001)).rejects.toMatchObject({
+      errno: 1146,
+    });
   });
 
-  it('falls back to legacy rows as client-required documents when category is unavailable', async () => {
+  it('does not fall back to legacy rows when category is unavailable', async () => {
     let callCount = 0;
     const db = {
       select() {
@@ -122,21 +123,8 @@ describe('distributionRequiredDocumentsService', () => {
       },
     };
 
-    await expect(listDevelopmentRequiredDocumentsOrEmpty(db, 60001)).resolves.toEqual([
-      {
-        id: 7,
-        developmentId: 60001,
-        documentCode: 'custom',
-        documentLabel: 'Price Structure',
-        category: 'client_required_document',
-        templateFileUrl: null,
-        templateFileName: null,
-        templateUploadedAt: null,
-        templateUploadedBy: null,
-        isRequired: true,
-        sortOrder: 0,
-        isActive: true,
-      },
-    ]);
+    await expect(listDevelopmentRequiredDocumentsOrEmpty(db, 60001)).rejects.toMatchObject({
+      code: 'ER_BAD_FIELD_ERROR',
+    });
   });
 });

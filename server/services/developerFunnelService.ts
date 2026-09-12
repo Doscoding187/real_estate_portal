@@ -20,7 +20,13 @@ import {
   type SlaStatus,
   isLeadTransitionAllowed,
 } from '../../shared/developerFunnel';
-import { parseDeliveryAttempts, toMySqlDateTime } from './leadDeliveryService';
+import {
+  getLeadDeliverySnapshot,
+  getLeadDeliverySnapshotsForLeadIds,
+  publicStatusForDelivery,
+  toMySqlDateTime,
+  type LeadDeliverySnapshot,
+} from './leadDeliveryService';
 
 type LeadRow = typeof leads.$inferSelect;
 type LeadStageRow = Pick<LeadRow, 'status' | 'funnelStage' | 'lostReason'>;
@@ -301,7 +307,7 @@ function canonicalStageToUpdate(stage: LeadStage): Partial<typeof leads.$inferIn
     case 'archived':
       return { status: 'lost', lostReason: 'archived' };
     default:
-      return {};
+      throw new Error(`Unsupported canonical lead stage: ${String(stage)}`);
   }
 }
 
@@ -560,12 +566,17 @@ function normalizeLeadRow(
   ownerName: string | null,
   distributionEnabledForDevelopment: boolean,
   developmentName: string | null,
+  deliverySnapshot?: LeadDeliverySnapshot | null,
 ) {
   const stage = deriveCanonicalLeadStage(lead);
   const owner = deriveOwner(lead, ownerName);
   const sla = computeLeadSla(lead);
   const lostReason = (lead.lostReason || '').toLowerCase();
   const availableOwnerTypes = getAvailableLeadOwnerTypes(distributionEnabledForDevelopment);
+
+  const currentDelivery = deliverySnapshot?.current || null;
+  const latestAttempt =
+    deliverySnapshot?.attempts[deliverySnapshot.attempts.length - 1] || null;
 
   return {
     id: String(lead.id),
@@ -593,11 +604,11 @@ function normalizeLeadRow(
       source: lead.consentSource || null,
     },
     delivery: {
-      status: lead.deliveryStatus,
-      attempts: parseDeliveryAttempts(lead.deliveryAttempts),
-      lastAttemptAt: lead.deliveryLastAttemptAt || null,
-      lastError: lead.deliveryLastError || null,
-      providerReference: lead.deliveryProviderReference || null,
+      status: currentDelivery ? publicStatusForDelivery(currentDelivery) : lead.deliveryStatus,
+      attempts: deliverySnapshot?.attempts || [],
+      lastAttemptAt: latestAttempt?.attemptedAt || lead.deliveryLastAttemptAt || null,
+      lastError: latestAttempt?.lastError || lead.deliveryLastError || null,
+      providerReference: latestAttempt?.providerReference || lead.deliveryProviderReference || null,
     },
     source: {
       channel: getCanonicalLeadSource(lead),
@@ -661,7 +672,8 @@ async function getDeveloperLeadRow(developerId: number, leadId: number) {
     });
   }
 
-  return row;
+  const deliverySnapshot = await getLeadDeliverySnapshot({ leadId: row.lead.id });
+  return { ...row, deliverySnapshot };
 }
 
 /**
@@ -762,6 +774,9 @@ export async function listDeveloperLeads(params: FunnelListParams) {
     ),
   ) as number[];
   const distributionEnabledMap = await getDistributionEnabledMapForDevelopments(developmentIds);
+  const deliverySnapshots = await getLeadDeliverySnapshotsForLeadIds({
+    leadIds: rows.map(row => row.lead.id),
+  });
 
   const normalized = rows.map(row => {
     const developmentId = Number(row.lead.developmentId || 0);
@@ -772,6 +787,7 @@ export async function listDeveloperLeads(params: FunnelListParams) {
       row.ownerName || null,
       distributionEnabledForDevelopment,
       row.developmentName || null,
+      deliverySnapshots.get(row.lead.id) || null,
     );
   });
 
@@ -891,6 +907,7 @@ export async function assignDeveloperLead(params: AssignParams) {
       updatedRow.ownerName || null,
       distributionEnabledForDevelopment,
       updatedRow.developmentName || null,
+      updatedRow.deliverySnapshot,
     ),
     assignmentMode: params.assignmentMode || 'manual',
   };
@@ -938,6 +955,7 @@ export async function transitionDeveloperLead(params: TransitionParams) {
       updated.ownerName || null,
       distributionEnabledMap.get(Number(updated.lead.developmentId || 0)) === true,
       updated.developmentName || null,
+      updated.deliverySnapshot,
     ),
   };
 }
@@ -981,6 +999,7 @@ export async function logDeveloperLeadActivity(params: ActivityParams) {
       updated.ownerName || null,
       distributionEnabledMap.get(Number(updated.lead.developmentId || 0)) === true,
       updated.developmentName || null,
+      updated.deliverySnapshot,
     ),
   };
 }
@@ -1017,6 +1036,7 @@ export async function setDeveloperLeadNextAction(params: NextActionParams) {
       updated.ownerName || null,
       distributionEnabledMap.get(Number(updated.lead.developmentId || 0)) === true,
       updated.developmentName || null,
+      updated.deliverySnapshot,
     ),
   };
 }

@@ -200,6 +200,30 @@ describe('canonical migration manifest', () => {
     const authVerificationTokenCleanup = manifest.orderedMigrations.find(
       entry => entry.filename === '0065_auth_verification_token_cleanup.sql',
     );
+    const favoritesDeduplicate = manifest.orderedMigrations.find(
+      entry => entry.filename === '0066_favorites_user_property_deduplicate.sql',
+    );
+    const favoritesUnique = manifest.orderedMigrations.find(
+      entry => entry.filename === '0067_favorites_user_property_unique.sql',
+    );
+    const recentlyViewedCleanup = manifest.orderedMigrations.find(
+      entry => entry.filename === '0068_recently_viewed_activity_cleanup.sql',
+    );
+    const recentlyViewedRequired = manifest.orderedMigrations.find(
+      entry => entry.filename === '0069_recently_viewed_listing_required.sql',
+    );
+    const recentlyViewedUnique = manifest.orderedMigrations.find(
+      entry => entry.filename === '0070_recently_viewed_user_listing_unique.sql',
+    );
+    const recentlyViewedRecency = manifest.orderedMigrations.find(
+      entry => entry.filename === '0071_recently_viewed_user_recency_index.sql',
+    );
+    const recentlyViewedPrecision = manifest.orderedMigrations.find(
+      entry => entry.filename === '0075_recently_viewed_microsecond_recency.sql',
+    );
+    const leadDeliveryRelational = manifest.orderedMigrations.find(
+      entry => entry.filename === '0076_lead_delivery_relational_authority.sql',
+    );
     expect(commercialQuoteTerms).toMatchObject({
       sequence: 46,
       parent: '0045_commercial_space_positive_area_integrity.sql',
@@ -242,6 +266,75 @@ describe('canonical migration manifest', () => {
       kind: 'transactional-data',
       statementPolicy: 'transactional-dml',
     });
+    expect(favoritesDeduplicate).toMatchObject({
+      sequence: 66,
+      parent: '0065_auth_verification_token_cleanup.sql',
+      parentChecksum: '0cd1523e5467f73dd0534a04116d25a974e9e2b9a900692e6c3933a67a3182eb',
+      checksum: '0f9ca1b08bd1cb43ec80f4d29060d6aa71477b2d2d54686a1d2c18fd9c403039',
+      kind: 'transactional-data',
+      statementPolicy: 'transactional-dml',
+    });
+    expect(favoritesUnique).toMatchObject({
+      sequence: 67,
+      parent: '0066_favorites_user_property_deduplicate.sql',
+      parentChecksum: '0f9ca1b08bd1cb43ec80f4d29060d6aa71477b2d2d54686a1d2c18fd9c403039',
+      checksum: 'c9b35e914772a6de5ca77ecd314d383f69d5f9872c9b36dbf10f2682c4e1ad44',
+      kind: 'ddl',
+      statementPolicy: 'single-ddl',
+    });
+    expect(recentlyViewedCleanup).toMatchObject({
+      sequence: 68,
+      parent: '0067_favorites_user_property_unique.sql',
+      parentChecksum: 'c9b35e914772a6de5ca77ecd314d383f69d5f9872c9b36dbf10f2682c4e1ad44',
+      checksum: '6279d3b18308df140f6abdf7158df9fd5acebc0434e2fe3eb5478de474bcef26',
+      kind: 'transactional-data',
+      statementPolicy: 'transactional-dml',
+    });
+    expect(recentlyViewedRequired).toMatchObject({
+      sequence: 69,
+      parent: '0068_recently_viewed_activity_cleanup.sql',
+      parentChecksum: '6279d3b18308df140f6abdf7158df9fd5acebc0434e2fe3eb5478de474bcef26',
+      checksum: '738fb1816e5ddb5283b340fe03531c5cf2767e07b6a611a42bfc0c422f2e1fc7',
+      kind: 'exceptional',
+      statementPolicy: 'approved-exception',
+      approvalReference: 'DBX-PRELAUNCH-CONSUMER-ACTIVITY-INTEGRITY-2026-09-09-Edward',
+    });
+    expect(recentlyViewedUnique).toMatchObject({
+      sequence: 70,
+      parent: '0069_recently_viewed_listing_required.sql',
+      parentChecksum: '738fb1816e5ddb5283b340fe03531c5cf2767e07b6a611a42bfc0c422f2e1fc7',
+      checksum: '70709963fc73af8ad314fd983bfb9382e036d7a7373e908a8b278ae2c8fcb0d2',
+      kind: 'ddl',
+      statementPolicy: 'single-ddl',
+    });
+    expect(recentlyViewedRecency).toMatchObject({
+      sequence: 71,
+      parent: '0070_recently_viewed_user_listing_unique.sql',
+      parentChecksum: '70709963fc73af8ad314fd983bfb9382e036d7a7373e908a8b278ae2c8fcb0d2',
+      checksum: '39102d96623ac8290038d5e3887fe3bcbc8960607b6e56b35065a0684023e19c',
+      kind: 'ddl',
+      statementPolicy: 'single-ddl',
+    });
+    expect(recentlyViewedPrecision).toMatchObject({
+      sequence: 75,
+      parent: '0074_retire_legacy_prospects.sql',
+      parentChecksum: 'b0d6cbab8f0ac521d478a371dab62e0e23a7c0e35f8d304a42394eb43cefed14',
+      checksum: 'e205efe19a742dced7bd1e18cf4dd75f4f37074cae62e8373e7e6b9687d30938',
+      kind: 'exceptional',
+      statementPolicy: 'approved-exception',
+      approvalReference: 'DBX-PRELAUNCH-CONSUMER-ACTIVITY-RECENCY-2026-09-09-Edward',
+    });
+    expect(recentlyViewedPrecision?.statementCount).toBe(1);
+    expect(leadDeliveryRelational).toMatchObject({
+      sequence: 76,
+      parent: '0075_recently_viewed_microsecond_recency.sql',
+      parentChecksum: 'e205efe19a742dced7bd1e18cf4dd75f4f37074cae62e8373e7e6b9687d30938',
+      checksum: '1dd8bcedad1517191b4f1701ce11dd6c9ca8c58cc45a9fe44361a36f35472a39',
+      kind: 'exceptional',
+      statementPolicy: 'approved-exception',
+      approvalReference: 'DBX-PRELAUNCH-LEAD-DELIVERY-RELATIONAL-2026-09-09-Edward',
+    });
+    expect(leadDeliveryRelational?.statementCount).toBe(3);
     const tidbSequenced = manifest.orderedMigrations.filter(
       entry => entry.approvalReference === 'DBX-TIDB-INCREMENTAL-DDL-SEQUENCING-2026-09-04-Edward',
     );
@@ -260,7 +353,7 @@ describe('canonical migration manifest', () => {
     expect(tidbSequenced.map(entry => entry.statementCount)).toEqual([
       4, 15, 3, 3, 3, 4, 3, 3, 3, 3,
     ]);
-    expect(manifest.expectedHead.filename).toBe('0065_auth_verification_token_cleanup.sql');
+    expect(manifest.expectedHead.filename).toBe('0090_retire_disconnected_boost_campaigns.sql');
   });
 
   it('plans the identity-and-custody migration chain from the integrated 0007 head', () => {
@@ -276,11 +369,11 @@ describe('canonical migration manifest', () => {
         checksum: item.checksum,
       })),
       acceptedOldHead: currentIntegratedHead.filename,
-      expectedNewHead: '0065_auth_verification_token_cleanup.sql',
+      expectedNewHead: '0090_retire_disconnected_boost_campaigns.sql',
     });
 
     expect(plan.acceptedOldHead).toBe('0007_paid_launch_access_invoice_term.sql');
-    expect(plan.pending).toHaveLength(58);
+    expect(plan.pending).toHaveLength(83);
     expect(plan.pending.map(item => item.filename)).toEqual([
       '0008_developer_organisations.sql',
       '0009_developer_organisation_memberships.sql',
@@ -340,8 +433,33 @@ describe('canonical migration manifest', () => {
       '0063_agent_launch_access_earnings_feature.sql',
       '0064_auth_session_security.sql',
       '0065_auth_verification_token_cleanup.sql',
+      '0066_favorites_user_property_deduplicate.sql',
+      '0067_favorites_user_property_unique.sql',
+      '0068_recently_viewed_activity_cleanup.sql',
+      '0069_recently_viewed_listing_required.sql',
+      '0070_recently_viewed_user_listing_unique.sql',
+      '0071_recently_viewed_user_recency_index.sql',
+      '0072_retire_legacy_prospect_favorites.sql',
+      '0073_retire_legacy_scheduled_viewings.sql',
+      '0074_retire_legacy_prospects.sql',
+      '0075_recently_viewed_microsecond_recency.sql',
+      '0076_lead_delivery_relational_authority.sql',
+      '0077_bundle_attribution_relational_authority.sql',
+      '0078_retire_unreachable_partner_leads.sql',
+      '0079_explore_engagement_event_identity.sql',
+      '0080_service_lead_request_idempotency.sql',
+      '0081_explore_analytics_query_index.sql',
+      '0082_explore_engagement_retention_indexes.sql',
+      '0083_billing_provider_event_identity.sql',
+      '0084_billing_provider_event_retry_budget.sql',
+      '0085_billing_billable_accounts.sql',
+      '0086_billing_billable_accounts_not_null.sql',
+      '0087_billing_provider_event_leases.sql',
+      '0088_retire_obsolete_billing_families.sql',
+      '0089_retire_disconnected_analytics_aggregations.sql',
+      '0090_retire_disconnected_boost_campaigns.sql',
     ]);
-    expect(plan.expectedNewHead).toBe('0065_auth_verification_token_cleanup.sql');
+    expect(plan.expectedNewHead).toBe('0090_retire_disconnected_boost_campaigns.sql');
   });
 
   it('accepts an isolated 0000 -> 0001 -> 0002 progression in ancestry order', () => {

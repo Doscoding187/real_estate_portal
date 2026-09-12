@@ -322,6 +322,15 @@ async function findAgencySubscription(
   connection: AuthoritySqlConnection,
   agencyId: number,
 ): Promise<Row | null> {
+  const accountRows = await queryRows(
+    connection,
+    `SELECT id FROM billable_accounts WHERE account_kind = ? AND agency_id = ? ORDER BY id`,
+    ['agency', agencyId],
+  );
+  if (accountRows.length !== 1) {
+    throw new Error('PLE publication entitlement fixture requires exactly one agency billable account.');
+  }
+  const accountId = rowValue(accountRows[0], 'id');
   return requireOneOrNone(
     await queryRows(
       connection,
@@ -329,9 +338,9 @@ async function findAgencySubscription(
               trial_ends_at, current_period_start, current_period_end,
               grace_ends_at, cancel_at_period_end, created_by, updated_by, metadata
          FROM subscriptions
-        WHERE owner_type = ? AND owner_id = ?
+        WHERE billable_account_id = ?
         ORDER BY id`,
-      [SUBSCRIPTION_EXPECTED.ownerType, agencyId],
+      [accountId],
     ),
     'agency subscription',
   );
@@ -630,6 +639,15 @@ export async function preparePlePublicationEntitlement(input: {
       }
     }
 
+    const accountRows = await queryRows(
+      input.connection,
+      `SELECT id FROM billable_accounts WHERE account_kind = 'agency' AND agency_id = ? ORDER BY id`,
+      [actors.agencyId],
+    );
+    if (accountRows.length !== 1) {
+      throw new Error('PLE publication entitlement fixture requires exactly one agency billable account.');
+    }
+    const billableAccountId = rowValue(accountRows[0], 'id');
     const existingSubscription = await findAgencySubscription(input.connection, actors.agencyId);
     const subscriptionDecision = classifyPleFixtureSubscription(
       existingSubscription ? [existingSubscription] : [],
@@ -639,14 +657,15 @@ export async function preparePlePublicationEntitlement(input: {
     if (subscriptionDecision.state === 'created') {
       await input.connection.execute(
         `INSERT INTO subscriptions
-          (owner_type, owner_id, plan_id, status, trial_ends_at,
+          (owner_type, owner_id, billable_account_id, plan_id, status, trial_ends_at,
            current_period_start, current_period_end, grace_ends_at,
            cancel_at_period_end, billing_cycle_anchor, metadata, created_by, updated_by)
-         VALUES ('agency', ?, ?, 'active', NULL, CURRENT_TIMESTAMP,
+        VALUES ('agency', ?, ?, ?, 'active', NULL, CURRENT_TIMESTAMP,
                  DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 30 DAY), NULL, 0,
                  CURRENT_TIMESTAMP, CAST(? AS JSON), ?, ?)`,
         [
           actors.agencyId,
+          billableAccountId,
           planId,
           JSON.stringify(SUBSCRIPTION_EXPECTED.metadata),
           actors.administratorUserId,

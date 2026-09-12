@@ -343,6 +343,7 @@ export const servicesEngineRouter = router({
   createLeadFromJourney: protectedProcedure
     .input(
       z.object({
+        requestId: z.string().trim().min(1).max(80).optional(),
         providerId: z.number().int().positive().optional(),
         category: serviceCategorySchema,
         sourceSurface: sourceSurfaceSchema,
@@ -362,6 +363,7 @@ export const servicesEngineRouter = router({
       const user = requireUser(ctx);
       return servicesEngineService.createLeadFromContext({
         requesterUserId: user.id,
+        requestId: input.requestId ?? null,
         providerId: input.providerId || null,
         category: input.category,
         sourceSurface: input.sourceSurface,

@@ -100,6 +100,7 @@ export class DiscoveryEngagementService {
 
     await exploreInteractionService.recordInteraction({
       contentId,
+      eventId: input.eventId,
       userId,
       sessionId,
       interactionType,

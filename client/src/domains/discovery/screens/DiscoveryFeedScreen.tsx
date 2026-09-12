@@ -246,6 +246,7 @@ export function DiscoveryVideoViewport({
               onView={() => {
                 void engageMutation.mutateAsync({
                   itemId: video.id,
+                  eventId: crypto.randomUUID(),
                   action: 'view',
                   context: {
                     mode: query.mode,

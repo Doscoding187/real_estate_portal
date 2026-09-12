@@ -34,6 +34,7 @@ export const REJECTED_PUBLIC_SEARCH_TO_LEAD_RELIABILITY = Object.freeze({
   acceptedSuccessfulHead: '0000_canonical_launch_baseline.sql',
   attemptAcceptedOldHead: null,
   failedExpectedHead: '0065_auth_verification_token_cleanup.sql',
+  failedExpectedHeadChecksum: '0cd1523e5467f73dd0534a04116d25a974e9e2b9a900692e6c3933a67a3182eb',
   expectedFailureClass: 'ER_KEY_COLUMN_DOES_NOT_EXITS',
   tableName: 'leads',
   absentColumns: [
@@ -267,9 +268,12 @@ function assertReplacementLineage(
   manifest: ReturnType<typeof loadAndValidateMigrationManifest>,
 ): void {
   const rejected = REJECTED_PUBLIC_SEARCH_TO_LEAD_RELIABILITY;
-  if (manifest.document.expectedHead !== rejected.failedExpectedHead) {
+  const failedHead = manifest.orderedMigrations.find(
+    item => item.filename === rejected.failedExpectedHead,
+  );
+  if (!failedHead || failedHead.checksum !== rejected.failedExpectedHeadChecksum) {
     throw new Error(
-      'Release migration recovery refused: active manifest head changed after review.',
+      'Release migration recovery refused: reviewed historical manifest head is absent or changed.',
     );
   }
   if (manifest.orderedMigrations.some(item => item.filename === rejected.filename)) {

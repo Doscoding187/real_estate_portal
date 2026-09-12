@@ -111,7 +111,7 @@ function buildSalesMetrics(
 export class PublicDevelopmentDetailService {
   async getBySlugOrId(slugOrId: string): Promise<PublicDevelopmentDetail | null> {
     const db = await getDb();
-    if (!db) return null;
+    if (!db) throw new Error('Database not available');
 
     const { isId, value } = parseSlugOrId(slugOrId);
     const identityCondition = isId

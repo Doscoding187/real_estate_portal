@@ -263,7 +263,8 @@ export async function captureDemandLeadFromCampaign(
   }
 
   const effectiveCriteria = toDemandCriteria(campaign, input.criteria, input.budgetMax);
-  const demandLeadInsert = await db.insert(demandLeads).values({
+  return db.transaction(async tx => {
+  const demandLeadInsert = await tx.insert(demandLeads).values({
     campaignId: campaign.id,
     sourceChannel: `campaign_${campaign.sourceChannel}`,
     status: 'captured',
@@ -304,7 +305,7 @@ export async function captureDemandLeadFromCampaign(
     propertyConditions.push(gte(properties.price, effectiveCriteria.minPrice));
   }
 
-  const candidateProperties = await db
+  const candidateProperties = await tx
     .select()
     .from(properties)
     .where(and(...propertyConditions))
@@ -313,9 +314,9 @@ export async function captureDemandLeadFromCampaign(
 
   if (candidateProperties.length === 0) {
     if (demandLeadId) {
-      await db.update(demandLeads).set({ status: 'unmatched' }).where(eq(demandLeads.id, demandLeadId));
+      await tx.update(demandLeads).set({ status: 'unmatched' }).where(eq(demandLeads.id, demandLeadId));
     }
-    await db.insert(demandUnmatchedLeads).values({
+    await tx.insert(demandUnmatchedLeads).values({
       campaignId: campaign.id,
       sourceChannel: `campaign_${campaign.sourceChannel}`,
       buyerName: input.name,
@@ -351,7 +352,7 @@ export async function captureDemandLeadFromCampaign(
 
   if (agentIds.length === 0) {
     if (demandLeadId) {
-      await db.update(demandLeads).set({ status: 'unmatched' }).where(eq(demandLeads.id, demandLeadId));
+      await tx.update(demandLeads).set({ status: 'unmatched' }).where(eq(demandLeads.id, demandLeadId));
     }
     return {
       campaignId: campaign.id,
@@ -363,7 +364,7 @@ export async function captureDemandLeadFromCampaign(
     };
   }
 
-  const agentRowsRaw = await db
+  const agentRowsRaw = await tx
     .select({
       id: agents.id,
       userId: agents.userId,
@@ -397,7 +398,7 @@ export async function captureDemandLeadFromCampaign(
     .filter(row => row.agencyId !== null)
     .map(row => row.id);
   const currentMembershipAgentIds = await listCurrentActiveMembershipAgentIds(
-    db,
+    tx,
     affiliatedAgentIds,
   );
   const agentRows = rawAgentRows.filter(
@@ -408,7 +409,7 @@ export async function captureDemandLeadFromCampaign(
   );
 
   const assignmentWindowStart = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-  const recentAssignments = await db
+  const recentAssignments = await tx
     .select({
       agentId: demandLeadAssignments.assignedAgentId,
       assignmentCount: sql<number>`COUNT(*)`,
@@ -526,7 +527,7 @@ export async function captureDemandLeadFromCampaign(
 
   if (uniqueRankedAgents.length === 0) {
     if (demandLeadId) {
-      await db.update(demandLeads).set({ status: 'unmatched' }).where(eq(demandLeads.id, demandLeadId));
+      await tx.update(demandLeads).set({ status: 'unmatched' }).where(eq(demandLeads.id, demandLeadId));
     }
     return {
       campaignId: campaign.id,
@@ -549,7 +550,7 @@ export async function captureDemandLeadFromCampaign(
 
   for (let idx = 0; idx < selectedRecipients.length; idx++) {
     const recipient = selectedRecipients[idx];
-    const leadInsertResult = await db.insert(leads).values({
+    const leadInsertResult = await tx.insert(leads).values({
       propertyId: recipient.property.id,
       agentId: recipient.agentId,
       name: input.name,
@@ -574,7 +575,7 @@ export async function captureDemandLeadFromCampaign(
     leadIds.push(leadId);
     assignedAgentIds.push(recipient.agentId);
 
-    await db.insert(demandLeadAssignments).values({
+    await tx.insert(demandLeadAssignments).values({
       demandLeadId,
       campaignId: campaign.id,
       leadId,
@@ -589,7 +590,7 @@ export async function captureDemandLeadFromCampaign(
       reason: `Matched via demand criteria for ${campaign.name}`,
     });
 
-    await db.insert(demandLeadMatches).values({
+    await tx.insert(demandLeadMatches).values({
       demandLeadId,
       campaignId: campaign.id,
       leadId,
@@ -611,7 +612,7 @@ export async function captureDemandLeadFromCampaign(
     });
 
     if (recipient.userId) {
-      await db.insert(notifications).values({
+      await tx.insert(notifications).values({
         userId: recipient.userId,
         type: 'lead_assigned',
         title: 'New Marketing Lead',
@@ -630,7 +631,7 @@ export async function captureDemandLeadFromCampaign(
 
   if (leadIds.length === 0) {
     if (demandLeadId) {
-      await db.update(demandLeads).set({ status: 'unmatched' }).where(eq(demandLeads.id, demandLeadId));
+      await tx.update(demandLeads).set({ status: 'unmatched' }).where(eq(demandLeads.id, demandLeadId));
     }
     return {
       campaignId: campaign.id,
@@ -643,7 +644,7 @@ export async function captureDemandLeadFromCampaign(
   }
 
   if (demandLeadId) {
-    await db.update(demandLeads).set({ status: 'assigned' }).where(eq(demandLeads.id, demandLeadId));
+    await tx.update(demandLeads).set({ status: 'assigned' }).where(eq(demandLeads.id, demandLeadId));
   }
 
   return {
@@ -654,6 +655,7 @@ export async function captureDemandLeadFromCampaign(
     assignmentType,
     unmatched: false,
   };
+  });
 }
 
 export async function getAgentCampaignLeadSummary(userId: number) {

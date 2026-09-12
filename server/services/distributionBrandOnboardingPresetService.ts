@@ -85,22 +85,17 @@ export async function getBrandOnboardingPreset(
   db: DbHandle,
   cataloguePublisherId: number,
 ): Promise<BrandOnboardingPreset | null> {
-  try {
-    const [row] = await db
-      .select({
-        onboardingDefaultsJson: distributionBrandPartnerships.onboardingDefaultsJson,
-      })
-      .from(distributionBrandPartnerships)
-      .where(eq(distributionBrandPartnerships.cataloguePublisherId, cataloguePublisherId))
-      .limit(1);
+  const [row] = await db
+    .select({
+      onboardingDefaultsJson: distributionBrandPartnerships.onboardingDefaultsJson,
+    })
+    .from(distributionBrandPartnerships)
+    .where(eq(distributionBrandPartnerships.cataloguePublisherId, cataloguePublisherId))
+    .limit(1);
 
-    if (!row?.onboardingDefaultsJson) return null;
-    const parsed = brandOnboardingPresetSchema.safeParse(row.onboardingDefaultsJson);
-    return parsed.success ? normalizePreset(parsed.data) : null;
-  } catch (error) {
-    if (isMissingBrandPresetSchemaError(error)) return null;
-    throw error;
-  }
+  if (!row?.onboardingDefaultsJson) return null;
+  const parsed = brandOnboardingPresetSchema.safeParse(row.onboardingDefaultsJson);
+  return parsed.success ? normalizePreset(parsed.data) : null;
 }
 
 export async function setBrandOnboardingPreset(input: {

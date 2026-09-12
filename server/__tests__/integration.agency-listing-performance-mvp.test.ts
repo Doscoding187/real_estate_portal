@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { and, eq } from 'drizzle-orm';
 
 import {
-  agencies, agencyBranding, agents, agencyDealOfferVersions, agencyDeals, agencyListingPerformanceActivity,
+  agencies, agencyBranding, agents, billableAccounts, agencyDealOfferVersions, agencyDeals, agencyListingPerformanceActivity,
   agencyListingPerformanceReviews, cities, listingAnalytics, listingApprovalQueue, listingLeads, listings,
   planEntitlements, plans, properties, provinces, showings, suburbs, subscriptions, users,
 } from '../../drizzle/schema';
@@ -17,7 +17,12 @@ dotenv.config({ path: path.resolve(process.cwd(), '.env.test'), override: true }
 function usesListifyTest(url?: string) {
   try { return new URL(url || '').pathname.replace(/^\//, '') === 'listify_test'; } catch { return false; }
 }
-const hasTestDb = usesListifyTest(process.env.DATABASE_URL);
+const hasTestDb = (() => {
+  try {
+    const databaseName = new URL(process.env.DATABASE_URL || '').pathname.replace(/^\//, '');
+    return databaseName === 'listify_test' || databaseName.startsWith('listify_wt_');
+  } catch { return false; }
+})();
 const guardedDescribe: typeof describe = hasTestDb ? describe : ((name, fn) => describe.skip(`${name} (requires listify_test)`, fn)) as typeof describe;
 const ids = { agencies: [] as number[], users: [] as number[], agents: [] as number[], listings: [] as number[], properties: [] as number[], reviews: [] as number[], deals: [] as number[], branding: [] as number[], planEntitlements: [] as number[], plans: [] as number[], subscriptions: [] as number[] };
 const idOf = (result: any) => Number(result?.insertId || result?.[0]?.insertId || 0);
@@ -71,7 +76,9 @@ async function makeAgencyPublicationReady(agencyId: number, suffix: string) {
   const [entitlementResult] = await db.insert(planEntitlements).values({ planId, featureKey: 'max_active_listings', valueJson: 50 } as any);
   ids.planEntitlements.push(idOf(entitlementResult));
   const now = new Date();
-  const [subscriptionResult] = await db.insert(subscriptions).values({ ownerType: 'agency', ownerId: agencyId, planId, status: 'active', currentPeriodStart: toMySqlTimestamp(now), currentPeriodEnd: toMySqlTimestamp(new Date(now.getTime() + 86_400_000)), cancelAtPeriodEnd: 0 } as any);
+  const [account] = await db.select({ id: billableAccounts.id }).from(billableAccounts).where(eq(billableAccounts.agencyId, agencyId)).limit(1);
+  if (!account) throw new Error(`Missing agency billable account ${agencyId}`);
+  const [subscriptionResult] = await db.insert(subscriptions).values({ ownerType: 'agency', ownerId: agencyId, billableAccountId: account.id, planId, status: 'active', currentPeriodStart: toMySqlTimestamp(now), currentPeriodEnd: toMySqlTimestamp(new Date(now.getTime() + 86_400_000)), cancelAtPeriodEnd: 0 } as any);
   ids.subscriptions.push(idOf(subscriptionResult));
 }
 async function publishedListing(ownerId: number, agencyId: number, agentId: number, suffix: string, price = 2_000_000) {
@@ -109,7 +116,7 @@ guardedDescribe('agency listing performance MVP persisted integration', () => {
   it('keeps canonical performance, review, revision, access, and publication contracts intact', async () => {
     const db = await getDb(); if (!db) throw new Error('Database not available');
     const suffix = `${Date.now()}-${randomUUID().slice(0, 8)}`;
-    const makeAgency = async (name: string) => { const [r] = await db.insert(agencies).values({ name, slug: `${name}-${suffix}`.toLowerCase().replace(/[^a-z0-9-]/g, '-'), email: `${name}-${suffix}@example.test`, city: 'Johannesburg', province: 'Gauteng', subscriptionPlan: 'premium', subscriptionStatus: 'active', isVerified: 1 } as any); const id = idOf(r); ids.agencies.push(id); return id; };
+    const makeAgency = async (name: string) => { const [r] = await db.insert(agencies).values({ name, slug: `${name}-${suffix}`.toLowerCase().replace(/[^a-z0-9-]/g, '-'), email: `${name}-${suffix}@example.test`, city: 'Johannesburg', province: 'Gauteng', subscriptionPlan: 'premium', subscriptionStatus: 'active', isVerified: 1 } as any); const id = idOf(r); ids.agencies.push(id); await db.insert(billableAccounts).values({ accountKind: 'agency', agencyId: id } as any); return id; };
     const agencyId = await makeAgency('Performance Agency'); const outsideAgencyId = await makeAgency('Outside Performance Agency');
     await makeAgencyPublicationReady(agencyId, suffix);
     const managerId = await user(agencyId, 'agency_admin', suffix, 'Manager'); const assignedUserId = await user(agencyId, 'agent', suffix, 'Assigned'); const unassignedUserId = await user(agencyId, 'agent', suffix, 'Unassigned'); const outsideManagerId = await user(outsideAgencyId, 'agency_admin', suffix, 'Outside');
@@ -136,6 +143,9 @@ guardedDescribe('agency listing performance MVP persisted integration', () => {
     expect(legacyOrderingSnapshot.live.metrics.views).toBe(73);
     await expect(unassigned.agency.recordListingPerformanceReview({ listingId: canonical.id, recommendation: 'review_later', sellerDecision: 'accepted', contactDate: '2026-07-13T09:00' })).rejects.toMatchObject({ code: 'FORBIDDEN' });
     await expect(outsider.agency.getListingPerformance({ listingId: canonical.id })).rejects.toMatchObject({ code: 'NOT_FOUND' });
+    const outsideOwned = await publishedListing(outsideManagerId, outsideAgencyId, assignedAgentId, `${suffix}-outside-owner`);
+    await db.update(listings).set({ agencyId: null, agentId: null } as any).where(eq(listings.id, outsideOwned.id));
+    await expect(manager.agency.getListingPerformance({ listingId: outsideOwned.id })).rejects.toMatchObject({ code: 'NOT_FOUND' });
     await expect(assigned.agency.recordListingPerformanceReview({ listingId: canonical.id, recommendation: 'change_price', sellerDecision: 'accepted', contactDate: '2026-07-13T09:00' })).rejects.toMatchObject({ code: 'BAD_REQUEST' });
     const saved = await assigned.agency.recordListingPerformanceReview({ listingId: canonical.id, contactChannel: 'call', contactDate: '2026-07-13T09:00', agentAssessment: 'Interest is present but the price is preventing offers.', buyerFeedbackThemes: 'Price sensitivity; competing stock.', recommendation: 'change_price', recommendationReason: 'Comparable activity supports a measured reduction.', sellerFeedback: 'Seller accepted the recommendation.', sellerDecision: 'accepted', proposedPrice: 1_850_000, nextReviewAt: '2026-07-20T09:00' });
     ids.reviews.push(saved.reviewId);
@@ -158,6 +168,15 @@ guardedDescribe('agency listing performance MVP persisted integration', () => {
     await approveListing(handoff.revisionListingId, managerId, 'Approved canonical performance revision');
     const [liveAfterApproval] = await db.select().from(listings).where(eq(listings.id, canonical.id)); const [publicAfterApproval] = await db.select().from(properties).where(eq(properties.id, canonical.propertyId)); const [archived] = await db.select().from(listings).where(eq(listings.id, handoff.revisionListingId));
     expect(liveAfterApproval.askingPrice).toBe('1850000.00'); expect(publicAfterApproval.price).toBe(1_850_000); expect(archived.status).toBe('archived');
+    const rebuildReview = await assigned.agency.recordListingPerformanceReview({ listingId: canonical.id, contactDate: '2026-07-14T09:00:00', recommendation: 'change_price', recommendationReason: 'Second rebuild equivalence pass.', sellerDecision: 'accepted', proposedPrice: 1_800_000 });
+    ids.reviews.push(rebuildReview.reviewId);
+    const rebuildHandoff = await assigned.agency.requestListingPerformancePriceRevision({ reviewId: rebuildReview.reviewId });
+    ids.listings.push(rebuildHandoff.revisionListingId);
+    await submitListingForReview(rebuildHandoff.revisionListingId);
+    await approveListing(rebuildHandoff.revisionListingId, managerId, 'Rebuilt canonical projection equivalence');
+    const [publicAfterRebuild] = await db.select().from(properties).where(eq(properties.id, canonical.propertyId));
+    expect(publicAfterRebuild).toMatchObject({ id: canonical.propertyId, sourceListingId: canonical.id, price: 1_800_000, status: 'available' });
+    expect(publicAfterRebuild?.id).toBe(publicAfterApproval.id);
     const conflictListing = await publishedListing(managerId, agencyId, assignedAgentId, `${suffix}-conflict`, 2_100_000);
     const conflictReview = await assigned.agency.recordListingPerformanceReview({ listingId: conflictListing.id, contactDate: '2026-07-13T09:00', recommendation: 'change_price', recommendationReason: 'Conflict coverage.', sellerDecision: 'accepted', proposedPrice: 1_900_000 }); ids.reviews.push(conflictReview.reviewId);
     const [competing] = await db.insert(listings).values({ ownerId: managerId, agentId: assignedAgentId, agencyId, action: 'sell', propertyType: 'house', title: 'Competing private revision', description: 'Private conflicting draft.', askingPrice: '1900000.00', address: '71 Snapshot Avenue', latitude: '-26.1076000', longitude: '28.0567000', city: 'Johannesburg', province: 'Gauteng', status: 'draft', approvalStatus: 'pending', slug: `competing-revision-${suffix}`.replace(/[^a-z0-9-]/g, '-'), revisionOfListingId: conflictListing.id } as any); ids.listings.push(idOf(competing));

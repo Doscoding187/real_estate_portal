@@ -2,8 +2,8 @@
  * Monetization Features - Smoke Tests
  *
  * These tests verify that the monetization services
- * (QualityScoringService, PartnerSubscriptionService, PartnerBoostCampaignService,
- * LeadGenerationService, MarketplaceBundleService, PartnerAnalyticsService)
+ * (QualityScoringService, PartnerSubscriptionService,
+ * MarketplaceBundleService, PartnerAnalyticsService)
  * are properly instantiated and have their core methods available.
  *
  * This is a checkpoint test to ensure all monetization infrastructure is working
@@ -15,8 +15,6 @@
 import { describe, it, expect } from 'vitest';
 import { qualityScoringService } from '../qualityScoringService';
 import { partnerSubscriptionService } from '../partnerSubscriptionService';
-import { partnerBoostCampaignService } from '../partnerBoostCampaignService';
-import { leadGenerationService } from '../leadGenerationService';
 import { marketplaceBundleService } from '../marketplaceBundleService';
 import { partnerAnalyticsService } from '../partnerAnalyticsService';
 
@@ -103,93 +101,6 @@ describe('Monetization Features - Smoke Tests', () => {
     });
   });
 
-  describe('Partner Boost Campaign Service', () => {
-    it('should be properly instantiated', () => {
-      expect(partnerBoostCampaignService).toBeDefined();
-    });
-
-    it('should have createCampaign method', () => {
-      expect(partnerBoostCampaignService.createCampaign).toBeDefined();
-      expect(typeof partnerBoostCampaignService.createCampaign).toBe('function');
-    });
-
-    it('should have activateCampaign method', () => {
-      expect(partnerBoostCampaignService.activateCampaign).toBeDefined();
-      expect(typeof partnerBoostCampaignService.activateCampaign).toBe('function');
-    });
-
-    it('should have pauseCampaign method', () => {
-      expect(partnerBoostCampaignService.pauseCampaign).toBeDefined();
-      expect(typeof partnerBoostCampaignService.pauseCampaign).toBe('function');
-    });
-
-    it('should have recordImpression method', () => {
-      expect(partnerBoostCampaignService.recordImpression).toBeDefined();
-      expect(typeof partnerBoostCampaignService.recordImpression).toBe('function');
-    });
-
-    it('should have recordClick method', () => {
-      expect(partnerBoostCampaignService.recordClick).toBeDefined();
-      expect(typeof partnerBoostCampaignService.recordClick).toBe('function');
-    });
-
-    it('should have getActiveCampaignsForTopic method', () => {
-      expect(partnerBoostCampaignService.getActiveCampaignsForTopic).toBeDefined();
-      expect(typeof partnerBoostCampaignService.getActiveCampaignsForTopic).toBe('function');
-    });
-
-    it('should have getCampaignAnalytics method', () => {
-      expect(partnerBoostCampaignService.getCampaignAnalytics).toBeDefined();
-      expect(typeof partnerBoostCampaignService.getCampaignAnalytics).toBe('function');
-    });
-
-    it('should have validateBoostEligibility method', () => {
-      expect(partnerBoostCampaignService.validateBoostEligibility).toBeDefined();
-      expect(typeof partnerBoostCampaignService.validateBoostEligibility).toBe('function');
-    });
-  });
-
-  describe('Lead Generation Service', () => {
-    it('should be properly instantiated', () => {
-      expect(leadGenerationService).toBeDefined();
-    });
-
-    it('should have createLead method', () => {
-      expect(leadGenerationService.createLead).toBeDefined();
-      expect(typeof leadGenerationService.createLead).toBe('function');
-    });
-
-    it('should have calculateLeadPrice method', () => {
-      expect(leadGenerationService.calculateLeadPrice).toBeDefined();
-      expect(typeof leadGenerationService.calculateLeadPrice).toBe('function');
-    });
-
-    it('should have notifyPartner method', () => {
-      expect(leadGenerationService.notifyPartner).toBeDefined();
-      expect(typeof leadGenerationService.notifyPartner).toBe('function');
-    });
-
-    it('should have disputeLead method', () => {
-      expect(leadGenerationService.disputeLead).toBeDefined();
-      expect(typeof leadGenerationService.disputeLead).toBe('function');
-    });
-
-    it('should have processDispute method', () => {
-      expect(leadGenerationService.processDispute).toBeDefined();
-      expect(typeof leadGenerationService.processDispute).toBe('function');
-    });
-
-    it('should have getPartnerLeads method', () => {
-      expect(leadGenerationService.getPartnerLeads).toBeDefined();
-      expect(typeof leadGenerationService.getPartnerLeads).toBe('function');
-    });
-
-    it('should have getLeadConversionFunnel method', () => {
-      expect(leadGenerationService.getLeadConversionFunnel).toBeDefined();
-      expect(typeof leadGenerationService.getLeadConversionFunnel).toBe('function');
-    });
-  });
-
   describe('Marketplace Bundle Service', () => {
     it('should be properly instantiated', () => {
       expect(marketplaceBundleService).toBeDefined();
@@ -235,14 +146,21 @@ describe('Monetization Features - Smoke Tests', () => {
     it('should be properly instantiated', () => {
       expect(partnerAnalyticsService).toBeDefined();
     });
+
+    it('does not report unimplemented analytics as empty success data', async () => {
+      await expect(partnerAnalyticsService.getTierBenchmarks()).rejects.toThrow(
+        'canonical analytics authority',
+      );
+      await expect(partnerAnalyticsService.getBoostCampaignROI('partner-1')).rejects.toThrow(
+        'campaign attribution authority',
+      );
+    });
   });
 
   describe('Service Integration', () => {
     it('should have all monetization services available for integration', () => {
       expect(qualityScoringService).toBeDefined();
       expect(partnerSubscriptionService).toBeDefined();
-      expect(partnerBoostCampaignService).toBeDefined();
-      expect(leadGenerationService).toBeDefined();
       expect(marketplaceBundleService).toBeDefined();
       expect(partnerAnalyticsService).toBeDefined();
     });

@@ -773,25 +773,7 @@ async function getPrimaryManagerUserIdForProgram(db: any, programId: number) {
     .orderBy(desc(distributionManagerAssignments.assignedAt))
     .limit(1);
 
-  if (primary?.managerUserId) {
-    return Number(primary.managerUserId);
-  }
-
-  const [fallback] = await db
-    .select({
-      managerUserId: distributionManagerAssignments.managerUserId,
-    })
-    .from(distributionManagerAssignments)
-    .where(
-      and(
-        eq(distributionManagerAssignments.developmentId, Number(program.developmentId)),
-        eq(distributionManagerAssignments.isActive, 1),
-      ),
-    )
-    .orderBy(desc(distributionManagerAssignments.assignedAt))
-    .limit(1);
-
-  return fallback?.managerUserId ? Number(fallback.managerUserId) : null;
+  return primary?.managerUserId ? Number(primary.managerUserId) : null;
 }
 
 async function hasPrimaryActiveManagerAssignment(db: any, programId: number) {
@@ -836,27 +818,6 @@ async function getCurrentTierByAgentIds(db: any, agentIds: number[]) {
     .orderBy(desc(distributionAgentTiers.id));
 
   for (const row of currentRows) {
-    if (!result.has(row.agentId)) {
-      result.set(row.agentId, row.tier as DistributionTier);
-    }
-  }
-
-  const unresolvedIds = agentIds.filter(agentId => !result.has(agentId));
-  if (!unresolvedIds.length) {
-    return result;
-  }
-
-  const fallbackRows = await db
-    .select({
-      agentId: distributionAgentTiers.agentId,
-      tier: distributionAgentTiers.tier,
-      id: distributionAgentTiers.id,
-    })
-    .from(distributionAgentTiers)
-    .where(inArray(distributionAgentTiers.agentId, unresolvedIds))
-    .orderBy(desc(distributionAgentTiers.id));
-
-  for (const row of fallbackRows) {
     if (!result.has(row.agentId)) {
       result.set(row.agentId, row.tier as DistributionTier);
     }
@@ -1735,66 +1696,6 @@ const adminDistributionRouter = router({
         .where(withConditions(conditions))
         .orderBy(desc(developments.updatedAt))
         .limit(limit);
-
-      // Fallback safety net:
-      // If a specific brand is selected and primary filtered query returns no rows,
-      // run a direct brand-link query to avoid false-empty states due filter interaction.
-      if (!rows.length && typeof cataloguePublisherId === 'number') {
-        const fallbackConditions: SQL[] = [
-          eq(developments.cataloguePublisherId, cataloguePublisherId),
-        ];
-        if (!includeUnpublished) {
-          fallbackConditions.push(eq(developments.isPublished, 1));
-          fallbackConditions.push(eq(developments.approvalStatus, 'approved'));
-        }
-        if (search) {
-          const term = `%${search}%`;
-          fallbackConditions.push(
-            sql`(
-              LOWER(COALESCE(${developments.name}, '')) LIKE ${term}
-              OR LOWER(COALESCE(${developments.city}, '')) LIKE ${term}
-              OR LOWER(COALESCE(${developments.province}, '')) LIKE ${term}
-            )`,
-          );
-        }
-
-        rows = await db
-          .select({
-            developmentId: developments.id,
-            developmentName: developments.name,
-            cataloguePublisherId: developments.cataloguePublisherId,
-            publisherName: cataloguePublishers.name,
-            city: developments.city,
-            province: developments.province,
-            developmentStatus: developments.status,
-            approvalStatus: developments.approvalStatus,
-            isPublished: developments.isPublished,
-            developmentImages: developments.images,
-            developmentPriceFrom: developments.priceFrom,
-            developmentPriceTo: developments.priceTo,
-            developmentUpdatedAt: developments.updatedAt,
-            programId: distributionPrograms.id,
-            programIsActive: distributionPrograms.isActive,
-            isReferralEnabled: distributionPrograms.isReferralEnabled,
-            commissionModel: distributionPrograms.commissionModel,
-            defaultCommissionPercent: distributionPrograms.defaultCommissionPercent,
-            defaultCommissionAmount: distributionPrograms.defaultCommissionAmount,
-            tierAccessPolicy: distributionPrograms.tierAccessPolicy,
-            payoutMilestone: distributionPrograms.payoutMilestone,
-            payoutMilestoneNotes: distributionPrograms.payoutMilestoneNotes,
-            currencyCode: distributionPrograms.currencyCode,
-            programUpdatedAt: distributionPrograms.updatedAt,
-          })
-          .from(developments)
-          .leftJoin(
-            cataloguePublishers,
-            eq(developments.cataloguePublisherId, cataloguePublishers.id),
-          )
-          .leftJoin(distributionPrograms, eq(distributionPrograms.developmentId, developments.id))
-          .where(withConditions(fallbackConditions))
-          .orderBy(desc(developments.updatedAt))
-          .limit(limit);
-      }
 
       const developmentIds: number[] = Array.from(
         new Set(rows.map(row => Number(row.developmentId)).filter(Boolean)),

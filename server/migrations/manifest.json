@@ -4,7 +4,7 @@
   "historyTable": "sql_migration_history",
   "attemptTable": "sql_migration_attempts",
   "lockName": "property_listify_manifest_migrations",
-  "expectedHead": "0065_auth_verification_token_cleanup.sql",
+  "expectedHead": "0090_retire_disconnected_boost_campaigns.sql",
   "migrations": [
     {
       "sequence": 0,
@@ -688,6 +688,276 @@
       "kind": "transactional-data",
       "statementPolicy": "transactional-dml",
       "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 66,
+      "filename": "0066_favorites_user_property_deduplicate.sql",
+      "checksum": "0f9ca1b08bd1cb43ec80f4d29060d6aa71477b2d2d54686a1d2c18fd9c403039",
+      "parent": "0065_auth_verification_token_cleanup.sql",
+      "parentChecksum": "0cd1523e5467f73dd0534a04116d25a974e9e2b9a900692e6c3933a67a3182eb",
+      "kind": "transactional-data",
+      "statementPolicy": "transactional-dml",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 67,
+      "filename": "0067_favorites_user_property_unique.sql",
+      "checksum": "c9b35e914772a6de5ca77ecd314d383f69d5f9872c9b36dbf10f2682c4e1ad44",
+      "parent": "0066_favorites_user_property_deduplicate.sql",
+      "parentChecksum": "0f9ca1b08bd1cb43ec80f4d29060d6aa71477b2d2d54686a1d2c18fd9c403039",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 68,
+      "filename": "0068_recently_viewed_activity_cleanup.sql",
+      "checksum": "6279d3b18308df140f6abdf7158df9fd5acebc0434e2fe3eb5478de474bcef26",
+      "parent": "0067_favorites_user_property_unique.sql",
+      "parentChecksum": "c9b35e914772a6de5ca77ecd314d383f69d5f9872c9b36dbf10f2682c4e1ad44",
+      "kind": "transactional-data",
+      "statementPolicy": "transactional-dml",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 69,
+      "filename": "0069_recently_viewed_listing_required.sql",
+      "checksum": "738fb1816e5ddb5283b340fe03531c5cf2767e07b6a611a42bfc0c422f2e1fc7",
+      "parent": "0068_recently_viewed_activity_cleanup.sql",
+      "parentChecksum": "6279d3b18308df140f6abdf7158df9fd5acebc0434e2fe3eb5478de474bcef26",
+      "kind": "exceptional",
+      "statementPolicy": "approved-exception",
+      "requiredReferenceDataVersion": null,
+      "approvalReference": "DBX-PRELAUNCH-CONSUMER-ACTIVITY-INTEGRITY-2026-09-09-Edward"
+    },
+    {
+      "sequence": 70,
+      "filename": "0070_recently_viewed_user_listing_unique.sql",
+      "checksum": "70709963fc73af8ad314fd983bfb9382e036d7a7373e908a8b278ae2c8fcb0d2",
+      "parent": "0069_recently_viewed_listing_required.sql",
+      "parentChecksum": "738fb1816e5ddb5283b340fe03531c5cf2767e07b6a611a42bfc0c422f2e1fc7",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 71,
+      "filename": "0071_recently_viewed_user_recency_index.sql",
+      "checksum": "39102d96623ac8290038d5e3887fe3bcbc8960607b6e56b35065a0684023e19c",
+      "parent": "0070_recently_viewed_user_listing_unique.sql",
+      "parentChecksum": "70709963fc73af8ad314fd983bfb9382e036d7a7373e908a8b278ae2c8fcb0d2",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 72,
+      "filename": "0072_retire_legacy_prospect_favorites.sql",
+      "checksum": "43c302a00bd00051ecf770d3b1bd04501b2c6c3ce6ef90a31fe093b2da23f3bc",
+      "parent": "0071_recently_viewed_user_recency_index.sql",
+      "parentChecksum": "39102d96623ac8290038d5e3887fe3bcbc8960607b6e56b35065a0684023e19c",
+      "kind": "exceptional",
+      "statementPolicy": "approved-exception",
+      "requiredReferenceDataVersion": null,
+      "approvalReference": "DBX-PRELAUNCH-LEGACY-CONSUMER-PROFILE-RETIREMENT-2026-09-09-Edward"
+    },
+    {
+      "sequence": 73,
+      "filename": "0073_retire_legacy_scheduled_viewings.sql",
+      "checksum": "e0e29c8c21c45564434833f0e84debbd4b0b8a3bedb6d15398ba91cc1ea537fc",
+      "parent": "0072_retire_legacy_prospect_favorites.sql",
+      "parentChecksum": "43c302a00bd00051ecf770d3b1bd04501b2c6c3ce6ef90a31fe093b2da23f3bc",
+      "kind": "exceptional",
+      "statementPolicy": "approved-exception",
+      "requiredReferenceDataVersion": null,
+      "approvalReference": "DBX-PRELAUNCH-LEGACY-CONSUMER-PROFILE-RETIREMENT-2026-09-09-Edward"
+    },
+    {
+      "sequence": 74,
+      "filename": "0074_retire_legacy_prospects.sql",
+      "checksum": "b0d6cbab8f0ac521d478a371dab62e0e23a7c0e35f8d304a42394eb43cefed14",
+      "parent": "0073_retire_legacy_scheduled_viewings.sql",
+      "parentChecksum": "e0e29c8c21c45564434833f0e84debbd4b0b8a3bedb6d15398ba91cc1ea537fc",
+      "kind": "exceptional",
+      "statementPolicy": "approved-exception",
+      "requiredReferenceDataVersion": null,
+      "approvalReference": "DBX-PRELAUNCH-LEGACY-CONSUMER-PROFILE-RETIREMENT-2026-09-09-Edward"
+    },
+    {
+      "sequence": 75,
+      "filename": "0075_recently_viewed_microsecond_recency.sql",
+      "checksum": "e205efe19a742dced7bd1e18cf4dd75f4f37074cae62e8373e7e6b9687d30938",
+      "parent": "0074_retire_legacy_prospects.sql",
+      "parentChecksum": "b0d6cbab8f0ac521d478a371dab62e0e23a7c0e35f8d304a42394eb43cefed14",
+      "kind": "exceptional",
+      "statementPolicy": "approved-exception",
+      "requiredReferenceDataVersion": null,
+      "approvalReference": "DBX-PRELAUNCH-CONSUMER-ACTIVITY-RECENCY-2026-09-09-Edward"
+    },
+    {
+      "sequence": 76,
+      "filename": "0076_lead_delivery_relational_authority.sql",
+      "checksum": "1dd8bcedad1517191b4f1701ce11dd6c9ca8c58cc45a9fe44361a36f35472a39",
+      "parent": "0075_recently_viewed_microsecond_recency.sql",
+      "parentChecksum": "e205efe19a742dced7bd1e18cf4dd75f4f37074cae62e8373e7e6b9687d30938",
+      "kind": "exceptional",
+      "statementPolicy": "approved-exception",
+      "requiredReferenceDataVersion": null,
+      "approvalReference": "DBX-PRELAUNCH-LEAD-DELIVERY-RELATIONAL-2026-09-09-Edward"
+    },
+    {
+      "sequence": 77,
+      "filename": "0077_bundle_attribution_relational_authority.sql",
+      "checksum": "ceb4873a45f054f426ba7f12d12fe4dbf96754e65dd5c826b2411b40683ef4c5",
+      "parent": "0076_lead_delivery_relational_authority.sql",
+      "parentChecksum": "1dd8bcedad1517191b4f1701ce11dd6c9ca8c58cc45a9fe44361a36f35472a39",
+      "kind": "exceptional",
+      "statementPolicy": "approved-exception",
+      "requiredReferenceDataVersion": null,
+      "approvalReference": "DBX-PRELAUNCH-BUNDLE-ATTRIBUTION-RELATIONAL-2026-09-10-Edward"
+    },
+    {
+      "sequence": 78,
+      "filename": "0078_retire_unreachable_partner_leads.sql",
+      "checksum": "f990ce8953e28746b4ab9555603b3a0cbbdb530d983f9ac49bf03e1cb2a7ae45",
+      "parent": "0077_bundle_attribution_relational_authority.sql",
+      "parentChecksum": "ceb4873a45f054f426ba7f12d12fe4dbf96754e65dd5c826b2411b40683ef4c5",
+      "kind": "exceptional",
+      "statementPolicy": "approved-exception",
+      "requiredReferenceDataVersion": null,
+      "approvalReference": "DBX-PRELAUNCH-RETIRE-UNREACHABLE-PARTNER-LEADS-2026-09-10-Edward"
+    },
+    {
+      "sequence": 79,
+      "filename": "0079_explore_engagement_event_identity.sql",
+      "checksum": "56135df6ebdf7098815524d995561bd1b1e0fa53802c756418cf805b3363cc09",
+      "parent": "0078_retire_unreachable_partner_leads.sql",
+      "parentChecksum": "f990ce8953e28746b4ab9555603b3a0cbbdb530d983f9ac49bf03e1cb2a7ae45",
+      "kind": "exceptional",
+      "statementPolicy": "approved-exception",
+      "requiredReferenceDataVersion": null,
+      "approvalReference": "DBX-PRELAUNCH-EXPLORE-EVENT-IDEMPOTENCY-2026-09-10-Edward"
+    },
+    {
+      "sequence": 80,
+      "filename": "0080_service_lead_request_idempotency.sql",
+      "checksum": "d23c0d5e5c527c09d116bbf390424cf0e5559cd583c8d284f1d1ef0e265f220e",
+      "parent": "0079_explore_engagement_event_identity.sql",
+      "parentChecksum": "56135df6ebdf7098815524d995561bd1b1e0fa53802c756418cf805b3363cc09",
+      "kind": "exceptional",
+      "statementPolicy": "approved-exception",
+      "requiredReferenceDataVersion": null,
+      "approvalReference": "DBX-PRELAUNCH-SERVICE-LEAD-IDEMPOTENCY-2026-09-11-Edward"
+    },
+    {
+      "sequence": 81,
+      "filename": "0081_explore_analytics_query_index.sql",
+      "checksum": "7a88bc44b45d58655b9f36b62450277093080481feb447d795c41c7612c71ac3",
+      "parent": "0080_service_lead_request_idempotency.sql",
+      "parentChecksum": "d23c0d5e5c527c09d116bbf390424cf0e5559cd583c8d284f1d1ef0e265f220e",
+      "kind": "exceptional",
+      "statementPolicy": "approved-exception",
+      "requiredReferenceDataVersion": null,
+      "approvalReference": "DBX-PRELAUNCH-EXPLORE-ANALYTICS-QUERY-INDEX-2026-09-11-Edward"
+    },
+    {
+      "sequence": 82,
+      "filename": "0082_explore_engagement_retention_indexes.sql",
+      "checksum": "e7fed7481e2c5471731fcc22b7f7917ec0316bf05235cd040ae592f06bd8f60e",
+      "parent": "0081_explore_analytics_query_index.sql",
+      "parentChecksum": "7a88bc44b45d58655b9f36b62450277093080481feb447d795c41c7612c71ac3",
+      "kind": "exceptional",
+      "statementPolicy": "approved-exception",
+      "requiredReferenceDataVersion": null,
+      "approvalReference": "DBX-PRELAUNCH-EXPLORE-ENGAGEMENT-RETENTION-INDEXES-2026-09-11-Edward"
+    },
+    {
+      "sequence": 83,
+      "filename": "0083_billing_provider_event_identity.sql",
+      "checksum": "da15119312017f652c2353aa972c5046cdab622f2fa086b92866955635f6fdde",
+      "parent": "0082_explore_engagement_retention_indexes.sql",
+      "parentChecksum": "e7fed7481e2c5471731fcc22b7f7917ec0316bf05235cd040ae592f06bd8f60e",
+      "kind": "exceptional",
+      "statementPolicy": "approved-exception",
+      "requiredReferenceDataVersion": null,
+      "approvalReference": "DBX-PRELAUNCH-BILLING-PROVIDER-EVENT-IDENTITY-2026-09-11-Edward"
+    },
+    {
+      "sequence": 84,
+      "filename": "0084_billing_provider_event_retry_budget.sql",
+      "checksum": "d1268fd0d268d8205c50cba3b3416613a00ba20af24d4c42daf011e7638a38e4",
+      "parent": "0083_billing_provider_event_identity.sql",
+      "parentChecksum": "da15119312017f652c2353aa972c5046cdab622f2fa086b92866955635f6fdde",
+      "kind": "exceptional",
+      "statementPolicy": "approved-exception",
+      "requiredReferenceDataVersion": null,
+      "approvalReference": "DBX-PRELAUNCH-BILLING-PROVIDER-RETRY-BUDGET-2026-09-11-Edward"
+    },
+    {
+      "sequence": 85,
+      "filename": "0085_billing_billable_accounts.sql",
+      "checksum": "b2f5af1567af3b4813406feec6a22bafb3e96cb510f397ba56f84f035226ece9",
+      "parent": "0084_billing_provider_event_retry_budget.sql",
+      "parentChecksum": "d1268fd0d268d8205c50cba3b3416613a00ba20af24d4c42daf011e7638a38e4",
+      "kind": "exceptional",
+      "statementPolicy": "approved-exception",
+      "requiredReferenceDataVersion": null,
+      "approvalReference": "DBX-PRELAUNCH-BILLING-BILLABLE-ACCOUNT-2026-09-11-Edward"
+    },
+    {
+      "sequence": 86,
+      "filename": "0086_billing_billable_accounts_not_null.sql",
+      "checksum": "e3352b8aa270f840c7bd028b9466546fbf130c5aa01647a9e862b67221b6e8ea",
+      "parent": "0085_billing_billable_accounts.sql",
+      "parentChecksum": "b2f5af1567af3b4813406feec6a22bafb3e96cb510f397ba56f84f035226ece9",
+      "kind": "exceptional",
+      "statementPolicy": "approved-exception",
+      "requiredReferenceDataVersion": null,
+      "approvalReference": "DBX-PRELAUNCH-BILLING-BILLABLE-ACCOUNT-NON-NULL-2026-09-11-Edward"
+    },
+    {
+      "sequence": 87,
+      "filename": "0087_billing_provider_event_leases.sql",
+      "checksum": "2f2ac4999fa614ecc391f85b5b8bc4aac11b6c60559a634e72d7f222a478059c",
+      "parent": "0086_billing_billable_accounts_not_null.sql",
+      "parentChecksum": "e3352b8aa270f840c7bd028b9466546fbf130c5aa01647a9e862b67221b6e8ea",
+      "kind": "exceptional",
+      "statementPolicy": "approved-exception",
+      "requiredReferenceDataVersion": null,
+      "approvalReference": "DBX-PRELAUNCH-BILLING-PROVIDER-LEASE-2026-09-11-Edward"
+    },
+    {
+      "sequence": 88,
+      "filename": "0088_retire_obsolete_billing_families.sql",
+      "checksum": "5dcb3481e8b1b772196b6e8cf9057457744ebde2586c7c7d2b302f7df7f54a7f",
+      "parent": "0087_billing_provider_event_leases.sql",
+      "parentChecksum": "2f2ac4999fa614ecc391f85b5b8bc4aac11b6c60559a634e72d7f222a478059c",
+      "kind": "exceptional",
+      "statementPolicy": "approved-exception",
+      "requiredReferenceDataVersion": null,
+      "approvalReference": "DBX-PRELAUNCH-RETIRE-OBSOLETE-BILLING-2026-09-11-Edward"
+    },
+    {
+      "sequence": 89,
+      "filename": "0089_retire_disconnected_analytics_aggregations.sql",
+      "checksum": "a550f1c7c64c8f97e72accd21aeeed1abfe33a4ac298e4d11c7818864f58c207",
+      "parent": "0088_retire_obsolete_billing_families.sql",
+      "parentChecksum": "5dcb3481e8b1b772196b6e8cf9057457744ebde2586c7c7d2b302f7df7f54a7f",
+      "kind": "exceptional",
+      "statementPolicy": "approved-exception",
+      "requiredReferenceDataVersion": null,
+      "approvalReference": "DBX-PRELAUNCH-RETIRE-DISCONNECTED-ANALYTICS-2026-09-11-Edward"
+    },
+    {
+      "sequence": 90,
+      "filename": "0090_retire_disconnected_boost_campaigns.sql",
+      "checksum": "767f3767f3a7f69d947ba150598cee45194ebfb64a11f52d7b3114c2b5467421",
+      "parent": "0089_retire_disconnected_analytics_aggregations.sql",
+      "parentChecksum": "a550f1c7c64c8f97e72accd21aeeed1abfe33a4ac298e4d11c7818864f58c207",
+      "kind": "exceptional",
+      "statementPolicy": "approved-exception",
+      "requiredReferenceDataVersion": null,
+      "approvalReference": "DBX-PRELAUNCH-RETIRE-DISCONNECTED-BOOST-CAMPAIGNS-2026-09-11-Edward"
     }
   ]
 }

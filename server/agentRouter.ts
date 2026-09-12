@@ -81,6 +81,10 @@ import {
   resolvePropertiesForListings,
   resolvePropertyForListing,
 } from './services/inventoryLinkResolver';
+import {
+  getLeadDeliverySnapshotsForLeadIds,
+  publicStatusForDelivery,
+} from './services/leadDeliveryService';
 type AgentShowingStatus = 'scheduled' | 'completed' | 'cancelled' | 'no_show';
 
 type CanonicalAgentShowingStorageStatus = 'confirmed' | 'completed' | 'cancelled' | 'no_show';
@@ -861,6 +865,10 @@ export const agentRouter = router({
         db,
         commercialLeadContextCandidateIds(leadsList.map(({ lead }) => lead)),
       );
+      const deliverySnapshots = await getLeadDeliverySnapshotsForLeadIds({
+        database: db,
+        leadIds: leadsList.map(({ lead }) => lead.id),
+      });
 
       // Define Output Type
       interface LeadPipelineItem {
@@ -904,6 +912,10 @@ export const agentRouter = router({
       };
 
       leadsList.forEach(({ lead, property }) => {
+        const deliverySnapshot = deliverySnapshots.get(lead.id);
+        const currentDelivery = deliverySnapshot?.current || null;
+        const latestAttempt =
+          deliverySnapshot?.attempts[deliverySnapshot.attempts.length - 1] || null;
         // Map lead status to pipeline stage
         let stage: PipelineStage = 'new';
         switch (lead.status) {
@@ -943,10 +955,10 @@ export const agentRouter = router({
             source: lead.consentSource || null,
           },
           delivery: {
-            status: lead.deliveryStatus,
-            attempts: lead.deliveryAttempts,
-            lastAttemptAt: lead.deliveryLastAttemptAt || null,
-            lastError: lead.deliveryLastError || null,
+            status: currentDelivery ? publicStatusForDelivery(currentDelivery) : lead.deliveryStatus,
+            attempts: deliverySnapshot?.attempts || [],
+            lastAttemptAt: latestAttempt?.attemptedAt || lead.deliveryLastAttemptAt || null,
+            lastError: latestAttempt?.lastError || lead.deliveryLastError || null,
           },
           notes: lead.notes,
           nextFollowUp: lead.nextFollowUp,
@@ -2068,6 +2080,9 @@ export const agentRouter = router({
     )
     .query(async ({ ctx, input }): Promise<(typeof leadActivities.$inferSelect)[]> => {
       const db = await getDb();
+      if (!db) {
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+      }
 
       const [agentRecord] = await db
         .select()
@@ -2107,6 +2122,9 @@ export const agentRouter = router({
     )
     .query(async ({ ctx, input }) => {
       const db = await getDb();
+      if (!db) {
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+      }
 
       const [agentRecord] = await db
         .select()

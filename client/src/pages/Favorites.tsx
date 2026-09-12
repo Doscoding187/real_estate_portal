@@ -19,7 +19,7 @@ export default function Favorites() {
     enabled: isAuthenticated,
   });
 
-  const removeFavoriteMutation = trpc.properties.toggleFavorite.useMutation({
+  const removeFavoriteMutation = trpc.properties.setFavorite.useMutation({
     onSuccess: () => {
       toast.success('Removed from favorites');
       utils.properties.getFavorites.invalidate();
@@ -30,7 +30,7 @@ export default function Favorites() {
   });
 
   const handleRemoveFavorite = (propertyId: string) => {
-    removeFavoriteMutation.mutate({ propertyId: parseInt(propertyId) });
+    removeFavoriteMutation.mutate({ propertyId: parseInt(propertyId), saved: false });
   };
 
   if (loading || isLoading) {

@@ -5,6 +5,26 @@ import {
   ListingPublicationEntitlementError,
   resolveListingCommercialOwner,
 } from '../listingPublicationEntitlementService';
+import { isPaidSubscriptionRowEntitled } from '../planAccessService';
+
+describe('paid subscription entitlement timestamps', () => {
+  it('interprets SQL DATETIME values as UTC', () => {
+    const now = new Date('2026-01-01T23:30:00.000Z');
+
+    expect(
+      isPaidSubscriptionRowEntitled(
+        { status: 'active', currentPeriodEnd: '2026-01-02 00:00:00' },
+        now,
+      ),
+    ).toBe(true);
+    expect(
+      isPaidSubscriptionRowEntitled(
+        { status: 'active', currentPeriodEnd: '2026-01-01 23:00:00' },
+        now,
+      ),
+    ).toBe(false);
+  });
+});
 
 class QueuedDb {
   constructor(private readonly results: any[][]) {}

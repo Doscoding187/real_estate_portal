@@ -10,6 +10,30 @@ const publicCaller = appRouter.createCaller({
 } as any);
 
 describe('legacy Explore capability boundary', () => {
+  it('does not report retired Explore catalogs as successful empty results', async () => {
+    await expect(publicCaller.explore.getCategories()).rejects.toMatchObject({
+      code: 'PRECONDITION_FAILED',
+    });
+    await expect(publicCaller.explore.getTopics()).rejects.toMatchObject({
+      code: 'PRECONDITION_FAILED',
+    });
+    await expect(publicCaller.explore.getHighlightTags()).rejects.toMatchObject({
+      code: 'PRECONDITION_FAILED',
+    });
+  });
+
+  it('does not report followed Explore items without a canonical follow authority', async () => {
+    const authenticatedCaller = appRouter.createCaller({
+      req: { headers: {} },
+      res: {},
+      user: { id: 42, role: 'visitor' },
+    } as any);
+
+    await expect(authenticatedCaller.explore.getFollowedItems()).rejects.toMatchObject({
+      code: 'PRECONDITION_FAILED',
+    });
+  });
+
   it('does not report disabled category discovery as a successful empty result', async () => {
     await expect(publicCaller.exploreApi.getCategories()).rejects.toMatchObject({
       code: 'PRECONDITION_FAILED',

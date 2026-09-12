@@ -15,6 +15,7 @@
  */
 
 import { db } from '../db';
+import { bundleAttributions } from '../../drizzle/schema';
 import { v4 as uuidv4 } from 'uuid';
 
 // ============================================================================
@@ -93,12 +94,13 @@ export class BundleAttributionService {
   async trackBundleView(input: TrackBundleViewInput): Promise<void> {
     const id = uuidv4();
 
-    await db.execute(
-      `INSERT INTO bundle_attributions 
-       (id, bundle_id, user_id, event_type, metadata, created_at)
-       VALUES (?, ?, ?, 'bundle_view', ?, NOW())`,
-      [id, input.bundleId, input.userId, input.metadata ? JSON.stringify(input.metadata) : null],
-    );
+    await db.insert(bundleAttributions).values({
+      id,
+      bundleId: input.bundleId,
+      userId: input.userId,
+      eventType: 'bundle_view',
+      metadata: input.metadata || null,
+    });
   }
 
   /**
@@ -110,20 +112,15 @@ export class BundleAttributionService {
   async trackPartnerEngagement(input: TrackPartnerEngagementInput): Promise<void> {
     const id = uuidv4();
 
-    await db.execute(
-      `INSERT INTO bundle_attributions 
-       (id, bundle_id, partner_id, user_id, event_type, content_id, metadata, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, NOW())`,
-      [
-        id,
-        input.bundleId,
-        input.partnerId,
-        input.userId,
-        input.eventType,
-        input.contentId || null,
-        input.metadata ? JSON.stringify(input.metadata) : null,
-      ],
-    );
+    await db.insert(bundleAttributions).values({
+      id,
+      bundleId: input.bundleId,
+      partnerId: input.partnerId,
+      userId: input.userId,
+      eventType: input.eventType,
+      contentId: input.contentId || null,
+      metadata: input.metadata || null,
+    });
   }
 
   /**
@@ -133,20 +130,15 @@ export class BundleAttributionService {
   async trackLeadAttribution(input: TrackLeadAttributionInput): Promise<void> {
     const id = uuidv4();
 
-    await db.execute(
-      `INSERT INTO bundle_attributions 
-       (id, bundle_id, partner_id, user_id, event_type, lead_id, metadata, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, NOW())`,
-      [
-        id,
-        input.bundleId,
-        input.partnerId,
-        input.userId,
-        input.eventType,
-        input.leadId,
-        input.metadata ? JSON.stringify(input.metadata) : null,
-      ],
-    );
+    await db.insert(bundleAttributions).values({
+      id,
+      bundleId: input.bundleId,
+      partnerId: input.partnerId,
+      userId: input.userId,
+      eventType: input.eventType,
+      leadId: input.leadId,
+      metadata: input.metadata || null,
+    });
   }
 
   /**

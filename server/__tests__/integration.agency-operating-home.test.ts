@@ -11,6 +11,7 @@ import { db } from '../db';
 import {
   agencies,
   agencyBranding,
+  billableAccounts,
   leads,
   planEntitlements,
   plans,
@@ -68,6 +69,7 @@ async function seedAgency(input: { verified?: number; daysRemaining?: number | n
       isVerified: input.verified ?? 1,
     } as any);
   const agencyId = await insertId(agencyResult);
+  await db.insert(billableAccounts).values({ accountKind: 'agency', agencyId } as any);
 
   await db.insert(agencyBranding).values({
     agencyId,
@@ -122,6 +124,13 @@ async function seedAgency(input: { verified?: number; daysRemaining?: number | n
       .values({
         ownerType: 'agency',
         ownerId: agencyId,
+        billableAccountId: (
+          await db
+            .select({ id: billableAccounts.id })
+            .from(billableAccounts)
+            .where(eq(billableAccounts.agencyId, agencyId))
+            .limit(1)
+        )[0]?.id,
         planId,
         status: 'active',
         currentPeriodEnd: periodEnd,

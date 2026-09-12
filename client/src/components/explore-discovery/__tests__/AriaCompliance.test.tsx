@@ -3,11 +3,14 @@ import { vi } from 'vitest';
 // CRITICAL: Mock TRPC before any other imports
 vi.mock('@/lib/trpc', () => ({
   trpc: {
+    useUtils: vi.fn(() => ({
+      properties: { getFavorites: { invalidate: vi.fn() } },
+    })),
     properties: {
-      toggleFavorite: {
+      setFavorite: {
         useMutation: vi.fn(() => ({
           mutate: vi.fn(),
-          mutateAsync: vi.fn(async () => ({ favorited: true })),
+          mutateAsync: vi.fn(async () => ({ saved: true })),
           isPending: false,
           isLoading: false,
           error: null,

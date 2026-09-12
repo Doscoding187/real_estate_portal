@@ -12,6 +12,7 @@ import {
   exploreFeedSessions,
 } from '../../drizzle/schema';
 import { eq, and, gte, lte, sql } from 'drizzle-orm';
+import { TRPCError } from '@trpc/server';
 
 interface VideoAnalytics {
   videoId: string;
@@ -89,26 +90,6 @@ interface AggregatedMetrics {
   averageSessionDuration: number;
   averageCompletionRate: number;
   engagementRate: number;
-}
-
-type AggregatedEngagementRow = {
-  interactionType: string;
-  metadata?: any;
-  userId: number | null;
-  sessionId: string | null;
-  contentId: number;
-};
-
-function emptyAggregatedMetrics(): AggregatedMetrics {
-  return {
-    totalViews: 0,
-    totalUniqueViewers: 0,
-    totalWatchTime: 0,
-    totalSessions: 0,
-    averageSessionDuration: 0,
-    averageCompletionRate: 0,
-    engagementRate: 0,
-  };
 }
 
 function getPeriodStart(period: AggregatedMetricsPeriod): Date | undefined {
@@ -492,63 +473,62 @@ export class ExploreAnalyticsService {
 
     const baseQuery = db
       .select({
-        interactionType: exploreEngagements.interactionType,
-        metadata: exploreEngagements.metadata,
-        userId: exploreEngagements.userId,
-        sessionId: exploreEngagements.sessionId,
-        contentId: exploreEngagements.contentId,
+        totalViews: sql<number>`SUM(CASE WHEN ${exploreEngagements.interactionType} = 'view' THEN 1 ELSE 0 END)`,
+        totalUniqueViewers: sql<number>`COUNT(DISTINCT CASE WHEN ${exploreEngagements.interactionType} = 'view' THEN CASE WHEN ${exploreEngagements.userId} IS NOT NULL THEN CONCAT('user:', ${exploreEngagements.userId}) WHEN NULLIF(${exploreEngagements.sessionId}, '') IS NOT NULL THEN CONCAT('session:', ${exploreEngagements.sessionId}) ELSE CONCAT('anonymous:', ${exploreEngagements.contentId}) END END)`,
+        totalCompletions: sql<number>`SUM(CASE WHEN ${exploreEngagements.interactionType} = 'complete' THEN 1 ELSE 0 END)`,
+        totalSaves: sql<number>`SUM(CASE WHEN ${exploreEngagements.interactionType} = 'save' THEN 1 ELSE 0 END)`,
+        totalShares: sql<number>`SUM(CASE WHEN ${exploreEngagements.interactionType} = 'share' THEN 1 ELSE 0 END)`,
+        totalClicks: sql<number>`SUM(CASE WHEN ${exploreEngagements.interactionType} IN ('click_cta', 'contact', 'whatsapp', 'book_viewing') THEN 1 ELSE 0 END)`,
+        totalSessions: sql<number>`COUNT(DISTINCT NULLIF(${exploreEngagements.sessionId}, ''))`,
+        totalWatchTime: sql<number>`SUM(COALESCE(CAST(JSON_UNQUOTE(JSON_EXTRACT(${exploreEngagements.metadata}, '$.watchTime')) AS DECIMAL(20,6)), CAST(JSON_UNQUOTE(JSON_EXTRACT(${exploreEngagements.metadata}, '$.duration')) AS DECIMAL(20,6)), 0))`,
       })
       .from(exploreEngagements)
       .innerJoin(exploreContent, eq(exploreContent.id, exploreEngagements.contentId));
 
-    let rows: AggregatedEngagementRow[] | Array<{ explore_engagements: AggregatedEngagementRow }>;
+    let rows: Array<{
+      totalViews: number | string | null;
+      totalUniqueViewers: number | string | null;
+      totalCompletions: number | string | null;
+      totalSaves: number | string | null;
+      totalShares: number | string | null;
+      totalClicks: number | string | null;
+      totalSessions: number | string | null;
+      totalWatchTime: number | string | null;
+    }>;
     try {
-      rows = (await (filters.length ? baseQuery.where(and(...filters)) : baseQuery)) as
-        | AggregatedEngagementRow[]
-        | Array<{ explore_engagements: AggregatedEngagementRow }>;
+      rows = (await (filters.length ? baseQuery.where(and(...filters)) : baseQuery)) as typeof rows;
     } catch (error) {
       if (isMissingExploreAnalyticsSchema(error)) {
-        console.warn('[Analytics] Explore analytics schema missing; returning empty metrics.');
-        return emptyAggregatedMetrics();
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message: 'Explore analytics is unavailable until its canonical schema is established',
+          cause: error,
+        });
       }
       throw error;
     }
-    const engagements = rows.map(row =>
-      'explore_engagements' in row ? row.explore_engagements : row,
-    );
-
-    const views = engagements.filter(e => e.interactionType === 'view');
-    const totalViews = views.length;
-    const totalCompletions = engagements.filter(e => e.interactionType === 'complete').length;
-    const totalSaves = engagements.filter(e => e.interactionType === 'save').length;
-    const totalShares = engagements.filter(e => e.interactionType === 'share').length;
-    const totalClicks = engagements.filter(e =>
-      ['click_cta', 'contact', 'whatsapp', 'book_viewing'].includes(e.interactionType),
-    ).length;
-
-    const uniqueViewerKeys = new Set(
-      views.map(e => {
-        if (e.userId) return `user:${e.userId}`;
-        if (e.sessionId) return `session:${e.sessionId}`;
-        return `anonymous:${e.contentId}`;
-      }),
-    );
-    const sessionKeys = new Set(engagements.map(e => e.sessionId).filter(Boolean));
-    const totalWatchTime = engagements.reduce((sum, e) => {
-      const metadata = e.metadata || {};
-      const watchTime =
-        typeof metadata.watchTime === 'number'
-          ? metadata.watchTime
-          : typeof metadata.duration === 'number'
-            ? metadata.duration
-            : 0;
-      return sum + watchTime;
-    }, 0);
-    const totalSessions = sessionKeys.size;
+    const aggregate = rows[0] ?? {
+      totalViews: 0,
+      totalUniqueViewers: 0,
+      totalCompletions: 0,
+      totalSaves: 0,
+      totalShares: 0,
+      totalClicks: 0,
+      totalSessions: 0,
+      totalWatchTime: 0,
+    };
+    const totalViews = Number(aggregate.totalViews || 0);
+    const totalUniqueViewers = Number(aggregate.totalUniqueViewers || 0);
+    const totalCompletions = Number(aggregate.totalCompletions || 0);
+    const totalSaves = Number(aggregate.totalSaves || 0);
+    const totalShares = Number(aggregate.totalShares || 0);
+    const totalClicks = Number(aggregate.totalClicks || 0);
+    const totalSessions = Number(aggregate.totalSessions || 0);
+    const totalWatchTime = Number(aggregate.totalWatchTime || 0);
 
     return {
       totalViews,
-      totalUniqueViewers: uniqueViewerKeys.size,
+      totalUniqueViewers,
       totalWatchTime,
       totalSessions,
       averageSessionDuration: totalSessions ? totalWatchTime / totalSessions : 0,

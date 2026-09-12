@@ -5,9 +5,13 @@ import { commercialLeadContexts, leadActivities, leads } from '../../drizzle/sch
 import { getDb } from '../db';
 import { nowAsDbTimestamp } from '../utils/dbTypeUtils';
 import {
-  createInitialLeadDeliveryAttempt,
-  leadDeliverySummaryForAttempts,
-  parseDeliveryAttempts,
+  completePlatformDeliveryInTransaction,
+  getCurrentPrimaryDeliveryForUpdateInTransaction,
+  getLeadDeliverySnapshot,
+  publicStatusForDelivery,
+  supersedePrimaryDeliveryInTransaction,
+  type LeadDeliveryRecord,
+  type LeadDeliveryRecipientType,
   type LeadDeliveryStatus,
 } from './leadDeliveryService';
 import { resolveLeadOwnership, type ResolvedLeadOwnership } from './publicLeadCaptureService';
@@ -45,26 +49,40 @@ interface CorrectionPlan {
 }
 
 export function requirePlatformOperationsCustody(lead: {
-  deliveryStatus: string | null;
-  deliveryAttempts: unknown;
+  deliveryStatus?: string | null;
+  delivery?: Pick<LeadDeliveryRecord,
+    'id' | 'leadCustody' | 'recipientType' | 'recipientAgentId' | 'recipientAgencyId' | 'recipientUserId'
+  > | null;
   agentId: number | null;
   agencyId: number | null;
 }) {
-  const attempts = parseDeliveryAttempts(lead.deliveryAttempts);
-  const latestAttempt = attempts[attempts.length - 1];
+  const delivery = lead.delivery;
   if (
-    lead.deliveryStatus !== 'attention_required' ||
+    (!delivery && lead.deliveryStatus !== 'attention_required') ||
     lead.agentId ||
     lead.agencyId ||
-    latestAttempt?.leadCustody !== 'platform_managed' ||
-    latestAttempt.recipientType !== 'manual'
+    delivery?.leadCustody !== 'platform_managed' ||
+    delivery.recipientType !== 'manual'
   ) {
     throw new TRPCError({
       code: 'BAD_REQUEST',
       message: 'Only an explicitly platform-custodied attention lead can be completed here.',
     });
   }
-  return { attempts, latestAttempt };
+  return { delivery };
+}
+
+function canonicalDeliveryRecipientType(
+  recipientType: CorrectionPlan['recipientType'],
+): Exclude<LeadDeliveryRecipientType, 'brand'> {
+  if (recipientType === 'brand' || recipientType === 'manual') return 'manual';
+  if (recipientType === 'agent' || recipientType === 'agency' || recipientType === 'developer') {
+    return recipientType;
+  }
+  throw new TRPCError({
+    code: 'BAD_REQUEST',
+    message: 'The correction target does not identify a durable delivery recipient.',
+  });
 }
 
 function positiveId(value: unknown): number | null {
@@ -332,7 +350,6 @@ export async function correctLeadRouting(input: LeadRoutingCorrectionInput, acto
       });
     }
 
-    const attempts = parseDeliveryAttempts(lockedLead.deliveryAttempts);
     const targetKey = [
       'routing-correction',
       plan.recipientType,
@@ -341,22 +358,30 @@ export async function correctLeadRouting(input: LeadRoutingCorrectionInput, acto
       plan.agencyId ?? 'none',
       plan.cataloguePublisherId ?? 'none',
     ].join(':');
-    const latestAttempt = attempts[attempts.length - 1];
-    const isIdempotentReplay =
-      latestAttempt?.deliveryKey === targetKey && latestAttempt.status === plan.deliveryStatus;
-    const correctionAttempt = isIdempotentReplay
-      ? latestAttempt
-      : createInitialLeadDeliveryAttempt({
-          deliveryKey: targetKey,
-          recipientType: plan.recipientType,
-          recipientId: plan.recipientId,
-          channel: plan.leadDeliveryMethod,
-          status: plan.deliveryStatus,
-          supplyOrigin: plan.supplyOrigin,
-          leadCustody: plan.leadCustody,
-          error: plan.reason,
-        });
-    const nextAttempts = isIdempotentReplay ? attempts : [...attempts, correctionAttempt];
+    const deliveryResult = await supersedePrimaryDeliveryInTransaction(tx, {
+      leadId: input.leadId,
+      idempotencyKey: `lead:${input.leadId}:routing-correction:${targetKey}`,
+      channel: plan.leadDeliveryMethod,
+      recipientType: canonicalDeliveryRecipientType(plan.recipientType),
+      recipientUserId: null,
+      recipientAgentId: plan.recipientType === 'agent' ? plan.agentId : null,
+      recipientAgencyId: plan.recipientType === 'agency' ? plan.agencyId : null,
+      recipientDeveloperOrganisationId: plan.recipientType === 'developer' ? plan.recipientId : null,
+      recipientPublisherId: plan.cataloguePublisherId,
+      destinationSnapshot: {
+        routeLabel: plan.routeLabel,
+        recipientType: plan.recipientType,
+        recipientId: plan.recipientId,
+        reason: plan.reason,
+      },
+      supplyOrigin: plan.supplyOrigin,
+      leadCustody: plan.leadCustody,
+      initialStatus: plan.deliveryStatus,
+      error: plan.reason,
+    });
+    const correctionAttempt = deliveryResult.attempt;
+    const isIdempotentReplay = deliveryResult.duplicate;
+    const effectiveStatus = publicStatusForDelivery(deliveryResult.delivery);
 
     await tx
       .update(leads)
@@ -366,7 +391,6 @@ export async function correctLeadRouting(input: LeadRoutingCorrectionInput, acto
         cataloguePublisherId: plan.cataloguePublisherId,
         brandLeadStatus: plan.brandLeadStatus,
         leadDeliveryMethod: plan.leadDeliveryMethod,
-        ...leadDeliverySummaryForAttempts(plan.deliveryStatus, nextAttempts),
         updatedAt: nowAsDbTimestamp(),
       })
       .where(eq(leads.id, input.leadId));
@@ -383,7 +407,8 @@ export async function correctLeadRouting(input: LeadRoutingCorrectionInput, acto
         description,
         metadata: JSON.stringify({
           authority: 'canonical_public_supply',
-          deliveryAttemptId: correctionAttempt.id,
+          deliveryId: deliveryResult.delivery.id,
+          deliveryAttemptId: correctionAttempt?.id,
           supplyOrigin: plan.supplyOrigin,
           leadCustody: plan.leadCustody,
           recipientType: plan.recipientType,
@@ -399,8 +424,9 @@ export async function correctLeadRouting(input: LeadRoutingCorrectionInput, acto
       cataloguePublisherId: plan.cataloguePublisherId,
       brandLeadStatus: plan.brandLeadStatus,
       leadDeliveryMethod: plan.leadDeliveryMethod,
-      deliveryStatus: plan.deliveryStatus,
-      deliveryAttemptId: correctionAttempt.id,
+      deliveryStatus: effectiveStatus,
+      deliveryId: deliveryResult.delivery.id,
+      deliveryAttemptId: correctionAttempt?.id,
       supplyOrigin: plan.supplyOrigin,
       leadCustody: plan.leadCustody,
       recipientType: plan.recipientType,
@@ -431,19 +457,24 @@ export async function completePlatformLeadAction(
       throw new TRPCError({ code: 'NOT_FOUND', message: 'Lead not found' });
     }
 
-    const { attempts, latestAttempt } = requirePlatformOperationsCustody(lead);
-
-    const deliveryKey = `platform-operations:${input.action}:${latestAttempt.id}`;
-    const actionAttempt = createInitialLeadDeliveryAttempt({
-      deliveryKey,
-      recipientType: 'manual',
-      recipientId: null,
-      channel: 'manual',
-      status: 'delivered',
-      supplyOrigin: 'platform_curated',
-      leadCustody: 'platform_managed',
+    const delivery = await getCurrentPrimaryDeliveryForUpdateInTransaction(tx, input.leadId);
+    const { delivery: validatedDelivery } = requirePlatformOperationsCustody({
+      delivery,
+      deliveryStatus: lead.deliveryStatus,
+      agentId: lead.agentId,
+      agencyId: lead.agencyId,
     });
-    const nextAttempts = [...attempts, actionAttempt];
+    if (!validatedDelivery) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'Only an explicitly platform-custodied attention lead can be completed here.',
+      });
+    }
+    const completion = await completePlatformDeliveryInTransaction(tx, {
+      leadId: input.leadId,
+      actionKey: `platform-operations:${input.leadId}:${validatedDelivery.id}:${input.action}`,
+    });
+    const actionAttempt = completion.attempt;
     const note = input.note?.trim();
     const nextLeadStatus = lead.status === 'new' ? 'contacted' : lead.status;
     const description = note
@@ -457,7 +488,6 @@ export async function completePlatformLeadAction(
         // conversion. Preserve an advanced CRM state and only advance `new`.
         status: nextLeadStatus,
         leadDeliveryMethod: 'manual',
-        ...leadDeliverySummaryForAttempts('delivered', nextAttempts),
         updatedAt: nowAsDbTimestamp(),
       })
       .where(eq(leads.id, input.leadId));
@@ -470,6 +500,7 @@ export async function completePlatformLeadAction(
       metadata: JSON.stringify({
         authority: 'platform_operations_custody',
         action: input.action,
+        deliveryId: completion.delivery.id,
         deliveryAttemptId: actionAttempt.id,
       }),
     });
@@ -479,6 +510,7 @@ export async function completePlatformLeadAction(
       action: input.action,
       status: nextLeadStatus,
       deliveryStatus: 'delivered' as const,
+      deliveryId: completion.delivery.id,
       deliveryAttemptId: actionAttempt.id,
     };
   });

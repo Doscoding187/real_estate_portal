@@ -164,4 +164,11 @@ describe('provider-independent billing foundation contract', () => {
     expect(billingSchema).toContain("unique('uq_subscriptions_owner')");
     expect(agentEntitlements).toContain('isPaidSubscriptionEntitled');
   });
+
+  it('keeps the interim billing owner allow-list closed', () => {
+    expect(billingService).toContain("export type BillingOwnerType = 'agent' | 'agency' | 'developer';");
+    expect(billingService).not.toContain("'developer' | string");
+    expect(billingService).toContain('toBillingOwnerType(invoice.ownerType)');
+    expect(billingService).toContain("code: 'PRECONDITION_FAILED'");
+  });
 });

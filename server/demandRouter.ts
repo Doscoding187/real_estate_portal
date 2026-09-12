@@ -48,6 +48,13 @@ function getCampaignOwnerContext(user: { id: number; role?: string | null; agenc
   };
 }
 
+function demandSchemaUnavailable(): never {
+  throw new TRPCError({
+    code: 'PRECONDITION_FAILED',
+    message: 'Demand routing schema is not ready. Apply demand migrations before reading campaigns.',
+  });
+}
+
 export const demandRouter = router({
   createCampaign: protectedProcedure
     .input(
@@ -98,20 +105,15 @@ export const demandRouter = router({
     if (!capabilities.demandEngineReady) {
       warnSchemaCapabilityOnce(
         'demand-listMyCampaigns-schema-not-ready',
-        '[demand.listMyCampaigns] Demand schema not ready. Returning empty list.',
+        '[demand.listMyCampaigns] Demand schema not ready. Blocking query.',
         capabilities.demandEngineDetails,
       );
-      return [];
+      return demandSchemaUnavailable();
     }
 
     const user = requireUser(ctx);
     const owner = getCampaignOwnerContext(user);
-    try {
-      return listDemandCampaignsForOwner(owner.ownerType, owner.ownerId);
-    } catch (error) {
-      console.warn('[demand.listMyCampaigns] Returning empty campaigns due to error:', error);
-      return [];
-    }
+    return listDemandCampaignsForOwner(owner.ownerType, owner.ownerId);
   }),
 
   captureLead: protectedProcedure
@@ -166,26 +168,13 @@ export const demandRouter = router({
     if (!capabilities.demandEngineReady) {
       warnSchemaCapabilityOnce(
         'demand-myLeadSummary-schema-not-ready',
-        '[demand.myLeadSummary] Demand schema not ready. Returning safe defaults.',
+        '[demand.myLeadSummary] Demand schema not ready. Blocking query.',
         capabilities.demandEngineDetails,
       );
-      return {
-        assignedThisWeek: 0,
-        activeCampaigns: 0,
-        campaignLeadsBySource: [] as Array<{ source: string; count: number }>,
-      };
+      return demandSchemaUnavailable();
     }
 
     const user = requireUser(ctx);
-    try {
-      return getAgentCampaignLeadSummary(user.id);
-    } catch (error) {
-      console.warn('[demand.myLeadSummary] Returning safe defaults due to error:', error);
-      return {
-        assignedThisWeek: 0,
-        activeCampaigns: 0,
-        campaignLeadsBySource: [] as Array<{ source: string; count: number }>,
-      };
-    }
+    return getAgentCampaignLeadSummary(user.id);
   }),
 });

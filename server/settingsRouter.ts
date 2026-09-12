@@ -2,6 +2,7 @@ import { publicProcedure, router } from './_core/trpc';
 import { getDb } from './db';
 import { platformSettings } from '../drizzle/schema';
 import { eq } from 'drizzle-orm';
+import { TRPCError } from '@trpc/server';
 
 /**
  * Settings Router
@@ -15,10 +16,7 @@ export const settingsRouter = router({
   getPublic: publicProcedure.query(async () => {
     const db = await getDb();
     if (!db) {
-      return {
-        sarb_prime_rate: '10.50',
-        sarb_repo_rate: '7.00',
-      };
+      throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
     }
 
     try {
@@ -33,19 +31,10 @@ export const settingsRouter = router({
         settingsObj[setting.settingKey] = setting.settingValue || '';
       });
 
-      // Ensure SARB rates are always present with fallback values
-      return {
-        sarb_prime_rate: settingsObj.sarb_prime_rate || '10.50',
-        sarb_repo_rate: settingsObj.sarb_repo_rate || '7.00',
-        ...settingsObj,
-      };
+      return settingsObj;
     } catch (error) {
       console.error('[Settings] Error fetching public settings:', error);
-      // Return fallback values
-      return {
-        sarb_prime_rate: '10.50',
-        sarb_repo_rate: '7.00',
-      };
+      throw error;
     }
   }),
 
@@ -56,7 +45,7 @@ export const settingsRouter = router({
   getSARBPrimeRate: publicProcedure.query(async () => {
     const db = await getDb();
     if (!db) {
-      return { rate: 10.5, lastUpdated: null };
+      throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
     }
 
     try {
@@ -73,10 +62,13 @@ export const settingsRouter = router({
         };
       }
 
-      return { rate: 10.5, lastUpdated: null };
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message: 'SARB prime rate is not configured in canonical platform settings',
+      });
     } catch (error) {
       console.error('[Settings] Error fetching SARB prime rate:', error);
-      return { rate: 10.5, lastUpdated: null };
+      throw error;
     }
   }),
 });

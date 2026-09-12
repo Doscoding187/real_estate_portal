@@ -252,7 +252,7 @@ router.post('/interaction', optionalAuth, rateLimit(500, 60000), (_req: Request,
 
 /**
  * POST /api/explore/save/:propertyId
- * Legacy save boundary. Property saves are owned by properties.toggleFavorite.
+ * Legacy save boundary. Property saves are owned by properties.setFavorite.
  */
 router.post(
   '/save/:propertyId',
@@ -262,7 +262,7 @@ router.post(
     return res.status(410).json({
       error: 'Explore property saves are unavailable in the legacy workflow.',
       code: 'CAPABILITY_UNAVAILABLE',
-      message: 'Use the canonical properties.toggleFavorite workflow.',
+      message: 'Use the canonical properties.setFavorite workflow.',
     });
   },
 );

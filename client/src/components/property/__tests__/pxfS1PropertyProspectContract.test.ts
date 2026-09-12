@@ -19,13 +19,13 @@ describe('PXF-S1 property prospect contract', () => {
     expect(route).toContain("import PropertyDetailPage from './PropertyDetailPage'");
     expect(route).not.toContain('matchMedia');
     expect(route).not.toContain('PropertyDetailMobileOptimized');
-    expect(page).toContain('trpc.properties.toggleFavorite.useMutation');
+    expect(page).toContain('trpc.properties.setFavorite.useMutation');
     expect(page).toContain('trpc.properties.getFavorites.useQuery');
     expect(page).toContain('utils.properties.getFavorites.invalidate()');
     expect(page).toContain('const isFavorite = favorites.some');
-    expect(page).toContain('disabled={toggleFavoriteMutation.isPending}');
+    expect(page).toContain('disabled={setFavoriteMutation.isPending}');
     expect(page).not.toContain(retiredFavoriteMutation);
-    expect(searchResults).toContain('trpc.properties.toggleFavorite.useMutation');
+    expect(searchResults).toContain('trpc.properties.setFavorite.useMutation');
     expect(searchResults).toContain('utils.properties.getFavorites.invalidate()');
     expect(searchResults).not.toContain(retiredFavoriteMutation);
   });
@@ -38,8 +38,8 @@ describe('PXF-S1 property prospect contract', () => {
       '/login?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}',
     );
     expect(page).not.toContain('addGuestFavorite');
-    expect(page).toContain('if (toggleFavoriteMutation.isPending) return;');
-    expect(page).toContain('toggleFavoriteMutation.mutate({ propertyId })');
+    expect(page).toContain('if (setFavoriteMutation.isPending) return;');
+    expect(page).toContain('setFavoriteMutation.mutate({ propertyId, saved: !isFavorite })');
   });
 
   it('submits viewing requests through the canonical lead authority without booking claims', () => {

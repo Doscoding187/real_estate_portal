@@ -36,6 +36,7 @@ import {
 } from '../shared/commercial-domain';
 import {
   resolvePublicPropertyEligibilities,
+  resolvePublicPropertyEligibilitiesBySourceListingIds,
   resolvePublicPropertyEligibility,
 } from './services/publicPropertyEligibilityService';
 import { toPublicPropertyDetailDto, toPublicPropertyImage } from './services/publicPropertyDto';
@@ -108,7 +109,6 @@ import { monetizationRouter } from './monetizationRouter';
 import { partnerRouter } from './partnerRouter';
 import { cataloguePublisherRouter } from './cataloguePublisherRouter';
 import { superAdminPublisherRouter } from './superAdminPublisherRouter';
-import { favoritesRouter } from './favoritesRouter';
 import { reviewsRouter } from './reviewsRouter';
 import { leadsRouter } from './leadsRouter';
 import { prospectJourneyRouter } from './prospectJourneyRouter';
@@ -166,7 +166,6 @@ const appRouterConfig = {
   locationPages: locationPagesRouter,
   cataloguePublisher: cataloguePublisherRouter,
   superAdminPublisher: superAdminPublisherRouter,
-  favorites: favoritesRouter,
   reviews: reviewsRouter,
   leads: leadsRouter,
   prospectJourney: prospectJourneyRouter,
@@ -977,32 +976,86 @@ const appRouterConfig = {
         return { success: true };
       }),
 
-    // Favorites
-    toggleFavorite: protectedProcedure
+    // Consumer saved inventory. The command carries desired state so retries
+    // and reordered network requests cannot invert a user's choice.
+    setFavorite: protectedProcedure
       .input(
         z.object({
           propertyId: z.number().int().positive(),
+          saved: z.boolean(),
         }),
       )
       .mutation(async ({ ctx, input }) => {
-        const property = await db.getPropertyById(input.propertyId);
-        if (!property) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Property not found' });
+        if (input.saved) {
+          const publicResolution = await resolvePublicPropertyEligibility(input.propertyId);
+          if (!publicResolution) {
+            throw new TRPCError({
+              code: 'NOT_FOUND',
+              message: 'Property is not currently available in the public inventory.',
+            });
+          }
+          rejectGenericCommercialPublicSearch(publicResolution.property.propertyType);
         }
-        rejectGenericCommercialPublicSearch(property.propertyType);
 
-        const existing = await db.isFavorite(getUserId(ctx), input.propertyId);
-        if (existing) {
-          await db.removeFavorite(getUserId(ctx), input.propertyId);
-          return { favorited: false };
-        } else {
-          await db.addFavorite(getUserId(ctx), input.propertyId);
-          return { favorited: true };
+        return await db.setUserFavoriteFact(getUserId(ctx), input.propertyId, input.saved);
+      }),
+
+    recordView: protectedProcedure
+      .input(z.object({ propertyId: z.number().int().positive() }))
+      .mutation(async ({ ctx, input }) => {
+        const publicResolution = await resolvePublicPropertyEligibility(input.propertyId);
+        if (!publicResolution) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Property is not currently available in the public inventory.',
+          });
         }
+        rejectGenericCommercialPublicSearch(publicResolution.property.propertyType);
+        const listingId = Number(publicResolution.sourceListingId);
+        if (!Number.isSafeInteger(listingId) || listingId <= 0) {
+          throw new TRPCError({
+            code: 'PRECONDITION_FAILED',
+            message: 'Public property has no canonical authored listing.',
+          });
+        }
+        const result = await db.recordUserListingViewFact(getUserId(ctx), listingId);
+        return { propertyId: input.propertyId, recorded: true, viewedAt: result.viewedAt };
       }),
 
     getFavorites: protectedProcedure.query(async ({ ctx }) => {
-      return await db.getUserFavorites(getUserId(ctx));
+      const facts = await db.getUserFavoriteFacts(getUserId(ctx));
+      const resolutions = await resolvePublicPropertyEligibilities(
+        facts.map(fact => Number(fact.propertyId)),
+      );
+      return facts.flatMap(fact => {
+        const propertyId = Number(fact.propertyId);
+        const resolution = resolutions.get(propertyId);
+        if (!resolution) return [];
+        return [{ ...fact, property: toPublicPropertyDetailDto(resolution).property }];
+      });
+    }),
+
+    getRecentlyViewed: protectedProcedure.query(async ({ ctx }) => {
+      const facts = await db.getUserRecentViewFacts(getUserId(ctx), 50);
+      const resolutions = await resolvePublicPropertyEligibilitiesBySourceListingIds(
+        facts.map(fact => Number(fact.listingId)),
+      );
+      return facts
+        .flatMap(fact => {
+          const listingId = Number(fact.listingId);
+          const resolution = resolutions.get(listingId);
+          if (!resolution) return [];
+          return [
+            {
+              id: fact.id,
+              propertyId: Number(resolution.property.id),
+              listingId,
+              property: toPublicPropertyDetailDto(resolution).property,
+              viewedAt: fact.viewedAt,
+            },
+          ];
+        })
+        .slice(0, 10);
     }),
   }),
 } satisfies Parameters<typeof router>[0];

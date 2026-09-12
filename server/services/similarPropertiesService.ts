@@ -145,13 +145,16 @@ export class SimilarPropertiesService {
     const propertyIds = sortedProperties.map((p: any) => p.propertyId);
     const exploreData = await db
       .select({
-        propertyId: exploreContent.id,
+        propertyId: exploreContent.referenceId,
         contentId: exploreContent.id,
         thumbnailUrl: exploreContent.thumbnailUrl,
       })
       .from(exploreContent)
       .where(
-        and(inArray(exploreContent.id, propertyIds), eq(exploreContent.contentType, 'property')),
+        and(
+          inArray(exploreContent.referenceId, propertyIds),
+          eq(exploreContent.contentType, 'property'),
+        ),
       );
 
     // Merge explore data
@@ -381,18 +384,12 @@ export class SimilarPropertiesService {
     similarPropertyId: number,
     engagementType: 'view' | 'save' | 'click',
   ): Promise<void> {
-    // TODO: Store engagement data for algorithm refinement
-    // This can be used to adjust weights over time
-    // For now, just log it
-    console.log(
-      `Similar property engagement: ${referencePropertyId} -> ${similarPropertyId} (${engagementType})`,
+    void referencePropertyId;
+    void similarPropertyId;
+    void engagementType;
+    throw new Error(
+      'Similar-property engagement is unavailable until a canonical engagement authority is approved.',
     );
-
-    // In production, you would:
-    // 1. Store this in a tracking table
-    // 2. Periodically analyze which similarities lead to engagement
-    // 3. Adjust weights accordingly
-    // 4. Use machine learning to optimize similarity algorithm
   }
 
   /**
@@ -400,11 +397,10 @@ export class SimilarPropertiesService {
    * Requirement 15.4: Algorithm refinement
    */
   async getRefinedWeights(userId: number): Promise<SimilarityWeights> {
-    // TODO: Implement ML-based weight refinement
-    // For now, return default weights
-    // In production, analyze user's engagement patterns and adjust weights
-
-    return this.defaultWeights;
+    void userId;
+    throw new Error(
+      'Refined similar-property weights are unavailable until engagement refinement is implemented.',
+    );
   }
 }
 

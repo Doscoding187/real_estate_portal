@@ -5,6 +5,7 @@
  */
 
 import { router, protectedProcedure, publicProcedure } from './_core/trpc';
+import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 import { similarPropertiesService } from './services/similarPropertiesService';
 import { requireUser } from './_core/requireUser';
@@ -64,23 +65,14 @@ export const similarPropertiesRouter = router({
       }),
     )
     .query(async ({ ctx, input }) => {
-      // Get user's refined weights if available
-      const weights = await similarPropertiesService.getRefinedWeights(getUserId(ctx));
-
-      const similarProperties = await similarPropertiesService.findSimilarProperties(
-        input.propertyId,
-        input.limit,
-        weights,
-      );
-
-      return {
-        success: true,
-        data: {
-          sectionTitle: 'Similar to What You Viewed',
-          properties: similarProperties,
-          referencePropertyId: input.propertyId,
-        },
-      };
+      // The personalized feed is not implemented until recent-view facts,
+      // recommendation ranking, and retention semantics are admitted as one
+      // canonical authority. Do not acknowledge a fabricated empty feed.
+      void getUserId(ctx);
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message: 'Personalized similar-property history is not available until its canonical workflow is approved.',
+      });
     }),
 
   /**
@@ -94,22 +86,10 @@ export const similarPropertiesRouter = router({
       }),
     )
     .query(async ({ ctx, input }) => {
-      // TODO: Get user's recent viewing history
-      // For now, return empty array
-      // In production, you would:
-      // 1. Get user's recently viewed properties
-      // 2. Find similar properties for each
-      // 3. Deduplicate and rank by relevance
-      // 4. Return top N results
-
-      return {
-        success: true,
-        data: {
-          sectionTitle: 'Based on Your Recent Views',
-          properties: [],
-          message: 'Start viewing properties to see personalized recommendations',
-        },
-      };
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message: 'Similar-property history is not available until recent-view ranking is implemented.',
+      });
     }),
 
   /**

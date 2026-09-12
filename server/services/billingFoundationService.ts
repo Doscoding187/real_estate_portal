@@ -8,6 +8,7 @@ import {
   billingInvoices,
   billingPaymentDocuments,
   billingPayments,
+  billableAccounts,
   coupons,
   developerOrganisationMemberships,
   developerOrganisations,
@@ -32,7 +33,22 @@ import {
   resolveCommercialTerm,
 } from './commercialTerm';
 
-export type BillingOwnerType = 'agent' | 'agency' | 'developer' | string;
+/**
+ * The only billing owner identities admitted by the current foundation.
+ *
+ * This remains a temporary application-level allow-list until billable_accounts
+ * provides database-enforced ownership; widening it would silently reintroduce
+ * an unregistered polymorphic owner.
+ */
+export type BillingOwnerType = 'agent' | 'agency' | 'developer';
+
+function toBillingOwnerType(value: string): BillingOwnerType {
+  if (value === 'agent' || value === 'agency' || value === 'developer') return value;
+  throw new TRPCError({
+    code: 'PRECONDITION_FAILED',
+    message: `Unregistered billing owner type: ${value}`,
+  });
+}
 export type BillingCycle = 'monthly' | 'annual';
 export type CanonicalSubscriptionStatus =
   | 'trial'
@@ -178,7 +194,7 @@ function isBillingFinanceAdmin(user: BillingUser) {
   return Boolean(user.role && BILLING_FINANCE_ROLES.has(user.role));
 }
 
-function ownerPrefix(ownerType: string) {
+function ownerPrefix(ownerType: BillingOwnerType) {
   const normalized = ownerType.toUpperCase().replace(/[^A-Z0-9]/g, '');
   if (normalized === 'AGENCY') return 'AG';
   if (normalized === 'AGENT') return 'AN';
@@ -194,11 +210,11 @@ function randomReferencePart(bytes = 3) {
   return randomBytes(bytes).toString('hex').toUpperCase();
 }
 
-function buildInvoiceNumber(ownerType: string, ownerId: number) {
+function buildInvoiceNumber(ownerType: BillingOwnerType, ownerId: number) {
   return `PLI-${referenceDatePart()}-${ownerPrefix(ownerType)}${ownerId}-${randomReferencePart(3)}`;
 }
 
-function buildPaymentReference(ownerType: string, ownerId: number) {
+function buildPaymentReference(ownerType: BillingOwnerType, ownerId: number) {
   return `PL${ownerPrefix(ownerType)}${ownerId}-${randomReferencePart(3)}`;
 }
 
@@ -373,35 +389,91 @@ async function getAgencyOrThrow(db: DbOrTx, agencyId: number) {
   return agency;
 }
 
+/** Resolve the typed billing principal; polymorphic owner keys are display-only during cutover. */
+async function resolveBillableAccountId(
+  db: DbOrTx,
+  ownerType: BillingOwnerType,
+  ownerId: number,
+) {
+  const predicate =
+    ownerType === 'agent'
+      ? eq(billableAccounts.userId, ownerId)
+      : ownerType === 'agency'
+        ? eq(billableAccounts.agencyId, ownerId)
+        : eq(billableAccounts.developerOrganisationId, ownerId);
+  const [account] = await db
+    .select({ id: billableAccounts.id })
+    .from(billableAccounts)
+    .where(and(eq(billableAccounts.accountKind, ownerType), predicate))
+    .limit(1);
+  if (account) return Number(account.id);
+
+  // New principals are admitted at the same transaction boundary as their
+  // first billing fact. Typed foreign keys reject unknown owners; the unique
+  // owner constraint makes concurrent admission idempotent.
+  try {
+    await db
+      .insert(billableAccounts)
+      .values(
+        ownerType === 'agent'
+          ? { accountKind: ownerType, userId: ownerId }
+          : ownerType === 'agency'
+            ? { accountKind: ownerType, agencyId: ownerId }
+            : { accountKind: ownerType, developerOrganisationId: ownerId },
+      )
+      .onDuplicateKeyUpdate({ set: { accountKind: ownerType } });
+  } catch {
+    throw new TRPCError({
+      code: 'PRECONDITION_FAILED',
+      message: `No billable account exists for ${ownerType}:${ownerId}.`,
+    });
+  }
+  const [created] = await db
+    .select({ id: billableAccounts.id })
+    .from(billableAccounts)
+    .where(and(eq(billableAccounts.accountKind, ownerType), predicate))
+    .limit(1);
+  if (!created) {
+    throw new TRPCError({
+      code: 'INTERNAL_SERVER_ERROR',
+      message: `Billable account admission did not produce ${ownerType}:${ownerId}.`,
+    });
+  }
+  return Number(created.id);
+}
+
 /**
  * Agency billing mutations share this lock order: agency, subscription, then
  * invoice/payment. Keeping the agency row first prevents checkout and finance
  * review from taking the same records in opposite orders.
  */
 async function lockAgencyBillingState(tx: BillingTx, agencyId: number) {
+  // Resolve the billing principal only after the owner lock: its ordinary
+  // SELECT would otherwise establish a pre-lock REPEATABLE READ snapshot.
   await tx.execute(sql`SELECT id FROM agencies WHERE id = ${agencyId} FOR UPDATE`);
+  const billableAccountId = await resolveBillableAccountId(tx, 'agency', agencyId);
   const agency = await getAgencyOrThrow(tx, agencyId);
   await tx.execute(sql`
     SELECT id
     FROM subscriptions
-    WHERE owner_type = 'agency' AND owner_id = ${agencyId}
+    WHERE billable_account_id = ${billableAccountId}
     FOR UPDATE
   `);
   const [subscription] = await tx
     .select()
     .from(subscriptions)
-    .where(and(eq(subscriptions.ownerType, 'agency'), eq(subscriptions.ownerId, agencyId)))
+    .where(eq(subscriptions.billableAccountId, billableAccountId))
     .limit(1);
   return { agency, subscription: subscription || null };
 }
 
 async function lockAgencyInvoice(tx: BillingTx, input: { invoiceId: number; agencyId: number }) {
+  const billableAccountId = await resolveBillableAccountId(tx, 'agency', input.agencyId);
   await tx.execute(sql`
     SELECT id
     FROM billing_invoices
     WHERE id = ${input.invoiceId}
-      AND owner_type = 'agency'
-      AND owner_id = ${input.agencyId}
+      AND billable_account_id = ${billableAccountId}
     FOR UPDATE
   `);
   return getInvoiceForOwnerOrThrow(tx, input.invoiceId, 'agency', input.agencyId);
@@ -428,17 +500,17 @@ async function lockInvoicePayment(tx: BillingTx, input: { paymentId: number; inv
 async function getInvoiceForOwnerOrThrow(
   db: DbOrTx,
   invoiceId: number,
-  ownerType: string,
+  ownerType: BillingOwnerType,
   ownerId: number,
 ) {
+  const billableAccountId = await resolveBillableAccountId(db, ownerType, ownerId);
   const [invoice] = await db
     .select()
     .from(billingInvoices)
     .where(
       and(
         eq(billingInvoices.id, invoiceId),
-        eq(billingInvoices.ownerType, ownerType),
-        eq(billingInvoices.ownerId, ownerId),
+        eq(billingInvoices.billableAccountId, billableAccountId),
       ),
     )
     .limit(1);
@@ -460,7 +532,7 @@ async function getLatestInvoicePaymentTotal(db: DbOrTx, invoiceId: number) {
 async function logBillingEvent(
   db: DbOrTx,
   input: {
-    ownerType: string;
+    ownerType: BillingOwnerType;
     ownerId: number;
     subscriptionId?: number | null;
     invoiceId?: number | null;
@@ -473,9 +545,11 @@ async function logBillingEvent(
     metadata?: Record<string, any> | null;
   },
 ) {
+  const billableAccountId = await resolveBillableAccountId(db, input.ownerType, input.ownerId);
   await db.insert(billingAuditEvents).values({
     ownerType: input.ownerType,
     ownerId: input.ownerId,
+    billableAccountId,
     subscriptionId: input.subscriptionId || null,
     invoiceId: input.invoiceId || null,
     paymentId: input.paymentId || null,
@@ -588,8 +662,8 @@ async function syncAgencyBillingShadow(
     })
     .where(eq(agencies.id, input.agencyId));
 
-  // Do not create legacy agency_subscriptions rows here: that table is Stripe-shaped and has
-  // non-null provider columns. It remains a compatibility read shadow only when it already exists.
+  // The historical agency_subscriptions table was retired before launch. These agency columns
+  // are display snapshots only; canonical access remains in subscriptions.
   return legacyStatus;
 }
 
@@ -603,12 +677,11 @@ async function upsertPendingSubscription(
     metadata: Record<string, any>;
   },
 ) {
+  const billableAccountId = await resolveBillableAccountId(db, input.ownerType, input.ownerId);
   const [existing] = await db
     .select()
     .from(subscriptions)
-    .where(
-      and(eq(subscriptions.ownerType, input.ownerType), eq(subscriptions.ownerId, input.ownerId)),
-    )
+    .where(eq(subscriptions.billableAccountId, billableAccountId))
     .limit(1);
 
   if (
@@ -627,6 +700,7 @@ async function upsertPendingSubscription(
     .values({
       ownerType: input.ownerType,
       ownerId: input.ownerId,
+      billableAccountId,
       planId: input.requestedPlanId,
       status: 'pending_payment',
       metadata: input.metadata,
@@ -639,15 +713,14 @@ async function upsertPendingSubscription(
         status: 'pending_payment',
         metadata: input.metadata,
         updatedBy: input.actorUserId,
+        billableAccountId,
       },
     });
 
   const [subscription] = await db
     .select()
     .from(subscriptions)
-    .where(
-      and(eq(subscriptions.ownerType, input.ownerType), eq(subscriptions.ownerId, input.ownerId)),
-    )
+    .where(eq(subscriptions.billableAccountId, billableAccountId))
     .limit(1);
 
   if (!subscription) {
@@ -818,17 +891,18 @@ async function lockLaunchBillingState(tx: BillingTx, owner: LaunchBillingOwner) 
       sql`SELECT id FROM developer_organisations WHERE id = ${owner.ownerId} FOR UPDATE`,
     );
   }
+  const billableAccountId = await resolveBillableAccountId(tx, owner.ownerType, owner.ownerId);
   await tx.execute(sql`
     SELECT id
     FROM subscriptions
-    WHERE owner_type = ${owner.ownerType} AND owner_id = ${owner.ownerId}
+    WHERE billable_account_id = ${billableAccountId}
     FOR UPDATE
   `);
   const [subscription] = await tx
     .select()
     .from(subscriptions)
     .where(
-      and(eq(subscriptions.ownerType, owner.ownerType), eq(subscriptions.ownerId, owner.ownerId)),
+      eq(subscriptions.billableAccountId, billableAccountId),
     )
     .limit(1);
   return { subscription: subscription || null };
@@ -973,13 +1047,13 @@ export async function requestPaidLaunchAccessInvoice(input: {
       .from(billingInvoices)
       .where(
         and(
-          eq(billingInvoices.ownerType, owner.ownerType),
-          eq(billingInvoices.ownerId, owner.ownerId),
+          eq(billingInvoices.billableAccountId, subscriptionResult.subscription.billableAccountId),
           eq(billingInvoices.subscriptionId, subscriptionResult.subscription.id),
           inArray(billingInvoices.status, ['issued', 'submitted', 'partially_paid', 'overdue']),
         ),
       )
-      .orderBy(desc(billingInvoices.createdAt));
+      .orderBy(desc(billingInvoices.createdAt))
+      .for('update');
     const outstandingInvoice = outstandingInvoices[0];
     if (outstandingInvoice) {
       const sameTerms =
@@ -1005,6 +1079,7 @@ export async function requestPaidLaunchAccessInvoice(input: {
       };
     }
 
+    const billableAccountId = await resolveBillableAccountId(tx, owner.ownerType, owner.ownerId);
     const invoiceNumber = buildInvoiceNumber(owner.ownerType, owner.ownerId);
     const paymentReference = buildPaymentReference(owner.ownerType, owner.ownerId);
     const priceSnapshot = buildInvoicePriceSnapshot({
@@ -1020,6 +1095,7 @@ export async function requestPaidLaunchAccessInvoice(input: {
       .values({
         ownerType: owner.ownerType,
         ownerId: owner.ownerId,
+        billableAccountId,
         subscriptionId: subscriptionResult.subscription.id,
         planId: plan.id,
         invoiceNumber,
@@ -1190,13 +1266,13 @@ export async function startAgencyManualCheckout(input: {
   // stale retry return the invoice it originally observed when finance settles
   // it while the checkout is waiting for the agency lock. It is revalidated
   // under lock and never authorizes a general reuse of terminal invoices.
+  const observedBillableAccountId = await resolveBillableAccountId(db, 'agency', agencyId);
   const [observedOutstandingInvoice] = await db
     .select()
     .from(billingInvoices)
     .where(
       and(
-        eq(billingInvoices.ownerType, 'agency'),
-        eq(billingInvoices.ownerId, agencyId),
+        eq(billingInvoices.billableAccountId, observedBillableAccountId),
         inArray(billingInvoices.status, ['issued', 'submitted', 'partially_paid', 'overdue']),
       ),
     )
@@ -1243,8 +1319,7 @@ export async function startAgencyManualCheckout(input: {
       await tx.execute(sql`
         SELECT id
         FROM billing_invoices
-        WHERE owner_type = 'agency'
-          AND owner_id = ${agencyId}
+        WHERE billable_account_id = ${lockedSubscription.billableAccountId}
           AND subscription_id = ${lockedSubscription.id}
           AND status IN ('issued', 'submitted', 'partially_paid', 'overdue')
         FOR UPDATE
@@ -1255,13 +1330,13 @@ export async function startAgencyManualCheckout(input: {
         .from(billingInvoices)
         .where(
           and(
-            eq(billingInvoices.ownerType, 'agency'),
-            eq(billingInvoices.ownerId, agencyId),
+            eq(billingInvoices.billableAccountId, lockedSubscription.billableAccountId),
             eq(billingInvoices.subscriptionId, lockedSubscription.id),
             inArray(billingInvoices.status, outstandingStatuses),
           ),
         )
-        .orderBy(desc(billingInvoices.createdAt));
+        .orderBy(desc(billingInvoices.createdAt))
+        .for('update');
       const outstandingInvoice = outstandingInvoices[0];
 
       if (outstandingInvoice) {
@@ -1294,6 +1369,7 @@ export async function startAgencyManualCheckout(input: {
           .select()
           .from(billingInvoices)
           .where(eq(billingInvoices.id, observedOutstandingInvoice.id))
+          .for('update')
           .limit(1);
         const isSettledRetry =
           settledObservedInvoice?.status === 'paid' &&
@@ -1346,11 +1422,13 @@ export async function startAgencyManualCheckout(input: {
       couponCode: coupon?.code || null,
     });
 
+    const billableAccountId = await resolveBillableAccountId(tx, 'agency', agencyId);
     const [invoiceInsert] = await tx
       .insert(billingInvoices)
       .values({
         ownerType: 'agency',
         ownerId: agencyId,
+        billableAccountId,
         subscriptionId: subscriptionResult.subscription.id,
         planId: plan.id,
         invoiceNumber,
@@ -1456,19 +1534,20 @@ export async function getAgencyBillingWorkspace(user: BillingUser) {
 
   const agencyId = assertAgencyAdmin(user);
   const agency = await getAgencyOrThrow(db, agencyId);
+  const billableAccountId = await resolveBillableAccountId(db, 'agency', agencyId);
   const planRows = await listBillingPlans('agency');
 
   const [subscriptionWithPlan] = await db
     .select({ subscription: subscriptions, plan: plans })
     .from(subscriptions)
     .leftJoin(plans, eq(subscriptions.planId, plans.id))
-    .where(and(eq(subscriptions.ownerType, 'agency'), eq(subscriptions.ownerId, agencyId)))
+    .where(eq(subscriptions.billableAccountId, billableAccountId))
     .limit(1);
 
   const invoiceRows = await db
     .select()
     .from(billingInvoices)
-    .where(and(eq(billingInvoices.ownerType, 'agency'), eq(billingInvoices.ownerId, agencyId)))
+    .where(eq(billingInvoices.billableAccountId, billableAccountId))
     .orderBy(desc(billingInvoices.createdAt))
     .limit(25);
 
@@ -1509,16 +1588,17 @@ export async function getAgentBillingWorkspace(user: BillingUser) {
   if (owner.ownerType !== 'agent') {
     throw new TRPCError({ code: 'FORBIDDEN', message: 'Agent billing workspace is agent-only.' });
   }
+  const billableAccountId = await resolveBillableAccountId(db, 'agent', owner.ownerId);
   const [subscriptionWithPlan] = await db
     .select({ subscription: subscriptions, plan: plans })
     .from(subscriptions)
     .leftJoin(plans, eq(subscriptions.planId, plans.id))
-    .where(and(eq(subscriptions.ownerType, 'agent'), eq(subscriptions.ownerId, owner.ownerId)))
+    .where(eq(subscriptions.billableAccountId, billableAccountId))
     .limit(1);
   const invoiceRows = await db
     .select()
     .from(billingInvoices)
-    .where(and(eq(billingInvoices.ownerType, 'agent'), eq(billingInvoices.ownerId, owner.ownerId)))
+    .where(eq(billingInvoices.billableAccountId, billableAccountId))
     .orderBy(desc(billingInvoices.createdAt))
     .limit(25);
   const invoiceIds = invoiceRows.map(invoice => invoice.id);
@@ -1585,10 +1665,10 @@ export async function submitPaidLaunchAccessPaymentProof(input: LaunchPaymentPro
   if (input.file.sizeBytes <= 0 || input.file.sizeBytes > MAX_PROOF_BYTES) {
     throw new TRPCError({ code: 'BAD_REQUEST', message: 'Proof-of-payment file is too large.' });
   }
-  if (!Number.isFinite(input.amount) || input.amount <= 0) {
+  if (!Number.isSafeInteger(input.amount) || input.amount <= 0) {
     throw new TRPCError({
       code: 'BAD_REQUEST',
-      message: 'Payment amount must be greater than zero.',
+      message: 'Payment amount must be a positive integer minor-unit value.',
     });
   }
 
@@ -1623,14 +1703,16 @@ export async function submitPaidLaunchAccessPaymentProof(input: LaunchPaymentPro
       });
     }
 
+    const billableAccountId = invoice.billableAccountId;
     const idempotencyKey = `manual_eft:${invoice.id}:${randomUUID()}`;
     const [paymentInsert] = await tx
       .insert(billingPayments)
       .values({
         invoiceId: invoice.id,
         subscriptionId: invoice.subscriptionId || null,
-        ownerType: invoice.ownerType,
+        ownerType: toBillingOwnerType(invoice.ownerType),
         ownerId: invoice.ownerId,
+        billableAccountId,
         paymentMethod: 'manual_eft',
         state: 'under_review',
         amount: Math.round(input.amount),
@@ -1677,8 +1759,9 @@ export async function submitPaidLaunchAccessPaymentProof(input: LaunchPaymentPro
       .values({
         paymentId,
         invoiceId: invoice.id,
-        ownerType: invoice.ownerType,
+        ownerType: toBillingOwnerType(invoice.ownerType),
         ownerId: invoice.ownerId,
+        billableAccountId,
         storageKey: storedDocument.storageKey,
         originalFileName: input.file.filename,
         mimeType,
@@ -1739,7 +1822,7 @@ export async function submitPaidLaunchAccessPaymentProof(input: LaunchPaymentPro
     }
 
     await logBillingEvent(tx, {
-      ownerType: invoice.ownerType,
+      ownerType: toBillingOwnerType(invoice.ownerType),
       ownerId: invoice.ownerId,
       subscriptionId: invoice.subscriptionId,
       invoiceId: invoice.id,
@@ -1807,10 +1890,10 @@ export async function submitAgencyPaymentProof(input: LaunchPaymentProofInput) {
   if (input.file.sizeBytes <= 0 || input.file.sizeBytes > MAX_PROOF_BYTES) {
     throw new TRPCError({ code: 'BAD_REQUEST', message: 'Proof-of-payment file is too large.' });
   }
-  if (!Number.isFinite(input.amount) || input.amount <= 0) {
+  if (!Number.isSafeInteger(input.amount) || input.amount <= 0) {
     throw new TRPCError({
       code: 'BAD_REQUEST',
-      message: 'Payment amount must be greater than zero.',
+      message: 'Payment amount must be a positive integer minor-unit value.',
     });
   }
 
@@ -1839,14 +1922,16 @@ export async function submitAgencyPaymentProof(input: LaunchPaymentProofInput) {
       });
     }
 
+    const billableAccountId = invoice.billableAccountId;
     const idempotencyKey = `manual_eft:${invoice.id}:${randomUUID()}`;
     const [paymentInsert] = await tx
       .insert(billingPayments)
       .values({
         invoiceId: invoice.id,
         subscriptionId: invoice.subscriptionId || null,
-        ownerType: invoice.ownerType,
+        ownerType: toBillingOwnerType(invoice.ownerType),
         ownerId: invoice.ownerId,
+        billableAccountId,
         paymentMethod: 'manual_eft',
         state: 'under_review',
         amount: Math.round(input.amount),
@@ -1892,8 +1977,9 @@ export async function submitAgencyPaymentProof(input: LaunchPaymentProofInput) {
       .values({
         paymentId,
         invoiceId: invoice.id,
-        ownerType: invoice.ownerType,
+        ownerType: toBillingOwnerType(invoice.ownerType),
         ownerId: invoice.ownerId,
+        billableAccountId,
         storageKey: storedDocument.storageKey,
         originalFileName: input.file.filename,
         mimeType,
@@ -1946,7 +2032,7 @@ export async function submitAgencyPaymentProof(input: LaunchPaymentProofInput) {
     });
 
     await logBillingEvent(tx, {
-      ownerType: invoice.ownerType,
+      ownerType: toBillingOwnerType(invoice.ownerType),
       ownerId: invoice.ownerId,
       subscriptionId: invoice.subscriptionId,
       invoiceId: invoice.id,
@@ -1981,25 +2067,22 @@ export async function getDeveloperBillingWorkspace(user: BillingUser) {
     throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
 
   const developerId = await assertDeveloperOwner(db, user);
+  const billableAccountId = await resolveBillableAccountId(db, 'developer', developerId);
   const [subscriptionWithPlan] = await db
     .select({ subscription: subscriptions, plan: plans })
     .from(subscriptions)
     .leftJoin(plans, eq(subscriptions.planId, plans.id))
-    .where(and(eq(subscriptions.ownerType, 'developer'), eq(subscriptions.ownerId, developerId)))
+    .where(eq(subscriptions.billableAccountId, billableAccountId))
     .limit(1);
   const invoiceRows = await db
     .select()
     .from(billingInvoices)
-    .where(
-      and(eq(billingInvoices.ownerType, 'developer'), eq(billingInvoices.ownerId, developerId)),
-    )
+    .where(eq(billingInvoices.billableAccountId, billableAccountId))
     .orderBy(desc(billingInvoices.createdAt));
   const paymentRows = await db
     .select()
     .from(billingPayments)
-    .where(
-      and(eq(billingPayments.ownerType, 'developer'), eq(billingPayments.ownerId, developerId)),
-    )
+    .where(eq(billingPayments.billableAccountId, billableAccountId))
     .orderBy(desc(billingPayments.createdAt));
 
   return {
@@ -2051,6 +2134,7 @@ export async function getAdminFinanceQueue(input: {
     })
     .from(billingPayments)
     .innerJoin(billingInvoices, eq(billingPayments.invoiceId, billingInvoices.id))
+    .leftJoin(billableAccounts, eq(billingInvoices.billableAccountId, billableAccounts.id))
     .leftJoin(
       billingPaymentDocuments,
       and(
@@ -2060,13 +2144,13 @@ export async function getAdminFinanceQueue(input: {
     )
     .leftJoin(
       agencies,
-      and(eq(billingInvoices.ownerType, 'agency'), eq(agencies.id, billingInvoices.ownerId)),
+      and(eq(billableAccounts.accountKind, 'agency'), eq(agencies.id, billableAccounts.agencyId)),
     )
     .leftJoin(
       developerOrganisations,
       and(
-        eq(billingInvoices.ownerType, 'developer'),
-        eq(developerOrganisations.id, billingInvoices.ownerId),
+        eq(billableAccounts.accountKind, 'developer'),
+        eq(developerOrganisations.id, billableAccounts.developerOrganisationId),
       ),
     )
     .where(conditions)
@@ -2394,7 +2478,7 @@ export async function reviewManualPayment(input: {
       }
 
       await logBillingEvent(tx, {
-        ownerType: invoice.ownerType,
+        ownerType: toBillingOwnerType(invoice.ownerType),
         ownerId: invoice.ownerId,
         subscriptionId: invoice.subscriptionId,
         invoiceId: invoice.id,
@@ -2539,7 +2623,7 @@ export async function reviewManualPayment(input: {
     }
 
     await logBillingEvent(tx, {
-      ownerType: invoice.ownerType,
+      ownerType: toBillingOwnerType(invoice.ownerType),
       ownerId: invoice.ownerId,
       subscriptionId: invoice.subscriptionId,
       invoiceId: invoice.id,
@@ -2751,12 +2835,7 @@ export async function requestAgencyCancellationAtPeriodEnd(user: BillingUser) {
   const agencyId = assertAgencyAdmin(user);
 
   return db.transaction(async tx => {
-    await lockAgencyBillingState(tx, agencyId);
-    const [subscription] = await tx
-      .select()
-      .from(subscriptions)
-      .where(and(eq(subscriptions.ownerType, 'agency'), eq(subscriptions.ownerId, agencyId)))
-      .limit(1);
+    const { subscription } = await lockAgencyBillingState(tx, agencyId);
 
     if (!subscription) {
       throw new TRPCError({ code: 'NOT_FOUND', message: 'No agency subscription found.' });
@@ -2812,12 +2891,7 @@ export async function restoreAgencySubscription(user: BillingUser) {
   const agencyId = assertAgencyAdmin(user);
 
   return db.transaction(async tx => {
-    await lockAgencyBillingState(tx, agencyId);
-    const [subscription] = await tx
-      .select()
-      .from(subscriptions)
-      .where(and(eq(subscriptions.ownerType, 'agency'), eq(subscriptions.ownerId, agencyId)))
-      .limit(1);
+    const { subscription } = await lockAgencyBillingState(tx, agencyId);
 
     if (!subscription) {
       throw new TRPCError({ code: 'NOT_FOUND', message: 'No agency subscription found.' });

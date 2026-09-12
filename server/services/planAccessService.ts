@@ -1,6 +1,7 @@
 import { and, asc, eq } from 'drizzle-orm';
 import {
   agencies,
+  billableAccounts,
   developerOrganisationMemberships,
   developerOrganisations,
   plans,
@@ -33,6 +34,39 @@ export type SubscriptionStatus =
   | 'expired';
 export type EntitlementValue = boolean | number | string | null;
 export type EntitlementMap = Record<string, EntitlementValue>;
+
+async function ensureBillableAccount(db: any, ownerType: SubscriptionOwnerType, ownerId: number) {
+  const ownerColumn =
+    ownerType === 'agent'
+      ? billableAccounts.userId
+      : ownerType === 'agency'
+        ? billableAccounts.agencyId
+        : billableAccounts.developerOrganisationId;
+  const ownerValue = eq(ownerColumn, ownerId);
+  const [existing] = await db
+    .select({ id: billableAccounts.id })
+    .from(billableAccounts)
+    .where(and(eq(billableAccounts.accountKind, ownerType), ownerValue))
+    .limit(1);
+  if (existing) return Number(existing.id);
+  await db
+    .insert(billableAccounts)
+    .values(
+      ownerType === 'agent'
+        ? { accountKind: ownerType, userId: ownerId }
+        : ownerType === 'agency'
+          ? { accountKind: ownerType, agencyId: ownerId }
+          : { accountKind: ownerType, developerOrganisationId: ownerId },
+    )
+    .onDuplicateKeyUpdate({ set: { accountKind: ownerType } });
+  const [created] = await db
+    .select({ id: billableAccounts.id })
+    .from(billableAccounts)
+    .where(and(eq(billableAccounts.accountKind, ownerType), ownerValue))
+    .limit(1);
+  if (!created) throw new Error(`No billable account exists for ${ownerType}:${ownerId}.`);
+  return Number(created.id);
+}
 
 export const DEFAULT_FEATURE_ENTITLEMENTS: EntitlementMap = {
   max_active_listings: 0,
@@ -167,6 +201,18 @@ export function isPaidSubscriptionEntitled(status: SubscriptionStatus | null | u
   return status === 'active' || status === 'grace_period';
 }
 
+function parseEntitlementTimestamp(value: string | Date): number {
+  if (value instanceof Date) return value.getTime();
+  const normalized = value.trim();
+  // MySQL DATETIME values have no timezone marker; the database authority
+  // treats them as UTC so entitlement decisions are process-timezone safe.
+  const utcValue =
+    /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(?:\.\d+)?$/.test(normalized)
+      ? `${normalized.replace(' ', 'T')}Z`
+      : normalized;
+  return new Date(utcValue).getTime();
+}
+
 /**
  * Pure, write-free row-level commercial entitlement test. This is the single
  * canonical predicate for "is this paid term currently usable" across read
@@ -175,12 +221,21 @@ export function isPaidSubscriptionEntitled(status: SubscriptionStatus | null | u
  * remains in getPlanAccessProjectionForUserId for authenticated contexts.
  */
 export function isPaidSubscriptionRowEntitled(
-  row: { status: string | null | undefined; currentPeriodEnd: string | Date | null | undefined },
+  row: {
+    status: string | null | undefined;
+    currentPeriodEnd: string | Date | null | undefined;
+    graceEndsAt?: string | Date | null | undefined;
+  },
   now: Date = new Date(),
 ): boolean {
   if (!isPaidSubscriptionEntitled(row.status as SubscriptionStatus)) return false;
-  const end = row.currentPeriodEnd ? new Date(row.currentPeriodEnd).getTime() : null;
-  return end === null || (Number.isFinite(end) && end > now.getTime());
+  const end = row.currentPeriodEnd ? parseEntitlementTimestamp(row.currentPeriodEnd) : null;
+  if (end !== null && (!Number.isFinite(end) || end <= now.getTime())) return false;
+  if (row.status === 'grace_period') {
+    const graceEnd = row.graceEndsAt ? parseEntitlementTimestamp(row.graceEndsAt) : null;
+    return graceEnd !== null && Number.isFinite(graceEnd) && graceEnd > now.getTime();
+  }
+  return true;
 }
 
 function deriveTrialState(
@@ -305,10 +360,11 @@ async function ensureDefaultSubscriptionForUser(user: UserRow): Promise<Subscrip
   const ownerContext = await getOwnerContextForUser(db, user);
   if (!ownerContext || ownerContext.ownerType !== 'agency') return null;
   const { ownerType, ownerId } = ownerContext;
+  const billableAccountId = await ensureBillableAccount(db, ownerType, ownerId);
   const [existing] = await db
     .select()
     .from(subscriptions)
-    .where(and(eq(subscriptions.ownerType, ownerType), eq(subscriptions.ownerId, ownerId)))
+    .where(eq(subscriptions.billableAccountId, billableAccountId))
     .limit(1);
 
   return existing || null;
@@ -422,11 +478,12 @@ export async function getPlanAccessProjectionForUserId(
   const ownerContext = await getOwnerContextForUser(db, user);
   if (!ownerContext) return null;
   const { ownerType, ownerId } = ownerContext;
+  const billableAccountId = await ensureBillableAccount(db, ownerType, ownerId);
 
   let [subscriptionRow] = await db
     .select()
     .from(subscriptions)
-    .where(and(eq(subscriptions.ownerType, ownerType), eq(subscriptions.ownerId, ownerId)))
+    .where(eq(subscriptions.billableAccountId, billableAccountId))
     .limit(1);
 
   const shouldAutoProvision = user.role === 'agency_admin' && ownerType === 'agency';
@@ -570,6 +627,7 @@ export async function setSubscriptionPlanForOwner(input: {
   }
 
   const nowTs = new Date().toISOString().slice(0, 19).replace('T', ' ');
+  const billableAccountId = await ensureBillableAccount(db, input.ownerType, input.ownerId);
   const trialDays = Math.max(0, Number(planRow.trialDays || 0));
   const computedTrialEnd =
     trialDays > 0
@@ -583,6 +641,7 @@ export async function setSubscriptionPlanForOwner(input: {
   const insertValues: typeof subscriptions.$inferInsert = {
     ownerType: input.ownerType,
     ownerId: input.ownerId,
+    billableAccountId,
     planId: input.planId,
     status: nextStatus,
     trialEndsAt: trialEndsAt || null,
@@ -598,6 +657,7 @@ export async function setSubscriptionPlanForOwner(input: {
     billingCycleAnchor: billingCycleAnchor || null,
     metadata: input.metadata || null,
     updatedBy: input.actorUserId || null,
+    billableAccountId,
   };
 
   if (input.currentPeriodStart !== undefined) {
@@ -619,7 +679,7 @@ export async function setSubscriptionPlanForOwner(input: {
     .select()
     .from(subscriptions)
     .where(
-      and(eq(subscriptions.ownerType, input.ownerType), eq(subscriptions.ownerId, input.ownerId)),
+      eq(subscriptions.billableAccountId, billableAccountId),
     )
     .limit(1);
 

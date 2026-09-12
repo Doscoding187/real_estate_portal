@@ -55,7 +55,7 @@ describe('database final closure residual executor authority', () => {
 
     const manual = manifest.manualUtilityAuthority;
 
-    expect(manifest.version).toBe(7);
+    expect(manifest.version).toBe(9);
     expect(manual.directSchemaCandidateClasses['deferred schema executor']).toEqual([]);
     expect(manual.deferredGap3Utilities).toEqual([]);
 
