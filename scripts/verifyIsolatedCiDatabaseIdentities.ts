@@ -146,6 +146,13 @@ async function main(): Promise<void> {
   console.log(
     JSON.stringify({
       targetFingerprintHash: runtimeAuthority.context.targetFingerprintHash,
+      operationRoleBindings: {
+        'runtime-connect': 'runtime',
+        'worker-connect': 'worker',
+        verification: 'read-only',
+        'migration-apply': 'migration',
+        'ci-identity-bootstrap': 'bootstrap-admin (provisioning step only)',
+      },
       grantPlanFingerprints: plan.fingerprints,
       observedGrantFingerprints: observed,
       positiveOperations: [
