@@ -35,11 +35,14 @@ const OPERATION_CREDENTIALS: Partial<Record<DatabaseOperation, DatabaseCredentia
   'ci-identity-bootstrap': 'bootstrap-admin',
   'migration-plan': 'migration',
   'migration-apply': 'migration',
-  'reference-seed': 'runtime',
-  'foundation-seed': 'runtime',
-  'demo-seed': 'runtime',
-  'scenario-seed': 'runtime',
-  'test-fixture': 'runtime',
+  // Seed/setup commands inspect the migration ledger before writing data.
+  // Keep that control-table read on the migration identity; application
+  // behavior remains bound to runtime-connect below.
+  'reference-seed': 'migration',
+  'foundation-seed': 'migration',
+  'demo-seed': 'migration',
+  'scenario-seed': 'migration',
+  'test-fixture': 'migration',
   verification: 'read-only',
   'browser-verification': 'runtime',
   readiness: 'read-only',

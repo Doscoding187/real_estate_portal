@@ -66,4 +66,12 @@ describe('isolated CI physical credential boundary', () => {
       }),
     ).toThrow('operation and credential role do not match');
   });
+
+  it('routes consumer-contract setup through migration and inspection through verifier', () => {
+    expect(isolatedCiCredentialClassForOperation('reference-seed')).toBe('migration');
+    expect(isolatedCiCredentialClassForOperation('foundation-seed')).toBe('migration');
+    expect(isolatedCiCredentialClassForOperation('scenario-seed')).toBe('migration');
+    expect(isolatedCiCredentialClassForOperation('verification')).toBe('read-only');
+    expect(isolatedCiCredentialClassForOperation('runtime-connect')).toBe('runtime');
+  });
 });
