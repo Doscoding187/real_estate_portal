@@ -1427,6 +1427,45 @@ async function ensureManualPublicFixtures(
   await ensureOrphanProjection(connection, provinceId, cityId, suburbId);
 }
 
+async function ensureAgentBillableAccount(connection: AuthoritySqlConnection): Promise<unknown> {
+  const rows = await queryRows(
+    connection,
+    `SELECT id FROM billable_accounts WHERE account_kind = 'agent' AND user_id = ? ORDER BY id`,
+    [SCENARIO_IDS.agentUser],
+  );
+  if (rows.length > 1) {
+    throw new Error('Search-to-Lead scenario found duplicate agent billable accounts.');
+  }
+  if (rows.length === 0) {
+    await connection.execute(
+      `INSERT INTO billable_accounts (account_kind, user_id) VALUES ('agent', ?)`,
+      [SCENARIO_IDS.agentUser],
+    );
+    return ensureAgentBillableAccount(connection);
+  }
+  return rowValue(rows[0], 'id');
+}
+
+async function ensureDeveloperBillableAccount(connection: AuthoritySqlConnection): Promise<unknown> {
+  const rows = await queryRows(
+    connection,
+    `SELECT id FROM billable_accounts
+      WHERE account_kind = 'developer' AND developer_organisation_id = ? ORDER BY id`,
+    [SCENARIO_IDS.developerOrganisation],
+  );
+  if (rows.length > 1) {
+    throw new Error('Search-to-Lead scenario found duplicate developer billable accounts.');
+  }
+  if (rows.length === 0) {
+    await connection.execute(
+      `INSERT INTO billable_accounts (account_kind, developer_organisation_id) VALUES ('developer', ?)`,
+      [SCENARIO_IDS.developerOrganisation],
+    );
+    return ensureDeveloperBillableAccount(connection);
+  }
+  return rowValue(rows[0], 'id');
+}
+
 async function ensureUserAgency(
   connection: AuthoritySqlConnection,
   userId: number,
@@ -2085,13 +2124,7 @@ async function ensureAgentLaunchAccess(connection: AuthoritySqlConnection): Prom
     throw new Error('Search-to-Lead scenario requires the canonical agent Launch Access plan.');
   }
   const planId = asId({ id: rowValue(planRows[0], 'id') }, 'agent Launch Access plan');
-  const accountRows = await queryRows(
-    connection,
-    `SELECT id FROM billable_accounts WHERE account_kind = 'agent' AND user_id = ? ORDER BY id`,
-    [SCENARIO_IDS.agentUser],
-  );
-  if (accountRows.length !== 1) throw new Error('Search-to-Lead scenario requires exactly one agent billable account.');
-  const billableAccountId = rowValue(accountRows[0], 'id');
+  const billableAccountId = await ensureAgentBillableAccount(connection);
   const subscriptionRows = await queryRows(
     connection,
     `SELECT id, plan_id, status, current_period_end
@@ -2156,13 +2189,7 @@ async function ensureDeveloperLaunchAccess(connection: AuthoritySqlConnection): 
     throw new Error('Search-to-Lead scenario requires the canonical developer Launch Access plan.');
   }
   const planId = asId({ id: rowValue(planRows[0], 'id') }, 'developer Launch Access plan');
-  const accountRows = await queryRows(
-    connection,
-    `SELECT id FROM billable_accounts WHERE account_kind = 'developer' AND developer_organisation_id = ? ORDER BY id`,
-    [SCENARIO_IDS.developerOrganisation],
-  );
-  if (accountRows.length !== 1) throw new Error('Search-to-Lead scenario requires exactly one developer billable account.');
-  const billableAccountId = rowValue(accountRows[0], 'id');
+  const billableAccountId = await ensureDeveloperBillableAccount(connection);
   const subscriptionRows = await queryRows(
     connection,
     `SELECT id, plan_id, status, current_period_end

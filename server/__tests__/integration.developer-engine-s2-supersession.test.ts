@@ -753,6 +753,17 @@ describeWithDb('Developer Engine S2 supersession lifecycle integration', () => {
 
     await expect(
       db.insert(developmentSupersessions).values({
+        sourceDevelopmentId: -2147483648,
+        replacementDevelopmentId: pair.replacementId,
+        status: 'verified',
+        verificationNote: 'orphan source endpoint',
+        verifiedByActorId: pair.superAdminId,
+        verifiedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
+      }),
+    ).rejects.toThrow();
+
+    await expect(
+      db.insert(developmentSupersessions).values({
         sourceDevelopmentId: pair.sourceId,
         replacementDevelopmentId: pair.replacementId,
         status: 'verified',
