@@ -222,14 +222,22 @@ describe('migration execution authority', () => {
         if (!manifest.scripts[reference]) continue;
         if (!isMigrationCapable(reference, manifest)) continue;
         expect(
-          ['db:migrate:test', 'db:authority:check', 'db:authority:consumer-contract', 'db:authority:lifecycle', 'db:verify:ci'],
+          [
+            'db:migrate:test',
+            'db:authority:check',
+            'db:authority:consumer-contract',
+            'db:authority:lifecycle',
+            'db:verify:ci',
+          ],
           `${workflow} may only invoke an approved canonical CI migration or verification wrapper.`,
         ).toContain(reference);
       }
     }
 
     const ci = read('.github/workflows/ci.yml');
-    expect(ci.match(/pnpm db:migrate:test/g)).toHaveLength(1);
+    // The isolated CI contract provisions migration privileges before the fresh
+    // chain, then the test job independently applies its own fresh chain.
+    expect(ci.match(/pnpm db:migrate:test/g)).toHaveLength(2);
     expect(ci.match(/pnpm db:authority:consumer-contract/g)).toHaveLength(1);
     expect(ci.match(/pnpm db:verify:ci/g)).toHaveLength(1);
   });

@@ -115,7 +115,8 @@ async function main() {
   const manifest = loadAuthorityManifest();
   validateAuthorityManifest(manifest);
   const authority = assertFreshDisposableTestTarget(process.env.DATABASE_URL);
-  await assertDatabaseIsFresh(authority);
+  const postMigration = process.env.DATABASE_CONSUMER_CONTRACT_PHASE === 'post-migration';
+  if (!postMigration) await assertDatabaseIsFresh(authority);
   console.log(
     `[Consumer Contract] Fresh authorized target ${authority.context.targetFingerprintHash.slice(0, 16)} (${authority.context.targetClass}).`,
   );

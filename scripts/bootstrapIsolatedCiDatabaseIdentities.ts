@@ -55,6 +55,10 @@ async function main(): Promise<void> {
   const decision = authorizeDatabaseOperation(authority);
   const connection = await createAuthoritySqlConnection(authority, decision);
   const plan = buildIsolatedCiGrantPlan();
+  const phase = String(process.env.ISOLATED_CI_BOOTSTRAP_PHASE ?? 'full').trim();
+  if (phase !== 'full' && phase !== 'migration-only') {
+    throw new Error('Isolated CI identity provisioning refused: invalid bootstrap phase.');
+  }
   const passwords = {
     runtime: randomBytes(32).toString('base64url'),
     worker: randomBytes(32).toString('base64url'),
@@ -63,7 +67,11 @@ async function main(): Promise<void> {
   } as const;
 
   try {
-    for (const credential of Object.keys(passwords) as Array<keyof typeof passwords>) {
+    const credentials =
+      phase === 'migration-only'
+        ? (['migration'] as const)
+        : (Object.keys(passwords) as Array<keyof typeof passwords>);
+    for (const credential of credentials) {
       const user = ISOLATED_CI_ROLE_USERS[credential];
       await connection.execute(
         `CREATE USER IF NOT EXISTS ${account(user)} IDENTIFIED BY ${sqlString(passwords[credential])}`,
@@ -81,13 +89,26 @@ async function main(): Promise<void> {
   }
 
   const values = {
-    DATABASE_URL: roleUrl(ISOLATED_CI_ROLE_USERS.runtime, passwords.runtime),
-    [ISOLATED_CI_ROLE_URL_ENV.runtime]: roleUrl(ISOLATED_CI_ROLE_USERS.runtime, passwords.runtime),
-    [ISOLATED_CI_ROLE_URL_ENV.worker]: roleUrl(ISOLATED_CI_ROLE_USERS.worker, passwords.worker),
-    [ISOLATED_CI_ROLE_URL_ENV['read-only']]: roleUrl(
-      ISOLATED_CI_ROLE_USERS['read-only'],
-      passwords['read-only'],
+    DATABASE_URL: roleUrl(
+      ISOLATED_CI_ROLE_USERS[phase === 'migration-only' ? 'migration' : 'runtime'],
+      passwords[phase === 'migration-only' ? 'migration' : 'runtime'],
     ),
+    ...(phase === 'full'
+      ? {
+          [ISOLATED_CI_ROLE_URL_ENV.runtime]: roleUrl(
+            ISOLATED_CI_ROLE_USERS.runtime,
+            passwords.runtime,
+          ),
+          [ISOLATED_CI_ROLE_URL_ENV.worker]: roleUrl(
+            ISOLATED_CI_ROLE_USERS.worker,
+            passwords.worker,
+          ),
+          [ISOLATED_CI_ROLE_URL_ENV['read-only']]: roleUrl(
+            ISOLATED_CI_ROLE_USERS['read-only'],
+            passwords['read-only'],
+          ),
+        }
+      : {}),
     [ISOLATED_CI_ROLE_URL_ENV.migration]: roleUrl(
       ISOLATED_CI_ROLE_USERS.migration,
       passwords.migration,
@@ -99,6 +120,7 @@ async function main(): Promise<void> {
     JSON.stringify({
       targetFingerprintHash: authority.context.targetFingerprintHash,
       credentialSource: authority.context.credentialSource,
+      phase,
       applicationTableCount: plan.applicationTables.length,
       grantFingerprints: plan.fingerprints,
       bootstrapCredentialPersisted: false,
