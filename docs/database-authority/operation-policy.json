@@ -59,7 +59,7 @@
     },
     "reference-seed": {
       "allowedTargetClasses": ["disposable-worktree", "disposable-test"],
-      "credentialClasses": ["runtime", "local-owner", "test-owner"],
+      "credentialClasses": ["runtime", "migration", "local-owner", "test-owner"],
       "ownership": "exact-local-owner",
       "approval": "none",
       "acknowledgement": "none",
@@ -67,7 +67,7 @@
     },
     "foundation-seed": {
       "allowedTargetClasses": ["disposable-worktree", "disposable-test"],
-      "credentialClasses": ["runtime", "local-owner", "test-owner"],
+      "credentialClasses": ["runtime", "migration", "local-owner", "test-owner"],
       "ownership": "exact-local-owner",
       "approval": "none",
       "acknowledgement": "none",
@@ -75,7 +75,7 @@
     },
     "demo-seed": {
       "allowedTargetClasses": ["disposable-worktree", "disposable-test"],
-      "credentialClasses": ["runtime", "local-owner", "test-owner"],
+      "credentialClasses": ["runtime", "migration", "local-owner", "test-owner"],
       "ownership": "exact-local-owner",
       "approval": "none",
       "acknowledgement": "none",
@@ -83,7 +83,7 @@
     },
     "scenario-seed": {
       "allowedTargetClasses": ["disposable-worktree", "disposable-test"],
-      "credentialClasses": ["runtime", "local-owner", "test-owner"],
+      "credentialClasses": ["runtime", "migration", "local-owner", "test-owner"],
       "ownership": "exact-local-owner",
       "approval": "none",
       "acknowledgement": "none",
@@ -91,7 +91,7 @@
     },
     "test-fixture": {
       "allowedTargetClasses": ["disposable-worktree", "disposable-test"],
-      "credentialClasses": ["runtime", "local-owner", "test-owner"],
+      "credentialClasses": ["runtime", "migration", "local-owner", "test-owner"],
       "ownership": "exact-local-owner",
       "approval": "none",
       "acknowledgement": "none",
