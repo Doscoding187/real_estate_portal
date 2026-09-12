@@ -1,7 +1,7 @@
 # Property Listify Database Transition and Launch Master Plan
 
-**Status:** WP0 correction required; G0 is not approved; WP1 is blocked
-**Plan version:** 1.2 (correction of 0463ac2a; G0 remains unapproved)
+**Status:** WP0 architect-approved; Stage 1 local implementation assigned under amendment A-01
+**Plan version:** 1.3 (A-01: three-stage execution and consolidated review)
 **Prepared:** 2026-09-12
 **Owner:** Principal architecture / database release authority
 
@@ -9,8 +9,11 @@ This is the complete execution specification for the database transition and
 launch programme. It preserves the senior-plan decisions and supplies the
 packet, evidence, gate, recovery and reporting controls needed for another
 agent to execute them. It does not authorize a protected database mutation.
-WP1 and every later work package remain blocked until the corrected WP0 record
-is reviewed, G0 is approved, and a named packet is assigned.
+WP0 at `b673eb42e47b831be19e1998422be11d3303b2d9` received principal-architect
+approval in the project conversation. Edward subsequently accepted the proposed
+three-stage execution model with “please continue with the recommandations”.
+Amendment A-01 below records that direction and the bounded Stage 1 assignment.
+It does not claim acceptance of pending launch scope, budget or provider facts.
 
 Protected release, import, restore, credential, infrastructure, and cutover
 operations require the existing Database Authority approval and acknowledgement
@@ -318,10 +321,10 @@ security and worker isolation requirements.
 
 ## WP0 evidence record and current authorization
 
-WP0 is correction-only. Its purpose is to preserve the senior plan in the
+The historical WP0 correction was documentation-only. Its purpose was to preserve the senior plan in the
 repository and create a reviewable evidence record. It does not establish a
 target, create credentials, initialize a database, run migrations, import
-TiDB data or authorize WP1.
+TiDB data or authorize WP1 at that time. Current assignment is defined by A-01.
 
 ### Recorded commands and results
 
@@ -361,13 +364,93 @@ remote, protected or shared target was accessed by this correction.
 
 | Field | Current record |
 | --- | --- |
-| Evidence | This corrected plan, WP0 provenance table, authority links, exact base/branch identity and final tracked-file checks |
-| Approver | Edward + principal architect, after reviewing the corrected commit and coverage checklist |
-| Blockers | G0 review not yet granted; incomplete plan/provenance/ownership record, validation defect, mixed worktree or missing budget/launch-disposition owner |
-| Recovery position | Remain in WP0 correction; preserve this branch and evidence; do not assign or start WP1 |
-| Current decision | **G0 not approved. WP1 is not authorized.** |
+| Evidence | Reviewed WP0 commit `b673eb42e47b831be19e1998422be11d3303b2d9`, provenance, coverage comparison and principal review in the project conversation |
+| Approver | Principal architect approved WP0; Edward directed proceeding with the three-stage recommendation |
+| Remaining decisions | Launch dispositions, expenditure and provider/data decisions remain open at their owning gates; dependency-complete status is required before local database work |
+| Recovery position | Local candidate work only under A-01; no protected operation or production promotion |
+| Current decision | **WP0 architectural approval recorded; Stage 1 assigned. Pending business/operational decisions are not certified by this assignment.** |
+
+## Amendment A-01 — Three-stage execution and consolidated review
+
+**Authority:** Principal-architect recommendation accepted by Edward in the
+project conversation following review of commit `b673eb42`. This amendment
+changes review cadence and internal dependency handling only. All migration,
+security, capacity, recovery, data and launch acceptance criteria remain intact.
+
+| Stage | Assigned scope | Mandatory review boundary |
+| --- | --- | --- |
+| 1 — Local implementation and proof | WP1, WP2 and local/integration preparation of WP3; WP4 mapping/import preparation using synthetic data only; prepare WP10 runbooks where useful | One consolidated architectural/security/product review before merge/promotion approval and before any Azure mutation |
+| 2 — Azure establishment and operational proof | After Stage 1 approval and release-source convergence: WP5, WP6, separately approved TiDB inspection/rehearsal in WP4, and WP7 final cutover preparation | Consolidated G5/G6 review before TiDB freeze or production opening |
+| 3 — Cutover and stabilization | After Stage 2 approval and exact operational authorization: WP8, WP9 stabilization, WP10 operational handoff and retirement preparation | G9 review and Edward's deletion approval before TiDB retirement |
+
+Stage 1 is assigned by this amendment; Stages 2 and 3 are not automatically
+authorized. The [Stage 1 assignment](stage-1-assignment.md) defines execution.
+This documentation turn records the assignment; it does not execute it.
+
+### Internal packet progression
+
+The agent maintains a durable checklist for every packet and criterion. Use
+`NOT STARTED`, `IN PROGRESS`, `EVIDENCE PASS — REVIEW PENDING`, or `BLOCKED`.
+Only the named reviewer may record `APPROVED`; an agent cannot approve its own
+release, engine selection, migration admission or exception.
+
+Inside an assigned stage, a prerequisite previously requiring an intermediate
+principal review may be satisfied for reversible implementation preparation by
+complete recorded evidence, within the already selected architecture. For
+example, successful WP1 evidence permits WP2/WP3 local work without another
+conversation. It does not admit the candidate for protected release. Missing
+evidence blocks dependent work, while independent in-scope work may continue.
+
+Run tests, investigate failures, fix ordinary implementation defects, reverify
+affected checks and continue. A routine test failure or completed packet is
+not a reason to return to Edward. A failed/ambiguous migration attempt remains
+a stop under the canonical recovery protocol: never retry, reset or edit its
+ledger to continue. Preserve that target and escalate the affected work.
+
+Stage 1 ends with a review-ready candidate and G1/G2 evidence plus WP3 local
+acceptance evidence. G3 still requires the approved merged `main` SHA and
+post-merge validation. A candidate cannot satisfy that requirement by relabeling
+its branch. After consolidated review, obtain normal merge authorization and
+run affected checks on the actual merged SHA before Stage 2. Existing branch
+protection, code review and CI requirements remain mandatory.
+
+G4 evidence is recorded and checked before WP6 begins. Its principal review may
+be consolidated at the Stage 2 boundary when establishment succeeds exactly as
+approved; unexpected protected state still stops dependent operations. G7's
+explicit opening approval and G9's retirement approval remain mandatory.
+
+### Protected operations and early escalation
+
+Stage approval does not supply operational credentials, consent to source-data
+access, cloud expenditure, or target-specific mutation approval. An operator
+may approve a concrete sequence of exact operations/targets together when the
+authority supports it; every operation still needs its own valid plan,
+fingerprint, credential, acknowledgement and evidence. An unknown future restore
+target cannot inherit another target's approval. No code check is bypassed to
+reduce conversational handoffs.
+
+Escalate early only for a required architectural/business decision or an
+unresolvable authority/environment blocker: changed migration history or
+lifecycle semantics; constraint weakening; broadened privileges; unreconciled
+required data; new spending; changed recovery/capacity targets; conflicting
+source authority; or failed/ambiguous DDL. Provide the finding, evidence, impact,
+options, recommended decision and independent work that can continue.
+
+### Consolidated stage report
+
+Return one report with the exact candidate/source/tree and configuration
+identities; per-packet acceptance checklist and durable evidence links;
+commands/results and skipped-test dispositions; changed files; local target
+and attempt state; security denial tests; decisions still pending; recovery
+position; and the concrete next-stage approval request. Do not claim unrun
+hosted CI, unmerged code, provider compatibility or launch scope as verified.
+Preserve progress in committed evidence so a replacement agent can resume.
 
 ## Gate protocol
+
+A-01 governs review timing and preparation dependencies in the table below.
+The table's criteria and final approvers remain authoritative; internal
+`EVIDENCE PASS — REVIEW PENDING` is not final gate approval.
 
 Every gate packet must use the authority evidence record fields: claim,
 mechanism, sequence, evidence, boundary, owner, status and next gate. A gate
@@ -599,7 +682,9 @@ exposure or repeated recovery failure to principal review.
 | TiDB remains read-only for 14 days, reviewed at days 7 and 14 | [Cutover and recovery procedure](#cutover-and-recovery-procedure) and WP9 | None |
 | Live/Pilot/Hidden journey disposition has explicit backend/worker boundaries | [Live, Pilot and Hidden journey requirements](#live-pilot-and-hidden-journey-requirements) and WP3/WP7 | None |
 
-No proposed architectural deviation is approved by this correction. A future
+The table above records the version 1.2 technical corrections. A-01 is the
+separately accepted review-cadence amendment; it changes none of those technical
+criteria. A future
 deviation must be recorded in this table, marked `Proposed — unapproved`, and
 returned for principal review before the dependent packet proceeds.
 
@@ -620,9 +705,9 @@ identity, credential/grant model, threshold or RPO/RTO changes, provider
 workarounds, compatibility exceptions, protected apply/restore/import,
 cutover, production open, regional-failure posture and TiDB retirement.
 
-The current task has one permitted action: WP0 correction in the task-owned
-documentation worktree. WP1 is not authorized before G0 approval and named
-packet assignment. The handoff below is a blocker statement, not permission.
+Current implementation assignment is Stage 1 under A-01 and its linked
+assignment. Broader packet execution does not enlarge protected-operation or
+architectural-change authority.
 
 ## Gate sequence and handoff
 
@@ -633,11 +718,11 @@ controls → G3 integrated release acceptance → G4 Azure establishment → G5
 recovery/capacity proof → G6 cutover approval → G7 production open → G8
 stabilization → G9 TiDB retirement`
 
-WP0 establishes the corrected record only. No Azure migration or TiDB import is
-authorized by completing WP0. The next possible packet is WP1 migration-lineage
-and engine admission, but it may be assigned only after the principal architect
-approves G0 on the corrected commit. Every packet must report evidence,
-approver, blockers and recovery position for its gate.
+WP0 approval and A-01 permit Stage 1 local execution, starting with WP1 and
+continuing through the assigned preparation when evidence permits. No Azure
+migration or TiDB import is authorized. Every packet still reports evidence,
+approver, blockers and recovery position; return the consolidated stage report
+at the mandatory boundary or escalate an exceptional decision earlier.
 
 ## WP0 acceptance and final handoff
 
@@ -657,6 +742,6 @@ WP0 is accepted only when all of the following are true:
   changed; and
 - tracked-file checks pass and final Git status is clean after commit.
 
-The corrected commit is a reviewable WP0 deliverable. It does not claim G0
-approval, assign WP1, or certify any database, provider, backup, capacity,
-recovery, cutover or launch state.
+The version 1.2 deliverable was approved at `b673eb42`; A-01 records the subsequent
+Stage 1 assignment. Neither approval certifies any database, provider, backup,
+capacity, recovery, cutover or launch state.
