@@ -47,7 +47,9 @@ async function currentUser(connection: AuthoritySqlConnection, expected: string)
 }
 
 async function grantsFingerprint(connection: AuthoritySqlConnection): Promise<string> {
-  const result: any = await connection.query('SHOW GRANTS FOR CURRENT_USER()');
+  // MySQL supports SHOW GRANTS without a subject for the authenticated user;
+  // `FOR CURRENT_USER()` is not valid syntax on MySQL 8.4.
+  const result: any = await connection.query('SHOW GRANTS');
   const rows = Array.isArray(result?.[0]) ? result[0] : [];
   const values = rows
     .flatMap((row: Record<string, unknown>) => Object.values(row).map(value => String(value)))
@@ -150,7 +152,7 @@ async function main(): Promise<void> {
       migration.connection,
       "GRANT SELECT ON `listify_test`.`users` TO 'listify_ci_verifier'@'%'",
     );
-    const result: any = await migration.connection.query('SHOW GRANTS FOR CURRENT_USER()');
+    const result: any = await migration.connection.query('SHOW GRANTS');
     const grants = JSON.stringify(result?.[0] ?? []).toUpperCase();
     if (grants.includes('GRANT OPTION') || grants.includes('CREATE USER')) {
       throw new Error('Isolated CI migration identity has an administrative grant.');
