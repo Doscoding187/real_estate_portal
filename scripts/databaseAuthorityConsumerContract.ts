@@ -120,7 +120,8 @@ async function main() {
   console.log(
     `[Consumer Contract] Fresh authorized target ${authority.context.targetFingerprintHash.slice(0, 16)} (${authority.context.targetClass}).`,
   );
-  for (const [command, args] of CONSUMER_CONTRACT_STEPS) {
+  const steps = postMigration ? CONSUMER_CONTRACT_STEPS.slice(1) : CONSUMER_CONTRACT_STEPS;
+  for (const [command, args] of steps) {
     runStep(command, args, authority);
   }
   await assertSearchToLeadReadiness(authority);
