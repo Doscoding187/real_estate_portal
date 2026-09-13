@@ -59,6 +59,15 @@ const completeBranding = {
   secondaryColor: '#ffffff',
 };
 const agencyPublishingPlan = { id: 1, segment: 'agency', isActive: 1 };
+const paidAgencyLaunchPlan = {
+  ...agencyPublishingPlan,
+  metadata: {
+    commercial_term_kind: 'paid_launch_access',
+    commercial_term_duration_days: 90,
+    commercial_requires_verified_payment: true,
+    commercial_auto_renews: false,
+  },
+};
 const publishingEntitlements = [{ featureKey: 'max_active_listings', valueJson: 1 }];
 const at = new Date('2026-07-16T10:00:00.000Z');
 
@@ -272,6 +281,27 @@ describe('listing publication entitlement service', () => {
           cancelAtPeriodEnd: 0,
           currentPeriodEnd: '2026-07-16T09:59:59.000Z',
         },
+      },
+      'subscription_period_ended',
+    );
+  });
+
+  it('fails closed when an active fixed-term agency subscription has no usable end', async () => {
+    await expectAgencyDenied(
+      {
+        subscription: { status: 'active', cancelAtPeriodEnd: 0 },
+        plan: paidAgencyLaunchPlan,
+      },
+      'subscription_period_ended',
+    );
+    await expectAgencyDenied(
+      {
+        subscription: {
+          status: 'active',
+          cancelAtPeriodEnd: 0,
+          currentPeriodEnd: 'not-a-date',
+        },
+        plan: paidAgencyLaunchPlan,
       },
       'subscription_period_ended',
     );

@@ -12,6 +12,11 @@ import {
 } from '../../drizzle/schema';
 import { getEntitlementNumber } from './planAccessService';
 import { resolveCurrentAgencyMembershipForAgent } from './agencyMembershipService';
+import {
+  isPaidCommercialTermExpired,
+  parseCanonicalCommercialTimestamp,
+  resolveCommercialTerm,
+} from './commercialTerm';
 
 /**
  * The commercial decision for a canonical listing must be derived from the
@@ -190,7 +195,11 @@ export async function evaluateAgencyPublicationReadiness(
   }
 
   const subscriptionWithPlan = await getCanonicalSubscription(db, 'agency', agencyId);
-  const subscriptionFailureForState = subscriptionFailure(subscriptionWithPlan?.subscription, now);
+  const subscriptionFailureForState = subscriptionFailure(
+    subscriptionWithPlan?.subscription,
+    now,
+    subscriptionWithPlan?.plan,
+  );
   if (subscriptionFailureForState) {
     push(subscriptionFailureForState.reason, subscriptionFailureForState.message);
   }
@@ -344,7 +353,7 @@ export async function evaluateIndependentAgentPublicationReadiness(
   const trialEndsAt = dbTimestamp(subscription?.trialEndsAt);
   const validTrial =
     subscription?.status === 'trial' && trialEndsAt !== null && trialEndsAt > nowMs;
-  const failure = validTrial ? null : subscriptionFailure(subscription, now);
+  const failure = validTrial ? null : subscriptionFailure(subscription, now, plan);
   if (failure) {
     push(failure.reason, failure.message);
   }
@@ -423,14 +432,15 @@ export async function evaluateIndependentAgentPublicationReadiness(
 const ACTIVE_CANONICAL_LISTING_STATUSES = ['approved', 'published'] as const;
 
 const dbTimestamp = (value: unknown) => {
-  if (!value) return null;
-  const timestamp = new Date(String(value)).getTime();
-  return Number.isFinite(timestamp) ? timestamp : null;
+  return parseCanonicalCommercialTimestamp(
+    value instanceof Date || typeof value === 'string' ? value : null,
+  );
 };
 
 function subscriptionFailure(
   subscription: any,
   now: Date,
+  plan: typeof plans.$inferSelect | null | undefined = null,
 ): ListingPublicationEntitlementError | null {
   if (!subscription) {
     return new ListingPublicationEntitlementError(
@@ -442,6 +452,15 @@ function subscriptionFailure(
   const nowMs = now.getTime();
   const currentPeriodEnd = dbTimestamp(subscription.currentPeriodEnd);
   const graceEndsAt = dbTimestamp(subscription.graceEndsAt);
+  const paidLaunchTermExpired = Boolean(
+    plan &&
+    isPaidCommercialTermExpired(
+      resolveCommercialTerm(plan),
+      subscription.status,
+      subscription.currentPeriodEnd,
+      now,
+    ),
+  );
 
   if (subscription.status === 'grace_period') {
     if (!graceEndsAt || graceEndsAt <= nowMs) {
@@ -454,7 +473,7 @@ function subscriptionFailure(
   }
 
   if (subscription.status === 'active') {
-    if (currentPeriodEnd && currentPeriodEnd <= nowMs) {
+    if (paidLaunchTermExpired || (currentPeriodEnd && currentPeriodEnd <= nowMs)) {
       return new ListingPublicationEntitlementError(
         'subscription_period_ended',
         'The subscription period has ended. Reactivate the subscription to publish listings.',

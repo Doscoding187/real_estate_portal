@@ -401,7 +401,13 @@ async function ensureDefaultSubscriptionForUser(user: UserRow): Promise<Subscrip
   const [existing] = await db
     .select()
     .from(subscriptions)
-    .where(eq(subscriptions.billableAccountId, billableAccountId))
+    .where(
+      and(
+        eq(subscriptions.billableAccountId, billableAccountId),
+        eq(subscriptions.ownerType, ownerType),
+        eq(subscriptions.ownerId, ownerId),
+      ),
+    )
     .limit(1);
 
   return existing || null;
@@ -520,7 +526,13 @@ export async function getPlanAccessProjectionForUserId(
   let [subscriptionRow] = await db
     .select()
     .from(subscriptions)
-    .where(eq(subscriptions.billableAccountId, billableAccountId))
+    .where(
+      and(
+        eq(subscriptions.billableAccountId, billableAccountId),
+        eq(subscriptions.ownerType, ownerType),
+        eq(subscriptions.ownerId, ownerId),
+      ),
+    )
     .limit(1);
 
   const shouldAutoProvision = user.role === 'agency_admin' && ownerType === 'agency';
@@ -716,7 +728,13 @@ export async function setSubscriptionPlanForOwner(input: {
   const [row] = await db
     .select()
     .from(subscriptions)
-    .where(eq(subscriptions.billableAccountId, billableAccountId))
+    .where(
+      and(
+        eq(subscriptions.billableAccountId, billableAccountId),
+        eq(subscriptions.ownerType, input.ownerType),
+        eq(subscriptions.ownerId, input.ownerId),
+      ),
+    )
     .limit(1);
 
   return row ? toSubscriptionSnapshot(row) : null;

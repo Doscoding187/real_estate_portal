@@ -67,6 +67,25 @@ describe('commercial term semantics', () => {
     expect(
       isPaidCommercialTermExpired(term, 'active', end, new Date('2026-11-06T00:00:00.000Z')),
     ).toBe(true);
+    // MySQL DATETIME is UTC, independent of the worker's local timezone.
+    expect(
+      isPaidCommercialTermExpired(
+        term,
+        'active',
+        '2026-11-05 00:00:00',
+        new Date('2026-11-04T23:59:59.000Z'),
+      ),
+    ).toBe(false);
+    expect(
+      isPaidCommercialTermExpired(
+        term,
+        'active',
+        '2026-11-05 00:00:00',
+        new Date('2026-11-05T00:00:00.000Z'),
+      ),
+    ).toBe(true);
+    expect(isPaidCommercialTermExpired(term, 'active', null, start)).toBe(true);
+    expect(isPaidCommercialTermExpired(term, 'active', 'not-a-date', start)).toBe(true);
   });
 
   it('requires a configured fee and verified payment before activation', () => {
@@ -79,7 +98,9 @@ describe('commercial term semantics', () => {
     };
 
     expect(validatePaidLaunchAccessPayment(term, 149_900, payment)).toBeNull();
-    expect(validatePaidLaunchAccessPayment(term, 150_000, { ...payment, amountMinor: 149_899 })).toContain('below');
+    expect(
+      validatePaidLaunchAccessPayment(term, 150_000, { ...payment, amountMinor: 149_899 }),
+    ).toContain('below');
     expect(
       validatePaidLaunchAccessPayment(term, 100_000, { ...payment, state: 'submitted' }),
     ).toContain('verified');
@@ -90,7 +111,12 @@ describe('commercial term semantics', () => {
       ...launchPlan,
       metadata: { ...launchPlan.metadata, commercial_price_configured: false },
     });
-    expect(getConfiguredLaunchFeeMinor({ ...launchPlan, metadata: { ...launchPlan.metadata, commercial_price_configured: false } })).toBeNull();
+    expect(
+      getConfiguredLaunchFeeMinor({
+        ...launchPlan,
+        metadata: { ...launchPlan.metadata, commercial_price_configured: false },
+      }),
+    ).toBeNull();
     expect(
       validatePaidLaunchAccessPayment(unconfigured, null, {
         invoiceId: 10,

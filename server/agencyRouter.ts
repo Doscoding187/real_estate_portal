@@ -123,6 +123,7 @@ import {
 import {
   getCommercialProductKey,
   getConfiguredLaunchFeeMinor,
+  isPaidCommercialTermExpired,
   resolveCommercialTerm,
 } from './services/commercialTerm';
 import {
@@ -605,6 +606,44 @@ function normalizeBillingStatus(value: unknown): AgencyBillingStatus {
   if (status === 'expired') return 'expired';
   if (PENDING_BILLING_STATUSES.has(status)) return 'pending_payment';
   return 'unavailable';
+}
+
+/**
+ * Resolve the agency-facing commercial state from one canonical subscription
+ * and its plan. A raw `active` value is insufficient: a fixed term may have
+ * elapsed, and a subscription without an eligible agency plan must not unlock
+ * the workspace merely because its historical status still says active.
+ */
+function resolveAgencyCommercialAccess(
+  subscription: typeof subscriptions.$inferSelect | null,
+  plan: typeof plans.$inferSelect | null,
+  now = new Date(),
+): { billingStatus: AgencyBillingStatus; billingActive: boolean } {
+  if (!subscription) return { billingStatus: 'not_started', billingActive: false };
+
+  if (!plan || plan.segment !== 'agency' || Number(plan.isActive) !== 1) {
+    return { billingStatus: 'unavailable', billingActive: false };
+  }
+
+  const normalizedStatus = normalizeBillingStatus(subscription.status);
+  const term = resolveCommercialTerm(plan);
+  const billingActive =
+    term.kind !== 'free_trial' &&
+    isPaidSubscriptionRowEntitled(
+      {
+        status: subscription.status,
+        currentPeriodEnd: subscription.currentPeriodEnd,
+        graceEndsAt: subscription.graceEndsAt,
+      },
+      now,
+    ) &&
+    !isPaidCommercialTermExpired(term, subscription.status, subscription.currentPeriodEnd, now);
+
+  if ((normalizedStatus === 'active' || normalizedStatus === 'grace_period') && !billingActive) {
+    return { billingStatus: 'expired', billingActive: false };
+  }
+
+  return { billingStatus: normalizedStatus, billingActive };
 }
 
 function toLeadTemperature(score: unknown): {
@@ -3598,16 +3637,30 @@ async function getAgencyAccessStateForUser(
     })
     .from(subscriptions)
     .leftJoin(plans, eq(subscriptions.planId, plans.id))
-    .where(billableAccount ? eq(subscriptions.billableAccountId, billableAccount.id) : sql`1 = 0`)
+    .where(
+      billableAccount
+        ? and(
+            eq(subscriptions.billableAccountId, billableAccount.id),
+            eq(subscriptions.ownerType, 'agency'),
+            eq(subscriptions.ownerId, agencyId),
+          )
+        : sql`1 = 0`,
+    )
     .limit(1);
 
+  const commercialAccess = resolveAgencyCommercialAccess(
+    canonical?.subscription || null,
+    canonical?.plan || null,
+  );
+
   if (canonical?.subscription) {
-    base.billingStatus = normalizeBillingStatus(canonical.subscription.status);
+    base.billingStatus = commercialAccess.billingStatus;
     base.planKey = canonical.plan?.name || null;
     base.planAccessSource = 'subscriptions';
-    base.actionableReason =
-      base.billingStatus === 'active'
-        ? 'Access is active from the canonical subscription record.'
+    base.actionableReason = commercialAccess.billingActive
+      ? 'Access is active from the canonical subscription record.'
+      : base.billingStatus === 'unavailable'
+        ? 'The canonical subscription does not have an eligible agency plan.'
         : `Subscription status is ${base.billingStatus}.`;
   } else {
     base.billingStatus = 'not_started';
@@ -3618,13 +3671,7 @@ async function getAgencyAccessStateForUser(
     base.actionableReason = 'No canonical subscription exists for this agency.';
   }
 
-  const billingActive = canonical?.subscription
-    ? isPaidSubscriptionRowEntitled({
-        status: canonical.subscription.status,
-        currentPeriodEnd: canonical.subscription.currentPeriodEnd,
-        graceEndsAt: canonical.subscription.graceEndsAt,
-      })
-    : false;
+  const billingActive = commercialAccess.billingActive;
   base.workspaceAccess = {
     listings: input.profileConfigured,
     publishing: billingActive && input.profileConfigured && input.brandingConfigured,
@@ -3636,6 +3683,8 @@ async function getAgencyAccessStateForUser(
     base.actionableReason = 'Agency profile must be completed first.';
   } else if (!input.brandingConfigured) {
     base.actionableReason = 'Agency branding must be configured before publishing.';
+  } else if (!billingActive && base.billingStatus === 'expired') {
+    base.actionableReason = 'Launch Access has expired. Renew it before publishing listings.';
   } else if (!billingActive && base.billingStatus !== 'unavailable') {
     base.actionableReason = `Billing status is ${base.billingStatus}; activate a subscription to unlock publishing.`;
   }
@@ -3659,22 +3708,28 @@ async function withCanonicalAgencySubscriptionStatus<
       and(eq(billableAccounts.accountKind, 'agency'), eq(billableAccounts.agencyId, agency.id)),
     )
     .limit(1);
-  const [subscription] = await db
-    .select({ status: subscriptions.status })
+  const [canonical] = await db
+    .select({ subscription: subscriptions, plan: plans })
     .from(subscriptions)
+    .leftJoin(plans, eq(subscriptions.planId, plans.id))
     .where(
       billableAccount
         ? and(
             eq(subscriptions.billableAccountId, billableAccount.id),
             eq(subscriptions.ownerType, 'agency'),
+            eq(subscriptions.ownerId, agency.id),
           )
         : sql`1 = 0`,
     )
     .limit(1);
+  const commercialAccess = resolveAgencyCommercialAccess(
+    canonical?.subscription || null,
+    canonical?.plan || null,
+  );
 
   return {
     ...agency,
-    subscriptionStatus: subscription?.status ?? 'not_started',
+    subscriptionStatus: commercialAccess.billingStatus,
   };
 }
 
@@ -3990,7 +4045,15 @@ export const agencyRouter = router({
       })
       .from(subscriptions)
       .leftJoin(plans, eq(subscriptions.planId, plans.id))
-      .where(agencyAccount ? eq(subscriptions.billableAccountId, agencyAccount.id) : sql`1 = 0`)
+      .where(
+        agencyAccount
+          ? and(
+              eq(subscriptions.billableAccountId, agencyAccount.id),
+              eq(subscriptions.ownerType, 'agency'),
+              eq(subscriptions.ownerId, Number(user.agencyId)),
+            )
+          : sql`1 = 0`,
+      )
       .limit(1);
 
     const availablePlans = await db

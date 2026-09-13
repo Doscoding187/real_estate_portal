@@ -16,6 +16,7 @@ const priorJwtSecret = vi.hoisted(() => {
 import { COOKIE_NAME } from '../../shared/const';
 import {
   agencies,
+  agencyBranding,
   agents,
   billableAccounts,
   invitations,
@@ -240,6 +241,13 @@ describeWithDb('agency member workspace authority', () => {
       agencyId,
     });
     await createActiveAgencyLaunchAccess(agencyId, owner.userId);
+    await db.insert(agencyBranding).values({
+      agencyId,
+      companyName: 'Workspace Authority Agency',
+      primaryColor: '#0f766e',
+      secondaryColor: '#334155',
+      isEnabled: 1,
+    } as any);
 
     const member = await insertUser({ label: 'InvitedWorkspaceMember', role: 'visitor' });
     const invitationToken = `workspace-authority-${randomUUID()}`;
@@ -293,6 +301,56 @@ describeWithDb('agency member workspace authority', () => {
     expect(active.recommendedNextStep).toBe('dashboard');
     expect(active.entitlements.canReceiveLeads).toBe(true);
     expect(active.profile?.agencyId).toBe(agencyId);
+
+    // A paid fixed term ends for both the agency owner and the member. The
+    // member must not retain inherited commercial capability simply because
+    // the stored subscription status was previously `active`.
+    await db
+      .update(subscriptions)
+      .set({ currentPeriodEnd: dbTimestamp(new Date(Date.now() - 60_000)) })
+      .where(and(eq(subscriptions.ownerType, 'agency'), eq(subscriptions.ownerId, agencyId)));
+    const expired = await onboardingStatus(member.userId);
+    expect(expired.commercial).toMatchObject({
+      ownerType: 'agency',
+      ownerId: agencyId,
+      ownerSource: 'agency_membership',
+    });
+    expect(expired.subscriptionStatus).toBe('expired');
+    expect(expired.fullFeaturesUnlocked).toBe(false);
+    expect(expired.recommendedNextStep).toBe('await_agency_activation');
+    expect(expired.entitlements.canReceiveLeads).toBe(false);
+
+    const ownerAfterExpiry = await trpcCaller({
+      id: owner.userId,
+      role: 'agency_admin',
+      agencyId,
+      email: owner.email,
+    }).agency.getOnboardingStatus();
+    expect(ownerAfterExpiry).toMatchObject({
+      billingActivated: false,
+      recommendedNextStep: 'renew_launch_access',
+      accessState: {
+        billingStatus: 'expired',
+        workspaceAccess: { publishing: false, reporting: false },
+      },
+    });
+
+    const [persistedExpiry] = await db
+      .select({ status: subscriptions.status })
+      .from(subscriptions)
+      .where(and(eq(subscriptions.ownerType, 'agency'), eq(subscriptions.ownerId, agencyId)))
+      .limit(1);
+    expect(persistedExpiry?.status).toBe('expired');
+
+    // Restore the fixture only. This is not a payment or entitlement
+    // activation path; the normal runtime remains preparation-only.
+    await db
+      .update(subscriptions)
+      .set({
+        status: 'active',
+        currentPeriodEnd: dbTimestamp(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)),
+      })
+      .where(and(eq(subscriptions.ownerType, 'agency'), eq(subscriptions.ownerId, agencyId)));
 
     // The authoritative agency subscription is sufficient: the member did
     // not receive an individual billable account or a second subscription.
