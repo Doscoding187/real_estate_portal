@@ -100,6 +100,13 @@ assert.equal(
 );
 const preflight = await rpc('listing.getSubmissionPreflight', undefined, owner);
 assert.equal(preflight.status, 200, JSON.stringify(preflight));
+assert.equal(preflight.data.canPrepareDraft, true);
+assert.equal(preflight.data.canStartListing, false);
+assert.ok(
+  preflight.data.blockers.some(
+    (blocker: { code: string }) => blocker.code === 'subscription_required',
+  ),
+);
 const submit = await rpc('listing.submitForReview', { listingId: id }, owner, true);
 console.log(
   JSON.stringify(

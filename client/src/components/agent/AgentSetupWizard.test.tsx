@@ -95,6 +95,16 @@ beforeEach(() => {
 });
 
 describe('AgentSetupWizard completion', () => {
+  it('opens the preparation workspace after profile completion without forcing payment', async () => {
+    apiFetchMock.mockResolvedValue({ recommendedNextStep: 'select_package' });
+    render(<AgentSetupWizard />);
+    for (let step = 0; step < 4; step += 1) {
+      fireEvent.click(screen.getByRole('button', { name: 'Skip' }));
+    }
+    fireEvent.click(await screen.findByRole('button', { name: 'Complete Setup' }));
+    await waitFor(() => expect(setLocationMock).toHaveBeenCalledWith('/agent/dashboard'));
+    expect(setLocationMock).not.toHaveBeenCalledWith('/agent/select-package');
+  });
   it('hands off to a retryable dashboard state when the post-save status lookup fails', async () => {
     apiFetchMock.mockRejectedValue(new Error('Status service unavailable'));
 

@@ -589,9 +589,7 @@ export const developerRouter = router({
           draftData: sanitized,
           progress,
           currentStep,
-          lastModified: new Date().toISOString(),
-          cataloguePublisherId: profile.publisherId,
-          developerOrganisationId: profile.organisationId,
+          lastModified: new Date(),
         };
 
         const [existingDraft] = await dbConn

@@ -295,11 +295,6 @@ export function AgentSetupWizard() {
           : 'Profile completed. Public publishing is pending approval.',
     );
 
-    if (journeyAction.href !== '/agent/dashboard') {
-      setLocation(journeyAction.href);
-      return;
-    }
-
     setLocation('/agent/dashboard');
   };
 

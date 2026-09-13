@@ -1817,6 +1817,11 @@ export const listingRouter = router({
 
     return {
       canStartListing: blockers.length === 0,
+      canPrepareDraft:
+        Number(currentUser.emailVerified) === 1 &&
+        ['agent', 'agency_admin', 'super_admin'].includes(currentUser.role ?? '') &&
+        agent?.status !== 'rejected' &&
+        agent?.status !== 'suspended',
       blockers,
       contact: {
         whatsapp: String(agent?.whatsapp || '').trim(),

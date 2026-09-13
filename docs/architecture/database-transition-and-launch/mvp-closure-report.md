@@ -114,6 +114,30 @@ rendering is smoke evidence only, not full browser acceptance.
 
 ## Material defects and validation
 
+### Interim pre-payment onboarding implementation
+
+The approved interim invariant is now implemented: identity and professional
+presence can be prepared before payment; private drafts can be saved, resumed
+and edited; publication, marketplace visibility and commercial capabilities
+remain entitlement-gated. The UI no longer forces an invoice request immediately
+after agency onboarding, no longer routes a completed agent profile directly to
+payment, and permits pending developer users to reach their draft routes. The
+listing preflight now distinguishes `canPrepareDraft: true` from
+`canStartListing: false`. Server-side publication checks were retained.
+
+Real local HTTP evidence from `scripts/mvp-prepayment-verification.mts`:
+agent profile and preflight PASS; agency profile persistence and idempotent
+resume PASS; agency commercial features `false`; developer draft save/reopen/edit
+PASS (draft id 5 in the task target). No invoice, payment, entitlement mutation,
+or publish operation was called. The focused suite passed 18/18 tests. A second
+material defect was fixed in `developer.saveDraft`: edits attempted to write
+ownership columns again and used an incompatible timestamp string. Ownership is
+now enforced in the WHERE predicate while only mutable draft fields are updated,
+and the timestamp uses the canonical Date value.
+
+This is a local candidate result. It does not authorize free publishing,
+commercial activation, protected release, or a new entitlement policy.
+
 1. **LRC-AUTH-001:** newly issued one-hour reset token rejected on an
    Africa/Johannesburg host. Persisted expiry 2026-09-13 02:53:28 and database
    UTC time 01:53:56 proved a future UTC deadline, while local parsing treated
