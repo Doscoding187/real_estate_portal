@@ -110,6 +110,7 @@ import {
   listCurrentActiveMembershipAgentIds,
   listCurrentAgencyMembershipsForAgent,
   maintainAgencyAgentMembership,
+  resolveCurrentAgencyMembershipForAgent,
 } from './services/agencyMembershipService';
 import {
   deriveLeadReadiness,
@@ -772,9 +773,7 @@ async function requireAgencyAgent(db: AgencyDb, agencyId: number, agentId: numbe
   const [agent] = await db
     .select()
     .from(agents)
-    .where(
-      and(eq(agents.id, agentId), eq(agents.agencyId, agencyId), eq(agents.status, 'approved')),
-    )
+    .where(and(eq(agents.id, agentId), eq(agents.status, 'approved')))
     .limit(1);
 
   if (!agent) {
@@ -787,8 +786,8 @@ async function requireAgencyAgent(db: AgencyDb, agencyId: number, agentId: numbe
   // Canonical currency: an approved profile alone is not enough — the agent
   // must hold a current active membership so suspended/left affiliations can
   // never receive assignments through stale profile state.
-  const currentMemberships = await listCurrentAgencyMembershipsForAgent(db, agentId);
-  if (currentMemberships.length === 0) {
+  const currentMembership = await resolveCurrentAgencyMembershipForAgent(db, agentId);
+  if (!currentMembership || Number(currentMembership.agencyId) !== agencyId) {
     throw new TRPCError({
       code: 'FORBIDDEN',
       message: 'This agent does not have a current agency membership and cannot be assigned work',

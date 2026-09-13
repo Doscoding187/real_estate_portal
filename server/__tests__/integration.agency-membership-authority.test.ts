@@ -13,8 +13,8 @@ import { and, eq } from 'drizzle-orm';
 
 const describeWithDb: typeof describe = process.env.DATABASE_URL
   ? describe
-  : ((name: string, fn: Parameters<typeof describe>[1]) =>
-      describe.skip(`${name} (requires DATABASE_URL disposable DB)`, fn)) as typeof describe;
+  : (((name: string, fn: Parameters<typeof describe>[1]) =>
+      describe.skip(`${name} (requires DATABASE_URL disposable DB)`, fn)) as typeof describe);
 
 import { db } from '../db';
 import {
@@ -22,6 +22,8 @@ import {
   agencyAgentMemberships,
   agents,
   invitations,
+  listingAnalytics,
+  listings,
   users,
 } from '../../drizzle/schema';
 import {
@@ -29,6 +31,8 @@ import {
   maintainAgencyAgentMembership,
 } from '../services/agencyMembershipService';
 import { resolveCurrentAgencyAffiliation } from '../services/agentPublicProfileService';
+import { agentOnboardingService } from '../services/agentOnboardingService';
+import { agentProfileSchema } from '../routes/agentOnboarding';
 import { createListing } from '../db';
 
 const created = {
@@ -36,11 +40,15 @@ const created = {
   agencyIds: [] as number[],
   agentIds: [] as number[],
   invitationIds: [] as number[],
+  listingIds: [] as number[],
 };
 
-let acceptanceCallerFor: (
-  user: { id: number; role: string; agencyId?: number | null; email?: string | null },
-) => { invitation: { accept: (input: { token: string }) => Promise<unknown> } };
+let acceptanceCallerFor: (user: {
+  id: number;
+  role: string;
+  agencyId?: number | null;
+  email?: string | null;
+}) => { invitation: { accept: (input: { token: string }) => Promise<unknown> } };
 
 /**
  * Acceptance mints a fresh session token through the real auth service.
@@ -80,18 +88,16 @@ async function insertId(result: any): Promise<number> {
 
 async function insertAgency(label: string) {
   const suffix = `${Date.now()}-${randomUUID().slice(0, 8)}`;
-  const [result] = await db
-    .insert(agencies)
-    .values({
-      name: `${label} Agency`,
-      slug: `${label.toLowerCase()}-${suffix}`,
-      email: `${label}-${suffix}@example.test`,
-      city: 'Johannesburg',
-      province: 'Gauteng',
-      subscriptionPlan: 'free',
-      subscriptionStatus: 'pending_payment',
-      isVerified: 1,
-    } as any);
+  const [result] = await db.insert(agencies).values({
+    name: `${label} Agency`,
+    slug: `${label.toLowerCase()}-${suffix}`,
+    email: `${label}-${suffix}@example.test`,
+    city: 'Johannesburg',
+    province: 'Gauteng',
+    subscriptionPlan: 'free',
+    subscriptionStatus: 'pending_payment',
+    isVerified: 1,
+  } as any);
   const id = await insertId(result);
   created.agencyIds.push(id);
   return id;
@@ -99,14 +105,12 @@ async function insertAgency(label: string) {
 
 async function insertUser(label: string, role: 'agent' | 'agency_admin' | 'visitor') {
   const suffix = `${Date.now()}-${randomUUID().slice(0, 8)}`;
-  const [result] = await db
-    .insert(users)
-    .values({
-      email: `${label}-${suffix}@example.test`,
-      name: label,
-      role,
-      emailVerified: 1,
-    } as any);
+  const [result] = await db.insert(users).values({
+    email: `${label}-${suffix}@example.test`,
+    name: label,
+    role,
+    emailVerified: 1,
+  } as any);
   const id = await insertId(result);
   created.userIds.push(id);
   return id;
@@ -123,23 +127,21 @@ async function insertAgentProfile(
   overrides: Record<string, unknown> = {},
 ) {
   const suffix = randomUUID().slice(0, 8);
-  const [result] = await db
-    .insert(agents)
-    .values({
-      userId,
-      agencyId,
-      firstName: 'Fixture',
-      lastName: 'Agent',
-      displayName: `Fixture Agent ${suffix}`,
-      email: `agent-${suffix}@example.test`,
-      role: 'agent',
-      isVerified: 0,
-      isFeatured: 0,
-      status: 'approved',
-      approvedAt: new Date(),
-      profileCompletionScore: 60,
-      ...overrides,
-    } as any);
+  const [result] = await db.insert(agents).values({
+    userId,
+    agencyId,
+    firstName: 'Fixture',
+    lastName: 'Agent',
+    displayName: `Fixture Agent ${suffix}`,
+    email: `agent-${suffix}@example.test`,
+    role: 'agent',
+    isVerified: 0,
+    isFeatured: 0,
+    status: 'approved',
+    approvedAt: new Date(),
+    profileCompletionScore: 60,
+    ...overrides,
+  } as any);
   const id = await insertId(result);
   created.agentIds.push(id);
   return id;
@@ -151,17 +153,15 @@ async function insertPendingInvitation(input: {
   email: string;
   role: 'agent' | 'agency_admin';
 }) {
-  const [result] = await db
-    .insert(invitations)
-    .values({
-      agencyId: input.agencyId,
-      email: input.email,
-      role: input.role,
-      token: `token-${randomUUID()}`,
-      status: 'pending',
-      invitedBy: input.invitedBy,
-      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-    } as any);
+  const [result] = await db.insert(invitations).values({
+    agencyId: input.agencyId,
+    email: input.email,
+    role: input.role,
+    token: `token-${randomUUID()}`,
+    status: 'pending',
+    invitedBy: input.invitedBy,
+    expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+  } as any);
   const id = await insertId(result);
   created.invitationIds.push(id);
   return id;
@@ -177,17 +177,39 @@ afterAll(async () => {
   if (priorJwtSecret === undefined) delete process.env.JWT_SECRET;
   else process.env.JWT_SECRET = priorJwtSecret;
   if (!process.env.DATABASE_URL) return;
+  for (const id of created.listingIds) {
+    await db
+      .delete(listingAnalytics)
+      .where(eq(listingAnalytics.listingId, id))
+      .catch(() => undefined);
+    await db
+      .delete(listings)
+      .where(eq(listings.id, id))
+      .catch(() => undefined);
+  }
   for (const id of created.invitationIds) {
-    await db.delete(invitations).where(eq(invitations.id, id)).catch(() => undefined);
+    await db
+      .delete(invitations)
+      .where(eq(invitations.id, id))
+      .catch(() => undefined);
   }
   for (const id of created.agentIds) {
-    await db.delete(agents).where(eq(agents.id, id)).catch(() => undefined);
+    await db
+      .delete(agents)
+      .where(eq(agents.id, id))
+      .catch(() => undefined);
   }
   for (const id of created.userIds) {
-    await db.delete(users).where(eq(users.id, id)).catch(() => undefined);
+    await db
+      .delete(users)
+      .where(eq(users.id, id))
+      .catch(() => undefined);
   }
   for (const id of created.agencyIds) {
-    await db.delete(agencies).where(eq(agencies.id, id)).catch(() => undefined);
+    await db
+      .delete(agencies)
+      .where(eq(agencies.id, id))
+      .catch(() => undefined);
   }
 });
 
@@ -272,7 +294,8 @@ describeWithDb('canonical membership maintenance (atomic unique-pair authority)'
   });
 
   it('establishing a new affiliation closes competing current memberships', async () => {
-    const { establishCanonicalAgencyMembership } = await import('../services/agencyMembershipService');
+    const { establishCanonicalAgencyMembership } =
+      await import('../services/agencyMembershipService');
     const agencyA = await insertAgency('CompeteA');
     const agencyB = await insertAgency('CompeteB');
     const agentUserId = await insertUser('Nomad', 'agent');
@@ -323,6 +346,31 @@ describeWithDb('canonical membership maintenance (atomic unique-pair authority)'
     expect(rows).toHaveLength(1);
     expect(rows[0].status).toBe('active');
     expect(await listCurrentAgencyMembershipsForAgent(db, agentId)).toHaveLength(1);
+  });
+
+  it('rejects profile-supplied agency affiliation and leaves direct service callers unaffiliated', async () => {
+    const agencyId = await insertAgency('ForgedProfile');
+    const userId = await insertUser('ForgedProfileAgent', 'agent');
+    const agentId = await insertAgentProfile(userId, null);
+
+    expect(
+      agentProfileSchema.safeParse({
+        displayName: 'Forged Profile Agent',
+        phone: '+27110000000',
+        agencyId,
+      }).success,
+    ).toBe(false);
+
+    const result = await agentOnboardingService.saveProfile(userId, {
+      displayName: 'Forged Profile Agent',
+      phone: '+27110000000',
+      agencyId,
+    } as any);
+
+    const [profile] = await db.select().from(agents).where(eq(agents.id, agentId)).limit(1);
+    expect(profile.agencyId).toBeNull();
+    expect(result.profile?.agencyId).toBeNull();
+    expect(await listCurrentAgencyMembershipsForAgent(db, agentId)).toHaveLength(0);
   });
 });
 
@@ -376,13 +424,10 @@ describeWithDb('team operations on canonical membership', () => {
     expect(assignable.map((a: { id: number }) => Number(a.id))).not.toContain(agentId);
   });
 
-  it('blocks inventory attribution for members whose membership is no longer current', async () => {
+  it('does not attribute a suspended member’s private draft to the stale agency profile claim', async () => {
     const agencyId = await insertAgency('Attribution');
     const memberUserId = await insertUser('AttrMember', 'agent');
-    await db
-      .update(users)
-      .set({ agencyId, isSubaccount: 1 })
-      .where(eq(users.id, memberUserId));
+    await db.update(users).set({ agencyId, isSubaccount: 1 }).where(eq(users.id, memberUserId));
     const agentId = await insertAgentProfile(memberUserId, agencyId);
 
     await maintainAgencyAgentMembership(db, { agencyId, agentId, status: 'active' });
@@ -393,10 +438,35 @@ describeWithDb('team operations on canonical membership', () => {
       actorUserId: memberUserId,
     });
 
-    // Suspended member attempts to mint an agency-attributed listing.
-    await expect(
-      createListing({ userId: memberUserId, title: 'Should not exist' } as any),
-    ).rejects.toThrow(/membership is no longer active/i);
+    const listingId = await createListing({
+      userId: memberUserId,
+      action: 'sell',
+      propertyType: 'house',
+      title: 'Unaffiliated private draft after membership suspension',
+      description: 'This draft proves stale profile affiliation cannot mint agency inventory.',
+      pricing: { askingPrice: 1_900_000 },
+      propertyDetails: { bedrooms: 3, bathrooms: 2, houseAreaM2: 160 },
+      address: '10 Membership Authority Road',
+      city: 'Johannesburg',
+      suburb: 'Sandton',
+      province: 'Gauteng',
+      slug: `suspended-membership-${randomUUID().slice(0, 8)}`,
+      media: [],
+    } as any);
+    created.listingIds.push(listingId);
+
+    const [draft] = await db
+      .select({
+        agentId: listings.agentId,
+        agencyId: listings.agencyId,
+        status: listings.status,
+      })
+      .from(listings)
+      .where(eq(listings.id, listingId))
+      .limit(1);
+    expect(Number(draft.agentId)).toBe(agentId);
+    expect(draft.agencyId).toBeNull();
+    expect(draft.status).toBe('draft');
   });
 });
 
@@ -436,23 +506,25 @@ describeWithDb('invitation acceptance (production path)', () => {
     expect(updatedUser.isSubaccount).toBe(1);
 
     // Agent profile approved and affiliated.
-    const [profile] = await db.select().from(agents).where(eq(agents.userId, inviteeUserId)).limit(1);
+    const [profile] = await db
+      .select()
+      .from(agents)
+      .where(eq(agents.userId, inviteeUserId))
+      .limit(1);
     expect(profile.status).toBe('approved');
     expect(Number(profile.agencyId)).toBe(agencyId);
 
     // Canonical membership row active with an open window.
-    const membership = (
-      await db
-        .select()
-        .from(agencyAgentMemberships)
-        .where(
-          and(
-            eq(agencyAgentMemberships.agencyId, agencyId),
-            eq(agencyAgentMemberships.agentId, Number(profile.id)),
-          ),
-        )
-        .limit(1)
-    );
+    const membership = await db
+      .select()
+      .from(agencyAgentMemberships)
+      .where(
+        and(
+          eq(agencyAgentMemberships.agencyId, agencyId),
+          eq(agencyAgentMemberships.agentId, Number(profile.id)),
+        ),
+      )
+      .limit(1);
     expect(membership).toHaveLength(1);
     expect(membership[0].status).toBe('active');
     expect(membership[0].effectiveTo).toBeNull();
@@ -468,6 +540,31 @@ describeWithDb('invitation acceptance (production path)', () => {
     // Public web presence resolves the new affiliation.
     const affiliation = await resolveCurrentAgencyAffiliation(db, Number(profile.id));
     expect(affiliation?.name).toContain('Production Agency');
+
+    const listingId = await createListing({
+      userId: inviteeUserId,
+      action: 'sell',
+      propertyType: 'house',
+      title: 'Invited member canonical agency draft',
+      description: 'An invited member can create a private draft through canonical membership.',
+      pricing: { askingPrice: 2_100_000 },
+      propertyDetails: { bedrooms: 3, bathrooms: 2, houseAreaM2: 180 },
+      address: '11 Invitation Authority Road',
+      city: 'Johannesburg',
+      suburb: 'Sandton',
+      province: 'Gauteng',
+      slug: `invited-membership-${randomUUID().slice(0, 8)}`,
+      media: [],
+    } as any);
+    created.listingIds.push(listingId);
+
+    const [draft] = await db
+      .select({ agencyId: listings.agencyId, agentId: listings.agentId })
+      .from(listings)
+      .where(eq(listings.id, listingId))
+      .limit(1);
+    expect(Number(draft.agencyId)).toBe(agencyId);
+    expect(Number(draft.agentId)).toBe(Number(profile.id));
   });
 
   it('rejects principal conversion for an account carrying an agent identity with no partial writes', async () => {
@@ -496,9 +593,7 @@ describeWithDb('invitation acceptance (production path)', () => {
 
     const before = {
       user: await getUser(agentUserId),
-      profile: (
-        await db.select().from(agents).where(eq(agents.id, originalProfileId)).limit(1)
-      )[0],
+      profile: (await db.select().from(agents).where(eq(agents.id, originalProfileId)).limit(1))[0],
     };
 
     const caller = acceptanceCaller({

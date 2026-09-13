@@ -11,6 +11,7 @@ import {
   users,
 } from '../../drizzle/schema';
 import { getEntitlementNumber } from './planAccessService';
+import { resolveCurrentAgencyMembershipForAgent } from './agencyMembershipService';
 
 /**
  * The commercial decision for a canonical listing must be derived from the
@@ -38,6 +39,7 @@ export type ListingPublicationFailureCode =
   | 'subscription_plan_unresolved'
   | 'subscription_plan_ineligible'
   | 'agency_unverified'
+  | 'agency_membership_required'
   | 'agency_profile_incomplete'
   | 'agency_branding_incomplete'
   | 'individual_agent_email_unverified'
@@ -302,11 +304,13 @@ export async function evaluateIndependentAgentPublicationReadiness(
     );
   }
 
-  const hasAgencyMembership = Boolean(user?.agencyId || agent?.agencyId);
-  if (hasAgencyMembership) {
+  const currentMembership = agent
+    ? await resolveCurrentAgencyMembershipForAgent(db, Number(agent.id), now)
+    : null;
+  if (currentMembership) {
     push(
       'commercial_owner_unresolved',
-      'Your account is associated with an agency. Use your agency listing workspace for this inventory.',
+      'Your current agency membership requires use of the agency listing workspace for this inventory.',
     );
   }
 
@@ -495,9 +499,11 @@ async function getCanonicalSubscription(
           FROM ${billableAccounts} account
           WHERE account.id = ${subscriptions.billableAccountId}
             AND account.account_kind = ${ownerType}
-            AND ${ownerType === 'agency'
-              ? sql`account.agency_id = ${ownerId}`
-              : sql`account.user_id = ${ownerId}`}
+            AND ${
+              ownerType === 'agency'
+                ? sql`account.agency_id = ${ownerId}`
+                : sql`account.user_id = ${ownerId}`
+            }
         )`,
       ),
     )
@@ -536,28 +542,12 @@ async function getActiveListingCount(
 ) {
   const ownerCondition =
     owner.kind === 'agency'
-      ? or(
-          eq(listings.agencyId, owner.agencyId),
-          and(
-            isNull(listings.agencyId),
-            or(
-              eq(users.agencyId, owner.agencyId),
-              and(isNull(users.agencyId), eq(agents.agencyId, owner.agencyId)),
-            ),
-          ),
-        )
-      : and(
-          eq(listings.ownerId, owner.userId),
-          isNull(listings.agencyId),
-          isNull(users.agencyId),
-          isNull(agents.agencyId),
-        );
+      ? eq(listings.agencyId, owner.agencyId)
+      : and(eq(listings.ownerId, owner.userId), isNull(listings.agencyId));
 
   const activeListingQuery = db
     .select({ id: listings.id })
     .from(listings)
-    .leftJoin(users, eq(listings.ownerId, users.id))
-    .leftJoin(agents, eq(listings.agentId, agents.id))
     .where(
       and(
         ownerCondition,
@@ -620,33 +610,55 @@ export async function resolveListingCommercialOwner(
     );
   }
 
-  const agencyClaims = [listing.agencyId, owner.agencyId, agent?.agencyId]
-    .map(value => Number(value || 0))
-    .filter(Boolean);
-  const uniqueAgencyClaims = [...new Set(agencyClaims)];
+  const listingAgencyId = Number(listing.agencyId || 0) || null;
+  const currentMembership = agent
+    ? await resolveCurrentAgencyMembershipForAgent(db, Number(agent.id))
+    : null;
 
-  if (uniqueAgencyClaims.length > 1) {
+  if (listingAgencyId) {
+    if (agent) {
+      if (owner.role === 'agent' && Number(agent.userId || 0) !== Number(owner.id)) {
+        throw new ListingPublicationEntitlementError(
+          'listing_ownership_inconsistent',
+          'The listing owner does not match its assigned agent.',
+        );
+      }
+      if (Number(currentMembership?.agencyId || 0) !== listingAgencyId) {
+        throw new ListingPublicationEntitlementError(
+          'agency_membership_required',
+          'The assigned agent no longer has a current membership in this agency.',
+        );
+      }
+      return {
+        kind: 'agency',
+        agencyId: listingAgencyId,
+        listingId,
+        responsibleAgentId: Number(agent.id),
+      };
+    }
+
+    if (owner.role === 'agency_admin' && Number(owner.agencyId || 0) === listingAgencyId) {
+      return {
+        kind: 'agency',
+        agencyId: listingAgencyId,
+        listingId,
+        responsibleAgentId: null,
+      };
+    }
+
     throw new ListingPublicationEntitlementError(
-      'listing_ownership_inconsistent',
-      'This listing has inconsistent ownership details and cannot be submitted.',
+      'agency_membership_required',
+      'This agency listing has no current authorized membership or agency principal.',
     );
   }
 
-  if (uniqueAgencyClaims.length === 1) {
-    return {
-      kind: 'agency',
-      agencyId: uniqueAgencyClaims[0],
-      listingId,
-      responsibleAgentId: listing.agentId ? Number(listing.agentId) : null,
-    };
-  }
-
-  if (
-    owner.role === 'agent' &&
-    agent &&
-    Number(agent.userId || 0) === Number(owner.id) &&
-    !agent.agencyId
-  ) {
+  if (owner.role === 'agent' && agent && Number(agent.userId || 0) === Number(owner.id)) {
+    if (currentMembership) {
+      throw new ListingPublicationEntitlementError(
+        'listing_ownership_inconsistent',
+        'A current agency member cannot publish inventory without agency attribution.',
+      );
+    }
     return {
       kind: 'independent_agent',
       userId: Number(owner.id),

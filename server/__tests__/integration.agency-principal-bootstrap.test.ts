@@ -278,16 +278,17 @@ afterEach(async () => {
 });
 
 guardedDescribe('agency principal bootstrap persisted acceptance', () => {
-  it('resumes checkout from the server-owned onboarding result without reviving the legacy wizard', () => {
+  it('opens the pre-payment preparation workspace from the server-owned onboarding result without reviving the legacy wizard', () => {
     const page = readFileSync(
       path.resolve(process.cwd(), 'client/src/pages/AgencyOnboarding.tsx'),
       'utf8',
     );
 
-    expect(page).toContain(
-      'planId: agency.alreadyCreated ? agency.planId : planSelection.selectedPlanId',
-    );
+    expect(page).toContain('planId: planSelection.selectedPlanId,');
     expect(page).toContain("toast.info('Resuming agency setup'");
+    expect(page).toContain("window.location.href = '/agency/dashboard';");
+    expect(page).toContain('Persisted onboarding is independent of invoice/payment activation.');
+    expect(page).not.toContain('createCheckoutMutation');
     expect(page).toContain('error instanceof Error\n            ? error.message');
     expect(page).not.toContain('AgencySetupWizard');
   });

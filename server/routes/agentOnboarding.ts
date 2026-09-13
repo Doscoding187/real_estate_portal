@@ -17,25 +17,26 @@ const selectPackageSchema = z.object({
   planId: z.number().int().positive(),
 });
 
-const profileSchema = z.object({
-  displayName: z.string().trim().min(2).max(160).optional(),
-  phone: z.string().trim().min(5).max(40).optional(),
-  whatsapp: z.string().trim().max(40).optional(),
-  bio: z.string().trim().max(5000).optional(),
-  profileImage: z.string().trim().max(2048).optional(),
-  profilePhoto: z.string().trim().max(2048).optional(),
-  licenseNumber: z.string().trim().max(120).optional(),
-  yearsExperience: z.number().int().min(0).max(80).optional(),
-  focus: z.enum(['sales', 'rentals', 'both']).optional(),
-  areasServed: z.array(z.string().trim().min(1)).max(50).optional(),
-  specializations: z.array(z.string().trim().min(1)).max(50).optional(),
-  propertyTypes: z.array(z.string().trim().min(1)).max(50).optional(),
-  languages: z.array(z.string().trim().min(1)).max(30).optional(),
-  socialLinks: z.record(z.string().trim().max(2048)).optional(),
-  slug: z.string().trim().max(160).optional(),
-  agencyId: z.number().int().positive().nullable().optional(),
-  onboardingStep: z.number().int().min(0).max(10).optional(),
-});
+export const agentProfileSchema = z
+  .object({
+    displayName: z.string().trim().min(2).max(160).optional(),
+    phone: z.string().trim().min(5).max(40).optional(),
+    whatsapp: z.string().trim().max(40).optional(),
+    bio: z.string().trim().max(5000).optional(),
+    profileImage: z.string().trim().max(2048).optional(),
+    profilePhoto: z.string().trim().max(2048).optional(),
+    licenseNumber: z.string().trim().max(120).optional(),
+    yearsExperience: z.number().int().min(0).max(80).optional(),
+    focus: z.enum(['sales', 'rentals', 'both']).optional(),
+    areasServed: z.array(z.string().trim().min(1)).max(50).optional(),
+    specializations: z.array(z.string().trim().min(1)).max(50).optional(),
+    propertyTypes: z.array(z.string().trim().min(1)).max(50).optional(),
+    languages: z.array(z.string().trim().min(1)).max(30).optional(),
+    socialLinks: z.record(z.string().trim().max(2048)).optional(),
+    slug: z.string().trim().max(160).optional(),
+    onboardingStep: z.number().int().min(0).max(10).optional(),
+  })
+  .strict();
 
 function respondForError(res: Response, error: unknown) {
   if (error instanceof ZodError) {
@@ -114,7 +115,7 @@ router.post('/request-launch-access-invoice', async (req, res) => {
 
 router.post('/profile', async (req, res) => {
   try {
-    const input = profileSchema.parse(req.body);
+    const input = agentProfileSchema.parse(req.body);
     const userId = Number((req as AuthenticatedRequest).user.id);
     const result = await agentOnboardingService.saveProfile(userId, input);
     res.json(result);

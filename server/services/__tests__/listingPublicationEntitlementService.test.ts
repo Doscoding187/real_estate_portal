@@ -66,6 +66,7 @@ function agencyDb(input: {
   listing?: Record<string, unknown>;
   owner?: Record<string, unknown>;
   agent?: Record<string, unknown> | null;
+  membership?: Record<string, unknown> | null;
   agency?: Record<string, unknown>;
   subscription?: Record<string, unknown> | null;
   plan?: Record<string, unknown> | null;
@@ -74,7 +75,22 @@ function agencyDb(input: {
 }) {
   const listing = { ...agencyListing, ...(input.listing || {}) };
   const results: any[][] = [[listing], [{ ...agencyOwner, ...(input.owner || {}) }]];
-  if (listing.agentId) results.push([input.agent || { id: listing.agentId, agencyId: 77 }]);
+  if (listing.agentId) {
+    results.push([input.agent || { id: listing.agentId, agencyId: 77 }]);
+    results.push(
+      input.membership === null
+        ? []
+        : [
+            {
+              agencyId: 77,
+              status: 'active',
+              effectiveFrom: null,
+              effectiveTo: null,
+              ...(input.membership || {}),
+            },
+          ],
+    );
+  }
   results.push([{ ...completeAgency, ...(input.agency || {}) }], [completeBranding]);
   results.push(
     [
@@ -119,8 +135,10 @@ function independentAgentDb(input: {
     [{ id: 12, ownerId: 200, agencyId: null, agentId: 45 }],
     [{ id: 200, role: 'agent', agencyId: null, emailVerified: 1 }],
     [agent],
+    [],
     [{ id: 200, role: 'agent', agencyId: null, emailVerified: 1 }],
     [agent],
+    [],
     [
       {
         subscription: { status: 'active', currentPeriodEnd: future },
@@ -137,6 +155,7 @@ function independentAgentReadinessDb(input: {
   entitlements?: Array<Record<string, unknown>>;
   agent?: Record<string, unknown>;
   user?: Record<string, unknown>;
+  membership?: Record<string, unknown> | null;
   subscription?: Record<string, unknown> | null;
   plan?: Record<string, unknown> | null;
 }) {
@@ -162,6 +181,19 @@ function independentAgentReadinessDb(input: {
   const rows: any[][] = [
     [{ id: 200, role: 'agent', agencyId: null, emailVerified: 1, ...(input.user || {}) }],
     [agent],
+    input.membership === null
+      ? []
+      : input.membership
+        ? [
+            {
+              agencyId: 77,
+              status: 'active',
+              effectiveFrom: null,
+              effectiveTo: null,
+              ...input.membership,
+            },
+          ]
+        : [],
     subscription ? [{ subscription, plan }] : [],
   ];
 
@@ -321,6 +353,32 @@ describe('listing publication entitlement service', () => {
     });
   });
 
+  it('uses current canonical membership rather than stale profile claims for independent preflight', async () => {
+    const staleProfileReadiness = await evaluateIndependentAgentPublicationReadiness(
+      independentAgentReadinessDb({
+        agent: { agencyId: 77 },
+        user: { agencyId: 77 },
+        membership: null,
+      }),
+      200,
+      { now: at },
+    );
+    expect(staleProfileReadiness.ready).toBe(true);
+
+    const currentMembershipReadiness = await evaluateIndependentAgentPublicationReadiness(
+      independentAgentReadinessDb({
+        agent: { agencyId: null },
+        user: { agencyId: null },
+        membership: { agencyId: 77 },
+      }),
+      200,
+      { now: at },
+    );
+    expect(currentMembershipReadiness.blockers).toEqual(
+      expect.arrayContaining([expect.objectContaining({ reason: 'commercial_owner_unresolved' })]),
+    );
+  });
+
   it('denies unapproved agents and publishes approved agents regardless of the badge flag', async () => {
     await expect(
       assertListingPublicationEntitled(
@@ -420,6 +478,7 @@ describe('listing publication entitlement service', () => {
           propertyTypes: 'house',
         },
       ],
+      [],
       [{ id: 200, role: 'agent', agencyId: null, emailVerified: 1 }],
       [
         {
@@ -436,6 +495,7 @@ describe('listing publication entitlement service', () => {
           propertyTypes: 'house',
         },
       ],
+      [],
       [
         {
           subscription: { status: 'trial', trialEndsAt: future },
@@ -462,7 +522,7 @@ describe('listing publication entitlement service', () => {
     }
   });
 
-  it('fails closed for missing and conflicting commercial ownership', async () => {
+  it('fails closed for missing commercial ownership and absent canonical membership', async () => {
     await expect(
       resolveListingCommercialOwner(new QueuedDb([[{ id: 21, ownerId: 999 }], []]), 21),
     ).rejects.toMatchObject({ reason: 'commercial_owner_unresolved' });
@@ -471,8 +531,50 @@ describe('listing publication entitlement service', () => {
       [{ id: 13, ownerId: 300, agencyId: 7, agentId: 99 }],
       [{ id: 300, role: 'agent', agencyId: 8 }],
       [{ id: 99, userId: 300, agencyId: 7 }],
+      [],
     ]);
     await expect(resolveListingCommercialOwner(db, 13)).rejects.toMatchObject({
+      reason: 'agency_membership_required',
+    });
+  });
+
+  it('uses current canonical membership instead of forged profile affiliation claims', async () => {
+    const db = new QueuedDb([
+      [{ id: 14, ownerId: 301, agencyId: 7, agentId: 100 }],
+      [{ id: 301, role: 'agent', agencyId: 999 }],
+      [{ id: 100, userId: 301, agencyId: 999 }],
+      [{ agencyId: 7, status: 'active', effectiveFrom: null, effectiveTo: null }],
+    ]);
+
+    await expect(resolveListingCommercialOwner(db, 14)).resolves.toMatchObject({
+      kind: 'agency',
+      agencyId: 7,
+      responsibleAgentId: 100,
+    });
+  });
+
+  it('denies suspended canonical membership even when every stored profile claim names the agency', async () => {
+    const db = new QueuedDb([
+      [{ id: 15, ownerId: 302, agencyId: 7, agentId: 101 }],
+      [{ id: 302, role: 'agent', agencyId: 7 }],
+      [{ id: 101, userId: 302, agencyId: 7 }],
+      [{ agencyId: 7, status: 'suspended', effectiveFrom: null, effectiveTo: null }],
+    ]);
+
+    await expect(resolveListingCommercialOwner(db, 15)).rejects.toMatchObject({
+      reason: 'agency_membership_required',
+    });
+  });
+
+  it('denies an agency member who attempts to publish an unattributed listing as an independent', async () => {
+    const db = new QueuedDb([
+      [{ id: 16, ownerId: 303, agencyId: null, agentId: 102 }],
+      [{ id: 303, role: 'agent', agencyId: null }],
+      [{ id: 102, userId: 303, agencyId: null }],
+      [{ agencyId: 7, status: 'active', effectiveFrom: null, effectiveTo: null }],
+    ]);
+
+    await expect(resolveListingCommercialOwner(db, 16)).rejects.toMatchObject({
       reason: 'listing_ownership_inconsistent',
     });
   });

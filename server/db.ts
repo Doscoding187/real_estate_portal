@@ -29,7 +29,6 @@ import {
   agents,
   subscriptions,
   billableAccounts,
-  agencyAgentMemberships,
   agencies,
   leads,
   listings,
@@ -69,7 +68,7 @@ import {
 } from '../drizzle/schema';
 
 import { ENV } from './_core/env';
-import { isCurrentActiveAgencyMembership } from './services/agencyMembershipService';
+import { resolveCurrentAgencyMembershipForAgent } from './services/agencyMembershipService';
 import { firstResponseOverdueSql } from './services/leadTransitionService';
 import { type InferSelectModel, type InferInsertModel } from 'drizzle-orm';
 import { normalizeLocationFields, validateLocationForPublish } from './utils/locationUtils';
@@ -1373,10 +1372,7 @@ export async function recordUserListingViewFactWithDatabase(
       .limit(1);
 
     if (existing) {
-      await tx
-        .update(recentlyViewed)
-        .set({ viewedAt })
-        .where(eq(recentlyViewed.id, existing.id));
+      await tx.update(recentlyViewed).set({ viewedAt }).where(eq(recentlyViewed.id, existing.id));
     } else {
       await tx.insert(recentlyViewed).values({ userId, listingId, viewedAt });
     }
@@ -2001,39 +1997,29 @@ export async function createListing(
         .from(users)
         .where(eq(users.id, listingData.userId))
         .limit(1);
-      const agentId = agent ? agent.id : null;
-      const ownerAgencyId = owner?.agencyId || null;
-      const agentAgencyId = agent?.agencyId || null;
+      const agentId = agent ? Number(agent.id) : null;
+      const currentMembership = agent
+        ? await resolveCurrentAgencyMembershipForAgent(tx, Number(agent.id))
+        : null;
+      const membershipAgencyId = currentMembership ? Number(currentMembership.agencyId) : null;
+      const ownerAgencyId =
+        owner?.role === 'agency_admin' && owner.agencyId ? Number(owner.agencyId) : null;
 
-      if (ownerAgencyId && agentAgencyId && ownerAgencyId !== agentAgencyId) {
+      if (
+        owner?.role === 'agent' &&
+        (!agent || Number(agent.userId || 0) !== Number(listingData.userId))
+      ) {
+        throw new Error('Listing owner does not have a matching agent profile');
+      }
+
+      if (ownerAgencyId && membershipAgencyId && ownerAgencyId !== membershipAgencyId) {
         throw new Error('Listing owner and agent belong to different agencies');
       }
 
-      // Membership is canonical; agent affiliation only preserves legacy agent-owned records.
-      const agencyId = ownerAgencyId || agentAgencyId || null;
-
-      // Attribution currency: a member whose canonical membership exists but
-      // is no longer current cannot mint new inventory attributed to the
-      // agency. Members predating the membership authority (no row) pass so
-      // legacy accounts are not locked out of drafting.
-      if ((ownerAgencyId || agentAgencyId) && agent) {
-        const [membershipRow] = await tx
-          .select()
-          .from(agencyAgentMemberships)
-          .where(
-            and(
-              eq(agencyAgentMemberships.agentId, Number(agent.id)),
-              eq(agencyAgentMemberships.agencyId, Number(ownerAgencyId || agentAgencyId)),
-            ),
-          )
-          .limit(1);
-
-        if (membershipRow && !isCurrentActiveAgencyMembership(membershipRow)) {
-          throw new Error(
-            'Your agency membership is no longer active. New listings cannot be attributed to the agency.',
-          );
-        }
-      }
+      // Agency attribution is derived only from a current canonical membership
+      // (or from the agency principal’s own organisation authority). Stored
+      // user/agent agency projections cannot mint agency inventory.
+      const agencyId = membershipAgencyId || ownerAgencyId || null;
       const sellerProspectConversion = listingData.sellerProspectConversion;
       const effectiveAgentId = sellerProspectConversion?.assignedAgentId ?? agentId;
 
@@ -2044,17 +2030,18 @@ export async function createListing(
 
         if (effectiveAgentId) {
           const [assignedAgent] = await tx
-            .select({ id: agents.id })
+            .select({ id: agents.id, status: agents.status })
             .from(agents)
-            .where(
-              and(
-                eq(agents.id, effectiveAgentId),
-                eq(agents.agencyId, sellerProspectConversion.agencyId),
-                eq(agents.status, 'approved'),
-              ),
-            )
+            .where(and(eq(agents.id, effectiveAgentId)))
             .limit(1);
-          if (!assignedAgent) {
+          const assignedMembership = assignedAgent
+            ? await resolveCurrentAgencyMembershipForAgent(tx, Number(assignedAgent.id))
+            : null;
+          if (
+            !assignedAgent ||
+            assignedAgent.status !== 'approved' ||
+            Number(assignedMembership?.agencyId || 0) !== sellerProspectConversion.agencyId
+          ) {
             throw new Error('Seller prospect assignment is no longer an approved agency agent');
           }
         }
