@@ -32,6 +32,8 @@ No existing worktree or branch may be deleted, pruned, moved, repaired, reset, r
 12. [GME-B2 — Controlled merge gate probe verification](11-github-merge-gate-probe-verification.md)
 13. [Worktree Lifecycle Reconciliation Audit](12-worktree-lifecycle-reconciliation-audit.md)
 14. [Local-environment authority contract and diagnostics](13-local-environment-authority-contract-and-diagnostics.md)
+15. [Agency Journey Senior Architecture Review](14-agency-journey-senior-review.md)
+16. [Agency Journey Closure — Sequential Goals](15-agency-journey-closure-goals.md)
 
 ## Canonical programme stages
 
