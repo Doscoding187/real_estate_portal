@@ -1700,6 +1700,10 @@ export const listingRouter = router({
    */
   getSubmissionPreflight: protectedProcedure.query(async ({ ctx }) => {
     const currentUser = requireUser(ctx);
+    const database = await db.getDb();
+    if (!database) {
+      throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+    }
     const agent = await db.getAgentByUserId(currentUser.id);
     const owner = await db.getUserById(currentUser.id);
 
@@ -1749,7 +1753,7 @@ export const listingRouter = router({
       });
     } else if (userAgencyId || agentAgencyId) {
       const agencyId = userAgencyId || agentAgencyId;
-      const readiness = await evaluateAgencyPublicationReadiness(db, agencyId, {
+      const readiness = await evaluateAgencyPublicationReadiness(database, agencyId, {
         includeCapacityCount: true,
         skipCapacityWhenBlocked: false,
       });
@@ -1773,11 +1777,15 @@ export const listingRouter = router({
         });
       }
     } else if (currentUser.role === 'agent') {
-      const readiness = await evaluateIndependentAgentPublicationReadiness(db, currentUser.id, {
-        agentId: agent?.id ? Number(agent.id) : undefined,
-        includeCapacityCount: true,
-        skipCapacityWhenBlocked: false,
-      });
+      const readiness = await evaluateIndependentAgentPublicationReadiness(
+        database,
+        currentUser.id,
+        {
+          agentId: agent?.id ? Number(agent.id) : undefined,
+          includeCapacityCount: true,
+          skipCapacityWhenBlocked: false,
+        },
+      );
       publication = {
         ready: readiness.ready,
         blockers: readiness.blockers.map(({ reason, message }) => ({ reason, message })),
