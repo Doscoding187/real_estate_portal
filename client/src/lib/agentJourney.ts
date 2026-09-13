@@ -68,6 +68,15 @@ export function getAgentJourneyAction(
           'We will notify you when Launch Access is active. Your professional profile remains available while verification is in progress.',
         waiting: true,
       };
+    case 'await_agency_activation':
+      return {
+        href: '/agent/dashboard',
+        label: 'Return to dashboard',
+        title: 'Your agency manages Launch Access',
+        description:
+          'Your agency membership is confirmed. Keep preparing your work while your agency completes and activates its commercial access.',
+        waiting: true,
+      };
     case 'await_profile_approval':
       return {
         href: '/agent/dashboard',

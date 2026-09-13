@@ -201,6 +201,40 @@ describe('Agent pre-payment preparation', () => {
     });
   });
 
+  it('does not open individual billing for a current agency member', async () => {
+    apiFetchMock.mockImplementation((endpoint: string) => {
+      if (endpoint === '/agent/onboarding-status') {
+        return Promise.resolve({
+          packageSelected: true,
+          onboardingComplete: true,
+          onboardingStep: 4,
+          dashboardUnlocked: true,
+          fullFeaturesUnlocked: false,
+          recommendedNextStep: 'await_agency_activation',
+          subscriptionTier: 'agency_launch_access',
+          subscriptionStatus: 'pending_payment',
+          commercial: {
+            ownerType: 'agency',
+            ownerId: 88,
+            ownerSource: 'agency_membership',
+          },
+          trialStartedAt: null,
+          trialEndsAt: null,
+        });
+      }
+      return Promise.resolve({});
+    });
+
+    render(<AgentPackageSelection />);
+
+    await waitFor(() => {
+      expect(setLocationMock).toHaveBeenCalledWith('/agent/dashboard');
+    });
+
+    const options = agentWorkspaceMock.mock.calls.at(-1)?.[1] as { enabled?: boolean };
+    expect(options.enabled).toBe(false);
+  });
+
   it('does not expose payment-proof controls for a historical invoice', async () => {
     agentWorkspaceMock.mockReturnValue({
       data: {

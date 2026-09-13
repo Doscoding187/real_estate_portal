@@ -83,6 +83,7 @@ function buildFallbackPlanAccess(user: typeof users.$inferSelect): PlanAccessPro
   return {
     ownerType,
     ownerId,
+    ownerSource: ownerType === 'agency' ? 'agency_admin' : 'individual_agent',
     currentPlan: null,
     subscription: null,
     entitlements: { ...DEFAULT_FEATURE_ENTITLEMENTS },

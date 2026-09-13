@@ -76,6 +76,7 @@ function buildOnboardingState(
     emailVerified: Number(user.emailVerified || 0) === 1,
     approvalStatus,
     subscriptionStatus,
+    agencyMember: planAccess.ownerSource === 'agency_membership',
   });
 
   return {
@@ -133,6 +134,7 @@ export class AgentOnboardingService {
     const planAccess = (await getPlanAccessProjectionForUserId(userId)) || {
       ownerType: 'agent' as const,
       ownerId: userId,
+      ownerSource: 'individual_agent' as const,
       currentPlan: null,
       subscription: null,
       entitlements: {},
@@ -174,6 +176,9 @@ export class AgentOnboardingService {
           : null,
       trialEndsAt: planAccess.trialEndsAt || null,
       commercial: {
+        ownerType: planAccess.ownerType,
+        ownerId: planAccess.ownerId,
+        ownerSource: planAccess.ownerSource,
         plan: planAccess.currentPlan,
         subscription: planAccess.subscription,
       },
@@ -321,6 +326,7 @@ export class AgentOnboardingService {
     const planAccess = (await getPlanAccessProjectionForUserId(userId)) || {
       ownerType: 'agent' as const,
       ownerId: userId,
+      ownerSource: 'individual_agent' as const,
       currentPlan: null,
       subscription: null,
       entitlements: {},

@@ -77,14 +77,17 @@ export function AgentStatusStrip() {
     suspended: 'Launch Access suspended',
   };
   const commercialLabel =
-    paidStates[status.subscriptionStatus ?? ''] ??
-    (status.packageSelected ? 'Commercial term in progress' : 'Launch Access not started');
+    status.recommendedNextStep === 'await_agency_activation'
+      ? 'Agency Launch Access pending'
+      : (paidStates[status.subscriptionStatus ?? ''] ??
+        (status.packageSelected ? 'Commercial term in progress' : 'Launch Access not started'));
   const journeyAction = getAgentJourneyAction(status);
   const showJourneyAction = [
     'select_package',
     'complete_payment',
     'renew_launch_access',
     'contact_support',
+    'await_agency_activation',
   ].includes(status.recommendedNextStep || 'select_package');
 
   return (

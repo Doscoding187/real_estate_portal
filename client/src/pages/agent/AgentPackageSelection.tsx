@@ -344,15 +344,19 @@ export default function AgentPackageSelection() {
   const search = useSearch();
   const { user, loading } = useAuth({ redirectOnUnauthenticated: true });
   const catalog = useCommercialCatalog('agent');
+  const [status, setStatus] = useState<AgentOnboardingStatus | null>(null);
+  const [statusLoading, setStatusLoading] = useState(true);
+  const agencyManagedCommercialAccess = status?.commercial?.ownerSource === 'agency_membership';
   const workspaceQuery = trpc.billing.agentWorkspace.useQuery(undefined, {
-    enabled: user?.role === 'agent',
+    // Wait for the server-owned commercial projection. A current agency
+    // member must never open an individual billing workspace merely by
+    // visiting this route while the redirect is resolving.
+    enabled: user?.role === 'agent' && Boolean(status) && !agencyManagedCommercialAccess,
     retry: false,
     staleTime: 0,
     refetchOnMount: true,
   });
   const submitProof = trpc.billing.submitLaunchAccessPaymentProof.useMutation();
-  const [, setStatus] = useState<AgentOnboardingStatus | null>(null);
-  const [statusLoading, setStatusLoading] = useState(true);
   const [invoiceResponse, setInvoiceResponse] = useState<AgentInvoiceResponse | null>(null);
   const [isRequestingInvoice, setIsRequestingInvoice] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState('');

@@ -40,6 +40,11 @@ export type AgentOnboardingStatus = {
   recommendedNextStep: AgentRecommendedNextStep;
   subscriptionTier: string;
   subscriptionStatus: AgentSubscriptionDisplayStatus;
+  commercial?: {
+    ownerType: 'agent' | 'agency' | 'developer';
+    ownerId: number;
+    ownerSource: 'individual_agent' | 'agency_admin' | 'agency_membership' | 'developer_membership';
+  };
   trialStartedAt?: string | null;
   trialEndsAt?: string | null;
   profile?: {

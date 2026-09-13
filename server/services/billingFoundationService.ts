@@ -4,6 +4,7 @@ import { and, desc, eq, inArray, sql } from 'drizzle-orm';
 import { TRPCError } from '@trpc/server';
 import {
   agencies,
+  agents,
   billingAuditEvents,
   billingInvoices,
   billingPaymentDocuments,
@@ -25,6 +26,7 @@ import {
   storeBillingProofDocument,
 } from './billingProofStorage';
 import { deliverPendingAgencyInvitations } from './agencyInvitationDeliveryService';
+import { resolveCurrentAgencyMembershipForAgent } from './agencyMembershipService';
 import { activatePaidLaunchAccessForOwner, type SubscriptionOwnerType } from './planAccessService';
 import {
   isCommercialActivationAvailable,
@@ -867,6 +869,26 @@ async function resolveLaunchBillingOwner(
         message: 'Agent billing requires an agent account.',
       });
     }
+
+    const [agentProfile] = await db
+      .select({ id: agents.id })
+      .from(agents)
+      .where(eq(agents.userId, agentUser.id))
+      .limit(1);
+    const membership = agentProfile
+      ? await resolveCurrentAgencyMembershipForAgent(db, Number(agentProfile.id))
+      : null;
+    if (membership) {
+      // An affiliated agent operates under the agency's commercial owner.
+      // Do not create a second individual billing account, invoice, or proof
+      // path while that membership is current.
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message:
+          'Your agency manages Launch Access for your current agency membership. Ask the agency owner about commercial activation.',
+      });
+    }
+
     return {
       ownerType: 'agent',
       ownerId: Number(agentUser.id),

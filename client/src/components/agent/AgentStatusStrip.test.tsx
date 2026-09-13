@@ -64,4 +64,16 @@ describe('AgentStatusStrip', () => {
     renderStrip();
     expect(await screen.findByText('Payment proof under review')).toBeTruthy();
   });
+
+  it('keeps an agency member in the agency activation path', async () => {
+    apiFetchMock.mockResolvedValue({
+      packageSelected: true,
+      approvalStatus: 'approved',
+      subscriptionStatus: 'pending_payment',
+      recommendedNextStep: 'await_agency_activation',
+    });
+    renderStrip();
+    expect(await screen.findByText('Agency Launch Access pending')).toBeTruthy();
+    expect(screen.getByText('Return to dashboard')).toBeTruthy();
+  });
 });
