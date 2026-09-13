@@ -2,7 +2,7 @@
 
 | Field                | Record                                                                                                                                                                                              |
 | -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Status               | **Working implementation authority.** Goals 1–3 are verified on the task branch; no goal is authorized as a protected release, payment activation, provider operation, or production deployment.    |
+| Status               | **Working implementation authority.** Goals 1–4 are verified on the task branch; no goal is authorized as a protected release, payment activation, provider operation, or production deployment.    |
 | Architectural source | [Agency Journey Senior Architecture Review](14-agency-journey-senior-review.md)                                                                                                                     |
 | Purpose              | Convert the senior review into small, sequential, evidence-led implementation goals for the first commercially usable agency journey.                                                               |
 | Cohort boundary      | One small agency in one geography is the proposed first operating cohort. Land, developer paid operation, and independent-agent launch claims remain outside this cohort until separately accepted. |
@@ -256,7 +256,36 @@ A legitimate agency member can prepare real inventory for publication.
 [Current supported agency slice](14-agency-journey-senior-review.md#current-supported-slices-and-their-limits) and
 [Most valuable next implementation assignment](14-agency-journey-senior-review.md#most-valuable-next-implementation-assignment)
 
-**Status:** NOT STARTED
+**Status:** VERIFIED (task branch evidence; integration and production verification pending)
+
+### Goal 4 verification record — 2026-09-14
+
+The bounded acceptance coverage is committed at
+[`a403d31d`](https://github.com/Doscoding187/real_estate_portal/commit/a403d31d7456aff837e6d6c5e73af8033cf1634b)
+on `verify/mvp-closure-post-577`. It uses the production listing and invitation
+routers over authenticated HTTP against the task-owned disposable target. A
+verified agency owner invites a member through the canonical membership path;
+the member reserves and physically uploads five media objects through the local
+media route, confirms each upload, resolves canonical Gauteng/Johannesburg/
+Sandton location IDs, and creates a real listing. Persisted assertions verify
+the canonical owner, agent, agency, location, confirmation source, draft state,
+and five completed media rows. The member reopens and edits the draft, the
+agency owner can view it through workspace custody, and an unrelated tenant is
+denied both read and media-reservation access. Submission remains blocked by
+the existing `subscription_required` gate; no public projection is created.
+
+Direct evidence:
+
+- `pnpm test:authority -- server/__tests__/integration.agency-listing-preparation.test.ts server/__tests__/integration.agency-member-workspace-authority.test.ts server/__tests__/integration.listing-media-tenant-boundary.test.ts` passed **3 files / 5 tests** on the exact target fingerprint (`a560e9f2971e7676…`). The run includes actual HTTP media PUTs and a served-object byte check, canonical membership acceptance, persisted draft reopen/edit, cross-tenant denial, and deleted/reassigned-listing media-token denial. The tenant-boundary fixture was corrected to create the canonical agent profile required by the current listing authority contract; this was a stale test fixture, not a runtime relaxation.
+- `pnpm check` passed; `pnpm build` passed with the existing large-chunk warning; and `pnpm db:authority:check` passed its **35 files / 293 tests**, **119-surface** utility classification, **212-table / 91-active-migration** schema sanity, deterministic inventory, and lifecycle checks.
+- Final `pnpm db:authority:status` reported the exact owned target fingerprint (`a560e9f2971e7676be194015ed933f1964e0948c5fd44d5844a74dcbf494e321`), migration head `0090_retire_disconnected_boost_campaigns.sql`, `schema-congruent`, `target-connected`, and `no-incomplete-attempts`. The status command leaves canonical reference and scenario fields unevaluated; no readiness claim is inferred from those fields.
+
+This proves the private preparation slice only. It does not prove browser wizard
+completion, reviewer rejection/resubmission, paid activation, public
+publication, discovery, enquiry, CRM handling, hosted integration, or
+production verification. Normal runtime remains `preparation_only`; no payment,
+entitlement mutation, provider, protected database, or deployment operation was
+performed.
 
 ## Goal 5 — Complete agency submission, review, and publication
 

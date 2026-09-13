@@ -1,8 +1,9 @@
 # Post-merge MVP closure review packet
 
-Date: 2026-09-13. **Outcome: the local candidate supports controlled
+Date: 2026-09-14 (Goal 4 addendum; original closure review dated 2026-09-13).
+**Outcome: the local candidate supports controlled
 pre-payment onboarding; canonical billing and activation paths are contained,
-and the Goals 1–3 agency-membership/workspace/commercial-term corrections are
+and the Goals 1–4 agency-membership/workspace/commercial-term/private-preparation corrections are
 verified on the task branch, while commercial activation, public publishing, and protected
 release remain blocked.** This is not a declaration that all MVP journeys or
 production are verified. Database task classification: local-data workflow,
@@ -44,6 +45,7 @@ protected environment.
 | Goal 1 authority correction (task branch)           | `cf1f93e6f2148a1fc434571475ecd9f18c646bfa`                                    |
 | Goal 2 workspace correction (task branch)           | `af9fd6f2`                                                                    |
 | Goal 3 commercial-term correction (task branch)     | `16a23cd9ab61cbc791f1b7e7941e62e53d1ecd7d`                                    |
+| Goal 4 listing-preparation evidence (task branch)   | `a403d31d7456aff837e6d6c5e73af8033cf1634b`                                    |
 | Branch                                              | `verify/mvp-closure-post-577`                                                 |
 | Worktree                                            | `/home/edwardspc/Desktop/Dev/worktrees/property-listify-mvp-closure-post-577` |
 
@@ -97,12 +99,26 @@ did not enable a normal runtime commercial path, contact a payment provider, or
 authorize a paid release. The complete commands and boundaries are in
 [Goal 3 verification](../launch-readiness-and-product-convergence/15-agency-journey-closure-goals.md#goal-3-verification-record--2026-09-13).
 
+Goal 4, agency listing preparation, is locally verified at
+[`a403d31d`](https://github.com/Doscoding187/real_estate_portal/commit/a403d31d7456aff837e6d6c5e73af8033cf1634b).
+The production invitation and listing routers were exercised over authenticated
+HTTP on the exact task-owned target. A canonical agency member uploaded and
+confirmed five real local media objects, created a listing with canonical
+Gauteng/Johannesburg/Sandton IDs, reopened and edited its persisted draft, and
+received the expected subscription gate when attempting submission. Persisted
+checks confirmed agency/agent ownership, canonical location and confirmation
+state, five completed media rows, no public `properties` projection, and
+cross-tenant denial for both draft reads and media reservation. The existing
+media-tenant test fixture was updated to create the canonical agent profile
+required by the current listing authority contract; no runtime authorization was
+relaxed.
+
 This is local branch evidence, not a public-recipient, CRM, browser-journey,
 integration, provider, or production claim. The L1 agency journey finding is
-narrowed but remains open through Goals 4–8 in
+narrowed but remains open through Goals 5–8 in
 [LRC-AGY-001](../launch-readiness-and-product-convergence/03-launch-register.md#lrc-agy-001).
 Milestone M1 remains ready for its planned senior review; M2 is not ready until
-Goals 4–5 have bounded evidence.
+Goal 5 has bounded evidence.
 
 ## Target and data establishment
 
@@ -166,7 +182,7 @@ incomplete required journey; it does not claim a failing production observation.
 | ---------------------------- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Account access               | PASS locally                                            | scripts/mvp-account-verification.mts completed 15 HTTP checks: weak password rejection; registration; unverified denial; verification; token replay denial; login; prohibited self-assigned super-admin reduced to visitor; logout; anonymous auth.me null; recovery enumeration resistance; reset; reset replay denial; old-password denial; new-password success; pre-reset session revoked. Real persisted user/token/session paths; email transport captured locally. External delivery, expiry timing over elapsed time, and browser form completion remain unverified.                                                                                                                                                                                                                |
 | Permissions                  | BLOCKED for complete scope                              | Account privilege injection denied; scripts/mvp-listing-verification.mts proved cross-tenant listing read and write HTTP 403 and unchanged persisted title. Scenario verifier proved agent/agency/developer unrelated-recipient denial and platform-operations restrictions. This is not exhaustive tenant membership revocation, every role, or admin audit proof.                                                                                                                                                                                                                                                                                                                                                                                                                         |
-| Listing authoring            | PASS for HTTP draft lifecycle                           | Final run created listing 991014, reopened it, changed title from “MVP persisted verification home” to “MVP edited verification home”, reopened again, denied outsider overwrite, and rechecked unchanged title. Browser wizard/media upload and other asset-family authoring are not proven. Earlier harness retries retained their task-local drafts.                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| Listing authoring            | PASS for HTTP private agency-preparation slice          | `pnpm test:authority -- server/__tests__/integration.agency-listing-preparation.test.ts server/__tests__/integration.agency-member-workspace-authority.test.ts server/__tests__/integration.listing-media-tenant-boundary.test.ts` passed 3 files / 5 tests on target fingerprint `a560e9f2971e7676…`. Production invitation/listing routers were exercised over authenticated HTTP; five media objects were physically PUT and served back, canonical Gauteng/Johannesburg/Sandton IDs persisted, the member reopened/edited the draft, the agency owner could view it, and an unrelated tenant was denied. Submission remained blocked by `subscription_required`; no public projection was created. Browser wizard completion and reviewer/public lifecycle remain unproven.             |
 | Publication                  | BLOCKED                                                 | Fixed preflight returns HTTP 200 with agency_profile_incomplete, agency_branding_incomplete, subscription_required and subscription_plan_unresolved. Draft submission returns HTTP 400 “Confirm the property location before publishing.” Approve/reject/publish sequence not run: setup/location/media prerequisites remain and canonical publication requires subscription authority. No paid activation or fabricated entitlement was used to make this pass.                                                                                                                                                                                                                                                                                                                            |
 | Discovery                    | BLOCKED for complete Land scope                         | db:scenario:verify passed real router search/detail, sale/rent separation and persisted custody checks. Browser at http://localhost:5177/property/990001 renders “Light-filled family home with garden and solar”, R3,850,000, Sandton/Johannesburg and features; /property/990005 renders “Property no longer available.” Orphan/unpublished/archived/pending/incoherent search/detail/enquiry exclusions passed in the scenario verifier. Full public Land single-geography-authority and classification journey was not run in this task.                                                                                                                                                                                                                                                |
 | Lead investigation and audit | BLOCKED                                                 | Scenario verifies durable lead IDs 1–5, identical replay IDs, conflicting replay rejection, custody and role visibility. CRM-export/local simulated delivery is not actual provider delivery. Investigator audit trail and worker restart/crash recovery were not proven.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
@@ -206,6 +222,20 @@ second material defect was fixed in `developer.saveDraft`: edits attempted to
 write ownership columns again and used an incompatible timestamp string.
 Ownership is now enforced in the WHERE predicate while only mutable draft
 fields are updated, and the timestamp uses the canonical Date value.
+
+### Agency listing-preparation evidence
+
+Goal 4 is verified on the task branch at
+[`a403d31d`](https://github.com/Doscoding187/real_estate_portal/commit/a403d31d7456aff837e6d6c5e73af8033cf1634b).
+The focused exact-target run passed 3 files / 5 tests. It exercised the
+production invitation and listing routers over authenticated HTTP, physically
+uploaded and served five local media objects, persisted canonical location and
+membership-derived agency attribution, reopened and edited the private draft,
+and denied an unrelated tenant draft read and media reservation. Submission
+returned the existing `subscription_required` precondition and left the draft
+private without a `properties` projection. The only source correction in this
+slice updates a stale media-boundary fixture to create the canonical agent
+profile required by `createListing`; it does not relax runtime authority.
 
 This is a local candidate result. It does not authorize free publishing,
 commercial activation, protected release, or a new entitlement policy.
@@ -268,8 +298,9 @@ and crash/restart evidence remain launch blockers.
 Claim: bounded fixes pass relevant local checks. Mechanism: repository commands
 and HTTP harnesses. Sequence: reproduce failures, inspect canonical timestamp/
 database consumers, fix, run focused and full checks, rerun HTTP against the
-restarted task runtime. Evidence: db:authority:check (293 static tests plus
-utilities/schema/lifecycle); pnpm check; pnpm lint:check; pnpm build all exit 0.
+restarted task runtime. Evidence: Goal 4 exact-target acceptance (3 files / 5
+tests); db:authority:check (293 static tests plus utilities/schema/lifecycle);
+pnpm check; pnpm build all exit 0.
 On the exact closure candidate `c8c35fde`, pnpm test:ci: **582 files passed,
 50 skipped; 3992 tests passed, 238 skipped**. The focused containment set:
 **8 files, 43 tests passed**. `pnpm lint:check` completed with **0 errors** and
@@ -301,11 +332,11 @@ diagnostics. Credentials and raw tokens are excluded from this report and Git.
    onboarding may prepare identities and private drafts only. Do not replace
    this boundary with a free publishing entitlement or a privilege bypass.
 2. **L1 — agency commercial/public/CRM journey remains incomplete
-   (LRC-AGY-001):** Goals 1–3 now prove the trusted membership,
-   workspace-owner, and fixed-term commercial-lifetime boundaries locally.
-   Listing preparation/review/publication, public discovery and recipient
+   (LRC-AGY-001):** Goals 1–4 now prove the trusted membership,
+   workspace-owner, fixed-term commercial-lifetime, and private listing-preparation
+   boundaries locally. Review/publication, public discovery and recipient
    eligibility, new-opportunity routing, and continued CRM custody remain
-   incomplete in Goals 4–8. Full reviewer approve/reject/publish, Land
+   incomplete in Goals 5–8. Full reviewer approve/reject/publish, Land
    geography, investigator audit, and worker crash/restart recovery also remain
    incomplete. Do not reclassify partial evidence as PASS.
 3. **L1 — external/protected operational evidence:** real verification/recovery
@@ -316,9 +347,10 @@ diagnostics. Credentials and raw tokens are excluded from this report and Git.
    widening this workstream.
 
 The [central launch register](../launch-readiness-and-product-convergence/03-launch-register.md)
-contains complete records for the two fixes and the payment/publication
-containment correction. No record is production verified; source fixes await
-integration. This is a review packet, not permission to enable payments.
+contains complete records for the two fixes, the payment/publication
+containment correction, and the agency-goal progress. No record is production
+verified; source fixes await integration. This is a review packet, not
+permission to enable payments.
 
 ## Proposed next protected-release packet (not executed)
 
@@ -348,7 +380,8 @@ backend identities and a staffed GO/no-GO/recovery decision.
 ## Git and protected boundaries
 
 Application fixes are committed at `c6c9f133`, `bba390b0`, `c8c35fde`,
-`cf1f93e6`, `af9fd6f2`, and `16a23cd9`; the review packet and register are
+`cf1f93e6`, `af9fd6f2`, `16a23cd9`, and the Goal 4 evidence/fixture correction
+`a403d31d`; the review packet and register are
 committed in the accompanying documentation commit. Final Git status was clean after that commit. No merge, feature push,
 deployment, cutover, Azure/TiDB access, protected migration, credential/grant
 change, provider setting change, recovery, payment activation, entitlement
