@@ -2,9 +2,9 @@
 
 | Field            | Authority                                                                                                                                                                                                         |
 | ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Status           | Post-merge MVP findings recorded; launch remains blocked.                                                                                                                                                         |
+| Status           | Pre-payment onboarding containment is locally verified on the closure candidate; public publishing and protected release remain blocked.                                                                          |
 | Scope            | Central launch disposition and verification register. It is not an implementation backlog.                                                                                                                        |
-| Candidate status | Verification candidate 4e012b3044628fc06da7489c0055e9ce01bdc8d9; local fixes c6c9f1330ae3910bfbad7021735b231e90e984b0 await integration and acceptance.                                                           |
+| Candidate status | Merged base 4e012b3044628fc06da7489c0055e9ce01bdc8d9; closure candidate c8c35fde44d00ff8b2ce83ca73fcb32dd522e9bc passed local verification and awaits integration and acceptance.                                 |
 | Evidence method  | [Evidence Sequence and Provenance Contract](06-evidence-sequence-and-provenance-contract.md) governs material technical claims and their boundaries; this register remains the sole launch-disposition authority. |
 
 ## Stable issue identifiers
@@ -45,7 +45,7 @@ This index is for navigation and programme oversight. Its **Full record** column
 | --------------- | ------------- | ----------------------------------- | -------- | ------------------------------- | --------------- | ----------- | -------------------------- |
 | LRC-AUTH-001    | 2026-09-13    | Account recovery                    | L1       | Authentication                  | Fix now         | in progress | [Record](#lrc-auth-001)    |
 | LRC-PUBLISH-001 | 2026-09-13    | Listing publication preflight       | L1       | Property Listing Engine         | Fix now         | in progress | [Record](#lrc-publish-001) |
-| LRC-PAY-001     | 2026-09-13    | Payment containment and publication | L1       | Commercial access / publication | Fix now         | Open        | [Record](#lrc-pay-001)     |
+| LRC-PAY-001     | 2026-09-13    | Payment containment and publication | L1       | Commercial access / publication | Fix now         | in progress | [Record](#lrc-pay-001)     |
 
 ## Complete per-finding record
 
@@ -99,27 +99,27 @@ This index is for navigation and programme oversight. Its **Full record** column
 
 ### LRC-PAY-001
 
-| Field                                   | Record                                                                                                                                                              |
-| --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Issue ID                                | LRC-PAY-001                                                                                                                                                         |
-| Date observed                           | 2026-09-13                                                                                                                                                          |
-| Exact Git SHA                           | 4e012b3044628fc06da7489c0055e9ce01bdc8d9 (initial); c6c9f1330ae3910bfbad7021735b231e90e984b0 (fixed source)                                                         |
-| Page or journey                         | Payment containment and publication                                                                                                                                 |
-| URL                                     | Static source inspection; no paid request executed                                                                                                                  |
-| User role                               | Agent / agency; payment admin boundaries inspected statically                                                                                                       |
-| Viewport or device                      | HTTP API / source inspection; viewport not applicable                                                                                                               |
-| Current behaviour                       | Paid checkout/review routes remain exposed in source; publication preflight requires active subscription.                                                           |
-| Expected behaviour                      | Disabled payment UI, backend and workers; publication only under an approved canonical cohort entitlement model.                                                    |
-| Evidence reference                      | [MVP closure report](../database-transition-and-launch/mvp-closure-report.md) — mechanism, sequence, execution and limits                                           |
-| Severity                                | L1                                                                                                                                                                  |
-| Owning engine                           | Commercial access / publication                                                                                                                                     |
-| Launch decision                         | Fix now                                                                                                                                                             |
-| Approved implementation branch/worktree | verify/mvp-closure-post-577 / /home/edwardspc/Desktop/Dev/worktrees/property-listify-mvp-closure-post-577                                                           |
-| Pull request or commit                  | Pending                                                                                                                                                             |
-| Integrated verification                 | Pending; local branch evidence only                                                                                                                                 |
-| Production verification                 | Pending; no protected access or deployment                                                                                                                          |
-| Status                                  | Open                                                                                                                                                                |
-| Notes                                   | Static containment finding, not an executed charge. Paid activation and privilege bypass are prohibited. Owner disposition required; no payment mutation performed. |
+| Field                                   | Record                                                                                                                                                                                                                    |
+| --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Issue ID                                | LRC-PAY-001                                                                                                                                                                                                               |
+| Date observed                           | 2026-09-13                                                                                                                                                                                                                |
+| Exact Git SHA                           | 4e012b3044628fc06da7489c0055e9ce01bdc8d9 (initial); c8c35fde44d00ff8b2ce83ca73fcb32dd522e9bc (containment candidate)                                                                                                      |
+| Page or journey                         | Payment containment and publication                                                                                                                                                                                       |
+| URL                                     | http://127.0.0.1:5000/api/trpc/billing.commercialActivation; /api/trpc/billing.requestLaunchAccessInvoice; /api/agent/request-launch-access-invoice                                                                       |
+| User role                               | Agent, agency administrator, property developer, and finance administrator boundaries                                                                                                                                     |
+| Viewport or device                      | Task-local HTTP API, source inspection, and focused UI tests; viewport not applicable                                                                                                                                     |
+| Current behaviour                       | On c8c35fde, the public status reports preparation_only/false; payment UI is hidden or disabled and invoice, checkout, proof, finance, lifecycle, entitlement, and provider-event paths fail closed before database work. |
+| Expected behaviour                      | Stakeholders may prepare identity, professional presence, and private drafts before payment; paid publishing remains unavailable until separately approved commercial activation.                                         |
+| Evidence reference                      | [MVP closure report](../database-transition-and-launch/mvp-closure-report.md) — exact-target HTTP run, source audit, focused tests, and boundaries                                                                        |
+| Severity                                | L1                                                                                                                                                                                                                        |
+| Owning engine                           | Commercial access / publication                                                                                                                                                                                           |
+| Launch decision                         | Fix now                                                                                                                                                                                                                   |
+| Approved implementation branch/worktree | verify/mvp-closure-post-577 / /home/edwardspc/Desktop/Dev/worktrees/property-listify-mvp-closure-post-577                                                                                                                 |
+| Pull request or commit                  | c8c35fde44d00ff8b2ce83ca73fcb32dd522e9bc                                                                                                                                                                                  |
+| Integrated verification                 | Local candidate only: exact-target HTTP PASS; 43 focused tests PASS; full suite 582 files/3992 tests PASS; typecheck and build PASS. Not merged or hosted-CI verified.                                                    |
+| Production verification                 | Pending; no protected access, deployment, provider configuration, or charge performed                                                                                                                                     |
+| Status                                  | in progress                                                                                                                                                                                                               |
+| Notes                                   | Test fixtures may model paid states only under Vitest. No development or deployed environment variable enables activation. No free publishing policy, privilege bypass, or payment mutation was introduced.               |
 
 The compact index does not replace the complete issue record. Add one complete record under a heading using the stable issue ID when a genuine finding is first registered.
 
