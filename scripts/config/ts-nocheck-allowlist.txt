@@ -47,9 +47,6 @@ client/src/components/marketing/wizard/Step4Budget.tsx
 client/src/components/marketing/wizard/Step6Creative.tsx
 client/src/components/PropertyCategories.tsx
 client/src/components/property-results/QuickFilters.tsx
-client/src/components/ProspectDashboard.tsx
-client/src/components/ProspectQuickView.tsx
-client/src/components/RecentlyViewedCarousel.tsx
 client/src/components/ui/sidebar.tsx
 client/src/components/wizard/DevelopmentPreview.tsx
 client/src/contexts/BrandingContext.tsx
