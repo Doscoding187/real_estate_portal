@@ -32,12 +32,16 @@ describe('provider-independent billing foundation contract', () => {
     expect(billingRouter).toContain('sessionId: `manual_eft:${result.invoice.id}`');
   });
 
-  it('keeps agency onboarding aligned to manual EFT invoice activation', () => {
-    expect(agencyOnboardingPage).toContain('Issue Invoice');
-    expect(agencyOnboardingPage).toContain('EFT invoice');
-    expect(agencyOnboardingPage).toContain('Proof upload');
+  it('keeps agency onboarding preparation-only while commercial activation is contained', () => {
+    expect(agencyOnboardingPage).toContain('Save and open workspace');
+    expect(agencyOnboardingPage).toContain('does not request payment or activate publishing');
+    expect(agencyOnboardingPage).toContain(
+      'Persisted onboarding is independent of invoice/payment activation.',
+    );
     expect(agencyOnboardingPage).toContain('utils.auth.me.invalidate()');
     expect(agencyOnboardingPage).toContain('utils.agency.getOnboardingStatus.invalidate()');
+    expect(agencyOnboardingPage).not.toContain('createCheckoutSession');
+    expect(agencyOnboardingPage).not.toContain('Issue Invoice');
     expect(agencyOnboardingPage).not.toContain("Stripe's secure checkout page");
     expect(agencyOnboardingPage).not.toContain('Complete Setup & Pay Now');
 
@@ -47,10 +51,10 @@ describe('provider-independent billing foundation contract', () => {
     expect(appRoutes).toContain('<AgencyOnboarding />');
     expect(appRoutes).not.toContain('AgencySetupWizard');
 
-    expect(onboardingSuccessPage).toContain('invoiceId');
-    expect(onboardingSuccessPage).toContain('isManualEftHandoff');
-    expect(onboardingSuccessPage).toContain('Open Billing Workspace');
-    expect(onboardingSuccessPage).not.toContain('Your payment has been processed by Stripe.');
+    expect(onboardingSuccessPage).toContain('Agency preparation workspace ready');
+    expect(onboardingSuccessPage).toContain('Open Agency workspace');
+    expect(onboardingSuccessPage).not.toContain('invoiceId');
+    expect(onboardingSuccessPage).not.toContain('Open Billing Workspace');
   });
 
   it('models the canonical billing lifecycle and audit tables', () => {
@@ -166,7 +170,9 @@ describe('provider-independent billing foundation contract', () => {
   });
 
   it('keeps the interim billing owner allow-list closed', () => {
-    expect(billingService).toContain("export type BillingOwnerType = 'agent' | 'agency' | 'developer';");
+    expect(billingService).toContain(
+      "export type BillingOwnerType = 'agent' | 'agency' | 'developer';",
+    );
     expect(billingService).not.toContain("'developer' | string");
     expect(billingService).toContain('toBillingOwnerType(invoice.ownerType)');
     expect(billingService).toContain("code: 'PRECONDITION_FAILED'");

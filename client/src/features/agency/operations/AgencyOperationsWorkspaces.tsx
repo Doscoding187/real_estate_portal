@@ -24,6 +24,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { trpc } from '@/lib/trpc';
+import { CommercialActivationNotice } from '@/components/commercial/CommercialActivationNotice';
+import { COMMERCIAL_ACTIVATION_STATE } from '@shared/commercialActivation';
 import { WORKSPACE_TITLES } from '../workspace/constants';
 import { SectionTitle } from '../workspace/WorkspacePrimitives';
 import { AttentionPanel } from '../workspace/WorkspacePanels';
@@ -45,7 +47,11 @@ export function AgencyAttentionWorkspace(props: WorkspaceContentProps) {
         <CardContent className="space-y-3">
           {[
             { label: 'New leads', value: props.leadSignals.newLeadCount, tone: 'rose' as Tone },
-            { label: 'Unassigned', value: props.leadSignals.unassignedCount, tone: 'amber' as Tone },
+            {
+              label: 'Unassigned',
+              value: props.leadSignals.unassignedCount,
+              tone: 'amber' as Tone,
+            },
             {
               label: 'Overdue follow-ups',
               value: props.leadSignals.contactedFollowUpCount,
@@ -101,7 +107,11 @@ export function AgencyComplianceWorkspace(props: WorkspaceContentProps) {
           <CardContent className="p-4">
             <div className="flex items-center justify-between gap-3">
               <p className="font-semibold text-slate-950">{item.label}</p>
-              <Badge className={item.done ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}>
+              <Badge
+                className={
+                  item.done ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
+                }
+              >
                 {item.done ? 'Ready' : 'Needs action'}
               </Badge>
             </div>
@@ -170,7 +180,8 @@ export function AgencyBillingWorkspace(_props: WorkspaceContentProps) {
   const workspace = workspaceQuery.data;
   const access = billingState?.accessState;
   const currentPlan = workspace?.currentPlan || billingState?.canonicalSubscription?.plan || null;
-  const subscription = workspace?.subscription || billingState?.canonicalSubscription?.subscription || null;
+  const subscription =
+    workspace?.subscription || billingState?.canonicalSubscription?.subscription || null;
   const currentStatus = access?.billingStatus || 'unavailable';
   const invoices = workspace?.invoices || [];
   const payments = workspace?.payments || [];
@@ -178,10 +189,22 @@ export function AgencyBillingWorkspace(_props: WorkspaceContentProps) {
   const eftCanIssueInvoices = Boolean(bankDetails?.canIssueInvoices);
   const proofStorageReady = Boolean(workspace?.proofStorage?.configured);
   const activeInvoice =
-    (selectedInvoiceId ? invoices.find((invoice: any) => invoice.id === selectedInvoiceId) : null) ||
+    (selectedInvoiceId
+      ? invoices.find((invoice: any) => invoice.id === selectedInvoiceId)
+      : null) ||
     workspace?.activeInvoice ||
-    invoices.find((invoice: any) => ['issued', 'submitted', 'partially_paid', 'overdue'].includes(invoice.status)) ||
+    invoices.find((invoice: any) =>
+      ['issued', 'submitted', 'partially_paid', 'overdue'].includes(invoice.status),
+    ) ||
     null;
+
+  const handleStartCheckout = (planId: number) => {
+    if (!COMMERCIAL_ACTIVATION_STATE.enabled) {
+      toast.info(COMMERCIAL_ACTIVATION_STATE.message);
+      return;
+    }
+    startCheckout.mutate({ planId, billingCycle });
+  };
 
   useEffect(() => {
     if (!activeInvoice) return;
@@ -195,8 +218,8 @@ export function AgencyBillingWorkspace(_props: WorkspaceContentProps) {
     { key: 'teamManagement', label: 'Team management' },
     { key: 'reporting', label: 'Reporting' },
   ];
-  const includedCapabilities = capabilityLabels.filter(
-    capability => Boolean((access?.workspaceAccess as any)?.[capability.key]),
+  const includedCapabilities = capabilityLabels.filter(capability =>
+    Boolean((access?.workspaceAccess as any)?.[capability.key]),
   );
   const blockedCapabilities = capabilityLabels.filter(
     capability => !(access?.workspaceAccess as any)?.[capability.key],
@@ -217,6 +240,10 @@ export function AgencyBillingWorkspace(_props: WorkspaceContentProps) {
   };
 
   const handleProofSubmit = async () => {
+    if (!COMMERCIAL_ACTIVATION_STATE.enabled) {
+      toast.info(COMMERCIAL_ACTIVATION_STATE.message);
+      return;
+    }
     if (!activeInvoice) {
       toast.error('Select an invoice first');
       return;
@@ -252,6 +279,7 @@ export function AgencyBillingWorkspace(_props: WorkspaceContentProps) {
 
   return (
     <section className="space-y-5">
+      <CommercialActivationNotice />
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_380px]">
         <Card className="border-slate-200 bg-white shadow-sm">
           <CardHeader className="pb-2">
@@ -294,15 +322,28 @@ export function AgencyBillingWorkspace(_props: WorkspaceContentProps) {
                     <InfoTile
                       icon={FileCheck2}
                       label="Subscription"
-                      value={subscription.cancelAtPeriodEnd ? 'Cancelling at period end' : String(subscription.status || currentStatus).replace(/_/g, ' ')}
+                      value={
+                        subscription.cancelAtPeriodEnd
+                          ? 'Cancelling at period end'
+                          : String(subscription.status || currentStatus).replace(/_/g, ' ')
+                      }
                     />
                   </div>
                 ) : null}
 
                 <div className="grid gap-3 md:grid-cols-3">
-                  <AccessTile label="Listings" enabled={Boolean(access?.workspaceAccess.listings)} />
-                  <AccessTile label="Publishing" enabled={Boolean(access?.workspaceAccess.publishing)} />
-                  <AccessTile label="Reporting" enabled={Boolean(access?.workspaceAccess.reporting)} />
+                  <AccessTile
+                    label="Listings"
+                    enabled={Boolean(access?.workspaceAccess.listings)}
+                  />
+                  <AccessTile
+                    label="Publishing"
+                    enabled={Boolean(access?.workspaceAccess.publishing)}
+                  />
+                  <AccessTile
+                    label="Reporting"
+                    enabled={Boolean(access?.workspaceAccess.reporting)}
+                  />
                 </div>
 
                 <div className="grid gap-3 lg:grid-cols-2">
@@ -353,7 +394,11 @@ export function AgencyBillingWorkspace(_props: WorkspaceContentProps) {
                 {workspace?.proofStorage?.message || 'Private proof storage is not configured.'}
               </div>
             ) : null}
-            <InfoTile icon={Building2} label="Bank" value={bankDetails?.bankName || 'Not configured'} />
+            <InfoTile
+              icon={Building2}
+              label="Bank"
+              value={bankDetails?.bankName || 'Not configured'}
+            />
             <InfoTile
               icon={Receipt}
               label="Account"
@@ -363,7 +408,11 @@ export function AgencyBillingWorkspace(_props: WorkspaceContentProps) {
                   : 'Not configured'
               }
             />
-            <InfoTile icon={FileText} label="Branch" value={bankDetails?.branchCode || 'Not configured'} />
+            <InfoTile
+              icon={FileText}
+              label="Branch"
+              value={bankDetails?.branchCode || 'Not configured'}
+            />
             {activeInvoice?.paymentReference ? (
               <button
                 type="button"
@@ -383,7 +432,7 @@ export function AgencyBillingWorkspace(_props: WorkspaceContentProps) {
             ) : null}
             {subscription?.cancelAtPeriodEnd ? (
               <Button
-                disabled={reactivateSubscription.isPending}
+                disabled={!COMMERCIAL_ACTIVATION_STATE.enabled || reactivateSubscription.isPending}
                 onClick={() => reactivateSubscription.mutate()}
                 className="w-full"
               >
@@ -393,6 +442,7 @@ export function AgencyBillingWorkspace(_props: WorkspaceContentProps) {
               <Button
                 variant="outline"
                 disabled={
+                  !COMMERCIAL_ACTIVATION_STATE.enabled ||
                   cancelSubscription.isPending ||
                   !subscription ||
                   !['active', 'grace_period'].includes(String(subscription.status))
@@ -421,37 +471,37 @@ export function AgencyBillingWorkspace(_props: WorkspaceContentProps) {
             <div className="grid gap-4 lg:grid-cols-3">
               {workspace.plans.map((plan: any) => (
                 <div key={plan.id} className="rounded-lg border border-slate-200 bg-white p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="font-semibold text-slate-950">{plan.displayName}</p>
-                        <p className="mt-1 text-sm text-slate-500">
-                          {formatPlanPrice(plan.priceMonthly || plan.price, plan.interval)}
-                        </p>
-                      </div>
-                      {currentPlan?.id === plan.id ? (
-                        <Badge className="bg-emerald-100 text-emerald-700">Current</Badge>
-                      ) : null}
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="font-semibold text-slate-950">{plan.displayName}</p>
+                      <p className="mt-1 text-sm text-slate-500">
+                        {formatPlanPrice(plan.priceMonthly || plan.price, plan.interval)}
+                      </p>
                     </div>
-                    <FeatureList value={plan.features} />
-                      <Button
-                      variant={currentPlan?.id === plan.id ? 'outline' : 'default'}
-                      disabled={
-                        startCheckout.isPending ||
-                        currentPlan?.id === plan.id ||
-                        !eftCanIssueInvoices ||
-                        !proofStorageReady
-                      }
-                      onClick={() =>
-                        startCheckout.mutate({
-                          planId: plan.id,
-                          billingCycle,
-                        })
-                      }
-                      className="mt-4 w-full"
-                    >
-                      {currentPlan?.id === plan.id ? 'Selected' : 'Select plan'}
-                      <ArrowRight className="h-4 w-4" />
-                    </Button>
+                    {currentPlan?.id === plan.id ? (
+                      <Badge className="bg-emerald-100 text-emerald-700">Current</Badge>
+                    ) : null}
+                  </div>
+                  <FeatureList value={plan.features} />
+                  <Button
+                    variant={currentPlan?.id === plan.id ? 'outline' : 'default'}
+                    disabled={
+                      !COMMERCIAL_ACTIVATION_STATE.enabled ||
+                      startCheckout.isPending ||
+                      currentPlan?.id === plan.id ||
+                      !eftCanIssueInvoices ||
+                      !proofStorageReady
+                    }
+                    onClick={() => handleStartCheckout(plan.id)}
+                    className="mt-4 w-full"
+                  >
+                    {currentPlan?.id === plan.id
+                      ? 'Selected'
+                      : COMMERCIAL_ACTIVATION_STATE.enabled
+                        ? 'Select plan'
+                        : 'Activation unavailable'}
+                    <ArrowRight className="h-4 w-4" />
+                  </Button>
                 </div>
               ))}
             </div>
@@ -482,12 +532,15 @@ export function AgencyBillingWorkspace(_props: WorkspaceContentProps) {
           <SectionTitle icon={UploadCloud} title="Proof Of Payment" eyebrow="Private upload" />
         </CardHeader>
         <CardContent>
-          {activeInvoice ? (
+          {COMMERCIAL_ACTIVATION_STATE.enabled && activeInvoice ? (
             <div className="grid gap-4 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1fr)]">
               <div className="rounded-lg border border-slate-200 p-4">
-                <p className="text-sm font-semibold text-slate-950">{activeInvoice.invoiceNumber}</p>
+                <p className="text-sm font-semibold text-slate-950">
+                  {activeInvoice.invoiceNumber}
+                </p>
                 <p className="mt-1 text-sm text-slate-500">
-                  {formatCurrency(Number(activeInvoice.amountDue || 0))} due by {formatDate(activeInvoice.dueAt)}
+                  {formatCurrency(Number(activeInvoice.amountDue || 0))} due by{' '}
+                  {formatDate(activeInvoice.dueAt)}
                 </p>
                 <StatusBadge status={activeInvoice.status} />
               </div>
@@ -537,7 +590,11 @@ export function AgencyBillingWorkspace(_props: WorkspaceContentProps) {
                   />
                 </div>
                 <Button
-                  disabled={submitProof.isPending || !proofStorageReady}
+                  disabled={
+                    !COMMERCIAL_ACTIVATION_STATE.enabled ||
+                    submitProof.isPending ||
+                    !proofStorageReady
+                  }
                   onClick={handleProofSubmit}
                   className="md:col-span-2"
                 >
@@ -628,7 +685,8 @@ export function AgencyBillingWorkspace(_props: WorkspaceContentProps) {
 
 export function AgencyUtilityWorkspace(props: WorkspaceContentProps) {
   const meta = WORKSPACE_TITLES[props.workspace];
-  const Icon = props.workspace === 'settings' ? Settings : props.workspace === 'help' ? HelpCircle : meta.icon;
+  const Icon =
+    props.workspace === 'settings' ? Settings : props.workspace === 'help' ? HelpCircle : meta.icon;
   return (
     <Card className="border-slate-200 bg-white shadow-sm">
       <CardHeader className="pb-2">
@@ -644,8 +702,17 @@ export function AgencyUtilityWorkspace(props: WorkspaceContentProps) {
 }
 
 function StatusBadge({ status }: { status: string }) {
-  const active = status === 'active' || status === 'grace_period' || status === 'paid' || status === 'verified';
-  const warning = ['pending_payment', 'payment_under_review', 'issued', 'submitted', 'partially_paid', 'overdue', 'past_due'].includes(status);
+  const active =
+    status === 'active' || status === 'grace_period' || status === 'paid' || status === 'verified';
+  const warning = [
+    'pending_payment',
+    'payment_under_review',
+    'issued',
+    'submitted',
+    'partially_paid',
+    'overdue',
+    'past_due',
+  ].includes(status);
   const Icon = active ? CheckCircle2 : warning ? AlertTriangle : XCircle;
   return (
     <Badge
@@ -677,7 +744,9 @@ function InfoTile({
       <div className="flex items-start gap-3">
         <Icon className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
         <div className="min-w-0">
-          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">{label}</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
+            {label}
+          </p>
           <p className="mt-1 break-words text-sm font-medium text-slate-800">{value}</p>
         </div>
       </div>

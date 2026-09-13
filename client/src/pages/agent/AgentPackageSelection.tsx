@@ -34,6 +34,8 @@ import {
   UploadCloud,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { CommercialActivationNotice } from '@/components/commercial/CommercialActivationNotice';
+import { COMMERCIAL_ACTIVATION_STATE } from '@shared/commercialActivation';
 
 type RouterOutputs = inferRouterOutputs<AppRouter>;
 type AgentBillingWorkspace = RouterOutputs['billing']['agentWorkspace'];
@@ -478,6 +480,10 @@ export default function AgentPackageSelection() {
   const action = getCommercialActionPresentation(launchProduct);
 
   const handleRequestInvoice = async () => {
+    if (!COMMERCIAL_ACTIVATION_STATE.enabled) {
+      setLocation('/agent/dashboard');
+      return;
+    }
     const planId = launchProduct.source?.planId;
     if (!planId) {
       toast.error('The canonical Agent Launch Access product is not requestable right now.');
@@ -508,6 +514,10 @@ export default function AgentPackageSelection() {
   };
 
   const handleProofSubmit = async () => {
+    if (!COMMERCIAL_ACTIVATION_STATE.enabled) {
+      toast.info(COMMERCIAL_ACTIVATION_STATE.message);
+      return;
+    }
     if (!activeInvoice) {
       toast.error('Request an invoice before submitting payment proof.');
       return;
@@ -587,9 +597,12 @@ export default function AgentPackageSelection() {
               You selected Agent Launch Access.
             </h1>
             <p className="mt-6 max-w-xl text-base leading-8 text-slate-600 sm:text-lg">
-              The public Agent page explains the product. This step confirms the canonical product
-              and takes you into the assisted invoice and activation process.
+              The public Agent page explains the product. This step lets you confirm your
+              professional presence and prepare for the assisted commercial activation process.
             </p>
+            <div className="mt-6 max-w-xl">
+              <CommercialActivationNotice />
+            </div>
             <a
               href="/advertise/sell/agents"
               className="mt-7 inline-flex items-center gap-2 text-sm font-bold text-slate-950 underline decoration-slate-300 underline-offset-4 hover:decoration-slate-950"
@@ -617,8 +630,9 @@ export default function AgentPackageSelection() {
                 <ActivationSteps />
               </div>
               <div className="mt-6 rounded-2xl bg-slate-950 px-5 py-4 text-sm leading-6 text-white">
-                Requesting an invoice, receiving an invoice or uploading payment proof does not
-                activate access. Finance verification starts the fixed 90-day term.
+                Your profile and private preparation work can continue now. Commercial activation,
+                payment proof and the fixed 90-day term become available only after the approved
+                payment workflow is opened.
               </div>
               <div className="mt-6 flex flex-col gap-3 sm:flex-row">
                 <Button
@@ -626,11 +640,13 @@ export default function AgentPackageSelection() {
                   disabled={isRequestingInvoice}
                   onClick={() => void handleRequestInvoice()}
                 >
-                  {isRequestingInvoice
-                    ? 'Preparing invoice…'
-                    : activeInvoice
-                      ? 'Refresh invoice'
-                      : action.label}{' '}
+                  {!COMMERCIAL_ACTIVATION_STATE.enabled
+                    ? 'Return to preparation workspace'
+                    : isRequestingInvoice
+                      ? 'Preparing invoice…'
+                      : activeInvoice
+                        ? 'Refresh invoice'
+                        : action.label}{' '}
                   <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" />
                 </Button>
                 <Button
@@ -641,7 +657,7 @@ export default function AgentPackageSelection() {
                   Talk to Property Listify
                 </Button>
               </div>
-              {activeInvoice ? (
+              {activeInvoice && COMMERCIAL_ACTIVATION_STATE.enabled ? (
                 <AgentManualEftPanel
                   invoice={activeInvoice}
                   bankDetails={bankDetails}

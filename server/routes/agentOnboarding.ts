@@ -47,17 +47,19 @@ function respondForError(res: Response, error: unknown) {
 
   const message = error instanceof Error ? error.message : 'Request failed';
   const normalized = message.toLowerCase();
-  const status = normalized.includes('not found')
-    ? 404
-    : normalized.includes('only available to agents') ||
-        normalized.includes('only available to agent') ||
-        normalized.includes('only available to')
-      ? 403
-      : normalized.includes('required') ||
-          normalized.includes('already taken') ||
-          normalized.includes('url-safe')
-        ? 400
-        : 500;
+  const status = normalized.includes('preparation-only onboarding')
+    ? 409
+    : normalized.includes('not found')
+      ? 404
+      : normalized.includes('only available to agents') ||
+          normalized.includes('only available to agent') ||
+          normalized.includes('only available to')
+        ? 403
+        : normalized.includes('required') ||
+            normalized.includes('already taken') ||
+            normalized.includes('url-safe')
+          ? 400
+          : 500;
 
   return res.status(status).json({ error: message });
 }
@@ -100,7 +102,8 @@ router.post('/select-package', async (req, res) => {
 
 router.post('/request-launch-access-invoice', async (req, res) => {
   try {
-    const planId = req.body?.planId === undefined ? undefined : selectPackageSchema.parse(req.body).planId;
+    const planId =
+      req.body?.planId === undefined ? undefined : selectPackageSchema.parse(req.body).planId;
     const user = (req as AuthenticatedRequest).user;
     const result = await requestPaidLaunchAccessInvoice({ user, planId });
     res.json(result);

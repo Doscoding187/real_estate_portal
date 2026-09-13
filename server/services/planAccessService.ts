@@ -19,6 +19,7 @@ import {
   resolveCommercialTerm,
   validatePaidLaunchAccessPayment,
 } from './commercialTerm';
+import { requireCommercialActivation } from './commercialActivationPolicy';
 
 export type PlanSegment = 'agent' | 'agency' | 'enterprise' | 'developer';
 export type SubscriptionOwnerType = 'agent' | 'agency' | 'developer';
@@ -206,10 +207,9 @@ function parseEntitlementTimestamp(value: string | Date): number {
   const normalized = value.trim();
   // MySQL DATETIME values have no timezone marker; the database authority
   // treats them as UTC so entitlement decisions are process-timezone safe.
-  const utcValue =
-    /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(?:\.\d+)?$/.test(normalized)
-      ? `${normalized.replace(' ', 'T')}Z`
-      : normalized;
+  const utcValue = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(?:\.\d+)?$/.test(normalized)
+    ? `${normalized.replace(' ', 'T')}Z`
+    : normalized;
   return new Date(utcValue).getTime();
 }
 
@@ -678,9 +678,7 @@ export async function setSubscriptionPlanForOwner(input: {
   const [row] = await db
     .select()
     .from(subscriptions)
-    .where(
-      eq(subscriptions.billableAccountId, billableAccountId),
-    )
+    .where(eq(subscriptions.billableAccountId, billableAccountId))
     .limit(1);
 
   return row ? toSubscriptionSnapshot(row) : null;
@@ -713,6 +711,7 @@ export async function activatePaidLaunchAccessForOwner(input: {
   metadata?: Record<string, unknown> | null;
   db?: any;
 }): Promise<SubscriptionSnapshot | null> {
+  requireCommercialActivation('Paid Launch Access activation');
   const db = input.db || (await getDb());
   if (!db) throw new Error('Database not available');
 

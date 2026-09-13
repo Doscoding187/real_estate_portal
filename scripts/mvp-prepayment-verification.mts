@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
+
 const base = 'http://127.0.0.1:5000';
+const runtimeLogPath = process.env.MVP_RUNTIME_LOG || '/tmp/listify-mvp-577-runtime.log';
 const ready = await (await fetch(`${base}/api/readiness`)).json();
 assert.equal(
   ready.db.targetFingerprintHash,
@@ -26,11 +28,11 @@ async function account(role: string) {
       role === 'agent' ? { displayName: 'Preparation Agent', phone: '+27820000000' } : undefined,
   });
   assert.equal(response.status, 201);
-  const token = [
-    ...readFileSync('/tmp/listify-mvp-577-runtime.log', 'utf8').matchAll(
-      /Verification URL: .*?token=([a-f0-9]+)/g,
-    ),
-  ].at(-1)![1];
+  const verificationTokens = [
+    ...readFileSync(runtimeLogPath, 'utf8').matchAll(/Verification URL: .*?token=([a-f0-9]+)/g),
+  ];
+  const token = verificationTokens.at(-1)?.[1];
+  assert.ok(token, `No local verification token found in ${runtimeLogPath}`);
   assert.equal(
     (await fetch(`${base}/api/auth/verify-email?token=${token}`, { redirect: 'manual' })).status,
     302,
@@ -50,6 +52,23 @@ async function rpc(path: string, input: unknown, cookie: string, mutation = fals
   assert.equal(response.status, 200, JSON.stringify(body));
   return body.result.data.json;
 }
+async function rpcPrecondition(path: string, input: unknown, cookie: string) {
+  const response = await post(`/api/trpc/${path}`, { json: input }, cookie);
+  const body = await response.json();
+  assert.equal(response.status, 412, JSON.stringify(body));
+  const error = body.error?.json ?? body.error;
+  assert.equal(error?.data?.code, 'PRECONDITION_FAILED', JSON.stringify(body));
+  assert.match(String(error?.message || ''), /preparation-only onboarding/i);
+}
+async function httpPrecondition(path: string, body: unknown, cookie: string) {
+  const response = await post(path, body, cookie);
+  const payload = await response.json();
+  assert.equal(response.status, 409, JSON.stringify(payload));
+  assert.match(String(payload?.error || ''), /preparation-only onboarding/i);
+}
+const commercialActivation = await rpc('billing.commercialActivation', undefined, '');
+assert.equal(commercialActivation.mode, 'preparation_only');
+assert.equal(commercialActivation.enabled, false);
 const agent = await account('agent');
 await rpc(
   'agent.updateMyProfileOnboarding',
@@ -64,6 +83,8 @@ await rpc(
 const preflight = await rpc('listing.getSubmissionPreflight', undefined, agent.cookie);
 assert.equal(preflight.canPrepareDraft, true);
 assert.equal(preflight.canStartListing, false);
+await rpcPrecondition('billing.requestLaunchAccessInvoice', {}, agent.cookie);
+await httpPrecondition('/api/agent/request-launch-access-invoice', {}, agent.cookie);
 const agency = await account('agency_admin');
 const agencyInput = {
   basicInfo: {
@@ -89,6 +110,16 @@ assert.equal(resumed.agencyId, created.agencyId);
 assert.equal(resumed.alreadyCreated, true);
 const status = await rpc('agency.getOnboardingStatus', undefined, agency.cookie);
 assert.equal(status.fullFeaturesUnlocked, false);
+await rpcPrecondition(
+  'billing.startManualEftCheckout',
+  { planId: 2, billingCycle: 'monthly' },
+  agency.cookie,
+);
+await rpcPrecondition(
+  'billing.createCheckoutSession',
+  { planId: 2, billingCycle: 'monthly' },
+  agency.cookie,
+);
 const developer = await account('property_developer');
 await rpc(
   'developer.createProfile',
@@ -101,6 +132,7 @@ await rpc(
   developer.cookie,
   true,
 );
+await rpcPrecondition('billing.requestDeveloperLaunchAccessInvoice', undefined, developer.cookie);
 const draft = await rpc(
   'developer.saveDraft',
   { draftData: { developmentData: { name: 'Preparation development' }, currentPhase: 1 } },
@@ -131,9 +163,11 @@ console.log(
       agencyProfileAndIdempotentResume: 'PASS',
       agencyCommercialFeatures: status.fullFeaturesUnlocked,
       developerDraftSaveReopenEdit: 'PASS',
+      paymentAndActivationContainment: 'PASS',
       agencyId: created.agencyId,
       developerDraftId: draft.id,
-      boundary: 'Task-local HTTP; no invoice, payment or publishing called',
+      boundary:
+        'Task-local HTTP; invoice/checkout requests were deliberately rejected before any invoice, payment, entitlement mutation or publishing call.',
     },
     null,
     2,

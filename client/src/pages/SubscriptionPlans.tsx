@@ -13,6 +13,8 @@ import {
 import { useCommercialCatalog } from '@/hooks/useCommercialCatalog';
 import type { CommercialAudience } from '@/hooks/useCommercialCatalog';
 import { Building2, Check, Crown, Loader2, Rocket, User, Zap } from 'lucide-react';
+import { CommercialActivationNotice } from '@/components/commercial/CommercialActivationNotice';
+import { COMMERCIAL_ACTIVATION_STATE } from '@shared/commercialActivation';
 
 const visibleAudiences: CommercialAudience[] = ['agent', 'agency', 'developer'];
 
@@ -40,8 +42,7 @@ export default function SubscriptionPlans() {
   const [selectedAudience, setSelectedAudience] = useState<CommercialAudience>('agent');
   const catalog = useCommercialCatalog();
   const products = useMemo(
-    () =>
-      (catalog.data?.products || []).filter(product => product.audience === selectedAudience),
+    () => (catalog.data?.products || []).filter(product => product.audience === selectedAudience),
     [catalog.data?.products, selectedAudience],
   );
 
@@ -64,6 +65,10 @@ export default function SubscriptionPlans() {
             Prices, trial terms, benefits, limits, and next actions are supplied by the canonical
             Property Listify commercial catalog.
           </p>
+        </div>
+
+        <div className="mx-auto mb-8 max-w-3xl">
+          <CommercialActivationNotice />
         </div>
 
         <Tabs
@@ -113,7 +118,8 @@ export default function SubscriptionPlans() {
                   const action = getCommercialActionPresentation(product);
                   const Icon = getPlanIcon(product.name);
                   const limitLines = Object.entries(product.limits).map(
-                    ([key, value]) => `${formatCommercialLimitLabel(key)}: ${formatLimitValue(value)}`,
+                    ([key, value]) =>
+                      `${formatCommercialLimitLabel(key)}: ${formatLimitValue(value)}`,
                   );
 
                   return (
@@ -142,7 +148,9 @@ export default function SubscriptionPlans() {
                       <div className="mb-6 mt-5">
                         <div className="flex items-baseline gap-2">
                           <span className="text-4xl font-bold text-slate-900">{price.label}</span>
-                          {price.period ? <span className="text-slate-600">{price.period}</span> : null}
+                          {price.period ? (
+                            <span className="text-slate-600">{price.period}</span>
+                          ) : null}
                         </div>
                         {product.trial.available ? (
                           <div className="mt-1 text-sm font-medium text-blue-600">
@@ -153,7 +161,10 @@ export default function SubscriptionPlans() {
 
                       <ul className="mb-8 flex-1 space-y-3">
                         {[...product.benefits, ...limitLines].map(feature => (
-                          <li key={feature} className="flex items-start gap-2 text-sm text-slate-700">
+                          <li
+                            key={feature}
+                            className="flex items-start gap-2 text-sm text-slate-700"
+                          >
                             <Check className="mt-0.5 h-5 w-5 shrink-0 text-green-600" />
                             <span>{feature}</span>
                           </li>
@@ -166,7 +177,7 @@ export default function SubscriptionPlans() {
                         disabled={action.disabled}
                         onClick={() => action.href && setLocation(action.href)}
                       >
-                        {action.label}
+                        {COMMERCIAL_ACTIVATION_STATE.enabled ? action.label : 'Prepare workspace'}
                       </Button>
                     </Card>
                   );

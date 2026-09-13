@@ -51,6 +51,7 @@ vi.mock('@/lib/trpc', () => ({
 vi.mock('sonner', () => ({
   toast: {
     error: vi.fn(),
+    info: vi.fn(),
     success: vi.fn(),
   },
 }));
@@ -154,29 +155,24 @@ beforeEach(() => {
   });
 });
 
-describe('Agent paid Launch Access conversion', () => {
-  it('requests the canonical invoice and exposes EFT/proof handoff in place', async () => {
+describe('Agent pre-payment preparation', () => {
+  it('returns the stakeholder to the preparation workspace without requesting an invoice', async () => {
     render(<AgentPackageSelection />);
 
-    const requestButton = await screen.findByRole('button', {
-      name: /Get Agent Launch Access/i,
+    const preparationButton = await screen.findByRole('button', {
+      name: /Return to preparation workspace/i,
     });
-    fireEvent.click(requestButton);
+    fireEvent.click(preparationButton);
 
     await waitFor(() => {
-      expect(apiFetchMock).toHaveBeenCalledWith(
-        '/agent/request-launch-access-invoice',
-        expect.objectContaining({
-          method: 'POST',
-          body: JSON.stringify({ planId: 42 }),
-        }),
-      );
+      expect(setLocationMock).toHaveBeenCalledWith('/agent/dashboard');
     });
 
-    expect(setLocationMock).not.toHaveBeenCalled();
-    expect(await screen.findByText(/PLI-AGENT-77/)).toBeInTheDocument();
-    expect(screen.getByText('Manual EFT instructions')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Submit proof for review' })).toBeInTheDocument();
+    expect(apiFetchMock).not.toHaveBeenCalledWith(
+      '/agent/request-launch-access-invoice',
+      expect.anything(),
+    );
+    expect(screen.getByText(/Preparation-only onboarding/i)).toBeInTheDocument();
   });
 
   it('lands a waiting payer on the dashboard while finance verifies the proof', async () => {
@@ -205,7 +201,7 @@ describe('Agent paid Launch Access conversion', () => {
     });
   });
 
-  it('shows finance correction guidance when a previous proof was rejected', async () => {
+  it('does not expose payment-proof controls for a historical invoice', async () => {
     agentWorkspaceMock.mockReturnValue({
       data: {
         activeInvoice: invoice,
@@ -250,9 +246,9 @@ describe('Agent paid Launch Access conversion', () => {
 
     render(<AgentPackageSelection />);
 
-    expect(await screen.findByRole('alert')).toHaveTextContent(
-      'Please upload a legible bank-stamped proof.',
-    );
-    expect(screen.getByRole('button', { name: 'Submit proof for review' })).toBeInTheDocument();
+    expect(await screen.findByText(/Preparation-only onboarding/i)).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Submit proof for review' }),
+    ).not.toBeInTheDocument();
   });
 });

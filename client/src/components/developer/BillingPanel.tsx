@@ -32,6 +32,8 @@ import { formatCommercialStatus, formatInvoiceStatus } from '@/lib/developerStat
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
+import { CommercialActivationNotice } from '@/components/commercial/CommercialActivationNotice';
+import { COMMERCIAL_ACTIVATION_STATE } from '@shared/commercialActivation';
 
 const PLAN_PRESENTATION = {
   trial: {
@@ -139,6 +141,10 @@ export default function BillingPanel() {
   }, [activeInvoice, paymentAmount]);
 
   const handleProofSubmit = async () => {
+    if (!COMMERCIAL_ACTIVATION_STATE.enabled) {
+      toast.info(COMMERCIAL_ACTIVATION_STATE.message);
+      return;
+    }
     if (!activeInvoice) {
       toast.error('Request an invoice before submitting payment proof');
       return;
@@ -186,7 +192,8 @@ export default function BillingPanel() {
   if (!subscription) {
     return (
       <div className="space-y-4">
-        {activeInvoice && (
+        <CommercialActivationNotice />
+        {activeInvoice && COMMERCIAL_ACTIVATION_STATE.enabled && (
           <DeveloperManualEftPanel
             invoice={activeInvoice}
             bankDetails={workspace?.bankDetails}
@@ -210,14 +217,16 @@ export default function BillingPanel() {
             <Sparkles className="w-12 h-12 mx-auto text-slate-400 mb-4" />
             <h3 className="text-lg font-semibold mb-2">Launch Access not active</h3>
             <p className="text-slate-600 mb-4">
-              Request Developer Launch Access. It begins only after manual-EFT payment is verified.
+              Complete your developer profile and prepare your workspace now. When commercial
+              onboarding opens, you can <span>Request Developer Launch Access</span>; marketplace
+              publication becomes available only after approved commercial activation.
             </p>
             <Button
-              onClick={() => setLocation('/developer/plans')}
+              onClick={() => setLocation('/developer/dashboard')}
               className="bg-blue-600 hover:bg-blue-700"
             >
               <Sparkles className="w-4 h-4 mr-2" />
-              Request Launch Access
+              Open preparation workspace
             </Button>
           </CardContent>
         </Card>
@@ -385,7 +394,7 @@ export default function BillingPanel() {
         </CardContent>
       </Card>
 
-      {activeInvoice && (
+      {activeInvoice && COMMERCIAL_ACTIVATION_STATE.enabled && (
         <DeveloperManualEftPanel
           invoice={activeInvoice}
           bankDetails={workspace?.bankDetails}

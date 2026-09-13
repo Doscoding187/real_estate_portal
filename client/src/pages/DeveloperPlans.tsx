@@ -39,6 +39,8 @@ import {
 import { trpc } from '@/lib/trpc';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { CommercialActivationNotice } from '@/components/commercial/CommercialActivationNotice';
+import { COMMERCIAL_ACTIVATION_STATE } from '@shared/commercialActivation';
 
 const PLAN_STYLES = [
   {
@@ -105,6 +107,11 @@ export default function DeveloperPlans() {
 
   const continueWithProduct = () => {
     if (!selectedProduct) return;
+    if (!COMMERCIAL_ACTIVATION_STATE.enabled) {
+      setSelectedProduct(null);
+      setLocation('/developer/dashboard');
+      return;
+    }
     if (
       selectedProduct.audience === 'developer' &&
       selectedProduct.term.kind === 'paid_launch_access' &&
@@ -142,6 +149,10 @@ export default function DeveloperPlans() {
             <p className="mx-auto max-w-2xl text-lg text-slate-600">
               Compare the developer products currently configured in Property Listify.
             </p>
+          </div>
+
+          <div className="mx-auto mb-8 max-w-3xl">
+            <CommercialActivationNotice />
           </div>
 
           {isLoading && (
@@ -286,7 +297,11 @@ export default function DeveloperPlans() {
                         disabled={isCurrentPlan || action.disabled}
                         onClick={() => handleSelectProduct(product)}
                       >
-                        {isCurrentPlan ? 'Current Plan' : action.label}
+                        {isCurrentPlan
+                          ? 'Current Plan'
+                          : COMMERCIAL_ACTIVATION_STATE.enabled
+                            ? action.label
+                            : 'Prepare workspace'}
                         {!isCurrentPlan && <ArrowUpRight className="ml-2 h-4 w-4" />}
                       </Button>
                     </div>
@@ -322,8 +337,8 @@ export default function DeveloperPlans() {
           <DialogHeader>
             <DialogTitle>Continue with {selectedProduct?.displayName}</DialogTitle>
             <DialogDescription>
-              This product uses the current canonical commercial action. Paid developer access is
-              not activated by selecting a plan.
+              Your developer profile and preparation workspace can be completed before commercial
+              activation. Selecting a product never grants publishing or paid access.
             </DialogDescription>
           </DialogHeader>
           {selectedProduct && (
@@ -333,7 +348,8 @@ export default function DeveloperPlans() {
                 {getCommercialPricePresentation(selectedProduct).period || ''}
               </p>
               <p>
-                Any paid activation remains subject to an assisted invoice and verified payment.
+                Commercial activation remains unavailable during this onboarding phase and will
+                require the approved payment and entitlement workflow later.
               </p>
               <p>No promotion is shown unless it is configured by the commercial catalog.</p>
             </div>
@@ -343,7 +359,11 @@ export default function DeveloperPlans() {
               Cancel
             </Button>
             <Button onClick={continueWithProduct} disabled={requestLaunchInvoice.isPending}>
-              {requestLaunchInvoice.isPending ? 'Requesting invoice…' : 'Continue'}
+              {requestLaunchInvoice.isPending
+                ? 'Requesting invoice…'
+                : COMMERCIAL_ACTIVATION_STATE.enabled
+                  ? 'Continue'
+                  : 'Open preparation workspace'}
             </Button>
           </DialogFooter>
         </DialogContent>
