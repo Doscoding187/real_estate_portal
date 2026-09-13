@@ -138,6 +138,21 @@ and the timestamp uses the canonical Date value.
 This is a local candidate result. It does not authorize free publishing,
 commercial activation, protected release, or a new entitlement policy.
 
+### Lead-handling follow-up investigation
+
+The next launch-critical review targeted lead custody and retry authorization.
+Public capture ignores client-supplied recipient IDs and derives ownership from
+canonical listing data; duplicate and conflicting request IDs, custody
+visibility, and cross-role routing are covered by the contract suite. Retry
+requires the owning approved agent, verified agency admin, owning developer
+publisher, or super-admin and rejects other users with `FORBIDDEN`. Relational
+delivery tests cover transactional rollback, concurrent claim fencing, and
+stale-lease quarantine. The focused run passed 60 tests; eight database
+integration tests were skipped because this invocation had no `DATABASE_URL`.
+No material authorization or data-integrity defect was found, so no lead code
+change was justified. Actual provider delivery, investigator audit workflow,
+and crash/restart evidence remain launch blockers.
+
 1. **LRC-AUTH-001:** newly issued one-hour reset token rejected on an
    Africa/Johannesburg host. Persisted expiry 2026-09-13 02:53:28 and database
    UTC time 01:53:56 proved a future UTC deadline, while local parsing treated
