@@ -2,7 +2,7 @@
 
 | Field                | Record                                                                                                                                                                                              |
 | -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Status               | **Working implementation authority.** Goals 1 and 2 are verified on the task branch; no goal is authorized as a protected release, payment activation, provider operation, or production deployment.        |
+| Status               | **Working implementation authority.** Goals 1–3 are verified on the task branch; no goal is authorized as a protected release, payment activation, provider operation, or production deployment.    |
 | Architectural source | [Agency Journey Senior Architecture Review](14-agency-journey-senior-review.md)                                                                                                                     |
 | Purpose              | Convert the senior review into small, sequential, evidence-led implementation goals for the first commercially usable agency journey.                                                               |
 | Cohort boundary      | One small agency in one geography is the proposed first operating cohort. Land, developer paid operation, and independent-agent launch claims remain outside this cohort until separately accepted. |
@@ -63,12 +63,12 @@ goal status:
 Use senior architectural review at these points, rather than asking it to
 re-litigate every individual implementation choice.
 
-| Milestone | Goals | Review question                                                                                                      | Status      |
-| --------- | ----- | -------------------------------------------------------------------------------------------------------------------- | ----------- |
+| Milestone | Goals | Review question                                                                                                      | Status                  |
+| --------- | ----- | -------------------------------------------------------------------------------------------------------------------- | ----------------------- |
 | M1        | 1–2   | Did implementation establish the correct agency identity and membership authority, or expose a deeper model problem? | READY FOR SENIOR REVIEW |
-| M2        | 3–5   | Does canonical membership now connect commercial ownership, listing, review, and publication without contradiction?  | NOT STARTED |
-| M3        | 6–8   | Does publication connect correctly to public discovery, enquiry, custody, and CRM operation?                         | NOT STARTED |
-| M4        | 9–10  | Can a real agency operate safely, with observable recovery and a bounded launch decision?                            | NOT STARTED |
+| M2        | 3–5   | Does canonical membership now connect commercial ownership, listing, review, and publication without contradiction?  | NOT STARTED             |
+| M3        | 6–8   | Does publication connect correctly to public discovery, enquiry, custody, and CRM operation?                         | NOT STARTED             |
+| M4        | 9–10  | Can a real agency operate safely, with observable recovery and a bounded launch decision?                            | NOT STARTED             |
 
 ## Goal 1 — Establish the trusted agency foundation
 
@@ -189,7 +189,8 @@ members inherit that entitlement, and what happens when it expires.
 
 This goal may use controlled tests and isolated paid-state fixtures already
 permitted to Vitest. It must not enable commercial activation in normal runtime
-or invoke payment/entitlement mutation.
+or introduce payment/entitlement mutation outside the existing Vitest-only
+fixture boundary.
 
 **Completion evidence**
 
@@ -204,7 +205,35 @@ or invoke payment/entitlement mutation.
 
 [P1 agency commercial/public/CRM contradiction](14-agency-journey-senior-review.md#2-p1--a-paid-agencys-agent-does-not-have-a-consistent-path-from-publication-to-discovery-and-lead-handling)
 
-**Status:** NOT STARTED
+**Status:** VERIFIED (task branch evidence; integration and production verification pending)
+
+### Goal 3 verification record — 2026-09-13
+
+The bounded correction is committed at
+[`16a23cd9`](https://github.com/Doscoding187/real_estate_portal/commit/16a23cd9ab61cbc791f1b7e7941e62e53d1ecd7d) on `verify/mvp-closure-post-577`. It keeps the
+current canonical agency membership as the owner selection from Goal 2, then
+makes the commercial decision owner-scoped at every changed subscription read.
+Agency workspace, public agency status, plan projection, and publication
+preflight now evaluate a paid Launch Access term against its eligible agency
+plan and canonical UTC fixed-term end. A stale raw `active` status, a missing
+fixed-term end, a malformed end, or a wrong-owner subscription can no longer
+unlock agency commercial capability.
+
+Direct evidence:
+
+- `pnpm test:authority -- server/__tests__/integration.agency-member-workspace-authority.test.ts` passed **1 file / 1 test** against the exact task-owned disposable target (`a560e9f2971e7676…`). It uses the production invitation mutation and authenticated HTTP onboarding-status route, then expires a paid agency term. The member projects the canonical agency owner but becomes `expired`, loses full commercial features and `canReceiveLeads`; the agency owner sees `billingActivated: false` and publishing/reporting disabled. The existing plan projection persists the elapsed term as expired; fixture restoration is test-only.
+- `pnpm test:authority -- server/__tests__/commercial-launch-access-s4.integration.test.ts` passed **1 file / 5 tests** on the same target. Its permitted Vitest-only finance path proves owner isolation, request/proof/review activation exactly once, fixed 90-day access, and expiry for agency and related fixture owners. It did not call a payment provider, alter a deployed environment, or enable normal runtime activation.
+- `pnpm test:authority -- server/__tests__/integration.agency-operating-home.test.ts server/__tests__/integration.commercial-listing-capacity.test.ts server/__tests__/integration.listing-publication-readiness.test.ts` passed **3 files / 6 tests**, covering agency access, commercial capacity enforcement, publication readiness, and rollback on the exact target.
+- `pnpm exec vitest run --project server server/services/__tests__/commercialTerm.test.ts server/services/__tests__/listingPublicationEntitlementService.test.ts server/__tests__/commercial-access-authority.contract.test.ts server/__tests__/contract.agent-continuity.test.ts server/__tests__/contract.agency-onboarding-journey.test.ts server/__tests__/commercial-agent-s2.contract.test.ts server/__tests__/commercial-launch-access-s4.contract.test.ts` passed **7 files / 62 tests**. The added regressions cover UTC MySQL `DATETIME` interpretation and fail-closed paid fixed terms with absent or malformed ends.
+- `pnpm check`, targeted ESLint (0 errors; existing warnings only), `pnpm build`, and `pnpm db:authority:check` passed. The authority gate passed **35 files / 293 tests**, utility classification of **119 surfaces**, schema sanity for **212 canonical tables / 91 active migrations**, deterministic inventory, and lifecycle checks. Final `pnpm db:authority:status` reported the same exact owned target, migration head `0090_retire_disconnected_boost_campaigns.sql`, `schema-congruent`, `target-connected`, and `no-incomplete-attempts`.
+
+This establishes the branch-local membership-to-commercial-owner and
+fixed-term-expiry boundary. It does not prove listing creation/media or the
+review/publication browser path (Goals 4–5), public discovery and recipient
+eligibility (Goals 6–7), continued CRM custody (Goal 8), provider delivery, or
+an enabled customer commercial journey. Normal runtime remains
+`preparation_only`; the isolated Vitest state transition is not payment or
+release authorization.
 
 ## Goal 4 — Complete agency listing preparation
 

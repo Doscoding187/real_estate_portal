@@ -2,8 +2,8 @@
 
 Date: 2026-09-13. **Outcome: the local candidate supports controlled
 pre-payment onboarding; canonical billing and activation paths are contained,
-and the Goals 1–2 agency-membership/workspace corrections are verified on
-the task branch, while commercial activation, public publishing, and protected
+and the Goals 1–3 agency-membership/workspace/commercial-term corrections are
+verified on the task branch, while commercial activation, public publishing, and protected
 release remain blocked.** This is not a declaration that all MVP journeys or
 production are verified. Database task classification: local-data workflow,
 followed by bounded consumer fixes. No schema authority changed.
@@ -43,6 +43,7 @@ protected environment.
 | Current closure candidate                           | `c8c35fde44d00ff8b2ce83ca73fcb32dd522e9bc`                                    |
 | Goal 1 authority correction (task branch)           | `cf1f93e6f2148a1fc434571475ecd9f18c646bfa`                                    |
 | Goal 2 workspace correction (task branch)           | `af9fd6f2`                                                                    |
+| Goal 3 commercial-term correction (task branch)     | `16a23cd9ab61cbc791f1b7e7941e62e53d1ecd7d`                                    |
 | Branch                                              | `verify/mvp-closure-post-577`                                                 |
 | Worktree                                            | `/home/edwardspc/Desktop/Dev/worktrees/property-listify-mvp-closure-post-577` |
 
@@ -75,19 +76,33 @@ retroactively credit older artifacts with those additional tests.
 
 Goal 2, agency-member workspace authority, is locally verified at
 [`af9fd6f2`](https://github.com/Doscoding187/real_estate_portal/commit/af9fd6f2).
-Current canonical membership now selects the agency commercial owner for the
+Current canonical membership selects the agency commercial owner for the
 member’s plan/entitlement projection; the onboarding route exposes that source;
 and both the client route and billing service deny an individual billing path
 for that member. Exact-target HTTP acceptance verified invitation acceptance,
 agency-projected active access, no individual billable account, pending agency
 activation remaining preparation-only, suspension/reinstatement, and rejection
-of stale affiliation claims. The complete record, focused-test commands, and
-boundaries are in [Goal 2 verification](../launch-readiness-and-product-convergence/15-agency-journey-closure-goals.md#goal-2-verification-record--2026-09-13).
+of stale affiliation claims.
 
-This is local branch evidence, not a paid activation, public-recipient, CRM,
+Goal 3, agency commercial-entitlement authority, is locally verified at
+[`16a23cd9`](https://github.com/Doscoding187/real_estate_portal/commit/16a23cd9ab61cbc791f1b7e7941e62e53d1ecd7d). Subscription reads at the agency/member-facing
+boundaries are explicitly scoped to the canonical owner. Paid Launch Access now
+requires an eligible agency plan and a valid, unelapsed canonical UTC fixed
+term before it enables workspace, public status, plan projection, or listing
+publication. Exact-target acceptance proves that expiry propagates to the
+member and agency workspace; focused service regressions fail closed for a
+missing or malformed fixed-term end. The isolated Vitest-only S4 case proved
+local finance-review activation exactly once and expiry for fixture owners. It
+did not enable a normal runtime commercial path, contact a payment provider, or
+authorize a paid release. The complete commands and boundaries are in
+[Goal 3 verification](../launch-readiness-and-product-convergence/15-agency-journey-closure-goals.md#goal-3-verification-record--2026-09-13).
+
+This is local branch evidence, not a public-recipient, CRM, browser-journey,
 integration, provider, or production claim. The L1 agency journey finding is
-narrowed but remains open through Goals 3, 7, and 8 in [LRC-AGY-001](../launch-readiness-and-product-convergence/03-launch-register.md#lrc-agy-001).
-Milestone M1 is ready for its planned senior review.
+narrowed but remains open through Goals 4–8 in
+[LRC-AGY-001](../launch-readiness-and-product-convergence/03-launch-register.md#lrc-agy-001).
+Milestone M1 remains ready for its planned senior review; M2 is not ready until
+Goals 4–5 have bounded evidence.
 
 ## Target and data establishment
 
@@ -286,12 +301,13 @@ diagnostics. Credentials and raw tokens are excluded from this report and Git.
    onboarding may prepare identities and private drafts only. Do not replace
    this boundary with a free publishing entitlement or a privilege bypass.
 2. **L1 — agency commercial/public/CRM journey remains incomplete
-   (LRC-AGY-001):** Goal 2 now proves the membership-to-workspace boundary,
-   but commercial lifecycle/expiry, public recipient eligibility,
-   new-opportunity routing, and continued CRM custody remain incomplete in
-   Goals 3, 7, and 8. Full reviewer approve/reject/publish, Land geography,
-   investigator audit, and worker crash/restart recovery also remain incomplete.
-   Do not reclassify partial evidence as PASS.
+   (LRC-AGY-001):** Goals 1–3 now prove the trusted membership,
+   workspace-owner, and fixed-term commercial-lifetime boundaries locally.
+   Listing preparation/review/publication, public discovery and recipient
+   eligibility, new-opportunity routing, and continued CRM custody remain
+   incomplete in Goals 4–8. Full reviewer approve/reject/publish, Land
+   geography, investigator audit, and worker crash/restart recovery also remain
+   incomplete. Do not reclassify partial evidence as PASS.
 3. **L1 — external/protected operational evidence:** real verification/recovery
    mail, recipient delivery, Azure grant/provider behavior, recovery and capacity
    are not proven here. Local mocks and green CI cannot authorize launch.
@@ -332,8 +348,8 @@ backend identities and a staffed GO/no-GO/recovery decision.
 ## Git and protected boundaries
 
 Application fixes are committed at `c6c9f133`, `bba390b0`, `c8c35fde`,
-`cf1f93e6`, and `af9fd6f2`; the review packet and register are committed in
-the accompanying documentation commit. Final Git status was clean after that commit. No merge, feature push,
+`cf1f93e6`, `af9fd6f2`, and `16a23cd9`; the review packet and register are
+committed in the accompanying documentation commit. Final Git status was clean after that commit. No merge, feature push,
 deployment, cutover, Azure/TiDB access, protected migration, credential/grant
 change, provider setting change, recovery, payment activation, entitlement
 activation, or migration-history edit was performed. Running deployments were
