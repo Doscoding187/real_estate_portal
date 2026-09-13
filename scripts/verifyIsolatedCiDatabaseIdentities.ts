@@ -49,8 +49,7 @@ async function currentUser(connection: AuthoritySqlConnection, expected: string)
 }
 
 async function grantsFingerprint(connection: AuthoritySqlConnection): Promise<string> {
-  // MySQL supports SHOW GRANTS without a subject for the authenticated user;
-  // `FOR CURRENT_USER()` is not valid syntax on MySQL 8.4.
+  // Without a subject, SHOW GRANTS inspects the authenticated user.
   const result: any = await connection.query('SHOW GRANTS');
   const rows = Array.isArray(result?.[0]) ? result[0] : [];
   const values = rows
@@ -77,6 +76,15 @@ async function mysqlRuntimeVersion(
 async function authorityConnection(operation: DatabaseOperation) {
   const authority = resolveDatabaseAuthority({ operation });
   const decision = authorizeDatabaseOperation(authority);
+  if (operation === 'worker-connect') {
+    const runtime = await createAuthorityRuntimePool(authority, decision);
+    const connection: AuthoritySqlConnection = {
+      execute: (statement, values) => runtime.pool.execute(statement, values as any),
+      query: (statement, values) => runtime.pool.query(statement, values as any),
+      end: () => runtime.end(),
+    };
+    return { authority, connection };
+  }
   return { authority, connection: await createAuthoritySqlConnection(authority, decision) };
 }
 
