@@ -1,0 +1,21 @@
+{
+  "targetFingerprintHash": "86f9b83dd07a89d4ec73f474609906e3356b1e5267ca33dff5e2443fa96fb53a",
+  "targetClass": "disposable-test",
+  "congruent": true,
+  "desiredDigest": "95f6c6b11056df70c0e1fd5639dcf0e9cb58e0616e01ac6f243564112dd24cea",
+  "actualDigest": "95f6c6b11056df70c0e1fd5639dcf0e9cb58e0616e01ac6f243564112dd24cea",
+  "differences": [],
+  "checkConstraintEnforcement": {
+    "applicable": false,
+    "variable": "tidb_enable_check_constraint",
+    "value": null,
+    "enabled": null,
+    "physical": {
+      "total": 23,
+      "enforced": 23,
+      "allEnforced": true,
+      "unenforced": []
+    }
+  },
+  "omittedDifferenceCount": 0
+}
