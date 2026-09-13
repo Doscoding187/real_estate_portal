@@ -2,10 +2,11 @@
 
 Date: 2026-09-13. **Outcome: the local candidate supports controlled
 pre-payment onboarding; canonical billing and activation paths are contained,
-while commercial activation, public publishing, and protected release remain
-blocked.** This is not a declaration that all MVP journeys or production are
-verified. Database task classification: local-data workflow, followed by
-bounded consumer fixes. No schema authority changed.
+and the Goal 1 agency-membership authority correction is verified on the task
+branch, while commercial activation, public publishing, and protected release
+remain blocked.** This is not a declaration that all MVP journeys or
+production are verified. Database task classification: local-data workflow,
+followed by bounded consumer fixes. No schema authority changed.
 
 ## Post-closure senior-review qualification
 
@@ -40,6 +41,7 @@ protected environment.
 | Accepted-head and merge tree (equal)                | `24731de54ebc739546b550376fe456eaf9731135`                                    |
 | Earlier recovery/preflight fix candidate            | `c6c9f1330ae3910bfbad7021735b231e90e984b0`                                    |
 | Current closure candidate                           | `c8c35fde44d00ff8b2ce83ca73fcb32dd522e9bc`                                    |
+| Goal 1 authority correction (task branch)           | `cf1f93e6f2148a1fc434571475ecd9f18c646bfa`                                    |
 | Branch                                              | `verify/mvp-closure-post-577`                                                 |
 | Worktree                                            | `/home/edwardspc/Desktop/Dev/worktrees/property-listify-mvp-closure-post-577` |
 

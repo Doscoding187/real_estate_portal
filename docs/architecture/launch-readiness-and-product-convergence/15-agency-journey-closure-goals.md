@@ -2,7 +2,7 @@
 
 | Field                | Record                                                                                                                                                                                              |
 | -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Status               | **Working implementation authority.** No goal is yet authorized as a protected release, payment activation, provider operation, or production deployment.                                           |
+| Status               | **Working implementation authority.** Goal 1 is verified on the task branch; no goal is authorized as a protected release, payment activation, provider operation, or production deployment.        |
 | Architectural source | [Agency Journey Senior Architecture Review](14-agency-journey-senior-review.md)                                                                                                                     |
 | Purpose              | Convert the senior review into small, sequential, evidence-led implementation goals for the first commercially usable agency journey.                                                               |
 | Cohort boundary      | One small agency in one geography is the proposed first operating cohort. Land, developer paid operation, and independent-agent launch claims remain outside this cohort until separately accepted. |
@@ -65,7 +65,7 @@ re-litigate every individual implementation choice.
 
 | Milestone | Goals | Review question                                                                                                      | Status      |
 | --------- | ----- | -------------------------------------------------------------------------------------------------------------------- | ----------- |
-| M1        | 1–2   | Did implementation establish the correct agency identity and membership authority, or expose a deeper model problem? | NOT STARTED |
+| M1        | 1–2   | Did implementation establish the correct agency identity and membership authority, or expose a deeper model problem? | IN PROGRESS |
 | M2        | 3–5   | Does canonical membership now connect commercial ownership, listing, review, and publication without contradiction?  | NOT STARTED |
 | M3        | 6–8   | Does publication connect correctly to public discovery, enquiry, custody, and CRM operation?                         | NOT STARTED |
 | M4        | 9–10  | Can a real agency operate safely, with observable recovery and a bounded launch decision?                            | NOT STARTED |
@@ -103,7 +103,31 @@ originates from authorized membership transitions.
 
 [P0 agency-affiliation authority defect](14-agency-journey-senior-review.md#1-p0--agents-can-supply-an-agency-affiliation-that-influences-commercial-ownership)
 
-**Status:** NOT STARTED
+**Status:** VERIFIED (task branch evidence; integration and production verification pending)
+
+### Goal 1 verification record — 2026-09-13
+
+The bounded correction is committed at
+[`cf1f93e6`](https://github.com/Doscoding187/real_estate_portal/commit/cf1f93e6f2148a1fc434571475ecd9f18c646bfa)
+on `verify/mvp-closure-post-577` in the task-owned worktree. It removes
+profile-supplied agency affiliation from the agent profile contract and
+mutation, derives listing attribution and publication ownership from a current
+canonical membership (or the agency principal’s own organisation authority),
+requires canonical membership for agency assignment, and fails closed on
+ambiguous current membership. The obsolete onboarding assertion was updated to
+the settled pre-payment preparation-workspace contract.
+
+Direct evidence:
+
+- `pnpm test:authority -- server/__tests__/integration.agency-principal-bootstrap.test.ts server/__tests__/integration.agency-membership-authority.test.ts server/__tests__/integration.agency-listing-attribution.test.ts` passed **3 files / 14 tests** on the exact task-owned disposable target (`a560e9f2971e7676…`). This covers verified owner setup/bootstrap, legitimate invitation acceptance, persisted canonical membership, agency listing attribution, forged profile input, absent membership, suspended membership, and reassignment/removal lifecycle.
+- `pnpm exec vitest run --project server server/services/__tests__/agencyMembershipService.test.ts server/services/__tests__/listingPublicationEntitlementService.test.ts server/__tests__/contract.agent-onboarding-journey.test.ts server/__tests__/commercial-agent-s2.contract.test.ts server/__tests__/contract.agency-listing-inventory.test.ts server/__tests__/contract.commercial-agency-workflow-boundary.test.ts server/__tests__/contract.agency-lead-visibility-followup.test.ts` passed **7 files / 53 tests**. The focused authority unit set includes the multiple-current-membership fail-closed regression.
+- `pnpm check` passed; `pnpm build` passed (existing large-chunk warning only).
+- `pnpm db:authority:check` passed its static authority suite (**35 files / 293 tests**), utility classification (**119 surfaces**), schema sanity (**212 canonical tables / 91 active migrations**), deterministic inventory, and lifecycle checks. Final target status remained `schema-congruent`, migration head `0090_retire_disconnected_boost_campaigns.sql`, `target-connected`, and `no-incomplete-attempts`.
+
+The evidence is branch-local and uses the authorized disposable worktree target.
+It does not establish hosted integration, production verification, payment or
+entitlement activation, provider delivery, or any protected database operation.
+Goal 2 remains **NOT STARTED**; milestone M1 is therefore still in progress.
 
 ## Goal 2 — Establish agency-member workspace authority
 
