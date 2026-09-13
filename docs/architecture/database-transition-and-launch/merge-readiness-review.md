@@ -54,3 +54,51 @@ No merge, Azure/TiDB access, database mutation or deployment setting change
 was performed in this review. No claim is made that all 352 commits have
 received a complete product/security review. Existing quarantined evidence
 and the successful local target remain unchanged.
+
+## Follow-up evidence and execution decision (2026-09-13)
+
+GitHub deployment history records Vercel Production deployment `6318628509`
+and Railway production deployment `6318616131` for current main SHA
+`c2158b5da27a4fde9e4329e276024e9ade570e4a`. Railway also recorded Testing
+`6318616125`. These establish prior production integrations, not present provider
+settings or a live database fingerprint. No provider connector or installed CLI
+is available in this session. Edward has been asked for non-secret current
+production auto-deploy settings. Do not infer isolation from green preview checks.
+
+Before a contained integration merge, the operator must identify the Railway
+production service and Vercel production project, record connected branches and
+auto-deploy behavior, and provide evidence that this merge will not release the
+candidate against an unadmitted database. If pausing auto-deploy is needed,
+propose that exact settings change and obtain authorization; no such settings
+change is performed or approved by this report. Do not use GitHub environment
+names as database authority or substitute a production startup failure for
+release containment.
+
+The grant-verifier follow-up compares the actual direct privileges with the
+canonical isolated CI grant plan. Its restricted parser rejects unsupported
+role/proxy/column/grant-option syntax, extra privileges and missing privileges.
+USAGE on *.* is treated only as the no-privilege account entry. Unit tests cover
+these failures; new hosted proof remains required. Both runtime identities now
+probe both control-table write denials and grant delegation denial. Actual
+production grants and provider-side inherited roles are still a separate gate.
+
+## Proposed minimum launch scope for Edward's decision
+
+Keep public discovery and consented enquiries as the proposed initial surface,
+with named agency/developer authoring cohorts only after tenant, authentication,
+recovery and audit acceptance. Payment/subscription charging stays Hidden until
+provider and entitlement lifecycle evidence is accepted. This recommendation
+changes no product switches and grants no Live status.
+
+Correction to the admission packet's earlier scope suggestion: founder/admin
+operations cannot simply be labeled Hidden and omitted from launch evidence.
+A restricted operational path for enquiry handling, moderation, account support,
+incident response and audit is required even for a discovery-only launch. Public
+visibility and operational necessity are separate. Edward must also confirm
+whether this enquiry-only launch meets the business objective; paid launch
+requires the payment and webhook evidence rather than a scope waiver.
+
+The central launch register is still an empty template. A complete entry for
+each proposed exposed journey must contain the approved disposition, owner,
+exact source SHA and corresponding evidence before launch admission. CI success
+alone must not populate these records as production-verified.
