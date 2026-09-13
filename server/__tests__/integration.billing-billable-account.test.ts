@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { count, eq, sql } from 'drizzle-orm';
 import {
@@ -74,30 +75,34 @@ describeWithDb('billing billable-account authority', () => {
   it('rejects a mismatched account kind and typed owner', async () => {
     const db = await getDb();
     if (!db) throw new Error('Database not available');
-    const [ownedAgency] = await db
-      .select({ id: agencies.id })
-      .from(agencies)
-      .innerJoin(billableAccounts, eq(billableAccounts.agencyId, agencies.id))
-      .where(eq(billableAccounts.accountKind, 'agency'))
-      .limit(1);
-    const agency = ownedAgency ? { id: ownedAgency.id } : undefined;
-    expect(agency).toBeDefined();
-    if (!agency) return;
-
-    await expectMySqlConstraintViolation(
-      db.insert(billableAccounts).values({ accountKind: 'agent', agencyId: agency.id }),
-      {
-        code: 'ER_CHECK_CONSTRAINT_VIOLATED',
-        errno: 3819,
-        sqlMessage: expect.stringContaining('billable_accounts_exactly_one_owner'),
-      },
-    );
-
-    const [account] = await db
-      .select({ id: billableAccounts.id })
-      .from(billableAccounts)
-      .where(eq(billableAccounts.agencyId, agency.id));
-    expect(account).toBeDefined();
+    const fixtureKey = `billing-owner-${randomUUID()}`;
+    const [inserted] = await db.insert(agencies).values({
+      name: fixtureKey,
+      slug: fixtureKey,
+      isVerified: 0,
+      email: `${fixtureKey}@example.test`,
+    }).$returningId();
+    const agencyId = inserted.id;
+    try {
+      // Prove a valid typed owner works without depending on scenario seed data.
+      await db.insert(billableAccounts).values({ accountKind: 'agency', agencyId });
+      await expectMySqlConstraintViolation(
+        db.insert(billableAccounts).values({ accountKind: 'agent', agencyId }),
+        {
+          code: 'ER_CHECK_CONSTRAINT_VIOLATED',
+          errno: 3819,
+          sqlMessage: expect.stringContaining('billable_accounts_exactly_one_owner'),
+        },
+      );
+      const [account] = await db
+        .select({ id: billableAccounts.id })
+        .from(billableAccounts)
+        .where(eq(billableAccounts.agencyId, agencyId));
+      expect(account).toBeDefined();
+    } finally {
+      await db.delete(billableAccounts).where(eq(billableAccounts.agencyId, agencyId));
+      await db.delete(agencies).where(eq(agencies.id, agencyId));
+    }
   });
 
   it('keeps every active billing fact non-null and linked to its account', async () => {
