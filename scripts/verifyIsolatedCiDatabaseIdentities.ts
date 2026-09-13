@@ -35,10 +35,12 @@ async function assertDenied(connection: AuthoritySqlConnection, statement: strin
 }
 
 async function currentUser(connection: AuthoritySqlConnection, expected: string): Promise<void> {
-  const result: any = await connection.execute('SELECT CURRENT_USER() AS current_user');
+  const result: any = await connection.execute(
+    'SELECT CURRENT_USER() AS authenticated_user',
+  );
   const rows = Array.isArray(result?.[0]) ? result[0] : [];
   if (
-    !String(rows[0]?.current_user ?? '')
+    !String(rows[0]?.authenticated_user ?? '')
       .toLowerCase()
       .startsWith(`${expected}@`)
   ) {
