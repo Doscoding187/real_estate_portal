@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { assertIsolatedCiGrants } from '../server/_core/databaseAuthority/isolatedCiGrantVerification';
 import { resolve } from 'node:path';
 import { authorizeDatabaseOperation } from '../server/_core/databaseAuthority/authorization';
 import {
@@ -35,9 +36,7 @@ async function assertDenied(connection: AuthoritySqlConnection, statement: strin
 }
 
 async function currentUser(connection: AuthoritySqlConnection, expected: string): Promise<void> {
-  const result: any = await connection.execute(
-    'SELECT CURRENT_USER() AS authenticated_user',
-  );
+  const result: any = await connection.execute('SELECT CURRENT_USER() AS authenticated_user');
   const rows = Array.isArray(result?.[0]) ? result[0] : [];
   if (
     !String(rows[0]?.authenticated_user ?? '')
@@ -48,13 +47,18 @@ async function currentUser(connection: AuthoritySqlConnection, expected: string)
   }
 }
 
-async function grantsFingerprint(connection: AuthoritySqlConnection): Promise<string> {
+async function grantsFingerprint(
+  connection: AuthoritySqlConnection,
+  role: 'runtime' | 'worker' | 'read-only' | 'migration',
+): Promise<string> {
   // Without a subject, SHOW GRANTS inspects the authenticated user.
   const result: any = await connection.query('SHOW GRANTS');
   const rows = Array.isArray(result?.[0]) ? result[0] : [];
   const values = rows
     .flatMap((row: Record<string, unknown>) => Object.values(row).map(value => String(value)))
     .sort();
+  const plan = buildIsolatedCiGrantPlan();
+  assertIsolatedCiGrants(values, plan.statementsByCredential[role], ISOLATED_CI_ROLE_USERS[role]);
   return createHash('sha256').update(JSON.stringify(values)).digest('hex');
 }
 
@@ -117,7 +121,14 @@ async function main(): Promise<void> {
       'UPDATE `sql_migration_history` SET `duration_ms` = `duration_ms` WHERE 1 = 0',
     );
     await assertDenied(runtimeConnection, 'CREATE TABLE `ci_forbidden_runtime_ddl` (`id` INT)');
-    observed.runtime = await grantsFingerprint(runtimeConnection);
+    for (const table of ['sql_migration_history', 'sql_migration_attempts']) {
+      await assertDenied(runtimeConnection, `DELETE FROM \`${table}\` WHERE 1 = 0`);
+    }
+    await assertDenied(
+      runtimeConnection,
+      "GRANT SELECT ON `listify_test`.`users` TO 'listify_ci_verifier'@'%'",
+    );
+    observed.runtime = await grantsFingerprint(runtimeConnection, 'runtime');
   } finally {
     await runtimePool.end();
   }
@@ -132,7 +143,14 @@ async function main(): Promise<void> {
       'UPDATE `sql_migration_attempts` SET `completed_statement_count` = `completed_statement_count` WHERE 1 = 0',
     );
     await assertDenied(worker.connection, 'CREATE TABLE `ci_forbidden_worker_ddl` (`id` INT)');
-    observed.worker = await grantsFingerprint(worker.connection);
+    for (const table of ['sql_migration_history', 'sql_migration_attempts']) {
+      await assertDenied(worker.connection, `DELETE FROM \`${table}\` WHERE 1 = 0`);
+    }
+    await assertDenied(
+      worker.connection,
+      "GRANT SELECT ON `listify_test`.`users` TO 'listify_ci_verifier'@'%'",
+    );
+    observed.worker = await grantsFingerprint(worker.connection, 'worker');
   } finally {
     await worker.connection.end();
   }
@@ -147,7 +165,7 @@ async function main(): Promise<void> {
     );
     await assertDenied(verifier.connection, 'UPDATE `users` SET `id` = `id` WHERE 1 = 0');
     await assertDenied(verifier.connection, 'CREATE TABLE `ci_forbidden_verifier_ddl` (`id` INT)');
-    observed.verifier = await grantsFingerprint(verifier.connection);
+    observed.verifier = await grantsFingerprint(verifier.connection, 'read-only');
   } finally {
     await verifier.connection.end();
   }
@@ -167,7 +185,7 @@ async function main(): Promise<void> {
     if (grants.includes('GRANT OPTION') || grants.includes('CREATE USER')) {
       throw new Error('Isolated CI migration identity has an administrative grant.');
     }
-    observed.migration = await grantsFingerprint(migration.connection);
+    observed.migration = await grantsFingerprint(migration.connection, 'migration');
   } finally {
     await migration.connection.end();
   }
@@ -184,6 +202,7 @@ async function main(): Promise<void> {
         'migration-apply': 'migration',
         'ci-identity-bootstrap': 'bootstrap-admin (provisioning step only)',
       },
+      actualGrantsMatchPlan: true,
       grantPlanFingerprints: plan.fingerprints,
       observedGrantFingerprints: observed,
       positiveOperations: [
