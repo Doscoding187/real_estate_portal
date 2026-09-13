@@ -2,9 +2,9 @@
 
 Date: 2026-09-13. **Outcome: the local candidate supports controlled
 pre-payment onboarding; canonical billing and activation paths are contained,
-and the Goal 1 agency-membership authority correction is verified on the task
-branch, while commercial activation, public publishing, and protected release
-remain blocked.** This is not a declaration that all MVP journeys or
+and the Goals 1–2 agency-membership/workspace corrections are verified on
+the task branch, while commercial activation, public publishing, and protected
+release remain blocked.** This is not a declaration that all MVP journeys or
 production are verified. Database task classification: local-data workflow,
 followed by bounded consumer fixes. No schema authority changed.
 
@@ -42,6 +42,7 @@ protected environment.
 | Earlier recovery/preflight fix candidate            | `c6c9f1330ae3910bfbad7021735b231e90e984b0`                                    |
 | Current closure candidate                           | `c8c35fde44d00ff8b2ce83ca73fcb32dd522e9bc`                                    |
 | Goal 1 authority correction (task branch)           | `cf1f93e6f2148a1fc434571475ecd9f18c646bfa`                                    |
+| Goal 2 workspace correction (task branch)           | `af9fd6f2`                                                                    |
 | Branch                                              | `verify/mvp-closure-post-577`                                                 |
 | Worktree                                            | `/home/edwardspc/Desktop/Dev/worktrees/property-listify-mvp-closure-post-577` |
 
@@ -69,6 +70,24 @@ credential/constraint tests, not Azure capabilities, TiDB data safety,
 production grant correctness, capacity, backup restoration, or full journeys.
 Later PR-head credential improvements are present in the merged source; do not
 retroactively credit older artifacts with those additional tests.
+
+## Sequential agency-goal progress (task branch only)
+
+Goal 2, agency-member workspace authority, is locally verified at
+[`af9fd6f2`](https://github.com/Doscoding187/real_estate_portal/commit/af9fd6f2).
+Current canonical membership now selects the agency commercial owner for the
+member’s plan/entitlement projection; the onboarding route exposes that source;
+and both the client route and billing service deny an individual billing path
+for that member. Exact-target HTTP acceptance verified invitation acceptance,
+agency-projected active access, no individual billable account, pending agency
+activation remaining preparation-only, suspension/reinstatement, and rejection
+of stale affiliation claims. The complete record, focused-test commands, and
+boundaries are in [Goal 2 verification](../launch-readiness-and-product-convergence/15-agency-journey-closure-goals.md#goal-2-verification-record--2026-09-13).
+
+This is local branch evidence, not a paid activation, public-recipient, CRM,
+integration, provider, or production claim. The L1 agency journey finding is
+narrowed but remains open through Goals 3, 7, and 8 in [LRC-AGY-001](../launch-readiness-and-product-convergence/03-launch-register.md#lrc-agy-001).
+Milestone M1 is ready for its planned senior review.
 
 ## Target and data establishment
 
@@ -266,10 +285,13 @@ diagnostics. Credentials and raw tokens are excluded from this report and Git.
    entitlement, and protected-release evidence exists. Controlled pre-payment
    onboarding may prepare identities and private drafts only. Do not replace
    this boundary with a free publishing entitlement or a privilege bypass.
-2. **L1 — missing complete journey evidence:** full reviewer approve/reject/
-   publish, Land geography, investigator audit, membership revocation and worker
-   crash/restart recovery remain incomplete. Do not reclassify this report's
-   partial evidence as PASS.
+2. **L1 — agency commercial/public/CRM journey remains incomplete
+   (LRC-AGY-001):** Goal 2 now proves the membership-to-workspace boundary,
+   but commercial lifecycle/expiry, public recipient eligibility,
+   new-opportunity routing, and continued CRM custody remain incomplete in
+   Goals 3, 7, and 8. Full reviewer approve/reject/publish, Land geography,
+   investigator audit, and worker crash/restart recovery also remain incomplete.
+   Do not reclassify partial evidence as PASS.
 3. **L1 — external/protected operational evidence:** real verification/recovery
    mail, recipient delivery, Azure grant/provider behavior, recovery and capacity
    are not proven here. Local mocks and green CI cannot authorize launch.
@@ -309,9 +331,9 @@ backend identities and a staffed GO/no-GO/recovery decision.
 
 ## Git and protected boundaries
 
-Application fixes are committed at `c6c9f133`, `bba390b0`, and
-`c8c35fde`; the review packet and register are committed in the accompanying
-documentation commit. Final Git status was clean after that commit. No merge, feature push,
+Application fixes are committed at `c6c9f133`, `bba390b0`, `c8c35fde`,
+`cf1f93e6`, and `af9fd6f2`; the review packet and register are committed in
+the accompanying documentation commit. Final Git status was clean after that commit. No merge, feature push,
 deployment, cutover, Azure/TiDB access, protected migration, credential/grant
 change, provider setting change, recovery, payment activation, entitlement
 activation, or migration-history edit was performed. Running deployments were

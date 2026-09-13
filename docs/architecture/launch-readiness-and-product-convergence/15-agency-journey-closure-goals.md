@@ -2,7 +2,7 @@
 
 | Field                | Record                                                                                                                                                                                              |
 | -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Status               | **Working implementation authority.** Goal 1 is verified on the task branch; no goal is authorized as a protected release, payment activation, provider operation, or production deployment.        |
+| Status               | **Working implementation authority.** Goals 1 and 2 are verified on the task branch; no goal is authorized as a protected release, payment activation, provider operation, or production deployment.        |
 | Architectural source | [Agency Journey Senior Architecture Review](14-agency-journey-senior-review.md)                                                                                                                     |
 | Purpose              | Convert the senior review into small, sequential, evidence-led implementation goals for the first commercially usable agency journey.                                                               |
 | Cohort boundary      | One small agency in one geography is the proposed first operating cohort. Land, developer paid operation, and independent-agent launch claims remain outside this cohort until separately accepted. |
@@ -65,7 +65,7 @@ re-litigate every individual implementation choice.
 
 | Milestone | Goals | Review question                                                                                                      | Status      |
 | --------- | ----- | -------------------------------------------------------------------------------------------------------------------- | ----------- |
-| M1        | 1–2   | Did implementation establish the correct agency identity and membership authority, or expose a deeper model problem? | IN PROGRESS |
+| M1        | 1–2   | Did implementation establish the correct agency identity and membership authority, or expose a deeper model problem? | READY FOR SENIOR REVIEW |
 | M2        | 3–5   | Does canonical membership now connect commercial ownership, listing, review, and publication without contradiction?  | NOT STARTED |
 | M3        | 6–8   | Does publication connect correctly to public discovery, enquiry, custody, and CRM operation?                         | NOT STARTED |
 | M4        | 9–10  | Can a real agency operate safely, with observable recovery and a bounded launch decision?                            | NOT STARTED |
@@ -127,7 +127,7 @@ Direct evidence:
 The evidence is branch-local and uses the authorized disposable worktree target.
 It does not establish hosted integration, production verification, payment or
 entitlement activation, provider delivery, or any protected database operation.
-Goal 2 remains **NOT STARTED**; milestone M1 is therefore still in progress.
+Goal 2 is recorded below as task-branch verified. Milestone M1 is ready for its planned senior architectural review; this tracker does not claim that review has occurred.
 
 ## Goal 2 — Establish agency-member workspace authority
 
@@ -149,7 +149,35 @@ authority.
 
 [P1 agency commercial/public/CRM contradiction](14-agency-journey-senior-review.md#2-p1--a-paid-agencys-agent-does-not-have-a-consistent-path-from-publication-to-discovery-and-lead-handling)
 
-**Status:** NOT STARTED
+**Status:** VERIFIED (task branch evidence; integration and production verification pending)
+
+### Goal 2 verification record — 2026-09-13
+
+The bounded correction is committed at
+[`af9fd6f2`](https://github.com/Doscoding187/real_estate_portal/commit/af9fd6f2)
+on `verify/mvp-closure-post-577`. It makes a current canonical agency
+membership select the agency commercial owner for the agent’s plan and
+entitlement projection. The onboarding response exposes that authority source,
+the package route waits for it before querying individual billing, and the
+billing service itself rejects an individual invoice/proof/workspace path for a
+current agency member. A member whose agency is awaiting activation remains in
+the settled preparation state (`await_agency_activation`); this does not create
+an entitlement, free publishing tier, payment mutation, or publication bypass.
+
+Direct evidence:
+
+- `pnpm test:authority -- server/__tests__/integration.agency-member-workspace-authority.test.ts` passed **1 file / 1 test** against the exact task-owned disposable target (`a560e9f2971e7676…`). It uses the production invitation mutation, authenticated HTTP onboarding-status route, persisted agency plan fixture, and billing router. It proves an approved, invited member without an individual subscription or optional badge receives the agency projection; individual billing is rejected; pending agency activation remains preparation-only; suspension removes agency workspace authority; canonical reinstatement restores it; and stale user/profile agency claims without membership do not obtain it.
+- `pnpm exec vitest run --project server server/__tests__/contract.agent-onboarding-journey.test.ts server/__tests__/commercial-agent-s2.contract.test.ts server/__tests__/commercial-launch-access-s4.contract.test.ts server/services/__tests__/agencyMembershipService.test.ts server/services/__tests__/listingPublicationEntitlementService.test.ts` passed **5 files / 47 tests**.
+- `pnpm exec vitest run --project client client/src/components/agent/AgentStatusStrip.test.tsx client/src/pages/agent/AgentPackageSelection.test.tsx` passed **2 files / 9 tests**.
+- `pnpm check`, `pnpm build`, and `pnpm db:authority:check` passed. The authority gate passed **35 files / 293 tests**, utility classification of **119 surfaces**, schema sanity for **212 canonical tables / 91 active migrations**, deterministic inventory, and lifecycle checks. The build retained only the existing large-chunk warning.
+
+The active subscription used in the isolated acceptance fixture is persisted
+test data; no invoice, finance activation, entitlement mutation, provider,
+protected database, or deployment operation was performed. This establishes
+Goal 2’s workspace-selection boundary only. Commercial lifecycle/expiry
+semantics remain Goal 3; public recipient eligibility remains Goal 7; and
+continued CRM custody is Goal 8. Milestone M1 is ready for planned senior
+architectural review.
 
 ## Goal 3 — Establish agency commercial-entitlement authority
 
