@@ -4,6 +4,11 @@ import { storeDatabaseCredentialUrl, readDatabaseCredentialUrl } from './credent
 import { resolveDatabaseEnvironment } from './environment';
 import { isProtectedIntegrationBranch, readRuntimeWorktreeIdentity } from './worktreeIdentity';
 import { readWorktreeDatabaseProfile } from './worktreeProfile';
+import {
+  isIsolatedGitHubCiService,
+  isolatedCiCredentialClassForOperation,
+  selectIsolatedCiCredential,
+} from './isolatedCiCredentials';
 import type {
   DatabaseCredentialClass,
   DatabaseOperation,
@@ -20,8 +25,10 @@ const LOCAL_LOOPBACK_PORTS = new Set(['3307']);
 const TEST_LOOPBACK_PORTS = new Set(['3306', '3307']);
 const CREDENTIAL_CLASSES = new Set<DatabaseCredentialClass>([
   'runtime',
+  'worker',
   'read-only',
   'migration',
+  'bootstrap-admin',
   'lifecycle-admin',
   'local-owner',
   'test-owner',
@@ -144,8 +151,22 @@ function classifyCredential(
   explicit: DatabaseCredentialClass | undefined,
   environmentValue: string | undefined,
   targetClass: DatabaseTargetClass,
+  operation: DatabaseOperation,
+  isolatedGitHubCi: boolean,
 ): DatabaseCredentialClass {
   const requested = explicit ?? (environmentValue as DatabaseCredentialClass | undefined);
+  if (isolatedGitHubCi) {
+    const expected = isolatedCiCredentialClassForOperation(operation);
+    if (!expected) {
+      throw new Error('Isolated CI credential refused: operation has no approved role binding.');
+    }
+    if (requested && requested !== expected) {
+      throw new Error(
+        'Isolated CI credential refused: credential class cannot override the operation role.',
+      );
+    }
+    return expected;
+  }
   if (requested) {
     if (!CREDENTIAL_CLASSES.has(requested)) {
       throw new Error('Database context resolution refused: credential class is unknown.');
@@ -233,6 +254,13 @@ export function resolveDatabaseAuthority(input: {
     resolvedDatabaseName === 'listify_test' &&
     resolvedLocal &&
     resolvedPort === '3306';
+  const isolatedGitHubCi = isIsolatedGitHubCiService({
+    runtimeMode: environment.runtimeMode,
+    processEnv,
+    host: resolvedHost,
+    port: resolvedPort,
+    databaseName: resolvedDatabaseName,
+  });
   let targetClass: DatabaseTargetClass = 'unknown';
   if (
     resolvedLocal &&
@@ -296,19 +324,31 @@ export function resolveDatabaseAuthority(input: {
     input.credentialClass,
     environment.values.DATABASE_CREDENTIAL_CLASS,
     targetClass,
+    input.operation,
+    isolatedGitHubCi,
   );
   const requiresMigrationCredential = requiresProtectedMigrationCredential(
     targetClass,
     credentialClass,
   );
-  const credentialUrl = requiresMigrationCredential
-    ? selectProtectedMigrationCredential({
-        runtimeMode: environment.runtimeMode,
+  const selectedIsolatedCiCredential = isolatedGitHubCi
+    ? selectIsolatedCiCredential({
+        operation: input.operation,
+        requestedClass: credentialClass,
         processEnv,
         runtimeTarget: parsed,
-        runtimeTargetIdentity: resolvedTargetIdentity,
       })
-    : parsed.toString();
+    : undefined;
+  const credentialUrl = selectedIsolatedCiCredential
+    ? selectedIsolatedCiCredential.credentialUrl
+    : requiresMigrationCredential
+      ? selectProtectedMigrationCredential({
+          runtimeMode: environment.runtimeMode,
+          processEnv,
+          runtimeTarget: parsed,
+          runtimeTargetIdentity: resolvedTargetIdentity,
+        })
+      : parsed.toString();
   const resolvedAt = input.resolvedAt ?? new Date();
   const context: ResolvedDatabaseContext = deepFreeze({
     contextVersion: 1,
@@ -334,7 +374,9 @@ export function resolveDatabaseAuthority(input: {
       certificateVerificationRequired,
     },
     credentialClass,
-    credentialSource: requiresMigrationCredential ? 'protected-migration-url' : 'database-url',
+    credentialSource:
+      selectedIsolatedCiCredential?.source ??
+      (requiresMigrationCredential ? 'protected-migration-url' : 'database-url'),
     repository: {
       root: identity.repositoryRoot,
       gitCommonDirectoryFingerprint: identity.gitCommonDirectoryFingerprint,
@@ -364,7 +406,15 @@ export function databaseAuthorityChildEnvironment(
   authority: ResolvedDatabaseAuthority,
   base: NodeJS.ProcessEnv = process.env,
 ): NodeJS.ProcessEnv {
-  const { DATABASE_MIGRATION_URL: _ignoredMigrationUrl, ...safeBase } = base;
+  const isIsolatedCi =
+    authority.context.credentialSource === 'isolated-ci-role-url' ||
+    authority.context.credentialSource === 'isolated-ci-bootstrap-url';
+  const { DATABASE_BOOTSTRAP_URL: _ignoredBootstrapUrl, ...withoutBootstrap } = base;
+  const safeBase = (() => {
+    if (isIsolatedCi) return withoutBootstrap;
+    const { DATABASE_MIGRATION_URL: _ignoredMigrationUrl, ...withoutMigration } = withoutBootstrap;
+    return withoutMigration;
+  })();
   return {
     ...safeBase,
     DATABASE_URL: readDatabaseCredentialUrl(authority.targetCredential),
@@ -373,7 +423,7 @@ export function databaseAuthorityChildEnvironment(
       : {}),
     DATABASE_AUTHORITY_PARENT_FINGERPRINT: authority.context.targetFingerprintHash,
     DATABASE_AUTHORITY_CORRELATION_ID: authority.context.correlationId,
-    DATABASE_CREDENTIAL_CLASS: authority.context.credentialClass,
+    ...(isIsolatedCi ? {} : { DATABASE_CREDENTIAL_CLASS: authority.context.credentialClass }),
     NODE_ENV: authority.context.runtimeMode,
     APP_ENV: authority.context.runtimeMode,
   };

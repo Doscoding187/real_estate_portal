@@ -182,8 +182,8 @@ describe('Commercial public truth', () => {
       occupationDate: '2026-10-01',
       confirmationSource: 'other',
       confirmationSourceLabel: 'Property manager on site',
-      lastConfirmedAt: '2026-08-29 10:00:00',
-      reconfirmationDueAt: '2026-09-28 10:00:00',
+      lastConfirmedAt: '2026-08-29 10:00:00.000000',
+      reconfirmationDueAt: '2026-09-28 10:00:00.000000',
     });
   });
 
@@ -509,8 +509,8 @@ describe('Commercial public truth', () => {
   });
 
   it('normalizes ISO API timestamps to strict-MySQL UTC without a timezone shift', () => {
-    expect(toMySqlDateTime('2026-08-20T08:00:00.000Z')).toBe('2026-08-20 08:00:00');
-    expect(toMySqlDateTime('2026-08-20T10:00:00+02:00')).toBe('2026-08-20 08:00:00');
+    expect(toMySqlDateTime('2026-08-20T08:00:00.000Z')).toBe('2026-08-20 08:00:00.000000');
+    expect(toMySqlDateTime('2026-08-20T10:00:00+02:00')).toBe('2026-08-20 08:00:00.000000');
   });
 
   it('materializes agency-principal custody without creating an Agent profile', () => {

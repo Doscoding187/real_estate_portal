@@ -17,10 +17,12 @@ import {
   mysqlView,
   tinyint,
   bigint,
+  check,
 } from 'drizzle-orm/mysql-core';
 import { sql } from 'drizzle-orm';
 import { users } from './core';
-import { agencies, agencySubscriptions } from './agencies';
+import { agencies } from './agencies';
+import { developerOrganisations } from './developerIdentity';
 
 export const plans = mysqlTable('plans', {
   id: int().autoincrement().primaryKey(),
@@ -64,12 +66,71 @@ export const planEntitlements = mysqlTable(
   ],
 );
 
+/** Durable provider-event identity and processing ledger. */
+export const billingProviderEvents = mysqlTable(
+  'billing_provider_events',
+  {
+    id: bigint('id', { mode: 'number' }).autoincrement().primaryKey(),
+    provider: varchar('provider', { length: 40 }).notNull(),
+    providerEventId: varchar('provider_event_id', { length: 255 }).notNull(),
+    eventType: varchar('event_type', { length: 120 }).notNull(),
+    status: mysqlEnum('status', ['received', 'processing', 'applied', 'ignored', 'failed'])
+      .default('received')
+      .notNull(),
+    attemptCount: int('attempt_count').default(0).notNull(),
+    maxAttempts: int('max_attempts').default(3).notNull(),
+    nextAttemptAt: timestamp('next_attempt_at', { mode: 'string' }).defaultNow().notNull(),
+    claimToken: varchar('claim_token', { length: 64 }),
+    claimExpiresAt: timestamp('claim_expires_at', { mode: 'string' }),
+    payload: json('payload').notNull(),
+    occurredAt: timestamp('occurred_at', { mode: 'string' }),
+    processedAt: timestamp('processed_at', { mode: 'string' }),
+    failureReason: text('failure_reason'),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+  },
+  table => [
+    unique('uq_billing_provider_events_identity').on(table.provider, table.providerEventId),
+    index('idx_billing_provider_events_status').on(table.status, table.createdAt),
+  ],
+);
+
+/** Central billing principal; owner snapshots remain historical display data. */
+export const billableAccounts = mysqlTable('billable_accounts', {
+    id: int().autoincrement().primaryKey(),
+    accountKind: mysqlEnum('account_kind', ['agent', 'agency', 'developer']).notNull(),
+    userId: int('user_id').references(() => users.id, { onDelete: 'cascade' }),
+    agencyId: int('agency_id').references(() => agencies.id, { onDelete: 'cascade' }),
+    developerOrganisationId: int('developer_organisation_id').references(
+      () => developerOrganisations.id,
+      { onDelete: 'cascade' },
+    ),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+  },
+  table => [
+    unique('uq_billable_accounts_user').on(table.userId),
+    unique('uq_billable_accounts_agency').on(table.agencyId),
+    unique('uq_billable_accounts_developer_organisation').on(table.developerOrganisationId),
+    index('idx_billable_accounts_kind').on(table.accountKind),
+    check(
+      'billable_accounts_exactly_one_owner',
+      sql`(\`account_kind\` = 'agent' AND \`user_id\` IS NOT NULL AND \`agency_id\` IS NULL AND \`developer_organisation_id\` IS NULL)
+        OR (\`account_kind\` = 'agency' AND \`user_id\` IS NULL AND \`agency_id\` IS NOT NULL AND \`developer_organisation_id\` IS NULL)
+        OR (\`account_kind\` = 'developer' AND \`user_id\` IS NULL AND \`agency_id\` IS NULL AND \`developer_organisation_id\` IS NOT NULL)`,
+    ),
+  ],
+);
+
 export const subscriptions = mysqlTable(
   'subscriptions',
   {
     id: int().autoincrement().primaryKey(),
     ownerType: mysqlEnum('owner_type', ['agent', 'agency', 'developer']).notNull(),
     ownerId: int('owner_id').notNull(),
+    billableAccountId: int('billable_account_id').notNull().references(() => billableAccounts.id, {
+      onDelete: 'restrict',
+    }),
     planId: int('plan_id').references(() => plans.id, { onDelete: 'set null' }),
     status: mysqlEnum([
       'trial',
@@ -110,6 +171,9 @@ export const billingInvoices = mysqlTable(
     id: int().autoincrement().primaryKey(),
     ownerType: varchar('owner_type', { length: 40 }).notNull(),
     ownerId: int('owner_id').notNull(),
+    billableAccountId: int('billable_account_id').notNull().references(() => billableAccounts.id, {
+      onDelete: 'restrict',
+    }),
     subscriptionId: int('subscription_id').references(() => subscriptions.id, {
       onDelete: 'set null',
     }),
@@ -169,6 +233,9 @@ export const billingPayments = mysqlTable(
     }),
     ownerType: varchar('owner_type', { length: 40 }).notNull(),
     ownerId: int('owner_id').notNull(),
+    billableAccountId: int('billable_account_id').notNull().references(() => billableAccounts.id, {
+      onDelete: 'restrict',
+    }),
     paymentMethod: mysqlEnum('payment_method', ['manual_eft', 'manual_adjustment', 'other'])
       .default('manual_eft')
       .notNull(),
@@ -220,6 +287,9 @@ export const billingPaymentDocuments = mysqlTable(
       .references(() => billingInvoices.id, { onDelete: 'cascade' }),
     ownerType: varchar('owner_type', { length: 40 }).notNull(),
     ownerId: int('owner_id').notNull(),
+    billableAccountId: int('billable_account_id').notNull().references(() => billableAccounts.id, {
+      onDelete: 'restrict',
+    }),
     storageKey: varchar('storage_key', { length: 512 }).notNull(),
     originalFileName: varchar('original_file_name', { length: 255 }).notNull(),
     mimeType: varchar('mime_type', { length: 120 }).notNull(),
@@ -245,6 +315,9 @@ export const billingAuditEvents = mysqlTable(
     id: int().autoincrement().primaryKey(),
     ownerType: varchar('owner_type', { length: 40 }).notNull(),
     ownerId: int('owner_id').notNull(),
+    billableAccountId: int('billable_account_id').notNull().references(() => billableAccounts.id, {
+      onDelete: 'restrict',
+    }),
     subscriptionId: int('subscription_id').references(() => subscriptions.id, {
       onDelete: 'set null',
     }),
@@ -350,38 +423,6 @@ export const subscriptionEvents = mysqlTable(
   table => [index('idx_user').on(table.userId), index('idx_event_type').on(table.eventType)],
 );
 
-export const billingTransactions = mysqlTable(
-  'billing_transactions',
-  {
-    id: int().autoincrement().primaryKey(),
-    userId: int('user_id')
-      .notNull()
-      .references(() => users.id),
-    subscriptionId: int('subscription_id'),
-    transactionType: mysqlEnum('transaction_type', [
-      'subscription_create',
-      'subscription_renew',
-      'upgrade',
-      'downgrade',
-      'addon_purchase',
-      'refund',
-      'failed_payment',
-      'trial_conversion',
-    ]).notNull(),
-    amountZar: int('amount_zar').notNull(),
-    currency: varchar({ length: 3 }).default('ZAR'),
-    status: mysqlEnum(['pending', 'completed', 'failed', 'refunded']).default('pending'),
-    paymentGateway: mysqlEnum('payment_gateway', ['stripe', 'paystack', 'manual']).notNull(),
-    gatewayTransactionId: varchar('gateway_transaction_id', { length: 255 }),
-    gatewayInvoiceId: varchar('gateway_invoice_id', { length: 255 }),
-    description: text(),
-    metadata: json(),
-    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow(),
-    updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow(),
-  },
-  table => [index('idx_user').on(table.userId), index('idx_status').on(table.status)],
-);
-
 export const boostCredits = mysqlTable(
   'boost_credits',
   {
@@ -398,39 +439,6 @@ export const boostCredits = mysqlTable(
   },
   table => [index('idx_user').on(table.userId), index('unique_user_credits').on(table.userId)],
 );
-
-export const invoices = mysqlTable('invoices', {
-  id: int().autoincrement().primaryKey(),
-  agencyId: int()
-    .notNull()
-    .references(() => agencies.id, { onDelete: 'cascade' }),
-  subscriptionId: int().references(() => agencySubscriptions.id, { onDelete: 'set null' }),
-  stripeInvoiceId: varchar({ length: 100 }),
-  stripeCustomerId: varchar({ length: 100 }),
-  amount: int().notNull(),
-  currency: varchar({ length: 3 }).default('ZAR').notNull(),
-  status: mysqlEnum(['draft', 'open', 'paid', 'void', 'uncollectible']).default('draft').notNull(),
-  invoicePdf: text(),
-  hostedInvoiceUrl: text(),
-  invoiceNumber: varchar({ length: 50 }),
-  description: text(),
-  billingReason: mysqlEnum([
-    'subscription_cycle',
-    'subscription_create',
-    'subscription_update',
-    'subscription_finalize',
-    'manual',
-  ])
-    .default('subscription_cycle')
-    .notNull(),
-  periodStart: timestamp({ mode: 'string' }),
-  periodEnd: timestamp({ mode: 'string' }),
-  paidAt: timestamp({ mode: 'string' }),
-  dueDate: timestamp({ mode: 'string' }),
-  metadata: text(),
-  createdAt: timestamp({ mode: 'string' }).defaultNow().notNull(),
-  updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
-});
 
 export const paymentMethods = mysqlTable('payment_methods', {
   id: int().autoincrement().primaryKey(),

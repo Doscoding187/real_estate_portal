@@ -1,5 +1,3 @@
-import { warnSchemaCapabilityOnce } from './runtimeSchemaCapabilities';
-
 type CommissionTriggerStage = 'contract_signed' | 'bond_approved';
 type DealStage =
   | 'viewing_scheduled'
@@ -94,15 +92,6 @@ function resolveCalculationBaseAmount(input: EnsureCommissionInput['deal']) {
   return 0;
 }
 
-function isMissingSchemaError(error: unknown): boolean {
-  const candidate = error as { code?: string; errno?: number; cause?: unknown } | null;
-  if (!candidate) return false;
-  if (candidate.code === 'ER_NO_SUCH_TABLE' || candidate.code === 'ER_BAD_FIELD_ERROR') return true;
-  if (candidate.errno === 1146 || candidate.errno === 1054) return true;
-  if (candidate.cause && candidate.cause !== error) return isMissingSchemaError(candidate.cause);
-  return false;
-}
-
 export async function ensureCommissionEntryForDeal(input: EnsureCommissionInput) {
   const shouldCreate = shouldCreateCommissionEntry(
     input.deal.commissionTriggerStage,
@@ -119,13 +108,16 @@ export async function ensureCommissionEntryForDeal(input: EnsureCommissionInput)
       input.deal.commissionTriggerStage,
     );
   } catch (error) {
-    if (!isMissingSchemaError(error)) throw error;
-    warnSchemaCapabilityOnce(
-      'distribution.commission_entries.schema_missing',
-      '[distribution] Skipping commission entry generation because commission tables are not available in this environment.',
-      { source: input.source, dealId: input.deal.id },
-    );
-    return { created: false as const, reason: 'schema_unavailable' as const };
+    // Commission creation is part of the same deal transition transaction.
+    // Never advance the deal while silently omitting its financial fact.
+    if (error instanceof Error) {
+      const wrapped = new Error(
+        'Commission entry could not be persisted; deal transition rolled back.',
+      );
+      (wrapped as Error & { cause?: unknown }).cause = error;
+      throw wrapped;
+    }
+    throw error;
   }
   if (existing) {
     return { created: false as const, reason: 'already_exists' as const, entryId: existing.id };
@@ -175,13 +167,16 @@ export async function ensureCommissionEntryForDeal(input: EnsureCommissionInput)
       },
     });
   } catch (error) {
-    if (!isMissingSchemaError(error)) throw error;
-    warnSchemaCapabilityOnce(
-      'distribution.commission_entries.schema_missing',
-      '[distribution] Skipping commission entry generation because commission tables are not available in this environment.',
-      { source: input.source, dealId: input.deal.id },
-    );
-    return { created: false as const, reason: 'schema_unavailable' as const };
+    // A missing or incompatible authority must fail the enclosing transition;
+    // returning a successful stage change would create a false financial state.
+    if (error instanceof Error) {
+      const wrapped = new Error(
+        'Commission entry could not be persisted; deal transition rolled back.',
+      );
+      (wrapped as Error & { cause?: unknown }).cause = error;
+      throw wrapped;
+    }
+    throw error;
   }
 
   return { created: true as const };

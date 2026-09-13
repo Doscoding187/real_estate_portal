@@ -7,7 +7,7 @@ import {
   superAdminProcedure,
 } from './_core/trpc';
 import { getDb } from './db';
-import { billingInvoices, billingPayments, plans, subscriptions } from '../drizzle/schema';
+import { billableAccounts, billingInvoices, billingPayments, plans, subscriptions } from '../drizzle/schema';
 import { and, desc, eq, sql } from 'drizzle-orm';
 import {
   getAdminFinanceQueue,
@@ -41,6 +41,16 @@ import { requireUser } from './_core/requireUser';
 const billingCycleSchema = z.enum(['monthly', 'annual']);
 const commercialAudienceSchema = z.enum(COMMERCIAL_AUDIENCES);
 
+async function getAgencyBillableAccountId(db: Awaited<ReturnType<typeof getDb>>, agencyId: number) {
+  if (!db) throw new Error('Database not available');
+  const [account] = await db
+    .select({ id: billableAccounts.id })
+    .from(billableAccounts)
+    .where(eq(billableAccounts.agencyId, agencyId))
+    .limit(1);
+  return account ? Number(account.id) : null;
+}
+
 const createCheckoutSessionSchema = z.object({
   planId: z.number().int().positive(),
   successUrl: z.string().url().optional(),
@@ -57,7 +67,9 @@ const startManualCheckoutSchema = z.object({
 
 const submitPaymentProofSchema = z.object({
   invoiceId: z.number().int().positive(),
-  amount: z.number().positive(),
+  // Billing amounts are integer minor units (cents), never rounded rand
+  // values. This keeps invoice/payment arithmetic exact at the API boundary.
+  amount: z.number().int().positive().safe(),
   bankReference: z.string().max(120).optional(),
   payerName: z.string().max(160).optional(),
   paymentDate: z.string().optional(),
@@ -242,11 +254,13 @@ export const billingRouter = {
     if (!db)
       throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
     const agencyId = requireAgencyId(ctx);
+    const billableAccountId = await getAgencyBillableAccountId(db, agencyId);
+    if (!billableAccountId) return null;
     const [row] = await db
       .select({ subscription: subscriptions, plan: plans })
       .from(subscriptions)
       .leftJoin(plans, eq(subscriptions.planId, plans.id))
-      .where(and(eq(subscriptions.ownerType, 'agency'), eq(subscriptions.ownerId, agencyId)))
+      .where(eq(subscriptions.billableAccountId, billableAccountId))
       .limit(1);
     return row
       ? {
@@ -261,10 +275,12 @@ export const billingRouter = {
     if (!db)
       throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
     const agencyId = requireAgencyId(ctx);
+    const billableAccountId = await getAgencyBillableAccountId(db, agencyId);
+    if (!billableAccountId) return [];
     return db
       .select()
       .from(billingInvoices)
-      .where(and(eq(billingInvoices.ownerType, 'agency'), eq(billingInvoices.ownerId, agencyId)))
+      .where(eq(billingInvoices.billableAccountId, billableAccountId))
       .orderBy(desc(billingInvoices.createdAt));
   }),
 
@@ -273,10 +289,12 @@ export const billingRouter = {
     if (!db)
       throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
     const agencyId = requireAgencyId(ctx);
+    const billableAccountId = await getAgencyBillableAccountId(db, agencyId);
+    if (!billableAccountId) return [];
     return db
       .select()
       .from(billingPayments)
-      .where(and(eq(billingPayments.ownerType, 'agency'), eq(billingPayments.ownerId, agencyId)))
+      .where(eq(billingPayments.billableAccountId, billableAccountId))
       .orderBy(desc(billingPayments.createdAt));
   }),
 

@@ -28,7 +28,7 @@ describe('ExploreAnalyticsService.getAggregatedMetrics', () => {
     vi.clearAllMocks();
   });
 
-  it('returns zeroed metrics when explore analytics tables are not migrated yet', async () => {
+  it('fails closed when explore analytics tables are not available', async () => {
     const missingSchemaError = new Error('Failed query');
     (missingSchemaError as any).cause = {
       code: 'ER_NO_SUCH_TABLE',
@@ -36,14 +36,9 @@ describe('ExploreAnalyticsService.getAggregatedMetrics', () => {
     };
     mockSelect.mockReturnValue(makeQuery(missingSchemaError));
 
-    await expect(exploreAnalyticsService.getAggregatedMetrics('month')).resolves.toEqual({
-      totalViews: 0,
-      totalUniqueViewers: 0,
-      totalWatchTime: 0,
-      totalSessions: 0,
-      averageSessionDuration: 0,
-      averageCompletionRate: 0,
-      engagementRate: 0,
+    await expect(exploreAnalyticsService.getAggregatedMetrics('month')).rejects.toMatchObject({
+      code: 'PRECONDITION_FAILED',
+      message: 'Explore analytics is unavailable until its canonical schema is established',
     });
   });
 
@@ -51,32 +46,14 @@ describe('ExploreAnalyticsService.getAggregatedMetrics', () => {
     mockSelect.mockReturnValue(
       makeQuery([
         {
-          interactionType: 'view',
-          metadata: { watchTime: 30 },
-          userId: 11,
-          sessionId: 'session-a',
-          contentId: 101,
-        },
-        {
-          interactionType: 'view',
-          metadata: { duration: 20 },
-          userId: null,
-          sessionId: 'session-b',
-          contentId: 102,
-        },
-        {
-          interactionType: 'complete',
-          metadata: {},
-          userId: 11,
-          sessionId: 'session-a',
-          contentId: 101,
-        },
-        {
-          interactionType: 'save',
-          metadata: {},
-          userId: 11,
-          sessionId: 'session-a',
-          contentId: 101,
+          totalViews: 2,
+          totalUniqueViewers: 2,
+          totalCompletions: 1,
+          totalSaves: 1,
+          totalShares: 0,
+          totalClicks: 0,
+          totalSessions: 2,
+          totalWatchTime: 50,
         },
       ]),
     );

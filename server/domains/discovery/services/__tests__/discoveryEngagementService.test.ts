@@ -23,6 +23,7 @@ describe('discoveryEngagementService', () => {
       discoveryEngagementService.handle(
         {
           itemId: '42',
+          eventId: 'event-like-42',
           action: 'like',
         },
         {
@@ -38,6 +39,7 @@ describe('discoveryEngagementService', () => {
     await discoveryEngagementService.handle(
       {
         itemId: '42',
+        eventId: 'event-complete-42',
         action: 'viewComplete',
         context: {
           mode: 'shorts',
@@ -62,6 +64,7 @@ describe('discoveryEngagementService', () => {
     await discoveryEngagementService.handle(
       {
         itemId: '42',
+        eventId: 'event-open-42',
         action: 'listingOpen',
         context: {
           mode: 'feed',
@@ -107,6 +110,7 @@ describe('discoveryEngagementService', () => {
     await discoveryEngagementService.handle(
       {
         itemId: '9',
+        eventId: 'event-share-9',
         action: 'share',
         context: {
           mode: 'home',

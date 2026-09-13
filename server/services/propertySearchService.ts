@@ -70,6 +70,7 @@ export interface PropertySearchOptions {
  */
 export function buildManualPropertySortOrder(sortOption: SortOption): [SQL, SQL] {
   let primaryOrder: SQL;
+  const canonicalSuburb = sql<string>`COALESCE(NULLIF(${suburbs.name}, ''), NULLIF(${properties.city}, ''), '')`;
   switch (sortOption) {
     case 'price_asc':
       primaryOrder = asc(properties.price);
@@ -81,10 +82,10 @@ export function buildManualPropertySortOrder(sortOption: SortOption): [SQL, SQL]
       primaryOrder = asc(properties.createdAt);
       break;
     case 'suburb_asc':
-      primaryOrder = asc(properties.publicAddress);
+      primaryOrder = asc(canonicalSuburb);
       break;
     case 'suburb_desc':
-      primaryOrder = desc(properties.publicAddress);
+      primaryOrder = desc(canonicalSuburb);
       break;
     case 'date_desc':
     default:
@@ -558,6 +559,7 @@ export class PropertySearchService {
         .select({ id: properties.id })
         .from(properties)
         .leftJoin(developments, eq(properties.developmentId, developments.id))
+        .leftJoin(suburbs, eq(properties.suburbId, suburbs.id))
         .where(and(...publicConditions))
         .orderBy(...buildManualPropertySortOrder(sortOption));
       publicResolutionById = await resolvePublicPropertyEligibilities(

@@ -13,29 +13,6 @@ const STATUS_VALUE_ERROR_CODES = new Set([
   'ER_TRUNCATED_WRONG_VALUE_FOR_FIELD',
   'ER_WRONG_VALUE_FOR_TYPE',
 ]);
-const UNKNOWN_COLUMN_ERROR_CODES = new Set(['ER_BAD_FIELD_ERROR']);
-const LEGACY_STATUS_FALLBACKS: Record<string, string[]> = {
-  listed: ['active'],
-  included: ['active', 'listed'],
-  excluded: ['ended', 'inactive'],
-  paused: ['inactive'],
-};
-const LEGACY_STATUS_NORMALIZATION: Record<string, DistributionDevelopmentAccessRow['status']> = {
-  active: 'included',
-  pending: 'listed',
-  ended: 'excluded',
-  inactive: 'excluded',
-  revoked: 'excluded',
-};
-
-function isMissingSchemaError(error: unknown) {
-  const candidate = error as { code?: string; errno?: number; cause?: unknown } | null;
-  if (!candidate) return false;
-  if (candidate.code === 'ER_NO_SUCH_TABLE' || candidate.code === 'ER_BAD_FIELD_ERROR') return true;
-  if (candidate.errno === 1146 || candidate.errno === 1054) return true;
-  if (candidate.cause && candidate.cause !== error) return isMissingSchemaError(candidate.cause);
-  return false;
-}
 
 function extractDbErrorCode(error: unknown): string {
   const candidate = error as { code?: string; cause?: unknown } | null;
@@ -59,22 +36,6 @@ function isStatusValueError(error: unknown): boolean {
   const code = extractDbErrorCode(error);
   if (!STATUS_VALUE_ERROR_CODES.has(code)) return false;
   return extractDbErrorMessage(error).includes('status');
-}
-
-function readUnknownColumnName(error: unknown): string | null {
-  const code = extractDbErrorCode(error);
-  if (!UNKNOWN_COLUMN_ERROR_CODES.has(code)) return null;
-  const message = extractDbErrorMessage(error);
-  const match = message.match(/unknown column '([^']+)'/i);
-  return match?.[1]?.toLowerCase() || null;
-}
-
-function normalizeDevelopmentAccessStatus(status: string | null | undefined) {
-  if (!status) return status;
-  const normalized =
-    LEGACY_STATUS_NORMALIZATION[status.toLowerCase()] ||
-    (status as DistributionDevelopmentAccessRow['status']);
-  return normalized;
 }
 
 type PersistedBrandPartnershipRow = typeof distributionBrandPartnerships.$inferSelect;
@@ -102,13 +63,8 @@ function normalizeDevelopmentAccessRow(
   const { brandProfileId: _retiredPhysicalAlias, ...publisherAccess } = row;
   return {
     ...publisherAccess,
-    status: normalizeDevelopmentAccessStatus(String(row.status || '')) as DistributionDevelopmentAccessRow['status'],
+    status: row.status,
   };
-}
-
-function getDevelopmentAccessStatusCandidates(status: DistributionDevelopmentAccessRow['status']) {
-  const candidates = [status as string, ...(LEGACY_STATUS_FALLBACKS[status as string] || [])];
-  return Array.from(new Set(candidates));
 }
 
 export type UpsertBrandPartnershipInput = {
@@ -140,18 +96,13 @@ export async function getBrandPartnershipByPublisherId(
   db: DbHandle,
   cataloguePublisherId: number,
 ): Promise<DistributionBrandPartnershipRow | null> {
-  try {
-    const [row] = await db
-      .select()
-      .from(distributionBrandPartnerships)
-      .where(eq(distributionBrandPartnerships.cataloguePublisherId, cataloguePublisherId))
-      .limit(1);
+  const [row] = await db
+    .select()
+    .from(distributionBrandPartnerships)
+    .where(eq(distributionBrandPartnerships.cataloguePublisherId, cataloguePublisherId))
+    .limit(1);
 
-    return row ? projectBrandPartnershipRow(row) : null;
-  } catch (error) {
-    if (isMissingSchemaError(error)) return null;
-    throw error;
-  }
+  return row ? projectBrandPartnershipRow(row) : null;
 }
 
 export async function upsertBrandPartnership(
@@ -217,18 +168,13 @@ export async function getDevelopmentAccessByDevelopmentId(
   db: DbHandle,
   developmentId: number,
 ): Promise<DistributionDevelopmentAccessRow | null> {
-  try {
-    const [row] = await db
-      .select()
-      .from(distributionDevelopmentAccess)
-      .where(eq(distributionDevelopmentAccess.developmentId, developmentId))
-      .limit(1);
+  const [row] = await db
+    .select()
+    .from(distributionDevelopmentAccess)
+    .where(eq(distributionDevelopmentAccess.developmentId, developmentId))
+    .limit(1);
 
-    return row ? normalizeDevelopmentAccessRow(row) : null;
-  } catch (error) {
-    if (isMissingSchemaError(error)) return null;
-    throw error;
-  }
+  return row ? normalizeDevelopmentAccessRow(row) : null;
 }
 
 export async function upsertDevelopmentAccess(
@@ -239,13 +185,10 @@ export async function upsertDevelopmentAccess(
   const now = nowSqlDateTime();
 
   if (!existing) {
-    let includeIncludedAt = true;
-    let includeExcludedAt = true;
-    let includePausedAt = true;
     let insertResult: { insertId?: number } | null = null;
     let lastInsertError: unknown = null;
 
-    for (const statusCandidate of getDevelopmentAccessStatusCandidates(input.status)) {
+    for (const statusCandidate of [input.status]) {
       while (true) {
         const values: Partial<typeof distributionDevelopmentAccess.$inferInsert> = {
           developmentId: input.developmentId,
@@ -262,9 +205,9 @@ export async function upsertDevelopmentAccess(
           updatedBy: input.actorUserId,
         };
 
-        if (includeIncludedAt && input.status === 'included') values.includedAt = now;
-        if (includeExcludedAt && input.status === 'excluded') values.excludedAt = now;
-        if (includePausedAt && input.status === 'paused') values.pausedAt = now;
+        if (input.status === 'included') values.includedAt = now;
+        if (input.status === 'excluded') values.excludedAt = now;
+        if (input.status === 'paused') values.pausedAt = now;
 
         try {
           const [result] = await db.insert(distributionDevelopmentAccess).values(values);
@@ -272,19 +215,6 @@ export async function upsertDevelopmentAccess(
           break;
         } catch (error) {
           lastInsertError = error;
-          const unknownColumn = readUnknownColumnName(error);
-          if (unknownColumn === 'included_at' && includeIncludedAt) {
-            includeIncludedAt = false;
-            continue;
-          }
-          if (unknownColumn === 'excluded_at' && includeExcludedAt) {
-            includeExcludedAt = false;
-            continue;
-          }
-          if (unknownColumn === 'paused_at' && includePausedAt) {
-            includePausedAt = false;
-            continue;
-          }
           if (isStatusValueError(error) && statusCandidate !== input.status) {
             break;
           }
@@ -313,13 +243,10 @@ export async function upsertDevelopmentAccess(
     return normalizeDevelopmentAccessRow(inserted);
   }
 
-  let includeIncludedAt = true;
-  let includeExcludedAt = true;
-  let includePausedAt = true;
   let didUpdate = false;
   let lastUpdateError: unknown = null;
 
-  for (const statusCandidate of getDevelopmentAccessStatusCandidates(input.status)) {
+  for (const statusCandidate of [input.status]) {
     while (true) {
       const updateSet: Partial<typeof distributionDevelopmentAccess.$inferInsert> = {
         brandPartnershipId: input.brandPartnershipId,
@@ -340,11 +267,11 @@ export async function upsertDevelopmentAccess(
       }
       if (input.reasonCode !== undefined) updateSet.reasonCode = input.reasonCode ?? null;
       if (input.notes !== undefined) updateSet.notes = input.notes ?? null;
-      if (includeIncludedAt && input.status === 'included' && !existing.includedAt) {
+      if (input.status === 'included' && !existing.includedAt) {
         updateSet.includedAt = now;
       }
-      if (includeExcludedAt && input.status === 'excluded') updateSet.excludedAt = now;
-      if (includePausedAt && input.status === 'paused') updateSet.pausedAt = now;
+      if (input.status === 'excluded') updateSet.excludedAt = now;
+      if (input.status === 'paused') updateSet.pausedAt = now;
 
       try {
         await db
@@ -355,19 +282,6 @@ export async function upsertDevelopmentAccess(
         break;
       } catch (error) {
         lastUpdateError = error;
-        const unknownColumn = readUnknownColumnName(error);
-        if (unknownColumn === 'included_at' && includeIncludedAt) {
-          includeIncludedAt = false;
-          continue;
-        }
-        if (unknownColumn === 'excluded_at' && includeExcludedAt) {
-          includeExcludedAt = false;
-          continue;
-        }
-        if (unknownColumn === 'paused_at' && includePausedAt) {
-          includePausedAt = false;
-          continue;
-        }
         if (isStatusValueError(error) && statusCandidate !== input.status) {
           break;
         }
@@ -458,7 +372,7 @@ export async function listDevelopmentAccess(
     .then(rows =>
       rows.map(row => ({
         ...row,
-        accessStatus: normalizeDevelopmentAccessStatus(String(row.accessStatus || '')) as DistributionDevelopmentAccessRow['status'],
+        accessStatus: row.accessStatus,
       })),
     );
 }

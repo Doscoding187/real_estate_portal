@@ -47,20 +47,14 @@ class RecommendationEngineService {
    * Get recommendations for a user
    */
   async getRecommendations(userId: number | null, limit: number = 10): Promise<any[]> {
-    try {
-      // Get recent content
-      const content = await db
-        .select()
-        .from(exploreContent)
-        .where(eq(exploreContent.isActive, 1))
-        .orderBy(desc(exploreContent.engagementScore), desc(exploreContent.createdAt))
-        .limit(limit);
-
-      return content;
-    } catch (error) {
-      console.error('[RecommendationEngine] getRecommendations error:', error);
-      return [];
-    }
+    // Get recent content from the canonical Explore authority. Query failures
+    // must reach the router so unavailable state cannot appear as success.
+    return await db
+      .select()
+      .from(exploreContent)
+      .where(eq(exploreContent.isActive, 1))
+      .orderBy(desc(exploreContent.engagementScore), desc(exploreContent.createdAt))
+      .limit(limit);
   }
 
   /**

@@ -3,6 +3,7 @@ import { publicProcedure, router } from './_core/trpc';
 import { priceInsightsService } from './services/priceInsightsService';
 import { getDb } from './db';
 import { sql } from 'drizzle-orm';
+import { TRPCError } from '@trpc/server';
 
 const LevelSchema = z.enum(['national', 'province', 'city']);
 
@@ -46,20 +47,15 @@ export const priceInsightsRouter = router({
       const { level, parentId } = input;
       const db = await getDb();
       if (!db) {
-        return {
-          tabs: [],
-          summariesByTabId: {},
-          topChildrenByTabId: {},
-        };
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message: 'Price insights database is unavailable',
+        });
       }
 
       // Basic Guard
       if (level !== 'national' && typeof parentId !== 'number') {
-        return {
-          tabs: [],
-          summariesByTabId: {},
-          topChildrenByTabId: {},
-        };
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'A parent location is required' });
       }
 
       // 1) Fetch Tabs (Entities for the current level)
@@ -78,49 +74,32 @@ export const priceInsightsRouter = router({
 
         if (level === 'province') {
           // Province level -> tabs are Cities in that province
-          try {
-            const result = await db.execute(sql`
-              SELECT id, name
-              FROM cities
-              WHERE provinceId = ${parentId}
-              ORDER BY name ASC
-            `);
-            tabs = extractRows(result);
-          } catch {
-            const result = await db.execute(sql`
-              SELECT id, name
-              FROM cities
-              WHERE province_id = ${parentId}
-              ORDER BY name ASC
-            `);
-            tabs = extractRows(result);
-          }
+          const result = await db.execute(sql`
+            SELECT id, name
+            FROM cities
+            WHERE province_id = ${parentId}
+            ORDER BY name ASC
+          `);
+          tabs = extractRows(result);
         }
 
         if (level === 'city') {
           // City level -> tabs are Suburbs in that city
-          try {
-            const result = await db.execute(sql`
-              SELECT id, name
-              FROM suburbs
-              WHERE cityId = ${parentId}
-              ORDER BY name ASC
-            `);
-            tabs = extractRows(result);
-          } catch {
-            const result = await db.execute(sql`
-              SELECT id, name
-              FROM suburbs
-              WHERE city_id = ${parentId}
-              ORDER BY name ASC
-            `);
-            tabs = extractRows(result);
-          }
+          const result = await db.execute(sql`
+            SELECT id, name
+            FROM suburbs
+            WHERE city_id = ${parentId}
+            ORDER BY name ASC
+          `);
+          tabs = extractRows(result);
         }
       } catch (error) {
         console.error('Error fetching tabs:', error);
-        // Return empty structure on error to prevent UI crash
-        return { tabs: [], summariesByTabId: {}, topChildrenByTabId: {} };
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message: 'Price insights location schema is unavailable',
+          cause: error,
+        });
       }
 
       // 2 & 3) Fetch Summaries and Top Children using Live Data
@@ -133,12 +112,12 @@ export const priceInsightsRouter = router({
           topChildrenByTabId,
         };
       } catch (error) {
-         console.error('Error fetching aggregation insights:', error);
-         return {
-          tabs,
-          summariesByTabId: {},
-          topChildrenByTabId: {},
-        };
+        console.error('Error fetching aggregation insights:', error);
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message: 'Price insights aggregation is unavailable',
+          cause: error,
+        });
       }
     }),
 
@@ -167,7 +146,11 @@ export const priceInsightsRouter = router({
         }));
       } catch (error) {
         console.error('Error fetching heatmap data:', error);
-        return [];
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message: 'Price insights heatmap is unavailable',
+          cause: error,
+        });
       }
     }),
 });

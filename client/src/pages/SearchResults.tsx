@@ -508,11 +508,11 @@ export default function SearchResults({
     onError: error => toast.error(error.message),
   });
   const utils = trpc.useUtils();
-  const toggleFavoriteMutation = trpc.properties.toggleFavorite.useMutation({
+  const setFavoriteMutation = trpc.properties.setFavorite.useMutation({
     onSuccess: result => {
       void utils.properties.getFavorites.invalidate();
       toast.success(
-        result.favorited ? 'Property saved to your homes.' : 'Property removed from saved homes.',
+        result.saved ? 'Property saved to your homes.' : 'Property removed from saved homes.',
       );
     },
     onError: () => toast.error('Unable to update saved homes. Please try again.'),
@@ -657,8 +657,8 @@ export default function SearchResults({
       );
       return;
     }
-    if (toggleFavoriteMutation.isPending) return;
-    toggleFavoriteMutation.mutate({ propertyId });
+    if (setFavoriteMutation.isPending) return;
+    setFavoriteMutation.mutate({ propertyId, saved: !savedPropertyIds.has(propertyId) });
   };
 
   const handleCompareProperty = (propertyId: number) => {

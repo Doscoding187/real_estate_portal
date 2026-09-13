@@ -10,6 +10,7 @@ import { db } from '../db';
 import { suburbs } from '../../drizzle/schema';
 import { eq } from 'drizzle-orm';
 import { OpenAI } from 'openai';
+import { TRPCError } from '@trpc/server';
 
 // Initialize OpenAI client - assumes OPENAI_API_KEY is in env
 const openai = new OpenAI({
@@ -43,8 +44,10 @@ export const locationInsightsService = {
       console.log(`Generating AI insights for ${suburbName}, ${cityName}...`);
 
       if (!process.env.OPENAI_API_KEY) {
-        console.warn('OPENAI_API_KEY not found, returning mock insights');
-        return this.getMockInsights();
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message: 'Location insights are unavailable until the AI provider is configured',
+        });
       }
 
       const completion = await openai.chat.completions.create({
@@ -85,37 +88,15 @@ export const locationInsightsService = {
       };
     } catch (error) {
       console.error('Failed to generate AI insights:', error);
-      return this.getMockInsights();
+      throw error;
     }
-  },
-
-  /**
-   * Verification/Fallback data if AI fails or key is missing
-   */
-  getMockInsights() {
-    return {
-      pros: [
-        'Strong community spirit',
-        'Close to major amenities',
-        'Good investment potential',
-        'Family-friendly atmosphere',
-        'Access to schools',
-      ],
-      cons: [
-        'Traffic during peak hours',
-        'Limited nightlife options',
-        'Distance from CBD',
-        'Construction noise in developing areas',
-      ],
-      source: 'mock',
-    };
   },
 
   /**
    * submitReview - STUBBED
    * suburbReviews table not available
    */
-  async submitReview(data: {
+  async submitReview(_data: {
     suburbId: number;
     userId?: number;
     rating: number;
@@ -123,12 +104,11 @@ export const locationInsightsService = {
     pros: string;
     cons: string;
     comment: string;
-  }) {
-    // STUB: No-op - suburbReviews table not available
-    console.debug(
-      '[locationInsightsService] submitReview called but disabled (no suburbReviews table)',
-    );
-    return { success: false, message: 'Reviews temporarily disabled' };
+  }): Promise<{ success: boolean; message: string }> {
+    throw new TRPCError({
+      code: 'PRECONDITION_FAILED',
+      message: 'Suburb reviews are unavailable until their canonical schema is approved',
+    });
   },
 
   /**

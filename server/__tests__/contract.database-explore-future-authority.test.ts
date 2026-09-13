@@ -179,7 +179,7 @@ describeFutureExploreAuthority('future Explore database authority', () => {
     );
   });
 
-  it('consolidates service providers and boosts onto canonical IDs', () => {
+  it('consolidates service providers and does not retain a disconnected boost authority', () => {
     expect(servicesSchema).not.toContain(
       "providerId: varchar('provider_id'",
     );
@@ -190,29 +190,6 @@ describeFutureExploreAuthority('future Explore database authority', () => {
       '.references(() => partners.id',
     );
 
-    const boostBlock = block(
-      marketplaceSchema,
-      'export const boostCampaigns =',
-      'export const contentApprovalQueue =',
-    );
-
-    expect(boostBlock).toContain(
-      "partnerId: int('partner_id')",
-    );
-    expect(boostBlock).toContain(
-      '.references(() => partners.id',
-    );
-    expect(boostBlock).toContain(
-      "contentId: int('content_id')",
-    );
-    expect(boostBlock).toContain(
-      '.references(() => exploreContent.id',
-    );
-    expect(boostBlock).toContain(
-      "topicId: int('topic_id')",
-    );
-    expect(boostBlock).toContain(
-      '.references(() => topics.id',
-    );
+    expect(marketplaceSchema).not.toContain('export const boostCampaigns =');
   });
 });

@@ -222,14 +222,22 @@ describe('migration execution authority', () => {
         if (!manifest.scripts[reference]) continue;
         if (!isMigrationCapable(reference, manifest)) continue;
         expect(
-          ['db:migrate:test', 'db:authority:check', 'db:authority:consumer-contract', 'db:authority:lifecycle', 'db:verify:ci'],
+          [
+            'db:migrate:test',
+            'db:authority:check',
+            'db:authority:consumer-contract',
+            'db:authority:lifecycle',
+            'db:verify:ci',
+          ],
           `${workflow} may only invoke an approved canonical CI migration or verification wrapper.`,
         ).toContain(reference);
       }
     }
 
     const ci = read('.github/workflows/ci.yml');
-    expect(ci.match(/pnpm db:migrate:test/g)).toHaveLength(1);
+    // The isolated CI contract provisions migration privileges before the fresh
+    // chain, then the test job independently applies its own fresh chain.
+    expect(ci.match(/pnpm db:migrate:test/g)).toHaveLength(2);
     expect(ci.match(/pnpm db:authority:consumer-contract/g)).toHaveLength(1);
     expect(ci.match(/pnpm db:verify:ci/g)).toHaveLength(1);
   });
@@ -424,8 +432,33 @@ describe('migration execution authority', () => {
       '0063_agent_launch_access_earnings_feature.sql',
       '0064_auth_session_security.sql',
       '0065_auth_verification_token_cleanup.sql',
+      '0066_favorites_user_property_deduplicate.sql',
+      '0067_favorites_user_property_unique.sql',
+      '0068_recently_viewed_activity_cleanup.sql',
+      '0069_recently_viewed_listing_required.sql',
+      '0070_recently_viewed_user_listing_unique.sql',
+      '0071_recently_viewed_user_recency_index.sql',
+      '0072_retire_legacy_prospect_favorites.sql',
+      '0073_retire_legacy_scheduled_viewings.sql',
+      '0074_retire_legacy_prospects.sql',
+      '0075_recently_viewed_microsecond_recency.sql',
+      '0076_lead_delivery_relational_authority.sql',
+      '0077_bundle_attribution_relational_authority.sql',
+      '0078_retire_unreachable_partner_leads.sql',
+      '0079_explore_engagement_event_identity.sql',
+      '0080_service_lead_request_idempotency.sql',
+      '0081_explore_analytics_query_index.sql',
+      '0082_explore_engagement_retention_indexes.sql',
+      '0083_billing_provider_event_identity.sql',
+      '0084_billing_provider_event_retry_budget.sql',
+      '0085_billing_billable_accounts.sql',
+      '0086_billing_billable_accounts_not_null.sql',
+      '0087_billing_provider_event_leases.sql',
+      '0088_retire_obsolete_billing_families.sql',
+      '0089_retire_disconnected_analytics_aggregations.sql',
+      '0090_retire_disconnected_boost_campaigns.sql',
     ]);
-    expect(executionManifest.expectedHead).toBe('0065_auth_verification_token_cleanup.sql');
+    expect(executionManifest.expectedHead).toBe('0090_retire_disconnected_boost_campaigns.sql');
     expect(archivedSqlFiles.length).toBeGreaterThan(0);
     expect(activeSqlFiles.some(file => file.includes('_archived'))).toBe(false);
     expect(executionManifest.historyTable).toBe('sql_migration_history');

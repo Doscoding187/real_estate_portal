@@ -1,11 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
 import { ensureCommissionEntryForDeal } from '../services/distributionCommissionService';
-import { warnSchemaCapabilityOnce } from '../services/runtimeSchemaCapabilities';
-
-vi.mock('../services/runtimeSchemaCapabilities', () => ({
-  warnSchemaCapabilityOnce: vi.fn(),
-}));
-
 describe('distributionCommissionService', () => {
   it('uses stored deal pricing for percentage commissions when available', async () => {
     const insertEntry = vi.fn().mockResolvedValue(undefined);
@@ -88,13 +82,13 @@ describe('distributionCommissionService', () => {
     );
   });
 
-  it('skips commission entry generation when commission schema is unavailable', async () => {
+  it('fails the deal transition when commission schema is unavailable', async () => {
     const missingTableError = Object.assign(new Error('missing table'), {
       code: 'ER_NO_SUCH_TABLE',
       errno: 1146,
     });
 
-    const result = await ensureCommissionEntryForDeal({
+    await expect(ensureCommissionEntryForDeal({
       deal: {
         id: 10,
         programId: 20,
@@ -120,9 +114,6 @@ describe('distributionCommissionService', () => {
         setDealCommissionPending: async () => undefined,
         insertCommissionCreatedEvent: async () => undefined,
       },
-    });
-
-    expect(result).toEqual({ created: false, reason: 'schema_unavailable' });
-    expect(warnSchemaCapabilityOnce).toHaveBeenCalled();
+    })).rejects.toThrow('Commission entry could not be persisted; deal transition rolled back.');
   });
 });

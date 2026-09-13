@@ -44,59 +44,44 @@ export class TopicsService {
    * Get all active topics ordered by display order
    */
   async getAllTopics(): Promise<Topic[]> {
-    try {
-      const result = await db.execute(sql`
-        SELECT *
-        FROM topics
-        WHERE is_active = 1
-        ORDER BY COALESCE(display_order, 999999) ASC, name ASC
-      `);
+    const result = await db.execute(sql`
+      SELECT *
+      FROM topics
+      WHERE is_active = 1
+      ORDER BY COALESCE(display_order, 999999) ASC, name ASC
+    `);
 
-      return ((result as any).rows ?? []).map((t: any) => this.mapTopicFromDb(t));
-    } catch (e: any) {
-      console.warn('[TopicsService] getAllTopics fallback:', e?.message);
-      return [];
-    }
+    return ((result as any).rows ?? []).map((t: any) => this.mapTopicFromDb(t));
   }
 
   /**
    * Get a single topic by its slug
    */
   async getTopicBySlug(slug: string): Promise<Topic | null> {
-    try {
-      const result = await db.execute(sql`
-        SELECT *
-        FROM topics
-        WHERE slug = ${slug} AND is_active = 1
-        LIMIT 1
-      `);
+    const result = await db.execute(sql`
+      SELECT *
+      FROM topics
+      WHERE slug = ${slug} AND is_active = 1
+      LIMIT 1
+    `);
 
-      const row = (result as any).rows?.[0];
-      return row ? this.mapTopicFromDb(row) : null;
-    } catch (e: any) {
-      console.warn('[TopicsService] getTopicBySlug fallback:', e?.message);
-      return null;
-    }
+    const row = (result as any).rows?.[0];
+    return row ? this.mapTopicFromDb(row) : null;
   }
 
   /**
    * Get a single topic by ID
    */
   async getTopicById(topicId: string): Promise<Topic | null> {
-    try {
-      const result = await db.execute(sql`
-        SELECT *
-        FROM topics
-        WHERE id = ${topicId}
-        LIMIT 1
-      `);
+    const result = await db.execute(sql`
+      SELECT *
+      FROM topics
+      WHERE id = ${topicId}
+      LIMIT 1
+    `);
 
-      const row = (result as any).rows?.[0];
-      return row ? this.mapTopicFromDb(row) : null;
-    } catch (e: any) {
-      console.warn('[TopicsService] getTopicById fallback:', e?.message);
-      return null;
-    }
+    const row = (result as any).rows?.[0];
+    return row ? this.mapTopicFromDb(row) : null;
   }
 
   /**
@@ -104,17 +89,13 @@ export class TopicsService {
    * If content_topics table doesn't exist yet, returns 0.
    */
   async getTopicContentCount(topicId: string): Promise<number> {
-    try {
-      const result = await db.execute(sql`
-        SELECT COUNT(*) AS cnt
-        FROM content_topics
-        WHERE topic_id = ${topicId}
-      `);
+    const result = await db.execute(sql`
+      SELECT COUNT(*) AS cnt
+      FROM content_topics
+      WHERE topic_id = ${topicId}
+    `);
 
-      return Number((result as any).rows?.[0]?.cnt ?? 0);
-    } catch {
-      return 0;
-    }
+    return Number((result as any).rows?.[0]?.cnt ?? 0);
   }
 
   /**
@@ -170,7 +151,7 @@ export class TopicsService {
    *
    * We attempt:
    * - If content_topics mapping exists: join to explore_content
-   * - Else: fallback to tag-based matching via JSON_CONTAINS on explore_content.tags
+   * - Content is read only through the canonical content_topics mapping.
    */
   async getContentForTopic(
     topicId: string,
@@ -188,81 +169,27 @@ export class TopicsService {
     const priceMax = filters?.priceMax;
 
     // 1) Try via content_topics mapping table
-    try {
-      const result = await db.execute(sql`
-        SELECT ec.*
-        FROM explore_content ec
-        JOIN content_topics ct ON ct.content_id = ec.id
-        WHERE ct.topic_id = ${topicId}
-          AND ec.is_active = 1
-          ${
-            contentTypes.length
-              ? sql`AND ec.content_type IN (${sql.join(
-                  contentTypes.map(t => sql`${t}`),
-                  sql`, `,
-                )})`
-              : sql``
-          }
-          ${priceMin != null ? sql`AND ec.price_min >= ${priceMin}` : sql``}
-          ${priceMax != null ? sql`AND ec.price_max <= ${priceMax}` : sql``}
-        ORDER BY ec.engagement_score DESC, ec.created_at DESC
-        LIMIT ${limit} OFFSET ${offset}
-      `);
-
-      return (result as any).rows ?? [];
-    } catch {
-      // ignore and fall back
-    }
-
-    // 2) Fallback: match by tags/features/categories in explore_content JSON fields
-    try {
-      const tagConds: any[] = [];
-
-      if (topic.contentTags?.length) {
-        for (const tag of topic.contentTags) {
-          tagConds.push(sql`JSON_CONTAINS(ec.tags, JSON_QUOTE(${tag}))`);
+    const result = await db.execute(sql`
+      SELECT ec.*
+      FROM explore_content ec
+      JOIN content_topics ct ON ct.content_id = ec.id
+      WHERE ct.topic_id = ${topicId}
+        AND ec.is_active = 1
+        ${
+          contentTypes.length
+            ? sql`AND ec.content_type IN (${sql.join(
+                contentTypes.map(t => sql`${t}`),
+                sql`, `,
+              )})`
+            : sql``
         }
-      }
+        ${priceMin != null ? sql`AND ec.price_min >= ${priceMin}` : sql``}
+        ${priceMax != null ? sql`AND ec.price_max <= ${priceMax}` : sql``}
+      ORDER BY ec.engagement_score DESC, ec.created_at DESC
+      LIMIT ${limit} OFFSET ${offset}
+    `);
 
-      if (topic.propertyFeatures?.length) {
-        for (const feature of topic.propertyFeatures) {
-          tagConds.push(
-            sql`JSON_CONTAINS(ec.metadata, JSON_QUOTE(${feature}), '$.propertyFeatures')`,
-          );
-        }
-      }
-
-      if (topic.partnerCategories?.length) {
-        for (const category of topic.partnerCategories) {
-          tagConds.push(
-            sql`JSON_CONTAINS(ec.metadata, JSON_QUOTE(${category}), '$.partnerCategory')`,
-          );
-        }
-      }
-
-      const result = await db.execute(sql`
-        SELECT ec.*
-        FROM explore_content ec
-        WHERE ec.is_active = 1
-          ${tagConds.length ? sql`AND (${sql.join(tagConds, sql` OR `)})` : sql``}
-          ${
-            contentTypes.length
-              ? sql`AND ec.content_type IN (${sql.join(
-                  contentTypes.map(t => sql`${t}`),
-                  sql`, `,
-                )})`
-              : sql``
-          }
-          ${priceMin != null ? sql`AND ec.price_min >= ${priceMin}` : sql``}
-          ${priceMax != null ? sql`AND ec.price_max <= ${priceMax}` : sql``}
-        ORDER BY ec.engagement_score DESC, ec.created_at DESC
-        LIMIT ${limit} OFFSET ${offset}
-      `);
-
-      return (result as any).rows ?? [];
-    } catch {
-      return [];
-    }
+    return (result as any).rows ?? [];
   }
 
   /**
@@ -274,21 +201,17 @@ export class TopicsService {
     const limit = Math.max(1, Math.min(100, pagination.limit));
     const offset = Math.max(0, (pagination.page - 1) * limit);
 
-    try {
-      const result = await db.execute(sql`
-        SELECT *
-        FROM explore_content
-        WHERE is_active = 1
-          AND topic_id = ${topicId}
-          AND content_type IN ('short', 'video')
-        ORDER BY engagement_score DESC, created_at DESC
-        LIMIT ${limit} OFFSET ${offset}
-      `);
+    const result = await db.execute(sql`
+      SELECT *
+      FROM explore_content
+      WHERE is_active = 1
+        AND topic_id = ${topicId}
+        AND content_type IN ('short', 'video')
+      ORDER BY engagement_score DESC, created_at DESC
+      LIMIT ${limit} OFFSET ${offset}
+    `);
 
-      return (result as any).rows ?? [];
-    } catch {
-      return [];
-    }
+    return (result as any).rows ?? [];
   }
 
   private mapTopicFromDb(dbTopic: any): Topic {

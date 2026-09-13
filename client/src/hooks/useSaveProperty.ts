@@ -3,17 +3,11 @@
  * Requirements: 14.1, 14.2, 14.4, 14.5
  */
 
-import { useState, useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { trpc } from '../lib/trpc';
 
 interface UseSavePropertyOptions {
   propertyId: number;
-  /**
-   * Retained for legacy component compatibility. Property saves are persisted
-   * through the canonical properties favorites workflow, not Explore
-   * engagement records.
-   */
-  contentId?: number;
   initialSaved?: boolean;
   onSaveSuccess?: () => void;
   onUnsaveSuccess?: () => void;
@@ -27,11 +21,17 @@ export function useSaveProperty({
 }: UseSavePropertyOptions) {
   const [isSaved, setIsSaved] = useState(initialSaved);
   const [isAnimating, setIsAnimating] = useState(false);
+  const utils = trpc.useUtils();
 
-  const toggleSaveMutation = trpc.properties.toggleFavorite.useMutation({
+  useEffect(() => {
+    setIsSaved(initialSaved);
+  }, [propertyId, initialSaved]);
+
+  const setSaveMutation = trpc.properties.setFavorite.useMutation({
     onSuccess: data => {
-      const nextSaved = data.favorited;
+      const nextSaved = data.saved;
       setIsSaved(nextSaved);
+      void utils.properties.getFavorites.invalidate();
 
       // Trigger animation
       setIsAnimating(true);
@@ -50,19 +50,19 @@ export function useSaveProperty({
       }
     },
     onError: error => {
-      console.error('Failed to toggle save:', error);
-      // Optionally show a toast notification
+      console.error('Failed to update saved property:', error);
     },
   });
 
   const toggleSave = useCallback(() => {
-    toggleSaveMutation.mutate({ propertyId });
-  }, [propertyId, toggleSaveMutation]);
+    if (setSaveMutation.isPending) return;
+    setSaveMutation.mutate({ propertyId, saved: !isSaved });
+  }, [propertyId, isSaved, setSaveMutation]);
 
   return {
     isSaved,
     isAnimating,
-    isLoading: toggleSaveMutation.isPending,
+    isLoading: setSaveMutation.isPending,
     toggleSave,
   };
 }

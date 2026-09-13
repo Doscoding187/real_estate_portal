@@ -3,6 +3,7 @@ import {
   agencies,
   agencyBranding,
   agents,
+  billableAccounts,
   listings,
   planEntitlements,
   plans,
@@ -487,7 +488,19 @@ async function getCanonicalSubscription(
     .select({ subscription: subscriptions, plan: plans })
     .from(subscriptions)
     .leftJoin(plans, eq(subscriptions.planId, plans.id))
-    .where(and(eq(subscriptions.ownerType, ownerType), eq(subscriptions.ownerId, ownerId)))
+    .where(
+      and(
+        sql`EXISTS (
+          SELECT 1
+          FROM ${billableAccounts} account
+          WHERE account.id = ${subscriptions.billableAccountId}
+            AND account.account_kind = ${ownerType}
+            AND ${ownerType === 'agency'
+              ? sql`account.agency_id = ${ownerId}`
+              : sql`account.user_id = ${ownerId}`}
+        )`,
+      ),
+    )
     .limit(1);
   return row || null;
 }

@@ -259,6 +259,7 @@ export default function PropertyDetailPage({ propertyId: propPropertyId }: Prope
   );
   const [isStickyNavVisible, setIsStickyNavVisible] = useState(false);
   const overviewSectionRef = React.useRef<HTMLElement>(null);
+  const recordedViewKeyRef = React.useRef<string | null>(null);
 
   const { data, error, isLoading, isFetching, refetch } = trpc.properties.getById.useQuery(
     { id: propertyId },
@@ -273,19 +274,29 @@ export default function PropertyDetailPage({ propertyId: propPropertyId }: Prope
   );
 
   const utils = trpc.useUtils();
-  const toggleFavoriteMutation = trpc.properties.toggleFavorite.useMutation({
+  const setFavoriteMutation = trpc.properties.setFavorite.useMutation({
     onSuccess: result => {
       void utils.properties.getFavorites.invalidate();
       toast.success(
-        result.favorited ? 'Property saved to your homes.' : 'Property removed from saved homes.',
+        result.saved ? 'Property saved to your homes.' : 'Property removed from saved homes.',
       );
     },
     onError: () => toast.error('Unable to update saved homes. Please try again.'),
   });
+  const recordViewMutation = trpc.properties.recordView.useMutation();
 
   React.useEffect(() => {
-    if (propertyId > 0) addViewedProperty(propertyId);
-  }, [propertyId, addViewedProperty]);
+    if (propertyId <= 0 || !data?.property) return;
+    const viewKey = `${isAuthenticated ? 'authenticated' : 'guest'}:${propertyId}`;
+    if (recordedViewKeyRef.current === viewKey) return;
+    recordedViewKeyRef.current = viewKey;
+
+    if (isAuthenticated) {
+      recordViewMutation.mutate({ propertyId });
+      return;
+    }
+    addViewedProperty(propertyId);
+  }, [propertyId, isAuthenticated, data?.property, addViewedProperty, recordViewMutation.mutate]);
 
   React.useEffect(() => {
     let frameId: number | null = null;
@@ -320,8 +331,8 @@ export default function PropertyDetailPage({ propertyId: propPropertyId }: Prope
       );
       return;
     }
-    if (toggleFavoriteMutation.isPending) return;
-    toggleFavoriteMutation.mutate({ propertyId });
+    if (setFavoriteMutation.isPending) return;
+    setFavoriteMutation.mutate({ propertyId, saved: !isFavorite });
   };
 
   const handleUnavailableReturn = () => {
@@ -713,7 +724,7 @@ export default function PropertyDetailPage({ propertyId: propPropertyId }: Prope
                   variant="ghost"
                   size="sm"
                   onClick={handleFavoriteClick}
-                  disabled={toggleFavoriteMutation.isPending}
+                  disabled={setFavoriteMutation.isPending}
                   aria-label={isFavorite ? 'Remove from saved homes' : 'Save property'}
                   aria-pressed={isFavorite}
                   className={cn(

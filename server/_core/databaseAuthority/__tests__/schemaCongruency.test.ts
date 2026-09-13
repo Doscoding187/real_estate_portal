@@ -1,8 +1,11 @@
+import { sql } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import {
+  check,
   index,
   int,
   mysqlTable,
+  timestamp,
   uniqueIndex,
   varchar,
 } from 'drizzle-orm/mysql-core';
@@ -15,10 +18,14 @@ import {
   type NormalizedSchema,
 } from '../schemaCongruency';
 
-const parents = mysqlTable('fixture_parents', {
-  id: int('id').autoincrement().notNull().primaryKey(),
-  code: varchar('code', { length: 32 }).notNull(),
-});
+const parents = mysqlTable(
+  'fixture_parents',
+  {
+    id: int('id').autoincrement().notNull().primaryKey(),
+    code: varchar('code', { length: 32 }).notNull(),
+  },
+  table => [check('fixture_parents_positive_id', sql`${table.id} > 0`)],
+);
 
 const children = mysqlTable(
   'fixture_children',
@@ -35,6 +42,13 @@ const children = mysqlTable(
   }),
 );
 
+const timestampFacts = mysqlTable('fixture_timestamp_facts', {
+  id: int('id').autoincrement().notNull().primaryKey(),
+  recordedAt: timestamp('recorded_at', { mode: 'string', fsp: 6 })
+    .default(sql`CURRENT_TIMESTAMP(6)`)
+    .notNull(),
+});
+
 function clone(schema: NormalizedSchema): NormalizedSchema {
   return JSON.parse(JSON.stringify(schema)) as NormalizedSchema;
 }
@@ -42,22 +56,18 @@ function clone(schema: NormalizedSchema): NormalizedSchema {
 describe('normalized schema congruency', () => {
   it('preserves SQL collection parentheses while removing redundant predicate grouping', () => {
     expect(
-      normalizeSqlExpression("((`state` NOT IN ('available_confirmed', 'available_upcoming')))")
+      normalizeSqlExpression("((`state` NOT IN ('available_confirmed', 'available_upcoming')))"),
     ).toBe("`state` not in ('available_confirmed','available_upcoming')");
     expect(normalizeSqlExpression('((`id` > 0))')).toBe('`id` > 0');
     expect(normalizeSqlExpression('NOT (`id` > 0)')).toBe('not (`id` > 0)');
     expect(normalizeSqlExpression('((`left` + `right`) = (`a`,`b`))')).toBe(
       '(`left` + `right`) = (`a`,`b`)',
     );
-    expect(normalizeSqlExpression('(`a` * (`b` + `c`) > 0)')).toBe(
-      '`a` * (`b` + `c`) > 0',
+    expect(normalizeSqlExpression('(`a` * (`b` + `c`) > 0)')).toBe('`a` * (`b` + `c`) > 0');
+    expect(normalizeSqlExpression("(`value` IN ('A  B', 'C'))")).toBe("`value` in ('A  B','C')");
+    expect(normalizeSqlExpression("(`schema`.`column` = _utf8mb4'Known Value')")).toBe(
+      "`column` = 'Known Value'",
     );
-    expect(normalizeSqlExpression("(`value` IN ('A  B', 'C'))")).toBe(
-      "`value` in ('A  B','C')",
-    );
-    expect(
-      normalizeSqlExpression("(`schema`.`column` = _utf8mb4'Known Value')"),
-    ).toBe("`column` = 'Known Value'");
     expect(
       normalizeSqlExpression(
         "(((`authority_kind` = _utf8mb4\\'platform_reference\\') AND (`developer_organisation_id` IS NULL)) OR ((`authority_kind` = _utf8mb4\\'developer_first_party\\') AND (`developer_organisation_id` IS NOT NULL)))",
@@ -65,12 +75,10 @@ describe('normalized schema congruency', () => {
     ).toBe(
       "(`authority_kind` = 'platform_reference' and `developer_organisation_id` is null) or (`authority_kind` = 'developer_first_party' and `developer_organisation_id` is not null)",
     );
-    expect(normalizeSqlExpression("(`label` = 'O\\'Brien')")).toBe(
+    expect(normalizeSqlExpression("(`label` = 'O\\'Brien')")).toBe("`label` = 'O\\'Brien'");
+    expect(normalizeSqlExpression("(`label` = _utf8mb4\\'O\\'Brien\\')")).toBe(
       "`label` = 'O\\'Brien'",
     );
-    expect(
-      normalizeSqlExpression("(`label` = _utf8mb4\\'O\\'Brien\\')"),
-    ).toBe("`label` = 'O\\'Brien'");
     expect(
       normalizeSqlExpression(
         "(`value_state` = 'known' AND (((`numeric_value` IS NOT NULL) + (`text_value` IS NOT NULL)) + (`boolean_value` IS NOT NULL)) = 1) OR (`value_state` IN ('unknown','unavailable','not_applicable') AND `numeric_value` IS NULL AND `text_value` IS NULL AND `boolean_value` IS NULL)",
@@ -78,9 +86,9 @@ describe('normalized schema congruency', () => {
     ).toBe(
       "(`value_state` = 'known' and ((`numeric_value` is not null) + (`text_value` is not null) + (`boolean_value` is not null) = 1)) or (`value_state` in ('unknown','unavailable','not_applicable') and `numeric_value` is null and `text_value` is null and `boolean_value` is null)",
     );
-    expect(
-      normalizeSqlExpression("(`label` = 'literal _utf8mb4`source`.`column`')"),
-    ).toBe("`label` = 'literal _utf8mb4`source`.`column`'");
+    expect(normalizeSqlExpression("(`label` = 'literal _utf8mb4`source`.`column`')")).toBe(
+      "`label` = 'literal _utf8mb4`source`.`column`'",
+    );
     expect(normalizeSqlExpression("(`label` = 'literal (value)')")).toBe(
       "`label` = 'literal (value)'",
     );
@@ -91,19 +99,82 @@ describe('normalized schema congruency', () => {
     const second = normalizedDesiredSchema({ children, parents });
     expect(first).toEqual(second);
     expect(first.digest).toMatch(/^[a-f0-9]{64}$/);
-    expect(first.tables.map(table => table.name)).toEqual([
-      'fixture_children',
-      'fixture_parents',
-    ]);
+    expect(first.tables.map(table => table.name)).toEqual(['fixture_children', 'fixture_parents']);
     expect(compareNormalizedSchemas(first, clone(first)).congruent).toBe(true);
+  });
+
+  it('normalizes precision-bearing current-time defaults from MySQL metadata', async () => {
+    const connection: AuthoritySqlConnection = {
+      async execute(statement: string) {
+        if (statement.includes('information_schema.tables')) {
+          return [[{ table_name: 'fixture_timestamp_facts' }]];
+        }
+        if (statement.includes('information_schema.columns')) {
+          return [
+            [
+              {
+                table_name: 'fixture_timestamp_facts',
+                column_name: 'id',
+                ordinal_position: 1,
+                column_type: 'int',
+                is_nullable: 'NO',
+                column_default: null,
+                extra: 'auto_increment',
+              },
+              {
+                table_name: 'fixture_timestamp_facts',
+                column_name: 'recorded_at',
+                ordinal_position: 2,
+                column_type: 'timestamp(6)',
+                is_nullable: 'NO',
+                column_default: 'CURRENT_TIMESTAMP(6)',
+                extra: '',
+              },
+            ],
+          ];
+        }
+        if (statement.includes('information_schema.statistics')) {
+          return [
+            [
+              {
+                table_name: 'fixture_timestamp_facts',
+                index_name: 'PRIMARY',
+                non_unique: 0,
+                sequence_in_index: 1,
+                column_name: 'id',
+              },
+            ],
+          ];
+        }
+        return [[]];
+      },
+      async query(statement: string) {
+        return connection.execute(statement);
+      },
+      async end() {},
+    };
+
+    const desired = normalizedDesiredSchema({ timestampFacts });
+    const physical = await normalizedPhysicalSchema(connection);
+    expect(desired.tables[0].columns[1].default).toBe('current_timestamp(6)');
+    expect(physical.tables[0].columns[1].default).toBe('current_timestamp(6)');
+    expect(compareNormalizedSchemas(desired, physical).congruent).toBe(true);
   });
 
   it.each([
     ['type', (schema: NormalizedSchema) => (schema.tables[0].columns[0].type = 'bigint')],
     ['nullability', (schema: NormalizedSchema) => (schema.tables[0].columns[1].nullable = true)],
     ['default', (schema: NormalizedSchema) => (schema.tables[0].columns[2].default = 'changed')],
-    ['index', (schema: NormalizedSchema) => (schema.tables[0].indexes.find(item => item.name.includes('label_unique'))!.unique = false)],
-    ['foreign-key', (schema: NormalizedSchema) => (schema.tables[0].foreignKeys[0].referencedTable = 'wrong_parent')],
+    [
+      'index',
+      (schema: NormalizedSchema) =>
+        (schema.tables[0].indexes.find(item => item.name.includes('label_unique'))!.unique = false),
+    ],
+    [
+      'foreign-key',
+      (schema: NormalizedSchema) =>
+        (schema.tables[0].foreignKeys[0].referencedTable = 'wrong_parent'),
+    ],
   ] as const)('reports deliberate %s drift', (category, mutate) => {
     const desired = normalizedDesiredSchema({ parents, children });
     const actual = clone(desired);
@@ -111,6 +182,109 @@ describe('normalized schema congruency', () => {
     const report = compareNormalizedSchemas(desired, actual);
     expect(report.congruent).toBe(false);
     expect(report.differences.some(difference => difference.category === category)).toBe(true);
+  });
+
+  it('treats an unchanged CHECK predicate with disabled enforcement as congruency drift', () => {
+    const desired = normalizedDesiredSchema({ parents, children });
+    const actual = clone(desired);
+    const check = actual.tables
+      .find(table => table.name === 'fixture_parents')!
+      .checks.find(item => item.name === 'fixture_parents_positive_id')!;
+    check.enforced = false;
+
+    const report = compareNormalizedSchemas(desired, actual);
+
+    expect(report.congruent).toBe(false);
+    expect(report.differences).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          category: 'check',
+          path: 'fixture_parents.fixture_parents_positive_id',
+          expected: expect.objectContaining({
+            expression: '`id` > 0',
+            enforced: true,
+          }),
+          actual: expect.objectContaining({
+            expression: '`id` > 0',
+            enforced: false,
+          }),
+        }),
+      ]),
+    );
+  });
+
+  it('reads a disabled MySQL CHECK from physical metadata as congruency drift', async () => {
+    const connection: AuthoritySqlConnection = {
+      async execute(statement: string) {
+        if (statement.includes('information_schema.tables')) {
+          return [[{ table_name: 'fixture_parents' }]];
+        }
+        if (statement.includes('information_schema.TABLE_CONSTRAINTS')) {
+          return [
+            [
+              {
+                table_name: 'fixture_parents',
+                constraint_name: 'fixture_parents_positive_id',
+                check_clause: '(`id` > 0)',
+                enforced: 'NO',
+              },
+            ],
+          ];
+        }
+        return [[]];
+      },
+      async query(statement: string) {
+        return connection.execute(statement);
+      },
+      async end() {},
+    };
+
+    const physical = await normalizedPhysicalSchema(connection, 'mysql');
+    const desired = normalizedDesiredSchema({ parents });
+    const report = compareNormalizedSchemas(desired, physical);
+
+    expect(physical.tables[0].checks).toEqual([
+      { name: 'fixture_parents_positive_id', expression: '`id` > 0', enforced: false },
+    ]);
+    expect(report.congruent).toBe(false);
+    expect(report.differences).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          category: 'check',
+          path: 'fixture_parents.fixture_parents_positive_id',
+        }),
+      ]),
+    );
+  });
+
+  it('fails closed when MySQL does not expose per-CHECK enforcement metadata', async () => {
+    const connection: AuthoritySqlConnection = {
+      async execute(statement: string) {
+        if (statement.includes('information_schema.tables')) {
+          return [[{ table_name: 'fixture_parents' }]];
+        }
+        if (statement.includes('information_schema.TABLE_CONSTRAINTS')) {
+          return [
+            [
+              {
+                table_name: 'fixture_parents',
+                constraint_name: 'fixture_parents_positive_id',
+                check_clause: '(`id` > 0)',
+              },
+            ],
+          ];
+        }
+        return [[]];
+      },
+      async query(statement: string) {
+        return connection.execute(statement);
+      },
+      async end() {},
+    };
+
+    await expect(normalizedPhysicalSchema(connection, 'mysql')).rejects.toThrow(
+      'MySQL CHECK enforcement metadata is unavailable for fixture_parents.fixture_parents_positive_id',
+    );
   });
 
   it('distinguishes unique/index order drift and column order drift', () => {
@@ -132,44 +306,50 @@ describe('normalized schema congruency', () => {
     const connection: AuthoritySqlConnection = {
       async execute(statement: string) {
         if (statement.includes('information_schema.tables')) {
-          return [[
-            { table_name: 'fixture_parents' },
-            { table_name: 'sql_migration_history' },
-            { table_name: 'sql_migration_attempts' },
-          ]];
+          return [
+            [
+              { table_name: 'fixture_parents' },
+              { table_name: 'sql_migration_history' },
+              { table_name: 'sql_migration_attempts' },
+            ],
+          ];
         }
         if (statement.includes('information_schema.columns')) {
-          return [[
-            {
-              table_name: 'fixture_parents',
-              column_name: 'id',
-              ordinal_position: 1,
-              column_type: 'int',
-              is_nullable: 'NO',
-              column_default: null,
-              extra: 'auto_increment',
-            },
-            {
-              table_name: 'sql_migration_history',
-              column_name: 'filename',
-              ordinal_position: 1,
-              column_type: 'varchar(255)',
-              is_nullable: 'NO',
-              column_default: null,
-              extra: '',
-            },
-          ]];
+          return [
+            [
+              {
+                table_name: 'fixture_parents',
+                column_name: 'id',
+                ordinal_position: 1,
+                column_type: 'int',
+                is_nullable: 'NO',
+                column_default: null,
+                extra: 'auto_increment',
+              },
+              {
+                table_name: 'sql_migration_history',
+                column_name: 'filename',
+                ordinal_position: 1,
+                column_type: 'varchar(255)',
+                is_nullable: 'NO',
+                column_default: null,
+                extra: '',
+              },
+            ],
+          ];
         }
         if (statement.includes('information_schema.statistics')) {
-          return [[
-            {
-              table_name: 'fixture_parents',
-              index_name: 'PRIMARY',
-              non_unique: 0,
-              sequence_in_index: 1,
-              column_name: 'id',
-            },
-          ]];
+          return [
+            [
+              {
+                table_name: 'fixture_parents',
+                index_name: 'PRIMARY',
+                non_unique: 0,
+                sequence_in_index: 1,
+                column_name: 'id',
+              },
+            ],
+          ];
         }
         return [[]];
       },
@@ -206,14 +386,17 @@ describe('normalized schema congruency', () => {
         return [[]];
       },
       async query(statement: string) {
+        if (statement.startsWith('SHOW GLOBAL VARIABLES')) {
+          return [[{ Variable_name: 'tidb_enable_check_constraint', Value: 'ON' }]];
+        }
         return connection.execute(statement);
       },
       async end() {},
     };
 
-    const physical = await normalizedPhysicalSchema(connection);
+    const physical = await normalizedPhysicalSchema(connection, 'tidb');
     expect(physical.tables[0].checks).toEqual([
-      { name: 'fixture_parents_positive_id', expression: '`id` > 0' },
+      { name: 'fixture_parents_positive_id', expression: '`id` > 0', enforced: true },
     ]);
   });
 
@@ -240,14 +423,17 @@ describe('normalized schema congruency', () => {
         return [[]];
       },
       async query(statement: string) {
+        if (statement.startsWith('SHOW GLOBAL VARIABLES')) {
+          return [[{ Variable_name: 'tidb_enable_check_constraint', Value: 'ON' }]];
+        }
         return connection.execute(statement);
       },
       async end() {},
     };
 
-    const physical = await normalizedPhysicalSchema(connection);
+    const physical = await normalizedPhysicalSchema(connection, 'tidb');
     expect(physical.tables[0].checks).toEqual([
-      { name: 'fixture_parents_positive_id', expression: '`id` > 0' },
+      { name: 'fixture_parents_positive_id', expression: '`id` > 0', enforced: true },
     ]);
   });
 
@@ -266,6 +452,9 @@ describe('normalized schema congruency', () => {
         return [[]];
       },
       async query(statement: string) {
+        if (statement.startsWith('SHOW GLOBAL VARIABLES')) {
+          return [[{ Variable_name: 'tidb_enable_check_constraint', Value: 'ON' }]];
+        }
         return connection.execute(statement);
       },
       async end() {},
@@ -299,7 +488,7 @@ describe('normalized schema congruency', () => {
               {
                 table_name: 'fixture_parents',
                 constraint_name: 'fixture_parents_nonempty_code',
-                check_clause: "(CHAR_LENGTH(TRIM(`code`)) > 0)",
+                check_clause: '(CHAR_LENGTH(TRIM(`code`)) > 0)',
               },
             ],
           ];
@@ -307,15 +496,22 @@ describe('normalized schema congruency', () => {
         return [[]];
       },
       async query(statement: string) {
+        if (statement.startsWith('SHOW GLOBAL VARIABLES')) {
+          return [[{ Variable_name: 'tidb_enable_check_constraint', Value: 'ON' }]];
+        }
         return connection.execute(statement);
       },
       async end() {},
     };
 
-    const physical = await normalizedPhysicalSchema(connection);
+    const physical = await normalizedPhysicalSchema(connection, 'tidb');
     expect(physical.tables[0].checks).toEqual([
-      { name: 'fixture_parents_nonempty_code', expression: 'char_length(trim(`code`)) > 0' },
-      { name: 'fixture_parents_positive_id', expression: '`id` > 0' },
+      {
+        name: 'fixture_parents_nonempty_code',
+        expression: 'char_length(trim(`code`)) > 0',
+        enforced: true,
+      },
+      { name: 'fixture_parents_positive_id', expression: '`id` > 0', enforced: true },
     ]);
   });
 

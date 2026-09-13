@@ -7,6 +7,7 @@ import { listCurrentActiveMembershipAgentIds } from './agencyMembershipService';
 import {
   agencies,
   agents,
+  billableAccounts,
   cataloguePublishers,
   commercialLeadContexts,
   developerOrganisations,
@@ -24,9 +25,9 @@ import { cataloguePublisherService } from './cataloguePublisherService';
 import { recordAgentOsEventForAgentId } from './agentOsEventService';
 import { getOrCreateProspectIdentity, recordProspectLeadAction } from './prospectJourneyService';
 import {
-  createInitialLeadDeliveryAttempt,
-  leadDeliverySummaryForInitialAttempt,
-  recordInitialLeadDeliveryAttempt,
+  createLeadDeliveryInTransaction,
+  getLeadDeliverySnapshot,
+  publicStatusForDelivery,
   toMySqlDateTime,
   type LeadDeliveryRecipientType,
   type LeadDeliveryStatus,
@@ -144,6 +145,7 @@ export interface PublicLeadCaptureResult {
   delivered: boolean;
   deliveryStatus: LeadDeliveryStatus;
   deliveryMethod: 'crm_export' | 'manual';
+  deliveryId?: number;
   deliveryAttemptId?: string;
   duplicate?: boolean;
   supplyOrigin: PublicSupplyOrigin;
@@ -513,7 +515,12 @@ async function isRecipientCommerciallyDeliverable(
       const [subscription] = await database
         .select({ status: subscriptions.status, currentPeriodEnd: subscriptions.currentPeriodEnd })
         .from(subscriptions)
-        .where(and(eq(subscriptions.ownerType, 'agent'), eq(subscriptions.ownerId, agent.userId)))
+        .where(sql`EXISTS (
+          SELECT 1 FROM ${billableAccounts} account
+          WHERE account.id = ${subscriptions.billableAccountId}
+            AND account.account_kind = 'agent'
+            AND account.user_id = ${agent.userId}
+        )`)
         .limit(1);
       entitled = isPaidSubscriptionRowEntitled(
         subscription ?? { status: null, currentPeriodEnd: null },
@@ -577,24 +584,13 @@ async function isRecipientCommerciallyDeliverable(
   return { eligible: false, reason: 'The marketing authority has no deliverable recipient.' };
 }
 
-async function notifyAgentOfNewLead(
-  database: NonNullable<Awaited<ReturnType<typeof getDb>>>,
-  input: {
-    agentId: number;
-    leadId: number;
-    leadName: string;
-    leadEmail: string;
-    message?: string | null;
-    propertyId?: number | null;
-  },
+/** Persists the in-app notification in the capture transaction. */
+async function persistAgentLeadNotification(
+  database: any,
+  input: { agentId: number; leadId: number; leadName: string; propertyId?: number | null },
 ): Promise<void> {
   const [agent] = await database
-    .select({
-      userId: agents.userId,
-      email: agents.email,
-      displayName: agents.displayName,
-      firstName: agents.firstName,
-    })
+    .select({ userId: agents.userId })
     .from(agents)
     .where(eq(agents.id, input.agentId))
     .limit(1);
@@ -610,24 +606,43 @@ async function notifyAgentOfNewLead(
     if (property?.title) propertyTitle = property.title;
   }
 
-  const agentName = agent.displayName || [agent.firstName].filter(Boolean).join(' ') || 'there';
-
   await database.insert(notifications).values({
     userId: agent.userId,
     type: 'lead_assigned',
     title: `New enquiry from ${input.leadName}`,
     content: `${input.leadName} enquired about ${propertyTitle}. Respond while the interest is warm.`,
-    data: JSON.stringify({
-      leadId: input.leadId,
-      propertyId: input.propertyId ?? null,
-      actionUrl: '/agent/leads',
-    }),
+    data: JSON.stringify({ leadId: input.leadId, propertyId: input.propertyId ?? null, actionUrl: '/agent/leads' }),
     isRead: 0,
   });
+}
 
+/** Sends the optional email alert after the durable in-app intent commits. */
+async function sendAgentLeadEmail(
+  database: NonNullable<Awaited<ReturnType<typeof getDb>>>,
+  input: {
+    agentId: number;
+    leadId: number;
+    leadName: string;
+    leadEmail: string;
+    message?: string | null;
+    propertyId?: number | null;
+  },
+): Promise<void> {
+  const [agent] = await database
+    .select({ email: agents.email, displayName: agents.displayName, firstName: agents.firstName })
+    .from(agents)
+    .where(eq(agents.id, input.agentId))
+    .limit(1);
+  if (!agent) return;
+  let propertyTitle = 'your listing';
+  if (input.propertyId) {
+    const [property] = await database.select({ title: properties.title }).from(properties)
+      .where(eq(properties.id, input.propertyId)).limit(1);
+    if (property?.title) propertyTitle = property.title;
+  }
   await EmailService.sendNewLeadNotificationEmail(
     agent.email || '',
-    agentName,
+    agent.displayName || agent.firstName || 'there',
     input.leadName,
     input.leadEmail,
     propertyTitle,
@@ -750,7 +765,12 @@ export async function resolveLeadOwnership(
       ? await database
           .select({ status: subscriptions.status, currentPeriodEnd: subscriptions.currentPeriodEnd })
           .from(subscriptions)
-          .where(and(eq(subscriptions.ownerType, 'agent'), eq(subscriptions.ownerId, agent.userId)))
+          .where(sql`EXISTS (
+            SELECT 1 FROM ${billableAccounts} account
+            WHERE account.id = ${subscriptions.billableAccountId}
+              AND account.account_kind = 'agent'
+              AND account.user_id = ${agent.userId}
+          )`)
           .limit(1)
       : [];
     const [agentUser] = agent.userId
@@ -1313,20 +1333,24 @@ async function resolveCommercialReplayContext(
   return { listingId: contextListingId, commercialAvailabilityId: contextAvailabilityId };
 }
 
-function resultForExistingLead(existing: typeof leads.$inferSelect): PublicLeadCaptureResult {
-  const deliveryStatus = existing.deliveryStatus || 'pending';
-  const attempts = Array.isArray(existing.deliveryAttempts) ? existing.deliveryAttempts : [];
-  const latestAttempt = attempts.length > 0 ? (attempts[attempts.length - 1] as any) : null;
-  if (!latestAttempt?.supplyOrigin || !latestAttempt?.leadCustody) {
+async function resultForExistingLead(
+  database: any,
+  existing: typeof leads.$inferSelect,
+): Promise<PublicLeadCaptureResult> {
+  const snapshot = await getLeadDeliverySnapshot({ leadId: Number(existing.id), database });
+  const delivery = snapshot.current;
+  const latestAttempt = snapshot.attempts[snapshot.attempts.length - 1] || null;
+  if (!delivery) {
     throw new TRPCError({
       code: 'SERVICE_UNAVAILABLE',
       message: 'The enquiry is stored, but its custody acknowledgement is still being finalized.',
     });
   }
 
-  const supplyOrigin = latestAttempt.supplyOrigin as PublicSupplyOrigin;
-  const leadCustody = latestAttempt.leadCustody as PublicLeadCustody;
-  const recipientType = latestAttempt.recipientType as PublicLeadCaptureResult['recipientType'];
+  const deliveryStatus = publicStatusForDelivery(delivery);
+  const supplyOrigin = delivery.supplyOrigin as PublicSupplyOrigin;
+  const leadCustody = delivery.leadCustody as PublicLeadCustody;
+  const recipientType = delivery.recipientType as PublicLeadCaptureResult['recipientType'];
   const brandLeadStatus =
     existing.brandLeadStatus === 'captured' ||
     existing.brandLeadStatus === 'delivered_unsubscribed' ||
@@ -1341,17 +1365,18 @@ function resultForExistingLead(existing: typeof leads.$inferSelect): PublicLeadC
       recipientType === 'brand' ||
       recipientType === 'developer' ||
       (recipientType === 'manual' && Boolean(existing.cataloguePublisherId))
-        ? 'brand'
-        : 'direct',
+      ? 'brand'
+      : 'direct',
     delivered: deliveryStatus === 'delivered',
     deliveryStatus,
-    deliveryMethod: existing.leadDeliveryMethod === 'crm_export' ? 'crm_export' : 'manual',
-    deliveryAttemptId: latestAttempt.id,
+    deliveryMethod: delivery.channel === 'crm_export' ? 'crm_export' : 'manual',
+    deliveryId: delivery.id,
+    deliveryAttemptId: latestAttempt?.id,
     duplicate: true,
     supplyOrigin,
     leadCustody,
     recipientType,
-    recipientId: latestAttempt.recipientId ?? null,
+    recipientId: delivery.recipientId,
     brandLeadStatus,
     message:
       deliveryStatus === 'delivered'
@@ -1385,6 +1410,41 @@ function deliveryKeyForOwnership(resolved: ResolvedLeadOwnership): string {
   if (resolved.propertyId) return `platform:property:${resolved.propertyId}`;
   if (resolved.developmentId) return `platform:development:${resolved.developmentId}`;
   return 'platform:manual';
+}
+
+function deliveryInputForResolved(
+  leadId: number,
+  resolved: ResolvedLeadOwnership,
+  status: LeadDeliveryStatus,
+) {
+  return {
+    leadId,
+    idempotencyKey: `lead:${leadId}:primary:${deliveryKeyForOwnership(resolved)}`,
+    channel: resolved.leadDeliveryMethod,
+    recipientType: (resolved.recipientType === 'brand' ? 'manual' : resolved.recipientType) as
+      | 'agent'
+      | 'agency'
+      | 'developer'
+      | 'manual',
+    recipientUserId: resolved.sharedLivingContext?.ownerUserId ?? null,
+    recipientAgentId: resolved.recipientType === 'agent' ? resolved.agentId ?? null : null,
+    recipientAgencyId: resolved.recipientType === 'agency' ? resolved.agencyId ?? null : null,
+    recipientDeveloperOrganisationId:
+      resolved.recipientType === 'developer' ? resolved.developerId ?? null : null,
+    // A Publisher is a typed destination snapshot for developer and
+    // platform-managed custody. It is never an untyped recipient ID.
+    recipientPublisherId: resolved.cataloguePublisherId ?? null,
+    destinationSnapshot: {
+      recipientType: resolved.recipientType,
+      recipientId: resolved.recipientId,
+      cataloguePublisherId: resolved.cataloguePublisherId ?? null,
+      routeReason: resolved.reason ?? null,
+    },
+    supplyOrigin: resolved.supplyOrigin,
+    leadCustody: resolved.leadCustody,
+    initialStatus: status,
+    error: resolved.reason,
+  };
 }
 
 function messageForResolution(resolved: ResolvedLeadOwnership): string {
@@ -1463,25 +1523,21 @@ async function recoverExistingLead(
         commercialAvailabilityId: resolvedCommercial.commercialContext.commercialAvailabilityId,
       });
   }
-  if (!Array.isArray(existing.deliveryAttempts) || existing.deliveryAttempts.length === 0) {
+  const existingDelivery = await getLeadDeliverySnapshot({ leadId: Number(existing.id), database });
+  if (!existingDelivery.current) {
     const replayResolved = await resolveLeadOwnership(input);
     const replayStatus = initialDeliveryStatus(replayResolved);
-    await recordInitialLeadDeliveryAttempt({
-      leadId: Number(existing.id),
-      deliveryKey: deliveryKeyForOwnership(replayResolved),
-      recipientType: replayResolved.recipientType,
-      recipientId: replayResolved.recipientId,
-      channel: replayResolved.leadDeliveryMethod,
-      status: replayStatus,
-      supplyOrigin: replayResolved.supplyOrigin,
-      leadCustody: replayResolved.leadCustody,
-      error: replayResolved.reason,
-      database,
+    await database.transaction(async (tx: any) => {
+      await tx.execute(sql`SELECT id FROM leads WHERE id = ${Number(existing.id)} FOR UPDATE`);
+      await createLeadDeliveryInTransaction(
+        tx,
+        deliveryInputForResolved(Number(existing.id), replayResolved, replayStatus),
+      );
     });
     durableLead = (await findLeadByCaptureRequestId(database, input.captureRequestId)) || existing;
   }
 
-  return resultForExistingLead(durableLead);
+  return resultForExistingLead(database, durableLead);
 }
 
 export async function capturePublicLead(
@@ -1513,20 +1569,12 @@ export async function capturePublicLead(
     (resolved.recipientType === 'manual' && resolved.cataloguePublisherId)
       ? 'brand'
       : 'direct';
-  const deliveryAttempt = createInitialLeadDeliveryAttempt({
-    deliveryKey: deliveryKeyForOwnership(resolved),
-    recipientType: resolved.recipientType,
-    recipientId: resolved.recipientId,
-    channel: resolved.leadDeliveryMethod,
-    status: deliveryStatus,
-    supplyOrigin: resolved.supplyOrigin,
-    leadCustody: resolved.leadCustody,
-    error: resolved.reason,
-  });
-  const deliverySummary = leadDeliverySummaryForInitialAttempt(deliveryAttempt);
-
   let insertResult: any;
   let prospectIdentityId: string | null = null;
+  let persistedDelivery: {
+    delivery: { id: number };
+    attempt: { id: string } | null;
+  } | null = null;
   try {
     const persist = async (tx: any) => {
       // A signed-in visitor's private journey is a custody boundary. Establish
@@ -1571,8 +1619,12 @@ export async function capturePublicLead(
         brandLeadStatus: resolved.brandLeadStatus || null,
         leadDeliveryMethod: resolved.leadDeliveryMethod,
         prospectIdentityId,
-        ...deliverySummary,
       } satisfies LeadInsert);
+      const leadId = Number(insertResult.insertId);
+      persistedDelivery = await createLeadDeliveryInTransaction(
+        tx,
+        deliveryInputForResolved(leadId, resolved, deliveryStatus),
+      );
       if (resolved.commercialContext)
         await tx.insert(commercialLeadContexts).values({
           leadId: Number(insertResult.insertId),
@@ -1595,23 +1647,29 @@ export async function capturePublicLead(
           body: input.message?.trim() || 'New Shared Living enquiry received.',
         });
       }
-    };
-    // Shared Living creates a lead, custody context, and first consumer
-    // message together. Signed-in capture also creates an identity-to-lead
-    // relationship. Neither may degrade to an optional post-capture update.
-    const requiresAtomicCapture = Boolean(
-      resolved.sharedLivingContext || input.authenticatedUserId,
-    );
-    if (requiresAtomicCapture) {
-      if (typeof (database as any).transaction !== 'function') {
-        throw new Error('Atomic public lead persistence is unavailable.');
+      if (resolved.agentId) {
+        await persistAgentLeadNotification(tx, {
+          agentId: resolved.agentId,
+          leadId: Number(insertResult.insertId),
+          leadName: input.name,
+          propertyId: resolved.propertyId ?? null,
+        });
       }
-      await (database as any).transaction(persist);
-    } else if (resolved.commercialContext && typeof (database as any).transaction === 'function') {
-      await (database as any).transaction(persist);
-    } else {
-      await persist(database);
+      if (resolved.sharedLivingContext?.ownerUserId) {
+        await notifySharedLivingLister(tx, {
+          ownerUserId: resolved.sharedLivingContext.ownerUserId,
+          leadId: Number(insertResult.insertId),
+          placeId: resolved.sharedLivingContext.placeId,
+          spaceLabel: resolved.sharedLivingContext.spaceLabelSnapshot,
+        });
+      }
+    };
+    // A capture acknowledgement is valid only when the lead, consent,
+    // context, and primary delivery obligation commit together.
+    if (typeof (database as any).transaction !== 'function') {
+      throw new Error('Atomic public lead persistence is unavailable.');
     }
+    await (database as any).transaction(persist);
   } catch (error) {
     if (input.captureRequestId && isDuplicateKeyError(error)) {
       const duplicate = await findLeadByCaptureRequestId(database, input.captureRequestId);
@@ -1661,7 +1719,7 @@ export async function capturePublicLead(
       utmCampaign: input.utmCampaign,
     }),
     resolved.agentId
-      ? notifyAgentOfNewLead(database, {
+      ? sendAgentLeadEmail(database, {
           agentId: resolved.agentId,
           leadId,
           leadName: input.name,
@@ -1670,14 +1728,7 @@ export async function capturePublicLead(
           propertyId: resolved.propertyId ?? null,
         })
       : Promise.resolve(),
-    resolved.sharedLivingContext?.ownerUserId
-      ? notifySharedLivingLister(database, {
-          ownerUserId: resolved.sharedLivingContext.ownerUserId,
-          leadId,
-          placeId: resolved.sharedLivingContext.placeId,
-          spaceLabel: resolved.sharedLivingContext.spaceLabelSnapshot,
-        })
-      : Promise.resolve(),
+    Promise.resolve(),
   ]);
   optionalSideEffects.forEach((result, index) => {
     if (result.status === 'rejected') {
@@ -1697,6 +1748,11 @@ export async function capturePublicLead(
       );
   }
 
+  const deliveryResult = persistedDelivery as {
+    delivery: { id: number };
+    attempt: { id: string } | null;
+  } | null;
+
   return {
     success: true,
     leadId,
@@ -1704,7 +1760,8 @@ export async function capturePublicLead(
     delivered: deliveryStatus === 'delivered',
     deliveryStatus,
     deliveryMethod: resolved.leadDeliveryMethod,
-    deliveryAttemptId: deliveryAttempt.id,
+    deliveryId: deliveryResult ? deliveryResult.delivery.id : undefined,
+    deliveryAttemptId: deliveryResult?.attempt ? deliveryResult.attempt.id : undefined,
     supplyOrigin: resolved.supplyOrigin,
     leadCustody: resolved.leadCustody,
     recipientType: resolved.recipientType,

@@ -1,5 +1,5 @@
-import { and, eq, inArray } from 'drizzle-orm';
-import { agencies, invitations, subscriptions, users } from '../../drizzle/schema';
+import { and, eq, inArray, sql } from 'drizzle-orm';
+import { agencies, billableAccounts, invitations, subscriptions, users } from '../../drizzle/schema';
 import { ENV } from '../_core/env';
 import { EmailService } from '../_core/emailService';
 import { getDb } from '../db';
@@ -94,7 +94,13 @@ export async function deliverAgencyInvitations(input: {
       graceEndsAt: subscriptions.graceEndsAt,
     })
     .from(subscriptions)
-    .where(and(eq(subscriptions.ownerType, 'agency'), eq(subscriptions.ownerId, input.agencyId)))
+    .where(sql`EXISTS (
+      SELECT 1
+      FROM ${billableAccounts} account
+      WHERE account.id = ${subscriptions.billableAccountId}
+        AND account.account_kind = 'agency'
+        AND account.agency_id = ${input.agencyId}
+    )`)
     .limit(1);
 
   if (!hasEffectiveAgencyPaidAccess(subscription ?? null)) {

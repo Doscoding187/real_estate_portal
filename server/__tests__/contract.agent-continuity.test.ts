@@ -20,9 +20,32 @@ describe('canonical paid-entitlement row predicate', () => {
     ).toBe(true);
   });
 
-  it('accepts grace_period and a missing period end (matches established loaders)', () => {
+  it('requires a future grace deadline when the paid period end is absent', () => {
     expect(
       isPaidSubscriptionRowEntitled({ status: 'grace_period', currentPeriodEnd: null }, NOW),
+    ).toBe(false);
+    for (const graceEndsAt of [
+      null,
+      'not-a-date',
+      NOW.toISOString(),
+      new Date(NOW.getTime() - DAY).toISOString(),
+    ]) {
+      expect(
+        isPaidSubscriptionRowEntitled(
+          { status: 'grace_period', currentPeriodEnd: null, graceEndsAt },
+          NOW,
+        ),
+      ).toBe(false);
+    }
+    expect(
+      isPaidSubscriptionRowEntitled(
+        {
+          status: 'grace_period',
+          currentPeriodEnd: null,
+          graceEndsAt: new Date(NOW.getTime() + DAY).toISOString(),
+        },
+        NOW,
+      ),
     ).toBe(true);
     expect(isPaidSubscriptionRowEntitled({ status: 'active', currentPeriodEnd: null }, NOW)).toBe(
       true,
@@ -51,9 +74,10 @@ describe('canonical paid-entitlement row predicate', () => {
 describe('activation-to-renewal continuity wiring', () => {
   it('notifies and emails the solo agent on captured organic enquiries', () => {
     const capture = readRepoFile('server/services/publicLeadCaptureService.ts');
-    expect(capture).toContain('notifyAgentOfNewLead');
+    expect(capture).toContain('persistAgentLeadNotification');
     expect(capture).toContain("type: 'lead_assigned'");
-    expect(capture).toContain('sendNewLeadNotificationEmail');
+    expect(capture).toContain('sendAgentLeadEmail');
+    expect(capture).toContain('EmailService.sendNewLeadNotificationEmail');
   });
 
   it('runs the launch-expiry notice scheduler on boot with idempotent notices', () => {

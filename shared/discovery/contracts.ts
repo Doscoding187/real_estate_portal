@@ -106,6 +106,7 @@ export interface DiscoveryEngagementContext {
 
 export interface DiscoveryEngagementEvent {
   itemId: string;
+  eventId: string;
   action: DiscoveryEngagementAction;
   context?: DiscoveryEngagementContext;
 }

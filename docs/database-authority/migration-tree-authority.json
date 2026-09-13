@@ -1,5 +1,5 @@
 {
-  "version": 7,
+  "version": 9,
   "canonicalAuthority": {
     "productionCommand": "pnpm db:release:apply",
     "testCommand": "pnpm db:migrate:test",
@@ -260,7 +260,9 @@
       "server/_core/databaseAuthority/dataAdapters/pleReviewerFixture.ts",
       "server/_core/databaseAuthority/dataAdapters/searchToLeadScenario.ts"
     ],
-    "approvedReadOnlyDiagnostics": ["scripts/print-db-target.ts"],
+    "approvedReadOnlyDiagnostics": [
+      "scripts/print-db-target.ts"
+    ],
     "controlledDataRepairUtilities": [],
     "localTestSeedOrFixtureUtilities": [
       "scripts/run-listing-performance-e2e.ts",
@@ -463,7 +465,9 @@
         "disposition": "superseded"
       }
     ],
-    "historicalDocumentationRoots": [".kiro/**"],
+    "historicalDocumentationRoots": [
+      ".kiro/**"
+    ],
     "historicalDocumentationFiles": [
       "COMPLETE_DELIVERY_SUMMARY.md",
       "EXPLORE_QUICK_REFERENCE.md",
@@ -991,7 +995,9 @@
       "path": "backups/**",
       "classification": "archived historical",
       "purpose": "Backup evidence; never an application migration source.",
-      "approvedFiles": ["backups/cleanup-backup-2026-01-29T20-02-35-220Z.sql"]
+      "approvedFiles": [
+        "backups/cleanup-backup-2026-01-29T20-02-35-220Z.sql"
+      ]
     },
     {
       "path": "docker-compose.local-db.yml",
@@ -1103,6 +1109,137 @@
       "path": "server/migrations/0065_auth_verification_token_cleanup.sql",
       "classification": "canonical active",
       "purpose": "Retires unbounded legacy verification-token state so verification is issued only through the bounded canonical flow."
+    },
+    {
+      "path": "server/migrations/0066_favorites_user_property_deduplicate.sql",
+      "classification": "canonical active",
+      "purpose": "Collapses duplicate saved-property facts before the canonical user/property cardinality is enforced."
+    },
+    {
+      "path": "server/migrations/0067_favorites_user_property_unique.sql",
+      "classification": "canonical active",
+      "purpose": "Makes a saved property an idempotent user/property fact."
+    },
+    {
+      "path": "server/migrations/0068_recently_viewed_activity_cleanup.sql",
+      "classification": "canonical active",
+      "purpose": "Removes ambiguous and duplicate consumer-activity rows before a durable authored-listing subject is required."
+    },
+    {
+      "path": "server/migrations/0069_recently_viewed_listing_required.sql",
+      "classification": "canonical active",
+      "purpose": "Requires every authenticated recent-view activity row to identify one authored listing."
+    },
+    {
+      "path": "server/migrations/0070_recently_viewed_user_listing_unique.sql",
+      "classification": "canonical active",
+      "purpose": "Makes recent activity one updatable user/listing fact instead of an unbounded event duplicate."
+    },
+    {
+      "path": "server/migrations/0071_recently_viewed_user_recency_index.sql",
+      "classification": "canonical active",
+      "purpose": "Indexes consumer recency reads by user and view timestamp."
+    },
+    {
+      "path": "server/migrations/0072_retire_legacy_prospect_favorites.sql",
+      "classification": "canonical active",
+      "purpose": "Retires the disconnected legacy prospect favorite table after its runtime write and read paths were removed."
+    },
+    {
+      "path": "server/migrations/0073_retire_legacy_scheduled_viewings.sql",
+      "classification": "canonical active",
+      "purpose": "Retires the disconnected legacy scheduled-viewing table; the canonical showing workflow remains in showings."
+    },
+    {
+      "path": "server/migrations/0074_retire_legacy_prospects.sql",
+      "classification": "canonical active",
+      "purpose": "Retires the unused CRM-era prospect profile table after consumer activity moved to authenticated user facts and prospect identities."
+    },
+    {
+      "path": "server/migrations/0075_recently_viewed_microsecond_recency.sql",
+      "classification": "canonical active",
+      "purpose": "Gives canonical recent-view facts microsecond UTC precision so revisits retain strict account recency ordering."
+    },
+    {
+      "path": "server/migrations/0076_lead_delivery_relational_authority.sql",
+      "classification": "canonical active",
+      "purpose": "Replaces JSON lead delivery history with relational delivery obligations and append-only attempt recovery state."
+    },
+    {
+      "path": "server/migrations/0077_bundle_attribution_relational_authority.sql",
+      "classification": "canonical active",
+      "purpose": "Establishes the relational bundle attribution event table used by marketplace attribution tracking and analytics."
+    },
+    {
+      "path": "server/migrations/0078_retire_unreachable_partner_leads.sql",
+      "classification": "canonical active",
+      "purpose": "Retires the unmounted partner lead router's stub table; canonical lead custody remains in leads and lead_deliveries."
+    },
+    {
+      "path": "server/migrations/0079_explore_engagement_event_identity.sql",
+      "classification": "canonical active",
+      "purpose": "Adds a client event identity and unique key so Explore engagement retries cannot create duplicate facts."
+    },
+    {
+      "path": "server/migrations/0080_service_lead_request_idempotency.sql",
+      "classification": "canonical active",
+      "purpose": "Adds a durable request identity and unique key so service-lead retries replay existing rows instead of duplicating requests."
+    },
+    {
+      "path": "server/migrations/0081_explore_analytics_query_index.sql",
+      "classification": "canonical active",
+      "purpose": "Adds a composite created-at/content index for period-filtered Explore engagement aggregates."
+    },
+    {
+      "path": "server/migrations/0082_explore_engagement_retention_indexes.sql",
+      "classification": "canonical active",
+      "purpose": "Adds time-leading session and user indexes for bounded Explore engagement history scans."
+    },
+    {
+      "path": "server/migrations/0083_billing_provider_event_identity.sql",
+      "classification": "canonical active",
+      "purpose": "Establishes unique provider event identity and durable processing states for billing webhook replay safety."
+    },
+    {
+      "path": "server/migrations/0084_billing_provider_event_retry_budget.sql",
+      "classification": "canonical active",
+      "purpose": "Adds bounded retry attempt state to the billing provider-event processing ledger."
+    },
+    {
+      "path": "server/migrations/0085_billing_billable_accounts.sql",
+      "classification": "canonical active",
+      "purpose": "Establishes typed billable-account ownership and staged foreign keys for the active billing foundation."
+    },
+    {
+      "path": "server/migrations/0086_billing_billable_accounts_not_null.sql",
+      "classification": "canonical active",
+      "purpose": "Enforces non-null typed billable-account ownership across active billing foundation tables after staged cutover."
+    },
+    {
+      "path": "server/migrations/0087_billing_provider_event_leases.sql",
+      "classification": "canonical active",
+      "purpose": "Adds due-time and lease-token state to fence crashed billing provider workers and bound retry recovery."
+    },
+    {
+      "path": "server/migrations/0088_retire_obsolete_billing_families.sql",
+      "classification": "canonical active",
+      "purpose": "Removes empty, unreachable pre-launch agency, transaction, and historical invoice billing families."
+    },
+    {
+      "path": "server/migrations/0089_retire_disconnected_analytics_aggregations.sql",
+      "classification": "canonical active",
+      "purpose": "P8 retirement of disconnected analytics aggregate authority",
+      "approvedFiles": [
+        "server/migrations/0089_retire_disconnected_analytics_aggregations.sql"
+      ]
+    },
+    {
+      "path": "server/migrations/0090_retire_disconnected_boost_campaigns.sql",
+      "classification": "canonical active",
+      "purpose": "P8 retirement of disconnected boost campaign authority",
+      "approvedFiles": [
+        "server/migrations/0090_retire_disconnected_boost_campaigns.sql"
+      ]
     }
   ],
   "prohibitedPaths": [

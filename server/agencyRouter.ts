@@ -36,6 +36,7 @@ import {
   agencyTransactions,
   agencyCommissionSettlements,
   agencyCommissionSettlementPayments,
+  billableAccounts,
   agencyTransactionMilestones,
   agencyTransactionConditions,
   agencyTransactionParties,
@@ -45,6 +46,24 @@ import {
   sellerMandateOperations,
   SELLER_PROSPECT_TERMINAL_STAGE_VALUES,
 } from '../drizzle/schema';
+
+async function withDeadlockRetry(operation: () => Promise<any>): Promise<any> {
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      return await operation();
+    } catch (error) {
+      const code =
+        (error as { cause?: { code?: string }; code?: string })?.cause?.code ??
+        (error as { code?: string })?.code;
+      if (
+        attempt >= 1 ||
+        !['ER_LOCK_DEADLOCK', 'ER_LOCK_WAIT_TIMEOUT', '40001'].includes(code ?? '')
+      ) {
+        throw error;
+      }
+    }
+  }
+}
 import {
   eq,
   like,
@@ -80,6 +99,7 @@ import { requireUser } from './_core/requireUser';
 import {
   getEntitlementNumber,
   isPaidSubscriptionEntitled,
+  isPaidSubscriptionRowEntitled,
   setSubscriptionPlanForOwner,
 } from './services/planAccessService';
 import { getManualEftBillingAmount } from './services/billingFoundationService';
@@ -3551,6 +3571,11 @@ async function getAgencyAccessStateForUser(
   },
 ) {
   const agencyId = Number(input.user.agencyId || input.agency.id);
+  const [billableAccount] = await db
+    .select({ id: billableAccounts.id })
+    .from(billableAccounts)
+    .where(and(eq(billableAccounts.accountKind, 'agency'), eq(billableAccounts.agencyId, agencyId)))
+    .limit(1);
   const base = {
     onboardingComplete: Boolean(input.profileConfigured && input.brandingConfigured),
     billingStatus: 'not_started' as AgencyBillingStatus,
@@ -3574,7 +3599,7 @@ async function getAgencyAccessStateForUser(
     })
     .from(subscriptions)
     .leftJoin(plans, eq(subscriptions.planId, plans.id))
-    .where(and(eq(subscriptions.ownerType, 'agency'), eq(subscriptions.ownerId, agencyId)))
+    .where(billableAccount ? eq(subscriptions.billableAccountId, billableAccount.id) : sql`1 = 0`)
     .limit(1);
 
   if (canonical?.subscription) {
@@ -3594,7 +3619,13 @@ async function getAgencyAccessStateForUser(
     base.actionableReason = 'No canonical subscription exists for this agency.';
   }
 
-  const billingActive = isPaidSubscriptionEntitled(base.billingStatus as any);
+  const billingActive = canonical?.subscription
+    ? isPaidSubscriptionRowEntitled({
+        status: canonical.subscription.status,
+        currentPeriodEnd: canonical.subscription.currentPeriodEnd,
+        graceEndsAt: canonical.subscription.graceEndsAt,
+      })
+    : false;
   base.workspaceAccess = {
     listings: input.profileConfigured,
     publishing: billingActive && input.profileConfigured && input.brandingConfigured,
@@ -3622,10 +3653,24 @@ async function getAgencyAccessStateForUser(
 async function withCanonicalAgencySubscriptionStatus<
   T extends { id: number; subscriptionStatus: string | null },
 >(db: NonNullable<Awaited<ReturnType<typeof getDb>>>, agency: T): Promise<T> {
+  const [billableAccount] = await db
+    .select({ id: billableAccounts.id })
+    .from(billableAccounts)
+    .where(
+      and(eq(billableAccounts.accountKind, 'agency'), eq(billableAccounts.agencyId, agency.id)),
+    )
+    .limit(1);
   const [subscription] = await db
     .select({ status: subscriptions.status })
     .from(subscriptions)
-    .where(and(eq(subscriptions.ownerType, 'agency'), eq(subscriptions.ownerId, agency.id)))
+    .where(
+      billableAccount
+        ? and(
+            eq(subscriptions.billableAccountId, billableAccount.id),
+            eq(subscriptions.ownerType, 'agency'),
+          )
+        : sql`1 = 0`,
+    )
     .limit(1);
 
   return {
@@ -3929,6 +3974,16 @@ export const agencyRouter = router({
       brandingConfigured,
     });
 
+    const [agencyAccount] = await db
+      .select({ id: billableAccounts.id })
+      .from(billableAccounts)
+      .where(
+        and(
+          eq(billableAccounts.accountKind, 'agency'),
+          eq(billableAccounts.agencyId, user.agencyId),
+        ),
+      )
+      .limit(1);
     const [canonicalSubscription] = await db
       .select({
         subscription: subscriptions,
@@ -3936,7 +3991,7 @@ export const agencyRouter = router({
       })
       .from(subscriptions)
       .leftJoin(plans, eq(subscriptions.planId, plans.id))
-      .where(and(eq(subscriptions.ownerType, 'agency'), eq(subscriptions.ownerId, user.agencyId)))
+      .where(agencyAccount ? eq(subscriptions.billableAccountId, agencyAccount.id) : sql`1 = 0`)
       .limit(1);
 
     const availablePlans = await db
@@ -3997,269 +4052,289 @@ export const agencyRouter = router({
       }
       const authenticatedUser = requireUser(ctx);
 
-      const result = await db.transaction(async tx => {
-        await tx.execute(sql`SELECT id FROM users WHERE id = ${authenticatedUser.id} FOR UPDATE`);
-        const [principal] = await tx
-          .select()
-          .from(users)
-          .where(eq(users.id, authenticatedUser.id))
-          .limit(1);
-        if (!principal) {
-          throw new TRPCError({
-            code: 'FORBIDDEN',
-            message: 'Agency onboarding requires a valid principal account.',
-          });
-        }
-        if (Number(principal.emailVerified) !== 1) {
-          throw new TRPCError({
-            code: 'PRECONDITION_FAILED',
-            message: 'Verify your email before creating an agency.',
-          });
-        }
-        if (principal.role !== 'agency_admin') {
-          throw new TRPCError({
-            code: 'FORBIDDEN',
-            message: 'Only a registered agency principal can create an agency.',
-          });
-        }
-        const normalizedTeamEmails = Array.from(
-          new Set(
-            input.teamEmails
-              .map(email => email.trim().toLowerCase())
-              .filter(Boolean)
-              .filter(
-                email =>
-                  email !==
-                  String(principal.email || '')
-                    .trim()
-                    .toLowerCase(),
-              ),
-          ),
-        );
-
-        const linkedAgents = await tx
-          .select({ id: agents.id, agencyId: agents.agencyId })
-          .from(agents)
-          .where(eq(agents.userId, principal.id));
-        if (linkedAgents.length) {
-          const memberships = await tx
-            .select({ id: agencyAgentMemberships.id })
-            .from(agencyAgentMemberships)
-            .where(
-              inArray(
-                agencyAgentMemberships.agentId,
-                linkedAgents.map(agent => agent.id),
-              ),
-            );
-          throw new TRPCError({
-            code: 'CONFLICT',
-            message:
-              memberships.length || linkedAgents.some(agent => agent.agencyId)
-                ? 'This account already has an agency membership and cannot create a new agency.'
-                : 'This account is already an agent identity and cannot become an agency principal through onboarding.',
-          });
-        }
-
-        if (principal.agencyId) {
-          const [[existingAgency], [existingBranding], [existingSubscription]] = await Promise.all([
-            tx.select().from(agencies).where(eq(agencies.id, principal.agencyId)).limit(1),
-            tx
-              .select()
-              .from(agencyBranding)
-              .where(eq(agencyBranding.agencyId, principal.agencyId))
-              .limit(1),
-            tx
-              .select()
-              .from(subscriptions)
-              .where(
-                and(
-                  eq(subscriptions.ownerType, 'agency'),
-                  eq(subscriptions.ownerId, principal.agencyId),
+      const result = await withDeadlockRetry(() =>
+        db.transaction(async tx => {
+          await tx.execute(sql`SELECT id FROM users WHERE id = ${authenticatedUser.id} FOR UPDATE`);
+          const [principal] = await tx
+            .select()
+            .from(users)
+            .where(eq(users.id, authenticatedUser.id))
+            .limit(1);
+          if (!principal) {
+            throw new TRPCError({
+              code: 'FORBIDDEN',
+              message: 'Agency onboarding requires a valid principal account.',
+            });
+          }
+          if (Number(principal.emailVerified) !== 1) {
+            throw new TRPCError({
+              code: 'PRECONDITION_FAILED',
+              message: 'Verify your email before creating an agency.',
+            });
+          }
+          if (principal.role !== 'agency_admin') {
+            throw new TRPCError({
+              code: 'FORBIDDEN',
+              message: 'Only a registered agency principal can create an agency.',
+            });
+          }
+          const normalizedTeamEmails = Array.from(
+            new Set(
+              input.teamEmails
+                .map(email => email.trim().toLowerCase())
+                .filter(Boolean)
+                .filter(
+                  email =>
+                    email !==
+                    String(principal.email || '')
+                      .trim()
+                      .toLowerCase(),
                 ),
-              )
-              .limit(1),
-          ]);
-          if (
-            !existingAgency ||
-            !existingBranding ||
-            !existingSubscription ||
-            !Number(existingSubscription.planId || 0)
-          ) {
+            ),
+          );
+
+          const linkedAgents = await tx
+            .select({ id: agents.id, agencyId: agents.agencyId })
+            .from(agents)
+            .where(eq(agents.userId, principal.id));
+          if (linkedAgents.length) {
+            const memberships = await tx
+              .select({ id: agencyAgentMemberships.id })
+              .from(agencyAgentMemberships)
+              .where(
+                inArray(
+                  agencyAgentMemberships.agentId,
+                  linkedAgents.map(agent => agent.id),
+                ),
+              );
             throw new TRPCError({
               code: 'CONFLICT',
               message:
-                'This account is linked to an incomplete agency onboarding record. Contact support to resolve it.',
+                memberships.length || linkedAgents.some(agent => agent.agencyId)
+                  ? 'This account already has an agency membership and cannot create a new agency.'
+                  : 'This account is already an agent identity and cannot become an agency principal through onboarding.',
             });
           }
-          return {
-            agencyId: Number(existingAgency.id),
-            slug: existingAgency.slug,
-            subscriptionId: Number(existingSubscription.id),
-            planId: Number(existingSubscription.planId || 0),
-            alreadyCreated: true,
-          };
-        }
 
-        const [plan] = await tx.select().from(plans).where(eq(plans.id, input.planId)).limit(1);
-        if (!plan || Number(plan.isActive) !== 1 || plan.segment !== 'agency') {
-          throw new TRPCError({
-            code: 'PRECONDITION_FAILED',
-            message: 'Select an active agency plan.',
-          });
-        }
-        const commercialTerm = resolveCommercialTerm(plan);
-        if (commercialTerm.kind === 'free_trial') {
-          throw new TRPCError({
-            code: 'PRECONDITION_FAILED',
-            message:
-              'Free agency trials are retired. Request Agency Launch Access and complete manual-EFT verification.',
-          });
-        }
-        if (commercialTerm.kind === 'paid_launch_access') {
-          if (
-            getCommercialProductKey(plan) !== 'agency_launch_access' ||
-            commercialTerm.durationDays !== 90 ||
-            commercialTerm.autoRenews ||
-            getConfiguredLaunchFeeMinor(plan) !== 99900
-          ) {
+          if (principal.agencyId) {
+            const [[existingAgency], [existingBranding], [agencyAccount], [existingSubscription]] =
+              await Promise.all([
+                tx.select().from(agencies).where(eq(agencies.id, principal.agencyId)).limit(1),
+                tx
+                  .select()
+                  .from(agencyBranding)
+                  .where(eq(agencyBranding.agencyId, principal.agencyId))
+                  .limit(1),
+                tx
+                  .select({ id: billableAccounts.id })
+                  .from(billableAccounts)
+                  .where(
+                    and(
+                      eq(billableAccounts.accountKind, 'agency'),
+                      eq(billableAccounts.agencyId, principal.agencyId),
+                    ),
+                  )
+                  .limit(1),
+                tx
+                  .select()
+                  .from(subscriptions)
+                  .where(
+                    sql`EXISTS (
+                SELECT 1
+                FROM ${billableAccounts} account
+                WHERE account.id = ${subscriptions.billableAccountId}
+                  AND account.account_kind = 'agency'
+                  AND account.agency_id = ${principal.agencyId}
+              )`,
+                  )
+                  .limit(1),
+              ]);
+            if (
+              !existingAgency ||
+              !existingBranding ||
+              !agencyAccount ||
+              !existingSubscription ||
+              !Number(existingSubscription.planId || 0)
+            ) {
+              throw new TRPCError({
+                code: 'CONFLICT',
+                message:
+                  'This account is linked to an incomplete agency onboarding record. Contact support to resolve it.',
+              });
+            }
+            return {
+              agencyId: Number(existingAgency.id),
+              slug: existingAgency.slug,
+              subscriptionId: Number(existingSubscription.id),
+              planId: Number(existingSubscription.planId || 0),
+              alreadyCreated: true,
+            };
+          }
+
+          const [plan] = await tx.select().from(plans).where(eq(plans.id, input.planId)).limit(1);
+          if (!plan || Number(plan.isActive) !== 1 || plan.segment !== 'agency') {
+            throw new TRPCError({
+              code: 'PRECONDITION_FAILED',
+              message: 'Select an active agency plan.',
+            });
+          }
+          const commercialTerm = resolveCommercialTerm(plan);
+          if (commercialTerm.kind === 'free_trial') {
             throw new TRPCError({
               code: 'PRECONDITION_FAILED',
               message:
-                'The selected agency Launch Access product is not configured with its approved terms.',
+                'Free agency trials are retired. Request Agency Launch Access and complete manual-EFT verification.',
             });
           }
-        } else {
-          if (!['month', 'year'].includes(String(plan.interval))) {
-            throw new TRPCError({
-              code: 'PRECONDITION_FAILED',
-              message: 'The selected agency plan has an unsupported billing interval.',
-            });
+          if (commercialTerm.kind === 'paid_launch_access') {
+            if (
+              getCommercialProductKey(plan) !== 'agency_launch_access' ||
+              commercialTerm.durationDays !== 90 ||
+              commercialTerm.autoRenews ||
+              getConfiguredLaunchFeeMinor(plan) !== 99900
+            ) {
+              throw new TRPCError({
+                code: 'PRECONDITION_FAILED',
+                message:
+                  'The selected agency Launch Access product is not configured with its approved terms.',
+              });
+            }
+          } else {
+            if (!['month', 'year'].includes(String(plan.interval))) {
+              throw new TRPCError({
+                code: 'PRECONDITION_FAILED',
+                message: 'The selected agency plan has an unsupported billing interval.',
+              });
+            }
+            if (getManualEftBillingAmount(plan, 'monthly') <= 0) {
+              throw new TRPCError({
+                code: 'PRECONDITION_FAILED',
+                message: 'The selected agency plan has no valid manual-EFT price.',
+              });
+            }
           }
-          if (getManualEftBillingAmount(plan, 'monthly') <= 0) {
-            throw new TRPCError({
-              code: 'PRECONDITION_FAILED',
-              message: 'The selected agency plan has no valid manual-EFT price.',
-            });
-          }
-        }
-        const entitlementRows = await tx
-          .select({
-            featureKey: planEntitlements.featureKey,
-            valueJson: planEntitlements.valueJson,
-          })
-          .from(planEntitlements)
-          .where(eq(planEntitlements.planId, plan.id));
-        const entitlements = Object.fromEntries(
-          entitlementRows.map(row => [row.featureKey, row.valueJson]),
-        );
-        if (getEntitlementNumber(entitlements, 'max_active_listings', 0) <= 0) {
-          throw new TRPCError({
-            code: 'PRECONDITION_FAILED',
-            message: 'The selected agency plan does not include listing publication capacity.',
-          });
-        }
-
-        const existing = await tx
-          .select()
-          .from(agencies)
-          .where(
-            or(eq(agencies.name, input.basicInfo.name), eq(agencies.email, input.basicInfo.email)),
-          )
-          .limit(1);
-        if (existing.length) {
-          throw new TRPCError({
-            code: 'CONFLICT',
-            message: 'Agency name or email already registered.',
-          });
-        }
-
-        const slug = input.basicInfo.name
-          .toLowerCase()
-          .replace(/[^a-z0-9]+/g, '-')
-          .replace(/^-|-$/g, '');
-        const [slugExists] = await tx
-          .select()
-          .from(agencies)
-          .where(eq(agencies.slug, slug))
-          .limit(1);
-        const finalSlug = slugExists ? `${slug}-${Date.now()}` : slug;
-        const [agencyResult] = await tx.insert(agencies).values({
-          name: input.basicInfo.name,
-          slug: finalSlug,
-          description: input.basicInfo.description,
-          email: input.basicInfo.email,
-          phone: input.basicInfo.phone || null,
-          website: input.basicInfo.website || null,
-          address: input.basicInfo.address,
-          city: input.basicInfo.city,
-          province: input.basicInfo.province,
-          logo: input.branding.logoUrl || null,
-          subscriptionPlan: 'free',
-          subscriptionStatus: 'pending_payment',
-          isVerified: 0,
-        });
-        const agencyId = Number(agencyResult.insertId);
-
-        await tx.insert(agencyBranding).values({
-          agencyId,
-          primaryColor: input.branding.primaryColor,
-          secondaryColor: input.branding.secondaryColor,
-          companyName: input.branding.companyName,
-          tagline: input.branding.tagline || null,
-          logoUrl: input.branding.logoUrl || null,
-          isEnabled: 1,
-        });
-
-        const principalPhone = input.basicInfo.phone?.trim();
-        await tx
-          .update(users)
-          .set({
-            agencyId,
-            role: 'agency_admin',
-            ...(principalPhone ? { phone: principalPhone } : {}),
-            updatedAt: new Date(),
-          })
-          .where(eq(users.id, principal.id));
-
-        const subscription = await setSubscriptionPlanForOwner({
-          ownerType: 'agency',
-          ownerId: agencyId,
-          planId: plan.id,
-          status: 'pending_payment',
-          allowPendingPayment: commercialTerm.kind === 'paid_launch_access',
-          metadata: {
-            source: 'agency_onboarding',
-            legacy_agency_subscription_status: 'pending_payment',
-            commercial_term_kind: commercialTerm.kind,
-            commercial_product_key: getCommercialProductKey(plan),
-          },
-          actorUserId: principal.id,
-          db: tx,
-        });
-        if (!subscription) throw new Error('Unable to create the canonical agency subscription.');
-
-        if (normalizedTeamEmails.length) {
-          await tx.insert(invitations).values(
-            normalizedTeamEmails.map(email => ({
-              agencyId,
-              email,
-              invitedBy: principal.id,
-              role: 'agent',
-              token: randomBytes(32).toString('hex'),
-              status: 'pending' as const,
-              expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-            })),
+          const entitlementRows = await tx
+            .select({
+              featureKey: planEntitlements.featureKey,
+              valueJson: planEntitlements.valueJson,
+            })
+            .from(planEntitlements)
+            .where(eq(planEntitlements.planId, plan.id));
+          const entitlements = Object.fromEntries(
+            entitlementRows.map(row => [row.featureKey, row.valueJson]),
           );
-        }
+          if (getEntitlementNumber(entitlements, 'max_active_listings', 0) <= 0) {
+            throw new TRPCError({
+              code: 'PRECONDITION_FAILED',
+              message: 'The selected agency plan does not include listing publication capacity.',
+            });
+          }
 
-        return {
-          agencyId,
-          slug: finalSlug,
-          subscriptionId: subscription.id,
-          planId: plan.id,
-          alreadyCreated: false,
-        };
-      });
+          const existing = await tx
+            .select()
+            .from(agencies)
+            .where(
+              or(
+                eq(agencies.name, input.basicInfo.name),
+                eq(agencies.email, input.basicInfo.email),
+              ),
+            )
+            .limit(1);
+          if (existing.length) {
+            throw new TRPCError({
+              code: 'CONFLICT',
+              message: 'Agency name or email already registered.',
+            });
+          }
+
+          const slug = input.basicInfo.name
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-|-$/g, '');
+          const [slugExists] = await tx
+            .select()
+            .from(agencies)
+            .where(eq(agencies.slug, slug))
+            .limit(1);
+          const finalSlug = slugExists ? `${slug}-${Date.now()}` : slug;
+          const [agencyResult] = await tx.insert(agencies).values({
+            name: input.basicInfo.name,
+            slug: finalSlug,
+            description: input.basicInfo.description,
+            email: input.basicInfo.email,
+            phone: input.basicInfo.phone || null,
+            website: input.basicInfo.website || null,
+            address: input.basicInfo.address,
+            city: input.basicInfo.city,
+            province: input.basicInfo.province,
+            logo: input.branding.logoUrl || null,
+            subscriptionPlan: 'free',
+            subscriptionStatus: 'pending_payment',
+            isVerified: 0,
+          });
+          const agencyId = Number(agencyResult.insertId);
+
+          await tx.insert(agencyBranding).values({
+            agencyId,
+            primaryColor: input.branding.primaryColor,
+            secondaryColor: input.branding.secondaryColor,
+            companyName: input.branding.companyName,
+            tagline: input.branding.tagline || null,
+            logoUrl: input.branding.logoUrl || null,
+            isEnabled: 1,
+          });
+
+          const principalPhone = input.basicInfo.phone?.trim();
+          await tx
+            .update(users)
+            .set({
+              agencyId,
+              role: 'agency_admin',
+              ...(principalPhone ? { phone: principalPhone } : {}),
+              updatedAt: new Date(),
+            })
+            .where(eq(users.id, principal.id));
+
+          const subscription = await setSubscriptionPlanForOwner({
+            ownerType: 'agency',
+            ownerId: agencyId,
+            planId: plan.id,
+            status: 'pending_payment',
+            allowPendingPayment: commercialTerm.kind === 'paid_launch_access',
+            metadata: {
+              source: 'agency_onboarding',
+              legacy_agency_subscription_status: 'pending_payment',
+              commercial_term_kind: commercialTerm.kind,
+              commercial_product_key: getCommercialProductKey(plan),
+            },
+            actorUserId: principal.id,
+            db: tx,
+          });
+          if (!subscription) throw new Error('Unable to create the canonical agency subscription.');
+
+          if (normalizedTeamEmails.length) {
+            await tx.insert(invitations).values(
+              normalizedTeamEmails.map(email => ({
+                agencyId,
+                email,
+                invitedBy: principal.id,
+                role: 'agent',
+                token: randomBytes(32).toString('hex'),
+                status: 'pending' as const,
+                expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+              })),
+            );
+          }
+
+          return {
+            agencyId,
+            slug: finalSlug,
+            subscriptionId: subscription.id,
+            planId: plan.id,
+            alreadyCreated: false,
+          };
+        }),
+      );
 
       if (!result.alreadyCreated) {
         await logAudit({
@@ -4492,6 +4567,21 @@ export const agencyRouter = router({
         throw new Error('Agency not found');
       }
 
+      const [billableAccount] = await db
+        .select({ id: billableAccounts.id })
+        .from(billableAccounts)
+        .where(
+          and(eq(billableAccounts.accountKind, 'agency'), eq(billableAccounts.agencyId, input.id)),
+        )
+        .limit(1);
+      if (billableAccount) {
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message:
+            'Agency cannot be deleted after billing has been initialized; retire the agency through the governed lifecycle first.',
+        });
+      }
+
       // Delete agency (cascade will handle related records)
       await db.delete(agencies).where(eq(agencies.id, input.id));
 
@@ -4545,31 +4635,16 @@ export const agencyRouter = router({
    */
   getDashboardStats: agencyAdminProcedure.query(async ({ ctx }) => {
     if (!ctx.user.agencyId) {
-      return {
-        totalListings: 0,
-        totalSales: 0,
-        totalLeads: 0,
-        totalAgents: 0,
-        activeListings: 0,
-        pendingListings: 0,
-        recentLeads: 0,
-        recentSales: 0,
-      };
+      throw new TRPCError({ code: 'FORBIDDEN', message: 'An agency membership is required' });
     }
     try {
       return await getAgencyDashboardStats(ctx.user.agencyId);
     } catch (error) {
-      console.warn('[agency.getDashboardStats] Returning safe defaults due to error:', error);
-      return {
-        totalListings: 0,
-        totalSales: 0,
-        totalLeads: 0,
-        totalAgents: 0,
-        activeListings: 0,
-        pendingListings: 0,
-        recentLeads: 0,
-        recentSales: 0,
-      };
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message: 'Agency dashboard statistics are unavailable',
+        cause: error,
+      });
     }
   }),
 
@@ -4580,13 +4655,16 @@ export const agencyRouter = router({
     .input(z.object({ months: z.number().default(6) }).optional())
     .query(async ({ ctx, input }) => {
       if (!ctx.user.agencyId) {
-        return [];
+        throw new TRPCError({ code: 'FORBIDDEN', message: 'An agency membership is required' });
       }
       try {
         return await getAgencyPerformanceData(ctx.user.agencyId, input?.months || 6);
       } catch (error) {
-        console.warn('[agency.getPerformanceData] Returning safe defaults due to error:', error);
-        return [];
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message: 'Agency performance data is unavailable',
+          cause: error,
+        });
       }
     }),
 
@@ -5250,9 +5328,21 @@ export const agencyRouter = router({
       const scheduledAt = toDbTimestampRequired(showingDate);
       const now = nowAsDbTimestamp();
 
-      validateLeadTransition(lead, 'viewing_scheduled');
       let showingId = 0;
       await db.transaction(async tx => {
+        // Serialize viewing creation against every other lead transition. The
+        // preflight read above is only for authorization and inventory
+        // resolution; the transition decision must use the locked row.
+        const [lockedLead] = await tx
+          .select()
+          .from(leads)
+          .where(and(eq(leads.id, lead.id), eq(leads.agencyId, agencyId)))
+          .for('update')
+          .limit(1);
+        if (!lockedLead) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Lead not found' });
+        }
+        validateLeadTransition(lockedLead, 'viewing_scheduled');
         const [result] = await tx.insert(showings).values({
           listingId: inventory.listingId,
           propertyId: inventory.propertyId,
@@ -5261,8 +5351,8 @@ export const agencyRouter = router({
           scheduledAt,
           status: input.status,
           createdByUserId: user.id,
-          prospectIdentityId: lead.prospectIdentityId,
-          visitorName: lead.name,
+          prospectIdentityId: lockedLead.prospectIdentityId,
+          visitorName: lockedLead.name,
           durationMinutes: input.durationMinutes,
           notes: serializeViewingNotes({
             notes: input.notes,
@@ -5276,8 +5366,8 @@ export const agencyRouter = router({
           .update(leads)
           .set({
             agentId: showingAgent.id,
-            assignedTo: showingAgent.userId || lead.assignedTo,
-            assignedAt: lead.assignedAt || now,
+            assignedTo: showingAgent.userId || lockedLead.assignedTo,
+            assignedAt: lockedLead.assignedAt || now,
             status: 'viewing_scheduled',
             funnelStage: 'viewing',
             updatedAt: now,
@@ -5285,7 +5375,7 @@ export const agencyRouter = router({
           .where(and(eq(leads.id, input.leadId), eq(leads.agencyId, agencyId)));
 
         await tx.insert(leadActivities).values({
-          leadId: input.leadId,
+          leadId: lockedLead.id,
           userId: user.id,
           type: 'meeting',
           description: `Viewing ${input.status} for ${scheduledAt}.`,
@@ -6198,8 +6288,26 @@ export const agencyRouter = router({
       const template = workflowTemplates(deal.transactionType as DealTransactionType);
       const now = nowAsDbTimestamp();
       let transactionId = 0;
+      let idempotentAcceptance = false;
 
       await db.transaction(async tx => {
+        // Serialize acceptance on the deal row. The preflight read above is
+        // advisory; concurrent acceptors must re-check the unique transaction
+        // authority while holding the same lock before mutating offer state.
+        await tx.execute(sql`SELECT id FROM agency_deals WHERE id = ${deal.id} FOR UPDATE`);
+        const [existingTransactionInLock] = await tx
+          .select({ id: agencyTransactions.id })
+          .from(agencyTransactions)
+          .where(
+            and(eq(agencyTransactions.dealId, deal.id), eq(agencyTransactions.agencyId, agencyId)),
+          )
+          .limit(1);
+        if (existingTransactionInLock) {
+          transactionId = Number(existingTransactionInLock.id);
+          idempotentAcceptance = true;
+          return;
+        }
+
         await tx
           .update(agencyDealOfferVersions)
           .set({ status: 'superseded', updatedAt: now } as any)
@@ -6393,6 +6501,10 @@ export const agencyRouter = router({
       });
 
       const refreshed = await recomputeTransactionNextStep(db, agencyId, transactionId);
+
+      if (idempotentAcceptance) {
+        return { success: true, idempotent: true, transactionId, dealId: deal.id };
+      }
 
       await logAudit({
         userId: user.id,
@@ -6648,41 +6760,65 @@ export const agencyRouter = router({
       const agencyId = requireAgencyId(user);
       const transaction = await requireAgencyTransaction(db, agencyId, input.transactionId);
       const now = nowAsDbTimestamp();
-      const nextStatus = input.status || transaction.status;
-      const commissionStatus =
-        input.commissionStatus ||
-        (nextStatus === 'completed' && transaction.commissionStatus === 'estimated'
-          ? 'payable'
-          : transaction.commissionStatus);
-      const riskStatus =
-        input.riskStatus ||
-        (nextStatus === 'completed'
-          ? 'complete'
-          : nextStatus === 'cancelled'
-            ? 'cancelled'
-            : transaction.riskStatus);
+      let nextStatus = input.status || transaction.status;
+      let commissionStatus = input.commissionStatus || transaction.commissionStatus;
+      let riskStatus = input.riskStatus || transaction.riskStatus;
 
       await db.transaction(async tx => {
+        // Serialize status and commission transitions against other agency
+        // operators. The preflight row is only an authorization check.
+        const [lockedTransaction] = await tx
+          .select()
+          .from(agencyTransactions)
+          .where(
+            and(
+              eq(agencyTransactions.id, transaction.id),
+              eq(agencyTransactions.agencyId, agencyId),
+            ),
+          )
+          .for('update')
+          .limit(1);
+        if (!lockedTransaction) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Transaction not found' });
+        }
+        nextStatus = input.status || lockedTransaction.status;
+        commissionStatus =
+          input.commissionStatus ||
+          (nextStatus === 'completed' && lockedTransaction.commissionStatus === 'estimated'
+            ? 'payable'
+            : lockedTransaction.commissionStatus);
+        riskStatus =
+          input.riskStatus ||
+          (nextStatus === 'completed'
+            ? 'complete'
+            : nextStatus === 'cancelled'
+              ? 'cancelled'
+              : lockedTransaction.riskStatus);
         await tx
           .update(agencyTransactions)
           .set({
-            stage: input.stage || transaction.stage,
+            stage: input.stage || lockedTransaction.stage,
             status: nextStatus,
             riskStatus,
-            nextAction: input.nextAction === undefined ? transaction.nextAction : input.nextAction,
+            nextAction:
+              input.nextAction === undefined ? lockedTransaction.nextAction : input.nextAction,
             nextDeadline:
               input.nextDeadline === undefined
-                ? transaction.nextDeadline
+                ? lockedTransaction.nextDeadline
                 : parseOptionalDbTimestamp(input.nextDeadline),
             expectedPaymentDate:
               input.expectedPaymentDate === undefined
-                ? transaction.expectedPaymentDate
+                ? lockedTransaction.expectedPaymentDate
                 : parseOptionalDbTimestamp(input.expectedPaymentDate),
             commissionStatus,
             completedAt:
-              nextStatus === 'completed' ? transaction.completedAt || now : transaction.completedAt,
+              nextStatus === 'completed'
+                ? lockedTransaction.completedAt || now
+                : lockedTransaction.completedAt,
             cancelledAt:
-              nextStatus === 'cancelled' ? transaction.cancelledAt || now : transaction.cancelledAt,
+              nextStatus === 'cancelled'
+                ? lockedTransaction.cancelledAt || now
+                : lockedTransaction.cancelledAt,
             updatedByUserId: user.id,
             updatedAt: now,
           } as any)
@@ -6722,10 +6858,11 @@ export const agencyRouter = router({
                   ? 'cancelled'
                   : 'transaction_progression',
             riskStatus,
-            nextAction: input.nextAction === undefined ? transaction.nextAction : input.nextAction,
+            nextAction:
+              input.nextAction === undefined ? lockedTransaction.nextAction : input.nextAction,
             nextDeadline:
               input.nextDeadline === undefined
-                ? transaction.nextDeadline
+                ? lockedTransaction.nextDeadline
                 : parseOptionalDbTimestamp(input.nextDeadline),
             updatedByUserId: user.id,
             updatedAt: now,
@@ -6740,7 +6877,7 @@ export const agencyRouter = router({
           description:
             input.note || `Transaction updated${input.status ? ` to ${input.status}` : ''}.`,
           metadata: {
-            previousStatus: transaction.status,
+            previousStatus: lockedTransaction.status,
             nextStatus,
             commissionStatus,
           },
@@ -7395,20 +7532,18 @@ export const agencyRouter = router({
         nextReviewAt: input.nextReviewAt ? toDbTimestampRequired(input.nextReviewAt) : null,
       } as any);
       const reviewId = insertResultId(result);
-      await db
-        .insert(agencyListingPerformanceActivity)
-        .values({
-          agencyId,
-          reviewId,
-          userId: user.id,
-          eventType: 'seller_review_recorded',
-          description: 'Seller performance review recorded.',
-          metadata: {
-            sellerDecision: input.sellerDecision,
-            recommendation: input.recommendation,
-            flags: snapshot.flags,
-          },
-        });
+      await db.insert(agencyListingPerformanceActivity).values({
+        agencyId,
+        reviewId,
+        userId: user.id,
+        eventType: 'seller_review_recorded',
+        description: 'Seller performance review recorded.',
+        metadata: {
+          sellerDecision: input.sellerDecision,
+          recommendation: input.recommendation,
+          flags: snapshot.flags,
+        },
+      });
       return { success: true, reviewId, snapshot };
     }),
 
@@ -7517,17 +7652,15 @@ export const agencyRouter = router({
           canonicalRevisionListingId: revisionListingId,
         })
         .where(eq(agencyListingPerformanceReviews.id, review.id));
-      await db
-        .insert(agencyListingPerformanceActivity)
-        .values({
-          agencyId,
-          reviewId: review.id,
-          userId: user.id,
-          eventType: 'price_revision_draft_created',
-          description:
-            'Private canonical listing revision draft created from the accepted seller price action.',
-          metadata: { proposedPrice: review.proposedPrice, revisionListingId },
-        });
+      await db.insert(agencyListingPerformanceActivity).values({
+        agencyId,
+        reviewId: review.id,
+        userId: user.id,
+        eventType: 'price_revision_draft_created',
+        description:
+          'Private canonical listing revision draft created from the accepted seller price action.',
+        metadata: { proposedPrice: review.proposedPrice, revisionListingId },
+      });
       return { success: true, status: 'draft', revisionListingId, duplicate: false };
     }),
 

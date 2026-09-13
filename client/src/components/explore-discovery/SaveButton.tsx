@@ -28,7 +28,6 @@ export function SaveButton({
   onUnsaveSuccess,
 }: SaveButtonProps) {
   const { isSaved, isAnimating, isLoading, toggleSave } = useSaveProperty({
-    contentId: propertyId,
     propertyId,
     initialSaved,
     onSaveSuccess,

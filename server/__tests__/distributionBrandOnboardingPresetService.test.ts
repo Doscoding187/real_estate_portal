@@ -5,7 +5,7 @@ import {
 } from '../services/distributionBrandOnboardingPresetService';
 
 describe('distributionBrandOnboardingPresetService', () => {
-  it('returns null when the preset column is missing from a legacy schema', async () => {
+  it('propagates a missing canonical preset column', async () => {
     const db = {
       select() {
         return {
@@ -24,7 +24,9 @@ describe('distributionBrandOnboardingPresetService', () => {
       },
     };
 
-    await expect(getBrandOnboardingPreset(db as any, 44)).resolves.toBeNull();
+    await expect(getBrandOnboardingPreset(db as any, 44)).rejects.toMatchObject({
+      code: 'ER_BAD_FIELD_ERROR',
+    });
   });
 
   it('throws a clear message when saving a preset against a legacy schema', async () => {

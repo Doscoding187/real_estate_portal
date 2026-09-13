@@ -1176,7 +1176,7 @@ export default function UserDashboard() {
     return changes.slice(0, 4);
   }, [alertHistory, buyabilityResults, favorites, lastVisitAt, watchMarket]);
 
-  const toggleFavoriteMutation = trpc.properties.toggleFavorite.useMutation({
+  const setFavoriteMutation = trpc.properties.setFavorite.useMutation({
     onSuccess: () => {
       void utils.properties.getFavorites.invalidate();
       toast.success('Saved homes updated');
@@ -2138,7 +2138,10 @@ export default function UserDashboard() {
                         <Button
                           variant="outline"
                           onClick={() =>
-                            toggleFavoriteMutation.mutate({ propertyId: Number(property.id) })
+                            setFavoriteMutation.mutate({
+                              propertyId: Number(property.id),
+                              saved: false,
+                            })
                           }
                         >
                           Remove

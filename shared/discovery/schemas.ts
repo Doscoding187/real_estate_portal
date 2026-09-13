@@ -92,6 +92,7 @@ export const discoveryEngagementContextSchema = z.object({
 
 export const discoveryEngagementSchema = z.object({
   itemId: z.string().min(1),
+  eventId: z.string().trim().min(1).max(64),
   action: discoveryEngagementActionSchema,
   context: discoveryEngagementContextSchema.optional(),
 });

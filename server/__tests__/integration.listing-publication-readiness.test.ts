@@ -12,6 +12,7 @@ import {
   agencies,
   agencyAgentMemberships,
   agencyBranding,
+  billableAccounts,
   listings,
   planEntitlements,
   plans,
@@ -48,6 +49,10 @@ async function insertAgency(input: { verified?: number; completeProfile?: boolea
       isVerified: input.verified ?? 0,
     } as any);
   const id = await insertId(result);
+  await db
+    .insert(billableAccounts)
+    .values({ accountKind: 'agency', agencyId: id })
+    .onDuplicateKeyUpdate({ set: { accountKind: 'agency' } });
   created.agencyIds.push(id);
   return id;
 }
@@ -99,11 +104,18 @@ async function insertActiveSubscription(input: {
     .toISOString()
     .slice(0, 19)
     .replace('T', ' ');
+  const [account] = await db
+    .select({ id: billableAccounts.id })
+    .from(billableAccounts)
+    .where(eq(billableAccounts.agencyId, input.agencyId))
+    .limit(1);
+  if (!account) throw new Error(`Missing billable account for agency ${input.agencyId}`);
   const [result] = await db
     .insert(subscriptions)
     .values({
       ownerType: 'agency',
       ownerId: input.agencyId,
+      billableAccountId: account.id,
       planId: input.planId,
       status: 'active',
       currentPeriodStart: new Date().toISOString().slice(0, 19).replace('T', ' '),

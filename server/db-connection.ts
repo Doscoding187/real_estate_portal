@@ -14,20 +14,31 @@ import { resolveDatabaseAuthority } from './_core/databaseAuthority/context';
 export let _db: any = null;
 let runtimePool: AuthorityRuntimePool | null = null;
 let initialization: Promise<any> | null = null;
+let initializationOperation: 'runtime-connect' | 'worker-connect' | null = null;
+let activeOperation: 'runtime-connect' | 'worker-connect' | null = null;
 let connectionGeneration = 0;
 
 export function resetDb() {
   connectionGeneration += 1;
   initialization = null;
+  initializationOperation = null;
+  activeOperation = null;
   _db = null;
   const pool = runtimePool;
   runtimePool = null;
   if (pool) void pool.end();
 }
 
-// Lazily create the drizzle instance
-export async function getDb() {
-  if (_db) return _db;
+// Lazily create the drizzle instance through the caller's bounded identity.
+async function getDbForOperation(operation: 'runtime-connect' | 'worker-connect') {
+  if (_db) {
+    if (activeOperation && activeOperation !== operation) {
+      throw new Error(
+        'Database connection refused: a process cannot reuse a runtime pool as a worker pool.',
+      );
+    }
+    return _db;
+  }
 
   // In test environment, bypass actual DB connection to avoid DATABASE_URL dependency
   // preventing unit tests from running in CI/CD.
@@ -359,15 +370,23 @@ export async function getDb() {
 
     (mockDb as any).__seed = state;
     _db = mockDb as any;
+    activeOperation = operation;
     return _db;
   }
 
-  if (initialization) return initialization;
+  if (initialization) {
+    if (initializationOperation && initializationOperation !== operation) {
+      throw new Error(
+        'Database connection refused: a process cannot initialize runtime and worker pools together.',
+      );
+    }
+    return initialization;
+  }
   const generation = connectionGeneration;
   const pending = (async () => {
     try {
       const authority = resolveDatabaseAuthority({
-        operation: 'runtime-connect',
+        operation,
         credentialClass: (process.env.DATABASE_CREDENTIAL_CLASS as any) ?? undefined,
       });
       const decision = authorizeDatabaseOperation(authority, {
@@ -389,22 +408,37 @@ export async function getDb() {
       }
       runtimePool = createdPool;
       _db = database;
+      activeOperation = operation;
       console.log(
-        `[Database] Authorized runtime target ${authority.context.targetFingerprintHash.slice(0, 16)} is connected.`,
+        `[Database] Authorized ${operation} target ${authority.context.targetFingerprintHash.slice(0, 16)} is connected.`,
       );
       return _db;
     } catch (error) {
       if (generation === connectionGeneration) {
         _db = null;
         runtimePool = null;
+        activeOperation = null;
       }
       throw error;
     }
   })();
   initialization = pending;
+  initializationOperation = operation;
   try {
     return await pending;
   } finally {
-    if (initialization === pending) initialization = null;
+    if (initialization === pending) {
+      initialization = null;
+      initializationOperation = null;
+    }
   }
+}
+
+export async function getDb() {
+  return getDbForOperation('runtime-connect');
+}
+
+/** Worker entrypoints receive their own connection-authority operation. */
+export async function getWorkerDb() {
+  return getDbForOperation('worker-connect');
 }

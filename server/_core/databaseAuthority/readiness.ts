@@ -31,8 +31,12 @@ import {
   compareNormalizedSchemas,
   normalizedDesiredSchema,
   normalizedPhysicalSchema,
+  type SchemaCongruencyReport,
 } from './schemaCongruency';
-import { readTiDbCheckConstraintCapability } from './tidbCheckConstraintCapability';
+import {
+  readTiDbCheckConstraintCapability,
+  type TiDbCheckConstraintCapability,
+} from './tidbCheckConstraintCapability';
 import * as canonicalSchema from '../../../drizzle/schema';
 import {
   buildMigrationPlan,
@@ -182,6 +186,31 @@ function targetOwnershipLayer(authority: ResolvedDatabaseAuthority): ReadinessLa
   }
 }
 
+export function schemaCongruencyReadinessLayer(
+  report: SchemaCongruencyReport,
+  capability: TiDbCheckConstraintCapability,
+): ReadinessLayer {
+  if (!report.congruent) {
+    return layer(
+      'not-ready',
+      'schema-not-congruent',
+      `Physical schema differs from canonical digest ${report.desiredDigest}; ${report.differences.length} difference(s) found.`,
+    );
+  }
+  if (capability.applicable && !capability.enabled) {
+    return layer(
+      'not-ready',
+      'tidb-check-constraints-disabled',
+      `TiDB CHECK-constraint enforcement is disabled (${capability.variable}=${capability.value}).`,
+    );
+  }
+  return layer(
+    'ready',
+    'schema-congruent',
+    `Physical schema matches canonical digest ${report.desiredDigest}.`,
+  );
+}
+
 async function schemaCongruencyLayer(
   connection: AuthoritySqlConnection,
   root: string,
@@ -197,28 +226,10 @@ async function schemaCongruencyLayer(
   try {
     const report = compareNormalizedSchemas(
       normalizedDesiredSchema(canonicalSchema),
-      await normalizedPhysicalSchema(connection),
+      await normalizedPhysicalSchema(connection, provider),
     );
-    if (!report.congruent) {
-      return layer(
-        'not-ready',
-        'schema-not-congruent',
-        `Physical schema differs from canonical digest ${report.desiredDigest}; ${report.differences.length} difference(s) found.`,
-      );
-    }
     const capability = await readTiDbCheckConstraintCapability(connection, provider);
-    if (capability.applicable && !capability.enabled) {
-      return layer(
-        'not-ready',
-        'tidb-check-constraints-disabled',
-        `TiDB CHECK-constraint enforcement is disabled (${capability.variable}=${capability.value}).`,
-      );
-    }
-    return layer(
-      'ready',
-      'schema-congruent',
-      `Physical schema matches canonical digest ${report.desiredDigest}.`,
-    );
+    return schemaCongruencyReadinessLayer(report, capability);
   } catch (error) {
     return layer(
       'not-ready',
@@ -497,11 +508,7 @@ export async function assessAuthorizedDatabaseReadiness(input: {
   }
   const requiredVersions =
     requestedRuntime === 'search-to-lead'
-      ? [
-          CANONICAL_GEOGRAPHY_VERSION,
-          CANONICAL_FOUNDATION_VERSION,
-          SEARCH_TO_LEAD_SCENARIO_VERSION,
-        ]
+      ? [CANONICAL_GEOGRAPHY_VERSION, CANONICAL_FOUNDATION_VERSION, SEARCH_TO_LEAD_SCENARIO_VERSION]
       : [CANONICAL_GEOGRAPHY_VERSION, SEARCH_TO_LEAD_SCENARIO_VERSION];
   const requiredDataReady =
     canonicalReferenceData.state === 'ready' &&
@@ -537,7 +544,7 @@ export async function assessAuthorizedDatabaseReadiness(input: {
     schemaCongruent.state === 'ready' &&
     incompleteAttemptState.state === 'ready' &&
     structuralSchema.state === 'ready' &&
-    (requestedRuntime !== 'database' && requestedRuntime !== 'search-to-lead' ||
+    ((requestedRuntime !== 'database' && requestedRuntime !== 'search-to-lead') ||
       commercialReferenceData.state === 'ready');
   const applicationReady =
     baseReady && (requestedRuntime === 'database' || requiredData.state === 'ready');

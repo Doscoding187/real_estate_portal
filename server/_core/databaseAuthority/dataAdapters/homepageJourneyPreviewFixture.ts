@@ -1130,13 +1130,28 @@ async function ensureLaunchAccessSubscription(input: {
     );
   }
   const planId = asId(planRows[0], `${input.plan.name} plan`);
+  const ownerColumn =
+    input.ownerType === 'agent'
+      ? 'user_id'
+      : input.ownerType === 'agency'
+        ? 'agency_id'
+        : 'developer_organisation_id';
+  const accountRows = await queryRows(
+    input.connection,
+    `SELECT id FROM billable_accounts WHERE account_kind = ? AND ${ownerColumn} = ? ORDER BY id`,
+    [input.ownerType, input.ownerId],
+  );
+  if (accountRows.length !== 1) {
+    throw new Error(`Homepage journey preview fixture requires exactly one ${input.ownerType} billable account.`);
+  }
+  const billableAccountId = rowValue(accountRows[0], 'id');
   const rows = await queryRows(
     input.connection,
     `SELECT id, plan_id, status, current_period_end, cancel_at_period_end
        FROM subscriptions
-      WHERE owner_type = ? AND owner_id = ?
+      WHERE billable_account_id = ?
       ORDER BY id`,
-    [input.ownerType, input.ownerId],
+    [billableAccountId],
   );
   const existing = requireOneOrNone(rows, `${input.ownerType} Launch Access subscription`);
   if (existing) {
@@ -1156,15 +1171,16 @@ async function ensureLaunchAccessSubscription(input: {
   }
   await input.connection.execute(
     `INSERT INTO subscriptions
-      (owner_type, owner_id, plan_id, status, trial_ends_at,
+      (owner_type, owner_id, billable_account_id, plan_id, status, trial_ends_at,
        current_period_start, current_period_end, grace_ends_at,
        cancel_at_period_end, billing_cycle_anchor, metadata, created_by, updated_by)
-     VALUES (?, ?, ?, 'active', NULL, CURRENT_TIMESTAMP,
+     VALUES (?, ?, ?, ?, 'active', NULL, CURRENT_TIMESTAMP,
              DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 90 DAY), NULL, 0,
              DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 90 DAY), CAST(? AS JSON), ?, ?)`,
     [
       input.ownerType,
       input.ownerId,
+      billableAccountId,
       planId,
       JSON.stringify({
         fixture: HOMEPAGE_JOURNEY_PREVIEW_VERSION,
@@ -1383,9 +1399,13 @@ async function verifyPreviewRows(
     connection,
     `SELECT owner_type, owner_id, status, cancel_at_period_end, current_period_end
        FROM subscriptions
-      WHERE (owner_type = 'agent' AND owner_id = ?)
-         OR (owner_type = 'agency' AND owner_id = ?)
-         OR (owner_type = 'developer' AND owner_id = ?)
+      WHERE EXISTS (
+        SELECT 1 FROM billable_accounts account
+         WHERE account.id = subscriptions.billable_account_id
+           AND ((account.account_kind = 'agent' AND account.user_id = ?)
+             OR (account.account_kind = 'agency' AND account.agency_id = ?)
+             OR (account.account_kind = 'developer' AND account.developer_organisation_id = ?))
+      )
       ORDER BY owner_type, owner_id`,
     [USERS.agent.id, AGENCY.id, IDS.developerOrganisation],
   );

@@ -8,13 +8,24 @@ const { mockDb } = vi.hoisted(() => ({
     updateProperty: vi.fn(),
     getListingById: vi.fn(),
     deleteListing: vi.fn(),
-    isFavorite: vi.fn(),
-    addFavorite: vi.fn(),
-    removeFavorite: vi.fn(),
+    setUserFavoriteFact: vi.fn(),
+    recordUserListingViewFact: vi.fn(),
+    getUserFavoriteFacts: vi.fn(),
+    getUserRecentViewFacts: vi.fn(),
   },
 }));
 
 vi.mock('../db', () => mockDb);
+
+const { mockResolvePublicPropertyEligibility } = vi.hoisted(() => ({
+  mockResolvePublicPropertyEligibility: vi.fn(),
+}));
+
+vi.mock('../services/publicPropertyEligibilityService', () => ({
+  resolvePublicPropertyEligibility: mockResolvePublicPropertyEligibility,
+  resolvePublicPropertyEligibilities: vi.fn(),
+  resolvePublicPropertyEligibilitiesBySourceListingIds: vi.fn(),
+}));
 
 import { appRouter } from '../routers';
 
@@ -31,6 +42,8 @@ describe('public inventory authority safety contracts', () => {
     mockDb.archiveListing.mockResolvedValue(undefined);
     mockDb.deleteProperty.mockResolvedValue(undefined);
     mockDb.deleteListing.mockResolvedValue(undefined);
+    mockDb.setUserFavoriteFact.mockResolvedValue({ propertyId: 705, saved: true });
+    mockResolvePublicPropertyEligibility.mockReset();
   });
 
   it('routes a listing-backed property delete to source-listing archive', async () => {
@@ -113,19 +126,32 @@ describe('public inventory authority safety contracts', () => {
   });
 
   it('refuses to save a legacy Commercial property mirror as a generic favorite', async () => {
-    mockDb.getPropertyById.mockResolvedValue({
-      id: 705,
-      propertyType: 'commercial',
+    mockResolvePublicPropertyEligibility.mockResolvedValue({
+      sourceListingId: 1705,
+      property: { id: 705, propertyType: 'commercial' },
     });
 
-    await expect(callerFor().properties.toggleFavorite({ propertyId: 705 })).rejects.toMatchObject({
+    await expect(
+      callerFor().properties.setFavorite({ propertyId: 705, saved: true }),
+    ).rejects.toMatchObject({
       code: 'BAD_REQUEST',
       message: 'Commercial leasing is available through the dedicated Commercial journey only.',
     });
 
-    expect(mockDb.isFavorite).not.toHaveBeenCalled();
-    expect(mockDb.addFavorite).not.toHaveBeenCalled();
-    expect(mockDb.removeFavorite).not.toHaveBeenCalled();
+    expect(mockDb.setUserFavoriteFact).not.toHaveBeenCalled();
+  });
+
+  it('refuses to save an unavailable public projection before persistence', async () => {
+    mockResolvePublicPropertyEligibility.mockResolvedValue(null);
+
+    await expect(
+      callerFor().properties.setFavorite({ propertyId: 706, saved: true }),
+    ).rejects.toMatchObject({
+      code: 'NOT_FOUND',
+      message: 'Property is not currently available in the public inventory.',
+    });
+
+    expect(mockDb.setUserFavoriteFact).not.toHaveBeenCalled();
   });
 
   it('archives published listings instead of hard-deleting customer-visible supply', async () => {

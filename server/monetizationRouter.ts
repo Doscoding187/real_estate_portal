@@ -14,8 +14,8 @@ import { findAgentsServingLocation } from './services/agentPublicProfileService'
 
 const notImplementedError = () => {
   throw new TRPCError({
-    code: 'INTERNAL_SERVER_ERROR',
-    message: 'Monetization features temporarily disabled (schema pending)',
+    code: 'PRECONDITION_FAILED',
+    message: 'Monetized placement is unavailable until its canonical authority is approved',
   });
 };
 
@@ -37,11 +37,7 @@ export const monetizationRouter = router({
     .mutation(async () => notImplementedError()),
 
   getAllRules: protectedProcedure.query(async () => {
-    // Return empty array instead of throwing
-    console.debug(
-      '[monetizationRouter] getAllRules called but disabled (no locationTargeting table)',
-    );
-    return [];
+    return notImplementedError();
   }),
 
   getHeroAd: publicProcedure
@@ -51,13 +47,7 @@ export const monetizationRouter = router({
         locationId: z.number(),
       }),
     )
-    .query(async () => {
-      // Return null instead of throwing
-      console.debug(
-        '[monetizationRouter] getHeroAd called but disabled (no locationTargeting table)',
-      );
-      return null;
-    }),
+    .query(async () => notImplementedError()),
 
   getFeaturedDevelopers: publicProcedure
     .input(
@@ -66,13 +56,7 @@ export const monetizationRouter = router({
         locationId: z.number(),
       }),
     )
-    .query(async () => {
-      // Return empty array instead of throwing
-      console.debug(
-        '[monetizationRouter] getFeaturedDevelopers called but disabled (no locationTargeting table)',
-      );
-      return [];
-    }),
+    .query(async () => notImplementedError()),
 
   getRecommendedAgents: publicProcedure
     .input(
@@ -84,13 +68,19 @@ export const monetizationRouter = router({
     .query(async ({ input }) => {
       const db = await getDb();
       if (!db) {
-        return [];
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message: 'Recommended-agent data is unavailable until the database is connected',
+        });
       }
       try {
         return await findAgentsServingLocation(db, input.locationType, input.locationId);
       } catch (error) {
-        console.error('[monetizationRouter] getRecommendedAgents failed closed', error);
-        return [];
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Recommended-agent lookup failed',
+          cause: error,
+        });
       }
     }),
 });

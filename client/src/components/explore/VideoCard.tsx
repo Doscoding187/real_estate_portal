@@ -222,6 +222,7 @@ export default function VideoCard({
         await navigator.share(shareData);
         await discoveryEngage.mutateAsync({
           itemId: video.id,
+          eventId: crypto.randomUUID(),
           action: 'share',
           context: { mode: discoveryMode },
         });
@@ -235,6 +236,7 @@ export default function VideoCard({
       await navigator.clipboard.writeText(window.location.href);
       await discoveryEngage.mutateAsync({
         itemId: video.id,
+        eventId: crypto.randomUUID(),
         action: 'share',
         context: { mode: discoveryMode },
       });
@@ -246,6 +248,7 @@ export default function VideoCard({
   const handleLike = () => {
     discoveryEngage.mutate({
       itemId: video.id,
+      eventId: crypto.randomUUID(),
       action: 'like',
       context: { mode: discoveryMode },
     });

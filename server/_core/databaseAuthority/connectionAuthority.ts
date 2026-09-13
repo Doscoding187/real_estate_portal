@@ -19,6 +19,19 @@ export type AuthorityRuntimePool = {
   end: () => Promise<void>;
 };
 
+/**
+ * Every durable timestamp is represented as UTC. MySQL's TIMESTAMP type
+ * converts values through the session timezone, so leaving a local server on
+ * SYSTEM time silently changes a UTC timestamp string at write time.
+ */
+const UTC_SESSION_TIME_ZONE = '+00:00';
+
+async function configureUtcSession(connection: {
+  execute: (statement: string, values?: readonly unknown[]) => Promise<unknown>;
+}): Promise<void> {
+  await connection.execute(`SET time_zone = '${UTC_SESSION_TIME_ZONE}'`);
+}
+
 export class DatabaseTargetMismatchError extends Error {
   readonly code = 'DATABASE_TARGET_MISMATCH';
 
@@ -31,6 +44,7 @@ export class DatabaseTargetMismatchError extends Error {
 }
 
 const SQL_CONNECTION_OPERATIONS: readonly DatabaseOperation[] = [
+  'ci-identity-bootstrap',
   'read-only-connect',
   'migration-plan',
   'migration-apply',
@@ -86,13 +100,14 @@ export async function createAuthoritySqlConnection(
   const databaseUrl = readDatabaseCredentialUrl(authority.credential);
   try {
     const config = buildMysqlConnectionSecurityConfig(databaseUrl, authority.context.runtimeMode);
-    const connection = await mysql.createConnection(config);
+    const connection = await mysql.createConnection({ ...config, timezone: 'Z' });
     const wrapped: AuthoritySqlConnection = {
       execute: (statement, values) => connection.execute(statement, values as any),
       query: (statement, values) => connection.query(statement, values as any),
       end: () => connection.end(),
     };
     try {
+      await configureUtcSession(wrapped);
       await verifySelectedTarget(wrapped, authority);
     } catch (error) {
       await wrapped.end();
@@ -113,29 +128,42 @@ export async function createAuthorityRuntimePool(
   authority: ResolvedDatabaseAuthority,
   decision: AuthorizedDatabaseOperation,
 ): Promise<AuthorityRuntimePool> {
-  assertAuthorizedDatabaseOperation(authority, decision, ['runtime-connect']);
+  assertAuthorizedDatabaseOperation(authority, decision, ['runtime-connect', 'worker-connect']);
   if (authority.context.dialect !== 'mysql') {
     throw new Error('Runtime connection refused: only the approved MySQL dialect is supported.');
   }
   const databaseUrl = readDatabaseCredentialUrl(authority.credential);
+  let pool: mysql.Pool | undefined;
   try {
     const config = buildMysqlConnectionSecurityConfig(databaseUrl, authority.context.runtimeMode);
-    const pool = mysql.createPool({
+    const createdPool = mysql.createPool({
       ...config,
+      timezone: 'Z',
       connectionLimit: 10,
       maxIdle: 10,
       idleTimeout: 60000,
       enableKeepAlive: true,
       keepAliveInitialDelay: 0,
     });
+    pool = createdPool;
+    // mysql2 emits `connection` before a newly created socket is leased from
+    // the pool. Queueing this command here establishes UTC for every physical
+    // connection, not only the verifier connection below.
+    createdPool.on('connection', connection => {
+      connection.query(`SET time_zone = '${UTC_SESSION_TIME_ZONE}'`, error => {
+        if (error) connection.destroy();
+      });
+    });
     const verifier: AuthoritySqlConnection = {
-      execute: statement => pool.execute(statement),
-      query: statement => pool.query(statement),
-      end: () => pool.end(),
+      execute: statement => createdPool.execute(statement),
+      query: statement => createdPool.query(statement),
+      end: () => createdPool.end(),
     };
+    await configureUtcSession(verifier);
     await verifySelectedTarget(verifier, authority);
-    return { pool, end: () => pool.end() };
+    return { pool: createdPool, end: () => createdPool.end() };
   } catch (error) {
+    if (pool) await pool.end().catch(() => undefined);
     if (error instanceof DatabaseTargetMismatchError) throw error;
     throw new Error(
       `Runtime database connection failed for authorized fingerprint ${authority.context.targetFingerprintHash.slice(0, 16)}.`,
@@ -169,13 +197,21 @@ export async function createLocalLifecycleAdminConnection(
     const connection = await mysql.createConnection({
       socketPath: input.socketPath ?? localServiceSocketPath(),
       user: 'root',
+      timezone: 'Z',
       ...(input.password === undefined ? {} : { password: input.password }),
     });
-    return {
+    const wrapped: AuthoritySqlConnection = {
       execute: (statement, values) => connection.execute(statement, values as any),
       query: (statement, values) => connection.query(statement, values as any),
       end: () => connection.end(),
     };
+    try {
+      await configureUtcSession(wrapped);
+    } catch (error) {
+      await wrapped.end();
+      throw error;
+    }
+    return wrapped;
   } catch {
     throw new Error('Lifecycle administration could not connect to the approved local server.');
   }

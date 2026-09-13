@@ -2,6 +2,7 @@ import { and, eq } from 'drizzle-orm';
 
 import {
   cataloguePublishers,
+  billableAccounts,
   developerOrganisationMemberships,
   developerOrganisations,
   plans,
@@ -168,9 +169,21 @@ export async function deleteDeveloperTestContext(context: DeveloperTestContext):
   const database = await getDb();
   if (!database) return;
 
-  await database
-    .delete(subscriptions)
-    .where(and(eq(subscriptions.ownerType, 'developer'), eq(subscriptions.ownerId, context.organisationId)));
+  const [billableAccount] = await database
+    .select({ id: billableAccounts.id })
+    .from(billableAccounts)
+    .where(
+      and(
+        eq(billableAccounts.accountKind, 'developer'),
+        eq(billableAccounts.developerOrganisationId, context.organisationId),
+      ),
+    )
+    .limit(1);
+  if (billableAccount) {
+    await database
+      .delete(subscriptions)
+      .where(eq(subscriptions.billableAccountId, billableAccount.id));
+  }
   await database
     .delete(cataloguePublishers)
     .where(eq(cataloguePublishers.id, context.cataloguePublisherId));

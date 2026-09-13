@@ -28,6 +28,7 @@ import {
   savedSearches,
   agents,
   subscriptions,
+  billableAccounts,
   agencyAgentMemberships,
   agencies,
   leads,
@@ -39,9 +40,6 @@ import {
   listingViewings,
   sellerProspectActivities,
   sellerProspects,
-  prospects,
-  prospectFavorites,
-  scheduledViewings,
   recentlyViewed,
   developerOrganisationMemberships,
   developerOrganisations,
@@ -344,8 +342,6 @@ export type User = InferSelectModel<typeof users>;
 export type InsertUser = InferInsertModel<typeof users>;
 export type Property = InferSelectModel<typeof properties>;
 export type InsertProperty = InferInsertModel<typeof properties>;
-export type InsertPropertyImage = InferInsertModel<typeof propertyImages>;
-export type Prospect = InferSelectModel<typeof prospects>;
 
 // Explicit canonical user columns required by the login boundary.
 export const AUTH_LOGIN_USER_COLUMNS = {
@@ -379,14 +375,6 @@ export const AUTH_SESSION_USER_COLUMNS = {
   lastSignedIn: users.lastSignedIn,
   sessionVersion: users.sessionVersion,
 } as const;
-
-function parseSessionUserId(sessionId: string): number {
-  const parsed = Number(sessionId);
-  if (!Number.isFinite(parsed) || parsed <= 0) {
-    throw new Error('Invalid sessionId format. Expected numeric user id.');
-  }
-  return parsed;
-}
 
 function toMysqlDateTime(value: Date | string = new Date()): string {
   const date = value instanceof Date ? value : new Date(value);
@@ -453,10 +441,7 @@ export async function upsertUser(user: InsertUser): Promise<void> {
   }
 
   const db = await getDb();
-  if (!db) {
-    console.warn('[Database] Cannot upsert user: database not available');
-    return;
-  }
+  if (!db) throw new Error('Database not available');
 
   try {
     const values: InsertUser = {
@@ -508,10 +493,7 @@ export async function upsertUser(user: InsertUser): Promise<void> {
 
 export async function getUser(openId: string) {
   const db = await getDb();
-  if (!db) {
-    console.warn('[Database] Cannot get user: database not available');
-    return undefined;
-  }
+  if (!db) throw new Error('Database not available');
 
   const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
 
@@ -523,10 +505,7 @@ export async function getUser(openId: string) {
  */
 export async function getUserById(id: number): Promise<User | undefined> {
   const db = await getDb();
-  if (!db) {
-    console.warn('[Database] Cannot get user: database not available');
-    return undefined;
-  }
+  if (!db) throw new Error('Database not available');
 
   const result = await db
     .select(AUTH_SESSION_USER_COLUMNS)
@@ -542,10 +521,7 @@ export async function getUserById(id: number): Promise<User | undefined> {
  */
 export async function getUserByEmail(email: string): Promise<User | undefined> {
   const db = await getDb();
-  if (!db) {
-    console.warn('[Database] Cannot get user: database not available');
-    return undefined;
-  }
+  if (!db) throw new Error('Database not available');
 
   const normalizedEmail = email.trim().toLowerCase();
   if (!normalizedEmail) return undefined;
@@ -627,10 +603,7 @@ export async function updateUserPasswordResetToken(
  */
 export async function getUserByPasswordResetToken(token: string): Promise<User | undefined> {
   const db = await getDb();
-  if (!db) {
-    console.warn('[Database] Cannot get user: database not available');
-    return undefined;
-  }
+  if (!db) throw new Error('Database not available');
 
   const result = await db.select().from(users).where(eq(users.passwordResetToken, token)).limit(1);
   return result.length > 0 ? result[0] : undefined;
@@ -709,52 +682,6 @@ export async function updateUserEmailVerificationTokenHash(
       emailVerificationTokenExpiresAt: expiresAt,
     })
     .where(eq(users.id, userId));
-}
-
-// Property queries
-export async function createProperty(property: InsertProperty) {
-  const db = await getDb();
-  if (!db) throw new Error('Database not available');
-
-  // Normalize location fields for consistent querying
-  const normalizedProperty = normalizeLocationFields(property);
-
-  // Validate location if publishing
-  const validationError = validateLocationForPublish(normalizedProperty);
-  if (validationError) {
-    throw new Error(validationError);
-  }
-
-  // Resolve and populate location IDs if text fields are provided
-  // This ensures new properties have proper ID references
-  try {
-    if (normalizedProperty.province && !normalizedProperty.provinceId) {
-      const locationIds = await locationResolver.getLocationIds({
-        provinceSlug: normalizedProperty.province,
-        citySlug: normalizedProperty.city || undefined,
-      });
-
-      if (locationIds.provinceId) {
-        normalizedProperty.provinceId = locationIds.provinceId;
-      }
-      if (locationIds.cityId) {
-        normalizedProperty.cityId = locationIds.cityId;
-      }
-    }
-  } catch (error) {
-    // If location resolution fails, continue without IDs
-    // The text-based fallback will still work
-    console.warn('[createProperty] Location ID resolution failed:', error);
-  }
-
-  const result = await db.insert(properties).values(normalizedProperty);
-  return result[0].insertId;
-}
-
-export async function createPropertyImage(image: InsertPropertyImage) {
-  const db = await getDb();
-  if (!db) throw new Error('Database not available');
-  await db.insert(propertyImages).values(image);
 }
 
 export async function getPropertyById(id: number) {
@@ -951,7 +878,7 @@ export interface PropertySearchParams {
 
 export async function searchProperties(params: PropertySearchParams) {
   const db = await getDb();
-  if (!db) return [];
+  if (!db) throw new Error('Database not available');
 
   const conditions: SQL[] = [ne(properties.propertyType, 'commercial')];
 
@@ -1042,28 +969,6 @@ export async function searchProperties(params: PropertySearchParams) {
 
   const results = await query;
 
-  // Get boosted listings for search channel
-  try {
-    const { getBoostedListingsForChannel } = await import('./campaignBoost');
-    const boostedIds = await getBoostedListingsForChannel('search', 3);
-
-    if (boostedIds.length > 0) {
-      // Fetch boosted properties
-      const boostedProperties = await db
-        .select()
-        .from(properties)
-        .where(and(inArray(properties.id, boostedIds), ne(properties.propertyType, 'commercial')));
-
-      // Remove boosted from regular results to avoid duplicates
-      const filteredResults = results.filter((prop: any) => !boostedIds.includes(prop.id));
-
-      // Merge: boosted first, then regular
-      return [...boostedProperties, ...filteredResults].slice(0, params.limit || 20);
-    }
-  } catch (error) {
-    console.error('Error applying campaign boost:', error);
-  }
-
   return results;
 }
 
@@ -1093,71 +998,84 @@ export async function incrementPropertyViews(id: number) {
     .where(eq(properties.id, id));
 }
 
-// Favorites queries
-export async function addFavorite(userId: number, propertyId: number) {
-  const db = await getDb();
-  if (!db) throw new Error('Database not available');
+// Consumer saved-inventory facts
+//
+// Public eligibility is established by the properties router before this
+// persistence boundary is called. This function owns only the idempotent
+// user/property fact and serializes competing commands for one account.
+export async function setUserFavoriteFactWithDatabase(
+  database: any,
+  userId: number,
+  propertyId: number,
+  saved: boolean,
+): Promise<{ propertyId: number; saved: boolean }> {
+  return database.transaction(async (tx: any) => {
+    const [owner] = await tx
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.id, userId))
+      .for('update');
+    if (!owner) throw new Error('User not found');
 
-  const [property] = await db
-    .select({ propertyType: properties.propertyType })
-    .from(properties)
-    .where(eq(properties.id, propertyId))
-    .limit(1);
-  if (!property) throw new Error('Property not found');
-  if (isCommercialMarketingPropertyType(property.propertyType)) {
-    throw new Error(COMMERCIAL_PUBLIC_JOURNEY_HANDOFF_MESSAGE);
-  }
+    if (!saved) {
+      await tx
+        .delete(favorites)
+        .where(and(eq(favorites.userId, userId), eq(favorites.propertyId, propertyId)));
+      return { propertyId, saved: false };
+    }
 
-  await db.insert(favorites).values({ userId, propertyId });
+    const [existing] = await tx
+      .select({ id: favorites.id })
+      .from(favorites)
+      .where(and(eq(favorites.userId, userId), eq(favorites.propertyId, propertyId)))
+      .limit(1);
+    if (!existing) {
+      await tx.insert(favorites).values({ userId, propertyId });
+    }
+
+    return { propertyId, saved: true };
+  });
 }
 
-export async function removeFavorite(userId: number, propertyId: number) {
-  const db = await getDb();
-  if (!db) throw new Error('Database not available');
-  await db
-    .delete(favorites)
-    .where(and(eq(favorites.userId, userId), eq(favorites.propertyId, propertyId)));
+export async function setUserFavoriteFact(
+  userId: number,
+  propertyId: number,
+  saved: boolean,
+): Promise<{ propertyId: number; saved: boolean }> {
+  const database = await getDb();
+  if (!database) throw new Error('Database not available');
+  return setUserFavoriteFactWithDatabase(database, userId, propertyId, saved);
 }
 
-export async function getUserFavorites(userId: number) {
+export async function getUserFavoriteFacts(userId: number) {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
   return await db
     .select({
       id: favorites.id,
       propertyId: favorites.propertyId,
-      property: properties,
       createdAt: favorites.createdAt,
     })
     .from(favorites)
-    .innerJoin(properties, eq(favorites.propertyId, properties.id))
-    .where(and(eq(favorites.userId, userId), ne(properties.propertyType, 'commercial')))
-    .orderBy(desc(favorites.createdAt));
-}
-
-export async function isFavorite(userId: number, propertyId: number) {
-  const db = await getDb();
-  if (!db) throw new Error('Database not available');
-  const result = await db
-    .select()
-    .from(favorites)
-    .where(and(eq(favorites.userId, userId), eq(favorites.propertyId, propertyId)))
-    .limit(1);
-  return result.length > 0;
+    .where(eq(favorites.userId, userId))
+    // `createdAt` has second precision in the current canonical favorite
+    // model. The account transaction lock makes the primary key a stable
+    // committed-order tie breaker for saves that share a second.
+    .orderBy(desc(favorites.createdAt), desc(favorites.id));
 }
 
 // ==================== AGENTS ====================
 
 export async function getAllAgents() {
   const db = await getDb();
-  if (!db) return [];
+  if (!db) throw new Error('Database not available');
 
   return await db.select().from(agents);
 }
 
 export async function getAgentById(id: number) {
   const db = await getDb();
-  if (!db) return undefined;
+  if (!db) throw new Error('Database not available');
 
   const result = await db.select().from(agents).where(eq(agents.id, id)).limit(1);
   return result.length > 0 ? result[0] : undefined;
@@ -1165,7 +1083,7 @@ export async function getAgentById(id: number) {
 
 export async function getFeaturedAgents(limit: number = 6) {
   const db = await getDb();
-  if (!db) return [];
+  if (!db) throw new Error('Database not available');
 
   return await db.select().from(agents).where(eq(agents.isFeatured, 1)).limit(limit);
 }
@@ -1174,14 +1092,14 @@ export async function getFeaturedAgents(limit: number = 6) {
 
 export async function getAllDevelopments() {
   const db = await getDb();
-  if (!db) return [];
+  if (!db) throw new Error('Database not available');
 
   return await db.select().from(developments);
 }
 
 export async function getDevelopmentById(id: number) {
   const db = await getDb();
-  if (!db) return undefined;
+  if (!db) throw new Error('Database not available');
 
   const result = await db.select().from(developments).where(eq(developments.id, id)).limit(1);
   return result.length > 0 ? result[0] : undefined;
@@ -1189,14 +1107,14 @@ export async function getDevelopmentById(id: number) {
 
 export async function getFeaturedDevelopments(limit: number = 6) {
   const db = await getDb();
-  if (!db) return [];
+  if (!db) throw new Error('Database not available');
 
   return await db.select().from(developments).where(eq(developments.isFeatured, 1)).limit(limit);
 }
 
 export async function getDevelopmentProperties(developmentId: number) {
   const db = await getDb();
-  if (!db) return [];
+  if (!db) throw new Error('Database not available');
 
   return await db.select().from(properties).where(eq(properties.developmentId, developmentId));
 }
@@ -1206,7 +1124,7 @@ export async function getDevelopmentProperties(developmentId: number) {
  */
 export async function searchDevelopers(query: string, limit: number = 10) {
   const db = await getDb();
-  if (!db) return [];
+  if (!db) throw new Error('Database not available');
 
   return await db
     .select({
@@ -1239,7 +1157,7 @@ export async function searchDevelopers(query: string, limit: number = 10) {
 
 export async function getAllServices() {
   const db = await getDb();
-  if (!db) return [];
+  if (!db) throw new Error('Database not available');
 
   // services table would need to be imported at top if used
   return await db.select().from(services);
@@ -1247,7 +1165,7 @@ export async function getAllServices() {
 
 export async function getServicesByCategory(category: string) {
   const db = await getDb();
-  if (!db) return [];
+  if (!db) throw new Error('Database not available');
 
   const categoryId = Number(category);
   if (!Number.isFinite(categoryId) || categoryId <= 0) {
@@ -1260,7 +1178,7 @@ export async function getServicesByCategory(category: string) {
 
 export async function getReviewsByTarget(reviewType: string, targetId: number) {
   const db = await getDb();
-  if (!db) return [];
+  if (!db) throw new Error('Database not available');
 
   // reviews table would need to be imported at top if used
   return await db
@@ -1297,7 +1215,7 @@ export async function createLead(leadData: any) {
 
 export async function getLeadsByAgent(agentId: number) {
   const db = await getDb();
-  if (!db) return [];
+  if (!db) throw new Error('Database not available');
 
   // leads already imported at top
   return await db.select().from(leads).where(eq(leads.agentId, agentId));
@@ -1307,7 +1225,7 @@ export async function getLeadsByAgent(agentId: number) {
 
 export async function getAllLocations() {
   const db = await getDb();
-  if (!db) return [];
+  if (!db) throw new Error('Database not available');
 
   // locations table would need to be imported at top if used
   return await db.select().from(locations);
@@ -1315,7 +1233,7 @@ export async function getAllLocations() {
 
 export async function getLocationsByType(type: string) {
   const db = await getDb();
-  if (!db) return [];
+  if (!db) throw new Error('Database not available');
 
   // locations table would need to be imported at top if used
   return await db
@@ -1326,23 +1244,14 @@ export async function getLocationsByType(type: string) {
 
 // ==================== AGENCY DASHBOARD ANALYTICS ====================
 
-/**
- * Canonical agency inventory is owned by listings. The owner/agent joins are
- * compatibility fallbacks for records created before listings.agencyId existed.
- */
+/** Canonical agency inventory is owned by the listing's agency identity. */
 function agencyListingScopeCondition(agencyId: number) {
-  return or(
-    eq(listings.agencyId, agencyId),
-    and(
-      isNull(listings.agencyId),
-      or(eq(users.agencyId, agencyId), and(isNull(users.agencyId), eq(agents.agencyId, agencyId))),
-    ),
-  )!;
+  return eq(listings.agencyId, agencyId);
 }
 
 async function getAgencyCanonicalListings(agencyId: number) {
   const db = await getDb();
-  if (!db) return [];
+  if (!db) throw new Error('Database not available');
 
   return db
     .select({ listing: listings })
@@ -1355,16 +1264,7 @@ async function getAgencyCanonicalListings(agencyId: number) {
 export async function getAgencyDashboardStats(agencyId: number) {
   const db = await getDb();
   if (!db) {
-    return {
-      totalListings: 0,
-      totalSales: 0,
-      totalLeads: 0,
-      totalAgents: 0,
-      activeListings: 0,
-      pendingListings: 0,
-      recentLeads: 0,
-      recentSales: 0,
-    };
+    throw new Error('Database not available');
   }
 
   const [agencyListingRows, agencyLeads] = await Promise.all([
@@ -1416,340 +1316,105 @@ export async function getAgencyDashboardStats(agencyId: number) {
   };
 }
 
-// ==================== PROSPECT MANAGEMENT ====================
-
-export async function createProspect(prospectData: any) {
-  const db = await getDb();
-  if (!db) throw new Error('Database not available');
-
-  const result = await db.insert(prospects).values(prospectData);
-  return result[0].insertId;
-}
-
-export async function updateProspect(sessionId: string, updates: any) {
-  const db = await getDb();
-  if (!db) throw new Error('Database not available');
-  const userId = parseSessionUserId(sessionId);
-
-  await db
-    .update(prospects)
-    .set({
-      preferences: updates?.preferences ?? null,
-      lastActiveAt: new Date() as any,
-      updatedAt: new Date(),
+/**
+ * Allocates the next recent-view time for an account while that account's
+ * `users` row is locked by the caller. The database clock, rather than an
+ * application host clock, defines UTC time. If a preceding committed fact is
+ * at or ahead of that clock, advancing the fact by one microsecond preserves
+ * strict recency despite clock resolution or regression.
+ */
+export async function allocateUserRecentViewTimestamp(
+  transaction: any,
+  userId: number,
+): Promise<string> {
+  const [row] = await transaction
+    .select({
+      viewedAt: sql<string | null>`DATE_FORMAT(
+        CASE
+          WHEN MAX(${recentlyViewed.viewedAt}) IS NULL
+            OR UTC_TIMESTAMP(6) > MAX(${recentlyViewed.viewedAt})
+          THEN UTC_TIMESTAMP(6)
+          ELSE DATE_ADD(MAX(${recentlyViewed.viewedAt}), INTERVAL 1 MICROSECOND)
+        END,
+        '%Y-%m-%d %H:%i:%s.%f'
+      )`,
     })
-    .where(eq(prospects.userId, userId));
-
-  return { success: true };
+    .from(recentlyViewed)
+    .where(eq(recentlyViewed.userId, userId));
+  const viewedAt = String(row?.viewedAt ?? '');
+  if (!/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{6}$/.test(viewedAt)) {
+    throw new Error('Canonical recent-view timestamp allocation failed.');
+  }
+  return viewedAt;
 }
 
-export async function getProspect(sessionId: string): Promise<Prospect | undefined> {
-  const db = await getDb();
-  if (!db) return undefined;
-  const userId = parseSessionUserId(sessionId);
+// Consumer activity facts use the canonical authored-listing identity.
+// The properties router resolves public eligibility before calling this
+// persistence boundary, so it cannot turn a projection ID into a listing ID
+// by coincidence.
+export async function recordUserListingViewFactWithDatabase(
+  database: any,
+  userId: number,
+  listingId: number,
+): Promise<{ listingId: number; viewedAt: string }> {
+  return database.transaction(async (tx: any) => {
+    const [owner] = await tx
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.id, userId))
+      .for('update');
+    if (!owner) throw new Error('User not found');
 
-  const result = await db.select().from(prospects).where(eq(prospects.userId, userId)).limit(1);
-  return result[0];
-}
+    const viewedAt = await allocateUserRecentViewTimestamp(tx, userId);
+    const [existing] = await tx
+      .select({ id: recentlyViewed.id })
+      .from(recentlyViewed)
+      .where(and(eq(recentlyViewed.userId, userId), eq(recentlyViewed.listingId, listingId)))
+      .limit(1);
 
-export async function addProspectFavorite(sessionId: string, propertyId: number) {
-  const db = await getDb();
-  if (!db) throw new Error('Database not available');
-
-  // Get prospect ID from sessionId
-  const prospect = await getProspect(sessionId);
-  if (!prospect) throw new Error('Prospect not found');
-
-  await db
-    .insert(prospectFavorites)
-    .values({ prospectId: prospect.id, listingId: propertyId as any });
-  return { success: true };
-}
-
-export async function removeProspectFavorite(sessionId: string, propertyId: number) {
-  const db = await getDb();
-  if (!db) throw new Error('Database not available');
-
-  // Get prospect ID from sessionId
-  const prospect = await getProspect(sessionId);
-  if (!prospect) throw new Error('Prospect not found');
-
-  await db
-    .delete(prospectFavorites)
-    .where(
-      and(
-        eq(prospectFavorites.prospectId, prospect.id),
-        eq(prospectFavorites.listingId, propertyId as any),
-      ),
-    );
-
-  return { success: true };
-}
-
-export async function getProspectFavorites(sessionId: string) {
-  const db = await getDb();
-  if (!db) return [];
-
-  try {
-    // First get the prospect by sessionId
-    const prospect = await getProspect(sessionId);
-    if (!prospect) {
-      console.log('[getProspectFavorites] No prospect found for sessionId:', sessionId);
-      return [];
+    if (existing) {
+      await tx
+        .update(recentlyViewed)
+        .set({ viewedAt })
+        .where(eq(recentlyViewed.id, existing.id));
+    } else {
+      await tx.insert(recentlyViewed).values({ userId, listingId, viewedAt });
     }
 
-    const results = await db
-      .select({
-        id: prospectFavorites.id,
-        listingId: prospectFavorites.listingId,
-        listing: listings,
-        createdAt: prospectFavorites.createdAt,
-      })
-      .from(prospectFavorites)
-      .innerJoin(listings, eq(prospectFavorites.listingId, listings.id))
-      .where(eq(prospectFavorites.prospectId, prospect.id))
-      .orderBy(desc(prospectFavorites.createdAt));
+    return { listingId, viewedAt };
+  });
+}
 
-    // Ensure we always return an array, even if results is null/undefined
-    return Array.isArray(results) ? results : [];
-  } catch (error) {
-    console.error('[getProspectFavorites] Database query failed:', error);
-    // Return empty array instead of throwing to prevent 500 errors
-    return [];
+export async function recordUserListingViewFact(
+  userId: number,
+  listingId: number,
+): Promise<{ listingId: number; viewedAt: string }> {
+  const database = await getDb();
+  if (!database) throw new Error('Database not available');
+  return recordUserListingViewFactWithDatabase(database, userId, listingId);
+}
+
+export async function getUserRecentViewFacts(userId: number, limit = 50) {
+  const database = await getDb();
+  if (!database) throw new Error('Database not available');
+  if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100) {
+    throw new Error('Recent-view limit must be an integer between 1 and 100');
   }
-}
 
-export async function scheduleViewing(viewingData: any) {
-  const db = await getDb();
-  if (!db) throw new Error('Database not available');
-
-  const result = await db.insert(scheduledViewings).values(viewingData);
-  return result[0].insertId;
-}
-
-export async function getScheduledViewings(sessionId: string) {
-  const db = await getDb();
-  if (!db) return [];
-  const userId = parseSessionUserId(sessionId);
-
-  try {
-    const results = await db
-      .select({
-        id: scheduledViewings.id,
-        propertyId: scheduledViewings.propertyId,
-        property: properties,
-        scheduledAt: scheduledViewings.scheduledDate,
-        status: scheduledViewings.status,
-        notes: scheduledViewings.notes,
-        createdAt: scheduledViewings.createdAt,
-      })
-      .from(scheduledViewings)
-      .innerJoin(properties, eq(scheduledViewings.propertyId, properties.id))
-      .where(eq(scheduledViewings.userId, userId))
-      .orderBy(scheduledViewings.scheduledDate);
-
-    return Array.isArray(results) ? results : [];
-  } catch (error) {
-    console.error('[getScheduledViewings] Database query failed:', error);
-    return [];
-  }
-}
-
-export async function updateViewingStatus(viewingId: number, status: string) {
-  const db = await getDb();
-  if (!db) throw new Error('Database not available');
-
-  await db
-    .update(scheduledViewings)
-    .set({
-      status: status as any,
-      updatedAt: new Date(),
+  return database
+    .select({
+      id: recentlyViewed.id,
+      listingId: recentlyViewed.listingId,
+      viewedAt: recentlyViewed.viewedAt,
     })
-    .where(eq(scheduledViewings.id, viewingId));
-
-  return { success: true };
-}
-
-export async function trackPropertyView(sessionId: string, propertyId: number) {
-  const db = await getDb();
-  if (!db) throw new Error('Database not available');
-  const userId = parseSessionUserId(sessionId);
-
-  // First check if this property was recently viewed by this prospect
-  const existing = await db
-    .select()
     .from(recentlyViewed)
-    .where(and(eq(recentlyViewed.userId, userId), eq(recentlyViewed.listingId, propertyId as any)))
-    .limit(1);
-
-  if (existing.length > 0) {
-    // Update the viewedAt timestamp
-    await db
-      .update(recentlyViewed)
-      .set({
-        viewedAt: new Date(),
-      })
-      .where(
-        and(eq(recentlyViewed.userId, userId), eq(recentlyViewed.listingId, propertyId as any)),
-      );
-  } else {
-    // Insert new record
-    await db.insert(recentlyViewed).values({
-      userId,
-      listingId: propertyId as any,
-      viewedAt: new Date(),
-    });
-  }
-
-  return { success: true };
+    .where(eq(recentlyViewed.userId, userId))
+    .orderBy(desc(recentlyViewed.viewedAt), desc(recentlyViewed.id))
+    .limit(limit);
 }
-
-export async function getRecentlyViewed(sessionId: string) {
-  const db = await getDb();
-  if (!db) return [];
-  const userId = parseSessionUserId(sessionId);
-
-  try {
-    const results = await db
-      .select({
-        id: recentlyViewed.id,
-        listingId: recentlyViewed.listingId,
-        listing: listings,
-        viewedAt: recentlyViewed.viewedAt,
-      })
-      .from(recentlyViewed)
-      .innerJoin(listings, eq(recentlyViewed.listingId, listings.id))
-      .where(eq(recentlyViewed.userId, userId))
-      .orderBy(desc(recentlyViewed.viewedAt))
-      .limit(10);
-
-    // Ensure we always return an array, even if results is null/undefined
-    return Array.isArray(results) ? results : [];
-  } catch (error) {
-    console.error('[getRecentlyViewed] Database query failed:', error);
-    // Return empty array instead of throwing to prevent 500 errors
-    return [];
-  }
-}
-
-export async function updateProspectProgress(
-  sessionId: string,
-  progress: number,
-  badges?: string[],
-) {
-  const db = await getDb();
-  if (!db) throw new Error('Database not available');
-  const userId = parseSessionUserId(sessionId);
-
-  const [current] = await db
-    .select({ preferences: prospects.preferences })
-    .from(prospects)
-    .where(eq(prospects.userId, userId))
-    .limit(1);
-
-  const currentPreferences =
-    current?.preferences && typeof current.preferences === 'object'
-      ? (current.preferences as Record<string, unknown>)
-      : {};
-  const nextPreferences: Record<string, unknown> = {
-    ...currentPreferences,
-    profileProgress: progress,
-  };
-
-  if (badges) {
-    nextPreferences.badges = badges;
-  }
-
-  const updateData = {
-    preferences: nextPreferences as any,
-    lastActiveAt: new Date() as any,
-    updatedAt: new Date(),
-  };
-
-  await db.update(prospects).set(updateData).where(eq(prospects.userId, userId));
-  return { success: true };
-}
-
-export async function earnBadge(sessionId: string, badge: string) {
-  const db = await getDb();
-  if (!db) throw new Error('Database not available');
-
-  const prospect = await getProspect(sessionId);
-  if (!prospect) throw new Error('Prospect not found');
-  const prefs =
-    prospect.preferences && typeof prospect.preferences === 'object'
-      ? (prospect.preferences as Record<string, unknown>)
-      : {};
-  const currentBadges = Array.isArray(prefs.badges) ? [...(prefs.badges as string[])] : [];
-  if (!currentBadges.includes(badge)) {
-    currentBadges.push(badge);
-    const nextPreferences = {
-      ...prefs,
-      badges: currentBadges,
-    };
-    const userId = parseSessionUserId(sessionId);
-    await db
-      .update(prospects)
-      .set({
-        preferences: nextPreferences as any,
-        lastActiveAt: new Date() as any,
-        updatedAt: new Date(),
-      })
-      .where(eq(prospects.userId, userId));
-  }
-
-  return { success: true, badges: currentBadges };
-}
-
-export async function getRecommendedProperties(prospect: Prospect, limit: number = 10) {
-  const db = await getDb();
-  if (!db) return [];
-
-  const prefs =
-    prospect.preferences && typeof prospect.preferences === 'object'
-      ? (prospect.preferences as Record<string, unknown>)
-      : {};
-  const affordabilityMax = Number(prefs.affordabilityMax || 0);
-  const affordabilityMin = Number(prefs.affordabilityMin || 0);
-  const preferredPropertyType =
-    typeof prefs.preferredPropertyType === 'string' ? prefs.preferredPropertyType : null;
-  const preferredLocation =
-    typeof prefs.preferredLocation === 'string' ? prefs.preferredLocation : null;
-
-  if (!affordabilityMax) return [];
-
-  // Build query conditions based on prospect preferences and affordability
-  const conditions: SQL[] = [
-    eq(properties.status, 'available' as any),
-    ne(properties.propertyType, 'commercial'),
-    lte(properties.price, affordabilityMax),
-  ];
-
-  if (affordabilityMin) {
-    conditions.push(gte(properties.price, affordabilityMin));
-  }
-
-  if (preferredPropertyType) {
-    conditions.push(eq(properties.propertyType, preferredPropertyType as any));
-  }
-
-  if (preferredLocation) {
-    conditions.push(like(properties.city, `%${preferredLocation}%`));
-  }
-
-  let query = db
-    .select()
-    .from(properties)
-    .where(and(...conditions));
-
-  query = query.orderBy(desc(properties.featured), desc(properties.createdAt)).limit(limit);
-
-  return await query;
-}
-
 export async function getAgencyPerformanceData(agencyId: number, months: number = 6) {
   const db = await getDb();
-  if (!db) return [];
+  if (!db) throw new Error('Database not available');
 
   // tables already imported at top
 
@@ -1803,7 +1468,7 @@ export async function getAgencyPerformanceData(agencyId: number, months: number 
 
 export async function getAgencyRecentLeads(agencyId: number, limit: number = 5) {
   const db = await getDb();
-  if (!db) return [];
+  if (!db) throw new Error('Database not available');
 
   // leads already imported at top
 
@@ -1832,7 +1497,7 @@ export async function getAgencyRecentLeads(agencyId: number, limit: number = 5) 
 
 export async function getAgencyRecentListings(agencyId: number, limit: number = 5) {
   const db = await getDb();
-  if (!db) return [];
+  if (!db) throw new Error('Database not available');
 
   const rows = await db
     .select({ listing: listings })
@@ -1865,7 +1530,7 @@ export async function getAgencyRecentListings(agencyId: number, limit: number = 
 
 export async function getAgencyAgents(agencyId: number) {
   const db = await getDb();
-  if (!db) return [];
+  if (!db) throw new Error('Database not available');
 
   // tables already imported at top
 
@@ -1894,7 +1559,7 @@ export async function getAgencyAgents(agencyId: number) {
 
 export async function getLeadConversionStats(agencyId: number, months: number = 6) {
   const db = await getDb();
-  if (!db) return { total: 0, converted: 0, conversionRate: 0, byStatus: [] };
+  if (!db) throw new Error('Database not available');
 
   // leads already imported at top
 
@@ -1947,8 +1612,7 @@ export async function getLeadConversionStats(agencyId: number, months: number = 
 
 export async function getAgencyCommissionStats(agencyId: number, months: number = 6) {
   const db = await getDb();
-  if (!db)
-    return { totalEarnings: 0, paidCommissions: 0, pendingCommissions: 0, monthlyBreakdown: [] };
+  if (!db) throw new Error('Database not available');
 
   // tables already imported at top
 
@@ -2022,7 +1686,7 @@ export async function getAgencyCommissionStats(agencyId: number, months: number 
 
 export async function getAgentPerformanceLeaderboard(agencyId: number, months: number = 3) {
   const db = await getDb();
-  if (!db) return [];
+  if (!db) throw new Error('Database not available');
 
   // tables already imported at top
 
@@ -2105,7 +1769,7 @@ export async function getAgentPerformanceLeaderboard(agencyId: number, months: n
 
 export async function getPlatformSetting(key: string) {
   const db = await getDb();
-  if (!db) return null;
+  if (!db) throw new Error('Database not available');
 
   const result: any = await db.execute(
     sql.raw(`
@@ -2164,7 +1828,7 @@ export async function setPlatformSetting(key: string, value: any, updatedBy?: nu
 
 export async function getAllPlatformSettings() {
   const db = await getDb();
-  if (!db) return [];
+  if (!db) throw new Error('Database not available');
 
   const result: any = await db.execute(
     sql.raw(`
@@ -2191,17 +1855,7 @@ export async function getAllPlatformSettings() {
 export async function getPlatformAnalytics() {
   const db = await getDb();
   if (!db) {
-    return {
-      totalUsers: 0,
-      totalAgencies: 0,
-      totalProperties: 0,
-      activeProperties: 0,
-      totalAgents: 0,
-      paidSubscriptions: 0,
-      monthlyRevenue: 0,
-      userGrowth: 0,
-      propertyGrowth: 0,
-    };
+    throw new Error('Database not available');
   }
 
   // Schema tables are already imported at top level
@@ -2214,7 +1868,13 @@ export async function getPlatformAnalytics() {
       (SELECT COUNT(*) FROM ${listings}) as propertyCount,
       (SELECT COUNT(*) FROM ${listings} WHERE ${listings.status} IN ('pending_review', 'approved', 'published')) as activePropertyCount,
       (SELECT COUNT(*) FROM ${agents}) as agentCount,
-      (SELECT COUNT(*) FROM ${subscriptions} WHERE ${subscriptions.ownerType} = 'agency' AND ${subscriptions.status} IN ('active', 'grace_period')) as paidSubsCount,
+      (SELECT COUNT(*) FROM ${subscriptions}
+         WHERE ${subscriptions.status} IN ('active', 'grace_period')
+           AND EXISTS (
+             SELECT 1 FROM ${billableAccounts} account
+              WHERE account.id = ${subscriptions.billableAccountId}
+                AND account.account_kind = 'agency'
+           )) as paidSubsCount,
       (SELECT COUNT(*) FROM ${cataloguePublishers} WHERE ${cataloguePublishers.authorityKind} = 'developer_first_party') as developerCount
   `);
 
@@ -2249,7 +1909,7 @@ export async function getPlatformAnalytics() {
 
 export async function getListingStats() {
   const db = await getDb();
-  if (!db) return { pending: 0, approved: 0, rejected: 0, total: 0 };
+  if (!db) throw new Error('Database not available');
 
   // properties already imported at top
 
@@ -2277,7 +1937,7 @@ export async function getListingStats() {
 
 export async function getSubscriptionStats() {
   const db = await getDb();
-  if (!db) return { free: 0, basic: 0, premium: 0, enterprise: 0, total: 0 };
+  if (!db) throw new Error('Database not available');
 
   // agencies already imported at top
 
@@ -2846,7 +2506,9 @@ export async function updateListing(listingId: number, updateData: any) {
     delete updateFields.pricing;
   }
 
-  if ((updateData.propertyDetails as Record<string, unknown> | undefined)?.rentalTerms !== undefined) {
+  if (
+    (updateData.propertyDetails as Record<string, unknown> | undefined)?.rentalTerms !== undefined
+  ) {
     // A terms-only edit is still enough to retire any stale direct-column
     // values left by a pre-contract draft.
     updateFields.leaseTerms = null;
@@ -2907,10 +2569,9 @@ export async function submitListingForReview(listingId: number, database?: any) 
     throw new Error(pricingIssues.map(issue => issue.message).join(' '));
   }
   if (String((transitionListing as any).action) === 'rent') {
-    const rentalTermsIssues = validateRentalTerms(
-      (listing as any)?.propertyDetails?.rentalTerms,
-      { mode: 'publish' },
-    );
+    const rentalTermsIssues = validateRentalTerms((listing as any)?.propertyDetails?.rentalTerms, {
+      mode: 'publish',
+    });
     if (rentalTermsIssues.length > 0) {
       throw new Error(rentalTermsIssues.map(issue => issue.message).join(' '));
     }
@@ -3334,11 +2995,15 @@ async function syncPublishedListingMediaToPropertyMirrorWithDatabase(
   // action. This prevents repair/compatibility callers bypassing entitlement.
   await assertListingPublicationEntitled(database, { listingId, operation: 'public_media_sync' });
 
-  const [mirroredProperty] = await database
+  const mirroredProperties = await database
     .select({ id: properties.id })
     .from(properties)
     .where(eq(properties.sourceListingId, listingId))
-    .limit(1);
+    .limit(2);
+  if (mirroredProperties.length > 1) {
+    return { synced: false, reason: 'duplicate_property_mirrors' as const };
+  }
+  const mirroredProperty = mirroredProperties[0];
 
   if (!mirroredProperty) {
     return { synced: false, reason: 'property_mirror_not_found' as const };
@@ -3769,11 +3434,15 @@ async function upsertCanonicalPublicPropertyProjection(
     );
   }
 
-  const [existingProperty] = await database
+  const existingProperties = await database
     .select({ id: properties.id })
     .from(properties)
     .where(eq(properties.sourceListingId, Number(propertyValues.sourceListingId)))
-    .limit(1);
+    .limit(2);
+  if (existingProperties.length > 1) {
+    throw new Error('Cannot publish: duplicate public projections exist for this listing.');
+  }
+  const existingProperty = existingProperties[0];
 
   if (existingProperty) {
     await database
@@ -4583,7 +4252,7 @@ interface ListingSearchParams {
  */
 export async function searchListings(params: ListingSearchParams) {
   const db = await getDb();
-  if (!db) return [];
+  if (!db) throw new Error('Database not available');
 
   const conditions: SQL[] = [ne(listings.propertyType, 'commercial')];
 
@@ -4742,7 +4411,7 @@ export async function searchListings(params: ListingSearchParams) {
  */
 export async function getFeaturedListings(limit: number = 6) {
   const db = await getDb();
-  if (!db) return [];
+  if (!db) throw new Error('Database not available');
 
   const results = await db
     .select()
@@ -4819,7 +4488,7 @@ function projectDeveloperOrganisation(row: DeveloperOrganisationRow) {
 
 async function getDeveloperOrganisationRow(id: number): Promise<DeveloperOrganisationRow | null> {
   const database = await getDb();
-  if (!database) return null;
+  if (!database) throw new Error('Database not available');
   const rows = await database
     .select({
       organisation: developerOrganisations,
@@ -4859,7 +4528,7 @@ async function listDeveloperOrganisationRows(
   },
 ) {
   const database = await getDb();
-  if (!database) return [];
+  if (!database) throw new Error('Database not available');
   const conditions: SQL[] = [eq(cataloguePublishers.authorityKind, 'developer_first_party')];
   if (status) conditions.push(eq(developerOrganisations.status, status));
   if (filters?.category)

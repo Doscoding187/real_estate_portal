@@ -6,6 +6,7 @@ export interface EmailData {
   subject: string;
   html: string;
   text?: string;
+  idempotencyKey?: string;
 }
 
 // Basic email service (placeholder for actual implementation)
@@ -26,7 +27,7 @@ export class EmailService {
             subject: emailData.subject,
             html: emailData.html,
             text: emailData.text,
-          });
+          }, emailData.idempotencyKey ? { idempotencyKey: emailData.idempotencyKey } : undefined);
 
           if (error) {
             console.error('[Email] Resend API Error:', error);
@@ -629,6 +630,7 @@ export class EmailService {
       developmentId?: number;
       propertyId?: number;
     },
+    options?: { idempotencyKey?: string },
   ): Promise<boolean> {
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #f8fafc; padding: 20px;">
@@ -669,6 +671,7 @@ export class EmailService {
       to: developerEmail,
       subject: `📩 New Buyer Enquiry for ${brandName} via Property Listify`,
       html,
+      idempotencyKey: options?.idempotencyKey,
     });
   }
 }

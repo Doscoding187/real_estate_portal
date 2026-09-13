@@ -1,6 +1,6 @@
 import { and, eq } from 'drizzle-orm';
 
-import { plans, subscriptions } from '../../drizzle/schema';
+import { billableAccounts, plans, subscriptions } from '../../drizzle/schema';
 import { getDb } from '../db';
 import {
   getCommercialProductKey,
@@ -51,11 +51,12 @@ export async function getDeveloperPublicationAccess(
   const [row] = await database
     .select({ subscription: subscriptions, plan: plans })
     .from(subscriptions)
+    .innerJoin(billableAccounts, eq(subscriptions.billableAccountId, billableAccounts.id))
     .innerJoin(plans, eq(subscriptions.planId, plans.id))
     .where(
       and(
-        eq(subscriptions.ownerType, 'developer'),
-        eq(subscriptions.ownerId, organisationId),
+        eq(billableAccounts.accountKind, 'developer'),
+        eq(billableAccounts.developerOrganisationId, organisationId),
         eq(plans.segment, 'developer'),
         eq(plans.name, 'developer_launch_access'),
       ),

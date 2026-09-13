@@ -125,4 +125,23 @@ describe('agents serving location authority', () => {
     expect(source).toContain('findAgentsServingLocation');
     expect(source).not.toContain('getRecommendedAgents called but disabled');
   });
+
+  it('fails closed for disabled monetized placement procedures', () => {
+    const source = readFileSync(
+      path.resolve(process.cwd(), 'server/monetizationRouter.ts'),
+      'utf8',
+    );
+    expect(source).toContain("code: 'PRECONDITION_FAILED'");
+    expect(source).toContain('canonical authority is approved');
+    expect(source).not.toContain('getAllRules called but disabled');
+    expect(source).not.toContain('getHeroAd called but disabled');
+    expect(source).not.toContain('getFeaturedDevelopers called but disabled');
+
+    for (const procedure of ['getAllRules', 'getHeroAd', 'getFeaturedDevelopers']) {
+      const start = source.indexOf(`${procedure}:`);
+      const end = source.indexOf('\n  },', start);
+      expect(start).toBeGreaterThanOrEqual(0);
+      expect(source.slice(start, end)).toContain('notImplementedError()');
+    }
+  });
 });

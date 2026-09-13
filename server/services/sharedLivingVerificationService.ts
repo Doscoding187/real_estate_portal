@@ -127,7 +127,7 @@ export async function verifyPhoneOtp(
 /** Latest phone number evidence recorded for a user (for display only). */
 export async function latestPhoneEvidence(userId: number): Promise<string | null> {
   const db = await getDb();
-  if (!db) return null;
+  if (!db) throw new Error('Database not available');
   const [row] = await db
     .select({ evidenceRef: slVerifications.evidenceRef })
     .from(slVerifications)

@@ -402,7 +402,7 @@ describe('bounded Database Authority data adapters', () => {
     ]);
     expect(plan.products.every(product => product.state === 'missing')).toBe(true);
     expect(plan.pending.filter(item => item.action === 'insert_plan')).toHaveLength(3);
-    expect(plan.migrationHead).toBe('0065_auth_verification_token_cleanup.sql');
+    expect(plan.migrationHead).toBe('0090_retire_disconnected_boost_campaigns.sql');
   });
 
   it('fails closed when a protected commercial row conflicts with canonical authority', async () => {

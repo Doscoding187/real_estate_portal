@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   evaluatePublicPropertySupplyEvidence,
   resolvePublicPropertyEligibilities,
+  resolvePublicPropertyEligibilitiesBySourceListingIds,
   type PublicPropertySupplyEvidence,
 } from '../publicPropertyEligibilityService';
 
@@ -98,6 +99,68 @@ describe('public property eligibility authority', () => {
       publicAuthority: 'public_property_eligibility',
       publicIdentity: { role: 'agent', agentId: 33 },
     });
+  });
+
+  it('resolves consumer activity only through one unambiguous public projection', async () => {
+    const approval = (propertyId: number, sourceListingId: number) => ({
+      authority: 'approved_listing' as const,
+      sourceListingId,
+      property: {
+        id: propertyId,
+        ownerId: 70,
+        agentId: 33,
+        developmentId: null,
+        cataloguePublisherId: null,
+      },
+      images: [],
+      media: [],
+    });
+    const approval501 = approval(501, 9001);
+    const approval504 = approval(504, 9003);
+    const resolveApprovedProperties = vi
+      .fn()
+      .mockResolvedValue(new Map([[501, approval501], [504, approval504]]));
+    const loadSupplyEvidence = vi.fn().mockResolvedValue(
+      new Map([
+        [501, evidence()],
+        [
+          504,
+          evidence({
+            approvedSourceListingId: 9003,
+            property: {
+              id: 504,
+              ownerId: 70,
+              agentId: 33,
+              developmentId: null,
+              cataloguePublisherId: null,
+            },
+            sourceListing: { id: 9003, ownerId: 70, agentId: 33, agencyId: null },
+          }),
+        ],
+      ]),
+    );
+    const loadPropertyProjectionLinksBySourceListingIds = vi.fn().mockResolvedValue([
+      { id: 501, sourceListingId: 9001 },
+      { id: 502, sourceListingId: 9002 },
+      { id: 503, sourceListingId: 9002 },
+      { id: 504, sourceListingId: 9003 },
+      { id: 999, sourceListingId: 9999 },
+    ]);
+
+    const result = await resolvePublicPropertyEligibilitiesBySourceListingIds(
+      [9001, 9002, 9003, 9003, 0],
+      {
+        resolveApprovedProperties,
+        loadSupplyEvidence,
+        loadPropertyProjectionLinksBySourceListingIds,
+      },
+    );
+
+    expect(loadPropertyProjectionLinksBySourceListingIds).toHaveBeenCalledWith([9001, 9002, 9003]);
+    expect(resolveApprovedProperties).toHaveBeenCalledWith([501, 504]);
+    expect(result.get(9001)?.property.id).toBe(501);
+    expect(result.has(9002)).toBe(false);
+    expect(result.get(9003)?.property.id).toBe(504);
   });
 
   it('publishes a verified independent agent with an actionable identity', () => {

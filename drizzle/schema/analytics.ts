@@ -7,18 +7,6 @@ import { locations, cities, suburbs } from './locations';
 import { properties } from './listings';
 
 // --------------------
-// Analytics Aggregations
-// --------------------
-export const analyticsAggregations = mysqlTable('analytics_aggregations', {
-  id: int().autoincrement().primaryKey(),
-  type: mysqlEnum('aggregation_type', ['listing_views', 'agency_views', 'search_terms', 'user_activity']).notNull(),
-  date: date('date', { mode: 'string' }).notNull(),
-  locationId: int('location_id'),
-  data: json('data').notNull(),
-  createdAt: timestamp('created_at', { mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
-});
-
-// --------------------
 // Analytics Events
 // --------------------
 export const analyticsEvents = mysqlTable('analytics_events', {

@@ -53,6 +53,7 @@ import {
   compareNormalizedSchemas,
   normalizedDesiredSchema,
   normalizedPhysicalSchema,
+  summarizeCheckConstraintEnforcement,
 } from '../server/_core/databaseAuthority/schemaCongruency';
 import { readTiDbCheckConstraintCapability } from '../server/_core/databaseAuthority/tidbCheckConstraintCapability';
 import { auditTidbStructuralAdmission } from '../server/_core/databaseAuthority/tidbStructuralAdmission';
@@ -148,7 +149,11 @@ function credentialClass(fallback?: DatabaseCredentialClass): DatabaseCredential
 function authorityFor(operation: DatabaseOperation, fallbackCredential?: DatabaseCredentialClass) {
   return resolveDatabaseAuthority({
     operation,
-    credentialClass: credentialClass(fallbackCredential),
+    // The isolated GitHub service binds identity from the operation after
+    // target resolution. A local-owner fallback must never select its role.
+    credentialClass: credentialClass(
+      process.env.GITHUB_ACTIONS === 'true' ? undefined : fallbackCredential,
+    ),
   });
 }
 
@@ -381,6 +386,7 @@ async function run(command: Command): Promise<void> {
       acceptedOldHead: option('accepted-old-head') === 'none' ? null : option('accepted-old-head'),
       expectedNewHead: option('expected-new-head'),
       acknowledgement: option('ack'),
+      expectedPlanDigest: releaseOperation && !planOnly ? requiredOption('plan-digest') : undefined,
     });
     print({
       mode: result.mode,
@@ -557,8 +563,9 @@ async function run(command: Command): Promise<void> {
   const connection = await createAuthoritySqlConnection(authority, decision);
   try {
     const desired = normalizedDesiredSchema(schema);
-    const actual = await normalizedPhysicalSchema(connection);
+    const actual = await normalizedPhysicalSchema(connection, authority.context.provider);
     const report = compareNormalizedSchemas(desired, actual);
+    const physicalCheckEnforcement = summarizeCheckConstraintEnforcement(actual);
     const checkConstraintEnforcement = await readTiDbCheckConstraintCapability(
       connection,
       authority.context.provider,
@@ -571,7 +578,10 @@ async function run(command: Command): Promise<void> {
       targetClass: authority.context.targetClass,
       ...report,
       congruent,
-      checkConstraintEnforcement,
+      checkConstraintEnforcement: {
+        ...checkConstraintEnforcement,
+        physical: physicalCheckEnforcement,
+      },
       differences: report.differences.slice(0, 100),
       omittedDifferenceCount: Math.max(0, report.differences.length - 100),
     });

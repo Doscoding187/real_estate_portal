@@ -211,7 +211,6 @@ ROI = ((Revenue - Spent) / Spent) × 100
 - `explore_content`: Card-based content
 - `explore_shorts`: Video shorts
 - `explore_engagements`: User interactions
-- `partner_leads`: Lead generation records
 - `boost_campaigns`: Paid promotion campaigns
 - `content_quality_scores`: Content quality metrics
 - `partner_tiers`: Tier configuration
@@ -223,6 +222,10 @@ ROI = ((Revenue - Spent) / Spent) × 100
 - `click`: User clicked CTA
 
 ### Lead Statuses
+
+Lead counts are not reported by this Explore analytics service. Canonical lead
+custody is owned by `leads` and `lead_deliveries`; a future attribution join
+must be defined before funnel counts can be exposed.
 - `new`: Lead just created
 - `contacted`: Partner reached out
 - `converted`: Lead became customer

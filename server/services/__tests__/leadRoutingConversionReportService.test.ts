@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { buildLeadRoutingConversionReport } from '../leadRoutingConversionReportService';
+import type {
+  LeadDeliveryAttemptRecord,
+  LeadDeliveryRecord,
+  LeadDeliverySnapshot,
+} from '../leadDeliveryService';
 
 function makeRow(overrides: Record<string, unknown> = {}) {
   return {
@@ -17,7 +22,7 @@ function makeRow(overrides: Record<string, unknown> = {}) {
     brandLeadStatus: null,
     leadDeliveryMethod: null,
     deliveryStatus: null,
-    deliveryAttempts: [],
+    deliverySnapshot: null,
     propertyOwnerId: null,
     propertyOwnerRole: null,
     status: 'new',
@@ -30,23 +35,55 @@ function deliveryEvidence(
   recipientType: 'agent' | 'developer' | 'manual',
   recipientId: number | null,
   leadCustody: 'verified_customer_recipient' | 'platform_managed',
-) {
-  return [
-    {
-      id: `attempt-${recipientType}`,
-      deliveryKey: `test:${recipientType}:${recipientId ?? 'manual'}`,
-      recipientType,
-      recipientId,
-      channel: recipientType === 'manual' ? 'manual' : 'crm_export',
-      status: 'delivered',
-      attemptCount: 1,
-      maxAttempts: 3,
-      createdAt: '2026-03-25 08:00:00',
-      updatedAt: '2026-03-25 08:00:00',
-      supplyOrigin: leadCustody === 'platform_managed' ? 'platform_curated' : 'customer_managed',
-      leadCustody,
-    },
-  ];
+): LeadDeliverySnapshot {
+  const deliveryId = 100 + (recipientId || 0);
+  const deliveryKey = `lead:1:${recipientType}:${recipientId ?? 'manual'}`;
+  const delivery: LeadDeliveryRecord = {
+    id: deliveryId,
+    leadId: 1,
+    purpose: 'primary_custody',
+    routingRevision: 1,
+    channel: recipientType === 'manual' ? 'manual' : 'crm_export',
+    recipientType,
+    recipientId,
+    recipientUserId: null,
+    recipientAgentId: recipientType === 'agent' ? recipientId : null,
+    recipientAgencyId: null,
+    recipientDeveloperOrganisationId: recipientType === 'developer' ? recipientId : null,
+    recipientPublisherId: null,
+    destinationName: null,
+    destinationAddress: null,
+    destinationSnapshot: null,
+    supplyOrigin: leadCustody === 'platform_managed' ? 'platform_curated' : 'customer_managed',
+    leadCustody,
+    state: 'completed',
+    idempotencyKey: deliveryKey,
+    dueAt: '2026-03-25 08:00:00.000000',
+    maxAttempts: 3,
+    completedAt: '2026-03-25 08:00:00.000000',
+    supersededAt: null,
+    createdAt: '2026-03-25 08:00:00.000000',
+    updatedAt: '2026-03-25 08:00:00.000000',
+  };
+  const attempt: LeadDeliveryAttemptRecord = {
+    id: String(deliveryId),
+    deliveryId,
+    deliveryKey,
+    recipientType,
+    recipientId,
+    channel: delivery.channel,
+    status: 'delivered',
+    attemptCount: 1,
+    maxAttempts: 3,
+    attemptedAt: '2026-03-25 08:00:00.000000',
+    deliveredAt: '2026-03-25 08:00:00.000000',
+    createdAt: '2026-03-25 08:00:00.000000',
+    updatedAt: '2026-03-25 08:00:00.000000',
+    supplyOrigin: delivery.supplyOrigin,
+    leadCustody: delivery.leadCustody,
+    state: 'completed',
+  };
+  return { current: delivery, attempts: [attempt] };
 }
 
 describe('leadRoutingConversionReportService', () => {
@@ -58,28 +95,28 @@ describe('leadRoutingConversionReportService', () => {
           agentId: 11,
           status: 'qualified',
           deliveryStatus: 'delivered',
-          deliveryAttempts: deliveryEvidence('agent', 11, 'verified_customer_recipient'),
+          deliverySnapshot: deliveryEvidence('agent', 11, 'verified_customer_recipient'),
         }),
         makeRow({
           id: 2,
           agentId: 11,
           status: 'converted',
           deliveryStatus: 'delivered',
-          deliveryAttempts: deliveryEvidence('agent', 11, 'verified_customer_recipient'),
+          deliverySnapshot: deliveryEvidence('agent', 11, 'verified_customer_recipient'),
         }),
         makeRow({
           id: 3,
           cataloguePublisherId: 8,
           leadDeliveryMethod: 'crm_export',
           deliveryStatus: 'delivered',
-          deliveryAttempts: deliveryEvidence('developer', 4, 'verified_customer_recipient'),
+          deliverySnapshot: deliveryEvidence('developer', 4, 'verified_customer_recipient'),
           status: 'lost',
         }),
         makeRow({
           id: 4,
           propertyId: 22,
           deliveryStatus: 'delivered',
-          deliveryAttempts: deliveryEvidence('manual', null, 'platform_managed'),
+          deliverySnapshot: deliveryEvidence('manual', null, 'platform_managed'),
           status: 'closed',
           corrected: true,
         }),

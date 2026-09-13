@@ -27,29 +27,6 @@ import { videos } from './media';
 import { exploreContent } from './explore';
 import { partners } from './partners';
 
-export const partnerLeads = mysqlTable(
-  'partner_leads',
-  {
-    id: int().autoincrement().primaryKey(),
-    partnerId: int('partner_id')
-      .notNull()
-      .references(() => partners.id),
-    userId: int('user_id').references(() => users.id),
-    customerName: varchar('customer_name', { length: 255 }).notNull(),
-    customerEmail: varchar('customer_email', { length: 320 }).notNull(),
-    customerPhone: varchar('customer_phone', { length: 50 }),
-    serviceRequested: varchar('service_requested', { length: 100 }),
-    message: text(),
-    status: mysqlEnum(['new', 'contacted', 'quoted', 'converted', 'closed']).default('new'),
-    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow(),
-    updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow(),
-  },
-  table => [
-    index('idx_partner_leads_partner').on(table.partnerId),
-    index('idx_partner_leads_status').on(table.status),
-  ],
-);
-
 export const marketplaceBundles = mysqlTable('marketplace_bundles', {
   id: int().autoincrement().primaryKey(),
   name: varchar({ length: 255 }).notNull(),
@@ -76,32 +53,31 @@ export const bundlePartners = mysqlTable('bundle_partners', {
   createdAt: timestamp({ mode: 'string' }).defaultNow().notNull(),
 });
 
-export const boostCampaigns = mysqlTable(
-  'boost_campaigns',
+export const bundleAttributions = mysqlTable(
+  'bundle_attributions',
   {
-    id: varchar('id', { length: 36 }).notNull().primaryKey(),
-    partnerId: varchar('partner_id', { length: 36 }).notNull(),
-    contentId: varchar('content_id', { length: 36 }).notNull(),
-    topicId: varchar('topic_id', { length: 36 }).notNull(),
-    budget: decimal('budget', { precision: 10, scale: 2 }).notNull(),
-    spent: decimal('spent', { precision: 10, scale: 2 }).default('0.00'),
-    status: mysqlEnum('status', ['draft', 'active', 'paused', 'completed', 'depleted']).default(
-      'draft',
-    ),
-    startDate: date('start_date').notNull(),
-    endDate: date('end_date'),
-    impressions: int('impressions').default(0),
-    clicks: int('clicks').default(0),
-    costPerImpression: decimal('cost_per_impression', { precision: 6, scale: 4 }).default(
-      '0.1000',
-    ),
-    createdAt: timestamp('created_at', { mode: 'date' }).defaultNow(),
+    id: varchar('id', { length: 36 }).primaryKey(),
+    bundleId: varchar('bundle_id', { length: 64 }).notNull(),
+    partnerId: varchar('partner_id', { length: 64 }),
+    userId: varchar('user_id', { length: 128 }),
+    eventType: mysqlEnum('event_type', [
+      'bundle_view',
+      'partner_click',
+      'profile_view',
+      'lead_generated',
+      'lead_converted',
+    ]).notNull(),
+    contentId: varchar('content_id', { length: 128 }),
+    leadId: varchar('lead_id', { length: 128 }),
+    metadata: json(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
   },
-  t => ({
-    topicIdx: index('idx_boost_campaigns_topic').on(t.topicId),
-    contentIdx: index('idx_boost_campaigns_content').on(t.contentId),
-    partnerIdx: index('idx_boost_campaigns_partner').on(t.partnerId),
-  }),
+  table => [
+    index('idx_bundle_attributions_bundle').on(table.bundleId, table.createdAt),
+    index('idx_bundle_attributions_partner').on(table.partnerId, table.createdAt),
+    index('idx_bundle_attributions_user').on(table.userId, table.createdAt),
+    index('idx_bundle_attributions_event').on(table.eventType, table.createdAt),
+  ],
 );
 
 export const contentApprovalQueue = mysqlTable(

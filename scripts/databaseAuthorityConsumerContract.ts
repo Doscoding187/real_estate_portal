@@ -47,10 +47,9 @@ export function assertFreshDisposableTestTarget(
     );
   }
   const authority = resolveDatabaseAuthority({
-    operation: 'test-fixture',
+    operation: 'verification',
     explicitDatabaseUrl: rawUrl,
     processEnv: env as NodeJS.ProcessEnv,
-    credentialClass: env.CI === 'true' ? 'test-owner' : undefined,
   });
   if (!['disposable-worktree', 'disposable-test'].includes(authority.context.targetClass)) {
     throw new Error(
@@ -116,11 +115,13 @@ async function main() {
   const manifest = loadAuthorityManifest();
   validateAuthorityManifest(manifest);
   const authority = assertFreshDisposableTestTarget(process.env.DATABASE_URL);
-  await assertDatabaseIsFresh(authority);
+  const postMigration = process.env.DATABASE_CONSUMER_CONTRACT_PHASE === 'post-migration';
+  if (!postMigration) await assertDatabaseIsFresh(authority);
   console.log(
     `[Consumer Contract] Fresh authorized target ${authority.context.targetFingerprintHash.slice(0, 16)} (${authority.context.targetClass}).`,
   );
-  for (const [command, args] of CONSUMER_CONTRACT_STEPS) {
+  const steps = postMigration ? CONSUMER_CONTRACT_STEPS.slice(1) : CONSUMER_CONTRACT_STEPS;
+  for (const [command, args] of steps) {
     runStep(command, args, authority);
   }
   await assertSearchToLeadReadiness(authority);

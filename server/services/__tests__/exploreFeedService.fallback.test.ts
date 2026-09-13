@@ -11,7 +11,7 @@ const { mockDb, mockCacheGet, mockCacheSet, mockRecommendedFeedKey } = vi.hoiste
     offset: vi.fn(),
   };
 
-  for (const method of ['select', 'from', 'leftJoin', 'where', 'orderBy', 'offset']) {
+  for (const method of ['select', 'from', 'leftJoin', 'where', 'orderBy', 'limit', 'offset']) {
     localDb[method].mockImplementation(() => localDb);
   }
 
@@ -45,46 +45,38 @@ import { exploreFeedService } from '../exploreFeedService';
 describe('ExploreFeedService fallback behavior', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    for (const method of ['select', 'from', 'leftJoin', 'where', 'orderBy', 'limit', 'offset']) {
+      mockDb[method].mockImplementation(() => mockDb);
+    }
   });
 
-  it('returns empty recommended feed when query fails', async () => {
+  it('propagates recommended feed query failures', async () => {
     mockDb.limit.mockRejectedValueOnce(new Error('recommended query failed'));
 
-    const result = await exploreFeedService.getRecommendedFeed({
-      limit: 5,
-      offset: 2,
-    });
-
-    expect(result.feedType).toBe('recommended');
-    expect(result.items).toEqual([]);
-    expect(result.shorts).toEqual([]);
-    expect(result.hasMore).toBe(false);
-    expect(result.offset).toBe(2);
-    expect(result.metadata).toMatchObject({
-      personalized: false,
-      degraded: true,
-      fallbackReason: 'query_error',
-    });
+    await expect(exploreFeedService.getRecommendedFeed({ limit: 5, offset: 2 })).rejects.toThrow(
+      'recommended query failed',
+    );
   });
 
-  it('returns empty area feed when query fails', async () => {
-    mockDb.limit.mockRejectedValueOnce(new Error('area query failed'));
+  it('propagates area feed query failures', async () => {
+    mockDb.offset.mockRejectedValueOnce(new Error('area query failed'));
 
-    const result = await exploreFeedService.getAreaFeed({
-      location: 'Sandton',
-      limit: 5,
-      offset: 4,
-    });
+    await expect(exploreFeedService.getAreaFeed({ location: 'Sandton', limit: 5, offset: 4 })).rejects.toThrow(
+      'area query failed',
+    );
+  });
 
-    expect(result.feedType).toBe('area');
-    expect(result.items).toEqual([]);
-    expect(result.shorts).toEqual([]);
-    expect(result.hasMore).toBe(false);
-    expect(result.offset).toBe(4);
-    expect(result.metadata).toMatchObject({
-      location: 'Sandton',
-      degraded: true,
-      fallbackReason: 'query_error',
+  it('fails closed when the canonical Explore schema is missing', async () => {
+    const missingSchemaError = new Error('Failed query');
+    (missingSchemaError as any).cause = {
+      code: 'ER_NO_SUCH_TABLE',
+      message: "Table 'listify_local.explore_content' doesn't exist",
+    };
+    mockDb.limit.mockRejectedValueOnce(missingSchemaError);
+
+    await expect(exploreFeedService.getRecommendedFeed({ limit: 5, offset: 0 })).rejects.toMatchObject({
+      code: 'PRECONDITION_FAILED',
+      message: 'Explore feed is unavailable until its canonical schema is established',
     });
   });
 });

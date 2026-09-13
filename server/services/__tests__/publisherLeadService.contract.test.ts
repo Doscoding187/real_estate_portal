@@ -1,13 +1,18 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { mockCapturePublicLead, mockDb } = vi.hoisted(() => ({
+const { mockCapturePublicLead, mockSendEmail, mockDb } = vi.hoisted(() => ({
   mockCapturePublicLead: vi.fn(),
+  mockSendEmail: vi.fn(),
   mockDb: {
     select: vi.fn(),
   },
 }));
 
 vi.mock('../../db', () => ({ db: mockDb }));
+vi.mock('../../_core/emailService', () => ({
+  EmailService: { sendBrandLeadNotification: mockSendEmail },
+}));
+vi.mock('../../_core/env', () => ({ ENV: { resendApiKey: 'test-provider-key' } }));
 
 vi.mock('../publicLeadCaptureService', () => ({
   capturePublicLead: mockCapturePublicLead,
@@ -104,5 +109,22 @@ describe('publisherLeadService canonical custody contract', () => {
       deliveryMethod: 'manual',
       brandLeadStatus: 'captured',
     });
+  });
+
+  it('does not report success when the email adapter hides a provider failure', async () => {
+    mockSendEmail.mockResolvedValueOnce(false);
+    await expect(publisherLeadService.routePublisherLeadToEmail(
+      988,
+      { brandName: 'Publisher', publicContactEmail: 'publisher@example.com', isContactVerified: 1 },
+      { cataloguePublisherId: 13, name: 'Sam Buyer', email: 'sam@example.com', consent },
+      { idempotencyKey: 'lead:988:primary:publisher:13' },
+    )).rejects.toThrow('Email provider acceptance could not be established.');
+    expect(mockSendEmail).toHaveBeenCalledOnce();
+    expect(mockSendEmail).toHaveBeenCalledWith(
+      'publisher@example.com',
+      'Publisher',
+      expect.objectContaining({ leadId: 988 }),
+      { idempotencyKey: 'lead:988:primary:publisher:13' },
+    );
   });
 });

@@ -462,7 +462,11 @@ export const locationRouter = router({
         return unique.sort((a, b) => a.distanceValue - b.distanceValue).slice(0, limit || 20);
       } catch (error) {
         console.error('Error fetching nearby amenities:', error);
-        return [];
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Nearby amenities are temporarily unavailable',
+          cause: error,
+        });
       }
     }),
 

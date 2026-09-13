@@ -14,11 +14,11 @@ describe('TiDB CHECK/FK structural admission', () => {
     const desired = normalizedDesiredSchema(canonical);
     const before = JSON.stringify(desired);
     const report = auditTidbStructuralAdmission(desired);
-    expect(report.checks).toHaveLength(22);
-    expect(report.foreignKeyImpacts).toHaveLength(12);
+    expect(report.checks).toHaveLength(23);
+    expect(report.foreignKeyImpacts).toHaveLength(15);
     expect(
       report.foreignKeyImpacts.filter(key => key.review === 'domain-lifecycle-decision-required'),
-    ).toHaveLength(2);
+    ).toHaveLength(5);
     expect(report.foreignKeyImpacts.some(key => key.columns.includes('verified_by_actor_id'))).toBe(
       false,
     );

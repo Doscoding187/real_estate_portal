@@ -122,8 +122,14 @@ export default defineConfig({
 
   // Run your local dev server before starting the tests
   webServer: {
-    command: 'pnpm dev:backend',
-    url: 'http://localhost:5000',
+    // Browser journeys need the application shell as well as the API. The
+    // backend development script intentionally disables frontend serving for
+    // API-only checks, so launch the same governed backend with Vite enabled.
+    command:
+      'cross-env NODE_ENV=development APP_ENV=development SKIP_FRONTEND=false tsx watch server/_core/start.ts',
+    // Probe the governed health endpoint so Playwright waits for an actual
+    // ready response instead of the backend's intentional root 404.
+    url: 'http://127.0.0.1:5000/api/health',
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000,
   },

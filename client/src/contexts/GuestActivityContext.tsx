@@ -68,8 +68,22 @@ function saveGuestActivity(activity: GuestActivity) {
   if (typeof window === 'undefined') return;
 
   try {
-    activity.lastUpdated = new Date().toISOString();
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(activity));
+    // An empty activity is not durable guest state. In particular, a
+    // successful account transfer must not be followed by the persistence
+    // effect recreating an empty localStorage record after clearGuestData()
+    // removes it.
+    if (
+      activity.viewedProperties.length === 0 &&
+      activity.favoriteProperties.length === 0 &&
+      activity.recentSearches.length === 0
+    ) {
+      localStorage.removeItem(STORAGE_KEY);
+      return;
+    }
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ ...activity, lastUpdated: new Date().toISOString() }),
+    );
   } catch (error) {
     console.error('Failed to save guest activity:', error);
   }

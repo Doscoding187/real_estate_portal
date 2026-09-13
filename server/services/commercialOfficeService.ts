@@ -971,6 +971,12 @@ export async function attachCommercialMarketingMedia(input: {
     .select()
     .from(listingMedia)
     .where(eq(listingMedia.listingId, input.listingId));
+  const existingUpload = existingMedia.find(
+    item => item.originalUrl === media.key || item.processedUrl === media.key,
+  );
+  if (existingUpload) {
+    return { mediaId: Number(existingUpload.id) };
+  }
   const placement = commercialMarketingMediaPlacement(existingMedia as any, media.mediaType);
   const result = await db.insert(listingMedia).values({
     listingId: input.listingId,

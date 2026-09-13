@@ -46,6 +46,44 @@ afterEach(() => {
 });
 
 describe('immutable resolved database context and operation authorization', () => {
+  it('enforces the local runtime, migration, and verifier credential matrix', () => {
+    const identity = fixtureIdentity('listify-security-matrix');
+    const target = `mysql://local-user:local-password@127.0.0.1:3307/${identity.expectedWorktreeDatabase}`;
+    const authority = (
+      operation: 'runtime-connect' | 'migration-apply' | 'verification',
+      credentialClass: 'runtime' | 'migration' | 'read-only' | 'lifecycle-admin',
+    ) =>
+      resolveDatabaseAuthority({
+        operation,
+        cwd: identity.worktreePath,
+        gitIdentity: identity,
+        explicitDatabaseUrl: target,
+        credentialClass,
+        processEnv: { NODE_ENV: 'development', APP_ENV: 'development' },
+      });
+
+    const runtime = authority('runtime-connect', 'runtime');
+    const migration = authority('migration-apply', 'migration');
+    const verifier = authority('verification', 'read-only');
+
+    expect(() => authorizeDatabaseOperation(runtime, { root: process.cwd() })).not.toThrow();
+    expect(() => authorizeDatabaseOperation(migration, { root: process.cwd() })).not.toThrow();
+    expect(() => authorizeDatabaseOperation(verifier, { root: process.cwd() })).not.toThrow();
+
+    const runtimeAsVerifier = authority('runtime-connect', 'read-only');
+    const migrationAsRuntime = authority('migration-apply', 'runtime');
+    const verifierAsAdmin = authority('verification', 'lifecycle-admin');
+    expect(() => authorizeDatabaseOperation(runtimeAsVerifier, { root: process.cwd() })).toThrow(
+      'credential class read-only is not allowed for runtime-connect',
+    );
+    expect(() => authorizeDatabaseOperation(migrationAsRuntime, { root: process.cwd() })).toThrow(
+      'credential class runtime is not allowed for migration-apply',
+    );
+    expect(() => authorizeDatabaseOperation(verifierAsAdmin, { root: process.cwd() })).toThrow(
+      'credential class lifecycle-admin is not allowed for verification',
+    );
+  });
+
   it('preserves an explicit caller target over worktree and central files', () => {
     const identity = fixtureIdentity();
     const central = centralEnvironment(identity);
@@ -498,6 +536,51 @@ describe('immutable resolved database context and operation authorization', () =
 
     expect(child.context.targetFingerprintHash).toBe(parent.context.targetFingerprintHash);
     expect(() => authorizeDatabaseOperation(child, { root: process.cwd() })).not.toThrow();
+  });
+
+  it('binds GitHub Actions disposable CI operations to distinct physical role URLs', () => {
+    const identity = fixtureIdentity();
+    const processEnv = {
+      CI: 'true',
+      GITHUB_ACTIONS: 'true',
+      APP_ENV: 'test',
+      NODE_ENV: 'test',
+      DATABASE_RUNTIME_URL: 'mysql://listify_ci_app:app-secret@127.0.0.1:3306/listify_test',
+      DATABASE_WORKER_URL: 'mysql://listify_ci_worker:worker-secret@127.0.0.1:3306/listify_test',
+      DATABASE_VERIFIER_URL:
+        'mysql://listify_ci_verifier:verify-secret@127.0.0.1:3306/listify_test',
+      DATABASE_MIGRATION_URL:
+        'mysql://listify_ci_migration:migration-secret@127.0.0.1:3306/listify_test',
+    };
+    const resolve = (
+      operation: 'runtime-connect' | 'worker-connect' | 'verification' | 'migration-apply',
+    ) =>
+      resolveDatabaseAuthority({
+        operation,
+        cwd: identity.worktreePath,
+        gitIdentity: identity,
+        centralPath: join(identity.repositoryRoot, 'missing-central.env'),
+        explicitDatabaseUrl: 'mysql://listify_ci_app:app-secret@127.0.0.1:3306/listify_test',
+        processEnv,
+      });
+    expect(resolve('runtime-connect').context).toMatchObject({
+      credentialClass: 'runtime',
+      credentialSource: 'isolated-ci-role-url',
+    });
+    expect(resolve('worker-connect').context.credentialClass).toBe('worker');
+    expect(resolve('verification').context.credentialClass).toBe('read-only');
+    expect(resolve('migration-apply').context.credentialClass).toBe('migration');
+    expect(() =>
+      resolveDatabaseAuthority({
+        operation: 'runtime-connect',
+        cwd: identity.worktreePath,
+        gitIdentity: identity,
+        centralPath: join(identity.repositoryRoot, 'missing-central.env'),
+        explicitDatabaseUrl: 'mysql://listify_ci_app:app-secret@127.0.0.1:3306/listify_test',
+        credentialClass: 'migration',
+        processEnv,
+      }),
+    ).toThrow('credential class cannot override the operation role');
   });
 
   it('requires exact target acknowledgement for disposal', () => {
