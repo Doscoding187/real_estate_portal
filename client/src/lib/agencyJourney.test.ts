@@ -24,4 +24,10 @@ describe('Agency journey action presentation', () => {
       label: 'Open workspace',
     });
   });
+
+  it('preserves the Agency support context when access needs review', () => {
+    expect(getAgencyJourneyAction({ recommendedNextStep: 'contact_support' })).toMatchObject({
+      href: '/contact?area=agency_operations&topic=agency-workspace',
+    });
+  });
 });

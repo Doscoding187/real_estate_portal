@@ -78,6 +78,9 @@ const ServiceProviderReviewsPage = lazy(
   () => import('./pages/services/ServiceProviderReviewsPage'),
 );
 const NavLandingPage = lazy(() => import('./pages/NavLandingPage'));
+const AssistedOnboardingRequestPage = lazy(
+  () => import('./pages/AssistedOnboardingRequestPage'),
+);
 const ProDashboardPage = lazy(() => import('./pages/pro/ProDashboardPage'));
 const ProProfilePage = lazy(() => import('./pages/pro/ProProfilePage'));
 const ProviderOnboardingWizard = lazy(() =>
@@ -503,9 +506,10 @@ function Router() {
           <Route path="/tools/:slug" component={NavLandingPage} />
           <Route path="/legal/:slug" component={NavLandingPage} />
           <Route path="/support/:slug" component={NavLandingPage} />
+          <Route path="/company/contact" component={AssistedOnboardingRequestPage} />
           <Route path="/company/:slug" component={NavLandingPage} />
           <Route path="/about" component={NavLandingPage} />
-          <Route path="/contact" component={NavLandingPage} />
+          <Route path="/contact" component={AssistedOnboardingRequestPage} />
           <Route path="/careers" component={NavLandingPage} />
           <Route path="/press" component={NavLandingPage} />
           <Route path="/partners" component={NavLandingPage} />

@@ -96,7 +96,7 @@ export function getAgentJourneyAction(
       };
     case 'contact_support':
       return {
-        href: '/contact',
+        href: '/contact?area=agent&topic=account-access',
         label: 'Contact Property Listify',
         title: 'Your Launch Access needs support',
         description: 'Contact Property Listify so we can help restore your account access.',

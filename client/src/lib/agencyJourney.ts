@@ -76,7 +76,7 @@ export function getAgencyJourneyAction(
       };
     case 'contact_support':
       return {
-        href: '/contact',
+        href: '/contact?area=agency_operations&topic=agency-workspace',
         label: 'Contact Property Listify',
         title: 'Your Agency Launch Access needs support',
         description:
