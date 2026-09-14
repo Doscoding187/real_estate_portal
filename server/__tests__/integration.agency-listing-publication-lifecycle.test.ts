@@ -9,6 +9,7 @@ import superjson from 'superjson';
 import { and, eq } from 'drizzle-orm';
 
 import { COOKIE_NAME } from '../../shared/const';
+import { encodeCanonicalLocationId } from '../../shared/locationAuthority';
 import type { AppRouter } from '../routers';
 import {
   agencies,
@@ -323,6 +324,7 @@ describeWithDb('agency listing publication lifecycle acceptance', () => {
     const memberApi = trpcClient(await sessionCookie(member.id));
     const ownerApi = trpcClient(await sessionCookie(owner.id));
     const reviewerApi = trpcClient(await sessionCookie(reviewer.id));
+    const publicApi = trpcClient('');
     await expect(memberApi.invitation.accept.mutate({ token: invitationToken })).resolves.toEqual({
       success: true,
     });
@@ -355,6 +357,7 @@ describeWithDb('agency listing publication lifecycle acceptance', () => {
     expect(individualSubscription).toBeUndefined();
 
     const location = await canonicalSandtonLocation();
+    const canonicalSuburbId = encodeCanonicalLocationId('suburb', Number(location.suburbId));
     const mediaManifest: Array<{
       id: string;
       mediaType: 'image';
@@ -560,6 +563,27 @@ describeWithDb('agency listing publication lifecycle acceptance', () => {
         .where(eq(properties.sourceListingId, created.listingId)),
     ).toEqual([]);
 
+    const privateSearch = await publicApi.properties.searchPublicInventory.query({
+      locationId: canonicalSuburbId,
+      propertyType: 'house',
+      listingType: 'sale',
+      listingSource: 'manual',
+      page: 0,
+      pageSize: 50,
+    });
+    expect(privateSearch.locationState).toBe('resolved');
+    expect(privateSearch.cards.some(card => card.title === `${title} — corrected`)).toBe(false);
+
+    await expect(
+      publicApi.properties.searchPublicInventory.query({
+        locationId: canonicalSuburbId,
+        city: 'johannesburg',
+        propertyType: 'house',
+        listingType: 'sale',
+        listingSource: 'manual',
+      }),
+    ).rejects.toMatchObject({ data: { code: 'BAD_REQUEST' } });
+
     await db
       .update(subscriptions)
       .set({
@@ -629,7 +653,6 @@ describeWithDb('agency listing publication lifecycle acceptance', () => {
     expect(mirroredImages).toHaveLength(5);
     expect(mirroredImages.filter(image => Number(image.isPrimary) === 1)).toHaveLength(1);
 
-    const publicApi = trpcClient('');
     const publicDetail = await publicApi.properties.getById.query({ id: Number(property.id) });
     expect(publicDetail.property).toMatchObject({
       id: Number(property.id),
@@ -644,6 +667,46 @@ describeWithDb('agency listing publication lifecycle acceptance', () => {
     });
     expect(publicDetail.images).toHaveLength(5);
     expect(publicDetail.media).toHaveLength(5);
+
+    const publicSearch = await publicApi.properties.searchPublicInventory.query({
+      locationId: canonicalSuburbId,
+      propertyType: 'house',
+      listingType: 'sale',
+      listingSource: 'manual',
+      page: 0,
+      pageSize: 50,
+    });
+    expect(publicSearch).toMatchObject({
+      locationState: 'resolved',
+      locationContext: {
+        type: 'suburb',
+        name: 'Sandton',
+        slug: 'sandton',
+        confidence: 'exact',
+        fallbackLevel: 'none',
+        hierarchy: { province: 'Gauteng', city: 'Johannesburg', suburb: 'Sandton' },
+        ids: {
+          provinceId: Number(location.provinceId),
+          cityId: Number(location.cityId),
+          suburbId: Number(location.suburbId),
+        },
+      },
+    });
+    const publicCard = publicSearch.cards.find(
+      card => card.propertyId === Number(property.id) || card.title === `${title} — corrected`,
+    );
+    expect(publicCard).toMatchObject({
+      kind: 'property',
+      propertyId: Number(property.id),
+      title: `${title} — corrected`,
+      city: 'Johannesburg',
+      suburb: 'Sandton',
+      province: 'Gauteng',
+      propertyType: 'house',
+      listingType: 'sale',
+      listingSource: 'manual',
+    });
+    expect(publicCard?.images).toHaveLength(5);
 
     const finalQueue = await db
       .select({

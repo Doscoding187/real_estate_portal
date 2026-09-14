@@ -850,11 +850,11 @@ export class PropertySearchService {
       // An approved listing deliberately does not carry a free-text suburb:
       // its public geography is the typed projection. The search query has
       // already resolved that canonical suburb name from the projection's
-      // suburbId, so retain it for exact public locations rather than
-      // accidentally repeating the city in the card location.
+      // suburbId, so retain it for both exact and approximate public locations
+      // rather than accidentally repeating the city in the card location.
       const canonicalPublicSuburb =
-        publicResolution && prop.publicLocationPrecision === 'exact'
-          ? String(rawProperty.suburb || '').trim()
+        publicResolution && String(rawProperty.suburb || '').trim()
+          ? String(rawProperty.suburb).trim()
           : String(prop.suburb || '').trim();
 
       const developmentId = Number(prop.developmentId || 0);
