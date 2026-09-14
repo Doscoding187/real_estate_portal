@@ -500,6 +500,33 @@ provided and accepted before external real-world onboarding. The correction
 does not enable payments, commercial entitlement, publication, provider mail,
 or a live paid cohort.
 
+
+### LRC-SUPPORT-001 operating-information hold — 2026-09-15
+
+A focused repository audit confirms that no approved public support operator,
+monitoring cadence, reply/escalation channel, or final launch Terms/Privacy
+content exists in the checked-in product authority. The current legal routes
+remain explicit placeholders: `/legal/terms` says that terms still need to
+define marketplace use, while `/legal/privacy` says privacy content still needs
+to explain data handling and user controls. The assisted-onboarding page is
+honest about this boundary and continues to state that final launch Terms and
+Privacy are required before public rollout.
+
+`BILLING_SUPPORT_EMAIL` is not a safe substitute. It is consumed by the manual
+EFT launch-preflight and billing configuration path, which remains disabled in
+normal `preparation_only` runtime. Repository values are example/test values;
+the presence of a centrally configured local value does not establish founder
+approval to publish it as a support or legal contact channel. No local
+configuration value was disclosed or repurposed.
+
+The smallest external inputs needed to close this blocker are an
+owner-approved public contact/reply channel, its named operational owner and
+review cadence, an escalation path for onboarding and access issues, and final
+launch-specific Terms/Privacy content including the approved data-handling and
+retention commitments. Those are operating and legal decisions, so this
+workstream must not invent them. The durable review-only intake remains a
+useful pre-payment capture path, but it is not a monitored support operation.
+
 ## LRC-GEO-001 canonical agent-coverage authority follow-up
 
 A browser-level `/agent/setup` acceptance and persisted-state inspection found
