@@ -2,7 +2,7 @@
 
 | Field                | Record                                                                                                                                                                                              |
 | -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Status               | **Working implementation authority.** Goals 1–6 are verified on the task branch; no goal is authorized as a protected release, payment activation, provider operation, or production deployment.    |
+| Status               | **Working implementation authority.** Goals 1–9 are verified on the task branch within their stated first-cohort boundaries; Goal 10 is the current bounded acceptance investigation. No goal is authorized as a protected release, payment activation, provider operation, or production deployment. |
 | Architectural source | [Agency Journey Senior Architecture Review](14-agency-journey-senior-review.md)                                                                                                                     |
 | Purpose              | Convert the senior review into small, sequential, evidence-led implementation goals for the first commercially usable agency journey.                                                               |
 | Cohort boundary      | One small agency in one geography is the proposed first operating cohort. Land, developer paid operation, and independent-agent launch claims remain outside this cohort until separately accepted. |
@@ -67,8 +67,8 @@ re-litigate every individual implementation choice.
 | --------- | ----- | -------------------------------------------------------------------------------------------------------------------- | ----------------------- |
 | M1        | 1–2   | Did implementation establish the correct agency identity and membership authority, or expose a deeper model problem? | READY FOR SENIOR REVIEW |
 | M2        | 3–5   | Does canonical membership now connect commercial ownership, listing, review, and publication without contradiction?  | READY FOR SENIOR REVIEW |
-| M3        | 6–8   | Does publication connect correctly to public discovery, enquiry, custody, and CRM operation?                         | NOT STARTED             |
-| M4        | 9–10  | Can a real agency operate safely, with observable recovery and a bounded launch decision?                            | NOT STARTED             |
+| M3        | 6–8   | Does publication connect correctly to public discovery, enquiry, custody, and CRM operation?                         | READY FOR SENIOR REVIEW |
+| M4        | 9–10  | Can a real agency operate safely, with observable recovery and a bounded launch decision?                            | IN PROGRESS             |
 
 ## Goal 1 — Establish the trusted agency foundation
 
@@ -414,7 +414,26 @@ lead is durably custodied by the correct agency and assigned-agent authority.
 [Lead-handling strength and boundary](14-agency-journey-senior-review.md#strengths-to-retain) and
 [Most valuable next implementation assignment](14-agency-journey-senior-review.md#most-valuable-next-implementation-assignment)
 
-**Status:** NOT STARTED
+**Status:** VERIFIED (task branch evidence; integration, hosted, and production verification pending)
+
+### Goal 7 verification record — 2026-09-14
+
+The public enquiry and custody acceptance is committed in the agency journey
+correction [`c4df6600`](https://github.com/Doscoding187/real_estate_portal/commit/c4df6600)
+on `verify/mvp-closure-post-577`. The production public lead route was exercised
+without an authenticated recipient selector. It derives the assigned agent and
+agency from the approved listing, persists the enquiry and its primary custody
+delivery, and keeps the stable capture request idempotent. A changed payload
+with the same request id is rejected rather than creating a second lead.
+
+Direct evidence:
+
+- `pnpm test:authority -- server/__tests__/integration.agency-member-workspace-authority.test.ts server/__tests__/integration.agency-listing-publication-lifecycle.test.ts` passed **2 files / 2 tests** on the exact task-owned disposable target (`a560e9f2971e7676…`). The real tRPC public route created one persisted lead and completed `crm_export` custody for the canonical assigned agent; exact replay returned the same lead, and a tampered replay returned `CONFLICT`. Persisted assertions covered agency/agent ownership, consent, request id, and the primary delivery row.
+- The same acceptance gave an unrelated verified agency administrator an empty lead list, `NOT_FOUND` detail, and no retry authority. The owning agency and assigned agent could see the one lead. The local email sink is only a test observation; no external provider delivery was claimed.
+
+The result is task-branch local evidence. Provider delivery, operator audit/recovery,
+and worker restart handling remain Goal 9. No payment, entitlement activation,
+protected database operation, or production release occurred.
 
 ## Goal 8 — Complete assigned-agent and agency CRM operation
 
@@ -438,7 +457,25 @@ legitimately custodied.
 
 [P1 agency commercial/public/CRM contradiction](14-agency-journey-senior-review.md#2-p1--a-paid-agencys-agent-does-not-have-a-consistent-path-from-publication-to-discovery-and-lead-handling)
 
-**Status:** NOT STARTED
+**Status:** VERIFIED (task branch evidence; integration, hosted, and production verification pending)
+
+### Goal 8 verification record — 2026-09-14
+
+The bounded correction is committed in [`c4df6600`](https://github.com/Doscoding187/real_estate_portal/commit/c4df6600). Agent lead routes now require an approved profile and current canonical membership for agency custody, while the agency administrator route scopes an agent to the same membership. `canReceiveLeads` remains the commercial permission for new opportunities; the separate `canAccessExistingLeads` capability keeps legitimate custody workable after term expiry. The CRM UI communicates the paused new-opportunity state instead of locking existing work.
+
+The acceptance also closes an operational continuity defect: deactivation/reassignment now moves future active showings together with active leads and listings and notifies the replacement agent. Browser-shaped ISO showing timestamps are normalized at the API boundary to the canonical MySQL representation.
+
+Direct evidence:
+
+- The same governed integration passed the assigned agent’s pipeline read, contact activity, stage transition, follow-up, and viewing booking while the agency term was expired (`canReceiveLeads: false`, `canAccessExistingLeads: true`). The agency administrator observed the same custody and activity.
+- Canonical invitation/reassignment then suspended the former membership, denied the former agent’s lead and agency-detail reads, moved the lead and confirmed future showing to the replacement agent, preserved the original primary-custody delivery history, exposed a reassignment notification, and allowed the replacement agent and owner to continue CRM work. An unrelated tenant remained denied.
+- `pnpm vitest run client/src/pages/AgentLeads.test.tsx server/__tests__/agent.inventory-cutover.test.ts server/__tests__/agent.showings-compatibility.test.ts server/__tests__/agent.lead-response-summary.test.ts server/__tests__/agent.offer-readiness.test.ts server/__tests__/contract.agent-public-profile-route.test.ts server/__tests__/contract.agent-public-profile.test.ts server/__tests__/agent.dashboard-showings.smoke.test.ts` passed **7 files / 38 tests**, with **1 database-gated test skipped**. The client regression proves the UI keeps the pipeline enabled for existing custody and locks it when custody authority is absent.
+- `pnpm check` passed; targeted ESLint reported **0 errors** (repository warnings only); `git diff --check` passed.
+
+This is local branch evidence, not hosted or production verification. It does not
+enable payments, create a free publishing entitlement, or promise external email.
+Goal 9's scoped first-cohort recovery fallback is now verified below; Goal 10 has
+begun, and milestone M3 remains ready for the planned senior review.
 
 ## Goal 9 — Complete notification, recovery, and operational handling
 
@@ -466,7 +503,33 @@ described by the senior review.
 
 [Lead-handling strength and boundary](14-agency-journey-senior-review.md#strengths-to-retain)
 
-**Status:** NOT STARTED
+**Status:** VERIFIED (first-cohort local recovery evidence; provider, hosted, and production verification pending)
+
+### Goal 9 verification record — 2026-09-14
+
+The bounded correction is committed at
+[`f9086ef4`](https://github.com/Doscoding187/real_estate_portal/commit/f9086ef4ee3a6fa664256a9dbebedd7e1fd9ce28).
+The existing relational delivery authority already fences a claimed worker and
+marks an ambiguous outcome `unknown` rather than retrying it. The focused
+investigation found one operational audit-integrity defect: although the
+platform delivery completion was idempotent, a repeated identical super-admin
+action still rewrote the lead and appended another CRM activity. The correction
+now treats that replay as a complete no-op after the original transaction and
+returns `duplicate: true` to the caller.
+
+Direct evidence:
+
+- `pnpm test:authority -- server/__tests__/integration.lead-delivery-authority.test.ts` passed **1 file / 9 tests** on the exact task-owned disposable target (`a560e9f2971e7676…`). A deliberately interrupted worker produced an `unknown` platform-managed delivery. The real super-admin audit and queue routes surfaced it; the authorized completion route recorded a factual contact; an exact replay returned `duplicate: true`; and persisted assertions showed one completed delivery and one CRM activity before both attention surfaces cleared.
+- `pnpm vitest run server/services/__tests__/leadRoutingCorrectionService.test.ts server/__tests__/contract.system-lead-routing-correction.test.ts server/__tests__/contract.system-lead-routing-audit.test.ts server/services/__tests__/leadRoutingAuditService.test.ts server/services/__tests__/leadDeliveryService.contract.test.ts` passed **5 files / 32 tests**. This covers custody authorization, audit classification, correction constraints, and delivery lifecycle contracts.
+- `pnpm check` and `git diff --check` passed. Targeted ESLint reported **0 errors**; existing repository warnings remain outside this bounded correction.
+- The operating procedure is recorded in the [first-cohort lead custody recovery runbook](16-first-cohort-lead-custody-recovery-runbook.md). It limits human completion to explicitly platform-managed/manual custody, directs customer-owned leads to their canonical CRM route, and preserves `unknown` external-provider outcomes for separately authorized reconciliation.
+
+This verifies the supported first-cohort fallback: durable internal CRM custody
+with an observable platform exception queue and an authorized, replay-safe
+manual recovery path. It does not prove an external email provider, live worker
+supervision, hosted operation, production recovery, or a paid launch. External
+email must not be sold as a dependable delivery channel until that separate
+evidence exists.
 
 ## Goal 10 — Prove the complete agency journey
 
@@ -508,7 +571,18 @@ launch audience.
 
 [Most valuable next implementation assignment](14-agency-journey-senior-review.md#most-valuable-next-implementation-assignment)
 
-**Status:** NOT STARTED
+**Status:** IN PROGRESS
+
+### Goal 10 initiation record — 2026-09-14
+
+Goals 1–9 now provide direct local evidence for each bounded authority slice.
+Goal 10 is the required consolidated acceptance run, not permission to infer an
+end-to-end customer journey from separate tests. The next investigation will
+trace one canonical agency owner and invited agent through setup, controlled
+fixture entitlement, listing review/publication, public discovery and enquiry,
+CRM continuity, reassignment/expiry, and the scoped recovery outcome. It will
+retain normal-runtime `preparation_only`, use no provider or protected
+operation, and record any missing transition as a concrete blocker.
 
 ## Advancement rule
 

@@ -34,6 +34,7 @@ No existing worktree or branch may be deleted, pruned, moved, repaired, reset, r
 14. [Local-environment authority contract and diagnostics](13-local-environment-authority-contract-and-diagnostics.md)
 15. [Agency Journey Senior Architecture Review](14-agency-journey-senior-review.md)
 16. [Agency Journey Closure — Sequential Goals](15-agency-journey-closure-goals.md)
+17. [First-cohort lead custody recovery runbook](16-first-cohort-lead-custody-recovery-runbook.md)
 
 ## Canonical programme stages
 
