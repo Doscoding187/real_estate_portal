@@ -2,7 +2,7 @@
 
 | Field                | Record                                                                                                                                                                                              |
 | -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Status               | **Working implementation authority.** Goals 1–4 are verified on the task branch; no goal is authorized as a protected release, payment activation, provider operation, or production deployment.    |
+| Status               | **Working implementation authority.** Goals 1–6 are verified on the task branch; no goal is authorized as a protected release, payment activation, provider operation, or production deployment.    |
 | Architectural source | [Agency Journey Senior Architecture Review](14-agency-journey-senior-review.md)                                                                                                                     |
 | Purpose              | Convert the senior review into small, sequential, evidence-led implementation goals for the first commercially usable agency journey.                                                               |
 | Cohort boundary      | One small agency in one geography is the proposed first operating cohort. Land, developer paid operation, and independent-agent launch claims remain outside this cohort until separately accepted. |
@@ -66,7 +66,7 @@ re-litigate every individual implementation choice.
 | Milestone | Goals | Review question                                                                                                      | Status                  |
 | --------- | ----- | -------------------------------------------------------------------------------------------------------------------- | ----------------------- |
 | M1        | 1–2   | Did implementation establish the correct agency identity and membership authority, or expose a deeper model problem? | READY FOR SENIOR REVIEW |
-| M2        | 3–5   | Does canonical membership now connect commercial ownership, listing, review, and publication without contradiction?  | NOT STARTED             |
+| M2        | 3–5   | Does canonical membership now connect commercial ownership, listing, review, and publication without contradiction?  | READY FOR SENIOR REVIEW |
 | M3        | 6–8   | Does publication connect correctly to public discovery, enquiry, custody, and CRM operation?                         | NOT STARTED             |
 | M4        | 9–10  | Can a real agency operate safely, with observable recovery and a bounded launch decision?                            | NOT STARTED             |
 
@@ -316,7 +316,32 @@ candidate needed later must be separately authorized.
 [Strengths to retain](14-agency-journey-senior-review.md#strengths-to-retain) and
 [Most valuable next implementation assignment](14-agency-journey-senior-review.md#most-valuable-next-implementation-assignment)
 
-**Status:** NOT STARTED
+**Status:** VERIFIED (task branch evidence; integration and production verification pending)
+
+### Goal 5 verification record — 2026-09-14
+
+The bounded publication correction and acceptance are committed at
+[`74bff0f9`](https://github.com/Doscoding187/real_estate_portal/commit/74bff0f983cee0911aa34a209886e7a5c96b37ff)
+on `verify/mvp-closure-post-577`; the public-search follow-up is
+[`9acfea2f`](https://github.com/Doscoding187/real_estate_portal/commit/9acfea2f5dd778b5b944fb9701e4fc2f39f885af).
+The production listing and reviewer routers now exercise submission, structured
+rejection, private correction, resubmission, entitlement recheck, approval, and
+projection publication. Approval updates only the current pending/reviewing
+queue row, preserving the earlier rejected audit record. Agency public
+eligibility inherits the active canonical agency entitlement for the current
+member; it does not require an individual subscription or optional verification
+badge.
+
+Direct evidence:
+
+- `pnpm test:authority -- server/__tests__/integration.agency-listing-publication-lifecycle.test.ts server/services/__tests__/propertySearchApprovedProjection.test.ts server/services/__tests__/publicSearchService.contract.test.ts server/__tests__/contract.public-search-pagination.test.ts server/__tests__/contract.property-search-detail-lead-ownership.test.ts` passed **5 files / 59 tests** on the exact task-owned disposable target. The real HTTP acceptance proved canonical invitation/membership, five uploaded media objects, listing submission, reviewer rejection with reasons and note, persisted correction/resubmission, rejected and pending queue history, suspended-subscription approval denial with no projection, and successful approval after restoration.
+- The same acceptance verifies the persisted published source and public projection contain one title, owner, agent, agency, canonical Gauteng/Johannesburg/Sandton IDs, and five mirrored images. Anonymous detail returns the approved projection and media; an agency member without an individual subscription or badge is eligible through the agency term.
+- `pnpm check`, `pnpm build`, targeted ESLint (0 errors; existing warnings only), and `pnpm db:authority:status` passed. Build retained the existing large-chunk warning.
+
+This is task-branch evidence only. It does not enable payments, create a free
+publishing entitlement, authorize a hosted release, or establish production
+verification. Goal 5 is complete locally; milestone M2 is ready for the planned
+senior review.
 
 ## Goal 6 — Complete public discovery
 
@@ -338,7 +363,36 @@ geographic and search journey.
 
 [Current supported public-property-user slice](14-agency-journey-senior-review.md#current-supported-slices-and-their-limits)
 
-**Status:** NOT STARTED
+**Status:** VERIFIED (task branch evidence; integration and production verification pending)
+
+### Goal 6 verification record — 2026-09-14
+
+The public-geography correction and acceptance coverage are committed at
+[`9acfea2f`](https://github.com/Doscoding187/real_estate_portal/commit/9acfea2f5dd778b5b944fb9701e4fc2f39f885af)
+on `verify/mvp-closure-post-577`. Public manual search now retains the
+canonical suburb label joined from the approved projection even when the
+listing's public address precision is approximate; the card no longer collapses
+Sandton to Johannesburg.
+
+Direct evidence:
+
+- The real HTTP acceptance searches with `locationId = suburb:<canonical
+  Sandton id>`, `listingType = sale`, `propertyType = house`, and
+  `listingSource = manual`. Before approval, the resolved search returns no
+  card for the private/unapproved listing. After approval, it returns the same
+  property ID, corrected title, Gauteng/Johannesburg/Sandton card geography,
+  manual source, and all five approved images.
+- The response includes an exact resolved `locationContext` with the canonical
+  province, city, suburb hierarchy and IDs. A mixed request combining that
+  canonical `locationId` with `city` is rejected by the real tRPC route with
+  `BAD_REQUEST`; no precedence or geography widening is chosen.
+- The same run opens public detail and verifies the approved title, city and
+  province, agent/agency identity, five images, and five media records. The
+  focused projection regression runs the approximate-precision case directly.
+
+The remaining boundary is hosted/browser and production verification. This
+goal does not authorize payment activation, provider access, Land exposure, or
+deployment. Goal 7 remains the next sequential implementation goal.
 
 ## Goal 7 — Complete public enquiry and lead custody
 

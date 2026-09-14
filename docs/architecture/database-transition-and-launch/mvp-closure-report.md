@@ -1,12 +1,13 @@
 # Post-merge MVP closure review packet
 
-Date: 2026-09-14 (Goal 4 addendum; original closure review dated 2026-09-13).
+Date: 2026-09-14 (Goal 6 addendum; original closure review dated 2026-09-13).
 **Outcome: the local candidate supports controlled
 pre-payment onboarding; canonical billing and activation paths are contained,
-and the Goals 1–4 agency-membership/workspace/commercial-term/private-preparation corrections are
-verified on the task branch, while commercial activation, public publishing, and protected
-release remain blocked.** This is not a declaration that all MVP journeys or
-production are verified. Database task classification: local-data workflow,
+and Goals 1–6 agency membership, workspace, commercial-term, private-preparation,
+review/publication, and public-discovery slices are verified on the task branch.
+Normal commercial activation, hosted integration, production verification, and
+protected release remain blocked.** This is not a declaration that all MVP
+journeys or production are verified. Database task classification: local-data workflow,
 followed by bounded consumer fixes. No schema authority changed.
 
 ## Post-closure senior-review qualification
@@ -46,6 +47,8 @@ protected environment.
 | Goal 2 workspace correction (task branch)           | `af9fd6f2`                                                                    |
 | Goal 3 commercial-term correction (task branch)     | `16a23cd9ab61cbc791f1b7e7941e62e53d1ecd7d`                                    |
 | Goal 4 listing-preparation evidence (task branch)   | `a403d31d7456aff837e6d6c5e73af8033cf1634b`                                    |
+| Goal 5 publication correction (task branch)         | `74bff0f983cee0911aa34a209886e7a5c96b37ff`                                    |
+| Goal 6 public-discovery correction (task branch)    | `9acfea2f5dd778b5b944fb9701e4fc2f39f885af`                                    |
 | Branch                                              | `verify/mvp-closure-post-577`                                                 |
 | Worktree                                            | `/home/edwardspc/Desktop/Dev/worktrees/property-listify-mvp-closure-post-577` |
 
@@ -113,12 +116,35 @@ media-tenant test fixture was updated to create the canonical agent profile
 required by the current listing authority contract; no runtime authorization was
 relaxed.
 
-This is local branch evidence, not a public-recipient, CRM, browser-journey,
-integration, provider, or production claim. The L1 agency journey finding is
-narrowed but remains open through Goals 5–8 in
-[LRC-AGY-001](../launch-readiness-and-product-convergence/03-launch-register.md#lrc-agy-001).
-Milestone M1 remains ready for its planned senior review; M2 is not ready until
-Goal 5 has bounded evidence.
+This is local branch evidence, not a hosted integration, provider, or production
+claim. Goals 5–6 below close the local review/public-discovery slice; the L1
+agency journey finding remains open through enquiry and CRM operation in Goals
+7–8 in [LRC-AGY-001](../launch-readiness-and-product-convergence/03-launch-register.md#lrc-agy-001).
+Milestone M1 remains ready for its planned senior review and M2 is now ready for
+that review; M3 remains pending Goals 7–8.
+
+
+Goal 5, agency submission, review, and publication, is locally verified at
+[`74bff0f9`](https://github.com/Doscoding187/real_estate_portal/commit/74bff0f983cee0911aa34a209886e7a5c96b37ff).
+The exact-target HTTP acceptance used a canonical invited agency member with no
+individual subscription or badge, uploaded five media objects, submitted the
+listing, captured structured reviewer rejection, corrected and resubmitted it,
+failed closed when the agency term was suspended, then approved it after the
+isolated fixture term was restored. Persisted assertions proved the rejected
+queue history was retained, the source/projection title and ownership matched,
+and five images were mirrored. This is a task-local fixture state; no payment
+or normal runtime entitlement activation occurred.
+
+Goal 6, public discovery, is locally verified at
+[`9acfea2f`](https://github.com/Doscoding187/real_estate_portal/commit/9acfea2f5dd778b5b944fb9701e4fc2f39f885af).
+The same real HTTP acceptance queried the canonical Sandton suburb identity
+before and after publication. Private/unapproved inventory was absent; the
+published card carried the exact canonical geography, approved title/type/source,
+and five images; public detail carried the matching approved facts and five
+media records. A mixed canonical-location-plus-city request was rejected with
+`BAD_REQUEST`. The implementation also corrected a discovered card defect that
+collapsed an approximate Sandton listing to Johannesburg. Hosted/browser and
+production discovery remain unverified.
 
 ## Target and data establishment
 
@@ -183,8 +209,8 @@ incomplete required journey; it does not claim a failing production observation.
 | Account access               | PASS locally                                            | scripts/mvp-account-verification.mts completed 15 HTTP checks: weak password rejection; registration; unverified denial; verification; token replay denial; login; prohibited self-assigned super-admin reduced to visitor; logout; anonymous auth.me null; recovery enumeration resistance; reset; reset replay denial; old-password denial; new-password success; pre-reset session revoked. Real persisted user/token/session paths; email transport captured locally. External delivery, expiry timing over elapsed time, and browser form completion remain unverified.                                                                                                                                                                                                                |
 | Permissions                  | BLOCKED for complete scope                              | Account privilege injection denied; scripts/mvp-listing-verification.mts proved cross-tenant listing read and write HTTP 403 and unchanged persisted title. Scenario verifier proved agent/agency/developer unrelated-recipient denial and platform-operations restrictions. This is not exhaustive tenant membership revocation, every role, or admin audit proof.                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | Listing authoring            | PASS for HTTP private agency-preparation slice          | `pnpm test:authority -- server/__tests__/integration.agency-listing-preparation.test.ts server/__tests__/integration.agency-member-workspace-authority.test.ts server/__tests__/integration.listing-media-tenant-boundary.test.ts` passed 3 files / 5 tests on target fingerprint `a560e9f2971e7676…`. Production invitation/listing routers were exercised over authenticated HTTP; five media objects were physically PUT and served back, canonical Gauteng/Johannesburg/Sandton IDs persisted, the member reopened/edited the draft, the agency owner could view it, and an unrelated tenant was denied. Submission remained blocked by `subscription_required`; no public projection was created. Browser wizard completion and reviewer/public lifecycle remain unproven.             |
-| Publication                  | BLOCKED                                                 | Fixed preflight returns HTTP 200 with agency_profile_incomplete, agency_branding_incomplete, subscription_required and subscription_plan_unresolved. Draft submission returns HTTP 400 “Confirm the property location before publishing.” Approve/reject/publish sequence not run: setup/location/media prerequisites remain and canonical publication requires subscription authority. No paid activation or fabricated entitlement was used to make this pass.                                                                                                                                                                                                                                                                                                                            |
-| Discovery                    | BLOCKED for complete Land scope                         | db:scenario:verify passed real router search/detail, sale/rent separation and persisted custody checks. Browser at http://localhost:5177/property/990001 renders “Light-filled family home with garden and solar”, R3,850,000, Sandton/Johannesburg and features; /property/990005 renders “Property no longer available.” Orphan/unpublished/archived/pending/incoherent search/detail/enquiry exclusions passed in the scenario verifier. Full public Land single-geography-authority and classification journey was not run in this task.                                                                                                                                                                                                                                                |
+| Publication                  | PASS for isolated agency lifecycle; normal runtime blocked | Goal 5 real HTTP acceptance submitted a canonical agency listing, captured reviewer rejection reasons/note, reopened and corrected the draft, resubmitted it, observed suspended-term approval denial with no projection, restored the isolated fixture term, and approved the listing. Persisted source/queue/projection checks and five mirrored images passed; approval used a task-local subscription fixture and did not invoke payment or normal runtime activation. Hosted and production publication remain unverified. |
+| Discovery                    | PASS for isolated agency slice; Land blocked    | Goal 6 real HTTP search used the canonical `suburb:<id>` authority and returned the published agency property with exact Gauteng/Johannesburg/Sandton context, matching title/type/source, and five images. Before approval the same search returned no card; mixed canonical-plus-city input returned `BAD_REQUEST`. Public detail returned the approved title, city/province, identity, five images and five media records. Land remains outside this cohort: its separate public route and full consumer journey are not verified or contained. |
 | Lead investigation and audit | BLOCKED                                                 | Scenario verifies durable lead IDs 1–5, identical replay IDs, conflicting replay rejection, custody and role visibility. CRM-export/local simulated delivery is not actual provider delivery. Investigator audit trail and worker restart/crash recovery were not proven.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | Payments disabled            | PASS locally — billing/activation containment candidate | `c8c35fde` defines a shared `preparation_only` state, removes payment/proof affordances from the onboarding surfaces, and fails closed before database work for invoice, checkout, proof, finance-review, lifecycle, entitlement, and provider-event functions. Exact-target HTTP proof returned tRPC 412 for agent invoice, agency checkout and developer invoice requests, and HTTP 409 for the agent Express invoice route; it then proved profile/draft preparation persisted. The worker intake/claim/complete/fail paths have the same guard. This is local candidate evidence only: it does not enable payment, entitlement mutation, free publication, provider delivery, or production release, and it does not cover the separately mounted Land approval/public-visibility path. |
 
@@ -331,18 +357,22 @@ diagnostics. Credentials and raw tokens are excluded from this report and Git.
    entitlement, and protected-release evidence exists. Controlled pre-payment
    onboarding may prepare identities and private drafts only. Do not replace
    this boundary with a free publishing entitlement or a privilege bypass.
-2. **L1 — agency commercial/public/CRM journey remains incomplete
-   (LRC-AGY-001):** Goals 1–4 now prove the trusted membership,
-   workspace-owner, fixed-term commercial-lifetime, and private listing-preparation
-   boundaries locally. Review/publication, public discovery and recipient
-   eligibility, new-opportunity routing, and continued CRM custody remain
-   incomplete in Goals 5–8. Full reviewer approve/reject/publish, Land
-   geography, investigator audit, and worker crash/restart recovery also remain
-   incomplete. Do not reclassify partial evidence as PASS.
-3. **L1 — external/protected operational evidence:** real verification/recovery
+2. **L1 — agency enquiry and CRM operation remains incomplete
+   (LRC-AGY-001):** Goals 1–6 now prove the trusted membership,
+   workspace-owner, fixed-term commercial-lifetime, private preparation, governed
+   review/publication, agency-entitlement recipient eligibility, and canonical
+   public discovery boundaries locally. Public enquiry custody, replay handling
+   over the newly authored listing, assigned-agent CRM operation, membership
+   removal/reassignment, and continued custody after expiry remain Goals 7–8.
+   Do not reclassify local fixture publication as a paid launch.
+3. **L0 — Land public-visibility containment:** the deferred first-cohort
+   disposition is still not enforced at every direct route, API, review, and
+   publication boundary. Land must remain outside any exposed paid cohort until
+   its separate containment and acceptance slice is authorized.
+4. **L1 — external/protected operational evidence:** real verification/recovery
    mail, recipient delivery, Azure grant/provider behavior, recovery and capacity
    are not proven here. Local mocks and green CI cannot authorize launch.
-4. **L2 — deferred polish/performance debt:** existing lint/bundle warnings,
+5. **L2 — deferred polish/performance debt:** existing lint/bundle warnings,
    optional map preview and broad optional product surfaces. These do not justify
    widening this workstream.
 
@@ -380,8 +410,9 @@ backend identities and a staffed GO/no-GO/recovery decision.
 ## Git and protected boundaries
 
 Application fixes are committed at `c6c9f133`, `bba390b0`, `c8c35fde`,
-`cf1f93e6`, `af9fd6f2`, `16a23cd9`, and the Goal 4 evidence/fixture correction
-`a403d31d`; the review packet and register are
+`cf1f93e6`, `af9fd6f2`, `16a23cd9`, Goal 4 evidence/fixture correction
+`a403d31d`, Goal 5 publication correction `74bff0f9`, and Goal 6 public-discovery
+correction `9acfea2f`; the review packet and register are
 committed in the accompanying documentation commit. Final Git status was clean after that commit. No merge, feature push,
 deployment, cutover, Azure/TiDB access, protected migration, credential/grant
 change, provider setting change, recovery, payment activation, entitlement

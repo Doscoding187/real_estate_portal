@@ -667,6 +667,10 @@ describeWithDb('agency listing publication lifecycle acceptance', () => {
     });
     expect(publicDetail.images).toHaveLength(5);
     expect(publicDetail.media).toHaveLength(5);
+    expect(publicDetail.property.detailPresentation.location).toMatchObject({
+      precision: 'approximate',
+    });
+    expect(publicDetail.property.detailPresentation.location.label).toContain('Sandton');
 
     const publicSearch = await publicApi.properties.searchPublicInventory.query({
       locationId: canonicalSuburbId,
