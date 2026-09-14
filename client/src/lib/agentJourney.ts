@@ -74,7 +74,7 @@ export function getAgentJourneyAction(
         label: 'Return to dashboard',
         title: 'Your agency manages Launch Access',
         description:
-          'Your agency membership is confirmed. Keep preparing your work while your agency completes and activates its commercial access.',
+          'Your agency membership is confirmed. Continue working existing assigned enquiries while your agency completes commercial access; publishing and new marketplace enquiries remain paused.',
         waiting: true,
       };
     case 'await_profile_approval':
@@ -92,7 +92,7 @@ export function getAgentJourneyAction(
         label: 'Renew Launch Access',
         title: 'Renew your Launch Access',
         description:
-          'Your previous access period has ended. Renew Launch Access to resume publishing, lead management, and growth tools.',
+          'Your previous access period has ended. Renew Launch Access to resume publishing and receiving new marketplace enquiries. You can continue working enquiries already assigned to you.',
       };
     case 'contact_support':
       return {

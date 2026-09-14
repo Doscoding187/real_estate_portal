@@ -803,6 +803,18 @@ async function requireAgencyLead(
         message: 'You can only work leads assigned to you.',
       });
     }
+
+    // The profile's agency projection is not a custody authority. An agent
+    // may work an agency lead only while their canonical membership remains
+    // current for this exact tenant. This preserves agency administration
+    // while preventing stale affiliation from retaining CRM access.
+    const currentMembership = await resolveCurrentAgencyMembershipForAgent(db, assignedAgent.id);
+    if (!currentMembership || Number(currentMembership.agencyId) !== Number(agencyId)) {
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message: 'A current agency membership is required to work this lead.',
+      });
+    }
   }
 
   return lead;
@@ -4786,7 +4798,22 @@ export const agencyRouter = router({
       const conditions: SQL[] = [eq(leads.agencyId, user.agencyId)];
 
       if (user.role === 'agent') {
-        conditions.push(eq(agents.userId, user.id), eq(agents.status, 'approved'));
+        const [agent] = await db
+          .select({ id: agents.id })
+          .from(agents)
+          .where(and(eq(agents.userId, user.id), eq(agents.status, 'approved')))
+          .limit(1);
+        if (!agent) {
+          throw new TRPCError({ code: 'FORBIDDEN', message: 'Approved agent profile required.' });
+        }
+        const currentMembership = await resolveCurrentAgencyMembershipForAgent(db, Number(agent.id));
+        if (!currentMembership || Number(currentMembership.agencyId) !== Number(user.agencyId)) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'A current agency membership is required to access agency leads.',
+          });
+        }
+        conditions.push(eq(leads.agentId, agent.id));
       }
 
       if (filters.status && filters.status !== 'all') {
@@ -8761,6 +8788,26 @@ export const agencyRouter = router({
               ),
             );
 
+          // `upcomingViewings` are counted as active work above. Reassign the
+          // same exact workload before revoking the departing agent's
+          // membership, otherwise an accepted customer appointment would be
+          // left attached to an account that can no longer operate it.
+          if (targetAgent) {
+            await db
+              .update(showings)
+              .set({
+                agentId: reassignTo.agent.id,
+                updatedAt: now,
+              })
+              .where(
+                and(
+                  eq(showings.agentId, targetAgent.id),
+                  inArray(showings.status, ACTIVE_VIEWING_STATUSES as any),
+                  sql`${showings.scheduledAt} >= NOW()`,
+                ),
+              );
+          }
+
           const listingsToReassign = await db
             .select({ id: listings.id })
             .from(listings)
@@ -8778,6 +8825,23 @@ export const agencyRouter = router({
             listingsToReassign.map(listing => Number(listing.id)),
             reassignTo.agent.id,
           );
+
+          if (workload.assignedActiveLeads > 0 || workload.upcomingViewings > 0) {
+            await db.insert(notifications).values({
+              userId: reassignTo.user.id,
+              type: 'lead_assigned',
+              title: 'Agency customer work reassigned to you',
+              content:
+                'A departing team member’s active customer work is now assigned to you. Review your leads and upcoming viewings.',
+              data: JSON.stringify({
+                agencyId,
+                reassignedFromUserId: targetUser.id,
+                activeLeadCount: workload.assignedActiveLeads,
+                upcomingViewingCount: workload.upcomingViewings,
+              }),
+              isRead: 0,
+            });
+          }
         }
 
         await db

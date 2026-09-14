@@ -230,7 +230,11 @@ export default function AgentLeads() {
     };
   }, [location]);
 
-  const leadsLocked = !statusLoading && !status?.entitlements?.canReceiveLeads;
+  const leadsLocked = !statusLoading && !status?.entitlements?.canAccessExistingLeads;
+  const newEnquiriesPaused =
+    !statusLoading &&
+    Boolean(status?.entitlements?.canAccessExistingLeads) &&
+    !status?.entitlements?.canReceiveLeads;
   const journeyAction = getAgentJourneyAction(status);
   const needsProfileCompletion = isAgentProfileJourneyStep(status);
 
@@ -345,7 +349,7 @@ export default function AgentLeads() {
             }
             description={
               needsProfileCompletion
-                ? 'Keep a working phone number on your professional profile, then activate Launch Access to receive and manage enquiries.'
+                ? 'Keep a working phone number on your professional profile, then activate Launch Access to receive new enquiries.'
                 : journeyAction.description
             }
             actionLabel={journeyAction.waiting ? 'Return to dashboard' : journeyAction.label}
@@ -355,6 +359,19 @@ export default function AgentLeads() {
           />
         ) : (
           <>
+            {newEnquiriesPaused ? (
+              <Card className="border-amber-200 bg-amber-50/70">
+                <CardContent className="p-5">
+                  <p className="text-sm font-semibold text-amber-950">
+                    New marketplace enquiries are paused
+                  </p>
+                  <p className="mt-1 text-sm leading-6 text-amber-900">
+                    Continue working leads already assigned to you. Publishing and new marketplace
+                    enquiries resume when the relevant Launch Access term is active.
+                  </p>
+                </CardContent>
+              </Card>
+            ) : null}
             <div className={agentPageStyles.header}>
               <div className={agentPageStyles.headingBlock}>
                 <h1 className={agentPageStyles.title}>Leads & CRM</h1>

@@ -6,6 +6,7 @@ const {
   mockResolvePropertyForListing,
   mockCommercialLeadContextCandidateIds,
   mockLoadCommercialLeadContext,
+  mockResolveCurrentAgencyMembershipForAgent,
 } =
   vi.hoisted(() => ({
     mockGetDb: vi.fn(),
@@ -13,6 +14,7 @@ const {
     mockResolvePropertyForListing: vi.fn(),
     mockCommercialLeadContextCandidateIds: vi.fn(),
     mockLoadCommercialLeadContext: vi.fn(),
+    mockResolveCurrentAgencyMembershipForAgent: vi.fn(),
   }));
 
 vi.mock('../db', () => ({
@@ -35,6 +37,10 @@ vi.mock('../services/commercialLeadContextService', () => ({
   commercialLeadContextCandidateIds: mockCommercialLeadContextCandidateIds,
   loadCommercialLeadContext: mockLoadCommercialLeadContext,
   loadCommercialLeadContexts: vi.fn(),
+}));
+
+vi.mock('../services/agencyMembershipService', () => ({
+  resolveCurrentAgencyMembershipForAgent: mockResolveCurrentAgencyMembershipForAgent,
 }));
 
 import { agentRouter } from '../agentRouter';
@@ -84,6 +90,7 @@ describe('agent canonical inventory authority', () => {
         .map(lead => Number(lead.id)),
     );
     mockLoadCommercialLeadContext.mockResolvedValue(null);
+    mockResolveCurrentAgencyMembershipForAgent.mockResolvedValue(null);
   });
 
   it('requests only canonical scheduling options', async () => {
@@ -133,7 +140,7 @@ describe('agent canonical inventory authority', () => {
     await expect(
       caller.bookShowing({
         listingId: 55,
-        scheduledAt: '2026-03-12T10:00:00.000Z',
+        scheduledAt: '2026-03-12 10:00:00',
         visitorName: 'Buyer Example',
       }),
     ).rejects.toThrow('not linked to canonical property inventory');
@@ -187,7 +194,7 @@ describe('agent canonical inventory authority', () => {
         propertyId: 5001,
         agentId: 7,
         visitorName: 'Buyer Example',
-        scheduledAt: '2026-03-12T10:00:00.000Z',
+        scheduledAt: '2026-03-12 10:00:00',
         status: 'confirmed',
       }),
     );

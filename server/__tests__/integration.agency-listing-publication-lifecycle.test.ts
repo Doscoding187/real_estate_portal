@@ -22,11 +22,14 @@ import {
   listingApprovalQueue,
   listingMedia,
   listings,
+  leadDeliveries,
+  leads,
   plans,
   propertyImages,
   cities,
   provinces,
   properties,
+  showings,
   suburbs,
   subscriptions,
   users,
@@ -37,6 +40,7 @@ import { ENV } from '../_core/env';
 import { registerLocalMediaRoutes } from '../_core/localMediaRoutes';
 import { db } from '../db';
 import { appRouter } from '../routers';
+import agentOnboardingRouter from '../routes/agentOnboarding';
 
 const describeWithDb: typeof describe = process.env.DATABASE_URL
   ? describe
@@ -56,12 +60,17 @@ type FixtureUser = { id: number; email: string; name: string; sessionVersion: nu
 
 const created = {
   agencyId: 0,
+  outsiderAgencyId: 0,
   ownerId: 0,
   memberId: 0,
+  replacementId: 0,
   outsiderId: 0,
   reviewerId: 0,
   agentId: 0,
+  replacementAgentId: 0,
   listingId: 0,
+  leadId: 0,
+  showingId: 0,
 };
 
 let mediaRoot = '';
@@ -114,6 +123,21 @@ async function sessionCookie(userId: number): Promise<string> {
     Number(user.sessionVersion),
   );
   return `${COOKIE_NAME}=${token}`;
+}
+
+type AgentOnboardingStatus = {
+  entitlements: {
+    canReceiveLeads: boolean;
+    canAccessExistingLeads: boolean;
+  };
+};
+
+async function agentOnboardingStatus(userId: number): Promise<AgentOnboardingStatus> {
+  const response = await fetch(`${baseUrl}/api/agent/onboarding-status`, {
+    headers: { cookie: await sessionCookie(userId) },
+  });
+  expect(response.status).toBe(200);
+  return (await response.json()) as AgentOnboardingStatus;
 }
 
 async function insertUser(
@@ -191,6 +215,16 @@ async function canonicalSandtonLocation() {
 async function cleanup() {
   if (!process.env.DATABASE_URL) return;
 
+  // A lead's listing reference is intentionally RESTRICTed. Remove the
+  // captured enquiry (and its delivery obligation history) before removing
+  // the source listing.
+  if (created.leadId) {
+    if (created.showingId) {
+      await db.delete(showings).where(eq(showings.id, created.showingId));
+    }
+    await db.delete(leads).where(eq(leads.id, created.leadId));
+  }
+
   if (created.listingId) {
     await db.delete(listingMedia).where(eq(listingMedia.listingId, created.listingId));
     await db
@@ -215,11 +249,11 @@ async function cleanup() {
       );
     await db.delete(billableAccounts).where(eq(billableAccounts.agencyId, created.agencyId));
   }
-  if (created.agentId) {
+  for (const agentId of [created.agentId, created.replacementAgentId].filter(Boolean)) {
     await db
       .delete(agencyAgentMemberships)
-      .where(eq(agencyAgentMemberships.agentId, created.agentId));
-    await db.delete(agents).where(eq(agents.id, created.agentId));
+      .where(eq(agencyAgentMemberships.agentId, agentId));
+    await db.delete(agents).where(eq(agents.id, agentId));
   }
   if (created.agencyId) {
     await db.delete(agencyBranding).where(eq(agencyBranding.agencyId, created.agencyId));
@@ -227,9 +261,12 @@ async function cleanup() {
   }
   if (created.outsiderId) await db.delete(users).where(eq(users.id, created.outsiderId));
   if (created.reviewerId) await db.delete(users).where(eq(users.id, created.reviewerId));
+  if (created.replacementId) await db.delete(users).where(eq(users.id, created.replacementId));
   if (created.memberId) await db.delete(users).where(eq(users.id, created.memberId));
   if (created.ownerId) await db.delete(users).where(eq(users.id, created.ownerId));
   if (created.agencyId) await db.delete(agencies).where(eq(agencies.id, created.agencyId));
+  if (created.outsiderAgencyId)
+    await db.delete(agencies).where(eq(agencies.id, created.outsiderAgencyId));
 }
 
 beforeAll(async () => {
@@ -245,6 +282,7 @@ beforeAll(async () => {
   const app = express();
   registerLocalMediaRoutes(app);
   app.use(express.json({ limit: '50mb' }));
+  app.use('/api/agent', agentOnboardingRouter);
   app.use(
     '/api/trpc',
     (await import('@trpc/server/adapters/express')).createExpressMiddleware({
@@ -466,6 +504,26 @@ describeWithDb('agency listing publication lifecycle acceptance', () => {
     await expect(
       outsiderApi.listing.reject.mutate({ listingId: created.listingId, reason: 'forged review' }),
     ).rejects.toMatchObject({ data: { code: 'FORBIDDEN' } });
+
+    // Give the unrelated principal a real, verified tenant so the lead scope
+    // check proves isolation rather than relying only on a role rejection.
+    const [outsiderAgencyResult] = await db.insert(agencies).values({
+      name: `Unrelated Agency ${suffix}`,
+      slug: `unrelated-agency-${suffix}`,
+      email: `unrelated-agency-${suffix}@example.test`,
+      city: 'Cape Town',
+      province: 'Western Cape',
+      subscriptionPlan: 'free',
+      subscriptionStatus: 'pending_payment',
+      isVerified: 1,
+    } satisfies typeof agencies.$inferInsert);
+    created.outsiderAgencyId = insertId(outsiderAgencyResult);
+    if (!created.outsiderAgencyId) throw new Error('Could not create unrelated agency fixture.');
+    await db
+      .update(users)
+      .set({ agencyId: created.outsiderAgencyId, role: 'agency_admin', isSubaccount: 0 })
+      .where(eq(users.id, outsider.id));
+    const unrelatedAgencyApi = trpcClient(await sessionCookie(outsider.id));
 
     await expect(
       reviewerApi.listing.reject.mutate({
@@ -711,6 +769,378 @@ describeWithDb('agency listing publication lifecycle acceptance', () => {
       listingSource: 'manual',
     });
     expect(publicCard?.images).toHaveLength(5);
+
+    // Goal 7: the public HTTP enquiry path must create one durable custody
+    // record for the assigned agency agent. The caller cannot select a
+    // recipient; the server derives it from the approved projection.
+    const enquiryInput = {
+      propertyId: Number(property.id),
+      name: `Prospect ${suffix}`,
+      email: `prospect-${suffix}@example.test`,
+      phone: '+27825550199',
+      message: 'Please arrange a viewing for this Sandton home.',
+      leadType: 'inquiry' as const,
+      source: 'property_detail',
+      leadSource: 'property_detail',
+      sourceSurface: 'property_detail_contact_modal',
+      captureRequestId: `agency-goal-7-${suffix}`,
+      consent: {
+        accepted: true as const,
+        version: 'launch-privacy-1',
+        source: 'property_detail_contact_modal',
+      },
+    };
+    const captured = await publicApi.leads.create.mutate(enquiryInput);
+    expect(captured).toMatchObject({
+      success: true,
+      delivered: true,
+      deliveryStatus: 'delivered',
+      deliveryMethod: 'crm_export',
+      supplyOrigin: 'customer_managed',
+      leadCustody: 'verified_customer_recipient',
+      recipientType: 'agent',
+      recipientId: created.agentId,
+    });
+    expect(captured.duplicate).toBeUndefined();
+    created.leadId = Number(captured.leadId);
+    expect(created.leadId).toBeGreaterThan(0);
+
+    const [storedLead] = await db
+      .select({
+        id: leads.id,
+        propertyId: leads.propertyId,
+        agencyId: leads.agencyId,
+        agentId: leads.agentId,
+        name: leads.name,
+        email: leads.email,
+        message: leads.message,
+        captureRequestId: leads.captureRequestId,
+        consentVersion: leads.consentVersion,
+        consentSource: leads.consentSource,
+        deliveryStatus: leads.deliveryStatus,
+        leadDeliveryMethod: leads.leadDeliveryMethod,
+      })
+      .from(leads)
+      .where(eq(leads.id, created.leadId))
+      .limit(1);
+    expect(storedLead).toMatchObject({
+      id: created.leadId,
+      propertyId: Number(property.id),
+      agencyId: created.agencyId,
+      agentId: created.agentId,
+      name: `Prospect ${suffix}`,
+      email: `prospect-${suffix}@example.test`,
+      message: 'Please arrange a viewing for this Sandton home.',
+      captureRequestId: enquiryInput.captureRequestId,
+      consentVersion: 'launch-privacy-1',
+      consentSource: 'property_detail_contact_modal',
+      deliveryStatus: 'delivered',
+      leadDeliveryMethod: 'crm_export',
+    });
+
+    const [storedDelivery] = await db
+      .select({
+        leadId: leadDeliveries.leadId,
+        purpose: leadDeliveries.purpose,
+        state: leadDeliveries.state,
+        channel: leadDeliveries.channel,
+        recipientType: leadDeliveries.recipientType,
+        recipientAgentId: leadDeliveries.recipientAgentId,
+        recipientAgencyId: leadDeliveries.recipientAgencyId,
+      })
+      .from(leadDeliveries)
+      .where(and(eq(leadDeliveries.leadId, created.leadId), eq(leadDeliveries.purpose, 'primary_custody')))
+      .limit(1);
+    expect(storedDelivery).toMatchObject({
+      leadId: created.leadId,
+      purpose: 'primary_custody',
+      state: 'completed',
+      channel: 'crm_export',
+      recipientType: 'agent',
+      recipientAgentId: created.agentId,
+    });
+    expect(storedDelivery?.recipientAgencyId).toBeNull();
+
+    const replayed = await publicApi.leads.create.mutate(enquiryInput);
+    expect(replayed).toMatchObject({
+      success: true,
+      leadId: created.leadId,
+      duplicate: true,
+      recipientType: 'agent',
+      recipientId: created.agentId,
+    });
+    await expect(
+      publicApi.leads.create.mutate({ ...enquiryInput, message: 'Tampered replay payload.' }),
+    ).rejects.toMatchObject({ data: { code: 'CONFLICT' } });
+    expect(
+      await db
+        .select({ id: leads.id })
+        .from(leads)
+        .where(eq(leads.captureRequestId, enquiryInput.captureRequestId)),
+    ).toHaveLength(1);
+
+    // Both legitimate operating surfaces can see the custodied lead, while a
+    // verified administrator from another tenant sees neither the row nor its
+    // delivery retry authority.
+    const agencyLeads = await ownerApi.agency.getLeads.query({ status: 'all', limit: 50 });
+    expect(agencyLeads.some(lead => Number(lead.id) === created.leadId)).toBe(true);
+    await expect(ownerApi.agency.getLeadDetail.query({ leadId: created.leadId })).resolves.toMatchObject({
+      id: created.leadId,
+      agencyId: created.agencyId,
+      agentId: created.agentId,
+    });
+    const memberAgentApi = trpcClient(await sessionCookie(member.id));
+    const agentLeads = await memberAgentApi.agent.getMyLeads.query({ status: 'all', limit: 100 });
+    expect(agentLeads.some(lead => Number(lead.id) === created.leadId)).toBe(true);
+    await expect(unrelatedAgencyApi.agency.getLeads.query({ status: 'all', limit: 50 })).resolves.toEqual([]);
+    await expect(
+      unrelatedAgencyApi.agency.getLeadDetail.query({ leadId: created.leadId }),
+    ).rejects.toMatchObject({ data: { code: 'NOT_FOUND' } });
+    await expect(
+      unrelatedAgencyApi.leads.retryDelivery.mutate({ leadId: created.leadId }),
+    ).rejects.toMatchObject({ data: { code: 'FORBIDDEN' } });
+
+    // Goal 8: the assigned agent can work durable custody through the agent
+    // workspace, and agency oversight sees the same shared record.
+    const initialPipeline = await memberAgentApi.agent.getLeadsPipeline.query({
+      filters: { propertyId: Number(property.id) },
+    });
+    expect(initialPipeline.new.some(lead => Number(lead.id) === created.leadId)).toBe(true);
+    await expect(
+      memberAgentApi.agent.addLeadActivity.mutate({
+        leadId: created.leadId,
+        activityType: 'call',
+        description: 'Prospect requested a preferred viewing window.',
+      }),
+    ).resolves.toEqual({ success: true });
+    await expect(
+      memberAgentApi.agent.moveLeadToStage.mutate({
+        leadId: created.leadId,
+        targetStage: 'contacted',
+        notes: 'Prospect reached by phone.',
+      }),
+    ).resolves.toEqual({ success: true });
+    const scheduledFollowUp = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+    await expect(
+      memberAgentApi.agent.setLeadFollowUp.mutate({
+        leadId: created.leadId,
+        nextFollowUp: scheduledFollowUp,
+        note: 'Confirm the viewing window with the prospect.',
+      }),
+    ).resolves.toMatchObject({ success: true });
+    const memberFollowUps = await memberAgentApi.agent.getMyFollowUps.query({ limit: 20 });
+    expect(memberFollowUps.some(lead => Number(lead.id) === created.leadId)).toBe(true);
+    const ownerObservedCustody = await ownerApi.agency.getLeadDetail.query({
+      leadId: created.leadId,
+    });
+    expect(ownerObservedCustody).toMatchObject({
+      id: created.leadId,
+      agentId: created.agentId,
+    });
+    expect(ownerObservedCustody.nextFollowUp).toBeTruthy();
+    expect(
+      ownerObservedCustody.activities.some(
+        activity => activity.description === 'Prospect requested a preferred viewing window.',
+      ),
+    ).toBe(true);
+
+    // The commercial term may pause new marketplace routing, but it must not
+    // strand the legitimate assignee from their existing custody. This only
+    // changes the disposable fixture's canonical term; no payment or
+    // entitlement activation path is invoked.
+    await db
+      .update(subscriptions)
+      .set({ currentPeriodEnd: dbTimestamp(new Date(Date.now() - 60_000)) })
+      .where(
+        and(eq(subscriptions.ownerType, 'agency'), eq(subscriptions.ownerId, created.agencyId)),
+      );
+    const expiredMemberStatus = await agentOnboardingStatus(member.id);
+    expect(expiredMemberStatus.entitlements).toMatchObject({
+      canReceiveLeads: false,
+      canAccessExistingLeads: true,
+    });
+    const expiredPipeline = await memberAgentApi.agent.getLeadsPipeline.query({
+      filters: { propertyId: Number(property.id) },
+    });
+    expect(expiredPipeline.contacted.some(lead => Number(lead.id) === created.leadId)).toBe(true);
+    await expect(
+      memberAgentApi.agent.addLeadActivity.mutate({
+        leadId: created.leadId,
+        activityType: 'email',
+        description: 'Sent the prospect the available viewing times.',
+      }),
+    ).resolves.toEqual({ success: true });
+    const bookedShowing = await memberAgentApi.agent.bookShowing.mutate({
+      listingId: created.listingId,
+      leadId: created.leadId,
+      scheduledAt: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
+      visitorName: `Prospect ${suffix}`,
+      notes: 'Viewing arranged while the commercial term is paused.',
+    });
+    expect(bookedShowing).toMatchObject({ success: true });
+    created.showingId = Number(bookedShowing.showingId);
+    expect(created.showingId).toBeGreaterThan(0);
+
+    // Reassignment uses the existing canonical invitation and membership
+    // path. The replacement has no individual subscription and no optional
+    // verification badge, yet can continue the agency's custodied work.
+    const replacement = await insertUser('PublicationReplacement', 'visitor');
+    created.replacementId = replacement.id;
+    const replacementInvitationToken = `publication-replacement-${randomUUID()}`;
+    await db.insert(invitations).values({
+      agencyId: created.agencyId,
+      invitedBy: owner.id,
+      email: replacement.email,
+      role: 'agent',
+      token: replacementInvitationToken,
+      status: 'pending',
+      expiresAt: dbTimestamp(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)),
+    } satisfies typeof invitations.$inferInsert);
+    const replacementApi = trpcClient(await sessionCookie(replacement.id));
+    await expect(
+      replacementApi.invitation.accept.mutate({ token: replacementInvitationToken }),
+    ).resolves.toEqual({ success: true });
+    const [replacementAgent] = await db
+      .select({
+        id: agents.id,
+        agencyId: agents.agencyId,
+        status: agents.status,
+        isVerified: agents.isVerified,
+      })
+      .from(agents)
+      .where(eq(agents.userId, replacement.id))
+      .limit(1);
+    if (!replacementAgent) throw new Error('Replacement invitation did not create an agent profile.');
+    created.replacementAgentId = Number(replacementAgent.id);
+    expect(replacementAgent).toMatchObject({
+      agencyId: created.agencyId,
+      status: 'approved',
+      isVerified: 0,
+    });
+    expect(
+      await db
+        .select({ id: subscriptions.id })
+        .from(subscriptions)
+        .where(
+          and(
+            eq(subscriptions.ownerType, 'agent'),
+            eq(subscriptions.ownerId, replacement.id),
+          ),
+        ),
+    ).toEqual([]);
+    expect((await agentOnboardingStatus(replacement.id)).entitlements).toMatchObject({
+      canReceiveLeads: false,
+      canAccessExistingLeads: true,
+    });
+
+    await expect(
+      ownerApi.agency.setAgentMembershipStatus.mutate({
+        userId: member.id,
+        status: 'suspended',
+        reassignToUserId: replacement.id,
+      }),
+    ).resolves.toEqual({ success: true });
+    const [reassignedLead] = await db
+      .select({
+        id: leads.id,
+        agencyId: leads.agencyId,
+        agentId: leads.agentId,
+        captureRequestId: leads.captureRequestId,
+      })
+      .from(leads)
+      .where(eq(leads.id, created.leadId))
+      .limit(1);
+    expect(reassignedLead).toMatchObject({
+      id: created.leadId,
+      agencyId: created.agencyId,
+      agentId: created.replacementAgentId,
+      captureRequestId: enquiryInput.captureRequestId,
+    });
+    const [reassignedShowing] = await db
+      .select({ agentId: showings.agentId, leadId: showings.leadId, status: showings.status })
+      .from(showings)
+      .where(eq(showings.id, created.showingId))
+      .limit(1);
+    expect(reassignedShowing).toMatchObject({
+      agentId: created.replacementAgentId,
+      leadId: created.leadId,
+      status: 'confirmed',
+    });
+    const [formerMembership] = await db
+      .select({ status: agencyAgentMemberships.status, effectiveTo: agencyAgentMemberships.effectiveTo })
+      .from(agencyAgentMemberships)
+      .where(eq(agencyAgentMemberships.agentId, created.agentId))
+      .limit(1);
+    expect(formerMembership).toMatchObject({ status: 'suspended' });
+    expect(formerMembership?.effectiveTo).toBeTruthy();
+    await expect(
+      memberAgentApi.agent.getMyLeads.query({ status: 'all', limit: 100 }),
+    ).rejects.toMatchObject({ data: { code: 'FORBIDDEN' } });
+    await expect(
+      memberAgentApi.agency.getLeadDetail.query({ leadId: created.leadId }),
+    ).rejects.toMatchObject({ data: { code: 'FORBIDDEN' } });
+
+    const replacementLeads = await replacementApi.agent.getMyLeads.query({
+      status: 'all',
+      limit: 100,
+    });
+    expect(replacementLeads.some(lead => Number(lead.id) === created.leadId)).toBe(true);
+    const replacementFollowUps = await replacementApi.agent.getMyFollowUps.query({ limit: 20 });
+    expect(replacementFollowUps.some(lead => Number(lead.id) === created.leadId)).toBe(true);
+    const replacementShowings = await replacementApi.agent.getMyShowings.query({
+      startDate: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+      endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+      status: 'all',
+    });
+    expect(replacementShowings.some(showing => Number(showing.id) === created.showingId)).toBe(true);
+    const replacementNotifications = await replacementApi.agent.getNotifications.query({
+      limit: 20,
+      unreadOnly: false,
+    });
+    expect(
+      replacementNotifications.some(
+        notification => notification.title === 'Agency customer work reassigned to you',
+      ),
+    ).toBe(true);
+    await expect(
+      replacementApi.agent.addLeadActivity.mutate({
+        leadId: created.leadId,
+        activityType: 'note',
+        description: 'Replacement agent accepted the scheduled follow-up.',
+      }),
+    ).resolves.toEqual({ success: true });
+    const ownerAfterReassignment = await ownerApi.agency.getLeadDetail.query({
+      leadId: created.leadId,
+    });
+    expect(ownerAfterReassignment).toMatchObject({
+      id: created.leadId,
+      agentId: created.replacementAgentId,
+    });
+    expect(
+      ownerAfterReassignment.activities.some(
+        activity => activity.description === 'Replacement agent accepted the scheduled follow-up.',
+      ),
+    ).toBe(true);
+    const [deliveryAfterReassignment] = await db
+      .select({ recipientAgentId: leadDeliveries.recipientAgentId, state: leadDeliveries.state })
+      .from(leadDeliveries)
+      .where(
+        and(
+          eq(leadDeliveries.leadId, created.leadId),
+          eq(leadDeliveries.purpose, 'primary_custody'),
+        ),
+      )
+      .limit(1);
+    expect(deliveryAfterReassignment).toMatchObject({
+      recipientAgentId: created.agentId,
+      state: 'completed',
+    });
+    expect(
+      await db
+        .select({ id: leads.id })
+        .from(leads)
+        .where(eq(leads.captureRequestId, enquiryInput.captureRequestId)),
+    ).toHaveLength(1);
 
     const finalQueue = await db
       .select({

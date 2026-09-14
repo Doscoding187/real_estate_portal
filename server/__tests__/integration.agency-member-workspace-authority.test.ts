@@ -52,6 +52,7 @@ type OnboardingStatus = {
   profile: { id: number; agencyId: number | null } | null;
   entitlements: {
     canReceiveLeads: boolean;
+    canAccessExistingLeads: boolean;
   };
 };
 
@@ -300,6 +301,7 @@ describeWithDb('agency member workspace authority', () => {
     expect(active.fullFeaturesUnlocked).toBe(true);
     expect(active.recommendedNextStep).toBe('dashboard');
     expect(active.entitlements.canReceiveLeads).toBe(true);
+    expect(active.entitlements.canAccessExistingLeads).toBe(true);
     expect(active.profile?.agencyId).toBe(agencyId);
 
     // A paid fixed term ends for both the agency owner and the member. The
@@ -319,6 +321,7 @@ describeWithDb('agency member workspace authority', () => {
     expect(expired.fullFeaturesUnlocked).toBe(false);
     expect(expired.recommendedNextStep).toBe('await_agency_activation');
     expect(expired.entitlements.canReceiveLeads).toBe(false);
+    expect(expired.entitlements.canAccessExistingLeads).toBe(true);
 
     const ownerAfterExpiry = await trpcCaller({
       id: owner.userId,
@@ -384,6 +387,7 @@ describeWithDb('agency member workspace authority', () => {
     expect(pending.fullFeaturesUnlocked).toBe(false);
     expect(pending.recommendedNextStep).toBe('await_agency_activation');
     expect(pending.entitlements.canReceiveLeads).toBe(false);
+    expect(pending.entitlements.canAccessExistingLeads).toBe(true);
 
     await db
       .update(subscriptions)
@@ -410,6 +414,7 @@ describeWithDb('agency member workspace authority', () => {
     expect(suspended.fullFeaturesUnlocked).toBe(false);
     expect(suspended.recommendedNextStep).toBe('select_package');
     expect(suspended.entitlements.canReceiveLeads).toBe(false);
+    expect(suspended.entitlements.canAccessExistingLeads).toBe(false);
     expect(suspended.profile?.agencyId).toBeNull();
 
     await establishCanonicalAgencyMembership({
@@ -426,6 +431,7 @@ describeWithDb('agency member workspace authority', () => {
     });
     expect(restored.fullFeaturesUnlocked).toBe(true);
     expect(restored.entitlements.canReceiveLeads).toBe(true);
+    expect(restored.entitlements.canAccessExistingLeads).toBe(true);
 
     // A separate agent holding stale user/profile agency IDs has no
     // canonical membership and cannot project the agency's workspace.
@@ -464,6 +470,7 @@ describeWithDb('agency member workspace authority', () => {
     });
     expect(unrelatedStatus.subscriptionStatus).toBe('unassigned');
     expect(unrelatedStatus.entitlements.canReceiveLeads).toBe(false);
+    expect(unrelatedStatus.entitlements.canAccessExistingLeads).toBe(false);
     expect(unrelatedStatus.profile?.agencyId).toBeNull();
   });
 });

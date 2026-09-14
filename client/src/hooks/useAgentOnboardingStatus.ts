@@ -11,6 +11,7 @@ export type AgentEntitlementsSnapshot = {
   trialExpired: boolean;
   canPublishListings: boolean;
   canReceiveLeads: boolean;
+  canAccessExistingLeads: boolean;
   canAppearInDirectory: boolean;
   trialStatusDetail: {
     status: 'active' | 'expired' | 'none';
