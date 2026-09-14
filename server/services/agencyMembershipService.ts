@@ -103,6 +103,40 @@ export async function listCurrentActiveMembershipAgentIds(
   return current;
 }
 
+/**
+ * Return the one current canonical agency membership for each requested
+ * agent. Public ownership decisions need the agency id as well as the fact
+ * that membership is current; deriving that id from the mutable agent profile
+ * would reintroduce the stale/self-assigned affiliation authority defect.
+ * Multiple current rows are an authority violation and fail closed.
+ */
+export async function listCurrentActiveAgencyMembershipsByAgentId(
+  db: DatabaseHandle,
+  agentIds: number[],
+  evaluatedAt: Date = new Date(),
+): Promise<Map<number, AgencyMembershipRow>> {
+  const uniqueIds = [...new Set(agentIds.filter(id => Number.isSafeInteger(id) && id > 0))];
+  if (uniqueIds.length === 0) return new Map();
+
+  const rows = await db
+    .select()
+    .from(agencyAgentMemberships)
+    .where(inArray(agencyAgentMemberships.agentId, uniqueIds));
+
+  const current = new Map<number, AgencyMembershipRow>();
+  for (const row of rows) {
+    if (!isCurrentActiveAgencyMembership(row, evaluatedAt)) continue;
+    const agentId = Number(row.agentId);
+    if (current.has(agentId)) {
+      throw new AgencyMembershipAuthorityError(
+        'An agent cannot hold more than one current agency membership.',
+      );
+    }
+    current.set(agentId, row);
+  }
+  return current;
+}
+
 function toDbTimestamp(value: Date): string {
   return value.toISOString().slice(0, 19).replace('T', ' ');
 }

@@ -3699,7 +3699,12 @@ export async function approveListing(
     await db
       .update(listingApprovalQueue)
       .set({ status: 'approved' as any, reviewedBy, reviewedAt: approvedAt, reviewNotes: notes })
-      .where(eq(listingApprovalQueue.listingId, listingId));
+      .where(
+        and(
+          eq(listingApprovalQueue.listingId, listingId),
+          inArray(listingApprovalQueue.status, ['pending', 'reviewing']),
+        ),
+      );
     return;
   }
 
@@ -3734,7 +3739,12 @@ export async function approveListing(
         reviewedAt: approvedAt,
         reviewNotes: notes,
       })
-      .where(eq(listingApprovalQueue.listingId, listingId));
+      .where(
+        and(
+          eq(listingApprovalQueue.listingId, listingId),
+          inArray(listingApprovalQueue.status, ['pending', 'reviewing']),
+        ),
+      );
     return;
   }
 
@@ -3795,7 +3805,12 @@ export async function approveListing(
       reviewedAt: approvedAt,
       reviewNotes: notes,
     })
-    .where(eq(listingApprovalQueue.listingId, listingId));
+    .where(
+      and(
+        eq(listingApprovalQueue.listingId, listingId),
+        inArray(listingApprovalQueue.status, ['pending', 'reviewing']),
+      ),
+    );
 }
 
 /**

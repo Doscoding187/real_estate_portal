@@ -422,7 +422,16 @@ describe('createListing (lower-level)', () => {
   it('persists the validated seller-prospect assignee for an agency-manager conversion', async () => {
     fakeDb.setNextSelectResult([]); // The acting agency manager has no agent profile.
     fakeDb.setNextSelectResult([{ agencyId: 77, role: 'agency_admin' }]);
-    fakeDb.setNextSelectResult([{ id: 55 }]); // Assigned, approved agency agent.
+    fakeDb.setNextSelectResult([{ id: 55, status: 'approved' }]);
+    fakeDb.setNextSelectResult([
+      {
+        agencyId: 77,
+        agentId: 55,
+        status: 'active',
+        effectiveFrom: null,
+        effectiveTo: null,
+      },
+    ]); // Assigned agent's canonical current agency membership.
     fakeDb.setNextSelectResult([
       {
         id: 901,
