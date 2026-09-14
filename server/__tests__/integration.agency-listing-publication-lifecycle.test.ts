@@ -6,7 +6,21 @@ import express from 'express';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { createTRPCProxyClient, httpLink } from '@trpc/client';
 import superjson from 'superjson';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
+
+const { deliveredVerificationEmails } = vi.hoisted(() => ({
+  deliveredVerificationEmails: [] as Array<{ to: string; verificationToken: string }>,
+}));
+
+vi.mock('../_core/email', () => ({
+  sendVerificationEmail: vi.fn(async (input: { to: string; verificationToken: string }) => {
+    deliveredVerificationEmails.push({
+      to: input.to,
+      verificationToken: input.verificationToken,
+    });
+    return { success: true, messageId: 'goal-10-verification-message' };
+  }),
+}));
 
 import { COOKIE_NAME } from '../../shared/const';
 import { encodeCanonicalLocationId } from '../../shared/locationAuthority';
@@ -17,6 +31,10 @@ import {
   agencyBranding,
   agents,
   billableAccounts,
+  billingAuditEvents,
+  billingInvoices,
+  billingPaymentDocuments,
+  billingPayments,
   invitations,
   listingAnalytics,
   listingApprovalQueue,
@@ -32,9 +50,11 @@ import {
   showings,
   suburbs,
   subscriptions,
+  notifications,
   users,
 } from '../../drizzle/schema';
 import { authService } from '../_core/auth';
+import { registerAuthRoutes } from '../_core/authRoutes';
 import { createContext } from '../_core/context';
 import { ENV } from '../_core/env';
 import { registerLocalMediaRoutes } from '../_core/localMediaRoutes';
@@ -57,6 +77,7 @@ const priorMediaAdapter = ENV.mediaStorageAdapter;
 const priorMediaDirectory = ENV.mediaLocalStorageDir;
 
 type FixtureUser = { id: number; email: string; name: string; sessionVersion: number };
+type RegisteredFixtureUser = FixtureUser & { cookie: string };
 
 const created = {
   agencyId: 0,
@@ -74,6 +95,7 @@ const created = {
 };
 
 let mediaRoot = '';
+let billingProofRoot = '';
 let server: Server | null = null;
 let baseUrl = '';
 
@@ -132,12 +154,76 @@ type AgentOnboardingStatus = {
   };
 };
 
-async function agentOnboardingStatus(userId: number): Promise<AgentOnboardingStatus> {
+async function agentOnboardingStatus(
+  userId: number,
+  cookie?: string,
+): Promise<AgentOnboardingStatus> {
   const response = await fetch(`${baseUrl}/api/agent/onboarding-status`, {
-    headers: { cookie: await sessionCookie(userId) },
+    headers: { cookie: cookie || (await sessionCookie(userId)) },
   });
   expect(response.status).toBe(200);
   return (await response.json()) as AgentOnboardingStatus;
+}
+
+async function registerAndVerify(input: {
+  email: string;
+  name: string;
+  role: 'visitor' | 'agency_admin';
+  expectedPath: string;
+}): Promise<RegisteredFixtureUser> {
+  const registration = await fetch(`${baseUrl}/api/auth/register`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      email: input.email,
+      password: 'StrongPassword1!',
+      name: input.name,
+      role: input.role,
+    }),
+  });
+  expect(registration.status).toBe(201);
+  expect(await registration.json()).toMatchObject({
+    success: true,
+    verificationEmailSent: true,
+  });
+
+  const delivery = [...deliveredVerificationEmails]
+    .reverse()
+    .find(candidate => candidate.to === input.email);
+  if (!delivery) throw new Error(`Verification email was not captured for ${input.email}.`);
+
+  const verification = await fetch(
+    `${baseUrl}/api/auth/verify-email?token=${encodeURIComponent(delivery.verificationToken)}`,
+    { redirect: 'manual' },
+  );
+  expect(verification.status).toBe(302);
+  expect(verification.headers.get('location')).toContain(input.expectedPath);
+  const setCookie = verification.headers.get('set-cookie') || '';
+  const cookie = setCookie.split(';')[0] || '';
+  expect(cookie).toContain(`${COOKIE_NAME}=`);
+
+  const [user] = await db
+    .select({
+      id: users.id,
+      email: users.email,
+      name: users.name,
+      sessionVersion: users.sessionVersion,
+      emailVerified: users.emailVerified,
+      role: users.role,
+    })
+    .from(users)
+    .where(eq(users.email, input.email))
+    .limit(1);
+  if (!user?.email) throw new Error(`Verified account ${input.email} was not persisted.`);
+  expect(user).toMatchObject({ emailVerified: 1, role: input.role });
+
+  return {
+    id: Number(user.id),
+    email: user.email,
+    name: user.name || input.name,
+    sessionVersion: Number(user.sessionVersion),
+    cookie,
+  };
 }
 
 async function insertUser(
@@ -161,37 +247,6 @@ async function insertUser(
   const id = insertId(result);
   if (!id) throw new Error(`Could not create ${label} fixture user.`);
   return { id, email, name, sessionVersion: 1 };
-}
-
-async function createActiveAgencyLaunchAccess(agencyId: number, actorUserId: number) {
-  const [plan] = await db
-    .select({ id: plans.id })
-    .from(plans)
-    .where(eq(plans.name, 'agency_launch_access'))
-    .limit(1);
-  if (!plan) throw new Error('Canonical agency Launch Access reference data is unavailable.');
-
-  const [accountResult] = await db.insert(billableAccounts).values({
-    accountKind: 'agency',
-    agencyId,
-  } as any);
-  const accountId = insertId(accountResult);
-  if (!accountId) throw new Error('Could not create agency billable-account fixture.');
-
-  const now = new Date();
-  await db.insert(subscriptions).values({
-    ownerType: 'agency',
-    ownerId: agencyId,
-    billableAccountId: accountId,
-    planId: Number(plan.id),
-    status: 'active',
-    currentPeriodStart: dbTimestamp(now),
-    currentPeriodEnd: dbTimestamp(new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)),
-    cancelAtPeriodEnd: 0,
-    createdBy: actorUserId,
-    updatedBy: actorUserId,
-  } as any);
-  return Number(plan.id);
 }
 
 async function canonicalSandtonLocation() {
@@ -243,6 +298,32 @@ async function cleanup() {
   }
   if (created.agencyId) {
     await db
+      .delete(billingAuditEvents)
+      .where(
+        and(
+          eq(billingAuditEvents.ownerType, 'agency'),
+          eq(billingAuditEvents.ownerId, created.agencyId),
+        ),
+      );
+    await db
+      .delete(billingPaymentDocuments)
+      .where(
+        and(
+          eq(billingPaymentDocuments.ownerType, 'agency'),
+          eq(billingPaymentDocuments.ownerId, created.agencyId),
+        ),
+      );
+    await db
+      .delete(billingPayments)
+      .where(
+        and(eq(billingPayments.ownerType, 'agency'), eq(billingPayments.ownerId, created.agencyId)),
+      );
+    await db
+      .delete(billingInvoices)
+      .where(
+        and(eq(billingInvoices.ownerType, 'agency'), eq(billingInvoices.ownerId, created.agencyId)),
+      );
+    await db
       .delete(subscriptions)
       .where(
         and(eq(subscriptions.ownerType, 'agency'), eq(subscriptions.ownerId, created.agencyId)),
@@ -250,20 +331,24 @@ async function cleanup() {
     await db.delete(billableAccounts).where(eq(billableAccounts.agencyId, created.agencyId));
   }
   for (const agentId of [created.agentId, created.replacementAgentId].filter(Boolean)) {
-    await db
-      .delete(agencyAgentMemberships)
-      .where(eq(agencyAgentMemberships.agentId, agentId));
+    await db.delete(agencyAgentMemberships).where(eq(agencyAgentMemberships.agentId, agentId));
     await db.delete(agents).where(eq(agents.id, agentId));
   }
   if (created.agencyId) {
     await db.delete(agencyBranding).where(eq(agencyBranding.agencyId, created.agencyId));
     await db.delete(invitations).where(eq(invitations.agencyId, created.agencyId));
   }
-  if (created.outsiderId) await db.delete(users).where(eq(users.id, created.outsiderId));
-  if (created.reviewerId) await db.delete(users).where(eq(users.id, created.reviewerId));
-  if (created.replacementId) await db.delete(users).where(eq(users.id, created.replacementId));
-  if (created.memberId) await db.delete(users).where(eq(users.id, created.memberId));
-  if (created.ownerId) await db.delete(users).where(eq(users.id, created.ownerId));
+  const userIds = [
+    created.ownerId,
+    created.memberId,
+    created.replacementId,
+    created.outsiderId,
+    created.reviewerId,
+  ].filter(Boolean);
+  if (userIds.length) {
+    await db.delete(notifications).where(inArray(notifications.userId, userIds));
+    await db.delete(users).where(inArray(users.id, userIds));
+  }
   if (created.agencyId) await db.delete(agencies).where(eq(agencies.id, created.agencyId));
   if (created.outsiderAgencyId)
     await db.delete(agencies).where(eq(agencies.id, created.outsiderAgencyId));
@@ -273,15 +358,26 @@ beforeAll(async () => {
   if (!process.env.DATABASE_URL) return;
 
   mediaRoot = await mkdtemp(`${tmpdir()}/property-listify-agency-media-`);
+  billingProofRoot = await mkdtemp(`${tmpdir()}/property-listify-agency-billing-`);
   vi.stubEnv('MEDIA_STORAGE_ADAPTER', 'local');
   vi.stubEnv('MEDIA_LOCAL_STORAGE_DIR', mediaRoot);
   vi.stubEnv('MEDIA_UPLOAD_TOKEN_SECRET', 'agency-listing-preparation-media-secret');
+  vi.stubEnv('BILLING_PROOF_STORAGE_ADAPTER', 'local');
+  vi.stubEnv('BILLING_PRIVATE_STORAGE_DIR', billingProofRoot);
+  vi.stubEnv('BILLING_EFT_ACCOUNT_NAME', 'LOCAL TEST EFT ACCOUNT - NOT PAYABLE');
+  vi.stubEnv('BILLING_EFT_BANK_NAME', 'Local Test Bank');
+  vi.stubEnv('BILLING_EFT_BRANCH_CODE', '000000');
+  vi.stubEnv('BILLING_EFT_ACCOUNT_NUMBER', '0000000000');
+  vi.stubEnv('BILLING_EFT_ACCOUNT_TYPE', 'Local test account');
+  vi.stubEnv('BILLING_SUPPORT_EMAIL', 'billing-test@propertylistify.local');
   ENV.mediaStorageAdapter = 'local';
   ENV.mediaLocalStorageDir = mediaRoot;
+  deliveredVerificationEmails.length = 0;
 
   const app = express();
   registerLocalMediaRoutes(app);
   app.use(express.json({ limit: '50mb' }));
+  registerAuthRoutes(app);
   app.use('/api/agent', agentOnboardingRouter);
   app.use(
     '/api/trpc',
@@ -305,6 +401,7 @@ afterAll(async () => {
   }
   await cleanup();
   if (mediaRoot) await rm(mediaRoot, { recursive: true, force: true });
+  if (billingProofRoot) await rm(billingProofRoot, { recursive: true, force: true });
   ENV.mediaStorageAdapter = priorMediaAdapter;
   ENV.mediaLocalStorageDir = priorMediaDirectory;
   vi.unstubAllEnvs();
@@ -312,58 +409,124 @@ afterAll(async () => {
   else process.env.JWT_SECRET = priorJwtSecret;
 });
 
-describeWithDb('agency listing publication lifecycle acceptance', () => {
-  it('preserves review feedback, rechecks entitlement, and publishes one coherent agency projection', async () => {
+describeWithDb('agency full operating journey acceptance', () => {
+  it('runs verified agency onboarding through controlled activation, publication, enquiry, and continued custody', async () => {
     const suffix = `${Date.now()}-${randomUUID().slice(0, 8)}`;
-    const [agencyResult] = await db.insert(agencies).values({
-      name: `Publication Agency ${suffix}`,
-      slug: `publication-agency-${suffix}`,
-      email: `publication-agency-${suffix}@example.test`,
-      city: 'Johannesburg',
-      province: 'Gauteng',
-      subscriptionPlan: 'free',
-      subscriptionStatus: 'pending_payment',
-      isVerified: 1,
-    } satisfies typeof agencies.$inferInsert);
-    created.agencyId = insertId(agencyResult);
-    if (!created.agencyId) throw new Error('Could not create agency fixture.');
-
-    const owner = await insertUser('PublicationOwner', 'agency_admin');
-    const member = await insertUser('PublicationMember', 'visitor');
+    const owner = await registerAndVerify({
+      email: `publication-owner-${suffix}@example.test`,
+      name: `Publication Owner ${suffix}`,
+      role: 'agency_admin',
+      expectedPath: '/agency/setup?verified=true',
+    });
+    const member = await registerAndVerify({
+      email: `publication-member-${suffix}@example.test`,
+      name: `Publication Member ${suffix}`,
+      role: 'visitor',
+      expectedPath: '/user/dashboard?verified=true',
+    });
     const reviewer = await insertUser('PublicationReviewer', 'super_admin');
     created.ownerId = owner.id;
     created.memberId = member.id;
     created.reviewerId = reviewer.id;
 
-    await db
-      .update(users)
-      .set({ agencyId: created.agencyId, isSubaccount: 0 })
-      .where(eq(users.id, owner.id));
-    await db.insert(agencyBranding).values({
-      agencyId: created.agencyId,
-      companyName: `Publication Agency ${suffix}`,
-      primaryColor: '#0f766e',
-      secondaryColor: '#334155',
-      isEnabled: 1,
-    } satisfies typeof agencyBranding.$inferInsert);
-    await createActiveAgencyLaunchAccess(created.agencyId, owner.id);
+    const [agencyPlan] = await db
+      .select({ id: plans.id, name: plans.name, segment: plans.segment, price: plans.price })
+      .from(plans)
+      .where(eq(plans.name, 'agency_launch_access'))
+      .limit(1);
+    if (!agencyPlan || agencyPlan.segment !== 'agency' || Number(agencyPlan.price) !== 99_900) {
+      throw new Error('Canonical Agency Launch Access reference data is unavailable.');
+    }
 
-    const invitationToken = `publication-${randomUUID()}`;
-    await db.insert(invitations).values({
-      agencyId: created.agencyId,
-      invitedBy: owner.id,
-      email: member.email,
-      role: 'agent',
-      token: invitationToken,
-      status: 'pending',
-      expiresAt: dbTimestamp(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)),
-    } satisfies typeof invitations.$inferInsert);
-
-    const memberApi = trpcClient(await sessionCookie(member.id));
-    const ownerApi = trpcClient(await sessionCookie(owner.id));
+    const ownerApi = trpcClient(owner.cookie);
+    const memberApi = trpcClient(member.cookie);
     const reviewerApi = trpcClient(await sessionCookie(reviewer.id));
     const publicApi = trpcClient('');
-    await expect(memberApi.invitation.accept.mutate({ token: invitationToken })).resolves.toEqual({
+    const onboarding = await ownerApi.agency.createOnboarding.mutate({
+      basicInfo: {
+        name: `Publication Agency ${suffix}`,
+        description: 'A real agency operating journey fixture with a verified principal.',
+        email: `publication-agency-${suffix}@example.test`,
+        phone: '+27115550123',
+        website: 'https://publication-agency.example.test',
+        address: '18 Review Avenue',
+        city: 'Johannesburg',
+        province: 'Gauteng',
+      },
+      branding: {
+        companyName: `Publication Agency ${suffix}`,
+        primaryColor: '#0f766e',
+        secondaryColor: '#334155',
+        tagline: 'Reviewable agency inventory',
+      },
+      teamEmails: [member.email],
+      planId: Number(agencyPlan.id),
+    });
+    created.agencyId = Number(onboarding.agencyId);
+    expect(onboarding).toMatchObject({
+      agencyId: created.agencyId,
+      planId: Number(agencyPlan.id),
+      alreadyCreated: false,
+    });
+
+    const [[pendingAgency], [pendingSubscription], [invitation]] = await Promise.all([
+      db
+        .select({
+          id: agencies.id,
+          isVerified: agencies.isVerified,
+          subscriptionStatus: agencies.subscriptionStatus,
+        })
+        .from(agencies)
+        .where(eq(agencies.id, created.agencyId))
+        .limit(1),
+      db
+        .select({
+          id: subscriptions.id,
+          ownerType: subscriptions.ownerType,
+          ownerId: subscriptions.ownerId,
+          planId: subscriptions.planId,
+          status: subscriptions.status,
+        })
+        .from(subscriptions)
+        .where(
+          and(eq(subscriptions.ownerType, 'agency'), eq(subscriptions.ownerId, created.agencyId)),
+        )
+        .limit(1),
+      db
+        .select({
+          id: invitations.id,
+          token: invitations.token,
+          email: invitations.email,
+          role: invitations.role,
+          status: invitations.status,
+        })
+        .from(invitations)
+        .where(eq(invitations.agencyId, created.agencyId))
+        .limit(1),
+    ]);
+    expect(pendingAgency).toMatchObject({
+      id: created.agencyId,
+      isVerified: 0,
+      subscriptionStatus: 'pending_payment',
+    });
+    expect(pendingSubscription).toMatchObject({
+      ownerType: 'agency',
+      ownerId: created.agencyId,
+      planId: Number(agencyPlan.id),
+      status: 'pending_payment',
+    });
+    expect(invitation).toMatchObject({ email: member.email, role: 'agent', status: 'pending' });
+    if (!invitation?.token)
+      throw new Error('Agency onboarding did not create a canonical invitation.');
+
+    const verifiedAgency = await reviewerApi.agency.verify.mutate({
+      id: created.agencyId,
+      isVerified: true,
+    });
+    expect(verifiedAgency).toMatchObject({ id: created.agencyId, isVerified: 1 });
+    expect((await ownerApi.agency.getAccessState.query()).workspaceAccess.publishing).toBe(false);
+
+    await expect(memberApi.invitation.accept.mutate({ token: invitation.token })).resolves.toEqual({
       success: true,
     });
 
@@ -393,6 +556,39 @@ describeWithDb('agency listing publication lifecycle acceptance', () => {
       .where(and(eq(subscriptions.ownerType, 'agent'), eq(subscriptions.ownerId, member.id)))
       .limit(1);
     expect(individualSubscription).toBeUndefined();
+
+    const profileResponse = await fetch(`${baseUrl}/api/agent/profile`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        cookie: member.cookie,
+      },
+      body: JSON.stringify({
+        displayName: `Publication Member ${suffix}`,
+        phone: '+27825550188',
+        whatsapp: '+27825550188',
+        bio: 'An agency member preparing residential inventory before commercial activation.',
+        licenseNumber: `PL-${suffix}`,
+        yearsExperience: 5,
+        focus: 'sales',
+        areasServed: ['Sandton'],
+        specializations: ['Residential sales'],
+        propertyTypes: ['house'],
+        languages: ['English'],
+        slug: `publication-member-${suffix}`,
+        onboardingStep: 4,
+      }),
+    });
+    expect(profileResponse.status).toBe(200);
+    expect(await profileResponse.json()).toMatchObject({
+      success: true,
+      profile: { agencyId: created.agencyId },
+    });
+    const preActivationStatus = await agentOnboardingStatus(member.id, member.cookie);
+    expect(preActivationStatus.entitlements).toMatchObject({
+      canReceiveLeads: false,
+      canAccessExistingLeads: true,
+    });
 
     const location = await canonicalSandtonLocation();
     const canonicalSuburbId = encodeCanonicalLocationId('suburb', Number(location.suburbId));
@@ -476,6 +672,124 @@ describeWithDb('agency listing publication lifecycle acceptance', () => {
     const createdListing = await memberApi.listing.create.mutate(listingInput);
     created.listingId = Number(createdListing.id);
     expect(createdListing).toMatchObject({ id: created.listingId, status: 'draft' });
+
+    // Preparation persists before payment, but the same listing cannot enter
+    // review or the marketplace until the agency's canonical commercial term
+    // is activated.
+    await expect(
+      memberApi.listing.submitForReview.mutate({ listingId: created.listingId }),
+    ).rejects.toMatchObject({ data: { code: 'PRECONDITION_FAILED' } });
+    const [stillDraft] = await db
+      .select({ status: listings.status, approvalStatus: listings.approvalStatus })
+      .from(listings)
+      .where(eq(listings.id, created.listingId))
+      .limit(1);
+    expect(stillDraft).toEqual({ status: 'draft', approvalStatus: 'pending' });
+    expect(
+      await db
+        .select({ id: properties.id })
+        .from(properties)
+        .where(eq(properties.sourceListingId, created.listingId)),
+    ).toEqual([]);
+
+    // This isolated Vitest-only candidate uses the canonical manual-EFT
+    // workflow. Normal runtime remains preparation-only; this test neither
+    // enables it nor contacts a payment provider.
+    const checkout = await ownerApi.billing.startManualEftCheckout.mutate({
+      planId: Number(agencyPlan.id),
+      billingCycle: 'monthly',
+    });
+    const checkoutRetry = await ownerApi.billing.startManualEftCheckout.mutate({
+      planId: Number(agencyPlan.id),
+      billingCycle: 'monthly',
+    });
+    expect(checkoutRetry).toMatchObject({
+      invoice: { id: checkout.invoice.id },
+      paymentReference: checkout.paymentReference,
+      reused: true,
+    });
+    expect(
+      await db
+        .select({ id: billingInvoices.id })
+        .from(billingInvoices)
+        .where(
+          and(
+            eq(billingInvoices.ownerType, 'agency'),
+            eq(billingInvoices.ownerId, created.agencyId),
+          ),
+        ),
+    ).toHaveLength(1);
+
+    const proof = await ownerApi.billing.submitPaymentProof.mutate({
+      invoiceId: checkout.invoice.id,
+      amount: checkout.invoice.amountDue,
+      bankReference: checkout.paymentReference,
+      payerName: 'Publication Agency Principal',
+      paymentDate: new Date().toISOString().slice(0, 10),
+      file: {
+        filename: 'publication-agency-proof.pdf',
+        mimeType: 'application/pdf',
+        sizeBytes: 3,
+        contentBase64: Buffer.from('pdf').toString('base64'),
+      },
+    });
+    const approvedPayment = await reviewerApi.billing.admin.reviewManualPayment.mutate({
+      paymentId: proof.paymentId,
+      decision: 'approve',
+      verifiedAmount: checkout.invoice.amountDue,
+    });
+    expect(approvedPayment).toMatchObject({
+      success: true,
+      idempotent: false,
+      invoiceStatus: 'paid',
+      subscriptionStatus: 'active',
+      activationOccurred: true,
+    });
+    const repeatedPaymentApproval = await reviewerApi.billing.admin.reviewManualPayment.mutate({
+      paymentId: proof.paymentId,
+      decision: 'approve',
+    });
+    expect(repeatedPaymentApproval).toMatchObject({
+      success: true,
+      idempotent: true,
+      invoiceStatus: 'paid',
+    });
+    expect(
+      await db
+        .select({ id: billingAuditEvents.id })
+        .from(billingAuditEvents)
+        .where(
+          and(
+            eq(billingAuditEvents.ownerType, 'agency'),
+            eq(billingAuditEvents.ownerId, created.agencyId),
+            eq(billingAuditEvents.eventType, 'payment_approved_subscription_activated'),
+          ),
+        ),
+    ).toHaveLength(1);
+    const [activeSubscription] = await db
+      .select({
+        status: subscriptions.status,
+        currentPeriodStart: subscriptions.currentPeriodStart,
+        currentPeriodEnd: subscriptions.currentPeriodEnd,
+        cancelAtPeriodEnd: subscriptions.cancelAtPeriodEnd,
+      })
+      .from(subscriptions)
+      .where(
+        and(eq(subscriptions.ownerType, 'agency'), eq(subscriptions.ownerId, created.agencyId)),
+      )
+      .limit(1);
+    expect(activeSubscription).toMatchObject({ status: 'active', cancelAtPeriodEnd: 0 });
+    expect(activeSubscription?.currentPeriodStart).toBeTruthy();
+    expect(activeSubscription?.currentPeriodEnd).toBeTruthy();
+    expect(
+      new Date(activeSubscription!.currentPeriodEnd!).getTime() -
+        new Date(activeSubscription!.currentPeriodStart!).getTime(),
+    ).toBe(90 * 24 * 60 * 60 * 1000);
+    expect((await ownerApi.agency.getAccessState.query()).workspaceAccess.publishing).toBe(true);
+    expect((await agentOnboardingStatus(member.id, member.cookie)).entitlements).toMatchObject({
+      canReceiveLeads: true,
+      canAccessExistingLeads: true,
+    });
 
     // Submission is a real API lifecycle transition, and the reviewer queue is
     // the persisted handoff rather than a client-side status.
@@ -594,8 +908,8 @@ describeWithDb('agency listing publication lifecycle acceptance', () => {
     expect(queueAfterResubmission.map(row => row.status).sort()).toEqual(['pending', 'rejected']);
 
     // A review decision cannot race past an entitlement change. The fixture
-    // changes only the isolated canonical row; no payment or activation route
-    // is invoked by this acceptance test.
+    // changes only the isolated canonical term after the real controlled
+    // finance activation above; it does not invoke any further payment route.
     await db
       .update(subscriptions)
       .set({ status: 'suspended' })
@@ -849,7 +1163,12 @@ describeWithDb('agency listing publication lifecycle acceptance', () => {
         recipientAgencyId: leadDeliveries.recipientAgencyId,
       })
       .from(leadDeliveries)
-      .where(and(eq(leadDeliveries.leadId, created.leadId), eq(leadDeliveries.purpose, 'primary_custody')))
+      .where(
+        and(
+          eq(leadDeliveries.leadId, created.leadId),
+          eq(leadDeliveries.purpose, 'primary_custody'),
+        ),
+      )
       .limit(1);
     expect(storedDelivery).toMatchObject({
       leadId: created.leadId,
@@ -884,15 +1203,19 @@ describeWithDb('agency listing publication lifecycle acceptance', () => {
     // delivery retry authority.
     const agencyLeads = await ownerApi.agency.getLeads.query({ status: 'all', limit: 50 });
     expect(agencyLeads.some(lead => Number(lead.id) === created.leadId)).toBe(true);
-    await expect(ownerApi.agency.getLeadDetail.query({ leadId: created.leadId })).resolves.toMatchObject({
+    await expect(
+      ownerApi.agency.getLeadDetail.query({ leadId: created.leadId }),
+    ).resolves.toMatchObject({
       id: created.leadId,
       agencyId: created.agencyId,
       agentId: created.agentId,
     });
-    const memberAgentApi = trpcClient(await sessionCookie(member.id));
+    const memberAgentApi = trpcClient(member.cookie);
     const agentLeads = await memberAgentApi.agent.getMyLeads.query({ status: 'all', limit: 100 });
     expect(agentLeads.some(lead => Number(lead.id) === created.leadId)).toBe(true);
-    await expect(unrelatedAgencyApi.agency.getLeads.query({ status: 'all', limit: 50 })).resolves.toEqual([]);
+    await expect(
+      unrelatedAgencyApi.agency.getLeads.query({ status: 'all', limit: 50 }),
+    ).resolves.toEqual([]);
     await expect(
       unrelatedAgencyApi.agency.getLeadDetail.query({ leadId: created.leadId }),
     ).rejects.toMatchObject({ data: { code: 'NOT_FOUND' } });
@@ -945,9 +1268,9 @@ describeWithDb('agency listing publication lifecycle acceptance', () => {
     ).toBe(true);
 
     // The commercial term may pause new marketplace routing, but it must not
-    // strand the legitimate assignee from their existing custody. This only
-    // changes the disposable fixture's canonical term; no payment or
-    // entitlement activation path is invoked.
+    // strand the legitimate assignee from their existing custody. This changes
+    // only the disposable fixture's canonical term after its real controlled
+    // activation has already been proven.
     await db
       .update(subscriptions)
       .set({ currentPeriodEnd: dbTimestamp(new Date(Date.now() - 60_000)) })
@@ -1010,7 +1333,8 @@ describeWithDb('agency listing publication lifecycle acceptance', () => {
       .from(agents)
       .where(eq(agents.userId, replacement.id))
       .limit(1);
-    if (!replacementAgent) throw new Error('Replacement invitation did not create an agent profile.');
+    if (!replacementAgent)
+      throw new Error('Replacement invitation did not create an agent profile.');
     created.replacementAgentId = Number(replacementAgent.id);
     expect(replacementAgent).toMatchObject({
       agencyId: created.agencyId,
@@ -1022,10 +1346,7 @@ describeWithDb('agency listing publication lifecycle acceptance', () => {
         .select({ id: subscriptions.id })
         .from(subscriptions)
         .where(
-          and(
-            eq(subscriptions.ownerType, 'agent'),
-            eq(subscriptions.ownerId, replacement.id),
-          ),
+          and(eq(subscriptions.ownerType, 'agent'), eq(subscriptions.ownerId, replacement.id)),
         ),
     ).toEqual([]);
     expect((await agentOnboardingStatus(replacement.id)).entitlements).toMatchObject({
@@ -1067,7 +1388,10 @@ describeWithDb('agency listing publication lifecycle acceptance', () => {
       status: 'confirmed',
     });
     const [formerMembership] = await db
-      .select({ status: agencyAgentMemberships.status, effectiveTo: agencyAgentMemberships.effectiveTo })
+      .select({
+        status: agencyAgentMemberships.status,
+        effectiveTo: agencyAgentMemberships.effectiveTo,
+      })
       .from(agencyAgentMemberships)
       .where(eq(agencyAgentMemberships.agentId, created.agentId))
       .limit(1);
@@ -1092,7 +1416,9 @@ describeWithDb('agency listing publication lifecycle acceptance', () => {
       endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
       status: 'all',
     });
-    expect(replacementShowings.some(showing => Number(showing.id) === created.showingId)).toBe(true);
+    expect(replacementShowings.some(showing => Number(showing.id) === created.showingId)).toBe(
+      true,
+    );
     const replacementNotifications = await replacementApi.agent.getNotifications.query({
       limit: 20,
       unreadOnly: false,
