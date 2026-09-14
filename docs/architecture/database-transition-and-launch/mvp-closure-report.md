@@ -1,12 +1,12 @@
 # Post-merge MVP closure review packet
 
-Date: 2026-09-14 (Goals 6–10 addendum; original closure review dated 2026-09-13).
+Date: 2026-09-14 (Goals 6–10 addendum and LRC-LAND-001 containment follow-up; original closure review dated 2026-09-13).
 **Outcome: the local candidate supports controlled
 pre-payment onboarding; canonical billing and activation paths are contained,
 and Goals 1–10 agency membership, workspace, commercial-term, private-preparation,
 review/publication, public-discovery, public-enquiry custody, CRM-continuity,
-first-cohort recovery, and one consolidated agency operating acceptance are
-verified on the task branch. Normal commercial activation, hosted integration,
+first-cohort recovery, one consolidated agency operating acceptance, and hard-deferred
+Land containment are verified on the task branch. Normal commercial activation, hosted integration,
 production verification, and protected release remain blocked.** This is not a declaration that all MVP
 journeys or production are verified. Database task classification: local-data workflow,
 followed by bounded consumer fixes. No schema authority changed.
@@ -21,13 +21,15 @@ complete paid customer journey. It identifies:
 - a P1 agency commercial-entitlement, public-recipient, and CRM-access
   contradiction;
 - a P0 Land public-visibility route outside the canonical
-  billing/activation-containment proof; and
+  billing/activation-containment proof, now locally hard-contained by
+  `335838dff0c746b860eaaf2930412d4b38540db5`; and
 - a P1 assisted-support and launch-disclosure gap.
 
 Accordingly, the Payments-disabled result below is a **local
 billing/activation-containment result**, not a platform-wide assertion that no
-path can make inventory public. The dedicated Land path remains an open
-containment finding. These findings and their launch disposition are recorded
+path can make inventory public. The dedicated Land path is now hard-contained
+on the task branch; its integration, protected-release verification, and separate
+commercial/acceptance policy remain open. These findings and their launch disposition are recorded
 in [the central launch register](../launch-readiness-and-product-convergence/03-launch-register.md);
 the bounded implementation order is [the sequential agency-goals tracker](../launch-readiness-and-product-convergence/15-agency-journey-closure-goals.md).
 This qualification retains the original local evidence and its limits. It does
@@ -53,6 +55,7 @@ protected environment.
 | Goals 7–8 lead-custody and CRM correction (task branch) | `c4df6600`                                                                  |
 | Goal 9 platform-recovery correction (task branch) | `f9086ef4ee3a6fa664256a9dbebedd7e1fd9ce28` |
 | Goal 10 full agency acceptance (task branch) | `fbf592cc7f1a808915be2b138e2f6f39a8b88963` |
+| Land hard-containment correction (task branch) | `335838dff0c746b860eaaf2930412d4b38540db5` |
 | Branch                                              | `verify/mvp-closure-post-577`                                                 |
 | Worktree                                            | `/home/edwardspc/Desktop/Dev/worktrees/property-listify-mvp-closure-post-577` |
 
@@ -275,9 +278,9 @@ incomplete required journey; it does not claim a failing production observation.
 | Permissions                  | BLOCKED for complete scope                              | Account privilege injection denied; scripts/mvp-listing-verification.mts proved cross-tenant listing read and write HTTP 403 and unchanged persisted title. Scenario verifier proved agent/agency/developer unrelated-recipient denial and platform-operations restrictions. This is not exhaustive tenant membership revocation, every role, or admin audit proof.                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | Listing authoring            | PASS for HTTP private agency-preparation slice          | `pnpm test:authority -- server/__tests__/integration.agency-listing-preparation.test.ts server/__tests__/integration.agency-member-workspace-authority.test.ts server/__tests__/integration.listing-media-tenant-boundary.test.ts` passed 3 files / 5 tests on target fingerprint `a560e9f2971e7676…`. Production invitation/listing routers were exercised over authenticated HTTP; five media objects were physically PUT and served back, canonical Gauteng/Johannesburg/Sandton IDs persisted, the member reopened/edited the draft, the agency owner could view it, and an unrelated tenant was denied. Submission remained blocked by `subscription_required`; no public projection was created. Browser wizard completion and reviewer/public lifecycle remain unproven.             |
 | Publication                  | PASS for isolated agency lifecycle; normal runtime blocked | Goal 5 real HTTP acceptance submitted a canonical agency listing, captured reviewer rejection reasons/note, reopened and corrected the draft, resubmitted it, observed suspended-term approval denial with no projection, restored the isolated fixture term, and approved the listing. Persisted source/queue/projection checks and five mirrored images passed; approval used a task-local subscription fixture and did not invoke payment or normal runtime activation. Hosted and production publication remain unverified. |
-| Discovery                    | PASS for isolated agency slice; Land blocked    | Goal 6 real HTTP search used the canonical `suburb:<id>` authority and returned the published agency property with exact Gauteng/Johannesburg/Sandton context, matching title/type/source, and five images. Before approval the same search returned no card; mixed canonical-plus-city input returned `BAD_REQUEST`. Public detail returned the approved title, city/province, identity, five images and five media records. Land remains outside this cohort: its separate public route and full consumer journey are not verified or contained. |
+| Discovery                    | PASS for isolated agency slice; Land locally contained | Goal 6 real HTTP search used the canonical `suburb:<id>` authority and returned the published agency property with exact Gauteng/Johannesburg/Sandton context, matching title/type/source, and five images. Before approval the same search returned no card; mixed canonical-plus-city input returned `BAD_REQUEST`. Public detail returned the approved title, city/province, identity, five images and five media records. `335838dff0c746b860eaaf2930412d4b38540db5` now blocks Land direct public/review/author paths and generic listing/public-projection paths locally; no Land consumer acceptance, integration, or production evidence is claimed. |
 | Lead investigation and audit | PASS for local custody/CRM/recovery fallback | Goals 7–8 exact-target acceptance creates one anonymous public enquiry for the newly published agency listing, persists the lead and completed `crm_export` custody row, returns the same lead for exact replay, rejects a conflicting replay, and denies an unrelated verified tenant lead visibility and retry. The assigned agent records contact, stage and follow-up; the agency admin observes them. Expiry pauses new enquiries without stranding custody; canonical suspension/reassignment moves active lead/future showing and denies the former agent. Goal 9 deliberately interrupted a platform-managed worker, observed audit/queue attention, completed the lead once through the authorized super-admin route, and proved replay-safe audit history. CRM-export/local simulated delivery is not actual provider delivery; external provider reliability, live worker supervision, hosted operation, and production recovery remain blocked. |
-| Payments disabled            | PASS locally — billing/activation containment candidate | `c8c35fde` defines a shared `preparation_only` state, removes payment/proof affordances from the onboarding surfaces, and fails closed before database work for invoice, checkout, proof, finance-review, lifecycle, entitlement, and provider-event functions. Exact-target HTTP proof returned tRPC 412 for agent invoice, agency checkout and developer invoice requests, and HTTP 409 for the agent Express invoice route; it then proved profile/draft preparation persisted. The worker intake/claim/complete/fail paths have the same guard. This is local candidate evidence only: it does not enable payment, entitlement mutation, free publication, provider delivery, or production release, and it does not cover the separately mounted Land approval/public-visibility path. |
+| Payments disabled            | PASS locally — billing/activation containment candidate | `c8c35fde` defines a shared `preparation_only` state, removes payment/proof affordances from the onboarding surfaces, and fails closed before database work for invoice, checkout, proof, finance-review, lifecycle, entitlement, and provider-event functions. Exact-target HTTP proof returned tRPC 412 for agent invoice, agency checkout and developer invoice requests, and HTTP 409 for the agent Express invoice route; it then proved profile/draft preparation persisted. The worker intake/claim/complete/fail paths have the same guard. `335838dff0c746b860eaaf2930412d4b38540db5` separately hard-contains Land’s formerly independent public/review path. This is local candidate evidence only: it does not enable payment, entitlement mutation, free publication, provider delivery, or production release. |
 
 The malformed journey row in the assignment was interpreted as lead
 investigation with audit evidence. No broader CRM scope was assumed.
@@ -425,12 +428,39 @@ mvp-\*-verification.mts scripts. They perform real task-local account/draft
 writes and use canonical scenario accounts; they are not general production
 diagnostics. Credentials and raw tokens are excluded from this report and Git.
 
+## LRC-LAND-001 containment follow-up
+
+Senior review approved the hard-deferred Land disposition and two bounded
+corrections. Commit [`335838df`](https://github.com/Doscoding187/real_estate_portal/commit/335838dff0c746b860eaaf2930412d4b38540db5)
+keeps `deferred_first_cohort` immutable and disabled, without an environment
+switch, payment bypass, migration, or changes to Land geography or public
+classifications. Direct Land public, author, evidence, reviewer, and lifecycle
+paths fail closed before a database mutation; generic discovery, listing, media,
+review, public-projection, analytics, saved-search, sitemap, and navigation
+paths exclude Land.
+
+The correction makes canonical active `land_listing_links` authoritative even
+when a malformed linked listing says `house`; it still immediately rejects a
+dedicated-Land marker, rejects an unlinked `plot`/`land` row while deferred,
+and allows an unlinked ordinary residential row. Known policy rejections map to
+a safe generic-workflow precondition. Unexpected Land-link/database lookup
+failures remain internal operational errors and retain their cause for
+diagnostics. The authority-wrapped 10-file run passed **144 tests**, the
+explicit client run passed **48 tests**, the static authority suite passed
+**293 tests**, `pnpm check` passed, targeted ESLint had no errors, and
+`git diff --check` passed. The retained target remained exact-worktree-owned,
+schema-congruent at `0090`, with no incomplete attempts.
+
+This is a task-branch containment correction, not a Land launch, commercial
+activation, hosted check, integration result, or production verification. Land
+has no approved live onboarding route. The phrase “first cohort” below means
+the controlled **pre-payment onboarding cohort**; an isolated paid-entitlement
+fixture proves lifecycle semantics only and does not authorize a live paid
+cohort.
+
 ## Ranked remaining blockers and authority handoff
 
-1. **L0 — Land public-visibility containment (LRC-LAND-001):** the deferred
-   first-cohort disposition is still not enforced at every direct route, API,
-   review, and publication boundary. Land must remain outside any exposed paid
-   cohort until its separate containment and acceptance slice is authorized.
+1. **L0 — integrate and independently verify the locally contained Land boundary (LRC-LAND-001):** `335838df` hard-deferred Land at direct and generic source boundaries on this task branch. It must remain unavailable to the controlled pre-payment onboarding cohort and public routes until integrated verification and a separately authorized Land commercial/acceptance slice exist.
 2. **L1 — normal-runtime commercial activation and protected release
    (LRC-PAY-001):** the source containment candidate is locally proven, but a
    stakeholder cannot publish until separately approved payment, finance,
@@ -461,9 +491,10 @@ permission to enable payments.
 
 Packet revision 1 should bind master-plan 1.3, reviewed source/tree, manifest
 and model digests, exact Azure target fingerprint, accepted/expected head and
-fresh runner plan digest. The local agency acceptance is complete; first resolve
-Land containment and support/disclosure readiness, then integrate the reviewed
-candidate and gather the required hosted evidence. Commercial activation remains
+fresh runner plan digest. The local agency acceptance and Land source containment are complete; first
+resolve support/disclosure readiness, then integrate the reviewed candidate and
+gather the required hosted evidence, including independent Land containment
+verification. Commercial activation remains
 a separate owner-approved release decision. Then seek explicit authorization for
 each protected operation; a read-only plan does not authorize apply.
 
@@ -489,9 +520,9 @@ Application fixes are committed at `c6c9f133`, `bba390b0`, `c8c35fde`,
 `cf1f93e6`, `af9fd6f2`, `16a23cd9`, Goal 4 evidence/fixture correction
 `a403d31d`, Goal 5 publication correction `74bff0f9`, Goal 6 public-discovery
 correction `9acfea2f`, Goals 7–8 CRM correction `c4df6600`, Goal 9
-platform-recovery correction `f9086ef4`, and Goal 10 full acceptance
-`fbf592cc`; the review packet and register are committed in the accompanying
-documentation commit. Final Git status was clean after that commit. No merge, feature push,
+platform-recovery correction `f9086ef4`, Goal 10 full acceptance `fbf592cc`,
+and Land containment correction `335838df`; the review packet, escalation
+resolution, and register are committed in the accompanying documentation commit. Final Git status was clean after that commit. No merge, feature push,
 deployment, cutover, Azure/TiDB access, protected migration, credential/grant
 change, provider setting change, recovery, payment activation, entitlement
 activation, or migration-history edit was performed. Running deployments were
