@@ -71,6 +71,13 @@ const paidAgencyLaunchPlan = {
 const publishingEntitlements = [{ featureKey: 'max_active_listings', valueJson: 1 }];
 const at = new Date('2026-07-16T10:00:00.000Z');
 
+const CANONICAL_AGENT_COVERAGE = JSON.stringify([
+  {
+    canonicalLocationId: 'suburb:1',
+    label: 'Coverage suburb, Coverage city, Coverage province',
+  },
+]);
+
 function agencyDb(input: {
   listing?: Record<string, unknown>;
   owner?: Record<string, unknown>;
@@ -133,7 +140,7 @@ function independentAgentDb(input: {
     status: 'approved',
     isVerified: 1,
     profileImage: 'a',
-    areasServed: 'b',
+    areasServed: CANONICAL_AGENT_COVERAGE,
     bio: 'c',
     phone: 'd',
     focus: 'sales',
@@ -175,7 +182,7 @@ function independentAgentReadinessDb(input: {
     agencyId: null,
     status: 'approved',
     profileImage: 'a',
-    areasServed: 'b',
+    areasServed: CANONICAL_AGENT_COVERAGE,
     bio: 'c',
     phone: 'd',
     focus: 'sales',
@@ -501,7 +508,7 @@ describe('listing publication entitlement service', () => {
           status: 'approved',
           isVerified: 1,
           profileImage: 'a',
-          areasServed: 'b',
+          areasServed: CANONICAL_AGENT_COVERAGE,
           bio: 'c',
           phone: 'd',
           focus: 'sales',
@@ -518,7 +525,7 @@ describe('listing publication entitlement service', () => {
           status: 'approved',
           isVerified: 1,
           profileImage: 'a',
-          areasServed: 'b',
+          areasServed: CANONICAL_AGENT_COVERAGE,
           bio: 'c',
           phone: 'd',
           focus: 'sales',

@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import dotenv from 'dotenv';
 import { afterEach, describe, expect, it } from 'vitest';
 import { and, eq } from 'drizzle-orm';
+import { encodeCanonicalLocationId } from '../../shared/locationAuthority';
 
 import {
   agents,
@@ -160,7 +161,12 @@ describeWithDb('independent agent launch journey (publish → receive)', () => {
       status: 'approved',
       approvedBy: created.userId,
       approvedAt: new Date(),
-      areasServed: 'Sandton',
+      areasServed: JSON.stringify([
+        {
+          canonicalLocationId: encodeCanonicalLocationId('suburb', Number(location.suburbId)),
+          label: 'Sandton, Johannesburg, Gauteng',
+        },
+      ]),
       slug: `amina-journey-${suffix}`.replace(/[^a-z0-9-]/g, '-'),
       bio: 'Launch journey fixture agent.',
       profileImage: 'https://cdn.example.com/journey-agent.jpg',

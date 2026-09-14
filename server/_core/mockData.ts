@@ -182,7 +182,8 @@ export const mockAgents = [
     role: 'agent',
     licenseNumber: 'REA-001',
     yearsExperience: 8,
-    areasServed: JSON.stringify(['Sandton', 'Rosebank', 'Hyde Park']),
+    // This isolated mock has no governed location identities, so it makes no coverage claim.
+    areasServed: null,
     languages: JSON.stringify(['English', 'Afrikaans']),
     rating: 4.8,
     reviewCount: 127,

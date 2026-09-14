@@ -3,6 +3,11 @@ import { ZodError, z } from 'zod';
 import { requireAuth } from '../_core/auth';
 import { agentOnboardingService } from '../services/agentOnboardingService';
 import { requestPaidLaunchAccessInvoice } from '../services/billingFoundationService';
+import { AgentCoverageAreaValidationError } from '../services/agentCoverageAreaService';
+import {
+  AGENT_COVERAGE_AREA_MAX,
+  CANONICAL_AGENT_COVERAGE_LOCATION_ID_PATTERN,
+} from '../../shared/agentCoverageArea';
 
 const router = Router();
 
@@ -28,7 +33,10 @@ export const agentProfileSchema = z
     licenseNumber: z.string().trim().max(120).optional(),
     yearsExperience: z.number().int().min(0).max(80).optional(),
     focus: z.enum(['sales', 'rentals', 'both']).optional(),
-    areasServed: z.array(z.string().trim().min(1)).max(50).optional(),
+    areasServed: z
+      .array(z.string().trim().regex(CANONICAL_AGENT_COVERAGE_LOCATION_ID_PATTERN))
+      .max(AGENT_COVERAGE_AREA_MAX)
+      .optional(),
     specializations: z.array(z.string().trim().min(1)).max(50).optional(),
     propertyTypes: z.array(z.string().trim().min(1)).max(50).optional(),
     languages: z.array(z.string().trim().min(1)).max(30).optional(),
@@ -48,7 +56,9 @@ function respondForError(res: Response, error: unknown) {
 
   const message = error instanceof Error ? error.message : 'Request failed';
   const normalized = message.toLowerCase();
-  const status = normalized.includes('preparation-only onboarding')
+  const status = error instanceof AgentCoverageAreaValidationError
+    ? 400
+    : normalized.includes('preparation-only onboarding')
     ? 409
     : normalized.includes('not found')
       ? 404

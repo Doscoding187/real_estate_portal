@@ -14,14 +14,18 @@ const priorJwtSecret = vi.hoisted(() => {
 });
 
 import { COOKIE_NAME } from '../../shared/const';
+import { encodeCanonicalLocationId } from '../../shared/locationAuthority';
 import {
   agencies,
   agencyBranding,
   agents,
   billableAccounts,
+  cities,
   invitations,
   plans,
+  provinces,
   subscriptions,
+  suburbs,
   users,
 } from '../../drizzle/schema';
 import { authService } from '../_core/auth';
@@ -71,6 +75,34 @@ function idOf(result: any): number {
 
 function dbTimestamp(value: Date): string {
   return value.toISOString().slice(0, 19).replace('T', ' ');
+}
+
+async function canonicalSandtonCoverageArea() {
+  const [location] = await db
+    .select({
+      provinceName: provinces.name,
+      cityName: cities.name,
+      suburbId: suburbs.id,
+      suburbName: suburbs.name,
+    })
+    .from(provinces)
+    .innerJoin(cities, eq(cities.provinceId, provinces.id))
+    .innerJoin(suburbs, eq(suburbs.cityId, cities.id))
+    .where(
+      and(
+        eq(provinces.slug, 'gauteng'),
+        eq(cities.slug, 'johannesburg'),
+        eq(suburbs.slug, 'sandton'),
+      ),
+    )
+    .limit(1);
+  if (!location) {
+    throw new Error('Canonical Gauteng/Johannesburg/Sandton data is required by this fixture.');
+  }
+  return {
+    canonicalLocationId: encodeCanonicalLocationId('suburb', Number(location.suburbId)),
+    label: [location.suburbName, location.cityName, location.provinceName].join(', '),
+  };
 }
 
 function trpcCaller(user: { id: number; role: string; agencyId?: number | null; email?: string }) {
@@ -280,12 +312,13 @@ describeWithDb('agency member workspace authority', () => {
 
     // Complete professional setup through the application service. The agent
     // has no optional verification badge and no individual subscription.
+    const sandtonCoverage = await canonicalSandtonCoverageArea();
     await agentOnboardingService.saveProfile(member.userId, {
       displayName: 'Invited Workspace Member',
       phone: '+27115550123',
       bio: 'A complete professional profile for agency workspace acceptance.',
       profileImage: 'https://example.test/member.jpg',
-      areasServed: ['Sandton'],
+      areasServed: [sandtonCoverage.canonicalLocationId],
       focus: 'sales',
       propertyTypes: ['house'],
     });
@@ -456,7 +489,7 @@ describeWithDb('agency member workspace authority', () => {
       isFeatured: 0,
       bio: 'Stale affiliation must not become commercial authority.',
       profileImage: 'https://example.test/unrelated.jpg',
-      areasServed: 'Sandton',
+      areasServed: JSON.stringify([sandtonCoverage]),
       focus: 'sales',
       propertyTypes: 'house',
     } as any);

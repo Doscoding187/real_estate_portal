@@ -56,6 +56,12 @@ import { logAudit } from './_core/auditLog';
 import { getAgentEntitlementsForUserId } from './services/agentEntitlementService';
 import { loadAgentPresenceSummary } from './services/agentPresenceSummaryService';
 import { agentOnboardingService } from './services/agentOnboardingService';
+import { AgentCoverageAreaValidationError } from './services/agentCoverageAreaService';
+import {
+  AGENT_COVERAGE_AREA_MAX,
+  CANONICAL_AGENT_COVERAGE_LOCATION_ID_PATTERN,
+  parseAgentCoverageAreas,
+} from '../shared/agentCoverageArea';
 import {
   COMMERCIAL_INVENTORY_MANAGEMENT_MESSAGE,
   isCommercialMarketingPropertyType,
@@ -417,7 +423,7 @@ function toAgentOnboardingResponse(agentRecord: typeof agents.$inferSelect | nul
     ...agentRecord,
     specializations: parseTextList(agentRecord.specialization),
     propertyTypes: parseTextList(agentRecord.propertyTypes),
-    areasServed: parseTextList(agentRecord.areasServed),
+    areasServed: parseAgentCoverageAreas(agentRecord.areasServed),
     languages: parseTextList(agentRecord.languages),
     socialLinks: parseSocialLinks(agentRecord.socialLinks),
   };
@@ -1377,7 +1383,10 @@ export const agentRouter = router({
         phone: z.string().min(7).max(20),
         whatsapp: z.string().max(50).optional(),
         profileImage: z.string().optional(),
-        areasServed: z.array(z.string()).optional(),
+        areasServed: z
+          .array(z.string().trim().regex(CANONICAL_AGENT_COVERAGE_LOCATION_ID_PATTERN))
+          .max(AGENT_COVERAGE_AREA_MAX)
+          .optional(),
         focus: z.enum(['sales', 'rentals', 'both']).optional(),
         specializations: z.array(z.string()).optional(),
         propertyTypes: z.array(z.string()).optional(),
@@ -1400,7 +1409,15 @@ export const agentRouter = router({
     .mutation(async ({ ctx, input }) => {
       const userId = requireUser(ctx).id;
       const db = await getDb();
-      const result = await agentOnboardingService.saveProfile(userId, input);
+      let result: Awaited<ReturnType<typeof agentOnboardingService.saveProfile>>;
+      try {
+        result = await agentOnboardingService.saveProfile(userId, input);
+      } catch (error) {
+        if (error instanceof AgentCoverageAreaValidationError) {
+          throw new TRPCError({ code: 'BAD_REQUEST', message: error.message });
+        }
+        throw error;
+      }
       const agentId = result.profile?.id;
       const entitlements = result.entitlements;
 

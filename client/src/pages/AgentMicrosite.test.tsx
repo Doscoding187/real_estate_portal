@@ -76,13 +76,20 @@ const baseProfile = {
   socialLinks: null,
   licenseNumber: null,
   yearsExperience: 12,
-  areasServed: 'Bryanston',
+  areasServed: [
+    { canonicalLocationId: 'suburb:11', label: 'Bryanston, Sandton, Gauteng' },
+  ],
   languages: 'English',
   isVerified: 1,
   agency: { name: 'Northline Realty' },
   canonicalAreas: [
-    { name: 'Bryanston', type: 'suburb', url: '/gauteng/sandton/bryanston' },
-    { name: 'Fourways', type: null, url: null },
+    {
+      canonicalLocationId: 'suburb:11',
+      name: 'Bryanston, Sandton, Gauteng',
+      type: 'suburb',
+      url: '/gauteng/sandton/bryanston',
+    },
+    { canonicalLocationId: 'suburb:12', name: 'Fourways, Sandton, Gauteng', type: null, url: null },
   ],
 };
 
@@ -188,7 +195,7 @@ describe('AgentMicrosite public web presence', () => {
 
     render(<AgentMicrosite />);
 
-    expect(screen.getByText('Property expertise in Bryanston')).toBeDefined();
+    expect(screen.getByText('Property expertise in Bryanston, Sandton, Gauteng')).toBeDefined();
     expect(screen.queryByText("Jane's Bryanston")).toBeNull();
   });
 

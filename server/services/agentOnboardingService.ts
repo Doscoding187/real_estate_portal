@@ -13,6 +13,11 @@ import {
   normalizeAgentSubscriptionStatus,
 } from '../../shared/agentJourney';
 import { resolveCurrentAgencyMembershipForAgent } from './agencyMembershipService';
+import {
+  parseAgentCoverageAreas,
+  serializeAgentCoverageAreas,
+} from '../../shared/agentCoverageArea';
+import { resolveSubmittedAgentCoverageAreas } from './agentCoverageAreaService';
 
 function slugify(value: string): string {
   return value
@@ -110,7 +115,7 @@ function toPublicAgentProfile(
     focus: agent.focus || null,
     slug: agent.slug || '',
     agencyId: canonicalAgencyId,
-    areasServed: splitCsv(agent.areasServed),
+    areasServed: parseAgentCoverageAreas(agent.areasServed),
     specializations: splitCsv(agent.specialization),
     propertyTypes: splitCsv(agent.propertyTypes),
     languages: splitCsv(agent.languages),
@@ -243,6 +248,13 @@ export class AgentOnboardingService {
     if (!user) throw new Error('User not found');
     if (user.role !== 'agent') throw new Error('Agent onboarding is only available to agents');
 
+    // Validate coverage before creating or updating a profile. This keeps an
+    // invalid display label from leaving a partially created agent record.
+    const coverageAreas =
+      input.areasServed === undefined
+        ? undefined
+        : await resolveSubmittedAgentCoverageAreas(input.areasServed);
+
     let [agent] = await db.select().from(agents).where(eq(agents.userId, userId)).limit(1);
 
     if (!agent) {
@@ -305,7 +317,9 @@ export class AgentOnboardingService {
     if (input.licenseNumber !== undefined) updates.licenseNumber = input.licenseNumber;
     if (input.yearsExperience !== undefined) updates.yearsExperience = input.yearsExperience;
     if (input.focus !== undefined) updates.focus = input.focus;
-    if (input.areasServed !== undefined) updates.areasServed = input.areasServed.join(', ');
+    if (coverageAreas !== undefined) {
+      updates.areasServed = serializeAgentCoverageAreas(coverageAreas);
+    }
     if (input.specializations !== undefined) {
       updates.specialization = input.specializations.join(', ');
     }

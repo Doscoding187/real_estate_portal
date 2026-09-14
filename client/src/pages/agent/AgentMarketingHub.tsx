@@ -994,8 +994,11 @@ export default function AgentMarketingHub() {
                         <div className="mt-3 flex flex-wrap gap-2">
                           {profile?.areasServed?.length ? (
                             profile.areasServed.map(area => (
-                              <Badge key={area} className="bg-slate-100 text-slate-700">
-                                {area}
+                              <Badge
+                                key={area.canonicalLocationId}
+                                className="bg-slate-100 text-slate-700"
+                              >
+                                {area.label}
                               </Badge>
                             ))
                           ) : (

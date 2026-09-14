@@ -29,7 +29,7 @@ function makeQueueDb(results: Array<Record<string, unknown>[] | Record<string, u
   };
 }
 
-const SUBURB_ROW = [{ name: 'Bryanston' }];
+const SUBURB_ROW = [{ id: 501 }];
 
 const baseAgent = {
   id: 33,
@@ -39,7 +39,9 @@ const baseAgent = {
   lastName: 'Nkosi',
   profileImage: 'amina.jpg',
   isVerified: 1,
-  areasServed: 'Bryanston, Sandton',
+  areasServed: JSON.stringify([
+    { canonicalLocationId: 'suburb:501', label: 'Bryanston, Sandton, Gauteng' },
+  ]),
   agencyName: null,
   agencyLogo: null,
   agencyVerified: null,
@@ -105,10 +107,28 @@ describe('agents serving location authority', () => {
   it('fails closed on partial or non-exact area claims', async () => {
     const { db } = makeQueueDb([
       SUBURB_ROW,
-      [{ ...baseAgent, areasServed: 'Bryanston Ext, Sandton City' }],
+      [
+        {
+          ...baseAgent,
+          areasServed: JSON.stringify([
+            { canonicalLocationId: 'suburb:502', label: 'Bryanston Ext, Sandton City' },
+          ]),
+        },
+      ],
     ]);
     const result = await findAgentsServingLocation(db as never, 'suburb', 501);
     expect(result).toEqual([]);
+  });
+
+  it('does not retain text matching in the canonical recipient boundary', () => {
+    const source = readFileSync(
+      path.resolve(process.cwd(), 'server/services/agentPublicProfileService.ts'),
+      'utf8',
+    );
+
+    expect(source).toContain("JSON_OBJECT('canonicalLocationId'");
+    expect(source).not.toContain('LOWER(${agents.areasServed}) LIKE');
+    expect(source).not.toContain('splitTextList(agent.areasServed)');
   });
 
   it('returns nothing for an unknown or retired location', async () => {

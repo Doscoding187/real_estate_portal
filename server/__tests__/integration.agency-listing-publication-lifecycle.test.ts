@@ -24,6 +24,7 @@ vi.mock('../_core/email', () => ({
 
 import { COOKIE_NAME } from '../../shared/const';
 import { encodeCanonicalLocationId } from '../../shared/locationAuthority';
+import { parseAgentCoverageAreas } from '../../shared/agentCoverageArea';
 import type { AppRouter } from '../routers';
 import {
   agencies,
@@ -251,7 +252,14 @@ async function insertUser(
 
 async function canonicalSandtonLocation() {
   const [location] = await db
-    .select({ provinceId: provinces.id, cityId: cities.id, suburbId: suburbs.id })
+    .select({
+      provinceId: provinces.id,
+      provinceName: provinces.name,
+      cityId: cities.id,
+      cityName: cities.name,
+      suburbId: suburbs.id,
+      suburbName: suburbs.name,
+    })
     .from(provinces)
     .innerJoin(cities, eq(cities.provinceId, provinces.id))
     .innerJoin(suburbs, eq(suburbs.cityId, cities.id))
@@ -557,6 +565,26 @@ describeWithDb('agency full operating journey acceptance', () => {
       .limit(1);
     expect(individualSubscription).toBeUndefined();
 
+    const location = await canonicalSandtonLocation();
+    const canonicalSuburbId = encodeCanonicalLocationId('suburb', Number(location.suburbId));
+    const canonicalCoverage = {
+      canonicalLocationId: canonicalSuburbId,
+      label: [location.suburbName, location.cityName, location.provinceName].join(', '),
+    };
+    const rejectedTextCoverageResponse = await fetch(`${baseUrl}/api/agent/profile`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        cookie: member.cookie,
+      },
+      body: JSON.stringify({
+        displayName: `Publication Member ${suffix}`,
+        phone: '+27825550188',
+        areasServed: ['Sandton'],
+      }),
+    });
+    expect(rejectedTextCoverageResponse.status).toBe(400);
+
     const profileResponse = await fetch(`${baseUrl}/api/agent/profile`, {
       method: 'POST',
       headers: {
@@ -571,7 +599,7 @@ describeWithDb('agency full operating journey acceptance', () => {
         licenseNumber: `PL-${suffix}`,
         yearsExperience: 5,
         focus: 'sales',
-        areasServed: ['Sandton'],
+        areasServed: [canonicalSuburbId],
         specializations: ['Residential sales'],
         propertyTypes: ['house'],
         languages: ['English'],
@@ -580,18 +608,23 @@ describeWithDb('agency full operating journey acceptance', () => {
       }),
     });
     expect(profileResponse.status).toBe(200);
-    expect(await profileResponse.json()).toMatchObject({
+    const profileBody = await profileResponse.json();
+    expect(profileBody).toMatchObject({
       success: true,
-      profile: { agencyId: created.agencyId },
+      profile: { agencyId: created.agencyId, areasServed: [canonicalCoverage] },
     });
+    const [persistedCoverage] = await db
+      .select({ areasServed: agents.areasServed })
+      .from(agents)
+      .where(eq(agents.id, created.agentId))
+      .limit(1);
+    expect(parseAgentCoverageAreas(persistedCoverage?.areasServed)).toEqual([canonicalCoverage]);
     const preActivationStatus = await agentOnboardingStatus(member.id, member.cookie);
     expect(preActivationStatus.entitlements).toMatchObject({
       canReceiveLeads: false,
       canAccessExistingLeads: true,
     });
 
-    const location = await canonicalSandtonLocation();
-    const canonicalSuburbId = encodeCanonicalLocationId('suburb', Number(location.suburbId));
     const mediaManifest: Array<{
       id: string;
       mediaType: 'image';

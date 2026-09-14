@@ -14,6 +14,7 @@ import {
   type SubscriptionSnapshot,
 } from './planAccessService';
 import { resolveCurrentAgencyMembershipForAgent } from './agencyMembershipService';
+import { parseAgentCoverageAreas } from '../../shared/agentCoverageArea';
 
 export type AgentEntitlements = {
   plan: 'trial' | 'paid';
@@ -115,7 +116,7 @@ export function calculateAgentProfileCompletion(
   }
 
   const hasPhoto = hasValue(agent.profileImage);
-  const hasAreas = hasValue(agent.areasServed);
+  const hasAreas = parseAgentCoverageAreas(agent.areasServed).length > 0;
   const hasBio = hasValue(agent.bio);
   const hasPhone = hasValue(agent.phone);
   const hasFocus = hasValue(agent.focus) || hasValue(agent.specialization);

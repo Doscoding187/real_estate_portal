@@ -12,6 +12,7 @@ import {
 } from '../../drizzle/schema';
 import { getEntitlementNumber } from './planAccessService';
 import { resolveCurrentAgencyMembershipForAgent } from './agencyMembershipService';
+import { parseAgentCoverageAreas } from '../../shared/agentCoverageArea';
 import {
   isPaidCommercialTermExpired,
   parseCanonicalCommercialTimestamp,
@@ -595,7 +596,7 @@ function profileCompletionScore(agent: any) {
   const present = (value: unknown) => Boolean(typeof value === 'string' ? value.trim() : value);
   return [
     [agent.profileImage, 20],
-    [agent.areasServed, 20],
+    [parseAgentCoverageAreas(agent.areasServed).length > 0, 20],
     [agent.bio, 15],
     [agent.phone, 15],
     [agent.focus || agent.specialization, 15],
