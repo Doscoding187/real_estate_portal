@@ -50,9 +50,11 @@ goal status:
   routes, APIs, review and public-publication boundaries must enforce that
   disposition before a launch claim; navigation hiding alone is insufficient.
   See [LRC-LAND-001](03-launch-register.md#lrc-land-001).
-- **Support and disclosures:** assisted onboarding must end in a monitored
-  contact channel, with final launch-specific terms and privacy information.
-  See [LRC-SUPPORT-001](03-launch-register.md#lrc-support-001).
+- **Support and disclosures:** `144e90d1` provides a persisted, review-only
+  assisted-onboarding intake, but assisted onboarding must still end in a
+  named, monitored contact operation with final launch-specific terms and
+  privacy information. See [LRC-SUPPORT-001](03-launch-register.md#lrc-support-001)
+  and the [assisted-onboarding queue runbook](18-assisted-onboarding-queue-runbook.md).
 - **Protected release evidence:** Azure/provider credentials, database grants,
   restoration, hosting connectivity, capacity, worker supervision and a
   deliberately enabled commercial path remain separately required before any
@@ -612,10 +614,11 @@ production recovery, protected database grants, capacity, or production
 launch. Normal runtime remains `preparation_only`; no free publishing
 entitlement, protected operation, or provider configuration was introduced.
 
-Milestone M4 is ready for its planned senior architectural review. The next
-implementation priority is the separate L0 Land-containment record, followed
-by support/disclosures and protected-release evidence; no local Goal 10 result
-changes those launch conditions.
+Milestone M4 is ready for its planned senior architectural review. The separate
+L0 Land-containment record is locally corrected, and `144e90d1` now supplies a
+bounded assisted-onboarding intake. Named support operation/disclosures and
+protected-release evidence remain required; no local Goal 10 result changes
+those launch conditions.
 
 ## Advancement rule
 

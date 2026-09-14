@@ -35,6 +35,8 @@ No existing worktree or branch may be deleted, pruned, moved, repaired, reset, r
 15. [Agency Journey Senior Architecture Review](14-agency-journey-senior-review.md)
 16. [Agency Journey Closure — Sequential Goals](15-agency-journey-closure-goals.md)
 17. [First-cohort lead custody recovery runbook](16-first-cohort-lead-custody-recovery-runbook.md)
+18. [Senior Product Architect Escalation Report](17-senior-product-architect-escalation-report.md)
+19. [Assisted onboarding request queue runbook](18-assisted-onboarding-queue-runbook.md)
 
 ## Canonical programme stages
 

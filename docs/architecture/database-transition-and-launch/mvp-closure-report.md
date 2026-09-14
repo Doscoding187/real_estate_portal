@@ -1,12 +1,14 @@
 # Post-merge MVP closure review packet
 
-Date: 2026-09-14 (Goals 6–10 addendum and LRC-LAND-001 containment follow-up; original closure review dated 2026-09-13).
+Date: 2026-09-14 (Goals 6–10 addendum, LRC-LAND-001 containment, and LRC-SUPPORT-001 bounded-intake follow-ups; original closure review dated 2026-09-13).
 **Outcome: the local candidate supports controlled
 pre-payment onboarding; canonical billing and activation paths are contained,
 and Goals 1–10 agency membership, workspace, commercial-term, private-preparation,
 review/publication, public-discovery, public-enquiry custody, CRM-continuity,
 first-cohort recovery, one consolidated agency operating acceptance, and hard-deferred
-Land containment are verified on the task branch. Normal commercial activation, hosted integration,
+Land containment are verified on the task branch. A bounded assisted-onboarding
+intake is also locally implemented; named support operations and final
+disclosures remain open. Normal commercial activation, hosted integration,
 production verification, and protected release remain blocked.** This is not a declaration that all MVP
 journeys or production are verified. Database task classification: local-data workflow,
 followed by bounded consumer fixes. No schema authority changed.
@@ -56,6 +58,7 @@ protected environment.
 | Goal 9 platform-recovery correction (task branch) | `f9086ef4ee3a6fa664256a9dbebedd7e1fd9ce28` |
 | Goal 10 full agency acceptance (task branch) | `fbf592cc7f1a808915be2b138e2f6f39a8b88963` |
 | Land hard-containment correction (task branch) | `335838dff0c746b860eaaf2930412d4b38540db5` |
+| Assisted-onboarding intake correction (task branch) | `144e90d1531d2e85a407e5dabecfb4124c8394bf` |
 | Branch                                              | `verify/mvp-closure-post-577`                                                 |
 | Worktree                                            | `/home/edwardspc/Desktop/Dev/worktrees/property-listify-mvp-closure-post-577` |
 
@@ -458,6 +461,44 @@ the controlled **pre-payment onboarding cohort**; an isolated paid-entitlement
 fixture proves lifecycle semantics only and does not authorize a live paid
 cohort.
 
+## LRC-SUPPORT-001 bounded-intake follow-up
+
+Commit [`144e90d1`](https://github.com/Doscoding187/real_estate_portal/commit/144e90d1531d2e85a407e5dabecfb4124c8394bf)
+replaces the placeholder `/contact` and `/company/contact` destination with a
+real, persisted assisted-onboarding request. It reuses the existing canonical
+`platform_team_registrations` queue rather than inventing a new ticketing
+platform or support database. Agent, agency, and developer support handoffs
+preserve their area and topic context, while the public request form accepts
+only the review-only areas: `agent`, `agency_operations`,
+`developer_operations`, and `other`.
+
+The intake boundary is explicit. Submission stores a pending review record and
+returns a reference number. It neither creates a user, membership, role, lead
+custody, payment, entitlement, nor public listing. The queue warns against
+credentials, financial data, identity documents, and third-party lead data.
+The super-admin queue now shows all registration areas, labels non-manager
+requests as review-only, and permits them only to be marked reviewed or closed.
+Only an explicitly `distribution_manager` request retains the existing
+account-verified identity-provisioning path. The server independently enforces
+the distinction: a non-manager approval leaves `userId` null and inserts no
+Distribution identity, while manager provisioning still fails closed when the
+invited email has no account.
+
+Focused proof passed on the exact task-owned target: authority-wrapped server
+tests **2 files / 8 tests**, explicit client tests **4 files / 8 tests**,
+database-authority static tests **35 files / 293 tests**, `pnpm check`,
+targeted ESLint with no errors, `pnpm build`, and `git diff --check`. The
+database remained exact-worktree-owned, schema-congruent at `0090`, and free of
+incomplete attempts. The full procedure and authority boundaries are recorded
+in the [assisted-onboarding queue runbook](../launch-readiness-and-product-convergence/18-assisted-onboarding-queue-runbook.md).
+
+This is not proof of an operated support service. The repository still has no
+owner-approved monitored reply channel, named queue owner/cadence, escalation
+process, or finalized launch Terms and Privacy content. Those facts must be
+provided and accepted before external real-world onboarding. The correction
+does not enable payments, commercial entitlement, publication, provider mail,
+or a live paid cohort.
+
 ## Ranked remaining blockers and authority handoff
 
 1. **L0 — integrate and independently verify the locally contained Land boundary (LRC-LAND-001):** `335838df` hard-deferred Land at direct and generic source boundaries on this task branch. It must remain unavailable to the controlled pre-payment onboarding cohort and public routes until integrated verification and a separately authorized Land commercial/acceptance slice exist.
@@ -472,11 +513,14 @@ cohort.
    locally. It remains task-branch evidence, with no browser UI, hosted,
    provider, or production proof; senior review, integration, and controlled
    runtime acceptance remain required before any cohort is represented as live.
-4. **L1 — support, disclosures, and external/protected operations:** assisted
-   stakeholders still need a monitored contact channel and finalized launch
-   disclosures (LRC-SUPPORT-001). Real verification/recovery mail, recipient
-   delivery, Azure grant/provider behavior, restoration, worker supervision, and
-   capacity remain unproven. Local mocks and green CI cannot authorize launch.
+4. **L1 — support/disclosure operation and external/protected operations:**
+   `144e90d1` makes assisted-onboarding intake durable and reviewable, but it
+   is not a monitored contact service. A named queue owner, cadence,
+   reply/escalation channel, and finalized launch Terms/Privacy content remain
+   required before real-world onboarding (LRC-SUPPORT-001). Real
+   verification/recovery mail, recipient delivery, Azure grant/provider
+   behavior, restoration, worker supervision, and capacity remain unproven.
+   Local mocks and green CI cannot authorize launch.
 5. **L2 — deferred polish/performance debt:** existing lint/bundle warnings,
    optional map preview and broad optional product surfaces. These do not justify
    widening this workstream.
@@ -491,10 +535,11 @@ permission to enable payments.
 
 Packet revision 1 should bind master-plan 1.3, reviewed source/tree, manifest
 and model digests, exact Azure target fingerprint, accepted/expected head and
-fresh runner plan digest. The local agency acceptance and Land source containment are complete; first
-resolve support/disclosure readiness, then integrate the reviewed candidate and
-gather the required hosted evidence, including independent Land containment
-verification. Commercial activation remains
+fresh runner plan digest. The local agency acceptance, Land source containment,
+and assisted-onboarding intake are complete; first resolve the named
+support/disclosure operation, then integrate the reviewed candidate and gather
+the required hosted evidence, including independent Land containment and
+assisted-intake verification. Commercial activation remains
 a separate owner-approved release decision. Then seek explicit authorization for
 each protected operation; a read-only plan does not authorize apply.
 
@@ -521,8 +566,10 @@ Application fixes are committed at `c6c9f133`, `bba390b0`, `c8c35fde`,
 `a403d31d`, Goal 5 publication correction `74bff0f9`, Goal 6 public-discovery
 correction `9acfea2f`, Goals 7–8 CRM correction `c4df6600`, Goal 9
 platform-recovery correction `f9086ef4`, Goal 10 full acceptance `fbf592cc`,
-and Land containment correction `335838df`; the review packet, escalation
-resolution, and register are committed in the accompanying documentation commit. Final Git status was clean after that commit. No merge, feature push,
+Land containment correction `335838df`, and bounded assisted-onboarding intake
+`144e90d1`; the review packet, escalation resolution, register, and queue
+runbook retain their respective evidence commits. Final Git status was clean
+after each recorded commit before the next bounded workstream began. No merge, feature push,
 deployment, cutover, Azure/TiDB access, protected migration, credential/grant
 change, provider setting change, recovery, payment activation, entitlement
 activation, or migration-history edit was performed. Running deployments were

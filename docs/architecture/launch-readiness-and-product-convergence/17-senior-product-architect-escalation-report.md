@@ -1,14 +1,14 @@
 # Senior Product Architect Escalation Report
 
-Date: 2026-09-14 (updated after senior direction)
+Date: 2026-09-14 (updated after senior direction and bounded support continuation)
 Status: **RESOLVED FOR BOUNDED CONTINUATION**
 Audience: senior product architect and launch coordination manager
 
 This report records the agency journey closure evidence through Goals 1–10,
 the Land containment work that followed, the verification error that paused the
-work, and the subsequent senior resolution. It is an escalation record. It is
-not a release approval, a production-verification record, or permission to
-resume protected operations.
+work, the subsequent senior resolution, and the bounded assisted-onboarding
+continuation. It is an escalation record. It is not a release approval, a
+production-verification record, or permission to resume protected operations.
 
 ## Senior decision and resolution
 
@@ -39,7 +39,8 @@ deployment, cutover, merge, or push occurred.
 | Closure source recorded by the prior packet | `c8c35fde44d00ff8b2ce83ca73fcb32dd522e9bc` |
 | Task branch HEAD before paused Land edits | `34e66d2fe8b8602387a2f673368242c6dc14b078` |
 | Land containment correction | `335838dff0c746b860eaaf2930412d4b38540db5` |
-| Current task branch HEAD | `335838dff0c746b860eaaf2930412d4b38540db5` |
+| Assisted-onboarding intake correction | `144e90d1531d2e85a407e5dabecfb4124c8394bf` |
+| Current task branch source HEAD | `144e90d1531d2e85a407e5dabecfb4124c8394bf` |
 | Branch | `verify/mvp-closure-post-577` |
 | Task-owned worktree | `/home/edwardspc/Desktop/Dev/worktrees/property-listify-mvp-closure-post-577` |
 | Disposable target fingerprint | `a560e9f2971e7676…` (full value remains in the local authority record) |
@@ -123,6 +124,39 @@ pre-payment onboarding cohort and public exposure until that work is authorized
 and independently accepted. An isolated paid-entitlement fixture proves only
 lifecycle behavior; it does not establish a live paid onboarding route.
 
+## LRC-SUPPORT-001 bounded continuation
+
+The senior direction permitted a bounded correction for the placeholder contact
+path, while expressly prohibiting invented operator identity, contact details,
+retention practices, or legal assurances. Commit
+`144e90d1531d2e85a407e5dabecfb4124c8394bf` implements that correction without
+changing any commercial, membership, payment, entitlement, or protected-system
+authority.
+
+`/contact` and `/company/contact` now create a persisted review-only request
+in the existing `platform_team_registrations` queue. The public form is limited
+to Agent, Agency, Developer, or Other onboarding context and returns a request
+reference. It never offers the manager-provisioning area. The super-admin
+queue now visibly separates non-manager requests from manager invitations:
+reviewing the former records an audit decision only, and it neither requires an
+account nor creates an identity. The existing manager flow remains account
+gated and is the only branch that can provision a Distribution identity.
+
+Focused local checks passed: authority-wrapped server tests **2 files / 8
+tests**, client tests **4 files / 8 tests**, database-authority static tests
+**35 files / 293 tests**, TypeScript check, production build, targeted ESLint,
+and diff validation. The local target remained exact-worktree-owned,
+schema-congruent at `0090`, and had no incomplete attempts.
+
+This resolves the code-level placeholder handoff. It does not resolve the
+operational or legal condition: no named queue owner, staffed cadence,
+monitored reply channel, escalation procedure, or finalized Terms/Privacy
+content is present in repository authority. The full operating boundary and
+explicit prerequisite list are recorded in the
+[assisted-onboarding queue runbook](18-assisted-onboarding-queue-runbook.md).
+LRC-SUPPORT-001 therefore remains **in progress** and blocks external
+real-world onboarding until those owner inputs are supplied and accepted.
+
 ## Verification error that caused the pause
 
 ### Primary observed error: an unscoped client command entered the full workspace
@@ -195,7 +229,7 @@ could not be credited until the mocks were corrected.
 | Is a production customer or protected system affected? | No. The unintended run had no governed database target, no provider credentials, and no deployment access. |
 | Is the `explore_content` schema proven missing in the canonical target? | No. The message came from an unscoped setup with no `DATABASE_URL`; the governed static and exact-target checks passed. |
 | Is the client Land containment result invalidated? | No. The explicit client run and governed server runs passed. The accidental workspace run itself is discarded. |
-| Is a release candidate available? | A task-branch source candidate exists at `335838df`; hosted CI, integration, and protected-release evidence remain absent. |
+| Is a release candidate available? | A task-branch source candidate exists through `144e90d1`; hosted CI, integration, named support operation, and protected-release evidence remain absent. |
 | Does this require database recovery? | No evidence supports recovery. No migration was attempted, retried, or changed. |
 
 The exception-mapping concern is resolved in `335838df`: only
@@ -208,8 +242,9 @@ focused contract test covers both branches.
 1. Keep the accidental unscoped-test result recorded as a discarded tooling
    diagnostic. Do not alter database state, add fallback SQL, or reopen Land
    code solely because of it.
-2. Treat Land containment as locally implemented and continue to
-   `LRC-SUPPORT-001`, fixing only demonstrated stakeholder-operation failures.
+2. Treat Land containment and the bounded `LRC-SUPPORT-001` intake as locally
+   implemented. Preserve their remaining support/disclosure and integration
+   blockers; do not invent an external operation or legal policy.
 3. Reconcile references to a paid first cohort: the approved near-term journey
    is controlled pre-payment onboarding. The commercial gate remains intact;
    an isolated paid fixture is not a live activation path.
@@ -218,10 +253,10 @@ focused contract test covers both branches.
 
 ## Protected-operation boundary and current worktree
 
-The Land implementation is committed separately at `335838df`, preserving a
-reviewable boundary from Goal 10. The prior two Stage 1 targets and their
-ownership records were preserved; the task-owned disposable target was not
-reset, repaired, reused, or disposed.
+The Land implementation (`335838df`) and assisted-onboarding intake
+(`144e90d1`) are separate reviewable commits after Goal 10. The prior two
+Stage 1 targets and their ownership records were preserved; the task-owned
+disposable target was not reset, repaired, reused, or disposed.
 
 No Azure/TiDB access, protected migration, migration-history edit, production
 deployment, cutover, merge, feature push, secret/provider-setting change,
