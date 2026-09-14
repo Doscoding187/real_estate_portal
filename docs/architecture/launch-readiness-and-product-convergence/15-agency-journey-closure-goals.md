@@ -2,7 +2,7 @@
 
 | Field                | Record                                                                                                                                                                                              |
 | -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Status               | **Working implementation authority.** Goals 1–9 are verified on the task branch within their stated first-cohort boundaries; Goal 10 is the current bounded acceptance investigation. No goal is authorized as a protected release, payment activation, provider operation, or production deployment. |
+| Status               | **Working implementation authority.** Goals 1–10 are verified on the task branch within their stated first-cohort boundaries. Goal 10 has a consolidated real-application acceptance and the scoped Goal 9 recovery companion; neither authorizes a protected release, normal-runtime payment activation, provider operation, or production deployment. |
 | Architectural source | [Agency Journey Senior Architecture Review](14-agency-journey-senior-review.md)                                                                                                                     |
 | Purpose              | Convert the senior review into small, sequential, evidence-led implementation goals for the first commercially usable agency journey.                                                               |
 | Cohort boundary      | One small agency in one geography is the proposed first operating cohort. Land, developer paid operation, and independent-agent launch claims remain outside this cohort until separately accepted. |
@@ -68,7 +68,7 @@ re-litigate every individual implementation choice.
 | M1        | 1–2   | Did implementation establish the correct agency identity and membership authority, or expose a deeper model problem? | READY FOR SENIOR REVIEW |
 | M2        | 3–5   | Does canonical membership now connect commercial ownership, listing, review, and publication without contradiction?  | READY FOR SENIOR REVIEW |
 | M3        | 6–8   | Does publication connect correctly to public discovery, enquiry, custody, and CRM operation?                         | READY FOR SENIOR REVIEW |
-| M4        | 9–10  | Can a real agency operate safely, with observable recovery and a bounded launch decision?                            | IN PROGRESS             |
+| M4        | 9–10  | Can a real agency operate safely, with observable recovery and a bounded launch decision?                            | READY FOR SENIOR REVIEW |
 
 ## Goal 1 — Establish the trusted agency foundation
 
@@ -571,18 +571,51 @@ launch audience.
 
 [Most valuable next implementation assignment](14-agency-journey-senior-review.md#most-valuable-next-implementation-assignment)
 
-**Status:** IN PROGRESS
+**Status:** VERIFIED (local task-branch acceptance; integration, hosted, provider, and production verification pending)
 
-### Goal 10 initiation record — 2026-09-14
+### Goal 10 verification record — 2026-09-14
 
-Goals 1–9 now provide direct local evidence for each bounded authority slice.
-Goal 10 is the required consolidated acceptance run, not permission to infer an
-end-to-end customer journey from separate tests. The next investigation will
-trace one canonical agency owner and invited agent through setup, controlled
-fixture entitlement, listing review/publication, public discovery and enquiry,
-CRM continuity, reassignment/expiry, and the scoped recovery outcome. It will
-retain normal-runtime `preparation_only`, use no provider or protected
-operation, and record any missing transition as a concrete blocker.
+The consolidated agency acceptance is committed at
+[`fbf592cc`](https://github.com/Doscoding187/real_estate_portal/commit/fbf592cc7f1a808915be2b138e2f6f39a8b88963)
+on `verify/mvp-closure-post-577`. It replaces the old direct agency and active
+subscription fixture in the lifecycle acceptance with the real local
+application path:
+
+`register → verification → agency onboarding → agency approval → canonical
+invitation acceptance → agent profile → private media/geography draft →
+controlled Vitest-only finance review → submit/reject/correct/resubmit/approve
+→ public search/detail → anonymous enquiry/replay → agent/agency CRM → expiry
+and reassignment`.
+
+Direct evidence:
+
+- `pnpm test:authority -- server/__tests__/integration.agency-listing-publication-lifecycle.test.ts` passed **1 file / 1 test** on the exact task-owned disposable target (`a560e9f2971e7676…`). The test mounts the real auth, agent-onboarding, local-media, and tRPC routes. It registers and verifies the owner and member through HTTP; persists canonical agency onboarding and finance-pending subscription state; obtains reviewer approval; accepts the canonical invitation; saves the professional profile over HTTP; uploads five actual local media objects; and persists a confirmed Sandton location.
+- Before the finance transition, the same prepared listing remains a private draft and submission fails with `PRECONDITION_FAILED`. In the permitted Vitest-only commercial state, canonical manual-EFT checkout reuses one invoice; proof submission and finance review activate the agency term once; replayed finance approval is idempotent; and the stored term is exactly 90 days. This test does not enable normal runtime activation, contact a provider, or alter a payment setting.
+- The same accepted owner/member then submits, receives structured rejection feedback, corrects and resubmits the persisted draft, proves suspended-term approval denial, restores only the isolated test term, and approves the listing. Persisted assertions cover the queue history, public source projection, matching media, canonical Sandton search/detail, anonymous enquiry exact replay and conflicting replay denial, unrelated-tenant denial, CRM contact/stage/follow-up, expiry continuity, invitation-based reassignment, former-agent denial, replacement access, and preserved custody history.
+- `pnpm test:authority -- server/__tests__/integration.agency-principal-bootstrap.test.ts server/__tests__/integration.agency-member-workspace-authority.test.ts server/__tests__/integration.agency-listing-publication-lifecycle.test.ts server/__tests__/integration.lead-delivery-authority.test.ts` passed **4 files / 15 tests** on the same exact target. It confirms that the full acceptance remains consistent with the canonical bootstrap, workspace-authority, and scoped recovery contracts.
+- `pnpm check`, `pnpm exec eslint server/__tests__/integration.agency-listing-publication-lifecycle.test.ts`, and `git diff --check` passed. Targeted ESLint reported **0 errors and 0 warnings** after formatting.
+- `pnpm db:authority:status` before the acceptance reported target class `disposable-worktree`, exact worktree ownership, migration head `0090_retire_disconnected_boost_campaigns.sql`, `schema-congruent`, `canonical-foundation-ready`, and `no-incomplete-attempts`.
+
+The deliberately interrupted-delivery requirement remains the exact companion
+acceptance in Goal 9 rather than an invented second primary channel for the
+agency customer lead. Agency enquiry custody is intentionally completed through
+the persisted `crm_export` channel; the Goal 9 platform-managed exception test
+creates an `unknown` delivery, exposes it through the authorized audit/queue
+surfaces, recovers it once, and proves replay-safe audit history. Together,
+these are direct local evidence for the operating journey and its scoped
+exception path.
+
+This verifies the one-agency, one-geography operating slice on the task branch.
+It does **not** prove browser UI completion, a deployed customer payment flow,
+external email/provider delivery, worker supervision, hosted integration,
+production recovery, protected database grants, capacity, or production
+launch. Normal runtime remains `preparation_only`; no free publishing
+entitlement, protected operation, or provider configuration was introduced.
+
+Milestone M4 is ready for its planned senior architectural review. The next
+implementation priority is the separate L0 Land-containment record, followed
+by support/disclosures and protected-release evidence; no local Goal 10 result
+changes those launch conditions.
 
 ## Advancement rule
 

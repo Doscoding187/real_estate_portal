@@ -1,13 +1,13 @@
 # Post-merge MVP closure review packet
 
-Date: 2026-09-14 (Goals 6–9 addendum; original closure review dated 2026-09-13).
+Date: 2026-09-14 (Goals 6–10 addendum; original closure review dated 2026-09-13).
 **Outcome: the local candidate supports controlled
 pre-payment onboarding; canonical billing and activation paths are contained,
-and Goals 1–9 agency membership, workspace, commercial-term, private-preparation,
+and Goals 1–10 agency membership, workspace, commercial-term, private-preparation,
 review/publication, public-discovery, public-enquiry custody, CRM-continuity,
-and first-cohort recovery slices are verified on the task branch.
-Normal commercial activation, hosted integration, production verification, and
-protected release remain blocked.** This is not a declaration that all MVP
+first-cohort recovery, and one consolidated agency operating acceptance are
+verified on the task branch. Normal commercial activation, hosted integration,
+production verification, and protected release remain blocked.** This is not a declaration that all MVP
 journeys or production are verified. Database task classification: local-data workflow,
 followed by bounded consumer fixes. No schema authority changed.
 
@@ -52,6 +52,7 @@ protected environment.
 | Goal 6 public-discovery correction (task branch)    | `9acfea2f5dd778b5b944fb9701e4fc2f39f885af`                                    |
 | Goals 7–8 lead-custody and CRM correction (task branch) | `c4df6600`                                                                  |
 | Goal 9 platform-recovery correction (task branch) | `f9086ef4ee3a6fa664256a9dbebedd7e1fd9ce28` |
+| Goal 10 full agency acceptance (task branch) | `fbf592cc7f1a808915be2b138e2f6f39a8b88963` |
 | Branch                                              | `verify/mvp-closure-post-577`                                                 |
 | Worktree                                            | `/home/edwardspc/Desktop/Dev/worktrees/property-listify-mvp-closure-post-577` |
 
@@ -120,12 +121,13 @@ required by the current listing authority contract; no runtime authorization was
 relaxed.
 
 This is local branch evidence, not a hosted integration, provider, or production
-claim. Goals 5–6 below close the local review/public-discovery slice; the L1
-agency journey finding remains open through enquiry and CRM operation in Goals
-7–8 in [LRC-AGY-001](../launch-readiness-and-product-convergence/03-launch-register.md#lrc-agy-001).
-Milestones M1–M3 are ready for their planned senior reviews. Goal 9's scoped
-first-cohort recovery fallback is locally verified; M4 is now in progress with
-the required consolidated Goal 10 acceptance.
+claim. Goals 5–6 below close the local review/public-discovery slice; Goals 7–10
+now close the single agency-to-agent acceptance through enquiry, CRM, expiry,
+reassignment, and the scoped recovery companion in
+[LRC-AGY-001](../launch-readiness-and-product-convergence/03-launch-register.md#lrc-agy-001).
+Milestones M1–M4 are ready for their planned senior reviews. Goal 10 is not a
+paid-launch authorization; its full evidence and remaining boundary are recorded
+in the addendum below.
 
 
 Goal 5, agency submission, review, and publication, is locally verified at
@@ -172,8 +174,42 @@ client/server regressions passed **7 files / 38 tests**, with one
 database-gated test skipped. This is no provider-delivery, hosted, or production
 claim. Goal 9 now proves the scoped first-cohort internal-custody/platform
 recovery fallback; external provider delivery, hosted operation, and production
-recovery remain unverified. M3 is ready for its planned senior review and Goal
-10 is the active M4 acceptance investigation.
+recovery remain unverified.
+
+### Goal 10 consolidated agency acceptance addendum
+
+Goal 10 is locally verified at
+[`fbf592cc`](https://github.com/Doscoding187/real_estate_portal/commit/fbf592cc7f1a808915be2b138e2f6f39a8b88963).
+One exact-target acceptance replaces the old direct agency and active-term
+fixture with real local auth registration/verification, canonical agency
+onboarding, reviewer agency approval, invitation membership, agent profile,
+five local media uploads, private draft persistence, controlled Vitest finance
+review, governed publication, public discovery/detail, anonymous enquiry
+replay, CRM follow-up, term expiry, and canonical reassignment.
+
+It proves a pre-payment draft cannot submit; a test-only manual-EFT checkout
+reuses one invoice; proof review activates the fixed 90-day term exactly once;
+and replayed finance approval is idempotent. The same listing then follows
+rejection/correction/resubmission, suspended-term approval denial, approval,
+canonical Sandton discovery and detail, and replay-safe public enquiry.
+The assigned agent and agency owner work the lead; an unrelated verified agency
+is denied; expiry preserves existing custody; suspension/reassignment moves
+active lead and future showing to the invited replacement without erasing
+history. The companion Goal 9 exact-target test deliberately interrupts a
+platform-managed delivery, demonstrates audit/queue visibility, and recovers it
+once without duplicate CRM activity.
+
+`pnpm test:authority -- server/__tests__/integration.agency-listing-publication-lifecycle.test.ts`
+passed **1 file / 1 test**. The connected authority set passed **4 files / 15
+tests**; `pnpm check`, targeted ESLint, and `git diff --check` passed. The
+target remained exact worktree-owned, schema-congruent, at migration head
+`0090_retire_disconnected_boost_campaigns.sql`, with no incomplete attempts.
+
+This is real local API/HTTP/tRPC and persisted-state evidence, not a browser UI,
+hosted, provider, or production claim. The finance transition is permitted only
+inside Vitest; normal runtime remains `preparation_only`. No payment provider,
+deployment, protected database operation, entitlement bypass, or free
+publication policy was introduced. M4 is ready for planned senior review.
 
 ## Target and data establishment
 
@@ -391,26 +427,26 @@ diagnostics. Credentials and raw tokens are excluded from this report and Git.
 
 ## Ranked remaining blockers and authority handoff
 
-1. **L1 — commercial activation and marketplace publication remain unavailable
+1. **L0 — Land public-visibility containment (LRC-LAND-001):** the deferred
+   first-cohort disposition is still not enforced at every direct route, API,
+   review, and publication boundary. Land must remain outside any exposed paid
+   cohort until its separate containment and acceptance slice is authorized.
+2. **L1 — normal-runtime commercial activation and protected release
    (LRC-PAY-001):** the source containment candidate is locally proven, but a
-   stakeholder cannot publish until the separately approved payment, finance,
+   stakeholder cannot publish until separately approved payment, finance,
    entitlement, and protected-release evidence exists. Controlled pre-payment
    onboarding may prepare identities and private drafts only. Do not replace
    this boundary with a free publishing entitlement or a privilege bypass.
-2. **L1 — the complete agency operating journey is not yet proven
-   (LRC-AGY-001):** Goals 1–9 now prove the trusted membership,
-   workspace-owner, fixed-term commercial lifetime, private preparation, governed
-   review/publication, public discovery, enquiry custody, CRM continuity, and
-   scoped manual-recovery boundaries locally. Goal 10 must still demonstrate
-   those transitions as one coherent agency-to-agent acceptance journey. Do not
-   reclassify controlled paid-state fixtures or local evidence as a paid launch.
-3. **L0 — Land public-visibility containment:** the deferred first-cohort
-   disposition is still not enforced at every direct route, API, review, and
-   publication boundary. Land must remain outside any exposed paid cohort until
-   its separate containment and acceptance slice is authorized.
-4. **L1 — external/protected operational evidence:** real verification/recovery
-   mail, recipient delivery, Azure grant/provider behavior, recovery and capacity
-   are not proven here. Local mocks and green CI cannot authorize launch.
+3. **L1 — integrate and host-verify the completed agency slice
+   (LRC-AGY-001):** Goal 10 now proves the complete first-cohort agency journey
+   locally. It remains task-branch evidence, with no browser UI, hosted,
+   provider, or production proof; senior review, integration, and controlled
+   runtime acceptance remain required before any cohort is represented as live.
+4. **L1 — support, disclosures, and external/protected operations:** assisted
+   stakeholders still need a monitored contact channel and finalized launch
+   disclosures (LRC-SUPPORT-001). Real verification/recovery mail, recipient
+   delivery, Azure grant/provider behavior, restoration, worker supervision, and
+   capacity remain unproven. Local mocks and green CI cannot authorize launch.
 5. **L2 — deferred polish/performance debt:** existing lint/bundle warnings,
    optional map preview and broad optional product surfaces. These do not justify
    widening this workstream.
@@ -425,10 +461,11 @@ permission to enable payments.
 
 Packet revision 1 should bind master-plan 1.3, reviewed source/tree, manifest
 and model digests, exact Azure target fingerprint, accepted/expected head and
-fresh runner plan digest. First finish the remaining local journey evidence.
-Commercial activation remains a separate owner-approved release decision. Then
-seek explicit authorization for each protected operation; a read-only plan does
-not authorize apply.
+fresh runner plan digest. The local agency acceptance is complete; first resolve
+Land containment and support/disclosure readiness, then integrate the reviewed
+candidate and gather the required hosted evidence. Commercial activation remains
+a separate owner-approved release decision. Then seek explicit authorization for
+each protected operation; a read-only plan does not authorize apply.
 
 Required evidence: exact Azure MySQL version, CHECK/FK enforcement and isolated
 restored-target congruency; distinct runtime/worker/migration/verifier grants
@@ -451,9 +488,10 @@ backend identities and a staffed GO/no-GO/recovery decision.
 Application fixes are committed at `c6c9f133`, `bba390b0`, `c8c35fde`,
 `cf1f93e6`, `af9fd6f2`, `16a23cd9`, Goal 4 evidence/fixture correction
 `a403d31d`, Goal 5 publication correction `74bff0f9`, Goal 6 public-discovery
-correction `9acfea2f`, Goals 7–8 CRM correction `c4df6600`, and Goal 9
-platform-recovery correction `f9086ef4`; the review packet and register are
-committed in the accompanying documentation commit. Final Git status was clean after that commit. No merge, feature push,
+correction `9acfea2f`, Goals 7–8 CRM correction `c4df6600`, Goal 9
+platform-recovery correction `f9086ef4`, and Goal 10 full acceptance
+`fbf592cc`; the review packet and register are committed in the accompanying
+documentation commit. Final Git status was clean after that commit. No merge, feature push,
 deployment, cutover, Azure/TiDB access, protected migration, credential/grant
 change, provider setting change, recovery, payment activation, entitlement
 activation, or migration-history edit was performed. Running deployments were
