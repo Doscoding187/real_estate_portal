@@ -35,6 +35,7 @@ const { mockDb, mockAssertListingPublicationEntitled } = vi.hoisted(() => ({
     getApprovalQueue: vi.fn(),
     syncPublishedListingMediaToPropertyMirror: vi.fn(),
     getDb: vi.fn(),
+    assertNotDedicatedLandWorkflowListing: vi.fn(),
   },
   mockAssertListingPublicationEntitled: vi.fn(),
 }));
@@ -84,6 +85,7 @@ vi.mock('../services/locationPagesServiceEnhanced', () => ({
 import { appRouter } from '../routers';
 import { ListingPublicationEntitlementError } from '../services/listingPublicationEntitlementService';
 import { createListingMediaUploadToken } from '../services/listingMediaAuthority';
+import { LandLaunchContainmentError } from '../services/landLaunchContainmentService';
 
 // ---------------------------------------------------------------------------
 // Shared test helpers
@@ -256,6 +258,7 @@ describe('listing lifecycle — canonical identity contract', () => {
       },
     };
     vi.mocked(mockDb.getDb).mockResolvedValue(mockDbInstance as any);
+    vi.mocked(mockDb.assertNotDedicatedLandWorkflowListing).mockResolvedValue(undefined);
   });
 
   // -----------------------------------------------------------------------
@@ -321,6 +324,32 @@ describe('listing lifecycle — canonical identity contract', () => {
     await expect(caller.listing.getById({ id: 1001 })).resolves.toMatchObject({
       property: { id: 1001 },
     });
+  });
+
+  it('maps only a known Land policy rejection to the generic-workflow precondition', async () => {
+    const caller = makeCaller(ownerUser);
+    vi.mocked(mockDb.assertNotDedicatedLandWorkflowListing).mockRejectedValue(
+      new LandLaunchContainmentError('Canonical Land link exists.'),
+    );
+
+    await expect(caller.listing.getById({ id: 1001 })).rejects.toMatchObject({
+      code: 'PRECONDITION_FAILED',
+      message: 'Land inventory is unavailable through the generic listing workflow for this launch cohort.',
+    });
+    expect(mockDb.getListingMedia).not.toHaveBeenCalled();
+  });
+
+  it('keeps an unexpected Land-link lookup failure internal and retains its cause', async () => {
+    const caller = makeCaller(ownerUser);
+    const lookupFailure = new Error('Land link lookup failed');
+    vi.mocked(mockDb.assertNotDedicatedLandWorkflowListing).mockRejectedValue(lookupFailure);
+
+    await expect(caller.listing.getById({ id: 1001 })).rejects.toMatchObject({
+      code: 'INTERNAL_SERVER_ERROR',
+      message: 'Listing workflow availability could not be verified.',
+      cause: lookupFailure,
+    });
+    expect(mockDb.getListingMedia).not.toHaveBeenCalled();
   });
 
   it('allows an approved assigned agent with the exact agency attribution to edit', async () => {

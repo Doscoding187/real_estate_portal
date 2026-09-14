@@ -8,6 +8,7 @@ import { developerSubscriptionService } from './services/developerSubscriptionSe
 import { developmentService } from './services/developmentService';
 import { publicDevelopmentSearchService } from './services/publicDevelopmentSearchService';
 import { searchPublicLand } from './services/landPublicService';
+import { isLandVerticalAvailable } from '../shared/landLaunchPolicy';
 import { getDeveloperByUserId, requireDeveloperProfileByUserId } from './services/developerService'; // [NEW] Import service methods
 import { getPublisherById } from './services/cataloguePublisherService';
 import { cataloguePublisherService } from './services/cataloguePublisherService';
@@ -1142,6 +1143,9 @@ export const developerRouter = router({
         }
 
         if (input.tab === 'plot_land') {
+          if (!isLandVerticalAvailable()) {
+            return { items: [], source: 'land' };
+          }
           const publicLand = await searchPublicLand({
             ...(locationFilter.province ? { province: locationFilter.province } : {}),
             ...(locationFilter.city ? { city: locationFilter.city } : {}),

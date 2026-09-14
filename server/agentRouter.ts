@@ -86,6 +86,7 @@ import {
   getLeadDeliverySnapshotsForLeadIds,
   publicStatusForDelivery,
 } from './services/leadDeliveryService';
+import { excludeLandFromGenericPublicProjection } from './services/landLaunchContainmentService';
 import { resolveCurrentAgencyMembershipForAgent } from './services/agencyMembershipService';
 type AgentShowingStatus = 'scheduled' | 'completed' | 'cancelled' | 'no_show';
 
@@ -1201,6 +1202,7 @@ export const agentRouter = router({
         agentRecord?.id ?? null,
         input.status,
       );
+      conditions.push(excludeLandFromGenericPublicProjection());
 
       const listings = await db
         .select()

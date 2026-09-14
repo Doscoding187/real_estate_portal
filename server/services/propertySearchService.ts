@@ -43,6 +43,7 @@ import {
 } from './publicPropertyEligibilityService';
 import { PUBLIC_PROPERTY_QUERY_BATCH_SIZE } from './approvedPublicPropertyService';
 import { buildManualPropertyCardHighlights } from '../../shared/listing-highlight-registry';
+import { excludeLandFromGenericPublicProjection } from './landLaunchContainmentService';
 import { normalizeRentalTerms } from '../../shared/rental-terms-contract';
 import {
   buildPublicPropertyParkingFact,
@@ -549,7 +550,11 @@ export class PropertySearchService {
     // media contract as property detail. Resolve eligibility before slicing a
     // page so totals, pagination and cards cannot expose stale rows.
     const publicConditions = options.publicOnly
-      ? [...conditions, sql`${properties.sourceListingId} IS NOT NULL`]
+      ? [
+          ...conditions,
+          sql`${properties.sourceListingId} IS NOT NULL`,
+          excludeLandFromGenericPublicProjection(),
+        ]
       : conditions;
     let total = 0;
     let eligiblePageIds: number[] | undefined;
@@ -1377,6 +1382,9 @@ export class PropertySearchService {
     }
 
     const conditions = this.buildFilterConditions(baseFilters, locationIds);
+    const publicScopedConditions = options.publicOnly
+      ? [...conditions, excludeLandFromGenericPublicProjection()]
+      : conditions;
     const applyPublicEligibility = async (baseConditions: SQL[]): Promise<SQL[] | null> => {
       if (!options.publicOnly) return baseConditions;
 
@@ -1392,7 +1400,7 @@ export class PropertySearchService {
         ? [...baseConditions, boundedPropertyIdCondition(eligibleIds)]
         : null;
     };
-    const eligibleConditions = await applyPublicEligibility(conditions);
+    const eligibleConditions = await applyPublicEligibility(publicScopedConditions);
     if (!eligibleConditions) {
       return {
         total: 0,

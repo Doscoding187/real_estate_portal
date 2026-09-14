@@ -83,6 +83,7 @@ import {
 } from '../shared/commercial-domain';
 import { assertCommercialMarketingMediaCustody } from './services/commercialOfficeService';
 import { canManageListingContent } from './services/listingContentCustody';
+import { LandLaunchContainmentError } from './services/landLaunchContainmentService';
 
 function rejectGenericCommercialWorkflow(propertyType: unknown): void {
   if (!isCommercialMarketingPropertyType(propertyType)) return;
@@ -90,6 +91,44 @@ function rejectGenericCommercialWorkflow(propertyType: unknown): void {
     code: 'BAD_REQUEST',
     message: COMMERCIAL_INVENTORY_MANAGEMENT_MESSAGE,
   });
+}
+
+/**
+ * A Land-linked Listing has specialist parcel, authority, evidence and review
+ * state. Keep generic listing routes from modifying or publishing it through
+ * a second lifecycle.
+ */
+async function assertGenericListingRouteAvailable(listingId: number, listing: Record<string, unknown>) {
+  try {
+    const database = await db.getDb();
+    if (!database) {
+      throw new Error('Database unavailable while checking the Land workflow boundary.');
+    }
+    await db.assertNotDedicatedLandWorkflowListing(database, listingId, listing);
+  } catch (error) {
+    if (error instanceof LandLaunchContainmentError) {
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message: 'Land inventory is unavailable through the generic listing workflow for this launch cohort.',
+      });
+    }
+    if (error instanceof TRPCError) throw error;
+    throw new TRPCError({
+      code: 'INTERNAL_SERVER_ERROR',
+      message: 'Listing workflow availability could not be verified.',
+      cause: error,
+    });
+  }
+}
+
+function isDedicatedLandWorkflowListingRecord(listing: Record<string, unknown>): boolean {
+  const details = listing.propertyDetails;
+  return (
+    Boolean(details) &&
+    typeof details === 'object' &&
+    !Array.isArray(details) &&
+    (details as Record<string, unknown>).landEngine === true
+  );
 }
 
 type ListingContentRecord = {
@@ -153,6 +192,7 @@ async function assertListingMediaCustody(
     return listing;
   }
 
+  await assertGenericListingRouteAvailable(listingId, listing as Record<string, unknown>);
   await assertListingContentCustody(listing, user, message);
   return listing;
 }
@@ -242,6 +282,8 @@ const LISTING_LIFECYCLE_ERROR_PATTERNS = [
   /^Listing is already published$/,
   /^Listing cannot be approved from status ".+"$/,
   /^Listing cannot be rejected from status ".+"$/,
+  /^Land listings use the dedicated Land workflow and cannot use the generic listing lifecycle\.$/,
+  /^Land and plot listings are deferred from the first launch cohort and cannot use the generic listing lifecycle\.$/,
 ];
 
 function mapListingLifecycleError(error: unknown, fallbackMessage: string): TRPCError {
@@ -863,6 +905,7 @@ export const listingRouter = router({
         // identity is created atomically with its Asset → Space → Availability
         // record, not by changing the Listing transport marker later.
         rejectGenericCommercialWorkflow(input.propertyType);
+        await assertGenericListingRouteAvailable(input.id, listing as Record<string, unknown>);
 
         const taxonomyChanged =
           (input.action !== undefined && input.action !== listing.action) ||
@@ -1171,6 +1214,7 @@ export const listingRouter = router({
         requireUser(ctx),
         'Not authorized to view this listing',
       );
+      await assertGenericListingRouteAvailable(input.id, listing as Record<string, unknown>);
 
       // Fetch media
       const rawMedia = await db.getListingMedia(input.id);
@@ -1266,7 +1310,11 @@ export const listingRouter = router({
         // Commercial marketing Listings are deliberately absent from the
         // generic authoring workspace. Their source of truth is the dedicated
         // Commercial inventory, including availability and advertiser custody.
-        return listings.filter(listing => !isCommercialMarketingPropertyType(listing.propertyType));
+        return listings.filter(
+          listing =>
+            !isCommercialMarketingPropertyType(listing.propertyType) &&
+            !isDedicatedLandWorkflowListingRecord(listing as Record<string, unknown>),
+        );
       } catch (error) {
         console.error('Error fetching user listings:', error);
         throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to fetch listings' });
@@ -1294,6 +1342,7 @@ export const listingRouter = router({
           });
         }
         rejectGenericCommercialWorkflow(listing.propertyType);
+        await assertGenericListingRouteAvailable(input.id, listing as Record<string, unknown>);
 
         // Archive listing
         await db.archiveListing(input.id);
@@ -1337,6 +1386,7 @@ export const listingRouter = router({
           });
         }
         rejectGenericCommercialWorkflow(listing.propertyType);
+        await assertGenericListingRouteAvailable(input.id, listing as Record<string, unknown>);
 
         // Published inventory is customer-visible supply. Removing it must
         // preserve the source record and durable history, and must cascade
@@ -1525,6 +1575,10 @@ export const listingRouter = router({
           requireUser(ctx),
           'Not authorized to view analytics for this listing',
         );
+        await assertGenericListingRouteAvailable(
+          input.listingId,
+          listing as Record<string, unknown>,
+        );
 
         // Fetch analytics
         const analytics = await db.getListingAnalytics(input.listingId);
@@ -1627,6 +1681,11 @@ export const listingRouter = router({
           if (!isOwner && !isAssignedAgent) {
             throw new TRPCError({ code: 'FORBIDDEN', message: 'Not authorized to view leads' });
           }
+
+          await assertGenericListingRouteAvailable(
+            input.listingId,
+            listing as Record<string, unknown>,
+          );
 
           // Published inventory lives in properties, while drafts and pending review listings
           // do not have public enquiries yet.
@@ -1880,6 +1939,10 @@ export const listingRouter = router({
             message: COMMERCIAL_INVENTORY_MANAGEMENT_MESSAGE,
           });
         }
+        await assertGenericListingRouteAvailable(
+          input.listingId,
+          listing as Record<string, unknown>,
+        );
 
         // Check readiness before allowing submission
         const fullListing = await db.getListingById(input.listingId);
@@ -2107,6 +2170,7 @@ export const listingRouter = router({
         // off this route prevents a legacy mutation from changing commercial
         // discovery state outside that lifecycle.
         rejectGenericCommercialWorkflow(listing.propertyType);
+        await assertGenericListingRouteAvailable(input.listingId, listing as Record<string, unknown>);
 
         // Gate: Quality Score >= 85 for featuring
         if (input.featured) {
@@ -2155,6 +2219,10 @@ export const listingRouter = router({
         if (!listing) {
           throw new TRPCError({ code: 'NOT_FOUND', message: 'Listing not found' });
         }
+        await assertGenericListingRouteAvailable(
+          input.listingId,
+          listing as Record<string, unknown>,
+        );
 
         // Update listing status to approved
         await db.approveListing(input.listingId, requireUser(ctx).id, input.notes);
@@ -2199,6 +2267,14 @@ export const listingRouter = router({
       try {
         // Construct composite reason if legacy reason provided
         // Store structured data
+        const listing = await db.getListingById(input.listingId);
+        if (!listing) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Listing not found' });
+        }
+        await assertGenericListingRouteAvailable(
+          input.listingId,
+          listing as Record<string, unknown>,
+        );
         await db.rejectListing(
           input.listingId,
           requireUser(ctx).id,

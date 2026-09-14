@@ -54,6 +54,7 @@ class FakeDrizzle {
   activeTransactionCount = 0;
   failureHook: ((call: DbCall) => Error | undefined) | undefined;
   private selectResults: Array<Record<string, unknown>[]> = [];
+  private landLinkResults: Array<Record<string, unknown>[]> = [];
   private commercialLinkResults: Array<Record<string, unknown>[]> = [];
 
   constructor() {
@@ -66,11 +67,17 @@ class FakeDrizzle {
     this.activeTransactionCount = 0;
     this.failureHook = undefined;
     this.selectResults = [];
+    this.landLinkResults = [];
     this.commercialLinkResults = [];
   }
 
   setNextSelectResult(rows: Record<string, unknown>[]) {
     this.selectResults.push(rows);
+    return this;
+  }
+
+  setNextLandLinkResult(rows: Record<string, unknown>[]) {
+    this.landLinkResults.push(rows);
     return this;
   }
 
@@ -87,6 +94,7 @@ class FakeDrizzle {
 
   private resolveSelect(tableName: string) {
     this.record({ type: 'select', table: tableName });
+    if (tableName === 'land_listing_links') return this.landLinkResults.shift() || [];
     // Generic Listing lifecycle fixtures intentionally own no canonical Commercial
     // association. Preserve their queued Listing/projection expectations while
     // representing the authoritative absence of Commercial capability ownership.
@@ -110,6 +118,8 @@ class FakeDrizzle {
       },
       limit: (n: number) => {
         this.record({ type: 'select', table: tableName, whereCols });
+        if (tableName === 'land_listing_links')
+          return Promise.resolve(this.landLinkResults.shift() || []);
         if (tableName === 'commercial_availability_listing_links')
           return Promise.resolve(this.commercialLinkResults.shift() || []);
         return Promise.resolve(this.selectResults.shift() || []);
@@ -121,6 +131,8 @@ class FakeDrizzle {
       then: (resolve: (v: any) => void) => {
         // If awaited directly (no .limit() called), resolve immediately
         this.record({ type: 'select', table: tableName, whereCols });
+        if (tableName === 'land_listing_links')
+          return resolve(this.landLinkResults.shift() || []);
         if (tableName === 'commercial_availability_listing_links')
           return resolve(this.commercialLinkResults.shift() || []);
         resolve(this.selectResults.shift() || []);
@@ -173,6 +185,7 @@ class FakeDrizzle {
     this.activeTransactionCount += 1;
     const callsBefore = this.calls.length;
     const selectsBefore = [...this.selectResults];
+    const landLinksBefore = [...this.landLinkResults];
     const commercialLinksBefore = [...this.commercialLinkResults];
     try {
       return await callback(this);
@@ -181,6 +194,7 @@ class FakeDrizzle {
       // issued through this executor disappear when the callback rejects.
       this.calls.splice(callsBefore);
       this.selectResults = selectsBefore;
+      this.landLinkResults = landLinksBefore;
       this.commercialLinkResults = commercialLinksBefore;
       throw error;
     } finally {
@@ -220,6 +234,7 @@ import {
   approveListing,
   archiveListing,
   createListing,
+  createListingRevision,
   deleteListing,
   rejectListing,
   replaceListingMedia,
@@ -1071,6 +1086,45 @@ describe('syncPublishedListingMediaToPropertyMirror (lower-level)', () => {
       0,
     );
   });
+
+  it('does not run generic media sync for deferred Land inventory', async () => {
+    fakeDb.setNextSelectResult([
+      listingRow({
+        id: 6005,
+        status: 'published',
+        propertyType: 'plot',
+        propertyDetails: { landEngine: true },
+      }),
+    ]);
+
+    await expect(syncPublishedListingMediaToPropertyMirror(6005)).resolves.toEqual({
+      synced: false,
+      reason: 'land_authority',
+    });
+    expect(mockAssertListingPublicationEntitled).not.toHaveBeenCalled();
+    expect(fakeDb.calls.filter(c => c.type === 'select' && c.table === 'properties')).toHaveLength(
+      0,
+    );
+  });
+});
+
+// ===========================================================================
+// createListingRevision — lower-level Land containment
+// ===========================================================================
+
+describe('createListingRevision (lower-level)', () => {
+  it('does not create a generic revision for a dedicated Land listing', async () => {
+    fakeDb.setNextSelectResult([
+      listingRow({
+        id: 6101,
+        status: 'published',
+        propertyType: 'plot',
+        propertyDetails: { landEngine: true },
+      }),
+    ]);
+
+    await expect(createListingRevision(6101)).rejects.toThrow(/dedicated Land workflow/);
+  });
 });
 
 // ===========================================================================
@@ -1123,6 +1177,10 @@ describe('rejectListing (lower-level)', () => {
 
 describe('archiveListing (lower-level)', () => {
   it('cascades archive status to linked property projection', async () => {
+    // archiveListing now verifies the canonical listing identity before
+    // allowing a generic lifecycle transition, so provide the ordinary
+    // listing row used by that boundary check.
+    fakeDb.setNextSelectResult([listingRow({ id: 9001, propertyType: 'house' })]);
     await archiveListing(9001);
 
     const listingUpdates = fakeDb.calls.filter(c => c.type === 'update' && c.table === 'listings');

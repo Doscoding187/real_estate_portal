@@ -46,6 +46,7 @@ import {
   sellerMandateOperations,
   SELLER_PROSPECT_TERMINAL_STAGE_VALUES,
 } from '../drizzle/schema';
+import { excludeLandFromGenericListingWorkflow } from './services/landLaunchContainmentService';
 
 async function withDeadlockRetry(operation: () => Promise<any>): Promise<any> {
   for (let attempt = 0; ; attempt += 1) {
@@ -1693,7 +1694,11 @@ function agencyListingScopeCondition(agencyId: number) {
 
 /** The general agency workspace intentionally excludes Commercial inventory. */
 function genericAgencyListingScopeCondition(agencyId: number) {
-  return and(agencyListingScopeCondition(agencyId), ne(listings.propertyType, 'commercial'))!;
+  return and(
+    agencyListingScopeCondition(agencyId),
+    ne(listings.propertyType, 'commercial'),
+    excludeLandFromGenericListingWorkflow(),
+  )!;
 }
 
 function rejectGenericAgencyCommercialWorkflow(listing: { propertyType?: unknown }): void {
@@ -2303,7 +2308,13 @@ async function requireAgencyListing(db: AgencyDb, agencyId: number, listingId: n
     .from(listings)
     .leftJoin(agents, eq(listings.agentId, agents.id))
     .leftJoin(users, eq(listings.ownerId, users.id))
-    .where(and(eq(listings.id, listingId), agencyListingScopeCondition(agencyId)))
+    .where(
+      and(
+        eq(listings.id, listingId),
+        agencyListingScopeCondition(agencyId),
+        excludeLandFromGenericListingWorkflow(),
+      ),
+    )
     .limit(1);
 
   if (!row) {

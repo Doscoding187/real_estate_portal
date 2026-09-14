@@ -12,6 +12,8 @@ const { mockDb } = vi.hoisted(() => ({
     recordUserListingViewFact: vi.fn(),
     getUserFavoriteFacts: vi.fn(),
     getUserRecentViewFacts: vi.fn(),
+    getDb: vi.fn(),
+    assertNotDedicatedLandWorkflowListing: vi.fn(),
   },
 }));
 
@@ -43,6 +45,8 @@ describe('public inventory authority safety contracts', () => {
     mockDb.deleteProperty.mockResolvedValue(undefined);
     mockDb.deleteListing.mockResolvedValue(undefined);
     mockDb.setUserFavoriteFact.mockResolvedValue({ propertyId: 705, saved: true });
+    mockDb.getDb.mockResolvedValue({});
+    mockDb.assertNotDedicatedLandWorkflowListing.mockResolvedValue(undefined);
     mockResolvePublicPropertyEligibility.mockReset();
   });
 

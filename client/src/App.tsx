@@ -52,7 +52,7 @@ const AgentTrainingSupport = lazy(() => import('./pages/agent/AgentTrainingSuppo
 const AgentSettings = lazy(() => import('./pages/AgentSettings'));
 const AgentSetup = lazy(() => import('./pages/AgentSetup'));
 const AgentPackageSelection = lazy(() => import('./pages/agent/AgentPackageSelection'));
-const LandAuthoringWorkspace = lazy(() => import('./pages/agent/LandAuthoringWorkspace'));
+const LandDeferred = lazy(() => import('./pages/LandDeferred'));
 const AcceptInvitation = lazy(() => import('./pages/AcceptInvitation'));
 const ExploreFeed = lazy(() => import('./pages/ExploreFeed'));
 const ExploreHome = lazy(() => import('./pages/ExploreHome'));
@@ -89,11 +89,8 @@ const ProExplorePage = lazy(() => import('./pages/pro/ProExplorePage'));
 
 const SuperAdminDashboard = lazy(() => import('@/pages/admin/SuperAdminDashboard'));
 const AdminPropertyReview = lazy(() => import('./pages/admin/AdminPropertyReview'));
-const LandReviewWorkspace = lazy(() => import('./pages/admin/LandReviewWorkspace'));
 const SharedLivingReviewWorkspace = lazy(() => import('./pages/admin/SharedLivingReviewWorkspace'));
-const PlotsAndLand = lazy(() => import('./pages/PlotsAndLand'));
 const FarmsAndSmallholdings = lazy(() => import('./pages/FarmsAndSmallholdings'));
-const LandDetail = lazy(() => import('./pages/LandDetail'));
 const CommercialOffice = lazy(() => import('./pages/CommercialOffice'));
 const SharedLiving = lazy(() => import('./pages/SharedLiving'));
 const SharedLivingDetail = lazy(() => import('./pages/SharedLivingDetail'));
@@ -252,7 +249,7 @@ function Router() {
           <Route path="/admin/review/:id" component={AdminPropertyReview} />
           <Route path="/admin/land-review">
             <RequireRole role="super_admin">
-              <LandReviewWorkspace />
+              <LandDeferred audience="reviewer" />
             </RequireRole>
           </Route>
           <Route path="/admin/shared-living-review">
@@ -285,7 +282,7 @@ function Router() {
           </Route>
           <Route path="/agent/land/create">
             <RequireRole role="agent" unauthenticatedAuthEntry="signin">
-              <LandAuthoringWorkspace />
+              <LandDeferred audience="author" />
             </RequireRole>
           </Route>
           <Route path="/agent/commercial/create">
@@ -702,8 +699,8 @@ function Router() {
               return <SearchResults />;
             }}
           />
-          <Route path="/plots-and-land" component={PlotsAndLand} />
-          <Route path="/land/:slug" component={LandDetail} />
+          <Route path="/plots-and-land" component={LandDeferred} />
+          <Route path="/land/:slug" component={LandDeferred} />
           <Route path="/property-to-rent" component={SearchResults} />
           <Route path="/farms-and-smallholdings" component={FarmsAndSmallholdings} />
 
