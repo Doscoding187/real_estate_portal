@@ -59,6 +59,11 @@ goal status:
   restoration, hosting connectivity, capacity, worker supervision and a
   deliberately enabled commercial path remain separately required before any
   paid launch. None is authorized by this tracker.
+- **Canonical agent coverage:** `f40ca8a3` replaces label/CSV coverage claims
+  with exact server-resolved location identities at the onboarding, public
+  discovery, and serving-agent boundary. Older unstructured values deliberately
+  fail closed until an agent reselects them. This is not a change to the
+  property-listing geography contract. See [LRC-GEO-001](03-launch-register.md#lrc-geo-001).
 
 ## Milestone reviews
 
@@ -436,6 +441,22 @@ Direct evidence:
 The result is task-branch local evidence. Provider delivery, operator audit/recovery,
 and worker restart handling remain Goal 9. No payment, entitlement activation,
 protected database operation, or production release occurred.
+
+
+### Post-goal coverage-authority correction — 2026-09-15
+
+The later browser/persisted-state inspection found an area-specific defect at
+the boundary between an agent-selected coverage location and public
+recommendation: one canonical label could be stored as comma-separated text,
+then split and partially matched. Commit
+[`f40ca8a3`](https://github.com/Doscoding187/real_estate_portal/commit/f40ca8a3bbed5bfc1f0ffeb675b2c9d10397f35e)
+supersedes that part of the earlier local evidence. It uses typed canonical IDs,
+server-generated labels, exact matching, and a deliberate fail-closed treatment
+for historic unstructured values. The authority-wrapped 9-file/73-test run and
+local Chromium save/reload acceptance prove the bounded correction on the exact
+owned target. The change neither alters property-listing geography nor claims
+hosted integration, production migration, or a live re-selection operation; see
+[LRC-GEO-001](03-launch-register.md#lrc-geo-001) for its release disposition.
 
 ## Goal 8 — Complete assigned-agent and agency CRM operation
 

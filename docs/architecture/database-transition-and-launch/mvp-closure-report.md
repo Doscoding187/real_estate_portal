@@ -1,14 +1,14 @@
 # Post-merge MVP closure review packet
 
-Date: 2026-09-14 (Goals 6–10 addendum, LRC-LAND-001 containment, and LRC-SUPPORT-001 bounded-intake follow-ups; original closure review dated 2026-09-13).
+Date: 2026-09-15 (canonical agent-coverage addendum; prior Goals 6–10, LRC-LAND-001, and LRC-SUPPORT-001 follow-ups dated 2026-09-14; original closure review dated 2026-09-13).
 **Outcome: the local candidate supports controlled
 pre-payment onboarding; canonical billing and activation paths are contained,
 and Goals 1–10 agency membership, workspace, commercial-term, private-preparation,
 review/publication, public-discovery, public-enquiry custody, CRM-continuity,
-first-cohort recovery, one consolidated agency operating acceptance, and hard-deferred
-Land containment are verified on the task branch. A bounded assisted-onboarding
-intake is also locally implemented; named support operations and final
-disclosures remain open. Normal commercial activation, hosted integration,
+first-cohort recovery, one consolidated agency operating acceptance, hard-deferred
+Land containment, and a canonical agent-coverage authority correction are verified
+on the task branch. A bounded assisted-onboarding intake is also locally implemented;
+named support operations and final disclosures remain open. Normal commercial activation, hosted integration,
 production verification, and protected release remain blocked.** This is not a declaration that all MVP
 journeys or production are verified. Database task classification: local-data workflow,
 followed by bounded consumer fixes. No schema authority changed.
@@ -59,6 +59,7 @@ protected environment.
 | Goal 10 full agency acceptance (task branch) | `fbf592cc7f1a808915be2b138e2f6f39a8b88963` |
 | Land hard-containment correction (task branch) | `335838dff0c746b860eaaf2930412d4b38540db5` |
 | Assisted-onboarding intake correction (task branch) | `144e90d1531d2e85a407e5dabecfb4124c8394bf` |
+| Canonical agent-coverage authority correction (task branch) | `f40ca8a3bbed5bfc1f0ffeb675b2c9d10397f35e` |
 | Branch                                              | `verify/mvp-closure-post-577`                                                 |
 | Worktree                                            | `/home/edwardspc/Desktop/Dev/worktrees/property-listify-mvp-closure-post-577` |
 
@@ -499,21 +500,71 @@ provided and accepted before external real-world onboarding. The correction
 does not enable payments, commercial entitlement, publication, provider mail,
 or a live paid cohort.
 
+## LRC-GEO-001 canonical agent-coverage authority follow-up
+
+A browser-level `/agent/setup` acceptance and persisted-state inspection found
+that one canonical autocomplete choice, for example `Sandton, Johannesburg,
+Gauteng`, was stored as comma-separated text. Existing readers split that one
+choice into several claims, and the serving-agent query used partial text
+matching. Reopening and saving could duplicate those fragments. This was a
+coverage-identity and recipient-selection integrity defect, not a problem with
+the canonical geography of the property listing itself.
+
+Commit [`f40ca8a3`](https://github.com/Doscoding187/real_estate_portal/commit/f40ca8a3bbed5bfc1f0ffeb675b2c9d10397f35e)
+changes the active `agents.areasServed` representation to a bounded JSON array
+of typed canonical identities plus server-generated display labels. A submitted
+browser label cannot become a coverage claim: the server accepts only
+`province:<id>`, `city:<id>`, or `suburb:<id>`, resolves each through the
+canonical location authority, and writes the authoritative hierarchy label.
+Public profile/discovery and serving-agent selection parse the same shape and
+match exact typed identities. `JSON_VALID` guards the MySQL predicate; legacy
+CSV, label arrays, malformed JSON, and unavailable locations fail closed with
+no text, label, partial-match, or geography-widening fallback.
+
+The deliberate transition consequence is that a profile holding an older
+unstructured coverage value is not represented as serving any canonical area
+until its owner reselects coverage. No migration or manual data repair was
+performed, and the inactive `agent_coverage_areas` register was not promoted:
+its authority contract has no settled runtime writers or readers. This preserves
+the established database authority and avoids creating a parallel coverage
+model.
+
+Direct local evidence on the exact owned disposable target:
+
+- `pnpm test:authority -- server/services/__tests__/agentCoverageAreaService.test.ts server/__tests__/contract.agent-public-profile.test.ts server/__tests__/contract.agents-serving-location.test.ts server/__tests__/integration.agency-listing-publication-lifecycle.test.ts client/src/components/agent/AgentSetupWizard.test.tsx client/src/pages/Agents.test.tsx client/src/pages/AgentMicrosite.test.tsx server/_core/databaseAuthority/__tests__/listingPreviewFixture.test.ts server/_core/databaseAuthority/__tests__/homepageJourneyPreviewFixture.test.ts` passed **9 files / 73 tests**. It covers forged labels, legacy values, unavailable records, operational resolver failures, exact public profile/discovery behavior, typed HTTP profile submission, persisted serialized state, and the authenticated agency lifecycle.
+- `pnpm run check`, `pnpm run lint:check`, and `pnpm test:db-authority:static` passed after the correction; the static authority suite reported **35 files / 293 tests**. The canonical non-commercial listing-preview fixture was prepared and verified as `listing-preview-auth-v2`, digest `72b4875f1549e7ac7af9aa7e294c14880df1c168b8ef01224084d35695c14654`.
+- Chromium at `1440x900` completed `/agent/setup` against the local application: it displayed exactly one `Sandton, Johannesburg, Gauteng` coverage chip, saved it, navigated away and back, reloaded, and retained exactly that one canonical choice with no page errors. The browser process used the exact owned target above.
+
+A direct unconfigured `pnpm dev:frontend` invocation initially rendered blank
+because this worktree has no `.env.local` and the client deliberately requires
+`VITE_API_URL`. The central local configuration contains the required values;
+running the verification frontend with the assigned local endpoint succeeded.
+This is a local verification-process limitation, not a database failure, hosted
+configuration result, or justification to alter release configuration in this
+bounded correction.
+
+This is branch-local source and browser evidence only. It does not establish
+hosted integration, production data migration, a live agent re-selection
+operation, payment activation, entitlement change, provider behavior, or a
+protected release. The homepage preview fixture was not prepared because it
+would create paid launch-access fixture state; that boundary remains intact.
+
 ## Ranked remaining blockers and authority handoff
 
 1. **L0 — integrate and independently verify the locally contained Land boundary (LRC-LAND-001):** `335838df` hard-deferred Land at direct and generic source boundaries on this task branch. It must remain unavailable to the controlled pre-payment onboarding cohort and public routes until integrated verification and a separately authorized Land commercial/acceptance slice exist.
-2. **L1 — normal-runtime commercial activation and protected release
+2. **L1 — integrate and host-verify canonical agent coverage authority (LRC-GEO-001):** `f40ca8a3` removes untrusted text coverage claims and partial matching on this branch. Historic unstructured coverage intentionally fails closed until an agent reselects canonical locations. Verify that transition and exact serving-agent behavior after integration before treating public agent discovery or coverage-driven recipient recommendations as launch-ready.
+3. **L1 — normal-runtime commercial activation and protected release
    (LRC-PAY-001):** the source containment candidate is locally proven, but a
    stakeholder cannot publish until separately approved payment, finance,
    entitlement, and protected-release evidence exists. Controlled pre-payment
    onboarding may prepare identities and private drafts only. Do not replace
    this boundary with a free publishing entitlement or a privilege bypass.
-3. **L1 — integrate and host-verify the completed agency slice
+4. **L1 — integrate and host-verify the completed agency slice
    (LRC-AGY-001):** Goal 10 now proves the complete first-cohort agency journey
    locally. It remains task-branch evidence, with no browser UI, hosted,
    provider, or production proof; senior review, integration, and controlled
    runtime acceptance remain required before any cohort is represented as live.
-4. **L1 — support/disclosure operation and external/protected operations:**
+5. **L1 — support/disclosure operation and external/protected operations:**
    `144e90d1` makes assisted-onboarding intake durable and reviewable, but it
    is not a monitored contact service. A named queue owner, cadence,
    reply/escalation channel, and finalized launch Terms/Privacy content remain
@@ -521,25 +572,25 @@ or a live paid cohort.
    verification/recovery mail, recipient delivery, Azure grant/provider
    behavior, restoration, worker supervision, and capacity remain unproven.
    Local mocks and green CI cannot authorize launch.
-5. **L2 — deferred polish/performance debt:** existing lint/bundle warnings,
+6. **L2 — deferred polish/performance debt:** existing lint/bundle warnings,
    optional map preview and broad optional product surfaces. These do not justify
    widening this workstream.
 
 The [central launch register](../launch-readiness-and-product-convergence/03-launch-register.md)
-contains complete records for the two fixes, the payment/publication
-containment correction, and the agency-goal progress. No record is production
-verified; source fixes await integration. This is a review packet, not
-permission to enable payments.
+contains complete records for the source corrections, the payment/publication
+containment decision, the agency-goal progress, and the canonical coverage
+follow-up. No record is production verified; source fixes await integration.
+This is a review packet, not permission to enable payments.
 
 ## Proposed next protected-release packet (not executed)
 
 Packet revision 1 should bind master-plan 1.3, reviewed source/tree, manifest
 and model digests, exact Azure target fingerprint, accepted/expected head and
-fresh runner plan digest. The local agency acceptance, Land source containment,
-and assisted-onboarding intake are complete; first resolve the named
-support/disclosure operation, then integrate the reviewed candidate and gather
-the required hosted evidence, including independent Land containment and
-assisted-intake verification. Commercial activation remains
+fresh runner plan digest. The local agency acceptance, Land source containment, assisted-onboarding
+intake, and canonical agent-coverage correction are complete; first resolve the
+named support/disclosure operation, then integrate the reviewed candidate and
+gather the required hosted evidence, including independent Land containment,
+assisted-intake, and coverage-transition verification. Commercial activation remains
 a separate owner-approved release decision. Then seek explicit authorization for
 each protected operation; a read-only plan does not authorize apply.
 
@@ -566,8 +617,9 @@ Application fixes are committed at `c6c9f133`, `bba390b0`, `c8c35fde`,
 `a403d31d`, Goal 5 publication correction `74bff0f9`, Goal 6 public-discovery
 correction `9acfea2f`, Goals 7–8 CRM correction `c4df6600`, Goal 9
 platform-recovery correction `f9086ef4`, Goal 10 full acceptance `fbf592cc`,
-Land containment correction `335838df`, and bounded assisted-onboarding intake
-`144e90d1`; the review packet, escalation resolution, register, and queue
+Land containment correction `335838df`, bounded assisted-onboarding intake
+`144e90d1`, and canonical agent-coverage authority correction `f40ca8a3`; the
+review packet, escalation resolution, register, and queue
 runbook retain their respective evidence commits. Final Git status was clean
 after each recorded commit before the next bounded workstream began. No merge, feature push,
 deployment, cutover, Azure/TiDB access, protected migration, credential/grant

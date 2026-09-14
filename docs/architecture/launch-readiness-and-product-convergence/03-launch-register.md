@@ -2,9 +2,9 @@
 
 | Field            | Authority                                                                                                                                                                                                                                                                                                                                                                                                  |
 | ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Status           | Canonical billing and activation containment, Goals 1–10 agency-membership/workspace/commercial-term/private-preparation/review/public-discovery/enquiry/CRM/first-cohort-recovery corrections, Land hard-containment, and a bounded assisted-onboarding intake are locally verified on the task-owned branch. They await integration; named support operations/disclosures, normal-runtime commercial activation, external provider reliability, and protected release remain open or blocked as recorded below. |
+| Status           | Canonical billing and activation containment, Goals 1–10 agency-membership/workspace/commercial-term/private-preparation/review/public-discovery/enquiry/CRM/first-cohort-recovery corrections, Land hard-containment, a bounded assisted-onboarding intake, and canonical agent-coverage authority are locally verified on the task-owned branch. They await integration; named support operations/disclosures, normal-runtime commercial activation, external provider reliability, and protected release remain open or blocked as recorded below. |
 | Scope            | Central launch disposition and verification register. It is not an implementation backlog.                                                                                                                                                                                                                                                                                                                 |
-| Candidate status | Merged base 4e012b3044628fc06da7489c0055e9ce01bdc8d9; billing containment source c8c35fde44d00ff8b2ce83ca73fcb32dd522e9bc, Goal 10 agency acceptance `fbf592cc`, Land hard-containment `335838dff0c746b860eaaf2930412d4b38540db5`, and bounded assisted-onboarding intake `144e90d1531d2e85a407e5dabecfb4124c8394bf` passed their stated local checks. All remain task-branch evidence and await integration. |
+| Candidate status | Merged base 4e012b3044628fc06da7489c0055e9ce01bdc8d9; billing containment source c8c35fde44d00ff8b2ce83ca73fcb32dd522e9bc, Goal 10 agency acceptance `fbf592cc`, Land hard-containment `335838dff0c746b860eaaf2930412d4b38540db5`, and bounded assisted-onboarding intake `144e90d1531d2e85a407e5dabecfb4124c8394bf`, and canonical agent-coverage authority `f40ca8a3bbed5bfc1f0ffeb675b2c9d10397f35e` passed their stated local checks. All remain task-branch evidence and await integration. |
 | Evidence method  | [Evidence Sequence and Provenance Contract](06-evidence-sequence-and-provenance-contract.md) governs material technical claims and their boundaries; this register remains the sole launch-disposition authority.                                                                                                                                                                                          |
 
 ## Stable issue identifiers
@@ -48,6 +48,7 @@ This index is for navigation and programme oversight. Its **Full record** column
 | LRC-PAY-001     | 2026-09-13    | Billing/activation containment     | L1       | Commercial access / publication        | Fix now                                     | in progress | [Record](#lrc-pay-001)     |
 | LRC-MEM-001     | 2026-09-13    | Agency affiliation and membership  | L0       | Agency membership / listing authority  | Fix now                                     | in progress | [Record](#lrc-mem-001)     |
 | LRC-AGY-001     | 2026-09-13    | Agency entitlement and lead access | L1       | Commercial access / lead custody       | Fix before agency launch                    | in progress | [Record](#lrc-agy-001)     |
+| LRC-GEO-001     | 2026-09-15    | Agent coverage identity             | L1       | Agent onboarding / public discovery / recipient eligibility | Fix now | in progress | [Record](#lrc-geo-001)     |
 | LRC-LEAD-001    | 2026-09-14    | Platform-custody recovery audit     | L1       | Lead delivery / operations             | Fix now                                     | in progress | [Record](#lrc-lead-001)    |
 | LRC-LAND-001    | 2026-09-13    | Land public visibility containment | L0       | Land / commercial-publication boundary | Contain now; defer from pre-payment cohort and public exposure | in progress | [Record](#lrc-land-001)    |
 | LRC-SUPPORT-001 | 2026-09-13    | Assisted support and disclosures   | L1       | Stakeholder operations                 | Implement bounded intake; fix before controlled real-world onboarding | in progress | [Record](#lrc-support-001) |
@@ -174,6 +175,31 @@ This index is for navigation and programme oversight. Its **Full record** column
 | Status                                  | in progress                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | Notes                                   | Goals 3–10 close the canonical agency commercial-owner, fixed-term-expiry, review/publication, public discovery, enquiry custody, CRM continuity, and scoped platform-recovery gaps in one local operating acceptance without enabling normal-runtime commercial activation. Goal 8 separates receipt of new marketplace opportunities from authority to work existing custody and fails closed for stale agency membership. Goal 9 provides only internal CRM/platform manual recovery; it makes no provider-delivery promise. Hosted integration, external provider reliability, and production verification remain open. Do not require a second individual purchase for agency operation. |
 
+
+
+### LRC-GEO-001
+
+| Field                                   | Record |
+| --------------------------------------- | ------ |
+| Issue ID                                | LRC-GEO-001 |
+| Date observed                           | 2026-09-15 |
+| Exact Git SHA                           | `7ad5cdef` (observed task-branch candidate); `f40ca8a3bbed5bfc1f0ffeb675b2c9d10397f35e` (fixed source) |
+| Page or journey                         | Agent coverage setup, public agent discovery, and serving-agent recipient eligibility |
+| URL                                     | `/agent/setup`; `/agent/settings`; `/agents`; canonical `findAgentsServingLocation` service boundary |
+| User role                               | Authenticated agent; anonymous public discovery and lead-recipient boundary |
+| Viewport or device                      | Chromium desktop `1440x900`; exact-target HTTP, persisted-state, and contract/integration tests |
+| Current behaviour                       | One canonical autocomplete label was persisted as comma-separated text. Readers split it into several claims and serving-agent selection used partial text matching, so saving/reopening could duplicate fragments and a label could influence coverage without one exact canonical identity. |
+| Expected behaviour                      | Coverage is an explicit bounded set of server-resolved `province:<id>`, `city:<id>`, or `suburb:<id>` identities. Public discovery and recipient selection match those identities exactly; labels are display-only and cannot widen geography. |
+| Evidence reference                      | [MVP closure report](../database-transition-and-launch/mvp-closure-report.md#lrc-geo-001-canonical-agent-coverage-authority-follow-up): exact owned target `a560e9f2971e7676…`, authority-wrapped 9-file/73-test run, static authority 35-file/293-test run, listing-preview v2 prepare/verify, and local Chromium save/reload acceptance. |
+| Severity                                | L1 |
+| Owning engine                           | Agent onboarding / public discovery / recipient eligibility |
+| Launch decision                         | Fix now |
+| Approved implementation branch/worktree | `verify/mvp-closure-post-577` / `/home/edwardspc/Desktop/Dev/worktrees/property-listify-mvp-closure-post-577` |
+| Pull request or commit                  | [`f40ca8a3`](https://github.com/Doscoding187/real_estate_portal/commit/f40ca8a3bbed5bfc1f0ffeb675b2c9d10397f35e) |
+| Integrated verification                 | Pending; source and local exact-target/browser evidence only. |
+| Production verification                 | Pending; no protected system, live data, deployment, or operating channel accessed. |
+| Status                                  | in progress |
+| Notes                                   | Historic CSV, bare-label JSON, malformed, and unavailable coverage values intentionally fail closed until the agent reselects current canonical locations. No migration, manual data repair, `agent_coverage_areas` promotion, payment/entitlement change, or release action occurred. The property-listing geography contract remains unchanged. |
 
 ### LRC-LEAD-001
 
