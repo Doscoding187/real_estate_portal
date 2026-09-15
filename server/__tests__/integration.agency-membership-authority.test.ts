@@ -37,6 +37,7 @@ import { resolveCurrentAgencyAffiliation } from '../services/agentPublicProfileS
 import { agentOnboardingService } from '../services/agentOnboardingService';
 import { agentProfileSchema } from '../routes/agentOnboarding';
 import { createListing } from '../db';
+import { requireAgencyAssignableAgent } from '../services/sellerProspectAccessService';
 
 const created = {
   userIds: [] as number[],
@@ -52,6 +53,12 @@ let acceptanceCallerFor: (user: {
   agencyId?: number | null;
   email?: string | null;
 }) => { invitation: { accept: (input: { token: string }) => Promise<unknown> } };
+let applicationCallerFor: (user: {
+  id: number;
+  role: string;
+  agencyId?: number | null;
+  email?: string | null;
+}) => any;
 
 /**
  * Acceptance mints a fresh session token through the real auth service.
@@ -62,7 +69,7 @@ let acceptanceCallerFor: (user: {
  */
 async function ensureTestAuthEnvironmentAndRouter() {
   const { appRouter } = await import('../routers');
-  acceptanceCallerFor = user =>
+  applicationCallerFor = user =>
     appRouter.createCaller({
       req: {
         hostname: 'localhost',
@@ -74,6 +81,7 @@ async function ensureTestAuthEnvironmentAndRouter() {
       res: { cookie: () => undefined },
       user,
     } as any);
+  acceptanceCallerFor = user => applicationCallerFor(user);
 }
 
 function acceptanceCaller(user: {
@@ -83,6 +91,15 @@ function acceptanceCaller(user: {
   email?: string | null;
 }) {
   return acceptanceCallerFor!(user);
+}
+
+function applicationCaller(user: {
+  id: number;
+  role: string;
+  agencyId?: number | null;
+  email?: string | null;
+}) {
+  return applicationCallerFor!(user);
 }
 
 async function insertId(result: any): Promise<number> {
@@ -249,6 +266,10 @@ afterAll(async () => {
       .catch(() => undefined);
   }
   for (const id of created.agentIds) {
+    await db
+      .delete(agencyAgentMemberships)
+      .where(eq(agencyAgentMemberships.agentId, id))
+      .catch(() => undefined);
     await db
       .delete(agents)
       .where(eq(agents.id, id))
@@ -477,6 +498,74 @@ describeWithDb('team operations on canonical membership', () => {
     // Assignment dropdown excludes the lapsed member entirely.
     const assignable = await adminCaller.agency.listAssignableAgents();
     expect(assignable.map((a: { id: number }) => Number(a.id))).not.toContain(agentId);
+  });
+
+  it('does not let a retained agency profile outlive canonical seller-prospect or analytics authority', async () => {
+    const agencyId = await insertAgency('PrivateWorkspace');
+    const ownerUserId = await insertUser('PrivateWorkspaceOwner', 'agency_admin');
+    await db.update(users).set({ agencyId }).where(eq(users.id, ownerUserId));
+
+    const memberUserId = await insertUser('PrivateWorkspaceMember', 'agent');
+    await db
+      .update(users)
+      .set({ agencyId, isSubaccount: 1 })
+      .where(eq(users.id, memberUserId));
+    const agentId = await insertAgentProfile(memberUserId, agencyId);
+    await maintainAgencyAgentMembership(db, {
+      agencyId,
+      agentId,
+      status: 'active',
+      actorUserId: ownerUserId,
+    });
+
+    const managerCaller = applicationCaller({
+      id: ownerUserId,
+      role: 'agency_admin',
+      agencyId,
+    });
+    const memberCaller = applicationCaller({
+      id: memberUserId,
+      role: 'agent',
+      agencyId,
+    });
+
+    await expect(memberCaller.canvassing.getWorkspaceAccess()).resolves.toMatchObject({
+      mode: 'agency_team',
+      scope: 'agent',
+      agencyId,
+    });
+    await expect(requireAgencyAssignableAgent(db, agencyId, agentId)).resolves.toMatchObject({
+      id: agentId,
+    });
+    await expect(managerCaller.canvassing.listAssignableAgents()).resolves.toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: agentId })]),
+    );
+
+    await maintainAgencyAgentMembership(db, {
+      agencyId,
+      agentId,
+      status: 'suspended',
+      actorUserId: ownerUserId,
+    });
+
+    const [retainedUser] = await db.select().from(users).where(eq(users.id, memberUserId)).limit(1);
+    const [retainedProfile] = await db.select().from(agents).where(eq(agents.id, agentId)).limit(1);
+    expect(retainedUser.agencyId).toBe(agencyId);
+    expect(retainedProfile.agencyId).toBe(agencyId);
+
+    await expect(memberCaller.canvassing.getWorkspaceAccess()).resolves.toMatchObject({
+      mode: 'agency_profile_required',
+    });
+    await expect(memberCaller.canvassing.list({})).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    await expect(requireAgencyAssignableAgent(db, agencyId, agentId)).rejects.toMatchObject({
+      code: 'FORBIDDEN',
+    });
+    await expect(
+      memberCaller.exploreApi.getAgencyAnalytics({ agencyId, dateRange: '7d' }),
+    ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    await expect(managerCaller.canvassing.listAssignableAgents()).resolves.not.toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: agentId })]),
+    );
   });
 
   it('does not attribute a suspended member’s private draft to the stale agency profile claim', async () => {

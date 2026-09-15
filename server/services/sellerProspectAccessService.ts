@@ -1,6 +1,7 @@
 import { TRPCError } from '@trpc/server';
 import { and, eq } from 'drizzle-orm';
 import { agents, sellerMandateOperations, sellerProspects } from '../../drizzle/schema';
+import { resolveCurrentAgencyMembershipForAgent } from './agencyMembershipService';
 
 export const SELLER_PROSPECT_LISTING_HANDOFF_STAGES = ['qualified', 'mandate_won'] as const;
 export const MANDATE_READINESS_REQUIREMENTS = [
@@ -45,29 +46,22 @@ export async function getSellerProspectActorScope(
   db: any,
   user: AgencyUser,
 ): Promise<SellerProspectActorScope> {
-  const agencyId = Number(user.agencyId || 0);
-  if (!agencyId) {
-    throw new TRPCError({
-      code: 'FORBIDDEN',
-      message: 'You must belong to an agency to work seller prospects.',
-    });
-  }
-
   const isManager = user.role === 'agency_admin' || user.role === 'super_admin';
   if (isManager) {
+    const agencyId = Number(user.agencyId || 0);
+    if (!agencyId) {
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message: 'You must belong to an agency to work seller prospects.',
+      });
+    }
     return { agencyId, agentId: null, isManager: true };
   }
 
   const [agent] = await db
     .select({ id: agents.id })
     .from(agents)
-    .where(
-      and(
-        eq(agents.userId, user.id),
-        eq(agents.agencyId, agencyId),
-        eq(agents.status, 'approved'),
-      ),
-    )
+    .where(and(eq(agents.userId, user.id), eq(agents.status, 'approved')))
     .limit(1);
 
   if (!agent) {
@@ -77,7 +71,15 @@ export async function getSellerProspectActorScope(
     });
   }
 
-  return { agencyId, agentId: Number(agent.id), isManager: false };
+  const membership = await resolveCurrentAgencyMembershipForAgent(db, Number(agent.id));
+  if (!membership) {
+    throw new TRPCError({
+      code: 'FORBIDDEN',
+      message: 'A current agency membership is required to work seller prospects.',
+    });
+  }
+
+  return { agencyId: Number(membership.agencyId), agentId: Number(agent.id), isManager: false };
 }
 
 export async function requireSellerProspect(
@@ -102,15 +104,21 @@ export async function requireAgencyAssignableAgent(db: any, agencyId: number, ag
   const [agent] = await db
     .select({ id: agents.id, userId: agents.userId, displayName: agents.displayName })
     .from(agents)
-    .where(
-      and(eq(agents.id, agentId), eq(agents.agencyId, agencyId), eq(agents.status, 'approved')),
-    )
+    .where(and(eq(agents.id, agentId), eq(agents.status, 'approved')))
     .limit(1);
 
   if (!agent) {
     throw new TRPCError({
       code: 'FORBIDDEN',
       message: 'Agent is not an approved member of this agency.',
+    });
+  }
+
+  const membership = await resolveCurrentAgencyMembershipForAgent(db, Number(agent.id));
+  if (!membership || Number(membership.agencyId) !== agencyId) {
+    throw new TRPCError({
+      code: 'FORBIDDEN',
+      message: 'Agent is not a current member of this agency.',
     });
   }
 
