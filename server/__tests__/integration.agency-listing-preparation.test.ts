@@ -15,15 +15,18 @@ import {
   agencyAgentMemberships,
   agencyBranding,
   agents,
+  billableAccounts,
   invitations,
   listingAnalytics,
   listingApprovalQueue,
   listingMedia,
   listings,
+  plans,
   cities,
   provinces,
   properties,
   suburbs,
+  subscriptions,
   users,
 } from '../../drizzle/schema';
 import { authService } from '../_core/auth';
@@ -68,6 +71,45 @@ function insertId(result: unknown): number {
     : (result as { insertId?: unknown } | undefined);
   const value = Number(entry?.insertId ?? 0);
   return Number.isSafeInteger(value) && value > 0 ? value : 0;
+}
+
+function dbTimestamp(value: Date): string {
+  return value.toISOString().slice(0, 19).replace('T', ' ');
+}
+
+/**
+ * Isolated fixture only: an agency member can be established after a valid
+ * commercial term, then continue private preparation when the term is no
+ * longer active. It does not exercise normal-runtime payment activation.
+ */
+async function createActiveAgencyInvitationAccess(agencyId: number, actorUserId: number) {
+  const [plan] = await db
+    .select({ id: plans.id })
+    .from(plans)
+    .where(eq(plans.name, 'agency_launch_access'))
+    .limit(1);
+  if (!plan) throw new Error('Canonical agency Launch Access reference data is unavailable.');
+
+  const [accountResult] = await db.insert(billableAccounts).values({
+    accountKind: 'agency',
+    agencyId,
+  } satisfies typeof billableAccounts.$inferInsert);
+  const accountId = insertId(accountResult);
+  if (!accountId) throw new Error('Could not create agency billable-account fixture.');
+
+  const now = new Date();
+  await db.insert(subscriptions).values({
+    ownerType: 'agency',
+    ownerId: agencyId,
+    billableAccountId: accountId,
+    planId: plan.id,
+    status: 'active',
+    currentPeriodStart: dbTimestamp(now),
+    currentPeriodEnd: dbTimestamp(new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)),
+    cancelAtPeriodEnd: 0,
+    createdBy: actorUserId,
+    updatedBy: actorUserId,
+  } satisfies typeof subscriptions.$inferInsert);
 }
 
 function trpcClient(cookie: string) {
@@ -163,6 +205,12 @@ async function cleanup() {
     await db.delete(agents).where(eq(agents.id, created.agentId));
   }
   if (created.agencyId) {
+    await db
+      .delete(subscriptions)
+      .where(
+        and(eq(subscriptions.ownerType, 'agency'), eq(subscriptions.ownerId, created.agencyId)),
+      );
+    await db.delete(billableAccounts).where(eq(billableAccounts.agencyId, created.agencyId));
     await db.delete(agencyBranding).where(eq(agencyBranding.agencyId, created.agencyId));
     await db.delete(invitations).where(eq(invitations.agencyId, created.agencyId));
   }
@@ -215,7 +263,7 @@ afterAll(async () => {
 });
 
 describeWithDb('agency listing preparation acceptance', () => {
-  it('creates a real private draft with confirmed media/geography and denies publication before activation', async () => {
+  it('keeps private preparation available to an established agency member while publication is inactive', async () => {
     const suffix = `${Date.now()}-${randomUUID().slice(0, 8)}`;
     const [agencyResult] = await db.insert(agencies).values({
       name: `Preparation Agency ${suffix}`,
@@ -261,9 +309,37 @@ describeWithDb('agency listing preparation acceptance', () => {
     } satisfies typeof invitations.$inferInsert);
 
     const preAccept = trpcClient(await sessionCookie(member.id));
+    await expect(
+      preAccept.invitation.accept.mutate({ token: invitationToken }),
+    ).rejects.toMatchObject({
+      data: { code: 'PRECONDITION_FAILED' },
+    });
+    expect(await db.select().from(agents).where(eq(agents.userId, member.id))).toHaveLength(0);
+    const [queuedInvitation] = await db
+      .select({ status: invitations.status })
+      .from(invitations)
+      .where(eq(invitations.token, invitationToken))
+      .limit(1);
+    expect(queuedInvitation).toEqual({ status: 'pending' });
+
+    // Membership begins only after a canonical paid-term fixture. The fixture
+    // is then returned to the normal inactive preparation state to prove that
+    // private drafts remain private and cannot enter review/publication.
+    await createActiveAgencyInvitationAccess(created.agencyId, owner.id);
     await expect(preAccept.invitation.accept.mutate({ token: invitationToken })).resolves.toEqual({
       success: true,
     });
+    await db
+      .update(subscriptions)
+      .set({
+        status: 'pending_payment',
+        currentPeriodStart: null,
+        currentPeriodEnd: null,
+        updatedAt: dbTimestamp(new Date()),
+      })
+      .where(
+        and(eq(subscriptions.ownerType, 'agency'), eq(subscriptions.ownerId, created.agencyId)),
+      );
 
     const [agent] = await db
       .select({ id: agents.id, status: agents.status, agencyId: agents.agencyId })
@@ -318,7 +394,7 @@ describeWithDb('agency listing preparation acceptance', () => {
     }
 
     const description =
-      'A carefully prepared family home in Sandton with verified private address details, clear pricing, and enough context for a reviewer to assess the inventory before commercial activation.';
+      'A carefully prepared family home in Sandton with verified private address details, clear pricing, and enough context for a reviewer to assess the private inventory before commercial activation resumes.';
     const propertyDetails = {
       corePropertyInformation: {
         version: 1,

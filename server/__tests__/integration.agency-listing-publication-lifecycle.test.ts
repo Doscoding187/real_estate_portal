@@ -534,196 +534,23 @@ describeWithDb('agency full operating journey acceptance', () => {
     expect(verifiedAgency).toMatchObject({ id: created.agencyId, isVerified: 1 });
     expect((await ownerApi.agency.getAccessState.query()).workspaceAccess.publishing).toBe(false);
 
-    await expect(memberApi.invitation.accept.mutate({ token: invitation.token })).resolves.toEqual({
-      success: true,
-    });
-
-    const [agent] = await db
-      .select({
-        id: agents.id,
-        userId: agents.userId,
-        agencyId: agents.agencyId,
-        status: agents.status,
-        isVerified: agents.isVerified,
-      })
-      .from(agents)
-      .where(eq(agents.userId, member.id))
-      .limit(1);
-    if (!agent) throw new Error('Canonical invitation acceptance did not create an agent profile.');
-    created.agentId = Number(agent.id);
-    expect(agent).toMatchObject({
-      userId: member.id,
-      agencyId: created.agencyId,
-      status: 'approved',
-      isVerified: 0,
-    });
-
-    const [individualSubscription] = await db
-      .select({ id: subscriptions.id })
-      .from(subscriptions)
-      .where(and(eq(subscriptions.ownerType, 'agent'), eq(subscriptions.ownerId, member.id)))
-      .limit(1);
-    expect(individualSubscription).toBeUndefined();
-
-    const location = await canonicalSandtonLocation();
-    const canonicalSuburbId = encodeCanonicalLocationId('suburb', Number(location.suburbId));
-    const canonicalCoverage = {
-      canonicalLocationId: canonicalSuburbId,
-      label: [location.suburbName, location.cityName, location.provinceName].join(', '),
-    };
-    const rejectedTextCoverageResponse = await fetch(`${baseUrl}/api/agent/profile`, {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        cookie: member.cookie,
-      },
-      body: JSON.stringify({
-        displayName: `Publication Member ${suffix}`,
-        phone: '+27825550188',
-        areasServed: ['Sandton'],
-      }),
-    });
-    expect(rejectedTextCoverageResponse.status).toBe(400);
-
-    const profileResponse = await fetch(`${baseUrl}/api/agent/profile`, {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        cookie: member.cookie,
-      },
-      body: JSON.stringify({
-        displayName: `Publication Member ${suffix}`,
-        phone: '+27825550188',
-        whatsapp: '+27825550188',
-        bio: 'An agency member preparing residential inventory before commercial activation.',
-        licenseNumber: `PL-${suffix}`,
-        yearsExperience: 5,
-        focus: 'sales',
-        areasServed: [canonicalSuburbId],
-        specializations: ['Residential sales'],
-        propertyTypes: ['house'],
-        languages: ['English'],
-        slug: `publication-member-${suffix}`,
-        onboardingStep: 4,
-      }),
-    });
-    expect(profileResponse.status).toBe(200);
-    const profileBody = await profileResponse.json();
-    expect(profileBody).toMatchObject({
-      success: true,
-      profile: { agencyId: created.agencyId, areasServed: [canonicalCoverage] },
-    });
-    const [persistedCoverage] = await db
-      .select({ areasServed: agents.areasServed })
-      .from(agents)
-      .where(eq(agents.id, created.agentId))
-      .limit(1);
-    expect(parseAgentCoverageAreas(persistedCoverage?.areasServed)).toEqual([canonicalCoverage]);
-    const preActivationStatus = await agentOnboardingStatus(member.id, member.cookie);
-    expect(preActivationStatus.entitlements).toMatchObject({
-      canReceiveLeads: false,
-      canAccessExistingLeads: true,
-    });
-
-    const mediaManifest: Array<{
-      id: string;
-      mediaType: 'image';
-      uploadToken: string;
-      fileName: string;
-      fileSize: number;
-    }> = [];
-    for (let index = 0; index < 5; index += 1) {
-      const fileName = `publication-home-${index + 1}.png`;
-      const reservation = await memberApi.listing.uploadMedia.mutate({
-        type: 'image',
-        filename: fileName,
-        contentType: 'image/png',
-      });
-      const body = Buffer.from(`publication-media-${index + 1}-${suffix}`);
-      const uploadResponse = await fetch(`${baseUrl}${reservation.uploadUrl}`, {
-        method: 'PUT',
-        headers: { 'content-type': 'image/png', 'content-length': String(body.length) },
-        body,
-      });
-      expect(uploadResponse.status).toBe(200);
-      const confirmed = await memberApi.listing.confirmMediaUpload.mutate({
-        uploadToken: reservation.uploadToken,
-      });
-      expect(confirmed).toMatchObject({ mediaId: reservation.mediaId, fileSize: body.length });
-      mediaManifest.push({
-        id: reservation.mediaId,
-        mediaType: 'image',
-        uploadToken: confirmed.uploadToken,
-        fileName,
-        fileSize: body.length,
-      });
-    }
-
-    const title = `Reviewable Sandton family home ${suffix}`;
-    const description =
-      'A reviewable family home with verified private address details, clear pricing, and enough context for a reviewer to assess the agency inventory.';
-    const listingInput = {
-      action: 'sell' as const,
-      propertyType: 'house' as const,
-      title,
-      description,
-      pricing: { askingPrice: 2_450_000, negotiability: 'not_negotiable' as const },
-      propertyDetails: {
-        corePropertyInformation: {
-          version: 1,
-          bedrooms: { status: 'known', value: 3 },
-          bathrooms: { status: 'known', value: 2 },
-          internalArea: { status: 'known', valueM2: 180, unit: 'm2' },
-          erfArea: { status: 'known', valueM2: 620, unit: 'm2' },
-        },
-      },
-      location: {
-        address: '18 Review Avenue',
-        latitude: -26.1076,
-        longitude: 28.0567,
-        city: 'Johannesburg',
-        suburb: 'Sandton',
-        province: 'Gauteng',
-        postalCode: '2196',
-        provinceId: Number(location.provinceId),
-        cityId: Number(location.cityId),
-        suburbId: Number(location.suburbId),
-        privateAddress: {
-          streetNumber: '18',
-          streetName: 'Review Avenue',
-          postalCode: '2196',
-        },
-        coordinateSource: 'manual_confirmed' as const,
-        locationConfirmationState: 'confirmed' as const,
-        publicLocationPrecision: 'approximate' as const,
-      },
-      mediaIds: mediaManifest.map(item => item.id),
-      mainMediaId: mediaManifest[0].id,
-      media: mediaManifest,
-    };
-
-    const createdListing = await memberApi.listing.create.mutate(listingInput);
-    created.listingId = Number(createdListing.id);
-    expect(createdListing).toMatchObject({ id: created.listingId, status: 'draft' });
-
-    // Preparation persists before payment, but the same listing cannot enter
-    // review or the marketplace until the agency's canonical commercial term
-    // is activated.
     await expect(
-      memberApi.listing.submitForReview.mutate({ listingId: created.listingId }),
-    ).rejects.toMatchObject({ data: { code: 'PRECONDITION_FAILED' } });
-    const [stillDraft] = await db
-      .select({ status: listings.status, approvalStatus: listings.approvalStatus })
-      .from(listings)
-      .where(eq(listings.id, created.listingId))
+      memberApi.invitation.accept.mutate({ token: invitation.token }),
+    ).rejects.toMatchObject({
+      data: { code: 'PRECONDITION_FAILED' },
+    });
+    const [queuedInvitee] = await db
+      .select({ role: users.role, agencyId: users.agencyId })
+      .from(users)
+      .where(eq(users.id, member.id))
       .limit(1);
-    expect(stillDraft).toEqual({ status: 'draft', approvalStatus: 'pending' });
-    expect(
-      await db
-        .select({ id: properties.id })
-        .from(properties)
-        .where(eq(properties.sourceListingId, created.listingId)),
-    ).toEqual([]);
+    expect(queuedInvitee).toEqual({ role: 'visitor', agencyId: null });
+    const [stillQueuedInvitation] = await db
+      .select({ status: invitations.status })
+      .from(invitations)
+      .where(eq(invitations.id, invitation.id))
+      .limit(1);
+    expect(stillQueuedInvitation).toEqual({ status: 'pending' });
 
     // This isolated Vitest-only candidate uses the canonical manual-EFT
     // workflow. Normal runtime remains preparation-only; this test neither
@@ -819,10 +646,177 @@ describeWithDb('agency full operating journey acceptance', () => {
         new Date(activeSubscription!.currentPeriodStart!).getTime(),
     ).toBe(90 * 24 * 60 * 60 * 1000);
     expect((await ownerApi.agency.getAccessState.query()).workspaceAccess.publishing).toBe(true);
-    expect((await agentOnboardingStatus(member.id, member.cookie)).entitlements).toMatchObject({
+    await expect(memberApi.invitation.accept.mutate({ token: invitation.token })).resolves.toEqual({
+      success: true,
+    });
+
+    const [agent] = await db
+      .select({
+        id: agents.id,
+        userId: agents.userId,
+        agencyId: agents.agencyId,
+        status: agents.status,
+        isVerified: agents.isVerified,
+      })
+      .from(agents)
+      .where(eq(agents.userId, member.id))
+      .limit(1);
+    if (!agent) throw new Error('Canonical invitation acceptance did not create an agent profile.');
+    created.agentId = Number(agent.id);
+    expect(agent).toMatchObject({
+      userId: member.id,
+      agencyId: created.agencyId,
+      status: 'approved',
+      isVerified: 0,
+    });
+
+    const [individualSubscription] = await db
+      .select({ id: subscriptions.id })
+      .from(subscriptions)
+      .where(and(eq(subscriptions.ownerType, 'agent'), eq(subscriptions.ownerId, member.id)))
+      .limit(1);
+    expect(individualSubscription).toBeUndefined();
+
+    const location = await canonicalSandtonLocation();
+    const canonicalSuburbId = encodeCanonicalLocationId('suburb', Number(location.suburbId));
+    const canonicalCoverage = {
+      canonicalLocationId: canonicalSuburbId,
+      label: [location.suburbName, location.cityName, location.provinceName].join(', '),
+    };
+    const rejectedTextCoverageResponse = await fetch(`${baseUrl}/api/agent/profile`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        cookie: member.cookie,
+      },
+      body: JSON.stringify({
+        displayName: `Publication Member ${suffix}`,
+        phone: '+27825550188',
+        areasServed: ['Sandton'],
+      }),
+    });
+    expect(rejectedTextCoverageResponse.status).toBe(400);
+
+    const profileResponse = await fetch(`${baseUrl}/api/agent/profile`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        cookie: member.cookie,
+      },
+      body: JSON.stringify({
+        displayName: `Publication Member ${suffix}`,
+        phone: '+27825550188',
+        whatsapp: '+27825550188',
+        bio: 'An agency member preparing residential inventory after commercial team activation.',
+        licenseNumber: `PL-${suffix}`,
+        yearsExperience: 5,
+        focus: 'sales',
+        areasServed: [canonicalSuburbId],
+        specializations: ['Residential sales'],
+        propertyTypes: ['house'],
+        languages: ['English'],
+        slug: `publication-member-${suffix}`,
+        onboardingStep: 4,
+      }),
+    });
+    expect(profileResponse.status).toBe(200);
+    const profileBody = await profileResponse.json();
+    expect(profileBody).toMatchObject({
+      success: true,
+      profile: { agencyId: created.agencyId, areasServed: [canonicalCoverage] },
+    });
+    const [persistedCoverage] = await db
+      .select({ areasServed: agents.areasServed })
+      .from(agents)
+      .where(eq(agents.id, created.agentId))
+      .limit(1);
+    expect(parseAgentCoverageAreas(persistedCoverage?.areasServed)).toEqual([canonicalCoverage]);
+    const activeMemberStatus = await agentOnboardingStatus(member.id, member.cookie);
+    expect(activeMemberStatus.entitlements).toMatchObject({
       canReceiveLeads: true,
       canAccessExistingLeads: true,
     });
+
+    const mediaManifest: Array<{
+      id: string;
+      mediaType: 'image';
+      uploadToken: string;
+      fileName: string;
+      fileSize: number;
+    }> = [];
+    for (let index = 0; index < 5; index += 1) {
+      const fileName = `publication-home-${index + 1}.png`;
+      const reservation = await memberApi.listing.uploadMedia.mutate({
+        type: 'image',
+        filename: fileName,
+        contentType: 'image/png',
+      });
+      const body = Buffer.from(`publication-media-${index + 1}-${suffix}`);
+      const uploadResponse = await fetch(`${baseUrl}${reservation.uploadUrl}`, {
+        method: 'PUT',
+        headers: { 'content-type': 'image/png', 'content-length': String(body.length) },
+        body,
+      });
+      expect(uploadResponse.status).toBe(200);
+      const confirmed = await memberApi.listing.confirmMediaUpload.mutate({
+        uploadToken: reservation.uploadToken,
+      });
+      expect(confirmed).toMatchObject({ mediaId: reservation.mediaId, fileSize: body.length });
+      mediaManifest.push({
+        id: reservation.mediaId,
+        mediaType: 'image',
+        uploadToken: confirmed.uploadToken,
+        fileName,
+        fileSize: body.length,
+      });
+    }
+
+    const title = `Reviewable Sandton family home ${suffix}`;
+    const description =
+      'A reviewable family home with verified private address details, clear pricing, and enough context for a reviewer to assess the agency inventory.';
+    const listingInput = {
+      action: 'sell' as const,
+      propertyType: 'house' as const,
+      title,
+      description,
+      pricing: { askingPrice: 2_450_000, negotiability: 'not_negotiable' as const },
+      propertyDetails: {
+        corePropertyInformation: {
+          version: 1,
+          bedrooms: { status: 'known', value: 3 },
+          bathrooms: { status: 'known', value: 2 },
+          internalArea: { status: 'known', valueM2: 180, unit: 'm2' },
+          erfArea: { status: 'known', valueM2: 620, unit: 'm2' },
+        },
+      },
+      location: {
+        address: '18 Review Avenue',
+        latitude: -26.1076,
+        longitude: 28.0567,
+        city: 'Johannesburg',
+        suburb: 'Sandton',
+        province: 'Gauteng',
+        postalCode: '2196',
+        provinceId: Number(location.provinceId),
+        cityId: Number(location.cityId),
+        suburbId: Number(location.suburbId),
+        privateAddress: {
+          streetNumber: '18',
+          streetName: 'Review Avenue',
+          postalCode: '2196',
+        },
+        coordinateSource: 'manual_confirmed' as const,
+        locationConfirmationState: 'confirmed' as const,
+        publicLocationPrecision: 'approximate' as const,
+      },
+      mediaIds: mediaManifest.map(item => item.id),
+      mainMediaId: mediaManifest[0].id,
+      media: mediaManifest,
+    };
+
+    const createdListing = await memberApi.listing.create.mutate(listingInput);
+    created.listingId = Number(createdListing.id);
+    expect(createdListing).toMatchObject({ id: created.listingId, status: 'draft' });
 
     // Submission is a real API lifecycle transition, and the reviewer queue is
     // the persisted handoff rather than a client-side status.
@@ -1353,9 +1347,27 @@ describeWithDb('agency full operating journey acceptance', () => {
       expiresAt: dbTimestamp(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)),
     } satisfies typeof invitations.$inferInsert);
     const replacementApi = trpcClient(await sessionCookie(replacement.id));
+    // New team membership is established only while the agency has a live
+    // commercial term. Restore the isolated fixture briefly for this canonical
+    // membership transition, then return it to the expired custody state.
+    await db
+      .update(subscriptions)
+      .set({
+        status: 'active',
+        currentPeriodEnd: dbTimestamp(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)),
+      })
+      .where(
+        and(eq(subscriptions.ownerType, 'agency'), eq(subscriptions.ownerId, created.agencyId)),
+      );
     await expect(
       replacementApi.invitation.accept.mutate({ token: replacementInvitationToken }),
     ).resolves.toEqual({ success: true });
+    await db
+      .update(subscriptions)
+      .set({ currentPeriodEnd: dbTimestamp(new Date(Date.now() - 60_000)) })
+      .where(
+        and(eq(subscriptions.ownerType, 'agency'), eq(subscriptions.ownerId, created.agencyId)),
+      );
     const [replacementAgent] = await db
       .select({
         id: agents.id,

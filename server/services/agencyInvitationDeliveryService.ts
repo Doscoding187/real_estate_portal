@@ -21,6 +21,8 @@ type CanonicalGateSubscription = {
   graceEndsAt: string | Date | null;
 };
 
+type InvitationCommercialDatabase = Pick<NonNullable<Awaited<ReturnType<typeof getDb>>>, 'select'>;
+
 /**
  * Effective paid access mirrors the canonical gates: an active/grace status
  * whose term (or grace window) has already elapsed is treated as expired,
@@ -53,6 +55,38 @@ export function hasEffectiveAgencyPaidAccess(subscription: CanonicalGateSubscrip
   }
 
   return true;
+}
+
+/**
+ * One canonical commercial decision for both invitation delivery and
+ * acceptance. A queued record is not an authorization credential while its
+ * agency remains in preparation-only mode: accepting it would otherwise mint
+ * membership and workspace access without the activation that permits its
+ * delivery.
+ */
+export async function hasEffectiveAgencyInvitationAccess(
+  db: InvitationCommercialDatabase,
+  agencyId: number,
+): Promise<boolean> {
+  const [subscription] = await db
+    .select({
+      status: subscriptions.status,
+      currentPeriodEnd: subscriptions.currentPeriodEnd,
+      graceEndsAt: subscriptions.graceEndsAt,
+    })
+    .from(subscriptions)
+    .where(
+      sql`EXISTS (
+      SELECT 1
+      FROM ${billableAccounts} account
+      WHERE account.id = ${subscriptions.billableAccountId}
+        AND account.account_kind = 'agency'
+        AND account.agency_id = ${agencyId}
+    )`,
+    )
+    .limit(1);
+
+  return hasEffectiveAgencyPaidAccess(subscription ?? null);
 }
 
 export type AgencyInvitationDeliveryResult = {
@@ -116,25 +150,7 @@ export async function deliverAgencyInvitations(input: {
 
   if (!agency) throw new Error('Agency not found');
 
-  const [subscription] = await db
-    .select({
-      status: subscriptions.status,
-      currentPeriodEnd: subscriptions.currentPeriodEnd,
-      graceEndsAt: subscriptions.graceEndsAt,
-    })
-    .from(subscriptions)
-    .where(
-      sql`EXISTS (
-      SELECT 1
-      FROM ${billableAccounts} account
-      WHERE account.id = ${subscriptions.billableAccountId}
-        AND account.account_kind = 'agency'
-        AND account.agency_id = ${input.agencyId}
-    )`,
-    )
-    .limit(1);
-
-  if (!hasEffectiveAgencyPaidAccess(subscription ?? null)) {
+  if (!(await hasEffectiveAgencyInvitationAccess(db, input.agencyId))) {
     return { deferred: true, attempted: 0, sent: 0, failed: 0 };
   }
 

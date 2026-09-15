@@ -12,6 +12,7 @@ import { resolveDatabaseAuthority } from '../../server/_core/databaseAuthority/c
 
 const runtimeLog = '/tmp/property-listify-mvp-prepayment-browser-runtime.log';
 const apiOrigin = 'http://localhost:5000';
+const webOrigin = 'http://localhost:5177';
 
 type Row = Record<string, unknown>;
 
@@ -23,7 +24,8 @@ function rowsFrom(result: unknown): Row[] {
 }
 
 async function query(statement: string, values: readonly unknown[] = []): Promise<Row[]> {
-  if (!connection) throw new Error('Pre-payment browser verification connection is not initialized.');
+  if (!connection)
+    throw new Error('Pre-payment browser verification connection is not initialized.');
   return rowsFrom(await connection.execute(statement, values));
 }
 
@@ -68,7 +70,8 @@ test.describe('pre-payment onboarding browser acceptance', () => {
     const email = `browser-preparation-${randomUUID()}@invalid.example`;
     const password = `Browser!${randomUUID()}9a`;
     const displayName = 'Browser Preparation Agent';
-    const bio = 'A prospective Property Listify professional preparing a private inventory workspace.';
+    const bio =
+      'A prospective Property Listify professional preparing a private inventory workspace.';
     const previousVerificationToken = latestVerificationToken();
 
     await page.goto('/login?mode=register');
@@ -199,7 +202,9 @@ test.describe('pre-payment onboarding browser acceptance', () => {
       page.getByRole('heading', { name: 'Build your Agency operating workspace' }),
     ).toBeVisible();
     await expect(
-      page.getByText(/save the commercial selection that will guide activation when it becomes available/i),
+      page.getByText(
+        /save the commercial selection that will guide activation when it becomes available/i,
+      ),
     ).toBeVisible();
 
     await page.locator('#name').fill(agencyName);
@@ -236,7 +241,8 @@ test.describe('pre-payment onboarding browser acceptance', () => {
 
     const onboardingResponse = page.waitForResponse(
       response =>
-        response.url().includes('agency.createOnboarding') && response.request().method() === 'POST',
+        response.url().includes('agency.createOnboarding') &&
+        response.request().method() === 'POST',
     );
     await page.getByRole('button', { name: 'Save and open workspace' }).click();
     expect((await onboardingResponse).status()).toBe(200);
@@ -301,5 +307,199 @@ test.describe('pre-payment onboarding browser acceptance', () => {
       [persisted.agencyId],
     );
     expect(Number(invoiceCount.total)).toBe(0);
+  });
+
+  test('returns a verified invitee through account entry but preserves queued team containment before activation', async ({
+    page,
+    browser,
+  }) => {
+    const suffix = randomUUID();
+    const inviteeEmail = `browser-queued-invitee-${suffix}@invalid.example`;
+    const inviteePassword = `Browser!${randomUUID()}9a`;
+    const ownerEmail = `browser-queued-owner-${suffix}@invalid.example`;
+    const ownerPassword = `Browser!${randomUUID()}9a`;
+    const agencyName = `Queued Invitation Agency ${suffix.slice(0, 8)}`;
+    const companyName = `${agencyName} Realty`;
+
+    // Establish the invited account through the ordinary registration and
+    // verification journey first. A fresh browser context later proves that
+    // the invitation returns through canonical account entry rather than
+    // inheriting this account's session.
+    const inviteeRegistrationContext = await browser.newContext();
+    const inviteeRegistrationPage = await inviteeRegistrationContext.newPage();
+    try {
+      const previousInviteeVerificationToken = latestVerificationToken();
+      await inviteeRegistrationPage.goto(`${webOrigin}/login?mode=register`);
+      await inviteeRegistrationPage.getByRole('button', { name: 'Buyer / User' }).click();
+      const registration = inviteeRegistrationPage.getByRole('dialog');
+      await expect(
+        registration.getByRole('heading', { name: 'Create your account' }),
+      ).toBeVisible();
+      await registration.locator('input[name="name"]').fill('Queued Invitation Invitee');
+      await registration.locator('input[name="email"]').fill(inviteeEmail);
+      await registration.locator('input[name="password"]').fill(inviteePassword);
+      await registration.locator('input[name="confirmPassword"]').fill(inviteePassword);
+      const registrationResponse = inviteeRegistrationPage.waitForResponse(
+        response =>
+          response.url().includes('/api/auth/register') && response.request().method() === 'POST',
+      );
+      await registration.getByRole('button', { name: 'Create free account' }).click();
+      expect((await registrationResponse).status()).toBe(201);
+
+      const verificationToken = await waitForVerificationToken(previousInviteeVerificationToken);
+      await inviteeRegistrationPage.goto(
+        `${apiOrigin}/api/auth/verify-email?token=${encodeURIComponent(verificationToken)}`,
+      );
+      await expect(inviteeRegistrationPage).toHaveURL(/\/user\/dashboard\?verified=true/);
+    } finally {
+      await inviteeRegistrationContext.close();
+    }
+
+    // The agency owner follows the normal pre-payment onboarding wizard and
+    // queues, rather than delivers, an invitation for the verified account.
+    const previousOwnerVerificationToken = latestVerificationToken();
+    await page.goto('/login?mode=register');
+    await page.getByRole('button', { name: 'Agency' }).click();
+    const ownerRegistration = page.getByRole('dialog');
+    await ownerRegistration.locator('input[name="name"]').fill('Queued Invitation Owner');
+    await ownerRegistration.locator('input[name="email"]').fill(ownerEmail);
+    await ownerRegistration.locator('input[name="password"]').fill(ownerPassword);
+    await ownerRegistration.locator('input[name="confirmPassword"]').fill(ownerPassword);
+    const ownerRegistrationResponse = page.waitForResponse(
+      response =>
+        response.url().includes('/api/auth/register') && response.request().method() === 'POST',
+    );
+    await ownerRegistration.getByRole('button', { name: 'Continue to agency setup' }).click();
+    expect((await ownerRegistrationResponse).status()).toBe(201);
+
+    const ownerVerificationToken = await waitForVerificationToken(previousOwnerVerificationToken);
+    await page.goto(
+      `${apiOrigin}/api/auth/verify-email?token=${encodeURIComponent(ownerVerificationToken)}`,
+    );
+    await expect(page).toHaveURL(/\/agency\/setup\?verified=true/);
+
+    await page.locator('#name').fill(agencyName);
+    await page.locator('#email').fill(ownerEmail);
+    await page.locator('#phone').fill('+27820000002');
+    await page.locator('#address').fill('2 Queued Invitation Avenue');
+    await page.locator('#city').fill('Johannesburg');
+    await page.locator('#province').fill('Gauteng');
+    await page
+      .locator('#description')
+      .fill('An agency confirming that a queued team invitation cannot create access early.');
+    await page.getByRole('button', { name: 'Continue to Agency identity' }).click();
+    await page.locator('#companyName').fill(companyName);
+    await page.getByRole('button', { name: 'Continue to Team launch' }).click();
+    await page.locator('#inviteAgents').click();
+    await page.getByPlaceholder('agent@example.com').fill(inviteeEmail);
+    await page.getByRole('button', { name: 'Add', exact: true }).click();
+    await expect(page.getByText(inviteeEmail)).toBeVisible();
+    await page.getByRole('button', { name: 'Continue to Launch Access' }).click();
+    await page.locator('label[for^="plan-"]').first().click();
+    await page.locator('#agreeToTerms').click();
+    await page.getByRole('button', { name: 'Review onboarding' }).click();
+    const onboardingResponse = page.waitForResponse(
+      response =>
+        response.url().includes('agency.createOnboarding') &&
+        response.request().method() === 'POST',
+    );
+    await page.getByRole('button', { name: 'Save and open workspace' }).click();
+    expect((await onboardingResponse).status()).toBe(200);
+    await expect(page).toHaveURL(/\/agency\/overview/);
+
+    // The token is read only from the exact task-owned target for this
+    // counterfactual containment proof. It is never rendered or logged, and
+    // no invitation email is sent while the agency remains pre-payment.
+    const [queuedInvitation] = await query(
+      `SELECT i.token AS token,
+              i.status AS invitationStatus,
+              i.agencyId AS agencyId,
+              s.status AS subscriptionStatus,
+              (
+                SELECT COUNT(*)
+                FROM billing_invoices invoice
+                WHERE invoice.owner_type = 'agency' AND invoice.owner_id = i.agencyId
+              ) AS invoiceCount
+         FROM invitations i
+         INNER JOIN agencies a ON a.id = i.agencyId
+         INNER JOIN subscriptions s
+           ON s.owner_type = 'agency' AND s.owner_id = i.agencyId
+         WHERE a.email = ? AND i.email = ?
+         ORDER BY i.id DESC
+         LIMIT 1`,
+      [ownerEmail, inviteeEmail],
+    );
+    expect(queuedInvitation).toMatchObject({
+      invitationStatus: 'pending',
+      subscriptionStatus: 'pending_payment',
+    });
+    expect(Number(queuedInvitation.agencyId)).toBeGreaterThan(0);
+    expect(Number(queuedInvitation.invoiceCount)).toBe(0);
+    const invitationToken = String(queuedInvitation.token || '');
+    expect(invitationToken).toMatch(/^[a-f0-9]{64}$/i);
+
+    const acceptanceContext = await browser.newContext();
+    const acceptancePage = await acceptanceContext.newPage();
+    try {
+      await acceptancePage.goto(
+        `${webOrigin}/accept-invitation?token=${encodeURIComponent(invitationToken)}`,
+      );
+      await expect(
+        acceptancePage.getByRole('heading', { name: "You've Been Invited!" }),
+      ).toBeVisible();
+      await acceptancePage.getByRole('button', { name: 'Log In / Register' }).click();
+      await expect(acceptancePage).toHaveURL(
+        /\/login\?mode=signin&next=%2Faccept-invitation%3Ftoken%3D/,
+      );
+
+      const signIn = acceptancePage.getByRole('dialog', { name: 'Welcome back' });
+      await expect(
+        signIn.getByText(/you will be returned to \/accept-invitation\?token=/i),
+      ).toBeVisible();
+      await signIn.getByPlaceholder('you@example.com').fill(inviteeEmail);
+      await signIn.getByPlaceholder('Enter your password').fill(inviteePassword);
+      const loginResponse = acceptancePage.waitForResponse(
+        response =>
+          response.url().includes('/api/auth/login') && response.request().method() === 'POST',
+      );
+      await signIn.getByRole('button', { name: 'Sign in' }).click();
+      expect((await loginResponse).status()).toBe(200);
+      await expect(acceptancePage).toHaveURL(/\/accept-invitation\?token=/);
+
+      const acceptanceResponse = acceptancePage.waitForResponse(
+        response =>
+          response.url().includes('invitation.accept') && response.request().method() === 'POST',
+      );
+      await acceptancePage.getByRole('button', { name: 'Accept Invitation' }).click();
+      expect((await acceptanceResponse).status()).toBe(412);
+      await expect(
+        acceptancePage.getByText('Agency team access is available after commercial activation.'),
+      ).toBeVisible();
+    } finally {
+      await acceptanceContext.close();
+    }
+
+    const [unchanged] = await query(
+      `SELECT u.emailVerified AS emailVerified,
+              u.role AS role,
+              u.agencyId AS userAgencyId,
+              i.status AS invitationStatus,
+              (
+                SELECT COUNT(*) FROM agents profile WHERE profile.userId = u.id
+              ) AS agentProfileCount
+         FROM users u
+         INNER JOIN invitations i ON i.email = u.email
+         WHERE u.email = ? AND i.agencyId = ?
+         ORDER BY i.id DESC
+         LIMIT 1`,
+      [inviteeEmail, queuedInvitation.agencyId],
+    );
+    expect(unchanged).toMatchObject({
+      emailVerified: 1,
+      role: 'visitor',
+      userAgencyId: null,
+      invitationStatus: 'pending',
+    });
+    expect(Number(unchanged.agentProfileCount)).toBe(0);
   });
 });

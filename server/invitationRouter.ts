@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { TRPCError } from '@trpc/server';
 import { router, agencyAdminProcedure, publicProcedure, protectedProcedure } from './_core/trpc';
 import { agencies, agents, invitations, users } from '../drizzle/schema';
 import { eq, and, desc } from 'drizzle-orm';
@@ -9,7 +10,10 @@ import { authService } from './_core/auth';
 import { COOKIE_NAME } from '@shared/const';
 import { getSessionCookieOptions } from './_core/cookies';
 import { requireUser } from './_core/requireUser';
-import { deliverAgencyInvitations } from './services/agencyInvitationDeliveryService';
+import {
+  deliverAgencyInvitations,
+  hasEffectiveAgencyInvitationAccess,
+} from './services/agencyInvitationDeliveryService';
 import { ensureApprovedAgencyAgentProfile } from './services/agencyMembershipService';
 
 /**
@@ -293,6 +297,13 @@ export const invitationRouter = router({
       throw new Error('User account not found');
     }
 
+    if (Number(currentUser.emailVerified) !== 1) {
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message: 'Verify your email before accepting an agency invitation.',
+      });
+    }
+
     if (currentUser.agencyId && currentUser.agencyId !== invitation.agencyId) {
       throw new Error('This account already belongs to another agency');
     }
@@ -322,6 +333,13 @@ export const invitationRouter = router({
     // All membership writes commit together: user affiliation, agent profile
     // with its canonical membership row, and invitation acceptance.
     await db.transaction(async tx => {
+      if (!(await hasEffectiveAgencyInvitationAccess(tx, invitation.agencyId))) {
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message: 'Agency team access is available after commercial activation.',
+        });
+      }
+
       await tx
         .update(users)
         .set({

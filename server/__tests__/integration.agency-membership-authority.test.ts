@@ -9,7 +9,7 @@ const priorJwtSecret = vi.hoisted(() => {
   return prior;
 });
 import { randomUUID } from 'node:crypto';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 
 const describeWithDb: typeof describe = process.env.DATABASE_URL
   ? describe
@@ -21,9 +21,12 @@ import {
   agencies,
   agencyAgentMemberships,
   agents,
+  billableAccounts,
   invitations,
   listingAnalytics,
   listings,
+  plans,
+  subscriptions,
   users,
 } from '../../drizzle/schema';
 import {
@@ -167,6 +170,43 @@ async function insertPendingInvitation(input: {
   return id;
 }
 
+/**
+ * Isolated paid-state fixture only. Invitation acceptance is intentionally
+ * unavailable while an agency is in the normal pre-payment state; this
+ * fixture establishes the canonical agency owner and live term needed to
+ * exercise the post-activation membership path without invoking a payment
+ * provider or enabling normal runtime activation.
+ */
+async function createActiveAgencyInvitationAccess(agencyId: number, actorUserId: number) {
+  const [plan] = await db
+    .select({ id: plans.id })
+    .from(plans)
+    .where(eq(plans.name, 'agency_launch_access'))
+    .limit(1);
+  if (!plan) throw new Error('Canonical agency Launch Access reference data is unavailable.');
+
+  const [accountResult] = await db.insert(billableAccounts).values({
+    accountKind: 'agency',
+    agencyId,
+  } as any);
+  const accountId = await insertId(accountResult);
+  if (!accountId) throw new Error('Could not create agency billable-account fixture.');
+
+  const now = new Date();
+  await db.insert(subscriptions).values({
+    ownerType: 'agency',
+    ownerId: agencyId,
+    billableAccountId: accountId,
+    planId: plan.id,
+    status: 'active',
+    currentPeriodStart: now,
+    currentPeriodEnd: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000),
+    cancelAtPeriodEnd: 0,
+    createdBy: actorUserId,
+    updatedBy: actorUserId,
+  } as any);
+}
+
 beforeAll(async () => {
   if (!process.env.DATABASE_URL) return;
   await ensureTestAuthEnvironmentAndRouter();
@@ -185,6 +225,21 @@ afterAll(async () => {
     await db
       .delete(listings)
       .where(eq(listings.id, id))
+      .catch(() => undefined);
+  }
+  if (created.agencyIds.length) {
+    await db
+      .delete(subscriptions)
+      .where(
+        and(
+          eq(subscriptions.ownerType, 'agency'),
+          inArray(subscriptions.ownerId, created.agencyIds),
+        ),
+      )
+      .catch(() => undefined);
+    await db
+      .delete(billableAccounts)
+      .where(inArray(billableAccounts.agencyId, created.agencyIds))
       .catch(() => undefined);
   }
   for (const id of created.invitationIds) {
@@ -471,10 +526,109 @@ describeWithDb('team operations on canonical membership', () => {
 });
 
 describeWithDb('invitation acceptance (production path)', () => {
+  it('requires a verified invitee before creating canonical agency membership', async () => {
+    const agencyId = await insertAgency('Unverified invitee');
+    const ownerUserId = await insertUser('UnverifiedOwner', 'agency_admin');
+    await db.update(users).set({ agencyId }).where(eq(users.id, ownerUserId));
+
+    const inviteeEmail = `unverified-joiner-${randomUUID().slice(0, 8)}@example.test`;
+    const inviteeUserId = await insertUser('UnverifiedJoiner', 'visitor');
+    await db
+      .update(users)
+      .set({ email: inviteeEmail, emailVerified: 0 })
+      .where(eq(users.id, inviteeUserId));
+
+    const invitationId = await insertPendingInvitation({
+      agencyId,
+      invitedBy: ownerUserId,
+      email: inviteeEmail,
+      role: 'agent',
+    });
+    const [invitation] = await db
+      .select()
+      .from(invitations)
+      .where(eq(invitations.id, invitationId))
+      .limit(1);
+    if (!invitation) throw new Error('Expected pending invitation');
+
+    await expect(
+      acceptanceCaller({
+        id: inviteeUserId,
+        role: 'visitor',
+        agencyId: null,
+        email: inviteeEmail,
+      }).invitation.accept({ token: invitation.token }),
+    ).rejects.toMatchObject({ code: 'PRECONDITION_FAILED' });
+
+    const [unchangedUser] = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, inviteeUserId))
+      .limit(1);
+    expect(unchangedUser).toMatchObject({
+      role: 'visitor',
+      agencyId: null,
+      emailVerified: 0,
+    });
+    expect(await db.select().from(agents).where(eq(agents.userId, inviteeUserId))).toHaveLength(0);
+    const [stillPending] = await db
+      .select()
+      .from(invitations)
+      .where(eq(invitations.id, invitationId))
+      .limit(1);
+    expect(stillPending?.status).toBe('pending');
+  });
+
+  it('does not turn a queued pre-payment invitation into agency membership', async () => {
+    const agencyId = await insertAgency('Queued pre-payment invitee');
+    const ownerUserId = await insertUser('QueuedPrePaymentOwner', 'agency_admin');
+    await db.update(users).set({ agencyId }).where(eq(users.id, ownerUserId));
+
+    const inviteeEmail = `queued-joiner-${randomUUID().slice(0, 8)}@example.test`;
+    const inviteeUserId = await insertUser('QueuedJoiner', 'visitor');
+    await db.update(users).set({ email: inviteeEmail }).where(eq(users.id, inviteeUserId));
+    const invitationId = await insertPendingInvitation({
+      agencyId,
+      invitedBy: ownerUserId,
+      email: inviteeEmail,
+      role: 'agent',
+    });
+    const [invitation] = await db
+      .select()
+      .from(invitations)
+      .where(eq(invitations.id, invitationId))
+      .limit(1);
+    if (!invitation) throw new Error('Expected queued invitation');
+
+    await expect(
+      acceptanceCaller({
+        id: inviteeUserId,
+        role: 'visitor',
+        agencyId: null,
+        email: inviteeEmail,
+      }).invitation.accept({ token: invitation.token }),
+    ).rejects.toMatchObject({ code: 'PRECONDITION_FAILED' });
+
+    const [unchangedUser] = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, inviteeUserId))
+      .limit(1);
+    expect(unchangedUser).toMatchObject({ role: 'visitor', agencyId: null, emailVerified: 1 });
+    expect(await db.select().from(agents).where(eq(agents.userId, inviteeUserId))).toHaveLength(0);
+    const [stillQueued] = await db
+      .select()
+      .from(invitations)
+      .where(eq(invitations.id, invitationId))
+      .limit(1);
+    expect(stillQueued?.status).toBe('pending');
+  });
+
   it('accepting an agent invitation creates consistent identity, profile, and canonical membership', async () => {
     const agencyId = await insertAgency('Production');
     const ownerUserId = await insertUser('ProdOwner', 'agency_admin');
     await db.update(users).set({ agencyId }).where(eq(users.id, ownerUserId));
+    await createActiveAgencyInvitationAccess(agencyId, ownerUserId);
 
     const inviteeEmail = `prod-joiner-${randomUUID().slice(0, 8)}@example.test`;
     const inviteeUserId = await insertUser('ProdJoiner', 'visitor');
@@ -571,6 +725,7 @@ describeWithDb('invitation acceptance (production path)', () => {
     const targetAgencyId = await insertAgency('ConflationTarget');
     const ownerUserId = await insertUser('ConflOwner', 'agency_admin');
     await db.update(users).set({ agencyId: targetAgencyId }).where(eq(users.id, ownerUserId));
+    await createActiveAgencyInvitationAccess(targetAgencyId, ownerUserId);
 
     const otherAgencyId = await insertAgency('ConflationOther');
 
