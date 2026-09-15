@@ -3,14 +3,37 @@ import { getAgencyJourneyAction } from './agencyJourney';
 
 describe('Agency journey action presentation', () => {
   it('keeps payment proof and finance review as different Agency actions', () => {
-    expect(getAgencyJourneyAction({ recommendedNextStep: 'complete_payment' })).toMatchObject({
+    expect(
+      getAgencyJourneyAction(
+        { recommendedNextStep: 'complete_payment' },
+        { commercialActivationEnabled: true },
+      ),
+    ).toMatchObject({
       href: '/agency/billing',
       label: 'Open invoice',
     });
-    expect(getAgencyJourneyAction({ recommendedNextStep: 'await_payment_review' })).toMatchObject({
+    expect(
+      getAgencyJourneyAction(
+        { recommendedNextStep: 'await_payment_review' },
+        { commercialActivationEnabled: true },
+      ),
+    ).toMatchObject({
       href: '/agency/billing',
       label: 'View payment review',
       waiting: true,
+    });
+  });
+
+  it('keeps a pending commercial selection in preparation when activation is disabled', () => {
+    expect(
+      getAgencyJourneyAction(
+        { recommendedNextStep: 'complete_payment' },
+        { commercialActivationEnabled: false },
+      ),
+    ).toMatchObject({
+      href: '/agency/listings',
+      label: 'Prepare inventory',
+      title: 'Commercial activation is not available yet',
     });
   });
 

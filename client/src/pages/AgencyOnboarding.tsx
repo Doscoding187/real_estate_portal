@@ -285,8 +285,8 @@ const AgencyOnboarding: React.FC = () => {
           <CardHeader>
             <CardTitle>Set up your Agency base</CardTitle>
             <CardDescription>
-              Create the Agency identity, invite your team when ready, then request the once-off
-              Launch Access invoice.
+              Create the Agency identity, invite your team when ready, and save the commercial
+              selection that will guide activation when it becomes available.
             </CardDescription>
           </CardHeader>
           <CardContent className="p-6">
@@ -714,8 +714,9 @@ export const PlanSelectionStep: React.FC<PlanSelectionStepProps> = ({ plans, onN
 
       <Alert>
         <AlertDescription>
-          Select the plan that best fits your agency's needs. Your selection determines the invoice
-          issued at the end of this wizard.
+          Select the plan that best fits your agency's needs. We save this selection with your
+          preparation; this wizard does not issue an invoice, request payment, or activate
+          publishing.
         </AlertDescription>
       </Alert>
 
