@@ -1,13 +1,13 @@
 # Post-merge MVP closure review packet
 
-Date: 2026-09-15 (canonical private-work, inventory, operational-workspace, public-recommendation membership, and viewing-UTC-wire-boundary supplements, generic Developer-Land row and draft-containment supplements, transactional-email containment, governed pre-payment browser-acceptance, Commercial-workflow, Commercial public-enquiry entitlement/custody, and governed local-service-recovery addenda; canonical agent-coverage addendum; prior Goals 6–10, LRC-LAND-001, and LRC-SUPPORT-001 follow-ups dated 2026-09-14; original closure review dated 2026-09-13).
+Date: 2026-09-15 (canonical private-work, inventory, operational-workspace, public-recommendation membership, and viewing-UTC-wire-boundary supplements, generic Developer-Land row and draft-containment supplements, transactional-email containment, governed pre-payment browser-acceptance, Commercial-workflow, Commercial public-enquiry entitlement/custody, shared public-advertising and Developer preparation-entry, and governed local-service-recovery addenda; canonical agent-coverage addendum; prior Goals 6–10, LRC-LAND-001, and LRC-SUPPORT-001 follow-ups dated 2026-09-14; original closure review dated 2026-09-13).
 **Outcome: the local candidate supports controlled
 pre-payment onboarding; canonical billing and activation paths are contained,
 and Goals 1–10 agency membership, private-work/inventory/operational-workspace/public-recommendation authority, commercial-term, private-preparation,
 review/publication, public-discovery, public-enquiry custody, CRM-continuity,
 first-cohort recovery, one consolidated agency operating acceptance, hard-deferred
 Land containment including generic Developer rows and drafts, canonical agent-coverage authority, governed browser proof of
-agent and agency-owner pre-payment onboarding, agency preparation-state and
+shared public advertising, Agent, Agency, and Developer preparation entry, and persisted Agent and Agency-owner pre-payment onboarding, agency preparation-state and
 deferred-invitation-validity and queued-invitation-acceptance corrections, and Commercial generic-viewing
 and public-enquiry entitlement/custody boundary corrections and deployed transactional-email false-success containment are verified
 on the task branch. A bounded assisted-onboarding intake is also locally implemented;
@@ -82,6 +82,7 @@ protected environment.
 | Browser correction-loop acceptance (task branch) | `72dd80e04b5c76c348389f4262543022a8a9a586` |
 | Browser public discovery/enquiry/CRM acceptance (task branch) | `a2a4e52b6b6d215263bc1f765d75a670d00ad64e` |
 | Deployed transactional-email containment correction (task branch) | `3d2e01488755376486d96e2242f83d08895c8a62` |
+| Shared public-advertising and Developer preparation-entry correction (task branch) | `234ca6e4f2c4833f5784300a1edb9ee016f2c386` |
 | Branch                                              | `verify/mvp-closure-post-577`                                                 |
 | Worktree                                            | `/home/edwardspc/Desktop/Dev/worktrees/property-listify-mvp-closure-post-577` |
 
@@ -1470,6 +1471,47 @@ acceptance is strong local evidence for preparation; hosted integration,
 operator/disclosure readiness, and protected-release evidence remain separate
 launch conditions.
 
+### Shared public advertising and Developer preparation-entry truthfulness — 2026-09-15
+
+The Agent and Agency landing corrections did not fully close the anonymous
+commercial funnel. The routable `/advertise` and `/advertise/sell` gateways
+still described 90-Day Launch Access, manual EFT, finance-verified activation,
+public discovery, enquiries, and paid commercial participation. The public
+Developer route also unconditionally loaded its commercial catalog and offered
+Developer Launch Access, an invoice request, and a fixed paid term. Those claims
+contradicted the same normal `preparation_only` state.
+
+Commit [`234ca6e4`](https://github.com/Doscoding187/real_estate_portal/commit/234ca6e4f2c4833f5784300a1edb9ee016f2c386)
+retains each catalog-driven commercial page behind the existing separately
+authorized `COMMERCIAL_ACTIVATION_STATE.enabled` boundary. Normal `/advertise`
+and `/advertise/sell` now show only role-specific preparation paths, and the
+homepage professional entry names preparation rather than commercial access.
+Normal Developer entry starts the real role-specific registration target and
+describes only Developer account creation, organisation identity/review, and
+private development drafts. It does not load the commercial catalog or advertise
+a price, invoice, manual-EFT payment, fixed paid term, public project
+presentation, or paid commercial participation.
+
+The underlying Developer route and existing focused tests support the stated
+preparation boundary: email verification returns a Developer to
+`/developer/setup`; a submitted organisation is `pending` for review; the
+private development-draft API is scoped to the canonical Developer organisation
+and its first-party publisher; and the legacy free-trial provisioning method
+fails closed. The browser evidence below deliberately proves the public entry
+only. It does **not** claim a new end-to-end browser proof of Developer
+organisation submission, approval, or persisted draft resume.
+
+Direct local evidence on the exact task-owned target:
+
+- `pnpm vitest run client/src/pages/AdvertiseWithUs.commercialTruth.test.tsx client/src/pages/advertise/AdvertiseSellPage.commercialTruth.test.tsx client/src/sections/home/ProfessionalEntrySection.test.tsx client/src/pages/advertise/DeveloperProductLandingPage.commercialTruth.test.tsx client/src/components/developer/__tests__/DeveloperSetupWizardEnhanced.states.test.tsx client/src/pages/__tests__/DeveloperRoutes.onboardingFailure.test.tsx client/src/components/development-wizard/DevelopmentWizard.test.tsx server/__tests__/developer.subscription-commercial.contract.test.ts --reporter=basic` passed **8 files / 28 tests**. It covers the shared gateways, homepage entry, Developer landing state, organisation review handling, private-draft workspace initialization, and no-free-trial commercial boundary.
+- `pnpm test:browser:authority -- --config=playwright.prepayment-onboarding.config.ts` passed **7 Chromium desktop tests**. The first browser path opens the actual `/advertise` and `/advertise/sell` routes, verifies the canonical preparation notice and the absence of paid claims, and checks all three role entry targets. The run separately opens each Agent, Agency, and Developer public landing, then retains the existing persisted Agent, Agency, and queued-invitation containment paths.
+- `pnpm check`, targeted zero-error ESLint, Prettier, and `git diff --check` passed. `pnpm test:db-authority:static` passed **35 files / 295 tests**. Final `pnpm db:authority:status` confirmed exact worktree ownership, target fingerprint `a560e9f2971e7676…`, manifest head `0090_retire_disconnected_boost_campaigns.sql`, schema congruency, and `no-incomplete-attempts`.
+
+This is a public-entry truthfulness correction. It does not enable payments,
+invoices, entitlements, publication, provider delivery, a free publishing tier,
+or a Developer paid cohort; it does not make the Developer full operating
+journey, support operation, hosted integration, or protected release ready.
+
 ## Ranked remaining blockers and authority handoff
 
 1. **L0 — integrate and independently verify the locally contained Land boundary (LRC-LAND-001):** `335838df` hard-deferred the specialist and generic-listing Land paths, `62ec0eed` closes the distinct generic Developer row authoring/public-discovery route, and `0280e9dd` closes generic Developer draft persistence. Land must remain unavailable to the controlled pre-payment onboarding cohort and public routes until integrated verification and a separately authorized Land commercial/acceptance slice exist.
@@ -1480,7 +1522,7 @@ launch conditions.
    entitlement, and protected-release evidence exists. Controlled pre-payment
    onboarding may prepare identities and private drafts only. Do not replace
    this boundary with a free publishing entitlement or a privilege bypass.
-4. **L1 — integrate and independently verify the public independent-Agent preparation boundary (LRC-AGENT-001):** `7c939831` removes the contradictory paid offer from normal runtime and browser-proves the actual preparation entry. It still does not prove an independent Agent's paid commercial operation. Retain that separate paid variation and hosted verification before advertising paid independent-Agent support.
+4. **L1 — integrate and independently verify public preparation entry (LRC-ADVERTISE-001; LRC-AGENT-001; LRC-AGY-001):** `234ca6e4` makes `/advertise`, `/advertise/sell`, the homepage professional entry, and the public Developer landing agree with normal `preparation_only` runtime; `7c939831` and `02788ff2` retain the role-specific Agent and Agency corrections. The browser proves the anonymous entry/routing surfaces, but a full Developer organisation-and-draft browser slice and every paid-operation variation remain separate. Do not advertise paid cohorts before integration and the relevant hosted verification.
 5. **L1 — integrate and host-verify the completed agency, membership, and Commercial-route
    boundaries (LRC-AGY-001; LRC-MEM-001; LRC-COMMERCIAL-001):** Goal 10 proves the complete
    first-cohort agency journey locally, `d1545579` keeps Commercial leads out
@@ -1562,9 +1604,10 @@ Land containment corrections `335838df`, `62ec0eed`, and `0280e9dd`, bounded ass
 `144e90d1`, canonical agent-coverage authority correction `f40ca8a3`, and
 queued-invitation acceptance containment `415a9472`, and deployed
 transactional-email containment `3d2e0148`, viewing UTC/input corrections
-`4d0b1517`, `fa8f9101`, and `40a37c37`, and independent-Agent public
-onboarding truthfulness `7c939831`, and Agency public onboarding truthfulness
-`02788ff2`; the review packet,
+`4d0b1517`, `fa8f9101`, and `40a37c37`, independent-Agent public
+onboarding truthfulness `7c939831`, Agency public onboarding truthfulness
+`02788ff2`, and shared public-advertising/Developer preparation-entry
+truthfulness `234ca6e4`; the review packet,
 escalation resolution, register, and queue
 runbook retain their respective evidence commits. Final Git status was clean
 after each recorded commit before the next bounded workstream began. No merge, feature push,

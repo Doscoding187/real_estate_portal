@@ -949,6 +949,31 @@ registration dialog, `pnpm check`, targeted zero-error lint/Prettier, and the
 does **not** satisfy the separate independent-Agent paid-operation variation or
 move independent-Agent paid-launch claims into the accepted agency cohort.
 
+### Shared public advertising and Developer preparation-entry follow-up — 2026-09-15
+
+The role-specific public pages alone did not close the anonymous entry surface.
+The routable `/advertise` and `/advertise/sell` pages still described paid
+Launch Access, manual EFT, finance activation, and public commercial outcomes;
+the public Developer page independently offered the same disabled commercial
+path. That would have made the controlled pre-payment boundary ambiguous before
+an interested stakeholder chose a role.
+
+Commit [`234ca6e4`](https://github.com/Doscoding187/real_estate_portal/commit/234ca6e4f2c4833f5784300a1edb9ee016f2c386)
+makes those shared entry surfaces and the Developer role landing agree with the
+settled preparation state. Normal public entry now offers only the existing
+Agent, Agency, and Developer preparation paths. The retained catalog-driven
+commercial surfaces are behind the existing separately authorized enabled state;
+no payment, invoice, entitlement, publication, provider, or deployment state
+changed.
+
+Evidence is an **8-file / 28-test** focused client/contract run and a **7-test**
+governed Chromium pre-payment acceptance. The browser opens `/advertise` and
+`/advertise/sell`, verifies that paid claims are absent, checks all three role
+targets, and opens each public role landing. It does not claim a full Developer
+organisation-submission/approval/draft-resume browser journey or any paid
+Developer operation. Those remain separate evidence requirements before a
+Developer cohort can be represented as live.
+
 ## Advancement rule
 
 Advance only when the current goal:
