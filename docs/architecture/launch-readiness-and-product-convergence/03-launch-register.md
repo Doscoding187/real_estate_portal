@@ -327,6 +327,31 @@ This index is for navigation and programme oversight. Its **Full record** column
 | Status | in progress |
 | Notes | The correction preserves `requireAgencyLead` ahead of Commercial detection, so it does not weaken tenant custody. It changes no Commercial publication, payment, entitlement, provider-delivery, migration, or Land policy. The first cohort remains controlled pre-payment onboarding; Commercial paid operation remains separately blocked. |
 
+
+### LRC-COMMERCIAL-001 public-entitlement/custody supplement — 2026-09-15
+
+| Field | Record |
+| --- | --- |
+| Issue ID | LRC-COMMERCIAL-001 |
+| Date observed | 2026-09-15 |
+| Exact Git SHA | `34511a4f9a22182be589dc024cf7707a3d57b0d7` (observed task-branch source); `551d63fe` (task-branch correction) |
+| Page or journey | Public Commercial detail → anonymous enquiry → agency-member/agency custody |
+| URL | Public Commercial detail; `leads.create` with `listingId` and `commercialAvailabilityId` |
+| User role | Anonymous prospect; approved current agency member without individual subscription or optional verification badge; agency-only recipient negative case |
+| Viewport or device | Exact task-owned disposable target; real public tRPC route, persisted target integration, service contract, and public Commercial search; browser not run for this supplement |
+| Current behaviour | Before correction, public Commercial capture looked only for an individual agent term before delivery. A current unbadged member backed by matching agency Launch Access was held in manual attention; membership existence was not tied to the materialized listing's agency. A verified agency-only recipient could pass without proving its current agency term. |
+| Expected behaviour | The materialized Commercial listing agency is the commercial owner. An assigned recipient needs current canonical membership in that same agency and may use its matching canonical agency term without a second personal purchase. A stale, absent, suspended, ambiguous, or wrong-agency membership cannot receive the new opportunity. Agency-only custody also requires a matching active agency term. Ineligible custody stays auditable manual attention. |
+| Evidence reference | [MVP closure report](../database-transition-and-launch/mvp-closure-report.md#lrc-commercial-001-public-enquiry-entitlement-and-custody-supplement--2026-09-15): pre-fix counterexample, post-fix real public route/persisted target acceptance, authority-wrapped **7 files / 128 tests**, typecheck, and static authority **35 files / 295 tests** on fingerprint `a560e9f2971e7676…`. |
+| Severity | L1 |
+| Owning engine | Commercial access / public eligibility / lead custody |
+| Launch decision | Fixed locally before any Commercial cohort; keep Commercial paid operation separately blocked. |
+| Approved implementation branch/worktree | `verify/mvp-closure-post-577` / `/home/edwardspc/Desktop/Dev/worktrees/property-listify-mvp-closure-post-577` |
+| Pull request or commit | [`551d63fe`](https://github.com/Doscoding187/real_estate_portal/commit/551d63fe) |
+| Integrated verification | Pending; exact task-branch local evidence only. |
+| Production verification | Pending; no protected system, provider, deployment, payment, entitlement activation, or Commercial cohort accessed. |
+| Status | in progress |
+| Notes | The correction does not enable publication, payments, finance activation, provider delivery, a Land lifecycle, migration, or release. It makes a shared delivery predicate stricter for a matching canonical Land membership, but hard Land containment remains in force. The paid agency term used by the target acceptance is an isolated fixture and is not a live onboarding route. |
+
 ### LRC-LEAD-001
 
 | Field                                   | Record |

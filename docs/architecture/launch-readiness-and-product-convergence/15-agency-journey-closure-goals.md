@@ -591,6 +591,34 @@ person-to-person lead, provider delivery, normal-runtime activation, hosted
 integration, or production verification.
 
 
+### Goal 3 / Goal 7 Commercial public-enquiry entitlement supplement — 2026-09-15
+
+A further public-route audit found the same commercial-owner contradiction at
+Commercial listing capture: a current, unbadged agency member without a personal
+term could be held in manual attention even when the materialized listing and
+canonical membership both pointed to an agency with valid Launch Access.
+Membership existence alone also did not prove it was membership in that listing
+owner; agency-only custody did not require an active agency term.
+
+[`551d63fe`](https://github.com/Doscoding187/real_estate_portal/commit/551d63fe)
+uses the materialized Commercial listing agency as the commercial owner,
+requires the assigned member's current canonical membership to match it, and
+admits the matching agency billable-account term. It retains independent-agent
+and badge paths where they are authorized, fails wrong/suspended/absent
+membership closed into auditable manual attention, and requires an active term
+for agency-only custody.
+
+On exact target `a560e9f2971e7676…`, the real public Commercial search and
+`leads.create` route created persisted agent-and-agency `crm_export` custody for
+a current unbadged member; after canonical suspension with retained profile
+association, the next enquiry was recorded as manual attention. The
+authority-wrapped Commercial/custody/membership regression passed **7 files /
+128 tests**; typecheck and static authority **35 files / 295 tests** passed.
+This closes the local Goal 3 commercial-owner and Goal 7 Commercial public
+recipient boundary. It does not prove Commercial browser UX, external delivery,
+hosted integration, a live paid cohort, or production activation.
+
+
 ### Post-goal coverage-authority correction — 2026-09-15
 
 The later browser/persisted-state inspection found an area-specific defect at

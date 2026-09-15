@@ -1,6 +1,6 @@
 # Post-merge MVP closure review packet
 
-Date: 2026-09-15 (canonical private-work, inventory, operational-workspace, and public-recommendation membership supplements, generic Developer-Land row and draft-containment supplements, transactional-email containment, governed pre-payment browser-acceptance, Commercial-workflow, and governed local-service-recovery addenda; canonical agent-coverage addendum; prior Goals 6–10, LRC-LAND-001, and LRC-SUPPORT-001 follow-ups dated 2026-09-14; original closure review dated 2026-09-13).
+Date: 2026-09-15 (canonical private-work, inventory, operational-workspace, and public-recommendation membership supplements, generic Developer-Land row and draft-containment supplements, transactional-email containment, governed pre-payment browser-acceptance, Commercial-workflow, Commercial public-enquiry entitlement/custody, and governed local-service-recovery addenda; canonical agent-coverage addendum; prior Goals 6–10, LRC-LAND-001, and LRC-SUPPORT-001 follow-ups dated 2026-09-14; original closure review dated 2026-09-13).
 **Outcome: the local candidate supports controlled
 pre-payment onboarding; canonical billing and activation paths are contained,
 and Goals 1–10 agency membership, private-work/inventory/operational-workspace/public-recommendation authority, commercial-term, private-preparation,
@@ -8,8 +8,8 @@ review/publication, public-discovery, public-enquiry custody, CRM-continuity,
 first-cohort recovery, one consolidated agency operating acceptance, hard-deferred
 Land containment including generic Developer rows and drafts, canonical agent-coverage authority, governed browser proof of
 agent and agency-owner pre-payment onboarding, agency preparation-state and
-deferred-invitation-validity and queued-invitation-acceptance corrections, and a Commercial generic-viewing
-boundary correction and deployed transactional-email false-success containment are verified
+deferred-invitation-validity and queued-invitation-acceptance corrections, and Commercial generic-viewing
+and public-enquiry entitlement/custody boundary corrections and deployed transactional-email false-success containment are verified
 on the task branch. A bounded assisted-onboarding intake is also locally implemented;
 named support operations and final disclosures are blocked pending owner-supplied operating and legal authority. Normal commercial activation, hosted integration,
 production verification, and protected release remain blocked.** This is not a declaration that all MVP
@@ -75,6 +75,7 @@ protected environment.
 | Assisted-onboarding intake correction (task branch) | `144e90d1531d2e85a407e5dabecfb4124c8394bf` |
 | Canonical agent-coverage authority correction (task branch) | `f40ca8a3bbed5bfc1f0ffeb675b2c9d10397f35e` |
 | Commercial generic-viewing boundary correction (task branch) | `d1545579fda2c32b466af4cf68ff6929c2e2be2b` |
+| Commercial public-enquiry entitlement/custody correction (task branch) | `551d63fe` |
 | Full-suite fixture-congruency correction (task branch) | `e50dbe956a50a0e0a1c071224fb1bffd46bdb4d4` |
 | Queued-invitation acceptance containment (task branch) | `415a947261a65c160f4fb77c39712050bab35b8` |
 | Browser correction-loop acceptance (task branch) | `72dd80e04b5c76c348389f4262543022a8a9a586` |
@@ -1097,6 +1098,57 @@ enable Commercial publishing, payments, entitlement mutation, provider delivery,
 or a Commercial launch cohort. Hosted, integrated, and production verification
 remain open.
 
+## LRC-COMMERCIAL-001 public-enquiry entitlement and custody supplement — 2026-09-15
+
+A follow-up review found a separate public Commercial-capture contradiction.
+The capture boundary evaluated an assigned agent through an individual
+subscription before it considered the agency that owned the materialized
+Commercial listing. A current, approved, unbadged canonical agency member with
+matching agency Launch Access but no personal subscription was therefore held
+in durable `attention_required`/`manual` custody. The agency-only recipient
+branch also accepted a verified agency without proving a current commercial
+term. The former membership guard only checked whether some current membership
+existed; it did not prove that its agency matched the listing's commercial
+owner.
+
+Commit [`551d63fe`](https://github.com/Doscoding187/real_estate_portal/commit/551d63fe)
+uses the materialized listing's agency as the commercial owner. For a
+Commercial listing assigned to an agent, delivery now requires that person's
+one current canonical membership to match that owner. It accepts a valid
+individual term, verification badge, or the matching agency's canonical
+billable-account term; stale profile affiliation and a membership in another
+agency cannot satisfy the boundary. An agency-only recipient must be verified
+and have a matching active agency term. Failure retains the enquiry in
+observable manual-attention custody rather than misrouting it. The shared
+recipient predicate is also stricter for a matching Land agency membership,
+while the separate hard Land containment remains unchanged.
+
+Direct local evidence on the exact task-owned disposable target
+`a560e9f2971e7676…`:
+
+- The new focused contract first failed on the prior source exactly as expected:
+  the eligible unbadged agency member produced `attention_required`/`manual`
+  rather than direct custody. After the correction, the contract covers the
+  matching-agency positive path, a current membership in another agency, and
+  an agency-only recipient without a valid term.
+- The real target acceptance constructs the canonical published Commercial
+  asset → space → availability → listing graph, confirms it through
+  `searchPublicCommercial`, and invokes the public `leads.create` route. An
+  anonymous enquiry reaches the current unbadged member through agency Launch
+  Access and persists matching listing, agency, and agent custody with
+  `crm_export` delivery. Suspending canonical membership while retaining the
+  profile agency field makes the next enquiry durable manual attention.
+- `pnpm test:authority -- server/services/__tests__/publicLeadCaptureService.contract.test.ts server/__tests__/integration.agency-membership-authority.test.ts server/services/__tests__/publicLeadCustodyService.contract.test.ts server/services/__tests__/commercialOfficeService.test.ts server/__tests__/contract.commercial-lead-workflow-boundary.test.ts server/__tests__/integration.agent-launch-journey.test.ts server/__tests__/contract.agent-continuity.test.ts --reporter=basic` passed **7 files / 128 tests**. The focused contract and persisted target integration contribute **55** and **17** tests respectively.
+- `pnpm check` and `pnpm test:db-authority:static` passed; the authority suite
+  reported **35 files / 295 tests**. Targeted ESLint had **0 errors** and the
+  existing warning backlog only; `git diff --check` passed.
+
+This is local source, fixture, service, and public-route evidence. The
+fixture's agency term is isolated test state; it does not enable normal-runtime
+payment, finance, subscription, or publishing activation. It does not establish
+Commercial browser UX, hosted/provider delivery, a Commercial cohort, protected
+release, or production verification.
+
 ## Full authority-suite fixture-congruency follow-up
 
 The first broad authority-wrapped run after the Commercial correction completed
@@ -1259,8 +1311,10 @@ server-draft creation, publication, discovery, enquiry, and CRM slices.
    this boundary with a free publishing entitlement or a privilege bypass.
 4. **L1 — integrate and host-verify the completed agency, membership, and Commercial-route
    boundaries (LRC-AGY-001; LRC-MEM-001; LRC-COMMERCIAL-001):** Goal 10 proves the complete
-   first-cohort agency journey locally, and `d1545579` keeps Commercial leads
-   out of generic viewing flows before ordinary assignment. `e9909ab6` adds
+   first-cohort agency journey locally, `d1545579` keeps Commercial leads out
+   of generic viewing flows before ordinary assignment, and `551d63fe` makes
+   public Commercial recipient eligibility agree with current canonical agency
+   membership and the matching agency term. `e9909ab6` adds
    browser proof for agency-owner registration and pre-payment setup, including
    persisted `pending_payment` preference without an invoice; `0c440207`
    prevents a queued pre-payment team invitation from producing an expired link
