@@ -6,9 +6,9 @@ pre-payment onboarding; canonical billing and activation paths are contained,
 and Goals 1–10 agency membership, workspace, commercial-term, private-preparation,
 review/publication, public-discovery, public-enquiry custody, CRM-continuity,
 first-cohort recovery, one consolidated agency operating acceptance, hard-deferred
-Land containment, canonical agent-coverage authority, a governed browser proof of
-standalone-agent pre-payment onboarding, and a Commercial generic-viewing
-boundary correction are verified
+Land containment, canonical agent-coverage authority, governed browser proof of
+agent and agency-owner pre-payment onboarding, an agency preparation-state
+correction, and a Commercial generic-viewing boundary correction are verified
 on the task branch. A bounded assisted-onboarding intake is also locally implemented;
 named support operations and final disclosures remain open. Normal commercial activation, hosted integration,
 production verification, and protected release remain blocked.** This is not a declaration that all MVP
@@ -282,13 +282,13 @@ incomplete required journey; it does not claim a failing production observation.
 
 | Journey                      | Result                                                  | Exact evidence and boundary                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | ---------------------------- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Account access               | PASS locally                                            | `scripts/mvp-account-verification.mts` completed 15 HTTP checks: weak password rejection; registration; unverified denial; verification; token replay denial; login; prohibited self-assigned super-admin reduced to visitor; logout; anonymous auth.me null; recovery enumeration resistance; reset; reset replay denial; old-password denial; new-password success; pre-reset session revoked. Commit `555250c5` also completed real Chromium registration UI, local-development verification-link navigation, session establishment, and agent setup on the exact target. External provider delivery and expiry timing over elapsed time remain unverified. |
+| Account access               | PASS locally                                            | `scripts/mvp-account-verification.mts` completed 15 HTTP checks: weak password rejection; registration; unverified denial; verification; token replay denial; login; prohibited self-assigned super-admin reduced to visitor; logout; anonymous auth.me null; recovery enumeration resistance; reset; reset replay denial; old-password denial; new-password success; pre-reset session revoked. Commits `555250c5` and `e9909ab6` also completed real Chromium registration UI, local-development verification-link navigation, session establishment, and respectively agent setup and agency-owner setup on the exact target. External provider delivery and expiry timing over elapsed time remain unverified. |
 | Permissions                  | BLOCKED for complete scope                              | Account privilege injection denied; scripts/mvp-listing-verification.mts proved cross-tenant listing read and write HTTP 403 and unchanged persisted title. Scenario verifier proved agent/agency/developer unrelated-recipient denial and platform-operations restrictions. This is not exhaustive tenant membership revocation, every role, or admin audit proof.                                                                                                                                                                                                                                                                                                                                                                                                                         |
-| Listing authoring            | PASS for HTTP private agency-preparation slice; browser entry/gate proven | `pnpm test:authority -- server/__tests__/integration.agency-listing-preparation.test.ts server/__tests__/integration.agency-member-workspace-authority.test.ts server/__tests__/integration.listing-media-tenant-boundary.test.ts` passed 3 files / 5 tests on target fingerprint `a560e9f2971e7676…`. Production invitation/listing routers were exercised over authenticated HTTP; five media objects were physically PUT and served back, canonical Gauteng/Johannesburg/Sandton IDs persisted, the member reopened/edited the draft, the agency owner could view it, and an unrelated tenant was denied. Submission remained blocked by `subscription_required`; no public projection was created. Commit `555250c5` proves the standalone-agent browser can reach and reload the private-preparation workspace with the commercial gate visible. A full browser completion of media upload/server-draft creation and the reviewer/public lifecycle remains unproven.             |
+| Listing authoring            | PASS for HTTP private agency-preparation slice; browser entry/gate proven | `pnpm test:authority -- server/__tests__/integration.agency-listing-preparation.test.ts server/__tests__/integration.agency-member-workspace-authority.test.ts server/__tests__/integration.listing-media-tenant-boundary.test.ts` passed 3 files / 5 tests on target fingerprint `a560e9f2971e7676…`. Production invitation/listing routers were exercised over authenticated HTTP; five media objects were physically PUT and served back, canonical Gauteng/Johannesburg/Sandton IDs persisted, the member reopened/edited the draft, the agency owner could view it, and an unrelated tenant was denied. Submission remained blocked by `subscription_required`; no public projection was created. Commits `555250c5` and `e9909ab6` prove the agent and agency-owner browsers can reach and reload their private-preparation workspaces with the commercial gate visible. A full browser completion of agency membership, media upload/server-draft creation, and the reviewer/public lifecycle remains unproven.             |
 | Publication                  | PASS for isolated agency lifecycle; normal runtime blocked | Goal 5 real HTTP acceptance submitted a canonical agency listing, captured reviewer rejection reasons/note, reopened and corrected the draft, resubmitted it, observed suspended-term approval denial with no projection, restored the isolated fixture term, and approved the listing. Persisted source/queue/projection checks and five mirrored images passed; approval used a task-local subscription fixture and did not invoke payment or normal runtime activation. Hosted and production publication remain unverified. |
 | Discovery                    | PASS for isolated agency slice; Land locally contained | Goal 6 real HTTP search used the canonical `suburb:<id>` authority and returned the published agency property with exact Gauteng/Johannesburg/Sandton context, matching title/type/source, and five images. Before approval the same search returned no card; mixed canonical-plus-city input returned `BAD_REQUEST`. Public detail returned the approved title, city/province, identity, five images and five media records. `335838dff0c746b860eaaf2930412d4b38540db5` now blocks Land direct public/review/author paths and generic listing/public-projection paths locally; no Land consumer acceptance, integration, or production evidence is claimed. |
 | Lead investigation and audit | PASS for local custody/CRM/recovery fallback | Goals 7–8 exact-target acceptance creates one anonymous public enquiry for the newly published agency listing, persists the lead and completed `crm_export` custody row, returns the same lead for exact replay, rejects a conflicting replay, and denies an unrelated verified tenant lead visibility and retry. The assigned agent records contact, stage and follow-up; the agency admin observes them. Expiry pauses new enquiries without stranding custody; canonical suspension/reassignment moves active lead/future showing and denies the former agent. Goal 9 deliberately interrupted a platform-managed worker, observed audit/queue attention, completed the lead once through the authorized super-admin route, and proved replay-safe audit history. CRM-export/local simulated delivery is not actual provider delivery; external provider reliability, live worker supervision, hosted operation, and production recovery remain blocked. |
-| Payments disabled            | PASS locally — billing/activation containment candidate | `c8c35fde` defines a shared `preparation_only` state, removes payment/proof affordances from the onboarding surfaces, and fails closed before database work for invoice, checkout, proof, finance-review, lifecycle, entitlement, and provider-event functions. Exact-target HTTP proof returned tRPC 412 for agent invoice, agency checkout and developer invoice requests, and HTTP 409 for the agent Express invoice route; it then proved profile/draft preparation persisted. The worker intake/claim/complete/fail paths have the same guard. `335838dff0c746b860eaaf2930412d4b38540db5` separately hard-contains Land’s formerly independent public/review path. This is local candidate evidence only: it does not enable payment, entitlement mutation, free publication, provider delivery, or production release. |
+| Payments disabled            | PASS locally — billing/activation containment candidate | `c8c35fde` defines a shared `preparation_only` state, removes payment/proof affordances from the onboarding surfaces, and fails closed before database work for invoice, checkout, proof, finance-review, lifecycle, entitlement, and provider-event functions. `e9909ab6` corrects agency setup and workspace actions that otherwise implied an invoice was ready: the canonical `pending_payment` preference now presents private-inventory preparation while activation is disabled. Exact-target HTTP proof returned tRPC 412 for agent invoice, agency checkout and developer invoice requests, and HTTP 409 for the agent Express invoice route; it then proved profile/draft preparation persisted. The worker intake/claim/complete/fail paths have the same guard. `335838dff0c746b860eaaf2930412d4b38540db5` separately hard-contains Land’s formerly independent public/review path. This is local candidate evidence only: it does not enable payment, entitlement mutation, free publication, provider delivery, or production release. |
 
 The malformed journey row in the assignment was interpreted as lead
 investigation with audit evidence. No broader CRM scope was assumed.
@@ -298,7 +298,7 @@ Browser setup initially used an unapproved port (5017), then a mismatched
 on the existing allowed backend port 5000 and configured localhost origin
 resolved the issue without changing security policy. The transient
 UNSUPPORTED_MEDIA_TYPE observation was not a product defect. That early page
-rendering was smoke evidence only. The later governed standalone-agent browser
+rendering was smoke evidence only. The later governed pre-payment browser
 acceptance recorded below is a real local form/session/profile/preparation-gate
 run; it does not replace the outstanding browser evidence for a completed
 agency listing, review, public discovery, enquiry, or CRM lifecycle.
@@ -682,14 +682,21 @@ reported by the governed command and was neither adopted nor changed.
 ## Governed pre-payment browser onboarding follow-up
 
 Commit [`555250c5`](https://github.com/Doscoding187/real_estate_portal/commit/555250c5dcb3b507d114eb76d40f3a01e7d7f6e8)
-adds one authority-bound Chromium acceptance to close the previously recorded
-browser-form gap for the standalone-agent preparation journey. It deliberately
-does not reuse older Playwright configurations that hard-code another local
-database. `playwright.prepayment-onboarding.config.ts` starts the repository's
-exact-target `mvp-local-runtime.mts` API process at `localhost:5000` and a local
-Vite browser shell at `localhost:5177`. The recorded command invokes it through
-`pnpm test:browser:authority`, which resolves and passes the governed authority
-context to its child processes.
+added the first authority-bound Chromium acceptance for standalone-agent
+preparation. Commit [`e9909ab6`](https://github.com/Doscoding187/real_estate_portal/commit/e9909ab6be90323a881f07a267777c64b1e075d3)
+extends that governed acceptance to a newly registered agency owner and corrects
+two misleading pre-payment presentations: agency setup no longer says it will
+issue an invoice, and a `pending_payment` commercial preference no longer shows
+an invoice-ready action while activation is disabled. The correction is a UI
+projection only; it preserves the canonical subscription state and the server's
+fail-closed payment and entitlement controls.
+
+The acceptance deliberately does not reuse older Playwright configurations that
+hard-code another local database. `playwright.prepayment-onboarding.config.ts`
+starts the repository's exact-target `mvp-local-runtime.mts` API process at
+`localhost:5000` and a local Vite browser shell at `localhost:5177`. The
+recorded command invokes it through `pnpm test:browser:authority`, which resolves
+and passes the governed authority context to its child processes.
 
 The final command was:
 
@@ -697,33 +704,53 @@ The final command was:
 pnpm test:browser:authority -- --config=playwright.prepayment-onboarding.config.ts
 ```
 
-It passed **1 Chromium desktop test** at `1440x900`. The browser selected Real
-Estate Agent, completed the normal registration form, received HTTP `201`, and
-then followed the normal `/api/auth/verify-email` route using the temporary
-link emitted by the repository's local-development email transport. The
-verification route set the real session and redirected the browser to
-`/agent/setup?verified=true`. The browser saved a professional profile, selected
-Sandton from the canonical location autocomplete, completed setup, reached
-`/listings/create`, and reloaded that workspace. The UI continued to state that
-the stakeholder may prepare a private listing but submission and marketplace
-publication require onboarding, approval, and commercial activation.
+It passed **2 Chromium desktop tests** at `1440x900`. In the first, the browser
+selected Real Estate Agent, completed the normal registration form, received
+HTTP `201`, and then followed the normal `/api/auth/verify-email` route using
+the temporary link emitted by the repository's local-development email
+transport. The verification route set the real session and redirected the
+browser to `/agent/setup?verified=true`. The browser saved a professional
+profile, selected Sandton from the canonical location autocomplete, completed
+setup, reached `/listings/create`, and reloaded that workspace. The UI continued
+to state that the stakeholder may prepare a private listing but submission and
+marketplace publication require onboarding, approval, and commercial activation.
 
-The test queried the same authority-owned target after the UI actions and
-asserted the persisted user/agent facts: verified agent role, display name,
-phone, bio, no agency affiliation, and a single canonical `suburb:<id>` Sandton
-coverage identity with its display label. `pnpm run check`,
-`pnpm test:db-authority:static` (**35 files / 293 tests**),
-`git diff --check`, and `pnpm db:authority:status` also passed. The final status
-retained fingerprint `a560e9f2971e7676…`, exact worktree ownership, migration
-head `0090_retire_disconnected_boost_campaigns.sql`, schema congruency, and
+In the second, the browser selected Agency during ordinary registration,
+verified through the same local-development transport and normal verification
+route, then completed agency identity, branding, commercial-selection, terms,
+review, and save steps at `/agency/setup`. It landed in `/agency/overview` with
+the agency shell and preparation banner. The setup explicitly stated that it
+does not issue an invoice, request payment, or activate publishing. The
+workspace presented “Prepare inventory” and did not present “Your invoice is
+ready.”
+
+The test queried the same authority-owned target after the UI actions. For the
+agent, it asserted a verified agent role, display name, phone, bio, no agency
+affiliation, and one canonical `suburb:<id>` Sandton coverage identity with its
+display label. For the agency owner, it asserted a verified `agency_admin`, a
+persisted agency and branding record with its selected geography, a canonical
+`pending_payment` subscription with a valid plan selection, and **zero**
+`billing_invoices`. This is evidence that normal pre-payment setup saves a
+commercial preference without creating an invoice, payment attempt, entitlement,
+or public activation.
+
+After the correction, the focused client suite passed **2 files / 10 tests**,
+the authority-wrapped agency onboarding contracts passed **2 files / 9 tests**,
+and the browser command above passed its two tests. `pnpm run check`,
+`pnpm test:db-authority:static` (**35 files / 293 tests**), targeted ESLint
+(zero errors; existing warnings only), `git diff --check`, and
+`pnpm db:authority:status` also passed. The final status retained fingerprint
+`a560e9f2971e7676…`, exact worktree ownership, migration head
+`0090_retire_disconnected_boost_campaigns.sql`, schema congruency, and
 `no-incomplete-attempts`.
 
 The temporary verification-link log is created mode `0600` under `/tmp`; raw
 tokens, credentials, screenshots, videos, and reports are excluded from Git.
 This evidence is local-only. It does not prove external email delivery,
 elapsed-time token expiry, actual media upload, a completed browser server-draft
-creation, agency membership/publication, payment or entitlement activation,
-provider behaviour, hosting, or production operation.
+creation, canonical invitation/member acceptance, agency publication,
+payment or entitlement activation, provider behaviour, hosting, or production
+operation.
 
 ## Ranked remaining blockers and authority handoff
 
@@ -738,11 +765,13 @@ provider behaviour, hosting, or production operation.
 4. **L1 — integrate and host-verify the completed agency and Commercial-route
    boundaries (LRC-AGY-001; LRC-COMMERCIAL-001):** Goal 10 proves the complete
    first-cohort agency journey locally, and `d1545579` keeps Commercial leads
-   out of generic viewing flows before ordinary assignment. `555250c5` adds
-   browser evidence only for the standalone-agent pre-payment slice. The full
-   agency journey still has no browser UI, hosted, provider, or production
-   proof; senior review, integration, and controlled runtime acceptance remain
-   required before any cohort is represented as live.
+   out of generic viewing flows before ordinary assignment. `e9909ab6` adds
+   browser proof for agency-owner registration and pre-payment setup, including
+   persisted `pending_payment` preference without an invoice. The full agency
+   member/listing/review/public-discovery/enquiry/CRM journey still has no
+   browser UI, hosted, provider, or production proof; senior review,
+   integration, and controlled runtime acceptance remain required before any
+   cohort is represented as live.
 5. **L1 — support/disclosure operation and external/protected operations:**
    `144e90d1` makes assisted-onboarding intake durable and reviewable, but it
    is not a monitored contact service. A named queue owner, cadence,
