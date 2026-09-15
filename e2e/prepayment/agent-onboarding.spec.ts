@@ -649,4 +649,148 @@ test.describe('pre-payment onboarding browser acceptance', () => {
     });
     expect(Number(unchanged.agentProfileCount)).toBe(0);
   });
+
+  test('lets a verified Developer submit organisation review intake and resume a private project draft', async ({
+    page,
+  }) => {
+    const email = `browser-developer-preparation-${randomUUID()}@invalid.example`;
+    const password = `Browser!${randomUUID()}9a`;
+    const ownerName = 'Browser Developer Owner';
+    const organisationName = `Browser Developer Organisation ${randomUUID()}`;
+    const previousVerificationToken = latestVerificationToken();
+
+    await page.goto('/advertise/sell/developers');
+    await page.getByRole('link', { name: 'Start Developer preparation' }).first().click();
+    await expect(page).toHaveURL(
+      /\/login\?mode=register&next=%2Fdeveloper%2Fsetup&role=property_developer/,
+    );
+
+    const registration = page.getByRole('dialog');
+    await expect(registration.getByRole('heading', { name: 'Create your account' })).toBeVisible();
+    await registration.locator('input[name="name"]').fill(ownerName);
+    await registration.locator('input[name="email"]').fill(email);
+    await registration.locator('input[name="password"]').fill(password);
+    await registration.locator('input[name="confirmPassword"]').fill(password);
+    const registrationResponse = page.waitForResponse(
+      response =>
+        response.url().includes('/api/auth/register') && response.request().method() === 'POST',
+    );
+    await registration.getByRole('button', { name: 'Continue to company onboarding' }).click();
+    expect((await registrationResponse).status()).toBe(201);
+    await expect(page.getByRole('dialog', { name: 'Welcome back' })).toBeVisible();
+
+    const verificationToken = await waitForVerificationToken(previousVerificationToken);
+    await page.goto(
+      `${apiOrigin}/api/auth/verify-email?token=${encodeURIComponent(verificationToken)}`,
+    );
+    await expect(page).toHaveURL(/\/developer\/setup\?verified=true/);
+    await expect(page.getByRole('heading', { name: 'Developer Registration' })).toBeVisible();
+
+    await page.getByPlaceholder('Enter your company name').fill(organisationName);
+    await page
+      .getByPlaceholder("Describe your company's focus and expertise...")
+      .fill('A prospective organisation preparing private residential development inventory.');
+    await page.getByRole('combobox').first().click();
+    await page.getByRole('option', { name: 'Residential Development' }).click();
+    await page.getByRole('button', { name: 'Next Step' }).click();
+
+    await expect(page.getByRole('heading', { name: 'Contact Information' })).toBeVisible();
+    await page.getByPlaceholder('contact@yourcompany.com').fill(email);
+    await page.getByPlaceholder('+27 11 123 4567').fill('+27110000000');
+    await page.getByPlaceholder('Cape Town').fill('Johannesburg');
+    await page.getByRole('combobox').click();
+    await page.getByRole('option', { name: 'Gauteng' }).click();
+    await page.getByRole('button', { name: 'Next Step' }).click();
+
+    await expect(page.getByRole('heading', { name: 'Portfolio & Expertise' })).toBeVisible();
+    await page.getByRole('button', { name: 'Select Residential specialization' }).click();
+    await page.getByRole('button', { name: 'Next Step' }).click();
+
+    await expect(page.getByRole('heading', { name: 'Review & Submit' })).toBeVisible();
+    await page.locator('#terms').click();
+    const profileResponse = page.waitForResponse(
+      response =>
+        response.url().includes('developer.createProfile') &&
+        response.request().method() === 'POST',
+    );
+    await page.getByRole('button', { name: 'Submit Application' }).click();
+    expect((await profileResponse).status()).toBe(200);
+    await expect(page).toHaveURL(/\/developer\/dashboard\?setup=complete/);
+    await expect(
+      page.getByRole('heading', { name: 'Prepare your development portfolio' }),
+    ).toBeVisible();
+    await expect(
+      page.getByText(
+        'Marketplace publishing requires profile approval and the required commercial activation.',
+      ),
+    ).toBeVisible();
+
+    await page.goto('/developer/create-development');
+    await expect(page.getByRole('heading', { name: 'Project Setup' })).toBeVisible();
+    await page.getByText('Residential Development', { exact: true }).click();
+    await page.getByText('For Sale', { exact: true }).click();
+    await page.getByRole('button', { name: 'Start Wizard' }).click();
+    await expect(page.getByTitle('Exit Wizard')).toBeVisible();
+    await page.getByTitle('Exit Wizard').click();
+    await expect(page.getByRole('heading', { name: 'Exit Development Wizard?' })).toBeVisible();
+    const draftResponse = page.waitForResponse(
+      response =>
+        response.url().includes('developer.saveDraft') && response.request().method() === 'POST',
+    );
+    await page.getByRole('button', { name: 'Exit', exact: true }).click();
+    expect((await draftResponse).status()).toBe(200);
+    await expect(page).toHaveURL(/\/developer(?:\/dashboard)?$/);
+
+    await page.goto('/developer/drafts');
+    await expect(page.getByRole('heading', { name: 'My Development Drafts' })).toBeVisible();
+    await expect(page.getByText('Untitled Draft', { exact: true })).toBeVisible();
+    await page.getByRole('button', { name: 'Resume' }).click();
+    await expect(page).toHaveURL(/\/developer\/create-development\?draftId=\d+/);
+    await expect(page.getByTitle('Exit Wizard')).toBeVisible();
+
+    const [persisted] = await query(
+      `SELECT u.emailVerified AS emailVerified,
+              u.role AS role,
+              organisation.id AS organisationId,
+              organisation.name AS organisationName,
+              organisation.status AS organisationStatus,
+              membership.role AS membershipRole,
+              membership.status AS membershipStatus,
+              publisher.id AS publisherId,
+              draft.id AS draftId,
+              draft.developer_organisation_id AS draftOrganisationId,
+              draft.catalogue_publisher_id AS draftPublisherId,
+              draft.draftName AS draftName,
+              JSON_UNQUOTE(JSON_EXTRACT(draft.draftData, '$.developmentType')) AS developmentType,
+              JSON_UNQUOTE(JSON_EXTRACT(draft.draftData, '$.developmentData.transactionType')) AS transactionType
+         FROM users u
+         INNER JOIN developer_organisation_memberships membership ON membership.user_id = u.id
+         INNER JOIN developer_organisations organisation ON organisation.id = membership.organisation_id
+         INNER JOIN catalogue_publishers publisher
+           ON publisher.developer_organisation_id = organisation.id
+         INNER JOIN development_drafts draft
+           ON draft.developer_organisation_id = organisation.id
+          AND draft.catalogue_publisher_id = publisher.id
+         WHERE u.email = ?
+         ORDER BY draft.id DESC
+         LIMIT 1`,
+      [email],
+    );
+    expect(persisted).toMatchObject({
+      emailVerified: 1,
+      role: 'property_developer',
+      organisationName,
+      organisationStatus: 'pending',
+      membershipRole: 'owner',
+      membershipStatus: 'active',
+      draftName: 'Untitled Draft',
+      developmentType: 'residential',
+      transactionType: 'for_sale',
+    });
+    expect(Number(persisted.organisationId)).toBeGreaterThan(0);
+    expect(Number(persisted.publisherId)).toBeGreaterThan(0);
+    expect(Number(persisted.draftId)).toBeGreaterThan(0);
+    expect(Number(persisted.draftOrganisationId)).toBe(Number(persisted.organisationId));
+    expect(Number(persisted.draftPublisherId)).toBe(Number(persisted.publisherId));
+  });
 });
