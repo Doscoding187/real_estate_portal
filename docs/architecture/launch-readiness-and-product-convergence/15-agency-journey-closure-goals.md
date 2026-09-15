@@ -702,6 +702,34 @@ pass; a clean broad rerun remains required. This correction neither changes
 membership/tenant authority nor enables payment, entitlement, publication,
 Land, provider, or protected operations.
 
+### Goal 8 client operating-date and viewing-input follow-up — 2026-09-15
+
+The explicit UTC wire boundary made a remaining client defect observable: the
+viewing calendar grouped ISO instants by their UTC date. Commit
+[`fa8f9101`](https://github.com/Doscoding187/real_estate_portal/commit/fa8f9101)
+now derives the calendar group and displayed date from the same
+`Africa/Johannesburg` operating-day key as My Day. Its client helper regression
+passed **1 file / 4 tests**, including the midnight boundary and UTC-to-local
+reschedule prepopulation.
+
+The same review identified an input-side risk. The agency API accepted a bare
+browser `datetime-local` string through host-local `Date` parsing even though
+durable database timestamps are UTC. Commit
+[`40a37c37`](https://github.com/Doscoding187/real_estate_portal/commit/40a37c37)
+treats only bare viewing input as Johannesburg wall time and preserves
+explicit-offset/UTC API input as an explicit instant. It supplies a time-zone
+label in both viewing entry points and prepopulates the reschedule control in
+that operating time zone.
+
+The authority-wrapped contract plus persisted viewing workflow passed **2 files
+/ 13 tests** on target `a560e9f2971e7676…`. Its new route-level counterexample
+forces the test API host to UTC, submits a browser-shaped 00:30 local input,
+and proves both its stored explicit instant and My Day membership. The client
+helper plus Agent Leads regression passed **2 files / 6 tests**; typecheck,
+static authority (**35 files / 295 tests**), targeted zero-error lint, and final
+authority status passed. This keeps the timestamp model and all commercial,
+membership, Land, schema, and protected-operation boundaries unchanged.
+
 ## Goal 9 — Complete notification, recovery, and operational handling
 
 **Outcome**

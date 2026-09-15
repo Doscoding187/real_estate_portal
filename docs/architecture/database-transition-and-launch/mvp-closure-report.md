@@ -1185,6 +1185,56 @@ Direct local evidence on the exact task-owned disposable target
   and `git diff --check` passed. Targeted ESLint had **0 errors** and the
   existing warning backlog only.
 
+### Client operating-day and viewing-input follow-up — 2026-09-15
+
+Making the API instant explicit exposed two remaining client/host boundary
+errors in the same operational journey. The viewing calendar grouped an ISO
+instant with `toISOString().slice(0, 10)`, which is the UTC date rather than
+the Agency workspace's governed Johannesburg operating date. A 00:30
+Johannesburg viewing was therefore shown under the previous calendar day even
+though My Day correctly returned it on the selected local day.
+
+Commit [`fa8f9101`](https://github.com/Doscoding187/real_estate_portal/commit/fa8f9101)
+introduces a small client-only Johannesburg date helper. Calendar grouping,
+calendar labels, and the My Day heading now use the same IANA time-zone date
+key as the server. It preserves the raw UTC instant and leaves unscheduled
+items distinct.
+
+The investigation also found that browser `datetime-local` values were passed
+as bare strings and parsed by `new Date` on the API host. Canonical database
+connections deliberately run in UTC, so a deployed UTC host would interpret a
+00:30 Johannesburg wall-time booking two hours later than the operator chose.
+Commit [`40a37c37`](https://github.com/Doscoding187/real_estate_portal/commit/40a37c37)
+defines the narrow viewing-input rule: a bare browser datetime is an
+`Africa/Johannesburg` wall time, while an explicit ISO offset or UTC instant
+retains its supplied instant. Existing viewing creation and rescheduling share
+that parser; the reschedule form prepopulates in Johannesburg wall time and
+both agency viewing entry points state their time zone.
+
+Direct local evidence on the exact task-owned disposable target
+`a560e9f2971e7676…`:
+
+- The client helper regression passed **1 file / 4 tests**, including the
+  22:00Z/00:00 Johannesburg date boundary, a post-midnight calendar group, and
+  an existing UTC instant rendered as `2026-09-17T00:30` for rescheduling.
+- The authority-wrapped contract and persisted workflow passed **2 files / 13
+  tests**. The new real-route regression changes the test API host to UTC,
+  creates a browser-shaped `${date}T00:30` booking, then proves the stored and
+  returned instant is the intended 00:30 Johannesburg instant and that My Day
+  returns it on the intended local date. It retains tenancy, suspension,
+  lifecycle, reassignment, feedback, and day-boundary coverage.
+- `pnpm vitest run client/src/features/agency/viewings/agencyViewingDates.test.ts
+  client/src/pages/AgentLeads.test.tsx --reporter=basic` passed **2 files / 6
+  tests**; `pnpm check`, `pnpm test:db-authority:static` (**35 files / 295
+  tests**), `git diff --check`, and targeted ESLint with zero errors passed.
+- A final authority status confirmed exact worktree ownership, a connected
+  schema-congruent manifest-head target, and no incomplete migration attempts.
+
+This is a targeted viewing-date/transport correction. It does not change the
+stored UTC timestamp model, the Johannesburg operating-date policy, generic
+non-viewing date fields, schema, migration history, membership/tenant rules,
+payments, entitlement, publication, Land, provider settings, or deployment.
+
 The interrupted broad invocation is not counted as a post-fix full-suite pass;
 it supplied the counterexample and then lost its terminal session before a
 summary could be retained. A later clean broad rerun remains required as

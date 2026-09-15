@@ -251,6 +251,30 @@ This index is for navigation and programme oversight. Its **Full record** column
 | Status | in progress |
 | Notes | The interrupted broad authority invocation is evidence of discovery only and is not claimed as a post-fix full-suite result. The correction does not change the Africa/Johannesburg operating-date contract, stored timestamp, schema, migration, membership/tenant authority, payment, entitlement, Land, provider, or deployment policy. |
 
+### LRC-AGY-001 client operating-date and viewing-input supplement — 2026-09-15
+
+| Field | Record |
+| --- | --- |
+| Issue ID | LRC-AGY-001 |
+| Date observed | 2026-09-15 |
+| Exact Git SHA | `4d0b1517` (preceding explicit-UTC API boundary); `fa8f9101` (Johannesburg calendar grouping); `40a37c37` (Johannesburg browser-input parsing) |
+| Page or journey | Agency viewing creation/reschedule → viewing calendar → Johannesburg My Day queue |
+| URL | `agency.createViewing`; `agency.scheduleLeadViewing`; `agency.rescheduleViewing`; `/agency/viewings`; `/agent/leads`; `agency.getMyDay` |
+| User role | Current agency administrator or same-agency member; cross-tenant and suspended-member negative cases retained in the workflow suite |
+| Viewport or device | Exact task-owned disposable target; real tRPC routes, persisted integration, and client unit evidence; browser not rerun for this narrow follow-up |
+| Current behaviour | After the API began returning explicit UTC instants, the calendar still grouped by UTC day. Separately, a browser `datetime-local` value reached the API as a bare string and inherited the host zone. A UTC deployment host could persist a chosen 00:30 Johannesburg appointment as 02:30 Johannesburg. |
+| Expected behaviour | Viewings group, label, prepopulate, persist, and query by the governed Africa/Johannesburg operating date. A bare browser datetime means Johannesburg wall time; an explicit offset or UTC timestamp remains an explicit instant. |
+| Evidence reference | [MVP closure report](../database-transition-and-launch/mvp-closure-report.md#lrc-agy-001-viewing-utc-wire-boundary-supplement--2026-09-15): client helper **1 file / 4 tests**; authority-wrapped viewing contract and persisted workflow **2 files / 13 tests**, including a real route forced to UTC; client regression **2 files / 6 tests**; typecheck; static authority **35 files / 295 tests**; final exact-target authority status. |
+| Severity | L1 |
+| Owning engine | Agency viewings / My Day / CRM continuity |
+| Launch decision | Fix now before controlled agency operations. |
+| Approved implementation branch/worktree | `verify/mvp-closure-post-577` / `/home/edwardspc/Desktop/Dev/worktrees/property-listify-mvp-closure-post-577` |
+| Pull request or commit | [`fa8f9101`](https://github.com/Doscoding187/real_estate_portal/commit/fa8f9101); [`40a37c37`](https://github.com/Doscoding187/real_estate_portal/commit/40a37c37) |
+| Integrated verification | Pending; exact task-branch local evidence only. |
+| Production verification | Pending; no protected system, provider, deployment, payment, or entitlement activation accessed. |
+| Status | in progress |
+| Notes | The localized parsing rule applies only to agency viewing inputs. It preserves stored UTC values and explicit API instants, and does not claim browser/hosted evidence or change generic follow-up, deal, transaction, payment, entitlement, Land, migration, or deployment policy. The earlier interrupted broad invocation remains non-passing evidence only. |
+
 
 ### LRC-INVITE-001
 
