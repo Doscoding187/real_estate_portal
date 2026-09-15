@@ -58,6 +58,7 @@ protected environment.
 | Canonical agency-inventory scope supplement (task branch) | `0eaf2cc806d157f4e6b378721db48e69cef3ffb6`                              |
 | Canonical operational-workspace membership supplement (task branch) | `32ce7524b642519300a5ae6daddac5ae2c393486`                       |
 | Canonical viewing/deal workspace membership supplement (task branch) | `47e059efaf3404db0f16d3f86b7a577ddb4f1ff3`                    |
+| Canonical Agent Home workspace membership supplement (task branch) | `a0fc9e8b95be1275844e11aaed4bf57bc1ff2bd3`                    |
 | Goal 2 workspace correction (task branch)           | `af9fd6f2`                                                                    |
 | Goal 3 commercial-term correction (task branch)     | `16a23cd9ab61cbc791f1b7e7941e62e53d1ecd7d`                                    |
 | Goal 4 listing-preparation evidence (task branch)   | `a403d31d7456aff837e6d6c5e73af8033cf1634b`                                    |
@@ -389,6 +390,42 @@ This is task-branch local authorization evidence only. It introduces no schema,
 migration, data repair, target lifecycle, payment, entitlement, publication,
 provider, deployment, credential, or protected-operation change. Hosted,
 integration, and production verification remain pending.
+
+### Canonical Agent Home workspace membership supplement (2026-09-15)
+
+The next exact-target audit found a matching stale-affiliation gap in Agent
+Home. The lead and calendar paths already resolved current canonical membership,
+but Agent Home inventory, dashboard statistics, listing scheduling options,
+commission views/CSV export, and generic property mutation started from the
+retained agent profile. The direct pre-fix counterexample suspended canonical
+membership while retaining the historical agency IDs, then received the full
+private property row from `agent.getMyListings`.
+
+Commit [`a0fc9e8b`](https://github.com/Doscoding187/real_estate_portal/commit/a0fc9e8b95be1275844e11aaed4bf57bc1ff2bd3)
+adds a shared Agent Home workspace resolver. It permits unaffiliated agents and
+no-profile preparation paths as before, but an agent record carrying an agency
+affiliation must resolve a current canonical membership before the listed
+operational paths proceed. Lead custody continues to require an approved
+profile; property mutation uses the same affiliation decision before ownership
+checks. This is not a commercial, publication, or Land-policy change.
+
+The persisted-state regression first failed with the suspended member's full
+private inventory record. After correction it retains the stale profile
+projections and proves `FORBIDDEN` for Agent Home inventory, dashboard,
+scheduling options, commissions, commission export, property update, and
+property archive. The authority-wrapped final run passed **3 files / 18 tests**
+(`integration.agency-membership-authority`, `agent.dashboard-showings.smoke`,
+and `integration.agent-lead-transitions`) on target fingerprint
+`a560e9f2971e7676…`. The non-database canonical showings and inventory contract
+run passed **2 files / 9 tests**. `pnpm check`, `pnpm test:db-authority:static`
+(**35 files / 295 tests**), targeted ESLint with zero errors, and `git diff
+--check` passed.
+
+This is local task-branch authority evidence only. It does not claim hosted
+integration, provider operation, production verification, payment or
+entitlement activation, or a protected operation. No schema, migration, data
+repair, target lifecycle, provider, credential, deployment, or policy change
+occurred.
 
 ## Target and data establishment
 
@@ -1120,9 +1157,10 @@ server-draft creation, publication, discovery, enquiry, and CRM slices.
    listing/review/public-discovery/enquiry/CRM slices. One continuous browser
    path through owner registration, canonical invitation acceptance, and that
    member flow, plus hosted, provider, and production proof, remains absent;
-   `32ce7524` and `47e059ef` also close the observed stale-membership
-   operational-workspace and viewing/deal admission paths locally, but require
-   the same integration and hosted verification; senior review, integration,
+   `32ce7524`, `47e059ef`, and `a0fc9e8b` also close the observed
+   stale-membership operational-workspace, viewing/deal, and Agent Home
+   admission paths locally, but require the same integration and hosted
+   verification; senior review, integration,
    and controlled runtime acceptance remain
    required before any cohort is represented as live.
 5. **L1 — support/disclosure operation and external/protected operations:**
@@ -1175,7 +1213,7 @@ backend identities and a staffed GO/no-GO/recovery decision.
 ## Git and protected boundaries
 
 Application fixes are committed at `c6c9f133`, `bba390b0`, `c8c35fde`,
-`cf1f93e6`, canonical private-work membership correction `5f37d3d1`, canonical agency-inventory scope correction `0eaf2cc8`, canonical operational-workspace membership correction `32ce7524`, canonical viewing/deal workspace membership correction `47e059ef`, `af9fd6f2`, `16a23cd9`, Goal 4 evidence/fixture correction
+`cf1f93e6`, canonical private-work membership correction `5f37d3d1`, canonical agency-inventory scope correction `0eaf2cc8`, canonical operational-workspace membership correction `32ce7524`, canonical viewing/deal workspace membership correction `47e059ef`, canonical Agent Home workspace membership correction `a0fc9e8b`, `af9fd6f2`, `16a23cd9`, Goal 4 evidence/fixture correction
 `a403d31d`, Goal 5 publication correction `74bff0f9`, Goal 6 public-discovery
 correction `9acfea2f`, Goals 7–8 CRM correction `c4df6600`, Goal 9
 platform-recovery correction `f9086ef4`, Goal 10 full acceptance `fbf592cc`,

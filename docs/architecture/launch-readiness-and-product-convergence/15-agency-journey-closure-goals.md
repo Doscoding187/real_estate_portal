@@ -206,6 +206,29 @@ This is an additional task-branch Goal 1 authority qualification. It does not
 change listing lifecycle, commercial entitlement, payment activation, Land,
 provider delivery, hosted integration, or production operation.
 
+### Goal 1 Agent Home workspace authority qualification — 2026-09-15
+
+The continuing exact-target audit found the same retained-affiliation flaw in
+Agent Home. A suspended agency member could still receive full private
+inventory through `agent.getMyListings`; the dashboard, scheduling options,
+commission/CSV paths, and generic property mutations shared that unguarded
+agent-profile entry condition.
+
+Commit [`a0fc9e8b`](https://github.com/Doscoding187/real_estate_portal/commit/a0fc9e8b95be1275844e11aaed4bf57bc1ff2bd3)
+adds a shared workspace-profile resolver. It leaves independent agents and
+no-profile preparation paths available, while requiring a current canonical
+membership wherever an existing agent profile carries an agency affiliation.
+The direct regression retains stale user/profile agency IDs after suspension
+and proves `FORBIDDEN` across Agent Home inventory, dashboard, scheduling,
+commissions, export, update, and archive. The final authority-wrapped run
+passed **3 files / 18 tests**; canonical showings/inventory contracts passed
+**2 files / 9 tests**; typecheck, static authority (**35 files / 295 tests**),
+targeted ESLint with zero errors, and `git diff --check` passed.
+
+This is task-branch Goal 1 authority evidence. It does not enable payment,
+entitlement, publication, Land, provider delivery, hosted integration, or
+production operation.
+
 ## Goal 2 — Establish agency-member workspace authority
 
 **Outcome**
