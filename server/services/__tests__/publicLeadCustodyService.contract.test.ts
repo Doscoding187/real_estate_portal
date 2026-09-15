@@ -43,6 +43,43 @@ describe('publicLeadCustodyService contract', () => {
     ).toMatchObject({ leadCustody: 'attention_required', recipientType: 'manual' });
   });
 
+  it('routes a current unbadged agency member through the agency entitlement from a direct profile', () => {
+    expect(
+      resolvePublicAgentProfileCustody({
+        agent: {
+          ...activeAgent,
+          id: 34,
+          agencyId: 44,
+          isVerified: 0,
+          hasActivePaidEntitlement: false,
+          hasActiveAgencyEntitlement: true,
+          hasCurrentMembership: true,
+        },
+      }),
+    ).toMatchObject({
+      leadCustody: 'verified_customer_recipient',
+      recipientType: 'agent',
+      recipientId: 34,
+      agencyId: null,
+    });
+  });
+
+  it('does not let an agency entitlement bypass a missing current membership on a direct profile', () => {
+    expect(
+      resolvePublicAgentProfileCustody({
+        agent: {
+          ...activeAgent,
+          id: 34,
+          agencyId: 44,
+          isVerified: 0,
+          hasActivePaidEntitlement: false,
+          hasActiveAgencyEntitlement: true,
+          hasCurrentMembership: false,
+        },
+      }),
+    ).toMatchObject({ leadCustody: 'attention_required', recipientType: 'manual' });
+  });
+
   it('routes an active direct agent to a verified customer recipient', () => {
     expect(
       resolvePublicPropertyCustody({

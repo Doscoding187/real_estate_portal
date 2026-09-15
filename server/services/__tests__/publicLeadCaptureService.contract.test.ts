@@ -413,6 +413,7 @@ describe('publicLeadCaptureService contract', () => {
       selectResults: [
         [],
         [{ id: 33, userId: 70, agencyId: null, status: 'approved', isVerified: 0 }],
+        [],
         [{ status: 'active', currentPeriodEnd: '2099-01-01 00:00:00' }],
         [{ role: 'agent' }],
       ],
@@ -455,6 +456,7 @@ describe('publicLeadCaptureService contract', () => {
         [],
         [{ id: 33, userId: 70, agencyId: null, status: 'approved', isVerified: 0 }],
         [],
+        [],
         [{ role: 'agent' }],
       ],
     });
@@ -471,6 +473,62 @@ describe('publicLeadCaptureService contract', () => {
       ),
     ).rejects.toMatchObject({ code: 'NOT_FOUND' });
     expect(database.insertValues).not.toHaveBeenCalled();
+  });
+
+  it('captures a direct profile enquiry for a current unbadged agency member through the agency entitlement', async () => {
+    const database = makeFakeDatabase({
+      selectResults: [
+        [],
+        [{ id: 33, userId: 70, agencyId: 44, status: 'approved', isVerified: 0 }],
+        [{ agentId: 33, agencyId: 44, status: 'active', effectiveFrom: null, effectiveTo: null }],
+        [],
+        [{ status: 'active', currentPeriodEnd: '2099-01-01 00:00:00' }],
+        [{ role: 'agent' }],
+      ],
+      insertId: 917,
+    });
+    mockGetDb.mockResolvedValue(database);
+
+    await expect(
+      capturePublicLead(
+        baseInput({
+          agentId: 33,
+          source: 'agent_profile',
+          sourceSurface: 'agent_profile_enquiry',
+          leadSource: 'agent_profile',
+        }),
+      ),
+    ).resolves.toMatchObject({
+      success: true,
+      leadId: 917,
+      deliveryStatus: 'delivered',
+      recipientType: 'agent',
+      recipientId: 33,
+    });
+  });
+
+  it('accepts a current individual term when an earlier subscription row has expired', async () => {
+    const database = makeFakeDatabase({
+      selectResults: [
+        [],
+        [{ id: 33, userId: 70, agencyId: null, status: 'approved', isVerified: 0 }],
+        [],
+        [
+          { status: 'active', currentPeriodEnd: '2000-01-01 00:00:00' },
+          { status: 'active', currentPeriodEnd: '2099-01-01 00:00:00' },
+        ],
+        [{ role: 'agent' }],
+      ],
+      insertId: 918,
+    });
+    mockGetDb.mockResolvedValue(database);
+
+    await expect(capturePublicLead(baseInput({ agentId: 33 }))).resolves.toMatchObject({
+      success: true,
+      leadId: 918,
+      recipientType: 'agent',
+      recipientId: 33,
+    });
   });
 
   it('persists a signed-in property enquiry and its prospect identity in one transaction', async () => {

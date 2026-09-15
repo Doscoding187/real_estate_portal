@@ -27,6 +27,8 @@ import {
   invitations,
   listingAnalytics,
   listings,
+  leads,
+  notifications,
   plans,
   properties,
   showings,
@@ -53,6 +55,7 @@ const created = {
   agentIds: [] as number[],
   invitationIds: [] as number[],
   listingIds: [] as number[],
+  leadIds: [] as number[],
 };
 
 let acceptanceCallerFor: (user: {
@@ -67,6 +70,7 @@ let applicationCallerFor: (user: {
   agencyId?: number | null;
   email?: string | null;
 }) => any;
+let publicCallerFor: () => any;
 
 /**
  * Acceptance mints a fresh session token through the real auth service.
@@ -77,7 +81,14 @@ let applicationCallerFor: (user: {
  */
 async function ensureTestAuthEnvironmentAndRouter() {
   const { appRouter } = await import('../routers');
-  applicationCallerFor = user =>
+  const createApplicationCaller = (
+    user: {
+      id: number;
+      role: string;
+      agencyId?: number | null;
+      email?: string | null;
+    } | null,
+  ) =>
     appRouter.createCaller({
       req: {
         hostname: 'localhost',
@@ -89,6 +100,8 @@ async function ensureTestAuthEnvironmentAndRouter() {
       res: { cookie: () => undefined },
       user,
     } as any);
+  applicationCallerFor = user => createApplicationCaller(user);
+  publicCallerFor = () => createApplicationCaller(null);
   acceptanceCallerFor = user => applicationCallerFor(user);
 }
 
@@ -108,6 +121,10 @@ function applicationCaller(user: {
   email?: string | null;
 }) {
   return applicationCallerFor!(user);
+}
+
+function publicCaller() {
+  return publicCallerFor!();
 }
 
 async function insertId(result: any): Promise<number> {
@@ -242,6 +259,12 @@ afterAll(async () => {
   if (priorJwtSecret === undefined) delete process.env.JWT_SECRET;
   else process.env.JWT_SECRET = priorJwtSecret;
   if (!process.env.DATABASE_URL) return;
+  if (created.leadIds.length) {
+    await db
+      .delete(leads)
+      .where(inArray(leads.id, created.leadIds))
+      .catch(() => undefined);
+  }
   for (const id of created.listingIds) {
     await db
       .delete(listingAnalytics)
@@ -284,6 +307,10 @@ afterAll(async () => {
       .catch(() => undefined);
   }
   for (const id of created.userIds) {
+    await db
+      .delete(notifications)
+      .where(eq(notifications.userId, id))
+      .catch(() => undefined);
     await db
       .delete(users)
       .where(eq(users.id, id))
@@ -493,6 +520,90 @@ describeWithDb('canonical membership maintenance (atomic unique-pair authority)'
 
     const recommendations = await findAgentsServingLocation(db, 'suburb', Number(location.id));
     expect(recommendations.map(recommendation => recommendation.id)).not.toContain(agentId);
+  });
+
+  it('delivers a direct profile enquiry to a current unbadged agency member with agency Launch Access', async () => {
+    const agencyId = await insertAgency('DirectProfileAgencyEntitlement');
+    const ownerUserId = await insertUser('DirectProfileAgencyOwner', 'agency_admin');
+    await db.update(users).set({ agencyId }).where(eq(users.id, ownerUserId));
+    await createActiveAgencyInvitationAccess(agencyId, ownerUserId);
+
+    const memberUserId = await insertUser('DirectProfileAgencyMember', 'agent');
+    await db.update(users).set({ agencyId, isSubaccount: 1 }).where(eq(users.id, memberUserId));
+    const agentId = await insertAgentProfile(memberUserId, agencyId, { isVerified: 0 });
+    await maintainAgencyAgentMembership(db, { agencyId, agentId, status: 'active' });
+    expect(
+      await db
+        .select({ id: subscriptions.id })
+        .from(subscriptions)
+        .where(and(eq(subscriptions.ownerType, 'agent'), eq(subscriptions.ownerId, memberUserId))),
+    ).toHaveLength(0);
+
+    // This is the intended post-activation agency case: no optional badge
+    // and no second personal purchase. Public eligibility comes from current
+    // canonical membership plus the agency's own billable entitlement.
+    const captured = await publicCaller().leads.create({
+      agentId,
+      name: 'Direct profile prospect',
+      email: `direct-profile-${randomUUID()}@example.test`,
+      message: 'Please contact me about your services.',
+      source: 'agent_profile',
+      sourceSurface: 'agent_profile_enquiry',
+      leadSource: 'agent_profile',
+      captureRequestId: `direct-profile-${randomUUID()}`,
+      consent: {
+        accepted: true,
+        version: 'launch-privacy-1',
+        source: 'agent_profile_enquiry',
+      },
+    });
+    expect(captured).toMatchObject({
+      success: true,
+      delivered: true,
+      deliveryStatus: 'delivered',
+      deliveryMethod: 'crm_export',
+      leadCustody: 'verified_customer_recipient',
+      recipientType: 'agent',
+      recipientId: agentId,
+    });
+    const leadId = Number(captured.leadId);
+    created.leadIds.push(leadId);
+
+    const [storedLead] = await db
+      .select({
+        agencyId: leads.agencyId,
+        agentId: leads.agentId,
+        captureRequestId: leads.captureRequestId,
+      })
+      .from(leads)
+      .where(eq(leads.id, leadId))
+      .limit(1);
+    expect(storedLead).toMatchObject({ agencyId: null, agentId });
+    expect(storedLead.captureRequestId).toMatch(/^direct-profile-/);
+
+    // The profile's historical agency field remains set after a membership
+    // suspension, but it can no longer use the agency commercial term to
+    // receive a new public enquiry.
+    await maintainAgencyAgentMembership(db, { agencyId, agentId, status: 'suspended' });
+    const [retainedProfile] = await db.select().from(agents).where(eq(agents.id, agentId)).limit(1);
+    expect(retainedProfile.agencyId).toBe(agencyId);
+    await expect(
+      publicCaller().leads.create({
+        agentId,
+        name: 'Suspended membership prospect',
+        email: `suspended-profile-${randomUUID()}@example.test`,
+        message: 'Please contact me about your services.',
+        source: 'agent_profile',
+        sourceSurface: 'agent_profile_enquiry',
+        leadSource: 'agent_profile',
+        captureRequestId: `suspended-profile-${randomUUID()}`,
+        consent: {
+          accepted: true,
+          version: 'launch-privacy-1',
+          source: 'agent_profile_enquiry',
+        },
+      }),
+    ).rejects.toMatchObject({ code: 'NOT_FOUND' });
   });
 });
 

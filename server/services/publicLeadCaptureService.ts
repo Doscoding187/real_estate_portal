@@ -3,7 +3,10 @@ import { and, eq, inArray, sql } from 'drizzle-orm';
 import { getDb } from '../db';
 import { slLeadContexts, slMessages, users } from '../../drizzle/schema';
 import { agencyAgentMemberships } from '../../drizzle/schema';
-import { listCurrentActiveMembershipAgentIds } from './agencyMembershipService';
+import {
+  listCurrentActiveAgencyMembershipsByAgentId,
+  listCurrentActiveMembershipAgentIds,
+} from './agencyMembershipService';
 import {
   agencies,
   agents,
@@ -761,17 +764,56 @@ export async function resolveLeadOwnership(
       });
     }
 
-    const [subscription] = agent.userId
+    // Canonical membership, rather than the mutable profile agency field,
+    // determines whether this public professional is currently agency-backed.
+    // It also supplies the only agency id permitted to affect public
+    // commercial eligibility.
+    const membership = (
+      await listCurrentActiveAgencyMembershipsByAgentId(database, [Number(agent.id)])
+    ).get(Number(agent.id));
+    const canonicalAgencyId = membership ? Number(membership.agencyId) : null;
+
+    const individualSubscriptions = agent.userId
       ? await database
-          .select({ status: subscriptions.status, currentPeriodEnd: subscriptions.currentPeriodEnd })
+          .select({
+            status: subscriptions.status,
+            currentPeriodEnd: subscriptions.currentPeriodEnd,
+            graceEndsAt: subscriptions.graceEndsAt,
+          })
           .from(subscriptions)
-          .where(sql`EXISTS (
-            SELECT 1 FROM ${billableAccounts} account
-            WHERE account.id = ${subscriptions.billableAccountId}
-              AND account.account_kind = 'agent'
-              AND account.user_id = ${agent.userId}
-          )`)
-          .limit(1)
+          .where(
+            and(
+              eq(subscriptions.ownerType, 'agent'),
+              eq(subscriptions.ownerId, Number(agent.userId)),
+              sql`EXISTS (
+                SELECT 1 FROM ${billableAccounts} account
+                WHERE account.id = ${subscriptions.billableAccountId}
+                  AND account.account_kind = 'agent'
+                  AND account.user_id = ${agent.userId}
+              )`,
+            ),
+          )
+      : [];
+    const agencySubscriptions = canonicalAgencyId
+      ? await database
+          .select({
+            status: subscriptions.status,
+            currentPeriodEnd: subscriptions.currentPeriodEnd,
+            graceEndsAt: subscriptions.graceEndsAt,
+          })
+          .from(subscriptions)
+          .where(
+            and(
+              eq(subscriptions.ownerType, 'agency'),
+              eq(subscriptions.ownerId, canonicalAgencyId),
+              sql`EXISTS (
+                SELECT 1 FROM ${billableAccounts} account
+                WHERE account.id = ${subscriptions.billableAccountId}
+                  AND account.account_kind = 'agency'
+                  AND account.agency_id = ${subscriptions.ownerId}
+              )`,
+            ),
+          )
       : [];
     const [agentUser] = agent.userId
       ? await database
@@ -780,22 +822,24 @@ export async function resolveLeadOwnership(
           .where(eq(users.id, agent.userId))
           .limit(1)
       : [];
-    const hasCurrentMembership = agent.agencyId
-      ? (await listCurrentActiveMembershipAgentIds(database, [Number(agent.id)])).has(Number(agent.id))
-      : true;
 
     const custody = resolvePublicAgentProfileCustody({
       agent: {
         id: Number(agent.id),
         userId: agent.userId == null ? null : Number(agent.userId),
-        agencyId: agent.agencyId == null ? null : Number(agent.agencyId),
+        agencyId: canonicalAgencyId,
         status: agent.status || null,
         isVerified: Number(agent.isVerified || 0),
-        hasActivePaidEntitlement: isPaidSubscriptionRowEntitled(subscription ?? {
-          status: null,
-          currentPeriodEnd: null,
-        }),
-        hasCurrentMembership,
+        hasActivePaidEntitlement: individualSubscriptions.some(subscription =>
+          isPaidSubscriptionRowEntitled(subscription),
+        ),
+        hasActiveAgencyEntitlement: agencySubscriptions.some(subscription =>
+          isPaidSubscriptionRowEntitled(subscription),
+        ),
+        // A non-null agency id above can only originate from `membership`,
+        // so a profile's stale or forged association cannot satisfy this
+        // boundary. Independent agents are not membership-scoped.
+        hasCurrentMembership: true,
         userRole: agentUser?.role || null,
       },
     });
