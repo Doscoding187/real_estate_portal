@@ -11,7 +11,7 @@ agent and agency-owner pre-payment onboarding, agency preparation-state and
 deferred-invitation-validity and queued-invitation-acceptance corrections, and a Commercial generic-viewing
 boundary correction are verified
 on the task branch. A bounded assisted-onboarding intake is also locally implemented;
-named support operations and final disclosures remain open. Normal commercial activation, hosted integration,
+named support operations and final disclosures are blocked pending owner-supplied operating and legal authority. Normal commercial activation, hosted integration,
 production verification, and protected release remain blocked.** This is not a declaration that all MVP
 journeys or production are verified. Database task classification: local-data workflow,
 followed by bounded consumer fixes. No schema authority changed.
@@ -578,7 +578,7 @@ does not enable payments, commercial entitlement, publication, provider mail,
 or a live paid cohort.
 
 
-### LRC-SUPPORT-001 operating-information hold — 2026-09-15
+### LRC-SUPPORT-001 BLOCKED — operating-information hold (2026-09-15)
 
 A focused repository audit confirms that no approved public support operator,
 monitoring cadence, reply/escalation channel, or final launch Terms/Privacy
@@ -595,6 +595,14 @@ normal `preparation_only` runtime. Repository values are example/test values;
 the presence of a centrally configured local value does not establish founder
 approval to publish it as a support or legal contact channel. No local
 configuration value was disclosed or repurposed.
+
+A fresh exact-target verification passed the authority-wrapped assisted-review
+suite (**1 file / 3 tests**) and the contact-page/contextual-handoff client
+suite (**2 files / 4 tests**). It confirms that public submission creates only
+a review row, non-manager review creates no identity or authority, manager
+provisioning remains fail-closed without an account, and the Developer handoff
+uses the intended contextual route. This proves the local bounded intake; it
+does not prove a person is monitoring it.
 
 The smallest external inputs needed to close this blocker are an
 owner-approved public contact/reply channel, its named operational owner and
