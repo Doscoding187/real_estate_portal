@@ -379,17 +379,16 @@ describe('publicLeadCaptureService contract', () => {
   });
 
   it('persists the canonical listing source for a public Land enquiry and derives custody server-side', async () => {
-    // The first select is the capture-request lookup. The agent is
-    // agency-affiliated, so the next two rows prove a current canonical
-    // membership before the lead can be delivered; later selects drive
-    // idempotency.
+    // The first select is the capture-request lookup. The agency-owned Land
+    // recipient must retain a matching current canonical membership; the
+    // remaining rows cover the personal and agency commercial-term reads.
     const database = makeFakeDatabase({
       selectResults: [
         [],
         [{ status: 'approved', userId: 70, agencyId: 9, isVerified: 1 }],
-        [{ id: 44 }],
-        [{ agentId: 33, status: 'active', effectiveFrom: null, effectiveTo: null }],
-        [{ agentId: 33, status: 'active', effectiveFrom: null, effectiveTo: null }],
+        [],
+        [{ agentId: 33, agencyId: 9, status: 'active', effectiveFrom: null, effectiveTo: null }],
+        [{ status: 'active', currentPeriodEnd: '2099-01-01 00:00:00' }],
       ],
       insertId: 902,
     });
@@ -835,6 +834,131 @@ describe('publicLeadCaptureService contract', () => {
         initialStatus: 'attention_required',
       }),
     );
+  });
+
+  it('delivers a Commercial enquiry to a current unbadged agency member through the matching agency entitlement', async () => {
+    const database = makeFakeDatabase({
+      selectResults: [
+        [],
+        [{ status: 'approved', userId: 70, agencyId: 44, isVerified: 0 }],
+        [],
+        [{ agentId: 33, agencyId: 44, status: 'active', effectiveFrom: null, effectiveTo: null }],
+        [{ status: 'active', currentPeriodEnd: '2099-01-01 00:00:00' }],
+      ],
+      insertId: 919,
+    });
+    mockGetDb.mockResolvedValue(database);
+    mockResolvePublicCommercialLeadCustody.mockResolvedValue({
+      listingId: 705,
+      commercialAssetId: 603,
+      commercialSpaceId: 703,
+      commercialAvailabilityId: 803,
+      agentId: 33,
+      agencyId: 44,
+    });
+
+    await expect(
+      capturePublicLead(
+        baseInput({
+          listingId: 705,
+          commercialAvailabilityId: 803,
+          source: 'commercial',
+          sourceSurface: 'commercial_detail',
+          leadSource: 'commercial',
+        }),
+      ),
+    ).resolves.toMatchObject({
+      success: true,
+      leadId: 919,
+      delivered: true,
+      deliveryStatus: 'delivered',
+      leadCustody: 'verified_customer_recipient',
+      recipientType: 'agent',
+      recipientId: 33,
+    });
+    expect(database.insertValues).toHaveBeenCalledWith(
+      expect.objectContaining({ listingId: 705, agentId: 33, agencyId: 44 }),
+    );
+  });
+
+  it('holds a Commercial enquiry when the assigned member belongs to a different current agency', async () => {
+    const database = makeFakeDatabase({
+      selectResults: [
+        [],
+        [{ status: 'approved', userId: 70, isVerified: 1 }],
+        [],
+        [{ agentId: 33, agencyId: 45, status: 'active', effectiveFrom: null, effectiveTo: null }],
+      ],
+      insertId: 920,
+    });
+    mockGetDb.mockResolvedValue(database);
+    mockResolvePublicCommercialLeadCustody.mockResolvedValue({
+      listingId: 706,
+      commercialAssetId: 604,
+      commercialSpaceId: 704,
+      commercialAvailabilityId: 804,
+      agentId: 33,
+      agencyId: 44,
+    });
+
+    await expect(
+      capturePublicLead(
+        baseInput({
+          listingId: 706,
+          commercialAvailabilityId: 804,
+          source: 'commercial',
+          sourceSurface: 'commercial_detail',
+          leadSource: 'commercial',
+        }),
+      ),
+    ).resolves.toMatchObject({
+      success: true,
+      leadId: 920,
+      delivered: false,
+      deliveryStatus: 'attention_required',
+      leadCustody: 'attention_required',
+      recipientType: 'manual',
+      recipientId: null,
+    });
+    expect(database.insertValues).toHaveBeenCalledWith(
+      expect.objectContaining({ listingId: 706, agentId: null, agencyId: null }),
+    );
+  });
+
+  it('does not hand an agency-only Commercial listing to a verified agency after its term ends', async () => {
+    const database = makeFakeDatabase({
+      selectResults: [[], [{ isVerified: 1 }], []],
+      insertId: 921,
+    });
+    mockGetDb.mockResolvedValue(database);
+    mockResolvePublicCommercialLeadCustody.mockResolvedValue({
+      listingId: 707,
+      commercialAssetId: 605,
+      commercialSpaceId: 705,
+      commercialAvailabilityId: 805,
+      agentId: null,
+      agencyId: 44,
+    });
+
+    await expect(
+      capturePublicLead(
+        baseInput({
+          listingId: 707,
+          commercialAvailabilityId: 805,
+          source: 'commercial',
+          sourceSurface: 'commercial_detail',
+          leadSource: 'commercial',
+        }),
+      ),
+    ).resolves.toMatchObject({
+      success: true,
+      leadId: 921,
+      delivered: false,
+      deliveryStatus: 'attention_required',
+      leadCustody: 'attention_required',
+      recipientType: 'manual',
+      recipientId: null,
+    });
   });
 
   it('captures platform-curated development demand in platform custody without a fake recipient', async () => {

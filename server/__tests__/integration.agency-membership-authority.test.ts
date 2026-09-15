@@ -23,7 +23,13 @@ import {
   agencyAgentMemberships,
   agents,
   billableAccounts,
+  cities,
   commissions,
+  commercialAssets,
+  commercialAvailabilities,
+  commercialAvailabilityEconomics,
+  commercialAvailabilityListingLinks,
+  commercialSpaces,
   invitations,
   listingAnalytics,
   listings,
@@ -31,6 +37,7 @@ import {
   notifications,
   plans,
   properties,
+  provinces,
   showings,
   suburbs,
   subscriptions,
@@ -48,6 +55,7 @@ import { agentOnboardingService } from '../services/agentOnboardingService';
 import { agentProfileSchema } from '../routes/agentOnboarding';
 import { createListing } from '../db';
 import { requireAgencyAssignableAgent } from '../services/sellerProspectAccessService';
+import { searchPublicCommercial } from '../services/commercialOfficeService';
 
 const created = {
   userIds: [] as number[],
@@ -56,6 +64,9 @@ const created = {
   invitationIds: [] as number[],
   listingIds: [] as number[],
   leadIds: [] as number[],
+  commercialAssetIds: [] as number[],
+  commercialSpaceIds: [] as number[],
+  commercialAvailabilityIds: [] as number[],
 };
 
 let acceptanceCallerFor: (user: {
@@ -249,6 +260,135 @@ async function createActiveAgencyInvitationAccess(agencyId: number, actorUserId:
   } as any);
 }
 
+function asMySqlTimestamp(value: Date) {
+  return value.toISOString().slice(0, 19).replace('T', ' ');
+}
+
+/**
+ * Builds the canonical Asset → Space → Availability → Listing graph directly
+ * for a public-custody acceptance case. The commercial authoring workflow is
+ * separately governed; this fixture isolates the already-published public
+ * record needed to prove recipient eligibility without enabling runtime
+ * commercial activation.
+ */
+async function insertPublishedCommercialListing(input: {
+  ownerUserId: number;
+  agencyId: number;
+  agentId: number;
+}) {
+  const [location] = await db
+    .select({
+      provinceId: provinces.id,
+      provinceName: provinces.name,
+      cityId: cities.id,
+      cityName: cities.name,
+      suburbId: suburbs.id,
+      suburbName: suburbs.name,
+    })
+    .from(suburbs)
+    .innerJoin(cities, eq(suburbs.cityId, cities.id))
+    .innerJoin(provinces, eq(cities.provinceId, provinces.id))
+    .where(ne(suburbs.status, 'retired'))
+    .limit(1);
+  if (!location) throw new Error('Canonical active Commercial fixture location is unavailable.');
+
+  const suffix = randomUUID().slice(0, 8);
+  const now = new Date();
+  const due = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+  const [assetResult] = await db.insert(commercialAssets).values({
+    assetKind: 'office_building',
+    name: `Commercial custody asset ${suffix}`,
+    address: '1 Canonical Commercial Way',
+    provinceId: Number(location.provinceId),
+    cityId: Number(location.cityId),
+    suburbId: Number(location.suburbId),
+    lifecycleStatus: 'active',
+    createdByUserId: input.ownerUserId,
+    latitude: '-26.1076000',
+    longitude: '28.0567000',
+    coordinateSource: 'manual_confirmed',
+    locationConfirmationState: 'confirmed',
+    publicLocationPrecision: 'approximate',
+    locationConfirmedByUserId: input.ownerUserId,
+    locationConfirmedAt: asMySqlTimestamp(now),
+  } as any);
+  const commercialAssetId = await insertId(assetResult);
+  created.commercialAssetIds.push(commercialAssetId);
+
+  const [spaceResult] = await db.insert(commercialSpaces).values({
+    commercialAssetId,
+    spaceClass: 'office',
+    spaceKind: 'office_suite',
+    identifier: `Suite ${suffix}`,
+    rentableAreaM2: '120.00',
+    lifecycleStatus: 'active',
+  } as any);
+  const commercialSpaceId = await insertId(spaceResult);
+  created.commercialSpaceIds.push(commercialSpaceId);
+
+  const [availabilityResult] = await db.insert(commercialAvailabilities).values({
+    commercialSpaceId,
+    transactionType: 'lease',
+    pricingMode: 'componentised',
+    vatTreatment: 'excluded',
+    availabilityState: 'available_confirmed',
+    lastConfirmedAt: asMySqlTimestamp(now),
+    confirmationSource: 'broker',
+    confirmationSourceLabel: 'Fixture broker',
+    confirmedByUserId: input.ownerUserId,
+    reconfirmationDueAt: asMySqlTimestamp(due),
+  } as any);
+  const commercialAvailabilityId = await insertId(availabilityResult);
+  created.commercialAvailabilityIds.push(commercialAvailabilityId);
+
+  await db.insert(commercialAvailabilityEconomics).values({
+    commercialAvailabilityId,
+    componentCode: 'base_rent',
+    valueState: 'supplied',
+    chargeBasis: 'per_m2_month',
+    amountMinor: 15000,
+    vatTreatment: 'excluded',
+    sourceLabel: 'Fixture lease schedule',
+    suppliedAt: asMySqlTimestamp(now),
+  } as any);
+
+  const [listingResult] = await db.insert(listings).values({
+    ownerId: input.ownerUserId,
+    agentId: input.agentId,
+    agencyId: input.agencyId,
+    action: 'rent',
+    propertyType: 'commercial',
+    title: `Commercial custody suite ${suffix}`,
+    description: 'A canonical public Commercial fixture used only for custody verification.',
+    address: '1 Canonical Commercial Way',
+    city: location.cityName,
+    suburb: location.suburbName,
+    province: location.provinceName,
+    provinceId: Number(location.provinceId),
+    cityId: Number(location.cityId),
+    suburbId: Number(location.suburbId),
+    latitude: '-26.1076000',
+    longitude: '28.0567000',
+    coordinateSource: 'manual_confirmed',
+    locationConfirmationState: 'confirmed',
+    publicLocationPrecision: 'approximate',
+    status: 'published',
+    approvalStatus: 'approved',
+    publishedAt: asMySqlTimestamp(now),
+    slug: `commercial-custody-${suffix}`,
+  } as any);
+  const listingId = await insertId(listingResult);
+  created.listingIds.push(listingId);
+
+  await db.insert(commercialAvailabilityListingLinks).values({
+    commercialAvailabilityId,
+    listingId,
+    linkStatus: 'active',
+  } as any);
+
+  return { listingId, commercialAvailabilityId };
+}
+
 beforeAll(async () => {
   if (!process.env.DATABASE_URL) return;
   await ensureTestAuthEnvironmentAndRouter();
@@ -263,6 +403,30 @@ afterAll(async () => {
     await db
       .delete(leads)
       .where(inArray(leads.id, created.leadIds))
+      .catch(() => undefined);
+  }
+  if (created.listingIds.length) {
+    await db
+      .delete(commercialAvailabilityListingLinks)
+      .where(inArray(commercialAvailabilityListingLinks.listingId, created.listingIds))
+      .catch(() => undefined);
+  }
+  if (created.commercialAvailabilityIds.length) {
+    await db
+      .delete(commercialAvailabilities)
+      .where(inArray(commercialAvailabilities.id, created.commercialAvailabilityIds))
+      .catch(() => undefined);
+  }
+  if (created.commercialSpaceIds.length) {
+    await db
+      .delete(commercialSpaces)
+      .where(inArray(commercialSpaces.id, created.commercialSpaceIds))
+      .catch(() => undefined);
+  }
+  if (created.commercialAssetIds.length) {
+    await db
+      .delete(commercialAssets)
+      .where(inArray(commercialAssets.id, created.commercialAssetIds))
       .catch(() => undefined);
   }
   for (const id of created.listingIds) {
@@ -520,6 +684,110 @@ describeWithDb('canonical membership maintenance (atomic unique-pair authority)'
 
     const recommendations = await findAgentsServingLocation(db, 'suburb', Number(location.id));
     expect(recommendations.map(recommendation => recommendation.id)).not.toContain(agentId);
+  });
+
+  it('delivers a public Commercial enquiry to a current unbadged agency member through the agency term', async () => {
+    const agencyId = await insertAgency('CommercialAgencyEntitlement');
+    const ownerUserId = await insertUser('CommercialAgencyOwner', 'agency_admin');
+    await db.update(users).set({ agencyId }).where(eq(users.id, ownerUserId));
+    await createActiveAgencyInvitationAccess(agencyId, ownerUserId);
+
+    const memberUserId = await insertUser('CommercialAgencyMember', 'agent');
+    await db.update(users).set({ agencyId, isSubaccount: 1 }).where(eq(users.id, memberUserId));
+    const agentId = await insertAgentProfile(memberUserId, agencyId, { isVerified: 0 });
+    await maintainAgencyAgentMembership(db, { agencyId, agentId, status: 'active' });
+    expect(
+      await db
+        .select({ id: subscriptions.id })
+        .from(subscriptions)
+        .where(and(eq(subscriptions.ownerType, 'agent'), eq(subscriptions.ownerId, memberUserId))),
+    ).toHaveLength(0);
+
+    const commercial = await insertPublishedCommercialListing({
+      ownerUserId,
+      agencyId,
+      agentId,
+    });
+    await expect(searchPublicCommercial()).resolves.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          listingId: commercial.listingId,
+          availability: expect.objectContaining({ id: commercial.commercialAvailabilityId }),
+        }),
+      ]),
+    );
+
+    const captured = await publicCaller().leads.create({
+      listingId: commercial.listingId,
+      commercialAvailabilityId: commercial.commercialAvailabilityId,
+      name: 'Commercial prospect',
+      email: `commercial-prospect-${randomUUID()}@example.test`,
+      message: 'Please contact me about this office suite.',
+      source: 'commercial',
+      sourceSurface: 'commercial_detail',
+      leadSource: 'commercial',
+      captureRequestId: `commercial-custody-${randomUUID()}`,
+      consent: {
+        accepted: true,
+        version: 'launch-privacy-1',
+        source: 'commercial_detail',
+      },
+    });
+    expect(captured).toMatchObject({
+      success: true,
+      delivered: true,
+      deliveryStatus: 'delivered',
+      deliveryMethod: 'crm_export',
+      leadCustody: 'verified_customer_recipient',
+      recipientType: 'agent',
+      recipientId: agentId,
+    });
+    const leadId = Number(captured.leadId);
+    created.leadIds.push(leadId);
+    await expect(
+      db
+        .select({ listingId: leads.listingId, agencyId: leads.agencyId, agentId: leads.agentId })
+        .from(leads)
+        .where(eq(leads.id, leadId))
+        .limit(1),
+    ).resolves.toEqual([
+      expect.objectContaining({
+        listingId: commercial.listingId,
+        agencyId,
+        agentId,
+      }),
+    ]);
+
+    // A historical profile association and materialized Listing custody must
+    // not keep granting new Commercial opportunities after canonical removal.
+    await maintainAgencyAgentMembership(db, { agencyId, agentId, status: 'suspended' });
+    const [retainedProfile] = await db.select().from(agents).where(eq(agents.id, agentId)).limit(1);
+    expect(retainedProfile.agencyId).toBe(agencyId);
+    const suspendedResult = await publicCaller().leads.create({
+      listingId: commercial.listingId,
+      commercialAvailabilityId: commercial.commercialAvailabilityId,
+      name: 'Suspended Commercial prospect',
+      email: `commercial-suspended-${randomUUID()}@example.test`,
+      message: 'Please contact me about this office suite.',
+      source: 'commercial',
+      sourceSurface: 'commercial_detail',
+      leadSource: 'commercial',
+      captureRequestId: `commercial-suspended-${randomUUID()}`,
+      consent: {
+        accepted: true,
+        version: 'launch-privacy-1',
+        source: 'commercial_detail',
+      },
+    });
+    expect(suspendedResult).toMatchObject({
+      success: true,
+      delivered: false,
+      deliveryStatus: 'attention_required',
+      leadCustody: 'attention_required',
+      recipientType: 'manual',
+      recipientId: null,
+    });
+    created.leadIds.push(Number(suspendedResult.leadId));
   });
 
   it('delivers a direct profile enquiry to a current unbadged agency member with agency Launch Access', async () => {
