@@ -90,6 +90,7 @@ protected environment.
 | Authenticated Developer plans containment (task branch) | `ada578a2ae2226df0497bb8769911fa668b85149` |
 | Authenticated Developer subscription-route containment (task branch) | `bb89b2b92ff421e54e9fe864e71112b2947b05f6` |
 | Authenticated Agent package-route containment (task branch) | `e1ccc2c8349b66887e8ab145cc772887f1322550` |
+| Authenticated Agent preparation-lock wording correction (task branch) | `217aa1df288bd7fdda32ee862570876677b0f523` |
 | Authenticated Agency billing-route containment (task branch) | `d48544b9a6c33de954821cbf06c0cac33f6dc0af` |
 | Branch                                              | `verify/mvp-closure-post-577`                                                 |
 | Worktree                                            | `/home/edwardspc/Desktop/Dev/worktrees/property-listify-mvp-closure-post-577` |
@@ -1677,6 +1678,47 @@ issue an invoice, request or receive payment proof, mutate an entitlement,
 publish inventory, alter the canonical commercial product, change provider or
 deployment settings, or establish a paid Agent cohort.
 
+### Authenticated Agent preparation-lock wording correction — 2026-09-16
+
+A source audit after direct package-route containment found a remaining
+normal-runtime presentation inconsistency. Ten reachable Agent workspace locks
+correctly kept operational data disabled, but their profile-completion overrides
+still instructed a stakeholder to “activate Launch Access.” That instruction was
+not actionable while `COMMERCIAL_ACTIVATION_STATE.enabled` is false and confused
+profile preparation with commercial activation.
+
+Commit
+[`217aa1df`](https://github.com/Doscoding187/real_estate_portal/commit/217aa1df288bd7fdda32ee862570876677b0f523)
+adds one shared profile-completion description and applies it to the dashboard,
+listing, analytics, leads, marketing, productivity, canvassing, earnings,
+referrals, and training/support locks, plus the verified setup toast. Normal
+runtime now directs the stakeholder to finish their professional profile and
+continue private preparation, while explicitly retaining the commercial,
+publishing, and new-marketplace-enquiry boundary. The future enabled-state
+message remains separate. Existing query and custody guards are unchanged.
+
+Focused client coverage passed **6 files / 13 tests**. It proves the shared
+runtime decision and a real analytics lock keeps reporting queries disabled
+while showing the preparation message; retained lead tests continue proving
+existing custody remains accessible when new enquiries are paused. The governed
+Chromium pre-payment suite passed **8 tests**. Its Agent path registers,
+verifies, saves core contact and canonical coverage, reaches the locked
+analytics route in its actual dashboard-unlocked/profile-incomplete state,
+confirms no activation label, then resumes setup and private listing
+preparation. `pnpm check`, targeted zero-error ESLint/Prettier,
+`pnpm test:db-authority:static` (**35 files / 295 tests**), `git diff --check`,
+and final `pnpm db:authority:status` passed on the exact task-owned target at
+migration head `0090` with no incomplete attempts.
+
+The first browser assertion attempted analytics immediately after verification.
+The existing route guard correctly redirected that not-yet-dashboard-unlocked
+Agent to setup. The test was corrected to save the two actual preparation
+checkpoints first; no application, migration, or database correction was made
+for that diagnostic.
+
+This is a presentation consistency correction only. It does not activate
+payment, entitlement, publication, provider delivery, or a paid Agent cohort.
+
 ### Authenticated Agency billing-route containment — 2026-09-16
 
 The authenticated `/agency/billing` deep link remained a normal-runtime
@@ -1761,7 +1803,7 @@ local task-branch evidence and does not authorize a paid Developer cohort.
    entitlement, and protected-release evidence exists. Controlled pre-payment
    onboarding may prepare identities and private drafts only. Do not replace
    this boundary with a free publishing entitlement or a privilege bypass.
-4. **L1 — integrate and independently verify public preparation entry (LRC-ADVERTISE-001; LRC-AGENT-001; LRC-AGY-001; LRC-DEV-001):** `234ca6e4` makes `/advertise`, `/advertise/sell`, the homepage professional entry, and the public Developer landing agree with normal `preparation_only` runtime; `32224b0a` closes the direct `/subscription-plans` paid-catalog escape; `e1ccc2c8` closes the analogous authenticated Agent package page and shared unavailable-activation CTA escape; `d48544b9` closes the authenticated Agency Billing route; `ada578a2` closes the authenticated Developer plans escape and inactive-workspace activation CTA; `bb89b2b9` closes the authenticated `/developer/subscription` and `/developer/settings/subscription` billing-route escapes; `7c939831` and `02788ff2` retain the role-specific Agent and Agency corrections; `9cd6d3e3` browser-proves the pending Developer organisation/private-draft preparation slice; `589135ce` proves the separate authorised approval-to-professional-presence boundary preserves `missing_launch_access` and an empty public project set. Every paid-operation variation remains separate. Do not advertise paid cohorts before integration and the relevant hosted verification.
+4. **L1 — integrate and independently verify public preparation entry (LRC-ADVERTISE-001; LRC-AGENT-001; LRC-AGY-001; LRC-DEV-001):** `234ca6e4` makes `/advertise`, `/advertise/sell`, the homepage professional entry, and the public Developer landing agree with normal `preparation_only` runtime; `32224b0a` closes the direct `/subscription-plans` paid-catalog escape; `e1ccc2c8` closes the analogous authenticated Agent package page and shared unavailable-activation CTA escape; `d48544b9` closes the authenticated Agency Billing route; `ada578a2` closes the authenticated Developer plans escape and inactive-workspace activation CTA; `bb89b2b9` closes the authenticated `/developer/subscription` and `/developer/settings/subscription` billing-route escapes; `217aa1df` makes all reachable profile-completion locks describe actual private preparation rather than unavailable activation; `7c939831` and `02788ff2` retain the role-specific Agent and Agency corrections; `9cd6d3e3` browser-proves the pending Developer organisation/private-draft preparation slice; `589135ce` proves the separate authorised approval-to-professional-presence boundary preserves `missing_launch_access` and an empty public project set. Every paid-operation variation remains separate. Do not advertise paid cohorts before integration and the relevant hosted verification.
 5. **L1 — integrate and host-verify the completed agency, membership, and Commercial-route
    boundaries (LRC-AGY-001; LRC-MEM-001; LRC-COMMERCIAL-001):** Goal 10 proves the complete
    first-cohort agency journey locally, `d1545579` keeps Commercial leads out
@@ -1847,7 +1889,7 @@ transactional-email containment `3d2e0148`, viewing UTC/input corrections
 onboarding truthfulness `7c939831`, Agency public onboarding truthfulness
 `02788ff2`, and shared public-advertising/Developer preparation-entry
 truthfulness `234ca6e4`, and Developer pre-payment organisation/draft browser
-acceptance `9cd6d3e3`; the review packet,
+acceptance `9cd6d3e3`, and Agent preparation-lock wording correction `217aa1df`; the review packet,
 escalation resolution, register, and queue
 runbook retain their respective evidence commits. Final Git status was clean
 after each recorded commit before the next bounded workstream began. No merge, feature push,

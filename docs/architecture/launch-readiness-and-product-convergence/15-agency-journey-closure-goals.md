@@ -974,6 +974,32 @@ static authority suite passed on exact target fingerprint `a560e9f2971e7676…`.
 This does not enable payment, entitlement mutation, publishing, a paid
 independent-Agent cohort, provider delivery, or a protected release.
 
+### Authenticated Agent preparation-lock wording follow-up — 2026-09-16
+
+The direct package-route correction did not make every reachable Agent lock
+truthful. Ten workspace surfaces already disabled their operational data while
+an Agent completed the professional profile, yet their profile-completion copy
+still directed that stakeholder to “activate Launch Access” in normal
+`preparation_only` runtime.
+
+Commit [`217aa1df`](https://github.com/Doscoding187/real_estate_portal/commit/217aa1df288bd7fdda32ee862570876677b0f523)
+centralizes the profile-completion description and applies it across the routed
+Agent workspace locks and verified setup toast. It preserves the data/custody
+guards, directs the stakeholder to complete their professional presence and
+private preparation, and clearly retains the commercial, publication, and
+new-enquiry boundary. The focused client run passed **6 files / 13 tests** and
+the governed Chromium suite passed **8 tests**. The real Agent browser path
+now saves core contact and canonical coverage before asserting the reachable
+analytics lock, then resumes setup and private listing preparation. `pnpm
+check`, targeted zero-error lint/Prettier, static authority **35 files / 295
+tests**, `git diff --check`, and database-authority status passed on fingerprint
+`a560e9f2971e7676…` at migration head `0090` with no incomplete attempts.
+
+The first browser assertion ran before the pre-existing dashboard-unlock
+threshold and was redirected to setup as designed. Correcting that test setup
+is a diagnostic correction only. This follow-up does not activate payment,
+entitlements, publication, provider delivery, or a paid cohort.
+
 ### Authenticated Agency billing-route follow-up — 2026-09-16
 
 The Agency public-entry correction did not contain the signed-in
