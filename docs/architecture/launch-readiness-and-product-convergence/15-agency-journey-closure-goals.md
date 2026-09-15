@@ -1047,6 +1047,23 @@ This follow-up preserves the settled commercial model: it enables preparation,
 not paid activation, payment handling, entitlement mutation, publication,
 provider delivery, or a protected release.
 
+### Legacy public activation-route follow-up — 2026-09-16
+
+The shared public-entry correction did not cover a stale anonymous
+`/activation` route. It still mounted `ActivationGate`, which claimed an agency
+profile was live and offered active listing and CRM-import actions despite
+normal `preparation_only` runtime.
+
+Commit [`a0ceea70`](https://github.com/Doscoding187/real_estate_portal/commit/a0ceea70940e3ee3f84b7118a0470e3b4c7b4631)
+redirects that legacy inbound URL to `/advertise`. The route now joins the
+settled preparation entry and does not mount a false live-agency or commercial
+workspace. Focused source-contract coverage passed **1 file / 6 tests**; the
+specific browser flow and final **8-test** governed Chromium suite passed.
+`pnpm check`, static authority **35 files / 295 tests**, `git diff --check`, and
+database-authority status passed on fingerprint `a560e9f2971e7676…` at migration
+head `0090` with no incomplete attempts. This does not activate payment,
+entitlement, publication, provider delivery, or a paid cohort.
+
 ### Shared public advertising and Developer preparation-entry follow-up — 2026-09-15
 
 The role-specific public pages alone did not close the anonymous entry surface.
