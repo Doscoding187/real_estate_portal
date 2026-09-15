@@ -123,7 +123,77 @@ export function AgencyComplianceWorkspace(props: WorkspaceContentProps) {
   );
 }
 
-export function AgencyBillingWorkspace(_props: WorkspaceContentProps) {
+/**
+ * The normal MVP runtime deliberately permits Agency setup and private
+ * inventory preparation without exposing a payment or entitlement path.
+ * Keep the commercial workspace separate so its queries and mutations are
+ * never mounted until the independently approved commercial release.
+ */
+export function AgencyBillingWorkspace(props: WorkspaceContentProps) {
+  if (!COMMERCIAL_ACTIVATION_STATE.enabled) {
+    return <PreparationAgencyBillingWorkspace {...props} />;
+  }
+
+  return <CommercialAgencyBillingWorkspace {...props} />;
+}
+
+function PreparationAgencyBillingWorkspace({
+  onNavigate,
+  setLocation,
+}: Pick<WorkspaceContentProps, 'onNavigate' | 'setLocation'>) {
+  return (
+    <section className="space-y-5" data-testid="agency-billing-preparation">
+      <CommercialActivationNotice />
+      <Card className="border-slate-200 bg-white shadow-sm">
+        <CardContent className="p-6 sm:p-8">
+          <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100">
+            Agency preparation
+          </Badge>
+          <h2 className="mt-4 text-2xl font-semibold tracking-tight text-slate-950">
+            Prepare your Agency workspace before commercial activation.
+          </h2>
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">
+            Complete your agency identity and prepare private inventory now. Publishing and
+            commercial activation remain protected until the approved commercial release.
+          </p>
+
+          <div className="mt-6 grid gap-3 md:grid-cols-3">
+            <PreparationTile
+              title="Agency identity"
+              detail="Complete the professional information that establishes your workspace."
+            />
+            <PreparationTile
+              title="Private inventory"
+              detail="Create, save and return to listing drafts while they remain private."
+            />
+            <PreparationTile
+              title="Activation boundary"
+              detail="Publishing becomes available only after approved commercial activation."
+            />
+          </div>
+
+          <div className="mt-6 flex flex-wrap gap-3">
+            <Button onClick={() => setLocation('/agency/setup')}>Continue Agency setup</Button>
+            <Button variant="outline" onClick={() => onNavigate('listings')}>
+              Prepare private inventory
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </section>
+  );
+}
+
+function PreparationTile({ title, detail }: { title: string; detail: string }) {
+  return (
+    <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+      <p className="font-semibold text-slate-900">{title}</p>
+      <p className="mt-2 text-sm leading-6 text-slate-600">{detail}</p>
+    </div>
+  );
+}
+
+export function CommercialAgencyBillingWorkspace(_props: WorkspaceContentProps) {
   const utils = trpc.useUtils();
   const invoiceIdFromUrl =
     typeof window !== 'undefined'

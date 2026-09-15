@@ -434,6 +434,24 @@ test.describe('pre-payment onboarding browser acceptance', () => {
     await expect(page.getByRole('button', { name: 'Prepare inventory' })).toBeVisible();
     await expect(page.getByText(/your invoice is ready/i)).toHaveCount(0);
 
+    // The authenticated direct Billing route must stay in the same
+    // preparation-only state. It must not load or advertise invoices, EFT,
+    // or paid plans simply because an Agency owner knows the deep link.
+    await page.goto('/agency/billing');
+    await expect(page).toHaveURL(/\/agency\/billing$/);
+    await expect(
+      page.getByRole('heading', {
+        name: 'Prepare your Agency workspace before commercial activation.',
+      }),
+    ).toBeVisible();
+    await expect(page.getByText('Preparation-only onboarding')).toBeVisible();
+    await expect(page.getByText('Private inventory', { exact: true })).toBeVisible();
+    await expect(page.getByText('Available Plans', { exact: true })).toHaveCount(0);
+    await expect(page.getByText('Proof Of Payment', { exact: true })).toHaveCount(0);
+    await expect(page.getByText('Manual verification', { exact: true })).toHaveCount(0);
+    await page.getByRole('button', { name: 'Prepare private inventory' }).click();
+    await expect(page).toHaveURL(/\/agency\/listings$/);
+
     const [persisted] = await query(
       `SELECT u.emailVerified AS emailVerified,
               u.role,
