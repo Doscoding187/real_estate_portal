@@ -93,6 +93,7 @@ protected environment.
 | Authenticated Agent preparation-lock wording correction (task branch) | `217aa1df288bd7fdda32ee862570876677b0f523` |
 | Authenticated Agency billing-route containment (task branch) | `d48544b9a6c33de954821cbf06c0cac33f6dc0af` |
 | Legacy public activation-route containment (task branch) | `a0ceea70940e3ee3f84b7118a0470e3b4c7b4631` |
+| Legacy Developer authoring-route containment (task branch) | `3ad9b1f5b0541a6931e6e5da1e14c758e7f18232` |
 | Branch                                              | `verify/mvp-closure-post-577`                                                 |
 | Worktree                                            | `/home/edwardspc/Desktop/Dev/worktrees/property-listify-mvp-closure-post-577` |
 
@@ -1821,6 +1822,41 @@ This is a normal-runtime public-entry containment correction only. It does not
 activate payment, entitlement, publication, provider delivery, a paid cohort,
 or any protected environment.
 
+### Legacy Developer authoring-route containment — 2026-09-16
+
+The legacy `/developments/create` and `/development-wizard` URLs mounted the
+Development Wizard directly, outside the canonical authenticated Developer
+workspace boundary. The server already rejects unauthorised authoring mutations,
+but an anonymous visitor could still load the private authoring interface and
+issue its dependent unauthorised reads. That is an inconsistent UI authority
+boundary and an avoidable false start for a prospective stakeholder.
+
+Commit
+[`3ad9b1f5`](https://github.com/Doscoding187/real_estate_portal/commit/3ad9b1f5b0541a6931e6e5da1e14c758e7f18232)
+preserves both legacy URLs and their draft/edit query strings, redirects them
+to `/developer/create-development`, and lets the existing Developer route
+boundary own sign-in and role checks. The same correction resolves a connected
+redirect race: the outer workspace computed a contextual sign-in return path,
+while its nested onboarding-status hook independently redirected to bare
+`/login`. The hook now lets the owning workspace suppress that nested redirect,
+so the canonical target remains intact.
+
+The first scoped browser run reached the canonical path and then received bare
+`/login`, demonstrating the redirect-race defect. It was not a migration,
+database, or recovery incident. After the bounded hook correction, the focused
+client run passed **4 files / 15 tests**; the specific governed Chromium flow
+passed both legacy URLs with their exact return targets; and the final full
+governed pre-payment suite passed **9 tests**. `pnpm check`, targeted Prettier,
+zero-error touched-file ESLint (the pre-existing `App.tsx` warnings remain),
+`pnpm test:db-authority:static` (**35 files / 295 tests**), `git diff --check`,
+and final `pnpm db:authority:status` passed on the exact task-owned target at
+migration head `0090` with no incomplete attempts.
+
+This correction does not grant authoring, activate a commercial entitlement,
+publish a development, access a provider, or change a protected environment.
+It preserves the settled pre-payment Developer preparation path only after the
+existing account and organisation guards allow it.
+
 ## Ranked remaining blockers and authority handoff
 
 1. **L0 — integrate and independently verify the locally contained Land boundary (LRC-LAND-001):** `335838df` hard-deferred the specialist and generic-listing Land paths, `62ec0eed` closes the distinct generic Developer row authoring/public-discovery route, and `0280e9dd` closes generic Developer draft persistence. Land must remain unavailable to the controlled pre-payment onboarding cohort and public routes until integrated verification and a separately authorized Land commercial/acceptance slice exist.
@@ -1831,7 +1867,7 @@ or any protected environment.
    entitlement, and protected-release evidence exists. Controlled pre-payment
    onboarding may prepare identities and private drafts only. Do not replace
    this boundary with a free publishing entitlement or a privilege bypass.
-4. **L1 — integrate and independently verify public preparation entry (LRC-ADVERTISE-001; LRC-AGENT-001; LRC-AGY-001; LRC-DEV-001):** `234ca6e4` makes `/advertise`, `/advertise/sell`, the homepage professional entry, and the public Developer landing agree with normal `preparation_only` runtime; `32224b0a` closes the direct `/subscription-plans` paid-catalog escape; `e1ccc2c8` closes the analogous authenticated Agent package page and shared unavailable-activation CTA escape; `d48544b9` closes the authenticated Agency Billing route; `ada578a2` closes the authenticated Developer plans escape and inactive-workspace activation CTA; `bb89b2b9` closes the authenticated `/developer/subscription` and `/developer/settings/subscription` billing-route escapes; `a0ceea70` redirects the stale public `/activation` route to preparation rather than mounting false live-agency, listing, or CRM-import claims; `217aa1df` makes all reachable profile-completion locks describe actual private preparation rather than unavailable activation; `7c939831` and `02788ff2` retain the role-specific Agent and Agency corrections; `9cd6d3e3` browser-proves the pending Developer organisation/private-draft preparation slice; `589135ce` proves the separate authorised approval-to-professional-presence boundary preserves `missing_launch_access` and an empty public project set. Every paid-operation variation remains separate. Do not advertise paid cohorts before integration and the relevant hosted verification.
+4. **L1 — integrate and independently verify public preparation entry (LRC-ADVERTISE-001; LRC-AGENT-001; LRC-AGY-001; LRC-DEV-001):** `234ca6e4` makes `/advertise`, `/advertise/sell`, the homepage professional entry, and the public Developer landing agree with normal `preparation_only` runtime; `32224b0a` closes the direct `/subscription-plans` paid-catalog escape; `e1ccc2c8` closes the analogous authenticated Agent package page and shared unavailable-activation CTA escape; `d48544b9` closes the authenticated Agency Billing route; `ada578a2` closes the authenticated Developer plans escape and inactive-workspace activation CTA; `bb89b2b9` closes the authenticated `/developer/subscription` and `/developer/settings/subscription` billing-route escapes; `a0ceea70` redirects the stale public `/activation` route to preparation rather than mounting false live-agency, listing, or CRM-import claims; `3ad9b1f5` routes the legacy Developer authoring URLs through the canonical authenticated workspace while preserving safe draft/edit return targets; `217aa1df` makes all reachable profile-completion locks describe actual private preparation rather than unavailable activation; `7c939831` and `02788ff2` retain the role-specific Agent and Agency corrections; `9cd6d3e3` browser-proves the pending Developer organisation/private-draft preparation slice; `589135ce` proves the separate authorised approval-to-professional-presence boundary preserves `missing_launch_access` and an empty public project set. Every paid-operation variation remains separate. Do not advertise paid cohorts before integration and the relevant hosted verification.
 5. **L1 — integrate and host-verify the completed agency, membership, and Commercial-route
    boundaries (LRC-AGY-001; LRC-MEM-001; LRC-COMMERCIAL-001):** Goal 10 proves the complete
    first-cohort agency journey locally, `d1545579` keeps Commercial leads out
@@ -1917,7 +1953,7 @@ transactional-email containment `3d2e0148`, viewing UTC/input corrections
 onboarding truthfulness `7c939831`, Agency public onboarding truthfulness
 `02788ff2`, and shared public-advertising/Developer preparation-entry
 truthfulness `234ca6e4`, and Developer pre-payment organisation/draft browser
-acceptance `9cd6d3e3`, legacy public activation-route containment `a0ceea70`, and Agent preparation-lock wording correction `217aa1df`; the review packet,
+acceptance `9cd6d3e3`, legacy public activation-route containment `a0ceea70`, legacy Developer authoring-route containment `3ad9b1f5`, and Agent preparation-lock wording correction `217aa1df`; the review packet,
 escalation resolution, register, and queue
 runbook retain their respective evidence commits. Final Git status was clean
 after each recorded commit before the next bounded workstream began. No merge, feature push,

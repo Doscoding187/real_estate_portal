@@ -1064,6 +1064,30 @@ database-authority status passed on fingerprint `a560e9f2971e7676…` at migrati
 head `0090` with no incomplete attempts. This does not activate payment,
 entitlement, publication, provider delivery, or a paid cohort.
 
+### Legacy Developer authoring-route follow-up — 2026-09-16
+
+The route audit found `/developments/create` and `/development-wizard` mounting
+the private Development Wizard outside the canonical authenticated Developer
+boundary. Although the server rejected unauthorised mutations, the interface
+and its dependent reads were exposed before the intended account/role gate.
+
+Commit [`3ad9b1f5`](https://github.com/Doscoding187/real_estate_portal/commit/3ad9b1f5b0541a6931e6e5da1e14c758e7f18232)
+redirects both retained URLs, including draft/edit query strings, to
+`/developer/create-development`. It also fixes the observed nested-auth race:
+the outer workspace owns the contextual sign-in return target, while its
+onboarding-status query no longer overwrites it with bare `/login`. The initial
+browser diagnostic exposed that actual application defect; it did not indicate
+a database failure. The focused client run passed **4 files / 15 tests**, the
+specific governed browser proof passed both legacy URLs, and the final full
+suite passed **9 tests**. `pnpm check`, targeted Prettier and zero-error
+ESLint, static authority **35 files / 295 tests**, `git diff --check`, and
+database-authority status passed on fingerprint `a560e9f2971e7676…` at
+migration head `0090` with no incomplete attempts.
+
+The correction preserves the existing Developer and organisation authority
+checks. It does not create authoring access, commercial activation, payment,
+entitlement mutation, publication, provider delivery, or a protected release.
+
 ### Shared public advertising and Developer preparation-entry follow-up — 2026-09-15
 
 The role-specific public pages alone did not close the anonymous entry surface.
