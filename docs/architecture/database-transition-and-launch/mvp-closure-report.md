@@ -1,12 +1,13 @@
 # Post-merge MVP closure review packet
 
-Date: 2026-09-15 (Commercial-workflow and governed local-service-recovery addendum; canonical agent-coverage addendum; prior Goals 6–10, LRC-LAND-001, and LRC-SUPPORT-001 follow-ups dated 2026-09-14; original closure review dated 2026-09-13).
+Date: 2026-09-15 (governed pre-payment browser-acceptance, Commercial-workflow, and governed local-service-recovery addenda; canonical agent-coverage addendum; prior Goals 6–10, LRC-LAND-001, and LRC-SUPPORT-001 follow-ups dated 2026-09-14; original closure review dated 2026-09-13).
 **Outcome: the local candidate supports controlled
 pre-payment onboarding; canonical billing and activation paths are contained,
 and Goals 1–10 agency membership, workspace, commercial-term, private-preparation,
 review/publication, public-discovery, public-enquiry custody, CRM-continuity,
 first-cohort recovery, one consolidated agency operating acceptance, hard-deferred
-Land containment, canonical agent-coverage authority, and a Commercial generic-viewing
+Land containment, canonical agent-coverage authority, a governed browser proof of
+standalone-agent pre-payment onboarding, and a Commercial generic-viewing
 boundary correction are verified
 on the task branch. A bounded assisted-onboarding intake is also locally implemented;
 named support operations and final disclosures remain open. Normal commercial activation, hosted integration,
@@ -281,9 +282,9 @@ incomplete required journey; it does not claim a failing production observation.
 
 | Journey                      | Result                                                  | Exact evidence and boundary                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | ---------------------------- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Account access               | PASS locally                                            | scripts/mvp-account-verification.mts completed 15 HTTP checks: weak password rejection; registration; unverified denial; verification; token replay denial; login; prohibited self-assigned super-admin reduced to visitor; logout; anonymous auth.me null; recovery enumeration resistance; reset; reset replay denial; old-password denial; new-password success; pre-reset session revoked. Real persisted user/token/session paths; email transport captured locally. External delivery, expiry timing over elapsed time, and browser form completion remain unverified.                                                                                                                                                                                                                |
+| Account access               | PASS locally                                            | `scripts/mvp-account-verification.mts` completed 15 HTTP checks: weak password rejection; registration; unverified denial; verification; token replay denial; login; prohibited self-assigned super-admin reduced to visitor; logout; anonymous auth.me null; recovery enumeration resistance; reset; reset replay denial; old-password denial; new-password success; pre-reset session revoked. Commit `555250c5` also completed real Chromium registration UI, local-development verification-link navigation, session establishment, and agent setup on the exact target. External provider delivery and expiry timing over elapsed time remain unverified. |
 | Permissions                  | BLOCKED for complete scope                              | Account privilege injection denied; scripts/mvp-listing-verification.mts proved cross-tenant listing read and write HTTP 403 and unchanged persisted title. Scenario verifier proved agent/agency/developer unrelated-recipient denial and platform-operations restrictions. This is not exhaustive tenant membership revocation, every role, or admin audit proof.                                                                                                                                                                                                                                                                                                                                                                                                                         |
-| Listing authoring            | PASS for HTTP private agency-preparation slice          | `pnpm test:authority -- server/__tests__/integration.agency-listing-preparation.test.ts server/__tests__/integration.agency-member-workspace-authority.test.ts server/__tests__/integration.listing-media-tenant-boundary.test.ts` passed 3 files / 5 tests on target fingerprint `a560e9f2971e7676…`. Production invitation/listing routers were exercised over authenticated HTTP; five media objects were physically PUT and served back, canonical Gauteng/Johannesburg/Sandton IDs persisted, the member reopened/edited the draft, the agency owner could view it, and an unrelated tenant was denied. Submission remained blocked by `subscription_required`; no public projection was created. Browser wizard completion and reviewer/public lifecycle remain unproven.             |
+| Listing authoring            | PASS for HTTP private agency-preparation slice; browser entry/gate proven | `pnpm test:authority -- server/__tests__/integration.agency-listing-preparation.test.ts server/__tests__/integration.agency-member-workspace-authority.test.ts server/__tests__/integration.listing-media-tenant-boundary.test.ts` passed 3 files / 5 tests on target fingerprint `a560e9f2971e7676…`. Production invitation/listing routers were exercised over authenticated HTTP; five media objects were physically PUT and served back, canonical Gauteng/Johannesburg/Sandton IDs persisted, the member reopened/edited the draft, the agency owner could view it, and an unrelated tenant was denied. Submission remained blocked by `subscription_required`; no public projection was created. Commit `555250c5` proves the standalone-agent browser can reach and reload the private-preparation workspace with the commercial gate visible. A full browser completion of media upload/server-draft creation and the reviewer/public lifecycle remains unproven.             |
 | Publication                  | PASS for isolated agency lifecycle; normal runtime blocked | Goal 5 real HTTP acceptance submitted a canonical agency listing, captured reviewer rejection reasons/note, reopened and corrected the draft, resubmitted it, observed suspended-term approval denial with no projection, restored the isolated fixture term, and approved the listing. Persisted source/queue/projection checks and five mirrored images passed; approval used a task-local subscription fixture and did not invoke payment or normal runtime activation. Hosted and production publication remain unverified. |
 | Discovery                    | PASS for isolated agency slice; Land locally contained | Goal 6 real HTTP search used the canonical `suburb:<id>` authority and returned the published agency property with exact Gauteng/Johannesburg/Sandton context, matching title/type/source, and five images. Before approval the same search returned no card; mixed canonical-plus-city input returned `BAD_REQUEST`. Public detail returned the approved title, city/province, identity, five images and five media records. `335838dff0c746b860eaaf2930412d4b38540db5` now blocks Land direct public/review/author paths and generic listing/public-projection paths locally; no Land consumer acceptance, integration, or production evidence is claimed. |
 | Lead investigation and audit | PASS for local custody/CRM/recovery fallback | Goals 7–8 exact-target acceptance creates one anonymous public enquiry for the newly published agency listing, persists the lead and completed `crm_export` custody row, returns the same lead for exact replay, rejects a conflicting replay, and denies an unrelated verified tenant lead visibility and retry. The assigned agent records contact, stage and follow-up; the agency admin observes them. Expiry pauses new enquiries without stranding custody; canonical suspension/reassignment moves active lead/future showing and denies the former agent. Goal 9 deliberately interrupted a platform-managed worker, observed audit/queue attention, completed the lead once through the authorized super-admin route, and proved replay-safe audit history. CRM-export/local simulated delivery is not actual provider delivery; external provider reliability, live worker supervision, hosted operation, and production recovery remain blocked. |
@@ -296,8 +297,11 @@ Browser setup initially used an unapproved port (5017), then a mismatched
 127.0.0.1 origin. The environment guard/CORS rejected those requests. Repeating
 on the existing allowed backend port 5000 and configured localhost origin
 resolved the issue without changing security policy. The transient
-UNSUPPORTED_MEDIA_TYPE observation was not a product defect. Browser page
-rendering is smoke evidence only, not full browser acceptance.
+UNSUPPORTED_MEDIA_TYPE observation was not a product defect. That early page
+rendering was smoke evidence only. The later governed standalone-agent browser
+acceptance recorded below is a real local form/session/profile/preparation-gate
+run; it does not replace the outstanding browser evidence for a completed
+agency listing, review, public discovery, enquiry, or CRM lifecycle.
 
 ## Material defects and validation
 
@@ -675,6 +679,52 @@ failure, database reset, target replacement, data repair, protected recovery,
 or production event. The inactive legacy home-directory service residue was
 reported by the governed command and was neither adopted nor changed.
 
+## Governed pre-payment browser onboarding follow-up
+
+Commit [`555250c5`](https://github.com/Doscoding187/real_estate_portal/commit/555250c5dcb3b507d114eb76d40f3a01e7d7f6e8)
+adds one authority-bound Chromium acceptance to close the previously recorded
+browser-form gap for the standalone-agent preparation journey. It deliberately
+does not reuse older Playwright configurations that hard-code another local
+database. `playwright.prepayment-onboarding.config.ts` starts the repository's
+exact-target `mvp-local-runtime.mts` API process at `localhost:5000` and a local
+Vite browser shell at `localhost:5177`. The recorded command invokes it through
+`pnpm test:browser:authority`, which resolves and passes the governed authority
+context to its child processes.
+
+The final command was:
+
+```text
+pnpm test:browser:authority -- --config=playwright.prepayment-onboarding.config.ts
+```
+
+It passed **1 Chromium desktop test** at `1440x900`. The browser selected Real
+Estate Agent, completed the normal registration form, received HTTP `201`, and
+then followed the normal `/api/auth/verify-email` route using the temporary
+link emitted by the repository's local-development email transport. The
+verification route set the real session and redirected the browser to
+`/agent/setup?verified=true`. The browser saved a professional profile, selected
+Sandton from the canonical location autocomplete, completed setup, reached
+`/listings/create`, and reloaded that workspace. The UI continued to state that
+the stakeholder may prepare a private listing but submission and marketplace
+publication require onboarding, approval, and commercial activation.
+
+The test queried the same authority-owned target after the UI actions and
+asserted the persisted user/agent facts: verified agent role, display name,
+phone, bio, no agency affiliation, and a single canonical `suburb:<id>` Sandton
+coverage identity with its display label. `pnpm run check`,
+`pnpm test:db-authority:static` (**35 files / 293 tests**),
+`git diff --check`, and `pnpm db:authority:status` also passed. The final status
+retained fingerprint `a560e9f2971e7676…`, exact worktree ownership, migration
+head `0090_retire_disconnected_boost_campaigns.sql`, schema congruency, and
+`no-incomplete-attempts`.
+
+The temporary verification-link log is created mode `0600` under `/tmp`; raw
+tokens, credentials, screenshots, videos, and reports are excluded from Git.
+This evidence is local-only. It does not prove external email delivery,
+elapsed-time token expiry, actual media upload, a completed browser server-draft
+creation, agency membership/publication, payment or entitlement activation,
+provider behaviour, hosting, or production operation.
+
 ## Ranked remaining blockers and authority handoff
 
 1. **L0 — integrate and independently verify the locally contained Land boundary (LRC-LAND-001):** `335838df` hard-deferred Land at direct and generic source boundaries on this task branch. It must remain unavailable to the controlled pre-payment onboarding cohort and public routes until integrated verification and a separately authorized Land commercial/acceptance slice exist.
@@ -688,8 +738,9 @@ reported by the governed command and was neither adopted nor changed.
 4. **L1 — integrate and host-verify the completed agency and Commercial-route
    boundaries (LRC-AGY-001; LRC-COMMERCIAL-001):** Goal 10 proves the complete
    first-cohort agency journey locally, and `d1545579` keeps Commercial leads
-   out of generic viewing flows before ordinary assignment. Both remain
-   task-branch evidence, with no browser UI, hosted, provider, or production
+   out of generic viewing flows before ordinary assignment. `555250c5` adds
+   browser evidence only for the standalone-agent pre-payment slice. The full
+   agency journey still has no browser UI, hosted, provider, or production
    proof; senior review, integration, and controlled runtime acceptance remain
    required before any cohort is represented as live.
 5. **L1 — support/disclosure operation and external/protected operations:**
