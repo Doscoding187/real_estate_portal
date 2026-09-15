@@ -21,6 +21,7 @@ type Row = Record<string, unknown>;
 let connection: AuthoritySqlConnection | undefined;
 let submittedListing: { id: number; title: string; suburbId: number } | undefined;
 let submittedFeedback: string | undefined;
+let publishedProperty: { id: number } | undefined;
 
 function rowsFrom(result: unknown): Row[] {
   const first = Array.isArray(result) ? result[0] : undefined;
@@ -155,7 +156,9 @@ test.describe('PLE agency operating browser acceptance', () => {
     await page.getByRole('button', { name: 'Save progress on this device' }).click();
     await expect(page.getByRole('button', { name: 'Saved on this device' })).toBeVisible();
 
-    const persistedDraft = await page.evaluate(() => localStorage.getItem('listing-wizard-storage'));
+    const persistedDraft = await page.evaluate(() =>
+      localStorage.getItem('listing-wizard-storage'),
+    );
     expect(persistedDraft).toContain(title);
     expect(persistedDraft).toContain('"currentStep":3');
 
@@ -169,10 +172,7 @@ test.describe('PLE agency operating browser acceptance', () => {
     await expect(page.locator('#core-internal-area')).toHaveValue('145');
     await expect(page.locator('#core-erf-area')).toHaveValue('600');
 
-    const [serverListing] = await query(
-      `SELECT id FROM listings WHERE title = ? LIMIT 1`,
-      [title],
-    );
+    const [serverListing] = await query(`SELECT id FROM listings WHERE title = ? LIMIT 1`, [title]);
     expect(serverListing).toBeUndefined();
   });
 
@@ -213,7 +213,9 @@ test.describe('PLE agency operating browser acceptance', () => {
     await page.locator('#location-street-number').fill('12');
     await page.locator('#location-street-name').fill('Katherine Street');
     await page.getByRole('button', { name: 'Confirm location', exact: true }).click();
-    await expect(page.getByText('Ready to continue. Coordinates are optional when the location is valid.')).toBeVisible();
+    await expect(
+      page.getByText('Ready to continue. Coordinates are optional when the location is valid.'),
+    ).toBeVisible();
     await moveToNextStep(page);
 
     const mediaInput = page.locator('input[type=file]');
@@ -283,7 +285,9 @@ test.describe('PLE agency operating browser acceptance', () => {
     expect(publicProjection).toBeUndefined();
   });
 
-  test('returns the submitted listing for correction through the reviewer workspace', async ({ page }) => {
+  test('returns the submitted listing for correction through the reviewer workspace', async ({
+    page,
+  }) => {
     expect(submittedListing).toBeDefined();
     const listing = submittedListing!;
     const rejectionFeedback = `Replace the cover image with a clear exterior photo before resubmission for ${listing.title}.`;
@@ -299,7 +303,9 @@ test.describe('PLE agency operating browser acceptance', () => {
     await expect(feedbackInput).toBeVisible();
     await feedbackInput.fill(rejectionFeedback);
     await page.getByRole('button', { name: 'Return for changes', exact: true }).click();
-    await expect(page.getByText('Property rejected and feedback sent', { exact: true })).toBeVisible();
+    await expect(
+      page.getByText('Property rejected and feedback sent', { exact: true }),
+    ).toBeVisible();
     submittedFeedback = rejectionFeedback;
 
     await expect
@@ -340,7 +346,10 @@ test.describe('PLE agency operating browser acceptance', () => {
     await expect(page.getByText(listing.title, { exact: true })).toBeVisible();
     const feedbackItem = page.getByText(rejectionFeedback, { exact: true });
     await expect(feedbackItem).toBeVisible();
-    await feedbackItem.locator('xpath=../..').getByRole('button', { name: 'Fix & Resubmit' }).click();
+    await feedbackItem
+      .locator('xpath=../..')
+      .getByRole('button', { name: 'Fix & Resubmit' })
+      .click();
     await expect(page).toHaveURL(new RegExp(`/listings/create\\?id=${listing.id}&edit=true$`));
 
     await expect(
@@ -352,9 +361,11 @@ test.describe('PLE agency operating browser acceptance', () => {
     await expect(page.locator('#description')).toHaveValue(
       'A complete locally verified agency listing used to prove the governed browser authoring and review path with real uploaded presentation media.',
     );
-    await page.locator('#description').fill(
-      'A corrected locally verified agency listing that retains its trusted ownership, media and confirmed geography through the review resubmission path.',
-    );
+    await page
+      .locator('#description')
+      .fill(
+        'A corrected locally verified agency listing that retains its trusted ownership, media and confirmed geography through the review resubmission path.',
+      );
     await moveToNextStep(page);
     await moveToNextStep(page);
     await moveToNextStep(page);
@@ -407,5 +418,69 @@ test.describe('PLE agency operating browser acceptance', () => {
       [listing.id],
     );
     expect(publicProjection).toBeUndefined();
+  });
+
+  test('approves the corrected listing through the reviewer workspace and creates one public projection', async ({
+    page,
+  }) => {
+    expect(submittedListing).toBeDefined();
+    const listing = submittedListing!;
+
+    await signInAsFixtureReviewer(page, listing.id);
+    await expect(page.getByText('Listing review', { exact: true })).toBeVisible();
+    await page.getByRole('button', { name: 'Approve & publish', exact: true }).click();
+    await expect(
+      page.getByText('Approve this listing for publication', { exact: true }),
+    ).toBeVisible();
+    const confirmation = page.getByRole('checkbox');
+    await confirmation.check();
+    await page
+      .getByPlaceholder('Any internal context about this approval…')
+      .fill('PLE local browser acceptance approval after correction and resubmission.');
+    await page.getByRole('button', { name: 'Confirm approval', exact: true }).click();
+    await expect(
+      page.getByText('Property approved and published successfully', { exact: true }),
+    ).toBeVisible();
+
+    await expect
+      .poll(async () => {
+        const [updated] = await query(
+          `SELECT status, approvalStatus
+             FROM listings
+            WHERE id = ?`,
+          [listing.id],
+        );
+        return updated;
+      })
+      .toMatchObject({ status: 'published', approvalStatus: 'approved' });
+
+    await expect
+      .poll(async () => {
+        const [projection] = await query(
+          `SELECT id, sourceListingId, provinceId, cityId, suburbId
+             FROM properties
+            WHERE sourceListingId = ?`,
+          [listing.id],
+        );
+        return projection;
+      })
+      .toMatchObject({
+        sourceListingId: listing.id,
+        suburbId: listing.suburbId,
+      });
+
+    const [projection] = await query(`SELECT id FROM properties WHERE sourceListingId = ?`, [
+      listing.id,
+    ]);
+    expect(Number(projection?.id)).toBeGreaterThan(0);
+    publishedProperty = { id: Number(projection.id) };
+
+    const [mirroredImages] = await query(
+      `SELECT COUNT(*) AS imageCount
+         FROM propertyImages
+        WHERE propertyId = ?`,
+      [publishedProperty.id],
+    );
+    expect(Number(mirroredImages?.imageCount)).toBe(5);
   });
 });
