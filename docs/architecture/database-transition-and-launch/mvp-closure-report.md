@@ -62,6 +62,7 @@ protected environment.
 | Assisted-onboarding intake correction (task branch) | `144e90d1531d2e85a407e5dabecfb4124c8394bf` |
 | Canonical agent-coverage authority correction (task branch) | `f40ca8a3bbed5bfc1f0ffeb675b2c9d10397f35e` |
 | Commercial generic-viewing boundary correction (task branch) | `d1545579fda2c32b466af4cf68ff6929c2e2be2b` |
+| Full-suite fixture-congruency correction (task branch) | `e50dbe956a50a0e0a1c071224fb1bffd46bdb4d4` |
 | Branch                                              | `verify/mvp-closure-post-577`                                                 |
 | Worktree                                            | `/home/edwardspc/Desktop/Dev/worktrees/property-listify-mvp-closure-post-577` |
 
@@ -608,6 +609,46 @@ This is a task-branch generic-workflow containment correction. It does not
 enable Commercial publishing, payments, entitlement mutation, provider delivery,
 or a Commercial launch cohort. Hosted, integrated, and production verification
 remain open.
+
+## Full authority-suite fixture-congruency follow-up
+
+The first broad authority-wrapped run after the Commercial correction completed
+with **630 passed, 9 skipped test files; 4,213 passed, 67 skipped tests** and
+three failures. Investigation confirmed the current implementation behaviour
+and isolated obsolete fixture assumptions:
+
+- The billing acceptance fixture forced a paid subscription's canonical end into
+  the past but expected its displayed billing state to remain `active`. Current
+  commercial authority correctly presents that state as `expired` while keeping
+  publishing unavailable. The fixture expectation was corrected.
+- The agency-listing performance fixture claimed ordinary agency-member
+  behaviour while creating agent profiles without canonical membership rows.
+  It now establishes those memberships through
+  `establishCanonicalAgencyMembership` and removes them before agent cleanup.
+- The independent media-reconciliation fixture claimed an agent-authored
+  listing while creating only a `users` row. It now creates and removes the
+  matching approved agent profile required by `createListing`.
+
+Commit [`e50dbe95`](https://github.com/Doscoding187/real_estate_portal/commit/e50dbe956a50a0e0a1c071224fb1bffd46bdb4d4)
+changes test data and one stale assertion only. It does not weaken membership,
+listing-owner, paid-term, publication, or tenant controls; no runtime source,
+schema, migration, payment, entitlement, provider, or protected configuration
+was changed.
+
+Evidence on the exact owned disposable target:
+
+- The three affected tests passed under `pnpm test:authority` (**3 files / 4
+  tests**). `pnpm run check` and `pnpm test:db-authority:static` passed; the
+  static authority suite reported **35 files / 293 tests**. `pnpm run
+  lint:check` completed with **0 errors** and **11,489 pre-existing warnings**.
+- A retained complete `pnpm test:authority` rerun exited 0 after 607.69 seconds:
+  **633 passed, 9 skipped test files; 4,216 passed, 67 skipped tests**. This is
+  regression evidence on the task branch, not hosted, integration, or
+  production verification.
+- `pnpm db:authority:status` after the run confirmed the same fingerprint
+  `a560e9f2971e7676…`, exact worktree ownership, migration head
+  `0090_retire_disconnected_boost_campaigns.sql`, schema congruency, and
+  `no-incomplete-attempts`.
 
 ### Governed local-service interruption — 2026-09-15
 
