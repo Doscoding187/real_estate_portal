@@ -2,10 +2,10 @@
 
 | Field                | Record                                                                                                                                                                                              |
 | -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Status               | **Working implementation authority.** Goals 1–10 are verified on the task branch within their stated first-cohort boundaries. Goal 10 has a consolidated real-application acceptance and the scoped Goal 9 recovery companion; neither authorizes a protected release, normal-runtime payment activation, provider operation, or production deployment. |
+| Status               | **Working implementation authority.** Goals 1–10 are verified on the task branch within the stated controlled pre-payment onboarding boundary. Goal 10 has a consolidated real-application acceptance and the scoped Goal 9 recovery companion; neither authorizes a protected release, normal-runtime payment activation, provider operation, or production deployment. |
 | Architectural source | [Agency Journey Senior Architecture Review](14-agency-journey-senior-review.md)                                                                                                                     |
-| Purpose              | Convert the senior review into small, sequential, evidence-led implementation goals for the first commercially usable agency journey.                                                               |
-| Cohort boundary      | One small agency in one geography is the proposed first operating cohort. Land, developer paid operation, and independent-agent launch claims remain outside this cohort until separately accepted. |
+| Purpose              | Convert the senior review into small, sequential, evidence-led implementation goals for the future commercial agency journey while containing the currently permitted pre-payment preparation path. |
+| Cohort boundary      | One small agency in one geography is the proposed controlled pre-payment onboarding cohort. Any later paid launch is separate. Land, developer paid operation, and independent-agent launch claims remain outside this cohort until separately accepted. |
 
 ## Operating model
 
@@ -46,7 +46,8 @@ own explicit release authorization.
 These are not extra agency-journey goals and must not be hidden by a completed
 goal status:
 
-- **Land containment:** Land is deferred from the first paid cohort. Direct
+- **Land containment:** Land is deferred from the controlled pre-payment
+  onboarding cohort and any later paid launch. Direct
   routes, APIs, review and public-publication boundaries must enforce that
   disposition before a launch claim; navigation hiding alone is insufficient.
   See [LRC-LAND-001](03-launch-register.md#lrc-land-001).
@@ -647,17 +648,40 @@ these are direct local evidence for the operating journey and its scoped
 exception path.
 
 This verifies the one-agency, one-geography operating slice on the task branch.
-It does **not** prove browser UI completion, a deployed customer payment flow,
-external email/provider delivery, worker supervision, hosted integration,
-production recovery, protected database grants, capacity, or production
-launch. Normal runtime remains `preparation_only`; no free publishing
-entitlement, protected operation, or provider configuration was introduced.
+At this record's date it did **not** prove browser UI completion. The browser
+acceptance addendum below supersedes that narrow limitation; the remaining
+protected-release boundaries still apply. It does not prove a deployed customer
+payment flow, external email/provider delivery, worker supervision, hosted
+integration, production recovery, protected database grants, capacity, or
+production launch. Normal runtime remains `preparation_only`; no free
+publishing entitlement, protected operation, or provider configuration was
+introduced.
 
 Milestone M4 is ready for its planned senior architectural review. The separate
 L0 Land-containment record is locally corrected, and `144e90d1` now supplies a
 bounded assisted-onboarding intake. Named support operation/disclosures and
 protected-release evidence remain required; no local Goal 10 result changes
 those launch conditions.
+
+### Goal 10 browser acceptance addendum — 2026-09-15
+
+[`72dd80e0`](https://github.com/Doscoding187/real_estate_portal/commit/72dd80e04b5c76c348389f4262543022a8a9a586)
+corrected the review feedback/re-entry path, and
+[`a2a4e52`](https://github.com/Doscoding187/real_estate_portal/commit/a2a4e52b6b6d215263bc1f765d75a670d00ad64e)
+adds focused Chromium acceptance against the same task-owned target. The
+following commands passed:
+
+- `pnpm test:browser:authority -- --config=playwright.ple-agency-operating.config.ts --reporter=line` — **5 passed**. An agency member creates a real House listing, confirms the canonical Gauteng/Johannesburg/Sandton geography, uploads five images, submits it, receives reviewer feedback, reopens the persisted listing, corrects and resubmits it, and a reviewer approves it. Persisted assertions confirm the state transitions and one public projection with five images.
+- `pnpm test:browser:authority -- --config=playwright.ple-agency-operating.config.ts --reporter=line --grep "discovers only the approved"` — **1 passed**. An anonymous visitor searches using `locationId=suburb:<id>`, sees the approved inventory but not a private candidate, opens its detail, and sees its Sandton context and five-image gallery.
+- `pnpm test:browser:authority -- --config=playwright.ple-agency-operating.config.ts --reporter=line --grep "captures a public enquiry"` — **1 passed**. An anonymous visitor supplies only property/prospect data and consent. The persisted lead has canonical agency/assigned-agent custody and completed `crm_export` delivery; the assigned member has no individual agent subscription, opens the real CRM workspace, records contact, and schedules a follow-up with persisted activity evidence.
+
+The browser tests intentionally use the isolated enabled fixture already
+required by Goal 10. They neither enable normal-runtime payment/entitlement
+functions nor prove a paid customer activation. They also do not form one
+continuous browser path through agency-owner registration, canonical invitation
+delivery/acceptance, and the later member session. That acquisition path,
+external provider delivery, hosted integration, and protected release remain
+separate evidence requirements.
 
 ## Advancement rule
 

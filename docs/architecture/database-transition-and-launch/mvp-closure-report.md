@@ -50,7 +50,7 @@ protected environment.
 | PR merge / observed remote main / initial candidate | `4e012b3044628fc06da7489c0055e9ce01bdc8d9`                                    |
 | Accepted-head and merge tree (equal)                | `24731de54ebc739546b550376fe456eaf9731135`                                    |
 | Earlier recovery/preflight fix candidate            | `c6c9f1330ae3910bfbad7021735b231e90e984b0`                                    |
-| Current closure candidate                           | `c8c35fde44d00ff8b2ce83ca73fcb32dd522e9bc`                                    |
+| Initial closure candidate                           | `c8c35fde44d00ff8b2ce83ca73fcb32dd522e9bc`                                    |
 | Goal 1 authority correction (task branch)           | `cf1f93e6f2148a1fc434571475ecd9f18c646bfa`                                    |
 | Goal 2 workspace correction (task branch)           | `af9fd6f2`                                                                    |
 | Goal 3 commercial-term correction (task branch)     | `16a23cd9ab61cbc791f1b7e7941e62e53d1ecd7d`                                    |
@@ -66,6 +66,8 @@ protected environment.
 | Commercial generic-viewing boundary correction (task branch) | `d1545579fda2c32b466af4cf68ff6929c2e2be2b` |
 | Full-suite fixture-congruency correction (task branch) | `e50dbe956a50a0e0a1c071224fb1bffd46bdb4d4` |
 | Queued-invitation acceptance containment (task branch) | `415a947261a65c160f4fb77c39712050bab35b8` |
+| Browser correction-loop acceptance (task branch) | `72dd80e04b5c76c348389f4262543022a8a9a586` |
+| Browser public discovery/enquiry/CRM acceptance (task branch) | `a2a4e52b6b6d215263bc1f765d75a670d00ad64e` |
 | Branch                                              | `verify/mvp-closure-post-577`                                                 |
 | Worktree                                            | `/home/edwardspc/Desktop/Dev/worktrees/property-listify-mvp-closure-post-577` |
 
@@ -286,10 +288,10 @@ incomplete required journey; it does not claim a failing production observation.
 | ---------------------------- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Account access               | PASS locally                                            | `scripts/mvp-account-verification.mts` completed 15 HTTP checks: weak password rejection; registration; unverified denial; verification; token replay denial; login; prohibited self-assigned super-admin reduced to visitor; logout; anonymous auth.me null; recovery enumeration resistance; reset; reset replay denial; old-password denial; new-password success; pre-reset session revoked. Commits `555250c5` and `e9909ab6` also completed real Chromium registration UI, local-development verification-link navigation, session establishment, and respectively agent setup and agency-owner setup on the exact target. External provider delivery and expiry timing over elapsed time remain unverified. |
 | Permissions                  | BLOCKED for complete scope                              | Account privilege injection denied; scripts/mvp-listing-verification.mts proved cross-tenant listing read and write HTTP 403 and unchanged persisted title. Scenario verifier proved agent/agency/developer unrelated-recipient denial and platform-operations restrictions. This is not exhaustive tenant membership revocation, every role, or admin audit proof.                                                                                                                                                                                                                                                                                                                                                                                                                         |
-| Listing authoring            | PASS for HTTP private agency-preparation slice; browser entry/gate proven | `pnpm test:authority -- server/__tests__/integration.agency-listing-preparation.test.ts server/__tests__/integration.agency-member-workspace-authority.test.ts server/__tests__/integration.listing-media-tenant-boundary.test.ts` passed 3 files / 5 tests on target fingerprint `a560e9f2971e7676…`. Production invitation/listing routers were exercised over authenticated HTTP; five media objects were physically PUT and served back, canonical Gauteng/Johannesburg/Sandton IDs persisted, the member reopened/edited the draft, the agency owner could view it, and an unrelated tenant was denied. Submission remained blocked by `subscription_required`; no public projection was created. Commits `555250c5` and `e9909ab6` prove the agent and agency-owner browsers can reach and reload their private-preparation workspaces with the commercial gate visible. A full browser completion of agency membership, media upload/server-draft creation, and the reviewer/public lifecycle remains unproven.             |
-| Publication                  | PASS for isolated agency lifecycle; normal runtime blocked | Goal 5 real HTTP acceptance submitted a canonical agency listing, captured reviewer rejection reasons/note, reopened and corrected the draft, resubmitted it, observed suspended-term approval denial with no projection, restored the isolated fixture term, and approved the listing. Persisted source/queue/projection checks and five mirrored images passed; approval used a task-local subscription fixture and did not invoke payment or normal runtime activation. Hosted and production publication remain unverified. |
-| Discovery                    | PASS for isolated agency slice; Land locally contained | Goal 6 real HTTP search used the canonical `suburb:<id>` authority and returned the published agency property with exact Gauteng/Johannesburg/Sandton context, matching title/type/source, and five images. Before approval the same search returned no card; mixed canonical-plus-city input returned `BAD_REQUEST`. Public detail returned the approved title, city/province, identity, five images and five media records. `335838dff0c746b860eaaf2930412d4b38540db5` now blocks Land direct public/review/author paths and generic listing/public-projection paths locally; no Land consumer acceptance, integration, or production evidence is claimed. |
-| Lead investigation and audit | PASS for local custody/CRM/recovery fallback | Goals 7–8 exact-target acceptance creates one anonymous public enquiry for the newly published agency listing, persists the lead and completed `crm_export` custody row, returns the same lead for exact replay, rejects a conflicting replay, and denies an unrelated verified tenant lead visibility and retry. The assigned agent records contact, stage and follow-up; the agency admin observes them. Expiry pauses new enquiries without stranding custody; canonical suspension/reassignment moves active lead/future showing and denies the former agent. Goal 9 deliberately interrupted a platform-managed worker, observed audit/queue attention, completed the lead once through the authorized super-admin route, and proved replay-safe audit history. CRM-export/local simulated delivery is not actual provider delivery; external provider reliability, live worker supervision, hosted operation, and production recovery remain blocked. |
+| Listing authoring            | PASS for local browser and HTTP agency-preparation slices | The three focused authority tests above passed 3 files / 5 tests on target fingerprint `a560e9f2971e7676…`: real authenticated routers physically PUT and served five media objects, persisted canonical Gauteng/Johannesburg/Sandton IDs, preserved a reopened/edited draft, allowed agency-owner visibility, and denied an unrelated tenant. `a2a4e52` then drove the agency member through Chromium: author a House listing, select and confirm Sandton, upload five images, save the persisted server draft, submit it, receive reviewer feedback, reopen it, retain its data/media/geography, correct it, and resubmit. Its isolated enabled fixture is browser acceptance evidence only; it does not enable a normal-runtime commercial transition. A single continuous browser path from owner registration and canonical invitation acceptance into this member session remains unproven. |
+| Publication                  | PASS for isolated local lifecycle; normal runtime blocked | Goal 5 real HTTP acceptance proved the governed lifecycle and denial case. `72dd80e0` and `a2a4e52` add Chromium reviewer/member proof of rejection feedback, correction, resubmission, confirmation, approval, and exactly one persisted published source/projection with five mirrored images. Approval uses the existing isolated local entitlement fixture and did not invoke payment or normal runtime activation. Hosted and production publication remain unverified. |
+| Discovery                    | PASS for isolated local agency slice; Land locally contained | Goal 6 real HTTP evidence proved the canonical `suburb:<id>` contract, rejected mixed canonical-plus-city input, and confirmed exact geography/media. `a2a4e52` adds anonymous Chromium proof that only the approved listing appears through canonical suburb search; a private candidate is absent; the detail has matching Sandton context and a five-image gallery. `335838dff0c746b860eaaf2930412d4b38540db5` blocks Land direct public/review/author paths and generic listing/public-projection paths locally; no Land consumer acceptance, integration, or production evidence is claimed. |
+| Lead investigation and audit | PASS for local custody/CRM/recovery fallback | Goals 7–8 exact-target acceptance covers exact replay, conflicting replay denial, unrelated-tenant denial, agency admin oversight, expiry continuity, suspension/reassignment, and former-agent denial. `a2a4e52` adds anonymous Chromium enquiry proof from the published detail: the client sends only property/prospect data and consent; persisted state has canonical agency/agent custody, completed `crm_export` primary custody, and the current agency member has zero individual agent subscriptions. That member then records contact and schedules a follow-up through the real CRM UI, with persisted lead and activity checks. Goal 9 deliberately interrupted a platform-managed worker and proved replay-safe internal recovery. CRM-export/local simulated delivery is not actual provider delivery; external provider reliability, live worker supervision, hosted operation, and production recovery remain blocked. |
 | Payments disabled            | PASS locally — billing/activation containment candidate | `c8c35fde` defines a shared `preparation_only` state, removes payment/proof affordances from the onboarding surfaces, and fails closed before database work for invoice, checkout, proof, finance-review, lifecycle, entitlement, and provider-event functions. `e9909ab6` corrects agency setup and workspace actions that otherwise implied an invoice was ready: the canonical `pending_payment` preference now presents private-inventory preparation while activation is disabled. Exact-target HTTP proof returned tRPC 412 for agent invoice, agency checkout and developer invoice requests, and HTTP 409 for the agent Express invoice route; it then proved profile/draft preparation persisted. The worker intake/claim/complete/fail paths have the same guard. `335838dff0c746b860eaaf2930412d4b38540db5` separately hard-contains Land’s formerly independent public/review path. This is local candidate evidence only: it does not enable payment, entitlement mutation, free publication, provider delivery, or production release. |
 
 The malformed journey row in the assignment was interpreted as lead
@@ -301,9 +303,13 @@ on the existing allowed backend port 5000 and configured localhost origin
 resolved the issue without changing security policy. The transient
 UNSUPPORTED_MEDIA_TYPE observation was not a product defect. That early page
 rendering was smoke evidence only. The later governed pre-payment browser
-acceptance recorded below is a real local form/session/profile/preparation-gate
-run; it does not replace the outstanding browser evidence for a completed
-agency listing, review, public discovery, enquiry, or CRM lifecycle.
+acceptance is a real local form/session/profile/preparation-gate run.
+`72dd80e0` and `a2a4e52` now add the completed member
+author/review/public-discovery/enquiry/CRM browser slices described above.
+This evidence remains local-only. It does not prove external email delivery,
+elapsed-time token expiry, one continuous browser path through canonical
+invitation/member acceptance, a deployed payment or entitlement activation,
+provider behaviour, hosting, or production operation.
 
 ## Material defects and validation
 
@@ -836,10 +842,11 @@ and the browser command above passed its three tests. `pnpm run check`,
 The temporary verification-link log is created mode `0600` under `/tmp`; raw
 tokens, credentials, screenshots, videos, and reports are excluded from Git.
 This evidence is local-only. It does not prove external email delivery,
-elapsed-time token expiry, actual media upload, a completed browser server-draft
-creation, canonical invitation/member acceptance, agency publication,
-payment or entitlement activation, provider behaviour, hosting, or production
-operation.
+elapsed-time token expiry, a single browser path from invitation delivery and
+canonical acceptance through later authoring, a deployed payment or entitlement
+activation, provider behaviour, hosting, or production operation. The separate
+`72dd80e0`/`a2a4e52` browser acceptance now proves actual media upload,
+server-draft creation, publication, discovery, enquiry, and CRM slices.
 
 ## Ranked remaining blockers and authority handoff
 
@@ -859,11 +866,13 @@ operation.
    persisted `pending_payment` preference without an invoice; `0c440207`
    prevents a queued pre-payment team invitation from producing an expired link
    if delivery later becomes authorized; and `415a9472` prevents direct
-   acceptance of a queued pre-payment token from creating team authority. The full agency
-   member/listing/review/public-discovery/enquiry/CRM journey still has no
-   browser UI, hosted, provider, or production proof; senior review,
-   integration, and controlled runtime acceptance remain required before any
-   cohort is represented as live.
+   acceptance of a queued pre-payment token from creating team authority.
+   `72dd80e0` and `a2a4e52` add local Chromium evidence for the member
+   listing/review/public-discovery/enquiry/CRM slices. One continuous browser
+   path through owner registration, canonical invitation acceptance, and that
+   member flow, plus hosted, provider, and production proof, remains absent;
+   senior review, integration, and controlled runtime acceptance remain
+   required before any cohort is represented as live.
 5. **L1 — support/disclosure operation and external/protected operations:**
    `144e90d1` makes assisted-onboarding intake durable and reviewable, but it
    is not a monitored contact service. A named queue owner, cadence,
