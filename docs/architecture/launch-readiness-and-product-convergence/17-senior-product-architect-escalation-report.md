@@ -1,13 +1,13 @@
 # Senior Product Architect Escalation Report
 
-Date: 2026-09-14 (updated after senior direction and bounded support continuation)
+Date: 2026-09-15 (updated after senior direction, bounded support continuation, Commercial workflow correction, and governed local-service interruption)
 Status: **RESOLVED FOR BOUNDED CONTINUATION**
 Audience: senior product architect and launch coordination manager
 
 This report records the agency journey closure evidence through Goals 1–10,
 the Land containment work that followed, the verification error that paused the
-work, the subsequent senior resolution, and the bounded assisted-onboarding
-continuation. It is an escalation record. It is not a release approval, a
+work, the subsequent senior resolution, the bounded assisted-onboarding
+continuation, and later bounded correction/verification addenda. It is an escalation record. It is not a release approval, a
 production-verification record, or permission to resume protected operations.
 
 ## Senior decision and resolution
@@ -24,9 +24,14 @@ recovery indication, and authorized two bounded corrections before continuation:
 Commit `335838dff0c746b860eaaf2930412d4b38540db5` implements those corrections
 and passed the final scoped checks recorded below. The accidental unscoped
 Vitest invocation remains an uncredited tooling diagnostic, not evidence of a
-database incident. No migration retry, database recovery, provider operation,
+database incident. At that point, no migration retry, database recovery, provider operation,
 payment activation, entitlement activation, protected database operation,
 deployment, cutover, merge, or push occurred.
+
+A later task-owned local-service interruption is separately recorded below. It
+was resolved only through the entry contract's stale-runtime-metadata command;
+it was not a migration or data recovery and did not change the senior decision
+about the earlier unscoped test diagnostic.
 
 ## Source identity and authority
 
@@ -40,7 +45,9 @@ deployment, cutover, merge, or push occurred.
 | Task branch HEAD before paused Land edits | `34e66d2fe8b8602387a2f673368242c6dc14b078` |
 | Land containment correction | `335838dff0c746b860eaaf2930412d4b38540db5` |
 | Assisted-onboarding intake correction | `144e90d1531d2e85a407e5dabecfb4124c8394bf` |
-| Current task branch source HEAD | `144e90d1531d2e85a407e5dabecfb4124c8394bf` |
+| Canonical agent-coverage authority correction | `f40ca8a3bbed5bfc1f0ffeb675b2c9d10397f35e` |
+| Commercial generic-viewing boundary correction | `d1545579fda2c32b466af4cf68ff6929c2e2be2b` |
+| Current task branch source HEAD | `d1545579fda2c32b466af4cf68ff6929c2e2be2b` |
 | Branch | `verify/mvp-closure-post-577` |
 | Task-owned worktree | `/home/edwardspc/Desktop/Dev/worktrees/property-listify-mvp-closure-post-577` |
 | Disposable target fingerprint | `a560e9f2971e7676…` (full value remains in the local authority record) |
@@ -222,6 +229,34 @@ were updated to preserve the production contract, and the targeted rerun passed
 application. It is included because it explains why an earlier broad result
 could not be credited until the mocks were corrected.
 
+### Subsequent governed local-service interruption and Commercial-route correction
+
+On 2026-09-15, a final authority-wrapped verification rerun received
+`ECONNREFUSED 127.0.0.1:3307`. The authority status classified the exact
+task-owned target as unreachable, so migration and schema state could not be
+evaluated during that short interruption. Read-only inspection found no service
+process owning the authority data directory or port, and only the exact
+authority-owned stale PID, socket, and lock artifacts remained.
+
+The canonical `pnpm db:authority:service:recover` command classified that
+runtime bundle as safely recoverable and removed only the three transient
+artifacts. `pnpm db:authority:service:start` then started the same owned local
+service. A fresh authority status restored the exact target fingerprint,
+worktree ownership, migration head `0090_retire_disconnected_boost_campaigns.sql`,
+schema congruency, and no-incomplete-attempts state. No target was reset,
+replaced, repaired, migrated, or disposed; no protected environment was
+accessed.
+
+The retried authority run passed **3 files / 15 tests**. It confirmed the
+separate code correction at `d1545579`: generic agency viewing routes now
+enforce canonical Commercial lead context after tenant-scoped lead authority but
+before generic assignee or inventory resolution. A legitimate Commercial lead
+receives the dedicated-workflow precondition from either generic route; an
+unrelated tenant receives `NOT_FOUND` before Commercial context is queried.
+The persisted normal agency viewing lifecycle remained covered. This is a
+task-branch source and local-target result only; it does not enable a Commercial
+launch cohort, payment, entitlement, provider delivery, or protected release.
+
 ## Classification and impact
 
 | Question | Finding |
@@ -229,8 +264,8 @@ could not be credited until the mocks were corrected.
 | Is a production customer or protected system affected? | No. The unintended run had no governed database target, no provider credentials, and no deployment access. |
 | Is the `explore_content` schema proven missing in the canonical target? | No. The message came from an unscoped setup with no `DATABASE_URL`; the governed static and exact-target checks passed. |
 | Is the client Land containment result invalidated? | No. The explicit client run and governed server runs passed. The accidental workspace run itself is discarded. |
-| Is a release candidate available? | A task-branch source candidate exists through `144e90d1`; hosted CI, integration, named support operation, and protected-release evidence remain absent. |
-| Does this require database recovery? | No evidence supports recovery. No migration was attempted, retried, or changed. |
+| Is a release candidate available? | A task-branch source candidate exists through `d1545579`; hosted CI, integration, named support operation, and protected-release evidence remain absent. |
+| Does this require database recovery? | The accidental unscoped test did not. A later stopped local service used the governed stale-metadata recovery only; no database data or migration recovery was needed. |
 
 The exception-mapping concern is resolved in `335838df`: only
 `LandLaunchContainmentError` becomes `PRECONDITION_FAILED`; unexpected lookup
@@ -250,16 +285,23 @@ focused contract test covers both branches.
    an isolated paid fixture is not a live activation path.
 4. Escalate only missing real-world operating information, authority changes,
    protected operations, or a material lifecycle conflict.
+5. Keep the Commercial generic-viewing correction and the local-service event
+   in the review record. Do not construe either as activation authorization or
+   reopen Land, payment, entitlement, or target-recovery work without new
+   evidence.
 
 ## Protected-operation boundary and current worktree
 
-The Land implementation (`335838df`) and assisted-onboarding intake
-(`144e90d1`) are separate reviewable commits after Goal 10. The prior two
-Stage 1 targets and their ownership records were preserved; the task-owned
+The Land implementation (`335838df`), assisted-onboarding intake (`144e90d1`),
+canonical coverage correction (`f40ca8a3`), and Commercial generic-viewing
+correction (`d1545579`) are separate reviewable commits after Goal 10. The prior
+two Stage 1 targets and their ownership records were preserved; the task-owned
 disposable target was not reset, repaired, reused, or disposed.
 
 No Azure/TiDB access, protected migration, migration-history edit, production
 deployment, cutover, merge, feature push, secret/provider-setting change,
-payment activation, entitlement activation, or recovery action occurred. Any
+payment activation, entitlement activation, or protected recovery action
+occurred. The one governed local-service recovery removed only stale runtime
+metadata after its safety checks; it did not touch target data or state. Any
 future protected operation requires its own explicit authorization and evidence
 packet.

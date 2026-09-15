@@ -1,12 +1,13 @@
 # Post-merge MVP closure review packet
 
-Date: 2026-09-15 (canonical agent-coverage addendum; prior Goals 6–10, LRC-LAND-001, and LRC-SUPPORT-001 follow-ups dated 2026-09-14; original closure review dated 2026-09-13).
+Date: 2026-09-15 (Commercial-workflow and governed local-service-recovery addendum; canonical agent-coverage addendum; prior Goals 6–10, LRC-LAND-001, and LRC-SUPPORT-001 follow-ups dated 2026-09-14; original closure review dated 2026-09-13).
 **Outcome: the local candidate supports controlled
 pre-payment onboarding; canonical billing and activation paths are contained,
 and Goals 1–10 agency membership, workspace, commercial-term, private-preparation,
 review/publication, public-discovery, public-enquiry custody, CRM-continuity,
 first-cohort recovery, one consolidated agency operating acceptance, hard-deferred
-Land containment, and a canonical agent-coverage authority correction are verified
+Land containment, canonical agent-coverage authority, and a Commercial generic-viewing
+boundary correction are verified
 on the task branch. A bounded assisted-onboarding intake is also locally implemented;
 named support operations and final disclosures remain open. Normal commercial activation, hosted integration,
 production verification, and protected release remain blocked.** This is not a declaration that all MVP
@@ -60,6 +61,7 @@ protected environment.
 | Land hard-containment correction (task branch) | `335838dff0c746b860eaaf2930412d4b38540db5` |
 | Assisted-onboarding intake correction (task branch) | `144e90d1531d2e85a407e5dabecfb4124c8394bf` |
 | Canonical agent-coverage authority correction (task branch) | `f40ca8a3bbed5bfc1f0ffeb675b2c9d10397f35e` |
+| Commercial generic-viewing boundary correction (task branch) | `d1545579fda2c32b466af4cf68ff6929c2e2be2b` |
 | Branch                                              | `verify/mvp-closure-post-577`                                                 |
 | Worktree                                            | `/home/edwardspc/Desktop/Dev/worktrees/property-listify-mvp-closure-post-577` |
 
@@ -576,6 +578,62 @@ operation, payment activation, entitlement change, provider behavior, or a
 protected release. The homepage preview fixture was not prepared because it
 would create paid launch-access fixture state; that boundary remains intact.
 
+## LRC-COMMERCIAL-001 generic viewing boundary follow-up
+
+The broad local test pass exposed a real ordering defect in the generic agency
+viewing routes. After a tenant-scoped lead read succeeded, both
+`agency.scheduleLeadViewing` and `agency.createViewing` resolved an ordinary
+agency assignee before asking whether the lead had a canonical Commercial
+context. A Commercial enquiry whose supplied assignee no longer had current
+membership could therefore receive an ordinary membership `FORBIDDEN` response
+instead of the dedicated-Commercial workflow precondition. No unauthorized
+Commercial viewing or inventory mutation was demonstrated, but the generic
+route was consulting ordinary workflow authority before enforcing its own
+Commercial boundary.
+
+Commit [`d1545579`](https://github.com/Doscoding187/real_estate_portal/commit/d1545579fda2c32b466af4cf68ff6929c2e2be2b)
+keeps `requireAgencyLead` first, preserving tenant-scoped custody and the
+non-disclosure boundary. It then resolves the Commercial context before any
+ordinary assignee or generic inventory lookup. A canonical Commercial lead now
+fails with the dedicated-workflow `PRECONDITION_FAILED` response in both generic
+viewing entry points. An unrelated tenant still receives only `NOT_FOUND`, and
+the Commercial context is not queried for that request.
+
+Direct local evidence after the correction and local-service revalidation:
+
+- `pnpm test:authority -- server/__tests__/contract.commercial-lead-workflow-boundary.test.ts server/__tests__/contract.agency-viewings-workflow.test.ts server/__tests__/integration.agency-viewings-workflow.test.ts` passed **3 files / 15 tests** on the exact owned target. The new contract cases cover both generic viewing routes, no generic assignee lookup for a Commercial lead, and no Commercial-context query before cross-tenant lead denial. The persisted integration covers normal agency viewing creation, tenancy, lifecycle transitions, reassignment, and follow-up.
+- `pnpm run check`, `pnpm run lint:check`, `pnpm test:db-authority:static`, and `git diff --check` passed. The static authority suite passed **35 files / 293 tests**. Full lint had **0 errors** and the existing repository warning backlog; no unrelated lint cleanup was added.
+
+This is a task-branch generic-workflow containment correction. It does not
+enable Commercial publishing, payments, entitlement mutation, provider delivery,
+or a Commercial launch cohort. Hosted, integrated, and production verification
+remain open.
+
+### Governed local-service interruption — 2026-09-15
+
+The first final authority-wrapped rerun of the affected tests stopped with
+`ECONNREFUSED 127.0.0.1:3307`. `pnpm db:authority:status` classified the same
+task-owned target as `database-unreachable`, so migration head, attempts, and
+schema could not be evaluated at that instant. Read-only inspection found no
+service process owning the authority data directory or port, together with only
+the authority-owned stale `mysqld.pid`, `mysql.sock`, and `mysql.sock.lock`
+runtime metadata.
+
+The canonical entry contract designates
+`pnpm db:authority:service:recover` for exactly that state. The guarded command
+classified the bundle as safely recoverable and removed only those three runtime
+artifacts. It did not remove the service root, data directory, logs, database,
+or any record. `pnpm db:authority:service:start` then brought up the same local
+service. A new `pnpm db:authority:status` re-established the unchanged target
+fingerprint `a560e9f2971e7676…`, exact worktree ownership,
+`0090_retire_disconnected_boost_campaigns.sql`, schema congruency, and
+`no-incomplete-attempts`; the 15-test authority run above then passed.
+
+This was a contained local verification-service interruption, not a migration
+failure, database reset, target replacement, data repair, protected recovery,
+or production event. The inactive legacy home-directory service residue was
+reported by the governed command and was neither adopted nor changed.
+
 ## Ranked remaining blockers and authority handoff
 
 1. **L0 — integrate and independently verify the locally contained Land boundary (LRC-LAND-001):** `335838df` hard-deferred Land at direct and generic source boundaries on this task branch. It must remain unavailable to the controlled pre-payment onboarding cohort and public routes until integrated verification and a separately authorized Land commercial/acceptance slice exist.
@@ -586,11 +644,13 @@ would create paid launch-access fixture state; that boundary remains intact.
    entitlement, and protected-release evidence exists. Controlled pre-payment
    onboarding may prepare identities and private drafts only. Do not replace
    this boundary with a free publishing entitlement or a privilege bypass.
-4. **L1 — integrate and host-verify the completed agency slice
-   (LRC-AGY-001):** Goal 10 now proves the complete first-cohort agency journey
-   locally. It remains task-branch evidence, with no browser UI, hosted,
-   provider, or production proof; senior review, integration, and controlled
-   runtime acceptance remain required before any cohort is represented as live.
+4. **L1 — integrate and host-verify the completed agency and Commercial-route
+   boundaries (LRC-AGY-001; LRC-COMMERCIAL-001):** Goal 10 proves the complete
+   first-cohort agency journey locally, and `d1545579` keeps Commercial leads
+   out of generic viewing flows before ordinary assignment. Both remain
+   task-branch evidence, with no browser UI, hosted, provider, or production
+   proof; senior review, integration, and controlled runtime acceptance remain
+   required before any cohort is represented as live.
 5. **L1 — support/disclosure operation and external/protected operations:**
    `144e90d1` makes assisted-onboarding intake durable and reviewable, but it
    is not a monitored contact service. A named queue owner, cadence,
