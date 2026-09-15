@@ -64,10 +64,11 @@ test.describe('pre-payment onboarding browser acceptance', () => {
     await connection?.end();
   });
 
-  test('keeps the public advertising entry and role chooser in preparation-only state', async ({
+  test('keeps public advertising, the legacy activation URL, and the role chooser in preparation-only state', async ({
     page,
   }) => {
-    await page.goto('/advertise');
+    await page.goto('/activation');
+    await expect(page).toHaveURL(/\/advertise$/);
 
     await expect(
       page.getByRole('heading', {
@@ -77,6 +78,8 @@ test.describe('pre-payment onboarding browser acceptance', () => {
     await expect(page.getByText('Preparation-only onboarding')).toBeVisible();
     await expect(page.getByText(/90-Day Launch Access/i)).toHaveCount(0);
     await expect(page.getByText(/manual EFT/i)).toHaveCount(0);
+    await expect(page.getByText('Your agency profile is live.')).toHaveCount(0);
+    await expect(page.getByText('Sync your CRM')).toHaveCount(0);
     await expect(page.getByRole('link', { name: 'Start Agent preparation' })).toHaveAttribute(
       'href',
       '/advertise/sell/agents',

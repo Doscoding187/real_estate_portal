@@ -149,7 +149,6 @@ const DeveloperFunnelPage = lazy(() => import('./pages/advertise/DeveloperFunnel
 const BankFunnelPage = lazy(() => import('./pages/advertise/BankFunnelPage'));
 const OriginatorFunnelPage = lazy(() => import('./pages/advertise/OriginatorFunnelPage'));
 const AgencyProductLandingPage = lazy(() => import('./pages/advertise/AgencyProductLandingPage'));
-const ActivationGate = lazy(() => import('./pages/dashboard/ActivationGate'));
 const BookStrategy = lazy(() => import('./pages/BookStrategy'));
 const RoleSelection = lazy(() => import('./pages/RoleSelection'));
 const RegistrationSuccess = lazy(() => import('./pages/RegistrationSuccess'));
@@ -597,16 +596,12 @@ function Router() {
             <Redirect to="/agent/settings" />
           </Route>
 
+          {/* A stale public activation URL must not imply live inventory,
+              CRM import, or marketplace access while normal runtime remains
+              preparation-only. Preserve the inbound URL as a safe public
+              handoff rather than mounting the retired activation screen. */}
           <Route path="/activation">
-            <Suspense
-              fallback={
-                <div className="min-h-screen flex items-center justify-center bg-slate-50">
-                  <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-                </div>
-              }
-            >
-              <ActivationGate />
-            </Suspense>
+            <Redirect to="/advertise" />
           </Route>
 
           <Route path="/agency">
