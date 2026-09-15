@@ -229,6 +229,33 @@ This is task-branch Goal 1 authority evidence. It does not enable payment,
 entitlement, publication, Land, provider delivery, hosted integration, or
 production operation.
 
+### Goal 1 public-recommendation authority qualification — 2026-09-15
+
+The same retained-affiliation risk extended to anonymous serving-agent
+recommendations. `monetization.getRecommendedAgents` previously joined agency
+verification and branding through `agents.agencyId`, although the public
+property recipient boundary already resolves current canonical membership. The
+exact-target regression confirmed an active unbadged member was recommended
+through a verified agency, suspended only canonical membership while retaining
+the profile affiliation, and initially received the former member in the
+public result.
+
+Commit [`049e2a92`](https://github.com/Doscoding187/real_estate_portal/commit/049e2a92fa2b025d4ad589d9d8a63b40489b9db6)
+removes that profile join. It derives verified-agency eligibility and visible
+agency identity from the one current canonical membership. A personally
+entitled independent result remains available without stale agency branding;
+ambiguous current membership retains the shared fail-closed authority behavior.
+The corrected authority-wrapped run passed **5 files / 49 tests** on the exact
+task target, including the persisted active-member positive and
+retained-profile suspended-member negative cases. Typecheck, static authority
+(**35 files / 295 tests**), and the client recommendation component (**1 file /
+3 tests**) passed; targeted ESLint had zero errors.
+
+This extends Goal 1's task-branch membership authority to the public
+recommendation boundary and supports Goal 6's public-discovery evidence. It
+does not establish browser, hosted, provider, payment, entitlement, or
+production verification.
+
 ## Goal 2 — Establish agency-member workspace authority
 
 **Outcome**

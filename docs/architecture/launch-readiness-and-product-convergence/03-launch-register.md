@@ -46,7 +46,7 @@ This index is for navigation and programme oversight. Its **Full record** column
 | LRC-AUTH-001    | 2026-09-13    | Account recovery                   | L1       | Authentication                         | Fix now                                     | in progress | [Record](#lrc-auth-001)    |
 | LRC-PUBLISH-001 | 2026-09-13    | Listing publication preflight      | L1       | Property Listing Engine                | Fix now                                     | in progress | [Record](#lrc-publish-001) |
 | LRC-PAY-001     | 2026-09-13    | Billing/activation containment     | L1       | Commercial access / publication        | Fix now                                     | in progress | [Record](#lrc-pay-001)     |
-| LRC-MEM-001     | 2026-09-13    | Agency affiliation and private work surfaces | L0       | Agency membership / private-work authority | Fix now                                   | in progress | [Record](#lrc-mem-001)     |
+| LRC-MEM-001     | 2026-09-13    | Agency affiliation, private work, and public recommendations | L0       | Agency membership / private-work authority | Fix now                                   | in progress | [Record](#lrc-mem-001)     |
 | LRC-AGY-001     | 2026-09-13    | Agency entitlement and lead access | L1       | Commercial access / lead custody       | Fix before agency launch                    | in progress | [Record](#lrc-agy-001)     |
 | LRC-INVITE-001  | 2026-09-15    | Deferred agency invitation validity | L1       | Agency onboarding / membership delivery | Fix before controlled team activation       | in progress | [Record](#lrc-invite-001)  |
 | LRC-INVITE-002  | 2026-09-15    | Queued invitation acceptance containment | L1       | Agency onboarding / membership authority | Fix before controlled team activation       | in progress | [Record](#lrc-invite-002)  |
@@ -153,6 +153,30 @@ This index is for navigation and programme oversight. Its **Full record** column
 | Production verification                 | Pending; no protected system accessed.                                                                                                                                                                                                                                                                                                                                          |
 | Status                                  | in progress                                                                                                                                                                                                                                                                                                                                                                     |
 | Notes                                   | Goal 1 is **VERIFIED** on the task branch: forged/absent/suspended/removed membership cannot mint agency attribution, legitimate invitation and agency-principal setup remain functional, and ambiguous current membership fails closed. `5f37d3d1` extends that same authority to private seller-prospect work, assignment, and legacy agency analytics; it proves a suspended member retains historical profile IDs but loses those private capabilities. `0eaf2cc8` also proves the former agency retains its materialized inventory while losing visibility of a later unaffiliated draft. `32ce7524` applies the same exact-tenant decision before private performance, queue, commission, and daily-work paths; it directly proves the former member loses those APIs while active-member performance and commission regressions remain intact. `47e059ef` applies it to viewing, deal, offer, and transaction entries; active same-agency viewing and deal workflows remain intact while a suspended member loses viewing and deal-workspace access. `a0fc9e8b` applies the same membership truth to Agent Home inventory, dashboard, scheduling, commission, export, and generic property work while preserving unaffiliated/preparation paths. The separate `listify_test` canvassing integration did not run on the task target, and no hosted or production claim is made. Commit `e50dbe95` updates an agency performance fixture to establish canonical membership rather than revive profile-only affiliation. Keep this register item in progress until integration and later hosted/production verification. |
+
+#### LRC-MEM-001 public-recommendation authority supplement — 2026-09-15
+
+| Field | Record |
+| --- | --- |
+| Issue ID | LRC-MEM-001 |
+| Date observed | 2026-09-15 |
+| Exact Git SHA | `a264b7c48e376afcccc60e8c9e89ced984572c79` (observed task-branch candidate); `049e2a92fa2b025d4ad589d9d8a63b40489b9db6` (fixed source) |
+| Page or journey | Canonical agency membership → public serving-agent recommendation |
+| URL | Public `monetization.getRecommendedAgents`; location-page `RecommendedAgents` component |
+| User role | Anonymous prospective user; approved agency member with no individual entitlement or optional badge |
+| Viewport or device | Exact-task-target persisted integration/service regression and client component contract; no browser acceptance claim |
+| Current behaviour | The candidate resolver joined a verified agency through the historical `agents.agencyId` projection. After canonical membership suspension, an agent with retained profile affiliation and exact coverage remained publicly recommended as an agency practitioner. |
+| Expected behaviour | Verified-agency recommendation eligibility and displayed agency identity derive only from exactly one current canonical membership. A personally entitled independent may remain recommended without stale agency branding; suspended, removed, absent, or ambiguous membership cannot use historical affiliation. |
+| Evidence reference | [MVP closure report](../database-transition-and-launch/mvp-closure-report.md#canonical-public-recommendation-membership-supplement-2026-09-15); initial authority-wrapped regression reproduced the suspended-member result. Corrected `pnpm test:authority -- contract.agent-public-profile integration.agent-launch-journey contract.agents-serving-location integration.agency-membership-authority --reporter=basic` passed **5 files / 49 tests** on exact target fingerprint `a560e9f2971e7676…`; typecheck, static authority **35 files / 295 tests**, and client component **1 file / 3 tests** passed. |
+| Severity | L0 |
+| Owning engine | Agency membership / public discovery |
+| Launch decision | Fix now; integrate and host-verify before treating public recommendations as launch-ready |
+| Approved implementation branch/worktree | `verify/mvp-closure-post-577` / `/home/edwardspc/Desktop/Dev/worktrees/property-listify-mvp-closure-post-577` |
+| Pull request or commit | [`049e2a92`](https://github.com/Doscoding187/real_estate_portal/commit/049e2a92fa2b025d4ad589d9d8a63b40489b9db6) |
+| Integrated verification | Pending; exact task-branch local evidence only. |
+| Production verification | Pending; no protected system accessed. |
+| Status | in progress |
+| Notes | The correction batches the existing current-membership helper, resolves agency name/logo from canonical membership, and preserves personal-entitlement recommendations without agency attribution. It changes no schema, migration, data, payment, entitlement, publication, provider, deployment, credential, or protected operation. |
 
 ### LRC-AGY-001
 

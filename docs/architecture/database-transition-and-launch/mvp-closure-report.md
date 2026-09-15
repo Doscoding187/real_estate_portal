@@ -1,9 +1,9 @@
 # Post-merge MVP closure review packet
 
-Date: 2026-09-15 (canonical private-work, inventory, and operational-workspace membership supplements, generic Developer-Land row and draft-containment supplements, transactional-email containment, governed pre-payment browser-acceptance, Commercial-workflow, and governed local-service-recovery addenda; canonical agent-coverage addendum; prior Goals 6–10, LRC-LAND-001, and LRC-SUPPORT-001 follow-ups dated 2026-09-14; original closure review dated 2026-09-13).
+Date: 2026-09-15 (canonical private-work, inventory, operational-workspace, and public-recommendation membership supplements, generic Developer-Land row and draft-containment supplements, transactional-email containment, governed pre-payment browser-acceptance, Commercial-workflow, and governed local-service-recovery addenda; canonical agent-coverage addendum; prior Goals 6–10, LRC-LAND-001, and LRC-SUPPORT-001 follow-ups dated 2026-09-14; original closure review dated 2026-09-13).
 **Outcome: the local candidate supports controlled
 pre-payment onboarding; canonical billing and activation paths are contained,
-and Goals 1–10 agency membership, private-work/inventory/operational-workspace authority, commercial-term, private-preparation,
+and Goals 1–10 agency membership, private-work/inventory/operational-workspace/public-recommendation authority, commercial-term, private-preparation,
 review/publication, public-discovery, public-enquiry custody, CRM-continuity,
 first-cohort recovery, one consolidated agency operating acceptance, hard-deferred
 Land containment including generic Developer rows and drafts, canonical agent-coverage authority, governed browser proof of
@@ -59,6 +59,7 @@ protected environment.
 | Canonical operational-workspace membership supplement (task branch) | `32ce7524b642519300a5ae6daddac5ae2c393486`                       |
 | Canonical viewing/deal workspace membership supplement (task branch) | `47e059efaf3404db0f16d3f86b7a577ddb4f1ff3`                    |
 | Canonical Agent Home workspace membership supplement (task branch) | `a0fc9e8b95be1275844e11aaed4bf57bc1ff2bd3`                    |
+| Canonical public-recommendation membership supplement (task branch) | `049e2a92fa2b025d4ad589d9d8a63b40489b9db6`                    |
 | Goal 2 workspace correction (task branch)           | `af9fd6f2`                                                                    |
 | Goal 3 commercial-term correction (task branch)     | `16a23cd9ab61cbc791f1b7e7941e62e53d1ecd7d`                                    |
 | Goal 4 listing-preparation evidence (task branch)   | `a403d31d7456aff837e6d6c5e73af8033cf1634b`                                    |
@@ -426,6 +427,72 @@ integration, provider operation, production verification, payment or
 entitlement activation, or a protected operation. No schema, migration, data
 repair, target lifecycle, provider, credential, deployment, or policy change
 occurred.
+
+### Canonical public-recommendation membership supplement (2026-09-15)
+
+The continuing stale-affiliation audit found a public discovery inconsistency.
+`monetization.getRecommendedAgents` selected agency verification and branding by
+joining the retained `agents.agencyId` projection. The public property recipient
+boundary already uses current canonical membership. A direct exact-target
+counterexample created an approved, unbadged agency member with exact canonical
+suburb coverage, confirmed that the active member was recommended, then
+suspended only canonical membership while retaining `agents.agencyId`. Before
+the correction, the public resolver still returned that former member as an
+agency recommendation.
+
+Commit [`049e2a92`](https://github.com/Doscoding187/real_estate_portal/commit/049e2a92fa2b025d4ad589d9d8a63b40489b9db6)
+removes the profile-affiliation join from the serving-agent resolver. It batches
+the existing canonical current-membership authority, resolves agency identity
+from the resulting membership, and applies verified-agency eligibility and
+branding only from that canonical relationship. A personally entitled agent can
+still be recommended without an agency relationship; a stale affiliation can
+neither make the agent eligible through the agency nor display that agency's
+branding. Multiple current memberships retain the shared authority helper's
+fail-closed behavior.
+
+The regression first failed on the authorized task target because the suspended
+agent remained in the result. After correction, `pnpm test:authority --
+contract.agent-public-profile integration.agent-launch-journey
+contract.agents-serving-location integration.agency-membership-authority
+--reporter=basic` passed **5 files / 49 tests** on fingerprint
+`a560e9f2971e7676…`. That includes the persisted active-member positive case
+and the retained-profile suspension negative case. The focused contract suite
+also verifies that the resolver contains no `agents.agencyId` agency join and
+uses canonical membership. `pnpm check`, `pnpm test:db-authority:static`
+(**35 files / 295 tests**), and the client recommendation rendering suite
+(**1 file / 3 tests**) passed. Targeted ESLint reported zero errors; existing
+repository warnings remain. No browser, hosted, provider, payment, or
+production assertion is implied by this service-level proof.
+
+This is local task-branch authority evidence only. It changes no schema,
+migration, data, target lifecycle, payment, entitlement, publication, provider,
+credential, deployment, or protected operation. Hosted and production public
+recommendation verification remain pending.
+
+### Governed local-service interruption after recommendation verification (2026-09-15)
+
+After the completed recommendation validation, a final authority-status check
+reported `database-unreachable`. Read-only service inspection found no listener
+on port 3307, no live owner for the authority service data directory, and a dead
+PID referenced by the exact authority-owned `mysqld.pid`, `mysql.sock`, and
+`mysql.sock.lock` runtime bundle. The data directory, target name, and service
+identity marker were left intact. This matches the entry contract's bounded
+stale-metadata path, not a migration failure or database-data recovery.
+
+`pnpm db:authority:service:recover` classified the bundle as safely recoverable
+and removed only those three transient artifacts. `pnpm
+db:authority:service:start`, `:wait`, and `:status` then started the same
+service. A new `pnpm db:authority:status` restored the exact task target
+fingerprint `a560e9f2971e7676…`, exact worktree ownership, manifest head
+`0090_retire_disconnected_boost_campaigns.sql`, schema congruency, and
+`no-incomplete-attempts`. The post-restart authority regression passed **2
+files / 23 tests** (`contract.agents-serving-location` and
+`integration.agency-membership-authority`).
+
+No target was reset, replaced, migrated, repaired, disposed, or otherwise
+mutated outside normal test cleanup. No protected system, provider, payment,
+entitlement, deployment, or credential operation occurred. The inactive legacy
+home-directory service residue was reported but not adopted or changed.
 
 ## Target and data establishment
 
@@ -1137,7 +1204,7 @@ server-draft creation, publication, discovery, enquiry, and CRM slices.
 ## Ranked remaining blockers and authority handoff
 
 1. **L0 — integrate and independently verify the locally contained Land boundary (LRC-LAND-001):** `335838df` hard-deferred the specialist and generic-listing Land paths, `62ec0eed` closes the distinct generic Developer row authoring/public-discovery route, and `0280e9dd` closes generic Developer draft persistence. Land must remain unavailable to the controlled pre-payment onboarding cohort and public routes until integrated verification and a separately authorized Land commercial/acceptance slice exist.
-2. **L1 — integrate and host-verify canonical agent coverage authority (LRC-GEO-001):** `f40ca8a3` removes untrusted text coverage claims and partial matching on this branch. Historic unstructured coverage intentionally fails closed until an agent reselects canonical locations. Verify that transition and exact serving-agent behavior after integration before treating public agent discovery or coverage-driven recipient recommendations as launch-ready.
+2. **L1 — integrate and host-verify canonical agent coverage and serving-agent authority (LRC-GEO-001; LRC-MEM-001):** `f40ca8a3` removes untrusted text coverage claims and partial matching, while `049e2a92` removes retained profile affiliation from verified-agency recommendation eligibility and branding. Historic unstructured coverage intentionally fails closed until an agent reselects canonical locations. Verify that transition and exact serving-agent behavior after integration before treating public agent discovery or coverage-driven recipient recommendations as launch-ready.
 3. **L1 — normal-runtime commercial activation and protected release
    (LRC-PAY-001):** the source containment candidate is locally proven, but a
    stakeholder cannot publish until separately approved payment, finance,
@@ -1157,9 +1224,9 @@ server-draft creation, publication, discovery, enquiry, and CRM slices.
    listing/review/public-discovery/enquiry/CRM slices. One continuous browser
    path through owner registration, canonical invitation acceptance, and that
    member flow, plus hosted, provider, and production proof, remains absent;
-   `32ce7524`, `47e059ef`, and `a0fc9e8b` also close the observed
-   stale-membership operational-workspace, viewing/deal, and Agent Home
-   admission paths locally, but require the same integration and hosted
+   `32ce7524`, `47e059ef`, `a0fc9e8b`, and `049e2a92` also close the observed
+   stale-membership operational-workspace, viewing/deal, Agent Home, and public
+   recommendation admission paths locally, but require the same integration and hosted
    verification; senior review, integration,
    and controlled runtime acceptance remain
    required before any cohort is represented as live.
