@@ -64,6 +64,37 @@ test.describe('pre-payment onboarding browser acceptance', () => {
     await connection?.end();
   });
 
+  test('routes the public Agent entry point into truthful preparation onboarding', async ({
+    page,
+  }) => {
+    await page.goto('/advertise/sell/agents');
+
+    await expect(
+      page.getByRole('heading', {
+        name: 'Establish your Agent presence and prepare private inventory.',
+      }),
+    ).toBeVisible();
+    await expect(page.getByText('Preparation-only onboarding')).toBeVisible();
+    await expect(
+      page.getByText(
+        'Commercial activation is not available yet. Complete your profile and prepare private drafts; publishing becomes available after approved commercial activation.',
+      ),
+    ).toBeVisible();
+    await expect(page.getByText('R499')).toHaveCount(0);
+    await expect(page.getByText(/manual EFT/i)).toHaveCount(0);
+    await expect(page.getByRole('link', { name: 'Get Agent Launch Access' })).toHaveCount(0);
+
+    const startPreparation = page.getByRole('link', { name: 'Start Agent preparation' }).first();
+    await expect(startPreparation).toHaveAttribute(
+      'href',
+      '/login?mode=register&next=%2Fagent%2Fsetup&role=agent',
+    );
+    await startPreparation.click();
+    await expect(page).toHaveURL(/\/login\?mode=register&next=%2Fagent%2Fsetup&role=agent/);
+    await expect(page.getByRole('heading', { name: 'Create your account' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Set up Agent OS' })).toBeVisible();
+  });
+
   test('registers, verifies, establishes a professional presence, and enters private listing preparation', async ({
     page,
   }) => {
