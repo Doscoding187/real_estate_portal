@@ -530,14 +530,8 @@ const BrandingStep: React.FC<StepProps> = ({ onNext, onPrev }) => {
   );
 };
 
-const TeamSetupStep: React.FC<StepProps> = ({ onNext, onPrev }) => {
-  const {
-    register,
-    handleSubmit,
-    watch,
-    setValue,
-    formState: { errors },
-  } = useForm<TeamSetupData>({
+export const TeamSetupStep: React.FC<StepProps> = ({ onNext, onPrev }) => {
+  const { handleSubmit, watch, setValue } = useForm<TeamSetupData>({
     defaultValues: { inviteAgents: false, agentEmails: [] },
   });
 
@@ -578,8 +572,9 @@ const TeamSetupStep: React.FC<StepProps> = ({ onNext, onPrev }) => {
 
       <Alert>
         <AlertDescription>
-          Invite the people who will own Agency inventory, opportunities and follow-up. You can do
-          this now or continue and manage the team from the workspace later.
+          Save the people who will own Agency inventory, opportunities and follow-up. Their
+          invitation links remain queued and no team access is granted until approved commercial
+          activation; you can also manage the team from the workspace later.
         </AlertDescription>
       </Alert>
 

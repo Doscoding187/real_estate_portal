@@ -1,10 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { mockGetDb, mockSelect, mockSendAgencyInvitationEmail } = vi.hoisted(() => ({
+const { mockGetDb, mockSelect, mockUpdate, mockSendAgencyInvitationEmail } = vi.hoisted(() => ({
   mockGetDb: vi.fn(),
   mockSelect: vi.fn(),
+  mockUpdate: vi.fn(),
   mockSendAgencyInvitationEmail: vi.fn(),
 }));
+
+const VALID_INVITATION_TOKEN = 'a'.repeat(64);
 
 vi.mock('../../db', () => ({ getDb: mockGetDb }));
 vi.mock('../../_core/emailService', () => ({
@@ -31,10 +34,16 @@ function rows(rows: unknown[]) {
   return { from, where };
 }
 
+function updateResult() {
+  const where = vi.fn().mockResolvedValue(undefined);
+  const set = vi.fn(() => ({ where }));
+  return { set, where };
+}
+
 describe('agency invitation delivery (canonical access gate)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockGetDb.mockResolvedValue({ select: mockSelect });
+    mockGetDb.mockResolvedValue({ select: mockSelect, update: mockUpdate });
   });
 
   function mockCanonicalGate(
@@ -66,8 +75,9 @@ describe('agency invitation delivery (canonical access gate)', () => {
       agencyId: 44,
       invitedBy: 7,
       email: 'agent@example.com',
-      token: 'secure-token',
+      token: VALID_INVITATION_TOKEN,
       status: 'pending',
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
     };
   }
 
@@ -94,7 +104,7 @@ describe('agency invitation delivery (canonical access gate)', () => {
       'agent@example.com',
       'Agency Principal',
       'Canonical Realty',
-      expect.stringContaining('/accept-invitation?token=secure-token'),
+      expect.stringContaining(`/accept-invitation?token=${VALID_INVITATION_TOKEN}`),
     );
   });
 
@@ -105,6 +115,87 @@ describe('agency invitation delivery (canonical access gate)', () => {
 
     expect(result).toEqual({ deferred: true, attempted: 0, sent: 0, failed: 0 });
     expect(mockSendAgencyInvitationEmail).not.toHaveBeenCalled();
+  });
+
+  it('refreshes an expired queued invitation only when paid delivery begins', async () => {
+    mockCanonicalGate('active');
+    const staleInvitation = {
+      ...pendingInvitation(),
+      token: 'b'.repeat(64),
+      expiresAt: new Date(Date.now() - 60_000).toISOString(),
+    };
+    const update = updateResult();
+    mockUpdate.mockReturnValueOnce(update);
+    mockSelect
+      .mockImplementationOnce(() => rows([staleInvitation]))
+      .mockImplementationOnce(() =>
+        limitedRows([
+          {
+            name: 'Agency Principal',
+            firstName: 'Agency',
+            lastName: 'Principal',
+            email: 'principal@example.com',
+          },
+        ]),
+      );
+    mockSendAgencyInvitationEmail.mockResolvedValue(true);
+
+    const result = await deliverAgencyInvitations({ agencyId: 44, invitationIds: [99] });
+
+    expect(result).toEqual({ deferred: false, attempted: 1, sent: 1, failed: 0 });
+    expect(update.set).toHaveBeenCalledWith(
+      expect.objectContaining({
+        token: expect.any(String),
+        expiresAt: expect.any(Date),
+        updatedAt: expect.any(Date),
+      }),
+    );
+    const refreshed = update.set.mock.calls[0]?.[0] as {
+      token: string;
+      expiresAt: Date;
+    };
+    expect(refreshed.token).not.toBe('b'.repeat(64));
+    expect(refreshed.expiresAt.getTime()).toBeGreaterThan(Date.now());
+    expect(mockSendAgencyInvitationEmail).toHaveBeenCalledWith(
+      'agent@example.com',
+      'Agency Principal',
+      'Canonical Realty',
+      expect.stringContaining(`token=${refreshed.token}`),
+    );
+  });
+
+  it('refreshes a malformed queued token only when paid delivery begins', async () => {
+    mockCanonicalGate('active');
+    const malformedInvitation = {
+      ...pendingInvitation(),
+      token: 'not-a-deliverable-token',
+    };
+    const update = updateResult();
+    mockUpdate.mockReturnValueOnce(update);
+    mockSelect
+      .mockImplementationOnce(() => rows([malformedInvitation]))
+      .mockImplementationOnce(() =>
+        limitedRows([
+          {
+            name: 'Agency Principal',
+            firstName: 'Agency',
+            lastName: 'Principal',
+            email: 'principal@example.com',
+          },
+        ]),
+      );
+    mockSendAgencyInvitationEmail.mockResolvedValue(true);
+
+    await deliverAgencyInvitations({ agencyId: 44, invitationIds: [99] });
+
+    const refreshed = update.set.mock.calls[0]?.[0] as { token: string };
+    expect(refreshed.token).toMatch(/^[a-f0-9]{64}$/);
+    expect(mockSendAgencyInvitationEmail).toHaveBeenCalledWith(
+      'agent@example.com',
+      'Agency Principal',
+      'Canonical Realty',
+      expect.stringContaining(`token=${refreshed.token}`),
+    );
   });
 
   it('accepts grace_period as paid access', async () => {

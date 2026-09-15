@@ -14,7 +14,7 @@ vi.mock('@/lib/trpc', () => ({
   },
 }));
 
-import { PlanSelectionStep, describeAgencyPlanBilling } from '../AgencyOnboarding';
+import { PlanSelectionStep, TeamSetupStep, describeAgencyPlanBilling } from '../AgencyOnboarding';
 
 // Radix RadioGroup observes layout in jsdom environments without ResizeObserver.
 class ResizeObserverStub {
@@ -136,6 +136,16 @@ describe('Agency onboarding plan selection commercial truth', () => {
     expect(screen.queryByText(/change your plan anytime/i)).not.toBeInTheDocument();
     expect(
       screen.getByText(/does not issue an invoice, request payment, or activate publishing/i),
+    ).toBeInTheDocument();
+  });
+
+  it('keeps team invitations queued until approved commercial activation', () => {
+    render(<TeamSetupStep onNext={noop} onPrev={noop} />);
+
+    expect(
+      screen.getByText(
+        /invitation links remain queued and no team access is granted until approved commercial activation/i,
+      ),
     ).toBeInTheDocument();
   });
 

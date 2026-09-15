@@ -366,6 +366,13 @@ guardedDescribe('agency principal bootstrap persisted acceptance', () => {
     });
     expect(invitationRows).toHaveLength(1);
     expect(invitationRows[0]?.email).toBe(`agent-${suffix}@example.test`);
+    const queuedInvitation = invitationRows[0];
+    if (!queuedInvitation) throw new Error('Expected a queued agency invitation');
+    const queuedToken = queuedInvitation.token;
+    await db
+      .update(invitations)
+      .set({ expiresAt: new Date(Date.now() - 60_000) })
+      .where(eq(invitations.id, queuedInvitation.id));
 
     const attachedCaller = caller({
       id: principal.user.id,
@@ -486,6 +493,14 @@ guardedDescribe('agency principal bootstrap persisted acceptance', () => {
           ),
         ),
     ).toHaveLength(1);
+    const [deliveredInvitation] = await db
+      .select()
+      .from(invitations)
+      .where(eq(invitations.id, queuedInvitation.id))
+      .limit(1);
+    expect(deliveredInvitation).toBeTruthy();
+    expect(deliveredInvitation?.token).not.toBe(queuedToken);
+    expect(new Date(deliveredInvitation?.expiresAt || 0).getTime()).toBeGreaterThan(Date.now());
     expect((await attachedCaller.agency.getAccessState()).workspaceAccess.publishing).toBe(true);
     expect(
       (
