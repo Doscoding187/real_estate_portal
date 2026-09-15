@@ -1,18 +1,27 @@
 import { Resend } from 'resend';
 import { ENV } from './env';
+import {
+  DEPLOYED_TRANSACTIONAL_EMAIL_UNAVAILABLE_MESSAGE,
+  isTransactionalEmailConfigured,
+  permitsLocalEmailFallback,
+} from './transactionalEmailConfig';
 
 let resendClient: Resend | null = null;
 
-export function getResend() {
-  const key = process.env.RESEND_API_KEY;
+function throwUnavailableDeployedEmail(): never {
+  console.error('[Email] Transactional email is unconfigured for deployed runtime', {
+    runtimeEnv: process.env.APP_ENV ?? process.env.NODE_ENV ?? 'development',
+  });
+  throw new Error(DEPLOYED_TRANSACTIONAL_EMAIL_UNAVAILABLE_MESSAGE);
+}
 
-  if (!key) {
-    // In dev, allow server to run without email
+export function getResend() {
+  if (!isTransactionalEmailConfigured()) {
     return null;
   }
 
   if (!resendClient) {
-    resendClient = new Resend(key);
+    resendClient = new Resend(process.env.RESEND_API_KEY!);
   }
 
   return resendClient;
@@ -42,6 +51,9 @@ export async function sendVerificationEmail({
 
   const resend = getResend();
   if (!resend) {
+    if (!permitsLocalEmailFallback()) {
+      throwUnavailableDeployedEmail();
+    }
     console.warn('[Email] RESEND_API_KEY missing — skipping sendVerificationEmail');
     // In dev mode, we might want to log the URL so devs can still verify
     console.log('[Email Local Dev] Verification URL:', verificationUrl);
@@ -134,6 +146,9 @@ export async function sendPasswordResetEmail({
 
   const resend = getResend();
   if (!resend) {
+    if (!permitsLocalEmailFallback()) {
+      throwUnavailableDeployedEmail();
+    }
     console.warn('[Email] RESEND_API_KEY missing — skipping sendPasswordResetEmail');
     console.log('[Email Local Dev] Reset URL:', resetUrl);
     return { success: true, messageId: 'dev-mock-id' };

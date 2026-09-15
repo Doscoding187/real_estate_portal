@@ -82,6 +82,22 @@ describe('launch preflight contract', () => {
     expect(failedIds).toContain('transactional-email');
   });
 
+  it('rejects placeholder transactional-email credentials before a release', () => {
+    const result = runLaunchPreflight({
+      runtimeEnv: 'production',
+      env: productionEnv({
+        RESEND_API_KEY: 'replace-with-resend-api-key',
+        RESEND_FROM_EMAIL: 'Listify Local <onboarding@resend.dev>',
+      }),
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.checks.find(check => check.id === 'transactional-email')).toMatchObject({
+      ok: false,
+      missing: ['RESEND_API_KEY (placeholder)', 'RESEND_FROM_EMAIL (placeholder)'],
+    });
+  });
+
   it('refuses a production browser boundary with a wildcard-like origin or missing proxy topology', () => {
     const result = runLaunchPreflight({
       runtimeEnv: 'production',

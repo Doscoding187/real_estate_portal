@@ -1,4 +1,8 @@
 import { ENV } from './env';
+import {
+  isTransactionalEmailConfigured,
+  permitsLocalEmailFallback,
+} from './transactionalEmailConfig';
 
 // Email service interface
 export interface EmailData {
@@ -13,7 +17,7 @@ export interface EmailData {
 // In production, you'd integrate with services like SendGrid, AWS SES, etc.
 import { Resend } from 'resend';
 
-const resend = ENV.resendApiKey ? new Resend(ENV.resendApiKey) : null;
+const resend = isTransactionalEmailConfigured() ? new Resend(ENV.resendApiKey) : null;
 
 export class EmailService {
   static async sendEmail(emailData: EmailData): Promise<boolean> {
@@ -21,13 +25,16 @@ export class EmailService {
       // If Resend is configured, use it
       if (resend) {
         try {
-          const { data, error } = await resend.emails.send({
-            from: ENV.resendFromEmail,
-            to: emailData.to,
-            subject: emailData.subject,
-            html: emailData.html,
-            text: emailData.text,
-          }, emailData.idempotencyKey ? { idempotencyKey: emailData.idempotencyKey } : undefined);
+          const { data, error } = await resend.emails.send(
+            {
+              from: ENV.resendFromEmail,
+              to: emailData.to,
+              subject: emailData.subject,
+              html: emailData.html,
+              text: emailData.text,
+            },
+            emailData.idempotencyKey ? { idempotencyKey: emailData.idempotencyKey } : undefined,
+          );
 
           if (error) {
             console.error('[Email] Resend API Error:', error);
@@ -44,7 +51,14 @@ export class EmailService {
         }
       }
 
-      // Fallback: Log email to console (Development/No API Key)
+      if (!permitsLocalEmailFallback()) {
+        console.error('[Email] Transactional email is unconfigured for deployed runtime', {
+          runtimeEnv: process.env.APP_ENV ?? process.env.NODE_ENV ?? 'development',
+        });
+        return false;
+      }
+
+      // Fallback: Log email to console for local development and tests only.
       console.log('[Email] Sending email (Mock/Log):', {
         to: emailData.to,
         subject: emailData.subject,
