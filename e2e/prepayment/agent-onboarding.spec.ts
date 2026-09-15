@@ -770,7 +770,21 @@ test.describe('pre-payment onboarding browser acceptance', () => {
       ),
     ).toBeVisible();
 
-    await page.goto('/developer/create-development');
+    // A pending organisation can safely follow the authenticated subscription
+    // deep link without being shown paid plans, invoices, or EFT controls.
+    await page.goto('/developer/subscription');
+    await expect(page).toHaveURL(/\/developer\/subscription$/);
+    await expect(
+      page.getByRole('heading', {
+        name: 'Prepare your Developer workspace before commercial activation.',
+      }),
+    ).toBeVisible();
+    await expect(page.getByText('Preparation-only onboarding')).toBeVisible();
+    await expect(page.getByText('Private developments', { exact: true })).toBeVisible();
+    await expect(page.getByText('Billing History', { exact: true })).toHaveCount(0);
+    await expect(page.getByText('Developer Launch Access invoice', { exact: true })).toHaveCount(0);
+    await expect(page.getByText('Manual EFT instructions', { exact: true })).toHaveCount(0);
+    await page.getByRole('button', { name: 'Prepare a development' }).click();
     await expect(page.getByRole('heading', { name: 'Project Setup' })).toBeVisible();
     await page.getByText('Residential Development', { exact: true }).click();
     await page.getByText('For Sale', { exact: true }).click();

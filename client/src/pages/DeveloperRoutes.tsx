@@ -163,7 +163,9 @@ export default function DeveloperRoutes() {
     pathname !== '/developer/dashboard' &&
     pathname !== '/developer/drafts' &&
     pathname !== '/developer/create-development' &&
-    pathname !== '/developer/developments/new'
+    pathname !== '/developer/developments/new' &&
+    pathname !== '/developer/subscription' &&
+    pathname !== '/developer/settings/subscription'
   ) {
     return <Redirect to="/developer/dashboard" />;
   }
