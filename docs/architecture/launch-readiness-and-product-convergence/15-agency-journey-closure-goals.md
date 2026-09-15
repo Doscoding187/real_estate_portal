@@ -183,6 +183,29 @@ This strengthens Goal 1's task-branch authority evidence. It does not prove
 hosted integration, a payment/entitlement transition, provider delivery, or
 production operation, and it does not change the settled pre-payment boundary.
 
+### Goal 1 viewing/deal workspace authority qualification — 2026-09-15
+
+The next exact-target audit found that the remaining agent-facing viewing, deal,
+offer, and transaction routes still began from the retained session/profile
+agency ID. The canonical membership lifecycle correctly preserves that field
+for audit, so a membership-only suspension left a former member able to read a
+full private viewing row and enter the deal workspace.
+
+Commit [`47e059ef`](https://github.com/Doscoding187/real_estate_portal/commit/47e059efaf3404db0f16d3f86b7a577ddb4f1ff3) applies the existing resolved
+current-workspace actor guard to those entry points. It preserves active
+same-agency viewing and deal workflows while denying the suspended member before
+private data read or mutation. The exact-target authority regression first
+failed with the private viewing disclosure; after correction it retains the
+historical profile IDs and proves `FORBIDDEN` for viewing list/detail/status and
+deal workspace. The viewing suite passed **1 file / 5 tests**, active deal
+engine passed **1 file / 4 tests**, and related membership/performance coverage
+passed **2 files / 15 tests**. Typecheck, static authority, targeted ESLint with
+zero errors, and `git diff --check` passed.
+
+This is an additional task-branch Goal 1 authority qualification. It does not
+change listing lifecycle, commercial entitlement, payment activation, Land,
+provider delivery, hosted integration, or production operation.
+
 ## Goal 2 — Establish agency-member workspace authority
 
 **Outcome**
