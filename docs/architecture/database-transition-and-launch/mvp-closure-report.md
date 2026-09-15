@@ -1434,6 +1434,42 @@ it is discarded as interrupted evidence. The retained broad **633 passed / 9
 skipped files; 4,216 passed / 67 skipped tests** result predates this current
 public-page change and is not claimed as its regression proof.
 
+### Agency public onboarding truthfulness — 2026-09-15
+
+The public Agency route is the entry surface for the proposed controlled
+pre-payment cohort. Its underlying Agency setup already did the intended work:
+it registered a separate owner, saved Agency identity and branding, retained a
+commercial preference as `pending_payment`, opened a preparation workspace, and
+created zero invoices. Yet the public `/advertise/sell/agencies` page loaded the
+commercial catalog and advertised a paid Launch Access term, manual EFT, invoice
+request, marketplace participation, and active team capability. The signed-in
+non-Agency account boundary also said setup would issue a Launch Access invoice.
+Those statements contradicted the normal `preparation_only` runtime state.
+
+Commit [`02788ff2`](https://github.com/Doscoding187/real_estate_portal/commit/02788ff2)
+retains the catalog-driven commercial presentation only behind a separately
+authorized enabled runtime state. Normal public Agency entry now begins at the
+existing Agency-owner registration target, describes account verification,
+Agency foundation/identity/branding, retained preparation information, and
+private inventory. It clearly states that publishing, marketplace participation,
+and team activation remain subject to approval and commercial activation. The
+account-boundary return copy now directs an agent to Agent preparation instead
+of promising Agent Launch Access.
+
+Direct local evidence on the same exact task-owned target:
+
+- `pnpm vitest run client/src/pages/advertise/AgencyProductLandingPage.commercialTruth.test.tsx client/src/components/__tests__/AgencySetupAccountBoundary.test.tsx client/src/pages/__tests__/AgencyOnboarding.planTruth.test.tsx --reporter=basic` passed **3 files / 16 tests**. The public-page and account-boundary regressions prove the disabled runtime is truthful while the retained enabled-state component remains catalog-driven; the onboarding suite preserves the persisted pre-payment contract.
+- `pnpm test:browser:authority -- --config=playwright.prepayment-onboarding.config.ts` passed **5 Chromium desktop tests**. The added anonymous Agency route proves the real owner-registration entry and absence of paid activation claims; the existing Agency flow then proves verification, setup, persisted Agency/branding/geography, `pending_payment`, and zero invoices. The same governed run retains the Agent public-entry, agent preparation, and queued-invitation containment evidence.
+- `pnpm check`, targeted zero-error ESLint, Prettier, `git diff --check`, and `pnpm test:db-authority:static` passed. The static authority suite reported **35 files / 295 tests**. `pnpm db:authority:status` before browser work confirmed fingerprint `a560e9f2971e7676…`, exact worktree ownership, manifest head `0090_retire_disconnected_boost_campaigns.sql`, schema congruency, and `no-incomplete-attempts`.
+
+This correction makes the proposed Agency cohort's public pre-payment entry
+truthful. It does not enable a paid Agency journey, create a free publishing
+tier, activate payments or entitlements, deliver provider email, change a
+deployment, or make the cohort production-ready. The current five-test browser
+acceptance is strong local evidence for preparation; hosted integration,
+operator/disclosure readiness, and protected-release evidence remain separate
+launch conditions.
+
 ## Ranked remaining blockers and authority handoff
 
 1. **L0 — integrate and independently verify the locally contained Land boundary (LRC-LAND-001):** `335838df` hard-deferred the specialist and generic-listing Land paths, `62ec0eed` closes the distinct generic Developer row authoring/public-discovery route, and `0280e9dd` closes generic Developer draft persistence. Land must remain unavailable to the controlled pre-payment onboarding cohort and public routes until integrated verification and a separately authorized Land commercial/acceptance slice exist.
@@ -1463,7 +1499,9 @@ public-page change and is not claimed as its regression proof.
    `32ce7524`, `47e059ef`, `a0fc9e8b`, `049e2a92`, and `1ca5fac2` also close the observed
    stale-membership operational-workspace, viewing/deal, Agent Home, public
    recommendation, and direct-profile commercial-admission paths locally, but require the same integration and hosted
-   verification; senior review, integration,
+   verification. `02788ff2` additionally makes the Agency's public entry agree
+   with the controlled pre-payment cohort, while retaining paid commercial
+   presentation behind a separately enabled runtime state; senior review, integration,
    and controlled runtime acceptance remain
    required before any cohort is represented as live.
 6. **L1 — support/disclosure operation and external/protected operations:**
@@ -1525,7 +1563,8 @@ Land containment corrections `335838df`, `62ec0eed`, and `0280e9dd`, bounded ass
 queued-invitation acceptance containment `415a9472`, and deployed
 transactional-email containment `3d2e0148`, viewing UTC/input corrections
 `4d0b1517`, `fa8f9101`, and `40a37c37`, and independent-Agent public
-onboarding truthfulness `7c939831`; the review packet,
+onboarding truthfulness `7c939831`, and Agency public onboarding truthfulness
+`02788ff2`; the review packet,
 escalation resolution, register, and queue
 runbook retain their respective evidence commits. Final Git status was clean
 after each recorded commit before the next bounded workstream began. No merge, feature push,

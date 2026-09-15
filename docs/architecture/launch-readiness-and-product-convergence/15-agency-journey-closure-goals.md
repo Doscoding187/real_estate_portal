@@ -894,6 +894,35 @@ delivery/acceptance, and the later member session. That acquisition path,
 external provider delivery, hosted integration, and protected release remain
 separate evidence requirements.
 
+### Agency preparation-entry truthfulness follow-up — 2026-09-15
+
+The proposed first cohort is Agency-based and normal runtime remains
+`preparation_only`. The persisted Agency onboarding flow already matched that
+decision: a verified owner can establish Agency identity and branding, save a
+commercial preference without an invoice, open the preparation workspace, and
+prepare private inventory. A focused public-entry review found that the external
+Agency landing page still described paid Launch Access, manual EFT, invoice
+request, marketplace participation, and active team capabilities. The separate
+signed-in Agency account boundary also claimed setup would issue an invoice.
+
+Commit [`02788ff2`](https://github.com/Doscoding187/real_estate_portal/commit/02788ff2)
+makes those public entry points agree with the settled cohort boundary. The
+normal page begins the real Agency-owner registration flow and explains
+foundation/identity/branding, retained preparation information, and private
+inventory. It states that publishing, marketplace participation, and team
+activation remain protected. The previous catalog-driven commercial page is
+retained only behind a separately authorized enabled runtime state.
+
+Direct evidence is a **3-file / 16-test** focused client run and a **5-test**
+governed Chromium pre-payment acceptance. The browser opens the actual public
+Agency page, proves the absence of paid activation claims, enters the
+Agency-owner registration dialog, and retains the verified owner/setup,
+persisted `pending_payment`, and zero-invoice evidence. `pnpm check`, targeted
+zero-error lint/Prettier, and the **35-file / 295-test** static authority suite
+also passed on fingerprint `a560e9f2971e7676…`. This is a public
+preparation-entry correction, not a paid Agency launch, provider-delivery
+proof, or authorization to alter payment or entitlement policy.
+
 ### Independent-Agent preparation-entry follow-up — 2026-09-15
 
 The Goal 10 final decision requires an equivalent independent-Agent variation
