@@ -218,34 +218,34 @@ type AgentLeadWorkspace = {
   currentAgencyId: number | null;
 };
 
+type AgentWorkspaceProfile = {
+  agent: typeof agents.$inferSelect | null;
+  currentAgencyId: number | null;
+};
+
 type AgentLeadDatabase = NonNullable<Awaited<ReturnType<typeof getDb>>>;
 
 /**
- * Resolve the current agent workspace for lead custody. Commercial access
- * determines whether new marketplace opportunities can arrive; it does not
- * determine whether the agent can work leads already routed to them. For
- * agency-owned custody, canonical membership is the authority and a stale
- * profile claim fails closed.
+ * Resolve the agent profile and its current agency authority. A retained
+ * profile affiliation is historical context only; any agency workspace must
+ * resolve a current canonical membership before it can expose or mutate work.
+ * A missing profile remains valid for the small number of onboarding paths
+ * that operate on user-owned preparation data alone.
  */
-async function requireAgentLeadWorkspace(
+async function resolveAgentWorkspaceProfile(
   db: AgentLeadDatabase,
   userId: number,
-): Promise<AgentLeadWorkspace> {
-  const [agent] = await db
-    .select()
-    .from(agents)
-    .where(and(eq(agents.userId, userId), eq(agents.status, 'approved')))
-    .limit(1);
+  membershipErrorMessage = 'A current agency membership is required to access this agency workspace.',
+): Promise<AgentWorkspaceProfile> {
+  const [agent] = await db.select().from(agents).where(eq(agents.userId, userId)).limit(1);
 
-  if (!agent) {
-    throw new TRPCError({ code: 'NOT_FOUND', message: 'Agent profile not found' });
-  }
+  if (!agent) return { agent: null, currentAgencyId: null };
 
   const membership = await resolveCurrentAgencyMembershipForAgent(db, Number(agent.id));
   if (agent.agencyId && !membership) {
     throw new TRPCError({
       code: 'FORBIDDEN',
-      message: 'A current agency membership is required to access agency lead custody.',
+      message: membershipErrorMessage,
     });
   }
 
@@ -253,6 +253,27 @@ async function requireAgentLeadWorkspace(
     agent,
     currentAgencyId: membership ? Number(membership.agencyId) : null,
   };
+}
+
+/**
+ * Lead custody additionally requires an approved agent profile. Commercial
+ * access determines whether new marketplace opportunities can arrive; it does
+ * not determine whether the agent can work leads already routed to them.
+ */
+async function requireAgentLeadWorkspace(
+  db: AgentLeadDatabase,
+  userId: number,
+): Promise<AgentLeadWorkspace> {
+  const workspace = await resolveAgentWorkspaceProfile(
+    db,
+    userId,
+    'A current agency membership is required to access agency lead custody.',
+  );
+  if (!workspace.agent || workspace.agent.status !== 'approved') {
+    throw new TRPCError({ code: 'NOT_FOUND', message: 'Agent profile not found' });
+  }
+
+  return { agent: workspace.agent, currentAgencyId: workspace.currentAgencyId };
 }
 
 function buildAgentLeadCustodyConditions(workspace: AgentLeadWorkspace): SQL[] {
@@ -335,6 +356,7 @@ async function requireAgentPropertyMutationTarget(
   propertyId: number,
   userId: number,
 ) {
+  const workspace = await resolveAgentWorkspaceProfile(database, userId);
   const [property] = await database
     .select()
     .from(properties)
@@ -345,15 +367,9 @@ async function requireAgentPropertyMutationTarget(
     throw new Error('Property not found');
   }
 
-  const [agentRecord] = await database
-    .select({ id: agents.id })
-    .from(agents)
-    .where(eq(agents.userId, userId))
-    .limit(1);
-
   const isOwner = property.ownerId === userId;
   const isAgent = Boolean(
-    agentRecord && property.agentId && Number(property.agentId) === Number(agentRecord.id),
+    workspace.agent && property.agentId && Number(property.agentId) === Number(workspace.agent.id),
   );
   if (!isOwner && !isAgent) {
     throw new Error('Not authorized to mutate this property');
@@ -653,23 +669,12 @@ export const agentRouter = router({
     }> => {
       const db = await getDb();
       const userId = requireUser(ctx).id;
-
-      const [agentRecord] = await db
-        .select()
-        .from(agents)
-        .where(and(eq(agents.userId, userId), eq(agents.status, 'approved')))
-        .limit(1);
+      const workspace = await resolveAgentWorkspaceProfile(db, userId);
+      const agentRecord = workspace.agent?.status === 'approved' ? workspace.agent : null;
       const agentId = agentRecord?.id ?? null;
-      const currentMembership = agentRecord
-        ? await resolveCurrentAgencyMembershipForAgent(db, Number(agentRecord.id))
+      const leadWorkspace = agentRecord
+        ? { agent: agentRecord, currentAgencyId: workspace.currentAgencyId }
         : null;
-      const leadWorkspace =
-        agentRecord && !(agentRecord.agencyId && !currentMembership)
-          ? {
-              agent: agentRecord,
-              currentAgencyId: currentMembership ? Number(currentMembership.agencyId) : null,
-            }
-          : null;
 
       const todayDate = new Date();
       todayDate.setHours(0, 0, 0, 0);
@@ -1194,18 +1199,12 @@ export const agentRouter = router({
     .query(async ({ ctx, input }) => {
       const db = await getDb();
       const user = requireUser(ctx);
-
-      // Try to get agent record, but don't fail if it doesn't exist
-      const [agentRecord] = await db
-        .select()
-        .from(agents)
-        .where(eq(agents.userId, user.id))
-        .limit(1);
+      const workspace = await resolveAgentWorkspaceProfile(db, user.id);
 
       // Build conditions - use agentId if profile exists, otherwise use ownerId
       const conditions = buildAgentInventoryConditions(
         user.id,
-        agentRecord?.id ?? null,
+        workspace.agent?.id ?? null,
         input.status,
       );
       conditions.push(excludeLandFromGenericPublicProjection());
@@ -1249,14 +1248,9 @@ export const agentRouter = router({
   getShowingListingOptions: agentProcedure.query(async ({ ctx }) => {
     const db = await getDb();
     const userId = requireUser(ctx).id;
+    const workspace = await resolveAgentWorkspaceProfile(db, userId);
 
-    const [agentRecord] = await db
-      .select({ id: agents.id })
-      .from(agents)
-      .where(eq(agents.userId, userId))
-      .limit(1);
-
-    return getAgentInventorySchedulingOptions(db, userId, agentRecord?.id ?? null);
+    return getAgentInventorySchedulingOptions(db, userId, workspace.agent?.id ?? null);
   }),
 
   /**
@@ -2385,17 +2379,8 @@ export const agentRouter = router({
     )
     .query(async ({ ctx, input }) => {
       const db = await getDb();
-
-      // Get agent record
-      const [agentRecord] = await db
-        .select()
-        .from(agents)
-        .where(and(eq(agents.userId, requireUser(ctx).id), eq(agents.status, 'approved')))
-        .limit(1);
-
-      if (!agentRecord) {
-        throw new Error('Agent profile not found');
-      }
+      const workspace = await requireAgentLeadWorkspace(db, requireUser(ctx).id);
+      const agentRecord = workspace.agent;
 
       // Build conditions
       const conditions: SQL[] = [eq(commissions.agentId, agentRecord.id)];
@@ -2603,14 +2588,8 @@ export const agentRouter = router({
     )
     .query(async ({ ctx, input }) => {
       const db = await getDb();
-
-      // Get agent record
-      const [agentRecord] = await db
-        .select()
-        .from(agents)
-        .where(eq(agents.userId, requireUser(ctx).id))
-        .limit(1);
-
+      const workspace = await resolveAgentWorkspaceProfile(db, requireUser(ctx).id);
+      const agentRecord = workspace.agent;
       if (!agentRecord) {
         throw new Error('Agent profile not found');
       }
@@ -2687,14 +2666,8 @@ export const agentRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       const db = await getDb();
-
-      // Get agent record
-      const [agentRecord] = await db
-        .select()
-        .from(agents)
-        .where(eq(agents.userId, requireUser(ctx).id))
-        .limit(1);
-
+      const workspace = await resolveAgentWorkspaceProfile(db, requireUser(ctx).id);
+      const agentRecord = workspace.agent;
       if (!agentRecord) {
         throw new Error('Agent profile not found');
       }

@@ -94,7 +94,7 @@ describe('agent canonical inventory authority', () => {
   });
 
   it('requests only canonical scheduling options', async () => {
-    const select = createSelectSequence([[{ id: 7 }]]);
+    const select = createSelectSequence([[{ id: 7, status: 'approved' }]]);
     mockGetDb.mockResolvedValue({ select } as any);
     mockGetAgentInventorySchedulingOptions.mockResolvedValue([]);
 
@@ -106,7 +106,7 @@ describe('agent canonical inventory authority', () => {
 
   it('blocks showing booking when no canonical property link exists', async () => {
     const select = createSelectSequence([
-      [{ id: 7 }],
+      [{ id: 7, status: 'approved' }],
       [
         {
           id: 55,
@@ -150,7 +150,7 @@ describe('agent canonical inventory authority', () => {
 
   it('persists the canonical property id when booking a showing', async () => {
     const select = createSelectSequence([
-      [{ id: 7 }],
+      [{ id: 7, status: 'approved' }],
       [
         {
           id: 55,
@@ -202,7 +202,7 @@ describe('agent canonical inventory authority', () => {
 
   it('does not let a Commercial lead be booked against unrelated generic inventory', async () => {
     const select = createSelectSequence([
-      [{ id: 7 }],
+      [{ id: 7, status: 'approved' }],
       [
         {
           id: 55,
@@ -257,7 +257,7 @@ describe('agent canonical inventory authority', () => {
 
   it('keeps Commercial property records out of generic agent inventory', async () => {
     const select = createOrderedSelectSequence([
-      [{ id: 7 }],
+      [{ id: 7, status: 'approved' }],
       [
         {
           id: 501,
@@ -284,6 +284,7 @@ describe('agent canonical inventory authority', () => {
 
   it('refuses a generic agent archive for a Commercial property record', async () => {
     const select = createSelectSequence([
+      [{ id: 7, status: 'approved' }],
       [
         {
           id: 503,

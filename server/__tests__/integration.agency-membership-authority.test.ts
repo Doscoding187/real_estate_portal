@@ -22,10 +22,13 @@ import {
   agencyAgentMemberships,
   agents,
   billableAccounts,
+  commissions,
   invitations,
   listingAnalytics,
   listings,
   plans,
+  properties,
+  showings,
   subscriptions,
   users,
 } from '../../drizzle/schema';
@@ -706,6 +709,117 @@ describeWithDb('team operations on canonical membership', () => {
     await expect(memberCaller.agency.getMyDay({ limit: 1 })).rejects.toMatchObject({
       code: 'FORBIDDEN',
     });
+  });
+
+  it('does not let a suspended member retain Agent Home inventory, commission, or property-work authority', async () => {
+    const agencyId = await insertAgency('AgentHomeWorkspace');
+    const ownerUserId = await insertUser('AgentHomeWorkspaceOwner', 'agency_admin');
+    await db.update(users).set({ agencyId }).where(eq(users.id, ownerUserId));
+
+    const memberUserId = await insertUser('AgentHomeWorkspaceMember', 'agent');
+    await db.update(users).set({ agencyId, isSubaccount: 1 }).where(eq(users.id, memberUserId));
+    const agentId = await insertAgentProfile(memberUserId, agencyId);
+    await maintainAgencyAgentMembership(db, { agencyId, agentId, status: 'active' });
+
+    const [propertyInsert] = await db.insert(properties).values({
+      title: 'Agent Home authority property',
+      description: 'Private agency inventory used to prove current membership is required.',
+      propertyType: 'house',
+      listingType: 'sale',
+      transactionType: 'sale',
+      price: 2_650_000,
+      bedrooms: 3,
+      bathrooms: 2,
+      area: 180,
+      address: '27 Agent Home Authority Road',
+      city: 'Johannesburg',
+      province: 'Gauteng',
+      status: 'available',
+      featured: 0,
+      views: 0,
+      enquiries: 0,
+      ownerId: memberUserId,
+      agentId,
+    } as any);
+    const propertyId = Number((propertyInsert as any).insertId);
+    if (!propertyId) throw new Error('Expected Agent Home authority property');
+
+    const scheduledAt = new Date();
+    scheduledAt.setHours(12, 0, 0, 0);
+    const [showingInsert] = await db.insert(showings).values({
+      propertyId,
+      agentId,
+      scheduledAt: scheduledAt.toISOString().slice(0, 19).replace('T', ' '),
+      status: 'confirmed',
+      visitorName: 'Suspended member authority probe',
+    } as any);
+    const showingId = Number((showingInsert as any).insertId);
+
+    const [commissionInsert] = await db.insert(commissions).values({
+      agentId,
+      propertyId,
+      amount: 53_000,
+      status: 'pending',
+    } as any);
+    const commissionId = Number((commissionInsert as any).insertId);
+
+    try {
+      const memberCaller = applicationCaller({
+        id: memberUserId,
+        role: 'agent',
+        agencyId,
+      });
+
+      await expect(memberCaller.agent.getMyListings({ status: 'all' })).resolves.toEqual(
+        expect.arrayContaining([expect.objectContaining({ id: propertyId })]),
+      );
+      await expect(memberCaller.agent.getMyCommissions({ status: 'pending' })).resolves.toEqual(
+        expect.arrayContaining([expect.objectContaining({ id: commissionId })]),
+      );
+
+      await maintainAgencyAgentMembership(db, { agencyId, agentId, status: 'suspended' });
+
+      // Membership suspension deliberately retains these profile projections
+      // for history. Agent Home must not treat them as present workspace authority.
+      const [retainedUser] = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, memberUserId))
+        .limit(1);
+      const [retainedProfile] = await db
+        .select()
+        .from(agents)
+        .where(eq(agents.id, agentId))
+        .limit(1);
+      expect(retainedUser.agencyId).toBe(agencyId);
+      expect(retainedProfile.agencyId).toBe(agencyId);
+
+      await expect(memberCaller.agent.getMyListings({ status: 'all' })).rejects.toMatchObject({
+        code: 'FORBIDDEN',
+      });
+      await expect(memberCaller.agent.getDashboardStats()).rejects.toMatchObject({
+        code: 'FORBIDDEN',
+      });
+      await expect(memberCaller.agent.getShowingListingOptions()).rejects.toMatchObject({
+        code: 'FORBIDDEN',
+      });
+      await expect(
+        memberCaller.agent.getMyCommissions({ status: 'pending' }),
+      ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+      await expect(
+        memberCaller.agent.exportCommissionsCSV({ status: 'pending' }),
+      ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+      await expect(
+        memberCaller.agent.quickUpdateProperty({ propertyId, updates: { price: 2_700_000 } }),
+      ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+      await expect(memberCaller.agent.archiveProperty({ id: propertyId })).rejects.toMatchObject({
+        code: 'FORBIDDEN',
+      });
+    } finally {
+      if (commissionId) await db.delete(commissions).where(eq(commissions.id, commissionId));
+      if (showingId) await db.delete(showings).where(eq(showings.id, showingId));
+      await db.delete(properties).where(eq(properties.id, propertyId));
+    }
   });
 });
 
