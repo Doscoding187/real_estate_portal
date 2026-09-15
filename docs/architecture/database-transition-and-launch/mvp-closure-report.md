@@ -7,8 +7,9 @@ and Goals 1–10 agency membership, workspace, commercial-term, private-preparat
 review/publication, public-discovery, public-enquiry custody, CRM-continuity,
 first-cohort recovery, one consolidated agency operating acceptance, hard-deferred
 Land containment, canonical agent-coverage authority, governed browser proof of
-agent and agency-owner pre-payment onboarding, an agency preparation-state
-correction, and a Commercial generic-viewing boundary correction are verified
+agent and agency-owner pre-payment onboarding, agency preparation-state and
+deferred-invitation-validity corrections, and a Commercial generic-viewing
+boundary correction are verified
 on the task branch. A bounded assisted-onboarding intake is also locally implemented;
 named support operations and final disclosures remain open. Normal commercial activation, hosted integration,
 production verification, and protected release remain blocked.** This is not a declaration that all MVP
@@ -372,6 +373,34 @@ five focused policy tests invoke every guarded service path and confirm the
 failure happens before database work. No payment provider, charge, invoice,
 proof, entitlement activation, free publishing policy, or commercial
 credential was used.
+
+### Deferred agency invitation validity
+
+**LRC-INVITE-001** was a preparation-to-activation integrity defect. Agency
+onboarding can persist prospective team invitations while the canonical agency
+term is `pending_payment`; delivery correctly remains deferred in that state.
+The stored acceptance token, however, began its seven-day expiry immediately.
+If commercial activation were approved after that window, the activation path
+could send an already-expired link.
+
+Commit [`0c440207`](https://github.com/Doscoding187/real_estate_portal/commit/0c4402078ffaced5664f6993dac3fe8f6d0ed504) preserves the deferred model. It
+does not deliver a link, create membership, grant workspace access, or change
+entitlement while commercial activation is unavailable. Only after the existing
+canonical paid-access gate authorizes delivery does the service rotate a
+missing, malformed, or elapsed queued token and give it a fresh seven-day
+window. The onboarding team step now states that invite links are queued and
+that team access awaits approved commercial activation.
+
+The authority-wrapped service regression passed **9 tests**, including elapsed
+and malformed-token delivery cases; the agency principal bootstrap integration
+and service suite passed **2 files / 13 tests**; and the agency onboarding client
+truth suite passed **7 tests**. Type checking, database-authority static checks
+(**35 files / 293 tests**), targeted ESLint with no errors, and `git diff
+--check` passed. The test-only activated fixture used the repository's local
+mock/log email transport; it did not contact a provider or enable normal
+runtime activation. The final status retained the exact owned target,
+`0090_retire_disconnected_boost_campaigns.sql`, schema congruency, and
+`no-incomplete-attempts`.
 
 ### Lead-handling follow-up investigation
 
@@ -767,7 +796,9 @@ operation.
    first-cohort agency journey locally, and `d1545579` keeps Commercial leads
    out of generic viewing flows before ordinary assignment. `e9909ab6` adds
    browser proof for agency-owner registration and pre-payment setup, including
-   persisted `pending_payment` preference without an invoice. The full agency
+   persisted `pending_payment` preference without an invoice; `0c440207`
+   prevents a queued pre-payment team invitation from producing an expired link
+   if delivery later becomes authorized. The full agency
    member/listing/review/public-discovery/enquiry/CRM journey still has no
    browser UI, hosted, provider, or production proof; senior review,
    integration, and controlled runtime acceptance remain required before any
