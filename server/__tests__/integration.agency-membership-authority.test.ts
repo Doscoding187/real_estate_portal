@@ -647,6 +647,66 @@ describeWithDb('team operations on canonical membership', () => {
       code: 'NOT_FOUND',
     });
   });
+
+  it('does not let a suspended member retain agency performance, commission, or daily-work access', async () => {
+    const agencyId = await insertAgency('OperationalWorkspace');
+    const ownerUserId = await insertUser('OperationalWorkspaceOwner', 'agency_admin');
+    await db.update(users).set({ agencyId }).where(eq(users.id, ownerUserId));
+
+    const memberUserId = await insertUser('OperationalWorkspaceMember', 'agent');
+    await db.update(users).set({ agencyId, isSubaccount: 1 }).where(eq(users.id, memberUserId));
+    const agentId = await insertAgentProfile(memberUserId, agencyId);
+    await maintainAgencyAgentMembership(db, { agencyId, agentId, status: 'active' });
+
+    const listingId = await createListing({
+      userId: memberUserId,
+      action: 'sell',
+      propertyType: 'house',
+      title: 'Agency performance listing before membership suspension',
+      description: 'This private inventory exercises agency operational workspace authority.',
+      pricing: { askingPrice: 2_300_000 },
+      propertyDetails: { bedrooms: 3, bathrooms: 2, houseAreaM2: 175 },
+      address: '12 Operational Authority Road',
+      city: 'Johannesburg',
+      suburb: 'Sandton',
+      province: 'Gauteng',
+      slug: `operational-membership-${randomUUID().slice(0, 8)}`,
+      media: [],
+    } as any);
+    created.listingIds.push(listingId);
+
+    const memberCaller = applicationCaller({
+      id: memberUserId,
+      role: 'agent',
+      agencyId,
+    });
+    await expect(memberCaller.agency.getListingPerformance({ listingId })).resolves.toMatchObject({
+      listingId,
+    });
+
+    await maintainAgencyAgentMembership(db, { agencyId, agentId, status: 'suspended' });
+
+    // Suspension intentionally retains user/agent affiliation projections for
+    // audit. Every private agency workspace must use the canonical membership
+    // window instead of granting continuing access through those projections.
+    const [retainedUser] = await db.select().from(users).where(eq(users.id, memberUserId)).limit(1);
+    const [retainedProfile] = await db.select().from(agents).where(eq(agents.id, agentId)).limit(1);
+    expect(retainedUser.agencyId).toBe(agencyId);
+    expect(retainedProfile.agencyId).toBe(agencyId);
+
+    await expect(memberCaller.agency.getListingPerformance({ listingId })).rejects.toMatchObject({
+      code: 'FORBIDDEN',
+    });
+    await expect(memberCaller.agency.getListingPerformanceQueue()).rejects.toMatchObject({
+      code: 'FORBIDDEN',
+    });
+    await expect(memberCaller.agency.getCommissionSettlements()).rejects.toMatchObject({
+      code: 'FORBIDDEN',
+    });
+    await expect(memberCaller.agency.getMyDay({ limit: 1 })).rejects.toMatchObject({
+      code: 'FORBIDDEN',
+    });
+  });
 });
 
 describeWithDb('invitation acceptance (production path)', () => {

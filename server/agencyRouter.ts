@@ -763,6 +763,51 @@ function requireAgencyId(user: ReturnType<typeof requireUser>) {
   return user.agencyId;
 }
 
+type AgencyWorkspaceActor = {
+  agencyId: number;
+  userId: number;
+  agentId: number | null;
+};
+
+/**
+ * Retained user/agent agency IDs are projections for history and session
+ * routing. They cannot authorize a suspended or departed agent to keep
+ * working an agency's private operational data. Agency managers retain their
+ * organisation authority; agents must additionally hold the one current
+ * canonical membership for this exact agency.
+ */
+async function requireCurrentAgencyWorkspaceActor(
+  db: AgencyDb,
+  user: ReturnType<typeof requireUser>,
+): Promise<AgencyWorkspaceActor> {
+  const agencyId = requireAgencyId(user);
+  if (user.role !== 'agent') {
+    return { agencyId, userId: user.id, agentId: null };
+  }
+
+  const [agent] = await db
+    .select({ id: agents.id })
+    .from(agents)
+    .where(and(eq(agents.userId, user.id), eq(agents.status, 'approved')))
+    .limit(1);
+  if (!agent) {
+    throw new TRPCError({
+      code: 'FORBIDDEN',
+      message: 'An approved agent profile is required to access agency work.',
+    });
+  }
+
+  const currentMembership = await resolveCurrentAgencyMembershipForAgent(db, Number(agent.id));
+  if (!currentMembership || Number(currentMembership.agencyId) !== Number(agencyId)) {
+    throw new TRPCError({
+      code: 'FORBIDDEN',
+      message: 'A current agency membership is required to access agency work.',
+    });
+  }
+
+  return { agencyId, userId: user.id, agentId: Number(agent.id) };
+}
+
 async function requireAgencyLead(
   db: AgencyDb,
   user: ReturnType<typeof requireUser>,
@@ -2326,32 +2371,19 @@ async function requireAgencyListing(db: AgencyDb, agencyId: number, listingId: n
 
 async function requirePerformanceListingAccess(
   db: AgencyDb,
-  user: ReturnType<typeof requireUser>,
+  actor: AgencyWorkspaceActor,
   listingId: number,
 ) {
-  const agencyId = requireAgencyId(user);
-  const listing = await requireAgencyListing(db, agencyId, listingId);
-  if (user.role === 'agent') {
-    const [agent] = await db
-      .select({ id: agents.id })
-      .from(agents)
-      .where(
-        and(
-          eq(agents.userId, user.id),
-          eq(agents.agencyId, agencyId),
-          eq(agents.status, 'approved'),
-        ),
-      )
-      .limit(1);
-    if (
-      !agent ||
-      (Number(listing.agentId || 0) !== agent.id && Number(listing.ownerId || 0) !== user.id)
-    ) {
-      throw new TRPCError({
-        code: 'FORBIDDEN',
-        message: 'You can only review listings assigned to you.',
-      });
-    }
+  const listing = await requireAgencyListing(db, actor.agencyId, listingId);
+  if (
+    actor.agentId !== null &&
+    Number(listing.agentId || 0) !== actor.agentId &&
+    Number(listing.ownerId || 0) !== actor.userId
+  ) {
+    throw new TRPCError({
+      code: 'FORBIDDEN',
+      message: 'You can only review listings assigned to you.',
+    });
   }
   return listing;
 }
@@ -6995,10 +7027,7 @@ export const agencyRouter = router({
       throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
 
     const user = requireUser(ctx);
-    const agencyId = requireAgencyId(user);
-    const ownAgent =
-      user.role === 'agent' ? await getApprovedAgentProfileForUser(db, agencyId, user.id) : null;
-    if (user.role === 'agent' && !ownAgent) return [];
+    const { agencyId, agentId: ownAgentId } = await requireCurrentAgencyWorkspaceActor(db, user);
 
     const rows = await db
       .select({
@@ -7022,7 +7051,7 @@ export const agencyRouter = router({
         and(
           eq(agencyCommissionSettlements.agencyId, agencyId),
           user.role === 'agent'
-            ? eq(agencyCommissionSettlements.responsibleAgentId, ownAgent!.id)
+            ? eq(agencyCommissionSettlements.responsibleAgentId, ownAgentId!)
             : undefined,
         ),
       )
@@ -7391,8 +7420,9 @@ export const agencyRouter = router({
       if (!db)
         throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
       const user = requireUser(ctx);
-      const agencyId = requireAgencyId(user);
-      await requirePerformanceListingAccess(db, user, input.listingId);
+      const actor = await requireCurrentAgencyWorkspaceActor(db, user);
+      const { agencyId } = actor;
+      await requirePerformanceListingAccess(db, actor, input.listingId);
       const [snapshot, reviews] = await Promise.all([
         createListingPerformanceSnapshot(db, agencyId, input.listingId),
         db
@@ -7439,7 +7469,7 @@ export const agencyRouter = router({
     if (!db)
       throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
     const user = requireUser(ctx);
-    const agencyId = requireAgencyId(user);
+    const { agencyId } = await requireCurrentAgencyWorkspaceActor(db, user);
     const rows = await db
       .select({ listing: listings, agent: agents })
       .from(listings)
@@ -7514,7 +7544,8 @@ export const agencyRouter = router({
       if (!db)
         throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
       const user = requireUser(ctx);
-      const agencyId = requireAgencyId(user);
+      const actor = await requireCurrentAgencyWorkspaceActor(db, user);
+      const { agencyId } = actor;
       const [review] = await db
         .select()
         .from(agencyListingPerformanceReviews)
@@ -7526,7 +7557,7 @@ export const agencyRouter = router({
         )
         .limit(1);
       if (!review) throw new TRPCError({ code: 'NOT_FOUND', message: 'Seller review not found' });
-      const listing = await requirePerformanceListingAccess(db, user, review.listingId);
+      const listing = await requirePerformanceListingAccess(db, actor, review.listingId);
       const [agency] = await db
         .select({ name: agencies.name })
         .from(agencies)
@@ -7573,8 +7604,9 @@ export const agencyRouter = router({
       if (!db)
         throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
       const user = requireUser(ctx);
-      const agencyId = requireAgencyId(user);
-      const listing = await requirePerformanceListingAccess(db, user, input.listingId);
+      const actor = await requireCurrentAgencyWorkspaceActor(db, user);
+      const { agencyId } = actor;
+      const listing = await requirePerformanceListingAccess(db, actor, input.listingId);
       if (String(listing.status) !== 'published')
         throw new TRPCError({
           code: 'PRECONDITION_FAILED',
@@ -7656,7 +7688,8 @@ export const agencyRouter = router({
       if (!db)
         throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
       const user = requireUser(ctx);
-      const agencyId = requireAgencyId(user);
+      const actor = await requireCurrentAgencyWorkspaceActor(db, user);
+      const { agencyId } = actor;
       const [review] = await db
         .select()
         .from(agencyListingPerformanceReviews)
@@ -7669,7 +7702,7 @@ export const agencyRouter = router({
         .limit(1);
       if (!review)
         throw new TRPCError({ code: 'NOT_FOUND', message: 'Performance review not found' });
-      await requirePerformanceListingAccess(db, user, review.listingId);
+      await requirePerformanceListingAccess(db, actor, review.listingId);
       if (
         review.recommendation !== 'change_price' ||
         review.sellerDecision !== 'accepted' ||
@@ -7782,7 +7815,7 @@ export const agencyRouter = router({
       }
 
       const user = requireUser(ctx);
-      const agencyId = requireAgencyId(user);
+      const { agencyId } = await requireCurrentAgencyWorkspaceActor(db, user);
       const bounds = getDayBounds(input?.date);
       const dayKey = bounds.dateKey;
       const nextDayKey = addAgencyDays(dayKey, 1);
