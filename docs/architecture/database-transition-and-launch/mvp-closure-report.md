@@ -60,6 +60,7 @@ protected environment.
 | Canonical viewing/deal workspace membership supplement (task branch) | `47e059efaf3404db0f16d3f86b7a577ddb4f1ff3`                    |
 | Canonical Agent Home workspace membership supplement (task branch) | `a0fc9e8b95be1275844e11aaed4bf57bc1ff2bd3`                    |
 | Canonical public-recommendation membership supplement (task branch) | `049e2a92fa2b025d4ad589d9d8a63b40489b9db6`                    |
+| Direct public-profile agency-entitlement supplement (task branch) | `1ca5fac21e740f657ca54582157eb805c0f82932`                    |
 | Goal 2 workspace correction (task branch)           | `af9fd6f2`                                                                    |
 | Goal 3 commercial-term correction (task branch)     | `16a23cd9ab61cbc791f1b7e7941e62e53d1ecd7d`                                    |
 | Goal 4 listing-preparation evidence (task branch)   | `a403d31d7456aff837e6d6c5e73af8033cf1634b`                                    |
@@ -468,6 +469,51 @@ This is local task-branch authority evidence only. It changes no schema,
 migration, data, target lifecycle, payment, entitlement, publication, provider,
 credential, deployment, or protected operation. Hosted and production public
 recommendation verification remain pending.
+
+### Direct public-profile agency-entitlement supplement (2026-09-15)
+
+The continuing agency entitlement audit found a distinct public-enquiry gap.
+A public direct-profile request reaches `leads.create` with only the selected
+agent id. Before the correction, its ownership resolver read that agent's
+individual billable subscription and retained profile agency id, but did not
+load the current canonical agency membership's commercial term. An approved,
+unbadged agency member with a valid agency Launch Access term and no personal
+subscription was therefore rejected with `NOT_FOUND` before a lead was written.
+
+Commit [`1ca5fac2`](https://github.com/Doscoding187/real_estate_portal/commit/1ca5fac21e740f657ca54582157eb805c0f82932)
+now derives any agency affiliation at this boundary from exactly one current
+canonical membership. It evaluates the affiliated agency's current paid term
+only where the subscription is bound to the matching canonical agency billable
+account; retained or forged profile affiliation cannot select that term. It
+also evaluates all matching individual rows, so an expired historical row
+cannot mask a later valid individual term. Ambiguous current membership keeps
+the shared membership helper's fail-closed behavior.
+
+The direct-profile contract intentionally remains person-to-person: a successful
+request is custodied to the selected agent and persists no client-selected
+agency recipient. This supplement does not assert agency-administrator CRM
+visibility for that direct lead; that remains governed by the separate CRM
+access boundary.
+
+The exact task-owned target first reproduced the rejection through the real
+public tRPC `leads.create` route. After correction, the same route accepted one
+anonymous enquiry for a current unbadged member under an isolated agency
+paid-state fixture, persisted direct agent custody, and rejected a second
+request after canonical membership suspension even though `agents.agencyId`
+remained historical. The fixture creates no normal-runtime commercial route and
+uses the local mock/log email transport.
+
+Post-correction evidence on fingerprint `a560e9f2971e7676…`:
+
+- `pnpm test:authority -- server/__tests__/integration.agency-membership-authority.test.ts server/services/__tests__/publicLeadCaptureService.contract.test.ts server/services/__tests__/publicLeadCustodyService.contract.test.ts` — **3 files / 89 tests passed**. It covers the exact public route, persisted direct custody, no individual subscription, suspension denial, agency-entitlement custody policy, and current-over-expired subscription selection.
+- The broader public-profile and launch-continuity slice passed **6 files / 120 tests**: `contract.agent-public-profile`, `integration.agent-launch-journey`, `contract.agent-continuity`, the two lead contracts, and agency membership authority.
+- `pnpm check` and `pnpm test:db-authority:static` (**35 files / 295 tests**) passed. Targeted ESLint reported zero errors with existing repository warnings only; `git diff --check` passed. Final authority status retained exact task ownership, head `0090_retire_disconnected_boost_campaigns.sql`, schema congruency, and `no-incomplete-attempts`.
+
+This is local task-branch evidence only. It changes no schema, migration,
+target lifecycle, payment activation, entitlement mutation, provider setting,
+deployment, credential, protected system, or Land disposition. Browser,
+hosted, provider-delivery, integration, and production verification remain
+open.
 
 ### Governed local-service interruption after recommendation verification (2026-09-15)
 
@@ -1224,9 +1270,9 @@ server-draft creation, publication, discovery, enquiry, and CRM slices.
    listing/review/public-discovery/enquiry/CRM slices. One continuous browser
    path through owner registration, canonical invitation acceptance, and that
    member flow, plus hosted, provider, and production proof, remains absent;
-   `32ce7524`, `47e059ef`, `a0fc9e8b`, and `049e2a92` also close the observed
-   stale-membership operational-workspace, viewing/deal, Agent Home, and public
-   recommendation admission paths locally, but require the same integration and hosted
+   `32ce7524`, `47e059ef`, `a0fc9e8b`, `049e2a92`, and `1ca5fac2` also close the observed
+   stale-membership operational-workspace, viewing/deal, Agent Home, public
+   recommendation, and direct-profile commercial-admission paths locally, but require the same integration and hosted
    verification; senior review, integration,
    and controlled runtime acceptance remain
    required before any cohort is represented as live.

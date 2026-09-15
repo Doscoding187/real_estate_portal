@@ -563,6 +563,34 @@ and worker restart handling remain Goal 9. No payment, entitlement activation,
 protected database operation, or production release occurred.
 
 
+### Goal 3 / Goal 7 direct-profile entitlement supplement — 2026-09-15
+
+A later audit found that the original public listing-enquiry acceptance did not
+cover the separate direct agent-profile route. That route accepted a selected
+agent id but evaluated only an individual subscription, creating a P1
+contradiction for an otherwise current, approved agency member with agency
+Launch Access.
+
+Commit [`1ca5fac2`](https://github.com/Doscoding187/real_estate_portal/commit/1ca5fac21e740f657ca54582157eb805c0f82932)
+loads exactly one current canonical agency membership for the selected profile,
+uses that membership's agency id to evaluate the matching canonical agency
+billable-account subscription, and preserves the individual entitlement path
+for independents. The public profile's retained agency field no longer carries
+commercial authority at this boundary. The resolver checks every matching term,
+so a historical expired row cannot hide a later current entitlement.
+
+The exact-target regression first proved the pre-fix `NOT_FOUND` rejection for
+an unbadged member with no individual term, then proved one durable direct-agent
+lead after correction. It also suspended canonical membership while preserving
+the profile agency id and proved that a new direct enquiry is rejected. The
+final authority-wrapped run passed **3 files / 89 tests**; the broader
+public-profile/continuity slice passed **6 files / 120 tests**. This improves
+the Goal 3 commercial-owner and Goal 7 direct-enquiry boundaries locally. It
+does not claim direct-profile browser UX, agency-administrator visibility for a
+person-to-person lead, provider delivery, normal-runtime activation, hosted
+integration, or production verification.
+
+
 ### Post-goal coverage-authority correction — 2026-09-15
 
 The later browser/persisted-state inspection found an area-specific defect at

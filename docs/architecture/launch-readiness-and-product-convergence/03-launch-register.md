@@ -203,6 +203,31 @@ This index is for navigation and programme oversight. Its **Full record** column
 | Notes                                   | Goals 3–10 close the canonical agency commercial-owner, fixed-term-expiry, review/publication, public discovery, enquiry custody, CRM continuity, and scoped platform-recovery gaps in one local operating acceptance without enabling normal-runtime commercial activation. `e9909ab6` proves owner identity/setup and truthful pre-payment preparation; `72dd80e0`/`a2a4e52` prove the separate member review/public/lead/CRM browser slices with persisted state. They do not create one continuous browser path through invitation delivery/acceptance, activate payment, or establish a live cohort. Goal 8 separates receipt of new marketplace opportunities from authority to work existing custody and fails closed for stale agency membership. Goal 9 provides only internal CRM/platform manual recovery; it makes no provider-delivery promise. Hosted integration, external provider reliability, and production verification remain open. Do not require a second individual purchase for agency operation. |
 
 
+### LRC-AGY-001 direct-profile entitlement supplement — 2026-09-15
+
+| Field | Record |
+| --- | --- |
+| Issue ID | LRC-AGY-001 |
+| Date observed | 2026-09-15 |
+| Exact Git SHA | `6e208d8a` (reviewed candidate); `1ca5fac21e740f657ca54582157eb805c0f82932` (task-branch correction) |
+| Page or journey | Public agent profile → direct anonymous enquiry → selected-agent custody |
+| URL | Public agent profile contact surface; `leads.create` with `agentId` |
+| User role | Anonymous prospect; approved current agency member without an individual subscription or optional verification badge |
+| Viewport or device | Exact task-owned target; real public tRPC route, persisted-state integration, and focused service contracts; browser not run for this supplement |
+| Current behaviour | Before the correction, the direct profile resolver evaluated only a personal agent subscription. A current unbadged agency member could therefore publish under the agency term elsewhere yet have their public profile enquiry rejected even when the agency held valid Launch Access. |
+| Expected behaviour | Public direct-profile eligibility derives agency entitlement only from current canonical membership and the matching agency billable account. A stale, absent, suspended, removed, or ambiguous membership cannot use retained profile affiliation. A current paid agency member does not need a second personal purchase. |
+| Evidence reference | [MVP closure report](../database-transition-and-launch/mvp-closure-report.md#direct-public-profile-agency-entitlement-supplement-2026-09-15): initial exact-target route counterexample rejected `NOT_FOUND`; after `1ca5fac2`, authority-wrapped regression **3 files / 89 tests** and broader public-profile/continuity regression **6 files / 120 tests** passed on fingerprint `a560e9f2971e7676…`. Typecheck and static authority **35 files / 295 tests** passed. |
+| Severity | L1 |
+| Owning engine | Commercial access / public eligibility / lead custody |
+| Launch decision | Fix before agency launch |
+| Approved implementation branch/worktree | `verify/mvp-closure-post-577` / `/home/edwardspc/Desktop/Dev/worktrees/property-listify-mvp-closure-post-577` |
+| Pull request or commit | [`1ca5fac2`](https://github.com/Doscoding187/real_estate_portal/commit/1ca5fac21e740f657ca54582157eb805c0f82932) |
+| Integrated verification | Pending; exact task-branch local evidence only. |
+| Production verification | Pending; no protected system, provider, deployment, payment, or entitlement activation accessed. |
+| Status | in progress |
+| Notes | The public profile remains visible under the pre-payment presence model, but a direct enquiry is accepted only when the selected agent has a current valid professional eligibility path. Successful direct contact remains agent custody; this supplement does not assert agency-administrator CRM access, browser contact-modal behavior, provider delivery, or a live commercial route. The paid state used by the regression is a disposable-target fixture only. |
+
+
 ### LRC-INVITE-001
 
 | Field | Record |
