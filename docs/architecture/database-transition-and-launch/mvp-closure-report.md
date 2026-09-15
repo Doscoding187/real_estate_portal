@@ -1,6 +1,6 @@
 # Post-merge MVP closure review packet
 
-Date: 2026-09-15 (canonical private-work membership, generic Developer-Land row and draft-containment supplements, transactional-email containment, governed pre-payment browser-acceptance, Commercial-workflow, and governed local-service-recovery addenda; canonical agent-coverage addendum; prior Goals 6–10, LRC-LAND-001, and LRC-SUPPORT-001 follow-ups dated 2026-09-14; original closure review dated 2026-09-13).
+Date: 2026-09-15 (canonical private-work membership and inventory supplements, generic Developer-Land row and draft-containment supplements, transactional-email containment, governed pre-payment browser-acceptance, Commercial-workflow, and governed local-service-recovery addenda; canonical agent-coverage addendum; prior Goals 6–10, LRC-LAND-001, and LRC-SUPPORT-001 follow-ups dated 2026-09-14; original closure review dated 2026-09-13).
 **Outcome: the local candidate supports controlled
 pre-payment onboarding; canonical billing and activation paths are contained,
 and Goals 1–10 agency membership, workspace, commercial-term, private-preparation,
@@ -55,6 +55,7 @@ protected environment.
 | Initial closure candidate                           | `c8c35fde44d00ff8b2ce83ca73fcb32dd522e9bc`                                    |
 | Goal 1 authority correction (task branch)           | `cf1f93e6f2148a1fc434571475ecd9f18c646bfa`                                    |
 | Canonical private-work membership supplement (task branch) | `5f37d3d1c14130f9078a17ea267e951547e65564`                              |
+| Canonical agency-inventory scope supplement (task branch) | `0eaf2cc806d157f4e6b378721db48e69cef3ffb6`                              |
 | Goal 2 workspace correction (task branch)           | `af9fd6f2`                                                                    |
 | Goal 3 commercial-term correction (task branch)     | `16a23cd9ab61cbc791f1b7e7941e62e53d1ecd7d`                                    |
 | Goal 4 listing-preparation evidence (task branch)   | `a403d31d7456aff837e6d6c5e73af8033cf1634b`                                    |
@@ -273,6 +274,40 @@ provider, deployment, or protected operation changed. This closes the observed
 local private-work authorization gap on the task branch only; hosted and
 production verification remain pending.
 
+### Canonical agency-inventory scope supplement (2026-09-15)
+
+The same membership audit found a second stale-projection route in the agency
+listing workspace. Its scope admitted a listing with no materialized
+`listings.agencyId` when its owner or assigned agent retained the former
+agency's profile ID. An ex-member can legitimately create a new independent,
+private draft after their membership ends; the former agency must not discover
+that draft merely because its historical profile projection remains available
+for audit.
+
+The counterexample was reproduced on the exact task target: after canonical
+suspension, `createListing` correctly produced an unaffiliated private draft,
+but the former agency's `getListingInventory` returned it. Commit
+[`0eaf2cc8`](https://github.com/Doscoding187/real_estate_portal/commit/0eaf2cc806d157f4e6b378721db48e69cef3ffb6)
+removes the fallback inference. Agency inventory, detail, summary, performance,
+and work-queue scopes now require the canonical listing's materialized
+`agencyId`. This preserves agency access to inventory authored while membership
+was current and prevents historical profile state from widening that tenant's
+private inventory scope.
+
+The authority-wrapped regression passed **4 files / 23 tests** on fingerprint
+`a560e9f2971e7676…`, including the full agency publication/enquiry lifecycle.
+The new membership test proves both sides of the boundary: an agency-owned
+draft stays visible after its author is suspended, while a later unaffiliated
+draft is absent from the former agency's inventory and detail APIs. `pnpm
+check`, `pnpm test:db-authority:static`, targeted ESLint with no errors, and
+`git diff --check` passed. This is local task-branch evidence; it does not
+claim historical legacy-listing migration, hosted integration, or production
+verification.
+
+No schema, migration, data repair, payment, entitlement, publication, provider,
+or protected operation changed. Pre-launch canonical listing ownership is the
+only supported agency-inventory authority.
+
 ## Target and data establishment
 
 Claim: one new product-verification target reached canonical schema/data
@@ -334,7 +369,7 @@ incomplete required journey; it does not claim a failing production observation.
 | Journey                      | Result                                                  | Exact evidence and boundary                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | ---------------------------- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Account access               | PASS locally                                            | `scripts/mvp-account-verification.mts` completed 15 HTTP checks: weak password rejection; registration; unverified denial; verification; token replay denial; login; prohibited self-assigned super-admin reduced to visitor; logout; anonymous auth.me null; recovery enumeration resistance; reset; reset replay denial; old-password denial; new-password success; pre-reset session revoked. Commits `555250c5` and `e9909ab6` also completed real Chromium registration UI, local-development verification-link navigation, session establishment, and respectively agent setup and agency-owner setup on the exact target. `3d2e0148` makes absent or placeholder transactional-mail configuration fail before recovery/resend account lookup in deployed runtime, limits local email fallback to development/test, and returns neutral recovery/verification responses if a configured provider fails. Its 4-file/20-test boundary suite, 15-check local HTTP rerun, typecheck, and 35-file/293-test static suite passed. External provider delivery and expiry timing over elapsed time remain unverified. |
-| Permissions                  | BLOCKED for complete scope                              | Account privilege injection denied; scripts/mvp-listing-verification.mts proved cross-tenant listing read and write HTTP 403 and unchanged persisted title. Scenario verifier proved agent/agency/developer unrelated-recipient denial and platform-operations restrictions. `5f37d3d1` additionally proves a suspended member with retained legacy agency IDs is denied private seller-prospect access, assignment, and legacy agency analytics. This is not exhaustive tenant membership revocation, every role, or admin audit proof.                                                                                                                                                                                                                                                                                                                                 |
+| Permissions                  | BLOCKED for complete scope                              | Account privilege injection denied; scripts/mvp-listing-verification.mts proved cross-tenant listing read and write HTTP 403 and unchanged persisted title. Scenario verifier proved agent/agency/developer unrelated-recipient denial and platform-operations restrictions. `5f37d3d1` additionally proves a suspended member with retained legacy agency IDs is denied private seller-prospect access, assignment, and legacy agency analytics; `0eaf2cc8` prevents their later unaffiliated private draft from appearing in the former agency workspace. This is not exhaustive tenant membership revocation, every role, or admin audit proof.                                                                                                                                                                                                                                                                                                                                 |
 | Listing authoring            | PASS for local browser and HTTP agency-preparation slices | The three focused authority tests above passed 3 files / 5 tests on target fingerprint `a560e9f2971e7676…`: real authenticated routers physically PUT and served five media objects, persisted canonical Gauteng/Johannesburg/Sandton IDs, preserved a reopened/edited draft, allowed agency-owner visibility, and denied an unrelated tenant. `a2a4e52` then drove the agency member through Chromium: author a House listing, select and confirm Sandton, upload five images, save the persisted server draft, submit it, receive reviewer feedback, reopen it, retain its data/media/geography, correct it, and resubmit. Its isolated enabled fixture is browser acceptance evidence only; it does not enable a normal-runtime commercial transition. A single continuous browser path from owner registration and canonical invitation acceptance into this member session remains unproven. |
 | Publication                  | PASS for isolated local lifecycle; normal runtime blocked | Goal 5 real HTTP acceptance proved the governed lifecycle and denial case. `72dd80e0` and `a2a4e52` add Chromium reviewer/member proof of rejection feedback, correction, resubmission, confirmation, approval, and exactly one persisted published source/projection with five mirrored images. Approval uses the existing isolated local entitlement fixture and did not invoke payment or normal runtime activation. Hosted and production publication remain unverified. |
 | Discovery                    | PASS for isolated local agency slice; Land locally contained | Goal 6 real HTTP evidence proved the canonical `suburb:<id>` contract, rejected mixed canonical-plus-city input, and confirmed exact geography/media. `a2a4e52` adds anonymous Chromium proof that only the approved listing appears through canonical suburb search; a private candidate is absent; the detail has matching Sandton context and a five-image gallery. `335838dff0c746b860eaaf2930412d4b38540db5` blocks direct Land and generic-listing paths; `62ec0eede830e96eafc69dfd9e4f42a9645aa1ee` additionally rejects generic Developer Land authoring/transitions and excludes retained generic Developer Land rows from public detail, list, and search; `0280e9dd` blocks the separate generic Developer draft-persistence route. No Land consumer acceptance, integration, or production evidence is claimed. |
@@ -1055,7 +1090,7 @@ backend identities and a staffed GO/no-GO/recovery decision.
 ## Git and protected boundaries
 
 Application fixes are committed at `c6c9f133`, `bba390b0`, `c8c35fde`,
-`cf1f93e6`, canonical private-work membership correction `5f37d3d1`, `af9fd6f2`, `16a23cd9`, Goal 4 evidence/fixture correction
+`cf1f93e6`, canonical private-work membership correction `5f37d3d1`, canonical agency-inventory scope correction `0eaf2cc8`, `af9fd6f2`, `16a23cd9`, Goal 4 evidence/fixture correction
 `a403d31d`, Goal 5 publication correction `74bff0f9`, Goal 6 public-discovery
 correction `9acfea2f`, Goals 7–8 CRM correction `c4df6600`, Goal 9
 platform-recovery correction `f9086ef4`, Goal 10 full acceptance `fbf592cc`,
