@@ -676,6 +676,32 @@ enable payments, create a free publishing entitlement, or promise external email
 Goal 9's scoped first-cohort recovery fallback is now verified below; Goal 10 has
 begun, and milestone M3 remains ready for the planned senior review.
 
+### Goal 8 viewing UTC wire-boundary supplement — 2026-09-15
+
+The next broad authority-wrapped run exposed a material operational defect in
+the otherwise verified agency viewing slice. `showings.scheduledAt` is a
+canonical UTC MySQL timestamp, but the viewings API returned the zone-less
+database text unchanged. A future viewing at 00:30 Africa/Johannesburg therefore
+appeared as the prior local date to the detail consumer and could be omitted
+from that selected My Day queue.
+
+Commit [`4d0b1517`](https://github.com/Doscoding187/real_estate_portal/commit/4d0b1517)
+serializes the persisted timestamp as an explicit ISO UTC API instant before it
+is returned or evaluated for `isUpcoming`; the stored value and Johannesburg
+day-boundary query remain canonical and unchanged. The deterministic persisted
+regression creates a future 00:30 Johannesburg viewing, retains the exact ISO
+instant through detail, and proves My Day returns it under the proper day.
+
+The initial isolated run reproduced **1 failed / 5 tests**. The corrected
+viewing suite passed **1 file / 5 tests**, and the related viewings contract,
+canonical membership, and agency deal set passed **4 files / 33 tests** on the
+exact owned disposable target. `pnpm check`, static database authority (**35
+files / 295 tests**), targeted ESLint with zero errors, and `git diff --check`
+passed. The interrupted broad invocation is not claimed as a post-fix suite
+pass; a clean broad rerun remains required. This correction neither changes
+membership/tenant authority nor enables payment, entitlement, publication,
+Land, provider, or protected operations.
+
 ## Goal 9 — Complete notification, recovery, and operational handling
 
 **Outcome**

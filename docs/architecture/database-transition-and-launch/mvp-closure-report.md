@@ -1,6 +1,6 @@
 # Post-merge MVP closure review packet
 
-Date: 2026-09-15 (canonical private-work, inventory, operational-workspace, and public-recommendation membership supplements, generic Developer-Land row and draft-containment supplements, transactional-email containment, governed pre-payment browser-acceptance, Commercial-workflow, Commercial public-enquiry entitlement/custody, and governed local-service-recovery addenda; canonical agent-coverage addendum; prior Goals 6–10, LRC-LAND-001, and LRC-SUPPORT-001 follow-ups dated 2026-09-14; original closure review dated 2026-09-13).
+Date: 2026-09-15 (canonical private-work, inventory, operational-workspace, public-recommendation membership, and viewing-UTC-wire-boundary supplements, generic Developer-Land row and draft-containment supplements, transactional-email containment, governed pre-payment browser-acceptance, Commercial-workflow, Commercial public-enquiry entitlement/custody, and governed local-service-recovery addenda; canonical agent-coverage addendum; prior Goals 6–10, LRC-LAND-001, and LRC-SUPPORT-001 follow-ups dated 2026-09-14; original closure review dated 2026-09-13).
 **Outcome: the local candidate supports controlled
 pre-payment onboarding; canonical billing and activation paths are contained,
 and Goals 1–10 agency membership, private-work/inventory/operational-workspace/public-recommendation authority, commercial-term, private-preparation,
@@ -76,6 +76,7 @@ protected environment.
 | Canonical agent-coverage authority correction (task branch) | `f40ca8a3bbed5bfc1f0ffeb675b2c9d10397f35e` |
 | Commercial generic-viewing boundary correction (task branch) | `d1545579fda2c32b466af4cf68ff6929c2e2be2b` |
 | Commercial public-enquiry entitlement/custody correction (task branch) | `551d63fe` |
+| Agency viewing UTC wire-boundary correction (task branch) | `4d0b1517` |
 | Full-suite fixture-congruency correction (task branch) | `e50dbe956a50a0e0a1c071224fb1bffd46bdb4d4` |
 | Queued-invitation acceptance containment (task branch) | `415a947261a65c160f4fb77c39712050bab35b8` |
 | Browser correction-loop acceptance (task branch) | `72dd80e04b5c76c348389f4262543022a8a9a586` |
@@ -1148,6 +1149,48 @@ fixture's agency term is isolated test state; it does not enable normal-runtime
 payment, finance, subscription, or publishing activation. It does not establish
 Commercial browser UX, hosted/provider delivery, a Commercial cohort, protected
 release, or production verification.
+
+## LRC-AGY-001 viewing UTC wire-boundary supplement — 2026-09-15
+
+The next broad authority-wrapped invocation exposed a separate core workflow
+defect in Agency My Day. An agency administrator created a canonical viewing at
+00:30 Africa/Johannesburg time. The detail API returned the persisted MySQL UTC
+timestamp as zone-less text, so a caller parsed the UTC instant in its host
+timezone, selected the prior local day, and `getMyDay` returned no viewing. The
+isolated authority-wrapped invocation reproduced the failure: the newly created
+same-agency viewing was present in `getViewings`, but `todayViewings` was empty.
+
+Commit [`4d0b1517`](https://github.com/Doscoding187/real_estate_portal/commit/4d0b1517)
+keeps the canonical MySQL value unchanged and makes the API boundary explicit.
+`mapViewingRow` now serializes a zone-less MySQL timestamp as an ISO UTC instant
+before returning it to the client or using it for the `isUpcoming` decision. The
+deterministic persisted regression creates a future Johannesburg 00:30 viewing,
+asserts that its detail retains the original ISO instant, and proves My Day
+returns it under the correct Johannesburg date. This is a transport correction,
+not a timezone, schema, migration, or lifecycle-policy change.
+
+Direct local evidence on the exact task-owned disposable target
+`a560e9f2971e7676…`:
+
+- Before the correction, `pnpm test:authority --
+  server/__tests__/integration.agency-viewings-workflow.test.ts --reporter=basic`
+  reproducibly failed **1 of 5 tests** at the My Day assertion. After the
+  correction, the same suite passed **1 file / 5 tests**.
+- The related authority-wrapped set covering the viewings contract, persisted
+  viewings workflow, canonical membership authority, and agency deal lifecycle
+  passed **4 files / 33 tests**. It retains cross-tenant denial, suspension,
+  reassignment, lifecycle, feedback, canonical day-boundary, and active-member
+  coverage.
+- `pnpm check`, `pnpm test:db-authority:static` (**35 files / 295 tests**),
+  and `git diff --check` passed. Targeted ESLint had **0 errors** and the
+  existing warning backlog only.
+
+The interrupted broad invocation is not counted as a post-fix full-suite pass;
+it supplied the counterexample and then lost its terminal session before a
+summary could be retained. A later clean broad rerun remains required as
+regression evidence. No database reset, migration, schema change, payment,
+entitlement activation, provider action, deployment, or protected operation
+occurred.
 
 ## Full authority-suite fixture-congruency follow-up
 
