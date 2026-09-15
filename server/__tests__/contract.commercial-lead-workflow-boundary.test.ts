@@ -42,9 +42,9 @@ const agencyAdmin = {
   agencyId: 44,
 };
 
-function caller() {
+function caller(user = agencyAdmin) {
   return agencyRouter.createCaller({
-    user: agencyAdmin,
+    user,
     req: {} as any,
     res: {} as any,
     requestId: 'commercial-lead-workflow-boundary',
@@ -89,11 +89,7 @@ describe('Commercial lead workflow boundary', () => {
   });
 
   it('rejects generic viewing scheduling for a Commercial enquiry before it can select generic inventory', async () => {
-    const select = createSelectSequence([
-      [commercialLead],
-      [{ id: 33, agencyId: 44, userId: 101, status: 'approved' }],
-      [{ agentId: 33, status: 'active', effectiveFrom: null, effectiveTo: null }],
-    ]);
+    const select = createSelectSequence([[commercialLead]]);
     const insert = vi.fn();
     mockGetDb.mockResolvedValue({ select, insert } as any);
 
@@ -110,6 +106,28 @@ describe('Commercial lead workflow boundary', () => {
     });
 
     expect(insert).not.toHaveBeenCalled();
+    expect(select).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects generic viewing creation for a Commercial enquiry before it can select an assignee', async () => {
+    const select = createSelectSequence([[commercialLead]]);
+    const insert = vi.fn();
+    mockGetDb.mockResolvedValue({ select, insert } as any);
+
+    await expect(
+      caller().createViewing({
+        leadId: 808,
+        agentId: 33,
+        scheduledAt: '2026-10-12T10:00:00.000Z',
+      }),
+    ).rejects.toMatchObject({
+      code: 'PRECONDITION_FAILED',
+      message:
+        'Commercial enquiries stay linked to their verified marketing listing and require the dedicated Commercial workflow for viewings or offers.',
+    });
+
+    expect(insert).not.toHaveBeenCalled();
+    expect(select).toHaveBeenCalledTimes(1);
   });
 
   it('rejects generic offer/deal creation for a Commercial enquiry', async () => {
@@ -129,6 +147,23 @@ describe('Commercial lead workflow boundary', () => {
         'Commercial enquiries stay linked to their verified marketing listing and require the dedicated Commercial workflow for viewings or offers.',
     });
 
+    expect(insert).not.toHaveBeenCalled();
+  });
+
+  it('does not reveal the Commercial workflow boundary before tenant-scoped lead authority', async () => {
+    const select = createSelectSequence([[]]);
+    const insert = vi.fn();
+    mockGetDb.mockResolvedValue({ select, insert } as any);
+
+    await expect(
+      caller({ ...agencyAdmin, agencyId: 45 }).scheduleLeadViewing({
+        leadId: 808,
+        agentId: 33,
+        scheduledAt: '2026-10-12T10:00:00.000Z',
+      }),
+    ).rejects.toMatchObject({ code: 'NOT_FOUND', message: 'Lead not found' });
+
+    expect(mockLoadCommercialLeadContext).not.toHaveBeenCalled();
     expect(insert).not.toHaveBeenCalled();
   });
 });

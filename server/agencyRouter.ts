@@ -5407,6 +5407,16 @@ export const agencyRouter = router({
       const agencyId = requireAgencyId(user);
 
       const lead = await requireAgencyLead(db, user, input.leadId);
+      // Commercial enquiries have a dedicated workflow. Check that boundary
+      // immediately after tenant-scoped lead authority, before ordinary agent
+      // assignment or generic inventory resolution can affect the outcome.
+      const inventory = await resolveViewingInventory({
+        db,
+        agencyId,
+        lead,
+        listingId: input.listingId,
+        propertyId: input.propertyId,
+      });
       const showingDate = assertViewingDateAllowed(input.scheduledAt);
 
       const showingAgentId = input.agentId || lead.agentId;
@@ -5418,13 +5428,6 @@ export const agencyRouter = router({
       }
 
       const showingAgent = await requireAgencyAgent(db, agencyId, showingAgentId);
-      const inventory = await resolveViewingInventory({
-        db,
-        agencyId,
-        lead,
-        listingId: input.listingId,
-        propertyId: input.propertyId,
-      });
       const scheduledAt = toDbTimestampRequired(showingDate);
       const now = nowAsDbTimestamp();
 
@@ -5630,9 +5633,8 @@ export const agencyRouter = router({
       const user = requireUser(ctx);
       const agencyId = requireAgencyId(user);
       const lead = await requireAgencyLead(db, user, input.leadId);
-      const showingAgent = await requireAgencyAgent(db, agencyId, input.agentId);
-      const showingDate = assertViewingDateAllowed(input.scheduledAt);
-      const scheduledAt = toDbTimestampRequired(showingDate);
+      // Keep Commercial enquiries on their dedicated workflow before looking
+      // up an ordinary assignee or inventory for a generic viewing.
       const inventory = await resolveViewingInventory({
         db,
         agencyId,
@@ -5640,6 +5642,9 @@ export const agencyRouter = router({
         listingId: input.listingId,
         propertyId: input.propertyId,
       });
+      const showingAgent = await requireAgencyAgent(db, agencyId, input.agentId);
+      const showingDate = assertViewingDateAllowed(input.scheduledAt);
+      const scheduledAt = toDbTimestampRequired(showingDate);
       const now = nowAsDbTimestamp();
 
       validateLeadTransition(lead, 'viewing_scheduled');
