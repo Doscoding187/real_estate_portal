@@ -1,0 +1,52 @@
+import { defineConfig, devices } from '@playwright/test';
+
+/**
+ * Local-only acceptance for the post-entitlement agency member surface.
+ *
+ * The PLE fixture is prepared separately through its canonical database
+ * adapter. This configuration never enables commercial activation, initiates
+ * payment, or follows a hosted URL.
+ */
+const runtimeLog = '/tmp/property-listify-mvp-ple-agency-browser-runtime.log';
+
+export default defineConfig({
+  testDir: './e2e/ple',
+  outputDir: '/tmp/property-listify-mvp-ple-agency-browser-results',
+  timeout: 90_000,
+  expect: { timeout: 15_000 },
+  fullyParallel: false,
+  workers: 1,
+  reporter: [
+    ['html', { outputFolder: '/tmp/property-listify-mvp-ple-agency-browser-report' }],
+    ['list'],
+  ],
+  use: {
+    // Keep this proof on the owned local runtime even if a caller supplies
+    // another base URL through its shell environment.
+    baseURL: 'http://localhost:5177',
+    trace: 'on-first-retry',
+    screenshot: 'only-on-failure',
+    video: 'retain-on-failure',
+  },
+  projects: [
+    {
+      name: 'Desktop Chrome',
+      use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 } },
+    },
+  ],
+  webServer: [
+    {
+      command: `sh -c 'umask 077; : > ${runtimeLog}; exec pnpm exec tsx scripts/mvp-local-runtime.mts >> ${runtimeLog} 2>&1'`,
+      url: 'http://localhost:5000/api/health',
+      reuseExistingServer: false,
+      timeout: 120_000,
+    },
+    {
+      command:
+        'cross-env VITE_API_URL=http://localhost:5000 VITE_DEPLOY_ENV=development pnpm exec vite --host localhost --port 5177 --strictPort',
+      url: 'http://localhost:5177',
+      reuseExistingServer: false,
+      timeout: 120_000,
+    },
+  ],
+});
