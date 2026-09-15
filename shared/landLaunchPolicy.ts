@@ -23,6 +23,16 @@ export function isLandVerticalAvailable(): boolean {
   return LAND_VERTICAL_LAUNCH_STATE.enabled;
 }
 
+/**
+ * A generic Development row labelled `land` cannot provide an alternate
+ * authoring or public-discovery route while the specialist Land vertical is
+ * deferred. Existing rows remain retained; their public and publication
+ * transitions must fail closed.
+ */
+export function isDeferredLandDevelopmentType(developmentType: unknown): boolean {
+  return developmentType === 'land' && !isLandVerticalAvailable();
+}
+
 /** Fail closed before an authoring, review, or publication transition. */
 export function requireLandVerticalAvailable(operation: string): void {
   if (isLandVerticalAvailable()) return;

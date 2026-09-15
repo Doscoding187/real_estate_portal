@@ -2,7 +2,10 @@ import { existsSync, readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { throwAuctionPublicationDisabled } from '../services/developerEngineContainment';
+import {
+  assertLandDevelopmentOperationAvailable,
+  throwAuctionPublicationDisabled,
+} from '../services/developerEngineContainment';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 
@@ -15,6 +18,27 @@ describe('Developer Engine S0 containment contracts', () => {
     expect(() => throwAuctionPublicationDisabled()).toThrow(
       /Auction developments are not part of the supported public MVP contract/,
     );
+  });
+
+  it('contains generic Land development authoring, review, publication, and public discovery', () => {
+    expect(
+      () => assertLandDevelopmentOperationAvailable('land', 'Land development publication'),
+    ).toThrow(
+      /Land development publication is unavailable while Land is deferred/,
+    );
+    expect(
+      () => assertLandDevelopmentOperationAvailable('residential', 'Development publication'),
+    ).not.toThrow();
+
+    const developmentService = source('server/services/developmentService.ts');
+    const eligibility = source('server/services/publicDevelopmentEligibility.ts');
+
+    expect(developmentService).toContain("'Land development authoring'");
+    expect(developmentService).toContain("'Land development submission'");
+    expect(developmentService).toContain("'Land development approval'");
+    expect(developmentService).toContain("'Land development publication'");
+    expect(eligibility).toContain("'land_vertical_deferred'");
+    expect(eligibility).toContain("ne(developments.developmentType, 'land')");
   });
 
   it('removes blanket publisher mutation and routes publication through the service gate', () => {
