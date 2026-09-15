@@ -21,7 +21,7 @@ vi.mock('@/layouts/HomeLayout', () => ({
   HomeLayout: ({ children }: { children: ReactNode }) => <>{children}</>,
 }));
 
-import SubscriptionPlans from './SubscriptionPlans';
+import SubscriptionPlans, { CommercialSubscriptionPlans } from './SubscriptionPlans';
 
 const agentLaunchAccess = {
   productId: 'plan:agent_launch_access',
@@ -75,11 +75,32 @@ describe('SubscriptionPlans preparation-only onboarding', () => {
     });
   });
 
-  it('routes a public commercial CTA into preparation without presenting an invoice action', () => {
+  it('shows only role-specific preparation paths without loading public commercial products', () => {
     render(<SubscriptionPlans />);
 
-    expect(screen.getByText(/Preparation-only onboarding/i)).toBeInTheDocument();
+    expect(screen.getByTestId('subscription-plans-preparation')).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', {
+        name: 'Prepare your Property Listify workspace before commercial activation.',
+      }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Preparation-only onboarding')).toBeInTheDocument();
+    expect(screen.queryByText('Agent Launch Access')).not.toBeInTheDocument();
+    expect(screen.queryByText('R499')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /invoice/i })).not.toBeInTheDocument();
+    expect(catalogMock).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Start Agent preparation' }));
+
+    expect(setLocationMock).toHaveBeenCalledWith('/advertise/sell/agents');
+  });
+
+  it('retains the catalog presentation for a separately enabled commercial runtime', () => {
+    render(<CommercialSubscriptionPlans />);
+
+    expect(screen.getByRole('heading', { name: 'Commercial products' })).toBeInTheDocument();
+    expect(screen.getByText('Agent Launch Access')).toBeInTheDocument();
+    expect(catalogMock).toHaveBeenCalled();
 
     fireEvent.click(screen.getByRole('button', { name: 'Prepare workspace' }));
 

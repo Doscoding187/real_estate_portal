@@ -111,6 +111,20 @@ test.describe('pre-payment onboarding browser acceptance', () => {
       'href',
       '/advertise/sell/developers',
     );
+
+    await page.goto('/subscription-plans');
+    await expect(
+      page.getByRole('heading', {
+        name: 'Prepare your Property Listify workspace before commercial activation.',
+      }),
+    ).toBeVisible();
+    await expect(page.getByText('Preparation-only onboarding')).toBeVisible();
+    await expect(page.getByText('Agent Launch Access', { exact: true })).toHaveCount(0);
+    await expect(page.getByText(/90-Day Launch Access/i)).toHaveCount(0);
+    await expect(page.getByText(/manual EFT/i)).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Start Agent preparation' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Start Agency preparation' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Start Developer preparation' })).toBeVisible();
   });
 
   test('routes the public Agent entry point into truthful preparation onboarding', async ({
