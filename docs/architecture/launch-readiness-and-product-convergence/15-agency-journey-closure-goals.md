@@ -1088,6 +1088,28 @@ The correction preserves the existing Developer and organisation authority
 checks. It does not create authoring access, commercial activation, payment,
 entitlement mutation, publication, provider delivery, or a protected release.
 
+### Direct administrator review-route authority follow-up — 2026-09-16
+
+The same direct-route audit found that `/admin/review/:id` mounted the private
+reviewer workspace outside the shared client role boundary. Its server listing
+read still required authentication and content custody, and its approve/reject
+actions still required `super_admin`; this was an inconsistent client authority
+surface, not evidence of a server privilege bypass.
+
+Commit [`ddbb7e58`](https://github.com/Doscoding187/real_estate_portal/commit/ddbb7e5893d2bd65361103f227887fd4c1f2e9b1)
+puts the retained URL behind `RequireRole` for `super_admin`, using contextual
+sign-in so a valid reviewer returns to the exact requested review URL. Focused
+source and role-boundary coverage passed **3 files / 19 tests**. The governed
+browser direct-URL proof passed, and the complete governed pre-payment suite
+passed **10 tests**. Typecheck, static authority **35 files / 295 tests**,
+`git diff --check`, and final authority status passed on the exact task-owned
+target at migration head `0090`, with no incomplete attempts. Targeted ESLint
+had no errors; the known unrelated `App.tsx` warnings remain.
+
+This is a route-boundary correction. It does not change agency membership,
+listing custody, commercial entitlement, publication, lead handling, Land
+containment, payment, provider configuration, or protected-release state.
+
 ### Shared public advertising and Developer preparation-entry follow-up — 2026-09-15
 
 The role-specific public pages alone did not close the anonymous entry surface.
