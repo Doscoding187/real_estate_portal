@@ -42,9 +42,6 @@ const baseAgent = {
   areasServed: JSON.stringify([
     { canonicalLocationId: 'suburb:501', label: 'Bryanston, Sandton, Gauteng' },
   ]),
-  agencyName: null,
-  agencyLogo: null,
-  agencyVerified: null,
 };
 
 describe('agents serving location authority', () => {
@@ -72,16 +69,13 @@ describe('agents serving location authority', () => {
     });
   });
 
-  it('excludes an unentitled solo agent affiliated with an unverified agency', async () => {
-    const { db } = makeQueueDb([
-      SUBURB_ROW,
-      [{ ...baseAgent, userId: 71, isVerified: 0, agencyVerified: 0 }],
-    ]);
+  it('excludes an unentitled agent without a verified current agency membership', async () => {
+    const { db } = makeQueueDb([SUBURB_ROW, [{ ...baseAgent, userId: 71, isVerified: 0 }], [], []]);
     const result = await findAgentsServingLocation(db as never, 'suburb', 501);
     expect(result).toEqual([]);
   });
 
-  it('includes an unbadged agent whose agency is verified', async () => {
+  it('includes an unbadged agent whose current canonical membership belongs to a verified agency', async () => {
     const { db } = makeQueueDb([
       SUBURB_ROW,
       [
@@ -89,9 +83,25 @@ describe('agents serving location authority', () => {
           ...baseAgent,
           userId: 72,
           isVerified: 0,
-          agencyName: 'North Star Realty',
-          agencyLogo: 'northstar.png',
-          agencyVerified: 1,
+        },
+      ],
+      [],
+      [
+        {
+          id: 901,
+          agentId: 33,
+          agencyId: 81,
+          status: 'active',
+          effectiveFrom: null,
+          effectiveTo: null,
+        },
+      ],
+      [
+        {
+          id: 81,
+          name: 'North Star Realty',
+          logo: 'northstar.png',
+          isVerified: 1,
         },
       ],
     ]);
@@ -129,6 +139,8 @@ describe('agents serving location authority', () => {
     expect(source).toContain("JSON_OBJECT('canonicalLocationId'");
     expect(source).not.toContain('LOWER(${agents.areasServed}) LIKE');
     expect(source).not.toContain('splitTextList(agent.areasServed)');
+    expect(source).not.toContain('leftJoin(agencies, eq(agents.agencyId, agencies.id))');
+    expect(source).toContain('listCurrentActiveAgencyMembershipsByAgentId');
   });
 
   it('returns nothing for an unknown or retired location', async () => {

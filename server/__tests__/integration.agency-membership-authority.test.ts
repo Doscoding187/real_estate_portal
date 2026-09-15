@@ -9,7 +9,8 @@ const priorJwtSecret = vi.hoisted(() => {
   return prior;
 });
 import { randomUUID } from 'node:crypto';
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray, ne } from 'drizzle-orm';
+import { encodeCanonicalLocationId } from '../../shared/locationAuthority';
 
 const describeWithDb: typeof describe = process.env.DATABASE_URL
   ? describe
@@ -29,6 +30,7 @@ import {
   plans,
   properties,
   showings,
+  suburbs,
   subscriptions,
   users,
 } from '../../drizzle/schema';
@@ -36,7 +38,10 @@ import {
   listCurrentAgencyMembershipsForAgent,
   maintainAgencyAgentMembership,
 } from '../services/agencyMembershipService';
-import { resolveCurrentAgencyAffiliation } from '../services/agentPublicProfileService';
+import {
+  findAgentsServingLocation,
+  resolveCurrentAgencyAffiliation,
+} from '../services/agentPublicProfileService';
 import { agentOnboardingService } from '../services/agentOnboardingService';
 import { agentProfileSchema } from '../routes/agentOnboarding';
 import { createListing } from '../db';
@@ -450,6 +455,44 @@ describeWithDb('canonical membership maintenance (atomic unique-pair authority)'
     expect(profile.agencyId).toBeNull();
     expect(result.profile?.agencyId).toBeNull();
     expect(await listCurrentAgencyMembershipsForAgent(db, agentId)).toHaveLength(0);
+  });
+
+  it('does not recommend a suspended member through retained agency profile affiliation', async () => {
+    const agencyId = await insertAgency('PublicRecommendation');
+    const memberUserId = await insertUser('PublicRecommendationMember', 'agent');
+    const [location] = await db
+      .select({ id: suburbs.id })
+      .from(suburbs)
+      .where(ne(suburbs.status, 'retired'))
+      .limit(1);
+    if (!location) throw new Error('Canonical active suburb reference data is required.');
+
+    const agentId = await insertAgentProfile(memberUserId, agencyId, {
+      areasServed: JSON.stringify([
+        {
+          canonicalLocationId: encodeCanonicalLocationId('suburb', Number(location.id)),
+          label: 'Canonical public recommendation fixture',
+        },
+      ]),
+    });
+    await maintainAgencyAgentMembership(db, { agencyId, agentId, status: 'active' });
+
+    await expect(findAgentsServingLocation(db, 'suburb', Number(location.id))).resolves.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: agentId, agencyName: expect.stringContaining('Agency') }),
+      ]),
+    );
+
+    await maintainAgencyAgentMembership(db, { agencyId, agentId, status: 'suspended' });
+
+    // Suspension deliberately retains historical projection fields. Public
+    // recommendations must derive agency eligibility from current canonical
+    // membership, just like public-property lead custody does.
+    const [retainedProfile] = await db.select().from(agents).where(eq(agents.id, agentId)).limit(1);
+    expect(retainedProfile.agencyId).toBe(agencyId);
+
+    const recommendations = await findAgentsServingLocation(db, 'suburb', Number(location.id));
+    expect(recommendations.map(recommendation => recommendation.id)).not.toContain(agentId);
   });
 });
 

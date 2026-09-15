@@ -5,7 +5,10 @@ import { slugify } from '../_core/utils/slug';
 import { isPaidSubscriptionRowEntitled } from './planAccessService';
 import { resolvePublicPropertyEligibilities } from './publicPropertyEligibilityService';
 import { toPublicPropertyDetailDto } from './publicPropertyDto';
-import { isCurrentActiveAgencyMembership } from './agencyMembershipService';
+import {
+  isCurrentActiveAgencyMembership,
+  listCurrentActiveAgencyMembershipsByAgentId,
+} from './agencyMembershipService';
 import {
   parseAgentCoverageAreas,
   parseCanonicalAgentCoverageLocationId,
@@ -443,9 +446,13 @@ type AgentAreaRecommendationRow = {
   profileImage: string | null;
   isVerified: number;
   areasServed: string | null;
-  agencyName: string | null;
-  agencyLogo: string | null;
-  agencyVerified: number | null;
+};
+
+type AgentAreaRecommendationAgency = {
+  id: number;
+  name: string;
+  logo: string | null;
+  isVerified: number;
 };
 
 async function loadPersonallyEntitledAgentUserIds(
@@ -485,10 +492,12 @@ async function loadPersonallyEntitledAgentUserIds(
 /**
  * Approved agents whose declared canonical coverage identity exactly matches
  * the requested canonical location and who remain commercially receivable:
- * an active personal agent entitlement, or affiliation with a verified agency.
+ * an active personal agent entitlement, or a current canonical membership in
+ * a verified agency.
  *
  * Mirrors the lead-custody eligibility truth. Matching uses the typed stored
- * identity only; no label, partial-text, or inferred-location fallback exists.
+ * identity only; no label, partial-text, inferred-location, or historical
+ * profile-affiliation fallback exists.
  */
 export async function findAgentsServingLocation(
   db: any,
@@ -518,12 +527,8 @@ export async function findAgentsServingLocation(
       profileImage: agents.profileImage,
       isVerified: agents.isVerified,
       areasServed: agents.areasServed,
-      agencyName: agencies.name,
-      agencyLogo: agencies.logo,
-      agencyVerified: agencies.isVerified,
     })
     .from(agents)
-    .leftJoin(agencies, eq(agents.agencyId, agencies.id))
     .where(
       and(
         APPROVED_AGENT,
@@ -551,23 +556,56 @@ export async function findAgentsServingLocation(
     exactClaimAgents.map(agent => Number(agent.userId)).filter(userId => userId > 0),
   );
 
+  // An agent's profile affiliation is historical/audit projection only. Public
+  // recommendation eligibility and branding must follow exactly one current
+  // canonical membership, otherwise a suspended former member can remain
+  // publicly represented as an agency practitioner.
+  const currentMembershipsByAgentId = await listCurrentActiveAgencyMembershipsByAgentId(
+    db,
+    exactClaimAgents.map(agent => Number(agent.id)),
+  );
+  const currentAgencyIds = [
+    ...new Set(
+      [...currentMembershipsByAgentId.values()]
+        .map(membership => Number(membership.agencyId))
+        .filter(agencyId => Number.isSafeInteger(agencyId) && agencyId > 0),
+    ),
+  ];
+  const currentAgencies: AgentAreaRecommendationAgency[] =
+    currentAgencyIds.length === 0
+      ? []
+      : await db
+          .select({
+            id: agencies.id,
+            name: agencies.name,
+            logo: agencies.logo,
+            isVerified: agencies.isVerified,
+          })
+          .from(agencies)
+          .where(inArray(agencies.id, currentAgencyIds));
+  const agencyById = new Map(currentAgencies.map(agency => [Number(agency.id), agency]));
+
   return exactClaimAgents
-    .filter(
-      agent =>
-        personallyEntitled.has(Number(agent.userId)) ||
-        Number(agent.agencyVerified || 0) === 1,
-    )
-    .slice(0, 8)
-    .map(agent => ({
-      id: Number(agent.id),
-      slug: buildAgentPublicSlug({ id: Number(agent.id), slug: agent.slug }),
-      firstName: agent.firstName || '',
-      lastName: agent.lastName || '',
-      profileImage: agent.profileImage ?? null,
-      agencyName: Number(agent.agencyVerified || 0) === 1 ? agent.agencyName ?? null : null,
-      agencyLogoUrl: Number(agent.agencyVerified || 0) === 1 ? agent.agencyLogo ?? null : null,
-      isVerified: Number(agent.isVerified || 0) === 1,
-    }));
+    .map(agent => {
+      const membership = currentMembershipsByAgentId.get(Number(agent.id));
+      const agency = membership ? agencyById.get(Number(membership.agencyId)) : null;
+      const hasVerifiedCurrentAgency = Number(agency?.isVerified || 0) === 1;
+      const hasPersonalEntitlement = personallyEntitled.has(Number(agent.userId));
+      if (!hasPersonalEntitlement && !hasVerifiedCurrentAgency) return null;
+
+      return {
+        id: Number(agent.id),
+        slug: buildAgentPublicSlug({ id: Number(agent.id), slug: agent.slug }),
+        firstName: agent.firstName || '',
+        lastName: agent.lastName || '',
+        profileImage: agent.profileImage ?? null,
+        agencyName: hasVerifiedCurrentAgency ? (agency?.name ?? null) : null,
+        agencyLogoUrl: hasVerifiedCurrentAgency ? (agency?.logo ?? null) : null,
+        isVerified: Number(agent.isVerified || 0) === 1,
+      } satisfies AgentAreaRecommendationDto;
+    })
+    .filter((agent): agent is AgentAreaRecommendationDto => agent !== null)
+    .slice(0, 8);
 }
 
 /**
