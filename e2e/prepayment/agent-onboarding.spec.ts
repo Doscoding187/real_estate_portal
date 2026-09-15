@@ -284,6 +284,19 @@ test.describe('pre-payment onboarding browser acceptance', () => {
     await page.getByRole('button', { name: 'Complete Setup' }).click();
     await expect(page).toHaveURL(/\/agent\/dashboard/);
 
+    await page.goto('/agent/select-package');
+    await expect(
+      page.getByRole('heading', {
+        name: 'Prepare your Agent workspace before commercial activation.',
+      }),
+    ).toBeVisible();
+    await expect(page.getByText('Preparation-only onboarding')).toBeVisible();
+    await expect(page.getByText('Agent Launch Access', { exact: true })).toHaveCount(0);
+    await expect(page.getByText(/manual EFT/i)).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Continue Agent setup' })).toBeVisible();
+    await page.getByRole('button', { name: 'Open preparation workspace' }).click();
+    await expect(page).toHaveURL(/\/agent\/dashboard/);
+
     // This is the intentional pre-payment state: profile and private-draft
     // preparation work are available, while submission and marketplace
     // publishing remain behind commercial activation.

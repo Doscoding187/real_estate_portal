@@ -12,8 +12,8 @@ import { Progress } from '@/components/ui/progress';
 import { ArrowLeft, ArrowRight, CheckCircle2, Upload, X } from 'lucide-react';
 import { LocationAutocomplete } from '@/components/location/LocationAutocomplete';
 import { apiFetch } from '@/lib/api';
-import { getAgentJourneyAction } from '@/lib/agentJourney';
 import type { AgentOnboardingStatus } from '@/hooks/useAgentOnboardingStatus';
+import { COMMERCIAL_ACTIVATION_STATE } from '@shared/commercialActivation';
 import {
   parseCanonicalAgentCoverageLocationId,
   type AgentCoverageArea,
@@ -309,11 +309,11 @@ export function AgentSetupWizard() {
       setLocation('/agent/dashboard');
       return;
     }
-    const journeyAction = getAgentJourneyAction(onboardingStatus);
-
     toast.success(
-      journeyAction.href === '/agent/select-package'
-        ? 'Your professional profile is ready. Activate Launch Access to start publishing.'
+      onboardingStatus?.recommendedNextStep === 'select_package'
+        ? COMMERCIAL_ACTIVATION_STATE.enabled
+          ? 'Your professional profile is ready. Activate Launch Access to start publishing.'
+          : 'Your professional profile is ready. Continue preparing private inventory; publishing follows approved commercial activation.'
         : result.isPublic
           ? 'Your public profile is now live. Your workspace is ready for the next step.'
           : 'Profile completed. Public publishing is pending approval.',

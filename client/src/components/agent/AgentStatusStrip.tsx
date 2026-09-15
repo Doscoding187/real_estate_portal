@@ -4,6 +4,7 @@ import { ShieldCheck, ShieldQuestion, ShieldX, CreditCard } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { apiFetch } from '@/lib/api';
 import { getAgentJourneyAction } from '@/lib/agentJourney';
+import { COMMERCIAL_ACTIVATION_STATE } from '@shared/commercialActivation';
 import type { AgentRecommendedNextStep } from '@shared/agentJourney';
 
 type StatusPayload = {
@@ -76,8 +77,9 @@ export function AgentStatusStrip() {
     cancelled: 'Launch Access cancelled',
     suspended: 'Launch Access suspended',
   };
-  const commercialLabel =
-    status.recommendedNextStep === 'await_agency_activation'
+  const commercialLabel = !COMMERCIAL_ACTIVATION_STATE.enabled
+    ? 'Preparation-only onboarding'
+    : status.recommendedNextStep === 'await_agency_activation'
       ? 'Agency Launch Access pending'
       : (paidStates[status.subscriptionStatus ?? ''] ??
         (status.packageSelected ? 'Commercial term in progress' : 'Launch Access not started'));

@@ -339,7 +339,7 @@ function AgentManualEftPanel({
   );
 }
 
-export default function AgentPackageSelection() {
+export function CommercialAgentPackageSelection() {
   const [, setLocation] = useLocation();
   const search = useSearch();
   const { user, loading } = useAuth({ redirectOnUnauthenticated: true });
@@ -395,7 +395,7 @@ export default function AgentPackageSelection() {
         if (cancelled) return;
 
         setStatus(result);
-        const journeyAction = getAgentJourneyAction(result);
+        const journeyAction = getAgentJourneyAction(result, { commercialActivationEnabled: true });
         if (journeyAction.href !== '/agent/select-package') {
           setLocation(journeyAction.href);
         }
@@ -715,5 +715,61 @@ export default function AgentPackageSelection() {
         </section>
       </main>
     </div>
+  );
+}
+
+function PreparationAgentPackageSelection() {
+  const [, setLocation] = useLocation();
+
+  return (
+    <div
+      className="min-h-screen bg-[#f7f9fc] px-6 py-12 text-slate-950 sm:px-8 lg:px-10"
+      data-testid="agent-package-preparation"
+    >
+      <main className="mx-auto w-full max-w-3xl">
+        <div className="rounded-[28px] border border-slate-200 bg-white p-7 shadow-sm sm:p-10">
+          <Badge className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-blue-700 hover:bg-blue-50">
+            <Briefcase className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />
+            Agent preparation
+          </Badge>
+          <h1 className="mt-6 font-serif text-4xl font-semibold tracking-[-0.04em] text-slate-950 sm:text-5xl">
+            Prepare your Agent workspace before commercial activation.
+          </h1>
+          <p className="mt-5 max-w-2xl text-base leading-8 text-slate-600 sm:text-lg">
+            Complete your professional presence and prepare private inventory now. Commercial
+            products, invoices, payment proof, and marketplace publishing remain unavailable until
+            approved commercial activation.
+          </p>
+
+          <div className="mt-7 max-w-2xl">
+            <CommercialActivationNotice />
+          </div>
+
+          <Card className="mt-8 border-slate-200 shadow-none">
+            <CardContent className="p-6">
+              <h2 className="text-xl font-semibold text-slate-950">Continue private preparation</h2>
+              <p className="mt-2 text-sm leading-6 text-slate-600">
+                Update your Agent setup or return to your workspace to continue preparing work for
+                the later commercial activation step.
+              </p>
+              <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+                <Button onClick={() => setLocation('/agent/setup')}>Continue Agent setup</Button>
+                <Button variant="outline" onClick={() => setLocation('/agent/dashboard')}>
+                  Open preparation workspace
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </main>
+    </div>
+  );
+}
+
+export default function AgentPackageSelection() {
+  return COMMERCIAL_ACTIVATION_STATE.enabled ? (
+    <CommercialAgentPackageSelection />
+  ) : (
+    <PreparationAgentPackageSelection />
   );
 }

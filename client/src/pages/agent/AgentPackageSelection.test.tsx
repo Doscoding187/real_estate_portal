@@ -56,7 +56,7 @@ vi.mock('sonner', () => ({
   },
 }));
 
-import AgentPackageSelection from './AgentPackageSelection';
+import AgentPackageSelection, { CommercialAgentPackageSelection } from './AgentPackageSelection';
 
 const product = {
   productId: 'plan:agent_launch_access',
@@ -156,23 +156,28 @@ beforeEach(() => {
 });
 
 describe('Agent pre-payment preparation', () => {
-  it('returns the stakeholder to the preparation workspace without requesting an invoice', async () => {
+  it('keeps the direct package route in preparation without loading commercial data', () => {
     render(<AgentPackageSelection />);
 
-    const preparationButton = await screen.findByRole('button', {
-      name: /Return to preparation workspace/i,
-    });
-    fireEvent.click(preparationButton);
+    expect(screen.getByTestId('agent-package-preparation')).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', {
+        name: 'Prepare your Agent workspace before commercial activation.',
+      }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Preparation-only onboarding')).toBeInTheDocument();
+    expect(screen.queryByText('Agent Launch Access')).not.toBeInTheDocument();
+    expect(screen.queryByText(/manual EFT/i)).not.toBeInTheDocument();
+    expect(catalogMock).not.toHaveBeenCalled();
+    expect(apiFetchMock).not.toHaveBeenCalled();
+    expect(agentWorkspaceMock).not.toHaveBeenCalled();
+    expect(submitProofMock).not.toHaveBeenCalled();
 
-    await waitFor(() => {
-      expect(setLocationMock).toHaveBeenCalledWith('/agent/dashboard');
-    });
+    fireEvent.click(screen.getByRole('button', { name: 'Continue Agent setup' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Open preparation workspace' }));
 
-    expect(apiFetchMock).not.toHaveBeenCalledWith(
-      '/agent/request-launch-access-invoice',
-      expect.anything(),
-    );
-    expect(screen.getByText(/Preparation-only onboarding/i)).toBeInTheDocument();
+    expect(setLocationMock).toHaveBeenNthCalledWith(1, '/agent/setup');
+    expect(setLocationMock).toHaveBeenNthCalledWith(2, '/agent/dashboard');
   });
 
   it('lands a waiting payer on the dashboard while finance verifies the proof', async () => {
@@ -194,7 +199,7 @@ describe('Agent pre-payment preparation', () => {
       return Promise.resolve({});
     });
 
-    render(<AgentPackageSelection />);
+    render(<CommercialAgentPackageSelection />);
 
     await waitFor(() => {
       expect(setLocationMock).toHaveBeenCalledWith('/agent/dashboard');
@@ -225,7 +230,7 @@ describe('Agent pre-payment preparation', () => {
       return Promise.resolve({});
     });
 
-    render(<AgentPackageSelection />);
+    render(<CommercialAgentPackageSelection />);
 
     await waitFor(() => {
       expect(setLocationMock).toHaveBeenCalledWith('/agent/dashboard');
@@ -278,7 +283,7 @@ describe('Agent pre-payment preparation', () => {
       return Promise.resolve({});
     });
 
-    render(<AgentPackageSelection />);
+    render(<CommercialAgentPackageSelection />);
 
     expect(await screen.findByText(/Preparation-only onboarding/i)).toBeInTheDocument();
     expect(

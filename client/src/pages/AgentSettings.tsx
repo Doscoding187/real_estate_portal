@@ -17,6 +17,7 @@ import { toast } from 'sonner';
 import { trpc } from '@/lib/trpc';
 import { useAgentOnboardingStatus } from '@/hooks/useAgentOnboardingStatus';
 import { getAgentJourneyAction } from '@/lib/agentJourney';
+import { COMMERCIAL_ACTIVATION_STATE } from '@shared/commercialActivation';
 import { LocationAutocomplete } from '@/components/location/LocationAutocomplete';
 import {
   parseCanonicalAgentCoverageLocationId,
@@ -218,12 +219,16 @@ export default function AgentSettings() {
     ? 'Agent Launch Access'
     : hasSelectedCommercialTerm
       ? 'Agent Launch Access activation'
-      : 'No active commercial term';
+      : COMMERCIAL_ACTIVATION_STATE.enabled
+        ? 'No active commercial term'
+        : 'Preparation-only onboarding';
   const currentTierDescription = hasActiveCommercialTerm
     ? 'Once-off 90-day access to the supported Agent workspace.'
     : hasSelectedCommercialTerm
       ? journeyAction.description
-      : 'Start Agent Launch Access to publish inventory and receive enquiries.';
+      : COMMERCIAL_ACTIVATION_STATE.enabled
+        ? 'Start Agent Launch Access to publish inventory and receive enquiries.'
+        : 'Complete your professional presence and prepare private inventory. Commercial activation and publishing remain unavailable until the approved activation path opens.';
   const trialEndsAt = status?.entitlements?.trialStatusDetail?.trialEndsAt
     ? new Date(status.entitlements.trialStatusDetail.trialEndsAt)
     : status?.trialEndsAt
@@ -469,7 +474,9 @@ export default function AgentSettings() {
                         onLocationSelect={location => {
                           const nextArea = coverageAreaFromLocation(location as LocationOption);
                           if (!nextArea) {
-                            toast.error('Choose a current location from the Property Listify suggestions.');
+                            toast.error(
+                              'Choose a current location from the Property Listify suggestions.',
+                            );
                             return;
                           }
                           setProfileData(prev => ({

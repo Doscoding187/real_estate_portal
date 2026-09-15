@@ -2,6 +2,7 @@ import type {
   AgentRecommendedNextStep,
   AgentSubscriptionDisplayStatus,
 } from '@shared/agentJourney';
+import { COMMERCIAL_ACTIVATION_STATE } from '@shared/commercialActivation';
 
 export type AgentJourneyStatus = {
   recommendedNextStep: AgentRecommendedNextStep;
@@ -18,6 +19,20 @@ export type AgentJourneyAction = {
   waiting?: boolean;
 };
 
+type AgentJourneyOptions = {
+  commercialActivationEnabled?: boolean;
+};
+
+function preparationAction(): AgentJourneyAction {
+  return {
+    href: '/agent/dashboard',
+    label: 'Continue preparation',
+    title: 'Prepare your Agent workspace',
+    description:
+      'Commercial activation is not available yet. Continue preparing your professional presence and private inventory; publishing becomes available after approved commercial activation.',
+  };
+}
+
 /**
  * Every Agent surface uses this presentation of the server-decided journey
  * state. This prevents a finished profile from being sent back to setup by one
@@ -25,7 +40,11 @@ export type AgentJourneyAction = {
  */
 export function getAgentJourneyAction(
   status: { recommendedNextStep?: AgentRecommendedNextStep } | null | undefined,
+  options: AgentJourneyOptions = {},
 ): AgentJourneyAction {
+  const commercialActivationEnabled =
+    options.commercialActivationEnabled ?? COMMERCIAL_ACTIVATION_STATE.enabled;
+
   switch (status?.recommendedNextStep) {
     case 'verify_email':
       return {
@@ -52,6 +71,7 @@ export function getAgentJourneyAction(
           'Your core details are in place. Complete your profile so your public presence is ready for Launch Access.',
       };
     case 'complete_payment':
+      if (!commercialActivationEnabled) return preparationAction();
       return {
         href: '/agent/select-package',
         label: 'Complete payment',
@@ -87,6 +107,7 @@ export function getAgentJourneyAction(
         waiting: true,
       };
     case 'renew_launch_access':
+      if (!commercialActivationEnabled) return preparationAction();
       return {
         href: '/agent/select-package',
         label: 'Renew Launch Access',
@@ -110,6 +131,7 @@ export function getAgentJourneyAction(
       };
     case 'select_package':
     default:
+      if (!commercialActivationEnabled) return preparationAction();
       return {
         href: '/agent/select-package',
         label: 'Activate Launch Access',
