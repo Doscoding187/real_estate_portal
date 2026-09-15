@@ -1301,12 +1301,34 @@ function getViewingQueueStatus(showing: typeof showings.$inferSelect) {
   return status;
 }
 
+/**
+ * `showings.scheduledAt` is stored as UTC MySQL timestamp text.  The driver
+ * returns that text without an offset, so returning it directly makes every
+ * browser (and a server-side `new Date`) interpret the instant in its host
+ * timezone.  Keep the persisted value untouched and make the API boundary
+ * explicit instead.
+ */
+function viewingApiTimestamp(value: string | Date | null | undefined) {
+  if (value == null) return null;
+  if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value.toISOString();
+
+  const raw = String(value).trim();
+  if (!raw) return null;
+
+  if (/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?$/.test(raw)) {
+    const parsed = new Date(`${raw.replace(' ', 'T')}Z`);
+    if (!Number.isNaN(parsed.getTime())) return parsed.toISOString();
+  }
+
+  return raw;
+}
+
 function mapViewingRow(row: any) {
   const showing = row.showing;
   const notes = parseViewingNotes(showing.notes);
   const feedback = parseViewingFeedback(showing.feedback);
   const status = normalizeViewingStatus(showing.status);
-  const scheduledAt = showing.scheduledAt;
+  const scheduledAt = viewingApiTimestamp(showing.scheduledAt);
   const now = Date.now();
   const scheduledTime = scheduledAt ? new Date(scheduledAt).getTime() : NaN;
   const isUpcoming = Number.isFinite(scheduledTime) && scheduledTime >= now;

@@ -356,6 +356,8 @@ describeWithDb('agency viewings and My Day persisted workflow', () => {
 
   it('creates canonical agency viewings, enforces tenancy, and allows same-agency agents to view them', async () => {
     const seed = await seedAgencyFixture('tenancy');
+    const scheduledDay = agencyDateKey(new Date(Date.now() + 48 * 60 * 60 * 1000));
+    const scheduledAt = jhbIso(scheduledDay, '00:30:00');
     const adminCaller = createCaller({
       id: seed.adminUserId,
       role: 'agency_admin',
@@ -376,7 +378,7 @@ describeWithDb('agency viewings and My Day persisted workflow', () => {
       leadId: seed.leadId,
       listingId: seed.listingId,
       agentId: seed.agentId,
-      scheduledAt: futureIso(4),
+      scheduledAt,
       status: 'awaiting_confirmation',
       location: 'Show unit',
       notes: 'Bring FICA checklist',
@@ -394,6 +396,8 @@ describeWithDb('agency viewings and My Day persisted workflow', () => {
         location: 'Show unit',
       }),
     );
+    expect(detail.scheduledAt).toBe(scheduledAt);
+    expect(agencyDateKey(new Date(detail.scheduledAt))).toBe(scheduledDay);
     expect(detail.creator).toEqual(expect.objectContaining({ id: seed.adminUserId }));
 
     const agentVisible = await agentCaller.getViewings({ status: 'all', limit: 20 });
