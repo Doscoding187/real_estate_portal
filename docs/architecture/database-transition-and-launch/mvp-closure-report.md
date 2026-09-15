@@ -1,9 +1,9 @@
 # Post-merge MVP closure review packet
 
-Date: 2026-09-15 (canonical private-work membership and inventory supplements, generic Developer-Land row and draft-containment supplements, transactional-email containment, governed pre-payment browser-acceptance, Commercial-workflow, and governed local-service-recovery addenda; canonical agent-coverage addendum; prior Goals 6–10, LRC-LAND-001, and LRC-SUPPORT-001 follow-ups dated 2026-09-14; original closure review dated 2026-09-13).
+Date: 2026-09-15 (canonical private-work, inventory, and operational-workspace membership supplements, generic Developer-Land row and draft-containment supplements, transactional-email containment, governed pre-payment browser-acceptance, Commercial-workflow, and governed local-service-recovery addenda; canonical agent-coverage addendum; prior Goals 6–10, LRC-LAND-001, and LRC-SUPPORT-001 follow-ups dated 2026-09-14; original closure review dated 2026-09-13).
 **Outcome: the local candidate supports controlled
 pre-payment onboarding; canonical billing and activation paths are contained,
-and Goals 1–10 agency membership, workspace, commercial-term, private-preparation,
+and Goals 1–10 agency membership, private-work/inventory/operational-workspace authority, commercial-term, private-preparation,
 review/publication, public-discovery, public-enquiry custody, CRM-continuity,
 first-cohort recovery, one consolidated agency operating acceptance, hard-deferred
 Land containment including generic Developer rows and drafts, canonical agent-coverage authority, governed browser proof of
@@ -56,6 +56,7 @@ protected environment.
 | Goal 1 authority correction (task branch)           | `cf1f93e6f2148a1fc434571475ecd9f18c646bfa`                                    |
 | Canonical private-work membership supplement (task branch) | `5f37d3d1c14130f9078a17ea267e951547e65564`                              |
 | Canonical agency-inventory scope supplement (task branch) | `0eaf2cc806d157f4e6b378721db48e69cef3ffb6`                              |
+| Canonical operational-workspace membership supplement (task branch) | `32ce7524b642519300a5ae6daddac5ae2c393486`                       |
 | Goal 2 workspace correction (task branch)           | `af9fd6f2`                                                                    |
 | Goal 3 commercial-term correction (task branch)     | `16a23cd9ab61cbc791f1b7e7941e62e53d1ecd7d`                                    |
 | Goal 4 listing-preparation evidence (task branch)   | `a403d31d7456aff837e6d6c5e73af8033cf1634b`                                    |
@@ -307,6 +308,46 @@ verification.
 No schema, migration, data repair, payment, entitlement, publication, provider,
 or protected operation changed. Pre-launch canonical listing ownership is the
 only supported agency-inventory authority.
+
+### Canonical operational-workspace membership supplement (2026-09-15)
+
+A continued exact-target membership audit found a third stale-projection
+admission route. After a canonical agency member was suspended, the historical
+`users.agencyId` and `agents.agencyId` projections intentionally remained for
+audit. `agency.getListingPerformance` used those retained values and the
+approved profile to admit the former member. The direct counterexample returned
+a complete private listing-performance snapshot after suspension, including the
+listing ID, price, operational metrics, and review boundary. The performance
+queue, commission-settlement view, and `getMyDay` had the same missing
+current-membership gate at their agency-workspace entry points.
+
+Commit [`32ce7524`](https://github.com/Doscoding187/real_estate_portal/commit/32ce7524b642519300a5ae6daddac5ae2c393486) adds one scoped agency-workspace
+actor guard. A non-manager agent must have an approved profile and one current
+canonical membership for the exact agency before the performance read, review,
+revision, queue, commission-settlement, or daily-work path proceeds. Agency
+manager authority retains its existing organisation path. The performance
+listing gate now receives that resolved actor rather than re-reading mutable
+profile affiliation.
+
+The first authority-wrapped regression deliberately failed before the correction:
+after suspension, `agency.getListingPerformance` resolved with a full snapshot.
+After the correction, the same real tRPC/database regression retains the stale
+profile projections but receives `FORBIDDEN` from performance, performance
+queue, commission settlements, and My Day. The combined authority-wrapped set
+passed **4 files / 20 tests**, including the existing persisted performance
+lifecycle (**1 file / 1 test**) and deal/commission workflow (**4 tests**), so
+active canonical-member behavior remains covered. The final focused rerun
+passed **2 files / 15 tests**. `pnpm check`,
+`pnpm test:db-authority:static`, targeted ESLint with zero errors (existing
+warnings only), and `git diff --check` passed.
+
+This establishes the fixed local authorization boundary only. The counterexample
+directly demonstrated private performance-data disclosure; the other three
+surfaces shared the missing entry gate and are now explicitly denied by the
+same regression. It does not claim hosted integration, production verification,
+external delivery, a payment/entitlement transition, or a protected operation.
+No schema, migration, target lifecycle, data repair, payment, entitlement,
+publication, provider, deployment, or credential change occurred.
 
 ## Target and data establishment
 
@@ -1025,8 +1066,8 @@ server-draft creation, publication, discovery, enquiry, and CRM slices.
    entitlement, and protected-release evidence exists. Controlled pre-payment
    onboarding may prepare identities and private drafts only. Do not replace
    this boundary with a free publishing entitlement or a privilege bypass.
-4. **L1 — integrate and host-verify the completed agency and Commercial-route
-   boundaries (LRC-AGY-001; LRC-COMMERCIAL-001):** Goal 10 proves the complete
+4. **L1 — integrate and host-verify the completed agency, membership, and Commercial-route
+   boundaries (LRC-AGY-001; LRC-MEM-001; LRC-COMMERCIAL-001):** Goal 10 proves the complete
    first-cohort agency journey locally, and `d1545579` keeps Commercial leads
    out of generic viewing flows before ordinary assignment. `e9909ab6` adds
    browser proof for agency-owner registration and pre-payment setup, including
@@ -1038,6 +1079,8 @@ server-draft creation, publication, discovery, enquiry, and CRM slices.
    listing/review/public-discovery/enquiry/CRM slices. One continuous browser
    path through owner registration, canonical invitation acceptance, and that
    member flow, plus hosted, provider, and production proof, remains absent;
+   `32ce7524` also closes the observed stale-membership operational-workspace
+   admission locally, but requires the same integration and hosted verification;
    senior review, integration, and controlled runtime acceptance remain
    required before any cohort is represented as live.
 5. **L1 — support/disclosure operation and external/protected operations:**
@@ -1090,7 +1133,7 @@ backend identities and a staffed GO/no-GO/recovery decision.
 ## Git and protected boundaries
 
 Application fixes are committed at `c6c9f133`, `bba390b0`, `c8c35fde`,
-`cf1f93e6`, canonical private-work membership correction `5f37d3d1`, canonical agency-inventory scope correction `0eaf2cc8`, `af9fd6f2`, `16a23cd9`, Goal 4 evidence/fixture correction
+`cf1f93e6`, canonical private-work membership correction `5f37d3d1`, canonical agency-inventory scope correction `0eaf2cc8`, canonical operational-workspace membership correction `32ce7524`, `af9fd6f2`, `16a23cd9`, Goal 4 evidence/fixture correction
 `a403d31d`, Goal 5 publication correction `74bff0f9`, Goal 6 public-discovery
 correction `9acfea2f`, Goals 7–8 CRM correction `c4df6600`, Goal 9
 platform-recovery correction `f9086ef4`, Goal 10 full acceptance `fbf592cc`,

@@ -155,6 +155,34 @@ pre-payment suite. The active-term invitation fixtures are isolated test
 semantics only. This qualification does not enable normal-runtime payment,
 entitlement, mail delivery, or production operation.
 
+### Goal 1 operational-workspace authority qualification — 2026-09-15
+
+A continued stale-membership audit found that the original Goal 1 correction,
+the private-work supplement, and the inventory supplement had not yet reached
+four agency operational entries. A suspended agent's retained historical
+profile affiliation still allowed `agency.getListingPerformance` to return a
+private listing-performance snapshot. The performance queue, commission
+settlements, and My Day had the same missing canonical-membership entry guard.
+
+Commit [`32ce7524`](https://github.com/Doscoding187/real_estate_portal/commit/32ce7524b642519300a5ae6daddac5ae2c393486) makes the resolved agency-workspace
+actor the common authority at those paths. An agent must now have an approved
+profile and one current canonical membership for the exact agency before
+performance reads, review/revision operations, queue access, commission
+settlements, or daily work proceed. Agency-manager authority remains unchanged.
+
+The first exact-target authority-wrapped run deliberately failed because the
+suspended agent received the performance snapshot. The corrected regression
+keeps both historical profile IDs, then proves `FORBIDDEN` for performance,
+queue, commission, and My Day after suspension. The combined authority-wrapped
+set passed **4 files / 20 tests**, including active-member persisted
+performance and commission workflow coverage, and the final focused rerun
+passed **2 files / 15 tests**. Typecheck, static database authority, targeted
+ESLint with zero errors, and `git diff --check` passed.
+
+This strengthens Goal 1's task-branch authority evidence. It does not prove
+hosted integration, a payment/entitlement transition, provider delivery, or
+production operation, and it does not change the settled pre-payment boundary.
+
 ## Goal 2 — Establish agency-member workspace authority
 
 **Outcome**
