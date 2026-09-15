@@ -7,7 +7,7 @@ and Goals 1–10 agency membership, private-work/inventory/operational-workspace
 review/publication, public-discovery, public-enquiry custody, CRM-continuity,
 first-cohort recovery, one consolidated agency operating acceptance, hard-deferred
 Land containment including generic Developer rows and drafts, canonical agent-coverage authority, governed browser proof of
-shared public advertising, Agent, Agency, and Developer preparation entry, and persisted Agent, Agency-owner, and pending Developer-organisation/private-draft pre-payment onboarding, agency preparation-state and
+shared public advertising, Agent, Agency, and Developer preparation entry, persisted Agent, Agency-owner, and pending Developer-organisation/private-draft pre-payment onboarding, and authorised Developer-organisation approval to professional presence without Launch Access or public projects, agency preparation-state and
 deferred-invitation-validity and queued-invitation-acceptance corrections, and Commercial generic-viewing
 and public-enquiry entitlement/custody boundary corrections and deployed transactional-email false-success containment are verified
 on the task branch. A bounded assisted-onboarding intake is also locally implemented;
@@ -84,6 +84,8 @@ protected environment.
 | Deployed transactional-email containment correction (task branch) | `3d2e01488755376486d96e2242f83d08895c8a62` |
 | Shared public-advertising and Developer preparation-entry correction (task branch) | `234ca6e4f2c4833f5784300a1edb9ee016f2c386` |
 | Developer pre-payment organisation/draft browser acceptance (task branch) | `9cd6d3e37163b22eab4aa3a82d90616906c14db0` |
+| Developer trust-control truthfulness correction (task branch) | `bb402332d3bbb2b82d26c060540c09d3cfb715e3` |
+| Developer pre-payment approval/payment-gate acceptance (task branch) | `589135cef7f48fe94076220e12b4ea07191e7ce9` |
 | Branch                                              | `verify/mvp-closure-post-577`                                                 |
 | Worktree                                            | `/home/edwardspc/Desktop/Dev/worktrees/property-listify-mvp-closure-post-577` |
 
@@ -1525,6 +1527,50 @@ a free publishing tier, or a Developer paid cohort; it does not make Developer
 approval, a paid operating journey, support operation, hosted integration, or a
 protected release ready.
 
+### Developer approval, professional presence, and trust-control truthfulness — 2026-09-15
+
+The next bounded audit separated two actions that the prior admin presentation
+incorrectly collapsed. `developer.adminApproveDeveloper` is the authorised
+review transition: it changes a pending Developer organisation to `approved`,
+marks its first-party Catalogue Publisher visible and contact-verified, and
+therefore establishes the approved professional presence contemplated by the
+pre-payment onboarding model. It does not create a subscription, invoice,
+payment, entitlement, published development, or new marketplace lead channel.
+The canonical public-development eligibility and publication-access checks
+still require an active paid Developer Launch Access term before a project can
+be public.
+
+The separate `developer.adminSetTrusted` action only persists the
+`isTrusted` profile signal that appears as the public **Trusted Partner**
+badge. Its former admin tooltip claimed that it “Bypasses manual review and
+publishes immediately,” although it neither approves an organisation nor
+changes commercial/publication state. Commit
+[`bb402332`](https://github.com/Doscoding187/real_estate_portal/commit/bb402332d3bbb2b82d26c060540c09d3cfb715e3)
+removes that false operational claim and states the actual boundary. Its
+focused client test passed **1 file / 1 test**, proving that the switch invokes
+only the trust mutation and does not invoke approval.
+
+Commit
+[`589135ce`](https://github.com/Doscoding187/real_estate_portal/commit/589135cef7f48fe94076220e12b4ea07191e7ce9)
+adds an authority-wrapped, persisted exact-target acceptance. It creates a
+verified Developer identity through the real protected procedure, proves a
+non-reviewer is denied, then has a super-admin reviewer approve it. Before
+approval, the profile is absent from both the direct public profile route and
+the public Developer search. After approval, the approved professional profile
+is discoverable as intended; `getDeveloperPublicationAccess` remains
+`eligible: false` with `missing_launch_access`, and the public-project result
+remains empty. The relevant authority run passed **3 files / 9 tests** with the
+public-profile and no-free-trial commercial contracts. `pnpm check`, targeted
+zero-error ESLint, `pnpm test:db-authority:static` (**35 files / 295 tests**),
+and final `pnpm db:authority:status` passed on the exact task-owned target.
+
+This proves a local identity-review-to-professional-presence slice. It does not
+prove a browser administrator session, customer acceptance of the public
+profile policy, a paid Developer operating journey, payments, entitlement
+activation, project publication, provider delivery, hosted operation, or a
+protected release. The authority-wrapped test's fixtures and clean-up operate
+only on the disposable task-owned database target.
+
 ## Ranked remaining blockers and authority handoff
 
 1. **L0 — integrate and independently verify the locally contained Land boundary (LRC-LAND-001):** `335838df` hard-deferred the specialist and generic-listing Land paths, `62ec0eed` closes the distinct generic Developer row authoring/public-discovery route, and `0280e9dd` closes generic Developer draft persistence. Land must remain unavailable to the controlled pre-payment onboarding cohort and public routes until integrated verification and a separately authorized Land commercial/acceptance slice exist.
@@ -1535,7 +1581,7 @@ protected release ready.
    entitlement, and protected-release evidence exists. Controlled pre-payment
    onboarding may prepare identities and private drafts only. Do not replace
    this boundary with a free publishing entitlement or a privilege bypass.
-4. **L1 — integrate and independently verify public preparation entry (LRC-ADVERTISE-001; LRC-AGENT-001; LRC-AGY-001):** `234ca6e4` makes `/advertise`, `/advertise/sell`, the homepage professional entry, and the public Developer landing agree with normal `preparation_only` runtime; `7c939831` and `02788ff2` retain the role-specific Agent and Agency corrections; `9cd6d3e3` browser-proves the pending Developer organisation/private-draft preparation slice. Developer approval and every paid-operation variation remain separate. Do not advertise paid cohorts before integration and the relevant hosted verification.
+4. **L1 — integrate and independently verify public preparation entry (LRC-ADVERTISE-001; LRC-AGENT-001; LRC-AGY-001; LRC-DEV-001):** `234ca6e4` makes `/advertise`, `/advertise/sell`, the homepage professional entry, and the public Developer landing agree with normal `preparation_only` runtime; `7c939831` and `02788ff2` retain the role-specific Agent and Agency corrections; `9cd6d3e3` browser-proves the pending Developer organisation/private-draft preparation slice; `589135ce` proves the separate authorised approval-to-professional-presence boundary preserves `missing_launch_access` and an empty public project set. Every paid-operation variation remains separate. Do not advertise paid cohorts before integration and the relevant hosted verification.
 5. **L1 — integrate and host-verify the completed agency, membership, and Commercial-route
    boundaries (LRC-AGY-001; LRC-MEM-001; LRC-COMMERCIAL-001):** Goal 10 proves the complete
    first-cohort agency journey locally, `d1545579` keeps Commercial leads out
