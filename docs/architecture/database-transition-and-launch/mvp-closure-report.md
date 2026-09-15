@@ -7,7 +7,7 @@ and Goals 1–10 agency membership, private-work/inventory/operational-workspace
 review/publication, public-discovery, public-enquiry custody, CRM-continuity,
 first-cohort recovery, one consolidated agency operating acceptance, hard-deferred
 Land containment including generic Developer rows and drafts, canonical agent-coverage authority, governed browser proof of
-shared public advertising, Agent, Agency, and Developer preparation entry, direct public commercial-plans and authenticated Agent/Developer commercial-route containment, persisted Agent, Agency-owner, and pending Developer-organisation/private-draft pre-payment onboarding, and authorised Developer-organisation approval to professional presence without Launch Access or public projects, agency preparation-state and
+shared public advertising, Agent, Agency, and Developer preparation entry, direct public commercial-plans and authenticated Agent, Agency, and Developer commercial-route containment, persisted Agent, Agency-owner, and pending Developer-organisation/private-draft pre-payment onboarding, and authorised Developer-organisation approval to professional presence without Launch Access or public projects, agency preparation-state and
 deferred-invitation-validity and queued-invitation-acceptance corrections, and Commercial generic-viewing
 and public-enquiry entitlement/custody boundary corrections and deployed transactional-email false-success containment are verified
 on the task branch. A bounded assisted-onboarding intake is also locally implemented;
@@ -88,6 +88,7 @@ protected environment.
 | Developer pre-payment approval/payment-gate acceptance (task branch) | `589135cef7f48fe94076220e12b4ea07191e7ce9` |
 | Direct commercial-plans public-route containment (task branch) | `32224b0ada4e34a1e9222d702d8fa46963bc88f2` |
 | Authenticated Developer plans containment (task branch) | `ada578a2ae2226df0497bb8769911fa668b85149` |
+| Authenticated Developer subscription-route containment (task branch) | `bb89b2b92ff421e54e9fe864e71112b2947b05f6` |
 | Authenticated Agent package-route containment (task branch) | `e1ccc2c8349b66887e8ab145cc772887f1322550` |
 | Authenticated Agency billing-route containment (task branch) | `d48544b9a6c33de954821cbf06c0cac33f6dc0af` |
 | Branch                                              | `verify/mvp-closure-post-577`                                                 |
@@ -1714,6 +1715,42 @@ mutate subscription/entitlement state, publish inventory, alter the canonical
 commercial catalog, access a provider, or change a protected environment. It
 is local task-branch evidence only and does not authorize a paid Agency cohort.
 
+### Authenticated Developer subscription-route containment — 2026-09-16
+
+The authenticated `/developer/subscription` route and its
+`/developer/settings/subscription` alias remained normal-runtime commercial
+presentation escapes. In `preparation_only` runtime, the reachable panel mounted
+subscription and billing-workspace data plus a payment-proof mutation, then
+rendered billing history, invoice, manual-EFT, and payment controls. A pending
+Developer was also redirected away from the safe route before it could continue
+preparing its organisation and private inventory.
+
+Commit
+[`bb89b2b9`](https://github.com/Doscoding187/real_estate_portal/commit/bb89b2b92ff421e54e9fe864e71112b2947b05f6)
+keeps the existing billing implementation as `CommercialDeveloperBillingPanel`
+behind the existing separately authorised enabled-state decision. The normal
+routes now show only the preparation notice, organisation-readiness context,
+and private-development actions; they do not mount the commercial data hooks or
+payment mutation. The pending-profile route guard admits these safe routes, so
+an otherwise verified Developer can continue private preparation rather than
+being redirected to the dashboard.
+
+Focused client coverage passed **4 files / 5 tests**, covering direct panel
+containment, both pending-profile route aliases, the retained plans boundary,
+and inactive workspace state. The governed Chromium pre-payment suite passed
+**8 tests**. Its real pending-Developer flow registers, verifies, submits
+organisation intake, opens `/developer/subscription`, confirms billing history,
+Developer invoice, and manual-EFT controls are absent, then creates and resumes
+a private development draft. `pnpm check`, targeted zero-error ESLint,
+`pnpm test:db-authority:static` (**35 files / 295 tests**), `git diff --check`,
+and final `pnpm db:authority:status` passed on the exact task-owned target at
+migration head `0090` with no incomplete attempts.
+
+This is a normal-runtime presentation and navigation correction only. It does
+not issue an invoice, accept a payment proof, mutate entitlement state, publish
+a development, access a provider, or change a protected environment. It is
+local task-branch evidence and does not authorize a paid Developer cohort.
+
 ## Ranked remaining blockers and authority handoff
 
 1. **L0 — integrate and independently verify the locally contained Land boundary (LRC-LAND-001):** `335838df` hard-deferred the specialist and generic-listing Land paths, `62ec0eed` closes the distinct generic Developer row authoring/public-discovery route, and `0280e9dd` closes generic Developer draft persistence. Land must remain unavailable to the controlled pre-payment onboarding cohort and public routes until integrated verification and a separately authorized Land commercial/acceptance slice exist.
@@ -1724,7 +1761,7 @@ is local task-branch evidence only and does not authorize a paid Agency cohort.
    entitlement, and protected-release evidence exists. Controlled pre-payment
    onboarding may prepare identities and private drafts only. Do not replace
    this boundary with a free publishing entitlement or a privilege bypass.
-4. **L1 — integrate and independently verify public preparation entry (LRC-ADVERTISE-001; LRC-AGENT-001; LRC-AGY-001; LRC-DEV-001):** `234ca6e4` makes `/advertise`, `/advertise/sell`, the homepage professional entry, and the public Developer landing agree with normal `preparation_only` runtime; `32224b0a` closes the direct `/subscription-plans` paid-catalog escape; `e1ccc2c8` closes the analogous authenticated Agent package page and shared unavailable-activation CTA escape; `d48544b9` closes the authenticated Agency Billing route; `ada578a2` closes the authenticated Developer plans escape and inactive-workspace activation CTA; `7c939831` and `02788ff2` retain the role-specific Agent and Agency corrections; `9cd6d3e3` browser-proves the pending Developer organisation/private-draft preparation slice; `589135ce` proves the separate authorised approval-to-professional-presence boundary preserves `missing_launch_access` and an empty public project set. Every paid-operation variation remains separate. Do not advertise paid cohorts before integration and the relevant hosted verification.
+4. **L1 — integrate and independently verify public preparation entry (LRC-ADVERTISE-001; LRC-AGENT-001; LRC-AGY-001; LRC-DEV-001):** `234ca6e4` makes `/advertise`, `/advertise/sell`, the homepage professional entry, and the public Developer landing agree with normal `preparation_only` runtime; `32224b0a` closes the direct `/subscription-plans` paid-catalog escape; `e1ccc2c8` closes the analogous authenticated Agent package page and shared unavailable-activation CTA escape; `d48544b9` closes the authenticated Agency Billing route; `ada578a2` closes the authenticated Developer plans escape and inactive-workspace activation CTA; `bb89b2b9` closes the authenticated `/developer/subscription` and `/developer/settings/subscription` billing-route escapes; `7c939831` and `02788ff2` retain the role-specific Agent and Agency corrections; `9cd6d3e3` browser-proves the pending Developer organisation/private-draft preparation slice; `589135ce` proves the separate authorised approval-to-professional-presence boundary preserves `missing_launch_access` and an empty public project set. Every paid-operation variation remains separate. Do not advertise paid cohorts before integration and the relevant hosted verification.
 5. **L1 — integrate and host-verify the completed agency, membership, and Commercial-route
    boundaries (LRC-AGY-001; LRC-MEM-001; LRC-COMMERCIAL-001):** Goal 10 proves the complete
    first-cohort agency journey locally, `d1545579` keeps Commercial leads out

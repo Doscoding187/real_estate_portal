@@ -997,6 +997,30 @@ and final complete suite passed. It is recorded as a corrected test diagnostic,
 not a database or product failure. This cross-cutting containment follow-up
 does not reopen Goals 1–10 or enable any commercial operation.
 
+### Authenticated Developer subscription-route follow-up — 2026-09-16
+
+The public Developer entry and `/developer/plans` correction did not contain the
+signed-in `/developer/subscription` route or its
+`/developer/settings/subscription` alias. In normal `preparation_only` runtime,
+those routes still mounted commercial billing data and payment-proof wiring and
+presented invoices, manual EFT, and payment controls. A pending Developer was
+also redirected before it could use the safe preparation route.
+
+Commit [`bb89b2b9`](https://github.com/Doscoding187/real_estate_portal/commit/bb89b2b92ff421e54e9fe864e71112b2947b05f6)
+retains the commercial billing panel only behind the separately authorised
+enabled state. The normal routes now provide organisation readiness and private
+development actions without commercial hooks or mutation wiring. The scoped
+client run passed **4 files / 5 tests**; the governed Chromium pre-payment suite
+passed **8 tests**, including real pending-Developer navigation to the route and
+private draft save/resume. `pnpm check`, targeted zero-error lint, static
+authority **35 files / 295 tests**, `git diff --check`, and database-authority
+status passed on fingerprint `a560e9f2971e7676…` at migration head `0090` with
+no incomplete attempts.
+
+This follow-up preserves the settled commercial model: it enables preparation,
+not paid activation, payment handling, entitlement mutation, publication,
+provider delivery, or a protected release.
+
 ### Shared public advertising and Developer preparation-entry follow-up — 2026-09-15
 
 The role-specific public pages alone did not close the anonymous entry surface.
