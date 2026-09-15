@@ -1,7 +1,9 @@
 import { cleanup, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CommercialProduct } from '@/hooks/useCommercialCatalog';
-import DeveloperProductLandingPage from './DeveloperProductLandingPage';
+import DeveloperProductLandingPage, {
+  DeveloperCommercialLandingPage,
+} from './DeveloperProductLandingPage';
 
 vi.mock('@/hooks/useCommercialCatalog', () => ({
   useCommercialCatalog: vi.fn(),
@@ -86,8 +88,58 @@ afterEach(() => {
 });
 
 describe('public Developer product landing page', () => {
-  it('leads with the Developer operating proposition and portfolio workspace', () => {
+  it('shows the approved preparation path while normal runtime commercial activation is disabled', () => {
     render(<DeveloperProductLandingPage />);
+
+    expect(
+      screen.getByRole('heading', {
+        name: 'Establish your Developer organisation and prepare private projects.',
+        level: 1,
+      }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Preparation-only onboarding')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'Commercial activation is not available yet. Complete your profile and prepare private drafts; publishing becomes available after approved commercial activation.',
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Prepare private development drafts')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'Public project presentation and commercial participation follow approval, review, and commercial activation.',
+      ),
+    ).toBeInTheDocument();
+
+    const preparationLinks = screen.getAllByRole('link', {
+      name: /Start Developer preparation/i,
+    });
+    expect(preparationLinks).toHaveLength(2);
+    preparationLinks.forEach(link => {
+      expect(link).toHaveAttribute(
+        'href',
+        '/login?mode=register&next=%2Fdeveloper%2Fsetup&role=property_developer',
+      );
+    });
+
+    expect(useCatalogMock).not.toHaveBeenCalled();
+  });
+
+  it('does not advertise a paid offer, invoice request, or activation period while activation is disabled', () => {
+    render(<DeveloperProductLandingPage />);
+
+    expect(screen.queryByText('R1,499')).not.toBeInTheDocument();
+    expect(screen.queryByText(/90 days/i)).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('link', { name: /Request Launch Access invoice/i }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/manual EFT/i)).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('link', { name: /Contact Property Listify/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('retains the catalog-driven commercial presentation for a separately enabled runtime', () => {
+    render(<DeveloperCommercialLandingPage />);
 
     expect(
       screen.getByRole('heading', {
@@ -106,10 +158,6 @@ describe('public Developer product landing page', () => {
       'href',
       '/developer/developments',
     );
-  });
-
-  it('renders canonical Developer Launch Access truth and the self-serve invoice handoff', () => {
-    render(<DeveloperProductLandingPage />);
 
     expect(screen.getAllByText('Developer Launch Access').length).toBeGreaterThan(0);
     expect(screen.getAllByText('R1,499').length).toBeGreaterThan(0);
@@ -145,7 +193,7 @@ describe('public Developer product landing page', () => {
       refetch: vi.fn(),
     } as unknown as ReturnType<typeof useCommercialCatalog>);
 
-    render(<DeveloperProductLandingPage />);
+    render(<DeveloperCommercialLandingPage />);
 
     const card = screen.getByTestId('developer-launch-access-card');
     expect(within(card).getByRole('heading', { name: 'Assisted access path' })).toBeInTheDocument();
