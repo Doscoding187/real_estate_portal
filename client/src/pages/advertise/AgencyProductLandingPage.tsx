@@ -22,6 +22,7 @@ import {
 import { EnhancedNavbar } from '@/components/EnhancedNavbar';
 import { Footer } from '@/components/Footer';
 import { SEOHead } from '@/components/advertise/SEOHead';
+import { CommercialActivationNotice } from '@/components/commercial/CommercialActivationNotice';
 import { useCommercialCatalog, type CommercialProduct } from '@/hooks/useCommercialCatalog';
 import {
   formatCommercialLimitLabel,
@@ -32,6 +33,7 @@ import {
   getCommercialTermPresentation,
 } from '@/lib/commercialCatalog';
 import { getAccountAuthHref } from '@/lib/publicNavigation';
+import { COMMERCIAL_ACTIVATION_STATE } from '@shared/commercialActivation';
 import { AgencyWorkspacePreview } from './AgencyWorkspacePreview';
 import { COMMERCIAL_HERO_CLASS } from './commercialHero';
 
@@ -771,7 +773,7 @@ function AgencyFaqSection({ faqs }: { faqs: readonly AgencyFaq[] }) {
   );
 }
 
-export default function AgencyProductLandingPage() {
+export function AgencyCommercialLandingPage() {
   const catalog = useCommercialCatalog('agency');
   const product = catalog.data?.products.find(
     item => item.productKey === 'agency_launch_access' && item.term.kind === 'paid_launch_access',
@@ -1286,5 +1288,152 @@ export default function AgencyProductLandingPage() {
       </script>
       <Footer />
     </div>
+  );
+}
+
+function AgencyPreparationLandingPage() {
+  return (
+    <div className="min-h-screen bg-[var(--surface)] text-slate-950">
+      <SEOHead
+        title="Prepare your Agency workspace | Property Listify"
+        description="Create your Property Listify Agency owner account, establish your agency identity and prepare private inventory before commercial activation."
+        canonicalUrl="/advertise/sell/agencies"
+      />
+      <EnhancedNavbar />
+
+      <main id="main-content">
+        <section data-commercial-hero="true" className={COMMERCIAL_HERO_CLASS}>
+          <div
+            className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_78%_18%,rgba(0,92,168,0.28),transparent_34%)]"
+            aria-hidden="true"
+          />
+          <div className="mx-auto max-w-screen-2xl px-4 pb-20 pt-10 sm:px-6 lg:px-8 lg:pb-28 lg:pt-14">
+            <a
+              href="/advertise"
+              className="inline-flex items-center gap-2 text-sm font-semibold text-slate-400 transition hover:text-white"
+            >
+              <ArrowRight className="h-4 w-4 rotate-180" aria-hidden="true" />
+              Back to Advertise
+            </a>
+
+            <div className="mt-14 grid items-center gap-12 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,.72fr)] lg:gap-16">
+              <div className="relative z-10 max-w-3xl">
+                <p className="text-xs font-bold uppercase tracking-[0.22em] text-blue-300">
+                  For property agencies
+                </p>
+                <h1 className="mt-6 font-serif text-5xl font-semibold leading-[1.03] tracking-[-0.05em] text-white sm:text-6xl lg:text-7xl">
+                  Establish your Agency workspace and prepare private inventory.
+                </h1>
+                <p className="mt-7 max-w-2xl text-lg leading-8 text-slate-300 sm:text-xl sm:leading-9">
+                  Create and verify an Agency owner account, establish your Agency identity and
+                  branding, then prepare private inventory while commercial activation remains
+                  protected.
+                </p>
+                <div className="mt-9 flex flex-wrap gap-3">
+                  <a
+                    href={AGENCY_ACCOUNT_START_HREF}
+                    className="inline-flex items-center gap-2 rounded-2xl bg-[var(--conversion)] px-5 py-3.5 text-sm font-bold text-white shadow-lg shadow-orange-950/25 transition hover:bg-[var(--conversion-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
+                  >
+                    Start Agency preparation
+                    <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                  </a>
+                </div>
+              </div>
+
+              <div className="relative rounded-[30px] border border-white/15 bg-white/10 p-6 shadow-[0_28px_80px_rgba(15,23,42,0.24)] backdrop-blur sm:p-8">
+                <CommercialActivationNotice />
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="border-b border-slate-200 bg-white py-24 md:py-32">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <SectionIntro
+              eyebrow="Prepare for participation"
+              title="Start the Agency work that can be completed before commercial activation."
+            >
+              Preparation establishes the business context and lets your Agency organise private
+              inventory. It does not grant marketplace publication, paid commercial access, or
+              active team participation.
+            </SectionIntro>
+            <div className="mt-12 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+              {[
+                {
+                  icon: ShieldCheck,
+                  title: 'Create and verify an Agency owner account',
+                  text: 'Start with the separate owner account required to establish an Agency workspace.',
+                },
+                {
+                  icon: Building2,
+                  title: 'Establish your Agency identity',
+                  text: 'Complete the Agency foundation, business identity and branding information for review.',
+                },
+                {
+                  icon: ClipboardCheck,
+                  title: 'Record preparation details',
+                  text: 'Save the information and commercial preference needed for a later approved activation path.',
+                },
+                {
+                  icon: ListChecks,
+                  title: 'Prepare private inventory',
+                  text: 'Open the workspace, create private drafts and return to continue preparing them.',
+                },
+              ].map(item => {
+                const Icon = item.icon;
+                return (
+                  <article
+                    key={item.title}
+                    className="rounded-[24px] border border-slate-200 bg-[var(--surface)] p-6 shadow-[0_16px_45px_rgba(15,23,42,0.05)]"
+                  >
+                    <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-50 text-[var(--brand-blue)]">
+                      <Icon className="h-5 w-5" aria-hidden="true" />
+                    </span>
+                    <h2 className="mt-6 text-xl font-bold leading-tight text-slate-950">
+                      {item.title}
+                    </h2>
+                    <p className="mt-3 text-sm leading-7 text-slate-600">{item.text}</p>
+                  </article>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+
+        <section className="bg-[var(--surface)] py-20 md:py-24">
+          <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
+            <div className="rounded-[30px] border border-amber-200 bg-amber-50 p-7 md:p-10">
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-amber-800">
+                What remains protected
+              </p>
+              <h2 className="mt-4 text-3xl font-bold tracking-[-0.035em] text-slate-950 md:text-4xl">
+                Publishing, marketplace participation and team activation follow approval and
+                commercial activation.
+              </h2>
+              <p className="mt-5 max-w-3xl text-base leading-8 text-slate-700">
+                Private inventory stays private. Team access and marketplace participation remain
+                subject to their existing approval and commercial activation requirements.
+              </p>
+              <a
+                href={AGENCY_ACCOUNT_START_HREF}
+                className="mt-7 inline-flex items-center gap-2 rounded-2xl bg-[var(--conversion)] px-5 py-3.5 text-sm font-bold text-white shadow-lg shadow-orange-900/15 transition hover:bg-[var(--conversion-hover)]"
+              >
+                Start Agency preparation <ArrowRight className="h-4 w-4" aria-hidden="true" />
+              </a>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <Footer />
+    </div>
+  );
+}
+
+export default function AgencyProductLandingPage() {
+  return COMMERCIAL_ACTIVATION_STATE.enabled ? (
+    <AgencyCommercialLandingPage />
+  ) : (
+    <AgencyPreparationLandingPage />
   );
 }
