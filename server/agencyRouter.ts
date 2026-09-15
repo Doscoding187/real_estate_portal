@@ -5565,7 +5565,7 @@ export const agencyRouter = router({
       }
 
       const user = requireUser(ctx);
-      const agencyId = requireAgencyId(user);
+      const { agencyId } = await requireCurrentAgencyWorkspaceActor(db, user);
       const filters = input || { status: 'upcoming' as const, limit: 50, offset: 0 };
 
       if (filters.agentId) {
@@ -5608,7 +5608,7 @@ export const agencyRouter = router({
       }
 
       const user = requireUser(ctx);
-      const agencyId = requireAgencyId(user);
+      const { agencyId } = await requireCurrentAgencyWorkspaceActor(db, user);
       const showing = await requireAgencyViewing(db, agencyId, input.viewingId);
       const [viewing] = await listAgencyViewings({
         db,
@@ -5764,7 +5764,7 @@ export const agencyRouter = router({
       }
 
       const user = requireUser(ctx);
-      const agencyId = requireAgencyId(user);
+      const { agencyId } = await requireCurrentAgencyWorkspaceActor(db, user);
       const viewing = await requireAgencyViewing(db, agencyId, input.viewingId);
       const currentStatus = normalizeViewingStatus(viewing.status);
       if (currentStatus === input.status) {
@@ -5841,7 +5841,7 @@ export const agencyRouter = router({
       }
 
       const user = requireUser(ctx);
-      const agencyId = requireAgencyId(user);
+      const { agencyId } = await requireCurrentAgencyWorkspaceActor(db, user);
       const viewing = await requireAgencyViewing(db, agencyId, input.viewingId);
       const currentStatus = normalizeViewingStatus(viewing.status);
       const nextStatus = input.status;
@@ -6029,7 +6029,7 @@ export const agencyRouter = router({
       }
 
       const user = requireUser(ctx);
-      const agencyId = requireAgencyId(user);
+      const { agencyId } = await requireCurrentAgencyWorkspaceActor(db, user);
       const viewing = await requireAgencyViewing(db, agencyId, input.viewingId);
       if (normalizeViewingStatus(viewing.status) !== 'completed') {
         throw new TRPCError({
@@ -6113,7 +6113,7 @@ export const agencyRouter = router({
       }
 
       const user = requireUser(ctx);
-      const agencyId = requireAgencyId(user);
+      const { agencyId } = await requireCurrentAgencyWorkspaceActor(db, user);
       return await getDealWorkspaceRows({
         db,
         agencyId,
@@ -6129,7 +6129,7 @@ export const agencyRouter = router({
     }
 
     const user = requireUser(ctx);
-    const agencyId = requireAgencyId(user);
+    const { agencyId } = await requireCurrentAgencyWorkspaceActor(db, user);
     const context = await resolveDealContext({
       db,
       agencyId,
@@ -6238,7 +6238,7 @@ export const agencyRouter = router({
       }
 
       const user = requireUser(ctx);
-      const agencyId = requireAgencyId(user);
+      const { agencyId } = await requireCurrentAgencyWorkspaceActor(db, user);
       const deal = await requireAgencyDeal(db, agencyId, input.dealId);
       const existingTransaction = await getExistingTransactionForDeal(db, agencyId, deal.id);
       if (existingTransaction) {
@@ -6329,7 +6329,7 @@ export const agencyRouter = router({
       }
 
       const user = requireUser(ctx);
-      const agencyId = requireAgencyId(user);
+      const { agencyId } = await requireCurrentAgencyWorkspaceActor(db, user);
       const { offer, deal } = await requireAgencyOfferVersion(db, agencyId, input.offerVersionId);
       if (!['draft', 'countered'].includes(String(offer.status || ''))) {
         throw new TRPCError({
@@ -6390,7 +6390,7 @@ export const agencyRouter = router({
       }
 
       const user = requireUser(ctx);
-      const agencyId = requireAgencyId(user);
+      const { agencyId } = await requireCurrentAgencyWorkspaceActor(db, user);
       const { offer, deal } = await requireAgencyOfferVersion(db, agencyId, input.offerVersionId);
       const existingTransaction = await getExistingTransactionForDeal(db, agencyId, deal.id);
       if (existingTransaction) {
@@ -6667,7 +6667,7 @@ export const agencyRouter = router({
       }
 
       const user = requireUser(ctx);
-      const agencyId = requireAgencyId(user);
+      const { agencyId } = await requireCurrentAgencyWorkspaceActor(db, user);
       await requireAgencyTransaction(db, agencyId, input.transactionId);
 
       const [conditionInsert] = await db.insert(agencyTransactionConditions).values({
@@ -6704,7 +6704,7 @@ export const agencyRouter = router({
       }
 
       const user = requireUser(ctx);
-      const agencyId = requireAgencyId(user);
+      const { agencyId } = await requireCurrentAgencyWorkspaceActor(db, user);
       await requireAgencyTransaction(db, agencyId, input.transactionId);
       const now = nowAsDbTimestamp();
       const terminal = ['completed', 'waived', 'cancelled'].includes(input.status);
@@ -6784,7 +6784,7 @@ export const agencyRouter = router({
       }
 
       const user = requireUser(ctx);
-      const agencyId = requireAgencyId(user);
+      const { agencyId } = await requireCurrentAgencyWorkspaceActor(db, user);
       await requireAgencyTransaction(db, agencyId, input.transactionId);
 
       const [partyInsert] = await db.insert(agencyTransactionParties).values({
@@ -6819,7 +6819,7 @@ export const agencyRouter = router({
       }
 
       const user = requireUser(ctx);
-      const agencyId = requireAgencyId(user);
+      const { agencyId } = await requireCurrentAgencyWorkspaceActor(db, user);
       await requireAgencyTransaction(db, agencyId, input.transactionId);
       const storageKey = input.storageKey.trim();
       const expectedPrivatePrefix = `private/agency-${agencyId}/transactions/${input.transactionId}/`;
@@ -6891,7 +6891,7 @@ export const agencyRouter = router({
       }
 
       const user = requireUser(ctx);
-      const agencyId = requireAgencyId(user);
+      const { agencyId } = await requireCurrentAgencyWorkspaceActor(db, user);
       const transaction = await requireAgencyTransaction(db, agencyId, input.transactionId);
       const now = nowAsDbTimestamp();
       let nextStatus = input.status || transaction.status;
