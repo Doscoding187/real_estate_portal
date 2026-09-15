@@ -151,6 +151,20 @@ test.describe('pre-payment onboarding browser acceptance', () => {
     );
   });
 
+  test('keeps direct administrator review URLs behind the role-aware sign-in boundary', async ({
+    page,
+  }) => {
+    await page.goto('/admin/review/123?queue=pending');
+
+    await expect(page).toHaveURL(
+      /\/login\?mode=signin&next=%2Fadmin%2Freview%2F123%3Fqueue%3Dpending/,
+    );
+    await expect(page.getByRole('dialog', { name: 'Welcome back' })).toContainText(
+      'You will be returned to /admin/review/123?queue=pending.',
+    );
+    await expect(page.getByText('Listing review', { exact: true })).toHaveCount(0);
+  });
+
   test('routes the public Agent entry point into truthful preparation onboarding', async ({
     page,
   }) => {

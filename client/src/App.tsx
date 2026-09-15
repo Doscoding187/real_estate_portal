@@ -251,7 +251,11 @@ function Router() {
 
           {/* IMPORTANT: Admin Review must be BEFORE legacy wildcards */}
           {/* Otherwise /:action/:province/:locationId matches /admin/review/360002 */}
-          <Route path="/admin/review/:id" component={AdminPropertyReview} />
+          <Route path="/admin/review/:id">
+            <RequireRole role="super_admin" unauthenticatedAuthEntry="signin">
+              <AdminPropertyReview />
+            </RequireRole>
+          </Route>
           <Route path="/admin/land-review">
             <RequireRole role="super_admin">
               <LandDeferred audience="reviewer" />
