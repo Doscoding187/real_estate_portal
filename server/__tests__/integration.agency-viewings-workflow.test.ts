@@ -629,6 +629,42 @@ describeWithDb('agency viewings and My Day persisted workflow', () => {
     expect(new Set(ids).size).toBe(ids.length);
   }, 30_000);
 
+  it('interprets browser datetime-local viewing input as Johannesburg time on a UTC host', async () => {
+    const seed = await seedAgencyFixture('datetime-local-timezone');
+    const caller = createCaller({
+      id: seed.adminUserId,
+      role: 'agency_admin',
+      agencyId: seed.agencyId,
+    });
+    const targetDay = agencyDateKey(new Date(Date.now() + 48 * 60 * 60 * 1000));
+    const originalTimeZone = process.env.TZ;
+    let created: Awaited<ReturnType<typeof caller.createViewing>>;
+
+    try {
+      process.env.TZ = 'UTC';
+      expect(Intl.DateTimeFormat().resolvedOptions().timeZone).toBe('UTC');
+      created = await caller.createViewing({
+        leadId: seed.leadId,
+        listingId: seed.listingId,
+        agentId: seed.agentId,
+        scheduledAt: `${targetDay}T00:30`,
+        status: 'confirmed',
+      });
+    } finally {
+      if (originalTimeZone === undefined) {
+        delete process.env.TZ;
+      } else {
+        process.env.TZ = originalTimeZone;
+      }
+    }
+
+    createdState.showingIds.push(created.viewingId);
+    const detail = await caller.getViewingDetail({ viewingId: created.viewingId });
+    expect(detail.scheduledAt).toBe(jhbIso(targetDay, '00:30:00'));
+    const myDay = await caller.getMyDay({ date: targetDay, limit: 20 });
+    expect(myDay.todayViewings.map(viewing => viewing.id)).toContain(created.viewingId);
+  }, 30_000);
+
   it('escalates an ignored buyer lead then records a structured first response', async () => {
     const seed = await seedAgencyFixture('buyer-response');
     const db = await getDb();

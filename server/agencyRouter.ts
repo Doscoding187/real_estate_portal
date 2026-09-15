@@ -566,6 +566,15 @@ const AGENCY_DAY_FORMATTER = new Intl.DateTimeFormat('en-CA', {
   month: '2-digit',
   day: '2-digit',
 });
+const AGENCY_TIME_FORMATTER = new Intl.DateTimeFormat('en-CA', {
+  timeZone: AGENCY_WORKSPACE_TIME_ZONE,
+  hourCycle: 'h23',
+  hour: '2-digit',
+  minute: '2-digit',
+  second: '2-digit',
+});
+const AGENCY_LOCAL_VIEWING_DATE_TIME_PATTERN =
+  /^(\d{4}-\d{2}-\d{2})T(\d{2}):(\d{2})(?::(\d{2})(?:\.\d{1,3})?)?$/;
 
 const ACTIVE_BILLING_STATUSES = new Set(['active']);
 const PENDING_BILLING_STATUSES = new Set([
@@ -1059,9 +1068,35 @@ function assertViewingTransitionAllowed(currentStatus: unknown, targetStatus: Vi
   }
 }
 
+function formatAgencyTimeKey(date: Date) {
+  const parts = AGENCY_TIME_FORMATTER.formatToParts(date);
+  const hour = parts.find(part => part.type === 'hour')?.value;
+  const minute = parts.find(part => part.type === 'minute')?.value;
+  const second = parts.find(part => part.type === 'second')?.value;
+  return hour && minute && second ? `${hour}:${minute}:${second}` : null;
+}
+
+function parseAgencyViewingDate(value: string) {
+  const raw = String(value || '').trim();
+  const localMatch = raw.match(AGENCY_LOCAL_VIEWING_DATE_TIME_PATTERN);
+  if (!localMatch) return new Date(raw);
+
+  const [, dateKey, hour, minute, suppliedSecond] = localMatch;
+  const second = suppliedSecond || '00';
+  const parsedDate = new Date(`${dateKey}T${hour}:${minute}:${second}${AGENCY_WORKSPACE_UTC_OFFSET}`);
+  if (
+    Number.isNaN(parsedDate.getTime()) ||
+    formatAgencyDateKey(parsedDate) !== dateKey ||
+    formatAgencyTimeKey(parsedDate) !== `${hour}:${minute}:${second}`
+  ) {
+    return null;
+  }
+  return parsedDate;
+}
+
 function assertViewingDateAllowed(value: string) {
-  const parsedDate = new Date(value);
-  if (Number.isNaN(parsedDate.getTime())) {
+  const parsedDate = parseAgencyViewingDate(value);
+  if (!parsedDate || Number.isNaN(parsedDate.getTime())) {
     throw new TRPCError({
       code: 'BAD_REQUEST',
       message: 'Viewing date is invalid.',

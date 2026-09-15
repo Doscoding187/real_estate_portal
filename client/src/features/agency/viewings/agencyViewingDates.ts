@@ -13,6 +13,16 @@ const AGENCY_DATE_LABEL_FORMATTER = new Intl.DateTimeFormat('en-ZA', {
   month: 'short',
 });
 
+const AGENCY_DATE_TIME_INPUT_FORMATTER = new Intl.DateTimeFormat('en-CA', {
+  timeZone: AGENCY_WORKSPACE_TIME_ZONE,
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+  hourCycle: 'h23',
+  hour: '2-digit',
+  minute: '2-digit',
+});
+
 type DatedViewing = {
   scheduledAt?: string | Date | null;
 };
@@ -38,6 +48,17 @@ export function formatAgencyViewingDateKey(value?: string | null) {
   const date = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day), 12));
   if (Number.isNaN(date.getTime())) return 'Recently';
   return AGENCY_DATE_LABEL_FORMATTER.format(date);
+}
+
+export function formatAgencyViewingDateTimeInput(value?: string | Date | null) {
+  if (!value) return '';
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  const parts = AGENCY_DATE_TIME_INPUT_FORMATTER.formatToParts(date);
+  const dateKey = dateKeyFromParts(parts);
+  const hour = parts.find(part => part.type === 'hour')?.value;
+  const minute = parts.find(part => part.type === 'minute')?.value;
+  return dateKey && hour && minute ? `${dateKey}T${hour}:${minute}` : '';
 }
 
 export function groupAgencyViewingsByDate<T extends DatedViewing>(viewings: T[]) {

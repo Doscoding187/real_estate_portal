@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { agencyViewingDateKey, groupAgencyViewingsByDate } from './agencyViewingDates';
+import {
+  agencyViewingDateKey,
+  formatAgencyViewingDateTimeInput,
+  groupAgencyViewingsByDate,
+} from './agencyViewingDates';
 
 describe('agency viewing dates', () => {
   it('uses Johannesburg day boundaries for an instant around local midnight', () => {
@@ -25,5 +29,11 @@ describe('agency viewing dates', () => {
 
   it('does not assign invalid timestamps to an operating day', () => {
     expect(agencyViewingDateKey('not-a-date')).toBeNull();
+  });
+
+  it('prepopulates viewing inputs in Johannesburg wall time', () => {
+    expect(formatAgencyViewingDateTimeInput('2026-09-16T22:30:00.000Z')).toBe(
+      '2026-09-17T00:30',
+    );
   });
 });

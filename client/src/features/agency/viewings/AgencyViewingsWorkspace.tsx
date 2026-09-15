@@ -41,6 +41,7 @@ import {
   AGENCY_WORKSPACE_TIME_ZONE,
   agencyViewingDateKey,
   formatAgencyViewingDateKey,
+  formatAgencyViewingDateTimeInput,
   groupAgencyViewingsByDate,
 } from './agencyViewingDates';
 
@@ -151,6 +152,10 @@ function toInputDateTime(value?: string | Date | null) {
   if (Number.isNaN(date.getTime())) return '';
   const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
   return local.toISOString().slice(0, 16);
+}
+
+function toAgencyViewingInputDateTime(value?: string | Date | null) {
+  return formatAgencyViewingDateTimeInput(value);
 }
 
 function todayInputDate() {
@@ -1353,7 +1358,7 @@ function CreateViewingDialog({
           </div>
 
           <div className="grid gap-3 md:grid-cols-3">
-            <Field label="Date and time">
+            <Field label="Date and time (Africa/Johannesburg)">
               <Input type="datetime-local" value={scheduledAt} onChange={event => setScheduledAt(event.target.value)} />
             </Field>
             <Field label="Duration">
@@ -1456,7 +1461,7 @@ function ViewingDetailDialog({
 
   useEffect(() => {
     if (!viewing) return;
-    setRescheduleAt(toInputDateTime(viewing.scheduledAt));
+    setRescheduleAt(toAgencyViewingInputDateTime(viewing.scheduledAt));
     setReassignAgentId(viewing.agentId ? String(viewing.agentId) : '');
     const existing = viewing.feedbackStructured || {};
     setFeedback({
@@ -1730,6 +1735,7 @@ function ViewingDetailDialog({
               <div className="rounded-lg border border-slate-200 p-4">
                 <p className="font-semibold text-slate-950">Reschedule</p>
                 <div className="mt-3 space-y-3">
+                  <p className="text-xs text-slate-500">Times use Africa/Johannesburg.</p>
                   <Input type="datetime-local" value={rescheduleAt} onChange={event => setRescheduleAt(event.target.value)} />
                   <Button
                     variant="outline"
