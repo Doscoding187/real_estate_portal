@@ -6,7 +6,11 @@ import { LeadPipeline } from '@/components/agent/LeadPipeline';
 import { AgentFeatureLockedState } from '@/components/agent/AgentFeatureLockedState';
 import { AgentJourneyStatusErrorState } from '@/components/agent/AgentJourneyStatusErrorState';
 import { useAgentOnboardingStatus } from '@/hooks/useAgentOnboardingStatus';
-import { getAgentJourneyAction, isAgentProfileJourneyStep } from '@/lib/agentJourney';
+import {
+  getAgentJourneyAction,
+  getAgentProfileCompletionDescription,
+  isAgentProfileJourneyStep,
+} from '@/lib/agentJourney';
 import { trpc } from '@/lib/trpc';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -349,7 +353,7 @@ export default function AgentLeads() {
             }
             description={
               needsProfileCompletion
-                ? 'Keep a working phone number on your professional profile, then activate Launch Access to receive new enquiries.'
+                ? getAgentProfileCompletionDescription()
                 : journeyAction.description
             }
             actionLabel={journeyAction.waiting ? 'Return to dashboard' : journeyAction.label}

@@ -5,7 +5,11 @@ import { agentPageStyles } from '@/components/agent/agentPageStyles';
 import { AgentFeatureLockedState } from '@/components/agent/AgentFeatureLockedState';
 import { AgentJourneyStatusErrorState } from '@/components/agent/AgentJourneyStatusErrorState';
 import { useAgentOnboardingStatus } from '@/hooks/useAgentOnboardingStatus';
-import { getAgentJourneyAction, isAgentProfileJourneyStep } from '@/lib/agentJourney';
+import {
+  getAgentJourneyAction,
+  getAgentProfileCompletionDescription,
+  isAgentProfileJourneyStep,
+} from '@/lib/agentJourney';
 
 export default function AgentEarnings() {
   const [, setLocation] = useLocation();
@@ -46,7 +50,7 @@ export default function AgentEarnings() {
             }
             description={
               needsProfileCompletion
-                ? 'Finish your professional profile, then activate Launch Access before using optional business tools.'
+                ? getAgentProfileCompletionDescription()
                 : journeyAction.description
             }
             actionLabel={journeyAction.waiting ? 'Return to dashboard' : journeyAction.label}

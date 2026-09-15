@@ -34,6 +34,22 @@ function preparationAction(): AgentJourneyAction {
 }
 
 /**
+ * A profile-completion lock must describe the runtime that is actually
+ * available. Individual workspace pages supply their own feature-specific
+ * title, while this message keeps the commercial boundary consistent.
+ */
+export function getAgentProfileCompletionDescription(options: AgentJourneyOptions = {}): string {
+  const commercialActivationEnabled =
+    options.commercialActivationEnabled ?? COMMERCIAL_ACTIVATION_STATE.enabled;
+
+  if (commercialActivationEnabled) {
+    return 'Finish your professional profile, then activate Launch Access for this workspace.';
+  }
+
+  return 'Finish your professional profile and continue preparing your private workspace. Commercial activation, publishing, and new marketplace enquiries remain unavailable until the approved activation path opens.';
+}
+
+/**
  * Every Agent surface uses this presentation of the server-decided journey
  * state. This prevents a finished profile from being sent back to setup by one
  * page while another page correctly asks for Launch Access.

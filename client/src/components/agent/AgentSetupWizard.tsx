@@ -13,6 +13,7 @@ import { ArrowLeft, ArrowRight, CheckCircle2, Upload, X } from 'lucide-react';
 import { LocationAutocomplete } from '@/components/location/LocationAutocomplete';
 import { apiFetch } from '@/lib/api';
 import type { AgentOnboardingStatus } from '@/hooks/useAgentOnboardingStatus';
+import { getAgentProfileCompletionDescription } from '@/lib/agentJourney';
 import { COMMERCIAL_ACTIVATION_STATE } from '@shared/commercialActivation';
 import {
   parseCanonicalAgentCoverageLocationId,
@@ -115,7 +116,7 @@ export function AgentSetupWizard() {
 
   useEffect(() => {
     if (searchParams.get('verified') === 'true') {
-      toast.success('Email verified. Finish your profile, then activate Launch Access to publish.');
+      toast.success(`Email verified. ${getAgentProfileCompletionDescription()}`);
     }
   }, [searchParams]);
 

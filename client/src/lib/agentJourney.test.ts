@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getAgentJourneyAction } from './agentJourney';
+import { getAgentJourneyAction, getAgentProfileCompletionDescription } from './agentJourney';
 import type { AgentRecommendedNextStep } from '@shared/agentJourney';
 
 describe('Agent journey support handoff', () => {
@@ -23,6 +23,15 @@ describe('Agent journey support handoff', () => {
         title: 'Prepare your Agent workspace',
       });
     }
+  });
+
+  it('keeps profile-completion locks truthful while commercial activation is unavailable', () => {
+    expect(getAgentProfileCompletionDescription()).toBe(
+      'Finish your professional profile and continue preparing your private workspace. Commercial activation, publishing, and new marketplace enquiries remain unavailable until the approved activation path opens.',
+    );
+    expect(getAgentProfileCompletionDescription({ commercialActivationEnabled: true })).toBe(
+      'Finish your professional profile, then activate Launch Access for this workspace.',
+    );
   });
 
   it('retains a commercial action only for an explicitly enabled runtime', () => {

@@ -13,7 +13,11 @@ import { EntityStatusCard } from '@/components/dashboard/EntityStatusCard';
 import { AgentFeatureLockedState } from '@/components/agent/AgentFeatureLockedState';
 import { AgentJourneyStatusErrorState } from '@/components/agent/AgentJourneyStatusErrorState';
 import { useAgentOnboardingStatus } from '@/hooks/useAgentOnboardingStatus';
-import { getAgentJourneyAction, isAgentProfileJourneyStep } from '@/lib/agentJourney';
+import {
+  getAgentJourneyAction,
+  getAgentProfileCompletionDescription,
+  isAgentProfileJourneyStep,
+} from '@/lib/agentJourney';
 import { calculateListingReadiness } from '@/lib/readiness';
 import { cn } from '@/lib/utils';
 
@@ -364,7 +368,7 @@ export default function AgentListings() {
                     }
                     description={
                       needsProfileCompletion
-                        ? 'Complete the remaining professional profile details, then activate Launch Access to publish and manage inventory.'
+                        ? getAgentProfileCompletionDescription()
                         : journeyAction.description
                     }
                     actionLabel={

@@ -11,7 +11,11 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { trpc } from '@/lib/trpc';
 import { useAgentOnboardingStatus } from '@/hooks/useAgentOnboardingStatus';
-import { getAgentJourneyAction, isAgentProfileJourneyStep } from '@/lib/agentJourney';
+import {
+  getAgentJourneyAction,
+  getAgentProfileCompletionDescription,
+  isAgentProfileJourneyStep,
+} from '@/lib/agentJourney';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import {
@@ -404,7 +408,7 @@ export default function AgentMarketingHub() {
             }
             description={
               needsProfileCompletion
-                ? 'Finish your professional profile first. Then activate Launch Access to use live inventory, Explore, and promotion tools together.'
+                ? getAgentProfileCompletionDescription()
                 : journeyAction.description
             }
             actionLabel={journeyAction.waiting ? 'Return to dashboard' : journeyAction.label}

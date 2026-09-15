@@ -7,7 +7,11 @@ import { AgentPresenceProof } from '@/components/agent/AgentPresenceProof';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { AgentOnboardingStatus } from '@/hooks/useAgentOnboardingStatus';
-import { getAgentJourneyAction, isAgentProfileJourneyStep } from '@/lib/agentJourney';
+import {
+  getAgentJourneyAction,
+  getAgentProfileCompletionDescription,
+  isAgentProfileJourneyStep,
+} from '@/lib/agentJourney';
 import {
   ArrowRight,
   Bell,
@@ -688,7 +692,7 @@ export function AgentDashboardOverview({
           ? 'Finish setting up your professional presence.'
           : journeyAction.title,
         description: needsProfileCompletion
-          ? 'Complete the remaining profile details so you can publish inventory and start building your pipeline.'
+          ? getAgentProfileCompletionDescription()
           : journeyAction.description,
         actionLabel: journeyAction.waiting
           ? null
@@ -1370,7 +1374,7 @@ export function AgentDashboardOverview({
                   }
                   description={
                     needsProfileCompletion
-                      ? 'Complete the remaining profile details, then activate Launch Access to publish inventory and open your full listing workflow.'
+                      ? getAgentProfileCompletionDescription()
                       : journeyAction.description
                   }
                   actionLabel={

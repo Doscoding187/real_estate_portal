@@ -276,6 +276,24 @@ test.describe('pre-payment onboarding browser acceptance', () => {
     await expect(page.locator('button[aria-label^="Remove "]')).toHaveCount(1);
     await page.getByRole('button', { name: 'Save & Continue' }).click();
 
+    // Once core contact and canonical coverage are saved, the Agent has a
+    // preparation workspace but remains profile-incomplete. The reachable
+    // analytics lock must not offer an unavailable activation path.
+    await page.goto('/agent/analytics');
+    await expect(page).toHaveURL(/\/agent\/analytics$/);
+    await expect(
+      page.getByText(
+        'Finish your professional profile and continue preparing your private workspace. Commercial activation, publishing, and new marketplace enquiries remain unavailable until the approved activation path opens.',
+      ),
+    ).toBeVisible();
+    await expect(page.getByText(/activate Launch Access/i)).toHaveCount(0);
+
+    await page.goto('/agent/setup');
+    await expect(page.getByRole('heading', { name: 'Finish your agent setup' })).toBeVisible();
+    await page.getByRole('button', { name: 'Skip' }).click();
+    await expect(page.locator('button[aria-label^="Remove "]')).toHaveCount(1);
+    await page.getByRole('button', { name: 'Skip' }).click();
+
     await page.getByRole('button', { name: 'Save & Continue' }).click();
     await page
       .getByPlaceholder('Tell clients about your experience and what you specialize in.')
