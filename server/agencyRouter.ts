@@ -1683,13 +1683,10 @@ function canonicalListingOwnerCondition(userId: number, agentId?: number | null)
 }
 
 function agencyListingScopeCondition(agencyId: number) {
-  return or(
-    eq(listings.agencyId, agencyId),
-    and(
-      isNull(listings.agencyId),
-      or(eq(users.agencyId, agencyId), and(isNull(users.agencyId), eq(agents.agencyId, agencyId))),
-    ),
-  )!;
+  // Agency inventory ownership is materialized on the canonical listing.
+  // Historical user/agent agency projections remain available for audit but
+  // cannot pull an unscoped private draft into a former agency workspace.
+  return eq(listings.agencyId, agencyId);
 }
 
 /** The general agency workspace intentionally excludes Commercial inventory. */

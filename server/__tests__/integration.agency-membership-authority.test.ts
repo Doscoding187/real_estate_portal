@@ -568,13 +568,32 @@ describeWithDb('team operations on canonical membership', () => {
     );
   });
 
-  it('does not attribute a suspended member’s private draft to the stale agency profile claim', async () => {
+  it('keeps an unaffiliated former member draft private from their former agency', async () => {
     const agencyId = await insertAgency('Attribution');
+    const ownerUserId = await insertUser('AttributionOwner', 'agency_admin');
+    await db.update(users).set({ agencyId }).where(eq(users.id, ownerUserId));
     const memberUserId = await insertUser('AttrMember', 'agent');
     await db.update(users).set({ agencyId, isSubaccount: 1 }).where(eq(users.id, memberUserId));
     const agentId = await insertAgentProfile(memberUserId, agencyId);
 
     await maintainAgencyAgentMembership(db, { agencyId, agentId, status: 'active' });
+    const agencyOwnedListingId = await createListing({
+      userId: memberUserId,
+      action: 'sell',
+      propertyType: 'house',
+      title: 'Agency-owned draft before membership suspension',
+      description: 'This draft remains agency inventory after its author later leaves the team.',
+      pricing: { askingPrice: 2_100_000 },
+      propertyDetails: { bedrooms: 3, bathrooms: 2, houseAreaM2: 170 },
+      address: '8 Membership Authority Road',
+      city: 'Johannesburg',
+      suburb: 'Sandton',
+      province: 'Gauteng',
+      slug: `active-membership-${randomUUID().slice(0, 8)}`,
+      media: [],
+    } as any);
+    created.listingIds.push(agencyOwnedListingId);
+
     await maintainAgencyAgentMembership(db, {
       agencyId,
       agentId,
@@ -611,6 +630,22 @@ describeWithDb('team operations on canonical membership', () => {
     expect(Number(draft.agentId)).toBe(agentId);
     expect(draft.agencyId).toBeNull();
     expect(draft.status).toBe('draft');
+
+    const ownerCaller = applicationCaller({
+      id: ownerUserId,
+      role: 'agency_admin',
+      agencyId,
+    });
+    const inventory = await ownerCaller.agency.getListingInventory();
+    const visibleListingIds = inventory.listings.map((listing: { id: number }) => listing.id);
+    expect(visibleListingIds).toContain(agencyOwnedListingId);
+    expect(visibleListingIds).not.toContain(listingId);
+    await expect(
+      ownerCaller.agency.getListingDetail({ listingId: agencyOwnedListingId }),
+    ).resolves.toMatchObject({ id: agencyOwnedListingId, agencyId });
+    await expect(ownerCaller.agency.getListingDetail({ listingId })).rejects.toMatchObject({
+      code: 'NOT_FOUND',
+    });
   });
 });
 
