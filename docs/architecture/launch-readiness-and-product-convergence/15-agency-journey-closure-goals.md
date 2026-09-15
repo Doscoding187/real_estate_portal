@@ -136,6 +136,24 @@ It does not establish hosted integration, production verification, payment or
 entitlement activation, provider delivery, or any protected database operation.
 Goal 2 is recorded below as task-branch verified. Milestone M1 is ready for its planned senior architectural review; this tracker does not claim that review has occurred.
 
+
+### Goal 1 invitation-acceptance qualification — 2026-09-15
+
+The original legitimate-invitation evidence is now explicitly bounded: canonical
+team membership begins only after the agency has an effective canonical
+commercial term. Commit [`415a9472`](https://github.com/Doscoding187/real_estate_portal/commit/415a947261a65c160f4fb77c39712050bab35b8) closes the direct-acceptance gap
+left by deferred delivery alone. A queued pre-payment token cannot create
+membership, profile, affiliation, or workspace authority; the recipient must
+also have verified email. The browser return path uses the canonical safe `next`
+parameter.
+
+The exact target run passed the affected authority suite (**5 files / 25
+tests**), delivery/commercial contracts (**2 files / 16 tests**), client
+navigation (**2 files / 70 tests**), and the three-test governed Chromium
+pre-payment suite. The active-term invitation fixtures are isolated test
+semantics only. This qualification does not enable normal-runtime payment,
+entitlement, mail delivery, or production operation.
+
 ## Goal 2 — Establish agency-member workspace authority
 
 **Outcome**
@@ -604,16 +622,16 @@ on `verify/mvp-closure-post-577`. It replaces the old direct agency and active
 subscription fixture in the lifecycle acceptance with the real local
 application path:
 
-`register → verification → agency onboarding → agency approval → canonical
-invitation acceptance → agent profile → private media/geography draft →
-controlled Vitest-only finance review → submit/reject/correct/resubmit/approve
-→ public search/detail → anonymous enquiry/replay → agent/agency CRM → expiry
-and reassignment`.
+`register → verification → agency onboarding → agency approval → controlled
+Vitest-only finance review / active canonical term → canonical invitation
+acceptance → agent profile → private media/geography draft →
+submit/reject/correct/resubmit/approve → public search/detail → anonymous
+enquiry/replay → agent/agency CRM → expiry and reassignment`.
 
 Direct evidence:
 
-- `pnpm test:authority -- server/__tests__/integration.agency-listing-publication-lifecycle.test.ts` passed **1 file / 1 test** on the exact task-owned disposable target (`a560e9f2971e7676…`). The test mounts the real auth, agent-onboarding, local-media, and tRPC routes. It registers and verifies the owner and member through HTTP; persists canonical agency onboarding and finance-pending subscription state; obtains reviewer approval; accepts the canonical invitation; saves the professional profile over HTTP; uploads five actual local media objects; and persists a confirmed Sandton location.
-- Before the finance transition, the same prepared listing remains a private draft and submission fails with `PRECONDITION_FAILED`. In the permitted Vitest-only commercial state, canonical manual-EFT checkout reuses one invoice; proof submission and finance review activate the agency term once; replayed finance approval is idempotent; and the stored term is exactly 90 days. This test does not enable normal runtime activation, contact a provider, or alter a payment setting.
+- `pnpm test:authority -- server/__tests__/integration.agency-listing-publication-lifecycle.test.ts` passed **1 file / 1 test** on the exact task-owned disposable target (`a560e9f2971e7676…`). The test mounts the real auth, agent-onboarding, local-media, and tRPC routes. It registers and verifies the owner and member through HTTP; persists canonical agency onboarding and finance-pending subscription state; obtains reviewer approval; performs the isolated Vitest-only finance transition; then accepts the canonical invitation after the active term, saves the professional profile over HTTP, uploads five actual local media objects, and persists a confirmed Sandton location.
+- Pre-payment owner preparation is separately browser-proven. The queued member cannot establish team authority before the active term; after a canonical member exists, the focused preparation acceptance proves its private draft remains available after the term returns to `pending_payment`, while submission fails with `PRECONDITION_FAILED`. In the permitted Vitest-only commercial state, canonical manual-EFT checkout reuses one invoice; proof submission and finance review activate the agency term once; replayed finance approval is idempotent; and the stored term is exactly 90 days. This test does not enable normal runtime activation, contact a provider, or alter a payment setting.
 - The same accepted owner/member then submits, receives structured rejection feedback, corrects and resubmits the persisted draft, proves suspended-term approval denial, restores only the isolated test term, and approves the listing. Persisted assertions cover the queue history, public source projection, matching media, canonical Sandton search/detail, anonymous enquiry exact replay and conflicting replay denial, unrelated-tenant denial, CRM contact/stage/follow-up, expiry continuity, invitation-based reassignment, former-agent denial, replacement access, and preserved custody history.
 - `pnpm test:authority -- server/__tests__/integration.agency-principal-bootstrap.test.ts server/__tests__/integration.agency-member-workspace-authority.test.ts server/__tests__/integration.agency-listing-publication-lifecycle.test.ts server/__tests__/integration.lead-delivery-authority.test.ts` passed **4 files / 15 tests** on the same exact target. It confirms that the full acceptance remains consistent with the canonical bootstrap, workspace-authority, and scoped recovery contracts.
 - `pnpm check`, `pnpm exec eslint server/__tests__/integration.agency-listing-publication-lifecycle.test.ts`, and `git diff --check` passed. Targeted ESLint reported **0 errors and 0 warnings** after formatting.

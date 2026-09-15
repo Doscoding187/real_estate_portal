@@ -8,7 +8,7 @@ review/publication, public-discovery, public-enquiry custody, CRM-continuity,
 first-cohort recovery, one consolidated agency operating acceptance, hard-deferred
 Land containment, canonical agent-coverage authority, governed browser proof of
 agent and agency-owner pre-payment onboarding, agency preparation-state and
-deferred-invitation-validity corrections, and a Commercial generic-viewing
+deferred-invitation-validity and queued-invitation-acceptance corrections, and a Commercial generic-viewing
 boundary correction are verified
 on the task branch. A bounded assisted-onboarding intake is also locally implemented;
 named support operations and final disclosures remain open. Normal commercial activation, hosted integration,
@@ -65,6 +65,7 @@ protected environment.
 | Canonical agent-coverage authority correction (task branch) | `f40ca8a3bbed5bfc1f0ffeb675b2c9d10397f35e` |
 | Commercial generic-viewing boundary correction (task branch) | `d1545579fda2c32b466af4cf68ff6929c2e2be2b` |
 | Full-suite fixture-congruency correction (task branch) | `e50dbe956a50a0e0a1c071224fb1bffd46bdb4d4` |
+| Queued-invitation acceptance containment (task branch) | `415a947261a65c160f4fb77c39712050bab35b8` |
 | Branch                                              | `verify/mvp-closure-post-577`                                                 |
 | Worktree                                            | `/home/edwardspc/Desktop/Dev/worktrees/property-listify-mvp-closure-post-577` |
 
@@ -383,13 +384,15 @@ The stored acceptance token, however, began its seven-day expiry immediately.
 If commercial activation were approved after that window, the activation path
 could send an already-expired link.
 
-Commit [`0c440207`](https://github.com/Doscoding187/real_estate_portal/commit/0c4402078ffaced5664f6993dac3fe8f6d0ed504) preserves the deferred model. It
-does not deliver a link, create membership, grant workspace access, or change
-entitlement while commercial activation is unavailable. Only after the existing
-canonical paid-access gate authorizes delivery does the service rotate a
-missing, malformed, or elapsed queued token and give it a fresh seven-day
-window. The onboarding team step now states that invite links are queued and
-that team access awaits approved commercial activation.
+Commit [`0c440207`](https://github.com/Doscoding187/real_estate_portal/commit/0c4402078ffaced5664f6993dac3fe8f6d0ed504) preserves the deferred delivery model. It
+does not deliver a link or change entitlement while commercial activation is
+unavailable. Only after the existing canonical paid-access gate authorizes
+delivery does the service rotate a missing, malformed, or elapsed queued token
+and give it a fresh seven-day window. The onboarding team step states that
+invite links are queued and that team access awaits approved commercial
+activation. That delivery correction did not itself govern direct acceptance by
+someone who already knew a queued token; the separate containment correction
+below closes that boundary.
 
 The authority-wrapped service regression passed **9 tests**, including elapsed
 and malformed-token delivery cases; the agency principal bootstrap integration
@@ -401,6 +404,44 @@ mock/log email transport; it did not contact a provider or enable normal
 runtime activation. The final status retained the exact owned target,
 `0090_retire_disconnected_boost_campaigns.sql`, schema congruency, and
 `no-incomplete-attempts`.
+
+### Queued invitation-acceptance containment
+
+**LRC-INVITE-002** found the complementary authorization gap. Although queued
+pre-payment delivery was deferred, an authenticated user who presented a known
+pending token could previously create canonical membership before the agency
+had commercial access; the endpoint also did not independently require verified
+email. The acceptance page additionally used an ignored `redirect` parameter,
+so its account-entry return route could be lost.
+
+Commit [`415a9472`](https://github.com/Doscoding187/real_estate_portal/commit/415a947261a65c160f4fb77c39712050bab35b8) treats the queued record as no authorization
+credential until the agency's existing canonical paid-access decision permits
+team access. The shared `hasEffectiveAgencyInvitationAccess` gate checks the
+canonical agency billable account and term before any affiliation, profile,
+membership, or invitation-consumption write. Email verification is an explicit
+precondition. The browser now uses the canonical safe `next` account-entry
+parameter, preserving the complete internal acceptance route after sign-in.
+No payment, entitlement, provider, or protected-environment action occurs in
+this correction.
+
+Evidence on the exact owned target (`a560e9f2971e7676…`): the affected
+authority suite passed **5 files / 25 tests**; delivery/commercial contracts
+passed **2 files / 16 tests**; client navigation passed **2 files / 70 tests**;
+and the governed Chromium pre-payment suite passed **3 tests** at `1440x900`.
+The added browser path registered and verified a normal visitor and an agency
+owner, completed normal agency setup with a queued team record, and then used a
+target-only counterfactual token read because provider delivery remains
+deferred. It returned the verified visitor through normal sign-in to the
+acceptance route, received `PRECONDITION_FAILED`, and confirmed persisted
+visitor role, no agency/profile, pending invitation, and zero invoices. Raw
+tokens were not recorded. `pnpm run check`, database-authority static checks
+(**35 files / 293 tests**), targeted lint with zero errors, `git diff --check`,
+and final authority status also passed.
+
+This is local task-branch evidence only. The test-only active-term fixtures
+prove post-activation membership semantics; they do not establish a live
+commercial activation route, real mail delivery, hosted operation, or
+production verification.
 
 ### Lead-handling follow-up investigation
 
@@ -733,7 +774,7 @@ The final command was:
 pnpm test:browser:authority -- --config=playwright.prepayment-onboarding.config.ts
 ```
 
-It passed **2 Chromium desktop tests** at `1440x900`. In the first, the browser
+It passed **3 Chromium desktop tests** at `1440x900`. In the first, the browser
 selected Real Estate Agent, completed the normal registration form, received
 HTTP `201`, and then followed the normal `/api/auth/verify-email` route using
 the temporary link emitted by the repository's local-development email
@@ -763,9 +804,20 @@ persisted agency and branding record with its selected geography, a canonical
 commercial preference without creating an invoice, payment attempt, entitlement,
 or public activation.
 
+The third browser path proves queued-team containment. It registered and
+verified a normal prospective invitee and a separate agency owner, completed
+normal agency setup with a queued team record, and confirmed a
+`pending_payment` subscription with zero invoices. A target-only counterfactual
+read supplied the queued token solely because provider delivery remains
+intentionally deferred. The invitee entered through Login using the canonical
+safe `next` parameter and returned to `/accept-invitation`; acceptance returned
+`PRECONDITION_FAILED`. Persisted state remained a verified visitor with no
+agency affiliation or agent profile, and the invitation remained pending. No
+raw token, provider action, payment, or entitlement mutation was retained.
+
 After the correction, the focused client suite passed **2 files / 10 tests**,
 the authority-wrapped agency onboarding contracts passed **2 files / 9 tests**,
-and the browser command above passed its two tests. `pnpm run check`,
+and the browser command above passed its three tests. `pnpm run check`,
 `pnpm test:db-authority:static` (**35 files / 293 tests**), targeted ESLint
 (zero errors; existing warnings only), `git diff --check`, and
 `pnpm db:authority:status` also passed. The final status retained fingerprint
@@ -798,7 +850,8 @@ operation.
    browser proof for agency-owner registration and pre-payment setup, including
    persisted `pending_payment` preference without an invoice; `0c440207`
    prevents a queued pre-payment team invitation from producing an expired link
-   if delivery later becomes authorized. The full agency
+   if delivery later becomes authorized; and `415a9472` prevents direct
+   acceptance of a queued pre-payment token from creating team authority. The full agency
    member/listing/review/public-discovery/enquiry/CRM journey still has no
    browser UI, hosted, provider, or production proof; senior review,
    integration, and controlled runtime acceptance remain required before any
@@ -857,8 +910,9 @@ Application fixes are committed at `c6c9f133`, `bba390b0`, `c8c35fde`,
 correction `9acfea2f`, Goals 7–8 CRM correction `c4df6600`, Goal 9
 platform-recovery correction `f9086ef4`, Goal 10 full acceptance `fbf592cc`,
 Land containment correction `335838df`, bounded assisted-onboarding intake
-`144e90d1`, and canonical agent-coverage authority correction `f40ca8a3`; the
-review packet, escalation resolution, register, and queue
+`144e90d1`, canonical agent-coverage authority correction `f40ca8a3`, and
+queued-invitation acceptance containment `415a9472`; the review packet,
+escalation resolution, register, and queue
 runbook retain their respective evidence commits. Final Git status was clean
 after each recorded commit before the next bounded workstream began. No merge, feature push,
 deployment, cutover, Azure/TiDB access, protected migration, credential/grant
