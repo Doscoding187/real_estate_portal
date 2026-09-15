@@ -1,6 +1,6 @@
 # Post-merge MVP closure review packet
 
-Date: 2026-09-15 (governed pre-payment browser-acceptance, Commercial-workflow, and governed local-service-recovery addenda; canonical agent-coverage addendum; prior Goals 6–10, LRC-LAND-001, and LRC-SUPPORT-001 follow-ups dated 2026-09-14; original closure review dated 2026-09-13).
+Date: 2026-09-15 (transactional-email containment, governed pre-payment browser-acceptance, Commercial-workflow, and governed local-service-recovery addenda; canonical agent-coverage addendum; prior Goals 6–10, LRC-LAND-001, and LRC-SUPPORT-001 follow-ups dated 2026-09-14; original closure review dated 2026-09-13).
 **Outcome: the local candidate supports controlled
 pre-payment onboarding; canonical billing and activation paths are contained,
 and Goals 1–10 agency membership, workspace, commercial-term, private-preparation,
@@ -9,7 +9,7 @@ first-cohort recovery, one consolidated agency operating acceptance, hard-deferr
 Land containment, canonical agent-coverage authority, governed browser proof of
 agent and agency-owner pre-payment onboarding, agency preparation-state and
 deferred-invitation-validity and queued-invitation-acceptance corrections, and a Commercial generic-viewing
-boundary correction are verified
+boundary correction and deployed transactional-email false-success containment are verified
 on the task branch. A bounded assisted-onboarding intake is also locally implemented;
 named support operations and final disclosures are blocked pending owner-supplied operating and legal authority. Normal commercial activation, hosted integration,
 production verification, and protected release remain blocked.** This is not a declaration that all MVP
@@ -68,6 +68,7 @@ protected environment.
 | Queued-invitation acceptance containment (task branch) | `415a947261a65c160f4fb77c39712050bab35b8` |
 | Browser correction-loop acceptance (task branch) | `72dd80e04b5c76c348389f4262543022a8a9a586` |
 | Browser public discovery/enquiry/CRM acceptance (task branch) | `a2a4e52b6b6d215263bc1f765d75a670d00ad64e` |
+| Deployed transactional-email containment correction (task branch) | `3d2e01488755376486d96e2242f83d08895c8a62` |
 | Branch                                              | `verify/mvp-closure-post-577`                                                 |
 | Worktree                                            | `/home/edwardspc/Desktop/Dev/worktrees/property-listify-mvp-closure-post-577` |
 
@@ -286,7 +287,7 @@ incomplete required journey; it does not claim a failing production observation.
 
 | Journey                      | Result                                                  | Exact evidence and boundary                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | ---------------------------- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Account access               | PASS locally                                            | `scripts/mvp-account-verification.mts` completed 15 HTTP checks: weak password rejection; registration; unverified denial; verification; token replay denial; login; prohibited self-assigned super-admin reduced to visitor; logout; anonymous auth.me null; recovery enumeration resistance; reset; reset replay denial; old-password denial; new-password success; pre-reset session revoked. Commits `555250c5` and `e9909ab6` also completed real Chromium registration UI, local-development verification-link navigation, session establishment, and respectively agent setup and agency-owner setup on the exact target. External provider delivery and expiry timing over elapsed time remain unverified. |
+| Account access               | PASS locally                                            | `scripts/mvp-account-verification.mts` completed 15 HTTP checks: weak password rejection; registration; unverified denial; verification; token replay denial; login; prohibited self-assigned super-admin reduced to visitor; logout; anonymous auth.me null; recovery enumeration resistance; reset; reset replay denial; old-password denial; new-password success; pre-reset session revoked. Commits `555250c5` and `e9909ab6` also completed real Chromium registration UI, local-development verification-link navigation, session establishment, and respectively agent setup and agency-owner setup on the exact target. `3d2e0148` makes absent or placeholder transactional-mail configuration fail before recovery/resend account lookup in deployed runtime, limits local email fallback to development/test, and returns neutral recovery/verification responses if a configured provider fails. Its 4-file/20-test boundary suite, 15-check local HTTP rerun, typecheck, and 35-file/293-test static suite passed. External provider delivery and expiry timing over elapsed time remain unverified. |
 | Permissions                  | BLOCKED for complete scope                              | Account privilege injection denied; scripts/mvp-listing-verification.mts proved cross-tenant listing read and write HTTP 403 and unchanged persisted title. Scenario verifier proved agent/agency/developer unrelated-recipient denial and platform-operations restrictions. This is not exhaustive tenant membership revocation, every role, or admin audit proof.                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | Listing authoring            | PASS for local browser and HTTP agency-preparation slices | The three focused authority tests above passed 3 files / 5 tests on target fingerprint `a560e9f2971e7676…`: real authenticated routers physically PUT and served five media objects, persisted canonical Gauteng/Johannesburg/Sandton IDs, preserved a reopened/edited draft, allowed agency-owner visibility, and denied an unrelated tenant. `a2a4e52` then drove the agency member through Chromium: author a House listing, select and confirm Sandton, upload five images, save the persisted server draft, submit it, receive reviewer feedback, reopen it, retain its data/media/geography, correct it, and resubmit. Its isolated enabled fixture is browser acceptance evidence only; it does not enable a normal-runtime commercial transition. A single continuous browser path from owner registration and canonical invitation acceptance into this member session remains unproven. |
 | Publication                  | PASS for isolated local lifecycle; normal runtime blocked | Goal 5 real HTTP acceptance proved the governed lifecycle and denial case. `72dd80e0` and `a2a4e52` add Chromium reviewer/member proof of rejection feedback, correction, resubmission, confirmation, approval, and exactly one persisted published source/projection with five mirrored images. Approval uses the existing isolated local entitlement fixture and did not invoke payment or normal runtime activation. Hosted and production publication remain unverified. |
@@ -486,6 +487,22 @@ separate launch evidence requirements.
    helper module to readiness evaluators, producing “db.select is not a
    function.” It now supplies the authorized database instance. The HTTP
    listing harness asserts successful preflight and preserves its real blockers.
+3. **LRC-AUTH-001 transactional-email boundary:** a deployed runtime with an
+   absent or placeholder Resend key/sender previously treated transactional mail
+   as a local/logged success. Recovery and verification resend responses could
+   therefore imply delivery when no provider was available; a configured-provider
+   error on a known account also had a distinct response path. Commit
+   [`3d2e0148`](https://github.com/Doscoding187/real_estate_portal/commit/3d2e01488755376486d96e2242f83d08895c8a62)
+   centralizes placeholder-aware configuration validation. Development/test keeps
+   the existing local sink. A deployed runtime now rejects unavailable mail
+   uniformly before recovery/resend account lookup, its low-level senders fail
+   closed rather than returning mock success, and configured-provider errors
+   receive neutral responses. The focused direct and authority-wrapped runs both
+   passed **4 files / 20 tests**; the exact-target local HTTP account script
+   passed its 15 checks again; `pnpm check` and the **35-file / 293-test** static
+   authority suite passed. No provider account, sender, secret, or deployment was
+   changed. This contains false success locally; it does not prove real provider
+   acceptance, delivery, alert recovery, or hosted operation.
 
 Claim: bounded fixes pass relevant local checks. Mechanism: repository commands
 and HTTP harnesses. Sequence: reproduce failures, inspect canonical timestamp/
@@ -877,10 +894,11 @@ server-draft creation, publication, discovery, enquiry, and CRM slices.
    `144e90d1` makes assisted-onboarding intake durable and reviewable, but it
    is not a monitored contact service. A named queue owner, cadence,
    reply/escalation channel, and finalized launch Terms/Privacy content remain
-   required before real-world onboarding (LRC-SUPPORT-001). Real
-   verification/recovery mail, recipient delivery, Azure grant/provider
-   behavior, restoration, worker supervision, and capacity remain unproven.
-   Local mocks and green CI cannot authorize launch.
+   required before real-world onboarding (LRC-SUPPORT-001). `3d2e0148` prevents
+   an unconfigured/default mail provider from reporting local delivery in a
+   deployed runtime, but real verification/recovery mail, recipient delivery,
+   Azure grant/provider behavior, restoration, worker supervision, and capacity
+   remain unproven. Local mocks and green CI cannot authorize launch.
 6. **L2 — deferred polish/performance debt:** existing lint/bundle warnings,
    optional map preview and broad optional product surfaces. These do not justify
    widening this workstream.
@@ -928,7 +946,8 @@ correction `9acfea2f`, Goals 7–8 CRM correction `c4df6600`, Goal 9
 platform-recovery correction `f9086ef4`, Goal 10 full acceptance `fbf592cc`,
 Land containment correction `335838df`, bounded assisted-onboarding intake
 `144e90d1`, canonical agent-coverage authority correction `f40ca8a3`, and
-queued-invitation acceptance containment `415a9472`; the review packet,
+queued-invitation acceptance containment `415a9472`, and deployed
+transactional-email containment `3d2e0148`; the review packet,
 escalation resolution, register, and queue
 runbook retain their respective evidence commits. Final Git status was clean
 after each recorded commit before the next bounded workstream began. No merge, feature push,
