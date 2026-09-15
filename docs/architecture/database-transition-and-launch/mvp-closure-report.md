@@ -1332,9 +1332,15 @@ The final command was:
 pnpm test:browser:authority -- --config=playwright.prepayment-onboarding.config.ts
 ```
 
-It passed **3 Chromium desktop tests** at `1440x900`. In the first, the browser
-selected Real Estate Agent, completed the normal registration form, received
-HTTP `201`, and then followed the normal `/api/auth/verify-email` route using
+The initial recorded run passed **3 Chromium desktop tests** at `1440x900`.
+The `7c939831` public-entry extension reran the same governed configuration and
+passed **4 Chromium desktop tests** at the same viewport. Its first path opens
+`/advertise/sell/agents`, proves the visible preparation-only state and absence
+of the former price, 90-day, invoice, and manual-EFT claims, then follows the
+real Agent registration return path to the preselected Agent registration
+dialog. In the second, the browser selected Real Estate Agent, completed the
+normal registration form, received HTTP `201`, and then followed the normal
+`/api/auth/verify-email` route using
 the temporary link emitted by the repository's local-development email
 transport. The verification route set the real session and redirected the
 browser to `/agent/setup?verified=true`. The browser saved a professional
@@ -1343,7 +1349,7 @@ setup, reached `/listings/create`, and reloaded that workspace. The UI continued
 to state that the stakeholder may prepare a private listing but submission and
 marketplace publication require onboarding, approval, and commercial activation.
 
-In the second, the browser selected Agency during ordinary registration,
+In the third, the browser selected Agency during ordinary registration,
 verified through the same local-development transport and normal verification
 route, then completed agency identity, branding, commercial-selection, terms,
 review, and save steps at `/agency/setup`. It landed in `/agency/overview` with
@@ -1362,7 +1368,7 @@ persisted agency and branding record with its selected geography, a canonical
 commercial preference without creating an invoice, payment attempt, entitlement,
 or public activation.
 
-The third browser path proves queued-team containment. It registered and
+The fourth browser path proves queued-team containment. It registered and
 verified a normal prospective invitee and a separate agency owner, completed
 normal agency setup with a queued team record, and confirmed a
 `pending_payment` subscription with zero invoices. A target-only counterfactual
@@ -1373,7 +1379,7 @@ safe `next` parameter and returned to `/accept-invitation`; acceptance returned
 agency affiliation or agent profile, and the invitation remained pending. No
 raw token, provider action, payment, or entitlement mutation was retained.
 
-After the correction, the focused client suite passed **2 files / 10 tests**,
+After the original correction, the focused client suite passed **2 files / 10 tests**,
 the authority-wrapped agency onboarding contracts passed **2 files / 9 tests**,
 and the browser command above passed its three tests. `pnpm run check`,
 `pnpm test:db-authority:static` (**35 files / 293 tests**), targeted ESLint
@@ -1392,6 +1398,42 @@ activation, provider behaviour, hosting, or production operation. The separate
 `72dd80e0`/`a2a4e52` browser acceptance now proves actual media upload,
 server-draft creation, publication, discovery, enquiry, and CRM slices.
 
+### Independent-Agent public onboarding truthfulness — 2026-09-15
+
+The normal runtime state in `shared/commercialActivation.ts` is
+`preparation_only` with activation disabled. `AgentPackageSelection` already
+failed an unavailable invoice request closed by returning the stakeholder to the
+preparation workspace. The public `/advertise/sell/agents` page contradicted
+that state: it loaded the commercial catalog and advertised a `R499` 90-day
+Agent Launch Access offer, manual EFT, invoices, and paid activation while none
+of those actions was available in normal runtime.
+
+Commit [`7c939831`](https://github.com/Doscoding187/real_estate_portal/commit/7c939831)
+retains the catalog-driven commercial presentation only behind a separately
+authorized enabled runtime state. The normal route now starts with the settled
+registration target `/agent/setup`, describes account verification,
+professional-profile and canonical-coverage completion, and private
+listing-draft preparation, and shows the canonical preparation-only notice.
+It makes clear that marketplace publication, visibility, and new marketplace
+enquiries remain unavailable until approved commercial activation. It does not
+load the commercial catalog or advertise a price, invoice, manual-EFT payment,
+or fixed paid term in that normal state.
+
+Direct local evidence on the exact task-owned target:
+
+- `pnpm vitest run client/src/pages/advertise/AgentProductLandingPage.commercialTruth.test.tsx client/src/pages/agent/AgentPackageSelection.test.tsx --reporter=basic` passed **2 files / 8 tests**. The presentation regression proves the truthful public state and retained enabled-state component; the package selection regression proves an unavailable commercial action returns to preparation without an invoice request.
+- `pnpm test:browser:authority -- --config=playwright.prepayment-onboarding.config.ts` passed **4 Chromium desktop tests**. The new path proves the anonymous public page's real registration entry; the three existing paths prove real agent verification, canonical coverage, persisted private preparation and publication containment, agency-owner preparation with zero invoices, and queued-invitation containment.
+- `pnpm check`, targeted zero-error ESLint, Prettier, `git diff --check`, and `pnpm test:db-authority:static` passed. The static authority suite reported **35 files / 295 tests**. `pnpm db:authority:status` after browser verification confirmed fingerprint `a560e9f2971e7676…`, exact worktree ownership, manifest head `0090_retire_disconnected_boost_campaigns.sql`, schema congruency, and `no-incomplete-attempts`.
+
+This correction makes the public independent-Agent preparation invitation
+truthful. It does not establish independent-Agent paid-operation support,
+enable payments or entitlements, contact a provider, change a deployment, or
+authorize marketing a paid independent-Agent cohort. The full authority-suite
+attempt after the later viewing corrections ended without a terminal summary;
+it is discarded as interrupted evidence. The retained broad **633 passed / 9
+skipped files; 4,216 passed / 67 skipped tests** result predates this current
+public-page change and is not claimed as its regression proof.
+
 ## Ranked remaining blockers and authority handoff
 
 1. **L0 — integrate and independently verify the locally contained Land boundary (LRC-LAND-001):** `335838df` hard-deferred the specialist and generic-listing Land paths, `62ec0eed` closes the distinct generic Developer row authoring/public-discovery route, and `0280e9dd` closes generic Developer draft persistence. Land must remain unavailable to the controlled pre-payment onboarding cohort and public routes until integrated verification and a separately authorized Land commercial/acceptance slice exist.
@@ -1402,7 +1444,8 @@ server-draft creation, publication, discovery, enquiry, and CRM slices.
    entitlement, and protected-release evidence exists. Controlled pre-payment
    onboarding may prepare identities and private drafts only. Do not replace
    this boundary with a free publishing entitlement or a privilege bypass.
-4. **L1 — integrate and host-verify the completed agency, membership, and Commercial-route
+4. **L1 — integrate and independently verify the public independent-Agent preparation boundary (LRC-AGENT-001):** `7c939831` removes the contradictory paid offer from normal runtime and browser-proves the actual preparation entry. It still does not prove an independent Agent's paid commercial operation. Retain that separate paid variation and hosted verification before advertising paid independent-Agent support.
+5. **L1 — integrate and host-verify the completed agency, membership, and Commercial-route
    boundaries (LRC-AGY-001; LRC-MEM-001; LRC-COMMERCIAL-001):** Goal 10 proves the complete
    first-cohort agency journey locally, `d1545579` keeps Commercial leads out
    of generic viewing flows before ordinary assignment, and `551d63fe` makes
@@ -1423,7 +1466,7 @@ server-draft creation, publication, discovery, enquiry, and CRM slices.
    verification; senior review, integration,
    and controlled runtime acceptance remain
    required before any cohort is represented as live.
-5. **L1 — support/disclosure operation and external/protected operations:**
+6. **L1 — support/disclosure operation and external/protected operations:**
    `144e90d1` makes assisted-onboarding intake durable and reviewable, but it
    is not a monitored contact service. A named queue owner, cadence,
    reply/escalation channel, and finalized launch Terms/Privacy content remain
@@ -1432,7 +1475,7 @@ server-draft creation, publication, discovery, enquiry, and CRM slices.
    deployed runtime, but real verification/recovery mail, recipient delivery,
    Azure grant/provider behavior, restoration, worker supervision, and capacity
    remain unproven. Local mocks and green CI cannot authorize launch.
-6. **L2 — deferred polish/performance debt:** existing lint/bundle warnings,
+7. **L2 — deferred polish/performance debt:** existing lint/bundle warnings,
    optional map preview and broad optional product surfaces. These do not justify
    widening this workstream.
 
@@ -1480,7 +1523,9 @@ platform-recovery correction `f9086ef4`, Goal 10 full acceptance `fbf592cc`,
 Land containment corrections `335838df`, `62ec0eed`, and `0280e9dd`, bounded assisted-onboarding intake
 `144e90d1`, canonical agent-coverage authority correction `f40ca8a3`, and
 queued-invitation acceptance containment `415a9472`, and deployed
-transactional-email containment `3d2e0148`; the review packet,
+transactional-email containment `3d2e0148`, viewing UTC/input corrections
+`4d0b1517`, `fa8f9101`, and `40a37c37`, and independent-Agent public
+onboarding truthfulness `7c939831`; the review packet,
 escalation resolution, register, and queue
 runbook retain their respective evidence commits. Final Git status was clean
 after each recorded commit before the next bounded workstream began. No merge, feature push,

@@ -894,6 +894,32 @@ delivery/acceptance, and the later member session. That acquisition path,
 external provider delivery, hosted integration, and protected release remain
 separate evidence requirements.
 
+### Independent-Agent preparation-entry follow-up — 2026-09-15
+
+The Goal 10 final decision requires an equivalent independent-Agent variation
+before advertising independent-Agent support. A focused review found that the
+normal runtime was correctly `preparation_only`, but the public Agent landing
+page still advertised a paid 90-day Launch Access term and manual-EFT invoice
+path. That claim was stronger than the currently approved controlled
+pre-payment onboarding path.
+
+Commit [`7c939831`](https://github.com/Doscoding187/real_estate_portal/commit/7c939831)
+makes the public entry consistent with the settled model. The normal route now
+invites a prospective independent Agent to register, verify, complete their
+professional presence and canonical coverage, and prepare private listing
+drafts. It names the protected publication/marketplace/new-enquiry boundary and
+does not show price, invoice, manual-EFT, or 90-day paid claims. The
+catalog-driven commercial page remains retained only behind a separately
+authorized enabled runtime state.
+
+Direct evidence is a **2-file / 8-test** focused client run, a **4-test**
+governed Chromium pre-payment acceptance including the real public entry and
+registration dialog, `pnpm check`, targeted zero-error lint/Prettier, and the
+**35-file / 295-test** static authority suite on fingerprint
+`a560e9f2971e7676…`. This is a truthful pre-payment onboarding correction. It
+does **not** satisfy the separate independent-Agent paid-operation variation or
+move independent-Agent paid-launch claims into the accepted agency cohort.
+
 ## Advancement rule
 
 Advance only when the current goal:
