@@ -949,6 +949,31 @@ registration dialog, `pnpm check`, targeted zero-error lint/Prettier, and the
 does **not** satisfy the separate independent-Agent paid-operation variation or
 move independent-Agent paid-launch claims into the accepted agency cohort.
 
+### Authenticated Agent preparation-route follow-up — 2026-09-15
+
+The public-entry correction did not by itself contain the authenticated
+`/agent/select-package` route. Although its disabled invoice action returned to
+the workspace, it still loaded and displayed the paid catalog, fixed term,
+manual-EFT steps, and payment-proofs UI. The shared Agent journey also sent
+unavailable select-payment and renewal states to activation-labelled actions.
+
+Commit [`e1ccc2c8`](https://github.com/Doscoding187/real_estate_portal/commit/e1ccc2c8349b66887e8ab145cc772887f1322550)
+retains the commercial component only behind the separately authorised enabled
+state. Normal runtime now shows the direct authenticated route as Agent setup
+and private-work preparation, without commercial queries or invoice wiring.
+The central journey maps unavailable commercial steps to a clear preparation
+action, so Agent status, settings, and locked-workspace surfaces no longer
+offer activation while it is unavailable.
+
+Direct evidence is a **7-file / 20-test** focused client run and the **8-test**
+governed Chromium pre-payment acceptance. The browser completed real Agent
+registration, verification, profile setup, and direct package-route navigation
+before returning to the preparation workspace. `pnpm check`, targeted
+zero-error lint/Prettier, `git diff --check`, and the **35-file / 295-test**
+static authority suite passed on exact target fingerprint `a560e9f2971e7676…`.
+This does not enable payment, entitlement mutation, publishing, a paid
+independent-Agent cohort, provider delivery, or a protected release.
+
 ### Shared public advertising and Developer preparation-entry follow-up — 2026-09-15
 
 The role-specific public pages alone did not close the anonymous entry surface.
