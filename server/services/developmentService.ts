@@ -11,6 +11,7 @@ import {
   validatePersistedSubmissionReadiness,
 } from './developmentSubmissionReadiness';
 import {
+  assertLandDevelopmentDraftOperationAvailable,
   assertLandDevelopmentOperationAvailable,
   throwAuctionPublicationDisabled,
 } from './developerEngineContainment';
@@ -3541,6 +3542,10 @@ export async function saveDraft(
       message: `Developer profile for user ID ${developerId} not found`,
     });
   }
+  assertLandDevelopmentDraftOperationAvailable(
+    wizardState,
+    'Land development draft preparation',
+  );
 
   try {
     const draftPayload = {

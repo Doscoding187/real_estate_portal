@@ -3,6 +3,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import {
+  assertLandDevelopmentDraftOperationAvailable,
   assertLandDevelopmentOperationAvailable,
   throwAuctionPublicationDisabled,
 } from '../services/developerEngineContainment';
@@ -39,6 +40,34 @@ describe('Developer Engine S0 containment contracts', () => {
     expect(developmentService).toContain("'Land development publication'");
     expect(eligibility).toContain("'land_vertical_deferred'");
     expect(eligibility).toContain("ne(developments.developmentType, 'land')");
+  });
+
+  it('contains generic Land drafts in both supported wizard payload shapes', () => {
+    expect(() =>
+      assertLandDevelopmentDraftOperationAvailable(
+        { developmentType: 'land' },
+        'Land development draft preparation',
+      ),
+    ).toThrow(/Land development draft preparation is unavailable while Land is deferred/);
+    expect(() =>
+      assertLandDevelopmentDraftOperationAvailable(
+        { developmentData: { developmentType: 'land' } },
+        'Land development draft preparation',
+      ),
+    ).toThrow(/Land development draft preparation is unavailable while Land is deferred/);
+    expect(() =>
+      assertLandDevelopmentDraftOperationAvailable(
+        { developmentType: 'residential' },
+        'Development draft preparation',
+      ),
+    ).not.toThrow();
+
+    expect(source('server/developerRouter.ts')).toContain(
+      'assertLandDevelopmentDraftOperationAvailable',
+    );
+    expect(source('server/superAdminPublisherRouter.ts')).toContain(
+      'assertLandDevelopmentDraftOperationAvailable',
+    );
   });
 
   it('removes blanket publisher mutation and routes publication through the service gate', () => {

@@ -33,6 +33,26 @@ export function isDeferredLandDevelopmentType(developmentType: unknown): boolean
   return developmentType === 'land' && !isLandVerticalAvailable();
 }
 
+/**
+ * Draft payloads have existed in both flattened and nested wizard shapes.
+ * Treat either representation as Land so an older client payload cannot turn
+ * the generic Developer draft store into a deferred-Land authoring route.
+ */
+export function isDeferredLandDevelopmentDraft(draftData: unknown): boolean {
+  if (!draftData || typeof draftData !== 'object') return false;
+
+  const draft = draftData as Record<string, unknown>;
+  const nestedDevelopment =
+    draft.developmentData && typeof draft.developmentData === 'object'
+      ? (draft.developmentData as Record<string, unknown>)
+      : null;
+
+  return (
+    isDeferredLandDevelopmentType(draft.developmentType) ||
+    isDeferredLandDevelopmentType(nestedDevelopment?.developmentType)
+  );
+}
+
 /** Fail closed before an authoring, review, or publication transition. */
 export function requireLandVerticalAvailable(operation: string): void {
   if (isLandVerticalAvailable()) return;

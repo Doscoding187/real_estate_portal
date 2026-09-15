@@ -1,5 +1,8 @@
 import { TRPCError } from '@trpc/server';
-import { isDeferredLandDevelopmentType } from '../../shared/landLaunchPolicy';
+import {
+  isDeferredLandDevelopmentDraft,
+  isDeferredLandDevelopmentType,
+} from '../../shared/landLaunchPolicy';
 
 /**
  * S0 publication boundary for the transaction types supported by the public
@@ -25,6 +28,25 @@ export function assertLandDevelopmentOperationAvailable(
   operation: string,
 ): void {
   if (!isDeferredLandDevelopmentType(developmentType)) return;
+
+  throw new TRPCError({
+    code: 'PRECONDITION_FAILED',
+    message:
+      `${operation} is unavailable while Land is deferred from the first launch cohort. ` +
+      'Land requires its dedicated commercial and operating acceptance before exposure.',
+  });
+}
+
+/**
+ * Generic Developer drafts are authoring state, even before they become a
+ * persisted Development row. Both historical wizard payload shapes must obey
+ * the same deferred-Land policy.
+ */
+export function assertLandDevelopmentDraftOperationAvailable(
+  draftData: unknown,
+  operation: string,
+): void {
+  if (!isDeferredLandDevelopmentDraft(draftData)) return;
 
   throw new TRPCError({
     code: 'PRECONDITION_FAILED',
