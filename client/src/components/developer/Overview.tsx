@@ -26,6 +26,7 @@ import {
 } from '@/components/ui/select';
 import { useDeveloperOnboardingStatus } from '@/hooks/useDeveloperOnboardingStatus';
 import { trpc } from '@/lib/trpc';
+import { COMMERCIAL_ACTIVATION_STATE } from '@shared/commercialActivation';
 
 type Range = '7d' | '30d' | '90d';
 
@@ -219,9 +220,15 @@ export default function Overview() {
                 </p>
               </div>
             </div>
-            <Button variant="outline" onClick={() => setLocation('/developer/plans')}>
-              Activate Launch Access
-            </Button>
+            {COMMERCIAL_ACTIVATION_STATE.enabled ? (
+              <Button variant="outline" onClick={() => setLocation('/developer/plans')}>
+                Activate Launch Access
+              </Button>
+            ) : (
+              <Button variant="outline" onClick={() => setLocation('/developer/developments')}>
+                Manage private developments
+              </Button>
+            )}
           </CardContent>
         </Card>
       )}

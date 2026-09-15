@@ -74,7 +74,7 @@ function ProductIcon({ index, className }: { index: number; className?: string }
   return <Icon className={className} />;
 }
 
-export default function DeveloperPlans() {
+export function CommercialDeveloperPlans() {
   const [, setLocation] = useLocation();
   const [selectedProduct, setSelectedProduct] = useState<CommercialProduct | null>(null);
   const { data: catalog, isLoading, isError } = useCommercialCatalog('developer');
@@ -369,5 +369,72 @@ export default function DeveloperPlans() {
         </DialogContent>
       </Dialog>
     </>
+  );
+}
+
+function PreparationDeveloperPlans() {
+  const [, setLocation] = useLocation();
+
+  return (
+    <div
+      className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100"
+      data-testid="developer-plans-preparation"
+    >
+      <div className="container mx-auto px-4 py-8 sm:px-6 lg:px-8">
+        <Button
+          variant="ghost"
+          className="mb-6"
+          onClick={() => setLocation('/developer/dashboard')}
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back to Dashboard
+        </Button>
+
+        <div className="mx-auto mb-8 max-w-3xl text-center">
+          <Badge className="mb-4 bg-blue-100 text-blue-700 hover:bg-blue-100">
+            <Sparkles className="mr-1 h-3 w-3" />
+            Developer preparation
+          </Badge>
+          <h1 className="mb-4 text-4xl font-bold text-slate-900 md:text-5xl">
+            Prepare your development portfolio before commercial activation.
+          </h1>
+          <p className="text-lg text-slate-600">
+            Continue building private development drafts and return to them when you are ready.
+            Public project publication remains available after approved commercial activation.
+          </p>
+        </div>
+
+        <div className="mx-auto mb-10 max-w-3xl">
+          <CommercialActivationNotice />
+        </div>
+
+        <Card className="mx-auto max-w-2xl p-8 text-center">
+          <Building2 className="mx-auto h-10 w-10 text-blue-600" />
+          <h2 className="mt-4 text-2xl font-semibold text-slate-900">
+            Private preparation is available
+          </h2>
+          <p className="mt-3 text-slate-600">
+            Create, edit, and resume private development drafts. Commercial products, invoices, and
+            publishing are unavailable during this onboarding phase.
+          </p>
+          <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
+            <Button onClick={() => setLocation('/developer/create-development')}>
+              Prepare a development
+            </Button>
+            <Button variant="outline" onClick={() => setLocation('/developer/drafts')}>
+              Resume private drafts
+            </Button>
+          </div>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+export default function DeveloperPlans() {
+  return COMMERCIAL_ACTIVATION_STATE.enabled ? (
+    <CommercialDeveloperPlans />
+  ) : (
+    <PreparationDeveloperPlans />
   );
 }
