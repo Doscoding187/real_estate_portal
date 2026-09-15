@@ -89,6 +89,7 @@ protected environment.
 | Direct commercial-plans public-route containment (task branch) | `32224b0ada4e34a1e9222d702d8fa46963bc88f2` |
 | Authenticated Developer plans containment (task branch) | `ada578a2ae2226df0497bb8769911fa668b85149` |
 | Authenticated Agent package-route containment (task branch) | `e1ccc2c8349b66887e8ab145cc772887f1322550` |
+| Authenticated Agency billing-route containment (task branch) | `d48544b9a6c33de954821cbf06c0cac33f6dc0af` |
 | Branch                                              | `verify/mvp-closure-post-577`                                                 |
 | Worktree                                            | `/home/edwardspc/Desktop/Dev/worktrees/property-listify-mvp-closure-post-577` |
 
@@ -1675,6 +1676,44 @@ issue an invoice, request or receive payment proof, mutate an entitlement,
 publish inventory, alter the canonical commercial product, change provider or
 deployment settings, or establish a paid Agent cohort.
 
+### Authenticated Agency billing-route containment — 2026-09-16
+
+The authenticated `/agency/billing` deep link remained a normal-runtime
+commercial presentation escape. Although its checkout, proof, cancellation,
+and reactivation handlers stopped when activation was disabled, the reachable
+workspace still mounted billing-state and billing-workspace queries and rendered
+paid plans, invoices, payment history, manual-EFT details, and proof-upload
+controls. That contradicted the settled preparation-only Agency path.
+
+Commit [`d48544b9`](https://github.com/Doscoding187/real_estate_portal/commit/d48544b9a6c33de954821cbf06c0cac33f6dc0af) keeps the existing billing component as an explicit
+future enabled-commercial surface. Under the normal `preparation_only` runtime,
+the route now renders a preparation screen with Agency setup and private
+inventory actions only; it does not mount the billing data hooks or payment
+mutations. Publishing and commercial activation remain clearly protected.
+
+Focused client coverage passed **2 files / 5 tests**, including an assertion
+that the direct authenticated screen makes no billing query or mutation call.
+The governed Chromium pre-payment suite passed **8 tests** on the exact
+task-owned target. Its real Agency-owner path registers, verifies, completes
+Agency setup, visits `/agency/billing`, confirms paid plans/EFT/proof controls
+are absent, and returns to `/agency/listings`. `pnpm check`, Prettier,
+`git diff --check`, and `pnpm test:db-authority:static` (**35 files / 295
+tests**) passed. Targeted client ESLint reported no errors; existing
+component-wide explicit-`any` warnings were left untouched, and the E2E file is
+outside that ESLint configuration.
+
+The first full browser attempt failed only because a newly added non-exact
+`Private inventory` locator matched five correctly rendered elements. Its error
+snapshot showed the intended preparation screen. The selector was made exact;
+the focused real-browser Agency flow then passed, followed by the final 8-test
+suite. This was a test diagnostic, not a product, migration, or database
+failure.
+
+This correction does not issue an invoice, request or accept payment proof,
+mutate subscription/entitlement state, publish inventory, alter the canonical
+commercial catalog, access a provider, or change a protected environment. It
+is local task-branch evidence only and does not authorize a paid Agency cohort.
+
 ## Ranked remaining blockers and authority handoff
 
 1. **L0 — integrate and independently verify the locally contained Land boundary (LRC-LAND-001):** `335838df` hard-deferred the specialist and generic-listing Land paths, `62ec0eed` closes the distinct generic Developer row authoring/public-discovery route, and `0280e9dd` closes generic Developer draft persistence. Land must remain unavailable to the controlled pre-payment onboarding cohort and public routes until integrated verification and a separately authorized Land commercial/acceptance slice exist.
@@ -1685,7 +1724,7 @@ deployment settings, or establish a paid Agent cohort.
    entitlement, and protected-release evidence exists. Controlled pre-payment
    onboarding may prepare identities and private drafts only. Do not replace
    this boundary with a free publishing entitlement or a privilege bypass.
-4. **L1 — integrate and independently verify public preparation entry (LRC-ADVERTISE-001; LRC-AGENT-001; LRC-AGY-001; LRC-DEV-001):** `234ca6e4` makes `/advertise`, `/advertise/sell`, the homepage professional entry, and the public Developer landing agree with normal `preparation_only` runtime; `32224b0a` closes the direct `/subscription-plans` paid-catalog escape; `e1ccc2c8` closes the analogous authenticated Agent package page and shared unavailable-activation CTA escape; `ada578a2` closes the authenticated Developer plans escape and inactive-workspace activation CTA; `7c939831` and `02788ff2` retain the role-specific Agent and Agency corrections; `9cd6d3e3` browser-proves the pending Developer organisation/private-draft preparation slice; `589135ce` proves the separate authorised approval-to-professional-presence boundary preserves `missing_launch_access` and an empty public project set. Every paid-operation variation remains separate. Do not advertise paid cohorts before integration and the relevant hosted verification.
+4. **L1 — integrate and independently verify public preparation entry (LRC-ADVERTISE-001; LRC-AGENT-001; LRC-AGY-001; LRC-DEV-001):** `234ca6e4` makes `/advertise`, `/advertise/sell`, the homepage professional entry, and the public Developer landing agree with normal `preparation_only` runtime; `32224b0a` closes the direct `/subscription-plans` paid-catalog escape; `e1ccc2c8` closes the analogous authenticated Agent package page and shared unavailable-activation CTA escape; `d48544b9` closes the authenticated Agency Billing route; `ada578a2` closes the authenticated Developer plans escape and inactive-workspace activation CTA; `7c939831` and `02788ff2` retain the role-specific Agent and Agency corrections; `9cd6d3e3` browser-proves the pending Developer organisation/private-draft preparation slice; `589135ce` proves the separate authorised approval-to-professional-presence boundary preserves `missing_launch_access` and an empty public project set. Every paid-operation variation remains separate. Do not advertise paid cohorts before integration and the relevant hosted verification.
 5. **L1 — integrate and host-verify the completed agency, membership, and Commercial-route
    boundaries (LRC-AGY-001; LRC-MEM-001; LRC-COMMERCIAL-001):** Goal 10 proves the complete
    first-cohort agency journey locally, `d1545579` keeps Commercial leads out

@@ -974,6 +974,29 @@ static authority suite passed on exact target fingerprint `a560e9f2971e7676…`.
 This does not enable payment, entitlement mutation, publishing, a paid
 independent-Agent cohort, provider delivery, or a protected release.
 
+### Authenticated Agency billing-route follow-up — 2026-09-16
+
+The Agency public-entry correction did not contain the signed-in
+`/agency/billing` deep link. In normal `preparation_only` runtime, that route
+still mounted commercial billing data and displayed plans, invoices, EFT, and
+proof controls even though its mutation handlers were disabled.
+
+Commit [`d48544b9`](https://github.com/Doscoding187/real_estate_portal/commit/d48544b9a6c33de954821cbf06c0cac33f6dc0af) separates the retained commercial billing workspace
+from the normal route. A signed-in Agency owner now sees only the existing
+preparation notice, Agency setup action, and private-inventory action; no
+billing query or payment mutation is mounted. Focused client coverage passed
+**2 files / 5 tests** and the governed Chromium pre-payment acceptance passed
+**8 tests**, including the real verified owner/setup path through the deep link
+and return to `/agency/listings`. `pnpm check`, Prettier, `git diff --check`,
+and static authority **35 files / 295 tests** passed on fingerprint
+`a560e9f2971e7676…` at migration head `0090` with no incomplete attempts.
+
+The initial full browser attempt had a non-exact test locator collision; its
+rendered snapshot was correct. After making the locator exact, the focused flow
+and final complete suite passed. It is recorded as a corrected test diagnostic,
+not a database or product failure. This cross-cutting containment follow-up
+does not reopen Goals 1–10 or enable any commercial operation.
+
 ### Shared public advertising and Developer preparation-entry follow-up — 2026-09-15
 
 The role-specific public pages alone did not close the anonymous entry surface.
