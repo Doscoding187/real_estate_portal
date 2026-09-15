@@ -61,6 +61,14 @@ afterEach(() => {
 });
 
 describe('Developer workspace onboarding-status failure handling', () => {
+  it('keeps contextual authentication redirects owned by the workspace router', () => {
+    onboardingStatusMock.mockReturnValue(approvedStatusState());
+
+    render(createElement(DeveloperRoutes));
+
+    expect(onboardingStatusMock).toHaveBeenCalledWith({ redirectOnUnauthenticated: false });
+  });
+
   it('never mistakes a failed status query for a missing organisation', () => {
     onboardingStatusMock.mockReturnValue({
       status: null,

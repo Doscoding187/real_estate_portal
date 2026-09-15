@@ -130,6 +130,27 @@ test.describe('pre-payment onboarding browser acceptance', () => {
     await expect(page.getByRole('button', { name: 'Start Developer preparation' })).toBeVisible();
   });
 
+  test('routes legacy development authoring URLs through the protected Developer workspace', async ({
+    page,
+  }) => {
+    await page.goto('/developments/create?draftId=77');
+    await expect(page).toHaveURL(
+      /\/login\?mode=signin&next=%2Fdeveloper%2Fcreate-development%3FdraftId%3D77/,
+    );
+    const signIn = page.getByRole('dialog', { name: 'Welcome back' });
+    await expect(signIn).toContainText(
+      'You will be returned to /developer/create-development?draftId=77.',
+    );
+
+    await page.goto('/development-wizard?id=42');
+    await expect(page).toHaveURL(
+      /\/login\?mode=signin&next=%2Fdeveloper%2Fcreate-development%3Fid%3D42/,
+    );
+    await expect(page.getByRole('dialog', { name: 'Welcome back' })).toContainText(
+      'You will be returned to /developer/create-development?id=42.',
+    );
+  });
+
   test('routes the public Agent entry point into truthful preparation onboarding', async ({
     page,
   }) => {

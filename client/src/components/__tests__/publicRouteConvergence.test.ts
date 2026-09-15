@@ -33,6 +33,23 @@ describe('public route convergence', () => {
     expect(app).not.toContain('<ActivationGate />');
   });
 
+  it('routes legacy development authoring through the protected canonical workspace', () => {
+    const app = readRepoFile('client/src/App.tsx');
+
+    expect(app).toContain('function LegacyDeveloperAuthoringRedirect() {');
+    expect(app).toContain('return <Redirect to={`/developer/create-development${query}`} />;');
+    expect(app).toContain(
+      '<Route path="/developments/create" component={LegacyDeveloperAuthoringRedirect} />',
+    );
+    expect(app).toContain(
+      '<Route path="/development-wizard" component={LegacyDeveloperAuthoringRedirect} />',
+    );
+    expect(app).not.toContain(
+      '<Route path="/developments/create" component={CreateDevelopment} />',
+    );
+    expect(app).not.toContain('<Route path="/development-wizard" component={CreateDevelopment} />');
+  });
+
   it('uses the canonical Land route for the Plots and Land journey', () => {
     expect(getPublicHeroJourney('plot_land').destination).toBe('/plots-and-land');
   });

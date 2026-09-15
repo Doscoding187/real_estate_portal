@@ -86,7 +86,11 @@ export default function DeveloperRoutes() {
     isLoading: statusLoading,
     isError: statusError,
     refetch: refetchStatus,
-  } = useDeveloperOnboardingStatus();
+  } = useDeveloperOnboardingStatus({
+    // This route owns the preserved direct-entry target. A nested status
+    // read must not race it with a context-free `/login` redirect.
+    redirectOnUnauthenticated: false,
+  });
   const isSuperAdmin = user?.role === 'super_admin';
   const isDeveloper = user?.role === 'property_developer';
   const hasPublisherContext = !!publisherContext?.cataloguePublisherId;

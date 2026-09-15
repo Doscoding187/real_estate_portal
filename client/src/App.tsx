@@ -115,8 +115,6 @@ const LovableIntegrationHub = lazy(() => import('./pages/LovableIntegrationHub')
 const ListingWizard = lazy(() => import('./components/listing-wizard/ListingWizard'));
 const ListingTemplate = lazy(() => import('./pages/ListingTemplate'));
 
-// Import Development Wizard
-const CreateDevelopment = lazy(() => import('./pages/CreateDevelopment'));
 const DevelopmentsDemo = lazy(() => import('./pages/DevelopmentsDemo'));
 const DevelopmentDetail = lazy(() => import('./pages/DevelopmentDetail'));
 const DevelopmentUnitDetailPage = lazy(() => import('./pages/DevelopmentUnitDetailPage'));
@@ -190,6 +188,11 @@ const DistributionReferralApplyPage = lazy(
 // Import SearchResults page for SEO-friendly URLs
 const SearchResults = lazy(() => import('./pages/SearchResults'));
 const SuburbPage = lazy(() => import('./pages/SuburbPage'));
+
+function LegacyDeveloperAuthoringRedirect() {
+  const query = typeof window === 'undefined' ? '' : window.location.search;
+  return <Redirect to={`/developer/create-development${query}`} />;
+}
 
 function Router() {
   // Auto-migrate guest data on login
@@ -392,8 +395,10 @@ function Router() {
             </RequireRole>
           </Route>
           <Route path="/listing-template" component={ListingTemplate} />
-          <Route path="/developments/create" component={CreateDevelopment} />
-          <Route path="/development-wizard" component={CreateDevelopment} />
+          {/* Preserve legacy authoring URLs, but route them through the canonical
+              authenticated Developer boundary rather than mounting the wizard publicly. */}
+          <Route path="/developments/create" component={LegacyDeveloperAuthoringRedirect} />
+          <Route path="/development-wizard" component={LegacyDeveloperAuthoringRedirect} />
 
           {/* Canonical Developments Root */}
           <Route path="/new-developments" component={DevelopmentsDemo} />
