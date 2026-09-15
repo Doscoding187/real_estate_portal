@@ -966,13 +966,16 @@ commercial surfaces are behind the existing separately authorized enabled state;
 no payment, invoice, entitlement, publication, provider, or deployment state
 changed.
 
-Evidence is an **8-file / 28-test** focused client/contract run and a **7-test**
+Evidence is an **8-file / 28-test** focused client/contract run and an **8-test**
 governed Chromium pre-payment acceptance. The browser opens `/advertise` and
 `/advertise/sell`, verifies that paid claims are absent, checks all three role
-targets, and opens each public role landing. It does not claim a full Developer
-organisation-submission/approval/draft-resume browser journey or any paid
-Developer operation. Those remain separate evidence requirements before a
-Developer cohort can be represented as live.
+targets, and opens each public role landing. Commit
+[`9cd6d3e3`](https://github.com/Doscoding187/real_estate_portal/commit/9cd6d3e37163b22eab4aa3a82d90616906c14db0)
+also proves the Developer public-entry → registration → email-verification →
+pending-organisation → private-draft-save/resume slice, including canonical
+owner membership and first-party publisher scope. It does not claim Developer
+organisation approval or any paid Developer operation. Those remain separate
+requirements before a Developer cohort can be represented as live.
 
 ## Advancement rule
 
