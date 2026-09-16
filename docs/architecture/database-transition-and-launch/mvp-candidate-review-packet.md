@@ -97,3 +97,41 @@ will list exact commands, UTC start/finish, exit status, SHA/tree, test totals,
 skips, limitations and sanitized evidence digests. A failed stage is never
 counted as acceptance merely because earlier stages passed. Raw local runtime
 logs and browser traces may contain tokens and are not committed or published.
+
+### Frozen candidate verification — 2026-09-17
+
+- Tested executable revision:
+  `07aab6a4234a7a7e1321f49eed485ab94df76a5d`.
+- Tested executable tree:
+  `83894f9cbc979be844344281b942b58076d97c90`.
+- Integration base was refreshed after verification:
+  `origin/main` remains `4e012b3044628fc06da7489c0055e9ce01bdc8d9`.
+- The full authority-wrapped Vitest runner reported a UTC window of
+  `2026-09-16T22:02:27Z` through `2026-09-16T22:10:46.670Z`.
+- Timestamped local browser evidence recorded these UTC windows: prepayment
+  `2026-09-16T22:19:26Z` through `2026-09-16T22:20:49Z`; agency operating
+  `2026-09-16T22:21:03Z` through `2026-09-16T22:22:44Z`. Raw logs remain
+  local and are not committed.
+
+| Gate | Command | Result |
+| --- | --- | --- |
+| Typecheck | `pnpm check` | Passed (exit 0). |
+| Full lint | `pnpm lint:check` | Passed (exit 0); retained baseline of 11,475 warnings and zero errors. |
+| Static database authority | `pnpm db:authority:check` | Passed (exit 0): 35 test files / 295 tests, canonical schema and lifecycle checks passed. |
+| Production build | `pnpm build` | Passed (exit 0); retained the existing large vendor-chunk warning. |
+| Full authority suite | `pnpm test:authority` | Passed (exit 0): 648 files / 4,283 tests passed; 9 files / 67 tests explicitly skipped. |
+| Prepayment Chromium journey | `pnpm test:browser:authority -- --config=playwright.prepayment-onboarding.config.ts` | Passed twice, including the timestamped run: 10/10. |
+| Agency-operating Chromium journey | `pnpm test:browser:authority -- --config=playwright.ple-agency-operating.config.ts` | Passed twice, including the timestamped run: 10/10. |
+| Final database authority | `pnpm db:authority:status` | Passed (exit 0): exact worktree-owned disposable target, manifest-head-ready, no incomplete attempts, schema-congruent, application ready. |
+| Tree integrity | `git diff --check`, `git status --short` | Passed; no uncommitted executable change before this evidence-only record. |
+
+The status command intentionally reports canonical reference data and
+acceptance scenario data as not evaluated for this local verification. Hosted
+CI, protected-provider, deployment, support, disclosure, real-email, and
+separate commercial-activation gates remain unexecuted and are not implied by
+these results.
+
+This is evidence-only documentation. Its post-commit comparison against the
+tested executable revision contains only this packet; no executable file,
+migration, schema authority, or runtime configuration differs from the tested
+tree.
