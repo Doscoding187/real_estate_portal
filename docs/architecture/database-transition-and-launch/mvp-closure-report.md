@@ -1,20 +1,65 @@
 # Post-merge MVP closure review packet
 
-Date: 2026-09-15 (canonical private-work, inventory, operational-workspace, public-recommendation membership, and viewing-UTC-wire-boundary supplements, generic Developer-Land row and draft-containment supplements, transactional-email containment, governed pre-payment browser-acceptance, Commercial-workflow, Commercial public-enquiry entitlement/custody, shared public-advertising and Developer preparation-entry, and governed local-service-recovery addenda; canonical agent-coverage addendum; prior Goals 6–10, LRC-LAND-001, and LRC-SUPPORT-001 follow-ups dated 2026-09-14; original closure review dated 2026-09-13).
-**Outcome: the local candidate supports controlled
-pre-payment onboarding; canonical billing and activation paths are contained,
-and Goals 1–10 agency membership, private-work/inventory/operational-workspace/public-recommendation authority, commercial-term, private-preparation,
-review/publication, public-discovery, public-enquiry custody, CRM-continuity,
-first-cohort recovery, one consolidated agency operating acceptance, hard-deferred
-Land containment including generic Developer rows and drafts, canonical agent-coverage authority, governed browser proof of
-shared public advertising, Agent, Agency, and Developer preparation entry, direct public commercial-plans and authenticated Agent, Agency, and Developer commercial-route containment, persisted Agent, Agency-owner, and pending Developer-organisation/private-draft pre-payment onboarding, and authorised Developer-organisation approval to professional presence without Launch Access or public projects, agency preparation-state and
-deferred-invitation-validity and queued-invitation-acceptance corrections, and Commercial generic-viewing
-and public-enquiry entitlement/custody boundary corrections and deployed transactional-email false-success containment are verified
-on the task branch. A bounded assisted-onboarding intake is also locally implemented;
-named support operations and final disclosures are blocked pending owner-supplied operating and legal authority. Normal commercial activation, hosted integration,
-production verification, and protected release remain blocked.** This is not a declaration that all MVP
-journeys or production are verified. Database task classification: local-data workflow,
-followed by bounded consumer fixes. No schema authority changed.
+Date: 2026-09-16. **Outcome: local acquisition-to-CRM continuity is now
+implemented and passed a preliminary 10-test Chromium run. The entire branch
+still requires frozen-candidate checks, independent consolidated review,
+integration and hosted verification. Production readiness is not declared.**
+Normal commercial runtime remains `preparation_only`; commercial activation and
+protected release retain their existing approval requirements.
+
+The [consolidated candidate review packet](mvp-candidate-review-packet.md) is the
+current review entry point. It defines acceptance criteria, the whole-branch
+review scope, the frozen-candidate evidence record and hosted verification plan,
+including owner decisions for support, final disclosures and real email.
+Earlier check results in this report apply only to their named revisions.
+
+## Acquisition continuity and candidate freeze — 2026-09-16
+
+`5064235b4c8154dc23d2c8668deebd197741111b` made listing creation, reviewer
+correction, approval, public discovery, enquiry replay and CRM follow-up a
+continuous sequence on the same listing and member. It still began with an
+already active member; separate pre-payment owner tests did not close that gap.
+
+The current extension removes that pre-existing member dependency. Chromium
+starts at public Agency entry, registers and verifies a new owner, persists
+agency setup and branding, and queues the journey member's invitation with a
+canonical `pending_payment` subscription and zero invoices/payments. A new
+visitor registers and verifies, returns through sign-in to that exact
+invitation, and receives the expected 412 before any agent profile, affiliation
+or invitation-consumption write. Only an explicitly marked test-fixture term
+on that agency's canonical subscription then permits the real invitation
+acceptance route to create one active membership and refresh the session. The
+same member completes profile setup and authors the existing listing-to-CRM
+sequence. Persisted listing ownership is tied to that accepted identity.
+
+This closes **local browser acquisition continuity with an explicit entitlement
+fixture**. It does not prove a normal paid acquisition path or invitation email
+delivery. Account verification uses the local transport sink. Agency approval
+uses the canonical reviewer API after browser sign-in; the mounted agency
+management page has no verification control. The test term is a marked 90-day
+term on the selected canonical plan, not a new free plan or runtime activation
+switch. Teardown archives only run-owned inventory through the canonical
+lifecycle, releases the fixture term, and verifies zero invoices/payments.
+
+Pre-freeze development evidence: the first run passed owner setup but failed a
+test locator based on an unmounted agency-management component (1 passed,
+1 failed, 8 not run). The test was corrected to use the authenticated canonical
+reviewer API and to label that boundary. The second complete run passed
+**10 tests in 2.0 minutes**, with no failures or skips. This is preliminary
+implementation evidence, not the required frozen-candidate verification.
+
+Database classification: local-data workflow with test-fixture consumer work.
+Target: owned disposable worktree `listify_wt_mvp_closure_post_577_0acaec2869a2`,
+fingerprint `a560e9f2971e7676be194015ed933f1964e0948c5fd44d5844a74dcbf494e321`.
+The startup status confirmed exact ownership, migration
+`0090_retire_disconnected_boost_campaigns.sql`, schema congruency and
+`no-incomplete-attempts`. No schema, migration or compatibility authority changed.
+No protected target was accessed.
+
+The next milestone is a reviewed, integrated candidate. The source freezes
+before all required checks and both governed browser suites; the review packet
+records the tested SHA/tree and every failure/skip. Further executable changes
+are restricted to acceptance-blocking defects and require a new freeze.
 
 ## Post-closure senior-review qualification
 
@@ -617,7 +662,7 @@ incomplete required journey; it does not claim a failing production observation.
 | ---------------------------- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Account access               | PASS locally                                            | `scripts/mvp-account-verification.mts` completed 15 HTTP checks: weak password rejection; registration; unverified denial; verification; token replay denial; login; prohibited self-assigned super-admin reduced to visitor; logout; anonymous auth.me null; recovery enumeration resistance; reset; reset replay denial; old-password denial; new-password success; pre-reset session revoked. Commits `555250c5` and `e9909ab6` also completed real Chromium registration UI, local-development verification-link navigation, session establishment, and respectively agent setup and agency-owner setup on the exact target. `3d2e0148` makes absent or placeholder transactional-mail configuration fail before recovery/resend account lookup in deployed runtime, limits local email fallback to development/test, and returns neutral recovery/verification responses if a configured provider fails. Its 4-file/20-test boundary suite, 15-check local HTTP rerun, typecheck, and 35-file/293-test static suite passed. External provider delivery and expiry timing over elapsed time remain unverified. |
 | Permissions                  | BLOCKED for complete scope                              | Account privilege injection denied; scripts/mvp-listing-verification.mts proved cross-tenant listing read and write HTTP 403 and unchanged persisted title. Scenario verifier proved agent/agency/developer unrelated-recipient denial and platform-operations restrictions. `5f37d3d1` additionally proves a suspended member with retained legacy agency IDs is denied private seller-prospect access, assignment, and legacy agency analytics; `0eaf2cc8` prevents their later unaffiliated private draft from appearing in the former agency workspace. This is not exhaustive tenant membership revocation, every role, or admin audit proof.                                                                                                                                                                                                                                                                                                                                 |
-| Listing authoring            | PASS for local browser and HTTP agency-preparation slices | The three focused authority tests above passed 3 files / 5 tests on target fingerprint `a560e9f2971e7676…`: real authenticated routers physically PUT and served five media objects, persisted canonical Gauteng/Johannesburg/Sandton IDs, preserved a reopened/edited draft, allowed agency-owner visibility, and denied an unrelated tenant. `a2a4e52` then drove the agency member through Chromium: author a House listing, select and confirm Sandton, upload five images, save the persisted server draft, submit it, receive reviewer feedback, reopen it, retain its data/media/geography, correct it, and resubmit. Its isolated enabled fixture is browser acceptance evidence only; it does not enable a normal-runtime commercial transition. A single continuous browser path from owner registration and canonical invitation acceptance into this member session remains unproven. |
+| Listing authoring            | PASS for local browser and HTTP agency-preparation slices | The three focused authority tests above passed 3 files / 5 tests on target fingerprint `a560e9f2971e7676…`: real authenticated routers physically PUT and served five media objects, persisted canonical Gauteng/Johannesburg/Sandton IDs, preserved a reopened/edited draft, allowed agency-owner visibility, and denied an unrelated tenant. `a2a4e52` then drove the agency member through Chromium: author a House listing, select and confirm Sandton, upload five images, save the persisted server draft, submit it, receive reviewer feedback, reopen it, retain its data/media/geography, correct it, and resubmit. Its isolated enabled fixture is browser acceptance evidence only; it does not enable a normal-runtime commercial transition. The 2026-09-16 acquisition extension now connects owner registration and canonical invitation acceptance to this same member; see the acquisition-continuity qualification above and the frozen-candidate packet. |
 | Publication                  | PASS for isolated local lifecycle; normal runtime blocked | Goal 5 real HTTP acceptance proved the governed lifecycle and denial case. `72dd80e0` and `a2a4e52` add Chromium reviewer/member proof of rejection feedback, correction, resubmission, confirmation, approval, and exactly one persisted published source/projection with five mirrored images. Approval uses the existing isolated local entitlement fixture and did not invoke payment or normal runtime activation. Hosted and production publication remain unverified. |
 | Discovery                    | PASS for isolated local agency slice; Land locally contained | Goal 6 real HTTP evidence proved the canonical `suburb:<id>` contract, rejected mixed canonical-plus-city input, and confirmed exact geography/media. `a2a4e52` adds anonymous Chromium proof that only the approved listing appears through canonical suburb search; a private candidate is absent; the detail has matching Sandton context and a five-image gallery. `335838dff0c746b860eaaf2930412d4b38540db5` blocks direct Land and generic-listing paths; `62ec0eede830e96eafc69dfd9e4f42a9645aa1ee` additionally rejects generic Developer Land authoring/transitions and excludes retained generic Developer Land rows from public detail, list, and search; `0280e9dd` blocks the separate generic Developer draft-persistence route. No Land consumer acceptance, integration, or production evidence is claimed. |
 | Lead investigation and audit | PASS for local custody/CRM/recovery fallback | Goals 7–8 exact-target acceptance covers exact replay, conflicting replay denial, unrelated-tenant denial, agency admin oversight, expiry continuity, suspension/reassignment, and former-agent denial. `a2a4e52` adds anonymous Chromium enquiry proof from the published detail: the client sends only property/prospect data and consent; persisted state has canonical agency/agent custody, completed `crm_export` primary custody, and the current agency member has zero individual agent subscriptions. That member then records contact and schedules a follow-up through the real CRM UI, with persisted lead and activity checks. Goal 9 deliberately interrupted a platform-managed worker and proved replay-safe internal recovery. CRM-export/local simulated delivery is not actual provider delivery; external provider reliability, live worker supervision, hosted operation, and production recovery remain blocked. |
@@ -636,8 +681,7 @@ acceptance is a real local form/session/profile/preparation-gate run.
 `72dd80e0` and `a2a4e52` now add the completed member
 author/review/public-discovery/enquiry/CRM browser slices described above.
 This evidence remains local-only. It does not prove external email delivery,
-elapsed-time token expiry, one continuous browser path through canonical
-invitation/member acceptance, a deployed payment or entitlement activation,
+elapsed-time token expiry, external invitation delivery, a deployed payment or entitlement activation,
 provider behaviour, hosting, or production operation.
 
 ## Material defects and validation
@@ -1917,8 +1961,10 @@ database schema or data, deployment, or any protected environment.
    acceptance of a queued pre-payment token from creating team authority.
    `72dd80e0` and `a2a4e52` add local Chromium evidence for the member
    listing/review/public-discovery/enquiry/CRM slices. One continuous browser
-   path through owner registration, canonical invitation acceptance, and that
-   member flow, plus hosted, provider, and production proof, remains absent;
+   path now includes owner registration, canonical invitation acceptance and that
+   member flow in the 2026-09-16 acquisition extension, using the explicit
+   disposable term described above. Whole-candidate review/integration, hosted,
+   provider and production proof remain open;
    `32ce7524`, `47e059ef`, `a0fc9e8b`, `049e2a92`, and `1ca5fac2` also close the observed
    stale-membership operational-workspace, viewing/deal, Agent Home, public
    recommendation, and direct-profile commercial-admission paths locally, but require the same integration and hosted

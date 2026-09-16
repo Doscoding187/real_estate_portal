@@ -1,11 +1,12 @@
 import { defineConfig, devices } from '@playwright/test';
 
 /**
- * Local-only acceptance for the post-entitlement agency member surface.
+ * Local-only acceptance from owner acquisition through the invited member to CRM.
  *
- * The PLE fixture is prepared separately through its canonical database
- * adapter. This configuration never enables commercial activation, initiates
- * payment, or follows a hosted URL.
+ * The reviewer fixture is prepared through its canonical database adapter.
+ * The spec supplies and releases an explicitly marked disposable agency term
+ * after proving pre-payment invitation containment. This configuration never
+ * enables normal commercial activation, initiates payment, or follows a hosted URL.
  */
 const runtimeLog = '/tmp/property-listify-mvp-ple-agency-browser-runtime.log';
 
