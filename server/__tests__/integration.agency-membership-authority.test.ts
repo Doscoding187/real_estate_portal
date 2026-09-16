@@ -54,6 +54,7 @@ import {
 import { agentOnboardingService } from '../services/agentOnboardingService';
 import { agentProfileSchema } from '../routes/agentOnboarding';
 import { createListing } from '../db';
+import { createListingMediaUploadToken } from '../services/listingMediaAuthority';
 import { requireAgencyAssignableAgent } from '../services/sellerProspectAccessService';
 import { searchPublicCommercial } from '../services/commercialOfficeService';
 
@@ -63,6 +64,7 @@ const created = {
   agentIds: [] as number[],
   invitationIds: [] as number[],
   listingIds: [] as number[],
+  propertyIds: [] as number[],
   leadIds: [] as number[],
   commercialAssetIds: [] as number[],
   commercialSpaceIds: [] as number[],
@@ -428,6 +430,9 @@ afterAll(async () => {
       .delete(commercialAssets)
       .where(inArray(commercialAssets.id, created.commercialAssetIds))
       .catch(() => undefined);
+  }
+  if (created.propertyIds.length) {
+    await db.delete(properties).where(inArray(properties.id, created.propertyIds));
   }
   for (const id of created.listingIds) {
     await db
@@ -931,10 +936,7 @@ describeWithDb('team operations on canonical membership', () => {
     await db.update(users).set({ agencyId }).where(eq(users.id, ownerUserId));
 
     const memberUserId = await insertUser('PrivateWorkspaceMember', 'agent');
-    await db
-      .update(users)
-      .set({ agencyId, isSubaccount: 1 })
-      .where(eq(users.id, memberUserId));
+    await db.update(users).set({ agencyId, isSubaccount: 1 }).where(eq(users.id, memberUserId));
     const agentId = await insertAgentProfile(memberUserId, agencyId);
     await maintainAgencyAgentMembership(db, {
       agencyId,
@@ -992,6 +994,134 @@ describeWithDb('team operations on canonical membership', () => {
       expect.arrayContaining([expect.objectContaining({ id: agentId })]),
     );
   });
+
+  it.each(['suspended', 'left'] as const)(
+    'denies every generic private-listing entry after membership becomes %s',
+    async status => {
+      const agencyId = await insertAgency(`ListingCustody-${status}`);
+      const managerId = await insertUser('CustodyManager', 'agency_admin');
+      await db.update(users).set({ agencyId }).where(eq(users.id, managerId));
+      const authorId = await insertUser('CustodyAuthor', 'agent');
+      await db.update(users).set({ agencyId }).where(eq(users.id, authorId));
+      const agentId = await insertAgentProfile(authorId, agencyId);
+      await maintainAgencyAgentMembership(db, { agencyId, agentId, status: 'active' });
+      const listingId = await createListing({
+        userId: authorId,
+        action: 'sell',
+        propertyType: 'house',
+        title: 'Private agency custody regression',
+        description: 'Private agency draft.',
+        pricing: { askingPrice: 1_900_000 },
+        propertyDetails: { bedrooms: 3, bathrooms: 2, houseAreaM2: 160 },
+        address: '10 Membership Authority Road',
+        city: 'Johannesburg',
+        province: 'Gauteng',
+        slug: `private-custody-${randomUUID()}`,
+        media: [],
+      } as any);
+      created.listingIds.push(listingId);
+      const [propertyInsert] = await db.insert(properties).values({
+        sourceListingId: listingId,
+        title: 'Custody projection',
+        description: 'Custody fixture',
+        propertyType: 'house',
+        listingType: 'sale',
+        transactionType: 'sale',
+        price: 1_900_000,
+        area: 160,
+        bedrooms: 3,
+        bathrooms: 2,
+        address: '10 Membership Authority Road',
+        city: 'Johannesburg',
+        province: 'Gauteng',
+        status: 'available',
+        featured: 0,
+        views: 0,
+        enquiries: 0,
+        ownerId: authorId,
+        agentId,
+      } as any);
+      const propertyId = Number(propertyInsert.insertId);
+      created.propertyIds.push(propertyId);
+      const author = applicationCaller({ id: authorId, role: 'agent', agencyId });
+      await expect(author.listing.getById({ id: listingId })).resolves.toMatchObject({
+        property: { id: listingId },
+      });
+      const uploadToken = createListingMediaUploadToken({
+        key: `properties/${listingId}/before-revocation.jpg`,
+        mediaType: 'image',
+        contentType: 'image/jpeg',
+        fileName: 'before-revocation.jpg',
+        userId: authorId,
+        listingId,
+      });
+      await maintainAgencyAgentMembership(db, { agencyId, agentId, status });
+
+      // Retain the approved profile and both historical agency projections.
+      // Each direct API must independently consult canonical membership.
+      for (const attempt of [
+        () => author.listing.getById({ id: listingId }),
+        () => author.listing.update({ id: listingId, title: 'Unauthorized change' }),
+        () => author.listing.getAnalytics({ listingId }),
+        () => author.listing.getLeads({ listingId }),
+        () => author.listing.getLeads({ propertyId }),
+        () =>
+          author.listing.uploadMedia({
+            listingId,
+            type: 'image',
+            filename: 'denied.jpg',
+            contentType: 'image/jpeg',
+          }),
+        () => author.listing.confirmMediaUpload({ uploadToken }),
+        () => author.listing.archive({ id: listingId }),
+        () => author.listing.delete({ id: listingId }),
+        () => author.listing.submitForReview({ listingId }),
+        () => author.listing.promote({ listingId, featured: false }),
+      ])
+        await expect(attempt()).rejects.toMatchObject({ code: 'FORBIDDEN' });
+      await expect(
+        author.listing.myListings({ status: 'draft', limit: 1, offset: 0 }),
+      ).resolves.toEqual([]);
+
+      const visitor = applicationCaller({ id: authorId, role: 'visitor', agencyId });
+      await expect(visitor.listing.getById({ id: listingId })).rejects.toMatchObject({
+        code: 'FORBIDDEN',
+      });
+
+      const replacementId = await insertUser('CustodyReplacement', 'agent');
+      await db.update(users).set({ agencyId }).where(eq(users.id, replacementId));
+      const replacementAgentId = await insertAgentProfile(replacementId, agencyId);
+      await maintainAgencyAgentMembership(db, {
+        agencyId,
+        agentId: replacementAgentId,
+        status: 'active',
+      });
+      await db
+        .update(listings)
+        .set({ agentId: replacementAgentId })
+        .where(eq(listings.id, listingId));
+      const replacement = applicationCaller({ id: replacementId, role: 'agent', agencyId });
+      await expect(replacement.listing.getById({ id: listingId })).resolves.toMatchObject({
+        property: { id: listingId },
+      });
+      const manager = applicationCaller({ id: managerId, role: 'agency_admin', agencyId });
+      await expect(manager.listing.getById({ id: listingId })).resolves.toMatchObject({
+        property: { id: listingId },
+      });
+      await expect(author.listing.getById({ id: listingId })).rejects.toMatchObject({
+        code: 'FORBIDDEN',
+      });
+
+      // The non-author assignment path must also lose access on revocation.
+      await maintainAgencyAgentMembership(db, { agencyId, agentId: replacementAgentId, status });
+      await expect(replacement.listing.getById({ id: listingId })).rejects.toMatchObject({
+        code: 'FORBIDDEN',
+      });
+      const [unchanged] = await db.select().from(listings).where(eq(listings.id, listingId));
+      expect(unchanged.title).toBe('Private agency custody regression');
+      expect(unchanged.status).toBe('draft');
+    },
+  );
 
   it('keeps an unaffiliated former member draft private from their former agency', async () => {
     const agencyId = await insertAgency('Attribution');
@@ -1055,6 +1185,14 @@ describeWithDb('team operations on canonical membership', () => {
     expect(Number(draft.agentId)).toBe(agentId);
     expect(draft.agencyId).toBeNull();
     expect(draft.status).toBe('draft');
+
+    const formerMember = applicationCaller({ id: memberUserId, role: 'agent', agencyId });
+    await expect(formerMember.listing.getById({ id: listingId })).resolves.toMatchObject({
+      property: { id: listingId },
+    });
+    await expect(
+      formerMember.listing.myListings({ status: 'draft', limit: 1, offset: 0 }),
+    ).resolves.toEqual([expect.objectContaining({ id: listingId })]);
 
     const ownerCaller = applicationCaller({
       id: ownerUserId,

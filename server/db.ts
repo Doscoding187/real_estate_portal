@@ -2417,6 +2417,7 @@ export async function getUserListings(
   status?: string,
   limit: number = 20,
   offset: number = 0,
+  agencyScope: { agencyId: number | null; allAgencies?: boolean } = { agencyId: null },
 ) {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
@@ -2430,6 +2431,13 @@ export async function getUserListings(
     eq(listings.ownerId, userId),
     excludeLandFromGenericListingWorkflow(),
   ];
+  if (!agencyScope.allAgencies) {
+    conditions.push(
+      agencyScope.agencyId
+        ? or(isNull(listings.agencyId), eq(listings.agencyId, agencyScope.agencyId))!
+        : isNull(listings.agencyId),
+    );
+  }
   if (status) conditions.push(eq(listings.status, status as any));
 
   const query = db.select().from(listings).where(and(...conditions));
@@ -3065,8 +3073,11 @@ async function syncPublishedListingMediaToPropertyMirrorWithDatabase(
   // generic projection as an alternative publication channel.
   try {
     await assertNotDedicatedLandWorkflowListing(database, listingId, listing);
-  } catch {
-    return { synced: false, reason: 'land_authority' as const };
+  } catch (error) {
+    if (error instanceof LandLaunchContainmentError) {
+      return { synced: false, reason: 'land_authority' as const };
+    }
+    throw error;
   }
 
   // Replacing public media is a public projection update, never a draft-only

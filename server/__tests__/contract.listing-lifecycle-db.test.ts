@@ -131,8 +131,7 @@ class FakeDrizzle {
       then: (resolve: (v: any) => void) => {
         // If awaited directly (no .limit() called), resolve immediately
         this.record({ type: 'select', table: tableName, whereCols });
-        if (tableName === 'land_listing_links')
-          return resolve(this.landLinkResults.shift() || []);
+        if (tableName === 'land_listing_links') return resolve(this.landLinkResults.shift() || []);
         if (tableName === 'commercial_availability_listing_links')
           return resolve(this.commercialLinkResults.shift() || []);
         resolve(this.selectResults.shift() || []);
@@ -902,6 +901,24 @@ describe('approveListing (lower-level)', () => {
     expect(vi.mocked(getDb)).toHaveBeenCalledTimes(1);
   });
 
+  it('rolls back revision approval when the Land lookup fails during media synchronization', async () => {
+    configureRevisionApproval();
+    const lookupFailure = new Error('Land lookup unavailable during public media synchronization');
+    fakeDb.failureHook = call => {
+      const promotedSource = fakeDb.calls.some(
+        candidate => candidate.type === 'update' && candidate.table === 'properties',
+      );
+      return promotedSource && call.type === 'select' && call.table === 'land_listing_links'
+        ? lookupFailure
+        : undefined;
+    };
+
+    await expect(approveListing(5602, 990005)).rejects.toBe(lookupFailure);
+    expect(fakeDb.transactionCount).toBe(1);
+    expect(fakeDb.calls.filter(call => call.type !== 'select')).toHaveLength(0);
+    expect(mockInvalidatePublicSearchCache).not.toHaveBeenCalled();
+  });
+
   it.each(['sell', 'rent', 'auction'] as const)(
     'handles action "%s" with correct listingType mapping',
     async action => {
@@ -1042,6 +1059,14 @@ describe('replaceListingMedia (lower-level)', () => {
 // ===========================================================================
 
 describe('syncPublishedListingMediaToPropertyMirror (lower-level)', () => {
+  it('propagates an operational Land lookup failure instead of reporting a policy exclusion', async () => {
+    fakeDb.setNextSelectResult([listingRow({ id: 6001, status: 'published' })]);
+    const lookupFailure = new Error('Land lookup unavailable');
+    fakeDb.failureHook = call =>
+      call.type === 'select' && call.table === 'land_listing_links' ? lookupFailure : undefined;
+    await expect(syncPublishedListingMediaToPropertyMirror(6001)).rejects.toBe(lookupFailure);
+    expect(fakeDb.calls.filter(call => call.type !== 'select')).toHaveLength(0);
+  });
   it('queries by sourceListingId as the sole canonical lookup', async () => {
     // getListingById → returns published listing
     fakeDb.setNextSelectResult([listingRow({ id: 6001, status: 'published' })]);

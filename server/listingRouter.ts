@@ -82,7 +82,11 @@ import {
   isCommercialMarketingPropertyType,
 } from '../shared/commercial-domain';
 import { assertCommercialMarketingMediaCustody } from './services/commercialOfficeService';
-import { canManageListingContent } from './services/listingContentCustody';
+import {
+  canManageListingContent,
+  type ListingContentActor,
+} from './services/listingContentCustody';
+import { resolveCurrentAgencyMembershipForAgent } from './services/agencyMembershipService';
 import { LandLaunchContainmentError } from './services/landLaunchContainmentService';
 
 function rejectGenericCommercialWorkflow(propertyType: unknown): void {
@@ -98,7 +102,10 @@ function rejectGenericCommercialWorkflow(propertyType: unknown): void {
  * state. Keep generic listing routes from modifying or publishing it through
  * a second lifecycle.
  */
-async function assertGenericListingRouteAvailable(listingId: number, listing: Record<string, unknown>) {
+async function assertGenericListingRouteAvailable(
+  listingId: number,
+  listing: Record<string, unknown>,
+) {
   try {
     const database = await db.getDb();
     if (!database) {
@@ -109,7 +116,8 @@ async function assertGenericListingRouteAvailable(listingId: number, listing: Re
     if (error instanceof LandLaunchContainmentError) {
       throw new TRPCError({
         code: 'PRECONDITION_FAILED',
-        message: 'Land inventory is unavailable through the generic listing workflow for this launch cohort.',
+        message:
+          'Land inventory is unavailable through the generic listing workflow for this launch cohort.',
       });
     }
     if (error instanceof TRPCError) throw error;
@@ -143,30 +151,36 @@ type ListingContentRecord = {
  * assigned agent cannot retain access after their assigned profile or agency
  * no longer agrees with the Listing.
  */
+async function resolveListingContentActor(
+  user: ReturnType<typeof requireUser>,
+): Promise<ListingContentActor> {
+  const agent = user.role === 'agent' ? await db.getAgentByUserId(user.id) : null;
+  let currentAgencyId: number | null = null;
+  if (agent) {
+    const database = await db.getDb();
+    if (!database) throw new Error('Database unavailable while checking listing custody.');
+    const membership = await resolveCurrentAgencyMembershipForAgent(database, Number(agent.id));
+    currentAgencyId = membership ? Number(membership.agencyId) : null;
+  }
+  return { userId: user.id, role: user.role, agencyId: user.agencyId, agent, currentAgencyId };
+}
+
 async function assertListingContentCustody(
   listing: ListingContentRecord,
   user: ReturnType<typeof requireUser>,
   message: string,
 ): Promise<void> {
-  const isDirectOwner = Number(listing.ownerId) === user.id;
-  const isAssignedAgent = String(user.role || '').toLowerCase() === 'agent' && !isDirectOwner;
-  const agent = isAssignedAgent ? await db.getAgentByUserId(user.id) : null;
-
-  if (
-    !canManageListingContent(listing, {
-      userId: user.id,
-      role: user.role,
-      agencyId: user.agencyId,
-      agent: agent
-        ? {
-            id: agent.id,
-            userId: agent.userId,
-            agencyId: agent.agencyId,
-            status: agent.status,
-          }
-        : null,
-    })
-  ) {
+  const personalOwner = !listing.agencyId && Number(listing.ownerId) === user.id;
+  const actor = personalOwner
+    ? {
+        userId: user.id,
+        role: user.role,
+        agencyId: user.agencyId,
+        agent: null,
+        currentAgencyId: null,
+      }
+    : await resolveListingContentActor(user);
+  if (!canManageListingContent(listing, actor)) {
     throw new TRPCError({ code: 'FORBIDDEN', message });
   }
 }
@@ -1305,7 +1319,16 @@ export const listingRouter = router({
 
       try {
         // Fetch user's listings with pagination
-        const listings = await db.getUserListings(userId, input.status, input.limit, input.offset);
+        const actor = await resolveListingContentActor(requireUser(ctx));
+        const listings = await db.getUserListings(userId, input.status, input.limit, input.offset, {
+          agencyId:
+            actor.role === 'agency_admin'
+              ? Number(actor.agencyId || 0) || null
+              : actor.agent?.status === 'approved'
+                ? actor.currentAgencyId
+                : null,
+          allAgencies: actor.role === 'super_admin',
+        });
 
         // Commercial marketing Listings are deliberately absent from the
         // generic authoring workspace. Their source of truth is the dedicated
@@ -1341,6 +1364,11 @@ export const listingRouter = router({
             message: 'Not authorized to archive this listing',
           });
         }
+        await assertListingContentCustody(
+          listing,
+          requireUser(ctx),
+          'Not authorized to archive this listing',
+        );
         rejectGenericCommercialWorkflow(listing.propertyType);
         await assertGenericListingRouteAvailable(input.id, listing as Record<string, unknown>);
 
@@ -1385,6 +1413,11 @@ export const listingRouter = router({
             message: 'Not authorized to delete this listing',
           });
         }
+        await assertListingContentCustody(
+          listing,
+          requireUser(ctx),
+          'Not authorized to delete this listing',
+        );
         rejectGenericCommercialWorkflow(listing.propertyType);
         await assertGenericListingRouteAvailable(input.id, listing as Record<string, unknown>);
 
@@ -1654,6 +1687,7 @@ export const listingRouter = router({
               id: properties.id,
               ownerId: properties.ownerId,
               agentId: properties.agentId,
+              sourceListingId: properties.sourceListingId,
             })
             .from(properties)
             .where(eq(properties.id, propertyId))
@@ -1669,6 +1703,24 @@ export const listingRouter = router({
           if (!isOwner && !isAssignedAgent) {
             throw new TRPCError({ code: 'FORBIDDEN', message: 'Not authorized to view leads' });
           }
+          const sourceListing = property.sourceListingId
+            ? await db.getListingById(property.sourceListingId)
+            : null;
+          if (!sourceListing) {
+            throw new TRPCError({
+              code: 'FORBIDDEN',
+              message: 'Canonical listing custody is required to view leads',
+            });
+          }
+          await assertListingContentCustody(
+            sourceListing,
+            requireUser(ctx),
+            'Not authorized to view leads',
+          );
+          await assertGenericListingRouteAvailable(
+            sourceListing.id,
+            sourceListing as Record<string, unknown>,
+          );
         } else if (input.listingId != null) {
           const listing = await db.getListingById(input.listingId);
           if (!listing) {
@@ -1681,6 +1733,12 @@ export const listingRouter = router({
           if (!isOwner && !isAssignedAgent) {
             throw new TRPCError({ code: 'FORBIDDEN', message: 'Not authorized to view leads' });
           }
+
+          await assertListingContentCustody(
+            listing,
+            requireUser(ctx),
+            'Not authorized to view leads',
+          );
 
           await assertGenericListingRouteAvailable(
             input.listingId,
@@ -1929,6 +1987,11 @@ export const listingRouter = router({
             message: 'Not authorized to submit this listing',
           });
         }
+        await assertListingContentCustody(
+          listing,
+          currentUser,
+          'Not authorized to submit this listing',
+        );
         if (isCommercialMarketingPropertyType(listing.propertyType)) {
           await recordSubmitFailure(
             'commercial_inventory_authority',
@@ -2164,13 +2227,17 @@ export const listingRouter = router({
         if (!isOwner && !isSuperAdmin) {
           throw new TRPCError({ code: 'FORBIDDEN', message: 'Not authorized' });
         }
+        await assertListingContentCustody(listing, requireUser(ctx), 'Not authorized');
 
         // Commercial marketing listings are promoted through the governed
         // Commercial inventory workflow.  Keeping the generic feature flag
         // off this route prevents a legacy mutation from changing commercial
         // discovery state outside that lifecycle.
         rejectGenericCommercialWorkflow(listing.propertyType);
-        await assertGenericListingRouteAvailable(input.listingId, listing as Record<string, unknown>);
+        await assertGenericListingRouteAvailable(
+          input.listingId,
+          listing as Record<string, unknown>,
+        );
 
         // Gate: Quality Score >= 85 for featuring
         if (input.featured) {

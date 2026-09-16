@@ -14,33 +14,40 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 // Use vi.hoisted() to avoid hoisting issues with vi.mock factory functions.
 // ---------------------------------------------------------------------------
 
-const { mockDb, mockAssertListingPublicationEntitled } = vi.hoisted(() => ({
-  mockDb: {
-    getListingById: vi.fn(),
-    createListing: vi.fn(),
-    createListingRevision: vi.fn(),
-    updateListing: vi.fn(),
-    submitListingForReview: vi.fn(),
-    approveListing: vi.fn(),
-    rejectListing: vi.fn(),
-    archiveListing: vi.fn(),
-    deleteListing: vi.fn(),
-    getListingMedia: vi.fn(),
-    replaceListingMedia: vi.fn(),
-    getUserListings: vi.fn(),
-    getListingAnalytics: vi.fn(),
-    getAgentById: vi.fn(),
-    getAgentByUserId: vi.fn(),
-    getUserById: vi.fn(),
-    getApprovalQueue: vi.fn(),
-    syncPublishedListingMediaToPropertyMirror: vi.fn(),
-    getDb: vi.fn(),
-    assertNotDedicatedLandWorkflowListing: vi.fn(),
-  },
-  mockAssertListingPublicationEntitled: vi.fn(),
-}));
+const { mockDb, mockAssertListingPublicationEntitled, mockResolveCurrentMembership } = vi.hoisted(
+  () => ({
+    mockDb: {
+      getListingById: vi.fn(),
+      createListing: vi.fn(),
+      createListingRevision: vi.fn(),
+      updateListing: vi.fn(),
+      submitListingForReview: vi.fn(),
+      approveListing: vi.fn(),
+      rejectListing: vi.fn(),
+      archiveListing: vi.fn(),
+      deleteListing: vi.fn(),
+      getListingMedia: vi.fn(),
+      replaceListingMedia: vi.fn(),
+      getUserListings: vi.fn(),
+      getListingAnalytics: vi.fn(),
+      getAgentById: vi.fn(),
+      getAgentByUserId: vi.fn(),
+      getUserById: vi.fn(),
+      getApprovalQueue: vi.fn(),
+      syncPublishedListingMediaToPropertyMirror: vi.fn(),
+      getDb: vi.fn(),
+      assertNotDedicatedLandWorkflowListing: vi.fn(),
+    },
+    mockAssertListingPublicationEntitled: vi.fn(),
+    mockResolveCurrentMembership: vi.fn(),
+  }),
+);
 
 vi.mock('../db', () => mockDb);
+vi.mock('../services/agencyMembershipService', async importOriginal => ({
+  ...(await importOriginal<typeof import('../services/agencyMembershipService')>()),
+  resolveCurrentAgencyMembershipForAgent: mockResolveCurrentMembership,
+}));
 
 // Also mock the agent OS event service so tests don't fail on recording
 vi.mock('../services/agentOsEventService', () => ({
@@ -177,6 +184,7 @@ const withSilencedConsoleError = async (run: () => Promise<void>) => {
 describe('listing lifecycle — canonical identity contract', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockResolveCurrentMembership.mockResolvedValue(null);
     vi.mocked(mockAssertListingPublicationEntitled).mockResolvedValue({
       kind: 'agency',
       agencyId: 1,
@@ -334,7 +342,8 @@ describe('listing lifecycle — canonical identity contract', () => {
 
     await expect(caller.listing.getById({ id: 1001 })).rejects.toMatchObject({
       code: 'PRECONDITION_FAILED',
-      message: 'Land inventory is unavailable through the generic listing workflow for this launch cohort.',
+      message:
+        'Land inventory is unavailable through the generic listing workflow for this launch cohort.',
     });
     expect(mockDb.getListingMedia).not.toHaveBeenCalled();
   });
@@ -353,6 +362,7 @@ describe('listing lifecycle — canonical identity contract', () => {
   });
 
   it('allows an approved assigned agent with the exact agency attribution to edit', async () => {
+    mockResolveCurrentMembership.mockResolvedValue({ agencyId: 20 });
     const caller = makeCaller({
       id: 78,
       email: 'assigned-agent@test.com',
@@ -472,12 +482,12 @@ describe('listing lifecycle — canonical identity contract', () => {
     );
 
     await withSilencedConsoleError(async () => {
-      await expect(
-        caller.listing.update({ id: LISTING_ID, action: 'rent' }),
-      ).rejects.toMatchObject({
-        code: 'BAD_REQUEST',
-        message: 'Set pricing for the new listing intent before changing it.',
-      });
+      await expect(caller.listing.update({ id: LISTING_ID, action: 'rent' })).rejects.toMatchObject(
+        {
+          code: 'BAD_REQUEST',
+          message: 'Set pricing for the new listing intent before changing it.',
+        },
+      );
     });
 
     expect(mockDb.updateListing).not.toHaveBeenCalled();
@@ -816,6 +826,7 @@ describe('listing lifecycle — canonical identity contract', () => {
   });
 
   it('allows an approved assigned agent to view listing analytics', async () => {
+    mockResolveCurrentMembership.mockResolvedValue({ agencyId: 20 });
     const caller = makeCaller({
       id: 78,
       email: 'assigned-agent@test.com',
@@ -933,10 +944,12 @@ describe('listing lifecycle — canonical identity contract', () => {
         code: 'BAD_REQUEST',
         message: 'Commercial leasing listings are managed through Commercial inventory.',
       });
-      await expect(caller.listing.submitForReview({ listingId: LISTING_ID })).rejects.toMatchObject({
-        code: 'BAD_REQUEST',
-        message: 'Commercial leasing listings are managed through Commercial inventory.',
-      });
+      await expect(caller.listing.submitForReview({ listingId: LISTING_ID })).rejects.toMatchObject(
+        {
+          code: 'BAD_REQUEST',
+          message: 'Commercial leasing listings are managed through Commercial inventory.',
+        },
+      );
       await expect(caller.listing.archive({ id: LISTING_ID })).rejects.toMatchObject({
         code: 'BAD_REQUEST',
         message: 'Commercial leasing listings are managed through Commercial inventory.',
@@ -1054,10 +1067,13 @@ describe('listing lifecycle — canonical identity contract', () => {
     );
 
     await withSilencedConsoleError(async () => {
-      await expect(caller.listing.submitForReview({ listingId: LISTING_ID })).rejects.toMatchObject({
-        code: 'BAD_REQUEST',
-        message: 'Set availability, lease, utilities and furnishing before publishing a rental listing',
-      });
+      await expect(caller.listing.submitForReview({ listingId: LISTING_ID })).rejects.toMatchObject(
+        {
+          code: 'BAD_REQUEST',
+          message:
+            'Set availability, lease, utilities and furnishing before publishing a rental listing',
+        },
+      );
     });
 
     expect(mockDb.submitListingForReview).not.toHaveBeenCalled();
