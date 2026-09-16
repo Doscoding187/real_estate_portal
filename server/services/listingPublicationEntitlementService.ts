@@ -18,6 +18,7 @@ import {
   parseCanonicalCommercialTimestamp,
   resolveCommercialTerm,
 } from './commercialTerm';
+import { isCommercialActivationAvailable } from './commercialActivationPolicy';
 
 /**
  * The commercial decision for a canonical listing must be derived from the
@@ -34,6 +35,7 @@ export type ListingPublicationOperation =
   | 'republish';
 
 export type ListingPublicationFailureCode =
+  | 'commercial_activation_unavailable'
   | 'commercial_owner_unresolved'
   | 'listing_ownership_inconsistent'
   | 'unsupported_listing_owner_type'
@@ -115,6 +117,14 @@ export type IndependentAgentPublicationReadiness = {
 
 type DbLike = any;
 
+function commercialActivationBlocker(): PublicationBlocker {
+  return {
+    reason: 'commercial_activation_unavailable',
+    message:
+      'Listing publication is unavailable while Property Listify is in preparation-only onboarding.',
+  };
+}
+
 /**
  * Enumerate EVERYTHING standing between an agency and publishable inventory.
  *
@@ -144,6 +154,13 @@ export async function evaluateAgencyPublicationReadiness(
   const blockers: PublicationBlocker[] = [];
   const push = (reason: ListingPublicationFailureCode, message: string) =>
     blockers.push({ reason, message });
+
+  // A persisted paid term is not a release decision. Keep the readiness view
+  // honest while the global preparation-only state is in force; the mutation
+  // assertion below independently fails before any listing write can begin.
+  if (!isCommercialActivationAvailable()) {
+    blockers.push(commercialActivationBlocker());
+  }
 
   const [[agency], [branding]] = await Promise.all([
     db.select().from(agencies).where(eq(agencies.id, agencyId)).limit(1),
@@ -299,6 +316,10 @@ export async function evaluateIndependentAgentPublicationReadiness(
   const blockers: PublicationBlocker[] = [];
   const push = (reason: ListingPublicationFailureCode, message: string) =>
     blockers.push({ reason, message });
+
+  if (!isCommercialActivationAvailable()) {
+    blockers.push(commercialActivationBlocker());
+  }
 
   const [[user], [agent]] = await Promise.all([
     db.select().from(users).where(eq(users.id, userId)).limit(1),
@@ -714,6 +735,14 @@ export async function assertListingPublicationEntitled(
     excludeListingIds?: number[];
   },
 ): Promise<ListingCommercialOwner> {
+  // Publication remains unavailable in all normal runtimes even if a stale,
+  // historical, or manually-created subscription row appears active. Vitest
+  // is the only narrowly governed fixture exception.
+  if (!isCommercialActivationAvailable()) {
+    const blocker = commercialActivationBlocker();
+    throw new ListingPublicationEntitlementError(blocker.reason, blocker.message);
+  }
+
   const now = input.at || new Date();
   const owner = await resolveListingCommercialOwner(db, input.listingId);
   await lockListingPublicationOwner(db, owner);

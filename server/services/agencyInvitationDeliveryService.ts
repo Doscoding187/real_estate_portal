@@ -10,6 +10,7 @@ import {
 import { ENV } from '../_core/env';
 import { EmailService } from '../_core/emailService';
 import { getDb } from '../db';
+import { isCommercialActivationAvailable } from './commercialActivationPolicy';
 
 const ACTIVE_AGENCY_SUBSCRIPTION_STATUSES = new Set(['active', 'grace_period']);
 const INVITATION_VALIDITY_MS = 7 * 24 * 60 * 60 * 1000;
@@ -68,6 +69,14 @@ export async function hasEffectiveAgencyInvitationAccess(
   db: InvitationCommercialDatabase,
   agencyId: number,
 ): Promise<boolean> {
+  // A persisted paid term is necessary but not sufficient. Until the
+  // separately approved commercial release is enabled, no normal runtime may
+  // turn a historical/manual active row into invitation delivery or team
+  // membership authority. Vitest remains the narrowly scoped fixture path.
+  if (!isCommercialActivationAvailable()) {
+    return false;
+  }
+
   const [subscription] = await db
     .select({
       status: subscriptions.status,

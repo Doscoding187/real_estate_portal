@@ -64,6 +64,7 @@ function lifecycleVariant(state: string): 'default' | 'secondary' | 'destructive
 
 function accessLabel(reason: string): string {
   if (reason === 'active_launch_access') return 'Launch Access active';
+  if (reason === 'commercial_activation_unavailable') return 'Commercial activation unavailable';
   if (reason === 'expired_launch_access') return 'Launch Access expired';
   if (reason === 'inactive_launch_access') return 'Launch Access inactive';
   if (reason === 'invalid_launch_access') return 'Launch Access needs attention';

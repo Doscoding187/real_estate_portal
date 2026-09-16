@@ -22,6 +22,7 @@ import {
   failBillingProviderEvent,
   recordBillingProviderEvent,
 } from '../billingProviderEventService';
+import { getDeveloperPublicationAccess } from '../developerPublicationAccess';
 import { activatePaidLaunchAccessForOwner } from '../planAccessService';
 
 describe('commercial activation containment', () => {
@@ -145,5 +146,9 @@ describe('commercial activation containment', () => {
       expected,
     );
     await expect(failBillingProviderEvent(1, 'claim-token', 'failed')).rejects.toThrow(expected);
+    await expect(getDeveloperPublicationAccess(1, { db: {} as any })).resolves.toMatchObject({
+      eligible: false,
+      reason: 'commercial_activation_unavailable',
+    });
   });
 });

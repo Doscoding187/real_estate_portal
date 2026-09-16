@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { mockGetDb, mockSelect, mockUpdate, mockSendAgencyInvitationEmail } = vi.hoisted(() => ({
   mockGetDb: vi.fn(),
@@ -44,6 +44,10 @@ describe('agency invitation delivery (canonical access gate)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockGetDb.mockResolvedValue({ select: mockSelect, update: mockUpdate });
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
   });
 
   function mockCanonicalGate(
@@ -110,6 +114,19 @@ describe('agency invitation delivery (canonical access gate)', () => {
 
   it('keeps onboarding invitations queued while canonical access is pending payment', async () => {
     mockCanonicalGate('pending_payment');
+
+    const result = await deliverAgencyInvitations({ agencyId: 44, invitationIds: [99] });
+
+    expect(result).toEqual({ deferred: true, attempted: 0, sent: 0, failed: 0 });
+    expect(mockSendAgencyInvitationEmail).not.toHaveBeenCalled();
+  });
+
+  it('keeps even a persisted active term queued while commercial activation is disabled', async () => {
+    // A historical/manual subscription row must not bypass the immutable
+    // preparation-only release state in a deployed or development runtime.
+    vi.stubEnv('NODE_ENV', 'development');
+    vi.stubEnv('VITEST', 'true');
+    mockCanonicalGate('active');
 
     const result = await deliverAgencyInvitations({ agencyId: 44, invitationIds: [99] });
 

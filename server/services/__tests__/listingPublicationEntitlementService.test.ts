@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   assertListingPublicationEntitled,
   evaluateIndependentAgentPublicationReadiness,
@@ -233,6 +233,24 @@ async function expectAgencyDenied(
 }
 
 describe('listing publication entitlement service', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('fails closed for an otherwise valid paid listing while preparation-only is enabled', async () => {
+    vi.stubEnv('NODE_ENV', 'development');
+    vi.stubEnv('VITEST', 'true');
+
+    await expect(
+      assertListingPublicationEntitled(
+        agencyDb({ subscription: { status: 'active', cancelAtPeriodEnd: 0 } }),
+        { listingId: 10, operation: 'submit', at },
+      ),
+    ).rejects.toMatchObject<ListingPublicationEntitlementError>({
+      reason: 'commercial_activation_unavailable',
+    });
+  });
+
   it('allows a paid agency principal with a valid agency publishing plan', async () => {
     await expect(
       assertListingPublicationEntitled(
