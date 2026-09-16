@@ -22,6 +22,7 @@ let connection: AuthoritySqlConnection | undefined;
 let submittedListing: { id: number; title: string; suburbId: number } | undefined;
 let submittedFeedback: string | undefined;
 let publishedProperty: { id: number } | undefined;
+let fixtureAgent: { userId: number; agencyId: number } | undefined;
 
 function rowsFrom(result: unknown): Row[] {
   const first = Array.isArray(result) ? result[0] : undefined;
@@ -31,6 +32,77 @@ function rowsFrom(result: unknown): Row[] {
 async function query(statement: string, values: readonly unknown[] = []): Promise<Row[]> {
   if (!connection) throw new Error('PLE browser verification connection is not initialized.');
   return rowsFrom(await connection.execute(statement, values));
+}
+
+/**
+ * The PLE fixture deliberately has a two-listing publication allowance. A
+ * browser run must therefore retire only its own previous, named acceptance
+ * artifacts through the production archive lifecycle before it starts. This
+ * is not a reset and never touches unrelated inventory, identities, plans or
+ * subscriptions.
+ */
+async function archivePriorFixtureJourneyArtifacts(): Promise<void> {
+  if (!fixtureAgent) {
+    throw new Error('PLE browser verification fixture identity is not initialized.');
+  }
+
+  const candidates = await query(
+    `SELECT id
+       FROM listings
+      WHERE ownerId = ?
+        AND agencyId = ?
+        AND title LIKE 'PLE agency browser listing %'
+        AND status <> 'archived'
+      ORDER BY id ASC`,
+    [fixtureAgent.userId, fixtureAgent.agencyId],
+  );
+
+  if (candidates.length === 0) return;
+
+  const { appRouter } = await import('../../server/routers');
+  const caller = appRouter.createCaller({
+    req: {
+      hostname: 'localhost',
+      path: '/',
+      method: 'POST',
+      headers: { host: 'localhost:5000' },
+      socket: { remoteAddress: '127.0.0.1' },
+    },
+    res: { cookie: () => undefined, clearCookie: () => undefined },
+    user: {
+      id: fixtureAgent.userId,
+      email: fixtureAgentEmail,
+      role: 'agent',
+      agencyId: fixtureAgent.agencyId,
+    },
+  } as any);
+
+  for (const candidate of candidates) {
+    await caller.listing.archive({ id: Number(candidate.id) });
+  }
+
+  const remainingSources = await query(
+    `SELECT id
+       FROM listings
+      WHERE ownerId = ?
+        AND agencyId = ?
+        AND title LIKE 'PLE agency browser listing %'
+        AND status <> 'archived'`,
+    [fixtureAgent.userId, fixtureAgent.agencyId],
+  );
+  expect(remainingSources).toHaveLength(0);
+
+  const remainingPublicProjections = await query(
+    `SELECT property.id
+       FROM properties property
+       INNER JOIN listings listing ON listing.id = property.sourceListingId
+      WHERE listing.ownerId = ?
+        AND listing.agencyId = ?
+        AND listing.title LIKE 'PLE agency browser listing %'
+        AND property.status <> 'archived'`,
+    [fixtureAgent.userId, fixtureAgent.agencyId],
+  );
+  expect(remainingPublicProjections).toHaveLength(0);
 }
 
 function fixturePassword(): string {
@@ -99,8 +171,10 @@ test.describe('PLE agency operating browser acceptance', () => {
     connection = await createAuthoritySqlConnection(authority, decision);
 
     const [fixture] = await query(
-      `SELECT u.emailVerified AS emailVerified,
+      `SELECT u.id AS userId,
+              u.emailVerified AS emailVerified,
               u.role AS role,
+              membership.agency_id AS agencyId,
               membership.status AS membershipStatus,
               subscription.status AS subscriptionStatus
          FROM users u
@@ -120,10 +194,22 @@ test.describe('PLE agency operating browser acceptance', () => {
       membershipStatus: 'active',
       subscriptionStatus: 'active',
     });
+    expect(Number(fixture?.userId)).toBeGreaterThan(0);
+    expect(Number(fixture?.agencyId)).toBeGreaterThan(0);
+    fixtureAgent = {
+      userId: Number(fixture!.userId),
+      agencyId: Number(fixture!.agencyId),
+    };
+
+    await archivePriorFixtureJourneyArtifacts();
   });
 
   test.afterAll(async () => {
-    await connection?.end();
+    try {
+      await archivePriorFixtureJourneyArtifacts();
+    } finally {
+      await connection?.end();
+    }
   });
 
   test('derives the agency workspace and retains a device-local private listing draft across reload', async ({
@@ -329,6 +415,14 @@ test.describe('PLE agency operating browser acceptance', () => {
       [listing.id],
     );
     expect(publicProjection).toBeUndefined();
+
+    // The rejected source must remain absent from the public browser route as
+    // well as from the projection table.
+    await page.context().clearCookies();
+    await page.goto(
+      `/property-for-sale?locationId=${encodeURIComponent(`suburb:${listing.suburbId}`)}`,
+    );
+    await expect(page.getByRole('link', { name: `View ${listing.title}` })).toHaveCount(0);
   });
 
   test('lets the agency member see feedback, retain the persisted listing, and resubmit it', async ({
@@ -482,5 +576,255 @@ test.describe('PLE agency operating browser acceptance', () => {
       [publishedProperty.id],
     );
     expect(Number(mirroredImages?.imageCount)).toBe(5);
+  });
+
+  test('discovers the just-approved inventory through canonical suburb search and public detail', async ({
+    page,
+  }) => {
+    expect(submittedListing).toBeDefined();
+    expect(publishedProperty).toBeDefined();
+    const listing = submittedListing!;
+    const property = publishedProperty!;
+
+    // The public journey starts without a session and carries the canonical
+    // suburb identity, rather than display-text geography.
+    await page.context().clearCookies();
+    await page.goto(
+      `/property-for-sale?locationId=${encodeURIComponent(`suburb:${listing.suburbId}`)}`,
+    );
+
+    const approvedCard = page.getByRole('link', { name: `View ${listing.title}` });
+    await expect(approvedCard).toBeVisible();
+    await approvedCard.click();
+
+    await expect(page).toHaveURL(new RegExp(`/property/${property.id}(?:-|$)`));
+    await expect(page.getByRole('heading', { name: listing.title, exact: true })).toBeVisible();
+    await expect(page.getByText(/Sandton/).first()).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: `Open photo gallery for ${listing.title}` }),
+    ).toBeVisible();
+    await expect(page.getByText('1 / 5', { exact: true })).toBeVisible();
+  });
+
+  test('captures one public enquiry into canonical agency custody, replays it safely, and lets the assigned agent follow up', async ({
+    page,
+  }) => {
+    expect(submittedListing).toBeDefined();
+    expect(publishedProperty).toBeDefined();
+    const listing = submittedListing!;
+    const property = publishedProperty!;
+
+    const [assignment] = await query(
+      `SELECT agencyId, agentId
+         FROM listings
+        WHERE id = ?
+        LIMIT 1`,
+      [listing.id],
+    );
+    expect(Number(assignment?.agencyId)).toBeGreaterThan(0);
+    expect(Number(assignment?.agentId)).toBeGreaterThan(0);
+
+    const [membership] = await query(
+      `SELECT agent.id AS agentId,
+              membership.agency_id AS agencyId,
+              (
+                SELECT COUNT(*)
+                  FROM subscriptions individualSubscription
+                 WHERE individualSubscription.owner_type = 'agent'
+                   AND individualSubscription.owner_id = agent.id
+              ) AS individualSubscriptionCount
+         FROM users user
+         INNER JOIN agents agent ON agent.userId = user.id
+         INNER JOIN agency_agent_memberships membership ON membership.agent_id = agent.id
+        WHERE user.email = ?
+          AND membership.status = 'active'
+        ORDER BY membership.id DESC
+        LIMIT 1`,
+      [fixtureAgentEmail],
+    );
+    expect(membership).toMatchObject({
+      agentId: Number(assignment?.agentId),
+      agencyId: Number(assignment?.agencyId),
+      individualSubscriptionCount: 0,
+    });
+
+    const suffix = randomUUID().slice(0, 12);
+    const prospectName = `PLE Browser Prospect ${suffix}`;
+    const prospectEmail = `ple-browser-prospect-${suffix}@example.test`;
+    const prospectMessage = `Please arrange a viewing and share the next steps for ${suffix}.`;
+    const contactOutcome = `Called ${prospectName}; confirmed viewing interest and agreed next steps.`;
+    const followUpNote = `Confirm availability with ${prospectName} after the viewing request.`;
+
+    await page.context().clearCookies();
+    await page.goto(`/property/${property.id}`);
+    await expect(page.getByRole('heading', { name: listing.title, exact: true })).toBeVisible();
+    await page.getByRole('button', { name: 'Send enquiry', exact: true }).first().click();
+
+    const enquiry = page.getByRole('dialog', { name: 'Send an enquiry' });
+    await expect(enquiry).toBeVisible();
+    await enquiry.getByLabel('Your Name').fill(prospectName);
+    await enquiry.getByLabel('Email Address').fill(prospectEmail);
+    await enquiry.getByLabel('Phone Number').fill('+27825550199');
+    await enquiry.getByLabel('Message').fill(prospectMessage);
+    await enquiry.getByLabel(/I agree to be contacted about this enquiry/).check();
+    const initialRequest = page.waitForRequest(
+      candidate =>
+        candidate.url().includes('/api/trpc/leads.create') && candidate.method() === 'POST',
+    );
+    await enquiry.getByRole('button', { name: 'Send enquiry', exact: true }).click();
+    const capturedRequest = await initialRequest;
+    await expect(
+      page
+        .getByRole('dialog', { name: 'Enquiry received' })
+        .getByRole('heading', { name: 'Enquiry received' }),
+    ).toBeVisible();
+
+    // Replaying the exact public request is the browser/API counterpart to a
+    // network retry. It must resolve the existing durable lead rather than
+    // minting another one.
+    const contentType = await capturedRequest.headerValue('content-type');
+    const replayResponse = await page.request.fetch(capturedRequest.url(), {
+      method: capturedRequest.method(),
+      headers: {
+        'content-type': contentType || 'application/json',
+      },
+      data: capturedRequest.postData() || undefined,
+    });
+    expect(replayResponse.status()).toBe(200);
+
+    await expect
+      .poll(async () => {
+        const [lead] = await query(
+          `SELECT id,
+                  propertyId,
+                  agencyId,
+                  agentId,
+                  message,
+                  capture_request_id AS captureRequestId,
+                  consent_captured_at AS consentCapturedAt,
+                  consent_version AS consentVersion,
+                  consent_source AS consentSource,
+                  delivery_status AS deliveryStatus,
+                  lead_delivery_method AS leadDeliveryMethod
+             FROM leads
+            WHERE propertyId = ?
+              AND email = ?
+            ORDER BY id DESC
+            LIMIT 1`,
+          [property.id, prospectEmail],
+        );
+        return lead;
+      })
+      .toMatchObject({
+        propertyId: property.id,
+        agencyId: Number(assignment?.agencyId),
+        agentId: Number(assignment?.agentId),
+        message: `[GENERAL ENQUIRY] ${prospectMessage}`,
+        consentVersion: '2026-08-02',
+        consentSource: 'property_contact_modal',
+        deliveryStatus: 'delivered',
+        leadDeliveryMethod: 'crm_export',
+      });
+
+    const [lead] = await query(
+      `SELECT id,
+              capture_request_id AS captureRequestId,
+              consent_captured_at AS consentCapturedAt
+         FROM leads
+        WHERE propertyId = ?
+          AND email = ?
+        ORDER BY id DESC
+        LIMIT 1`,
+      [property.id, prospectEmail],
+    );
+    expect(Number(lead?.id)).toBeGreaterThan(0);
+    expect(lead?.captureRequestId).toBeTruthy();
+    expect(lead?.consentCapturedAt).toBeTruthy();
+    const leadId = Number(lead.id);
+
+    const [replayedCount] = await query(
+      `SELECT COUNT(*) AS rowCount
+         FROM leads
+        WHERE propertyId = ?
+          AND capture_request_id = ?`,
+      [property.id, lead.captureRequestId],
+    );
+    expect(Number(replayedCount?.rowCount)).toBe(1);
+
+    const [custody] = await query(
+      `SELECT purpose,
+              state,
+              channel,
+              recipient_type AS recipientType,
+              recipient_agent_id AS recipientAgentId,
+              recipient_agency_id AS recipientAgencyId
+         FROM lead_deliveries
+        WHERE lead_id = ?
+          AND purpose = 'primary_custody'
+        ORDER BY routing_revision DESC
+        LIMIT 1`,
+      [leadId],
+    );
+    expect(custody).toMatchObject({
+      purpose: 'primary_custody',
+      state: 'completed',
+      channel: 'crm_export',
+      recipientType: 'agent',
+      recipientAgentId: Number(assignment?.agentId),
+    });
+    expect(custody?.recipientAgencyId).toBeNull();
+
+    await signInAsFixtureAgent(page);
+    await page.goto(`/agent/leads?leadId=${leadId}`);
+    const leadWorkspace = page.getByRole('dialog', { name: prospectName });
+    await expect(leadWorkspace).toBeVisible();
+    await expect(leadWorkspace.getByText(listing.title, { exact: true })).toBeVisible();
+    await expect(leadWorkspace.getByText(prospectMessage, { exact: false }).first()).toBeVisible();
+
+    await leadWorkspace.locator(`#lead-note-${leadId}`).fill(contactOutcome);
+    await leadWorkspace.getByRole('button', { name: 'Record contact', exact: true }).click();
+    await expect(leadWorkspace.getByText(contactOutcome, { exact: true })).toBeVisible();
+
+    const followUpAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 16);
+    await leadWorkspace.locator(`#lead-follow-up-${leadId}`).fill(followUpAt);
+    await leadWorkspace.getByPlaceholder('What should happen next?').fill(followUpNote);
+    await leadWorkspace.getByRole('button', { name: 'Schedule follow-up', exact: true }).click();
+    await expect(
+      leadWorkspace.getByRole('button', { name: 'Complete follow-up', exact: true }),
+    ).toBeVisible();
+
+    await expect
+      .poll(async () => {
+        const [stored] = await query(
+          `SELECT firstRespondedAt, lastContactedAt, nextFollowUp
+             FROM leads
+            WHERE id = ?`,
+          [leadId],
+        );
+        return Boolean(stored?.firstRespondedAt && stored.lastContactedAt && stored.nextFollowUp);
+      })
+      .toBe(true);
+
+    const [recordedContact] = await query(
+      `SELECT type, description
+         FROM lead_activities
+        WHERE leadId = ?
+          AND description = ?
+        ORDER BY id DESC
+        LIMIT 1`,
+      [leadId, contactOutcome],
+    );
+    expect(recordedContact).toMatchObject({ type: 'call', description: contactOutcome });
+
+    const [scheduledFollowUp] = await query(
+      `SELECT type, description
+         FROM lead_activities
+        WHERE leadId = ?
+          AND description LIKE ?
+        ORDER BY id DESC
+        LIMIT 1`,
+      [leadId, `%${followUpNote}%`],
+    );
+    expect(scheduledFollowUp).toMatchObject({ type: 'note' });
   });
 });
