@@ -736,8 +736,8 @@ export async function assertListingPublicationEntitled(
   },
 ): Promise<ListingCommercialOwner> {
   // Publication remains unavailable in all normal runtimes even if a stale,
-  // historical, or manually-created subscription row appears active. Vitest
-  // is the only narrowly governed fixture exception.
+  // historical, or manually-created subscription row appears active. Governed
+  // test fixtures are the only narrowly scoped exception.
   if (!isCommercialActivationAvailable()) {
     const blocker = commercialActivationBlocker();
     throw new ListingPublicationEntitlementError(blocker.reason, blocker.message);

@@ -43,9 +43,34 @@ describe('commercial activation containment', () => {
     });
   });
 
-  it('only permits paid-state fixtures in the isolated Vitest runtime', () => {
+  it('only permits paid-state fixtures in governed test runtimes', () => {
     expect(isCommercialActivationAvailable({ NODE_ENV: 'test', VITEST: 'true' })).toBe(true);
     expect(isCommercialActivationAvailable({ NODE_ENV: 'test' })).toBe(false);
+    expect(
+      isCommercialActivationAvailable({
+        NODE_ENV: 'test',
+        APP_ENV: 'test',
+        PROPERTY_LISTIFY_GOVERNED_BROWSER_TEST_FIXTURE: 'true',
+        DATABASE_AUTHORITY_PARENT_FINGERPRINT: 'owned-target',
+        DATABASE_AUTHORITY_CORRELATION_ID: 'authority-run',
+      }),
+    ).toBe(true);
+    expect(
+      isCommercialActivationAvailable({
+        NODE_ENV: 'test',
+        APP_ENV: 'test',
+        PROPERTY_LISTIFY_GOVERNED_BROWSER_TEST_FIXTURE: 'true',
+      }),
+    ).toBe(false);
+    expect(
+      isCommercialActivationAvailable({
+        NODE_ENV: 'development',
+        APP_ENV: 'test',
+        PROPERTY_LISTIFY_GOVERNED_BROWSER_TEST_FIXTURE: 'true',
+        DATABASE_AUTHORITY_PARENT_FINGERPRINT: 'owned-target',
+        DATABASE_AUTHORITY_CORRELATION_ID: 'authority-run',
+      }),
+    ).toBe(false);
     expect(isCommercialActivationAvailable()).toBe(true);
   });
 

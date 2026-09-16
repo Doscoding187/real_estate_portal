@@ -5,16 +5,26 @@ import { COMMERCIAL_ACTIVATION_STATE } from '../../shared/commercialActivation';
 type RuntimeEnvironment = Record<string, string | undefined>;
 
 /**
- * Test fixtures may model paid states only from the Vitest process so
- * entitlement consumers retain coverage. No development or deployed runtime
- * can enable commercial activation through environment configuration.
+ * Test fixtures may model paid states only from Vitest or the authority-wrapped
+ * browser fixture runner. The latter marker is injected only after that runner
+ * has authorized an owned disposable target; it is not a normal app setting.
+ * Development and deployed runtimes therefore retain the immutable release
+ * state below.
  */
 export function isCommercialActivationAvailable(
   environment: RuntimeEnvironment = process.env,
 ): boolean {
+  const authorityWrappedBrowserFixture =
+    environment.NODE_ENV === 'test' &&
+    environment.APP_ENV === 'test' &&
+    environment.PROPERTY_LISTIFY_GOVERNED_BROWSER_TEST_FIXTURE === 'true' &&
+    Boolean(environment.DATABASE_AUTHORITY_PARENT_FINGERPRINT) &&
+    Boolean(environment.DATABASE_AUTHORITY_CORRELATION_ID);
+
   return (
     COMMERCIAL_ACTIVATION_STATE.enabled ||
-    (environment.NODE_ENV === 'test' && environment.VITEST === 'true')
+    (environment.NODE_ENV === 'test' && environment.VITEST === 'true') ||
+    authorityWrappedBrowserFixture
   );
 }
 

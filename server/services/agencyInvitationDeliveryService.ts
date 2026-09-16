@@ -72,7 +72,8 @@ export async function hasEffectiveAgencyInvitationAccess(
   // A persisted paid term is necessary but not sufficient. Until the
   // separately approved commercial release is enabled, no normal runtime may
   // turn a historical/manual active row into invitation delivery or team
-  // membership authority. Vitest remains the narrowly scoped fixture path.
+  // membership authority. Governed test fixtures remain the narrowly scoped
+  // exception for canonical paid-term coverage.
   if (!isCommercialActivationAvailable()) {
     return false;
   }
