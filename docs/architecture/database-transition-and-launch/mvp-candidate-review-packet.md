@@ -3,6 +3,14 @@
 Date: 2026-09-16. Status: prepared for whole-branch review; not integrated or
 approved for real-world onboarding, commercial activation, or protected release.
 
+Supersession — 2026-09-17: senior-review corrections and their complete local
+verification are recorded in [the correction record](mvp-senior-review-corrections.md).
+The current executable candidate is `d61eb2c37940ecf3ed1946d45400818df65dd7f9`
+on `fix/mvp-senior-review-closure`, retaining the PR-577 integration base. The
+original candidate identity and evidence below remain historical records, not
+the current review head. Whole-branch review, hosted CI, integration, and all
+separately governed launch gates remain required.
+
 The closure branch corrects agency ownership, commercial gating, publication,
 discovery and lead custody while retaining preparation-only commercial entry.
 The review unit is the entire diff from PR 577, not the most recent browser test.

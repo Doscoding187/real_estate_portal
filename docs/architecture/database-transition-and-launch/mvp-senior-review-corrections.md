@@ -1,6 +1,6 @@
 # Senior review corrections — 2026-09-17
 
-Status: corrections implemented; frozen-candidate verification pending. This
+Status: corrections implemented; frozen-candidate local verification passed. This
 record does not authorize integration, protected release, or commercial launch.
 
 ## Scope and authority
@@ -79,8 +79,64 @@ requires another frozen candidate; the failed run is not final acceptance.
 
 The [candidate review packet](mvp-candidate-review-packet.md) retains the full
 branch acceptance criteria and hosted gate ownership. Final full-suite,
-browser, lint, build, authority, and exact-revision evidence will be recorded
-below after the correction commit is frozen. Hosted CI, final consolidated
+browser, lint, build, authority, and exact-revision evidence is recorded
+below for the frozen correction candidate. Hosted CI, final consolidated
 review, integration, exact-artifact deployment/provider verification, monitored
 support, approved disclosures, real email, and commercial activation remain
 separate gates. Local fixture entitlements do not prove a paid customer journey.
+
+## Final frozen-candidate verification
+
+- Tested executable SHA: `d61eb2c37940ecf3ed1946d45400818df65dd7f9`.
+- Tested executable tree: `3b1744d5f0eb53a6caca5196899da4290419e294`.
+- Complete sequential run: 2026-09-17 04:09:02–04:25:09 UTC; exit 0.
+- The runner verified a clean worktree and unchanged HEAD before and after all
+  gates. No executable correction occurred during verification.
+- Remote `main` refreshed after verification remains the recorded PR-577 base.
+
+All times below are UTC on 2026-09-17; every gate exited 0.
+
+| Gate / command | Start–finish | Result |
+| --- | --- | --- |
+| `pnpm test:authority` | 04:09:02–04:17:42 | 648 files / 4,291 tests passed; 9 files / 67 tests explicitly skipped. |
+| `pnpm check` | 04:17:42–04:17:51 | Passed. |
+| `pnpm lint:check` | 04:17:51–04:20:45 | Zero errors; 11,460 retained warnings (original candidate: 11,475). |
+| `pnpm build` | 04:20:45–04:21:27 | Passed; existing large-chunk warning retained. |
+| `pnpm db:authority:check` | 04:21:27–04:21:58 | 35 files / 295 tests passed; utility authority, schema sanity, and lifecycle passed. |
+| `pnpm test:browser:authority -- --config=playwright.prepayment-onboarding.config.ts` | 04:21:58–04:23:25 | Chromium 10/10 passed. |
+| `pnpm test:browser:authority -- --config=playwright.ple-agency-operating.config.ts` | 04:23:25–04:25:07 | Chromium 10/10 passed. |
+| `pnpm db:authority:status` | 04:25:07–04:25:09 | Exact owned target; manifest-head-ready; no incomplete attempts; schema-congruent; application ready. |
+
+Reference/scenario status is not evaluated by this final status command; the
+governed local preparation and full-suite evidence above remain distinct from
+hosted provider verification. Both browser suites also passed preliminary
+portability smoke runs; those do not substitute for the frozen-candidate run.
+
+### Local evidence integrity
+
+Raw logs and browser artifacts remain local because they may contain private
+fixture data or temporary tokens. The stage logs use the prefix
+`/tmp/mvp-senior-d61eb2c3-` and these SHA-256 digests:
+
+| Log suffix | SHA-256 |
+| --- | --- |
+| `verification.log` | `af8c7850f9c0132eebdb7c251a7b590ed1833e4bf73455b60d846e272e1683fb` |
+| `full.log` | `58c06b86219f5b59c996d6a0fb1d2258fa1c78fa47130c2b47612fb89be77bd7` |
+| `typecheck.log` | `46a37aa38fcae9d7caf79924c5e85b28263712cef9bc282d976671c0e1e6b35d` |
+| `lint.log` | `c5118f4e75bfb9c57879b9778e9a47c7d26c5797bbe95bfa2ed17d605837e1a7` |
+| `build.log` | `3a16f5105b46611203ee46e5dada6079a22b5f7a9657afcc4139386a2172e54c` |
+| `authority.log` | `6dc88a3587a7a90ee38b9556c7137f2a98f99abeebc486635ef67942779f8834` |
+| `prepayment.log` | `921ae1b3b696e6ccdd62ae9054f4f90908ddbb296bcff78e53fc58678768803d` |
+| `agency.log` | `ab25a924a535842ae412289082ef47fa143adcb985b7e706cdefc4359e842020` |
+| `status.log` | `137d1fd60f9e7db4b72654bb244eccd5ad6d94f908f9dbac2af18edfd3c42a3f` |
+
+The evidence-only follow-up changes this record and the review-packet
+supersession note only. Its comparison against the tested SHA must contain no
+executable, migration, schema, or runtime configuration change.
+
+Senior disposition: the identified code defects and browser-harness portability
+issue are corrected and locally verified. Approved to advance to draft PR,
+hosted CI, and independent consolidated review, not to merge or launch. Edward
+explicitly authorized pushing this branch and opening a draft PR after these
+checks passed. No deployment, protected operation, or commercial activation was
+performed or authorized by this review.
