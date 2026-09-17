@@ -1,8 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { assertPublicLandSearchInput, isPublicLandEligible } from '../landPublicService';
+import {
+  assertPublicLandSearchInput,
+  isPublicLandEligible,
+  meetsPublicLandPublicationRequirements,
+} from '../landPublicService';
 
 const eligible = (overrides = {}) =>
-  isPublicLandEligible({
+  meetsPublicLandPublicationRequirements({
     listingStatus: 'approved',
     listingApprovalStatus: 'approved',
     reviewState: 'approved',
@@ -15,8 +19,20 @@ const eligible = (overrides = {}) =>
   });
 
 describe('public Land eligibility', () => {
-  it('requires the shared publication state and Land-specific approval', () => {
+  it('keeps the Land domain publication requirements separate from the first-cohort disposition', () => {
     expect(eligible()).toBe(true);
+    expect(
+      isPublicLandEligible({
+        listingStatus: 'approved',
+        listingApprovalStatus: 'approved',
+        reviewState: 'approved',
+        classification: 'residential_stand',
+        authorityStatus: 'active',
+        assetLifecycleStatus: 'active',
+        hasBlockingConflict: false,
+        hasCompletedMarketingImage: true,
+      }),
+    ).toBe(false);
     expect(eligible({ listingStatus: 'draft' })).toBe(false);
     expect(eligible({ listingApprovalStatus: 'pending' })).toBe(false);
     expect(eligible({ reviewState: 'pending' })).toBe(false);

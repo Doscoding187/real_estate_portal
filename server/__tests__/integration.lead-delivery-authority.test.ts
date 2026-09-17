@@ -4,7 +4,7 @@ import { eq } from 'drizzle-orm';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 import * as schema from '../../drizzle/schema';
-import { leads } from '../../drizzle/schema';
+import { leadActivities, leads } from '../../drizzle/schema';
 import { authorizeDatabaseOperation } from '../_core/databaseAuthority/authorization';
 import {
   createAuthorityRuntimePool,
@@ -13,6 +13,7 @@ import {
   type AuthoritySqlConnection,
 } from '../_core/databaseAuthority/connectionAuthority';
 import { resolveDatabaseAuthority } from '../_core/databaseAuthority/context';
+import { appRouter } from '../routers';
 import {
   appendLeadDeliveryRetryAttempt,
   claimLeadDeliveryAttempt,
@@ -117,11 +118,14 @@ describeDatabase('relational lead delivery authority (P2)', () => {
     return id;
   }
 
-  async function createUser(label: string): Promise<number> {
+  async function createUser(
+    label: string,
+    role: 'visitor' | 'super_admin' = 'visitor',
+  ): Promise<number> {
     const suffix = randomUUID().replaceAll('-', '');
     const result = await fixtureConnection.execute(
-      'INSERT INTO users (name, email) VALUES (?, ?)',
-      [`P2 ${label}`, `p2-${label}-${suffix}@invalid.example`],
+      'INSERT INTO users (name, email, role, emailVerified) VALUES (?, ?, ?, ?)',
+      [`P2 ${label}`, `p2-${label}-${suffix}@invalid.example`, role, 1],
     );
     const id = insertIdFrom(result, 'user');
     createdUserIds.add(id);
@@ -310,6 +314,94 @@ describeDatabase('relational lead delivery authority (P2)', () => {
     await expect(
       appendLeadDeliveryRetryAttempt({ database: databaseA, deliveryId: recorded.delivery.id }),
     ).resolves.toBeNull();
+  });
+
+  it('surfaces a failed platform delivery and allows audited idempotent operator recovery', async () => {
+    const leadId = await createLead('operator-recovery');
+    const operatorId = await createUser('operations', 'super_admin');
+    const recorded = await recordInitialLeadDelivery({
+      ...primaryDeliveryInput(leadId, {
+        idempotencyKey: `p2-operator-recovery:${leadId}:${randomUUID()}`,
+        channel: 'manual',
+        recipientType: 'manual',
+        supplyOrigin: 'platform_curated',
+        leadCustody: 'platform_managed',
+        initialStatus: 'pending',
+      }),
+      database: databaseA,
+    });
+
+    const worker = await runLeadDeliveryWorker({
+      database: databaseB,
+      leadId,
+      dispatcher: async () => {
+        throw new Error('simulated worker interruption before provider outcome was known');
+      },
+    });
+    expect(worker).toMatchObject({ claimed: 1, unknown: 1, recovered: 0 });
+
+    const operator = appRouter.createCaller({
+      req: { headers: {} },
+      res: {},
+      user: { id: operatorId, role: 'super_admin' },
+    } as any);
+    const auditBefore = await operator.system.leadRoutingAudit({ days: 1, attentionLimit: 50 });
+    expect(auditBefore.attentionLeads).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: leadId,
+          recipientType: 'platform',
+          issue: 'platform_custody_review',
+        }),
+      ]),
+    );
+    const queueBefore = await operator.superAdminPublisher.getPlatformManagedLeads({
+      limit: 50,
+      offset: 0,
+    });
+    expect(queueBefore.items.some(lead => Number(lead.id) === leadId)).toBe(true);
+
+    const recovered = await operator.system.completePlatformLeadAction({
+      leadId,
+      action: 'contacted',
+      note: 'Operations reached the prospect using the monitored custody queue.',
+    });
+    expect(recovered).toMatchObject({
+      id: leadId,
+      action: 'contacted',
+      status: 'contacted',
+      deliveryStatus: 'delivered',
+      duplicate: false,
+    });
+
+    const replay = await operator.system.completePlatformLeadAction({
+      leadId,
+      action: 'contacted',
+      note: 'A repeated operator request must not create another completion.',
+    });
+    expect(replay).toMatchObject({
+      id: leadId,
+      deliveryStatus: 'delivered',
+      duplicate: true,
+    });
+
+    const snapshot = await getLeadDeliverySnapshot({ leadId, database: databaseA });
+    expect(snapshot.current).toMatchObject({ id: recorded.delivery.id, state: 'completed' });
+    expect(snapshot.attempts.map(attempt => attempt.state)).toEqual(['unknown', 'completed']);
+    const activities = await databaseA
+      .select()
+      .from(leadActivities)
+      .where(eq(leadActivities.leadId, leadId));
+    expect(activities).toHaveLength(1);
+    expect(activities[0]?.description).toContain('monitored custody queue');
+
+    const auditAfter = await operator.system.leadRoutingAudit({ days: 1, attentionLimit: 50 });
+    expect(auditAfter.attentionLeads.some(lead => Number(lead.id) === leadId)).toBe(false);
+    const queueAfter = await operator.superAdminPublisher.getPlatformManagedLeads({
+      limit: 50,
+      offset: 0,
+    });
+    expect(queueAfter.items.some(lead => Number(lead.id) === leadId)).toBe(false);
   });
 
   it('keeps expired-claim recovery inside the worker lead scope', async () => {

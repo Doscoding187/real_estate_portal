@@ -138,6 +138,14 @@ describe('saved-search notification public search authority', () => {
 
     expect(mockSearchInventory).not.toHaveBeenCalled();
     expect(mockSearchProperties).toHaveBeenCalledOnce();
+    expect(mockSearchProperties).toHaveBeenCalledWith(
+      expect.objectContaining({ listingType: 'sale', city: 'johannesburg', petFriendly: true }),
+      'date_desc',
+      1,
+      100,
+      undefined,
+      { publicOnly: true },
+    );
     expect(mockSearchListings).toHaveBeenCalledOnce();
   });
 });

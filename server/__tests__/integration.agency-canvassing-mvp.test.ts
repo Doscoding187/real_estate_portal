@@ -6,6 +6,7 @@ import { eq } from 'drizzle-orm';
 
 import {
   agencies,
+  agencyAgentMemberships,
   agents,
   listingAnalytics,
   listingMedia,
@@ -19,6 +20,7 @@ import {
 } from '../../drizzle/schema';
 import { getDb } from '../db';
 import { appRouter } from '../routers';
+import { maintainAgencyAgentMembership } from '../services/agencyMembershipService';
 
 dotenv.config({ path: path.resolve(process.cwd(), '.env.test'), override: true });
 
@@ -102,6 +104,12 @@ async function createAgent(input: { agencyId: number; userId: number; name: stri
   } as any);
   const id = insertId(result);
   created.agentIds.push(id);
+  await maintainAgencyAgentMembership(db, {
+    agencyId: input.agencyId,
+    agentId: id,
+    status: 'active',
+    actorUserId: input.userId,
+  });
   return id;
 }
 
@@ -126,6 +134,7 @@ afterEach(async () => {
     await db.delete(locations).where(eq(locations.id, locationId));
   }
   for (const agentId of created.agentIds) {
+    await db.delete(agencyAgentMemberships).where(eq(agencyAgentMemberships.agentId, agentId));
     await db.delete(agents).where(eq(agents.id, agentId));
   }
   for (const userId of created.userIds) {

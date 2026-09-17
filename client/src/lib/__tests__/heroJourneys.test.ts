@@ -39,7 +39,6 @@ describe('hero journey authority', () => {
       'rent',
       'developments',
       'shared_living',
-      'plot_land',
       'commercial',
       'find_agent',
     ]);
@@ -107,23 +106,23 @@ describe('hero journey authority', () => {
     ]);
   });
 
-  it('releases completed journeys only through an explicit hosted manifest', () => {
+  it('requires the product disposition as well as an explicit hosted manifest', () => {
     const hostedRelease = resolvePublicJourneyReleaseContext({
       PROD: true,
       VITE_DEPLOY_ENV: 'production',
       VITE_PUBLIC_JOURNEY_RELEASES: 'shared_living,plot_land,commercial',
     });
 
-    // This manifest names Shared Living explicitly, so it releases with its
-    // own destination; other journeys stay gated by their absence here.
+    // Shared Living and Commercial are explicitly released. Land remains
+    // deferred even when a stale manifest names it.
     expect(getPublicHeroJourney('shared_living', hostedRelease)).toMatchObject({
       homepageVisible: true,
       homepageEnabled: true,
       destination: '/shared-living',
     });
     expect(getPublicHeroJourney('plot_land', hostedRelease)).toMatchObject({
-      homepageVisible: true,
-      homepageEnabled: true,
+      homepageVisible: false,
+      homepageEnabled: false,
       destination: '/plots-and-land',
     });
     expect(getPublicHeroJourney('commercial', hostedRelease)).toMatchObject({

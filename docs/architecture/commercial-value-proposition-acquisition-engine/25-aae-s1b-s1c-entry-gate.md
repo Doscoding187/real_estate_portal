@@ -6,6 +6,15 @@
 | Relationship | Uses the AAE-S0 strategic baseline, the approved AAE-S1A evidence boundary and the targeted owner/investor audience amendment in AAE-S1B to identify what a future commercial architecture must decide; it does not authorise AAE-S1C. |
 | Current decision | `AAE_S1C_ENTRY=REQUIRES_FOUNDER_DECISION` |
 
+> **Narrow B01 supersession — 2026-09-17.** The founder has separately
+> approved the Paid MVP policy for Independent Agent, Agency and Developer
+> Launch Access in
+> [LRC-PAY-001](../launch-readiness-and-product-convergence/03-launch-register.md#lrc-pay-001-b01-founder-commercial-and-operating-decision--2026-09-17).
+> That decision resolves only those three fixed, once-off, 90-day manual-EFT
+> offers and their minimum value floor. It does not authorise AAE-S1C, public
+> copy or routes, normal-runtime activation, any other audience/package, or
+> the broader reconciliation and legal/operational work below.
+
 ## What a separately authorised S1C may rely on
 
 S1C may use the recommended internal master proposition (`PLT-PROP-04`), the audience proposition records (`CON-PROP-01`–`CON-PROP-04`, `OWN-PROP-01`–`OWN-PROP-04`, `INV-PROP-01`–`INV-PROP-04`, `AGT-PROP-01`–`AGT-PROP-04`, `AGY-PROP-01`–`AGY-PROP-04`, `DEV-PROP-01`–`DEV-PROP-04`, `SRV-PROP-01`–`SRV-PROP-04`, `FIN-PROP-01`–`FIN-PROP-04`, `TDP-PROP-01`–`TDP-PROP-04`) and the four-layer model `PLT-PROP-06`, subject to their delivered, qualified, amended and hypothesis limits. It may treat `PLT-PROP-09` only as explicitly exploratory future direction and must retain `PLT-PROP-10` as a prohibition boundary.
@@ -32,7 +41,7 @@ This is not approval of a plan, package, price, offer, eligibility rule, route, 
 
 ## Commercial-authority reconciliation required in S1C
 
-The future exercise must reconcile—not assume—`DEP-01`–`DEP-16`: shared plans and entitlements, agent entitlement/publication rules, agency billing, legacy subscriptions, developer/partner subscriptions, coupons, discounts, early access, browser-local advertising prices/trials, checkout/payment, cancellation/expiry and a public commercial read model. No canonical authority has been selected.
+The future exercise must reconcile—not assume—`DEP-01`–`DEP-16`: shared plans and entitlements, agent entitlement/publication rules, agency billing, legacy subscriptions, developer/partner subscriptions, coupons, discounts, early access, browser-local advertising prices/trials, checkout/payment, cancellation/expiry and a public commercial read model. B01 selects the narrow canonical authority for its three named Paid MVP offers; no general S1C authority has been selected.
 
 Public price, plan, offer, trial, discount, eligibility, entitlement-inclusion, activation, cancellation or billing statement remains blocked until that reconciliation has been separately reviewed and approved.
 

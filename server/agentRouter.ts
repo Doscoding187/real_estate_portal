@@ -27,6 +27,7 @@ import {
   count,
   inArray,
   isNotNull,
+  isNull,
   like,
   notInArray,
   or,
@@ -55,6 +56,12 @@ import { logAudit } from './_core/auditLog';
 import { getAgentEntitlementsForUserId } from './services/agentEntitlementService';
 import { loadAgentPresenceSummary } from './services/agentPresenceSummaryService';
 import { agentOnboardingService } from './services/agentOnboardingService';
+import { AgentCoverageAreaValidationError } from './services/agentCoverageAreaService';
+import {
+  AGENT_COVERAGE_AREA_MAX,
+  CANONICAL_AGENT_COVERAGE_LOCATION_ID_PATTERN,
+  parseAgentCoverageAreas,
+} from '../shared/agentCoverageArea';
 import {
   COMMERCIAL_INVENTORY_MANAGEMENT_MESSAGE,
   isCommercialMarketingPropertyType,
@@ -85,6 +92,8 @@ import {
   getLeadDeliverySnapshotsForLeadIds,
   publicStatusForDelivery,
 } from './services/leadDeliveryService';
+import { excludeLandFromGenericPublicProjection } from './services/landLaunchContainmentService';
+import { resolveCurrentAgencyMembershipForAgent } from './services/agencyMembershipService';
 type AgentShowingStatus = 'scheduled' | 'completed' | 'cancelled' | 'no_show';
 
 type CanonicalAgentShowingStorageStatus = 'confirmed' | 'completed' | 'cancelled' | 'no_show';
@@ -204,6 +213,102 @@ export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 const LIVE_AGENT_LISTING_STATUSES = ['available', 'published'] as const;
 const TERMINAL_FOLLOW_UP_STATUSES = ['converted', 'closed', 'lost'] as const;
 
+type AgentLeadWorkspace = {
+  agent: typeof agents.$inferSelect;
+  currentAgencyId: number | null;
+};
+
+type AgentWorkspaceProfile = {
+  agent: typeof agents.$inferSelect | null;
+  currentAgencyId: number | null;
+};
+
+type AgentLeadDatabase = NonNullable<Awaited<ReturnType<typeof getDb>>>;
+
+/**
+ * Resolve the agent profile and its current agency authority. A retained
+ * profile affiliation is historical context only; any agency workspace must
+ * resolve a current canonical membership before it can expose or mutate work.
+ * A missing profile remains valid for the small number of onboarding paths
+ * that operate on user-owned preparation data alone.
+ */
+async function resolveAgentWorkspaceProfile(
+  db: AgentLeadDatabase,
+  userId: number,
+  membershipErrorMessage = 'A current agency membership is required to access this agency workspace.',
+): Promise<AgentWorkspaceProfile> {
+  const [agent] = await db.select().from(agents).where(eq(agents.userId, userId)).limit(1);
+
+  if (!agent) return { agent: null, currentAgencyId: null };
+
+  const membership = await resolveCurrentAgencyMembershipForAgent(db, Number(agent.id));
+  if (agent.agencyId && !membership) {
+    throw new TRPCError({
+      code: 'FORBIDDEN',
+      message: membershipErrorMessage,
+    });
+  }
+
+  return {
+    agent,
+    currentAgencyId: membership ? Number(membership.agencyId) : null,
+  };
+}
+
+/**
+ * Lead custody additionally requires an approved agent profile. Commercial
+ * access determines whether new marketplace opportunities can arrive; it does
+ * not determine whether the agent can work leads already routed to them.
+ */
+async function requireAgentLeadWorkspace(
+  db: AgentLeadDatabase,
+  userId: number,
+): Promise<AgentLeadWorkspace> {
+  const workspace = await resolveAgentWorkspaceProfile(
+    db,
+    userId,
+    'A current agency membership is required to access agency lead custody.',
+  );
+  if (!workspace.agent || workspace.agent.status !== 'approved') {
+    throw new TRPCError({ code: 'NOT_FOUND', message: 'Agent profile not found' });
+  }
+
+  return { agent: workspace.agent, currentAgencyId: workspace.currentAgencyId };
+}
+
+function buildAgentLeadCustodyConditions(workspace: AgentLeadWorkspace): SQL[] {
+  const conditions: SQL[] = [eq(leads.agentId, workspace.agent.id)];
+  if (workspace.currentAgencyId) {
+    // A member can retain independently-originated custody, but may only see
+    // agency custody for their single current canonical affiliation.
+    conditions.push(
+      or(isNull(leads.agencyId), eq(leads.agencyId, workspace.currentAgencyId))!,
+    );
+  } else {
+    conditions.push(isNull(leads.agencyId));
+  }
+  return conditions;
+}
+
+async function requireAgentCustodiedLead(
+  db: AgentLeadDatabase,
+  userId: number,
+  leadId: number,
+): Promise<{ workspace: AgentLeadWorkspace; lead: typeof leads.$inferSelect }> {
+  const workspace = await requireAgentLeadWorkspace(db, userId);
+  const [lead] = await db
+    .select()
+    .from(leads)
+    .where(and(eq(leads.id, leadId), ...buildAgentLeadCustodyConditions(workspace)))
+    .limit(1);
+
+  if (!lead) {
+    throw new TRPCError({ code: 'NOT_FOUND', message: 'Lead not found or unauthorized' });
+  }
+
+  return { workspace, lead };
+}
+
 function rejectGenericCommercialPropertyWorkflow(propertyType: unknown): void {
   if (!isCommercialMarketingPropertyType(propertyType)) return;
   throw new TRPCError({
@@ -251,6 +356,7 @@ async function requireAgentPropertyMutationTarget(
   propertyId: number,
   userId: number,
 ) {
+  const workspace = await resolveAgentWorkspaceProfile(database, userId);
   const [property] = await database
     .select()
     .from(properties)
@@ -261,15 +367,9 @@ async function requireAgentPropertyMutationTarget(
     throw new Error('Property not found');
   }
 
-  const [agentRecord] = await database
-    .select({ id: agents.id })
-    .from(agents)
-    .where(eq(agents.userId, userId))
-    .limit(1);
-
   const isOwner = property.ownerId === userId;
   const isAgent = Boolean(
-    agentRecord && property.agentId && Number(property.agentId) === Number(agentRecord.id),
+    workspace.agent && property.agentId && Number(property.agentId) === Number(workspace.agent.id),
   );
   if (!isOwner && !isAgent) {
     throw new Error('Not authorized to mutate this property');
@@ -339,7 +439,7 @@ function toAgentOnboardingResponse(agentRecord: typeof agents.$inferSelect | nul
     ...agentRecord,
     specializations: parseTextList(agentRecord.specialization),
     propertyTypes: parseTextList(agentRecord.propertyTypes),
-    areasServed: parseTextList(agentRecord.areasServed),
+    areasServed: parseAgentCoverageAreas(agentRecord.areasServed),
     languages: parseTextList(agentRecord.languages),
     socialLinks: parseSocialLinks(agentRecord.socialLinks),
   };
@@ -569,13 +669,12 @@ export const agentRouter = router({
     }> => {
       const db = await getDb();
       const userId = requireUser(ctx).id;
-
-      const [agentRecord] = await db
-        .select()
-        .from(agents)
-        .where(and(eq(agents.userId, userId), eq(agents.status, 'approved')))
-        .limit(1);
+      const workspace = await resolveAgentWorkspaceProfile(db, userId);
+      const agentRecord = workspace.agent?.status === 'approved' ? workspace.agent : null;
       const agentId = agentRecord?.id ?? null;
+      const leadWorkspace = agentRecord
+        ? { agent: agentRecord, currentAgencyId: workspace.currentAgencyId }
+        : null;
 
       const todayDate = new Date();
       todayDate.setHours(0, 0, 0, 0);
@@ -595,12 +694,14 @@ export const agentRouter = router({
       let pendingCommissionsResult: { total: number | null } | undefined;
       let showingsTodayCount = 0;
 
-      if (agentId) {
+      if (leadWorkspace) {
         [newLeadsResult] = await db
           .select({ count: count() })
           .from(leads)
-          .where(and(eq(leads.agentId, agentId), gte(leads.createdAt, weekAgo)));
+          .where(and(...buildAgentLeadCustodyConditions(leadWorkspace), gte(leads.createdAt, weekAgo)));
+      }
 
+      if (agentId) {
         showingsTodayCount = await countAgentShowingsInRange({
           db,
           agentId,
@@ -643,11 +744,18 @@ export const agentRouter = router({
     };
 
     const [agentRecord] = await db
-      .select({ id: agents.id })
+      .select()
       .from(agents)
       .where(and(eq(agents.userId, requireUser(ctx).id), eq(agents.status, 'approved')))
       .limit(1);
     if (!agentRecord) return emptySummary;
+
+    const membership = await resolveCurrentAgencyMembershipForAgent(db, Number(agentRecord.id));
+    if (agentRecord.agencyId && !membership) return emptySummary;
+    const leadWorkspace: AgentLeadWorkspace = {
+      agent: agentRecord,
+      currentAgencyId: membership ? Number(membership.agencyId) : null,
+    };
 
     const sinceIso = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
     const rows = await db
@@ -657,7 +765,7 @@ export const agentRouter = router({
         firstRespondedAt: leads.firstRespondedAt,
       })
       .from(leads)
-      .where(and(eq(leads.agentId, agentRecord.id), gte(leads.createdAt, sinceIso)));
+      .where(and(...buildAgentLeadCustodyConditions(leadWorkspace), gte(leads.createdAt, sinceIso)));
 
     const respondedHours = rows
       .filter(row => Boolean(row.firstRespondedAt))
@@ -813,19 +921,10 @@ export const agentRouter = router({
     .query(async ({ ctx, input }) => {
       const db = await getDb();
 
-      // Get agent record
-      const [agentRecord] = await db
-        .select()
-        .from(agents)
-        .where(and(eq(agents.userId, requireUser(ctx).id), eq(agents.status, 'approved')))
-        .limit(1);
+      const workspace = await requireAgentLeadWorkspace(db, requireUser(ctx).id);
 
-      if (!agentRecord) {
-        throw new Error('Agent profile not found');
-      }
-
-      // Build conditions
-      const conditions: SQL[] = [eq(leads.agentId, agentRecord.id)];
+      // Build conditions from durable custody and canonical membership.
+      const conditions: SQL[] = buildAgentLeadCustodyConditions(workspace);
 
       if (input.filters?.propertyId) {
         conditions.push(eq(leads.propertyId, input.filters.propertyId));
@@ -992,23 +1091,12 @@ export const agentRouter = router({
     .mutation(async ({ ctx, input }): Promise<{ success: boolean }> => {
       const db = await getDb();
 
-      // Get agent record
-      const [agentRecord] = await db
-        .select()
-        .from(agents)
-        .where(and(eq(agents.userId, requireUser(ctx).id), eq(agents.status, 'approved')))
-        .limit(1);
-
-      if (!agentRecord) {
-        throw new Error('Agent profile not found');
-      }
-
-      // Verify lead belongs to agent
-      const [lead] = await db.select().from(leads).where(eq(leads.id, input.leadId)).limit(1);
-
-      if (!lead || lead.agentId !== agentRecord.id) {
-        throw new Error('Lead not found or unauthorized');
-      }
+      const { workspace, lead } = await requireAgentCustodiedLead(
+        db,
+        requireUser(ctx).id,
+        input.leadId,
+      );
+      const agentRecord = workspace.agent;
 
       // Map pipeline stage to lead status
       let newStatus = 'new';
@@ -1053,7 +1141,7 @@ export const agentRouter = router({
           updatedAt: now,
           ...leadStatusTimestamps(lead, newStatus as any, now),
         })
-        .where(eq(leads.id, input.leadId));
+        .where(and(eq(leads.id, input.leadId), ...buildAgentLeadCustodyConditions(workspace)));
 
       await logAudit({
         userId: requireUser(ctx).id,
@@ -1111,20 +1199,15 @@ export const agentRouter = router({
     .query(async ({ ctx, input }) => {
       const db = await getDb();
       const user = requireUser(ctx);
-
-      // Try to get agent record, but don't fail if it doesn't exist
-      const [agentRecord] = await db
-        .select()
-        .from(agents)
-        .where(eq(agents.userId, user.id))
-        .limit(1);
+      const workspace = await resolveAgentWorkspaceProfile(db, user.id);
 
       // Build conditions - use agentId if profile exists, otherwise use ownerId
       const conditions = buildAgentInventoryConditions(
         user.id,
-        agentRecord?.id ?? null,
+        workspace.agent?.id ?? null,
         input.status,
       );
+      conditions.push(excludeLandFromGenericPublicProjection());
 
       const listings = await db
         .select()
@@ -1165,14 +1248,9 @@ export const agentRouter = router({
   getShowingListingOptions: agentProcedure.query(async ({ ctx }) => {
     const db = await getDb();
     const userId = requireUser(ctx).id;
+    const workspace = await resolveAgentWorkspaceProfile(db, userId);
 
-    const [agentRecord] = await db
-      .select({ id: agents.id })
-      .from(agents)
-      .where(eq(agents.userId, userId))
-      .limit(1);
-
-    return getAgentInventorySchedulingOptions(db, userId, agentRecord?.id ?? null);
+    return getAgentInventorySchedulingOptions(db, userId, workspace.agent?.id ?? null);
   }),
 
   /**
@@ -1299,7 +1377,10 @@ export const agentRouter = router({
         phone: z.string().min(7).max(20),
         whatsapp: z.string().max(50).optional(),
         profileImage: z.string().optional(),
-        areasServed: z.array(z.string()).optional(),
+        areasServed: z
+          .array(z.string().trim().regex(CANONICAL_AGENT_COVERAGE_LOCATION_ID_PATTERN))
+          .max(AGENT_COVERAGE_AREA_MAX)
+          .optional(),
         focus: z.enum(['sales', 'rentals', 'both']).optional(),
         specializations: z.array(z.string()).optional(),
         propertyTypes: z.array(z.string()).optional(),
@@ -1322,7 +1403,15 @@ export const agentRouter = router({
     .mutation(async ({ ctx, input }) => {
       const userId = requireUser(ctx).id;
       const db = await getDb();
-      const result = await agentOnboardingService.saveProfile(userId, input);
+      let result: Awaited<ReturnType<typeof agentOnboardingService.saveProfile>>;
+      try {
+        result = await agentOnboardingService.saveProfile(userId, input);
+      } catch (error) {
+        if (error instanceof AgentCoverageAreaValidationError) {
+          throw new TRPCError({ code: 'BAD_REQUEST', message: error.message });
+        }
+        throw error;
+      }
       const agentId = result.profile?.id;
       const entitlements = result.entitlements;
 
@@ -1491,19 +1580,10 @@ export const agentRouter = router({
     )
     .query(async ({ ctx, input }) => {
       const db = await getDb();
-      // Get agent record
-      const [agentRecord] = await db
-        .select()
-        .from(agents)
-        .where(and(eq(agents.userId, requireUser(ctx).id), eq(agents.status, 'approved')))
-        .limit(1);
+      const workspace = await requireAgentLeadWorkspace(db, requireUser(ctx).id);
 
-      if (!agentRecord) {
-        throw new Error('Agent profile not found');
-      }
-
-      // Build query conditions
-      const conditions: SQL[] = [eq(leads.agentId, agentRecord.id)];
+      // Build query conditions from durable custody and canonical membership.
+      const conditions: SQL[] = buildAgentLeadCustodyConditions(workspace);
       if (input.status && input.status !== 'all') {
         conditions.push(eq(leads.status, input.status as any));
       }
@@ -1553,15 +1633,7 @@ export const agentRouter = router({
     .query(async ({ ctx, input }) => {
       const db = await getDb();
       const user = requireUser(ctx);
-      const [agentRecord] = await db
-        .select({ id: agents.id })
-        .from(agents)
-        .where(and(eq(agents.userId, user.id), eq(agents.status, 'approved')))
-        .limit(1);
-
-      if (!agentRecord) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'Agent profile not found' });
-      }
+      const workspace = await requireAgentLeadWorkspace(db, user.id);
 
       const followUps = await db
         .select({
@@ -1572,7 +1644,7 @@ export const agentRouter = router({
         .leftJoin(properties, eq(leads.propertyId, properties.id))
         .where(
           and(
-            eq(leads.agentId, agentRecord.id),
+            ...buildAgentLeadCustodyConditions(workspace),
             isNotNull(leads.nextFollowUp),
             notInArray(leads.status, TERMINAL_FOLLOW_UP_STATUSES as any),
           ),
@@ -1623,20 +1695,7 @@ export const agentRouter = router({
     .mutation(async ({ ctx, input }): Promise<{ success: boolean; nextFollowUp: string }> => {
       const db = await getDb();
       const user = requireUser(ctx);
-      const [agentRecord] = await db
-        .select({ id: agents.id })
-        .from(agents)
-        .where(and(eq(agents.userId, user.id), eq(agents.status, 'approved')))
-        .limit(1);
-
-      if (!agentRecord) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'Agent profile not found' });
-      }
-
-      const [lead] = await db.select().from(leads).where(eq(leads.id, input.leadId)).limit(1);
-      if (!lead || Number(lead.agentId) !== Number(agentRecord.id)) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'Lead not found or unauthorized' });
-      }
+      const { workspace, lead } = await requireAgentCustodiedLead(db, user.id, input.leadId);
 
       if (TERMINAL_FOLLOW_UP_STATUSES.includes(lead.status as any)) {
         throw new TRPCError({
@@ -1663,7 +1722,7 @@ export const agentRouter = router({
           .where(
             and(
               eq(leads.id, lead.id),
-              eq(leads.agentId, agentRecord.id),
+              ...buildAgentLeadCustodyConditions(workspace),
               notInArray(leads.status, TERMINAL_FOLLOW_UP_STATUSES as any),
             ),
           );
@@ -1710,20 +1769,7 @@ export const agentRouter = router({
     .mutation(async ({ ctx, input }): Promise<{ success: boolean }> => {
       const db = await getDb();
       const user = requireUser(ctx);
-      const [agentRecord] = await db
-        .select({ id: agents.id })
-        .from(agents)
-        .where(and(eq(agents.userId, user.id), eq(agents.status, 'approved')))
-        .limit(1);
-
-      if (!agentRecord) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'Agent profile not found' });
-      }
-
-      const [lead] = await db.select().from(leads).where(eq(leads.id, input.leadId)).limit(1);
-      if (!lead || Number(lead.agentId) !== Number(agentRecord.id)) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'Lead not found or unauthorized' });
-      }
+      const { workspace, lead } = await requireAgentCustodiedLead(db, user.id, input.leadId);
 
       if (TERMINAL_FOLLOW_UP_STATUSES.includes(lead.status as any)) {
         throw new TRPCError({
@@ -1745,7 +1791,7 @@ export const agentRouter = router({
           .where(
             and(
               eq(leads.id, lead.id),
-              eq(leads.agentId, agentRecord.id),
+              ...buildAgentLeadCustodyConditions(workspace),
               notInArray(leads.status, TERMINAL_FOLLOW_UP_STATUSES as any),
             ),
           );
@@ -1801,24 +1847,9 @@ export const agentRouter = router({
     )
     .mutation(async ({ ctx, input }): Promise<{ success: boolean }> => {
       const db = await getDb();
-
-      // Get agent record
-      const [agentRecord] = await db
-        .select()
-        .from(agents)
-        .where(and(eq(agents.userId, requireUser(ctx).id), eq(agents.status, 'approved')))
-        .limit(1);
-
-      if (!agentRecord) {
-        throw new Error('Agent profile not found');
-      }
-
-      // Verify lead belongs to agent
-      const [lead] = await db.select().from(leads).where(eq(leads.id, input.leadId)).limit(1);
-
-      if (!lead || lead.agentId !== agentRecord.id) {
-        throw new Error('Lead not found or unauthorized');
-      }
+      const user = requireUser(ctx);
+      const { workspace, lead } = await requireAgentCustodiedLead(db, user.id, input.leadId);
+      const agentRecord = workspace.agent;
 
       // Canonical transition rules, timestamps and lost-reason handling are
       // identical to the Agency surface so first-response measurement stays
@@ -1833,12 +1864,12 @@ export const agentRouter = router({
           updatedAt: now,
           ...leadStatusTimestamps(lead, input.status, now, { lostReason: input.lostReason }),
         })
-        .where(eq(leads.id, input.leadId));
+        .where(and(eq(leads.id, input.leadId), ...buildAgentLeadCustodyConditions(workspace)));
 
       // Log activity
       await db.insert(leadActivities).values({
         leadId: input.leadId,
-        userId: requireUser(ctx).id,
+        userId: user.id,
         type: 'status_change',
         description:
           input.notes ||
@@ -1848,7 +1879,7 @@ export const agentRouter = router({
       });
 
       await logAudit({
-        userId: requireUser(ctx).id,
+        userId: user.id,
         action: 'agent.lead_status_update',
         targetType: 'lead',
         targetId: input.leadId,
@@ -1884,20 +1915,7 @@ export const agentRouter = router({
     .input(z.object({ leadId: z.number().int().positive() }))
     .query(async ({ ctx, input }): Promise<AgentOfferReadinessSummary> => {
       const db = await getDb();
-      const [agentRecord] = await db
-        .select({ id: agents.id })
-        .from(agents)
-        .where(and(eq(agents.userId, requireUser(ctx).id), eq(agents.status, 'approved')))
-        .limit(1);
-
-      if (!agentRecord) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'Agent profile not found' });
-      }
-
-      const [lead] = await db.select().from(leads).where(eq(leads.id, input.leadId)).limit(1);
-      if (!lead || Number(lead.agentId) !== Number(agentRecord.id)) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'Lead not found or unauthorized' });
-      }
+      const { lead } = await requireAgentCustodiedLead(db, requireUser(ctx).id, input.leadId);
 
       return getAgentOfferReadiness(db, lead);
     }),
@@ -1923,20 +1941,8 @@ export const agentRouter = router({
     .mutation(async ({ ctx, input }): Promise<AgentOfferReadinessSummary> => {
       const db = await getDb();
       const user = requireUser(ctx);
-      const [agentRecord] = await db
-        .select({ id: agents.id })
-        .from(agents)
-        .where(and(eq(agents.userId, user.id), eq(agents.status, 'approved')))
-        .limit(1);
-
-      if (!agentRecord) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'Agent profile not found' });
-      }
-
-      const [lead] = await db.select().from(leads).where(eq(leads.id, input.leadId)).limit(1);
-      if (!lead || Number(lead.agentId) !== Number(agentRecord.id)) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'Lead not found or unauthorized' });
-      }
+      const { workspace, lead } = await requireAgentCustodiedLead(db, user.id, input.leadId);
+      const agentRecord = workspace.agent;
 
       if (['converted', 'closed', 'lost'].includes(String(lead.status))) {
         throw new TRPCError({
@@ -1963,7 +1969,7 @@ export const agentRouter = router({
         await tx
           .update(leads)
           .set({ updatedAt: now })
-          .where(and(eq(leads.id, lead.id), eq(leads.agentId, agentRecord.id)));
+          .where(and(eq(leads.id, lead.id), ...buildAgentLeadCustodyConditions(workspace)));
       });
 
       await logAudit({
@@ -2007,24 +2013,8 @@ export const agentRouter = router({
     )
     .mutation(async ({ ctx, input }): Promise<{ success: boolean }> => {
       const db = await getDb();
-
-      // Get agent record
-      const [agentRecord] = await db
-        .select()
-        .from(agents)
-        .where(and(eq(agents.userId, requireUser(ctx).id), eq(agents.status, 'approved')))
-        .limit(1);
-
-      if (!agentRecord) {
-        throw new Error('Agent profile not found');
-      }
-
-      // Verify lead belongs to agent
-      const [lead] = await db.select().from(leads).where(eq(leads.id, input.leadId)).limit(1);
-
-      if (!lead || lead.agentId !== agentRecord.id) {
-        throw new Error('Lead not found or unauthorized');
-      }
+      const user = requireUser(ctx);
+      const { workspace, lead } = await requireAgentCustodiedLead(db, user.id, input.leadId);
 
       const activityType =
         input.activityType === 'viewing_scheduled' || input.activityType === 'offer_sent'
@@ -2038,7 +2028,7 @@ export const agentRouter = router({
       await db.transaction(async tx => {
         await tx.insert(leadActivities).values({
           leadId: input.leadId,
-          userId: requireUser(ctx).id,
+          userId: user.id,
           type: activityType,
           description: input.description,
           metadata: input.metadata || null,
@@ -2052,11 +2042,11 @@ export const agentRouter = router({
               ? { lastContactedAt: now, firstRespondedAt: lead.firstRespondedAt || now }
               : {}),
           })
-          .where(eq(leads.id, input.leadId));
+          .where(and(eq(leads.id, input.leadId), ...buildAgentLeadCustodyConditions(workspace)));
       });
 
       await recordAgentOsEvent({
-        userId: requireUser(ctx).id,
+        userId: user.id,
         eventType: 'agent_crm_action_logged',
         eventData: {
           leadId: input.leadId,
@@ -2083,22 +2073,7 @@ export const agentRouter = router({
       if (!db) {
         throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
       }
-
-      const [agentRecord] = await db
-        .select()
-        .from(agents)
-        .where(and(eq(agents.userId, requireUser(ctx).id), eq(agents.status, 'approved')))
-        .limit(1);
-
-      if (!agentRecord) {
-        throw new Error('Agent profile not found');
-      }
-
-      const [lead] = await db.select().from(leads).where(eq(leads.id, input.leadId)).limit(1);
-
-      if (!lead || lead.agentId !== agentRecord.id) {
-        throw new Error('Lead not found or unauthorized');
-      }
+      await requireAgentCustodiedLead(db, requireUser(ctx).id, input.leadId);
 
       const activities = await db
         .select()
@@ -2125,20 +2100,11 @@ export const agentRouter = router({
       if (!db) {
         throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
       }
-
-      const [agentRecord] = await db
-        .select()
-        .from(agents)
-        .where(eq(agents.userId, requireUser(ctx).id))
-        .limit(1);
-
-      if (!agentRecord) {
-        return [];
-      }
+      const workspace = await requireAgentLeadWorkspace(db, requireUser(ctx).id);
 
       return listAgentShowings({
         db,
-        agentId: agentRecord.id,
+        agentId: workspace.agent.id,
         startDate: input.startDate,
         endDate: input.endDate,
         status: input.status,
@@ -2159,16 +2125,8 @@ export const agentRouter = router({
     .mutation(async ({ ctx, input }): Promise<{ success: boolean; showingId: number }> => {
       const db = await getDb();
       const userId = requireUser(ctx).id;
-
-      const [agentRecord] = await db
-        .select()
-        .from(agents)
-        .where(and(eq(agents.userId, userId), eq(agents.status, 'approved')))
-        .limit(1);
-
-      if (!agentRecord) {
-        throw new Error('Agent profile not found');
-      }
+      const workspace = await requireAgentLeadWorkspace(db, userId);
+      const agentRecord = workspace.agent;
 
       const [listingRecord] = await db
         .select({
@@ -2218,15 +2176,25 @@ export const agentRouter = router({
         });
       }
 
+      // Browser clients submit ISO-8601 values. The canonical MySQL schema
+      // stores timestamp strings, so normalize at the API boundary rather
+      // than passing a `T`/`Z` value into a strict SQL timestamp column.
+      const scheduledAtDate = new Date(input.scheduledAt);
+      if (Number.isNaN(scheduledAtDate.getTime())) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Showing date is invalid' });
+      }
+      const scheduledAt = toDbTimestampRequired(scheduledAtDate);
+
       let leadRecord: typeof leads.$inferSelect | null = null;
       if (input.leadId) {
-        const [lead] = await db.select().from(leads).where(eq(leads.id, input.leadId)).limit(1);
-
-        if (!lead || lead.agentId !== agentRecord.id) {
-          throw new Error('Lead not found or unauthorized');
+        const [persistedLead] = await db
+          .select()
+          .from(leads)
+          .where(and(eq(leads.id, input.leadId), ...buildAgentLeadCustodyConditions(workspace)))
+          .limit(1);
+        if (!persistedLead) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Lead not found or unauthorized' });
         }
-
-        const persistedLead = lead;
         leadRecord = persistedLead;
 
         if (
@@ -2265,7 +2233,7 @@ export const agentRouter = router({
         sql`${leadRecord?.id ?? null}`,
         sql`${agentRecord.id}`,
         sql`${input.visitorName}`,
-        sql`${toDbTimestampRequired(input.scheduledAt)}`,
+        sql`${scheduledAt}`,
         sql`${input.durationMinutes ?? 30}`,
         sql`${'confirmed'}`,
         sql`${input.notes || null}`,
@@ -2288,7 +2256,7 @@ export const agentRouter = router({
               leadId: leadRecord?.id ?? null,
               agentId: agentRecord.id,
               visitorName: input.visitorName,
-              scheduledAt: toDbTimestampRequired(input.scheduledAt),
+              scheduledAt,
               durationMinutes: input.durationMinutes ?? 30,
               status: 'confirmed',
               notes: input.notes || null,
@@ -2311,7 +2279,9 @@ export const agentRouter = router({
             status: 'viewing_scheduled',
             updatedAt: nowAsDbTimestamp(),
           })
-          .where(eq(leads.id, persistedLead.id));
+          .where(
+            and(eq(leads.id, persistedLead.id), ...buildAgentLeadCustodyConditions(workspace)),
+          );
 
         await db.insert(leadActivities).values({
           leadId: persistedLead.id,
@@ -2362,17 +2332,8 @@ export const agentRouter = router({
     )
     .mutation(async ({ ctx, input }): Promise<{ success: boolean }> => {
       const db = await getDb();
-
-      // Get agent record
-      const [agentRecord] = await db
-        .select()
-        .from(agents)
-        .where(and(eq(agents.userId, requireUser(ctx).id), eq(agents.status, 'approved')))
-        .limit(1);
-
-      if (!agentRecord) {
-        throw new Error('Agent profile not found');
-      }
+      const workspace = await requireAgentLeadWorkspace(db, requireUser(ctx).id);
+      const agentRecord = workspace.agent;
 
       const nextStatus = mapAgentShowingStatusToCanonical(input.status);
       const result = await db.execute(sql`
@@ -2418,17 +2379,8 @@ export const agentRouter = router({
     )
     .query(async ({ ctx, input }) => {
       const db = await getDb();
-
-      // Get agent record
-      const [agentRecord] = await db
-        .select()
-        .from(agents)
-        .where(and(eq(agents.userId, requireUser(ctx).id), eq(agents.status, 'approved')))
-        .limit(1);
-
-      if (!agentRecord) {
-        throw new Error('Agent profile not found');
-      }
+      const workspace = await requireAgentLeadWorkspace(db, requireUser(ctx).id);
+      const agentRecord = workspace.agent;
 
       // Build conditions
       const conditions: SQL[] = [eq(commissions.agentId, agentRecord.id)];
@@ -2478,17 +2430,8 @@ export const agentRouter = router({
     )
     .query(async ({ ctx, input }) => {
       const db = await getDb();
-
-      // Get agent record
-      const [agentRecord] = await db
-        .select()
-        .from(agents)
-        .where(eq(agents.userId, requireUser(ctx).id))
-        .limit(1);
-
-      if (!agentRecord) {
-        throw new Error('Agent profile not found');
-      }
+      const workspace = await requireAgentLeadWorkspace(db, requireUser(ctx).id);
+      const agentRecord = workspace.agent;
 
       const now = new Date();
       const periodDays = {
@@ -2504,7 +2447,9 @@ export const agentRouter = router({
       const [leadsContactedResult] = await db
         .select({ count: count() })
         .from(leads)
-        .where(and(eq(leads.agentId, agentRecord.id), gte(leads.lastContactedAt, startDate)));
+        .where(
+          and(...buildAgentLeadCustodyConditions(workspace), gte(leads.lastContactedAt, startDate)),
+        );
 
       // Properties sold/rented
       const [propertiesClosedResult] = await db
@@ -2525,14 +2470,14 @@ export const agentRouter = router({
       const [totalLeadsResult] = await db
         .select({ count: count() })
         .from(leads)
-        .where(and(eq(leads.agentId, agentRecord.id), gte(leads.createdAt, startDate)));
+        .where(and(...buildAgentLeadCustodyConditions(workspace), gte(leads.createdAt, startDate)));
 
       const [convertedLeadsResult] = await db
         .select({ count: count() })
         .from(leads)
         .where(
           and(
-            eq(leads.agentId, agentRecord.id),
+            ...buildAgentLeadCustodyConditions(workspace),
             inArray(leads.status, ['converted', 'closed'] as any),
             gte(leads.createdAt, startDate),
           ),
@@ -2643,14 +2588,8 @@ export const agentRouter = router({
     )
     .query(async ({ ctx, input }) => {
       const db = await getDb();
-
-      // Get agent record
-      const [agentRecord] = await db
-        .select()
-        .from(agents)
-        .where(eq(agents.userId, requireUser(ctx).id))
-        .limit(1);
-
+      const workspace = await resolveAgentWorkspaceProfile(db, requireUser(ctx).id);
+      const agentRecord = workspace.agent;
       if (!agentRecord) {
         throw new Error('Agent profile not found');
       }
@@ -2727,14 +2666,8 @@ export const agentRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       const db = await getDb();
-
-      // Get agent record
-      const [agentRecord] = await db
-        .select()
-        .from(agents)
-        .where(eq(agents.userId, requireUser(ctx).id))
-        .limit(1);
-
+      const workspace = await resolveAgentWorkspaceProfile(db, requireUser(ctx).id);
+      const agentRecord = workspace.agent;
       if (!agentRecord) {
         throw new Error('Agent profile not found');
       }

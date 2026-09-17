@@ -51,11 +51,12 @@ vi.mock('@/lib/trpc', () => ({
 vi.mock('sonner', () => ({
   toast: {
     error: vi.fn(),
+    info: vi.fn(),
     success: vi.fn(),
   },
 }));
 
-import AgentPackageSelection from './AgentPackageSelection';
+import AgentPackageSelection, { CommercialAgentPackageSelection } from './AgentPackageSelection';
 
 const product = {
   productId: 'plan:agent_launch_access',
@@ -154,29 +155,29 @@ beforeEach(() => {
   });
 });
 
-describe('Agent paid Launch Access conversion', () => {
-  it('requests the canonical invoice and exposes EFT/proof handoff in place', async () => {
+describe('Agent pre-payment preparation', () => {
+  it('keeps the direct package route in preparation without loading commercial data', () => {
     render(<AgentPackageSelection />);
 
-    const requestButton = await screen.findByRole('button', {
-      name: /Get Agent Launch Access/i,
-    });
-    fireEvent.click(requestButton);
+    expect(screen.getByTestId('agent-package-preparation')).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', {
+        name: 'Prepare your Agent workspace before commercial activation.',
+      }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Preparation-only onboarding')).toBeInTheDocument();
+    expect(screen.queryByText('Agent Launch Access')).not.toBeInTheDocument();
+    expect(screen.queryByText(/manual EFT/i)).not.toBeInTheDocument();
+    expect(catalogMock).not.toHaveBeenCalled();
+    expect(apiFetchMock).not.toHaveBeenCalled();
+    expect(agentWorkspaceMock).not.toHaveBeenCalled();
+    expect(submitProofMock).not.toHaveBeenCalled();
 
-    await waitFor(() => {
-      expect(apiFetchMock).toHaveBeenCalledWith(
-        '/agent/request-launch-access-invoice',
-        expect.objectContaining({
-          method: 'POST',
-          body: JSON.stringify({ planId: 42 }),
-        }),
-      );
-    });
+    fireEvent.click(screen.getByRole('button', { name: 'Continue Agent setup' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Open preparation workspace' }));
 
-    expect(setLocationMock).not.toHaveBeenCalled();
-    expect(await screen.findByText(/PLI-AGENT-77/)).toBeInTheDocument();
-    expect(screen.getByText('Manual EFT instructions')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Submit proof for review' })).toBeInTheDocument();
+    expect(setLocationMock).toHaveBeenNthCalledWith(1, '/agent/setup');
+    expect(setLocationMock).toHaveBeenNthCalledWith(2, '/agent/dashboard');
   });
 
   it('lands a waiting payer on the dashboard while finance verifies the proof', async () => {
@@ -198,14 +199,48 @@ describe('Agent paid Launch Access conversion', () => {
       return Promise.resolve({});
     });
 
-    render(<AgentPackageSelection />);
+    render(<CommercialAgentPackageSelection />);
 
     await waitFor(() => {
       expect(setLocationMock).toHaveBeenCalledWith('/agent/dashboard');
     });
   });
 
-  it('shows finance correction guidance when a previous proof was rejected', async () => {
+  it('does not open individual billing for a current agency member', async () => {
+    apiFetchMock.mockImplementation((endpoint: string) => {
+      if (endpoint === '/agent/onboarding-status') {
+        return Promise.resolve({
+          packageSelected: true,
+          onboardingComplete: true,
+          onboardingStep: 4,
+          dashboardUnlocked: true,
+          fullFeaturesUnlocked: false,
+          recommendedNextStep: 'await_agency_activation',
+          subscriptionTier: 'agency_launch_access',
+          subscriptionStatus: 'pending_payment',
+          commercial: {
+            ownerType: 'agency',
+            ownerId: 88,
+            ownerSource: 'agency_membership',
+          },
+          trialStartedAt: null,
+          trialEndsAt: null,
+        });
+      }
+      return Promise.resolve({});
+    });
+
+    render(<CommercialAgentPackageSelection />);
+
+    await waitFor(() => {
+      expect(setLocationMock).toHaveBeenCalledWith('/agent/dashboard');
+    });
+
+    const options = agentWorkspaceMock.mock.calls.at(-1)?.[1] as { enabled?: boolean };
+    expect(options.enabled).toBe(false);
+  });
+
+  it('does not expose payment-proof controls for a historical invoice', async () => {
     agentWorkspaceMock.mockReturnValue({
       data: {
         activeInvoice: invoice,
@@ -248,11 +283,11 @@ describe('Agent paid Launch Access conversion', () => {
       return Promise.resolve({});
     });
 
-    render(<AgentPackageSelection />);
+    render(<CommercialAgentPackageSelection />);
 
-    expect(await screen.findByRole('alert')).toHaveTextContent(
-      'Please upload a legible bank-stamped proof.',
-    );
-    expect(screen.getByRole('button', { name: 'Submit proof for review' })).toBeInTheDocument();
+    expect(await screen.findByText(/Preparation-only onboarding/i)).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Submit proof for review' }),
+    ).not.toBeInTheDocument();
   });
 });

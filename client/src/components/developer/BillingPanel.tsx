@@ -32,6 +32,8 @@ import { formatCommercialStatus, formatInvoiceStatus } from '@/lib/developerStat
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
+import { CommercialActivationNotice } from '@/components/commercial/CommercialActivationNotice';
+import { COMMERCIAL_ACTIVATION_STATE } from '@shared/commercialActivation';
 
 const PLAN_PRESENTATION = {
   trial: {
@@ -64,7 +66,78 @@ function formatInvoiceAmount(amountMinor: number | null | undefined): string {
   }).format(Number(amountMinor || 0) / 100);
 }
 
+/**
+ * Normal MVP onboarding allows a Developer to prepare private work without
+ * exposing a payment, invoice, or entitlement path. Keep the commercial
+ * workspace unmounted until the separately authorised enabled runtime.
+ */
 export default function BillingPanel() {
+  if (!COMMERCIAL_ACTIVATION_STATE.enabled) {
+    return <PreparationDeveloperBillingPanel />;
+  }
+
+  return <CommercialDeveloperBillingPanel />;
+}
+
+function PreparationDeveloperBillingPanel() {
+  const [, setLocation] = useLocation();
+
+  return (
+    <section className="space-y-5" data-testid="developer-billing-preparation">
+      <CommercialActivationNotice />
+      <Card className="border-slate-200 bg-white shadow-sm">
+        <CardContent className="p-6 sm:p-8">
+          <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100">
+            Developer preparation
+          </Badge>
+          <h2 className="mt-4 text-2xl font-semibold tracking-tight text-slate-950">
+            Prepare your Developer workspace before commercial activation.
+          </h2>
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">
+            Complete your organisation information and prepare private developments now. Marketplace
+            publication and commercial activation remain protected until the approved commercial
+            release.
+          </p>
+
+          <div className="mt-6 grid gap-3 md:grid-cols-3">
+            <PreparationTile
+              title="Organisation readiness"
+              detail="Keep your organisation details current while review and preparation continue."
+            />
+            <PreparationTile
+              title="Private developments"
+              detail="Create, save and return to drafts without making them public."
+            />
+            <PreparationTile
+              title="Activation boundary"
+              detail="Publishing becomes available only after approved commercial activation."
+            />
+          </div>
+
+          <div className="mt-6 flex flex-wrap gap-3">
+            <Button onClick={() => setLocation('/developer/create-development')}>
+              Prepare a development
+            </Button>
+            <Button variant="outline" onClick={() => setLocation('/developer/drafts')}>
+              Resume private drafts
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </section>
+  );
+}
+
+function PreparationTile({ title, detail }) {
+  return (
+    <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+      <p className="font-semibold text-slate-900">{title}</p>
+      <p className="mt-2 text-sm leading-6 text-slate-600">{detail}</p>
+    </div>
+  );
+}
+
+export function CommercialDeveloperBillingPanel() {
   const [, setLocation] = useLocation();
   const [paymentAmount, setPaymentAmount] = useState('');
   const [bankReference, setBankReference] = useState('');
@@ -139,6 +212,10 @@ export default function BillingPanel() {
   }, [activeInvoice, paymentAmount]);
 
   const handleProofSubmit = async () => {
+    if (!COMMERCIAL_ACTIVATION_STATE.enabled) {
+      toast.info(COMMERCIAL_ACTIVATION_STATE.message);
+      return;
+    }
     if (!activeInvoice) {
       toast.error('Request an invoice before submitting payment proof');
       return;
@@ -186,7 +263,8 @@ export default function BillingPanel() {
   if (!subscription) {
     return (
       <div className="space-y-4">
-        {activeInvoice && (
+        <CommercialActivationNotice />
+        {activeInvoice && COMMERCIAL_ACTIVATION_STATE.enabled && (
           <DeveloperManualEftPanel
             invoice={activeInvoice}
             bankDetails={workspace?.bankDetails}
@@ -199,7 +277,6 @@ export default function BillingPanel() {
             setPayerName={setPayerName}
             paymentDate={paymentDate}
             setPaymentDate={setPaymentDate}
-            proofFile={proofFile}
             setProofFile={setProofFile}
             onSubmit={handleProofSubmit}
             isSubmitting={submitProof.isPending}
@@ -210,14 +287,16 @@ export default function BillingPanel() {
             <Sparkles className="w-12 h-12 mx-auto text-slate-400 mb-4" />
             <h3 className="text-lg font-semibold mb-2">Launch Access not active</h3>
             <p className="text-slate-600 mb-4">
-              Request Developer Launch Access. It begins only after manual-EFT payment is verified.
+              Complete your developer profile and prepare your workspace now. When commercial
+              onboarding opens, you can <span>Request Developer Launch Access</span>; marketplace
+              publication becomes available only after approved commercial activation.
             </p>
             <Button
-              onClick={() => setLocation('/developer/plans')}
+              onClick={() => setLocation('/developer/dashboard')}
               className="bg-blue-600 hover:bg-blue-700"
             >
               <Sparkles className="w-4 h-4 mr-2" />
-              Request Launch Access
+              Open preparation workspace
             </Button>
           </CardContent>
         </Card>
@@ -385,7 +464,7 @@ export default function BillingPanel() {
         </CardContent>
       </Card>
 
-      {activeInvoice && (
+      {activeInvoice && COMMERCIAL_ACTIVATION_STATE.enabled && (
         <DeveloperManualEftPanel
           invoice={activeInvoice}
           bankDetails={workspace?.bankDetails}
@@ -398,7 +477,6 @@ export default function BillingPanel() {
           setPayerName={setPayerName}
           paymentDate={paymentDate}
           setPaymentDate={setPaymentDate}
-          proofFile={proofFile}
           setProofFile={setProofFile}
           onSubmit={handleProofSubmit}
           isSubmitting={submitProof.isPending}
@@ -502,7 +580,6 @@ function DeveloperManualEftPanel({
   setPayerName,
   paymentDate,
   setPaymentDate,
-  proofFile,
   setProofFile,
   onSubmit,
   isSubmitting,

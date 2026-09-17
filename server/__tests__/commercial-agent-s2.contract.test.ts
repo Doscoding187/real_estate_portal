@@ -58,7 +58,7 @@ describe('commercial monetization S2 agent authority', () => {
 
     expect(publication).toContain("plan.segment !== 'agent'");
     expect(publication).toMatch(/(?:maxActiveListings|capacityMax)\s*<=\s*0/);
-    expect(publication).toContain('subscriptionFailure(subscription, now)');
+    expect(publication).toContain('subscriptionFailure(subscription, now, plan)');
   });
 
   it('removes the obsolete public agent price authority', () => {

@@ -36,7 +36,14 @@ import { cn } from '@/lib/utils';
 import { LeadRow } from '../leads/AgencyLeadsWorkspace';
 import { EmptyPanel, ErrorPanel, SectionTitle } from '../workspace/WorkspacePrimitives';
 import type { AgencyLead, Tone, WorkspaceContentProps } from '../workspace/types';
-import { formatAge, formatDate, numberLabel, toneClasses } from '../workspace/utils';
+import { formatAge, numberLabel, toneClasses } from '../workspace/utils';
+import {
+  AGENCY_WORKSPACE_TIME_ZONE,
+  agencyViewingDateKey,
+  formatAgencyViewingDateKey,
+  formatAgencyViewingDateTimeInput,
+  groupAgencyViewingsByDate,
+} from './agencyViewingDates';
 
 type ViewingStatus =
   | 'requested'
@@ -129,8 +136,6 @@ const STATUS_TONES: Record<string, Tone> = {
   upcoming: 'sky',
 };
 
-const AGENCY_WORKSPACE_TIME_ZONE = 'Africa/Johannesburg';
-
 function statusLabel(value?: string | null) {
   if (!value) return 'Requested';
   if (value === 'no_show') return 'No-show';
@@ -149,14 +154,12 @@ function toInputDateTime(value?: string | Date | null) {
   return local.toISOString().slice(0, 16);
 }
 
+function toAgencyViewingInputDateTime(value?: string | Date | null) {
+  return formatAgencyViewingDateTimeInput(value);
+}
+
 function todayInputDate() {
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: AGENCY_WORKSPACE_TIME_ZONE,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).formatToParts(new Date());
-  return `${parts.find(part => part.type === 'year')?.value}-${parts.find(part => part.type === 'month')?.value}-${parts.find(part => part.type === 'day')?.value}`;
+  return agencyViewingDateKey(new Date()) || '';
 }
 
 function tomorrowMorningInput() {
@@ -297,7 +300,9 @@ export function AgencyMyDayWorkspace(props: WorkspaceContentProps) {
         <CardContent className="flex flex-wrap items-center justify-between gap-3 p-4">
           <div>
             <p className="text-sm font-medium text-slate-500">Daily operating queue</p>
-            <h2 className="text-xl font-semibold text-slate-950">{formatDate(activeDate)}</h2>
+            <h2 className="text-xl font-semibold text-slate-950">
+              {formatAgencyViewingDateKey(activeDate)}
+            </h2>
           </div>
           <div className="flex flex-wrap gap-2">
             <Input
@@ -643,7 +648,7 @@ export function AgencyViewingsWorkspace(props: WorkspaceContentProps) {
   });
 
   const viewings = ((viewingsQuery.data as any)?.viewings || []) as ViewingRecord[];
-  const grouped = useMemo(() => groupViewingsByDate(viewings), [viewings]);
+  const grouped = useMemo(() => groupAgencyViewingsByDate(viewings), [viewings]);
 
   const openDetail = (viewingId: number) => {
     setSelectedViewingId(viewingId);
@@ -1353,7 +1358,7 @@ function CreateViewingDialog({
           </div>
 
           <div className="grid gap-3 md:grid-cols-3">
-            <Field label="Date and time">
+            <Field label="Date and time (Africa/Johannesburg)">
               <Input type="datetime-local" value={scheduledAt} onChange={event => setScheduledAt(event.target.value)} />
             </Field>
             <Field label="Duration">
@@ -1456,7 +1461,7 @@ function ViewingDetailDialog({
 
   useEffect(() => {
     if (!viewing) return;
-    setRescheduleAt(toInputDateTime(viewing.scheduledAt));
+    setRescheduleAt(toAgencyViewingInputDateTime(viewing.scheduledAt));
     setReassignAgentId(viewing.agentId ? String(viewing.agentId) : '');
     const existing = viewing.feedbackStructured || {};
     setFeedback({
@@ -1730,6 +1735,7 @@ function ViewingDetailDialog({
               <div className="rounded-lg border border-slate-200 p-4">
                 <p className="font-semibold text-slate-950">Reschedule</p>
                 <div className="mt-3 space-y-3">
+                  <p className="text-xs text-slate-500">Times use Africa/Johannesburg.</p>
                   <Input type="datetime-local" value={rescheduleAt} onChange={event => setRescheduleAt(event.target.value)} />
                   <Button
                     variant="outline"
@@ -1804,20 +1810,6 @@ function DetailBlock({ label, value }: { label: string; value?: string | number 
       <p className="mt-2 truncate text-sm font-semibold text-slate-950">{value || 'Not recorded'}</p>
     </div>
   );
-}
-
-function groupViewingsByDate(viewings: ViewingRecord[]) {
-  const groups = new Map<string, ViewingRecord[]>();
-  viewings.forEach(viewing => {
-    const date = viewing.scheduledAt ? new Date(viewing.scheduledAt) : null;
-    const key = date && !Number.isNaN(date.getTime()) ? date.toISOString().slice(0, 10) : 'unscheduled';
-    groups.set(key, [...(groups.get(key) || []), viewing]);
-  });
-  return Array.from(groups.entries()).map(([date, items]) => ({
-    date,
-    label: date === 'unscheduled' ? 'Unscheduled' : formatDate(date),
-    items,
-  }));
 }
 
 function openListing(props: WorkspaceContentProps, viewing: ViewingRecord) {

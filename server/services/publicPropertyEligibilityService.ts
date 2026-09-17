@@ -17,7 +17,7 @@ import {
   resolveApprovedPublicProperties,
   type ApprovedPublicPropertyResolution,
 } from './approvedPublicPropertyService';
-import { listCurrentActiveMembershipAgentIds } from './agencyMembershipService';
+import { listCurrentActiveAgencyMembershipsByAgentId } from './agencyMembershipService';
 import { isPaidSubscriptionRowEntitled } from './planAccessService';
 import {
   resolvePublicPropertyCustody,
@@ -432,10 +432,12 @@ async function loadAgentPaidEntitledUserIds(
         ownerId: subscriptions.ownerId,
         status: subscriptions.status,
         currentPeriodEnd: subscriptions.currentPeriodEnd,
+        graceEndsAt: subscriptions.graceEndsAt,
       })
       .from(subscriptions)
       .where(
         and(
+          eq(subscriptions.ownerType, 'agent'),
           inArray(subscriptions.ownerId, [...batchIds]),
           sql`EXISTS (
             SELECT 1
@@ -443,6 +445,43 @@ async function loadAgentPaidEntitledUserIds(
             WHERE account.id = ${subscriptions.billableAccountId}
               AND account.account_kind = 'agent'
               AND account.user_id = ${subscriptions.ownerId}
+          )`,
+        ),
+      ),
+  );
+  const now = new Date();
+  const entitled = new Set<number>();
+  for (const row of rows) {
+    if (!isPaidSubscriptionRowEntitled(row, now)) continue;
+    entitled.add(Number(row.ownerId));
+  }
+  return entitled;
+}
+
+async function loadAgencyPaidEntitledAgencyIds(
+  database: NonNullable<Awaited<ReturnType<typeof getDb>>>,
+  agencyIds: number[],
+): Promise<Set<number>> {
+  if (agencyIds.length === 0) return new Set();
+  const rows = await loadRowsInBoundedBatches(agencyIds, async batchIds =>
+    database
+      .select({
+        ownerId: subscriptions.ownerId,
+        status: subscriptions.status,
+        currentPeriodEnd: subscriptions.currentPeriodEnd,
+        graceEndsAt: subscriptions.graceEndsAt,
+      })
+      .from(subscriptions)
+      .where(
+        and(
+          eq(subscriptions.ownerType, 'agency'),
+          inArray(subscriptions.ownerId, [...batchIds]),
+          sql`EXISTS (
+            SELECT 1
+            FROM ${billableAccounts} account
+            WHERE account.id = ${subscriptions.billableAccountId}
+              AND account.account_kind = 'agency'
+              AND account.agency_id = ${subscriptions.ownerId}
           )`,
         ),
       ),
@@ -509,10 +548,19 @@ async function loadDefaultSupplyEvidence(
     distinctPositiveIds(agentRows.map(row => row.userId)),
   );
 
+  const candidateAgencyIds = distinctPositiveIds([
+    ...sourceListings.map(row => row.agencyId),
+    ...agentRows.map(row => row.agencyId),
+  ]);
+  const agencyPaidEntitledIds = await loadAgencyPaidEntitledAgencyIds(
+    database,
+    candidateAgencyIds,
+  );
+
   // Canonical membership currency: agency-affiliated agents may only receive
   // public enquiries while a current membership exists. Independents are not
   // membership-scoped.
-  const currentMembershipAgentIds = await listCurrentActiveMembershipAgentIds(
+  const currentMembershipsByAgentId = await listCurrentActiveAgencyMembershipsByAgentId(
     database,
     agentRows.map(row => Number(row.id)),
   );
@@ -550,10 +598,14 @@ async function loadDefaultSupplyEvidence(
         status: row.status || null,
         isVerified: Number(row.isVerified || 0),
         hasActivePaidEntitlement: agentPaidEntitledUserIds.has(Number(row.userId)),
+        hasActiveAgencyEntitlement: (() => {
+          const membership = currentMembershipsByAgentId.get(Number(row.id));
+          return Boolean(membership && agencyPaidEntitledIds.has(Number(membership.agencyId)));
+        })(),
         hasCurrentMembership:
           positiveId(row.agencyId) === null
             ? true
-            : currentMembershipAgentIds.has(Number(row.id)),
+            : currentMembershipsByAgentId.get(Number(row.id))?.agencyId === row.agencyId,
         userRole: userById.get(Number(row.userId))?.role || null,
       },
     ]),

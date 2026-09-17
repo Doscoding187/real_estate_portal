@@ -17,7 +17,12 @@ import { toast } from 'sonner';
 import { trpc } from '@/lib/trpc';
 import { useAgentOnboardingStatus } from '@/hooks/useAgentOnboardingStatus';
 import { getAgentJourneyAction } from '@/lib/agentJourney';
+import { COMMERCIAL_ACTIVATION_STATE } from '@shared/commercialActivation';
 import { LocationAutocomplete } from '@/components/location/LocationAutocomplete';
+import {
+  parseCanonicalAgentCoverageLocationId,
+  type AgentCoverageArea,
+} from '@shared/agentCoverageArea';
 
 type LocationOption = {
   id: number;
@@ -25,6 +30,7 @@ type LocationOption = {
   type: 'province' | 'city' | 'suburb';
   provinceName?: string;
   cityName?: string;
+  canonicalLocationId?: string;
 };
 
 const AGENT_BIO_MAX_LENGTH = 1000;
@@ -50,6 +56,16 @@ function formatCoverageLabel(location: LocationOption) {
   }
 
   return location.name;
+}
+
+function coverageAreaFromLocation(location: LocationOption): AgentCoverageArea | null {
+  const canonical = parseCanonicalAgentCoverageLocationId(location.canonicalLocationId);
+  if (!canonical) return null;
+
+  return {
+    canonicalLocationId: canonical.canonicalLocationId,
+    label: formatCoverageLabel(location),
+  };
 }
 
 function formatSubscriptionStatus(status: string | null | undefined) {
@@ -115,7 +131,7 @@ export default function AgentSettings() {
     twitter: '',
     slug: '',
     profileImage: '',
-    areasServed: [] as string[],
+    areasServed: [] as AgentCoverageArea[],
   });
 
   const profileQuery = trpc.agent.getMyProfileOnboarding.useQuery(undefined, {
@@ -187,7 +203,7 @@ export default function AgentSettings() {
       },
       slug: profileData.slug.trim() || undefined,
       profileImage: profileData.profileImage || undefined,
-      areasServed: profileData.areasServed,
+      areasServed: profileData.areasServed.map(area => area.canonicalLocationId),
     });
   };
 
@@ -203,12 +219,16 @@ export default function AgentSettings() {
     ? 'Agent Launch Access'
     : hasSelectedCommercialTerm
       ? 'Agent Launch Access activation'
-      : 'No active commercial term';
+      : COMMERCIAL_ACTIVATION_STATE.enabled
+        ? 'No active commercial term'
+        : 'Preparation-only onboarding';
   const currentTierDescription = hasActiveCommercialTerm
     ? 'Once-off 90-day access to the supported Agent workspace.'
     : hasSelectedCommercialTerm
       ? journeyAction.description
-      : 'Start Agent Launch Access to publish inventory and receive enquiries.';
+      : COMMERCIAL_ACTIVATION_STATE.enabled
+        ? 'Start Agent Launch Access to publish inventory and receive enquiries.'
+        : 'Complete your professional presence and prepare private inventory. Commercial activation and publishing remain unavailable until the approved activation path opens.';
   const trialEndsAt = status?.entitlements?.trialStatusDetail?.trialEndsAt
     ? new Date(status.entitlements.trialStatusDetail.trialEndsAt)
     : status?.trialEndsAt
@@ -452,12 +472,20 @@ export default function AgentSettings() {
                         value={areaSearch}
                         onValueChange={setAreaSearch}
                         onLocationSelect={location => {
-                          const nextLabel = formatCoverageLabel(location as LocationOption);
+                          const nextArea = coverageAreaFromLocation(location as LocationOption);
+                          if (!nextArea) {
+                            toast.error(
+                              'Choose a current location from the Property Listify suggestions.',
+                            );
+                            return;
+                          }
                           setProfileData(prev => ({
                             ...prev,
-                            areasServed: prev.areasServed.includes(nextLabel)
+                            areasServed: prev.areasServed.some(
+                              area => area.canonicalLocationId === nextArea.canonicalLocationId,
+                            )
                               ? prev.areasServed
-                              : [...prev.areasServed, nextLabel].slice(0, 20),
+                              : [...prev.areasServed, nextArea].slice(0, 20),
                           }));
                           setAreaSearch('');
                         }}
@@ -472,20 +500,22 @@ export default function AgentSettings() {
                         <div className="flex flex-wrap gap-2">
                           {profileData.areasServed.map(area => (
                             <span
-                              key={area}
+                              key={area.canonicalLocationId}
                               className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700"
                             >
-                              {area}
+                              {area.label}
                               <button
                                 type="button"
                                 onClick={() =>
                                   setProfileData(prev => ({
                                     ...prev,
-                                    areasServed: prev.areasServed.filter(item => item !== area),
+                                    areasServed: prev.areasServed.filter(
+                                      item => item.canonicalLocationId !== area.canonicalLocationId,
+                                    ),
                                   }))
                                 }
                                 className="rounded-full text-slate-400 transition hover:text-slate-700"
-                                aria-label={`Remove ${area}`}
+                                aria-label={`Remove ${area.label}`}
                               >
                                 <X className="h-3.5 w-3.5" />
                               </button>

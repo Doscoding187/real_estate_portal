@@ -1,16 +1,28 @@
+import { randomBytes } from 'node:crypto';
 import { and, eq, inArray, sql } from 'drizzle-orm';
-import { agencies, billableAccounts, invitations, subscriptions, users } from '../../drizzle/schema';
+import {
+  agencies,
+  billableAccounts,
+  invitations,
+  subscriptions,
+  users,
+} from '../../drizzle/schema';
 import { ENV } from '../_core/env';
 import { EmailService } from '../_core/emailService';
 import { getDb } from '../db';
+import { isCommercialActivationAvailable } from './commercialActivationPolicy';
 
 const ACTIVE_AGENCY_SUBSCRIPTION_STATUSES = new Set(['active', 'grace_period']);
+const INVITATION_VALIDITY_MS = 7 * 24 * 60 * 60 * 1000;
+const INVITATION_TOKEN_PATTERN = /^[a-f0-9]{64}$/i;
 
 type CanonicalGateSubscription = {
   status: string | null;
   currentPeriodEnd: string | Date | null;
   graceEndsAt: string | Date | null;
 };
+
+type InvitationCommercialDatabase = Pick<NonNullable<Awaited<ReturnType<typeof getDb>>>, 'select'>;
 
 /**
  * Effective paid access mirrors the canonical gates: an active/grace status
@@ -19,7 +31,10 @@ type CanonicalGateSubscription = {
  * rest of the platform denies.
  */
 export function hasEffectiveAgencyPaidAccess(subscription: CanonicalGateSubscription): boolean {
-  if (!subscription || !ACTIVE_AGENCY_SUBSCRIPTION_STATUSES.has(String(subscription.status || ''))) {
+  if (
+    !subscription ||
+    !ACTIVE_AGENCY_SUBSCRIPTION_STATUSES.has(String(subscription.status || ''))
+  ) {
     return false;
   }
 
@@ -43,6 +58,47 @@ export function hasEffectiveAgencyPaidAccess(subscription: CanonicalGateSubscrip
   return true;
 }
 
+/**
+ * One canonical commercial decision for both invitation delivery and
+ * acceptance. A queued record is not an authorization credential while its
+ * agency remains in preparation-only mode: accepting it would otherwise mint
+ * membership and workspace access without the activation that permits its
+ * delivery.
+ */
+export async function hasEffectiveAgencyInvitationAccess(
+  db: InvitationCommercialDatabase,
+  agencyId: number,
+): Promise<boolean> {
+  // A persisted paid term is necessary but not sufficient. Until the
+  // separately approved commercial release is enabled, no normal runtime may
+  // turn a historical/manual active row into invitation delivery or team
+  // membership authority. Governed test fixtures remain the narrowly scoped
+  // exception for canonical paid-term coverage.
+  if (!isCommercialActivationAvailable()) {
+    return false;
+  }
+
+  const [subscription] = await db
+    .select({
+      status: subscriptions.status,
+      currentPeriodEnd: subscriptions.currentPeriodEnd,
+      graceEndsAt: subscriptions.graceEndsAt,
+    })
+    .from(subscriptions)
+    .where(
+      sql`EXISTS (
+      SELECT 1
+      FROM ${billableAccounts} account
+      WHERE account.id = ${subscriptions.billableAccountId}
+        AND account.account_kind = 'agency'
+        AND account.agency_id = ${agencyId}
+    )`,
+    )
+    .limit(1);
+
+  return hasEffectiveAgencyPaidAccess(subscription ?? null);
+}
+
 export type AgencyInvitationDeliveryResult = {
   deferred: boolean;
   attempted: number;
@@ -54,7 +110,24 @@ export function buildAgencyInvitationUrl(token: string) {
   return `${ENV.appUrl}/accept-invitation?token=${encodeURIComponent(token)}`;
 }
 
-function inviterName(user?: Pick<typeof users.$inferSelect, 'name' | 'firstName' | 'lastName' | 'email'> | null) {
+function invitationTokenHasElapsed(expiresAt: string | Date | null | undefined, now = Date.now()) {
+  if (!expiresAt) return true;
+  const expiresAtMs = new Date(expiresAt).getTime();
+  return Number.isNaN(expiresAtMs) || expiresAtMs <= now;
+}
+
+function queuedInvitationNeedsRefresh(
+  invitation: Pick<typeof invitations.$inferSelect, 'token' | 'expiresAt'>,
+) {
+  return (
+    !INVITATION_TOKEN_PATTERN.test(String(invitation.token || '')) ||
+    invitationTokenHasElapsed(invitation.expiresAt)
+  );
+}
+
+function inviterName(
+  user?: Pick<typeof users.$inferSelect, 'name' | 'firstName' | 'lastName' | 'email'> | null,
+) {
   const name = String(user?.name || '').trim();
   if (name) return name;
 
@@ -87,23 +160,7 @@ export async function deliverAgencyInvitations(input: {
 
   if (!agency) throw new Error('Agency not found');
 
-  const [subscription] = await db
-    .select({
-      status: subscriptions.status,
-      currentPeriodEnd: subscriptions.currentPeriodEnd,
-      graceEndsAt: subscriptions.graceEndsAt,
-    })
-    .from(subscriptions)
-    .where(sql`EXISTS (
-      SELECT 1
-      FROM ${billableAccounts} account
-      WHERE account.id = ${subscriptions.billableAccountId}
-        AND account.account_kind = 'agency'
-        AND account.agency_id = ${input.agencyId}
-    )`)
-    .limit(1);
-
-  if (!hasEffectiveAgencyPaidAccess(subscription ?? null)) {
+  if (!(await hasEffectiveAgencyInvitationAccess(db, input.agencyId))) {
     return { deferred: true, attempted: 0, sent: 0, failed: 0 };
   }
 
@@ -112,11 +169,36 @@ export async function deliverAgencyInvitations(input: {
     filters.push(inArray(invitations.id, input.invitationIds));
   }
 
-  const pending = await db.select().from(invitations).where(and(...filters));
+  const pending = await db
+    .select()
+    .from(invitations)
+    .where(and(...filters));
   let sent = 0;
   let failed = 0;
 
   for (const invitation of pending) {
+    // Onboarding can safely queue an invitation while commercial activation is
+    // unavailable. Its acceptance token must begin its validity window when
+    // delivery actually starts, not while the invitation is waiting unsent.
+    let deliverableInvitation = invitation;
+    if (queuedInvitationNeedsRefresh(invitation)) {
+      const refreshedAt = new Date();
+      const token = randomBytes(32).toString('hex');
+      const expiresAt = new Date(refreshedAt.getTime() + INVITATION_VALIDITY_MS);
+
+      await db
+        .update(invitations)
+        .set({ token, expiresAt, updatedAt: refreshedAt })
+        .where(eq(invitations.id, invitation.id));
+
+      deliverableInvitation = {
+        ...invitation,
+        token,
+        expiresAt: expiresAt.toISOString(),
+        updatedAt: refreshedAt.toISOString(),
+      };
+    }
+
     const [inviter] = await db
       .select({
         name: users.name,
@@ -132,7 +214,7 @@ export async function deliverAgencyInvitations(input: {
       invitation.email,
       inviterName(inviter),
       agency.name,
-      buildAgencyInvitationUrl(invitation.token),
+      buildAgencyInvitationUrl(deliverableInvitation.token),
     );
 
     if (delivered) {

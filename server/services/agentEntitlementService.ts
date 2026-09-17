@@ -13,6 +13,8 @@ import {
   type PlanSnapshot,
   type SubscriptionSnapshot,
 } from './planAccessService';
+import { resolveCurrentAgencyMembershipForAgent } from './agencyMembershipService';
+import { parseAgentCoverageAreas } from '../../shared/agentCoverageArea';
 
 export type AgentEntitlements = {
   plan: 'trial' | 'paid';
@@ -25,6 +27,13 @@ export type AgentEntitlements = {
   profileCompletionFlags: string[];
   canPublishListings: boolean;
   canReceiveLeads: boolean;
+  /**
+   * Existing lead custody is a separate operational authority from receiving
+   * new marketplace enquiries. A lapsed commercial term pauses the latter;
+   * it must not strand a legitimate assignee from the work already routed to
+   * them. Agency membership remains canonical for agency-owned custody.
+   */
+  canAccessExistingLeads: boolean;
   canAppearInDirectory: boolean;
   currentPlan: PlanSnapshot | null;
   subscription: SubscriptionSnapshot | null;
@@ -83,6 +92,7 @@ function buildFallbackPlanAccess(user: typeof users.$inferSelect): PlanAccessPro
   return {
     ownerType,
     ownerId,
+    ownerSource: ownerType === 'agency' ? 'agency_admin' : 'individual_agent',
     currentPlan: null,
     subscription: null,
     entitlements: { ...DEFAULT_FEATURE_ENTITLEMENTS },
@@ -106,7 +116,7 @@ export function calculateAgentProfileCompletion(
   }
 
   const hasPhoto = hasValue(agent.profileImage);
-  const hasAreas = hasValue(agent.areasServed);
+  const hasAreas = parseAgentCoverageAreas(agent.areasServed).length > 0;
   const hasBio = hasValue(agent.bio);
   const hasPhone = hasValue(agent.phone);
   const hasFocus = hasValue(agent.focus) || hasValue(agent.specialization);
@@ -143,6 +153,9 @@ export async function getAgentEntitlementsForUserId(
   if (!user) return null;
 
   const [agent] = await db.select().from(agents).where(eq(agents.userId, userId)).limit(1);
+  const currentAgencyMembership = agent
+    ? await resolveCurrentAgencyMembershipForAgent(db, Number(agent.id))
+    : null;
 
   let planAccess: PlanAccessProjection | null = null;
   try {
@@ -214,6 +227,15 @@ export async function getAgentEntitlementsForUserId(
     agentApproved &&
     !trialExpired &&
     hasValue(agent?.phone);
+  // An agency-affiliated profile without a current canonical membership is
+  // deliberately fail-closed. Independent agents have no agency claim and
+  // may continue working their own existing custody after commercial expiry.
+  // The lead routes apply the same membership boundary to each agency-owned
+  // lead, so this presentation capability cannot widen data access.
+  const canAccessExistingLeads =
+    emailVerified &&
+    agentApproved &&
+    !(agent?.agencyId && !currentAgencyMembership);
   const canAppearInDirectory =
     profileCompletionScore >= 80 &&
     completion.hasPhoto &&
@@ -238,6 +260,7 @@ export async function getAgentEntitlementsForUserId(
     profileCompletionFlags: completion.flags,
     canPublishListings,
     canReceiveLeads,
+    canAccessExistingLeads,
     canAppearInDirectory,
     currentPlan: effectivePlanAccess.currentPlan,
     subscription: effectivePlanAccess.subscription,

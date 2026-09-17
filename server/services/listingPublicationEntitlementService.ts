@@ -11,6 +11,14 @@ import {
   users,
 } from '../../drizzle/schema';
 import { getEntitlementNumber } from './planAccessService';
+import { resolveCurrentAgencyMembershipForAgent } from './agencyMembershipService';
+import { parseAgentCoverageAreas } from '../../shared/agentCoverageArea';
+import {
+  isPaidCommercialTermExpired,
+  parseCanonicalCommercialTimestamp,
+  resolveCommercialTerm,
+} from './commercialTerm';
+import { isCommercialActivationAvailable } from './commercialActivationPolicy';
 
 /**
  * The commercial decision for a canonical listing must be derived from the
@@ -27,6 +35,7 @@ export type ListingPublicationOperation =
   | 'republish';
 
 export type ListingPublicationFailureCode =
+  | 'commercial_activation_unavailable'
   | 'commercial_owner_unresolved'
   | 'listing_ownership_inconsistent'
   | 'unsupported_listing_owner_type'
@@ -38,6 +47,7 @@ export type ListingPublicationFailureCode =
   | 'subscription_plan_unresolved'
   | 'subscription_plan_ineligible'
   | 'agency_unverified'
+  | 'agency_membership_required'
   | 'agency_profile_incomplete'
   | 'agency_branding_incomplete'
   | 'individual_agent_email_unverified'
@@ -107,6 +117,14 @@ export type IndependentAgentPublicationReadiness = {
 
 type DbLike = any;
 
+function commercialActivationBlocker(): PublicationBlocker {
+  return {
+    reason: 'commercial_activation_unavailable',
+    message:
+      'Listing publication is unavailable while Property Listify is in preparation-only onboarding.',
+  };
+}
+
 /**
  * Enumerate EVERYTHING standing between an agency and publishable inventory.
  *
@@ -136,6 +154,13 @@ export async function evaluateAgencyPublicationReadiness(
   const blockers: PublicationBlocker[] = [];
   const push = (reason: ListingPublicationFailureCode, message: string) =>
     blockers.push({ reason, message });
+
+  // A persisted paid term is not a release decision. Keep the readiness view
+  // honest while the global preparation-only state is in force; the mutation
+  // assertion below independently fails before any listing write can begin.
+  if (!isCommercialActivationAvailable()) {
+    blockers.push(commercialActivationBlocker());
+  }
 
   const [[agency], [branding]] = await Promise.all([
     db.select().from(agencies).where(eq(agencies.id, agencyId)).limit(1),
@@ -188,7 +213,11 @@ export async function evaluateAgencyPublicationReadiness(
   }
 
   const subscriptionWithPlan = await getCanonicalSubscription(db, 'agency', agencyId);
-  const subscriptionFailureForState = subscriptionFailure(subscriptionWithPlan?.subscription, now);
+  const subscriptionFailureForState = subscriptionFailure(
+    subscriptionWithPlan?.subscription,
+    now,
+    subscriptionWithPlan?.plan,
+  );
   if (subscriptionFailureForState) {
     push(subscriptionFailureForState.reason, subscriptionFailureForState.message);
   }
@@ -288,6 +317,10 @@ export async function evaluateIndependentAgentPublicationReadiness(
   const push = (reason: ListingPublicationFailureCode, message: string) =>
     blockers.push({ reason, message });
 
+  if (!isCommercialActivationAvailable()) {
+    blockers.push(commercialActivationBlocker());
+  }
+
   const [[user], [agent]] = await Promise.all([
     db.select().from(users).where(eq(users.id, userId)).limit(1),
     options.agentId
@@ -302,11 +335,13 @@ export async function evaluateIndependentAgentPublicationReadiness(
     );
   }
 
-  const hasAgencyMembership = Boolean(user?.agencyId || agent?.agencyId);
-  if (hasAgencyMembership) {
+  const currentMembership = agent
+    ? await resolveCurrentAgencyMembershipForAgent(db, Number(agent.id), now)
+    : null;
+  if (currentMembership) {
     push(
       'commercial_owner_unresolved',
-      'Your account is associated with an agency. Use your agency listing workspace for this inventory.',
+      'Your current agency membership requires use of the agency listing workspace for this inventory.',
     );
   }
 
@@ -340,7 +375,7 @@ export async function evaluateIndependentAgentPublicationReadiness(
   const trialEndsAt = dbTimestamp(subscription?.trialEndsAt);
   const validTrial =
     subscription?.status === 'trial' && trialEndsAt !== null && trialEndsAt > nowMs;
-  const failure = validTrial ? null : subscriptionFailure(subscription, now);
+  const failure = validTrial ? null : subscriptionFailure(subscription, now, plan);
   if (failure) {
     push(failure.reason, failure.message);
   }
@@ -419,14 +454,15 @@ export async function evaluateIndependentAgentPublicationReadiness(
 const ACTIVE_CANONICAL_LISTING_STATUSES = ['approved', 'published'] as const;
 
 const dbTimestamp = (value: unknown) => {
-  if (!value) return null;
-  const timestamp = new Date(String(value)).getTime();
-  return Number.isFinite(timestamp) ? timestamp : null;
+  return parseCanonicalCommercialTimestamp(
+    value instanceof Date || typeof value === 'string' ? value : null,
+  );
 };
 
 function subscriptionFailure(
   subscription: any,
   now: Date,
+  plan: typeof plans.$inferSelect | null | undefined = null,
 ): ListingPublicationEntitlementError | null {
   if (!subscription) {
     return new ListingPublicationEntitlementError(
@@ -438,6 +474,15 @@ function subscriptionFailure(
   const nowMs = now.getTime();
   const currentPeriodEnd = dbTimestamp(subscription.currentPeriodEnd);
   const graceEndsAt = dbTimestamp(subscription.graceEndsAt);
+  const paidLaunchTermExpired = Boolean(
+    plan &&
+    isPaidCommercialTermExpired(
+      resolveCommercialTerm(plan),
+      subscription.status,
+      subscription.currentPeriodEnd,
+      now,
+    ),
+  );
 
   if (subscription.status === 'grace_period') {
     if (!graceEndsAt || graceEndsAt <= nowMs) {
@@ -450,7 +495,7 @@ function subscriptionFailure(
   }
 
   if (subscription.status === 'active') {
-    if (currentPeriodEnd && currentPeriodEnd <= nowMs) {
+    if (paidLaunchTermExpired || (currentPeriodEnd && currentPeriodEnd <= nowMs)) {
       return new ListingPublicationEntitlementError(
         'subscription_period_ended',
         'The subscription period has ended. Reactivate the subscription to publish listings.',
@@ -495,9 +540,11 @@ async function getCanonicalSubscription(
           FROM ${billableAccounts} account
           WHERE account.id = ${subscriptions.billableAccountId}
             AND account.account_kind = ${ownerType}
-            AND ${ownerType === 'agency'
-              ? sql`account.agency_id = ${ownerId}`
-              : sql`account.user_id = ${ownerId}`}
+            AND ${
+              ownerType === 'agency'
+                ? sql`account.agency_id = ${ownerId}`
+                : sql`account.user_id = ${ownerId}`
+            }
         )`,
       ),
     )
@@ -536,28 +583,12 @@ async function getActiveListingCount(
 ) {
   const ownerCondition =
     owner.kind === 'agency'
-      ? or(
-          eq(listings.agencyId, owner.agencyId),
-          and(
-            isNull(listings.agencyId),
-            or(
-              eq(users.agencyId, owner.agencyId),
-              and(isNull(users.agencyId), eq(agents.agencyId, owner.agencyId)),
-            ),
-          ),
-        )
-      : and(
-          eq(listings.ownerId, owner.userId),
-          isNull(listings.agencyId),
-          isNull(users.agencyId),
-          isNull(agents.agencyId),
-        );
+      ? eq(listings.agencyId, owner.agencyId)
+      : and(eq(listings.ownerId, owner.userId), isNull(listings.agencyId));
 
   const activeListingQuery = db
     .select({ id: listings.id })
     .from(listings)
-    .leftJoin(users, eq(listings.ownerId, users.id))
-    .leftJoin(agents, eq(listings.agentId, agents.id))
     .where(
       and(
         ownerCondition,
@@ -586,7 +617,7 @@ function profileCompletionScore(agent: any) {
   const present = (value: unknown) => Boolean(typeof value === 'string' ? value.trim() : value);
   return [
     [agent.profileImage, 20],
-    [agent.areasServed, 20],
+    [parseAgentCoverageAreas(agent.areasServed).length > 0, 20],
     [agent.bio, 15],
     [agent.phone, 15],
     [agent.focus || agent.specialization, 15],
@@ -620,33 +651,55 @@ export async function resolveListingCommercialOwner(
     );
   }
 
-  const agencyClaims = [listing.agencyId, owner.agencyId, agent?.agencyId]
-    .map(value => Number(value || 0))
-    .filter(Boolean);
-  const uniqueAgencyClaims = [...new Set(agencyClaims)];
+  const listingAgencyId = Number(listing.agencyId || 0) || null;
+  const currentMembership = agent
+    ? await resolveCurrentAgencyMembershipForAgent(db, Number(agent.id))
+    : null;
 
-  if (uniqueAgencyClaims.length > 1) {
+  if (listingAgencyId) {
+    if (agent) {
+      if (owner.role === 'agent' && Number(agent.userId || 0) !== Number(owner.id)) {
+        throw new ListingPublicationEntitlementError(
+          'listing_ownership_inconsistent',
+          'The listing owner does not match its assigned agent.',
+        );
+      }
+      if (Number(currentMembership?.agencyId || 0) !== listingAgencyId) {
+        throw new ListingPublicationEntitlementError(
+          'agency_membership_required',
+          'The assigned agent no longer has a current membership in this agency.',
+        );
+      }
+      return {
+        kind: 'agency',
+        agencyId: listingAgencyId,
+        listingId,
+        responsibleAgentId: Number(agent.id),
+      };
+    }
+
+    if (owner.role === 'agency_admin' && Number(owner.agencyId || 0) === listingAgencyId) {
+      return {
+        kind: 'agency',
+        agencyId: listingAgencyId,
+        listingId,
+        responsibleAgentId: null,
+      };
+    }
+
     throw new ListingPublicationEntitlementError(
-      'listing_ownership_inconsistent',
-      'This listing has inconsistent ownership details and cannot be submitted.',
+      'agency_membership_required',
+      'This agency listing has no current authorized membership or agency principal.',
     );
   }
 
-  if (uniqueAgencyClaims.length === 1) {
-    return {
-      kind: 'agency',
-      agencyId: uniqueAgencyClaims[0],
-      listingId,
-      responsibleAgentId: listing.agentId ? Number(listing.agentId) : null,
-    };
-  }
-
-  if (
-    owner.role === 'agent' &&
-    agent &&
-    Number(agent.userId || 0) === Number(owner.id) &&
-    !agent.agencyId
-  ) {
+  if (owner.role === 'agent' && agent && Number(agent.userId || 0) === Number(owner.id)) {
+    if (currentMembership) {
+      throw new ListingPublicationEntitlementError(
+        'listing_ownership_inconsistent',
+        'A current agency member cannot publish inventory without agency attribution.',
+      );
+    }
     return {
       kind: 'independent_agent',
       userId: Number(owner.id),
@@ -682,6 +735,14 @@ export async function assertListingPublicationEntitled(
     excludeListingIds?: number[];
   },
 ): Promise<ListingCommercialOwner> {
+  // Publication remains unavailable in all normal runtimes even if a stale,
+  // historical, or manually-created subscription row appears active. Governed
+  // test fixtures are the only narrowly scoped exception.
+  if (!isCommercialActivationAvailable()) {
+    const blocker = commercialActivationBlocker();
+    throw new ListingPublicationEntitlementError(blocker.reason, blocker.message);
+  }
+
   const now = input.at || new Date();
   const owner = await resolveListingCommercialOwner(db, input.listingId);
   await lockListingPublicationOwner(db, owner);

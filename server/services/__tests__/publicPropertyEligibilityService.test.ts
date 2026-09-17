@@ -211,6 +211,36 @@ describe('public property eligibility authority', () => {
     });
   });
 
+  it('publishes an agency member with the agency entitlement and no individual badge', () => {
+    const agencyAgent = {
+      ...agent,
+      agencyId: 44,
+      isVerified: 0,
+      hasActivePaidEntitlement: false,
+      hasActiveAgencyEntitlement: true,
+      hasCurrentMembership: true,
+    };
+    const result = evaluatePublicPropertySupplyEvidence(
+      evidence({
+        sourceListing: { id: 9001, ownerId: 70, agentId: 33, agencyId: 44 },
+        propertyOwner: { id: 70, role: 'agent', agencyId: 44 },
+        sourceOwner: { id: 70, role: 'agent', agencyId: 44 },
+        directAgent: agencyAgent,
+        sourceAgent: agencyAgent,
+        directAgentAgency: agency,
+        sourceAgentAgency: agency,
+        sourceAgency: agency,
+        ownerAgency: agency,
+      }),
+    );
+
+    expect(result).toMatchObject({
+      eligible: true,
+      custody: { recipientType: 'agent', recipientId: 33, agencyId: 44 },
+      publicIdentity: { agentId: 33, agencyId: 44 },
+    });
+  });
+
   it('withholds the public identity when an affiliated agent loses membership currency', () => {
     const lapsedAgencyAgent = { ...agent, agencyId: 44, hasCurrentMembership: false };
     const result = evaluatePublicPropertySupplyEvidence(

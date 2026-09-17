@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { isCurrentActiveAgencyMembership } from '../agencyMembershipService';
+import {
+  AgencyMembershipAuthorityError,
+  isCurrentActiveAgencyMembership,
+  resolveCurrentAgencyMembershipForAgent,
+} from '../agencyMembershipService';
 
 const NOW = new Date('2026-08-23T12:00:00.000Z');
 const iso = (offsetDays: number) =>
@@ -32,12 +36,18 @@ describe('canonical agency membership semantics', () => {
     it('rejects non-active statuses regardless of window', () => {
       for (const status of ['invited', 'suspended', 'left'] as const) {
         expect(
-          isCurrentActiveAgencyMembership({ status, effectiveFrom: iso(-5), effectiveTo: null }, NOW),
+          isCurrentActiveAgencyMembership(
+            { status, effectiveFrom: iso(-5), effectiveTo: null },
+            NOW,
+          ),
         ).toBe(false);
       }
-      expect(isCurrentActiveAgencyMembership({ status: null, effectiveFrom: iso(-5), effectiveTo: null }, NOW)).toBe(
-        false,
-      );
+      expect(
+        isCurrentActiveAgencyMembership(
+          { status: null, effectiveFrom: iso(-5), effectiveTo: null },
+          NOW,
+        ),
+      ).toBe(false);
     });
 
     it('enforces the half-open effective window boundaries', () => {
@@ -60,5 +70,23 @@ describe('canonical agency membership semantics', () => {
         ),
       ).toBe(true);
     });
+  });
+
+  it('fails closed when more than one current agency membership is present', async () => {
+    const memberships = [
+      { agencyId: 11, status: 'active', effectiveFrom: iso(-5), effectiveTo: null },
+      { agencyId: 22, status: 'active', effectiveFrom: iso(-2), effectiveTo: null },
+    ];
+    const db = {
+      select: () => ({
+        from: () => ({
+          where: async () => memberships,
+        }),
+      }),
+    } as any;
+
+    await expect(resolveCurrentAgencyMembershipForAgent(db, 44, NOW)).rejects.toBeInstanceOf(
+      AgencyMembershipAuthorityError,
+    );
   });
 });

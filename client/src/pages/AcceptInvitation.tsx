@@ -6,6 +6,7 @@ import { Navbar } from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { getAgencyInvitationAuthHref } from '@/lib/agencyInvitationNavigation';
 import { Mail, Building2, UserCheck, AlertCircle, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -53,7 +54,7 @@ export default function AcceptInvitation() {
 
     if (!isAuthenticated) {
       toast.error('Please log in or register first');
-      setLocation(`/login?redirect=/accept-invitation?token=${token}`);
+      setLocation(getAgencyInvitationAuthHref(token));
       return;
     }
 
@@ -148,7 +149,7 @@ export default function AcceptInvitation() {
                 <Badge>{invitation.role}</Badge>
               </div>
               <div className="flex items-center gap-2">
-                  <Building2 className="h-4 w-4 text-muted-foreground" />
+                <Building2 className="h-4 w-4 text-muted-foreground" />
                 <span className="text-sm text-muted-foreground">Agency:</span>
                 <span className="font-semibold">
                   {invitation.agency?.name || `Agency #${invitation.agencyId}`}
@@ -164,7 +165,7 @@ export default function AcceptInvitation() {
                 </p>
                 <div className="flex gap-2">
                   <Button
-                    onClick={() => setLocation(`/login?redirect=/accept-invitation?token=${token}`)}
+                    onClick={() => setLocation(getAgencyInvitationAuthHref(token))}
                     variant="default"
                   >
                     Log In / Register

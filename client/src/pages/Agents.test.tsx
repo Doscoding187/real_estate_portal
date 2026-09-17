@@ -56,7 +56,9 @@ const discoveryAgent = {
   specialization: 'Residential Sales, Sectional Title',
   propertyTypes: null,
   yearsExperience: 12,
-  areasServed: 'Bryanston, Sandton',
+  areasServed: [
+    { canonicalLocationId: 'suburb:11', label: 'Bryanston, Sandton, Gauteng' },
+  ],
   languages: 'English',
   isVerified: 1,
 };

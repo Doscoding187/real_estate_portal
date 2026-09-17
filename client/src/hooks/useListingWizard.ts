@@ -131,7 +131,13 @@ type WizardNavigationState = Pick<
   | 'mainMediaId'
 >;
 
-export function getLocationValidationIssues(
+/**
+ * Checks the location evidence that must exist before a user can confirm it.
+ * Confirmation itself remains a separate lifecycle state: the wizard must not
+ * use the post-confirmation navigation rule to disable its own confirmation
+ * control.
+ */
+export function getLocationEvidenceValidationIssues(
   state: Pick<WizardNavigationState, 'propertyType' | 'location'>,
 ): string[] {
   const location = state.location;
@@ -160,6 +166,16 @@ export function getLocationValidationIssues(
       issues.push(coordinates.error.issues[0]?.message || 'Enter a valid map location.');
     }
   }
+
+  return issues;
+}
+
+export function getLocationValidationIssues(
+  state: Pick<WizardNavigationState, 'propertyType' | 'location'>,
+): string[] {
+  const location = state.location;
+  const issues = getLocationEvidenceValidationIssues(state);
+  if (!location) return issues;
 
   if (location.locationConfirmationState !== 'confirmed') {
     issues.push('Confirm the current location before continuing.');

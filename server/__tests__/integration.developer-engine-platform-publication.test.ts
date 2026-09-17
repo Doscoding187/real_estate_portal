@@ -53,7 +53,9 @@ type DevelopmentOptions = {
 
 type PublicationState = {
   name: string;
+  slug: string | null;
   description: string | null;
+  developmentType: string;
   isPublished: number;
   approvalStatus: string | null;
   publishedAt: string | null;
@@ -205,7 +207,9 @@ async function readPublicationState(developmentId: number): Promise<PublicationS
   const [state] = await db
     .select({
       name: developments.name,
+      slug: developments.slug,
       description: developments.description,
+      developmentType: developments.developmentType,
       isPublished: developments.isPublished,
       approvalStatus: developments.approvalStatus,
       publishedAt: developments.publishedAt,
@@ -525,6 +529,138 @@ describeWithDb('Developer Engine platform-curated publication authority integrat
     ).rejects.toMatchObject({ code: 'CONFLICT' });
     const afterRetryHistory = await readApprovalHistory(developmentId);
     expect(afterRetryHistory).toHaveLength(1);
+  });
+
+  it('contains generic Land authoring, retained-row transitions, and public discovery', async () => {
+    const superAdminId = await insertUser('super_admin');
+    const cataloguePublisherId = await insertPlatformPublisher(superAdminId);
+    const deferredLandName = `Deferred generic Land development ${fixtureSuffix()}`;
+    const db = await database();
+
+    await expect(
+      developmentService.createDevelopment(
+        superAdminId,
+        {
+          name: deferredLandName,
+          developmentType: 'land',
+          transactionType: 'for_sale',
+          city: 'Johannesburg',
+          province: 'Gauteng',
+          suburb: 'Berea',
+          address: '1 Deferred Land Road, Berea',
+          status: 'selling',
+          ownershipType: 'sectional-title',
+          description:
+            'A generic Land development must not become an alternate authoring route while Land is deferred.',
+          images: [{ url: 'https://example.com/deferred-land.jpg', category: 'hero' }],
+          unitTypes: [canonicalUnitType()],
+        } as any,
+        {},
+        { cataloguePublisherId },
+      ),
+    ).rejects.toMatchObject({ code: 'PRECONDITION_FAILED' });
+    expect(
+      await db
+        .select({ id: developments.id })
+        .from(developments)
+        .where(eq(developments.name, deferredLandName)),
+    ).toEqual([]);
+
+    const developmentId = await insertDevelopment(superAdminId, cataloguePublisherId);
+    await db
+      .update(developments)
+      .set({
+        developmentType: 'land',
+        approvalStatus: 'approved',
+        isPublished: 1,
+        publishedAt: '2026-09-15 12:00:00',
+      })
+      .where(eq(developments.id, developmentId));
+
+    const before = await readPublicationState(developmentId);
+    const historyBefore = await readApprovalHistory(developmentId);
+    expect(before).toMatchObject({
+      developmentType: 'land',
+      approvalStatus: 'approved',
+      isPublished: 1,
+    });
+    expect(before.slug).toEqual(expect.any(String));
+
+    await expect(
+      developmentService.updateDevelopment(
+        developmentId,
+        superAdminId,
+        {
+          description: 'This retained generic Land row must remain unavailable for authoring.',
+        } as any,
+        { cataloguePublisherId },
+      ),
+    ).rejects.toMatchObject({ code: 'PRECONDITION_FAILED' });
+    await expect(
+      developmentService.publishPlatformCuratedDevelopment(developmentId, superAdminId, {
+        cataloguePublisherId,
+      }),
+    ).rejects.toMatchObject({ code: 'PRECONDITION_FAILED' });
+
+    expect(await readPublicationState(developmentId)).toEqual(before);
+    expect(await readApprovalHistory(developmentId)).toEqual(historyBefore);
+    expect(await developmentService.getPublicDevelopment(developmentId)).toBeNull();
+    expect(await developmentService.getPublicDevelopmentBySlug(before.slug!)).toBeNull();
+    expect(
+      (
+        await developmentService.listPublicDevelopments({
+          developmentType: 'land',
+          limit: 100,
+        })
+      ).map(row => Number(row.id)),
+    ).not.toContain(developmentId);
+    expect(
+      (
+        await developmentService.searchPublicDevelopments({
+          query: before.name,
+          limit: 100,
+        })
+      ).map(row => Number(row.id)),
+    ).not.toContain(developmentId);
+  });
+
+  it('rejects retained generic Land availability changes through the developer API', async () => {
+    const developerUserId = await insertUser('property_developer');
+    const developerIdentity = await insertDeveloperIdentity(developerUserId);
+    const developmentId = await insertDevelopment(developerUserId, developerIdentity.publisherId);
+    const db = await database();
+    const [unit] = await db
+      .select({ id: unitTypes.id, availableUnits: unitTypes.availableUnits })
+      .from(unitTypes)
+      .where(eq(unitTypes.developmentId, developmentId))
+      .limit(1);
+    if (!unit) throw new Error('Expected the development fixture to contain one active unit type');
+
+    await db
+      .update(developments)
+      .set({
+        developmentType: 'land',
+        approvalStatus: 'approved',
+        isPublished: 1,
+        publishedAt: '2026-09-15 12:00:00',
+      })
+      .where(eq(developments.id, developmentId));
+
+    await expect(
+      developmentService.updateDeveloperUnitAvailability(
+        developmentId,
+        unit.id,
+        developerUserId,
+        Math.max(0, Number(unit.availableUnits) - 1),
+      ),
+    ).rejects.toMatchObject({ code: 'PRECONDITION_FAILED' });
+
+    const [after] = await db
+      .select({ id: unitTypes.id, availableUnits: unitTypes.availableUnits })
+      .from(unitTypes)
+      .where(eq(unitTypes.id, unit.id))
+      .limit(1);
+    expect(after).toEqual(unit);
   });
 
   it('completes one legacy curated submission through privileged publication without duplicating audit history', async () => {

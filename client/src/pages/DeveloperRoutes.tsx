@@ -86,7 +86,11 @@ export default function DeveloperRoutes() {
     isLoading: statusLoading,
     isError: statusError,
     refetch: refetchStatus,
-  } = useDeveloperOnboardingStatus();
+  } = useDeveloperOnboardingStatus({
+    // This route owns the preserved direct-entry target. A nested status
+    // read must not race it with a context-free `/login` redirect.
+    redirectOnUnauthenticated: false,
+  });
   const isSuperAdmin = user?.role === 'super_admin';
   const isDeveloper = user?.role === 'property_developer';
   const hasPublisherContext = !!publisherContext?.cataloguePublisherId;
@@ -160,13 +164,31 @@ export default function DeveloperRoutes() {
     isDeveloper &&
     status?.profileStatus === 'pending' &&
     pathname !== '/developer' &&
-    pathname !== '/developer/dashboard'
+    pathname !== '/developer/dashboard' &&
+    pathname !== '/developer/drafts' &&
+    pathname !== '/developer/create-development' &&
+    pathname !== '/developer/developments/new' &&
+    pathname !== '/developer/subscription' &&
+    pathname !== '/developer/settings/subscription'
   ) {
     return <Redirect to="/developer/dashboard" />;
   }
 
   return (
     <DeveloperLayout>
+      {isDeveloper ? (
+        <section className="mb-5 rounded-xl border border-slate-200 bg-white p-4">
+          <h2 className="font-semibold">Prepare your development portfolio</h2>
+          <p className="mt-1 text-sm text-slate-600">
+            Save private drafts and return to continue preparing your inventory. Marketplace
+            publishing requires profile approval and the required commercial activation.
+          </p>
+          <div className="mt-3 flex gap-4 text-sm font-semibold underline">
+            <a href="/developer/create-development">Prepare a development</a>
+            <a href="/developer/drafts">Resume drafts</a>
+          </div>
+        </section>
+      ) : null}
       <Switch>
         {/* Main */}
         <Route path="/developer" component={Overview} />

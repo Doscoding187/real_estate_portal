@@ -7,6 +7,7 @@ import {
   isPaidCommercialTermExpired,
   resolveCommercialTerm,
 } from './commercialTerm';
+import { isCommercialActivationAvailable } from './commercialActivationPolicy';
 import { isPaidSubscriptionEntitled, type SubscriptionStatus } from './planAccessService';
 
 type PublicationAccessDatabase = NonNullable<Awaited<ReturnType<typeof getDb>>>;
@@ -16,7 +17,8 @@ export type DeveloperPublicationAccessReason =
   | 'missing_launch_access'
   | 'expired_launch_access'
   | 'inactive_launch_access'
-  | 'invalid_launch_access';
+  | 'invalid_launch_access'
+  | 'commercial_activation_unavailable';
 
 export type DeveloperPublicationAccess = {
   eligible: boolean;
@@ -45,6 +47,12 @@ export async function getDeveloperPublicationAccess(
   organisationId: number,
   options: { db?: PublicationAccessDatabase; now?: Date } = {},
 ): Promise<DeveloperPublicationAccess> {
+  // A stored launch-access term cannot independently reopen developer public
+  // publication while the product-wide release state remains preparation-only.
+  if (!isCommercialActivationAvailable()) {
+    return accessResult({ eligible: false, reason: 'commercial_activation_unavailable' });
+  }
+
   const database = options.db ?? (await getDb());
   if (!database) throw new Error('Database not available');
 

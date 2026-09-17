@@ -50,6 +50,7 @@ describe('agency canvassing boundary contract', () => {
 
     expect(canvassingRouter).toContain('getSellerProspectActorScope');
     expect(canvassingRouter).toContain('requireSellerProspect');
+    expect(canvassingRouter).toContain('listCurrentActiveAgencyMembershipsByAgentId');
     expect(canvassingRouter).toContain('Follow-ups cannot be scheduled for terminal seller prospects.');
     expect(canvassingRouter).toContain('recordContactAttempt');
     expect(canvassingRouter).toContain('Record the next action for every active seller prospect.');
@@ -60,6 +61,16 @@ describe('agency canvassing boundary contract', () => {
     expect(appRouter).toContain('canvassing: canvassingRouter');
     expect(agentCanvassing).toContain("accessQuery.data?.mode === 'agency_team'");
     expect(agentCanvassing).toContain('IndependentGrowthPlan');
+  });
+
+  it('uses current canonical membership instead of retained agency profile projections', () => {
+    const sellerProspectAccess = readRepoFile('server/services/sellerProspectAccessService.ts');
+    const exploreApiRouter = readRepoFile('server/exploreApiRouter.ts');
+
+    expect(sellerProspectAccess).toContain('resolveCurrentAgencyMembershipForAgent');
+    expect(sellerProspectAccess).toContain('A current agency membership is required to work seller prospects.');
+    expect(exploreApiRouter).toContain('resolveCurrentAgencyMembershipForAgent');
+    expect(exploreApiRouter).toContain('Private analytics');
   });
 
   it('unifies seller work with My Day and keeps mandate evidence private', () => {

@@ -46,6 +46,7 @@ import {
   sellerMandateOperations,
   SELLER_PROSPECT_TERMINAL_STAGE_VALUES,
 } from '../drizzle/schema';
+import { excludeLandFromGenericListingWorkflow } from './services/landLaunchContainmentService';
 
 async function withDeadlockRetry(operation: () => Promise<any>): Promise<any> {
   for (let attempt = 0; ; attempt += 1) {
@@ -110,6 +111,7 @@ import {
   listCurrentActiveMembershipAgentIds,
   listCurrentAgencyMembershipsForAgent,
   maintainAgencyAgentMembership,
+  resolveCurrentAgencyMembershipForAgent,
 } from './services/agencyMembershipService';
 import {
   deriveLeadReadiness,
@@ -122,6 +124,7 @@ import {
 import {
   getCommercialProductKey,
   getConfiguredLaunchFeeMinor,
+  isPaidCommercialTermExpired,
   resolveCommercialTerm,
 } from './services/commercialTerm';
 import {
@@ -563,6 +566,15 @@ const AGENCY_DAY_FORMATTER = new Intl.DateTimeFormat('en-CA', {
   month: '2-digit',
   day: '2-digit',
 });
+const AGENCY_TIME_FORMATTER = new Intl.DateTimeFormat('en-CA', {
+  timeZone: AGENCY_WORKSPACE_TIME_ZONE,
+  hourCycle: 'h23',
+  hour: '2-digit',
+  minute: '2-digit',
+  second: '2-digit',
+});
+const AGENCY_LOCAL_VIEWING_DATE_TIME_PATTERN =
+  /^(\d{4}-\d{2}-\d{2})T(\d{2}):(\d{2})(?::(\d{2})(?:\.\d{1,3})?)?$/;
 
 const ACTIVE_BILLING_STATUSES = new Set(['active']);
 const PENDING_BILLING_STATUSES = new Set([
@@ -604,6 +616,44 @@ function normalizeBillingStatus(value: unknown): AgencyBillingStatus {
   if (status === 'expired') return 'expired';
   if (PENDING_BILLING_STATUSES.has(status)) return 'pending_payment';
   return 'unavailable';
+}
+
+/**
+ * Resolve the agency-facing commercial state from one canonical subscription
+ * and its plan. A raw `active` value is insufficient: a fixed term may have
+ * elapsed, and a subscription without an eligible agency plan must not unlock
+ * the workspace merely because its historical status still says active.
+ */
+function resolveAgencyCommercialAccess(
+  subscription: typeof subscriptions.$inferSelect | null,
+  plan: typeof plans.$inferSelect | null,
+  now = new Date(),
+): { billingStatus: AgencyBillingStatus; billingActive: boolean } {
+  if (!subscription) return { billingStatus: 'not_started', billingActive: false };
+
+  if (!plan || plan.segment !== 'agency' || Number(plan.isActive) !== 1) {
+    return { billingStatus: 'unavailable', billingActive: false };
+  }
+
+  const normalizedStatus = normalizeBillingStatus(subscription.status);
+  const term = resolveCommercialTerm(plan);
+  const billingActive =
+    term.kind !== 'free_trial' &&
+    isPaidSubscriptionRowEntitled(
+      {
+        status: subscription.status,
+        currentPeriodEnd: subscription.currentPeriodEnd,
+        graceEndsAt: subscription.graceEndsAt,
+      },
+      now,
+    ) &&
+    !isPaidCommercialTermExpired(term, subscription.status, subscription.currentPeriodEnd, now);
+
+  if ((normalizedStatus === 'active' || normalizedStatus === 'grace_period') && !billingActive) {
+    return { billingStatus: 'expired', billingActive: false };
+  }
+
+  return { billingStatus: normalizedStatus, billingActive };
 }
 
 function toLeadTemperature(score: unknown): {
@@ -722,6 +772,51 @@ function requireAgencyId(user: ReturnType<typeof requireUser>) {
   return user.agencyId;
 }
 
+type AgencyWorkspaceActor = {
+  agencyId: number;
+  userId: number;
+  agentId: number | null;
+};
+
+/**
+ * Retained user/agent agency IDs are projections for history and session
+ * routing. They cannot authorize a suspended or departed agent to keep
+ * working an agency's private operational data. Agency managers retain their
+ * organisation authority; agents must additionally hold the one current
+ * canonical membership for this exact agency.
+ */
+async function requireCurrentAgencyWorkspaceActor(
+  db: AgencyDb,
+  user: ReturnType<typeof requireUser>,
+): Promise<AgencyWorkspaceActor> {
+  const agencyId = requireAgencyId(user);
+  if (user.role !== 'agent') {
+    return { agencyId, userId: user.id, agentId: null };
+  }
+
+  const [agent] = await db
+    .select({ id: agents.id })
+    .from(agents)
+    .where(and(eq(agents.userId, user.id), eq(agents.status, 'approved')))
+    .limit(1);
+  if (!agent) {
+    throw new TRPCError({
+      code: 'FORBIDDEN',
+      message: 'An approved agent profile is required to access agency work.',
+    });
+  }
+
+  const currentMembership = await resolveCurrentAgencyMembershipForAgent(db, Number(agent.id));
+  if (!currentMembership || Number(currentMembership.agencyId) !== Number(agencyId)) {
+    throw new TRPCError({
+      code: 'FORBIDDEN',
+      message: 'A current agency membership is required to access agency work.',
+    });
+  }
+
+  return { agencyId, userId: user.id, agentId: Number(agent.id) };
+}
+
 async function requireAgencyLead(
   db: AgencyDb,
   user: ReturnType<typeof requireUser>,
@@ -763,6 +858,18 @@ async function requireAgencyLead(
         message: 'You can only work leads assigned to you.',
       });
     }
+
+    // The profile's agency projection is not a custody authority. An agent
+    // may work an agency lead only while their canonical membership remains
+    // current for this exact tenant. This preserves agency administration
+    // while preventing stale affiliation from retaining CRM access.
+    const currentMembership = await resolveCurrentAgencyMembershipForAgent(db, assignedAgent.id);
+    if (!currentMembership || Number(currentMembership.agencyId) !== Number(agencyId)) {
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message: 'A current agency membership is required to work this lead.',
+      });
+    }
   }
 
   return lead;
@@ -772,9 +879,7 @@ async function requireAgencyAgent(db: AgencyDb, agencyId: number, agentId: numbe
   const [agent] = await db
     .select()
     .from(agents)
-    .where(
-      and(eq(agents.id, agentId), eq(agents.agencyId, agencyId), eq(agents.status, 'approved')),
-    )
+    .where(and(eq(agents.id, agentId), eq(agents.status, 'approved')))
     .limit(1);
 
   if (!agent) {
@@ -787,8 +892,8 @@ async function requireAgencyAgent(db: AgencyDb, agencyId: number, agentId: numbe
   // Canonical currency: an approved profile alone is not enough — the agent
   // must hold a current active membership so suspended/left affiliations can
   // never receive assignments through stale profile state.
-  const currentMemberships = await listCurrentAgencyMembershipsForAgent(db, agentId);
-  if (currentMemberships.length === 0) {
+  const currentMembership = await resolveCurrentAgencyMembershipForAgent(db, agentId);
+  if (!currentMembership || Number(currentMembership.agencyId) !== agencyId) {
     throw new TRPCError({
       code: 'FORBIDDEN',
       message: 'This agent does not have a current agency membership and cannot be assigned work',
@@ -963,9 +1068,35 @@ function assertViewingTransitionAllowed(currentStatus: unknown, targetStatus: Vi
   }
 }
 
+function formatAgencyTimeKey(date: Date) {
+  const parts = AGENCY_TIME_FORMATTER.formatToParts(date);
+  const hour = parts.find(part => part.type === 'hour')?.value;
+  const minute = parts.find(part => part.type === 'minute')?.value;
+  const second = parts.find(part => part.type === 'second')?.value;
+  return hour && minute && second ? `${hour}:${minute}:${second}` : null;
+}
+
+function parseAgencyViewingDate(value: string) {
+  const raw = String(value || '').trim();
+  const localMatch = raw.match(AGENCY_LOCAL_VIEWING_DATE_TIME_PATTERN);
+  if (!localMatch) return new Date(raw);
+
+  const [, dateKey, hour, minute, suppliedSecond] = localMatch;
+  const second = suppliedSecond || '00';
+  const parsedDate = new Date(`${dateKey}T${hour}:${minute}:${second}${AGENCY_WORKSPACE_UTC_OFFSET}`);
+  if (
+    Number.isNaN(parsedDate.getTime()) ||
+    formatAgencyDateKey(parsedDate) !== dateKey ||
+    formatAgencyTimeKey(parsedDate) !== `${hour}:${minute}:${second}`
+  ) {
+    return null;
+  }
+  return parsedDate;
+}
+
 function assertViewingDateAllowed(value: string) {
-  const parsedDate = new Date(value);
-  if (Number.isNaN(parsedDate.getTime())) {
+  const parsedDate = parseAgencyViewingDate(value);
+  if (!parsedDate || Number.isNaN(parsedDate.getTime())) {
     throw new TRPCError({
       code: 'BAD_REQUEST',
       message: 'Viewing date is invalid.',
@@ -1205,12 +1336,34 @@ function getViewingQueueStatus(showing: typeof showings.$inferSelect) {
   return status;
 }
 
+/**
+ * `showings.scheduledAt` is stored as UTC MySQL timestamp text.  The driver
+ * returns that text without an offset, so returning it directly makes every
+ * browser (and a server-side `new Date`) interpret the instant in its host
+ * timezone.  Keep the persisted value untouched and make the API boundary
+ * explicit instead.
+ */
+function viewingApiTimestamp(value: string | Date | null | undefined) {
+  if (value == null) return null;
+  if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value.toISOString();
+
+  const raw = String(value).trim();
+  if (!raw) return null;
+
+  if (/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?$/.test(raw)) {
+    const parsed = new Date(`${raw.replace(' ', 'T')}Z`);
+    if (!Number.isNaN(parsed.getTime())) return parsed.toISOString();
+  }
+
+  return raw;
+}
+
 function mapViewingRow(row: any) {
   const showing = row.showing;
   const notes = parseViewingNotes(showing.notes);
   const feedback = parseViewingFeedback(showing.feedback);
   const status = normalizeViewingStatus(showing.status);
-  const scheduledAt = showing.scheduledAt;
+  const scheduledAt = viewingApiTimestamp(showing.scheduledAt);
   const now = Date.now();
   const scheduledTime = scheduledAt ? new Date(scheduledAt).getTime() : NaN;
   const isUpcoming = Number.isFinite(scheduledTime) && scheduledTime >= now;
@@ -1632,18 +1785,19 @@ function canonicalListingOwnerCondition(userId: number, agentId?: number | null)
 }
 
 function agencyListingScopeCondition(agencyId: number) {
-  return or(
-    eq(listings.agencyId, agencyId),
-    and(
-      isNull(listings.agencyId),
-      or(eq(users.agencyId, agencyId), and(isNull(users.agencyId), eq(agents.agencyId, agencyId))),
-    ),
-  )!;
+  // Agency inventory ownership is materialized on the canonical listing.
+  // Historical user/agent agency projections remain available for audit but
+  // cannot pull an unscoped private draft into a former agency workspace.
+  return eq(listings.agencyId, agencyId);
 }
 
 /** The general agency workspace intentionally excludes Commercial inventory. */
 function genericAgencyListingScopeCondition(agencyId: number) {
-  return and(agencyListingScopeCondition(agencyId), ne(listings.propertyType, 'commercial'))!;
+  return and(
+    agencyListingScopeCondition(agencyId),
+    ne(listings.propertyType, 'commercial'),
+    excludeLandFromGenericListingWorkflow(),
+  )!;
 }
 
 function rejectGenericAgencyCommercialWorkflow(listing: { propertyType?: unknown }): void {
@@ -2253,7 +2407,13 @@ async function requireAgencyListing(db: AgencyDb, agencyId: number, listingId: n
     .from(listings)
     .leftJoin(agents, eq(listings.agentId, agents.id))
     .leftJoin(users, eq(listings.ownerId, users.id))
-    .where(and(eq(listings.id, listingId), agencyListingScopeCondition(agencyId)))
+    .where(
+      and(
+        eq(listings.id, listingId),
+        agencyListingScopeCondition(agencyId),
+        excludeLandFromGenericListingWorkflow(),
+      ),
+    )
     .limit(1);
 
   if (!row) {
@@ -2268,32 +2428,19 @@ async function requireAgencyListing(db: AgencyDb, agencyId: number, listingId: n
 
 async function requirePerformanceListingAccess(
   db: AgencyDb,
-  user: ReturnType<typeof requireUser>,
+  actor: AgencyWorkspaceActor,
   listingId: number,
 ) {
-  const agencyId = requireAgencyId(user);
-  const listing = await requireAgencyListing(db, agencyId, listingId);
-  if (user.role === 'agent') {
-    const [agent] = await db
-      .select({ id: agents.id })
-      .from(agents)
-      .where(
-        and(
-          eq(agents.userId, user.id),
-          eq(agents.agencyId, agencyId),
-          eq(agents.status, 'approved'),
-        ),
-      )
-      .limit(1);
-    if (
-      !agent ||
-      (Number(listing.agentId || 0) !== agent.id && Number(listing.ownerId || 0) !== user.id)
-    ) {
-      throw new TRPCError({
-        code: 'FORBIDDEN',
-        message: 'You can only review listings assigned to you.',
-      });
-    }
+  const listing = await requireAgencyListing(db, actor.agencyId, listingId);
+  if (
+    actor.agentId !== null &&
+    Number(listing.agentId || 0) !== actor.agentId &&
+    Number(listing.ownerId || 0) !== actor.userId
+  ) {
+    throw new TRPCError({
+      code: 'FORBIDDEN',
+      message: 'You can only review listings assigned to you.',
+    });
   }
   return listing;
 }
@@ -3599,16 +3746,30 @@ async function getAgencyAccessStateForUser(
     })
     .from(subscriptions)
     .leftJoin(plans, eq(subscriptions.planId, plans.id))
-    .where(billableAccount ? eq(subscriptions.billableAccountId, billableAccount.id) : sql`1 = 0`)
+    .where(
+      billableAccount
+        ? and(
+            eq(subscriptions.billableAccountId, billableAccount.id),
+            eq(subscriptions.ownerType, 'agency'),
+            eq(subscriptions.ownerId, agencyId),
+          )
+        : sql`1 = 0`,
+    )
     .limit(1);
 
+  const commercialAccess = resolveAgencyCommercialAccess(
+    canonical?.subscription || null,
+    canonical?.plan || null,
+  );
+
   if (canonical?.subscription) {
-    base.billingStatus = normalizeBillingStatus(canonical.subscription.status);
+    base.billingStatus = commercialAccess.billingStatus;
     base.planKey = canonical.plan?.name || null;
     base.planAccessSource = 'subscriptions';
-    base.actionableReason =
-      base.billingStatus === 'active'
-        ? 'Access is active from the canonical subscription record.'
+    base.actionableReason = commercialAccess.billingActive
+      ? 'Access is active from the canonical subscription record.'
+      : base.billingStatus === 'unavailable'
+        ? 'The canonical subscription does not have an eligible agency plan.'
         : `Subscription status is ${base.billingStatus}.`;
   } else {
     base.billingStatus = 'not_started';
@@ -3619,13 +3780,7 @@ async function getAgencyAccessStateForUser(
     base.actionableReason = 'No canonical subscription exists for this agency.';
   }
 
-  const billingActive = canonical?.subscription
-    ? isPaidSubscriptionRowEntitled({
-        status: canonical.subscription.status,
-        currentPeriodEnd: canonical.subscription.currentPeriodEnd,
-        graceEndsAt: canonical.subscription.graceEndsAt,
-      })
-    : false;
+  const billingActive = commercialAccess.billingActive;
   base.workspaceAccess = {
     listings: input.profileConfigured,
     publishing: billingActive && input.profileConfigured && input.brandingConfigured,
@@ -3637,6 +3792,8 @@ async function getAgencyAccessStateForUser(
     base.actionableReason = 'Agency profile must be completed first.';
   } else if (!input.brandingConfigured) {
     base.actionableReason = 'Agency branding must be configured before publishing.';
+  } else if (!billingActive && base.billingStatus === 'expired') {
+    base.actionableReason = 'Launch Access has expired. Renew it before publishing listings.';
   } else if (!billingActive && base.billingStatus !== 'unavailable') {
     base.actionableReason = `Billing status is ${base.billingStatus}; activate a subscription to unlock publishing.`;
   }
@@ -3660,22 +3817,28 @@ async function withCanonicalAgencySubscriptionStatus<
       and(eq(billableAccounts.accountKind, 'agency'), eq(billableAccounts.agencyId, agency.id)),
     )
     .limit(1);
-  const [subscription] = await db
-    .select({ status: subscriptions.status })
+  const [canonical] = await db
+    .select({ subscription: subscriptions, plan: plans })
     .from(subscriptions)
+    .leftJoin(plans, eq(subscriptions.planId, plans.id))
     .where(
       billableAccount
         ? and(
             eq(subscriptions.billableAccountId, billableAccount.id),
             eq(subscriptions.ownerType, 'agency'),
+            eq(subscriptions.ownerId, agency.id),
           )
         : sql`1 = 0`,
     )
     .limit(1);
+  const commercialAccess = resolveAgencyCommercialAccess(
+    canonical?.subscription || null,
+    canonical?.plan || null,
+  );
 
   return {
     ...agency,
-    subscriptionStatus: subscription?.status ?? 'not_started',
+    subscriptionStatus: commercialAccess.billingStatus,
   };
 }
 
@@ -3991,7 +4154,15 @@ export const agencyRouter = router({
       })
       .from(subscriptions)
       .leftJoin(plans, eq(subscriptions.planId, plans.id))
-      .where(agencyAccount ? eq(subscriptions.billableAccountId, agencyAccount.id) : sql`1 = 0`)
+      .where(
+        agencyAccount
+          ? and(
+              eq(subscriptions.billableAccountId, agencyAccount.id),
+              eq(subscriptions.ownerType, 'agency'),
+              eq(subscriptions.ownerId, Number(user.agencyId)),
+            )
+          : sql`1 = 0`,
+      )
       .limit(1);
 
     const availablePlans = await db
@@ -4724,7 +4895,22 @@ export const agencyRouter = router({
       const conditions: SQL[] = [eq(leads.agencyId, user.agencyId)];
 
       if (user.role === 'agent') {
-        conditions.push(eq(agents.userId, user.id), eq(agents.status, 'approved'));
+        const [agent] = await db
+          .select({ id: agents.id })
+          .from(agents)
+          .where(and(eq(agents.userId, user.id), eq(agents.status, 'approved')))
+          .limit(1);
+        if (!agent) {
+          throw new TRPCError({ code: 'FORBIDDEN', message: 'Approved agent profile required.' });
+        }
+        const currentMembership = await resolveCurrentAgencyMembershipForAgent(db, Number(agent.id));
+        if (!currentMembership || Number(currentMembership.agencyId) !== Number(user.agencyId)) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'A current agency membership is required to access agency leads.',
+          });
+        }
+        conditions.push(eq(leads.agentId, agent.id));
       }
 
       if (filters.status && filters.status !== 'all') {
@@ -5307,6 +5493,16 @@ export const agencyRouter = router({
       const agencyId = requireAgencyId(user);
 
       const lead = await requireAgencyLead(db, user, input.leadId);
+      // Commercial enquiries have a dedicated workflow. Check that boundary
+      // immediately after tenant-scoped lead authority, before ordinary agent
+      // assignment or generic inventory resolution can affect the outcome.
+      const inventory = await resolveViewingInventory({
+        db,
+        agencyId,
+        lead,
+        listingId: input.listingId,
+        propertyId: input.propertyId,
+      });
       const showingDate = assertViewingDateAllowed(input.scheduledAt);
 
       const showingAgentId = input.agentId || lead.agentId;
@@ -5318,13 +5514,6 @@ export const agencyRouter = router({
       }
 
       const showingAgent = await requireAgencyAgent(db, agencyId, showingAgentId);
-      const inventory = await resolveViewingInventory({
-        db,
-        agencyId,
-        lead,
-        listingId: input.listingId,
-        propertyId: input.propertyId,
-      });
       const scheduledAt = toDbTimestampRequired(showingDate);
       const now = nowAsDbTimestamp();
 
@@ -5433,7 +5622,7 @@ export const agencyRouter = router({
       }
 
       const user = requireUser(ctx);
-      const agencyId = requireAgencyId(user);
+      const { agencyId } = await requireCurrentAgencyWorkspaceActor(db, user);
       const filters = input || { status: 'upcoming' as const, limit: 50, offset: 0 };
 
       if (filters.agentId) {
@@ -5476,7 +5665,7 @@ export const agencyRouter = router({
       }
 
       const user = requireUser(ctx);
-      const agencyId = requireAgencyId(user);
+      const { agencyId } = await requireCurrentAgencyWorkspaceActor(db, user);
       const showing = await requireAgencyViewing(db, agencyId, input.viewingId);
       const [viewing] = await listAgencyViewings({
         db,
@@ -5530,9 +5719,8 @@ export const agencyRouter = router({
       const user = requireUser(ctx);
       const agencyId = requireAgencyId(user);
       const lead = await requireAgencyLead(db, user, input.leadId);
-      const showingAgent = await requireAgencyAgent(db, agencyId, input.agentId);
-      const showingDate = assertViewingDateAllowed(input.scheduledAt);
-      const scheduledAt = toDbTimestampRequired(showingDate);
+      // Keep Commercial enquiries on their dedicated workflow before looking
+      // up an ordinary assignee or inventory for a generic viewing.
       const inventory = await resolveViewingInventory({
         db,
         agencyId,
@@ -5540,6 +5728,9 @@ export const agencyRouter = router({
         listingId: input.listingId,
         propertyId: input.propertyId,
       });
+      const showingAgent = await requireAgencyAgent(db, agencyId, input.agentId);
+      const showingDate = assertViewingDateAllowed(input.scheduledAt);
+      const scheduledAt = toDbTimestampRequired(showingDate);
       const now = nowAsDbTimestamp();
 
       validateLeadTransition(lead, 'viewing_scheduled');
@@ -5630,7 +5821,7 @@ export const agencyRouter = router({
       }
 
       const user = requireUser(ctx);
-      const agencyId = requireAgencyId(user);
+      const { agencyId } = await requireCurrentAgencyWorkspaceActor(db, user);
       const viewing = await requireAgencyViewing(db, agencyId, input.viewingId);
       const currentStatus = normalizeViewingStatus(viewing.status);
       if (currentStatus === input.status) {
@@ -5707,7 +5898,7 @@ export const agencyRouter = router({
       }
 
       const user = requireUser(ctx);
-      const agencyId = requireAgencyId(user);
+      const { agencyId } = await requireCurrentAgencyWorkspaceActor(db, user);
       const viewing = await requireAgencyViewing(db, agencyId, input.viewingId);
       const currentStatus = normalizeViewingStatus(viewing.status);
       const nextStatus = input.status;
@@ -5895,7 +6086,7 @@ export const agencyRouter = router({
       }
 
       const user = requireUser(ctx);
-      const agencyId = requireAgencyId(user);
+      const { agencyId } = await requireCurrentAgencyWorkspaceActor(db, user);
       const viewing = await requireAgencyViewing(db, agencyId, input.viewingId);
       if (normalizeViewingStatus(viewing.status) !== 'completed') {
         throw new TRPCError({
@@ -5979,7 +6170,7 @@ export const agencyRouter = router({
       }
 
       const user = requireUser(ctx);
-      const agencyId = requireAgencyId(user);
+      const { agencyId } = await requireCurrentAgencyWorkspaceActor(db, user);
       return await getDealWorkspaceRows({
         db,
         agencyId,
@@ -5995,7 +6186,7 @@ export const agencyRouter = router({
     }
 
     const user = requireUser(ctx);
-    const agencyId = requireAgencyId(user);
+    const { agencyId } = await requireCurrentAgencyWorkspaceActor(db, user);
     const context = await resolveDealContext({
       db,
       agencyId,
@@ -6104,7 +6295,7 @@ export const agencyRouter = router({
       }
 
       const user = requireUser(ctx);
-      const agencyId = requireAgencyId(user);
+      const { agencyId } = await requireCurrentAgencyWorkspaceActor(db, user);
       const deal = await requireAgencyDeal(db, agencyId, input.dealId);
       const existingTransaction = await getExistingTransactionForDeal(db, agencyId, deal.id);
       if (existingTransaction) {
@@ -6195,7 +6386,7 @@ export const agencyRouter = router({
       }
 
       const user = requireUser(ctx);
-      const agencyId = requireAgencyId(user);
+      const { agencyId } = await requireCurrentAgencyWorkspaceActor(db, user);
       const { offer, deal } = await requireAgencyOfferVersion(db, agencyId, input.offerVersionId);
       if (!['draft', 'countered'].includes(String(offer.status || ''))) {
         throw new TRPCError({
@@ -6256,7 +6447,7 @@ export const agencyRouter = router({
       }
 
       const user = requireUser(ctx);
-      const agencyId = requireAgencyId(user);
+      const { agencyId } = await requireCurrentAgencyWorkspaceActor(db, user);
       const { offer, deal } = await requireAgencyOfferVersion(db, agencyId, input.offerVersionId);
       const existingTransaction = await getExistingTransactionForDeal(db, agencyId, deal.id);
       if (existingTransaction) {
@@ -6533,7 +6724,7 @@ export const agencyRouter = router({
       }
 
       const user = requireUser(ctx);
-      const agencyId = requireAgencyId(user);
+      const { agencyId } = await requireCurrentAgencyWorkspaceActor(db, user);
       await requireAgencyTransaction(db, agencyId, input.transactionId);
 
       const [conditionInsert] = await db.insert(agencyTransactionConditions).values({
@@ -6570,7 +6761,7 @@ export const agencyRouter = router({
       }
 
       const user = requireUser(ctx);
-      const agencyId = requireAgencyId(user);
+      const { agencyId } = await requireCurrentAgencyWorkspaceActor(db, user);
       await requireAgencyTransaction(db, agencyId, input.transactionId);
       const now = nowAsDbTimestamp();
       const terminal = ['completed', 'waived', 'cancelled'].includes(input.status);
@@ -6650,7 +6841,7 @@ export const agencyRouter = router({
       }
 
       const user = requireUser(ctx);
-      const agencyId = requireAgencyId(user);
+      const { agencyId } = await requireCurrentAgencyWorkspaceActor(db, user);
       await requireAgencyTransaction(db, agencyId, input.transactionId);
 
       const [partyInsert] = await db.insert(agencyTransactionParties).values({
@@ -6685,7 +6876,7 @@ export const agencyRouter = router({
       }
 
       const user = requireUser(ctx);
-      const agencyId = requireAgencyId(user);
+      const { agencyId } = await requireCurrentAgencyWorkspaceActor(db, user);
       await requireAgencyTransaction(db, agencyId, input.transactionId);
       const storageKey = input.storageKey.trim();
       const expectedPrivatePrefix = `private/agency-${agencyId}/transactions/${input.transactionId}/`;
@@ -6757,7 +6948,7 @@ export const agencyRouter = router({
       }
 
       const user = requireUser(ctx);
-      const agencyId = requireAgencyId(user);
+      const { agencyId } = await requireCurrentAgencyWorkspaceActor(db, user);
       const transaction = await requireAgencyTransaction(db, agencyId, input.transactionId);
       const now = nowAsDbTimestamp();
       let nextStatus = input.status || transaction.status;
@@ -6893,10 +7084,7 @@ export const agencyRouter = router({
       throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
 
     const user = requireUser(ctx);
-    const agencyId = requireAgencyId(user);
-    const ownAgent =
-      user.role === 'agent' ? await getApprovedAgentProfileForUser(db, agencyId, user.id) : null;
-    if (user.role === 'agent' && !ownAgent) return [];
+    const { agencyId, agentId: ownAgentId } = await requireCurrentAgencyWorkspaceActor(db, user);
 
     const rows = await db
       .select({
@@ -6920,7 +7108,7 @@ export const agencyRouter = router({
         and(
           eq(agencyCommissionSettlements.agencyId, agencyId),
           user.role === 'agent'
-            ? eq(agencyCommissionSettlements.responsibleAgentId, ownAgent!.id)
+            ? eq(agencyCommissionSettlements.responsibleAgentId, ownAgentId!)
             : undefined,
         ),
       )
@@ -7289,8 +7477,9 @@ export const agencyRouter = router({
       if (!db)
         throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
       const user = requireUser(ctx);
-      const agencyId = requireAgencyId(user);
-      await requirePerformanceListingAccess(db, user, input.listingId);
+      const actor = await requireCurrentAgencyWorkspaceActor(db, user);
+      const { agencyId } = actor;
+      await requirePerformanceListingAccess(db, actor, input.listingId);
       const [snapshot, reviews] = await Promise.all([
         createListingPerformanceSnapshot(db, agencyId, input.listingId),
         db
@@ -7337,7 +7526,7 @@ export const agencyRouter = router({
     if (!db)
       throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
     const user = requireUser(ctx);
-    const agencyId = requireAgencyId(user);
+    const { agencyId } = await requireCurrentAgencyWorkspaceActor(db, user);
     const rows = await db
       .select({ listing: listings, agent: agents })
       .from(listings)
@@ -7412,7 +7601,8 @@ export const agencyRouter = router({
       if (!db)
         throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
       const user = requireUser(ctx);
-      const agencyId = requireAgencyId(user);
+      const actor = await requireCurrentAgencyWorkspaceActor(db, user);
+      const { agencyId } = actor;
       const [review] = await db
         .select()
         .from(agencyListingPerformanceReviews)
@@ -7424,7 +7614,7 @@ export const agencyRouter = router({
         )
         .limit(1);
       if (!review) throw new TRPCError({ code: 'NOT_FOUND', message: 'Seller review not found' });
-      const listing = await requirePerformanceListingAccess(db, user, review.listingId);
+      const listing = await requirePerformanceListingAccess(db, actor, review.listingId);
       const [agency] = await db
         .select({ name: agencies.name })
         .from(agencies)
@@ -7471,8 +7661,9 @@ export const agencyRouter = router({
       if (!db)
         throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
       const user = requireUser(ctx);
-      const agencyId = requireAgencyId(user);
-      const listing = await requirePerformanceListingAccess(db, user, input.listingId);
+      const actor = await requireCurrentAgencyWorkspaceActor(db, user);
+      const { agencyId } = actor;
+      const listing = await requirePerformanceListingAccess(db, actor, input.listingId);
       if (String(listing.status) !== 'published')
         throw new TRPCError({
           code: 'PRECONDITION_FAILED',
@@ -7554,7 +7745,8 @@ export const agencyRouter = router({
       if (!db)
         throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
       const user = requireUser(ctx);
-      const agencyId = requireAgencyId(user);
+      const actor = await requireCurrentAgencyWorkspaceActor(db, user);
+      const { agencyId } = actor;
       const [review] = await db
         .select()
         .from(agencyListingPerformanceReviews)
@@ -7567,7 +7759,7 @@ export const agencyRouter = router({
         .limit(1);
       if (!review)
         throw new TRPCError({ code: 'NOT_FOUND', message: 'Performance review not found' });
-      await requirePerformanceListingAccess(db, user, review.listingId);
+      await requirePerformanceListingAccess(db, actor, review.listingId);
       if (
         review.recommendation !== 'change_price' ||
         review.sellerDecision !== 'accepted' ||
@@ -7680,7 +7872,7 @@ export const agencyRouter = router({
       }
 
       const user = requireUser(ctx);
-      const agencyId = requireAgencyId(user);
+      const { agencyId } = await requireCurrentAgencyWorkspaceActor(db, user);
       const bounds = getDayBounds(input?.date);
       const dayKey = bounds.dateKey;
       const nextDayKey = addAgencyDays(dayKey, 1);
@@ -8699,6 +8891,26 @@ export const agencyRouter = router({
               ),
             );
 
+          // `upcomingViewings` are counted as active work above. Reassign the
+          // same exact workload before revoking the departing agent's
+          // membership, otherwise an accepted customer appointment would be
+          // left attached to an account that can no longer operate it.
+          if (targetAgent) {
+            await db
+              .update(showings)
+              .set({
+                agentId: reassignTo.agent.id,
+                updatedAt: now,
+              })
+              .where(
+                and(
+                  eq(showings.agentId, targetAgent.id),
+                  inArray(showings.status, ACTIVE_VIEWING_STATUSES as any),
+                  sql`${showings.scheduledAt} >= NOW()`,
+                ),
+              );
+          }
+
           const listingsToReassign = await db
             .select({ id: listings.id })
             .from(listings)
@@ -8716,6 +8928,23 @@ export const agencyRouter = router({
             listingsToReassign.map(listing => Number(listing.id)),
             reassignTo.agent.id,
           );
+
+          if (workload.assignedActiveLeads > 0 || workload.upcomingViewings > 0) {
+            await db.insert(notifications).values({
+              userId: reassignTo.user.id,
+              type: 'lead_assigned',
+              title: 'Agency customer work reassigned to you',
+              content:
+                'A departing team member’s active customer work is now assigned to you. Review your leads and upcoming viewings.',
+              data: JSON.stringify({
+                agencyId,
+                reassignedFromUserId: targetUser.id,
+                activeLeadCount: workload.assignedActiveLeads,
+                upcomingViewingCount: workload.upcomingViewings,
+              }),
+              isRead: 0,
+            });
+          }
         }
 
         await db

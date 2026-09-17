@@ -100,7 +100,9 @@ const baseAgentRow = {
   socialLinks: '{"linkedin":"https://linkedin.com/in/janeagent"}',
   licenseNumber: 'PG 123456',
   yearsExperience: 12,
-  areasServed: 'Bryanston, Sandton',
+  areasServed: JSON.stringify([
+    { canonicalLocationId: 'suburb:11', label: 'Bryanston, Sandton, Gauteng' },
+  ]),
   languages: 'English, isiZulu',
   isVerified: 1,
 };
@@ -120,11 +122,9 @@ function makeMembership(overrides: Record<string, unknown> = {}) {
 function presenceBatches(
   profileRow: Record<string, unknown>,
   memberships: Array<Record<string, unknown>> = [ACTIVE_MEMBERSHIP],
-  suburbs: Array<Record<string, unknown>> = [],
-  cities: Array<Record<string, unknown>> = [],
-  provinces: Array<Record<string, unknown>> = [],
+  canonicalRows: Array<Record<string, unknown>> = [],
 ) {
-  return [[profileRow], memberships, suburbs, cities, provinces];
+  return [[profileRow], memberships, canonicalRows];
 }
 
 function makePresenceRow(areasServed: string) {
@@ -177,6 +177,19 @@ describe('public agent discovery projection', () => {
       expect(projectedKeys).not.toContain(field);
     }
   });
+
+
+  it('projects structured coverage labels without exposing the persisted JSON text', async () => {
+    mockGetDb.mockResolvedValue(recordingDb([[baseAgentRow]]).db);
+
+    const agents = await createCaller().list();
+
+    expect(agents).toHaveLength(1);
+    expect(agents[0].areasServed).toEqual([
+      { canonicalLocationId: 'suburb:11', label: 'Bryanston, Sandton, Gauteng' },
+    ]);
+    expect(Array.isArray(agents[0].areasServed)).toBe(true);
+  });
 });
 
 describe('public agent web presence projection', () => {
@@ -213,15 +226,19 @@ describe('public agent web presence projection', () => {
     ).resolves.toBeNull();
   });
 
-  it('resolves unstructured served areas onto canonical geography only by exact name', async () => {
+  it('resolves a typed suburb claim by its exact canonical identity', async () => {
     mockGetDb.mockResolvedValue(
       recordingDb(
-        presenceBatches(makePresenceRow('Bryanston, Sandton'), [ACTIVE_MEMBERSHIP], [
+        presenceBatches(makePresenceRow(JSON.stringify([
+          { canonicalLocationId: 'suburb:11', label: 'Bryanston, Sandton, Gauteng' },
+        ])), [ACTIVE_MEMBERSHIP], [
           {
             id: 11,
             name: 'Bryanston',
             slug: 'bryanston',
+            cityName: 'Sandton',
             citySlug: 'sandton',
+            provinceName: 'Gauteng',
             provinceSlug: 'gauteng',
           },
         ]),
@@ -230,16 +247,32 @@ describe('public agent web presence projection', () => {
 
     const profile = await createCaller().getPublicProfileBySlug({ slug: 'jane-agent' });
 
+    expect(profile?.areasServed).toEqual([
+      { canonicalLocationId: 'suburb:11', label: 'Bryanston, Sandton, Gauteng' },
+    ]);
     expect(profile?.canonicalAreas).toEqual([
-      { name: 'Bryanston', type: 'suburb', url: '/gauteng/sandton/bryanston' },
-      { name: 'Sandton', type: null, url: null },
+      {
+        canonicalLocationId: 'suburb:11',
+        name: 'Bryanston, Sandton, Gauteng',
+        type: 'suburb',
+        url: '/gauteng/sandton/bryanston',
+      },
     ]);
   });
-  it('links a uniquely matched city without a suburb of the same name', async () => {
+
+  it('links a typed city only through that city identity', async () => {
     mockGetDb.mockResolvedValue(
       recordingDb(
-        presenceBatches(makePresenceRow('Stellenbosch'), [ACTIVE_MEMBERSHIP], [], [
-          { id: 31, name: 'Stellenbosch', slug: 'stellenbosch', provinceSlug: 'western-cape' },
+        presenceBatches(makePresenceRow(JSON.stringify([
+          { canonicalLocationId: 'city:31', label: 'Stellenbosch, Western Cape' },
+        ])), [ACTIVE_MEMBERSHIP], [
+          {
+            id: 31,
+            name: 'Stellenbosch',
+            slug: 'stellenbosch',
+            provinceName: 'Western Cape',
+            provinceSlug: 'western-cape',
+          },
         ]),
       ).db,
     );
@@ -247,14 +280,21 @@ describe('public agent web presence projection', () => {
     const profile = await createCaller().getPublicProfileBySlug({ slug: 'jane-agent' });
 
     expect(profile?.canonicalAreas).toEqual([
-      { name: 'Stellenbosch', type: 'city', url: '/western-cape/stellenbosch' },
+      {
+        canonicalLocationId: 'city:31',
+        name: 'Stellenbosch, Western Cape',
+        type: 'city',
+        url: '/western-cape/stellenbosch',
+      },
     ]);
   });
 
-  it('links a uniquely matched province', async () => {
+  it('links a typed province only through that province identity', async () => {
     mockGetDb.mockResolvedValue(
       recordingDb(
-        presenceBatches(makePresenceRow('Western Cape'), [ACTIVE_MEMBERSHIP], [], [], [
+        presenceBatches(makePresenceRow(JSON.stringify([
+          { canonicalLocationId: 'province:5', label: 'Western Cape' },
+        ])), [ACTIVE_MEMBERSHIP], [
           { id: 5, name: 'Western Cape', slug: 'western-cape' },
         ]),
       ).db,
@@ -263,72 +303,62 @@ describe('public agent web presence projection', () => {
     const profile = await createCaller().getPublicProfileBySlug({ slug: 'jane-agent' });
 
     expect(profile?.canonicalAreas).toEqual([
-      { name: 'Western Cape', type: 'province', url: '/western-cape' },
+      {
+        canonicalLocationId: 'province:5',
+        name: 'Western Cape',
+        type: 'province',
+        url: '/western-cape',
+      },
     ]);
   });
 
-  it('refuses to link when two distinct suburbs share the entry name', async () => {
+  it('does not reinterpret a historic comma-separated coverage value', async () => {
+    mockGetDb.mockResolvedValue(
+      recordingDb(presenceBatches(makePresenceRow('Bryanston, Sandton'))).db,
+    );
+
+    const profile = await createCaller().getPublicProfileBySlug({ slug: 'jane-agent' });
+
+    expect(profile?.areasServed).toEqual([]);
+    expect(profile?.canonicalAreas).toEqual([]);
+  });
+
+  it('fails closed when the typed canonical record is unavailable', async () => {
     mockGetDb.mockResolvedValue(
       recordingDb(
-        presenceBatches(makePresenceRow('Parklands'), [ACTIVE_MEMBERSHIP], [
+        presenceBatches(makePresenceRow(JSON.stringify([
+          { canonicalLocationId: 'suburb:11', label: 'Bryanston, Sandton, Gauteng' },
+        ]))),
+      ).db,
+    );
+
+    const profile = await createCaller().getPublicProfileBySlug({ slug: 'jane-agent' });
+
+    expect(profile?.canonicalAreas).toEqual([
+      {
+        canonicalLocationId: 'suburb:11',
+        name: 'Bryanston, Sandton, Gauteng',
+        type: null,
+        url: null,
+      },
+    ]);
+  });
+
+  it('does not replace an exact ID with another place that has a similar label', async () => {
+    mockGetDb.mockResolvedValue(
+      recordingDb(
+        presenceBatches(makePresenceRow(JSON.stringify([
+          { canonicalLocationId: 'suburb:11', label: 'Parklands, Sandton, Gauteng' },
+        ])), [ACTIVE_MEMBERSHIP], [
           {
             id: 61,
             name: 'Parklands',
             slug: 'parklands',
+            cityName: 'Cape Town',
             citySlug: 'cape-town',
+            provinceName: 'Western Cape',
             provinceSlug: 'western-cape',
           },
-          {
-            id: 62,
-            name: 'Parklands',
-            slug: 'parklands',
-            citySlug: 'durban',
-            provinceSlug: 'kwazulu-natal',
-          },
-        ]),
-      ).db,
-    );
-
-    const profile = await createCaller().getPublicProfileBySlug({ slug: 'jane-agent' });
-
-    expect(profile?.canonicalAreas).toEqual([{ name: 'Parklands', type: null, url: null }]);
-  });
-
-  it('refuses to link when an entry matches both a suburb and a city', async () => {
-    mockGetDb.mockResolvedValue(
-      recordingDb(
-        presenceBatches(makePresenceRow('Sandton'), [ACTIVE_MEMBERSHIP], [
-          {
-            id: 71,
-            name: 'Sandton',
-            slug: 'sandton-suburb',
-            citySlug: 'johannesburg',
-            provinceSlug: 'gauteng',
-          },
-        ], [
-          { id: 72, name: 'Sandton', slug: 'sandton', provinceSlug: 'gauteng' },
-        ]),
-      ).db,
-    );
-
-    const profile = await createCaller().getPublicProfileBySlug({ slug: 'jane-agent' });
-
-    expect(profile?.canonicalAreas).toEqual([{ name: 'Sandton', type: null, url: null }]);
-  });
-
-  it('collapses repeated evidence for one location into a single match', async () => {
-    const bryanston = {
-      id: 11,
-      name: 'Bryanston',
-      slug: 'bryanston',
-      citySlug: 'sandton',
-      provinceSlug: 'gauteng',
-    };
-    mockGetDb.mockResolvedValue(
-      recordingDb(
-        presenceBatches(makePresenceRow('Bryanston'), [ACTIVE_MEMBERSHIP], [
-          bryanston,
-          { ...bryanston },
         ]),
       ).db,
     );
@@ -336,8 +366,39 @@ describe('public agent web presence projection', () => {
     const profile = await createCaller().getPublicProfileBySlug({ slug: 'jane-agent' });
 
     expect(profile?.canonicalAreas).toEqual([
-      { name: 'Bryanston', type: 'suburb', url: '/gauteng/sandton/bryanston' },
+      {
+        canonicalLocationId: 'suburb:11',
+        name: 'Parklands, Sandton, Gauteng',
+        type: null,
+        url: null,
+      },
     ]);
+  });
+
+  it('collapses a duplicate typed canonical ID into one area', async () => {
+    mockGetDb.mockResolvedValue(
+      recordingDb(
+        presenceBatches(makePresenceRow(JSON.stringify([
+          { canonicalLocationId: 'suburb:11', label: 'Bryanston, Sandton, Gauteng' },
+          { canonicalLocationId: 'suburb:11', label: 'Forged duplicate label' },
+        ])), [ACTIVE_MEMBERSHIP], [
+          {
+            id: 11,
+            name: 'Bryanston',
+            slug: 'bryanston',
+            cityName: 'Sandton',
+            citySlug: 'sandton',
+            provinceName: 'Gauteng',
+            provinceSlug: 'gauteng',
+          },
+        ]),
+      ).db,
+    );
+
+    const profile = await createCaller().getPublicProfileBySlug({ slug: 'jane-agent' });
+
+    expect(profile?.canonicalAreas).toHaveLength(1);
+    expect(profile?.canonicalAreas?.[0].canonicalLocationId).toBe('suburb:11');
   });
 });
 

@@ -1,7 +1,7 @@
 import { cleanup, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CommercialProduct } from '@/hooks/useCommercialCatalog';
-import AgencyProductLandingPage from './AgencyProductLandingPage';
+import AgencyProductLandingPage, { AgencyCommercialLandingPage } from './AgencyProductLandingPage';
 
 vi.mock('@/hooks/useCommercialCatalog', () => ({
   useCommercialCatalog: vi.fn(),
@@ -94,62 +94,56 @@ afterEach(() => {
 });
 
 describe('public Agency product landing page', () => {
-  it('leads with the Agency operating proposition before the commercial decision', () => {
+  it('shows the approved preparation path while normal runtime commercial activation is disabled', () => {
     render(<AgencyProductLandingPage />);
 
     expect(
       screen.getByRole('heading', {
-        name: 'Run more of your agency from one connected operating workspace.',
+        name: 'Establish your Agency workspace and prepare private inventory.',
         level: 1,
       }),
     ).toBeInTheDocument();
-    expect(screen.getAllByTestId('agency-workspace-preview')).toHaveLength(2);
-    expect(screen.getByTestId('agency-operating-model')).toBeInTheDocument();
+    expect(screen.getByText('Preparation-only onboarding')).toBeInTheDocument();
     expect(
-      screen.getByRole('heading', {
-        name: 'Run the business behind the listings, not just the listings themselves.',
-      }),
-    ).toBeInTheDocument();
-    expect(screen.getByText('Who owns this opportunity?')).toBeInTheDocument();
-    expect(screen.getAllByText('Run the team').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Understand the business').length).toBeGreaterThan(0);
-    expect(screen.getByTestId('agency-capability-support')).toBeInTheDocument();
-    expect(screen.getByText('Supported Agency workspace')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /Explore team tools/i })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /Explore business visibility/i })).toBeInTheDocument();
-    expect(screen.getAllByText('Visibility without micromanagement').length).toBeGreaterThan(0);
-    expect(screen.getByTestId('agency-value-hierarchy')).toBeInTheDocument();
-    expect(screen.getByText('Operate the Agency')).toBeInTheDocument();
-    expect(
-      screen.getByText('Put eligible inventory into the Property Listify marketplace'),
-    ).toBeInTheDocument();
-    expect(screen.getByText('Connect to more ways the market is discovered')).toBeInTheDocument();
-    expect(
-      screen.getByRole('heading', {
-        name: 'Your Agency operates the work. Eligible inventory joins the Property Listify marketplace.',
-      }),
+      screen.getByText(
+        'Commercial activation is not available yet. Complete your profile and prepare private drafts; publishing becomes available after approved commercial activation.',
+      ),
     ).toBeInTheDocument();
     expect(
-      screen.getByText('Platform discovery, not outsourced Agency marketing.'),
+      screen.getByText(
+        'Publishing, marketplace participation and team activation follow approval and commercial activation.',
+      ),
     ).toBeInTheDocument();
-    expect(
-      screen.getByText('Is Property Listify doing our digital marketing for us?'),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText(/not a bespoke social-media, advertising or campaign-management service/i),
-    ).toBeInTheDocument();
-    expect(
-      screen.queryByText(/recruitment|candidate pipeline|interview stage/i),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.getByRole('heading', {
-        name: 'Give your Agency 90 days to operate the complete supported workspace.',
-      }),
-    ).toBeInTheDocument();
+    expect(screen.getByText('Prepare private inventory')).toBeInTheDocument();
+
+    const preparationLinks = screen.getAllByRole('link', { name: /Start Agency preparation/i });
+    expect(preparationLinks).toHaveLength(2);
+    preparationLinks.forEach(link => {
+      expect(link).toHaveAttribute(
+        'href',
+        '/login?mode=register&next=%2Fagency%2Fsetup&role=agency_admin',
+      );
+    });
+
+    expect(useCatalogMock).not.toHaveBeenCalled();
   });
 
-  it('renders canonical Agency Launch Access truth and assisted actions', () => {
+  it('does not advertise a paid offer, invoice request, or activation period while activation is disabled', () => {
     render(<AgencyProductLandingPage />);
+
+    expect(screen.queryByText('R999')).not.toBeInTheDocument();
+    expect(screen.queryByText(/90 days/i)).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('link', { name: /Request Launch Access invoice/i }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/manual EFT/i)).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('link', { name: /Contact Property Listify/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('retains the catalog-driven commercial presentation for a separately enabled runtime', () => {
+    render(<AgencyCommercialLandingPage />);
 
     expect(screen.getAllByText('Agency Launch Access').length).toBeGreaterThan(0);
     expect(screen.getAllByText('R999').length).toBeGreaterThan(0);
@@ -159,13 +153,9 @@ describe('public Agency product landing page', () => {
       'href',
       '/agency/setup',
     );
-    expect(
-      screen.getAllByRole('link', { name: /Contact Property Listify/i }).length,
-    ).toBeGreaterThan(0);
-    expect(screen.queryByText(/Coming Soon|waitlist|free trial|\/month/i)).not.toBeInTheDocument();
   });
 
-  it('derives commercial copy and capacity from the catalog rather than hardcoded offer values', () => {
+  it('derives enabled-runtime commercial copy and capacity from the catalog rather than hardcoded offer values', () => {
     const changedProduct = {
       ...agencyProduct,
       limits: { max_active_listings: 275 },
@@ -193,7 +183,7 @@ describe('public Agency product landing page', () => {
       refetch: vi.fn(),
     } as unknown as ReturnType<typeof useCommercialCatalog>);
 
-    render(<AgencyProductLandingPage />);
+    render(<AgencyCommercialLandingPage />);
 
     expect(screen.getAllByText('R1,249').length).toBeGreaterThan(0);
     expect(screen.getAllByText('45 days').length).toBeGreaterThan(0);
@@ -209,8 +199,8 @@ describe('public Agency product landing page', () => {
     expect(screen.queryByText('90 days')).not.toBeInTheDocument();
   });
 
-  it('starts the Agency journey with a dedicated owner account and preserves setup intent', () => {
-    render(<AgencyProductLandingPage />);
+  it('retains the enabled-runtime owner account start and commercial proposition', () => {
+    render(<AgencyCommercialLandingPage />);
 
     const accountLinks = screen.getAllByRole('link', {
       name: /Create your Agency owner account/i,
@@ -225,7 +215,7 @@ describe('public Agency product landing page', () => {
     expect(screen.getAllByText(/not a reduced feature tier/i).length).toBeGreaterThan(0);
   });
 
-  it('keeps catalog-unavailable Launch Access as an intentional assisted path', () => {
+  it('keeps catalog-unavailable Launch Access as an intentional assisted path when separately enabled', () => {
     useCatalogMock.mockReturnValue({
       data: undefined,
       isLoading: false,
@@ -233,7 +223,7 @@ describe('public Agency product landing page', () => {
       refetch: vi.fn(),
     } as unknown as ReturnType<typeof useCommercialCatalog>);
 
-    render(<AgencyProductLandingPage />);
+    render(<AgencyCommercialLandingPage />);
 
     expect(screen.getByTestId('agency-launch-access-card')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Assisted access path' })).toBeInTheDocument();

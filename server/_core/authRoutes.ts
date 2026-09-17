@@ -3,6 +3,7 @@ import type { Express, Request, Response } from 'express';
 import { getSessionCookieOptions } from './cookies';
 import { authService } from './auth';
 import { ENV } from './env';
+import { isTransactionalEmailDeliveryAvailable } from './transactionalEmailConfig';
 import { getActiveDistributionIdentityFlags } from '../services/distributionIdentityProjection';
 
 const VERIFIED_SESSION_MAX_AGE_MS = 24 * 60 * 60 * 1000;
@@ -28,6 +29,12 @@ const getPostVerificationPath = (role: string | null | undefined): string => {
       return '/user/dashboard?verified=true';
   }
 };
+
+const RECOVERY_EMAIL_PENDING_MESSAGE =
+  'If an account with that email exists, check your inbox for password reset instructions. If no email arrives, try again later.';
+
+const VERIFICATION_EMAIL_PENDING_MESSAGE =
+  'If this account exists and is unverified, check your inbox for verification instructions. If no email arrives, try again later.';
 
 /**
  * Register authentication routes
@@ -288,12 +295,22 @@ export function registerAuthRoutes(app: Express) {
         return res.status(400).json({ error: 'A valid email is required' });
       }
 
+      // This is a deployment-wide state, so returning it before account lookup
+      // does not disclose whether the submitted email belongs to a user.
+      if (!isTransactionalEmailDeliveryAvailable()) {
+        return res.status(503).json({
+          error: 'Password reset email is unavailable right now. Please try again later.',
+        });
+      }
+
       await authService.forgotPassword(email);
 
-      // Always return a success message to prevent email enumeration attacks
+      // Do not claim a message was delivered: an existing account can still
+      // encounter a provider-side failure, and that detail must not reveal
+      // account existence.
       res.json({
         success: true,
-        message: 'If an account with that email exists, a password reset link has been sent.',
+        message: RECOVERY_EMAIL_PENDING_MESSAGE,
       });
     } catch (error: any) {
       console.warn('[Auth] Forgot password failed', {
@@ -301,10 +318,10 @@ export function registerAuthRoutes(app: Express) {
         code: error?.code || null,
         name: error?.name || null,
       });
-      // Do not reveal internal errors to the client
+      // Do not reveal a provider error for one account and not another.
       res.json({
         success: true,
-        message: 'If an account with that email exists, a password reset link has been sent.',
+        message: RECOVERY_EMAIL_PENDING_MESSAGE,
       });
     }
   });
@@ -405,11 +422,19 @@ export function registerAuthRoutes(app: Express) {
         return res.status(400).json({ error: 'A valid email is required' });
       }
 
+      // As above, fail uniformly before account lookup when the deployed
+      // runtime has no usable transactional-email configuration.
+      if (!isTransactionalEmailDeliveryAvailable()) {
+        return res.status(503).json({
+          error: 'Verification email is unavailable right now. Please try again later.',
+        });
+      }
+
       await authService.resendVerificationEmail(email);
 
       res.json({
         success: true,
-        message: 'If this account exists and is unverified, a verification email has been sent.',
+        message: VERIFICATION_EMAIL_PENDING_MESSAGE,
       });
     } catch (error: any) {
       console.warn('[Auth] Resend verification failed', {
@@ -417,8 +442,11 @@ export function registerAuthRoutes(app: Express) {
         code: error?.code || null,
         name: error?.name || null,
       });
-      res.status(503).json({
-        error: 'Verification email could not be sent right now. Please try again later.',
+      // Keep the response independent of account existence. A deployed
+      // configuration outage was already handled before the lookup above.
+      res.json({
+        success: true,
+        message: VERIFICATION_EMAIL_PENDING_MESSAGE,
       });
     }
   });

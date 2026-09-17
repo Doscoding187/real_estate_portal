@@ -7,6 +7,7 @@
 import { db } from '../db';
 import { exploreContent, properties } from '../../drizzle/schema';
 import { eq, and, gte, lte, sql, ne, inArray } from 'drizzle-orm';
+import { excludeLandFromGenericPublicProjection } from './landLaunchContainmentService';
 
 interface SimilarProperty {
   contentId: number;
@@ -69,6 +70,11 @@ export class SimilarPropertiesService {
         'Commercial leasing uses the dedicated Commercial journey and has no generic similar-properties feed.',
       );
     }
+    if (String(referenceProperty[0].propertyType).toLowerCase() === 'plot') {
+      throw new Error(
+        'Land uses the dedicated Land journey and has no generic similar-properties feed.',
+      );
+    }
 
     const ref = {
       ...referenceProperty[0],
@@ -102,6 +108,7 @@ export class SimilarPropertiesService {
         and(
           ne(properties.id, propertyId), // Exclude reference property
           ne(properties.propertyType, 'commercial'),
+          excludeLandFromGenericPublicProjection(),
           eq(properties.status, 'available'),
           gte(properties.price, priceMin),
           lte(properties.price, priceMax),
@@ -365,6 +372,7 @@ export class SimilarPropertiesService {
         and(
           ne(properties.id, excludeId),
           ne(properties.propertyType, 'commercial'),
+          excludeLandFromGenericPublicProjection(),
           eq(properties.status, 'available'),
           gte(properties.price, priceMin),
           lte(properties.price, priceMax),

@@ -352,7 +352,7 @@ const ListingWizard: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (!isEditMode && preflight && !preflight.canStartListing) {
+    if (!isEditMode && preflight && !preflight.canPrepareDraft) {
       setShowPreflightModal(true);
     }
   }, [isEditMode, preflight]);
@@ -746,7 +746,7 @@ const ListingWizard: React.FC = () => {
       <Dialog
         open={showPreflightModal}
         onOpenChange={nextOpen => {
-          if (!nextOpen && preflight?.canStartListing) setShowPreflightModal(false);
+          if (!nextOpen && preflight?.canPrepareDraft) setShowPreflightModal(false);
           if (nextOpen) setShowPreflightModal(true);
         }}
       >
@@ -759,8 +759,8 @@ const ListingWizard: React.FC = () => {
           </DialogHeader>
           <div className="space-y-4">
             <p className="text-sm text-slate-700">
-              Resolve these account and publishing requirements before starting a new listing. This
-              keeps your authoring time focused on inventory that can move to review.
+              Verify your account and use your authorised professional workspace to prepare a draft.
+              Publishing remains subject to profile approval and commercial activation.
             </p>
             <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
               {(preflight?.blockers || []).map(blocker => (
@@ -810,6 +810,18 @@ const ListingWizard: React.FC = () => {
       />
 
       <div className="container mx-auto max-w-5xl px-4 sm:px-6">
+        {preflight?.canPrepareDraft && !preflight.canStartListing ? (
+          <div
+            className="mb-5 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950"
+            role="status"
+          >
+            <p className="font-semibold">Prepare your listing before activation</p>
+            <p>
+              You can save this private draft and return to it. Submission and marketplace
+              publishing require completed onboarding, approval and commercial activation.
+            </p>
+          </div>
+        ) : null}
         {!isInitialized ? (
           <div className="flex items-center justify-center min-h-[60vh]">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>

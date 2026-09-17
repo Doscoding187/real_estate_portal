@@ -4,6 +4,7 @@ import { and, desc, eq, inArray, sql } from 'drizzle-orm';
 import { TRPCError } from '@trpc/server';
 import {
   agencies,
+  agents,
   billingAuditEvents,
   billingInvoices,
   billingPaymentDocuments,
@@ -25,7 +26,12 @@ import {
   storeBillingProofDocument,
 } from './billingProofStorage';
 import { deliverPendingAgencyInvitations } from './agencyInvitationDeliveryService';
+import { resolveCurrentAgencyMembershipForAgent } from './agencyMembershipService';
 import { activatePaidLaunchAccessForOwner, type SubscriptionOwnerType } from './planAccessService';
+import {
+  isCommercialActivationAvailable,
+  requireCommercialActivation,
+} from './commercialActivationPolicy';
 import {
   getCommercialProductKey,
   getConfiguredLaunchFeeMinor,
@@ -390,11 +396,7 @@ async function getAgencyOrThrow(db: DbOrTx, agencyId: number) {
 }
 
 /** Resolve the typed billing principal; polymorphic owner keys are display-only during cutover. */
-async function resolveBillableAccountId(
-  db: DbOrTx,
-  ownerType: BillingOwnerType,
-  ownerId: number,
-) {
+async function resolveBillableAccountId(db: DbOrTx, ownerType: BillingOwnerType, ownerId: number) {
   const predicate =
     ownerType === 'agent'
       ? eq(billableAccounts.userId, ownerId)
@@ -734,6 +736,22 @@ async function upsertPendingSubscription(
 }
 
 export function getManualEftBankDetails() {
+  if (!isCommercialActivationAvailable()) {
+    return {
+      configured: false,
+      canIssueInvoices: false,
+      localFixture: false,
+      accountName: 'Commercial activation unavailable',
+      bankName: 'Commercial activation unavailable',
+      branchCode: '',
+      accountNumber: '',
+      maskedAccountNumber: '',
+      accountType: '',
+      supportEmail: '',
+      configurationMessage:
+        'Commercial activation is unavailable during preparation-only onboarding.',
+    };
+  }
   const required = {
     accountName: process.env.BILLING_EFT_ACCOUNT_NAME,
     bankName: process.env.BILLING_EFT_BANK_NAME,
@@ -851,6 +869,26 @@ async function resolveLaunchBillingOwner(
         message: 'Agent billing requires an agent account.',
       });
     }
+
+    const [agentProfile] = await db
+      .select({ id: agents.id })
+      .from(agents)
+      .where(eq(agents.userId, agentUser.id))
+      .limit(1);
+    const membership = agentProfile
+      ? await resolveCurrentAgencyMembershipForAgent(db, Number(agentProfile.id))
+      : null;
+    if (membership) {
+      // An affiliated agent operates under the agency's commercial owner.
+      // Do not create a second individual billing account, invoice, or proof
+      // path while that membership is current.
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message:
+          'Your agency manages Launch Access for your current agency membership. Ask the agency owner about commercial activation.',
+      });
+    }
+
     return {
       ownerType: 'agent',
       ownerId: Number(agentUser.id),
@@ -901,9 +939,7 @@ async function lockLaunchBillingState(tx: BillingTx, owner: LaunchBillingOwner) 
   const [subscription] = await tx
     .select()
     .from(subscriptions)
-    .where(
-      eq(subscriptions.billableAccountId, billableAccountId),
-    )
+    .where(eq(subscriptions.billableAccountId, billableAccountId))
     .limit(1);
   return { subscription: subscription || null };
 }
@@ -971,6 +1007,7 @@ export async function requestPaidLaunchAccessInvoice(input: {
   user: BillingUser;
   planId?: number;
 }) {
+  requireCommercialActivation('Invoice requests');
   const db = await getDb();
   if (!db)
     throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
@@ -1229,6 +1266,7 @@ export async function startAgencyManualCheckout(input: {
   billingCycle: BillingCycle;
   couponCode?: string;
 }) {
+  requireCommercialActivation('Manual-EFT checkout');
   const db = await getDb();
   if (!db)
     throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
@@ -1650,6 +1688,7 @@ type LaunchPaymentProofInput = {
  * invoice.
  */
 export async function submitPaidLaunchAccessPaymentProof(input: LaunchPaymentProofInput) {
+  requireCommercialActivation('Payment-proof submission');
   const db = await getDb();
   if (!db)
     throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
@@ -1875,6 +1914,7 @@ function getCommercialProductKeyFromInvoice(invoice: InvoiceRow): string {
  * to accept canonical recurring agency invoices.
  */
 export async function submitAgencyPaymentProof(input: LaunchPaymentProofInput) {
+  requireCommercialActivation('Payment-proof submission');
   const db = await getDb();
   if (!db)
     throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
@@ -2301,6 +2341,7 @@ export async function reviewManualPayment(input: {
   note?: string;
   verifiedAmount?: number;
 }) {
+  requireCommercialActivation('Payment review');
   const db = await getDb();
   if (!db)
     throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
@@ -2680,9 +2721,7 @@ export async function reviewManualPayment(input: {
       await notifyAgentOwner(tx, {
         ownerId: invoice.ownerId,
         type: activationOccurred ? 'payment_approved' : 'partial_payment',
-        title: activationOccurred
-          ? 'Launch Access activated'
-          : 'Partial payment recorded',
+        title: activationOccurred ? 'Launch Access activated' : 'Partial payment recorded',
         content: activationOccurred
           ? `Payment for ${invoice.invoiceNumber} has been verified. Your 90-day Launch Access term is active.`
           : `A partial payment was recorded for ${invoice.invoiceNumber}.`,
@@ -2723,6 +2762,7 @@ export async function updateSubscriptionLifecycle(input: {
   graceEndsAt?: string | null;
   note?: string;
 }) {
+  requireCommercialActivation('Subscription lifecycle changes');
   const db = await getDb();
   if (!db)
     throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
@@ -2829,6 +2869,7 @@ export async function updateSubscriptionLifecycle(input: {
 }
 
 export async function requestAgencyCancellationAtPeriodEnd(user: BillingUser) {
+  requireCommercialActivation('Subscription lifecycle changes');
   const db = await getDb();
   if (!db)
     throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
@@ -2885,6 +2926,7 @@ export async function requestAgencyCancellationAtPeriodEnd(user: BillingUser) {
 }
 
 export async function restoreAgencySubscription(user: BillingUser) {
+  requireCommercialActivation('Subscription lifecycle changes');
   const db = await getDb();
   if (!db)
     throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });

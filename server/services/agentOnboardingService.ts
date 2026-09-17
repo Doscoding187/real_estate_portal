@@ -12,6 +12,12 @@ import {
   deriveAgentJourneyAccessState,
   normalizeAgentSubscriptionStatus,
 } from '../../shared/agentJourney';
+import { resolveCurrentAgencyMembershipForAgent } from './agencyMembershipService';
+import {
+  parseAgentCoverageAreas,
+  serializeAgentCoverageAreas,
+} from '../../shared/agentCoverageArea';
+import { resolveSubmittedAgentCoverageAreas } from './agentCoverageAreaService';
 
 function slugify(value: string): string {
   return value
@@ -75,6 +81,7 @@ function buildOnboardingState(
     emailVerified: Number(user.emailVerified || 0) === 1,
     approvalStatus,
     subscriptionStatus,
+    agencyMember: planAccess.ownerSource === 'agency_membership',
   });
 
   return {
@@ -90,7 +97,10 @@ function buildOnboardingState(
   };
 }
 
-function toPublicAgentProfile(agent: typeof agents.$inferSelect | null) {
+function toPublicAgentProfile(
+  agent: typeof agents.$inferSelect | null,
+  canonicalAgencyId: number | null = null,
+) {
   if (!agent) return null;
 
   return {
@@ -104,8 +114,8 @@ function toPublicAgentProfile(agent: typeof agents.$inferSelect | null) {
     yearsExperience: agent.yearsExperience || 0,
     focus: agent.focus || null,
     slug: agent.slug || '',
-    agencyId: agent.agencyId || null,
-    areasServed: splitCsv(agent.areasServed),
+    agencyId: canonicalAgencyId,
+    areasServed: parseAgentCoverageAreas(agent.areasServed),
     specializations: splitCsv(agent.specialization),
     propertyTypes: splitCsv(agent.propertyTypes),
     languages: splitCsv(agent.languages),
@@ -123,9 +133,13 @@ export class AgentOnboardingService {
     if (user.role !== 'agent') throw new Error('Agent onboarding is only available to agents');
 
     const [agent] = await db.select().from(agents).where(eq(agents.userId, userId)).limit(1);
+    const membership = agent
+      ? await resolveCurrentAgencyMembershipForAgent(db, Number(agent.id))
+      : null;
     const planAccess = (await getPlanAccessProjectionForUserId(userId)) || {
       ownerType: 'agent' as const,
       ownerId: userId,
+      ownerSource: 'individual_agent' as const,
       currentPlan: null,
       subscription: null,
       entitlements: {},
@@ -167,10 +181,16 @@ export class AgentOnboardingService {
           : null,
       trialEndsAt: planAccess.trialEndsAt || null,
       commercial: {
+        ownerType: planAccess.ownerType,
+        ownerId: planAccess.ownerId,
+        ownerSource: planAccess.ownerSource,
         plan: planAccess.currentPlan,
         subscription: planAccess.subscription,
       },
-      profile: toPublicAgentProfile(agent || null),
+      profile: toPublicAgentProfile(
+        agent || null,
+        membership ? Number(membership.agencyId) || null : null,
+      ),
       profileCompletionScore: onboardingState.profileCompletionScore,
       profileCompletionFlags: onboardingState.profileCompletionFlags,
       entitlements,
@@ -218,7 +238,6 @@ export class AgentOnboardingService {
       languages?: string[];
       socialLinks?: Record<string, string>;
       slug?: string;
-      agencyId?: number | null;
       onboardingStep?: number;
     },
   ) {
@@ -228,6 +247,13 @@ export class AgentOnboardingService {
     const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
     if (!user) throw new Error('User not found');
     if (user.role !== 'agent') throw new Error('Agent onboarding is only available to agents');
+
+    // Validate coverage before creating or updating a profile. This keeps an
+    // invalid display label from leaving a partially created agent record.
+    const coverageAreas =
+      input.areasServed === undefined
+        ? undefined
+        : await resolveSubmittedAgentCoverageAreas(input.areasServed);
 
     let [agent] = await db.select().from(agents).where(eq(agents.userId, userId)).limit(1);
 
@@ -291,7 +317,9 @@ export class AgentOnboardingService {
     if (input.licenseNumber !== undefined) updates.licenseNumber = input.licenseNumber;
     if (input.yearsExperience !== undefined) updates.yearsExperience = input.yearsExperience;
     if (input.focus !== undefined) updates.focus = input.focus;
-    if (input.areasServed !== undefined) updates.areasServed = input.areasServed.join(', ');
+    if (coverageAreas !== undefined) {
+      updates.areasServed = serializeAgentCoverageAreas(coverageAreas);
+    }
     if (input.specializations !== undefined) {
       updates.specialization = input.specializations.join(', ');
     }
@@ -299,7 +327,6 @@ export class AgentOnboardingService {
     if (input.languages !== undefined) updates.languages = input.languages.join(', ');
     if (input.socialLinks !== undefined) updates.socialLinks = JSON.stringify(input.socialLinks);
     if (normalizedSlug !== undefined) updates.slug = normalizedSlug;
-    if (input.agencyId !== undefined) updates.agencyId = input.agencyId;
 
     await db
       .update(agents)
@@ -307,9 +334,13 @@ export class AgentOnboardingService {
       .where(eq(agents.id, agent.id));
 
     const [updatedAgent] = await db.select().from(agents).where(eq(agents.id, agent.id)).limit(1);
+    const membership = updatedAgent
+      ? await resolveCurrentAgencyMembershipForAgent(db, Number(updatedAgent.id))
+      : null;
     const planAccess = (await getPlanAccessProjectionForUserId(userId)) || {
       ownerType: 'agent' as const,
       ownerId: userId,
+      ownerSource: 'individual_agent' as const,
       currentPlan: null,
       subscription: null,
       entitlements: {},
@@ -354,7 +385,10 @@ export class AgentOnboardingService {
       onboardingStep: onboardingState.onboardingStep,
       dashboardUnlocked: onboardingState.dashboardUnlocked,
       fullFeaturesUnlocked: onboardingState.fullFeaturesUnlocked,
-      profile: toPublicAgentProfile(updatedAgent || null),
+      profile: toPublicAgentProfile(
+        updatedAgent || null,
+        membership ? Number(membership.agencyId) || null : null,
+      ),
       profileCompletionScore: onboardingState.profileCompletionScore,
       profileCompletionFlags: onboardingState.profileCompletionFlags,
       entitlements,

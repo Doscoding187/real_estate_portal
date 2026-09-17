@@ -29,6 +29,8 @@ import {
 import { trpc } from '@/lib/trpc';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+import { CommercialActivationNotice } from '@/components/commercial/CommercialActivationNotice';
+import { COMMERCIAL_ACTIVATION_STATE } from '@shared/commercialActivation';
 
 const BillingDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState('overview');
@@ -43,9 +45,12 @@ const BillingDashboard: React.FC = () => {
   // Mutations
   const cancelSubscriptionMutation = trpc.billing.cancelSubscription.useMutation();
   const reactivateSubscriptionMutation = trpc.billing.reactivateSubscription.useMutation();
-  const createCheckoutMutation = trpc.billing.createCheckoutSession.useMutation();
 
   const handleCancelSubscription = async () => {
+    if (!COMMERCIAL_ACTIVATION_STATE.enabled) {
+      toast.info(COMMERCIAL_ACTIVATION_STATE.message);
+      return;
+    }
     try {
       await cancelSubscriptionMutation.mutateAsync();
       toast.success('Subscription cancelled', {
@@ -58,6 +63,10 @@ const BillingDashboard: React.FC = () => {
   };
 
   const handleReactivateSubscription = async () => {
+    if (!COMMERCIAL_ACTIVATION_STATE.enabled) {
+      toast.info(COMMERCIAL_ACTIVATION_STATE.message);
+      return;
+    }
     try {
       await reactivateSubscriptionMutation.mutateAsync();
       toast.success('Subscription reactivated', {
@@ -69,8 +78,7 @@ const BillingDashboard: React.FC = () => {
   };
 
   const handleUpgradePlan = async () => {
-    // TODO: Implement plan upgrade flow
-    toast.info('Plan upgrades are not available in this environment yet');
+    toast.info(COMMERCIAL_ACTIVATION_STATE.message);
   };
 
   const getStatusBadge = (status: string) => {
@@ -113,6 +121,8 @@ const BillingDashboard: React.FC = () => {
           <p className="text-gray-600">Manage your subscription and billing information</p>
         </div>
       </div>
+
+      <CommercialActivationNotice />
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="grid w-full grid-cols-4">
@@ -206,6 +216,7 @@ const BillingDashboard: React.FC = () => {
                 <Button
                   variant="outline"
                   onClick={handleUpgradePlan}
+                  disabled={!COMMERCIAL_ACTIVATION_STATE.enabled}
                   className="h-20 flex-col space-y-2"
                 >
                   <TrendingUp className="w-6 h-6" />
@@ -216,7 +227,10 @@ const BillingDashboard: React.FC = () => {
                   <Button
                     variant="outline"
                     onClick={handleReactivateSubscription}
-                    disabled={reactivateSubscriptionMutation.isPending}
+                    disabled={
+                      !COMMERCIAL_ACTIVATION_STATE.enabled ||
+                      reactivateSubscriptionMutation.isPending
+                    }
                     className="h-20 flex-col space-y-2"
                   >
                     <CheckCircle className="w-6 h-6" />
@@ -226,7 +240,9 @@ const BillingDashboard: React.FC = () => {
                   <Button
                     variant="outline"
                     onClick={handleCancelSubscription}
-                    disabled={cancelSubscriptionMutation.isPending}
+                    disabled={
+                      !COMMERCIAL_ACTIVATION_STATE.enabled || cancelSubscriptionMutation.isPending
+                    }
                     className="h-20 flex-col space-y-2"
                   >
                     <XCircle className="w-6 h-6" />

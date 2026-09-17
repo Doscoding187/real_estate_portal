@@ -34,6 +34,7 @@ export const AGENT_RECOMMENDED_NEXT_STEP_VALUES = [
   'select_package',
   'complete_payment',
   'await_payment_review',
+  'await_agency_activation',
   'await_profile_approval',
   'renew_launch_access',
   'contact_support',
@@ -62,6 +63,8 @@ export function deriveAgentJourneyAccessState(input: {
   emailVerified: boolean;
   approvalStatus: AgentApprovalStatus;
   subscriptionStatus: AgentSubscriptionDisplayStatus;
+  /** True only when current canonical membership makes the agency the owner. */
+  agencyMember?: boolean;
 }): AgentJourneyAccessState {
   const profileNextStep: AgentRecommendedNextStep =
     input.onboardingStep >= 3 ? 'publish_profile' : 'complete_profile_basics';
@@ -104,19 +107,21 @@ export function deriveAgentJourneyAccessState(input: {
     case 'pending_payment':
       return {
         fullFeaturesUnlocked: false,
-        recommendedNextStep: 'complete_payment',
+        recommendedNextStep: input.agencyMember ? 'await_agency_activation' : 'complete_payment',
       };
     case 'payment_under_review':
       return {
         fullFeaturesUnlocked: false,
-        recommendedNextStep: 'await_payment_review',
+        recommendedNextStep: input.agencyMember
+          ? 'await_agency_activation'
+          : 'await_payment_review',
       };
     case 'expired':
     case 'past_due':
     case 'cancelled':
       return {
         fullFeaturesUnlocked: false,
-        recommendedNextStep: 'renew_launch_access',
+        recommendedNextStep: input.agencyMember ? 'await_agency_activation' : 'renew_launch_access',
       };
     case 'suspended':
       return {
@@ -127,7 +132,7 @@ export function deriveAgentJourneyAccessState(input: {
     default:
       return {
         fullFeaturesUnlocked: false,
-        recommendedNextStep: 'select_package',
+        recommendedNextStep: input.agencyMember ? 'await_agency_activation' : 'select_package',
       };
   }
 }

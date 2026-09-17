@@ -83,22 +83,15 @@ function databaseForApproval() {
 describe('Land review approval transition', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('activates only the approved Land lifecycle after every publication gate is met', async () => {
+  it('fails closed before review can activate Land public state for the deferred first cohort', async () => {
     const db = databaseForApproval();
     mockGetDb.mockResolvedValue(db);
 
     await expect(
       transitionLandReview({ listingId: 9, reviewerUserId: 1, action: 'approve' }),
-    ).resolves.toBeUndefined();
+    ).rejects.toThrow(/Land review transition is unavailable while Land is deferred/);
 
-    expect(db.updates).toContainEqual(
-      expect.objectContaining({ table: 'land_assets', values: expect.objectContaining({ lifecycleStatus: 'active' }) }),
-    );
-    expect(db.updates).toContainEqual(
-      expect.objectContaining({ table: 'land_marketing_authorities', values: expect.objectContaining({ authorityStatus: 'active' }) }),
-    );
-    expect(db.updates).toContainEqual(
-      expect.objectContaining({ table: 'listings', values: expect.objectContaining({ status: 'approved', approvalStatus: 'approved' }) }),
-    );
+    expect(mockGetDb).not.toHaveBeenCalled();
+    expect(db.updates).toEqual([]);
   });
 });

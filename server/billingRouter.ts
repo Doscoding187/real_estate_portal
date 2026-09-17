@@ -7,7 +7,13 @@ import {
   superAdminProcedure,
 } from './_core/trpc';
 import { getDb } from './db';
-import { billableAccounts, billingInvoices, billingPayments, plans, subscriptions } from '../drizzle/schema';
+import {
+  billableAccounts,
+  billingInvoices,
+  billingPayments,
+  plans,
+  subscriptions,
+} from '../drizzle/schema';
 import { and, desc, eq, sql } from 'drizzle-orm';
 import {
   getAdminFinanceQueue,
@@ -37,6 +43,7 @@ import {
   type CommercialAudience,
 } from './services/commercialCatalogService';
 import { requireUser } from './_core/requireUser';
+import { getCommercialActivationStatus } from './services/commercialActivationPolicy';
 
 const billingCycleSchema = z.enum(['monthly', 'annual']);
 const commercialAudienceSchema = z.enum(COMMERCIAL_AUDIENCES);
@@ -123,6 +130,8 @@ function requireAgencyId(ctx: { user?: { agencyId?: number | null } | null }): n
 }
 
 export const billingRouter = {
+  commercialActivation: publicProcedure.query(() => getCommercialActivationStatus()),
+
   plans: publicProcedure
     .input(
       z.object({ segment: z.enum(['agent', 'agency', 'developer']).default('agency') }).optional(),

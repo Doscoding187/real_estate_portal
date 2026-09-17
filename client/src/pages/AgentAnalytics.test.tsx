@@ -112,6 +112,35 @@ describe('AgentAnalytics', () => {
     ).toBeInTheDocument();
   });
 
+  it('keeps the incomplete-profile analytics lock truthful during preparation', () => {
+    useOnboardingStatusMock.mockReturnValue({
+      status: {
+        fullFeaturesUnlocked: false,
+        recommendedNextStep: 'complete_profile_basics',
+        subscriptionStatus: 'unassigned',
+      },
+      isLoading: false,
+    });
+
+    render(<AgentAnalytics />);
+
+    expect(
+      screen.getByText(
+        'Finish your professional profile and continue preparing your private workspace. Commercial activation, publishing, and new marketplace enquiries remain unavailable until the approved activation path opens.',
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/activate Launch Access/i)).not.toBeInTheDocument();
+    expect(getPerformanceQueryMock.mock.calls[0]?.at(-1)).toEqual(
+      expect.objectContaining({ enabled: false }),
+    );
+    expect(getPipelineQueryMock.mock.calls[0]?.at(-1)).toEqual(
+      expect.objectContaining({ enabled: false }),
+    );
+    expect(getListingsQueryMock.mock.calls[0]?.at(-1)).toEqual(
+      expect.objectContaining({ enabled: false }),
+    );
+  });
+
   it('moves performance and pipeline data to the same selected lead period', async () => {
     render(<AgentAnalytics />);
 

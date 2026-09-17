@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { HomeLayout } from '@/layouts/HomeLayout';
 import { parseDelimitedList } from '@/lib/agentPresence';
+import type { AgentCoverageArea } from '@shared/agentCoverageArea';
 
 const ROLE_LABELS: Record<string, string> = {
   agent: 'Property Practitioner',
@@ -26,14 +27,14 @@ function agentDisplayName(agent: {
 function matchesSearch(
   agent: Parameters<typeof agentDisplayName>[0] & {
     specialization?: string | null;
-    areasServed?: string | null;
+    areasServed?: AgentCoverageArea[] | null;
   },
   query: string,
 ) {
   const haystack = [
     agentDisplayName(agent),
     ...parseDelimitedList(agent.specialization),
-    ...parseDelimitedList(agent.areasServed),
+    ...(Array.isArray(agent.areasServed) ? agent.areasServed.map(area => area.label) : []),
   ]
     .join(' ')
     .toLowerCase();
@@ -122,7 +123,9 @@ export default function Agents() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredAgents.map(agent => {
                 const specializations = parseDelimitedList(agent.specialization);
-                const areasServed = parseDelimitedList(agent.areasServed);
+                const areasServed = Array.isArray(agent.areasServed)
+                  ? agent.areasServed.map(area => area.label)
+                  : [];
                 const name = agentDisplayName(agent);
                 return (
                   <Link key={agent.id} href={`/agents/${agent.slug}`} data-testid="agent-card">

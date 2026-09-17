@@ -79,6 +79,20 @@ export default function AgencyWorkspace() {
           />
 
           <main className="mx-auto max-w-[1440px] space-y-5 px-4 py-5 lg:px-6">
+            {status && !status.fullFeaturesUnlocked ? (
+              <section className="rounded-xl border border-amber-200 bg-amber-50 p-5 text-amber-950">
+                <h2 className="font-semibold">Prepare your agency before activation</h2>
+                <p className="mt-2 text-sm">
+                  Your professional profile and private inventory can be prepared now. Publishing
+                  and team activation remain subject to approval and the required commercial
+                  entitlement.
+                </p>
+                <div className="mt-3 flex gap-4 text-sm font-semibold underline">
+                  <a href="/listings/create">Prepare a listing</a>
+                  <a href="/agency/listings">Return to inventory</a>
+                </div>
+              </section>
+            ) : null}
             {journeyNeedsAttention && status ? (
               <ActivationBanner
                 recommendedNextStep={status.recommendedNextStep}

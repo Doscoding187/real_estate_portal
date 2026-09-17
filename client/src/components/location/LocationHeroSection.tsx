@@ -109,6 +109,7 @@ export function LocationHeroSection({
   const [showFilters, setShowFilters] = useState(false);
   const rentJourneyEnabled = isHomepageHeroJourneyEnabled('rent');
   const developmentsJourneyEnabled = isHomepageHeroJourneyEnabled('developments');
+  const landJourneyEnabled = isHomepageHeroJourneyEnabled('plot_land');
   const activeTab = controlledActiveTab ?? internalActiveTab;
   const locationSegments = locationSlug.split('/').filter(Boolean);
 
@@ -145,6 +146,7 @@ export function LocationHeroSection({
   const handleCategoryClick = (categoryId: string) => {
     if (categoryId === 'rental' && !rentJourneyEnabled) return;
     if (categoryId === 'developments' && !developmentsJourneyEnabled) return;
+    if (categoryId === 'plot_land' && !landJourneyEnabled) return;
     if (
       neutralMode &&
       categoryId !== 'buy' &&
@@ -169,6 +171,7 @@ export function LocationHeroSection({
     if (!effectiveCategoryId) return undefined;
     if (effectiveCategoryId === 'rental' && !rentJourneyEnabled) return undefined;
     if (effectiveCategoryId === 'developments' && !developmentsJourneyEnabled) return undefined;
+    if (effectiveCategoryId === 'plot_land' && !landJourneyEnabled) return undefined;
 
     if (neutralMode && effectiveCategoryId === 'buy') {
       return buildCanonicalBuyResultsPath(location);
@@ -261,7 +264,8 @@ export function LocationHeroSection({
               .filter(
                 category =>
                   (category.id !== 'rental' || rentJourneyEnabled) &&
-                  (category.id !== 'developments' || developmentsJourneyEnabled),
+                  (category.id !== 'developments' || developmentsJourneyEnabled) &&
+                  (category.id !== 'plot_land' || landJourneyEnabled),
               )
               .map(category => {
               const Icon = category.icon;
@@ -304,7 +308,8 @@ export function LocationHeroSection({
           {/* Dynamic Filter Panel */}
           {showFilters &&
             activeTab &&
-            (activeTab !== 'rental' || rentJourneyEnabled) && (
+            (activeTab !== 'rental' || rentJourneyEnabled) &&
+            (activeTab !== 'plot_land' || landJourneyEnabled) && (
             <div className="mb-6 pt-4 border-t border-slate-100 animate-in slide-in-from-top-2 duration-200">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 {/* BUY FILTERS */}
@@ -323,7 +328,9 @@ export function LocationHeroSection({
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="all">Any Category</SelectItem>
-                          {filterConfig.buy.intents.map(intent => (
+                          {filterConfig.buy.intents
+                            .filter(intent => intent !== 'Land & Plots' || landJourneyEnabled)
+                            .map(intent => (
                             <SelectItem key={intent} value={intent}>
                               {intent}
                             </SelectItem>
@@ -351,7 +358,9 @@ export function LocationHeroSection({
                             ? filterConfig.buy.propertyTypes[
                                 filters.propertyIntent as keyof typeof filterConfig.buy.propertyTypes
                               ]
-                            : Object.values(filterConfig.buy.propertyTypes).flat()
+                            : Object.entries(filterConfig.buy.propertyTypes)
+                                .filter(([intent]) => intent !== 'Land & Plots' || landJourneyEnabled)
+                                .flatMap(([, types]) => types)
                           ).map((type: string) => (
                             <SelectItem key={type} value={type}>
                               {type}

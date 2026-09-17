@@ -34,6 +34,7 @@ import {
   type LandPublicClassification,
 } from '../../shared/land-domain';
 import { validateLandSearchGeography } from '../../shared/landSearchGeography';
+import { isLandVerticalAvailable } from '../../shared/landLaunchPolicy';
 import { getCompletedListingImages, getListingMediaUrl } from '../../shared/listing-media';
 import { resolveMediaDeliveryUrl } from '../_core/mediaStorage';
 import { locationResolver } from './locationResolverService';
@@ -115,7 +116,7 @@ export function assertPublicLandSearchInput(input: LandPublicSearchInput): void 
   }
 }
 
-export function isPublicLandEligible(input: {
+export function meetsPublicLandPublicationRequirements(input: {
   listingStatus: string;
   listingApprovalStatus: string | null;
   reviewState: string;
@@ -139,6 +140,16 @@ export function isPublicLandEligible(input: {
     !input.hasBlockingConflict &&
     input.hasCompletedMarketingImage
   );
+}
+
+/**
+ * Public Land eligibility includes the explicit first-cohort product
+ * disposition. Keep the domain requirements separately testable so a future
+ * reviewed release cannot accidentally weaken them while lifting the
+ * disposition.
+ */
+export function isPublicLandEligible(input: Parameters<typeof meetsPublicLandPublicationRequirements>[0]) {
+  return isLandVerticalAvailable() && meetsPublicLandPublicationRequirements(input);
 }
 
 export function publicLocationPrecision(precision: 'approximate' | 'exact') {
@@ -231,6 +242,8 @@ function latestActiveAuthorityCondition(): SQL {
 }
 
 function publicLandEligibilityConditions(now = timestamp()): SQL[] {
+  if (!isLandVerticalAvailable()) return [sql`1 = 0`];
+
   return [
     eq(landListingLinks.linkStatus, 'active'),
     eq(landAssets.lifecycleStatus, 'active'),
@@ -461,6 +474,8 @@ async function toPublicRow(db: Database, row: PublicLandRow) {
 
 export async function searchPublicLand(input: LandPublicSearchInput) {
   assertPublicLandSearchInput(input);
+  if (!isLandVerticalAvailable()) return [];
+
   const db = await database();
   const boundary = await resolveGeography(input);
   const conditions = publicLandEligibilityConditions();
@@ -484,6 +499,8 @@ export async function searchPublicLand(input: LandPublicSearchInput) {
 
 /** Server-only custody lookup; Land lead recipients are never accepted from the client. */
 export async function resolvePublicLandLeadCustody(listingId: number) {
+  if (!isLandVerticalAvailable()) return null;
+
   const db = await database();
   const rows = (await selectPublicLandRows(db, [
     ...publicLandEligibilityConditions(),
@@ -496,6 +513,8 @@ export async function resolvePublicLandLeadCustody(listingId: number) {
 
 /** A detail is a direct public-record lookup, not an unscoped public search. */
 export async function publicLandDetail(slug: string) {
+  if (!isLandVerticalAvailable()) return null;
+
   const db = await database();
   const rows = (await selectPublicLandRows(db, [
     ...publicLandEligibilityConditions(),

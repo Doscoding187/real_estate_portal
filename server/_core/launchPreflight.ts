@@ -3,6 +3,7 @@ import { isValidAuthRateLimitRedisUrl } from './authRateLimitStore';
 import { resolveBrowserSecurityPolicy } from './browserSecurity';
 import type { AppRuntimeEnv } from './runtimeBootstrap';
 import { resolveAppRuntimeEnv } from './runtimeBootstrap';
+import { resolveTransactionalEmailConfiguration } from './transactionalEmailConfig';
 
 export type LaunchPreflightLevel = 'required' | 'recommended';
 
@@ -287,11 +288,18 @@ function billingProofStorageCheck(env: EnvLike) {
 }
 
 function emailCheck(env: EnvLike) {
-  const from = firstValue(env, ['RESEND_FROM_EMAIL', 'EMAIL_FROM']);
+  const configuration = resolveTransactionalEmailConfiguration(env);
   const missing = [
-    !readEnv(env, 'RESEND_API_KEY') ? 'RESEND_API_KEY' : null,
-    !from ? 'RESEND_FROM_EMAIL or EMAIL_FROM' : null,
-    from && hasPlaceholder(from.value) ? `${from.key} (placeholder)` : null,
+    !configuration.apiKey
+      ? 'RESEND_API_KEY'
+      : !configuration.apiKeyConfigured
+        ? 'RESEND_API_KEY (placeholder)'
+        : null,
+    !configuration.from
+      ? 'RESEND_FROM_EMAIL or EMAIL_FROM'
+      : !configuration.fromConfigured
+        ? `${configuration.fromKey} (placeholder)`
+        : null,
   ].filter(Boolean) as string[];
 
   return makeCheck({

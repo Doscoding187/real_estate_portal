@@ -455,6 +455,38 @@ describe('ApprovedPublicProperty authority', () => {
     expect(source.getListingMedia).not.toHaveBeenCalled();
   });
 
+  it('keeps a canonical Land plot out of generic public property discovery even without a legacy marker', async () => {
+    const fixture = canonicalFixture();
+    fixture.sourceListing.propertyType = 'plot';
+    fixture.property.propertyType = 'plot';
+    const source = dataSource(fixture);
+
+    await expect(resolveApprovedPublicProperty(501, source)).resolves.toBeNull();
+    expect(source.getListingMedia).not.toHaveBeenCalled();
+  });
+
+  it('keeps malformed active Land links out of generic public property discovery', async () => {
+    const fixture = canonicalFixture();
+    const source = dataSource(fixture);
+    source.isActiveLandListing = vi.fn().mockResolvedValue(true);
+
+    await expect(resolveApprovedPublicProperty(501, source)).resolves.toBeNull();
+
+    expect(source.isActiveLandListing).toHaveBeenCalledWith(9001);
+    expect(source.getListingMedia).not.toHaveBeenCalled();
+  });
+
+  it('keeps active Land-linked sources out of the bulk public projection path', async () => {
+    const fixture = canonicalFixture();
+    const source = batchDataSource([fixture]);
+    source.getActiveLandListingIds = vi.fn().mockResolvedValue([9001]);
+
+    await expect(resolveApprovedPublicProperties([501], source)).resolves.toEqual(new Map());
+
+    expect(source.getActiveLandListingIds).toHaveBeenCalledWith([9001]);
+    expect(source.getListingMediaByListingIds).not.toHaveBeenCalled();
+  });
+
   it('fails closed when partially promoted source images disagree with the approved mirror', async () => {
     const fixture = canonicalFixture();
     fixture.listingMedia[0].originalUrl = 'https://cdn.example.test/unapproved-new-photo.jpg';

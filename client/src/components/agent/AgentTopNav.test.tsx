@@ -77,10 +77,7 @@ describe('AgentTopNav access handoff', () => {
 
     const search = screen.getByRole('textbox', { name: 'Search your agent workspace' });
     expect(search).toBeDisabled();
-    expect(search).toHaveAttribute(
-      'placeholder',
-      'Activate Launch Access to search your workspace',
-    );
+    expect(search).toHaveAttribute('placeholder', 'Continue preparation to search your workspace');
     expect(screen.getByTestId('notification-center')).toHaveAttribute('data-enabled', 'false');
     expect(getListingsQueryMock).toHaveBeenCalledWith(
       expect.anything(),
