@@ -17,6 +17,7 @@ import {
   COMMERCIAL_PUBLIC_JOURNEY_HANDOFF_MESSAGE,
   isCommercialMarketingPropertyType,
 } from '../shared/commercial-domain';
+import { excludeLandFromGenericPublicProjection } from './services/landLaunchContainmentService';
 
 function rejectCommercialPropertyTypes(values: readonly unknown[] | undefined): void {
   if (!values?.some(value => isCommercialMarketingPropertyType(value))) return;
@@ -135,6 +136,7 @@ export const enhancedLocationRouter = router({
       const conditions = [
         eq(properties.status, 'published'),
         ne(properties.propertyType, 'commercial'),
+        excludeLandFromGenericPublicProjection(),
       ];
 
       // Location-based filtering
@@ -473,6 +475,7 @@ export const enhancedLocationRouter = router({
       const conditions = [
         eq(properties.status, 'published'),
         ne(properties.propertyType, 'commercial'),
+        excludeLandFromGenericPublicProjection(),
       ];
       if (input.filters?.propertyType?.length) {
         conditions.push(
@@ -543,10 +546,16 @@ export const enhancedLocationRouter = router({
         throw new Error('Property not found');
       }
 
-      if (isCommercialMarketingPropertyType(referenceProperty.propertyType)) {
+      if (
+        isCommercialMarketingPropertyType(referenceProperty.propertyType) ||
+        referenceProperty.propertyType === 'plot'
+      ) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
-          message: COMMERCIAL_PUBLIC_JOURNEY_HANDOFF_MESSAGE,
+          message:
+            referenceProperty.propertyType === 'plot'
+              ? 'Land uses the dedicated Land journey and is unavailable through generic property discovery.'
+              : COMMERCIAL_PUBLIC_JOURNEY_HANDOFF_MESSAGE,
         });
       }
 
@@ -564,6 +573,7 @@ export const enhancedLocationRouter = router({
       const conditions = [
         eq(properties.status, 'published'),
         ne(properties.propertyType, 'commercial'),
+        excludeLandFromGenericPublicProjection(),
         sql`${properties.id} != ${input.propertyId}`,
         sql`${properties.publicLatitude} IS NOT NULL
           AND ${properties.publicLongitude} IS NOT NULL
@@ -685,6 +695,7 @@ export const enhancedLocationRouter = router({
       const conditions = [
         eq(properties.status, 'published'),
         ne(properties.propertyType, 'commercial'),
+        excludeLandFromGenericPublicProjection(),
       ];
 
       if (locationValue && locationFilter) {

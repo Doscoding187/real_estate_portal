@@ -33,6 +33,14 @@ const EMAIL_VERIFICATION_TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
 
 const hashOpaqueToken = (token: string) => crypto.createHash('sha256').update(token).digest('hex');
 
+// Canonical MySQL timestamp strings represent UTC, regardless of the host TZ.
+function tokenExpiryMilliseconds(value: string): number {
+  const normalized = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(\.\d+)?$/.test(value)
+    ? `${value.replace(' ', 'T')}Z`
+    : value;
+  return Date.parse(normalized);
+}
+
 const getRequestId = (req: Request): string => {
   const value = (req as any)?.requestId;
   return typeof value === 'string' && value.trim().length > 0 ? value : 'unknown';
@@ -479,7 +487,8 @@ export class AuthService {
       throw new Error('Invalid or expired password reset token.');
     }
 
-    if (new Date() > new Date(user.passwordResetTokenExpiresAt)) {
+    const expiry = tokenExpiryMilliseconds(user.passwordResetTokenExpiresAt);
+    if (!Number.isFinite(expiry) || expiry <= Date.now()) {
       throw new Error('Invalid or expired password reset token.');
     }
 
@@ -499,7 +508,8 @@ export class AuthService {
     if (
       !user ||
       !user.emailVerificationTokenExpiresAt ||
-      new Date(user.emailVerificationTokenExpiresAt).getTime() <= Date.now()
+      !Number.isFinite(tokenExpiryMilliseconds(user.emailVerificationTokenExpiresAt)) ||
+      tokenExpiryMilliseconds(user.emailVerificationTokenExpiresAt) <= Date.now()
     ) {
       throw new Error('Invalid or expired email verification token.');
     }

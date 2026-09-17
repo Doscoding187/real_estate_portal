@@ -6,6 +6,7 @@ import { SimpleHomeListingCard } from '@/components/SimpleHomeListingCard';
 import { SimpleSharedLivingCard } from '@/components/SimpleSharedLivingCard';
 import { getPrimaryDevelopmentImageUrl } from '@/lib/mediaUtils';
 import { isHomepageHeroJourneyEnabled } from '@/lib/publicNavigation';
+import { isLandVerticalAvailable } from '@shared/landLaunchPolicy';
 import {
   Carousel,
   CarouselContent,
@@ -220,6 +221,8 @@ export function HomeTrendingSection({
   }
 
   if (plotLandHandsOff) {
+    if (!isLandVerticalAvailable()) return null;
+
     return (
       <section className="home-section">
         <div className="home-section-header">

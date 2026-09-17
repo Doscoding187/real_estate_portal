@@ -9,7 +9,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAgentOnboardingStatus } from '@/hooks/useAgentOnboardingStatus';
-import { getAgentJourneyAction, isAgentProfileJourneyStep } from '@/lib/agentJourney';
+import {
+  getAgentJourneyAction,
+  getAgentProfileCompletionDescription,
+  isAgentProfileJourneyStep,
+} from '@/lib/agentJourney';
 import { trpc } from '@/lib/trpc';
 import { cn } from '@/lib/utils';
 import {
@@ -120,7 +124,7 @@ export default function AgentTrainingSupport() {
             }
             description={
               needsProfileCompletion
-                ? 'Finish your professional profile, then activate Launch Access to use training, support, and daily-work tools.'
+                ? getAgentProfileCompletionDescription()
                 : journeyAction.description
             }
             actionLabel={journeyAction.waiting ? 'Return to dashboard' : journeyAction.label}

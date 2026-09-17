@@ -236,6 +236,8 @@ describe('savedSearchNotificationEngine', () => {
         'date_desc',
         1,
         100,
+        undefined,
+        { publicOnly: true },
       );
       expect(mockInsertValues).toHaveBeenCalledTimes(2);
       expect(mockInsertValues).toHaveBeenNthCalledWith(

@@ -7,11 +7,10 @@ import {
 import { trpc } from '@/lib/trpc';
 
 /**
- * Shared parsing for public Agent profile list fields.
+ * Shared parsing for legacy public Agent specialization and language fields.
  *
- * The canonical persisted representation is comma-separated text; values are
- * split strictly by comma and trimmed. Noncanonical encodings fail closed
- * rather than being silently reinterpreted as canonical data.
+ * Service coverage does not use this parser: its persisted contract carries
+ * typed canonical location identities and is resolved by the server.
  */
 export function parseDelimitedList(value: unknown): string[] {
   if (typeof value !== 'string') return [];

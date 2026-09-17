@@ -8,6 +8,8 @@ import { developerSubscriptionService } from './services/developerSubscriptionSe
 import { developmentService } from './services/developmentService';
 import { publicDevelopmentSearchService } from './services/publicDevelopmentSearchService';
 import { searchPublicLand } from './services/landPublicService';
+import { isLandVerticalAvailable } from '../shared/landLaunchPolicy';
+import { assertLandDevelopmentDraftOperationAvailable } from './services/developerEngineContainment';
 import { getDeveloperByUserId, requireDeveloperProfileByUserId } from './services/developerService'; // [NEW] Import service methods
 import { getPublisherById } from './services/cataloguePublisherService';
 import { cataloguePublisherService } from './services/cataloguePublisherService';
@@ -582,6 +584,10 @@ export const developerRouter = router({
           message: 'The draft publisher must belong to the authenticated organisation.',
         });
       }
+      assertLandDevelopmentDraftOperationAvailable(
+        input.draftData,
+        'Land development draft preparation',
+      );
 
       if (input.id) {
         const updateSet: Record<string, any> = {
@@ -589,13 +595,11 @@ export const developerRouter = router({
           draftData: sanitized,
           progress,
           currentStep,
-          lastModified: new Date().toISOString(),
-          cataloguePublisherId: profile.publisherId,
-          developerOrganisationId: profile.organisationId,
+          lastModified: new Date(),
         };
 
         const [existingDraft] = await dbConn
-          .select({ id: developmentDrafts.id })
+          .select({ id: developmentDrafts.id, draftData: developmentDrafts.draftData })
           .from(developmentDrafts)
           .where(
             and(
@@ -608,6 +612,10 @@ export const developerRouter = router({
         if (!existingDraft) {
           throw new TRPCError({ code: 'NOT_FOUND', message: 'Draft not found' });
         }
+        assertLandDevelopmentDraftOperationAvailable(
+          existingDraft.draftData,
+          'Land development draft preparation',
+        );
 
         await dbConn
           .update(developmentDrafts)
@@ -1144,6 +1152,9 @@ export const developerRouter = router({
         }
 
         if (input.tab === 'plot_land') {
+          if (!isLandVerticalAvailable()) {
+            return { items: [], source: 'land' };
+          }
           const publicLand = await searchPublicLand({
             ...(locationFilter.province ? { province: locationFilter.province } : {}),
             ...(locationFilter.city ? { city: locationFilter.city } : {}),

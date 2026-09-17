@@ -1,6 +1,7 @@
 import { ArrowRight, BriefcaseBusiness, Building2, Handshake, UsersRound } from 'lucide-react';
+import { COMMERCIAL_ACTIVATION_STATE } from '@shared/commercialActivation';
 
-const professionalPaths = [
+const COMMERCIAL_PROFESSIONAL_PATHS = [
   {
     title: 'Agents',
     description: 'Present listings, receive property enquiries and organise follow-up.',
@@ -31,7 +32,43 @@ const professionalPaths = [
   },
 ] as const;
 
+const PREPARATION_PROFESSIONAL_PATHS = [
+  {
+    title: 'Agents',
+    description: 'Establish your Agent presence and prepare private listing drafts.',
+    href: '/advertise/sell/agents',
+    cta: 'Explore Agent preparation',
+    icon: BriefcaseBusiness,
+  },
+  {
+    title: 'Agencies',
+    description: 'Establish an Agency identity and prepare private inventory.',
+    href: '/advertise/sell/agencies',
+    cta: 'Explore Agency preparation',
+    icon: UsersRound,
+  },
+  {
+    title: 'Developers',
+    description: 'Establish your organisation for review and prepare private development drafts.',
+    href: '/advertise/sell/developers',
+    cta: 'Explore Developer preparation',
+    icon: Building2,
+  },
+  {
+    title: 'Service businesses',
+    description: 'Introduce your property service to people looking for practical help.',
+    href: '/advertise/services',
+    cta: 'Explore service solutions',
+    icon: Handshake,
+  },
+] as const;
+
 export function ProfessionalEntrySection() {
+  const preparationOnly = !COMMERCIAL_ACTIVATION_STATE.enabled;
+  const professionalPaths = preparationOnly
+    ? PREPARATION_PROFESSIONAL_PATHS
+    : COMMERCIAL_PROFESSIONAL_PATHS;
+
   return (
     <section
       data-testid="home-professional-entry"
@@ -43,11 +80,14 @@ export function ProfessionalEntrySection() {
           For property professionals
         </p>
         <h2 id="professional-entry-heading" className="mt-3 text-2xl font-bold md:text-3xl">
-          Build your property business with Property Listify.
+          {preparationOnly
+            ? 'Establish your Property Listify presence.'
+            : 'Build your property business with Property Listify.'}
         </h2>
         <p className="mt-3 text-sm leading-7 text-white/70 md:text-base">
-          Choose the path that fits your role, then explore the supported workspace and commercial
-          offering behind it.
+          {preparationOnly
+            ? 'Choose the role that fits your work and start the available preparation path before commercial activation.'
+            : 'Choose the path that fits your role, then explore the supported workspace and commercial offering behind it.'}
         </p>
       </div>
 
@@ -64,7 +104,8 @@ export function ProfessionalEntrySection() {
             <h3 className="mt-4 text-base font-bold text-white">{title}</h3>
             <p className="mt-2 min-h-[3rem] text-sm leading-6 text-white/65">{description}</p>
             <span className="mt-4 inline-flex items-center gap-1.5 text-sm font-bold text-white">
-              {cta} <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+              {cta}{' '}
+              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
             </span>
           </a>
         ))}

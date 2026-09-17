@@ -19,17 +19,18 @@ function renderStrip() {
 }
 
 describe('AgentStatusStrip', () => {
-  it('offers Launch Access to agents who have not selected a package', async () => {
+  it('offers private preparation to agents while commercial activation is disabled', async () => {
     apiFetchMock.mockResolvedValue({
       packageSelected: false,
       approvalStatus: 'approved',
       recommendedNextStep: 'select_package',
     });
     renderStrip();
-    expect(await screen.findByText('Activate Launch Access')).toBeTruthy();
+    expect(await screen.findByText('Continue preparation')).toBeTruthy();
+    expect(screen.getByText('Preparation-only onboarding')).toBeTruthy();
   });
 
-  it('offers renewal language once the launch term has expired', async () => {
+  it('keeps expired commercial state in preparation-only handling', async () => {
     apiFetchMock.mockResolvedValue({
       packageSelected: true,
       approvalStatus: 'approved',
@@ -37,8 +38,8 @@ describe('AgentStatusStrip', () => {
       recommendedNextStep: 'renew_launch_access',
     });
     renderStrip();
-    expect(await screen.findByText('Renew Launch Access')).toBeTruthy();
-    expect(screen.getByText('Launch Access expired')).toBeTruthy();
+    expect(await screen.findByText('Continue preparation')).toBeTruthy();
+    expect(screen.getByText('Preparation-only onboarding')).toBeTruthy();
   });
 
   it('renders evaluated CTA labels only, never raw expressions', async () => {
@@ -49,7 +50,7 @@ describe('AgentStatusStrip', () => {
       recommendedNextStep: 'dashboard',
     });
     renderStrip();
-    await waitFor(() => expect(screen.getByText('Launch Access active')).toBeTruthy());
+    await waitFor(() => expect(screen.getByText('Preparation-only onboarding')).toBeTruthy());
     expect(screen.queryByText(/showRenewalCta/)).toBeNull();
     expect(screen.queryByText(/\? '/)).toBeNull();
   });
@@ -62,6 +63,18 @@ describe('AgentStatusStrip', () => {
       recommendedNextStep: 'await_payment_review',
     });
     renderStrip();
-    expect(await screen.findByText('Payment proof under review')).toBeTruthy();
+    expect(await screen.findByText('Preparation-only onboarding')).toBeTruthy();
+  });
+
+  it('keeps an agency member in the agency activation path', async () => {
+    apiFetchMock.mockResolvedValue({
+      packageSelected: true,
+      approvalStatus: 'approved',
+      subscriptionStatus: 'pending_payment',
+      recommendedNextStep: 'await_agency_activation',
+    });
+    renderStrip();
+    expect(await screen.findByText('Preparation-only onboarding')).toBeTruthy();
+    expect(screen.getByText('Return to dashboard')).toBeTruthy();
   });
 });

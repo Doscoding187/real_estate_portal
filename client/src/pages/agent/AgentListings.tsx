@@ -13,12 +13,16 @@ import { EntityStatusCard } from '@/components/dashboard/EntityStatusCard';
 import { AgentFeatureLockedState } from '@/components/agent/AgentFeatureLockedState';
 import { AgentJourneyStatusErrorState } from '@/components/agent/AgentJourneyStatusErrorState';
 import { useAgentOnboardingStatus } from '@/hooks/useAgentOnboardingStatus';
-import { getAgentJourneyAction, isAgentProfileJourneyStep } from '@/lib/agentJourney';
+import {
+  getAgentJourneyAction,
+  getAgentProfileCompletionDescription,
+  isAgentProfileJourneyStep,
+} from '@/lib/agentJourney';
 import { calculateListingReadiness } from '@/lib/readiness';
 import { cn } from '@/lib/utils';
 
-type ListingTab = 'active' | 'pending' | 'draft' | 'sold' | 'archived';
-type ListingStatusFilter = 'pending_review' | 'draft';
+type ListingTab = 'active' | 'pending' | 'draft' | 'rejected' | 'sold' | 'archived';
+type ListingStatusFilter = 'pending_review' | 'draft' | 'rejected';
 
 function listingTabFromLocation(location: string): ListingTab {
   // Wouter may expose the pathname without its search string, while the
@@ -33,6 +37,7 @@ function listingTabFromLocation(location: string): ListingTab {
 
   return requestedTab === 'pending' ||
     requestedTab === 'draft' ||
+    requestedTab === 'rejected' ||
     requestedTab === 'sold' ||
     requestedTab === 'archived'
     ? requestedTab
@@ -59,10 +64,13 @@ export default function AgentListings() {
 
   // Map tabs to status for API
   const getListingStatusForTab = (tab: ListingTab): ListingStatusFilter => {
-    return tab === 'pending' ? 'pending_review' : 'draft';
+    if (tab === 'pending') return 'pending_review';
+    if (tab === 'rejected') return 'rejected';
+    return 'draft';
   };
 
-  const isDraftOrPending = activeTab === 'draft' || activeTab === 'pending';
+  const isDraftOrPending =
+    activeTab === 'draft' || activeTab === 'pending' || activeTab === 'rejected';
   const dashboardUnlocked = !statusLoading && Boolean(status?.dashboardUnlocked);
   const operationalDataEnabled = !statusLoading && Boolean(status?.fullFeaturesUnlocked);
 
@@ -180,6 +188,7 @@ export default function AgentListings() {
     status: listing.status === 'pending_review' ? 'pending' : listing.status,
     approvalStatus: listing.approvalStatus,
     readinessScore: listing.readinessScore,
+    rejectionReason: listing.rejectionReason,
     rejectionReasons: listing.rejectionReasons,
     rejectionNote: listing.rejectionNote,
     readiness: calculateListingReadiness(listing),
@@ -324,7 +333,7 @@ export default function AgentListings() {
               className="w-full"
             >
               <TabsList
-                className={cn(agentPageStyles.tabsList, 'mb-6 grid w-full max-w-3xl grid-cols-5')}
+                className={cn(agentPageStyles.tabsList, 'mb-6 grid w-full max-w-4xl grid-cols-6')}
               >
                 <TabsTrigger value="active" className={agentPageStyles.tabTrigger}>
                   Active
@@ -334,6 +343,9 @@ export default function AgentListings() {
                 </TabsTrigger>
                 <TabsTrigger value="draft" className={agentPageStyles.tabTrigger}>
                   Drafts
+                </TabsTrigger>
+                <TabsTrigger value="rejected" className={agentPageStyles.tabTrigger}>
+                  Changes needed
                 </TabsTrigger>
                 <TabsTrigger value="sold" className={agentPageStyles.tabTrigger}>
                   Sold
@@ -356,7 +368,7 @@ export default function AgentListings() {
                     }
                     description={
                       needsProfileCompletion
-                        ? 'Complete the remaining professional profile details, then activate Launch Access to publish and manage inventory.'
+                        ? getAgentProfileCompletionDescription()
                         : journeyAction.description
                     }
                     actionLabel={

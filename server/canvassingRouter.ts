@@ -3,6 +3,7 @@ import { and, asc, desc, eq, isNotNull, isNull, like, lt, notInArray, or } from 
 import { z } from 'zod';
 import {
   agents,
+  agencyAgentMemberships,
   sellerProspectActivities,
   sellerMandateComparables,
   sellerMandateOperations,
@@ -31,6 +32,7 @@ import {
   requireAgencyAssignableAgent,
   requireSellerProspect,
 } from './services/sellerProspectAccessService';
+import { listCurrentActiveAgencyMembershipsByAgentId } from './services/agencyMembershipService';
 import { nowAsDbTimestamp, toDbTimestampRequired } from './utils/dbTypeUtils';
 
 const terminalStages = SELLER_PROSPECT_TERMINAL_STAGE_VALUES as unknown as [string, ...string[]];
@@ -296,14 +298,6 @@ export const canvassingRouter = router({
    */
   getWorkspaceAccess: agentProcedure.query(async ({ ctx }) => {
     const user = requireUser(ctx);
-    if (!user.agencyId) {
-      return {
-        mode: 'independent_growth' as const,
-        message:
-          'Shared seller prospect records and mandate workflows are available through an agency team.',
-      };
-    }
-
     const db = await requireDatabase();
     try {
       const scope = await getSellerProspectActorScope(db, user);
@@ -315,7 +309,7 @@ export const canvassingRouter = router({
     } catch (error) {
       if (error instanceof TRPCError && error.code === 'FORBIDDEN') {
         return {
-          mode: 'agency_profile_required' as const,
+          mode: user.agencyId ? ('agency_profile_required' as const) : ('independent_growth' as const),
           message: error.message,
         };
       }
@@ -569,9 +563,24 @@ export const canvassingRouter = router({
         phone: agents.phone,
       })
       .from(agents)
-      .where(and(eq(agents.agencyId, scope.agencyId), eq(agents.status, 'approved')))
+      .innerJoin(
+        agencyAgentMemberships,
+        and(
+          eq(agencyAgentMemberships.agentId, agents.id),
+          eq(agencyAgentMemberships.agencyId, scope.agencyId),
+        ),
+      )
+      .where(eq(agents.status, 'approved'))
       .orderBy(asc(agents.displayName));
-    return rows.map(formatAgent);
+    const currentMembershipsByAgentId = await listCurrentActiveAgencyMembershipsByAgentId(
+      db,
+      rows.map(agent => Number(agent.id)),
+    );
+    return rows
+      .filter(
+        agent => Number(currentMembershipsByAgentId.get(Number(agent.id))?.agencyId || 0) === scope.agencyId,
+      )
+      .map(formatAgent);
   }),
 
   create: agentProcedure.input(createSellerProspectSchema).mutation(async ({ ctx, input }) => {

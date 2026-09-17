@@ -12,6 +12,8 @@ const {
   mockUpdateUserEmailVerificationTokenHash,
   mockUpdateUserLastSignIn,
   mockVerifyUserEmail,
+  mockGetUserByPasswordResetToken,
+  mockUpdateUserPassword,
 } = vi.hoisted(() => ({
   mockGetAgentByUserId: vi.fn(),
   mockGetUserByEmail: vi.fn(),
@@ -21,6 +23,8 @@ const {
   mockUpdateUserEmailVerificationTokenHash: vi.fn(),
   mockUpdateUserLastSignIn: vi.fn(),
   mockVerifyUserEmail: vi.fn(),
+  mockGetUserByPasswordResetToken: vi.fn(),
+  mockUpdateUserPassword: vi.fn(),
 }));
 
 vi.mock('../db', () => ({
@@ -31,6 +35,8 @@ vi.mock('../db', () => ({
   updateUserEmailVerificationTokenHash: mockUpdateUserEmailVerificationTokenHash,
   updateUserLastSignIn: mockUpdateUserLastSignIn,
   verifyUserEmail: mockVerifyUserEmail,
+  getUserByPasswordResetToken: mockGetUserByPasswordResetToken,
+  updateUserPassword: mockUpdateUserPassword,
 }));
 
 vi.mock('./env', () => ({
@@ -63,6 +69,33 @@ function user(overrides: Record<string, unknown> = {}) {
 }
 
 describe('session security', () => {
+  it('accepts an unexpired canonical UTC reset timestamp independently of host timezone', async () => {
+    const service = new AuthService();
+    vi.spyOn(service, 'hashPassword').mockResolvedValueOnce('new-hash');
+    mockGetUserByPasswordResetToken.mockResolvedValueOnce(
+      user({
+        passwordResetTokenExpiresAt: new Date(Date.now() + 3600000)
+          .toISOString()
+          .slice(0, 19)
+          .replace('T', ' '),
+      }),
+    );
+    await expect(service.resetPassword('reset-token', 'NewPassword!123')).resolves.toBeUndefined();
+    expect(mockUpdateUserPassword).toHaveBeenCalledWith(42, 'new-hash');
+  });
+
+  it.each(['invalid', '2000-01-01 00:00:00'])(
+    'rejects invalid or expired reset timestamp %s before changing credentials',
+    async expiry => {
+      mockGetUserByPasswordResetToken.mockResolvedValueOnce(
+        user({ passwordResetTokenExpiresAt: expiry }),
+      );
+      await expect(
+        new AuthService().resetPassword('reset-token', 'NewPassword!123'),
+      ).rejects.toThrow('Invalid or expired');
+      expect(mockUpdateUserPassword).not.toHaveBeenCalled();
+    },
+  );
   beforeEach(() => {
     vi.clearAllMocks();
     mockGetAgentByUserId.mockResolvedValue(null);

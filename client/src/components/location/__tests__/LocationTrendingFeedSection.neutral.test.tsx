@@ -38,4 +38,20 @@ describe('LocationTrendingFeedSection neutral mode', () => {
       expect.objectContaining({ enabled: false }),
     );
   });
+
+  it('does not expose the deferred Land tab, including when stale state requests it', () => {
+    render(
+      <LocationTrendingFeedSection
+        locationName="Pretoria"
+        activeTab="plot_land"
+      />,
+    );
+
+    expect(screen.queryByRole('button', { name: 'Plot & Land' })).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Explore Pretoria' })).toBeInTheDocument();
+    expect(useQuery).toHaveBeenCalledWith(
+      expect.objectContaining({ tab: 'buy' }),
+      expect.objectContaining({ enabled: false }),
+    );
+  });
 });

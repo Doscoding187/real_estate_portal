@@ -14,6 +14,7 @@ import { useAuth } from '@/_core/hooks/useAuth';
 import { useAgencyOnboardingStatus } from '@/hooks/useAgencyOnboardingStatus';
 import { getAgencyJourneyAction } from '@/lib/agencyJourney';
 import { trpc } from '@/lib/trpc';
+import { COMMERCIAL_ACTIVATION_STATE } from '@shared/commercialActivation';
 import {
   DETAIL_WORKSPACES,
   EMPTY_COMMISSION,
@@ -141,13 +142,14 @@ export function useAgencyWorkspaceData(workspace: WorkspaceId) {
     status?.hasAgency && status.recommendedNextStep !== 'workspace',
   );
   const billingJourneyNeedsAttention = Boolean(
+    COMMERCIAL_ACTIVATION_STATE.enabled &&
     status &&
-      [
-        'activate_launch_access',
-        'complete_payment',
-        'await_payment_review',
-        'renew_launch_access',
-      ].includes(status.recommendedNextStep),
+    [
+      'activate_launch_access',
+      'complete_payment',
+      'await_payment_review',
+      'renew_launch_access',
+    ].includes(status.recommendedNextStep),
   );
   const teamCoverageNeedsAttention = Boolean(
     status?.billingActivated && (teamNeedsAttention || stats.totalAgents === 0),

@@ -165,6 +165,29 @@ export function calculateCommercialTermEnd(start: Date, term: CommercialTerm): D
   return end;
 }
 
+/**
+ * Canonical commercial timestamps stored in MySQL DATETIME columns are UTC.
+ * Parsing them through the host-local timezone makes a fixed access term end
+ * at different moments on different workers, so normalize the SQL shape
+ * before evaluating any commercial authority.
+ */
+export function parseCanonicalCommercialTimestamp(
+  value: string | Date | null | undefined,
+): number | null {
+  if (!value) return null;
+  if (value instanceof Date) {
+    const timestamp = value.getTime();
+    return Number.isFinite(timestamp) ? timestamp : null;
+  }
+
+  const normalized = value.trim();
+  const utcValue = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(?:\.\d+)?$/.test(normalized)
+    ? `${normalized.replace(' ', 'T')}Z`
+    : normalized;
+  const timestamp = new Date(utcValue).getTime();
+  return Number.isFinite(timestamp) ? timestamp : null;
+}
+
 export function isPaidCommercialTermExpired(
   term: CommercialTerm,
   status: string | null | undefined,
@@ -173,9 +196,14 @@ export function isPaidCommercialTermExpired(
 ): boolean {
   if (term.kind !== 'paid_launch_access') return false;
   if (status !== 'active' && status !== 'grace_period') return false;
-  if (!currentPeriodEnd) return false;
-  const end = currentPeriodEnd instanceof Date ? currentPeriodEnd : new Date(currentPeriodEnd);
-  return !Number.isNaN(end.getTime()) && end.getTime() <= now.getTime();
+
+  // An active fixed-term Launch Access subscription cannot be valid without
+  // a canonical end. Grace periods retain their separate grace deadline
+  // authority, which is evaluated by the subscription row predicate.
+  if (!currentPeriodEnd) return status === 'active';
+
+  const end = parseCanonicalCommercialTimestamp(currentPeriodEnd);
+  return end === null || end <= now.getTime();
 }
 
 export function validatePaidLaunchAccessPayment(

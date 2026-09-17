@@ -12,8 +12,13 @@ import { Progress } from '@/components/ui/progress';
 import { ArrowLeft, ArrowRight, CheckCircle2, Upload, X } from 'lucide-react';
 import { LocationAutocomplete } from '@/components/location/LocationAutocomplete';
 import { apiFetch } from '@/lib/api';
-import { getAgentJourneyAction } from '@/lib/agentJourney';
 import type { AgentOnboardingStatus } from '@/hooks/useAgentOnboardingStatus';
+import { getAgentProfileCompletionDescription } from '@/lib/agentJourney';
+import { COMMERCIAL_ACTIVATION_STATE } from '@shared/commercialActivation';
+import {
+  parseCanonicalAgentCoverageLocationId,
+  type AgentCoverageArea,
+} from '@shared/agentCoverageArea';
 
 const TOTAL_STEPS = 5;
 
@@ -23,6 +28,7 @@ type LocationOption = {
   type: 'province' | 'city' | 'suburb';
   provinceName?: string;
   cityName?: string;
+  canonicalLocationId?: string;
 };
 
 function splitCsv(value: string) {
@@ -48,6 +54,16 @@ function formatCoverageLabel(location: LocationOption) {
   return location.name;
 }
 
+function coverageAreaFromLocation(location: LocationOption): AgentCoverageArea | null {
+  const canonical = parseCanonicalAgentCoverageLocationId(location.canonicalLocationId);
+  if (!canonical) return null;
+
+  return {
+    canonicalLocationId: canonical.canonicalLocationId,
+    label: formatCoverageLabel(location),
+  };
+}
+
 export function AgentSetupWizard() {
   const [, setLocation] = useLocation();
   const search = useSearch();
@@ -59,7 +75,7 @@ export function AgentSetupWizard() {
   const [selectedProfileImageName, setSelectedProfileImageName] = useState('');
   const [isDragOverProfileImage, setIsDragOverProfileImage] = useState(false);
   const [areaSearch, setAreaSearch] = useState('');
-  const [selectedCoverageAreas, setSelectedCoverageAreas] = useState<string[]>([]);
+  const [selectedCoverageAreas, setSelectedCoverageAreas] = useState<AgentCoverageArea[]>([]);
   const [formData, setFormData] = useState({
     displayName: '',
     phone: '',
@@ -100,7 +116,7 @@ export function AgentSetupWizard() {
 
   useEffect(() => {
     if (searchParams.get('verified') === 'true') {
-      toast.success('Email verified. Finish your profile, then activate Launch Access to publish.');
+      toast.success(`Email verified. ${getAgentProfileCompletionDescription()}`);
     }
   }, [searchParams]);
 
@@ -157,7 +173,7 @@ export function AgentSetupWizard() {
     phone: formData.phone.trim(),
     whatsapp: formData.whatsapp.trim() || undefined,
     profileImage: formData.profileImage.trim() || undefined,
-    areasServed: selectedCoverageAreas,
+    areasServed: selectedCoverageAreas.map(area => area.canonicalLocationId),
     focus: formData.focus,
     specializations: splitCsv(formData.specializations),
     propertyTypes: splitCsv(formData.propertyTypes),
@@ -176,15 +192,24 @@ export function AgentSetupWizard() {
   });
 
   const addCoverageArea = (location: LocationOption) => {
-    const nextLabel = formatCoverageLabel(location);
+    const nextArea = coverageAreaFromLocation(location);
+    if (!nextArea) {
+      toast.error('Choose a current location from the Property Listify suggestions.');
+      return;
+    }
+
     setSelectedCoverageAreas(prev =>
-      prev.includes(nextLabel) ? prev : [...prev, nextLabel].slice(0, 20),
+      prev.some(area => area.canonicalLocationId === nextArea.canonicalLocationId)
+        ? prev
+        : [...prev, nextArea].slice(0, 20),
     );
     setAreaSearch('');
   };
 
-  const removeCoverageArea = (label: string) => {
-    setSelectedCoverageAreas(prev => prev.filter(item => item !== label));
+  const removeCoverageArea = (canonicalLocationId: string) => {
+    setSelectedCoverageAreas(prev =>
+      prev.filter(area => area.canonicalLocationId !== canonicalLocationId),
+    );
   };
 
   const openProfileImagePicker = () => {
@@ -285,20 +310,15 @@ export function AgentSetupWizard() {
       setLocation('/agent/dashboard');
       return;
     }
-    const journeyAction = getAgentJourneyAction(onboardingStatus);
-
     toast.success(
-      journeyAction.href === '/agent/select-package'
-        ? 'Your professional profile is ready. Activate Launch Access to start publishing.'
+      onboardingStatus?.recommendedNextStep === 'select_package'
+        ? COMMERCIAL_ACTIVATION_STATE.enabled
+          ? 'Your professional profile is ready. Activate Launch Access to start publishing.'
+          : 'Your professional profile is ready. Continue preparing private inventory; publishing follows approved commercial activation.'
         : result.isPublic
           ? 'Your public profile is now live. Your workspace is ready for the next step.'
           : 'Profile completed. Public publishing is pending approval.',
     );
-
-    if (journeyAction.href !== '/agent/dashboard') {
-      setLocation(journeyAction.href);
-      return;
-    }
 
     setLocation('/agent/dashboard');
   };
@@ -473,15 +493,15 @@ export function AgentSetupWizard() {
                     <div className="flex flex-wrap gap-2">
                       {selectedCoverageAreas.map(area => (
                         <span
-                          key={area}
+                          key={area.canonicalLocationId}
                           className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700"
                         >
-                          {area}
+                          {area.label}
                           <button
                             type="button"
-                            onClick={() => removeCoverageArea(area)}
+                            onClick={() => removeCoverageArea(area.canonicalLocationId)}
                             className="rounded-full text-slate-400 transition hover:text-slate-700"
-                            aria-label={`Remove ${area}`}
+                            aria-label={`Remove ${area.label}`}
                           >
                             <X className="h-3.5 w-3.5" />
                           </button>

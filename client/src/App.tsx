@@ -52,7 +52,7 @@ const AgentTrainingSupport = lazy(() => import('./pages/agent/AgentTrainingSuppo
 const AgentSettings = lazy(() => import('./pages/AgentSettings'));
 const AgentSetup = lazy(() => import('./pages/AgentSetup'));
 const AgentPackageSelection = lazy(() => import('./pages/agent/AgentPackageSelection'));
-const LandAuthoringWorkspace = lazy(() => import('./pages/agent/LandAuthoringWorkspace'));
+const LandDeferred = lazy(() => import('./pages/LandDeferred'));
 const AcceptInvitation = lazy(() => import('./pages/AcceptInvitation'));
 const ExploreFeed = lazy(() => import('./pages/ExploreFeed'));
 const ExploreHome = lazy(() => import('./pages/ExploreHome'));
@@ -78,6 +78,9 @@ const ServiceProviderReviewsPage = lazy(
   () => import('./pages/services/ServiceProviderReviewsPage'),
 );
 const NavLandingPage = lazy(() => import('./pages/NavLandingPage'));
+const AssistedOnboardingRequestPage = lazy(
+  () => import('./pages/AssistedOnboardingRequestPage'),
+);
 const ProDashboardPage = lazy(() => import('./pages/pro/ProDashboardPage'));
 const ProProfilePage = lazy(() => import('./pages/pro/ProProfilePage'));
 const ProviderOnboardingWizard = lazy(() =>
@@ -89,11 +92,8 @@ const ProExplorePage = lazy(() => import('./pages/pro/ProExplorePage'));
 
 const SuperAdminDashboard = lazy(() => import('@/pages/admin/SuperAdminDashboard'));
 const AdminPropertyReview = lazy(() => import('./pages/admin/AdminPropertyReview'));
-const LandReviewWorkspace = lazy(() => import('./pages/admin/LandReviewWorkspace'));
 const SharedLivingReviewWorkspace = lazy(() => import('./pages/admin/SharedLivingReviewWorkspace'));
-const PlotsAndLand = lazy(() => import('./pages/PlotsAndLand'));
 const FarmsAndSmallholdings = lazy(() => import('./pages/FarmsAndSmallholdings'));
-const LandDetail = lazy(() => import('./pages/LandDetail'));
 const CommercialOffice = lazy(() => import('./pages/CommercialOffice'));
 const SharedLiving = lazy(() => import('./pages/SharedLiving'));
 const SharedLivingDetail = lazy(() => import('./pages/SharedLivingDetail'));
@@ -115,8 +115,6 @@ const LovableIntegrationHub = lazy(() => import('./pages/LovableIntegrationHub')
 const ListingWizard = lazy(() => import('./components/listing-wizard/ListingWizard'));
 const ListingTemplate = lazy(() => import('./pages/ListingTemplate'));
 
-// Import Development Wizard
-const CreateDevelopment = lazy(() => import('./pages/CreateDevelopment'));
 const DevelopmentsDemo = lazy(() => import('./pages/DevelopmentsDemo'));
 const DevelopmentDetail = lazy(() => import('./pages/DevelopmentDetail'));
 const DevelopmentUnitDetailPage = lazy(() => import('./pages/DevelopmentUnitDetailPage'));
@@ -149,7 +147,6 @@ const DeveloperFunnelPage = lazy(() => import('./pages/advertise/DeveloperFunnel
 const BankFunnelPage = lazy(() => import('./pages/advertise/BankFunnelPage'));
 const OriginatorFunnelPage = lazy(() => import('./pages/advertise/OriginatorFunnelPage'));
 const AgencyProductLandingPage = lazy(() => import('./pages/advertise/AgencyProductLandingPage'));
-const ActivationGate = lazy(() => import('./pages/dashboard/ActivationGate'));
 const BookStrategy = lazy(() => import('./pages/BookStrategy'));
 const RoleSelection = lazy(() => import('./pages/RoleSelection'));
 const RegistrationSuccess = lazy(() => import('./pages/RegistrationSuccess'));
@@ -191,6 +188,11 @@ const DistributionReferralApplyPage = lazy(
 // Import SearchResults page for SEO-friendly URLs
 const SearchResults = lazy(() => import('./pages/SearchResults'));
 const SuburbPage = lazy(() => import('./pages/SuburbPage'));
+
+function LegacyDeveloperAuthoringRedirect() {
+  const query = typeof window === 'undefined' ? '' : window.location.search;
+  return <Redirect to={`/developer/create-development${query}`} />;
+}
 
 function Router() {
   // Auto-migrate guest data on login
@@ -249,10 +251,14 @@ function Router() {
 
           {/* IMPORTANT: Admin Review must be BEFORE legacy wildcards */}
           {/* Otherwise /:action/:province/:locationId matches /admin/review/360002 */}
-          <Route path="/admin/review/:id" component={AdminPropertyReview} />
+          <Route path="/admin/review/:id">
+            <RequireRole role="super_admin" unauthenticatedAuthEntry="signin">
+              <AdminPropertyReview />
+            </RequireRole>
+          </Route>
           <Route path="/admin/land-review">
             <RequireRole role="super_admin">
-              <LandReviewWorkspace />
+              <LandDeferred audience="reviewer" />
             </RequireRole>
           </Route>
           <Route path="/admin/shared-living-review">
@@ -285,7 +291,7 @@ function Router() {
           </Route>
           <Route path="/agent/land/create">
             <RequireRole role="agent" unauthenticatedAuthEntry="signin">
-              <LandAuthoringWorkspace />
+              <LandDeferred audience="author" />
             </RequireRole>
           </Route>
           <Route path="/agent/commercial/create">
@@ -393,8 +399,10 @@ function Router() {
             </RequireRole>
           </Route>
           <Route path="/listing-template" component={ListingTemplate} />
-          <Route path="/developments/create" component={CreateDevelopment} />
-          <Route path="/development-wizard" component={CreateDevelopment} />
+          {/* Preserve legacy authoring URLs, but route them through the canonical
+              authenticated Developer boundary rather than mounting the wizard publicly. */}
+          <Route path="/developments/create" component={LegacyDeveloperAuthoringRedirect} />
+          <Route path="/development-wizard" component={LegacyDeveloperAuthoringRedirect} />
 
           {/* Canonical Developments Root */}
           <Route path="/new-developments" component={DevelopmentsDemo} />
@@ -506,9 +514,10 @@ function Router() {
           <Route path="/tools/:slug" component={NavLandingPage} />
           <Route path="/legal/:slug" component={NavLandingPage} />
           <Route path="/support/:slug" component={NavLandingPage} />
+          <Route path="/company/contact" component={AssistedOnboardingRequestPage} />
           <Route path="/company/:slug" component={NavLandingPage} />
           <Route path="/about" component={NavLandingPage} />
-          <Route path="/contact" component={NavLandingPage} />
+          <Route path="/contact" component={AssistedOnboardingRequestPage} />
           <Route path="/careers" component={NavLandingPage} />
           <Route path="/press" component={NavLandingPage} />
           <Route path="/partners" component={NavLandingPage} />
@@ -596,16 +605,12 @@ function Router() {
             <Redirect to="/agent/settings" />
           </Route>
 
+          {/* A stale public activation URL must not imply live inventory,
+              CRM import, or marketplace access while normal runtime remains
+              preparation-only. Preserve the inbound URL as a safe public
+              handoff rather than mounting the retired activation screen. */}
           <Route path="/activation">
-            <Suspense
-              fallback={
-                <div className="min-h-screen flex items-center justify-center bg-slate-50">
-                  <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-                </div>
-              }
-            >
-              <ActivationGate />
-            </Suspense>
+            <Redirect to="/advertise" />
           </Route>
 
           <Route path="/agency">
@@ -702,8 +707,8 @@ function Router() {
               return <SearchResults />;
             }}
           />
-          <Route path="/plots-and-land" component={PlotsAndLand} />
-          <Route path="/land/:slug" component={LandDetail} />
+          <Route path="/plots-and-land" component={LandDeferred} />
+          <Route path="/land/:slug" component={LandDeferred} />
           <Route path="/property-to-rent" component={SearchResults} />
           <Route path="/farms-and-smallholdings" component={FarmsAndSmallholdings} />
 

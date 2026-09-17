@@ -44,6 +44,7 @@ import { nowAsDbTimestamp } from './utils/dbTypeUtils';
 import { developmentService } from './services/developmentService';
 import { resolvePropertiesForListings } from './services/inventoryLinkResolver';
 import { getDiscoveryOpsReport } from './services/discoveryOpsReportService';
+import { excludeLandFromGenericListingWorkflow } from './services/landLaunchContainmentService';
 
 /**
  * Admin router - Super admin and agency admin endpoints
@@ -70,7 +71,12 @@ export const adminRouter = router({
         updatedAt: listings.updatedAt,
       })
       .from(listings)
-      .where(inArray(listings.status, ['approved', 'published']))
+      .where(
+        and(
+          inArray(listings.status, ['approved', 'published']),
+          excludeLandFromGenericListingWorkflow(),
+        ),
+      )
       .orderBy(desc(listings.updatedAt));
 
     const resolvedMap = await resolvePropertiesForListings(db, candidateListings);
@@ -506,7 +512,10 @@ export const adminRouter = router({
         const offset = (input.page - 1) * input.limit;
 
         // Build where conditions
-        const conditions: SQL[] = [];
+        // This is the generic Listing oversight surface. The deferred Land
+        // vertical has its own specialist authority and must not reappear as
+        // a generic moderation candidate through an older direct route.
+        const conditions: SQL[] = [excludeLandFromGenericListingWorkflow()];
         if (input.role) conditions.push(eq(users.role, input.role));
         if (input.agencyId) conditions.push(eq(users.agencyId, input.agencyId));
         const search = input.search?.trim();

@@ -2,6 +2,8 @@ import bcrypt from 'bcryptjs';
 import type { AuthorizedDatabaseOperation } from '../authorization';
 import type { AuthoritySqlConnection } from '../connectionAuthority';
 import { assertOwnedDisposableTarget } from '../lifecycle';
+import { serializeAgentCoverageAreas } from '../../../../shared/agentCoverageArea';
+import { encodeCanonicalLocationId } from '../../../../shared/locationAuthority';
 import {
   PLE_MANUAL_LOCATION_CAPABILITY,
   assertOperation,
@@ -14,13 +16,14 @@ import {
   type AdapterEvidence,
 } from './common';
 import type { ResolvedDatabaseAuthority } from '../types';
+import { verifyCanonicalGeographyReferenceData } from './canonicalGeography';
 import {
   assertCentralEnvironmentReady,
   inspectCentralLocalEnvironment,
   resolveCentralLocalEnvironment,
 } from '../../../../scripts/localEnvironmentAuthority';
 
-export const LISTING_PREVIEW_FIXTURE_VERSION = 'listing-preview-auth-v1' as const;
+export const LISTING_PREVIEW_FIXTURE_VERSION = 'listing-preview-auth-v2' as const;
 
 const FIXTURE = Object.freeze({
   agency: Object.freeze({
@@ -55,7 +58,6 @@ const FIXTURE = Object.freeze({
     bio: 'Local-only approved agent profile for reviewing the Property Listing Engine.',
     focus: 'both' as const,
     propertyTypes: JSON.stringify(['Apartment', 'Townhouse', 'House']),
-    areasServed: JSON.stringify(['Johannesburg', 'Sandton']),
     languages: JSON.stringify(['English']),
     profileCompletionScore: 80,
   }),
@@ -77,6 +79,10 @@ const FIXTURE_PAYLOAD = Object.freeze({
   agencyAdmin: FIXTURE.agencyAdmin,
   agentProfile: FIXTURE.agentProfile,
   branding: FIXTURE.branding,
+  coverageAuthority: {
+    location: 'gauteng/johannesburg/sandton',
+    format: 'typed-canonical-location-id-with-resolved-label',
+  },
   publicationEntitlement: 'not-provisioned',
 });
 
@@ -425,6 +431,55 @@ async function ensureBranding(
   return { state: 'created' };
 }
 
+type CanonicalSandtonLocation = {
+  provinceId: number;
+  provinceName: string;
+  cityId: number;
+  cityName: string;
+  suburbId: number;
+  suburbName: string;
+};
+
+function serializedSandtonCoverage(location: CanonicalSandtonLocation): string {
+  const coverage = serializeAgentCoverageAreas([
+    {
+      canonicalLocationId: encodeCanonicalLocationId('suburb', location.suburbId),
+      label: [location.suburbName, location.cityName, location.provinceName].join(', '),
+    },
+  ]);
+  if (!coverage) throw new Error('Listing preview fixture requires one canonical agent coverage area.');
+  return coverage;
+}
+
+async function resolveExactSandtonLocation(
+  connection: AuthoritySqlConnection,
+): Promise<CanonicalSandtonLocation> {
+  const rows = await queryRows(
+    connection,
+    `SELECT p.id AS province_id, p.name AS province_name,
+            c.id AS city_id, c.name AS city_name,
+            s.id AS suburb_id, s.name AS suburb_name
+       FROM provinces p
+       INNER JOIN cities c ON c.provinceId = p.id
+       INNER JOIN suburbs s ON s.cityId = c.id
+      WHERE p.slug = ? AND c.slug = ? AND s.slug = ?`,
+    ['gauteng', 'johannesburg', 'sandton'],
+  );
+  if (rows.length !== 1) {
+    throw new Error(
+      'Listing preview fixture requires the canonical Gauteng/Johannesburg/Sandton hierarchy.',
+    );
+  }
+  return {
+    provinceId: asId({ id: rowValue(rows[0], 'province_id') }, 'province'),
+    provinceName: String(rowValue(rows[0], 'province_name') || '').trim(),
+    cityId: asId({ id: rowValue(rows[0], 'city_id') }, 'city'),
+    cityName: String(rowValue(rows[0], 'city_name') || '').trim(),
+    suburbId: asId({ id: rowValue(rows[0], 'suburb_id') }, 'suburb'),
+    suburbName: String(rowValue(rows[0], 'suburb_name') || '').trim(),
+  };
+}
+
 async function findAgentProfile(
   connection: AuthoritySqlConnection,
   userId: number,
@@ -447,7 +502,7 @@ async function findAgentProfile(
 
 async function ensureAgentProfile(
   connection: AuthoritySqlConnection,
-  input: { userId: number; agencyId: number; approvedBy: number },
+  input: { userId: number; agencyId: number; approvedBy: number; areasServed: string },
 ): Promise<AgentProfileFixtureResult> {
   const existing = await findAgentProfile(connection, input.userId);
   if (existing) {
@@ -476,7 +531,7 @@ async function ensureAgentProfile(
         FIXTURE.agent.phone,
         FIXTURE.agentProfile.focus,
         FIXTURE.agentProfile.propertyTypes,
-        FIXTURE.agentProfile.areasServed,
+        input.areasServed,
         FIXTURE.agentProfile.languages,
         FIXTURE.agentProfile.profileCompletionScore,
         input.approvedBy,
@@ -507,7 +562,7 @@ async function ensureAgentProfile(
       FIXTURE.agent.phone,
       FIXTURE.agentProfile.focus,
       FIXTURE.agentProfile.propertyTypes,
-      FIXTURE.agentProfile.areasServed,
+      input.areasServed,
       FIXTURE.agentProfile.languages,
       FIXTURE.agentProfile.profileCompletionScore,
       input.approvedBy,
@@ -557,6 +612,7 @@ async function ensureMembership(
 async function verifyFixtureRows(
   connection: AuthoritySqlConnection,
   password: string,
+  areasServed: string,
 ): Promise<ListingPreviewFixtureEvidence['verified']> {
   const agency = await findAgency(connection);
   if (!agency) throw new Error('Listing preview fixture agency is missing.');
@@ -605,6 +661,7 @@ async function verifyFixtureRows(
   requireExact(rowValue(agentProfile, 'agencyId'), agencyId, 'agent profile agency ownership');
   requireExact(rowValue(agentProfile, 'status'), 'approved', 'agent profile status');
   requireExact(rowValue(agentProfile, 'isVerified'), 1, 'agent profile verification');
+  requireExact(rowValue(agentProfile, 'areasServed'), areasServed, 'agent profile canonical coverage');
   if (!String(rowValue(agentProfile, 'phone') || '').trim()) {
     throw new Error('Listing preview fixture agent profile contact is missing.');
   }
@@ -671,6 +728,8 @@ export async function prepareListingPreviewFixture(input: {
     connection: input.connection,
     requiredCapabilities: [PLE_MANUAL_LOCATION_CAPABILITY],
   });
+  await verifyCanonicalGeographyReferenceData(input.connection);
+  const coverage = serializedSandtonCoverage(await resolveExactSandtonLocation(input.connection));
   const password = localPreviewPassword();
 
   const prepared = await withTransaction(input.connection, async () => {
@@ -692,6 +751,7 @@ export async function prepareListingPreviewFixture(input: {
       userId: agentUser.id,
       agencyId: agency.id,
       approvedBy: agencyAdminUser.id,
+      areasServed: coverage,
     });
     const membership = await ensureMembership(input.connection, {
       agencyId: agency.id,
@@ -701,7 +761,7 @@ export async function prepareListingPreviewFixture(input: {
     return { agency, agencyAdminUser, agentUser, branding, agentProfile, membership };
   });
 
-  const verified = await verifyFixtureRows(input.connection, password);
+  const verified = await verifyFixtureRows(input.connection, password, coverage);
   return {
     ...base,
     fixture: LISTING_PREVIEW_FIXTURE_VERSION,
@@ -737,8 +797,10 @@ export async function verifyListingPreviewFixture(input: {
     connection: input.connection,
     requiredCapabilities: [PLE_MANUAL_LOCATION_CAPABILITY],
   });
+  await verifyCanonicalGeographyReferenceData(input.connection);
+  const coverage = serializedSandtonCoverage(await resolveExactSandtonLocation(input.connection));
   const password = localPreviewPassword();
-  const verified = await verifyFixtureRows(input.connection, password);
+  const verified = await verifyFixtureRows(input.connection, password, coverage);
   return {
     ...base,
     fixture: LISTING_PREVIEW_FIXTURE_VERSION,

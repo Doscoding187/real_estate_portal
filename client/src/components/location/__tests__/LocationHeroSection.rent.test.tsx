@@ -35,4 +35,21 @@ describe('LocationHeroSection Rent controls', () => {
     expect(screen.queryByText('Lease Term')).not.toBeInTheDocument();
     expect(screen.queryByText('Furnished Only')).not.toBeInTheDocument();
   });
+
+  it('does not expose the deferred Land journey or Land filters', () => {
+    render(
+      <LocationHeroSection
+        locationName="Johannesburg"
+        locationSlug="gauteng/johannesburg"
+        locationType="city"
+        locationId={12}
+        backgroundImage="/johannesburg.jpg"
+        listingCount={0}
+      />,
+    );
+
+    expect(screen.queryByRole('button', { name: 'Plot & Land' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Buy' }));
+    expect(screen.queryByText('Land & Plots')).not.toBeInTheDocument();
+  });
 });

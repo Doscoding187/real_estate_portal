@@ -31,6 +31,7 @@ import {
   COMMERCIAL_PUBLIC_JOURNEY_HANDOFF_MESSAGE,
   isCommercialMarketingPropertyType,
 } from '../shared/commercial-domain';
+import { excludeLandFromGenericPublicProjection } from './services/landLaunchContainmentService';
 
 function rejectCommercialPropertyTypes(values: readonly unknown[] | undefined): void {
   if (!values?.some(value => isCommercialMarketingPropertyType(value))) return;
@@ -504,6 +505,7 @@ export const locationRouter = router({
         sql`${properties.publicLongitude} BETWEEN ${input.bounds.west} AND ${input.bounds.east}`,
         eq(properties.status, 'published'),
         ne(properties.propertyType, 'commercial'),
+        excludeLandFromGenericPublicProjection(),
       ];
 
       // Apply filters
@@ -804,6 +806,7 @@ export const locationRouter = router({
                 sql`${properties.publicLongitude} BETWEEN ${gridLng} AND ${gridLng + lngStep}`,
                 eq(properties.status, 'published'),
                 ne(properties.propertyType, 'commercial'),
+                excludeLandFromGenericPublicProjection(),
               ),
             );
 

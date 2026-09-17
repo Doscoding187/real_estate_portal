@@ -46,8 +46,12 @@ import {
 } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { toast } from 'sonner';
+import { CommercialActivationNotice } from '@/components/commercial/CommercialActivationNotice';
+import { COMMERCIAL_ACTIVATION_STATE } from '@shared/commercialActivation';
 
-export default function SubscriptionManagementPage({ initialTab = 'subscriptions' }: { initialTab?: string } = {}) {
+export default function SubscriptionManagementPage({
+  initialTab = 'subscriptions',
+}: { initialTab?: string } = {}) {
   const utils = trpc.useUtils();
   const [activeTab, setActiveTab] = useState(initialTab);
   const [searchTerm, setSearchTerm] = useState('');
@@ -70,10 +74,12 @@ export default function SubscriptionManagementPage({ initialTab = 'subscriptions
     },
   );
 
-  const { data: plansData, isLoading: isLoadingPlans } =
-    trpc.billing.plans.useQuery({ segment: 'agency' }, {
+  const { data: plansData, isLoading: isLoadingPlans } = trpc.billing.plans.useQuery(
+    { segment: 'agency' },
+    {
       enabled: activeTab === 'plans',
-    });
+    },
+  );
 
   const {
     data: proofsData,
@@ -102,6 +108,10 @@ export default function SubscriptionManagementPage({ initialTab = 'subscriptions
   });
 
   const handleVerifyPayment = (paymentId: number, status: 'verified' | 'rejected') => {
+    if (!COMMERCIAL_ACTIVATION_STATE.enabled) {
+      toast.info(COMMERCIAL_ACTIVATION_STATE.message);
+      return;
+    }
     verifyPaymentMutation.mutate({
       paymentId,
       decision: status === 'verified' ? 'approve' : 'reject',
@@ -109,6 +119,10 @@ export default function SubscriptionManagementPage({ initialTab = 'subscriptions
   };
 
   const handleRequestCorrection = (paymentId: number) => {
+    if (!COMMERCIAL_ACTIVATION_STATE.enabled) {
+      toast.info(COMMERCIAL_ACTIVATION_STATE.message);
+      return;
+    }
     verifyPaymentMutation.mutate({
       paymentId,
       decision: 'request_correction',
@@ -181,6 +195,7 @@ export default function SubscriptionManagementPage({ initialTab = 'subscriptions
 
   return (
     <div className="space-y-6 p-6 pb-20">
+      <CommercialActivationNotice />
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
@@ -443,8 +458,13 @@ export default function SubscriptionManagementPage({ initialTab = 'subscriptions
                     </TableRow>
                   ) : (
                     financeRows.map(row => (
-                      <TableRow key={row.payment.id} className="hover:bg-slate-50/50 transition-colors">
-                        <TableCell>{new Date(row.payment.createdAt).toLocaleDateString()}</TableCell>
+                      <TableRow
+                        key={row.payment.id}
+                        className="hover:bg-slate-50/50 transition-colors"
+                      >
+                        <TableCell>
+                          {new Date(row.payment.createdAt).toLocaleDateString()}
+                        </TableCell>
                         <TableCell>
                           <div className="flex flex-col">
                             <span className="font-medium">
@@ -465,7 +485,9 @@ export default function SubscriptionManagementPage({ initialTab = 'subscriptions
                             <Badge variant="outline" className="w-fit font-mono text-xs">
                               {row.payment.paymentReference}
                             </Badge>
-                            <span className="text-xs text-slate-500">{row.invoice.invoiceNumber}</span>
+                            <span className="text-xs text-slate-500">
+                              {row.invoice.invoiceNumber}
+                            </span>
                           </div>
                         </TableCell>
                         <TableCell>
@@ -488,6 +510,7 @@ export default function SubscriptionManagementPage({ initialTab = 'subscriptions
                             <Button
                               size="sm"
                               variant="outline"
+                              disabled={!COMMERCIAL_ACTIVATION_STATE.enabled}
                               className="text-green-600 hover:bg-green-50 border-green-200"
                               onClick={() => handleVerifyPayment(row.payment.id, 'verified')}
                             >
@@ -497,6 +520,7 @@ export default function SubscriptionManagementPage({ initialTab = 'subscriptions
                             <Button
                               size="sm"
                               variant="outline"
+                              disabled={!COMMERCIAL_ACTIVATION_STATE.enabled}
                               className="text-amber-600 hover:bg-amber-50 border-amber-200"
                               onClick={() => handleRequestCorrection(row.payment.id)}
                             >
@@ -505,6 +529,7 @@ export default function SubscriptionManagementPage({ initialTab = 'subscriptions
                             <Button
                               size="sm"
                               variant="outline"
+                              disabled={!COMMERCIAL_ACTIVATION_STATE.enabled}
                               className="text-red-600 hover:bg-red-50 border-red-200"
                               onClick={() => handleVerifyPayment(row.payment.id, 'rejected')}
                             >

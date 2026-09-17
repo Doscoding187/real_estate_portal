@@ -10,6 +10,7 @@
 import { getDb } from '../db';
 import { locations, properties, developments, locationSearches } from '../../drizzle/schema';
 import { eq, and, or, like, inArray, SQL, sql, ne } from 'drizzle-orm';
+import { excludeLandFromGenericPublicProjection } from './landLaunchContainmentService';
 
 export interface SearchOptions {
   query: string;
@@ -330,6 +331,7 @@ async function searchListings(query: string, limit: number = 10): Promise<Listin
         ),
         eq(properties.status, 'published'),
         ne(properties.propertyType, 'commercial'),
+        excludeLandFromGenericPublicProjection(),
       ),
     )
     .limit(limit)) as ListingRow[];
@@ -421,6 +423,7 @@ export async function filterListingsByPlaceId(
     eq(properties.locationId, location.id),
     eq(properties.status, 'published'),
     ne(properties.propertyType, 'commercial'),
+    excludeLandFromGenericPublicProjection(),
   ];
 
   if (filters?.propertyType?.length)
@@ -469,6 +472,7 @@ async function filterListingsByPlaceIdDirect(
     eq(properties.placeId, placeId),
     eq(properties.status, 'published'),
     ne(properties.propertyType, 'commercial'),
+    excludeLandFromGenericPublicProjection(),
   ];
 
   if (filters?.propertyType?.length)

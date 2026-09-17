@@ -16,12 +16,17 @@ import {
   type CanonicalDevelopmentCatalogue,
   type SupportedPublicTransactionType,
 } from './developerEngineCatalogue';
+import {
+  isDeferredLandDevelopmentType,
+  isLandVerticalAvailable,
+} from '../../shared/landLaunchPolicy';
 
 export type PublicDevelopmentEligibilityReason =
   | 'not_published'
   | 'not_approved'
   | 'unsupported_transaction'
   | 'unsupported_development_type'
+  | 'land_vertical_deferred'
   | 'missing_publisher'
   | 'publisher_not_visible'
   | 'missing_source_attribution'
@@ -60,6 +65,9 @@ export function evaluatePublicDevelopmentEligibility(
   // Commercial inventory merely because its publication flags are live.
   if (development.developmentType === 'commercial') {
     reasons.push('unsupported_development_type');
+  }
+  if (isDeferredLandDevelopmentType(development.developmentType)) {
+    reasons.push('land_vertical_deferred');
   }
 
   const supportedTransactionType = isSupportedPublicTransaction(development.transactionType)
@@ -174,6 +182,7 @@ export function publicDevelopmentEligibilityConditions(): SQL {
     eq(developments.isPublished, 1),
     eq(developments.approvalStatus, 'approved'),
     ne(developments.developmentType, 'commercial'),
+    isLandVerticalAvailable() ? undefined : ne(developments.developmentType, 'land'),
     sql`(${developments.transactionType} IN ('for_sale', 'for_rent'))`,
     publisherExists,
     sql`(${developments.developmentType} = 'land' OR ${activeUnitTypeExists})`,

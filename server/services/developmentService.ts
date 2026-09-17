@@ -10,7 +10,11 @@ import {
   submissionValidationError,
   validatePersistedSubmissionReadiness,
 } from './developmentSubmissionReadiness';
-import { throwAuctionPublicationDisabled } from './developerEngineContainment';
+import {
+  assertLandDevelopmentDraftOperationAvailable,
+  assertLandDevelopmentOperationAvailable,
+  throwAuctionPublicationDisabled,
+} from './developerEngineContainment';
 import { publicDevelopmentEligibilityConditions } from './publicDevelopmentEligibility';
 import { assertDevelopmentPublicTransitionAllowed } from './developmentSupersessionPolicy';
 import { buildDevelopmentRootPath } from './developmentRouteAuthority';
@@ -926,6 +930,10 @@ export async function createDevelopment(
       { developmentType: (developmentData as any).developmentType },
     );
   }
+  assertLandDevelopmentOperationAvailable(
+    (developmentData as any).developmentType,
+    'Land development authoring',
+  );
 
   let baseSlug = (developmentData as any).slug as string | undefined;
   if (!baseSlug || baseSlug.trim() === '') {
@@ -1292,12 +1300,15 @@ export async function updateDevelopment(
   // ---------------------------------------------------------------------------
   // Categorization / types
   // ---------------------------------------------------------------------------
-  if (developmentData.developmentType !== undefined)
-    updatePayload.developmentType = requireEnum(
+  if (developmentData.developmentType !== undefined) {
+    const developmentType = requireEnum(
       developmentData.developmentType,
       ['residential', 'commercial', 'mixed_use', 'land'],
       'developmentType',
     );
+    assertLandDevelopmentOperationAvailable(developmentType, 'Land development authoring');
+    updatePayload.developmentType = developmentType;
+  }
   if (developmentData.transactionType !== undefined)
     updatePayload.transactionType = normalizeTransactionType(developmentData.transactionType);
   if (developmentData.propertyCategory !== undefined)
@@ -1616,6 +1627,13 @@ export async function updateDevelopment(
   console.log('[updateDevelopment] Update payload fields:', Object.keys(updatePayload));
 
   const persistUpdate = async (writeDb: any, current?: DevelopmentRow) => {
+    if (current) {
+      assertLandDevelopmentOperationAvailable(
+        current.developmentType,
+        'Land development authoring',
+      );
+    }
+
     const persistedPayload = { ...updatePayload };
 
     // A live catalogue record cannot be edited in place. Until S1 adds
@@ -1784,6 +1802,7 @@ export async function updateDeveloperUnitAvailability(
     const [development] = await tx
       .select({
         id: developments.id,
+        developmentType: developments.developmentType,
         approvalStatus: developments.approvalStatus,
         isPublished: developments.isPublished,
       })
@@ -1800,6 +1819,10 @@ export async function updateDeveloperUnitAvailability(
     if (!development) {
       throw new TRPCError({ code: 'NOT_FOUND', message: 'Development not found' });
     }
+    assertLandDevelopmentOperationAvailable(
+      development.developmentType,
+      'Land development availability updates',
+    );
     if (development.approvalStatus !== 'approved' || Number(development.isPublished) !== 1) {
       throw new TRPCError({
         code: 'PRECONDITION_FAILED',
@@ -2524,6 +2547,10 @@ async function publishDevelopment(
     if (!ownedDevelopment) {
       throw new TRPCError({ code: 'NOT_FOUND', message: 'Development not found' });
     }
+    assertLandDevelopmentOperationAvailable(
+      ownedDevelopment.developmentType,
+      'Land development publication',
+    );
     await assertDevelopmentPublicTransitionAllowed(tx, id);
     if (ownedDevelopment.transactionType === 'auction') {
       throwAuctionPublicationDisabled();
@@ -2714,6 +2741,10 @@ export async function submitPlatformCuratedDevelopment(
       });
     }
 
+    assertLandDevelopmentOperationAvailable(
+      development.developmentType,
+      'Land development submission',
+    );
     await assertDevelopmentPublicTransitionAllowed(tx, id);
     if (development.transactionType === 'auction') throwAuctionPublicationDisabled();
 
@@ -3037,6 +3068,10 @@ export async function publishPlatformCuratedDevelopmentInTransaction(
       });
     }
 
+    assertLandDevelopmentOperationAvailable(
+      existingDev.developmentType,
+      'Land development publication',
+    );
     await assertDevelopmentPublicTransitionAllowed(tx, id);
     if (existingDev.transactionType === 'auction') {
       throwAuctionPublicationDisabled();
@@ -3222,6 +3257,10 @@ export async function completeReviewInTransaction(
     throwAuctionPublicationDisabled();
   }
   if (decision === 'approved') {
+    assertLandDevelopmentOperationAvailable(
+      development.developmentType,
+      'Land development approval',
+    );
     await assertDevelopmentPublicTransitionAllowed(tx, developmentId, options);
     const reviewUnitTypes = await tx
       .select()
@@ -3382,6 +3421,11 @@ export async function publishDeveloperOwnedDevelopmentInTransaction(
     throwAuctionPublicationDisabled();
   }
 
+  assertLandDevelopmentOperationAvailable(
+    development.developmentType,
+    'Land development publication',
+  );
+
   await assertDevelopmentPublicTransitionAllowed(tx, developmentId, {
     allowVerifiedRelationshipId: supersessionRelationshipId,
   });
@@ -3498,6 +3542,10 @@ export async function saveDraft(
       message: `Developer profile for user ID ${developerId} not found`,
     });
   }
+  assertLandDevelopmentDraftOperationAvailable(
+    wizardState,
+    'Land development draft preparation',
+  );
 
   try {
     const draftPayload = {

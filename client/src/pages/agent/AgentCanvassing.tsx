@@ -8,7 +8,11 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useAgentOnboardingStatus } from '@/hooks/useAgentOnboardingStatus';
-import { getAgentJourneyAction, isAgentProfileJourneyStep } from '@/lib/agentJourney';
+import {
+  getAgentJourneyAction,
+  getAgentProfileCompletionDescription,
+  isAgentProfileJourneyStep,
+} from '@/lib/agentJourney';
 import { trpc } from '@/lib/trpc';
 import { cn } from '@/lib/utils';
 import { ArrowRight, Building2, Loader2, MapPinned, Megaphone, Share2, Users } from 'lucide-react';
@@ -159,7 +163,7 @@ export default function AgentCanvassing() {
             }
             description={
               needsProfileCompletion
-                ? 'Finish your professional profile, then activate Launch Access to use your agent growth workspace.'
+                ? getAgentProfileCompletionDescription()
                 : journeyAction.description
             }
             actionLabel={journeyAction.waiting ? 'Return to dashboard' : journeyAction.label}

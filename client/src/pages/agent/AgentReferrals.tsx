@@ -7,7 +7,11 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useAgentOnboardingStatus } from '@/hooks/useAgentOnboardingStatus';
-import { getAgentJourneyAction, isAgentProfileJourneyStep } from '@/lib/agentJourney';
+import {
+  getAgentJourneyAction,
+  getAgentProfileCompletionDescription,
+  isAgentProfileJourneyStep,
+} from '@/lib/agentJourney';
 import { trpc } from '@/lib/trpc';
 import { cn } from '@/lib/utils';
 import {
@@ -231,7 +235,7 @@ export default function AgentReferrals() {
             }
             description={
               needsProfileCompletion
-                ? 'Finish your professional profile, then activate Launch Access to work buyer referrals from your agent workspace.'
+                ? getAgentProfileCompletionDescription()
                 : journeyAction.description
             }
             actionLabel={journeyAction.waiting ? 'Return to dashboard' : journeyAction.label}

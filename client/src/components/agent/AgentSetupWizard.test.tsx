@@ -6,6 +6,7 @@ const {
   profileQueryMock,
   publishProfileMutationMock,
   saveProfileMutationMock,
+  saveProfileMutateAsyncMock,
   setLocationMock,
   toastErrorMock,
   toastSuccessMock,
@@ -15,6 +16,7 @@ const {
   profileQueryMock: vi.fn(),
   publishProfileMutationMock: vi.fn(),
   saveProfileMutationMock: vi.fn(),
+  saveProfileMutateAsyncMock: vi.fn(),
   setLocationMock: vi.fn(),
   toastErrorMock: vi.fn(),
   toastSuccessMock: vi.fn(),
@@ -52,7 +54,23 @@ vi.mock('@/lib/trpc', () => ({
 }));
 
 vi.mock('@/components/location/LocationAutocomplete', () => ({
-  LocationAutocomplete: () => null,
+  LocationAutocomplete: ({ onLocationSelect }: { onLocationSelect: (location: unknown) => void }) => (
+    <button
+      type="button"
+      onClick={() =>
+        onLocationSelect({
+          id: 34,
+          name: 'Sandton',
+          type: 'suburb',
+          cityName: 'Johannesburg',
+          provinceName: 'Gauteng',
+          canonicalLocationId: 'suburb:34',
+        })
+      }
+    >
+      Select Sandton coverage
+    </button>
+  ),
 }));
 
 vi.mock('sonner', () => ({
@@ -79,10 +97,11 @@ beforeEach(() => {
     },
     isLoading: false,
   });
+  saveProfileMutateAsyncMock.mockResolvedValue({});
   saveProfileMutationMock.mockReturnValue({
     data: null,
     isPending: false,
-    mutateAsync: vi.fn().mockResolvedValue({}),
+    mutateAsync: saveProfileMutateAsyncMock,
   });
   publishProfileMutationMock.mockReturnValue({
     isPending: false,
@@ -95,6 +114,31 @@ beforeEach(() => {
 });
 
 describe('AgentSetupWizard completion', () => {
+  it('opens the preparation workspace after profile completion without forcing payment', async () => {
+    apiFetchMock.mockResolvedValue({ recommendedNextStep: 'select_package' });
+    render(<AgentSetupWizard />);
+    for (let step = 0; step < 4; step += 1) {
+      fireEvent.click(screen.getByRole('button', { name: 'Skip' }));
+    }
+    fireEvent.click(await screen.findByRole('button', { name: 'Complete Setup' }));
+    await waitFor(() => expect(setLocationMock).toHaveBeenCalledWith('/agent/dashboard'));
+    expect(setLocationMock).not.toHaveBeenCalledWith('/agent/select-package');
+  });
+  it('submits a typed canonical coverage identity instead of its display label', async () => {
+    render(<AgentSetupWizard />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Skip' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Select Sandton coverage' }));
+    expect(screen.getByText('Sandton, Johannesburg, Gauteng')).toBeDefined();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save & Continue' }));
+    await waitFor(() =>
+      expect(saveProfileMutateAsyncMock).toHaveBeenCalledWith(
+        expect.objectContaining({ areasServed: ['suburb:34'] }),
+      ),
+    );
+  });
+
   it('hands off to a retryable dashboard state when the post-save status lookup fails', async () => {
     apiFetchMock.mockRejectedValue(new Error('Status service unavailable'));
 

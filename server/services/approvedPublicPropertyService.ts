@@ -1,6 +1,12 @@
 import * as listingDb from '../db';
-import { inArray } from 'drizzle-orm';
-import { listingMedia, listings, properties, propertyImages } from '../../drizzle/schema';
+import { and, eq, inArray } from 'drizzle-orm';
+import {
+  landListingLinks,
+  listingMedia,
+  listings,
+  properties,
+  propertyImages,
+} from '../../drizzle/schema';
 import { resolveMediaDeliveryUrl } from '../_core/mediaStorage';
 import {
   buildCanonicalCorePropertyDetails,
@@ -29,6 +35,12 @@ export interface ApprovedPublicPropertyDataSource {
   getPropertyImages(propertyId: number): Promise<any[]>;
   getListingById(listingId: number): Promise<any>;
   getListingMedia(listingId: number): Promise<any[]>;
+  /**
+   * Optional only so isolated contract fixtures can supply source aggregates
+   * without a database. The production source always checks canonical Land
+   * links before admitting a generic public projection.
+   */
+  isActiveLandListing?(listingId: number): Promise<boolean>;
 }
 
 export interface ApprovedPublicPropertyBatchDataSource {
@@ -36,6 +48,8 @@ export interface ApprovedPublicPropertyBatchDataSource {
   getPropertyImagesByPropertyIds(propertyIds: readonly number[]): Promise<any[]>;
   getListingsByIds(listingIds: readonly number[]): Promise<any[]>;
   getListingMediaByListingIds(listingIds: readonly number[]): Promise<any[]>;
+  /** See the single-record counterpart above. */
+  getActiveLandListingIds?(listingIds: readonly number[]): Promise<number[]>;
 }
 
 /** Keeps every public-eligibility IN query below a predictable parameter bound. */
@@ -55,6 +69,21 @@ const defaultDataSource: ApprovedPublicPropertyDataSource = {
   getPropertyImages: propertyId => listingDb.getPropertyImages(propertyId),
   getListingById: listingId => listingDb.getListingById(listingId),
   getListingMedia: listingId => listingDb.getListingMedia(listingId),
+  async isActiveLandListing(listingId) {
+    const database = await listingDb.getDb();
+    if (!database) throw new Error('Database not available');
+    const [link] = await database
+      .select({ id: landListingLinks.id })
+      .from(landListingLinks)
+      .where(
+        and(
+          eq(landListingLinks.listingId, listingId),
+          eq(landListingLinks.linkStatus, 'active'),
+        ),
+      )
+      .limit(1);
+    return Boolean(link);
+  },
 };
 
 const defaultBatchDataSource: ApprovedPublicPropertyBatchDataSource = {
@@ -90,6 +119,21 @@ const defaultBatchDataSource: ApprovedPublicPropertyBatchDataSource = {
       .from(listingMedia)
       .where(inArray(listingMedia.listingId, [...listingIds]));
   },
+  async getActiveLandListingIds(listingIds) {
+    if (listingIds.length === 0) return [];
+    const database = await listingDb.getDb();
+    if (!database) throw new Error('Database not available');
+    const rows = await database
+      .select({ listingId: landListingLinks.listingId })
+      .from(landListingLinks)
+      .where(
+        and(
+          inArray(landListingLinks.listingId, [...listingIds]),
+          eq(landListingLinks.linkStatus, 'active'),
+        ),
+      );
+    return rows.map(row => Number(row.listingId));
+  },
 };
 
 async function loadRowsInBoundedBatches<T>(
@@ -108,10 +152,30 @@ function isPublicPropertyStatus(status: unknown): boolean {
   return status === 'available' || status === 'published';
 }
 
+function isDedicatedLandWorkflowListing(listing: any): boolean {
+  if (['plot', 'land'].includes(String(listing?.propertyType || '').toLowerCase())) {
+    return true;
+  }
+
+  const details = listing?.propertyDetails;
+  if (!details) return false;
+  if (typeof details === 'object' && !Array.isArray(details)) {
+    return details.landEngine === true;
+  }
+  if (typeof details !== 'string') return false;
+  try {
+    const parsed = JSON.parse(details);
+    return Boolean(parsed && typeof parsed === 'object' && !Array.isArray(parsed) && parsed.landEngine === true);
+  } catch {
+    return false;
+  }
+}
+
 function isApprovedSourceListing(listing: any, expectedListingId: number): boolean {
   return Boolean(
     listing &&
     Number(listing.id) === expectedListingId &&
+    !isDedicatedLandWorkflowListing(listing) &&
     listing.revisionOfListingId == null &&
     // `approved` is a historical review state, not a future publication
     // authority. Current approval writes `published`; legacy rows must be
@@ -576,6 +640,7 @@ export async function resolveApprovedPublicProperty(
 
   const sourceListing = await dataSource.getListingById(sourceListingId);
   if (!isApprovedSourceListing(sourceListing, sourceListingId)) return null;
+  if (await dataSource.isActiveLandListing?.(sourceListingId)) return null;
 
   const approvedMedia = await dataSource.getListingMedia(sourceListingId);
   return mapApprovedListingProperty(property, sourceListing, projectionImages, approvedMedia);
@@ -622,6 +687,12 @@ export async function resolveApprovedPublicProperties(
   );
   if (sourceListingIds.length === 0) return new Map();
 
+  const activeLandListingIds = new Set(
+    dataSource.getActiveLandListingIds
+      ? await dataSource.getActiveLandListingIds(sourceListingIds)
+      : [],
+  );
+
   const sourceRows = await loadRowsInBoundedBatches(sourceListingIds, ids =>
     dataSource.getListingsByIds(ids),
   );
@@ -632,6 +703,7 @@ export async function resolveApprovedPublicProperties(
     if (
       requestedListingIds.has(sourceListingId) &&
       !sourceById.has(sourceListingId) &&
+      !activeLandListingIds.has(sourceListingId) &&
       isApprovedSourceListing(sourceListing, sourceListingId)
     ) {
       sourceById.set(sourceListingId, sourceListing);

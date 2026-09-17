@@ -29,7 +29,6 @@ import {
   agents,
   subscriptions,
   billableAccounts,
-  agencyAgentMemberships,
   agencies,
   leads,
   listings,
@@ -66,10 +65,11 @@ import {
   commercialAvailabilities,
   commercialAssets,
   commercialSpaces,
+  landListingLinks,
 } from '../drizzle/schema';
 
 import { ENV } from './_core/env';
-import { isCurrentActiveAgencyMembership } from './services/agencyMembershipService';
+import { resolveCurrentAgencyMembershipForAgent } from './services/agencyMembershipService';
 import { firstResponseOverdueSql } from './services/leadTransitionService';
 import { type InferSelectModel, type InferInsertModel } from 'drizzle-orm';
 import { normalizeLocationFields, validateLocationForPublish } from './utils/locationUtils';
@@ -109,6 +109,11 @@ import {
   normalizePropertyPresentation,
   summarizePropertyPresentation,
 } from '../shared/property-presentation';
+import {
+  excludeLandFromGenericListingWorkflow,
+  excludeLandFromGenericPublicProjection,
+  LandLaunchContainmentError,
+} from './services/landLaunchContainmentService';
 import { resolveMediaDeliveryUrl } from './_core/mediaStorage';
 import {
   assertCommercialAvailabilityFreshness,
@@ -128,6 +133,70 @@ type CommercialListingApplicability =
   | { kind: 'not_owned' }
   | { kind: 'canonical_commercial' }
   | { kind: 'invalid_commercial_context'; message: string };
+
+type ListingWorkflowIdentity = {
+  propertyType?: unknown;
+  propertyDetails?: unknown;
+};
+
+function hasDedicatedLandWorkflowMarker(listing: ListingWorkflowIdentity): boolean {
+  const details = listing.propertyDetails;
+  return (
+    Boolean(details) &&
+    typeof details === 'object' &&
+    !Array.isArray(details) &&
+    (details as Record<string, unknown>).landEngine === true
+  );
+}
+
+/**
+ * Land records have their own parcel, authority, evidence and review model.
+ * A generic listing transition must never substitute for that model, even if
+ * a caller knows the shared listing ID. The marker blocks ordinary Land
+ * records without another query; the active-link check protects older or
+ * malformed rows whose marker is absent.
+ */
+export async function assertNotDedicatedLandWorkflowListing(
+  db: any,
+  listingId: number,
+  listing: ListingWorkflowIdentity,
+): Promise<void> {
+  if (hasDedicatedLandWorkflowMarker(listing)) {
+    throw new LandLaunchContainmentError(
+      'Land listings use the dedicated Land workflow and cannot use the generic listing lifecycle.',
+    );
+  }
+
+  // The canonical Land link is authoritative even if a historical or malformed
+  // row carries an ordinary listing type. Check it before admitting any generic
+  // lifecycle action. Lookup failures deliberately propagate as operational
+  // failures; only a known policy result is translated by route callers.
+  const [activeLandLink] = await db
+    .select({ id: landListingLinks.id })
+    .from(landListingLinks)
+    .where(
+      and(
+        eq(landListingLinks.listingId, listingId),
+        eq(landListingLinks.linkStatus, 'active'),
+      ),
+    )
+    .limit(1);
+  if (activeLandLink) {
+    throw new LandLaunchContainmentError(
+      'Land listings use the dedicated Land workflow and cannot use the generic listing lifecycle.',
+    );
+  }
+
+  // Plot is the canonical public transport type for Land. Even an older,
+  // unlinked plot must not be promoted by the generic lifecycle while the
+  // vertical is deferred: that would create a false published state which no
+  // first-cohort consumer journey is allowed to expose.
+  if (['plot', 'land'].includes(String(listing.propertyType))) {
+    throw new LandLaunchContainmentError(
+      'Land and plot listings are deferred from the first launch cohort and cannot use the generic listing lifecycle.',
+    );
+  }
+}
 
 /** Resolves capability ownership from the canonical Listing association, never propertyType. */
 async function resolveCommercialListingApplicability(
@@ -880,7 +949,10 @@ export async function searchProperties(params: PropertySearchParams) {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
 
-  const conditions: SQL[] = [ne(properties.propertyType, 'commercial')];
+  const conditions: SQL[] = [
+    ne(properties.propertyType, 'commercial'),
+    excludeLandFromGenericPublicProjection(),
+  ];
 
   // Build WHERE conditions
   if (params.city) conditions.push(like(properties.city, `%${params.city}%`));
@@ -983,6 +1055,7 @@ export async function getFeaturedProperties(limit: number = 6) {
         eq(properties.featured, 1),
         eq(properties.status, 'available' as any),
         ne(properties.propertyType, 'commercial'),
+        excludeLandFromGenericPublicProjection(),
       ),
     )
     .orderBy(desc(properties.createdAt))
@@ -1373,10 +1446,7 @@ export async function recordUserListingViewFactWithDatabase(
       .limit(1);
 
     if (existing) {
-      await tx
-        .update(recentlyViewed)
-        .set({ viewedAt })
-        .where(eq(recentlyViewed.id, existing.id));
+      await tx.update(recentlyViewed).set({ viewedAt }).where(eq(recentlyViewed.id, existing.id));
     } else {
       await tx.insert(recentlyViewed).values({ userId, listingId, viewedAt });
     }
@@ -2001,39 +2071,29 @@ export async function createListing(
         .from(users)
         .where(eq(users.id, listingData.userId))
         .limit(1);
-      const agentId = agent ? agent.id : null;
-      const ownerAgencyId = owner?.agencyId || null;
-      const agentAgencyId = agent?.agencyId || null;
+      const agentId = agent ? Number(agent.id) : null;
+      const currentMembership = agent
+        ? await resolveCurrentAgencyMembershipForAgent(tx, Number(agent.id))
+        : null;
+      const membershipAgencyId = currentMembership ? Number(currentMembership.agencyId) : null;
+      const ownerAgencyId =
+        owner?.role === 'agency_admin' && owner.agencyId ? Number(owner.agencyId) : null;
 
-      if (ownerAgencyId && agentAgencyId && ownerAgencyId !== agentAgencyId) {
+      if (
+        owner?.role === 'agent' &&
+        (!agent || Number(agent.userId || 0) !== Number(listingData.userId))
+      ) {
+        throw new Error('Listing owner does not have a matching agent profile');
+      }
+
+      if (ownerAgencyId && membershipAgencyId && ownerAgencyId !== membershipAgencyId) {
         throw new Error('Listing owner and agent belong to different agencies');
       }
 
-      // Membership is canonical; agent affiliation only preserves legacy agent-owned records.
-      const agencyId = ownerAgencyId || agentAgencyId || null;
-
-      // Attribution currency: a member whose canonical membership exists but
-      // is no longer current cannot mint new inventory attributed to the
-      // agency. Members predating the membership authority (no row) pass so
-      // legacy accounts are not locked out of drafting.
-      if ((ownerAgencyId || agentAgencyId) && agent) {
-        const [membershipRow] = await tx
-          .select()
-          .from(agencyAgentMemberships)
-          .where(
-            and(
-              eq(agencyAgentMemberships.agentId, Number(agent.id)),
-              eq(agencyAgentMemberships.agencyId, Number(ownerAgencyId || agentAgencyId)),
-            ),
-          )
-          .limit(1);
-
-        if (membershipRow && !isCurrentActiveAgencyMembership(membershipRow)) {
-          throw new Error(
-            'Your agency membership is no longer active. New listings cannot be attributed to the agency.',
-          );
-        }
-      }
+      // Agency attribution is derived only from a current canonical membership
+      // (or from the agency principal’s own organisation authority). Stored
+      // user/agent agency projections cannot mint agency inventory.
+      const agencyId = membershipAgencyId || ownerAgencyId || null;
       const sellerProspectConversion = listingData.sellerProspectConversion;
       const effectiveAgentId = sellerProspectConversion?.assignedAgentId ?? agentId;
 
@@ -2044,17 +2104,18 @@ export async function createListing(
 
         if (effectiveAgentId) {
           const [assignedAgent] = await tx
-            .select({ id: agents.id })
+            .select({ id: agents.id, status: agents.status })
             .from(agents)
-            .where(
-              and(
-                eq(agents.id, effectiveAgentId),
-                eq(agents.agencyId, sellerProspectConversion.agencyId),
-                eq(agents.status, 'approved'),
-              ),
-            )
+            .where(and(eq(agents.id, effectiveAgentId)))
             .limit(1);
-          if (!assignedAgent) {
+          const assignedMembership = assignedAgent
+            ? await resolveCurrentAgencyMembershipForAgent(tx, Number(assignedAgent.id))
+            : null;
+          if (
+            !assignedAgent ||
+            assignedAgent.status !== 'approved' ||
+            Number(assignedMembership?.agencyId || 0) !== sellerProspectConversion.agencyId
+          ) {
             throw new Error('Seller prospect assignment is no longer an approved agency agent');
           }
         }
@@ -2356,17 +2417,30 @@ export async function getUserListings(
   status?: string,
   limit: number = 20,
   offset: number = 0,
+  agencyScope: { agencyId: number | null; allAgencies?: boolean } = { agencyId: null },
 ) {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
 
   // listingMedia already imported at top
 
-  let query = db.select().from(listings).where(eq(listings.ownerId, userId));
-
-  if (status) {
-    query = query.where(eq(listings.status, status as any));
+  // Keep every optional filter in one predicate. Reapplying `.where()` to a
+  // builder can replace the first predicate in some adapter modes, which
+  // would make a status-filtered request lose the Land containment boundary.
+  const conditions: SQL[] = [
+    eq(listings.ownerId, userId),
+    excludeLandFromGenericListingWorkflow(),
+  ];
+  if (!agencyScope.allAgencies) {
+    conditions.push(
+      agencyScope.agencyId
+        ? or(isNull(listings.agencyId), eq(listings.agencyId, agencyScope.agencyId))!
+        : isNull(listings.agencyId),
+    );
   }
+  if (status) conditions.push(eq(listings.status, status as any));
+
+  const query = db.select().from(listings).where(and(...conditions));
 
   const listingsData = await query.orderBy(desc(listings.createdAt)).limit(limit).offset(offset);
 
@@ -2540,6 +2614,7 @@ export async function submitListingForReview(listingId: number, database?: any) 
     .where(eq(listings.id, listingId))
     .limit(1);
   if (!transitionListing) throw new Error('Listing not found');
+  await assertNotDedicatedLandWorkflowListing(db, listingId, transitionListing);
   if (!['draft', 'rejected'].includes(String(transitionListing.status))) {
     throw new Error(`Listing cannot be submitted from status "${transitionListing.status}"`);
   }
@@ -2659,6 +2734,7 @@ export async function createListingRevision(listingId: number): Promise<ListingR
   return await db.transaction(async tx => {
     const [source] = await tx.select().from(listings).where(eq(listings.id, listingId)).limit(1);
     if (!source) throw new Error('Listing not found');
+    await assertNotDedicatedLandWorkflowListing(tx, listingId, source);
     if (source.status !== 'published') {
       throw new Error(`Only published listings can be revised (status "${source.status}")`);
     }
@@ -2991,6 +3067,19 @@ async function syncPublishedListingMediaToPropertyMirrorWithDatabase(
     return { synced: false, reason: 'commercial_authority' as const };
   }
 
+  // A Land source must never refresh the generic public mirror. The dedicated
+  // Land lifecycle owns its specialist marketing media and its first-cohort
+  // release decision. A no-op result keeps repair callers from treating the
+  // generic projection as an alternative publication channel.
+  try {
+    await assertNotDedicatedLandWorkflowListing(database, listingId, listing);
+  } catch (error) {
+    if (error instanceof LandLaunchContainmentError) {
+      return { synced: false, reason: 'land_authority' as const };
+    }
+    throw error;
+  }
+
   // Replacing public media is a public projection update, never a draft-only
   // action. This prevents repair/compatibility callers bypassing entitlement.
   await assertListingPublicationEntitled(database, { listingId, operation: 'public_media_sync' });
@@ -3068,7 +3157,10 @@ export async function getApprovalQueue(status?: string) {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
 
-  let query = db
+  const conditions: SQL[] = [excludeLandFromGenericListingWorkflow()];
+  if (status) conditions.push(eq(listingApprovalQueue.status, status as any));
+
+  const query = db
     .select({
       id: listingApprovalQueue.id,
       listingId: listingApprovalQueue.listingId,
@@ -3087,11 +3179,8 @@ export async function getApprovalQueue(status?: string) {
       listingStatus: listings.status,
     })
     .from(listingApprovalQueue)
-    .leftJoin(listings, eq(listingApprovalQueue.listingId, listings.id));
-
-  if (status) {
-    query = query.where(eq(listingApprovalQueue.status, status as any));
-  }
+    .leftJoin(listings, eq(listingApprovalQueue.listingId, listings.id))
+    .where(and(...conditions));
 
   return await query.orderBy(desc(listingApprovalQueue.submittedAt));
 }
@@ -3595,6 +3684,7 @@ export async function approveListing(
   // 1. Get full listing data
   const listing = await getListingById(listingId, db);
   if (!listing) throw new Error('Listing not found');
+  await assertNotDedicatedLandWorkflowListing(db, listingId, listing);
 
   if (listing.status === 'published' || listing.status === 'approved') {
     throw new Error('Listing is already published');
@@ -3712,7 +3802,12 @@ export async function approveListing(
     await db
       .update(listingApprovalQueue)
       .set({ status: 'approved' as any, reviewedBy, reviewedAt: approvedAt, reviewNotes: notes })
-      .where(eq(listingApprovalQueue.listingId, listingId));
+      .where(
+        and(
+          eq(listingApprovalQueue.listingId, listingId),
+          inArray(listingApprovalQueue.status, ['pending', 'reviewing']),
+        ),
+      );
     return;
   }
 
@@ -3747,7 +3842,12 @@ export async function approveListing(
         reviewedAt: approvedAt,
         reviewNotes: notes,
       })
-      .where(eq(listingApprovalQueue.listingId, listingId));
+      .where(
+        and(
+          eq(listingApprovalQueue.listingId, listingId),
+          inArray(listingApprovalQueue.status, ['pending', 'reviewing']),
+        ),
+      );
     return;
   }
 
@@ -3808,7 +3908,12 @@ export async function approveListing(
       reviewedAt: approvedAt,
       reviewNotes: notes,
     })
-    .where(eq(listingApprovalQueue.listingId, listingId));
+    .where(
+      and(
+        eq(listingApprovalQueue.listingId, listingId),
+        inArray(listingApprovalQueue.status, ['pending', 'reviewing']),
+      ),
+    );
 }
 
 /**
@@ -3826,6 +3931,7 @@ export async function rejectListing(
 
   const listing = await getListingById(listingId);
   if (!listing) throw new Error('Listing not found');
+  await assertNotDedicatedLandWorkflowListing(db, listingId, listing);
   if (listing.status !== 'pending_review') {
     throw new Error(`Listing cannot be rejected from status "${listing.status}"`);
   }
@@ -3891,6 +3997,7 @@ export async function deleteListing(id: number) {
 
   const listing = await getListingById(id);
   if (!listing) throw new Error('Listing not found');
+  await assertNotDedicatedLandWorkflowListing(db, id, listing);
   if (['published', 'approved'].includes(String(listing.status))) {
     throw new Error('Published listings must be archived through the canonical lifecycle.');
   }
@@ -3930,6 +4037,10 @@ export async function deleteListing(id: number) {
 export async function archiveListing(id: number) {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
+
+  const listing = await getListingById(id, db);
+  if (!listing) throw new Error('Listing not found');
+  await assertNotDedicatedLandWorkflowListing(db, id, listing);
 
   const archivedAt = new Date().toISOString().slice(0, 19).replace('T', ' ');
   await db.transaction(async tx => {
@@ -4254,7 +4365,10 @@ export async function searchListings(params: ListingSearchParams) {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
 
-  const conditions: SQL[] = [ne(listings.propertyType, 'commercial')];
+  const conditions: SQL[] = [
+    ne(listings.propertyType, 'commercial'),
+    excludeLandFromGenericListingWorkflow(),
+  ];
 
   // Only show published listings (status after approval)
   // Use raw SQL to bypass Drizzle enum type mismatch
@@ -4421,6 +4535,7 @@ export async function getFeaturedListings(limit: number = 6) {
         eq(listings.featured, 1),
         eq(listings.status, 'approved' as any),
         ne(listings.propertyType, 'commercial'),
+        excludeLandFromGenericListingWorkflow(),
       ),
     )
     .orderBy(desc(listings.createdAt))

@@ -1,6 +1,7 @@
 import { and, asc, eq } from 'drizzle-orm';
 import {
   agencies,
+  agents,
   billableAccounts,
   developerOrganisationMemberships,
   developerOrganisations,
@@ -10,6 +11,7 @@ import {
   users,
 } from '../../drizzle/schema';
 import { getDb } from '../db';
+import { resolveCurrentAgencyMembershipForAgent } from './agencyMembershipService';
 import {
   calculateCommercialTermEnd,
   getCommercialProductKey,
@@ -19,9 +21,15 @@ import {
   resolveCommercialTerm,
   validatePaidLaunchAccessPayment,
 } from './commercialTerm';
+import { requireCommercialActivation } from './commercialActivationPolicy';
 
 export type PlanSegment = 'agent' | 'agency' | 'enterprise' | 'developer';
 export type SubscriptionOwnerType = 'agent' | 'agency' | 'developer';
+export type PlanAccessOwnerSource =
+  | 'individual_agent'
+  | 'agency_admin'
+  | 'agency_membership'
+  | 'developer_membership';
 export type SubscriptionStatus =
   | 'trial'
   | 'pending_payment'
@@ -115,6 +123,8 @@ export type SubscriptionSnapshot = {
 export type PlanAccessProjection = {
   ownerType: SubscriptionOwnerType;
   ownerId: number;
+  /** The authenticated authority that selected the commercial owner. */
+  ownerSource: PlanAccessOwnerSource;
   currentPlan: PlanSnapshot | null;
   subscription: SubscriptionSnapshot | null;
   entitlements: EntitlementMap;
@@ -206,10 +216,9 @@ function parseEntitlementTimestamp(value: string | Date): number {
   const normalized = value.trim();
   // MySQL DATETIME values have no timezone marker; the database authority
   // treats them as UTC so entitlement decisions are process-timezone safe.
-  const utcValue =
-    /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(?:\.\d+)?$/.test(normalized)
-      ? `${normalized.replace(' ', 'T')}Z`
-      : normalized;
+  const utcValue = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(?:\.\d+)?$/.test(normalized)
+    ? `${normalized.replace(' ', 'T')}Z`
+    : normalized;
   return new Date(utcValue).getTime();
 }
 
@@ -284,11 +293,41 @@ async function getOwnerContextForUser(
 ): Promise<{
   ownerType: SubscriptionOwnerType;
   ownerId: number;
+  ownerSource: PlanAccessOwnerSource;
 } | null> {
   if (user.role === 'agency_admin' && user.agencyId) {
     return {
       ownerType: 'agency',
       ownerId: Number(user.agencyId),
+      ownerSource: 'agency_admin',
+    };
+  }
+
+  if (user.role === 'agent') {
+    // Agency attribution is a relationship authority. A stale profile claim,
+    // user.agencyId value, or client-supplied identifier cannot select the
+    // agency's commercial owner. Only the current canonical membership can do
+    // that; an agent without one remains an independent owner.
+    const [agent] = await db
+      .select({ id: agents.id })
+      .from(agents)
+      .where(eq(agents.userId, user.id))
+      .limit(1);
+    if (agent) {
+      const membership = await resolveCurrentAgencyMembershipForAgent(db, Number(agent.id));
+      if (membership) {
+        return {
+          ownerType: 'agency',
+          ownerId: Number(membership.agencyId),
+          ownerSource: 'agency_membership',
+        };
+      }
+    }
+
+    return {
+      ownerType: 'agent',
+      ownerId: user.id,
+      ownerSource: 'individual_agent',
     };
   }
 
@@ -317,13 +356,11 @@ async function getOwnerContextForUser(
     return {
       ownerType: 'developer',
       ownerId: Number(membership.organisationId),
+      ownerSource: 'developer_membership',
     };
   }
 
-  return {
-    ownerType: 'agent',
-    ownerId: user.id,
-  };
+  return null;
 }
 
 async function getStarterPlan(db: DbHandle, ownerType: SubscriptionOwnerType) {
@@ -364,7 +401,13 @@ async function ensureDefaultSubscriptionForUser(user: UserRow): Promise<Subscrip
   const [existing] = await db
     .select()
     .from(subscriptions)
-    .where(eq(subscriptions.billableAccountId, billableAccountId))
+    .where(
+      and(
+        eq(subscriptions.billableAccountId, billableAccountId),
+        eq(subscriptions.ownerType, ownerType),
+        eq(subscriptions.ownerId, ownerId),
+      ),
+    )
     .limit(1);
 
   return existing || null;
@@ -483,7 +526,13 @@ export async function getPlanAccessProjectionForUserId(
   let [subscriptionRow] = await db
     .select()
     .from(subscriptions)
-    .where(eq(subscriptions.billableAccountId, billableAccountId))
+    .where(
+      and(
+        eq(subscriptions.billableAccountId, billableAccountId),
+        eq(subscriptions.ownerType, ownerType),
+        eq(subscriptions.ownerId, ownerId),
+      ),
+    )
     .limit(1);
 
   const shouldAutoProvision = user.role === 'agency_admin' && ownerType === 'agency';
@@ -558,6 +607,7 @@ export async function getPlanAccessProjectionForUserId(
   return {
     ownerType,
     ownerId,
+    ownerSource: ownerContext.ownerSource,
     currentPlan: planRow ? toPlanSnapshot(planRow) : null,
     subscription: subscriptionRow ? toSubscriptionSnapshot(subscriptionRow) : null,
     entitlements: entitlementMap,
@@ -679,7 +729,11 @@ export async function setSubscriptionPlanForOwner(input: {
     .select()
     .from(subscriptions)
     .where(
-      eq(subscriptions.billableAccountId, billableAccountId),
+      and(
+        eq(subscriptions.billableAccountId, billableAccountId),
+        eq(subscriptions.ownerType, input.ownerType),
+        eq(subscriptions.ownerId, input.ownerId),
+      ),
     )
     .limit(1);
 
@@ -713,6 +767,7 @@ export async function activatePaidLaunchAccessForOwner(input: {
   metadata?: Record<string, unknown> | null;
   db?: any;
 }): Promise<SubscriptionSnapshot | null> {
+  requireCommercialActivation('Paid Launch Access activation');
   const db = input.db || (await getDb());
   if (!db) throw new Error('Database not available');
 

@@ -34,6 +34,8 @@ import {
   UploadCloud,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { CommercialActivationNotice } from '@/components/commercial/CommercialActivationNotice';
+import { COMMERCIAL_ACTIVATION_STATE } from '@shared/commercialActivation';
 
 type RouterOutputs = inferRouterOutputs<AppRouter>;
 type AgentBillingWorkspace = RouterOutputs['billing']['agentWorkspace'];
@@ -337,20 +339,24 @@ function AgentManualEftPanel({
   );
 }
 
-export default function AgentPackageSelection() {
+export function CommercialAgentPackageSelection() {
   const [, setLocation] = useLocation();
   const search = useSearch();
   const { user, loading } = useAuth({ redirectOnUnauthenticated: true });
   const catalog = useCommercialCatalog('agent');
+  const [status, setStatus] = useState<AgentOnboardingStatus | null>(null);
+  const [statusLoading, setStatusLoading] = useState(true);
+  const agencyManagedCommercialAccess = status?.commercial?.ownerSource === 'agency_membership';
   const workspaceQuery = trpc.billing.agentWorkspace.useQuery(undefined, {
-    enabled: user?.role === 'agent',
+    // Wait for the server-owned commercial projection. A current agency
+    // member must never open an individual billing workspace merely by
+    // visiting this route while the redirect is resolving.
+    enabled: user?.role === 'agent' && Boolean(status) && !agencyManagedCommercialAccess,
     retry: false,
     staleTime: 0,
     refetchOnMount: true,
   });
   const submitProof = trpc.billing.submitLaunchAccessPaymentProof.useMutation();
-  const [, setStatus] = useState<AgentOnboardingStatus | null>(null);
-  const [statusLoading, setStatusLoading] = useState(true);
   const [invoiceResponse, setInvoiceResponse] = useState<AgentInvoiceResponse | null>(null);
   const [isRequestingInvoice, setIsRequestingInvoice] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState('');
@@ -389,7 +395,7 @@ export default function AgentPackageSelection() {
         if (cancelled) return;
 
         setStatus(result);
-        const journeyAction = getAgentJourneyAction(result);
+        const journeyAction = getAgentJourneyAction(result, { commercialActivationEnabled: true });
         if (journeyAction.href !== '/agent/select-package') {
           setLocation(journeyAction.href);
         }
@@ -478,6 +484,10 @@ export default function AgentPackageSelection() {
   const action = getCommercialActionPresentation(launchProduct);
 
   const handleRequestInvoice = async () => {
+    if (!COMMERCIAL_ACTIVATION_STATE.enabled) {
+      setLocation('/agent/dashboard');
+      return;
+    }
     const planId = launchProduct.source?.planId;
     if (!planId) {
       toast.error('The canonical Agent Launch Access product is not requestable right now.');
@@ -508,6 +518,10 @@ export default function AgentPackageSelection() {
   };
 
   const handleProofSubmit = async () => {
+    if (!COMMERCIAL_ACTIVATION_STATE.enabled) {
+      toast.info(COMMERCIAL_ACTIVATION_STATE.message);
+      return;
+    }
     if (!activeInvoice) {
       toast.error('Request an invoice before submitting payment proof.');
       return;
@@ -587,9 +601,12 @@ export default function AgentPackageSelection() {
               You selected Agent Launch Access.
             </h1>
             <p className="mt-6 max-w-xl text-base leading-8 text-slate-600 sm:text-lg">
-              The public Agent page explains the product. This step confirms the canonical product
-              and takes you into the assisted invoice and activation process.
+              The public Agent page explains the product. This step lets you confirm your
+              professional presence and prepare for the assisted commercial activation process.
             </p>
+            <div className="mt-6 max-w-xl">
+              <CommercialActivationNotice />
+            </div>
             <a
               href="/advertise/sell/agents"
               className="mt-7 inline-flex items-center gap-2 text-sm font-bold text-slate-950 underline decoration-slate-300 underline-offset-4 hover:decoration-slate-950"
@@ -617,8 +634,9 @@ export default function AgentPackageSelection() {
                 <ActivationSteps />
               </div>
               <div className="mt-6 rounded-2xl bg-slate-950 px-5 py-4 text-sm leading-6 text-white">
-                Requesting an invoice, receiving an invoice or uploading payment proof does not
-                activate access. Finance verification starts the fixed 90-day term.
+                Your profile and private preparation work can continue now. Commercial activation,
+                payment proof and the fixed 90-day term become available only after the approved
+                payment workflow is opened.
               </div>
               <div className="mt-6 flex flex-col gap-3 sm:flex-row">
                 <Button
@@ -626,11 +644,13 @@ export default function AgentPackageSelection() {
                   disabled={isRequestingInvoice}
                   onClick={() => void handleRequestInvoice()}
                 >
-                  {isRequestingInvoice
-                    ? 'Preparing invoice…'
-                    : activeInvoice
-                      ? 'Refresh invoice'
-                      : action.label}{' '}
+                  {!COMMERCIAL_ACTIVATION_STATE.enabled
+                    ? 'Return to preparation workspace'
+                    : isRequestingInvoice
+                      ? 'Preparing invoice…'
+                      : activeInvoice
+                        ? 'Refresh invoice'
+                        : action.label}{' '}
                   <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" />
                 </Button>
                 <Button
@@ -641,7 +661,7 @@ export default function AgentPackageSelection() {
                   Talk to Property Listify
                 </Button>
               </div>
-              {activeInvoice ? (
+              {activeInvoice && COMMERCIAL_ACTIVATION_STATE.enabled ? (
                 <AgentManualEftPanel
                   invoice={activeInvoice}
                   bankDetails={bankDetails}
@@ -695,5 +715,61 @@ export default function AgentPackageSelection() {
         </section>
       </main>
     </div>
+  );
+}
+
+function PreparationAgentPackageSelection() {
+  const [, setLocation] = useLocation();
+
+  return (
+    <div
+      className="min-h-screen bg-[#f7f9fc] px-6 py-12 text-slate-950 sm:px-8 lg:px-10"
+      data-testid="agent-package-preparation"
+    >
+      <main className="mx-auto w-full max-w-3xl">
+        <div className="rounded-[28px] border border-slate-200 bg-white p-7 shadow-sm sm:p-10">
+          <Badge className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-blue-700 hover:bg-blue-50">
+            <Briefcase className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />
+            Agent preparation
+          </Badge>
+          <h1 className="mt-6 font-serif text-4xl font-semibold tracking-[-0.04em] text-slate-950 sm:text-5xl">
+            Prepare your Agent workspace before commercial activation.
+          </h1>
+          <p className="mt-5 max-w-2xl text-base leading-8 text-slate-600 sm:text-lg">
+            Complete your professional presence and prepare private inventory now. Commercial
+            products, invoices, payment proof, and marketplace publishing remain unavailable until
+            approved commercial activation.
+          </p>
+
+          <div className="mt-7 max-w-2xl">
+            <CommercialActivationNotice />
+          </div>
+
+          <Card className="mt-8 border-slate-200 shadow-none">
+            <CardContent className="p-6">
+              <h2 className="text-xl font-semibold text-slate-950">Continue private preparation</h2>
+              <p className="mt-2 text-sm leading-6 text-slate-600">
+                Update your Agent setup or return to your workspace to continue preparing work for
+                the later commercial activation step.
+              </p>
+              <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+                <Button onClick={() => setLocation('/agent/setup')}>Continue Agent setup</Button>
+                <Button variant="outline" onClick={() => setLocation('/agent/dashboard')}>
+                  Open preparation workspace
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </main>
+    </div>
+  );
+}
+
+export default function AgentPackageSelection() {
+  return COMMERCIAL_ACTIVATION_STATE.enabled ? (
+    <CommercialAgentPackageSelection />
+  ) : (
+    <PreparationAgentPackageSelection />
   );
 }
