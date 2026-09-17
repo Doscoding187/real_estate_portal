@@ -55,8 +55,8 @@ export async function sendVerificationEmail({
       throwUnavailableDeployedEmail();
     }
     console.warn('[Email] RESEND_API_KEY missing — skipping sendVerificationEmail');
-    // In dev mode, we might want to log the URL so devs can still verify
-    console.log('[Email Local Dev] Verification URL:', verificationUrl);
+    // The local fallback must not log verification URLs: they embed the raw
+    // verification token, and console capture is not a sanitized evidence path.
     return { success: true, messageId: 'dev-mock-id' };
   }
 
@@ -150,7 +150,8 @@ export async function sendPasswordResetEmail({
       throwUnavailableDeployedEmail();
     }
     console.warn('[Email] RESEND_API_KEY missing — skipping sendPasswordResetEmail');
-    console.log('[Email Local Dev] Reset URL:', resetUrl);
+    // Same token-hygiene rule as verification: never log reset URLs; they
+    // embed the raw single-use reset token.
     return { success: true, messageId: 'dev-mock-id' };
   }
 
