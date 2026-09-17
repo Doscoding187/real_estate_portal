@@ -25,7 +25,8 @@ changed.
    Original authorship and retained profile affiliation cannot bypass that
    requirement. The shared check covers private detail, edits, analytics, media
    reservation/confirmation, archive/delete, submission, promotion, and listing
-   leads (including requests by public property ID). The author's listing list
+   leads (including requests by public property ID), and the property-delete
+   alias that archives its source listing. The author's listing list
    applies its permitted agency scope before pagination. Independent private
    drafts, exact agency administrators, and super-admin access remain supported.
 2. Public media synchronization catches only `LandLaunchContainmentError` as a
@@ -55,6 +56,14 @@ declare canonical membership instead of relying on profile affiliation.
   exposed two stale success mocks and a missing required `properties.area` in
   the new fixture; both were corrected before the frozen candidate. Typecheck
   and static authority checks passed during development.
+
+The first complete run on `dc5f2bc0` did not pass: 646 files passed, one older
+archive unit mock lacked canonical `ownerId`, and the fresh target lacked the
+required Search-to-Lead acceptance scenario (nine dependent tests did not run).
+The mock was corrected and the scenario prepared through `db:scenario:prepare`.
+The public-property archive alias was also connected to the shared membership
+check and covered by the direct revocation regression. These executable changes
+require a new frozen candidate and a complete verification run.
 
 ## Remaining release gates
 

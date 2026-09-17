@@ -47,10 +47,12 @@ describe('public inventory authority safety contracts', () => {
     mockDb.setUserFavoriteFact.mockResolvedValue({ propertyId: 705, saved: true });
     mockDb.getDb.mockResolvedValue({});
     mockDb.assertNotDedicatedLandWorkflowListing.mockResolvedValue(undefined);
+    mockDb.getListingById.mockReset();
     mockResolvePublicPropertyEligibility.mockReset();
   });
 
   it('routes a listing-backed property delete to source-listing archive', async () => {
+    mockDb.getListingById.mockResolvedValue({ id: 1700, ownerId: 42, agencyId: null });
     mockDb.getPropertyById.mockResolvedValue({
       id: 700,
       ownerId: 42,
@@ -162,6 +164,7 @@ describe('public inventory authority safety contracts', () => {
     mockDb.getListingById.mockResolvedValue({
       id: 1703,
       userId: 42,
+      ownerId: 42,
       status: 'published',
     });
 

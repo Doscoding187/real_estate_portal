@@ -165,7 +165,7 @@ async function resolveListingContentActor(
   return { userId: user.id, role: user.role, agencyId: user.agencyId, agent, currentAgencyId };
 }
 
-async function assertListingContentCustody(
+export async function assertListingContentCustody(
   listing: ListingContentRecord,
   user: ReturnType<typeof requireUser>,
   message: string,

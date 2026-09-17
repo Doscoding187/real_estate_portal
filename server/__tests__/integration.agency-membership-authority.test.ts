@@ -1065,6 +1065,7 @@ describeWithDb('team operations on canonical membership', () => {
         () => author.listing.getAnalytics({ listingId }),
         () => author.listing.getLeads({ listingId }),
         () => author.listing.getLeads({ propertyId }),
+        () => author.properties.delete({ id: propertyId }),
         () =>
           author.listing.uploadMedia({
             listingId,
