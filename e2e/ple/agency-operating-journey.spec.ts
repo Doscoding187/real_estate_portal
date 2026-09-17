@@ -227,8 +227,9 @@ test.describe('PLE agency operating browser acceptance', () => {
     const authority = resolveDatabaseAuthority({ operation: 'test-fixture' });
     if (
       authority.context.targetClass !== 'disposable-worktree' ||
+      process.env.PROPERTY_LISTIFY_GOVERNED_BROWSER_TEST_FIXTURE !== 'true' ||
       authority.context.targetFingerprintHash !==
-        'a560e9f2971e7676be194015ed933f1964e0948c5fd44d5844a74dcbf494e321'
+        process.env.DATABASE_AUTHORITY_PARENT_FINGERPRINT
     ) {
       throw new Error(
         'Agency acquisition fixture requires the exact task-owned disposable target.',

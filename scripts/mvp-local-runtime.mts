@@ -9,11 +9,14 @@ import { homedir } from 'node:os';
 const authority = resolveDatabaseAuthority({ operation: 'runtime-connect' });
 if (
   authority.context.targetClass !== 'disposable-worktree' ||
+  process.env.PROPERTY_LISTIFY_GOVERNED_BROWSER_TEST_FIXTURE !== 'true' ||
   authority.context.targetFingerprintHash !==
-    'a560e9f2971e7676be194015ed933f1964e0948c5fd44d5844a74dcbf494e321'
+    process.env.DATABASE_AUTHORITY_PARENT_FINGERPRINT
 ) {
   throw new Error('MVP verification requires the exact task-owned target.');
 }
+// The authorized browser wrapper pins its child to this worktree's exact
+// target; never substitute the database belonging to a previous review branch.
 authorizeDatabaseOperation(authority);
 const central = dotenv.config({
   path: `${homedir()}/.config/property-listify/local.env`,

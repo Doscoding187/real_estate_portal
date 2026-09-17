@@ -65,6 +65,16 @@ The public-property archive alias was also connected to the shared membership
 check and covered by the direct revocation regression. These executable changes
 require a new frozen candidate and a complete verification run.
 
+The `6b83fcd2` run passed the full suite (648 files / 4,291 tests; 9 files /
+67 tests skipped), typecheck, lint (zero errors / 11,460 warnings), build, and
+static authority checks. Browser startup then failed before executing tests:
+the local browser runtime and agency fixture hard-coded the original branch's
+disposable target fingerprint. They now require the authorized browser-wrapper
+marker and its exact parent fingerprint, retaining the disposable-worktree
+restriction and canonical operation authorization/ownership checks. Missing or
+mismatching parent authority fails closed. This harness portability correction
+requires another frozen candidate; the failed run is not final acceptance.
+
 ## Remaining release gates
 
 The [candidate review packet](mvp-candidate-review-packet.md) retains the full
