@@ -1078,6 +1078,46 @@ describe('publicLeadCaptureService contract', () => {
     expect(database.state.deliveryRows).toHaveLength(0);
   });
 
+  it('rejects an otherwise approved first-party development without Launch Access', async () => {
+    const database = makeFakeDatabase({
+      selectResults: [
+        [],
+        [
+          {
+            id: 77,
+            cataloguePublisherId: 13,
+            isPublished: 1,
+            approvalStatus: 'approved',
+            transactionType: 'for_sale',
+            developmentType: 'residential',
+            activeUnitTypeCount: 1,
+            activeOperatorCount: 1,
+          },
+        ],
+        [{ id: 'unit-1', developmentId: 77, isActive: 1 }],
+        [
+          {
+            id: 13,
+            authorityKind: 'developer_first_party',
+            developerOrganisationId: 7,
+            isVisible: 1,
+            isSubscriber: 1,
+            sourceAttribution: null,
+          },
+        ],
+        [{ id: 7, status: 'approved' }],
+        [],
+      ],
+    });
+    mockGetDb.mockResolvedValue(database);
+
+    await expect(
+      capturePublicLead(baseInput({ developmentId: 77, unitId: 'unit-1' })),
+    ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+    expect(database.insertValues).not.toHaveBeenCalled();
+    expect(database.state.deliveryRows).toHaveLength(0);
+  });
+
   it('routes a registered, approved development to its matching developer recipient', async () => {
     const database = makeFakeDatabase({
       selectResults: [

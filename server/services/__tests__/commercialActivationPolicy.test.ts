@@ -59,7 +59,23 @@ describe('commercial activation containment', () => {
       isCommercialActivationAvailable({
         NODE_ENV: 'test',
         APP_ENV: 'test',
+        PROPERTY_LISTIFY_GOVERNED_SCENARIO_TEST_FIXTURE: 'true',
+        DATABASE_AUTHORITY_PARENT_FINGERPRINT: 'owned-target',
+        DATABASE_AUTHORITY_CORRELATION_ID: 'authority-run',
+      }),
+    ).toBe(false);
+    expect(
+      isCommercialActivationAvailable({
+        NODE_ENV: 'test',
+        APP_ENV: 'test',
         PROPERTY_LISTIFY_GOVERNED_BROWSER_TEST_FIXTURE: 'true',
+      }),
+    ).toBe(false);
+    expect(
+      isCommercialActivationAvailable({
+        NODE_ENV: 'test',
+        APP_ENV: 'test',
+        PROPERTY_LISTIFY_GOVERNED_SCENARIO_TEST_FIXTURE: 'true',
       }),
     ).toBe(false);
     expect(
@@ -67,6 +83,15 @@ describe('commercial activation containment', () => {
         NODE_ENV: 'development',
         APP_ENV: 'test',
         PROPERTY_LISTIFY_GOVERNED_BROWSER_TEST_FIXTURE: 'true',
+        DATABASE_AUTHORITY_PARENT_FINGERPRINT: 'owned-target',
+        DATABASE_AUTHORITY_CORRELATION_ID: 'authority-run',
+      }),
+    ).toBe(false);
+    expect(
+      isCommercialActivationAvailable({
+        NODE_ENV: 'production',
+        APP_ENV: 'test',
+        PROPERTY_LISTIFY_GOVERNED_SCENARIO_TEST_FIXTURE: 'true',
         DATABASE_AUTHORITY_PARENT_FINGERPRINT: 'owned-target',
         DATABASE_AUTHORITY_CORRELATION_ID: 'authority-run',
       }),

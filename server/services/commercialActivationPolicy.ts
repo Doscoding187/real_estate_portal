@@ -1,15 +1,16 @@
 import { TRPCError } from '@trpc/server';
 
+import { isGovernedContainedScenarioFixtureActive } from '../_core/databaseAuthority/governedContainedScenarioFixture';
 import { COMMERCIAL_ACTIVATION_STATE } from '../../shared/commercialActivation';
 
 type RuntimeEnvironment = Record<string, string | undefined>;
 
 /**
- * Test fixtures may model paid states only from Vitest or the authority-wrapped
- * browser fixture runner. The latter marker is injected only after that runner
- * has authorized an owned disposable target; it is not a normal app setting.
- * Development and deployed runtimes therefore retain the immutable release
- * state below.
+ * Test fixtures may model paid states only from Vitest or an authority-wrapped
+ * browser/contained-scenario fixture runner. The contained-scenario capability
+ * is issued from a real Database Authority decision and is process-scoped;
+ * neither marker is a normal app setting. Development and deployed runtimes
+ * therefore retain the immutable release state below.
  */
 export function isCommercialActivationAvailable(
   environment: RuntimeEnvironment = process.env,
@@ -20,11 +21,13 @@ export function isCommercialActivationAvailable(
     environment.PROPERTY_LISTIFY_GOVERNED_BROWSER_TEST_FIXTURE === 'true' &&
     Boolean(environment.DATABASE_AUTHORITY_PARENT_FINGERPRINT) &&
     Boolean(environment.DATABASE_AUTHORITY_CORRELATION_ID);
+  const authorityWrappedScenarioFixture = isGovernedContainedScenarioFixtureActive(environment);
 
   return (
     COMMERCIAL_ACTIVATION_STATE.enabled ||
     (environment.NODE_ENV === 'test' && environment.VITEST === 'true') ||
-    authorityWrappedBrowserFixture
+    authorityWrappedBrowserFixture ||
+    authorityWrappedScenarioFixture
   );
 }
 

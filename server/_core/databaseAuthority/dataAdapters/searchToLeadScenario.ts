@@ -1,6 +1,10 @@
 import type { AuthorizedDatabaseOperation } from '../authorization';
 import type { AuthoritySqlConnection } from '../connectionAuthority';
 import { databaseAuthorityChildEnvironment } from '../context';
+import {
+  issueGovernedContainedScenarioFixture,
+  revokeGovernedContainedScenarioFixture,
+} from '../governedContainedScenarioFixture';
 import type { ResolvedDatabaseAuthority } from '../types';
 import {
   assertOperation,
@@ -23,8 +27,8 @@ import {
 import type { MoneyFact, RecurringCosts } from '../../../../shared/pricing-contract';
 import type { RentalTerms } from '../../../../shared/rental-terms-contract';
 
-export const SEARCH_TO_LEAD_SCENARIO_VERSION = 'search-to-lead-v3' as const;
-export const SEARCH_TO_LEAD_SCENARIO_CAPTURE_REQUEST_ID = 'dba-search-to-lead-v3-property-enquiry';
+export const SEARCH_TO_LEAD_SCENARIO_VERSION = 'search-to-lead-v5' as const;
+export const SEARCH_TO_LEAD_SCENARIO_CAPTURE_REQUEST_ID = 'dba-search-to-lead-v5-property-enquiry';
 
 function truthfulDirectAcknowledgement(lead: {
   duplicate?: boolean;
@@ -70,6 +74,7 @@ export const SEARCH_TO_LEAD_SCENARIO_IDS = Object.freeze({
   unrelatedDeveloperPublisher: 990002,
   platformPublisher: 990003,
   agentMembership: 995001,
+  unrelatedAgentMembership: 995002,
   development: 990001,
   property: 990001,
   agentProperty: 990001,
@@ -1818,6 +1823,45 @@ async function prepareScenarioRows(
       'approved',
     ],
   });
+  // The unrelated actor must be a legitimate member of a different agency.
+  // A retained agents.agencyId without this canonical row is stale affiliation
+  // and is correctly denied by the agent workspace, rather than proving
+  // tenant-isolated empty lead access.
+  await ensureDeterministicRow({
+    connection,
+    table: 'agency_agent_memberships',
+    id: SCENARIO_IDS.unrelatedAgentMembership,
+    columns: ['agency_id', 'agent_id', 'status', 'governance_mode', 'role'],
+    expected: {
+      agency_id: SCENARIO_IDS.unrelatedAgency,
+      agent_id: SCENARIO_IDS.unrelatedAgent,
+      status: 'active',
+      governance_mode: 'affiliated',
+      role: 'agent',
+    },
+    insertColumns: [
+      'id',
+      'agency_id',
+      'agent_id',
+      'status',
+      'governance_mode',
+      'role',
+      'effective_from',
+      'created_by',
+      'updated_by',
+    ],
+    insertValues: [
+      SCENARIO_IDS.unrelatedAgentMembership,
+      SCENARIO_IDS.unrelatedAgency,
+      SCENARIO_IDS.unrelatedAgent,
+      'active',
+      'affiliated',
+      'agent',
+      FIXTURE_TIMESTAMP,
+      SCENARIO_IDS.unrelatedAgencyAdminUser,
+      SCENARIO_IDS.unrelatedAgencyAdminUser,
+    ],
+  });
   await ensureDeterministicRow({
     connection,
     table: 'developer_organisations',
@@ -2394,6 +2438,39 @@ export async function verifySearchToLeadScenarioData(
   );
   if (developmentRows.length !== 1)
     throw new Error('Search-to-Lead scenario is missing one eligible public development unit.');
+  const membershipRows = await queryRows(
+    connection,
+    `SELECT id, agency_id, agent_id, status, governance_mode, role, effective_to
+       FROM agency_agent_memberships
+      WHERE id IN (?, ?)
+      ORDER BY id`,
+    [SCENARIO_IDS.agentMembership, SCENARIO_IDS.unrelatedAgentMembership],
+  );
+  const membershipById = new Map(
+    membershipRows.map(row => [Number(rowValue(row, 'id')), row] as const),
+  );
+  const expectedMemberships = [
+    [SCENARIO_IDS.agentMembership, SCENARIO_IDS.agency, SCENARIO_IDS.agent],
+    [
+      SCENARIO_IDS.unrelatedAgentMembership,
+      SCENARIO_IDS.unrelatedAgency,
+      SCENARIO_IDS.unrelatedAgent,
+    ],
+  ] as const;
+  for (const [membershipId, agencyId, agentId] of expectedMemberships) {
+    const membership = membershipById.get(membershipId);
+    if (
+      !membership ||
+      Number(rowValue(membership, 'agency_id')) !== agencyId ||
+      Number(rowValue(membership, 'agent_id')) !== agentId ||
+      rowValue(membership, 'status') !== 'active' ||
+      rowValue(membership, 'governance_mode') !== 'affiliated' ||
+      rowValue(membership, 'role') !== 'agent' ||
+      rowValue(membership, 'effective_to') != null
+    ) {
+      throw new Error('Search-to-Lead scenario has invalid canonical agency membership fixtures.');
+    }
+  }
   const property = propertyRows.find(
     row => Number(rowValue(row, 'id')) === SCENARIO_IDS.agentProperty,
   );
@@ -2531,7 +2608,9 @@ export async function prepareSearchToLeadScenario(input: {
 
 async function runContainedApplicationVerification(
   authority: ResolvedDatabaseAuthority,
+  decision: AuthorizedDatabaseOperation,
   expected: SearchToLeadScenarioEvidence['verified'],
+  profileRoot?: string,
 ): Promise<NonNullable<SearchToLeadScenarioEvidence['acceptance']>> {
   if (
     expected.propertyId !== SCENARIO_IDS.property ||
@@ -2543,13 +2622,20 @@ async function runContainedApplicationVerification(
   ) {
     throw new Error('Search-to-Lead scenario has unexpected deterministic target identities.');
   }
+  const scenarioFixtureCapability = issueGovernedContainedScenarioFixture({
+    authority,
+    decision,
+    profileRoot,
+  });
   const previous = new Map<string, string | undefined>();
   const containedKeys = [
     'DATABASE_URL',
     'DATABASE_AUTHORITY_PARENT_FINGERPRINT',
+    'DATABASE_AUTHORITY_CORRELATION_ID',
     'DATABASE_CREDENTIAL_CLASS',
     'NODE_ENV',
     'APP_ENV',
+    'PROPERTY_LISTIFY_GOVERNED_SCENARIO_TEST_FIXTURE',
     'REDIS_URL',
     'RESEND_API_KEY',
     'RESEND_FROM_EMAIL',
@@ -2562,6 +2648,12 @@ async function runContainedApplicationVerification(
   for (const key of containedKeys) previous.set(key, process.env[key]);
   Object.assign(process.env, {
     ...databaseAuthorityChildEnvironment(authority),
+    // This contained verifier is a test fixture only after exact target
+    // ownership has been proven above. It can exercise its seeded paid term
+    // without changing the immutable commercial release state.
+    NODE_ENV: 'test',
+    APP_ENV: 'test',
+    PROPERTY_LISTIFY_GOVERNED_SCENARIO_TEST_FIXTURE: scenarioFixtureCapability,
     REDIS_URL: '',
     RESEND_API_KEY: '',
     RESEND_FROM_EMAIL: '',
@@ -2586,7 +2678,7 @@ async function runContainedApplicationVerification(
         req: { headers: {}, ip: '127.0.0.1' },
         res: {},
         user,
-        requestId: 'dba-search-to-lead-v3',
+        requestId: 'dba-search-to-lead-v5',
       } as any);
 
     const search = await publicSearchService.searchInventory({
@@ -2673,7 +2765,7 @@ async function runContainedApplicationVerification(
       const captureRequestId =
         scenarioName === 'agent'
           ? SEARCH_TO_LEAD_SCENARIO_CAPTURE_REQUEST_ID
-          : `dba-search-to-lead-v3-${scenarioName}-enquiry`;
+          : `dba-search-to-lead-v5-${scenarioName}-enquiry`;
       const baseInput = {
         propertyId,
         name: `Database Authority ${scenarioName} Prospect`,
@@ -2686,7 +2778,7 @@ async function runContainedApplicationVerification(
         captureRequestId,
         consent: {
           accepted: true as const,
-          version: 'dba-search-to-lead-v3',
+          version: 'dba-search-to-lead-v5',
           source: 'local-test',
         },
       };
@@ -2796,8 +2888,8 @@ async function runContainedApplicationVerification(
       source: 'development_detail',
       sourceSurface: 'development_detail',
       leadSource: 'development_detail',
-      captureRequestId: 'dba-search-to-lead-v3-development-enquiry',
-      consent: { accepted: true as const, version: 'dba-search-to-lead-v3', source: 'local-test' },
+      captureRequestId: 'dba-search-to-lead-v5-development-enquiry',
+      consent: { accepted: true as const, version: 'dba-search-to-lead-v5', source: 'local-test' },
     };
     const developmentLead = await capturePublicLead(developmentLeadInput);
     const developmentReplay = await capturePublicLead(developmentLeadInput);
@@ -3015,8 +3107,8 @@ async function runContainedApplicationVerification(
       source: 'property_detail',
       sourceSurface: 'property_detail',
       leadSource: 'property_detail',
-      captureRequestId: 'dba-search-to-lead-v3-rental-enquiry',
-      consent: { accepted: true as const, version: 'dba-search-to-lead-v3', source: 'local-test' },
+      captureRequestId: 'dba-search-to-lead-v5-rental-enquiry',
+      consent: { accepted: true as const, version: 'dba-search-to-lead-v5', source: 'local-test' },
     };
     const rentalLead = await capturePublicLead(rentalLeadInput);
     const rentalReplay = await capturePublicLead(rentalLeadInput);
@@ -3127,8 +3219,8 @@ async function runContainedApplicationVerification(
           source: 'property_detail',
           sourceSurface: 'property_detail',
           leadSource: 'property_detail',
-          captureRequestId: `dba-search-to-lead-v3-negative-${name}`,
-          consent: { accepted: true, version: 'dba-search-to-lead-v3', source: 'local-test' },
+          captureRequestId: `dba-search-to-lead-v5-negative-${name}`,
+          consent: { accepted: true, version: 'dba-search-to-lead-v5', source: 'local-test' },
         });
       } catch (error) {
         rejected = String((error as { code?: unknown })?.code || '') === 'NOT_FOUND';
@@ -3262,6 +3354,7 @@ async function runContainedApplicationVerification(
       },
     };
   } finally {
+    revokeGovernedContainedScenarioFixture(scenarioFixtureCapability);
     const { resetDb } = await import('../../../db-connection');
     resetDb();
     for (const [key, value] of previous) {
@@ -3289,7 +3382,12 @@ export async function verifySearchToLeadScenario(input: {
   const acceptance =
     input.decision.operation === 'readiness'
       ? undefined
-      : await runContainedApplicationVerification(input.authority, verified);
+      : await runContainedApplicationVerification(
+          input.authority,
+          input.decision,
+          verified,
+          input.profileRoot,
+        );
   return {
     ...ownership,
     adapter: 'search-to-lead-scenario',
