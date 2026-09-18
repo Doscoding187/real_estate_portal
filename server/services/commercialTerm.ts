@@ -160,9 +160,7 @@ export function hasConfiguredCommercialPrice(plan: PlanTermSource): boolean {
 
 export function calculateCommercialTermEnd(start: Date, term: CommercialTerm): Date | null {
   if (term.kind !== 'paid_launch_access' || !term.durationDays) return null;
-  const end = new Date(start);
-  end.setUTCDate(end.getUTCDate() + term.durationDays);
-  return end;
+  return new Date(start.getTime() + term.durationDays * 24 * 60 * 60 * 1000);
 }
 
 /**
@@ -181,7 +179,7 @@ export function parseCanonicalCommercialTimestamp(
   }
 
   const normalized = value.trim();
-  const utcValue = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(?:\.\d+)?$/.test(normalized)
+  const utcValue = /^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(?:\.\d+)?$/.test(normalized)
     ? `${normalized.replace(' ', 'T')}Z`
     : normalized;
   const timestamp = new Date(utcValue).getTime();

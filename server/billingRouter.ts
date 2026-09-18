@@ -100,7 +100,8 @@ const reviewPaymentSchema = z.object({
     'unmatched',
   ]),
   note: z.string().max(2000).optional(),
-  verifiedAmount: z.number().positive().optional(),
+  verifiedAmount: z.number().int().positive().safe().optional(),
+  overpaymentReconciled: z.boolean().optional(),
 });
 
 const lifecycleSchema = z.object({
@@ -373,6 +374,7 @@ export const billingRouter = {
           decision: input.decision,
           note: input.note,
           verifiedAmount: input.verifiedAmount,
+          overpaymentReconciled: input.overpaymentReconciled,
         }),
       ),
 

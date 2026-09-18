@@ -17,6 +17,7 @@ import {
   getCommercialProductKey,
   getConfiguredLaunchFeeMinor,
   isPaidCommercialTermExpired,
+  parseCanonicalCommercialTimestamp,
   parseCommercialMetadata,
   resolveCommercialTerm,
   validatePaidLaunchAccessPayment,
@@ -212,14 +213,7 @@ export function isPaidSubscriptionEntitled(status: SubscriptionStatus | null | u
 }
 
 function parseEntitlementTimestamp(value: string | Date): number {
-  if (value instanceof Date) return value.getTime();
-  const normalized = value.trim();
-  // MySQL DATETIME values have no timezone marker; the database authority
-  // treats them as UTC so entitlement decisions are process-timezone safe.
-  const utcValue = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(?:\.\d+)?$/.test(normalized)
-    ? `${normalized.replace(' ', 'T')}Z`
-    : normalized;
-  return new Date(utcValue).getTime();
+  return parseCanonicalCommercialTimestamp(value) ?? Number.NaN;
 }
 
 /**
@@ -259,8 +253,8 @@ function deriveTrialState(
     };
   }
 
-  const trialEndDate = new Date(trialEndsAt);
-  if (Number.isNaN(trialEndDate.getTime())) {
+  const trialEndDate = parseEntitlementTimestamp(trialEndsAt);
+  if (!Number.isFinite(trialEndDate)) {
     return {
       trialStatus: status === 'trial' ? 'active' : status === 'expired' ? 'expired' : 'none',
       trialEndsAt: trialEndsAt || null,
@@ -269,7 +263,7 @@ function deriveTrialState(
   }
 
   const now = Date.now();
-  const rawDays = Math.ceil((trialEndDate.getTime() - now) / MS_PER_DAY);
+  const rawDays = Math.ceil((trialEndDate - now) / MS_PER_DAY);
   const expired = rawDays <= 0 || status === 'expired' || status === 'cancelled';
 
   if (status !== 'trial' && !expired) {
@@ -563,7 +557,7 @@ export async function getPlanAccessProjectionForUserId(
     : { ...DEFAULT_FEATURE_ENTITLEMENTS };
 
   if (subscriptionRow?.status === 'trial' && subscriptionRow.trialEndsAt) {
-    const trialEndTs = new Date(subscriptionRow.trialEndsAt).getTime();
+    const trialEndTs = parseEntitlementTimestamp(subscriptionRow.trialEndsAt);
 
     if (Number.isFinite(trialEndTs) && trialEndTs <= Date.now()) {
       await db
@@ -788,7 +782,23 @@ export async function activatePaidLaunchAccessForOwner(input: {
     throw new Error(activationError);
   }
 
-  const start = input.activatedAt || new Date();
+  const activatedAt = input.activatedAt || new Date();
+  const billableAccountId = await ensureBillableAccount(db, input.ownerType, input.ownerId);
+  const [currentSubscription] = await db
+    .select()
+    .from(subscriptions)
+    .where(eq(subscriptions.billableAccountId, billableAccountId))
+    .limit(1);
+  const currentEndTimestamp = parseCanonicalCommercialTimestamp(
+    currentSubscription?.currentPeriodEnd,
+  );
+  const currentEnd = currentEndTimestamp === null ? null : new Date(currentEndTimestamp);
+  const preservesPaidDays =
+    currentSubscription?.status === 'active' &&
+    currentSubscription.planId === input.planId &&
+    currentEnd !== null &&
+    currentEnd.getTime() > activatedAt.getTime();
+  const start = preservesPaidDays ? currentEnd! : activatedAt;
   const end = calculateCommercialTermEnd(start, term);
   if (!end) throw new Error('Paid Launch Access has no valid duration.');
   const metadata = parseCommercialMetadata(planRow.metadata);
@@ -799,7 +809,9 @@ export async function activatePaidLaunchAccessForOwner(input: {
     planId: input.planId,
     status: 'active',
     trialEndsAt: null,
-    currentPeriodStart: toDbDateTime(start),
+    currentPeriodStart: preservesPaidDays
+      ? currentSubscription.currentPeriodStart
+      : toDbDateTime(start),
     currentPeriodEnd: toDbDateTime(end),
     cancelAtPeriodEnd: false,
     billingCycleAnchor: toDbDateTime(end),
@@ -815,7 +827,10 @@ export async function activatePaidLaunchAccessForOwner(input: {
       verified_invoice_id: input.verifiedPayment.invoiceId,
       verified_payment_id: input.verifiedPayment.paymentId,
       verified_payment_amount_minor: input.verifiedPayment.amountMinor,
-      activated_at: toDbDateTime(start),
+      activated_at: toDbDateTime(activatedAt),
+      paid_term_starts_at: toDbDateTime(start),
+      paid_term_ends_at: toDbDateTime(end),
+      renewal_preserved_paid_days: Boolean(preservesPaidDays),
     },
     actorUserId: input.actorUserId,
     verifiedPayment: input.verifiedPayment,

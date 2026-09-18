@@ -57,6 +57,13 @@ export default function SubscriptionManagementPage({
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [page, setPage] = useState(1);
+  const [reviewPayment, setReviewPayment] = useState<{
+    id: number;
+    decision: 'approve' | 'duplicate';
+  } | null>(null);
+  const [verifiedCents, setVerifiedCents] = useState('');
+  const [financeNote, setFinanceNote] = useState('');
+  const [overpaymentReconciled, setOverpaymentReconciled] = useState(false);
 
   // Queries
   const {
@@ -99,7 +106,8 @@ export default function SubscriptionManagementPage({
   // Mutations
   const verifyPaymentMutation = trpc.billing.admin.reviewManualPayment.useMutation({
     onSuccess: () => {
-      toast.success('Payment verified successfully');
+      toast.success('Finance review recorded');
+      setReviewPayment(null);
       refetchProofs();
     },
     onError: error => {
@@ -112,10 +120,14 @@ export default function SubscriptionManagementPage({
       toast.info(COMMERCIAL_ACTIVATION_STATE.message);
       return;
     }
-    verifyPaymentMutation.mutate({
-      paymentId,
-      decision: status === 'verified' ? 'approve' : 'reject',
-    });
+    if (status === 'verified') {
+      setReviewPayment({ id: paymentId, decision: 'approve' });
+      setVerifiedCents('');
+      setFinanceNote('');
+      setOverpaymentReconciled(false);
+      return;
+    }
+    verifyPaymentMutation.mutate({ paymentId, decision: 'reject' });
   };
 
   const handleRequestCorrection = (paymentId: number) => {
@@ -128,6 +140,15 @@ export default function SubscriptionManagementPage({
       decision: 'request_correction',
       note: 'Finance team requested a corrected proof of payment.',
     });
+  };
+
+  const handleDuplicatePayment = (paymentId: number) => {
+    if (!COMMERCIAL_ACTIVATION_STATE.enabled) {
+      toast.info(COMMERCIAL_ACTIVATION_STATE.message);
+      return;
+    }
+    setReviewPayment({ id: paymentId, decision: 'duplicate' });
+    setFinanceNote('');
   };
 
   const handleViewProof = async (documentId?: number | null) => {
@@ -196,6 +217,82 @@ export default function SubscriptionManagementPage({
   return (
     <div className="space-y-6 p-6 pb-20">
       <CommercialActivationNotice />
+      <Dialog open={reviewPayment !== null} onOpenChange={open => !open && setReviewPayment(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {reviewPayment?.decision === 'duplicate'
+                ? 'Record duplicate payment proof'
+                : 'Reconcile received EFT funds'}
+            </DialogTitle>
+            <DialogDescription>
+              {reviewPayment?.decision === 'duplicate'
+                ? 'Do not approve or extend access. Record the manual treatment for this duplicate proof.'
+                : 'Match actual bank receipt to the invoice and payer. Uploaded proof alone is not payment verification.'}
+            </DialogDescription>
+          </DialogHeader>
+          {reviewPayment?.decision === 'approve' ? (
+            <label>
+              Verified amount in cents
+              <Input
+                type="number"
+                min="1"
+                step="1"
+                value={verifiedCents}
+                onChange={event => setVerifiedCents(event.target.value)}
+              />
+            </label>
+          ) : null}
+          <label>
+            {reviewPayment?.decision === 'duplicate'
+              ? 'Manual treatment note'
+              : 'Finance reconciliation note'}
+            <Input
+              value={financeNote}
+              maxLength={2000}
+              onChange={event => setFinanceNote(event.target.value)}
+            />
+          </label>
+          {reviewPayment?.decision === 'approve' ? (
+            <label>
+              <input
+                type="checkbox"
+                checked={overpaymentReconciled}
+                onChange={event => setOverpaymentReconciled(event.target.checked)}
+              />
+              I have reconciled any excess and recorded its manual treatment in the note.
+            </label>
+          ) : null}
+          <DialogFooter>
+            <Button
+              disabled={
+                !COMMERCIAL_ACTIVATION_STATE.enabled ||
+                verifyPaymentMutation.isPending ||
+                (reviewPayment?.decision === 'approve' &&
+                  (!Number.isSafeInteger(Number(verifiedCents)) || Number(verifiedCents) <= 0)) ||
+                !financeNote.trim()
+              }
+              onClick={() =>
+                verifyPaymentMutation.mutate({
+                  paymentId: reviewPayment!.id,
+                  decision: reviewPayment!.decision,
+                  ...(reviewPayment?.decision === 'approve'
+                    ? {
+                        verifiedAmount: Number(verifiedCents),
+                        overpaymentReconciled,
+                      }
+                    : {}),
+                  note: financeNote.trim(),
+                })
+              }
+            >
+              {reviewPayment?.decision === 'duplicate'
+                ? 'Record duplicate proof'
+                : 'Confirm finance approval'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
@@ -525,6 +622,15 @@ export default function SubscriptionManagementPage({
                               onClick={() => handleRequestCorrection(row.payment.id)}
                             >
                               Correction
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={!COMMERCIAL_ACTIVATION_STATE.enabled}
+                              className="text-slate-600 hover:bg-slate-50 border-slate-200"
+                              onClick={() => handleDuplicatePayment(row.payment.id)}
+                            >
+                              Duplicate
                             </Button>
                             <Button
                               size="sm"

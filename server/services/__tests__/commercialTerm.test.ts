@@ -4,6 +4,7 @@ import {
   getCommercialProductKey,
   getConfiguredLaunchFeeMinor,
   isPaidCommercialTermExpired,
+  parseCanonicalCommercialTimestamp,
   resolveCommercialTerm,
   validatePaidLaunchAccessPayment,
 } from '../commercialTerm';
@@ -57,6 +58,7 @@ describe('commercial term semantics', () => {
     const term = resolveCommercialTerm(launchPlan);
     const end = calculateCommercialTermEnd(start, term);
 
+    expect(end?.getTime() - start.getTime()).toBe(90 * 24 * 60 * 60 * 1000);
     expect(end?.toISOString()).toBe('2026-11-05T00:00:00.000Z');
     expect(
       isPaidCommercialTermExpired(term, 'active', end, new Date('2026-11-04T23:59:59.000Z')),
@@ -86,6 +88,35 @@ describe('commercial term semantics', () => {
     ).toBe(true);
     expect(isPaidCommercialTermExpired(term, 'active', null, start)).toBe(true);
     expect(isPaidCommercialTermExpired(term, 'active', 'not-a-date', start)).toBe(true);
+  });
+
+  it.each(['2026-03-01T12:34:56.789Z', '2026-10-01T12:34:56.789Z'])(
+    'preserves fixed duration and repeated UTC round trips from %s',
+    value => {
+      const term = resolveCommercialTerm(launchPlan);
+      const activation = new Date(value);
+      let start = activation;
+      for (let renewal = 1; renewal <= 8; renewal += 1) {
+        const end = calculateCommercialTermEnd(start, term)!;
+        expect(end.getTime() - start.getTime()).toBe(90 * 24 * 60 * 60 * 1000);
+        const stored = end.toISOString().replace('T', ' ').replace('Z', '');
+        const restored = parseCanonicalCommercialTimestamp(stored)!;
+        expect(restored).toBe(end.getTime());
+        expect(restored - activation.getTime()).toBe(renewal * 90 * 24 * 60 * 60 * 1000);
+        start = new Date(restored);
+      }
+    },
+  );
+
+  it('preserves explicit timezone offsets and rejects invalid timestamps', () => {
+    const expected = Date.parse('2026-09-17T12:34:56.789Z');
+    expect(parseCanonicalCommercialTimestamp('2026-09-17 12:34:56.789')).toBe(expected);
+    expect(parseCanonicalCommercialTimestamp('2026-09-17T12:34:56.789')).toBe(expected);
+    expect(parseCanonicalCommercialTimestamp('2026-09-17T14:34:56.789+02:00')).toBe(expected);
+    expect(parseCanonicalCommercialTimestamp('2026-09-17T08:34:56.789-04:00')).toBe(expected);
+    expect(parseCanonicalCommercialTimestamp(new Date(expected))).toBe(expected);
+    expect(parseCanonicalCommercialTimestamp('invalid')).toBeNull();
+    expect(parseCanonicalCommercialTimestamp(null)).toBeNull();
   });
 
   it('requires a configured fee and verified payment before activation', () => {

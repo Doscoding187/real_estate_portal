@@ -36,6 +36,7 @@ import {
   getCommercialProductKey,
   getConfiguredLaunchFeeMinor,
   isPaidCommercialTermExpired,
+  parseCanonicalCommercialTimestamp,
   resolveCommercialTerm,
 } from './commercialTerm';
 
@@ -121,12 +122,11 @@ function nowDb() {
 }
 
 function toDbTimestamp(value: Date | string | null | undefined) {
-  if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}/.test(value)) {
-    return value.slice(0, 19).replace('T', ' ');
+  const timestamp = value == null ? Date.now() : parseCanonicalCommercialTimestamp(value);
+  if (timestamp === null) {
+    throw new TRPCError({ code: 'BAD_REQUEST', message: 'Invalid commercial timestamp.' });
   }
-  const date = value instanceof Date ? value : value ? new Date(value) : new Date();
-  if (Number.isNaN(date.getTime())) return new Date().toISOString().slice(0, 19).replace('T', ' ');
-  return date.toISOString().slice(0, 19).replace('T', ' ');
+  return new Date(timestamp).toISOString().slice(0, 19).replace('T', ' ');
 }
 
 function addMonths(value: Date, months: number) {
@@ -258,14 +258,8 @@ function getBillingCycleMonths(billingCycle: BillingCycle) {
 }
 
 function parseDbDate(value?: string | Date | null) {
-  if (!value) return null;
-  const date =
-    value instanceof Date
-      ? value
-      : /^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}/.test(value)
-        ? new Date(`${value.slice(0, 19).replace(' ', 'T')}Z`)
-        : new Date(value);
-  return Number.isNaN(date.getTime()) ? null : date;
+  const timestamp = parseCanonicalCommercialTimestamp(value);
+  return timestamp === null ? null : new Date(timestamp);
 }
 
 function resolveInvoicePeriod(input: {
@@ -361,11 +355,17 @@ async function resolveCouponDiscount(
   }
 
   const now = Date.now();
-  if (coupon.validFrom && new Date(coupon.validFrom).getTime() > now) {
-    throw new TRPCError({ code: 'BAD_REQUEST', message: 'Coupon is not active yet.' });
+  if (coupon.validFrom) {
+    const validFrom = parseDbDate(coupon.validFrom);
+    if (validFrom && validFrom.getTime() > now) {
+      throw new TRPCError({ code: 'BAD_REQUEST', message: 'Coupon is not active yet.' });
+    }
   }
-  if (coupon.validUntil && new Date(coupon.validUntil).getTime() < now) {
-    throw new TRPCError({ code: 'BAD_REQUEST', message: 'Coupon has expired.' });
+  if (coupon.validUntil) {
+    const validUntil = parseDbDate(coupon.validUntil);
+    if (validUntil && validUntil.getTime() < now) {
+      throw new TRPCError({ code: 'BAD_REQUEST', message: 'Coupon has expired.' });
+    }
   }
 
   const appliesToPlans = parseJsonArray(coupon.appliesToPlans);
@@ -1031,21 +1031,6 @@ export async function requestPaidLaunchAccessInvoice(input: {
     const term = resolveCommercialTerm(plan);
     const launchFee = getConfiguredLaunchFeeMinor(plan)!;
     const lockedSubscription = lockedState.subscription;
-
-    if (
-      lockedSubscription &&
-      ACTIVE_SUBSCRIPTION_STATUSES.has(lockedSubscription.status as CanonicalSubscriptionStatus) &&
-      !isPaidCommercialTermExpired(
-        term,
-        lockedSubscription.status,
-        lockedSubscription.currentPeriodEnd,
-      )
-    ) {
-      throw new TRPCError({
-        code: 'CONFLICT',
-        message: `${plan.displayName} is already active for this account.`,
-      });
-    }
 
     if (
       lockedSubscription &&
@@ -2340,6 +2325,7 @@ export async function reviewManualPayment(input: {
     | 'unmatched';
   note?: string;
   verifiedAmount?: number;
+  overpaymentReconciled?: boolean;
 }) {
   requireCommercialActivation('Payment review');
   const db = await getDb();
@@ -2451,6 +2437,21 @@ export async function reviewManualPayment(input: {
       throw new TRPCError({
         code: 'BAD_REQUEST',
         message: `Payment cannot be reviewed while ${beforePayment.state}.`,
+      });
+    }
+
+    if (input.decision === 'duplicate' && !input.note?.trim()) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'Duplicate payment review requires a finance note.',
+      });
+    }
+
+    if (invoiceWasAlreadyPaid && !BLOCKED_REVIEW_DECISIONS.has(input.decision)) {
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message:
+          'An already-paid invoice cannot be approved again. Record the proof as duplicate, unmatched, or rejected.',
       });
     }
 
@@ -2583,11 +2584,22 @@ export async function reviewManualPayment(input: {
       };
     }
 
-    const verifiedAmount = Math.round(input.verifiedAmount || beforePayment.amount);
-    if (!Number.isFinite(verifiedAmount) || verifiedAmount <= 0) {
+    const verifiedAmount = input.verifiedAmount;
+    if (!Number.isSafeInteger(verifiedAmount) || !verifiedAmount || verifiedAmount <= 0) {
       throw new TRPCError({
         code: 'BAD_REQUEST',
-        message: 'Verified amount must be greater than zero.',
+        message: 'An explicit verified amount in positive integer cents is required.',
+      });
+    }
+    const priorVerifiedAmount = await getLatestInvoicePaymentTotal(tx, invoice.id);
+    if (
+      !invoiceWasAlreadyPaid &&
+      priorVerifiedAmount + verifiedAmount > invoice.amountDue &&
+      !(input.overpaymentReconciled === true && input.note?.trim())
+    ) {
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message: 'Overpayment requires explicit reconciliation and a finance note.',
       });
     }
 
@@ -2621,13 +2633,15 @@ export async function reviewManualPayment(input: {
           last_reviewed_payment_id: beforePayment.id,
           last_reviewed_at: reviewedAt,
           overpayment_amount: overpaymentAmount,
+          overpayment_reconciled: input.overpaymentReconciled === true,
+          overpayment_reconciliation_note: input.overpaymentReconciled ? input.note?.trim() : null,
           activation_transition: activationOccurred,
           already_paid_invoice_proof: invoiceWasAlreadyPaid,
           amount_rule: invoiceWasAlreadyPaid
             ? 'already_paid_invoice_does_not_reactivate'
             : invoicePaid
               ? overpaymentAmount > 0
-                ? 'overpayment_activates'
+                ? 'reconciled_overpayment_activates'
                 : 'exact_or_full_payment_activates'
               : 'partial_payment_does_not_activate',
         },

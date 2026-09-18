@@ -14,6 +14,8 @@ import {
 } from '../../drizzle/schema';
 import { getDb } from '../db-connection';
 import { getCommercialCatalog } from '../services/commercialCatalogService';
+import { parseCanonicalCommercialTimestamp } from '../services/commercialTerm';
+import { DeveloperSubscriptionService } from '../services/developerSubscriptionService';
 import {
   getPlanAccessProjectionForUserId,
   isSubscriptionEntitled,
@@ -508,30 +510,193 @@ describeWithDb('S4 paid Launch Access disposable runtime', () => {
       }
 
       const periodEndAfterFirstApproval = active?.subscription?.currentPeriodEnd;
-      const secondApproval = await reviewManualPayment({
+      await expect(
+        reviewManualPayment({
+          actorUser: { id: financeId, role: 'super_admin' },
+          paymentId: secondProof.paymentId,
+          decision: 'approve',
+          verifiedAmount: input.expectedAmount,
+        }),
+      ).rejects.toThrow('An already-paid invoice cannot be approved again.');
+      await expect(
+        reviewManualPayment({
+          actorUser: { id: financeId, role: 'super_admin' },
+          paymentId: secondProof.paymentId,
+          decision: 'duplicate',
+        }),
+      ).rejects.toThrow('Duplicate payment review requires a finance note.');
+      const duplicateReview = await reviewManualPayment({
         actorUser: { id: financeId, role: 'super_admin' },
         paymentId: secondProof.paymentId,
-        decision: 'approve',
-        verifiedAmount: input.expectedAmount,
+        decision: 'duplicate',
+        note: 'Same EFT proof submitted twice; manual duplicate-payment treatment recorded.',
       });
-      expect(secondApproval).toMatchObject({
+      expect(duplicateReview).toMatchObject({
         success: true,
         idempotent: true,
         invoiceStatus: 'paid',
         subscriptionStatus: 'active',
-        activationOccurred: false,
+      });
+      const [duplicatePayment] = await db
+        .select({ state: billingPayments.state, reviewNote: billingPayments.reviewNote })
+        .from(billingPayments)
+        .where(eq(billingPayments.id, secondProof.paymentId));
+      expect(duplicatePayment).toMatchObject({
+        state: 'rejected',
+        reviewNote: 'Same EFT proof submitted twice; manual duplicate-payment treatment recorded.',
       });
       const afterSecondApproval = await loadSubscription(input.ownerType, input.ownerId);
       expect(afterSecondApproval?.currentPeriodEnd).toBe(periodEndAfterFirstApproval);
+      expect(
+        parseCanonicalCommercialTimestamp(afterSecondApproval!.currentPeriodEnd)! -
+          parseCanonicalCommercialTimestamp(afterSecondApproval!.currentPeriodStart)!,
+      ).toBe(90 * 24 * 60 * 60 * 1000);
 
       const subscription = await loadSubscription(input.ownerType, input.ownerId);
       expect(subscription?.currentPeriodStart).toBeTruthy();
       expect(subscription?.currentPeriodEnd).toBeTruthy();
       const duration =
-        new Date(subscription!.currentPeriodEnd!).getTime() -
-        new Date(subscription!.currentPeriodStart!).getTime();
+        parseCanonicalCommercialTimestamp(subscription!.currentPeriodEnd)! -
+        parseCanonicalCommercialTimestamp(subscription!.currentPeriodStart)!;
       expect(duration).toBe(90 * 24 * 60 * 60 * 1000);
       expect(subscription?.cancelAtPeriodEnd).toBe(0);
+
+      const renewal = await requestPaidLaunchAccessInvoice({ user: ownerUser, planId: plan.id });
+      expect(renewal.invoice.id).not.toBe(requested.invoice.id);
+      expect((await loadSubscription(input.ownerType, input.ownerId))?.currentPeriodEnd).toBe(
+        subscription?.currentPeriodEnd,
+      );
+      const renewalProof = await submitPaidLaunchAccessPaymentProof({
+        user: ownerUser,
+        ...proofFor(renewal.invoice),
+      });
+      const renewalReviews = await Promise.all([
+        reviewManualPayment({
+          actorUser: { id: financeId, role: 'super_admin' },
+          paymentId: renewalProof.paymentId,
+          decision: 'approve',
+          verifiedAmount: input.expectedAmount,
+        }),
+        reviewManualPayment({
+          actorUser: { id: financeId, role: 'super_admin' },
+          paymentId: renewalProof.paymentId,
+          decision: 'approve',
+          verifiedAmount: input.expectedAmount,
+        }),
+      ]);
+      expect(renewalReviews.filter(result => result.activationOccurred)).toHaveLength(1);
+      const renewed = await loadSubscription(input.ownerType, input.ownerId);
+      const firstTermMs = 90 * 24 * 60 * 60 * 1000;
+      expect(
+        parseCanonicalCommercialTimestamp(renewed!.currentPeriodEnd)! -
+          parseCanonicalCommercialTimestamp(subscription!.currentPeriodEnd)!,
+      ).toBe(firstTermMs);
+      expect(
+        parseCanonicalCommercialTimestamp(renewed!.currentPeriodEnd)! -
+          parseCanonicalCommercialTimestamp(renewed!.currentPeriodStart)!,
+      ).toBe(firstTermMs * 2);
+      expect(renewed?.metadata).toMatchObject({ renewal_preserved_paid_days: true });
+
+      const nextRenewal = await requestPaidLaunchAccessInvoice({
+        user: ownerUser,
+        planId: plan.id,
+      });
+      const nextProof = await submitPaidLaunchAccessPaymentProof({
+        user: ownerUser,
+        ...proofFor(nextRenewal.invoice),
+      });
+      const nextApproval = await reviewManualPayment({
+        actorUser: { id: financeId, role: 'super_admin' },
+        paymentId: nextProof.paymentId,
+        decision: 'approve',
+        verifiedAmount: input.expectedAmount,
+      });
+      expect(nextApproval.activationOccurred).toBe(true);
+      const twiceRenewed = await loadSubscription(input.ownerType, input.ownerId);
+      expect(
+        parseCanonicalCommercialTimestamp(twiceRenewed!.currentPeriodEnd)! -
+          parseCanonicalCommercialTimestamp(renewed!.currentPeriodEnd)!,
+      ).toBe(firstTermMs);
+      expect(
+        parseCanonicalCommercialTimestamp(twiceRenewed!.currentPeriodEnd)! -
+          parseCanonicalCommercialTimestamp(subscription!.currentPeriodStart)!,
+      ).toBe(firstTermMs * 3);
+      expect(twiceRenewed!.currentPeriodStart).toBe(subscription!.currentPeriodStart);
+      expect(twiceRenewed!.id).toBe(subscription!.id);
+      if (input.ownerType === 'developer') {
+        const developerSubscription = await new DeveloperSubscriptionService().getSubscription(
+          input.ownerId,
+        );
+        expect(developerSubscription!.currentPeriodStart!.getTime()).toBe(
+          parseCanonicalCommercialTimestamp(twiceRenewed!.currentPeriodStart),
+        );
+        expect(developerSubscription!.currentPeriodEnd!.getTime()).toBe(
+          parseCanonicalCommercialTimestamp(twiceRenewed!.currentPeriodEnd),
+        );
+      }
+      expect(twiceRenewed!.metadata).toMatchObject({
+        paid_term_starts_at: renewed!.currentPeriodEnd,
+        paid_term_ends_at: twiceRenewed!.currentPeriodEnd,
+        renewal_preserved_paid_days: true,
+      });
+      const ownerSubscriptions = await db
+        .select()
+        .from(subscriptions)
+        .where(
+          and(
+            eq(subscriptions.ownerType, input.ownerType),
+            eq(subscriptions.ownerId, input.ownerId),
+          ),
+        );
+      expect(ownerSubscriptions).toHaveLength(1);
+      const ownerInvoices = await db
+        .select()
+        .from(billingInvoices)
+        .where(
+          and(
+            eq(billingInvoices.ownerType, input.ownerType),
+            eq(billingInvoices.ownerId, input.ownerId),
+          ),
+        );
+      expect(ownerInvoices).toHaveLength(3);
+      expect(
+        ownerInvoices.every(
+          row => row.status === 'paid' && row.subscriptionId === subscription!.id,
+        ),
+      ).toBe(true);
+      const activations = await db
+        .select()
+        .from(billingAuditEvents)
+        .where(
+          and(
+            eq(billingAuditEvents.ownerType, input.ownerType),
+            eq(billingAuditEvents.ownerId, input.ownerId),
+            eq(billingAuditEvents.eventType, 'payment_approved_subscription_activated'),
+          ),
+        );
+      expect(activations).toHaveLength(3);
+      expect(new Set(activations.map(row => row.invoiceId))).toEqual(
+        new Set([requested.invoice.id, renewal.invoice.id, nextRenewal.invoice.id]),
+      );
+      await reviewManualPayment({
+        actorUser: { id: financeId, role: 'super_admin' },
+        paymentId: nextProof.paymentId,
+        decision: 'approve',
+      });
+      expect((await loadSubscription(input.ownerType, input.ownerId))!.currentPeriodEnd).toBe(
+        twiceRenewed!.currentPeriodEnd,
+      );
+      const afterReplay = await db
+        .select()
+        .from(billingAuditEvents)
+        .where(
+          and(
+            eq(billingAuditEvents.ownerType, input.ownerType),
+            eq(billingAuditEvents.ownerId, input.ownerId),
+            eq(billingAuditEvents.eventType, 'payment_approved_subscription_activated'),
+          ),
+        );
+      expect(afterReplay).toHaveLength(3);
 
       const invoiceCountBeforeExpiry = await ownerInvoiceCount(input.ownerType, input.ownerId);
       await db
@@ -554,6 +719,27 @@ describeWithDb('S4 paid Launch Access disposable runtime', () => {
       expect(await ownerInvoiceCount(input.ownerType, input.ownerId)).toBe(
         invoiceCountBeforeExpiry,
       );
+      const restart = await requestPaidLaunchAccessInvoice({ user: ownerUser, planId: plan.id });
+      const restartProof = await submitPaidLaunchAccessPaymentProof({
+        user: ownerUser,
+        ...proofFor(restart.invoice),
+      });
+      const beforeRestart = Date.now();
+      await reviewManualPayment({
+        actorUser: { id: financeId, role: 'super_admin' },
+        paymentId: restartProof.paymentId,
+        decision: 'approve',
+        verifiedAmount: input.expectedAmount,
+      });
+      const restarted = await loadSubscription(input.ownerType, input.ownerId);
+      expect(
+        parseCanonicalCommercialTimestamp(restarted!.currentPeriodStart)!,
+      ).toBeGreaterThanOrEqual(beforeRestart - 1000);
+      expect(
+        parseCanonicalCommercialTimestamp(restarted!.currentPeriodEnd)! -
+          parseCanonicalCommercialTimestamp(restarted!.currentPeriodStart)!,
+      ).toBe(90 * 24 * 60 * 60 * 1000);
+      expect(restarted?.metadata).toMatchObject({ renewal_preserved_paid_days: false });
     };
 
     await runOwner({
@@ -698,6 +884,93 @@ describeWithDb('S4 paid Launch Access disposable runtime', () => {
       }
     });
     expect(approvedTypes).toContain('payment_approved');
+  }, 60_000);
+
+  it('keeps an unreconciled overpayment under review without activating access', async () => {
+    const db = await getDb();
+    if (!db) throw new Error('Database not available');
+    const agentId = await insertUser({ label: 'b03-overpayment', role: 'agent' });
+    const financeId = await insertUser({ label: 'b03-finance', role: 'super_admin' });
+    const ownerUser = { id: agentId, role: 'agent' as const, agencyId: null };
+    const requested = await requestPaidLaunchAccessInvoice({ user: ownerUser });
+    const proof = await submitPaidLaunchAccessPaymentProof({
+      user: ownerUser,
+      ...proofFor(requested.invoice),
+      amount: requested.invoice.amountDue + 10000,
+    });
+
+    for (const verifiedAmount of [undefined, 0, -1, 1.5, Number.MAX_SAFE_INTEGER + 1]) {
+      await expect(
+        reviewManualPayment({
+          actorUser: { id: financeId, role: 'super_admin' },
+          paymentId: proof.paymentId,
+          decision: 'approve',
+          verifiedAmount,
+        }),
+      ).rejects.toThrow('An explicit verified amount in positive integer cents is required.');
+    }
+
+    await expect(
+      reviewManualPayment({
+        actorUser: { id: financeId, role: 'super_admin' },
+        paymentId: proof.paymentId,
+        decision: 'approve',
+        verifiedAmount: requested.invoice.amountDue + 10000,
+      }),
+    ).rejects.toThrow('Overpayment requires explicit reconciliation and a finance note.');
+
+    const subscription = await loadSubscription('agent', agentId);
+    expect(subscription?.status).toBe('payment_under_review');
+    const [payment] = await db
+      .select()
+      .from(billingPayments)
+      .where(eq(billingPayments.id, proof.paymentId));
+    expect(payment.state).toBe('under_review');
+    const [invoice] = await db
+      .select()
+      .from(billingInvoices)
+      .where(eq(billingInvoices.id, requested.invoice.id));
+    expect(invoice.status).toBe('submitted');
+    expect(invoice.amountPaid).toBe(0);
+
+    await expect(
+      reviewManualPayment({
+        actorUser: { id: financeId, role: 'super_admin' },
+        paymentId: proof.paymentId,
+        decision: 'approve',
+        verifiedAmount: requested.invoice.amountDue + 10000,
+        overpaymentReconciled: true,
+      }),
+    ).rejects.toThrow('Overpayment requires explicit reconciliation and a finance note.');
+
+    const approved = await reviewManualPayment({
+      actorUser: { id: financeId, role: 'super_admin' },
+      paymentId: proof.paymentId,
+      decision: 'approve',
+      verifiedAmount: requested.invoice.amountDue + 10000,
+      overpaymentReconciled: true,
+      note: 'Simulated bank match; excess assigned for manual refund.',
+    });
+    expect(approved).toMatchObject({ activationOccurred: true, invoiceStatus: 'paid' });
+    const [reconciled] = await db
+      .select()
+      .from(billingInvoices)
+      .where(eq(billingInvoices.id, invoice.id));
+    expect(reconciled.metadata).toMatchObject({
+      overpayment_amount: 10000,
+      overpayment_reconciled: true,
+      amount_rule: 'reconciled_overpayment_activates',
+    });
+    const active = await loadSubscription('agent', agentId);
+    await reviewManualPayment({
+      actorUser: { id: financeId, role: 'super_admin' },
+      paymentId: proof.paymentId,
+      decision: 'approve',
+      verifiedAmount: requested.invoice.amountDue + 10000,
+    });
+    expect((await loadSubscription('agent', agentId))?.currentPeriodEnd).toBe(
+      active?.currentPeriodEnd,
+    );
   }, 60_000);
 
   it('notifies an agent at every Launch Access billing milestone', async () => {
