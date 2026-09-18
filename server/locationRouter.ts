@@ -32,6 +32,7 @@ import {
   isCommercialMarketingPropertyType,
 } from '../shared/commercial-domain';
 import { excludeLandFromGenericPublicProjection } from './services/landLaunchContainmentService';
+import { resolvePublicPropertyEligibilityIds } from './services/publicPropertyEligibilityService';
 
 function rejectCommercialPropertyTypes(values: readonly unknown[] | undefined): void {
   if (!values?.some(value => isCommercialMarketingPropertyType(value))) return;
@@ -537,7 +538,7 @@ export const locationRouter = router({
         conditions.push(eq(properties.bathrooms, input.filters.bathrooms));
       }
 
-      const propertiesList = await db
+      const candidateProperties = await db
         .select({
           id: properties.id,
           title: properties.title,
@@ -553,8 +554,20 @@ export const locationRouter = router({
           province: properties.province,
         })
         .from(properties)
-        .where(and(...conditions))
-        .limit(input.limit);
+        .where(and(...conditions));
+
+      // A published projection is not, by itself, a current commercial
+      // assertion. Re-resolve every map candidate through the shared public
+      // eligibility authority so expiry removes listing-backed inventory from
+      // this legacy-but-live discovery surface as well.
+      const eligibleIds = new Set(
+        await resolvePublicPropertyEligibilityIds(
+          candidateProperties.map(property => Number(property.id)),
+        ),
+      );
+      const propertiesList = candidateProperties
+        .filter(property => eligibleIds.has(Number(property.id)))
+        .slice(0, input.limit);
 
       return propertiesList.map(property => {
         const publicCoordinates = normalizeCoordinatePair(property.latitude, property.longitude);
@@ -791,31 +804,55 @@ export const locationRouter = router({
         weight: number;
       }> = [];
 
+      const candidateRows = await db
+        .select({
+          id: properties.id,
+          latitude: properties.publicLatitude,
+          longitude: properties.publicLongitude,
+        })
+        .from(properties)
+        .where(
+          and(
+            sql`${properties.publicLatitude} BETWEEN ${input.bounds.south} AND ${input.bounds.north}`,
+            sql`${properties.publicLongitude} BETWEEN ${input.bounds.west} AND ${input.bounds.east}`,
+            eq(properties.status, 'published'),
+            ne(properties.propertyType, 'commercial'),
+            excludeLandFromGenericPublicProjection(),
+          ),
+        );
+      const eligibleIds = new Set(
+        await resolvePublicPropertyEligibilityIds(candidateRows.map(row => Number(row.id))),
+      );
+      const countsByCell = new Map<string, number>();
+      for (const row of candidateRows) {
+        if (!eligibleIds.has(Number(row.id))) continue;
+        const latitude = Number(row.latitude);
+        const longitude = Number(row.longitude);
+        if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) continue;
+        const cellRow = Math.min(
+          input.gridSize - 1,
+          Math.max(0, Math.floor((latitude - input.bounds.south) / latStep)),
+        );
+        const cellColumn = Math.min(
+          input.gridSize - 1,
+          Math.max(0, Math.floor((longitude - input.bounds.west) / lngStep)),
+        );
+        const key = `${cellRow}:${cellColumn}`;
+        countsByCell.set(key, (countsByCell.get(key) || 0) + 1);
+      }
+
       for (let i = 0; i < input.gridSize; i++) {
         for (let j = 0; j < input.gridSize; j++) {
           const gridLat = input.bounds.south + i * latStep;
           const gridLng = input.bounds.west + j * lngStep;
+          const cellCount = countsByCell.get(`${i}:${j}`) || 0;
 
-          // Count properties in this grid cell
-          const [countResult] = await db
-            .select({ count: count() })
-            .from(properties)
-            .where(
-              and(
-                sql`${properties.publicLatitude} BETWEEN ${gridLat} AND ${gridLat + latStep}`,
-                sql`${properties.publicLongitude} BETWEEN ${gridLng} AND ${gridLng + lngStep}`,
-                eq(properties.status, 'published'),
-                ne(properties.propertyType, 'commercial'),
-                excludeLandFromGenericPublicProjection(),
-              ),
-            );
-
-          if (countResult?.count > 0) {
+          if (cellCount > 0) {
             heatmapData.push({
               latitude: gridLat + latStep / 2,
               longitude: gridLng + lngStep / 2,
-              count: countResult.count,
-              weight: Math.min(countResult.count / 10, 1), // Normalize to 0-1
+              count: cellCount,
+              weight: Math.min(cellCount / 10, 1), // Normalize to 0-1
             });
           }
         }

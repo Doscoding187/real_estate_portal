@@ -89,6 +89,21 @@ paid capability; it does not erase legitimate business history.
     used a product-less activation check. They now resolve the persisted plan
     before mutation, so a future bounded MVP release can administer only an
     approved product and cannot release legacy/deferred products.
+13. The mounted location-map, heatmap, enhanced-location, and similar-property
+   discovery surfaces still trusted a published projection directly. They now
+   re-resolve candidates, references, and aggregates through the shared public
+   eligibility authority before pagination or recommendation output, so an
+   expired paid projection cannot remain discoverable on a secondary route.
+14. The generic global-search and Place-ID listing paths also read published
+    projections directly. They now resolve listing candidates through the same
+    authority, and generic development search applies the canonical Developer
+    publication condition, closing the remaining secondary discovery bypass.
+
+The bounded follow-up changed only the canonical discovery services and their
+contract coverage: `server/locationRouter.ts`,
+`server/enhancedLocationRouter.ts`, `server/services/similarPropertiesService.ts`,
+`server/services/globalSearchService.ts`, and the two public-discovery contract
+tests. No stakeholder-specific commercial authority was introduced.
 
 ## 4. Expiry and new-enquiry evidence
 
@@ -106,6 +121,11 @@ The database-backed acceptance matrix passed against the disposable target:
   received an enquiry while the organisation term was active; after expiry,
   public eligibility and new enquiry were rejected while the organisation,
   publisher, and development state remained present.
+- **Secondary public discovery:** map, heatmap, enhanced-location, location
+  insight, sitemap, similar-property, generic global-search, and Place-ID paths
+  now filter through the same current eligibility resolver; generic development
+  search applies the canonical development condition. Expired paid inventory is
+  absent from cards, aggregates, recommendations, search, and crawl output.
 
 The public profile/identity layer may preserve a verified professional or
 organisation record for legitimate history, but its commercial discovery and
@@ -184,8 +204,8 @@ Production and protected resources were untouched.
 
 | Layer | Command/result |
 | --- | --- |
-| Unit/contract | Focused final run: 10 files, 158 tests passed, covering terms, activation allowlist, authenticated entitlement projection, public eligibility, custody/capture, Developer owner matching, serving-location owner boundaries, continuity, and notice scheduler |
-| Persisted lifecycle integration | `NODE_ENV=test APP_ENV=test pnpm test:authority -- ...` (12 selected B03/lifecycle files, including demand routing): 12 files, 74 tests passed |
+| Unit/contract | Focused B03 run: 10 files, 158 tests passed, covering terms, activation allowlist, authenticated entitlement projection, public eligibility, custody/capture, Developer owner matching, serving-location owner boundaries, continuity, and notice scheduler; residual public-discovery run: 6 files, 20 tests passed (location, global-search, similar-property, location-insight, hierarchy, and home-insight expiry boundaries) |
+| Persisted lifecycle integration | `NODE_ENV=test APP_ENV=test pnpm test:authority -- ...` (12 selected B03/lifecycle files, including demand routing): 12 files, 74 tests passed; secondary expiry regression (Agent launch, Developer publication, consumer activity): 3 files, 32 tests passed |
 | Payment/finance acceptance | `commercial-launch-access-s4.integration.test.ts`: 6/6; `billing.foundation.acceptance.integration.test.ts`: 2/2 (also included in the matrix) |
 | Governed scenario | `pnpm db:scenario:prepare`; `NODE_ENV=test APP_ENV=test pnpm db:scenario:verify`: 3 manual + 1 development source, duplicate replay/custody, Agent/Agency/Developer authorization and cross-tenant denial all passed |
 | Database authority | `pnpm db:authority:check`: 36 files, 298 tests plus 119 utility surfaces; passed |

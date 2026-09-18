@@ -8,6 +8,7 @@ import { db } from '../db';
 import { exploreContent, properties } from '../../drizzle/schema';
 import { eq, and, gte, lte, sql, ne, inArray } from 'drizzle-orm';
 import { excludeLandFromGenericPublicProjection } from './landLaunchContainmentService';
+import { resolvePublicPropertyEligibilityIds } from './publicPropertyEligibilityService';
 
 interface SimilarProperty {
   contentId: number;
@@ -76,6 +77,12 @@ export class SimilarPropertiesService {
       );
     }
 
+    // Similar-property discovery is still a public inventory surface. A
+    // published projection whose Launch Access term has expired must not be
+    // used as either the reference or a recommendation candidate.
+    const referenceEligibility = await resolvePublicPropertyEligibilityIds([propertyId]);
+    if (referenceEligibility.length === 0) return [];
+
     const ref = {
       ...referenceProperty[0],
       latitude: referenceProperty[0].publicLatitude,
@@ -116,9 +123,19 @@ export class SimilarPropertiesService {
       )
       .limit(100); // Get more candidates for better filtering
 
+    const filterEligibleCandidates = async (rows: any[]): Promise<any[]> => {
+      const eligibleIds = new Set(
+        await resolvePublicPropertyEligibilityIds(rows.map(candidate => Number(candidate.id))),
+      );
+      return rows.filter(candidate => eligibleIds.has(Number(candidate.id)));
+    };
+    candidates = await filterEligibleCandidates(candidates);
+
     // If not enough candidates, expand search
     if (candidates.length < limit) {
-      candidates = await this.expandSearch(ref, propertyId, limit * 2);
+      candidates = await filterEligibleCandidates(
+        await this.expandSearch(ref, propertyId, limit * 2),
+      );
     }
 
     // Calculate similarity scores
