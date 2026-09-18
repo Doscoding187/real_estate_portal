@@ -1309,6 +1309,22 @@ describeWithDb('agency full operating journey acceptance', () => {
       canReceiveLeads: false,
       canAccessExistingLeads: true,
     });
+    const [membershipDuringExpiry] = await db
+      .select({ status: agencyAgentMemberships.status, agencyId: agencyAgentMemberships.agencyId })
+      .from(agencyAgentMemberships)
+      .where(eq(agencyAgentMemberships.agentId, created.agentId))
+      .limit(1);
+    expect(membershipDuringExpiry).toMatchObject({
+      agencyId: created.agencyId,
+      status: 'active',
+    });
+    await expect(
+      publicApi.leads.create.mutate({
+        ...enquiryInput,
+        captureRequestId: `agency-expired-new-enquiry-${suffix}`,
+        message: 'This new enquiry must be denied after Agency expiry.',
+      }),
+    ).rejects.toMatchObject({ data: { code: 'NOT_FOUND' } });
     const expiredPipeline = await memberAgentApi.agent.getLeadsPipeline.query({
       filters: { propertyId: Number(property.id) },
     });

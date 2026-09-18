@@ -1,3 +1,8 @@
+import {
+  isPaidMvpLaunchAccessProductKey,
+  type PaidMvpLaunchAccessProductKey,
+} from '../../shared/commercialActivation';
+
 export const COMMERCIAL_TERM_KINDS = [
   'free_trial',
   'paid_launch_access',
@@ -22,6 +27,8 @@ export type VerifiedPaymentLike = {
 
 type PlanTermSource = {
   name?: string | null;
+  segment?: string | null;
+  isActive?: boolean | number | null;
   price?: number | null;
   priceMonthly?: number | null;
   trialDays?: number | null;
@@ -127,6 +134,40 @@ export function getCommercialProductKey(plan: PlanTermSource): string {
     return configured;
   }
   return String(plan.name || 'unidentified_product');
+}
+
+/**
+ * A paid-MVP entitlement is intentionally stricter than a generic paid plan.
+ * This shared check keeps historical recurring, trial, and future product rows
+ * from being mistaken for one of the approved 90-day Launch Access terms.
+ */
+export function getPaidMvpLaunchAccessProductKey(
+  plan: PlanTermSource,
+  expectedOwnerType?: 'agent' | 'agency' | 'developer',
+): PaidMvpLaunchAccessProductKey | null {
+  // Public read/capture paths must fail closed if a corrupted join or an
+  // incomplete fixture supplies no canonical plan row.
+  if (!plan || typeof plan !== 'object') return null;
+  const productKey = getCommercialProductKey(plan);
+  if (!isPaidMvpLaunchAccessProductKey(productKey)) return null;
+  if (expectedOwnerType && plan.segment !== expectedOwnerType) return null;
+  // The canonical plan row must explicitly be live.  Treat a partial or
+  // malformed projection as ineligible rather than inheriting launch access
+  // from a matching name alone.
+  if (Number(plan.isActive) !== 1) return null;
+
+  const term = resolveCommercialTerm(plan);
+  if (
+    term.kind !== 'paid_launch_access' ||
+    term.durationDays !== 90 ||
+    !term.requiresVerifiedPayment ||
+    term.autoRenews
+  ) {
+    return null;
+  }
+
+  const expectedKey = `${expectedOwnerType || plan.segment || ''}_launch_access`;
+  return productKey === expectedKey ? productKey : null;
 }
 
 /**

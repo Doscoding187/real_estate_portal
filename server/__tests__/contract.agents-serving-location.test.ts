@@ -31,6 +31,19 @@ function makeQueueDb(results: Array<Record<string, unknown>[] | Record<string, u
 
 const SUBURB_ROW = [{ id: 501 }];
 
+const launchPlan = (segment: 'agent' | 'agency') => ({
+  name: `${segment}_launch_access`,
+  segment,
+  isActive: 1,
+  metadata: {
+    commercial_term_kind: 'paid_launch_access',
+    commercial_product_key: `${segment}_launch_access`,
+    commercial_term_duration_days: 90,
+    commercial_requires_verified_payment: true,
+    commercial_auto_renews: false,
+  },
+});
+
 const baseAgent = {
   id: 33,
   userId: 70,
@@ -49,7 +62,16 @@ describe('agents serving location authority', () => {
     const { db } = makeQueueDb([
       SUBURB_ROW,
       [baseAgent],
-      [{ ownerId: 70, status: 'active', currentPeriodEnd: '2099-01-01 00:00:00' }],
+      [
+        {
+          subscription: {
+            ownerId: 70,
+            status: 'active',
+            currentPeriodEnd: '2099-01-01 00:00:00',
+          },
+          plan: launchPlan('agent'),
+        },
+      ],
     ]);
     const result: AgentAreaRecommendationDto[] = await findAgentsServingLocation(
       db as never,
@@ -104,6 +126,16 @@ describe('agents serving location authority', () => {
           isVerified: 1,
         },
       ],
+      [
+        {
+          subscription: {
+            ownerId: 81,
+            status: 'active',
+            currentPeriodEnd: '2099-01-01 00:00:00',
+          },
+          plan: launchPlan('agency'),
+        },
+      ],
     ]);
     const result = await findAgentsServingLocation(db as never, 'suburb', 501);
     expect(result).toHaveLength(1);
@@ -141,6 +173,7 @@ describe('agents serving location authority', () => {
     expect(source).not.toContain('splitTextList(agent.areasServed)');
     expect(source).not.toContain('leftJoin(agencies, eq(agents.agencyId, agencies.id))');
     expect(source).toContain('listCurrentActiveAgencyMembershipsByAgentId');
+    expect(source).toContain("eq(subscriptions.ownerType, 'agent')");
   });
 
   it('returns nothing for an unknown or retired location', async () => {

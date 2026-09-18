@@ -16,13 +16,17 @@ import {
   calculateCommercialTermEnd,
   getCommercialProductKey,
   getConfiguredLaunchFeeMinor,
+  getPaidMvpLaunchAccessProductKey,
   isPaidCommercialTermExpired,
   parseCanonicalCommercialTimestamp,
   parseCommercialMetadata,
   resolveCommercialTerm,
   validatePaidLaunchAccessPayment,
 } from './commercialTerm';
-import { requireCommercialActivation } from './commercialActivationPolicy';
+import {
+  requireAnyPaidMvpLaunchAccessActivation,
+  requireCommercialActivation,
+} from './commercialActivationPolicy';
 
 export type PlanSegment = 'agent' | 'agency' | 'enterprise' | 'developer';
 export type SubscriptionOwnerType = 'agent' | 'agency' | 'developer';
@@ -96,6 +100,7 @@ export type PlanSnapshot = {
   name: string;
   displayName: string;
   segment: PlanSegment;
+  isActive: number;
   priceMonthly: number;
   trialDays: number;
   metadata: Record<string, unknown> | null;
@@ -180,6 +185,7 @@ function toPlanSnapshot(row: typeof plans.$inferSelect): PlanSnapshot {
     name: row.name,
     displayName: row.displayName,
     segment: (row.segment || 'agent') as PlanSegment,
+    isActive: Number(row.isActive || 0),
     priceMonthly: Number(row.priceMonthly || row.price || 0),
     trialDays: Number(row.trialDays || 0),
     metadata: parseJsonRecord(row.metadata),
@@ -238,6 +244,32 @@ export function isPaidSubscriptionRowEntitled(
     const graceEnd = row.graceEndsAt ? parseEntitlementTimestamp(row.graceEndsAt) : null;
     return graceEnd !== null && Number.isFinite(graceEnd) && graceEnd > now.getTime();
   }
+  return true;
+}
+
+/**
+ * The public/commercial read paths must not treat a generic active or legacy
+ * subscription as Launch Access. A fixed paid term always requires a valid
+ * UTC end, in addition to the exact approved product and owner segment.
+ */
+export function isPaidMvpLaunchAccessSubscriptionEntitled(
+  row: {
+    status: string | null | undefined;
+    currentPeriodEnd: string | Date | null | undefined;
+    graceEndsAt?: string | Date | null | undefined;
+  },
+  plan: Parameters<typeof getPaidMvpLaunchAccessProductKey>[0],
+  ownerType: SubscriptionOwnerType,
+  now: Date = new Date(),
+): boolean {
+  if (!getPaidMvpLaunchAccessProductKey(plan, ownerType)) return false;
+  // Launch Access is a founder-approved fixed 90-day term.  A generic
+  // grace-period state is intentionally not an entitlement for this product:
+  // expiry removes new paid capability even when an older billing workflow
+  // has left a grace row behind.
+  if (row.status !== 'active') return false;
+  const end = parseCanonicalCommercialTimestamp(row.currentPeriodEnd);
+  if (end === null || end <= now.getTime()) return false;
   return true;
 }
 
@@ -653,6 +685,9 @@ export async function setSubscriptionPlanForOwner(input: {
   const nextStatus = input.status || 'active';
   const term = resolveCommercialTerm(planRow);
   if (term.kind === 'paid_launch_access') {
+    if (!getPaidMvpLaunchAccessProductKey(planRow, input.ownerType)) {
+      throw new Error('Plan is not an approved paid-MVP Launch Access product.');
+    }
     if (nextStatus === 'pending_payment' && input.allowPendingPayment) {
       // Pending payment is intentionally non-entitled. Activation still
       // requires the verified payment branch below.
@@ -761,7 +796,7 @@ export async function activatePaidLaunchAccessForOwner(input: {
   metadata?: Record<string, unknown> | null;
   db?: any;
 }): Promise<SubscriptionSnapshot | null> {
-  requireCommercialActivation('Paid Launch Access activation');
+  requireAnyPaidMvpLaunchAccessActivation('Paid Launch Access activation');
   const db = input.db || (await getDb());
   if (!db) throw new Error('Database not available');
 
@@ -770,6 +805,11 @@ export async function activatePaidLaunchAccessForOwner(input: {
   if (planRow.segment !== input.ownerType) {
     throw new Error('Plan is not eligible for this commercial owner.');
   }
+  const productKey = getPaidMvpLaunchAccessProductKey(planRow, input.ownerType);
+  if (!productKey) {
+    throw new Error('Plan is not an approved paid-MVP Launch Access product.');
+  }
+  requireCommercialActivation('Paid Launch Access activation', productKey);
 
   const term = resolveCommercialTerm(planRow);
   const configuredFee = getConfiguredLaunchFeeMinor(planRow);

@@ -35,6 +35,8 @@ export interface PublicAgentOwnershipCandidate {
 export interface PublicAgencyOwnershipCandidate {
   id: number;
   isVerified: number | null;
+  /** Canonical Agency Launch Access term, evaluated at the public boundary. */
+  hasActivePaidEntitlement?: boolean;
 }
 
 export interface PublicDeveloperOwnershipCandidate {
@@ -43,6 +45,8 @@ export interface PublicDeveloperOwnershipCandidate {
   status: string | null;
   userRole?: string | null;
   organisationId?: number | null;
+  /** Canonical Developer Launch Access term, when the caller is commercial. */
+  hasActivePaidEntitlement?: boolean;
 }
 
 export interface PublicBrandOwnershipCandidate {
@@ -80,12 +84,16 @@ export interface PublicDevelopmentOwnershipCandidates {
   developer?: PublicDeveloperOwnershipCandidate | null;
   brand?: PublicBrandOwnershipCandidate | null;
   brandReferenceInvalid?: boolean;
+  /** First-party development enquiries require current Developer Launch Access. */
+  hasActiveCommercialEntitlement?: boolean;
 }
 
 export interface PublicBrandOnlyOwnershipCandidates {
   cataloguePublisherId?: number;
   developer?: PublicDeveloperOwnershipCandidate | null;
   brand?: PublicBrandOwnershipCandidate | null;
+  /** First-party publisher enquiries require current Developer Launch Access. */
+  hasActiveCommercialEntitlement?: boolean;
 }
 
 export interface PublicLeadCustodyResolution {
@@ -107,19 +115,21 @@ function positiveId(value: number | null | undefined): number | null {
 }
 
 function isEligibleAgentRecipient(agent: PublicAgentOwnershipCandidate | null | undefined): boolean {
-  const professionallyVerified = Number(agent?.isVerified || 0) === 1;
   // Membership currency: a suspended/left affiliation stops public enquiry
   // delivery even when the legacy profile still looks approved. Independent
   // agents carry no agencyId and remain routable on the existing criteria.
   const agencyAffiliated = positiveId(agent?.agencyId) !== null;
   const membershipCurrent = !agencyAffiliated || agent?.hasCurrentMembership === true;
-  const commerciallyEligible =
-    agent?.hasActivePaidEntitlement === true ||
-    (agencyAffiliated && agent?.hasActiveAgencyEntitlement === true);
+  // A member never silently becomes an independent commercial owner after an
+  // Agency term expires. Professional verification is an identity fact, not
+  // a substitute for the current commercial entitlement.
+  const commerciallyEligible = agencyAffiliated
+    ? agent?.hasActiveAgencyEntitlement === true
+    : agent?.hasActivePaidEntitlement === true;
   return Boolean(
     agent &&
       agent.status === 'approved' &&
-      (professionallyVerified || commerciallyEligible) &&
+      commerciallyEligible &&
       membershipCurrent &&
       positiveId(agent.userId) &&
       agent.userRole === 'agent',
@@ -173,8 +183,10 @@ export function resolvePublicAgentProfileCustody(input: {
   );
 }
 
-function isVerifiedAgency(agency: PublicAgencyOwnershipCandidate | null | undefined): boolean {
-  return Boolean(agency && Number(agency.isVerified) === 1);
+function isEligibleAgency(agency: PublicAgencyOwnershipCandidate | null | undefined): boolean {
+  return Boolean(
+    agency && Number(agency.isVerified) === 1 && agency.hasActivePaidEntitlement === true,
+  );
 }
 
 function isVerifiedDeveloper(
@@ -340,7 +352,7 @@ export function resolvePublicPropertyCustody(
           : input.sourceAgency || input.ownerAgency;
     if (
       (expectedAgencyIds.length > 0 && expectedAgencyIds[0] !== agentAgencyId) ||
-      (agentAgencyId && !isVerifiedAgency(agentAgency))
+      (agentAgencyId && !isEligibleAgency(agentAgency))
     ) {
       return attentionResolution(
         'customer_managed',
@@ -367,7 +379,7 @@ export function resolvePublicPropertyCustody(
           ? input.ownerAgency
           : input.sourceAgency || input.ownerAgency;
 
-    if (!isVerifiedAgency(agency)) {
+    if (!isEligibleAgency(agency)) {
       return attentionResolution(
         'customer_managed',
         'The owning agency is not an active verified organization.',
@@ -430,6 +442,7 @@ export function resolvePublicDevelopmentCustody(
       !organisationId ||
       !input.developer ||
       !isVerifiedDeveloper(input.developer) ||
+      input.hasActiveCommercialEntitlement !== true ||
       Number(publisher.developerOrganisationId) !== Number(organisationId)
     ) {
       return attentionResolution(
@@ -482,6 +495,7 @@ export function resolvePublicDevelopmentCustody(
     if (
       !developerIsValid ||
       !developerId ||
+      input.hasActiveCommercialEntitlement !== true ||
       (brandDeveloperId && brandDeveloperId !== developerId)
     ) {
       return attentionResolution(
@@ -529,7 +543,8 @@ export function resolvePublicBrandOnlyCustody(
     input.brand.authorityKind === 'developer_first_party' &&
     developerId &&
     input.developer &&
-    isVerifiedDeveloper(input.developer)
+    isVerifiedDeveloper(input.developer) &&
+    input.hasActiveCommercialEntitlement === true
   ) {
     return customerResolution({
       recipientType: 'developer',

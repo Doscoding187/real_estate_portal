@@ -3,6 +3,7 @@ import {
   calculateCommercialTermEnd,
   getCommercialProductKey,
   getConfiguredLaunchFeeMinor,
+  getPaidMvpLaunchAccessProductKey,
   isPaidCommercialTermExpired,
   parseCanonicalCommercialTimestamp,
   resolveCommercialTerm,
@@ -12,6 +13,8 @@ import {
 describe('commercial term semantics', () => {
   const launchPlan = {
     name: 'developer_launch_access',
+    segment: 'developer',
+    isActive: 1,
     price: 149900,
     priceMonthly: 0,
     trialDays: 0,
@@ -36,6 +39,26 @@ describe('commercial term semantics', () => {
     });
     expect(getCommercialProductKey(launchPlan)).toBe('developer_launch_access');
     expect(getConfiguredLaunchFeeMinor(launchPlan)).toBe(149900);
+  });
+
+  it('requires the exact active owner-scoped MVP Launch Access plan', () => {
+    expect(getPaidMvpLaunchAccessProductKey(launchPlan, 'developer')).toBe(
+      'developer_launch_access',
+    );
+    expect(getPaidMvpLaunchAccessProductKey({ ...launchPlan, isActive: 0 }, 'developer')).toBeNull();
+    expect(getPaidMvpLaunchAccessProductKey({ ...launchPlan, segment: 'agent' }, 'developer')).toBeNull();
+    expect(
+      getPaidMvpLaunchAccessProductKey(
+        {
+          ...launchPlan,
+          metadata: {
+            ...launchPlan.metadata,
+            commercial_auto_renews: true,
+          },
+        },
+        'developer',
+      ),
+    ).toBeNull();
   });
 
   it('keeps free trials and normal recurring subscriptions as separate terms', () => {

@@ -30,15 +30,18 @@ import { resolveCurrentAgencyMembershipForAgent } from './agencyMembershipServic
 import { activatePaidLaunchAccessForOwner, type SubscriptionOwnerType } from './planAccessService';
 import {
   isCommercialActivationAvailable,
+  requireAnyPaidMvpLaunchAccessActivation,
   requireCommercialActivation,
 } from './commercialActivationPolicy';
 import {
   getCommercialProductKey,
   getConfiguredLaunchFeeMinor,
+  getPaidMvpLaunchAccessProductKey,
   isPaidCommercialTermExpired,
   parseCanonicalCommercialTimestamp,
   resolveCommercialTerm,
 } from './commercialTerm';
+import type { PaidMvpLaunchAccessProductKey } from '../../shared/commercialActivation';
 
 /**
  * The only billing owner identities admitted by the current foundation.
@@ -55,6 +58,24 @@ function toBillingOwnerType(value: string): BillingOwnerType {
     code: 'PRECONDITION_FAILED',
     message: `Unregistered billing owner type: ${value}`,
   });
+}
+/**
+ * Resolve the bounded activation gate from the persisted commercial plan.
+ * Approved Launch Access terms get their exact product key; legacy and
+ * deferred terms deliberately fall through to the product-less gate, which
+ * remains closed in normal runtimes.
+ */
+function requireSubscriptionCommercialActivation(
+  operation: string,
+  plan: typeof plans.$inferSelect | null | undefined,
+  ownerType: BillingOwnerType,
+): void {
+  const productKey = plan ? getPaidMvpLaunchAccessProductKey(plan, ownerType) : null;
+  if (productKey) {
+    requireCommercialActivation(operation, productKey);
+    return;
+  }
+  requireCommercialActivation(operation);
 }
 export type BillingCycle = 'monthly' | 'annual';
 export type CanonicalSubscriptionStatus =
@@ -635,6 +656,58 @@ async function notifyAgentOwner(
   }
 }
 
+/**
+ * Developer Launch Access is owned by the organisation, not by the user row
+ * whose id happens to appear in a request. Keep billing milestones addressed
+ * to the canonical active organisation owner so identity survives term expiry.
+ */
+async function notifyDeveloperOrganisationOwners(
+  db: DbOrTx,
+  input: {
+    organisationId: number;
+    type: string;
+    title: string;
+    content: string;
+    actionUrl?: string;
+    data?: Record<string, any>;
+  },
+) {
+  try {
+    const owners = await db
+      .select({ id: users.id })
+      .from(developerOrganisationMemberships)
+      .innerJoin(users, eq(developerOrganisationMemberships.userId, users.id))
+      .where(
+        and(
+          eq(developerOrganisationMemberships.organisationId, input.organisationId),
+          eq(developerOrganisationMemberships.status, 'active'),
+          eq(developerOrganisationMemberships.role, 'owner'),
+        ),
+      );
+    if (!owners.length) return;
+
+    await db.insert(notifications).values(
+      owners.map(owner => ({
+        userId: owner.id,
+        type: 'system_alert' as const,
+        title: input.title,
+        content: input.content,
+        data: JSON.stringify({
+          notificationType: input.type,
+          ...(input.actionUrl ? { actionUrl: input.actionUrl } : {}),
+          ...(input.data || {}),
+        }),
+        isRead: 0,
+      })),
+    );
+  } catch (error) {
+    console.warn('[BillingFoundation] Developer notification insert skipped', {
+      organisationId: input.organisationId,
+      message: (error as any)?.message,
+    });
+  }
+}
+
 async function syncAgencyBillingShadow(
   db: DbOrTx,
   input: {
@@ -735,8 +808,8 @@ async function upsertPendingSubscription(
   return { subscription, pendingPlanId: input.requestedPlanId, accessChangeDeferred: false };
 }
 
-export function getManualEftBankDetails() {
-  if (!isCommercialActivationAvailable()) {
+export function getManualEftBankDetails(productKey?: PaidMvpLaunchAccessProductKey) {
+  if (!isCommercialActivationAvailable(process.env, productKey)) {
     return {
       configured: false,
       canIssueInvoices: false,
@@ -809,7 +882,7 @@ export async function listBillingPlans(segment: 'agency' | 'agent' | 'developer'
   // Free-trial plans are not a launch-path product. Keep the generic term
   // available to future internal products, but do not expose old automatic
   // trial choices through the active billing-plan surface.
-  return availablePlans.filter(plan => resolveCommercialTerm(plan).kind !== 'free_trial');
+  return availablePlans.filter(plan => Boolean(getPaidMvpLaunchAccessProductKey(plan, segment)));
 }
 
 async function assertDeveloperOwner(db: DbOrTx, user: BillingUser): Promise<number> {
@@ -973,12 +1046,9 @@ async function getLaunchPlanForOwner(
         .where(and(eq(plans.segment, segment), eq(plans.isActive, 1)))
         .orderBy(plans.sortOrder, plans.id);
   const plan = candidates.find(candidate => {
-    const term = resolveCommercialTerm(candidate);
     return (
-      candidate.isActive === 1 &&
-      candidate.segment === segment &&
-      getCommercialProductKey(candidate) === `${ownerType}_launch_access` &&
-      term.kind === 'paid_launch_access'
+      Boolean(getPaidMvpLaunchAccessProductKey(candidate, ownerType)) &&
+      candidate.segment === segment
     );
   });
   if (!plan) {
@@ -1007,13 +1077,15 @@ export async function requestPaidLaunchAccessInvoice(input: {
   user: BillingUser;
   planId?: number;
 }) {
-  requireCommercialActivation('Invoice requests');
+  requireAnyPaidMvpLaunchAccessActivation('Invoice requests');
   const db = await getDb();
   if (!db)
     throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
 
   const owner = await resolveLaunchBillingOwner(db, input.user);
-  const bankDetails = getManualEftBankDetails();
+  const ownerProductKey = `${owner.ownerType}_launch_access` as PaidMvpLaunchAccessProductKey;
+  requireCommercialActivation('Invoice requests', ownerProductKey);
+  const bankDetails = getManualEftBankDetails(ownerProductKey);
   if (!bankDetails.canIssueInvoices) {
     throw new TRPCError({
       code: 'PRECONDITION_FAILED',
@@ -1221,6 +1293,17 @@ export async function requestPaidLaunchAccessInvoice(input: {
       });
     }
 
+    if (owner.ownerType === 'developer') {
+      await notifyDeveloperOrganisationOwners(tx, {
+        organisationId: owner.ownerId,
+        type: 'invoice_issued',
+        title: 'Launch Access invoice issued',
+        content: `Invoice ${invoiceNumber} has been issued for ${centsToRand(launchFee)} once-off Launch Access. Pay by EFT and submit your proof to continue.`,
+        actionUrl: '/developer/plans',
+        data: { invoiceId, invoiceNumber, paymentReference },
+      });
+    }
+
     const [invoice] = await tx
       .select()
       .from(billingInvoices)
@@ -1251,19 +1334,12 @@ export async function startAgencyManualCheckout(input: {
   billingCycle: BillingCycle;
   couponCode?: string;
 }) {
-  requireCommercialActivation('Manual-EFT checkout');
+  requireAnyPaidMvpLaunchAccessActivation('Manual-EFT checkout');
   const db = await getDb();
   if (!db)
     throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
 
   const agencyId = assertAgencyAdmin(input.user);
-  const bankDetails = getManualEftBankDetails();
-  if (!bankDetails.canIssueInvoices) {
-    throw new TRPCError({
-      code: 'PRECONDITION_FAILED',
-      message: bankDetails.configurationMessage || 'Manual EFT bank details are not configured.',
-    });
-  }
   const [selectedAgencyPlan] = await db
     .select()
     .from(plans)
@@ -1272,9 +1348,18 @@ export async function startAgencyManualCheckout(input: {
   if (
     selectedAgencyPlan &&
     selectedAgencyPlan.segment === 'agency' &&
-    resolveCommercialTerm(selectedAgencyPlan).kind === 'paid_launch_access'
+    getPaidMvpLaunchAccessProductKey(selectedAgencyPlan, 'agency')
   ) {
     return requestPaidLaunchAccessInvoice({ user: input.user, planId: input.planId });
+  }
+
+  requireCommercialActivation('Manual-EFT checkout');
+  const bankDetails = getManualEftBankDetails();
+  if (!bankDetails.canIssueInvoices) {
+    throw new TRPCError({
+      code: 'PRECONDITION_FAILED',
+      message: bankDetails.configurationMessage || 'Manual EFT bank details are not configured.',
+    });
   }
 
   const proofStorage = getBillingProofStorageStatus();
@@ -1597,7 +1682,7 @@ export async function getAgencyBillingWorkspace(user: BillingUser) {
     activeInvoice,
     invoices: invoiceRows,
     payments: paymentRows,
-    bankDetails: getManualEftBankDetails(),
+    bankDetails: getManualEftBankDetails('agency_launch_access'),
     proofStorage: getBillingProofStorageStatus(),
   };
 }
@@ -1645,7 +1730,7 @@ export async function getAgentBillingWorkspace(user: BillingUser) {
       ) || null,
     invoices: invoiceRows,
     payments: paymentRows,
-    bankDetails: getManualEftBankDetails(),
+    bankDetails: getManualEftBankDetails('agent_launch_access'),
     proofStorage: getBillingProofStorageStatus(),
   };
 }
@@ -1673,7 +1758,7 @@ type LaunchPaymentProofInput = {
  * invoice.
  */
 export async function submitPaidLaunchAccessPaymentProof(input: LaunchPaymentProofInput) {
-  requireCommercialActivation('Payment-proof submission');
+  requireAnyPaidMvpLaunchAccessActivation('Payment-proof submission');
   const db = await getDb();
   if (!db)
     throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
@@ -1704,6 +1789,21 @@ export async function submitPaidLaunchAccessPaymentProof(input: LaunchPaymentPro
   return db.transaction(async tx => {
     const { subscription: lockedSubscription } = await lockLaunchBillingState(tx, owner);
     const invoice = await lockLaunchInvoice(tx, { invoiceId: input.invoiceId, owner });
+    const [invoicePlan] = await tx
+      .select()
+      .from(plans)
+      .where(eq(plans.id, invoice.planId))
+      .limit(1);
+    const invoiceProductKey = invoicePlan
+      ? getPaidMvpLaunchAccessProductKey(invoicePlan, owner.ownerType)
+      : null;
+    if (!invoiceProductKey) {
+      throw new TRPCError({
+        code: 'CONFLICT',
+        message: 'Payment proof requires an approved paid-MVP Launch Access invoice.',
+      });
+    }
+    requireCommercialActivation('Payment-proof submission', invoiceProductKey);
     if (
       invoice.subscriptionId &&
       lockedSubscription &&
@@ -1884,6 +1984,17 @@ export async function submitPaidLaunchAccessPaymentProof(input: LaunchPaymentPro
       });
     }
 
+    if (owner.ownerType === 'developer') {
+      await notifyDeveloperOrganisationOwners(tx, {
+        organisationId: owner.ownerId,
+        type: 'proof_received',
+        title: 'Payment proof received',
+        content: `Proof of payment for ${invoice.invoiceNumber} is with finance for review.`,
+        actionUrl: '/developer/plans',
+        data: { invoiceId: invoice.id, paymentId },
+      });
+    }
+
     return { success: true, paymentId, documentId: Number(documentInsert.id) };
   });
 }
@@ -1899,12 +2010,35 @@ function getCommercialProductKeyFromInvoice(invoice: InvoiceRow): string {
  * to accept canonical recurring agency invoices.
  */
 export async function submitAgencyPaymentProof(input: LaunchPaymentProofInput) {
-  requireCommercialActivation('Payment-proof submission');
+  requireAnyPaidMvpLaunchAccessActivation('Payment-proof submission');
   const db = await getDb();
   if (!db)
     throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
 
   const agencyId = assertAgencyAdmin(input.user);
+  const [invoiceCandidate] = await db
+    .select({ invoice: billingInvoices, plan: plans })
+    .from(billingInvoices)
+    .innerJoin(plans, eq(billingInvoices.planId, plans.id))
+    .where(
+      and(
+        eq(billingInvoices.id, input.invoiceId),
+        eq(billingInvoices.ownerType, 'agency'),
+        eq(billingInvoices.ownerId, agencyId),
+      ),
+    )
+    .limit(1);
+  if (!invoiceCandidate) {
+    throw new TRPCError({ code: 'NOT_FOUND', message: 'Invoice not found.' });
+  }
+  if (getPaidMvpLaunchAccessProductKey(invoiceCandidate.plan, 'agency')) {
+    // Preserve the long-lived route name used by Agency surfaces while routing
+    // the approved product through the shared owner-scoped Launch Access path.
+    return submitPaidLaunchAccessPaymentProof(input);
+  }
+
+  // No recurring or future agency product inherits a paid-MVP release.
+  requireCommercialActivation('Payment-proof submission');
   const mimeType = input.file.mimeType.trim().toLowerCase();
   if (!ALLOWED_PROOF_MIME_TYPES.has(mimeType)) {
     throw new TRPCError({
@@ -2121,7 +2255,7 @@ export async function getDeveloperBillingWorkspace(user: BillingUser) {
       ) || null,
     invoices: invoiceRows,
     payments: paymentRows,
-    bankDetails: getManualEftBankDetails(),
+    bankDetails: getManualEftBankDetails('developer_launch_access'),
     proofStorage: getBillingProofStorageStatus(),
   };
 }
@@ -2327,7 +2461,7 @@ export async function reviewManualPayment(input: {
   verifiedAmount?: number;
   overpaymentReconciled?: boolean;
 }) {
-  requireCommercialActivation('Payment review');
+  requireAnyPaidMvpLaunchAccessActivation('Payment review');
   const db = await getDb();
   if (!db)
     throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
@@ -2425,6 +2559,29 @@ export async function reviewManualPayment(input: {
       if (!row) throw new TRPCError({ code: 'NOT_FOUND', message: 'Payment not found.' });
       beforePayment = row.payment;
       invoice = row.invoice;
+    }
+    const [reviewPlan] = invoice.planId
+      ? await tx.select().from(plans).where(eq(plans.id, invoice.planId)).limit(1)
+      : [];
+    const reviewProductKey = reviewPlan
+      ? getPaidMvpLaunchAccessProductKey(reviewPlan, invoice.ownerType as LaunchBillingOwnerType)
+      : null;
+    if (reviewProductKey) {
+      requireCommercialActivation('Payment review', reviewProductKey);
+    } else if (reviewPlan && resolveCommercialTerm(reviewPlan).kind === 'paid_launch_access') {
+      // A fixed-term row that is not one of the three approved MVP products
+      // must fail closed; it must not inherit the controlled-fixture path for
+      // legacy recurring acceptance coverage below.
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message: 'Finance review is limited to approved paid-MVP Launch Access invoices.',
+      });
+    } else {
+      // Preserve the existing owner-scoped recurring billing contract for
+      // controlled regression fixtures. Normal runtime remains gated by the
+      // generic commercial activation policy, so this does not release a
+      // deferred recurring product.
+      requireCommercialActivation('Payment review');
     }
     const reviewedAt = nowDb();
     const invoiceWasAlreadyPaid = invoice.status === 'paid';
@@ -2572,6 +2729,27 @@ export async function reviewManualPayment(input: {
                 : 'Payment review update',
           content: `${reason}. You can submit a corrected proof of payment for ${invoice.invoiceNumber} from the Launch Access page.`,
           actionUrl: '/agent/select-package',
+          data: { invoiceId: invoice.id, paymentId: beforePayment.id },
+        });
+      }
+
+      if (invoice.ownerType === 'developer') {
+        await notifyDeveloperOrganisationOwners(tx, {
+          organisationId: invoice.ownerId,
+          type:
+            input.decision === 'reject'
+              ? 'payment_rejected'
+              : input.decision === 'request_correction'
+                ? 'payment_correction_requested'
+                : `payment_review_${input.decision}`,
+          title:
+            input.decision === 'reject'
+              ? 'Payment proof not approved'
+              : input.decision === 'request_correction'
+                ? 'Payment correction requested'
+                : 'Payment review update',
+          content: `${reason}. You can submit a corrected proof of payment for ${invoice.invoiceNumber} from the Developer Launch Access page.`,
+          actionUrl: '/developer/plans',
           data: { invoiceId: invoice.id, paymentId: beforePayment.id },
         });
       }
@@ -2744,6 +2922,29 @@ export async function reviewManualPayment(input: {
       });
     }
 
+    if (invoice.ownerType === 'developer') {
+      await notifyDeveloperOrganisationOwners(tx, {
+        organisationId: invoice.ownerId,
+        type: activationOccurred
+          ? 'payment_approved'
+          : invoiceWasAlreadyPaid
+            ? 'payment_proof_recorded'
+            : 'partial_payment',
+        title: activationOccurred
+          ? 'Developer Launch Access activated'
+          : invoiceWasAlreadyPaid
+            ? 'Additional payment proof recorded'
+            : 'Partial payment recorded',
+        content: activationOccurred
+          ? `Payment for ${invoice.invoiceNumber} has been verified. Your organisation's 90-day Launch Access term is active.`
+          : invoiceWasAlreadyPaid
+            ? `Additional proof for ${invoice.invoiceNumber} was recorded; the existing activation was not extended.`
+            : `A partial payment was recorded for ${invoice.invoiceNumber}.`,
+        actionUrl: '/developer/plans',
+        data: { invoiceId: invoice.id, paymentId: beforePayment.id },
+      });
+    }
+
     return {
       success: true,
       idempotent: invoiceWasAlreadyPaid,
@@ -2776,7 +2977,10 @@ export async function updateSubscriptionLifecycle(input: {
   graceEndsAt?: string | null;
   note?: string;
 }) {
-  requireCommercialActivation('Subscription lifecycle changes');
+  // Keep the pre-database fail-closed boundary, while allowing a later
+  // bounded MVP release to resolve the exact product after the subscription
+  // owner/plan is known.
+  requireAnyPaidMvpLaunchAccessActivation('Subscription lifecycle changes');
   const db = await getDb();
   if (!db)
     throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
@@ -2814,6 +3018,17 @@ export async function updateSubscriptionLifecycle(input: {
         message: 'Subscription no longer matches the agency account.',
       });
     }
+
+    const [plan] = await tx
+      .select()
+      .from(plans)
+      .where(eq(plans.id, subscription.planId))
+      .limit(1);
+    requireSubscriptionCommercialActivation(
+      'Subscription lifecycle changes',
+      plan,
+      toBillingOwnerType(subscription.ownerType),
+    );
 
     const updateSet: Partial<typeof subscriptions.$inferInsert> = {
       status: input.status,
@@ -2883,7 +3098,7 @@ export async function updateSubscriptionLifecycle(input: {
 }
 
 export async function requestAgencyCancellationAtPeriodEnd(user: BillingUser) {
-  requireCommercialActivation('Subscription lifecycle changes');
+  requireAnyPaidMvpLaunchAccessActivation('Subscription lifecycle changes');
   const db = await getDb();
   if (!db)
     throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
@@ -2895,6 +3110,13 @@ export async function requestAgencyCancellationAtPeriodEnd(user: BillingUser) {
     if (!subscription) {
       throw new TRPCError({ code: 'NOT_FOUND', message: 'No agency subscription found.' });
     }
+
+    const [plan] = await tx
+      .select()
+      .from(plans)
+      .where(eq(plans.id, subscription.planId))
+      .limit(1);
+    requireSubscriptionCommercialActivation('Subscription lifecycle changes', plan, 'agency');
 
     const accessPreservingStatus = ACTIVE_SUBSCRIPTION_STATUSES.has(
       subscription.status as CanonicalSubscriptionStatus,
@@ -2940,7 +3162,7 @@ export async function requestAgencyCancellationAtPeriodEnd(user: BillingUser) {
 }
 
 export async function restoreAgencySubscription(user: BillingUser) {
-  requireCommercialActivation('Subscription lifecycle changes');
+  requireAnyPaidMvpLaunchAccessActivation('Subscription lifecycle changes');
   const db = await getDb();
   if (!db)
     throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
@@ -2952,6 +3174,13 @@ export async function restoreAgencySubscription(user: BillingUser) {
     if (!subscription) {
       throw new TRPCError({ code: 'NOT_FOUND', message: 'No agency subscription found.' });
     }
+
+    const [plan] = await tx
+      .select()
+      .from(plans)
+      .where(eq(plans.id, subscription.planId))
+      .limit(1);
+    requireSubscriptionCommercialActivation('Subscription lifecycle changes', plan, 'agency');
 
     const restoredStatus: CanonicalSubscriptionStatus =
       subscription.status === 'cancelled' && subscription.currentPeriodEnd

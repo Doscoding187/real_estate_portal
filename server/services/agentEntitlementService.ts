@@ -6,13 +6,14 @@ import {
   getEntitlementBoolean,
   getEntitlementNumber,
   getPlanAccessProjectionForUserId,
-  isPaidSubscriptionEntitled,
-  isSubscriptionEntitled,
+  isPaidMvpLaunchAccessSubscriptionEntitled,
   type EntitlementMap,
   type PlanAccessProjection,
   type PlanSnapshot,
   type SubscriptionSnapshot,
 } from './planAccessService';
+import { isCommercialActivationAvailable } from './commercialActivationPolicy';
+import { getPaidMvpLaunchAccessProductKey } from './commercialTerm';
 import { resolveCurrentAgencyMembershipForAgent } from './agencyMembershipService';
 import { parseAgentCoverageAreas } from '../../shared/agentCoverageArea';
 
@@ -194,11 +195,29 @@ export async function getAgentEntitlementsForUserId(
   }
 
   const emailVerified = user.emailVerified === 1;
-  const paidSubscriptionEntitled = isPaidSubscriptionEntitled(
-    effectivePlanAccess.subscription?.status,
+  // The projection identifies the canonical commercial owner (individual
+  // Agent or current Agency membership), but its generic status alone is not
+  // enough to unlock Launch Access. Require the exact approved product,
+  // current fixed term, and product-specific release gate.
+  const ownerType = effectivePlanAccess.ownerType;
+  const productKey =
+    effectivePlanAccess.currentPlan && (ownerType === 'agent' || ownerType === 'agency')
+      ? getPaidMvpLaunchAccessProductKey(effectivePlanAccess.currentPlan, ownerType)
+      : null;
+  const hasActivePaidPlan = Boolean(
+    productKey &&
+      isCommercialActivationAvailable(process.env, productKey) &&
+      effectivePlanAccess.subscription &&
+      effectivePlanAccess.currentPlan &&
+      isPaidMvpLaunchAccessSubscriptionEntitled(
+        effectivePlanAccess.subscription,
+        effectivePlanAccess.currentPlan,
+        ownerType,
+      ),
   );
-  const hasActivePaidPlan = paidSubscriptionEntitled;
-  const hasCommercialAccess = isSubscriptionEntitled(effectivePlanAccess.subscription?.status);
+  const membershipCommerciallyValid =
+    effectivePlanAccess.ownerType !== 'agency' || Boolean(currentAgencyMembership);
+  const hasCommercialAccess = hasActivePaidPlan && membershipCommerciallyValid;
   const trialExpired = !hasActivePaidPlan && trialStatus === 'expired';
   const profileCompletionScore = completion.score;
   const agentApproved = agent?.status === 'approved';

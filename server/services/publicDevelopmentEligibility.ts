@@ -20,6 +20,7 @@ import {
   isDeferredLandDevelopmentType,
   isLandVerticalAvailable,
 } from '../../shared/landLaunchPolicy';
+import { isCommercialActivationAvailable } from './commercialActivationPolicy';
 
 export type PublicDevelopmentEligibilityReason =
   | 'not_published'
@@ -132,6 +133,15 @@ export function evaluatePublicDevelopmentEligibility(
  * legacy developer or brand row.
  */
 export function publicDevelopmentEligibilityConditions(): SQL {
+  // Keep the platform-curated branch independent of commercial release state,
+  // while failing closed for first-party Developer inventory until its exact
+  // Launch Access product is explicitly enabled.
+  const developerLaunchAccessEnabled = isCommercialActivationAvailable(
+    process.env,
+    'developer_launch_access',
+  )
+    ? sql`1 = 1`
+    : sql`1 = 0`;
   const publisherExists = sql`EXISTS (
     SELECT 1
     FROM ${cataloguePublishers} p
@@ -146,6 +156,7 @@ export function publicDevelopmentEligibilityConditions(): SQL {
         (p.authority_kind = 'developer_first_party'
           AND p.developer_organisation_id IS NOT NULL
           AND o.status = 'approved'
+          AND ${developerLaunchAccessEnabled}
           AND EXISTS (
             SELECT 1
             FROM ${developerOrganisationMemberships} active_member
@@ -158,15 +169,20 @@ export function publicDevelopmentEligibilityConditions(): SQL {
             INNER JOIN ${billableAccounts} b ON b.id = s.billable_account_id
             INNER JOIN ${plans} launch_plan ON launch_plan.id = s.plan_id
             WHERE s.owner_type = 'developer'
+              AND s.owner_id = p.developer_organisation_id
               AND b.account_kind = 'developer'
               AND b.developer_organisation_id = p.developer_organisation_id
-              AND s.status IN ('active', 'grace_period')
+              AND s.status = 'active'
               AND s.current_period_end IS NOT NULL
               AND s.current_period_end > UTC_TIMESTAMP()
               AND launch_plan.segment = 'developer'
               AND launch_plan.name = 'developer_launch_access'
+              AND launch_plan.isActive = 1
               AND JSON_UNQUOTE(JSON_EXTRACT(launch_plan.metadata, '$.commercial_term_kind')) = 'paid_launch_access'
               AND JSON_UNQUOTE(JSON_EXTRACT(launch_plan.metadata, '$.commercial_product_key')) = 'developer_launch_access'
+              AND CAST(JSON_UNQUOTE(JSON_EXTRACT(launch_plan.metadata, '$.commercial_term_duration_days')) AS UNSIGNED) = 90
+              AND JSON_UNQUOTE(JSON_EXTRACT(launch_plan.metadata, '$.commercial_requires_verified_payment')) = 'true'
+              AND JSON_UNQUOTE(JSON_EXTRACT(launch_plan.metadata, '$.commercial_auto_renews')) = 'false'
           ))
       )
   )`;

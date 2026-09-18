@@ -4,6 +4,7 @@ import {
   agencies,
   billableAccounts,
   invitations,
+  plans,
   subscriptions,
   users,
 } from '../../drizzle/schema';
@@ -11,6 +12,7 @@ import { ENV } from '../_core/env';
 import { EmailService } from '../_core/emailService';
 import { getDb } from '../db';
 import { isCommercialActivationAvailable } from './commercialActivationPolicy';
+import { isPaidMvpLaunchAccessSubscriptionEntitled } from './planAccessService';
 
 const ACTIVE_AGENCY_SUBSCRIPTION_STATUSES = new Set(['active', 'grace_period']);
 const INVITATION_VALIDITY_MS = 7 * 24 * 60 * 60 * 1000;
@@ -74,29 +76,37 @@ export async function hasEffectiveAgencyInvitationAccess(
   // turn a historical/manual active row into invitation delivery or team
   // membership authority. Governed test fixtures remain the narrowly scoped
   // exception for canonical paid-term coverage.
-  if (!isCommercialActivationAvailable()) {
+  if (!isCommercialActivationAvailable(process.env, 'agency_launch_access')) {
     return false;
   }
 
   const [subscription] = await db
-    .select({
-      status: subscriptions.status,
-      currentPeriodEnd: subscriptions.currentPeriodEnd,
-      graceEndsAt: subscriptions.graceEndsAt,
-    })
+    .select({ subscription: subscriptions, plan: plans })
     .from(subscriptions)
+    .innerJoin(plans, eq(subscriptions.planId, plans.id))
     .where(
-      sql`EXISTS (
+      and(
+        eq(subscriptions.ownerType, 'agency'),
+        eq(subscriptions.ownerId, agencyId),
+        sql`EXISTS (
       SELECT 1
       FROM ${billableAccounts} account
       WHERE account.id = ${subscriptions.billableAccountId}
         AND account.account_kind = 'agency'
         AND account.agency_id = ${agencyId}
     )`,
+      ),
     )
     .limit(1);
 
-  return hasEffectiveAgencyPaidAccess(subscription ?? null);
+  return Boolean(
+    subscription &&
+      isPaidMvpLaunchAccessSubscriptionEntitled(
+        subscription.subscription,
+        subscription.plan,
+        'agency',
+      ),
+  );
 }
 
 export type AgencyInvitationDeliveryResult = {

@@ -22,6 +22,7 @@ import {
 } from './canonicalGeography';
 import {
   CANONICAL_AGENT_LAUNCH_ACCESS,
+  CANONICAL_AGENCY_LAUNCH_ACCESS,
   CANONICAL_DEVELOPER_LAUNCH_ACCESS,
 } from './canonicalCommercial';
 import type { MoneyFact, RecurringCosts } from '../../../../shared/pricing-contract';
@@ -1473,6 +1474,29 @@ async function ensureDeveloperBillableAccount(
   return rowValue(rows[0], 'id');
 }
 
+async function ensureAgencyBillableAccount(
+  connection: AuthoritySqlConnection,
+  agencyId: number,
+): Promise<unknown> {
+  const rows = await queryRows(
+    connection,
+    `SELECT id FROM billable_accounts
+      WHERE account_kind = 'agency' AND agency_id = ? ORDER BY id`,
+    [agencyId],
+  );
+  if (rows.length > 1) {
+    throw new Error('Search-to-Lead scenario found duplicate agency billable accounts.');
+  }
+  if (rows.length === 0) {
+    await connection.execute(
+      `INSERT INTO billable_accounts (account_kind, agency_id) VALUES ('agency', ?)`,
+      [agencyId],
+    );
+    return ensureAgencyBillableAccount(connection, agencyId);
+  }
+  return rowValue(rows[0], 'id');
+}
+
 async function ensureUserAgency(
   connection: AuthoritySqlConnection,
   userId: number,
@@ -2040,6 +2064,18 @@ async function prepareScenarioRows(
     ],
   });
   await ensureAgentLaunchAccess(connection);
+  await ensureAgencyLaunchAccess(
+    connection,
+    SCENARIO_IDS.agency,
+    SCENARIO_IDS.agentUser,
+    SCENARIO_IDS.agentProperty,
+  );
+  await ensureAgencyLaunchAccess(
+    connection,
+    SCENARIO_IDS.agencyOnly,
+    SCENARIO_IDS.agencyOnlyUser,
+    SCENARIO_IDS.agencyProperty,
+  );
   await ensureDeveloperLaunchAccess(connection);
   await ensureDeterministicRow({
     connection,
@@ -2221,6 +2257,76 @@ async function ensureAgentLaunchAccess(connection: AuthoritySqlConnection): Prom
       }),
       SCENARIO_IDS.agentUser,
       SCENARIO_IDS.agentUser,
+    ],
+  );
+}
+
+async function ensureAgencyLaunchAccess(
+  connection: AuthoritySqlConnection,
+  agencyId: number,
+  actorUserId: number,
+  proofId: number,
+): Promise<void> {
+  const planRows = await queryRows(
+    connection,
+    'SELECT id FROM plans WHERE name = ? AND segment = ?',
+    [CANONICAL_AGENCY_LAUNCH_ACCESS.name, CANONICAL_AGENCY_LAUNCH_ACCESS.segment],
+  );
+  if (planRows.length !== 1) {
+    throw new Error('Search-to-Lead scenario requires the canonical agency Launch Access plan.');
+  }
+  const planId = asId({ id: rowValue(planRows[0], 'id') }, 'agency Launch Access plan');
+  const billableAccountId = await ensureAgencyBillableAccount(connection, agencyId);
+  const subscriptionRows = await queryRows(
+    connection,
+    `SELECT id, plan_id, status, current_period_end
+       FROM subscriptions
+      WHERE billable_account_id = ?
+      ORDER BY id`,
+    [billableAccountId],
+  );
+  if (subscriptionRows.length > 1) {
+    throw new Error('Search-to-Lead scenario found duplicate agency Launch Access subscriptions.');
+  }
+  if (subscriptionRows.length === 1) {
+    const row = subscriptionRows[0];
+    const expiresAt = new Date(String(rowValue(row, 'current_period_end') || '')).getTime();
+    if (
+      Number(rowValue(row, 'plan_id')) !== planId ||
+      rowValue(row, 'status') !== 'active' ||
+      !Number.isFinite(expiresAt) ||
+      expiresAt <= Date.now()
+    ) {
+      throw new Error('Search-to-Lead scenario agency Launch Access is not currently eligible.');
+    }
+    return;
+  }
+  await connection.execute(
+    `INSERT INTO subscriptions
+      (owner_type, owner_id, billable_account_id, plan_id, status, trial_ends_at,
+       current_period_start, current_period_end, grace_ends_at,
+       cancel_at_period_end, billing_cycle_anchor, metadata, created_by, updated_by)
+     VALUES ('agency', ?, ?, ?, 'active', NULL, CURRENT_TIMESTAMP,
+             DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 90 DAY), NULL, 0,
+             DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 90 DAY), CAST(? AS JSON), ?, ?)`,
+    [
+      agencyId,
+      billableAccountId,
+      planId,
+      JSON.stringify({
+        fixture: SEARCH_TO_LEAD_SCENARIO_VERSION,
+        commercial_product_key: CANONICAL_AGENCY_LAUNCH_ACCESS.name,
+        commercial_term_kind: 'paid_launch_access',
+        commercial_access_activated: true,
+        commercial_requires_verified_payment: true,
+        commercial_auto_renews: false,
+        billing_provider: 'manual_eft',
+        verified_invoice_id: proofId,
+        verified_payment_id: proofId,
+        verified_payment_amount_minor: CANONICAL_AGENCY_LAUNCH_ACCESS.price,
+      }),
+      actorUserId,
+      actorUserId,
     ],
   );
 }

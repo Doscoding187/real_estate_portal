@@ -252,6 +252,32 @@ function existingLead(overrides: Record<string, unknown> = {}) {
   } as any;
 }
 
+function launchPlan(ownerType: 'agent' | 'agency' | 'developer') {
+  return {
+    name: `${ownerType}_launch_access`,
+    displayName: `${ownerType} Launch Access`,
+    segment: ownerType,
+    isActive: 1,
+    metadata: {
+      commercial_term_kind: 'paid_launch_access',
+      commercial_product_key: `${ownerType}_launch_access`,
+      commercial_term_duration_days: 90,
+      commercial_requires_verified_payment: true,
+      commercial_auto_renews: false,
+    },
+  };
+}
+
+function entitledLaunchSubscription(
+  ownerType: 'agent' | 'agency' | 'developer',
+  currentPeriodEnd = '2099-01-01 00:00:00',
+) {
+  return {
+    subscription: { status: 'active', currentPeriodEnd },
+    plan: launchPlan(ownerType),
+  };
+}
+
 describe('publicLeadCaptureService contract', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -388,7 +414,7 @@ describe('publicLeadCaptureService contract', () => {
         [{ status: 'approved', userId: 70, agencyId: 9, isVerified: 1 }],
         [],
         [{ agentId: 33, agencyId: 9, status: 'active', effectiveFrom: null, effectiveTo: null }],
-        [{ status: 'active', currentPeriodEnd: '2099-01-01 00:00:00' }],
+        [entitledLaunchSubscription('agency')],
       ],
       insertId: 902,
     });
@@ -413,7 +439,7 @@ describe('publicLeadCaptureService contract', () => {
         [],
         [{ id: 33, userId: 70, agencyId: null, status: 'approved', isVerified: 0 }],
         [],
-        [{ status: 'active', currentPeriodEnd: '2099-01-01 00:00:00' }],
+        [entitledLaunchSubscription('agent')],
         [{ role: 'agent' }],
       ],
       insertId: 916,
@@ -481,7 +507,7 @@ describe('publicLeadCaptureService contract', () => {
         [{ id: 33, userId: 70, agencyId: 44, status: 'approved', isVerified: 0 }],
         [{ agentId: 33, agencyId: 44, status: 'active', effectiveFrom: null, effectiveTo: null }],
         [],
-        [{ status: 'active', currentPeriodEnd: '2099-01-01 00:00:00' }],
+        [entitledLaunchSubscription('agency')],
         [{ role: 'agent' }],
       ],
       insertId: 917,
@@ -513,8 +539,8 @@ describe('publicLeadCaptureService contract', () => {
         [{ id: 33, userId: 70, agencyId: null, status: 'approved', isVerified: 0 }],
         [],
         [
-          { status: 'active', currentPeriodEnd: '2000-01-01 00:00:00' },
-          { status: 'active', currentPeriodEnd: '2099-01-01 00:00:00' },
+          entitledLaunchSubscription('agent', '2000-01-01 00:00:00'),
+          entitledLaunchSubscription('agent'),
         ],
         [{ role: 'agent' }],
       ],
@@ -843,7 +869,7 @@ describe('publicLeadCaptureService contract', () => {
         [{ status: 'approved', userId: 70, agencyId: 44, isVerified: 0 }],
         [],
         [{ agentId: 33, agencyId: 44, status: 'active', effectiveFrom: null, effectiveTo: null }],
-        [{ status: 'active', currentPeriodEnd: '2099-01-01 00:00:00' }],
+        [entitledLaunchSubscription('agency')],
       ],
       insertId: 919,
     });
@@ -1156,10 +1182,13 @@ describe('publicLeadCaptureService contract', () => {
               name: 'developer_launch_access',
               displayName: 'Launch Access',
               segment: 'developer',
+              isActive: 1,
               metadata: JSON.stringify({
                 commercial_term_kind: 'paid_launch_access',
                 commercial_product_key: 'developer_launch_access',
                 commercial_term_duration_days: 90,
+                commercial_requires_verified_payment: true,
+                commercial_auto_renews: false,
               }),
             },
           },

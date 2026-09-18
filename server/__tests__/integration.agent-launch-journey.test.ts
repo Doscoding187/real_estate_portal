@@ -28,6 +28,7 @@ import {
   getDb,
   submitListingForReview,
 } from '../db';
+import { appRouter } from '../routers';
 import { assertListingPublicationEntitled } from '../services/listingPublicationEntitlementService';
 import { capturePublicLead } from '../services/publicLeadCaptureService';
 import { findAgentsServingLocation } from '../services/agentPublicProfileService';
@@ -177,7 +178,7 @@ describeWithDb('independent agent launch journey (publish → receive)', () => {
     created.agentId = insertId(agentResult);
 
     const [planResult] = await db.insert(plans).values({
-      name: `agent-launch-journey-${suffix}`,
+      name: 'agent_launch_access',
       displayName: 'Agent Launch Journey Test Plan',
       description: 'Canonical agent publication fixture.',
       segment: 'agent',
@@ -191,6 +192,13 @@ describeWithDb('independent agent launch journey (publish → receive)', () => {
       isActive: 1,
       isPopular: 0,
       sortOrder: 999,
+      metadata: JSON.stringify({
+        commercial_product_key: 'agent_launch_access',
+        commercial_term_kind: 'paid_launch_access',
+        commercial_term_duration_days: 90,
+        commercial_requires_verified_payment: true,
+        commercial_auto_renews: false,
+      }),
     } as any);
     created.planId = insertId(planResult);
 
@@ -323,5 +331,55 @@ describeWithDb('independent agent launch journey (publish → receive)', () => {
         order by n.id desc limit 1`,
     ).then((r: any) => (Array.isArray(r) ? r[0] : (r?.rows ?? [])[0]));
     expect(notification?.type).toBe('lead_assigned');
+
+    // Expiry removes new paid capability without erasing the legitimate
+    // enquiry or changing its canonical agent custody.
+    await db
+      .update(subscriptions)
+      .set({ currentPeriodEnd: toMySqlTimestamp(new Date(Date.now() - 60_000)) })
+      .where(eq(subscriptions.id, created.subscriptionId));
+
+    expect(
+      (await findAgentsServingLocation(db as never, 'suburb', location.suburbId)).map(
+        entry => entry.id,
+      ),
+    ).not.toContain(created.agentId);
+    await expect(
+      assertListingPublicationEntitled(db as never, {
+        listingId: created.listingId,
+        operation: 'republish',
+        at: new Date(),
+      }),
+    ).rejects.toMatchObject({ reason: 'subscription_period_ended' });
+    await expect(
+      capturePublicLead({
+        propertyId: created.propertyId,
+        name: 'Second Journey Buyer',
+        email: `second-buyer-${suffix}@example.com`,
+        phone: '+27112223345',
+        leadSource: 'property_detail',
+        sourceSurface: 'property_detail_contact_modal',
+        captureRequestId: `agent-launch-journey-expired-${suffix}`,
+        consent: {
+          accepted: true,
+          version: '2026-08-02',
+          source: 'agent-launch-journey-test',
+        },
+      }),
+    ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+
+    const [historicalLead] = await db
+      .select({ agentId: leads.agentId, agencyId: leads.agencyId })
+      .from(leads)
+      .where(eq(leads.id, created.leadId))
+      .limit(1);
+    expect(historicalLead).toMatchObject({ agentId: created.agentId, agencyId: null });
+    const agentCaller = appRouter.createCaller({
+      req: { headers: {} },
+      res: {},
+      user: { id: created.userId, role: 'agent' },
+    } as any);
+    const retainedLeads = await agentCaller.agent.getMyLeads({ status: 'all', limit: 100 });
+    expect(retainedLeads.some(lead => Number(lead.id) === created.leadId)).toBe(true);
   }, 60_000);
 });

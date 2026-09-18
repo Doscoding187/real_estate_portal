@@ -5,6 +5,7 @@ import {
   isCommercialActivationAvailable,
   requireCommercialActivation,
 } from '../commercialActivationPolicy';
+import { isPaidMvpLaunchAccessProductEnabled } from '../../../shared/commercialActivation';
 import {
   getManualEftBankDetails,
   requestPaidLaunchAccessInvoice,
@@ -104,6 +105,19 @@ describe('commercial activation containment', () => {
     expect(() => requireCommercialActivation('Payment review')).toThrow(
       /preparation-only onboarding/,
     );
+  });
+
+  it('allows a future release decision to enable only its explicit paid-MVP product keys', () => {
+    const boundedRelease = {
+      mode: 'paid_mvp' as const,
+      enabled: true,
+      enabledProductKeys: ['agent_launch_access'] as const,
+    };
+    expect(isPaidMvpLaunchAccessProductEnabled('agent_launch_access', boundedRelease)).toBe(true);
+    expect(isPaidMvpLaunchAccessProductEnabled('agency_launch_access', boundedRelease)).toBe(false);
+    expect(isPaidMvpLaunchAccessProductEnabled('developer_launch_access', boundedRelease)).toBe(false);
+    expect(isPaidMvpLaunchAccessProductEnabled('land_launch_access', boundedRelease)).toBe(false);
+    expect(isCommercialActivationAvailable({ NODE_ENV: 'production' })).toBe(false);
   });
 
   it('does not expose EFT account details while activation is disabled', () => {

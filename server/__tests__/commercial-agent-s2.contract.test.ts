@@ -36,7 +36,8 @@ describe('commercial monetization S2 agent authority', () => {
     expect(entitlements).not.toContain('user.plan');
     expect(entitlements).not.toContain('user.subscriptionTier');
     expect(entitlements).not.toContain('applyTierEntitlementMinimums');
-    expect(entitlements).toContain('isPaidSubscriptionEntitled');
+    expect(entitlements).toContain('isPaidMvpLaunchAccessSubscriptionEntitled');
+    expect(entitlements).toContain('isCommercialActivationAvailable(process.env, productKey)');
     expect(entitlements).toContain('getEntitlementNumber(entitlements,');
   });
 
@@ -58,7 +59,7 @@ describe('commercial monetization S2 agent authority', () => {
 
     expect(publication).toContain("plan.segment !== 'agent'");
     expect(publication).toMatch(/(?:maxActiveListings|capacityMax)\s*<=\s*0/);
-    expect(publication).toContain('subscriptionFailure(subscription, now, plan)');
+    expect(publication).toContain("subscriptionFailure(subscription, now, 'agent', plan)");
   });
 
   it('removes the obsolete public agent price authority', () => {

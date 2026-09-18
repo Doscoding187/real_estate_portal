@@ -1,7 +1,12 @@
 import { TRPCError } from '@trpc/server';
 
 import { isGovernedContainedScenarioFixtureActive } from '../_core/databaseAuthority/governedContainedScenarioFixture';
-import { COMMERCIAL_ACTIVATION_STATE } from '../../shared/commercialActivation';
+import {
+  COMMERCIAL_ACTIVATION_STATE,
+  isPaidMvpLaunchAccessProductKey,
+  isPaidMvpLaunchAccessProductEnabled,
+  type PaidMvpLaunchAccessProductKey,
+} from '../../shared/commercialActivation';
 
 type RuntimeEnvironment = Record<string, string | undefined>;
 
@@ -14,6 +19,7 @@ type RuntimeEnvironment = Record<string, string | undefined>;
  */
 export function isCommercialActivationAvailable(
   environment: RuntimeEnvironment = process.env,
+  productKey?: PaidMvpLaunchAccessProductKey,
 ): boolean {
   const authorityWrappedBrowserFixture =
     environment.NODE_ENV === 'test' &&
@@ -23,24 +29,72 @@ export function isCommercialActivationAvailable(
     Boolean(environment.DATABASE_AUTHORITY_CORRELATION_ID);
   const authorityWrappedScenarioFixture = isGovernedContainedScenarioFixtureActive(environment);
 
-  return (
-    COMMERCIAL_ACTIVATION_STATE.enabled ||
+  const controlledFixture =
+    (environment.NODE_ENV === 'test' && environment.VITEST === 'true') ||
+    authorityWrappedBrowserFixture ||
+    authorityWrappedScenarioFixture;
+
+  if (controlledFixture) return !productKey || isPaidMvpLaunchAccessProductKey(productKey);
+
+  // A product must be stated at normal runtime. This prevents a caller for a
+  // legacy checkout, boosts, Land, or a future tier from inheriting approval
+  // intended only for the three paid-MVP Launch Access products.
+  return Boolean(
+    productKey && isPaidMvpLaunchAccessProductEnabled(productKey, COMMERCIAL_ACTIVATION_STATE),
+  );
+}
+
+/** Whether any approved Launch Access product is available to a bounded flow. */
+export function isAnyPaidMvpLaunchAccessActivationAvailable(
+  environment: RuntimeEnvironment = process.env,
+): boolean {
+  const authorityWrappedBrowserFixture =
+    environment.NODE_ENV === 'test' &&
+    environment.APP_ENV === 'test' &&
+    environment.PROPERTY_LISTIFY_GOVERNED_BROWSER_TEST_FIXTURE === 'true' &&
+    Boolean(environment.DATABASE_AUTHORITY_PARENT_FINGERPRINT) &&
+    Boolean(environment.DATABASE_AUTHORITY_CORRELATION_ID);
+  const authorityWrappedScenarioFixture = isGovernedContainedScenarioFixtureActive(environment);
+  if (
     (environment.NODE_ENV === 'test' && environment.VITEST === 'true') ||
     authorityWrappedBrowserFixture ||
     authorityWrappedScenarioFixture
+  ) {
+    return true;
+  }
+
+  return (
+    COMMERCIAL_ACTIVATION_STATE.enabled &&
+    COMMERCIAL_ACTIVATION_STATE.enabledProductKeys.some(isPaidMvpLaunchAccessProductKey)
   );
 }
 
 export function getCommercialActivationStatus(environment: RuntimeEnvironment = process.env) {
   return {
     ...COMMERCIAL_ACTIVATION_STATE,
-    enabled: isCommercialActivationAvailable(environment),
+    enabled: isAnyPaidMvpLaunchAccessActivationAvailable(environment),
   };
 }
 
 /** Fail closed before an invoice, payment, or entitlement mutation can begin. */
-export function requireCommercialActivation(operation: string): void {
-  if (isCommercialActivationAvailable()) return;
+export function requireCommercialActivation(
+  operation: string,
+  productKey?: PaidMvpLaunchAccessProductKey,
+): void {
+  if (isCommercialActivationAvailable(process.env, productKey)) return;
+
+  throw new TRPCError({
+    code: 'PRECONDITION_FAILED',
+    message: `${operation} is unavailable while Property Listify is in preparation-only onboarding. ${COMMERCIAL_ACTIVATION_STATE.message}`,
+  });
+}
+
+/**
+ * Used only before a bounded Launch Access flow can load the selected plan.
+ * Every mutating flow must subsequently require its exact product key.
+ */
+export function requireAnyPaidMvpLaunchAccessActivation(operation: string): void {
+  if (isAnyPaidMvpLaunchAccessActivationAvailable()) return;
 
   throw new TRPCError({
     code: 'PRECONDITION_FAILED',

@@ -24,8 +24,9 @@ import {
 function limitedRows(rows: unknown[]) {
   const limit = vi.fn().mockResolvedValue(rows);
   const where = vi.fn(() => ({ limit }));
-  const from = vi.fn(() => ({ where }));
-  return { from, where, limit };
+  const innerJoin = vi.fn(() => ({ where }));
+  const from = vi.fn(() => ({ where, innerJoin }));
+  return { from, where, limit, innerJoin };
 }
 
 function rows(rows: unknown[]) {
@@ -61,9 +62,24 @@ describe('agency invitation delivery (canonical access gate)', () => {
       .mockImplementationOnce(() =>
         limitedRows([
           {
-            status,
-            currentPeriodEnd: dates.currentPeriodEnd ?? null,
-            graceEndsAt: dates.graceEndsAt ?? null,
+            subscription: {
+              status,
+              currentPeriodEnd:
+                dates.currentPeriodEnd ?? (status === 'active' ? futureDate(30) : null),
+              graceEndsAt: dates.graceEndsAt ?? null,
+            },
+            plan: {
+              id: 44,
+              name: 'agency_launch_access',
+              segment: 'agency',
+              isActive: 1,
+              metadata: {
+                commercial_term_kind: 'paid_launch_access',
+                commercial_term_duration_days: 90,
+                commercial_requires_verified_payment: true,
+                commercial_auto_renews: false,
+              },
+            },
           },
         ]),
       );
@@ -215,7 +231,7 @@ describe('agency invitation delivery (canonical access gate)', () => {
     );
   });
 
-  it('accepts grace_period as paid access', async () => {
+  it('defers grace_period because fixed Launch Access expires at term end', async () => {
     mockCanonicalGate('grace_period');
     mockSelect
       .mockImplementationOnce(() => rows([{ ...pendingInvitation(), id: 100 }]))
@@ -233,7 +249,7 @@ describe('agency invitation delivery (canonical access gate)', () => {
 
     const result = await deliverAgencyInvitations({ agencyId: 44 });
 
-    expect(result).toEqual({ deferred: false, attempted: 1, sent: 1, failed: 0 });
+    expect(result).toEqual({ deferred: true, attempted: 0, sent: 0, failed: 0 });
   });
 
   it('defers when the canonical subscription has expired even if a stale shadow says active', async () => {

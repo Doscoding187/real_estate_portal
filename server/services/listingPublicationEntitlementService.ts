@@ -14,6 +14,7 @@ import { getEntitlementNumber } from './planAccessService';
 import { resolveCurrentAgencyMembershipForAgent } from './agencyMembershipService';
 import { parseAgentCoverageAreas } from '../../shared/agentCoverageArea';
 import {
+  getPaidMvpLaunchAccessProductKey,
   isPaidCommercialTermExpired,
   parseCanonicalCommercialTimestamp,
   resolveCommercialTerm,
@@ -158,7 +159,7 @@ export async function evaluateAgencyPublicationReadiness(
   // A persisted paid term is not a release decision. Keep the readiness view
   // honest while the global preparation-only state is in force; the mutation
   // assertion below independently fails before any listing write can begin.
-  if (!isCommercialActivationAvailable()) {
+  if (!isCommercialActivationAvailable(process.env, 'agency_launch_access')) {
     blockers.push(commercialActivationBlocker());
   }
 
@@ -216,6 +217,7 @@ export async function evaluateAgencyPublicationReadiness(
   const subscriptionFailureForState = subscriptionFailure(
     subscriptionWithPlan?.subscription,
     now,
+    'agency',
     subscriptionWithPlan?.plan,
   );
   if (subscriptionFailureForState) {
@@ -317,7 +319,7 @@ export async function evaluateIndependentAgentPublicationReadiness(
   const push = (reason: ListingPublicationFailureCode, message: string) =>
     blockers.push({ reason, message });
 
-  if (!isCommercialActivationAvailable()) {
+  if (!isCommercialActivationAvailable(process.env, 'agent_launch_access')) {
     blockers.push(commercialActivationBlocker());
   }
 
@@ -372,10 +374,7 @@ export async function evaluateIndependentAgentPublicationReadiness(
   const subscriptionWithPlan = await getCanonicalSubscription(db, 'agent', userId);
   const subscription = subscriptionWithPlan?.subscription;
   const plan = subscriptionWithPlan?.plan;
-  const trialEndsAt = dbTimestamp(subscription?.trialEndsAt);
-  const validTrial =
-    subscription?.status === 'trial' && trialEndsAt !== null && trialEndsAt > nowMs;
-  const failure = validTrial ? null : subscriptionFailure(subscription, now, plan);
+  const failure = subscriptionFailure(subscription, now, 'agent', plan);
   if (failure) {
     push(failure.reason, failure.message);
   }
@@ -462,6 +461,7 @@ const dbTimestamp = (value: unknown) => {
 function subscriptionFailure(
   subscription: any,
   now: Date,
+  ownerType: 'agency' | 'agent',
   plan: typeof plans.$inferSelect | null | undefined = null,
 ): ListingPublicationEntitlementError | null {
   if (!subscription) {
@@ -471,9 +471,18 @@ function subscriptionFailure(
     );
   }
 
+  if (
+    plan &&
+    !getPaidMvpLaunchAccessProductKey(plan, ownerType)
+  ) {
+    return new ListingPublicationEntitlementError(
+      'subscription_plan_ineligible',
+      'The current plan is not an approved paid Launch Access product for listing publication.',
+    );
+  }
+
   const nowMs = now.getTime();
   const currentPeriodEnd = dbTimestamp(subscription.currentPeriodEnd);
-  const graceEndsAt = dbTimestamp(subscription.graceEndsAt);
   const paidLaunchTermExpired = Boolean(
     plan &&
     isPaidCommercialTermExpired(
@@ -485,17 +494,14 @@ function subscriptionFailure(
   );
 
   if (subscription.status === 'grace_period') {
-    if (!graceEndsAt || graceEndsAt <= nowMs) {
-      return new ListingPublicationEntitlementError(
-        'subscription_expired',
-        'The subscription grace period has ended. Reactivate the subscription to publish listings.',
-      );
-    }
-    return null;
+    return new ListingPublicationEntitlementError(
+      'subscription_expired',
+      'The fixed Launch Access term has ended. Reactivate the subscription to publish listings.',
+    );
   }
 
   if (subscription.status === 'active') {
-    if (paidLaunchTermExpired || (currentPeriodEnd && currentPeriodEnd <= nowMs)) {
+    if (!currentPeriodEnd || paidLaunchTermExpired || currentPeriodEnd <= nowMs) {
       return new ListingPublicationEntitlementError(
         'subscription_period_ended',
         'The subscription period has ended. Reactivate the subscription to publish listings.',
@@ -535,6 +541,8 @@ async function getCanonicalSubscription(
     .leftJoin(plans, eq(subscriptions.planId, plans.id))
     .where(
       and(
+        eq(subscriptions.ownerType, ownerType),
+        eq(subscriptions.ownerId, ownerId),
         sql`EXISTS (
           SELECT 1
           FROM ${billableAccounts} account
@@ -738,13 +746,13 @@ export async function assertListingPublicationEntitled(
   // Publication remains unavailable in all normal runtimes even if a stale,
   // historical, or manually-created subscription row appears active. Governed
   // test fixtures are the only narrowly scoped exception.
-  if (!isCommercialActivationAvailable()) {
+  const now = input.at || new Date();
+  const owner = await resolveListingCommercialOwner(db, input.listingId);
+  const productKey = owner.kind === 'agency' ? 'agency_launch_access' : 'agent_launch_access';
+  if (!isCommercialActivationAvailable(process.env, productKey)) {
     const blocker = commercialActivationBlocker();
     throw new ListingPublicationEntitlementError(blocker.reason, blocker.message);
   }
-
-  const now = input.at || new Date();
-  const owner = await resolveListingCommercialOwner(db, input.listingId);
   await lockListingPublicationOwner(db, owner);
 
   if (owner.kind === 'agency') {

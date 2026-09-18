@@ -16,6 +16,7 @@ import {
   leads,
   listings,
   notifications,
+  plans,
   properties,
   subscriptions,
   unitTypes,
@@ -45,7 +46,8 @@ import {
 import { evaluatePublicDevelopmentEligibility } from './publicDevelopmentEligibility';
 import { getDeveloperPublicationAccess } from './developerPublicationAccess';
 import { EmailService } from '../_core/emailService';
-import { isPaidSubscriptionRowEntitled } from './planAccessService';
+import { isPaidMvpLaunchAccessSubscriptionEntitled } from './planAccessService';
+import { isCommercialActivationAvailable } from './commercialActivationPolicy';
 import { resolvePublicPropertyEligibility } from './publicPropertyEligibilityService';
 import { resolvePublicLandLeadCustody } from './landPublicService';
 import { resolveSharedLivingLeadCustody, ensureLeadContextRow } from './sharedLivingEnquiryService';
@@ -499,7 +501,6 @@ async function isRecipientCommerciallyDeliverable(
       .select({
         status: agents.status,
         userId: agents.userId,
-        isVerified: agents.isVerified,
       })
       .from(agents)
       .where(eq(agents.id, agentId))
@@ -513,12 +514,9 @@ async function isRecipientCommerciallyDeliverable(
 
     const individualSubscriptions = agent.userId
       ? await database
-          .select({
-            status: subscriptions.status,
-            currentPeriodEnd: subscriptions.currentPeriodEnd,
-            graceEndsAt: subscriptions.graceEndsAt,
-          })
+          .select({ subscription: subscriptions, plan: plans })
           .from(subscriptions)
+          .innerJoin(plans, eq(subscriptions.planId, plans.id))
           .where(
             and(
               eq(subscriptions.ownerType, 'agent'),
@@ -551,12 +549,9 @@ async function isRecipientCommerciallyDeliverable(
       }
 
       const agencySubscriptions = await database
-        .select({
-          status: subscriptions.status,
-          currentPeriodEnd: subscriptions.currentPeriodEnd,
-          graceEndsAt: subscriptions.graceEndsAt,
-        })
+        .select({ subscription: subscriptions, plan: plans })
         .from(subscriptions)
+        .innerJoin(plans, eq(subscriptions.planId, plans.id))
         .where(
           and(
             eq(subscriptions.ownerType, 'agency'),
@@ -569,16 +564,30 @@ async function isRecipientCommerciallyDeliverable(
             )`,
           ),
         );
-      agencyEntitled = agencySubscriptions.some(subscription =>
-        isPaidSubscriptionRowEntitled(subscription),
-      );
+      agencyEntitled =
+        isCommercialActivationAvailable(process.env, 'agency_launch_access') &&
+        agencySubscriptions.some(subscription =>
+          isPaidMvpLaunchAccessSubscriptionEntitled(
+            subscription.subscription,
+            subscription.plan,
+            'agency',
+          ),
+        );
     }
 
-    const individuallyEntitled = individualSubscriptions.some(subscription =>
-      isPaidSubscriptionRowEntitled(subscription),
-    );
-    const badged = Number(agent.isVerified || 0) === 1;
-    if (!(badged || individuallyEntitled || agencyEntitled)) {
+    const individuallyEntitled =
+      isCommercialActivationAvailable(process.env, 'agent_launch_access') &&
+      individualSubscriptions.some(subscription =>
+        isPaidMvpLaunchAccessSubscriptionEntitled(
+          subscription.subscription,
+          subscription.plan,
+          'agent',
+        ),
+      );
+    // If the inventory names an agency commercial owner, current membership
+    // and that agency's term are the only authority. An individual term must
+    // not keep a member receiving new enquiries after agency expiry.
+    if (!(commercialAgencyId ? agencyEntitled : individuallyEntitled)) {
       return {
         eligible: false,
         reason: 'The assigned listing agent is not an eligible active recipient.',
@@ -602,12 +611,9 @@ async function isRecipientCommerciallyDeliverable(
     }
 
     const agencySubscriptions = await database
-      .select({
-        status: subscriptions.status,
-        currentPeriodEnd: subscriptions.currentPeriodEnd,
-        graceEndsAt: subscriptions.graceEndsAt,
-      })
+      .select({ subscription: subscriptions, plan: plans })
       .from(subscriptions)
+      .innerJoin(plans, eq(subscriptions.planId, plans.id))
       .where(
         and(
           eq(subscriptions.ownerType, 'agency'),
@@ -620,7 +626,16 @@ async function isRecipientCommerciallyDeliverable(
           )`,
         ),
       );
-    if (!agencySubscriptions.some(subscription => isPaidSubscriptionRowEntitled(subscription))) {
+    if (
+      !isCommercialActivationAvailable(process.env, 'agency_launch_access') ||
+      !agencySubscriptions.some(subscription =>
+        isPaidMvpLaunchAccessSubscriptionEntitled(
+          subscription.subscription,
+          subscription.plan,
+          'agency',
+        ),
+      )
+    ) {
       return {
         eligible: false,
         reason: 'The owning agency is not commercially eligible to receive new enquiries.',
@@ -820,12 +835,9 @@ export async function resolveLeadOwnership(
 
     const individualSubscriptions = agent.userId
       ? await database
-          .select({
-            status: subscriptions.status,
-            currentPeriodEnd: subscriptions.currentPeriodEnd,
-            graceEndsAt: subscriptions.graceEndsAt,
-          })
+          .select({ subscription: subscriptions, plan: plans })
           .from(subscriptions)
+          .innerJoin(plans, eq(subscriptions.planId, plans.id))
           .where(
             and(
               eq(subscriptions.ownerType, 'agent'),
@@ -841,12 +853,9 @@ export async function resolveLeadOwnership(
       : [];
     const agencySubscriptions = canonicalAgencyId
       ? await database
-          .select({
-            status: subscriptions.status,
-            currentPeriodEnd: subscriptions.currentPeriodEnd,
-            graceEndsAt: subscriptions.graceEndsAt,
-          })
+          .select({ subscription: subscriptions, plan: plans })
           .from(subscriptions)
+          .innerJoin(plans, eq(subscriptions.planId, plans.id))
           .where(
             and(
               eq(subscriptions.ownerType, 'agency'),
@@ -874,13 +883,24 @@ export async function resolveLeadOwnership(
         userId: agent.userId == null ? null : Number(agent.userId),
         agencyId: canonicalAgencyId,
         status: agent.status || null,
-        isVerified: Number(agent.isVerified || 0),
-        hasActivePaidEntitlement: individualSubscriptions.some(subscription =>
-          isPaidSubscriptionRowEntitled(subscription),
-        ),
-        hasActiveAgencyEntitlement: agencySubscriptions.some(subscription =>
-          isPaidSubscriptionRowEntitled(subscription),
-        ),
+        hasActivePaidEntitlement:
+          isCommercialActivationAvailable(process.env, 'agent_launch_access') &&
+          individualSubscriptions.some(subscription =>
+            isPaidMvpLaunchAccessSubscriptionEntitled(
+              subscription.subscription,
+              subscription.plan,
+              'agent',
+            ),
+          ),
+        hasActiveAgencyEntitlement:
+          isCommercialActivationAvailable(process.env, 'agency_launch_access') &&
+          agencySubscriptions.some(subscription =>
+            isPaidMvpLaunchAccessSubscriptionEntitled(
+              subscription.subscription,
+              subscription.plan,
+              'agency',
+            ),
+          ),
         // A non-null agency id above can only originate from `membership`,
         // so a profile's stale or forged association cannot satisfy this
         // boundary. Independent agents are not membership-scoped.
@@ -1193,6 +1213,7 @@ export async function resolveLeadOwnership(
       developer: developerId ? developerMap.get(developerId) : null,
       brand,
       brandReferenceInvalid,
+      hasActiveCommercialEntitlement: commercialAccess,
     });
 
     if (custody.leadCustody === 'attention_required') {
@@ -1214,10 +1235,15 @@ export async function resolveLeadOwnership(
   if (targetKind === 'brand') {
     const developerId = positiveId(brand?.developerOrganisationId);
     const developerMap = await loadDeveloperCandidates(database, developerId ? [developerId] : []);
+    const commercialAccess =
+      brand?.authorityKind === 'developer_first_party' && developerId
+        ? (await getDeveloperPublicationAccess(developerId, { db: database })).eligible
+        : true;
     const custody = resolvePublicBrandOnlyCustody({
       cataloguePublisherId: canonicalBrandId!,
       brand: brand as PublicBrandOwnershipCandidate,
       developer: developerId ? developerMap.get(developerId) : null,
+      hasActiveCommercialEntitlement: commercialAccess,
     });
 
     if (custody.leadCustody === 'attention_required') {

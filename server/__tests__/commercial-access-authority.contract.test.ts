@@ -56,9 +56,13 @@ describe('agency commercial access authority', () => {
   it('gates agency invitation delivery on effective canonical entitlement', () => {
     expect(invitationSource).toContain('billableAccounts');
     expect(invitationSource).toContain("account.account_kind = 'agency'");
-    expect(invitationSource).toContain('hasEffectiveAgencyPaidAccess');
-    expect(invitationSource).toContain('currentPeriodEnd: subscriptions.currentPeriodEnd');
-    expect(invitationSource).toContain('graceEndsAt: subscriptions.graceEndsAt');
+    // Invitation delivery now uses the same exact Launch Access term
+    // predicate as publication and lead capture.  Keep the structural
+    // contract on the joined canonical plan/subscription projection rather
+    // than the retired status/period shadow projection.
+    expect(invitationSource).toContain('.innerJoin(plans, eq(subscriptions.planId, plans.id))');
+    expect(invitationSource).toContain('isPaidMvpLaunchAccessSubscriptionEntitled');
+    expect(invitationSource).toContain("'agency_launch_access'");
     // The retired agencies column must no longer decide delivery.
     expect(invitationSource).not.toContain('agencies.subscriptionStatus');
 

@@ -14,14 +14,18 @@ vi.mock('../services/propertySearchService', () => ({
 import { appRouter } from '../routers';
 import { getDb } from '../db-connection';
 import {
+  cataloguePublishers,
   developmentApprovalQueue,
+  developerOrganisations,
   developments,
   leads,
+  notifications,
   subscriptions,
   unitTypes,
   users,
 } from '../../drizzle/schema';
 import { developmentService } from '../services/developmentService';
+import { commercialTermNoticeScheduler } from '../services/commercialTermNoticeScheduler';
 import {
   activateDeveloperTestLaunchAccess,
   createDeveloperTestContext,
@@ -496,6 +500,59 @@ describeWithDb('Developer development publication lifecycle integration', () => 
         toStage: 'qualified',
       }),
     ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+
+    // A lead accepted while the organisation term is live remains in the
+    // developer's canonical CRM custody after expiry, while a fresh public
+    // enquiry is refused by the same publication/eligibility authority.
+    const publicCaller = appRouter.createCaller({
+      req: { headers: {} },
+      res: {},
+      user: null,
+    } as any);
+    const accepted = await publicCaller.developer.createLead({
+      developmentId,
+      name: 'Accepted before expiry',
+      email: `accepted-before-expiry-${Date.now()}@example.com`,
+      message: 'Please send the current availability schedule.',
+      sourceSurface: 'development_detail',
+      leadSource: 'development_detail',
+      captureRequestId: `developer-expiry-history-${Date.now()}`,
+      consent: { accepted: true, version: '2026-08-02', source: 'developer-expiry-test' },
+    });
+    expect(accepted).toMatchObject({ success: true, leadCustody: 'verified_customer_recipient' });
+    const acceptedLeadId = Number(accepted.leadId);
+    expect(acceptedLeadId).toBeGreaterThan(0);
+
+    await db!
+      .update(subscriptions)
+      .set({ status: 'active', currentPeriodEnd: '2020-01-01 00:00:00' })
+      .where(
+        and(
+          eq(subscriptions.ownerType, 'developer'),
+          eq(subscriptions.ownerId, owner.developerContext!.organisationId),
+        ),
+      );
+
+    await expect(
+      publicCaller.developer.createLead({
+        developmentId,
+        name: 'Rejected after expiry',
+        email: `rejected-after-expiry-${Date.now()}@example.com`,
+        message: 'This must not become a new paid enquiry.',
+        sourceSurface: 'development_detail',
+        leadSource: 'development_detail',
+        captureRequestId: `developer-expiry-new-${Date.now()}`,
+        consent: { accepted: true, version: '2026-08-02', source: 'developer-expiry-test' },
+      }),
+    ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+
+    const retained = await ownerCaller.developer.getLeads({ limit: 200 });
+    expect(retained.items.some(item => Number(item.id) === acceptedLeadId)).toBe(true);
+    const unrelatedRetained = await callerFor(
+      otherDeveloper.userId,
+      'property_developer',
+    ).developer.getLeads({ limit: 200 });
+    expect(unrelatedRetained.items.some(item => Number(item.id) === acceptedLeadId)).toBe(false);
   });
 
   it('keeps approval private without Launch Access and restores publication after activation', async () => {
@@ -568,6 +625,89 @@ describeWithDb('Developer development publication lifecycle integration', () => 
       .from(developments)
       .where(eq(developments.id, developmentId));
     expect(preserved).toMatchObject({ id: developmentId, approvalStatus: 'approved' });
+    const [preservedOrganisation] = await db!
+      .select({ id: developerOrganisations.id, status: developerOrganisations.status })
+      .from(developerOrganisations)
+      .where(eq(developerOrganisations.id, owner.developerContext!.organisationId))
+      .limit(1);
+    const [preservedPublisher] = await db!
+      .select({
+        id: cataloguePublishers.id,
+        developerOrganisationId: cataloguePublishers.developerOrganisationId,
+        isVisible: cataloguePublishers.isVisible,
+      })
+      .from(cataloguePublishers)
+      .where(eq(cataloguePublishers.id, owner.developerContext!.cataloguePublisherId))
+      .limit(1);
+    expect(preservedOrganisation).toMatchObject({
+      id: owner.developerContext!.organisationId,
+      status: 'approved',
+    });
+    expect(preservedPublisher).toMatchObject({
+      id: owner.developerContext!.cataloguePublisherId,
+      developerOrganisationId: owner.developerContext!.organisationId,
+      isVisible: 1,
+    });
+  });
+
+  it('queues one durable Developer expiry event for the organisation owner', async () => {
+    const owner = await createFixture();
+    const db = await getDb();
+    const [subscription] = await db!
+      .select({ id: subscriptions.id })
+      .from(subscriptions)
+      .where(
+        and(
+          eq(subscriptions.ownerType, 'developer'),
+          eq(subscriptions.ownerId, owner.developerContext!.organisationId),
+        ),
+      )
+      .limit(1);
+    expect(subscription).toBeTruthy();
+
+    await db!
+      .update(subscriptions)
+      .set({ status: 'expired', currentPeriodEnd: '2020-01-01 00:00:00' })
+      .where(eq(subscriptions.id, subscription!.id));
+
+    await expect(commercialTermNoticeScheduler.tick()).resolves.toEqual(
+      expect.objectContaining({ sent: expect.any(Number) }),
+    );
+
+    const readExpiryNotices = async () =>
+      (
+        await db!
+          .select({ data: notifications.data })
+          .from(notifications)
+          .where(eq(notifications.userId, owner.userId))
+      )
+        .map(row => {
+          try {
+            return row.data ? JSON.parse(row.data) : null;
+          } catch {
+            return null;
+          }
+        })
+        .filter(
+          notice =>
+            notice?.notice === 'launch_expired' &&
+            Number(notice.subscriptionId) === Number(subscription!.id),
+        );
+
+    expect(await readExpiryNotices()).toEqual([
+      expect.objectContaining({
+        notificationType: 'launch_access_expired',
+        ownerType: 'developer',
+        ownerId: owner.developerContext!.organisationId,
+        recipientUserId: owner.userId,
+        providerDelivery: 'b10_notification_consumer',
+      }),
+    ]);
+
+    // The recipient/subscription/notice key is durable and idempotent, so a
+    // repeat scheduler tick cannot enqueue a second expiry message.
+    await commercialTermNoticeScheduler.tick();
+    expect(await readExpiryNotices()).toHaveLength(1);
   });
 
   it('does not transition incomplete development data to pending through the active developer procedure', async () => {

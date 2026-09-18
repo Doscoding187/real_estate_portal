@@ -58,9 +58,11 @@ const completeBranding = {
   primaryColor: '#000000',
   secondaryColor: '#ffffff',
 };
-const agencyPublishingPlan = { id: 1, segment: 'agency', isActive: 1 };
-const paidAgencyLaunchPlan = {
-  ...agencyPublishingPlan,
+const agencyPublishingPlan = {
+  id: 1,
+  name: 'agency_launch_access',
+  segment: 'agency',
+  isActive: 1,
   metadata: {
     commercial_term_kind: 'paid_launch_access',
     commercial_term_duration_days: 90,
@@ -68,6 +70,7 @@ const paidAgencyLaunchPlan = {
     commercial_auto_renews: false,
   },
 };
+const paidAgencyLaunchPlan = agencyPublishingPlan;
 const publishingEntitlements = [{ featureKey: 'max_active_listings', valueJson: 1 }];
 const at = new Date('2026-07-16T10:00:00.000Z');
 
@@ -112,7 +115,11 @@ function agencyDb(input: {
     [
       input.subscription
         ? {
-            subscription: input.subscription,
+            subscription: {
+              status: 'active',
+              currentPeriodEnd: new Date(at.getTime() + 86_400_000).toISOString(),
+              ...(input.subscription || {}),
+            },
             plan: input.plan === undefined ? agencyPublishingPlan : input.plan,
           }
         : undefined,
@@ -158,7 +165,18 @@ function independentAgentDb(input: {
     [
       {
         subscription: { status: 'active', currentPeriodEnd: future },
-        plan: { id: 2, segment: 'agent', isActive: 1 },
+        plan: {
+          id: 2,
+          name: 'agent_launch_access',
+          segment: 'agent',
+          isActive: 1,
+          metadata: {
+            commercial_term_kind: 'paid_launch_access',
+            commercial_term_duration_days: 90,
+            commercial_requires_verified_payment: true,
+            commercial_auto_renews: false,
+          },
+        },
       },
     ],
     input.entitlements || [{ featureKey: 'max_active_listings', valueJson: 50 }],
@@ -193,7 +211,21 @@ function independentAgentReadinessDb(input: {
     input.subscription === undefined
       ? { status: 'active', currentPeriodEnd: future }
       : input.subscription;
-  const plan = input.plan === undefined ? { id: 2, segment: 'agent', isActive: 1 } : input.plan;
+  const plan =
+    input.plan === undefined
+      ? {
+          id: 2,
+          name: 'agent_launch_access',
+          segment: 'agent',
+          isActive: 1,
+          metadata: {
+            commercial_term_kind: 'paid_launch_access',
+            commercial_term_duration_days: 90,
+            commercial_requires_verified_payment: true,
+            commercial_auto_renews: false,
+          },
+        }
+      : input.plan;
   const rows: any[][] = [
     [{ id: 200, role: 'agent', agencyId: null, emailVerified: 1, ...(input.user || {}) }],
     [agent],
@@ -314,7 +346,7 @@ describe('listing publication entitlement service', () => {
   it('fails closed when an active fixed-term agency subscription has no usable end', async () => {
     await expectAgencyDenied(
       {
-        subscription: { status: 'active', cancelAtPeriodEnd: 0 },
+        subscription: { status: 'active', cancelAtPeriodEnd: 0, currentPeriodEnd: null },
         plan: paidAgencyLaunchPlan,
       },
       'subscription_period_ended',
@@ -450,7 +482,7 @@ describe('listing publication entitlement service', () => {
     ).resolves.toMatchObject({ kind: 'independent_agent', userId: 200 });
   });
 
-  it('accepts a valid agency grace period', async () => {
+  it('denies a grace-period row because fixed Launch Access expires at term end', async () => {
     await expect(
       assertListingPublicationEntitled(
         agencyDb({
@@ -461,7 +493,7 @@ describe('listing publication entitlement service', () => {
         }),
         { listingId: 10, operation: 'submit', at },
       ),
-    ).resolves.toMatchObject({ kind: 'agency', agencyId: 77 });
+    ).rejects.toMatchObject({ reason: 'subscription_expired' });
   });
 
   it('denies an agency grace period that has ended', async () => {
@@ -513,7 +545,7 @@ describe('listing publication entitlement service', () => {
     );
   });
 
-  it('preserves an unexpired individual-agent trial without using agency billing', async () => {
+  it('does not let a free trial substitute for Launch Access', async () => {
     const future = new Date(at.getTime() + 86_400_000).toISOString();
     const db = new QueuedDb([
       [{ id: 12, ownerId: 200, agencyId: null, agentId: 45 }],
@@ -562,7 +594,7 @@ describe('listing publication entitlement service', () => {
 
     await expect(
       assertListingPublicationEntitled(db, { listingId: 12, operation: 'submit', at }),
-    ).resolves.toMatchObject({ kind: 'independent_agent', userId: 200 });
+    ).rejects.toMatchObject({ reason: 'subscription_plan_ineligible' });
   });
 
   it('denies developer, prospect, and unassociated authenticated listing owners', async () => {

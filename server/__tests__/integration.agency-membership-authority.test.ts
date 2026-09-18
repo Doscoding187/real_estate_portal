@@ -672,6 +672,10 @@ describeWithDb('canonical membership maintenance (atomic unique-pair authority)'
       ]),
     });
     await maintainAgencyAgentMembership(db, { agencyId, agentId, status: 'active' });
+    // Public recommendations are commercially actionable discovery. Establish
+    // the same canonical Agency Launch Access term that a live agency would
+    // have; membership alone must not substitute for paid entitlement.
+    await createActiveAgencyInvitationAccess(agencyId, memberUserId);
 
     await expect(findAgentsServingLocation(db, 'suburb', Number(location.id))).resolves.toEqual(
       expect.arrayContaining([

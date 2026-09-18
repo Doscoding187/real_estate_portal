@@ -1,8 +1,21 @@
 import { and, desc, eq, inArray, ne, sql } from 'drizzle-orm';
 
-import { agencyAgentMemberships, agencies, agents, billableAccounts, cities, listings, provinces, properties, suburbs, subscriptions } from '../../drizzle/schema';
+import {
+  agencyAgentMemberships,
+  agencies,
+  agents,
+  billableAccounts,
+  cities,
+  listings,
+  plans,
+  provinces,
+  properties,
+  suburbs,
+  subscriptions,
+} from '../../drizzle/schema';
 import { slugify } from '../_core/utils/slug';
-import { isPaidSubscriptionRowEntitled } from './planAccessService';
+import { isPaidMvpLaunchAccessSubscriptionEntitled } from './planAccessService';
+import { isCommercialActivationAvailable } from './commercialActivationPolicy';
 import { resolvePublicPropertyEligibilities } from './publicPropertyEligibilityService';
 import { toPublicPropertyDetailDto } from './publicPropertyDto';
 import {
@@ -459,17 +472,19 @@ async function loadPersonallyEntitledAgentUserIds(
   db: any,
   userIds: number[],
 ): Promise<Set<number>> {
-  if (userIds.length === 0) return new Set();
-  const rows: Array<{ ownerId: number; status: string; currentPeriodEnd: string | Date | null }> =
-    await db
-      .select({
-        ownerId: subscriptions.ownerId,
-        status: subscriptions.status,
-        currentPeriodEnd: subscriptions.currentPeriodEnd,
-      })
+  if (
+    userIds.length === 0 ||
+    !isCommercialActivationAvailable(process.env, 'agent_launch_access')
+  ) {
+    return new Set();
+  }
+  const rows = await db
+      .select({ subscription: subscriptions, plan: plans })
       .from(subscriptions)
+      .innerJoin(plans, eq(subscriptions.planId, plans.id))
       .where(
         and(
+          eq(subscriptions.ownerType, 'agent'),
           inArray(subscriptions.ownerId, userIds),
           sql`EXISTS (
             SELECT 1
@@ -483,10 +498,46 @@ async function loadPersonallyEntitledAgentUserIds(
   const now = new Date();
   const entitled = new Set<number>();
   for (const row of rows) {
-    if (!isPaidSubscriptionRowEntitled(row, now)) continue;
-    entitled.add(Number(row.ownerId));
+    if (!isPaidMvpLaunchAccessSubscriptionEntitled(row.subscription, row.plan, 'agent', now)) {
+      continue;
+    }
+    entitled.add(Number(row.subscription.ownerId));
   }
   return entitled;
+}
+
+async function loadEntitledAgencyIds(db: any, agencyIds: number[]): Promise<Set<number>> {
+  if (
+    agencyIds.length === 0 ||
+    !isCommercialActivationAvailable(process.env, 'agency_launch_access')
+  ) {
+    return new Set();
+  }
+  const rows = await db
+    .select({ subscription: subscriptions, plan: plans })
+    .from(subscriptions)
+    .innerJoin(plans, eq(subscriptions.planId, plans.id))
+    .where(
+      and(
+        eq(subscriptions.ownerType, 'agency'),
+        inArray(subscriptions.ownerId, agencyIds),
+        sql`EXISTS (
+          SELECT 1
+          FROM ${billableAccounts} account
+          WHERE account.id = ${subscriptions.billableAccountId}
+            AND account.account_kind = 'agency'
+            AND account.agency_id = ${subscriptions.ownerId}
+        )`,
+      ),
+    );
+  const now = new Date();
+  return new Set(
+    rows
+      .filter(row =>
+        isPaidMvpLaunchAccessSubscriptionEntitled(row.subscription, row.plan, 'agency', now),
+      )
+      .map(row => Number(row.subscription.ownerId)),
+  );
 }
 
 /**
@@ -584,14 +635,23 @@ export async function findAgentsServingLocation(
           .from(agencies)
           .where(inArray(agencies.id, currentAgencyIds));
   const agencyById = new Map(currentAgencies.map(agency => [Number(agency.id), agency]));
+  const entitledAgencyIds = await loadEntitledAgencyIds(db, currentAgencyIds);
 
   return exactClaimAgents
     .map(agent => {
       const membership = currentMembershipsByAgentId.get(Number(agent.id));
       const agency = membership ? agencyById.get(Number(membership.agencyId)) : null;
-      const hasVerifiedCurrentAgency = Number(agency?.isVerified || 0) === 1;
+      const hasVerifiedCurrentAgency =
+        Number(agency?.isVerified || 0) === 1 &&
+        entitledAgencyIds.has(Number(membership?.agencyId || 0));
       const hasPersonalEntitlement = personallyEntitled.has(Number(agent.userId));
-      if (!hasPersonalEntitlement && !hasVerifiedCurrentAgency) return null;
+      // A current membership makes the Agency the commercial owner; an
+      // individual term cannot silently keep the member discoverable after
+      // that Agency term expires.
+      const commerciallyEligible = membership
+        ? hasVerifiedCurrentAgency
+        : hasPersonalEntitlement;
+      if (!commerciallyEligible) return null;
 
       return {
         id: Number(agent.id),
