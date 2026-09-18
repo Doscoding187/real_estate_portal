@@ -32,10 +32,10 @@ type NavItem = {
 
 const OPERATE_LINKS = [
   { label: 'Overview', href: '/agent/dashboard', icon: Home },
-  { label: 'Listings', href: '/agent/listings', icon: Building2 },
   { label: 'Leads & CRM', href: '/agent/leads', icon: Users },
+  { label: 'Productivity', href: '/agent/productivity', icon: CalendarDays },
+  { label: 'Listings', href: '/agent/listings', icon: Building2 },
   { label: 'Seller Growth', href: '/agent/canvassing', icon: MapPinned },
-  { label: 'Calendar', href: '/agent/productivity', icon: CalendarDays },
 ] as const;
 
 const GROW_LINKS = [

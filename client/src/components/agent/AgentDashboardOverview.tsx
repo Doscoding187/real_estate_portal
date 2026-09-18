@@ -82,6 +82,14 @@ type ShowingItem = {
   scheduledAt?: string | Date;
 };
 
+type FollowUpSummaryItem = {
+  id: number;
+  name: string;
+  nextFollowUp: string | Date;
+  property?: { title?: string | null; city?: string | null } | null;
+  commercial?: { listingTitle?: string | null } | null;
+};
+
 type DashboardGuidanceMode = 'setup';
 
 const GUIDANCE_STORAGE_KEY = 'agent-dashboard-guidance-dismissed';
@@ -131,6 +139,15 @@ const DAY_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 function toDate(value: unknown): Date | null {
   if (!value) return null;
   const date = new Date(value as string);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function parseFollowUpTimestamp(value: string | Date): Date | null {
+  if (value instanceof Date) return value;
+  const normalized = value.includes('T') ? value : value.replace(' ', 'T');
+  const date = /(?:Z|[+-]\d{2}:?\d{2})$/.test(normalized)
+    ? new Date(normalized)
+    : new Date(`${normalized}Z`);
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
@@ -403,6 +420,15 @@ export function AgentDashboardOverview({
     { enabled: operationalDataEnabled, retry: false },
   );
 
+  const {
+    data: followUpsData = [],
+    isLoading: followUpsLoading,
+    isError: followUpsError,
+  } = trpc.agent.getMyFollowUps.useQuery(
+    { limit: 50 },
+    { enabled: operationalDataEnabled, retry: false },
+  );
+
   const pipeline = useMemo(
     () =>
       (pipelineData || {
@@ -543,6 +569,32 @@ export function AgentDashboardOverview({
   }, [showings]);
 
   const unreadNotificationCount = notificationsData.length;
+
+  const dueFollowUps = useMemo(() => {
+    return (followUpsData as FollowUpSummaryItem[])
+      .filter(item => {
+        const dueAt = parseFollowUpTimestamp(item.nextFollowUp);
+        return !!dueAt && dueAt.getTime() <= Date.now();
+      })
+      .sort(
+        (left, right) =>
+          (parseFollowUpTimestamp(left.nextFollowUp)?.getTime() || 0) -
+          (parseFollowUpTimestamp(right.nextFollowUp)?.getTime() || 0),
+      );
+  }, [followUpsData]);
+  const followUpsDueCount = dueFollowUps.length;
+  const followUpsDueCountLabel = followUpsDueCount === 50 ? '50+' : String(followUpsDueCount);
+  const followUpsLocked = !operationalDataEnabled;
+  const followUpsUnavailable = operationalDataEnabled && followUpsError;
+  const followUpsReady = operationalDataEnabled && !followUpsLoading && !followUpsUnavailable;
+  const nextFollowUpLabel = dueFollowUps[0]
+    ? (parseFollowUpTimestamp(dueFollowUps[0].nextFollowUp) as Date).toLocaleString('en-ZA', {
+        day: 'numeric',
+        month: 'short',
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+    : null;
   const pipelineLeadPreview = useMemo(() => {
     return [...allLeads]
       .filter(lead => getLeadStage(lead.status) !== 'closed')
@@ -609,7 +661,41 @@ export function AgentDashboardOverview({
   const pendingReviewCount = pendingReviewListings.length;
   const draftCount = draftListings.length;
 
-  const heroMetrics = [
+  const heroMetrics: Array<{
+    label: string;
+    value: string;
+    status: string;
+    statusClassName: string;
+    icon: typeof Building2;
+    iconShellClassName: string;
+    actionHref?: string;
+    actionAriaLabel?: string;
+  }> = [
+    {
+      label: 'Leads Needing Follow-up',
+      value: followUpsReady ? followUpsDueCountLabel : '-',
+      status: followUpsLocked
+        ? 'Locked'
+        : followUpsLoading
+          ? 'Loading'
+          : followUpsUnavailable
+            ? 'Unavailable'
+            : followUpsDueCount > 0
+              ? nextFollowUpLabel
+                ? `Due ${nextFollowUpLabel}`
+                : 'Due now'
+              : 'On track',
+      statusClassName: followUpsUnavailable
+        ? 'border-rose-200 bg-rose-50 text-rose-700'
+        : followUpsReady && followUpsDueCount > 0
+          ? 'border-amber-200 bg-amber-50 text-amber-700'
+          : 'border-slate-200 bg-slate-100 text-slate-700',
+      icon: CalendarDays,
+      iconShellClassName: 'bg-amber-50 text-amber-700',
+      actionHref:
+        followUpsReady && followUpsDueCount > 0 ? '/agent/productivity?tab=reminders' : undefined,
+      actionAriaLabel: 'Open follow-ups in Productivity',
+    },
     {
       label: 'Active Listings',
       value: statsLoading ? '-' : String(activeListingCount),
@@ -1031,11 +1117,17 @@ export function AgentDashboardOverview({
                             {metric.label}
                           </p>
                           <p className="text-xs text-slate-500">
-                            {metric.label === 'Unread Alerts'
-                              ? 'Unread notifications'
-                              : metric.label === 'Appointments Today'
-                                ? 'Showings booked for today'
-                                : 'Currently published inventory'}
+                            {metric.label === 'Leads Needing Follow-up'
+                              ? followUpsLocked
+                                ? 'Unlock Agent access to work follow-ups'
+                                : followUpsUnavailable
+                                  ? 'Follow-up status could not load'
+                                  : 'Overdue or due lead follow-ups'
+                              : metric.label === 'Unread Alerts'
+                                ? 'Unread notifications'
+                                : metric.label === 'Appointments Today'
+                                  ? 'Showings booked for today'
+                                  : 'Currently published inventory'}
                           </p>
                         </div>
                       </div>
@@ -1043,15 +1135,30 @@ export function AgentDashboardOverview({
                         {metric.value}
                       </div>
                       <div className="justify-self-end">
-                        <Badge
-                          variant="outline"
-                          className={cn(
-                            'rounded-full border px-[10px] py-[3px] text-[11px] font-semibold',
-                            metric.statusClassName,
-                          )}
-                        >
-                          {metric.status}
-                        </Badge>
+                        {metric.actionHref ? (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            onClick={() => setLocation(metric.actionHref!)}
+                            aria-label={metric.actionAriaLabel}
+                            className={cn(
+                              'h-auto rounded-full border px-[10px] py-[3px] text-[11px] font-semibold hover:bg-transparent',
+                              metric.statusClassName,
+                            )}
+                          >
+                            {metric.status}
+                          </Button>
+                        ) : (
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              'rounded-full border px-[10px] py-[3px] text-[11px] font-semibold',
+                              metric.statusClassName,
+                            )}
+                          >
+                            {metric.status}
+                          </Badge>
+                        )}
                       </div>
                     </div>
                   );
