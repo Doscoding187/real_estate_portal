@@ -24,6 +24,7 @@ import { Footer } from '@/components/Footer';
 import { SEOHead } from '@/components/advertise/SEOHead';
 import { CommercialActivationNotice } from '@/components/commercial/CommercialActivationNotice';
 import { useCommercialCatalog, type CommercialProduct } from '@/hooks/useCommercialCatalog';
+import { useCommercialProductAvailability } from '@/hooks/useCommercialProductAvailability';
 import {
   formatCommercialLimitLabel,
   formatCommercialLimitValue,
@@ -33,7 +34,6 @@ import {
   getCommercialTermPresentation,
 } from '@/lib/commercialCatalog';
 import { getAccountAuthHref } from '@/lib/publicNavigation';
-import { COMMERCIAL_ACTIVATION_STATE } from '@shared/commercialActivation';
 import { AgencyWorkspacePreview } from './AgencyWorkspacePreview';
 import { COMMERCIAL_HERO_CLASS } from './commercialHero';
 
@@ -1291,7 +1291,13 @@ export function AgencyCommercialLandingPage() {
   );
 }
 
-function AgencyPreparationLandingPage() {
+function AgencyPreparationLandingPage({
+  availabilityError,
+  onRetry,
+}: {
+  availabilityError?: boolean;
+  onRetry?: () => void;
+}) {
   return (
     <div className="min-h-screen bg-[var(--surface)] text-slate-950">
       <SEOHead
@@ -1423,6 +1429,20 @@ function AgencyPreparationLandingPage() {
             </div>
           </div>
         </section>
+        {availabilityError ? (
+          <section className="bg-[var(--surface)] px-4 pb-12 sm:px-6 lg:px-8">
+            <div className="mx-auto flex max-w-4xl flex-wrap items-center justify-between gap-4 rounded-2xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-950">
+              <p>Agency Launch Access is temporarily unavailable. Paid actions remain closed.</p>
+              <button
+                type="button"
+                className="font-semibold underline underline-offset-4"
+                onClick={onRetry}
+              >
+                Retry availability check
+              </button>
+            </div>
+          </section>
+        ) : null}
       </main>
 
       <Footer />
@@ -1431,9 +1451,14 @@ function AgencyPreparationLandingPage() {
 }
 
 export default function AgencyProductLandingPage() {
-  return COMMERCIAL_ACTIVATION_STATE.enabled ? (
+  const availability = useCommercialProductAvailability('agency_launch_access');
+
+  return availability.isAvailable ? (
     <AgencyCommercialLandingPage />
   ) : (
-    <AgencyPreparationLandingPage />
+    <AgencyPreparationLandingPage
+      availabilityError={availability.isError}
+      onRetry={() => void availability.refetch()}
+    />
   );
 }

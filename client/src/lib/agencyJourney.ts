@@ -1,5 +1,4 @@
 import type { AgencyRecommendedNextStep } from '@shared/agencyJourney';
-import { COMMERCIAL_ACTIVATION_STATE } from '@shared/commercialActivation';
 
 export type AgencyJourneyAction = {
   href: string;
@@ -18,8 +17,10 @@ export function getAgencyJourneyAction(
   status: { recommendedNextStep?: AgencyRecommendedNextStep } | null | undefined,
   options: { commercialActivationEnabled?: boolean } = {},
 ): AgencyJourneyAction {
-  const commercialActivationEnabled =
-    options.commercialActivationEnabled ?? COMMERCIAL_ACTIVATION_STATE.enabled;
+  // Availability belongs to the exact Agency product and is supplied by the
+  // mounted surface. An omitted or loading decision stays closed instead of
+  // inheriting a build-time/global commercial flag.
+  const commercialActivationEnabled = options.commercialActivationEnabled === true;
 
   // A selected commercial product is retained during pre-payment onboarding,
   // but it is not an invoice or an entitlement. Keep every workspace surface

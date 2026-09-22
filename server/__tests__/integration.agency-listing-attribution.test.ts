@@ -14,7 +14,6 @@ import {
   listingApprovalQueue,
   listingMedia,
   listings,
-  planEntitlements,
   plans,
   provinces,
   properties,
@@ -66,8 +65,6 @@ const created = {
   propertyId: 0,
   leadId: 0,
   brandingId: 0,
-  planEntitlementId: 0,
-  planId: 0,
   subscriptionId: 0,
 };
 
@@ -121,30 +118,14 @@ async function makeAgencyPublicationReady(
   } as any);
   created.brandingId = insertId(brandingResult);
 
-  const [planResult] = await db.insert(plans).values({
-    name: `attribution-publication-${suffix}`,
-    displayName: 'Attribution Publication Test Plan',
-    description: 'Canonical agency publication fixture for attribution coverage.',
-    segment: 'agency',
-    price: 99_000,
-    priceMonthly: 99_000,
-    currency: 'ZAR',
-    interval: 'month',
-    trialDays: 0,
-    features: JSON.stringify(['Listings', 'Publishing']),
-    limits: JSON.stringify({ max_active_listings: 50 }),
-    isActive: 1,
-    isPopular: 0,
-    sortOrder: 999,
-  } as any);
-  created.planId = insertId(planResult);
-
-  const [entitlementResult] = await db.insert(planEntitlements).values({
-    planId: created.planId,
-    featureKey: 'max_active_listings',
-    valueJson: 50,
-  } as any);
-  created.planEntitlementId = insertId(entitlementResult);
+  const [launchPlan] = await db
+    .select({ id: plans.id })
+    .from(plans)
+    .where(eq(plans.name, 'agency_launch_access'))
+    .limit(1);
+  if (!launchPlan) {
+    throw new Error('Canonical agency_launch_access foundation data is required by this fixture.');
+  }
 
   const now = new Date();
   const [account] = await db.select({ id: billableAccounts.id }).from(billableAccounts).where(eq(billableAccounts.agencyId, agencyId)).limit(1);
@@ -153,10 +134,10 @@ async function makeAgencyPublicationReady(
     ownerType: 'agency',
     ownerId: agencyId,
     billableAccountId: account.id,
-    planId: created.planId,
+    planId: launchPlan.id,
     status: 'active',
     currentPeriodStart: toMySqlTimestamp(now),
-    currentPeriodEnd: toMySqlTimestamp(new Date(now.getTime() + 86_400_000)),
+    currentPeriodEnd: toMySqlTimestamp(new Date(now.getTime() + 90 * 86_400_000)),
     cancelAtPeriodEnd: 0,
   } as any);
   created.subscriptionId = insertId(subscriptionResult);
@@ -178,15 +159,11 @@ afterEach(async () => {
   if (created.subscriptionId) {
     await db.delete(subscriptions).where(eq(subscriptions.id, created.subscriptionId));
   }
-  if (created.planEntitlementId) {
-    await db.delete(planEntitlements).where(eq(planEntitlements.id, created.planEntitlementId));
-  }
   if (created.brandingId) {
     await db.delete(agencyBranding).where(eq(agencyBranding.id, created.brandingId));
   }
   if (created.userId) await db.delete(users).where(eq(users.id, created.userId));
   if (created.agencyId) await db.delete(agencies).where(eq(agencies.id, created.agencyId));
-  if (created.planId) await db.delete(plans).where(eq(plans.id, created.planId));
 
   Object.assign(created, {
     agencyId: 0,
@@ -195,8 +172,6 @@ afterEach(async () => {
     propertyId: 0,
     leadId: 0,
     brandingId: 0,
-    planEntitlementId: 0,
-    planId: 0,
     subscriptionId: 0,
   });
 });

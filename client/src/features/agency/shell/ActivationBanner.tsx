@@ -2,6 +2,7 @@ import { AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { AgencyRecommendedNextStep } from '@shared/agencyJourney';
 import { getAgencyJourneyAction } from '@/lib/agencyJourney';
+import { useCommercialProductAvailability } from '@/hooks/useCommercialProductAvailability';
 
 export function ActivationBanner({
   recommendedNextStep,
@@ -10,7 +11,11 @@ export function ActivationBanner({
   recommendedNextStep: AgencyRecommendedNextStep;
   onNavigate: (href: string) => void;
 }) {
-  const action = getAgencyJourneyAction({ recommendedNextStep });
+  const availability = useCommercialProductAvailability('agency_launch_access');
+  const action = getAgencyJourneyAction(
+    { recommendedNextStep },
+    { commercialActivationEnabled: availability.isAvailable },
+  );
 
   return (
     <section className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">

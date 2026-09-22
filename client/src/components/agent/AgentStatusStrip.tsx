@@ -11,6 +11,9 @@ type StatusPayload = {
   approvalStatus: 'pending' | 'approved' | 'rejected' | 'suspended';
   subscriptionStatus?: string;
   recommendedNextStep?: AgentRecommendedNextStep;
+  commercial?: {
+    ownerSource?: 'individual_agent' | 'agency_admin' | 'agency_membership' | 'developer_membership';
+  };
 };
 
 type ApprovalTone = {
@@ -81,9 +84,12 @@ export function AgentStatusStrip({
     cancelled: 'Launch Access cancelled',
     suspended: 'Launch Access suspended',
   };
-  const commercialLabel = !agentLaunchAccessAvailable
-    ? 'Preparation-only onboarding'
-    : status.recommendedNextStep === 'await_agency_activation'
+  const commercialLabel =
+    status.commercial?.ownerSource === 'agency_membership'
+      ? 'Your agency manages Launch Access'
+      : !agentLaunchAccessAvailable
+        ? 'Preparation-only onboarding'
+        : status.recommendedNextStep === 'await_agency_activation'
       ? 'Agency Launch Access pending'
       : (paidStates[status.subscriptionStatus ?? ''] ??
         (status.packageSelected ? 'Commercial term in progress' : 'Launch Access not started'));

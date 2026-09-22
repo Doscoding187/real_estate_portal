@@ -1,6 +1,20 @@
 import { cleanup, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CommercialProduct } from '@/hooks/useCommercialCatalog';
+const { commercialActivationMock } = vi.hoisted(() => ({
+  commercialActivationMock: vi.fn(),
+}));
+
+vi.mock('@/lib/trpc', () => ({
+  trpc: {
+    billing: {
+      commercialActivation: {
+        useQuery: (...args: unknown[]) => commercialActivationMock(...args),
+      },
+    },
+  },
+}));
+
 import AgencyProductLandingPage, { AgencyCommercialLandingPage } from './AgencyProductLandingPage';
 
 vi.mock('@/hooks/useCommercialCatalog', () => ({
@@ -71,6 +85,18 @@ const agencyProduct = {
 } as unknown as CommercialProduct;
 
 beforeEach(() => {
+  commercialActivationMock.mockReturnValue({
+    data: {
+      enabled: false,
+      productAvailability: {
+        agent_launch_access: false,
+        agency_launch_access: false,
+        developer_launch_access: false,
+      },
+    },
+    isError: false,
+    refetch: vi.fn(),
+  });
   useCatalogMock.mockReturnValue({
     data: {
       authority: {
@@ -140,6 +166,61 @@ describe('public Agency product landing page', () => {
     expect(
       screen.queryByRole('link', { name: /Contact Property Listify/i }),
     ).not.toBeInTheDocument();
+  });
+
+  it('uses the exact Agency product decision instead of another paid product', () => {
+    commercialActivationMock.mockReturnValue({
+      data: {
+        enabled: true,
+        productAvailability: {
+          agent_launch_access: true,
+          agency_launch_access: false,
+          developer_launch_access: true,
+        },
+      },
+      isError: false,
+      refetch: vi.fn(),
+    });
+
+    render(<AgencyProductLandingPage />);
+
+    expect(screen.getByText('Preparation-only onboarding')).toBeInTheDocument();
+    expect(screen.queryByText('R999')).not.toBeInTheDocument();
+    expect(useCatalogMock).not.toHaveBeenCalled();
+  });
+
+  it('shows the commercial Agency path only when the exact Agency product is available', () => {
+    commercialActivationMock.mockReturnValue({
+      data: {
+        enabled: true,
+        productAvailability: {
+          agent_launch_access: false,
+          agency_launch_access: true,
+          developer_launch_access: false,
+        },
+      },
+      isError: false,
+      refetch: vi.fn(),
+    });
+
+    render(<AgencyProductLandingPage />);
+
+    expect(screen.getAllByText('R999').length).toBeGreaterThan(0);
+    expect(useCatalogMock).toHaveBeenCalled();
+  });
+
+  it('fails closed when availability cannot be read', () => {
+    commercialActivationMock.mockReturnValue({
+      data: undefined,
+      isError: true,
+      refetch: vi.fn(),
+    });
+
+    render(<AgencyProductLandingPage />);
+
+    expect(screen.getByText('Preparation-only onboarding')).toBeInTheDocument();
+    expect(screen.getByText(/temporarily unavailable/i)).toBeInTheDocument();
+    expect(screen.queryByText('R999')).not.toBeInTheDocument();
   });
 
   it('retains the catalog-driven commercial presentation for a separately enabled runtime', () => {

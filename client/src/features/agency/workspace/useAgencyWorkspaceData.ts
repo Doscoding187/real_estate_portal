@@ -12,9 +12,9 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { useAgencyOnboardingStatus } from '@/hooks/useAgencyOnboardingStatus';
+import { useCommercialProductAvailability } from '@/hooks/useCommercialProductAvailability';
 import { getAgencyJourneyAction } from '@/lib/agencyJourney';
 import { trpc } from '@/lib/trpc';
-import { COMMERCIAL_ACTIVATION_STATE } from '@shared/commercialActivation';
 import {
   DETAIL_WORKSPACES,
   EMPTY_COMMISSION,
@@ -67,6 +67,7 @@ export function useAgencyWorkspaceData(workspace: WorkspaceId) {
   } = useAgencyOnboardingStatus({
     requireDashboardUnlocked: true,
   });
+  const agencyLaunchAvailability = useCommercialProductAvailability('agency_launch_access');
 
   const dashboardReady = Boolean(status?.dashboardUnlocked);
   const needsDetailedLeads = DETAIL_WORKSPACES.has(workspace);
@@ -142,7 +143,7 @@ export function useAgencyWorkspaceData(workspace: WorkspaceId) {
     status?.hasAgency && status.recommendedNextStep !== 'workspace',
   );
   const billingJourneyNeedsAttention = Boolean(
-    COMMERCIAL_ACTIVATION_STATE.enabled &&
+    agencyLaunchAvailability.isAvailable &&
     status &&
     [
       'activate_launch_access',
@@ -212,7 +213,9 @@ export function useAgencyWorkspaceData(workspace: WorkspaceId) {
     const items: WorkspaceDataProps['attentionItems'] = [];
 
     if (billingJourneyNeedsAttention) {
-      const action = getAgencyJourneyAction(status);
+      const action = getAgencyJourneyAction(status, {
+        commercialActivationEnabled: agencyLaunchAvailability.isAvailable,
+      });
       items.push({
         title: action.title,
         detail: action.description,
@@ -333,6 +336,7 @@ export function useAgencyWorkspaceData(workspace: WorkspaceId) {
     }
     return items;
   }, [
+    agencyLaunchAvailability.isAvailable,
     billingJourneyNeedsAttention,
     leadSignals,
     stats.pendingListings,

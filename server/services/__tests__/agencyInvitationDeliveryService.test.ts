@@ -23,10 +23,11 @@ import {
 
 function limitedRows(rows: unknown[]) {
   const limit = vi.fn().mockResolvedValue(rows);
-  const where = vi.fn(() => ({ limit }));
+  const forUpdate = vi.fn(() => ({ limit }));
+  const where = vi.fn(() => ({ limit, for: forUpdate }));
   const innerJoin = vi.fn(() => ({ where }));
-  const from = vi.fn(() => ({ where, innerJoin }));
-  return { from, where, limit, innerJoin };
+  const from = vi.fn(() => ({ where, innerJoin, for: forUpdate, limit }));
+  return { from, where, limit, innerJoin, for: forUpdate };
 }
 
 function rows(rows: unknown[]) {
@@ -36,7 +37,7 @@ function rows(rows: unknown[]) {
 }
 
 function updateResult() {
-  const where = vi.fn().mockResolvedValue(undefined);
+  const where = vi.fn().mockResolvedValue({ affectedRows: 1 });
   const set = vi.fn(() => ({ where }));
   return { set, where };
 }
@@ -44,7 +45,11 @@ function updateResult() {
 describe('agency invitation delivery (canonical access gate)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockGetDb.mockResolvedValue({ select: mockSelect, update: mockUpdate });
+    const database = { select: mockSelect, update: mockUpdate };
+    mockGetDb.mockResolvedValue({
+      ...database,
+      transaction: async (callback: (tx: typeof database) => Promise<unknown>) => callback(database),
+    });
   });
 
   afterEach(() => {
@@ -105,6 +110,8 @@ describe('agency invitation delivery (canonical access gate)', () => {
     mockCanonicalGate('active');
     mockSelect
       .mockImplementationOnce(() => rows([pendingInvitation()]))
+      // Re-read the invitation under the delivery transaction lock.
+      .mockImplementationOnce(() => limitedRows([pendingInvitation()]))
       .mockImplementationOnce(() =>
         limitedRows([
           {
@@ -159,8 +166,11 @@ describe('agency invitation delivery (canonical access gate)', () => {
     };
     const update = updateResult();
     mockUpdate.mockReturnValueOnce(update);
+    const rotatedToken = 'c'.repeat(64);
     mockSelect
       .mockImplementationOnce(() => rows([staleInvitation]))
+      .mockImplementationOnce(() => limitedRows([staleInvitation]))
+      .mockImplementationOnce(() => limitedRows([{ ...staleInvitation, token: rotatedToken }]))
       .mockImplementationOnce(() =>
         limitedRows([
           {
@@ -193,7 +203,7 @@ describe('agency invitation delivery (canonical access gate)', () => {
       'agent@example.com',
       'Agency Principal',
       'Canonical Realty',
-      expect.stringContaining(`token=${refreshed.token}`),
+      expect.stringContaining(`token=${rotatedToken}`),
     );
   });
 
@@ -205,8 +215,11 @@ describe('agency invitation delivery (canonical access gate)', () => {
     };
     const update = updateResult();
     mockUpdate.mockReturnValueOnce(update);
+    const rotatedToken = 'd'.repeat(64);
     mockSelect
       .mockImplementationOnce(() => rows([malformedInvitation]))
+      .mockImplementationOnce(() => limitedRows([malformedInvitation]))
+      .mockImplementationOnce(() => limitedRows([{ ...malformedInvitation, token: rotatedToken }]))
       .mockImplementationOnce(() =>
         limitedRows([
           {
@@ -227,7 +240,7 @@ describe('agency invitation delivery (canonical access gate)', () => {
       'agent@example.com',
       'Agency Principal',
       'Canonical Realty',
-      expect.stringContaining(`token=${refreshed.token}`),
+      expect.stringContaining(`token=${rotatedToken}`),
     );
   });
 

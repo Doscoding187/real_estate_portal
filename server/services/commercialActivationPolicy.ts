@@ -11,6 +11,53 @@ import {
 
 type RuntimeEnvironment = Record<string, string | undefined>;
 
+const CONTROLLED_PRODUCT_KEYS_ENV = 'PROPERTY_LISTIFY_GOVERNED_BROWSER_TEST_PRODUCT_KEYS';
+
+function isAuthorityWrappedBrowserFixture(environment: RuntimeEnvironment): boolean {
+  return (
+    environment.NODE_ENV === 'test' &&
+    environment.APP_ENV === 'test' &&
+    environment.PROPERTY_LISTIFY_GOVERNED_BROWSER_TEST_FIXTURE === 'true' &&
+    Boolean(environment.DATABASE_AUTHORITY_PARENT_FINGERPRINT) &&
+    Boolean(environment.DATABASE_AUTHORITY_CORRELATION_ID)
+  );
+}
+
+function isControlledFixture(environment: RuntimeEnvironment): boolean {
+  return (
+    (environment.NODE_ENV === 'test' && environment.VITEST === 'true') ||
+    isAuthorityWrappedBrowserFixture(environment) ||
+    isGovernedContainedScenarioFixtureActive(environment)
+  );
+}
+
+/**
+ * The product selector is test-only and only interpreted after the existing
+ * Database Authority fixture gate has succeeded. A malformed selector fails
+ * closed. Omitting it preserves older governed suites that intentionally
+ * exercise the complete paid-MVP cohort.
+ */
+function controlledFixtureProductKeys(
+  environment: RuntimeEnvironment,
+): readonly PaidMvpLaunchAccessProductKey[] {
+  if (!isControlledFixture(environment)) return [];
+
+  const configured = environment[CONTROLLED_PRODUCT_KEYS_ENV];
+  if (configured === undefined || configured.trim() === '') {
+    return PAID_MVP_LAUNCH_ACCESS_PRODUCT_KEYS;
+  }
+
+  const parsed = configured
+    .split(',')
+    .map(value => value.trim())
+    .filter(Boolean);
+  if (parsed.length === 0 || parsed.some(value => !isPaidMvpLaunchAccessProductKey(value))) {
+    return [];
+  }
+
+  return [...new Set(parsed)] as PaidMvpLaunchAccessProductKey[];
+}
+
 /**
  * Test fixtures may model paid states only from Vitest or an authority-wrapped
  * browser/contained-scenario fixture runner. The contained-scenario capability
@@ -22,20 +69,12 @@ export function isCommercialActivationAvailable(
   environment: RuntimeEnvironment = process.env,
   productKey?: PaidMvpLaunchAccessProductKey,
 ): boolean {
-  const authorityWrappedBrowserFixture =
-    environment.NODE_ENV === 'test' &&
-    environment.APP_ENV === 'test' &&
-    environment.PROPERTY_LISTIFY_GOVERNED_BROWSER_TEST_FIXTURE === 'true' &&
-    Boolean(environment.DATABASE_AUTHORITY_PARENT_FINGERPRINT) &&
-    Boolean(environment.DATABASE_AUTHORITY_CORRELATION_ID);
-  const authorityWrappedScenarioFixture = isGovernedContainedScenarioFixtureActive(environment);
-
-  const controlledFixture =
-    (environment.NODE_ENV === 'test' && environment.VITEST === 'true') ||
-    authorityWrappedBrowserFixture ||
-    authorityWrappedScenarioFixture;
-
-  if (controlledFixture) return !productKey || isPaidMvpLaunchAccessProductKey(productKey);
+  if (isControlledFixture(environment)) {
+    const enabledProductKeys = controlledFixtureProductKeys(environment);
+    return productKey
+      ? enabledProductKeys.includes(productKey)
+      : enabledProductKeys.length > 0;
+  }
 
   // A product must be stated at normal runtime. This prevents a caller for a
   // legacy checkout, boosts, Land, or a future tier from inheriting approval
@@ -49,20 +88,7 @@ export function isCommercialActivationAvailable(
 export function isAnyPaidMvpLaunchAccessActivationAvailable(
   environment: RuntimeEnvironment = process.env,
 ): boolean {
-  const authorityWrappedBrowserFixture =
-    environment.NODE_ENV === 'test' &&
-    environment.APP_ENV === 'test' &&
-    environment.PROPERTY_LISTIFY_GOVERNED_BROWSER_TEST_FIXTURE === 'true' &&
-    Boolean(environment.DATABASE_AUTHORITY_PARENT_FINGERPRINT) &&
-    Boolean(environment.DATABASE_AUTHORITY_CORRELATION_ID);
-  const authorityWrappedScenarioFixture = isGovernedContainedScenarioFixtureActive(environment);
-  if (
-    (environment.NODE_ENV === 'test' && environment.VITEST === 'true') ||
-    authorityWrappedBrowserFixture ||
-    authorityWrappedScenarioFixture
-  ) {
-    return true;
-  }
+  if (isControlledFixture(environment)) return controlledFixtureProductKeys(environment).length > 0;
 
   return (
     COMMERCIAL_ACTIVATION_STATE.enabled &&

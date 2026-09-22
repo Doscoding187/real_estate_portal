@@ -112,6 +112,44 @@ describe('commercial activation containment', () => {
     expect(isCommercialActivationAvailable()).toBe(true);
   });
 
+  it('limits a governed browser fixture to its explicit exact product key', () => {
+    const agencyOnlyFixture = {
+      NODE_ENV: 'test',
+      APP_ENV: 'test',
+      PROPERTY_LISTIFY_GOVERNED_BROWSER_TEST_FIXTURE: 'true',
+      PROPERTY_LISTIFY_GOVERNED_BROWSER_TEST_PRODUCT_KEYS: 'agency_launch_access',
+      DATABASE_AUTHORITY_PARENT_FINGERPRINT: 'owned-target',
+      DATABASE_AUTHORITY_CORRELATION_ID: 'b05-agency-only',
+    };
+
+    expect(isCommercialActivationAvailable(agencyOnlyFixture, 'agency_launch_access')).toBe(true);
+    expect(isCommercialActivationAvailable(agencyOnlyFixture, 'agent_launch_access')).toBe(false);
+    expect(isCommercialActivationAvailable(agencyOnlyFixture, 'developer_launch_access')).toBe(false);
+    expect(getCommercialActivationStatus(agencyOnlyFixture).productAvailability).toEqual({
+      agent_launch_access: false,
+      agency_launch_access: true,
+      developer_launch_access: false,
+    });
+  });
+
+  it('fails closed for a malformed governed product selector', () => {
+    const malformedFixture = {
+      NODE_ENV: 'test',
+      APP_ENV: 'test',
+      PROPERTY_LISTIFY_GOVERNED_BROWSER_TEST_FIXTURE: 'true',
+      PROPERTY_LISTIFY_GOVERNED_BROWSER_TEST_PRODUCT_KEYS: 'agency_launch_access,not_a_product',
+      DATABASE_AUTHORITY_PARENT_FINGERPRINT: 'owned-target',
+      DATABASE_AUTHORITY_CORRELATION_ID: 'b05-malformed-selector',
+    };
+
+    expect(isCommercialActivationAvailable(malformedFixture)).toBe(false);
+    expect(getCommercialActivationStatus(malformedFixture).productAvailability).toEqual({
+      agent_launch_access: false,
+      agency_launch_access: false,
+      developer_launch_access: false,
+    });
+  });
+
   it('fails closed before a commercial mutation starts', () => {
     vi.stubEnv('NODE_ENV', 'development');
     expect(() => requireCommercialActivation('Payment review')).toThrow(

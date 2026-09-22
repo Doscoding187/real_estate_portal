@@ -25,6 +25,12 @@ type CanonicalGateSubscription = {
 };
 
 type InvitationCommercialDatabase = Pick<NonNullable<Awaited<ReturnType<typeof getDb>>>, 'select'>;
+type InvitationDeliveryDatabase = NonNullable<Awaited<ReturnType<typeof getDb>>>;
+
+function affectedRows(result: unknown): number {
+  const header = Array.isArray(result) ? result[0] : result;
+  return Number((header as { affectedRows?: unknown } | null)?.affectedRows ?? 0);
+}
 
 /**
  * Effective paid access mirrors the canonical gates: an active/grace status
@@ -97,6 +103,10 @@ export async function hasEffectiveAgencyInvitationAccess(
     )`,
       ),
     )
+    // In invitation acceptance this runs inside the authoritative
+    // transaction, so finance expiry/review cannot change the entitlement
+    // after it has been validated but before membership is committed.
+    .for('update')
     .limit(1);
 
   return Boolean(
@@ -148,6 +158,52 @@ function inviterName(
 }
 
 /**
+ * Delivery is deliberately outside the transaction because a mail provider is
+ * an external boundary. The token selection/rotation itself must still share
+ * the invitation row lock used by acceptance, cancellation and resend: an
+ * accepted row must never be refreshed back into a usable pending token.
+ */
+async function lockDeliverableInvitation(
+  db: InvitationDeliveryDatabase,
+  invitationId: number,
+): Promise<typeof invitations.$inferSelect | null> {
+  return db.transaction(async tx => {
+    const [invitation] = await tx
+      .select()
+      .from(invitations)
+      .where(eq(invitations.id, invitationId))
+      .for('update')
+      .limit(1);
+    if (!invitation || invitation.status !== 'pending') return null;
+
+    if (!queuedInvitationNeedsRefresh(invitation)) return invitation;
+
+    const refreshedAt = new Date();
+    const token = randomBytes(32).toString('hex');
+    const expiresAt = new Date(refreshedAt.getTime() + INVITATION_VALIDITY_MS);
+    const rotation = await tx
+      .update(invitations)
+      .set({ token, expiresAt, updatedAt: refreshedAt })
+      .where(
+        and(
+          eq(invitations.id, invitation.id),
+          eq(invitations.status, 'pending'),
+          eq(invitations.token, invitation.token),
+        ),
+      );
+    if (affectedRows(rotation) !== 1) return null;
+
+    const [rotated] = await tx
+      .select()
+      .from(invitations)
+      .where(eq(invitations.id, invitation.id))
+      .limit(1);
+    if (!rotated || rotated.status !== 'pending') return null;
+    return rotated;
+  });
+}
+
+/**
  * Delivers accepted-format invitation links only after canonical paid access
  * is active. The gate reads the canonical subscriptions table — the single
  * commercial-access authority — rather than the legacy agencies shadow
@@ -183,31 +239,17 @@ export async function deliverAgencyInvitations(input: {
     .select()
     .from(invitations)
     .where(and(...filters));
+  let attempted = 0;
   let sent = 0;
   let failed = 0;
 
-  for (const invitation of pending) {
+  for (const pendingInvitation of pending) {
     // Onboarding can safely queue an invitation while commercial activation is
-    // unavailable. Its acceptance token must begin its validity window when
-    // delivery actually starts, not while the invitation is waiting unsent.
-    let deliverableInvitation = invitation;
-    if (queuedInvitationNeedsRefresh(invitation)) {
-      const refreshedAt = new Date();
-      const token = randomBytes(32).toString('hex');
-      const expiresAt = new Date(refreshedAt.getTime() + INVITATION_VALIDITY_MS);
-
-      await db
-        .update(invitations)
-        .set({ token, expiresAt, updatedAt: refreshedAt })
-        .where(eq(invitations.id, invitation.id));
-
-      deliverableInvitation = {
-        ...invitation,
-        token,
-        expiresAt: expiresAt.toISOString(),
-        updatedAt: refreshedAt.toISOString(),
-      };
-    }
+    // unavailable. Its acceptance token begins its validity window when
+    // delivery starts, under the same row lock as terminal transitions.
+    const deliverableInvitation = await lockDeliverableInvitation(db, pendingInvitation.id);
+    if (!deliverableInvitation) continue;
+    attempted += 1;
 
     const [inviter] = await db
       .select({
@@ -217,11 +259,11 @@ export async function deliverAgencyInvitations(input: {
         email: users.email,
       })
       .from(users)
-      .where(eq(users.id, invitation.invitedBy))
+      .where(eq(users.id, deliverableInvitation.invitedBy))
       .limit(1);
 
     const delivered = await EmailService.sendAgencyInvitationEmail(
-      invitation.email,
+      deliverableInvitation.email,
       inviterName(inviter),
       agency.name,
       buildAgencyInvitationUrl(deliverableInvitation.token),
@@ -233,12 +275,12 @@ export async function deliverAgencyInvitations(input: {
       failed += 1;
       console.error('[AgencyInvitationDelivery] Invitation email was not accepted by provider', {
         agencyId: input.agencyId,
-        invitationId: invitation.id,
+        invitationId: deliverableInvitation.id,
       });
     }
   }
 
-  return { deferred: false, attempted: pending.length, sent, failed };
+  return { deferred: false, attempted, sent, failed };
 }
 
 export async function deliverPendingAgencyInvitations(agencyId: number) {

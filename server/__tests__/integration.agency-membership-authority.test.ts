@@ -44,6 +44,7 @@ import {
   users,
 } from '../../drizzle/schema';
 import {
+  isCurrentActiveAgencyMembership,
   listCurrentAgencyMembershipsForAgent,
   maintainAgencyAgentMembership,
 } from '../services/agencyMembershipService';
@@ -177,6 +178,57 @@ async function insertUser(label: string, role: 'agent' | 'agency_admin' | 'visit
 async function getUser(id: number) {
   const [row] = await db.select().from(users).where(eq(users.id, id)).limit(1);
   return row;
+}
+
+async function getInvitation(id: number) {
+  const [row] = await db.select().from(invitations).where(eq(invitations.id, id)).limit(1);
+  if (!row) throw new Error(`Expected invitation ${id}`);
+  return row;
+}
+
+async function createActivatedAgencyOwner(label: string) {
+  const agencyId = await insertAgency(label);
+  const ownerUserId = await insertUser(`${label} Owner`, 'agency_admin');
+  await db.update(users).set({ agencyId }).where(eq(users.id, ownerUserId));
+  await createActiveAgencyInvitationAccess(agencyId, ownerUserId);
+  const owner = await getUser(ownerUserId);
+  if (!owner?.email) throw new Error('Expected agency owner email');
+
+  return {
+    agencyId,
+    ownerUserId,
+    ownerCaller: applicationCaller({
+      id: ownerUserId,
+      role: 'agency_admin',
+      agencyId,
+      email: owner.email,
+    }),
+  };
+}
+
+async function insertVerifiedInvitee(label: string, role: 'agent' | 'visitor' = 'visitor') {
+  const userId = await insertUser(label, role);
+  const user = await getUser(userId);
+  if (!user?.email) throw new Error('Expected invitee email');
+  return { userId, email: user.email };
+}
+
+function inviteeCaller(input: { userId: number; role?: 'agent' | 'visitor'; email: string }) {
+  return acceptanceCaller({
+    id: input.userId,
+    role: input.role ?? 'visitor',
+    agencyId: null,
+    email: input.email,
+  });
+}
+
+async function currentMembershipsForUser(userId: number) {
+  const [profile] = await db.select().from(agents).where(eq(agents.userId, userId)).limit(1);
+  if (!profile) return [];
+  return db
+    .select()
+    .from(agencyAgentMemberships)
+    .where(eq(agencyAgentMemberships.agentId, profile.id));
 }
 
 async function insertAgentProfile(
@@ -1653,5 +1705,337 @@ describeWithDb('invitation acceptance (production path)', () => {
       .where(eq(invitations.id, invitationId))
       .limit(1);
     expect(stillPending.status).toBe('pending');
+  });
+});
+
+describeWithDb('invitation terminal state and concurrency authority', () => {
+  it('rejects a verified account with the wrong email without changing affiliation', async () => {
+    const { agencyId, ownerUserId } = await createActivatedAgencyOwner('Wrong identity');
+    const invitee = await insertVerifiedInvitee('WrongIdentityInvitee');
+    const invitationId = await insertPendingInvitation({
+      agencyId,
+      invitedBy: ownerUserId,
+      email: `different-${randomUUID().slice(0, 8)}@example.test`,
+      role: 'agent',
+    });
+    const invitation = await getInvitation(invitationId);
+
+    await expect(inviteeCaller(invitee).invitation.accept({ token: invitation.token })).rejects.toThrow(
+      /different email address/i,
+    );
+
+    expect(await getUser(invitee.userId)).toMatchObject({ role: 'visitor', agencyId: null });
+    expect(await currentMembershipsForUser(invitee.userId)).toHaveLength(0);
+    expect((await getInvitation(invitationId)).status).toBe('pending');
+  });
+
+  it('commits expiry as a terminal state and never grants membership from the expired token', async () => {
+    const { agencyId, ownerUserId } = await createActivatedAgencyOwner('Expired invitation');
+    const invitee = await insertVerifiedInvitee('ExpiredInvitee');
+    const invitationId = await insertPendingInvitation({
+      agencyId,
+      invitedBy: ownerUserId,
+      email: invitee.email,
+      role: 'agent',
+    });
+    await db
+      .update(invitations)
+      .set({ expiresAt: new Date(Date.now() - 1_000) })
+      .where(eq(invitations.id, invitationId));
+    const invitation = await getInvitation(invitationId);
+
+    await expect(inviteeCaller(invitee).invitation.accept({ token: invitation.token })).rejects.toThrow(
+      /expired/i,
+    );
+
+    expect((await getInvitation(invitationId)).status).toBe('expired');
+    expect(await currentMembershipsForUser(invitee.userId)).toHaveLength(0);
+  });
+
+  it('rejects a cancelled invitation and leaves its terminal history intact', async () => {
+    const { agencyId, ownerUserId, ownerCaller } = await createActivatedAgencyOwner(
+      'Cancelled invitation',
+    );
+    const invitee = await insertVerifiedInvitee('CancelledInvitee');
+    const invitationId = await insertPendingInvitation({
+      agencyId,
+      invitedBy: ownerUserId,
+      email: invitee.email,
+      role: 'agent',
+    });
+    const invitation = await getInvitation(invitationId);
+
+    await ownerCaller.invitation.cancel({ invitationId });
+    await expect(publicCaller().invitation.getByToken({ token: invitation.token })).rejects.toThrow(
+      /cancelled/i,
+    );
+    await expect(inviteeCaller(invitee).invitation.accept({ token: invitation.token })).rejects.toThrow(
+      /cancelled/i,
+    );
+
+    expect((await getInvitation(invitationId)).status).toBe('cancelled');
+    expect(await currentMembershipsForUser(invitee.userId)).toHaveLength(0);
+  });
+
+  it('rotates a pending token atomically so the old token cannot be replayed', async () => {
+    const { agencyId, ownerUserId, ownerCaller } = await createActivatedAgencyOwner('Rotation');
+    const invitee = await insertVerifiedInvitee('RotationInvitee');
+    const invitationId = await insertPendingInvitation({
+      agencyId,
+      invitedBy: ownerUserId,
+      email: invitee.email,
+      role: 'agent',
+    });
+    const oldInvitation = await getInvitation(invitationId);
+
+    await ownerCaller.invitation.resend({ invitationId });
+    const rotatedInvitation = await getInvitation(invitationId);
+    expect(rotatedInvitation.token).not.toBe(oldInvitation.token);
+    expect(rotatedInvitation.status).toBe('pending');
+
+    await expect(
+      inviteeCaller(invitee).invitation.accept({ token: oldInvitation.token }),
+    ).rejects.toThrow(/invitation not found/i);
+    await inviteeCaller(invitee).invitation.accept({ token: rotatedInvitation.token });
+
+    expect((await getInvitation(invitationId)).status).toBe('accepted');
+    expect((await currentMembershipsForUser(invitee.userId)).filter(membership => isCurrentActiveAgencyMembership(membership))).toHaveLength(
+      1,
+    );
+  });
+
+  it('consumes an accepted token once and cannot create a second canonical membership on replay', async () => {
+    const { agencyId, ownerUserId } = await createActivatedAgencyOwner('Replay');
+    const invitee = await insertVerifiedInvitee('ReplayInvitee');
+    const invitationId = await insertPendingInvitation({
+      agencyId,
+      invitedBy: ownerUserId,
+      email: invitee.email,
+      role: 'agent',
+    });
+    const invitation = await getInvitation(invitationId);
+    const caller = inviteeCaller(invitee);
+
+    await caller.invitation.accept({ token: invitation.token });
+    await expect(publicCaller().invitation.getByToken({ token: invitation.token })).rejects.toThrow(
+      /accepted/i,
+    );
+    await expect(caller.invitation.accept({ token: invitation.token })).rejects.toThrow(/accepted/i);
+
+    const memberships = await currentMembershipsForUser(invitee.userId);
+    expect(memberships.filter(membership => isCurrentActiveAgencyMembership(membership))).toHaveLength(1);
+    expect((await getInvitation(invitationId)).status).toBe('accepted');
+  });
+
+  it('serializes two simultaneous accepts of one invitation to one membership grant', async () => {
+    const { agencyId, ownerUserId } = await createActivatedAgencyOwner('Concurrent accept');
+    const invitee = await insertVerifiedInvitee('ConcurrentAcceptInvitee');
+    const invitationId = await insertPendingInvitation({
+      agencyId,
+      invitedBy: ownerUserId,
+      email: invitee.email,
+      role: 'agent',
+    });
+    const invitation = await getInvitation(invitationId);
+
+    const outcomes = await Promise.allSettled([
+      inviteeCaller(invitee).invitation.accept({ token: invitation.token }),
+      inviteeCaller(invitee).invitation.accept({ token: invitation.token }),
+    ]);
+
+    expect(outcomes.filter(outcome => outcome.status === 'fulfilled')).toHaveLength(1);
+    expect((await getInvitation(invitationId)).status).toBe('accepted');
+    expect((await currentMembershipsForUser(invitee.userId)).filter(membership => isCurrentActiveAgencyMembership(membership))).toHaveLength(
+      1,
+    );
+  });
+
+  it('serializes cancellation against acceptance without rewriting a consumed invitation', async () => {
+    const { agencyId, ownerUserId, ownerCaller } = await createActivatedAgencyOwner('Cancel race');
+    const invitee = await insertVerifiedInvitee('CancelRaceInvitee');
+    const invitationId = await insertPendingInvitation({
+      agencyId,
+      invitedBy: ownerUserId,
+      email: invitee.email,
+      role: 'agent',
+    });
+    const invitation = await getInvitation(invitationId);
+
+    const outcomes = await Promise.allSettled([
+      ownerCaller.invitation.cancel({ invitationId }),
+      inviteeCaller(invitee).invitation.accept({ token: invitation.token }),
+    ]);
+    expect(outcomes.filter(outcome => outcome.status === 'fulfilled')).toHaveLength(1);
+
+    const terminal = await getInvitation(invitationId);
+    expect(['accepted', 'cancelled']).toContain(terminal.status);
+    expect((await currentMembershipsForUser(invitee.userId)).filter(membership => isCurrentActiveAgencyMembership(membership))).toHaveLength(
+      terminal.status === 'accepted' ? 1 : 0,
+    );
+  });
+
+  it('serializes resend rotation against acceptance and leaves no stale token usable', async () => {
+    const { agencyId, ownerUserId, ownerCaller } = await createActivatedAgencyOwner('Resend race');
+    const invitee = await insertVerifiedInvitee('ResendRaceInvitee');
+    const invitationId = await insertPendingInvitation({
+      agencyId,
+      invitedBy: ownerUserId,
+      email: invitee.email,
+      role: 'agent',
+    });
+    const beforeRace = await getInvitation(invitationId);
+
+    const outcomes = await Promise.allSettled([
+      ownerCaller.invitation.resend({ invitationId }),
+      inviteeCaller(invitee).invitation.accept({ token: beforeRace.token }),
+    ]);
+    expect(outcomes.filter(outcome => outcome.status === 'fulfilled')).toHaveLength(1);
+
+    const afterRace = await getInvitation(invitationId);
+    if (afterRace.status === 'pending') {
+      expect(afterRace.token).not.toBe(beforeRace.token);
+      await expect(
+        inviteeCaller(invitee).invitation.accept({ token: beforeRace.token }),
+      ).rejects.toThrow(/invitation not found/i);
+      await inviteeCaller(invitee).invitation.accept({ token: afterRace.token });
+    }
+
+    expect((await getInvitation(invitationId)).status).toBe('accepted');
+    expect((await currentMembershipsForUser(invitee.userId)).filter(membership => isCurrentActiveAgencyMembership(membership))).toHaveLength(
+      1,
+    );
+  });
+
+  it('admits one unaffiliated user through at most one competing Agency invitation', async () => {
+    const first = await createActivatedAgencyOwner('Competing first');
+    const second = await createActivatedAgencyOwner('Competing second');
+    const invitee = await insertVerifiedInvitee('CompetingInvitee');
+    const firstInvitationId = await insertPendingInvitation({
+      agencyId: first.agencyId,
+      invitedBy: first.ownerUserId,
+      email: invitee.email,
+      role: 'agent',
+    });
+    const secondInvitationId = await insertPendingInvitation({
+      agencyId: second.agencyId,
+      invitedBy: second.ownerUserId,
+      email: invitee.email,
+      role: 'agent',
+    });
+    const firstInvitation = await getInvitation(firstInvitationId);
+    const secondInvitation = await getInvitation(secondInvitationId);
+
+    const outcomes = await Promise.allSettled([
+      inviteeCaller(invitee).invitation.accept({ token: firstInvitation.token }),
+      inviteeCaller(invitee).invitation.accept({ token: secondInvitation.token }),
+    ]);
+
+    expect(outcomes.filter(outcome => outcome.status === 'fulfilled')).toHaveLength(1);
+    const memberships = (await currentMembershipsForUser(invitee.userId)).filter(membership =>
+      isCurrentActiveAgencyMembership(membership),
+    );
+    expect(memberships).toHaveLength(1);
+    expect([first.agencyId, second.agencyId]).toContain(Number(memberships[0].agencyId));
+    expect([
+      (await getInvitation(firstInvitationId)).status,
+      (await getInvitation(secondInvitationId)).status,
+    ].filter(status => status === 'accepted')).toHaveLength(1);
+  });
+
+  it.each(['suspended', 'left'] as const)(
+    'does not revive a member after a newer %s membership transition',
+    async terminalStatus => {
+      const { agencyId, ownerUserId, ownerCaller } = await createActivatedAgencyOwner(
+        `Stale ${terminalStatus}`,
+      );
+      const invitee = await insertVerifiedInvitee(`Stale${terminalStatus}Invitee`, 'agent');
+      const agentId = await insertAgentProfile(invitee.userId, agencyId);
+      await maintainAgencyAgentMembership(db, {
+        agencyId,
+        agentId,
+        status: 'active',
+        actorUserId: ownerUserId,
+      });
+      const invitationId = await insertPendingInvitation({
+        agencyId,
+        invitedBy: ownerUserId,
+        email: invitee.email,
+        role: 'agent',
+      });
+      // Make the causal order unambiguous even on a database configured with
+      // second-granularity timestamps.
+      await db
+        .update(invitations)
+        .set({
+          createdAt: new Date(Date.now() - 20_000),
+          updatedAt: new Date(Date.now() - 20_000),
+        })
+        .where(eq(invitations.id, invitationId));
+      await maintainAgencyAgentMembership(db, {
+        agencyId,
+        agentId,
+        status: terminalStatus,
+        actorUserId: ownerUserId,
+      });
+      // Rotation is delivery/token maintenance, not a new invitation
+      // authority. It cannot revive a member transition that happened after
+      // the invitation was originally issued.
+      await ownerCaller.invitation.resend({ invitationId });
+      const invitation = await getInvitation(invitationId);
+
+      await expect(
+        inviteeCaller({ ...invitee, role: 'agent' }).invitation.accept({ token: invitation.token }),
+      ).rejects.toThrow(/newer agency membership transition/i);
+
+      expect((await getInvitation(invitationId)).status).toBe('pending');
+      expect((await currentMembershipsForUser(invitee.userId))[0]).toMatchObject({
+        status: terminalStatus,
+      });
+    },
+  );
+
+  it('accepts an existing verified visitor through the canonical membership path', async () => {
+    const { agencyId, ownerUserId } = await createActivatedAgencyOwner('Existing verified');
+    const existingUser = await insertVerifiedInvitee('ExistingVerifiedInvitee');
+    const invitationId = await insertPendingInvitation({
+      agencyId,
+      invitedBy: ownerUserId,
+      email: existingUser.email,
+      role: 'agent',
+    });
+    const invitation = await getInvitation(invitationId);
+
+    await inviteeCaller(existingUser).invitation.accept({ token: invitation.token });
+
+    expect((await getInvitation(invitationId)).status).toBe('accepted');
+    expect((await currentMembershipsForUser(existingUser.userId)).filter(membership => isCurrentActiveAgencyMembership(membership))).toHaveLength(
+      1,
+    );
+  });
+
+  it('rolls back identity writes when canonical profile and membership creation cannot complete', async () => {
+    const { agencyId, ownerUserId } = await createActivatedAgencyOwner('Rollback');
+    const invitee = await insertVerifiedInvitee('RollbackInvitee');
+    // `ensureApprovedAgencyAgentProfile` derives firstName from this value.
+    // It exceeds the canonical agents.firstName bound only after the locked
+    // user affiliation update has begun, so a failed profile/membership
+    // segment proves the transaction leaves no partial acceptance state.
+    await db
+      .update(users)
+      .set({ name: `${'x'.repeat(101)} Last` })
+      .where(eq(users.id, invitee.userId));
+    const invitationId = await insertPendingInvitation({
+      agencyId,
+      invitedBy: ownerUserId,
+      email: invitee.email,
+      role: 'agent',
+    });
+    const invitation = await getInvitation(invitationId);
+
+    await expect(inviteeCaller(invitee).invitation.accept({ token: invitation.token })).rejects.toThrow();
+
+    expect(await getUser(invitee.userId)).toMatchObject({ role: 'visitor', agencyId: null });
+    expect(await currentMembershipsForUser(invitee.userId)).toHaveLength(0);
+    expect((await getInvitation(invitationId)).status).toBe('pending');
   });
 });

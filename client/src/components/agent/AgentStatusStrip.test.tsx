@@ -77,4 +77,16 @@ describe('AgentStatusStrip', () => {
     expect(await screen.findByText('Preparation-only onboarding')).toBeTruthy();
     expect(screen.getByText('Return to dashboard')).toBeTruthy();
   });
+
+  it('tells a current member that the agency owns active Launch Access', async () => {
+    apiFetchMock.mockResolvedValue({
+      packageSelected: true,
+      approvalStatus: 'approved',
+      subscriptionStatus: 'active',
+      recommendedNextStep: 'dashboard',
+      commercial: { ownerSource: 'agency_membership' },
+    });
+    renderStrip();
+    expect(await screen.findByText('Your agency manages Launch Access')).toBeTruthy();
+  });
 });
