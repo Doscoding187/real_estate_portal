@@ -6,6 +6,7 @@ const {
   apiFetchMock,
   agentWorkspaceMock,
   catalogMock,
+  commercialActivationMock,
   setLocationMock,
   submitProofMock,
   useAuthMock,
@@ -13,6 +14,7 @@ const {
   apiFetchMock: vi.fn(),
   agentWorkspaceMock: vi.fn(),
   catalogMock: vi.fn(),
+  commercialActivationMock: vi.fn(),
   setLocationMock: vi.fn(),
   submitProofMock: vi.fn(),
   useAuthMock: vi.fn(),
@@ -38,6 +40,9 @@ vi.mock('@/lib/api', () => ({
 vi.mock('@/lib/trpc', () => ({
   trpc: {
     billing: {
+      commercialActivation: {
+        useQuery: (...args: unknown[]) => commercialActivationMock(...args),
+      },
       agentWorkspace: {
         useQuery: (...args: unknown[]) => agentWorkspaceMock(...args),
       },
@@ -101,6 +106,18 @@ beforeEach(() => {
   catalogMock.mockReturnValue({
     data: { products: [product] },
     isLoading: false,
+    isError: false,
+    refetch: vi.fn(),
+  });
+  commercialActivationMock.mockReturnValue({
+    data: {
+      enabled: false,
+      productAvailability: {
+        agent_launch_access: false,
+        agency_launch_access: false,
+        developer_launch_access: false,
+      },
+    },
     isError: false,
     refetch: vi.fn(),
   });
@@ -199,7 +216,7 @@ describe('Agent pre-payment preparation', () => {
       return Promise.resolve({});
     });
 
-    render(<CommercialAgentPackageSelection />);
+    render(<CommercialAgentPackageSelection agentLaunchAccessAvailable />);
 
     await waitFor(() => {
       expect(setLocationMock).toHaveBeenCalledWith('/agent/dashboard');
@@ -230,7 +247,7 @@ describe('Agent pre-payment preparation', () => {
       return Promise.resolve({});
     });
 
-    render(<CommercialAgentPackageSelection />);
+    render(<CommercialAgentPackageSelection agentLaunchAccessAvailable />);
 
     await waitFor(() => {
       expect(setLocationMock).toHaveBeenCalledWith('/agent/dashboard');
@@ -240,7 +257,7 @@ describe('Agent pre-payment preparation', () => {
     expect(options.enabled).toBe(false);
   });
 
-  it('does not expose payment-proof controls for a historical invoice', async () => {
+  it('allows corrected proof for a rejected invoice while finance approval remains required', async () => {
     agentWorkspaceMock.mockReturnValue({
       data: {
         activeInvoice: invoice,
@@ -283,11 +300,82 @@ describe('Agent pre-payment preparation', () => {
       return Promise.resolve({});
     });
 
-    render(<CommercialAgentPackageSelection />);
+    render(<CommercialAgentPackageSelection agentLaunchAccessAvailable />);
 
-    expect(await screen.findByText(/Preparation-only onboarding/i)).toBeInTheDocument();
+    expect(await screen.findByText('What happens next')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Submit proof for review' })).toBeInTheDocument();
+    expect(screen.getByText('Please upload a legible bank-stamped proof.')).toBeInTheDocument();
+  });
+
+  it('opens the mounted paid workflow only for the effective Agent product decision', async () => {
+    commercialActivationMock.mockReturnValue({
+      data: {
+        enabled: true,
+        productAvailability: {
+          agent_launch_access: true,
+          agency_launch_access: false,
+          developer_launch_access: false,
+        },
+      },
+      isError: false,
+      refetch: vi.fn(),
+    });
+
+    render(<AgentPackageSelection />);
+
+    expect(await screen.findByText('You selected Agent Launch Access.')).toBeInTheDocument();
+    expect(screen.queryByTestId('agent-package-preparation')).not.toBeInTheDocument();
+  });
+
+  it('keeps the Agent workflow closed when another product is available instead', () => {
+    commercialActivationMock.mockReturnValue({
+      data: {
+        enabled: true,
+        productAvailability: {
+          agent_launch_access: false,
+          agency_launch_access: true,
+          developer_launch_access: false,
+        },
+      },
+      isError: false,
+      refetch: vi.fn(),
+    });
+
+    render(<AgentPackageSelection />);
+
+    expect(screen.getByTestId('agent-package-preparation')).toBeInTheDocument();
+    expect(catalogMock).not.toHaveBeenCalled();
+  });
+
+  it('keeps paid actions closed while the effective product decision is loading', () => {
+    commercialActivationMock.mockReturnValue({
+      data: undefined,
+      isLoading: true,
+      isError: false,
+      refetch: vi.fn(),
+    });
+
+    render(<AgentPackageSelection />);
+
+    expect(screen.getByTestId('agent-package-preparation')).toBeInTheDocument();
+    expect(catalogMock).not.toHaveBeenCalled();
+  });
+
+  it('keeps paid actions closed and offers a retry when the product decision fails', () => {
+    commercialActivationMock.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isError: true,
+      refetch: vi.fn(),
+    });
+
+    render(<AgentPackageSelection />);
+
+    expect(screen.getByTestId('agent-package-preparation')).toBeInTheDocument();
     expect(
-      screen.queryByRole('button', { name: 'Submit proof for review' }),
-    ).not.toBeInTheDocument();
+      screen.getByText('Agent Launch Access could not be verified, so paid actions remain unavailable.'),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
+    expect(catalogMock).not.toHaveBeenCalled();
   });
 });

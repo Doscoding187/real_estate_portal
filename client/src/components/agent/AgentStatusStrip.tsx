@@ -4,7 +4,6 @@ import { ShieldCheck, ShieldQuestion, ShieldX, CreditCard } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { apiFetch } from '@/lib/api';
 import { getAgentJourneyAction } from '@/lib/agentJourney';
-import { COMMERCIAL_ACTIVATION_STATE } from '@shared/commercialActivation';
 import type { AgentRecommendedNextStep } from '@shared/agentJourney';
 
 type StatusPayload = {
@@ -37,7 +36,8 @@ const APPROVAL_TONES: Record<string, ApprovalTone> = {
   },
   rejected: {
     label: 'Profile needs attention',
-    detail: 'Your profile was not approved. Contact Property Listify support for next steps.',
+    detail:
+      'Correct and save your profile details. An authorised reviewer must reconsider it before its status can change.',
     className: 'border-rose-200 bg-rose-50 text-rose-900',
     icon: ShieldX,
   },
@@ -49,7 +49,11 @@ const APPROVAL_TONES: Record<string, ApprovalTone> = {
   },
 };
 
-export function AgentStatusStrip() {
+export function AgentStatusStrip({
+  agentLaunchAccessAvailable = false,
+}: {
+  agentLaunchAccessAvailable?: boolean;
+}) {
   const [status, setStatus] = useState<StatusPayload | null>(null);
 
   useEffect(() => {
@@ -77,13 +81,13 @@ export function AgentStatusStrip() {
     cancelled: 'Launch Access cancelled',
     suspended: 'Launch Access suspended',
   };
-  const commercialLabel = !COMMERCIAL_ACTIVATION_STATE.enabled
+  const commercialLabel = !agentLaunchAccessAvailable
     ? 'Preparation-only onboarding'
     : status.recommendedNextStep === 'await_agency_activation'
       ? 'Agency Launch Access pending'
       : (paidStates[status.subscriptionStatus ?? ''] ??
         (status.packageSelected ? 'Commercial term in progress' : 'Launch Access not started'));
-  const journeyAction = getAgentJourneyAction(status);
+  const journeyAction = getAgentJourneyAction(status, { agentLaunchAccessAvailable });
   const showJourneyAction = [
     'select_package',
     'complete_payment',

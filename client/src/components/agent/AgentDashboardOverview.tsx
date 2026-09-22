@@ -330,8 +330,10 @@ function getGuidanceSnoozeMs(mode: DashboardGuidanceMode | null) {
 
 export function AgentDashboardOverview({
   onboardingStatus,
+  agentLaunchAccessAvailable = false,
 }: {
   onboardingStatus: AgentOnboardingStatus;
+  agentLaunchAccessAvailable?: boolean;
 }) {
   const [, setLocation] = useLocation();
   const { user } = useAuth();
@@ -565,7 +567,7 @@ export function AgentDashboardOverview({
   const profileSetupFlags = onboardingStatus?.profileCompletionFlags ?? [];
   const fullFeaturesUnlocked = onboardingStatus?.fullFeaturesUnlocked ?? false;
   const needsProfileCompletion = isAgentProfileJourneyStep(onboardingStatus);
-  const journeyAction = getAgentJourneyAction(onboardingStatus);
+  const journeyAction = getAgentJourneyAction(onboardingStatus, { agentLaunchAccessAvailable });
   const canPublishListings = entitlements?.canPublishListings ?? false;
   const setupPriorityFlags = profileSetupFlags.slice(0, 3).map(formatSetupFlag);
   const guidanceMode: DashboardGuidanceMode | null = needsProfileCompletion ? 'setup' : null;
@@ -692,7 +694,7 @@ export function AgentDashboardOverview({
           ? 'Finish setting up your professional presence.'
           : journeyAction.title,
         description: needsProfileCompletion
-          ? getAgentProfileCompletionDescription()
+          ? getAgentProfileCompletionDescription({ agentLaunchAccessAvailable })
           : journeyAction.description,
         actionLabel: journeyAction.waiting
           ? null
@@ -1374,7 +1376,7 @@ export function AgentDashboardOverview({
                   }
                   description={
                     needsProfileCompletion
-                      ? getAgentProfileCompletionDescription()
+                    ? getAgentProfileCompletionDescription({ agentLaunchAccessAvailable })
                       : journeyAction.description
                   }
                   actionLabel={

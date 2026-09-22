@@ -14,7 +14,7 @@ import { LocationAutocomplete } from '@/components/location/LocationAutocomplete
 import { apiFetch } from '@/lib/api';
 import type { AgentOnboardingStatus } from '@/hooks/useAgentOnboardingStatus';
 import { getAgentProfileCompletionDescription } from '@/lib/agentJourney';
-import { COMMERCIAL_ACTIVATION_STATE } from '@shared/commercialActivation';
+import { useCommercialProductAvailability } from '@/hooks/useCommercialProductAvailability';
 import {
   parseCanonicalAgentCoverageLocationId,
   type AgentCoverageArea,
@@ -67,6 +67,7 @@ function coverageAreaFromLocation(location: LocationOption): AgentCoverageArea |
 export function AgentSetupWizard() {
   const [, setLocation] = useLocation();
   const search = useSearch();
+  const commercialAvailability = useCommercialProductAvailability('agent_launch_access');
   const searchParams = useMemo(() => new URLSearchParams(search), [search]);
   const profileImageInputRef = useRef<HTMLInputElement>(null);
   const [step, setStep] = useState(1);
@@ -116,9 +117,13 @@ export function AgentSetupWizard() {
 
   useEffect(() => {
     if (searchParams.get('verified') === 'true') {
-      toast.success(`Email verified. ${getAgentProfileCompletionDescription()}`);
+      toast.success(
+        `Email verified. ${getAgentProfileCompletionDescription({
+          agentLaunchAccessAvailable: commercialAvailability.isAvailable,
+        })}`,
+      );
     }
-  }, [searchParams]);
+  }, [commercialAvailability.isAvailable, searchParams]);
 
   useEffect(() => {
     const agent = profileQuery.data?.agent;
@@ -164,6 +169,8 @@ export function AgentSetupWizard() {
     profileQuery.data?.agent?.profileCompletionScore ||
     0;
   const activeProfileImagePreview = profileImagePreviewUrl || formData.profileImage.trim();
+  const profileStatus = profileQuery.data?.agent?.status;
+  const awaitingReconsideration = profileStatus === 'rejected';
 
   const canContinue =
     step !== 1 || (formData.displayName.trim().length >= 2 && formData.phone.trim().length >= 7);
@@ -290,6 +297,13 @@ export function AgentSetupWizard() {
 
   const handleCompleteSetup = async () => {
     await saveProfileMutation.mutateAsync(buildPayload());
+    if (awaitingReconsideration) {
+      toast.success(
+        'Your corrected profile has been saved. It remains rejected until an authorised reviewer reconsiders it.',
+      );
+      setLocation('/agent/dashboard');
+      return;
+    }
     const result = await publishProfileMutation.mutateAsync();
     let onboardingStatus: AgentOnboardingStatus;
     try {
@@ -312,7 +326,7 @@ export function AgentSetupWizard() {
     }
     toast.success(
       onboardingStatus?.recommendedNextStep === 'select_package'
-        ? COMMERCIAL_ACTIVATION_STATE.enabled
+        ? commercialAvailability.isAvailable
           ? 'Your professional profile is ready. Activate Launch Access to start publishing.'
           : 'Your professional profile is ready. Continue preparing private inventory; publishing follows approved commercial activation.'
         : result.isPublic
@@ -351,6 +365,12 @@ export function AgentSetupWizard() {
         </CardHeader>
 
         <CardContent className="space-y-6">
+          {awaitingReconsideration ? (
+            <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+              Save your corrected professional profile. Its rejected status remains in place until an
+              authorised reviewer reconsiders and approves it.
+            </div>
+          ) : null}
           {step === 1 && (
             <div className="space-y-4">
               <div>

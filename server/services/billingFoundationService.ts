@@ -2284,8 +2284,13 @@ export async function getAdminFinanceQueue(input: {
     .select({
       payment: billingPayments,
       invoice: billingInvoices,
+      plan: plans,
       agency: agencies,
       developerOrganisation: developerOrganisations,
+      agentUser: {
+        name: users.name,
+        email: users.email,
+      },
       documentId: billingPaymentDocuments.id,
       documentFileName: billingPaymentDocuments.originalFileName,
       documentMimeType: billingPaymentDocuments.mimeType,
@@ -2293,7 +2298,12 @@ export async function getAdminFinanceQueue(input: {
     })
     .from(billingPayments)
     .innerJoin(billingInvoices, eq(billingPayments.invoiceId, billingInvoices.id))
+    .leftJoin(plans, eq(billingInvoices.planId, plans.id))
     .leftJoin(billableAccounts, eq(billingInvoices.billableAccountId, billableAccounts.id))
+    .leftJoin(
+      users,
+      and(eq(billableAccounts.accountKind, 'agent'), eq(users.id, billableAccounts.userId)),
+    )
     .leftJoin(
       billingPaymentDocuments,
       and(
@@ -2323,7 +2333,13 @@ export async function getAdminFinanceQueue(input: {
     .where(inArray(billingPayments.state, ['submitted', 'under_review']));
 
   return {
-    payments: rows,
+    payments: rows.map(row => ({
+      ...row,
+      commercialProductKey:
+        row.plan && isLaunchBillingOwnerType(row.invoice.ownerType)
+          ? getPaidMvpLaunchAccessProductKey(row.plan, row.invoice.ownerType)
+          : null,
+    })),
     pagination: {
       limit,
       offset,

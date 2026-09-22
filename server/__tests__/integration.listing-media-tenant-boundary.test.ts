@@ -97,6 +97,14 @@ describeDatabase('listing media tenant boundary', () => {
       user: { id: outsiderId, email: `media-outsider-${suffix}@invalid.example`, role: 'agent' },
     } as any);
 
+    await expect(outsider.listing.getById({ id: listingId })).rejects.toMatchObject({
+      code: 'FORBIDDEN',
+    });
+
+    await expect(
+      outsider.listing.update({ id: listingId, title: 'Unauthorized private listing edit' }),
+    ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+
     await expect(
       outsider.listing.uploadMedia({
         listingId,

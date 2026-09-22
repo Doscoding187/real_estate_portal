@@ -226,6 +226,7 @@ export default function AgentMarketingHub() {
     isLoading: statusLoading,
     error: statusError,
     retry: retryStatus,
+    agentLaunchAccessAvailable,
   } = useAgentOnboardingStatus({
     requireDashboardUnlocked: true,
   });
@@ -257,7 +258,7 @@ export default function AgentMarketingHub() {
   }, [activeTab]);
 
   const marketingLocked = !statusLoading && !status?.entitlements?.canPublishListings;
-  const journeyAction = getAgentJourneyAction(status);
+  const journeyAction = getAgentJourneyAction(status, { agentLaunchAccessAvailable });
   const needsProfileCompletion = isAgentProfileJourneyStep(status);
   const explorePublishingQuery = trpc.explore.getPublishingEligibility.useQuery(undefined, {
     enabled: Boolean(user) && !marketingLocked,
@@ -408,7 +409,7 @@ export default function AgentMarketingHub() {
             }
             description={
               needsProfileCompletion
-                ? getAgentProfileCompletionDescription()
+                ? getAgentProfileCompletionDescription({ agentLaunchAccessAvailable })
                 : journeyAction.description
             }
             actionLabel={journeyAction.waiting ? 'Return to dashboard' : journeyAction.label}

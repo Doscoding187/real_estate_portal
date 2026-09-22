@@ -76,6 +76,7 @@ export function AgentTopNav() {
     status: onboardingStatus,
     isLoading: onboardingLoading,
     error: onboardingError,
+    agentLaunchAccessAvailable,
   } = useAgentOnboardingStatus();
   const [searchQuery, setSearchQuery] = useState('');
   const [searchFocused, setSearchFocused] = useState(false);
@@ -94,7 +95,7 @@ export function AgentTopNav() {
     !onboardingLoading &&
     !workspaceStatusUnavailable &&
     !onboardingStatus?.entitlements?.canPublishListings;
-  const journeyAction = getAgentJourneyAction(onboardingStatus);
+  const journeyAction = getAgentJourneyAction(onboardingStatus, { agentLaunchAccessAvailable });
 
   const dateParts = useMemo(() => {
     const now = new Date();

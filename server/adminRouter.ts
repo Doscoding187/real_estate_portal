@@ -1271,6 +1271,7 @@ export const adminRouter = router({
           status: agents.status,
           rejectionReason: agents.rejectionReason,
           createdAt: agents.createdAt,
+          updatedAt: agents.updatedAt,
           approvedAt: agents.approvedAt,
         })
         .from(agents)
@@ -1293,24 +1294,43 @@ export const adminRouter = router({
       const db = await getDb();
       if (!db) throw new Error('Database not available');
 
+      const [agent] = await db
+        .select({ userId: agents.userId, status: agents.status })
+        .from(agents)
+        .where(eq(agents.id, input.agentId))
+        .limit(1);
+
+      if (!agent) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Agent application not found',
+        });
+      }
+
+      if (agent.status !== 'pending' && agent.status !== 'rejected') {
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message:
+            agent.status === 'suspended'
+              ? 'Suspended agent accounts must be restored through their dedicated review process'
+              : 'Only pending or rejected agent profiles can be approved',
+        });
+      }
+
       await db
         .update(agents)
         .set({
           status: 'approved',
+          rejectionReason: null,
           approvedBy: ctx.user.id,
           approvedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
           updatedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
         })
         .where(eq(agents.id, input.agentId));
 
-      const [approvedAgent] = await db
-        .select({ userId: agents.userId })
-        .from(agents)
-        .where(eq(agents.id, input.agentId))
-        .limit(1);
-      if (approvedAgent?.userId) {
+      if (agent.userId) {
         await db.insert(notifications).values({
-          userId: approvedAgent.userId,
+          userId: agent.userId,
           type: 'system_alert',
           title: 'Profile approved',
           content:
@@ -1325,7 +1345,7 @@ export const adminRouter = router({
         action: AuditActions.APPROVE_JOIN_REQUEST,
         targetType: 'agent',
         targetId: input.agentId,
-        metadata: { status: 'approved' },
+        metadata: { status: 'approved', previousStatus: agent.status },
         req: ctx.req,
       });
 

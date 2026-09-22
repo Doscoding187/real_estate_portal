@@ -150,6 +150,7 @@ export default function AgentAnalytics() {
     isLoading: statusLoading,
     error: statusError,
     retry: retryStatus,
+    agentLaunchAccessAvailable,
   } = useAgentOnboardingStatus({
     requireDashboardUnlocked: true,
   });
@@ -193,7 +194,7 @@ export default function AgentAnalytics() {
   );
 
   const analyticsLocked = !statusLoading && !status?.fullFeaturesUnlocked;
-  const journeyAction = getAgentJourneyAction(status);
+  const journeyAction = getAgentJourneyAction(status, { agentLaunchAccessAvailable });
   const needsProfileCompletion = isAgentProfileJourneyStep(status);
 
   const recordSurfaceView = trpc.agent.recordSurfaceView.useMutation();
@@ -387,7 +388,7 @@ export default function AgentAnalytics() {
               }
               description={
                 needsProfileCompletion
-                  ? getAgentProfileCompletionDescription()
+                  ? getAgentProfileCompletionDescription({ agentLaunchAccessAvailable })
                   : journeyAction.description
               }
               actionLabel={journeyAction.waiting ? 'Return to dashboard' : journeyAction.label}

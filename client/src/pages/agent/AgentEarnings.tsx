@@ -18,6 +18,7 @@ export default function AgentEarnings() {
     isLoading: statusLoading,
     error: statusError,
     retry: retryStatus,
+    agentLaunchAccessAvailable,
   } = useAgentOnboardingStatus({
     requireDashboardUnlocked: true,
   });
@@ -25,7 +26,7 @@ export default function AgentEarnings() {
   const journeyLocked = !statusLoading && !status?.fullFeaturesUnlocked;
   const earningsLocked =
     !statusLoading && !journeyLocked && !status?.entitlements?.featureFlags?.hasCommissionTracking;
-  const journeyAction = getAgentJourneyAction(status);
+  const journeyAction = getAgentJourneyAction(status, { agentLaunchAccessAvailable });
   const needsProfileCompletion = isAgentProfileJourneyStep(status);
 
   return (
@@ -50,7 +51,7 @@ export default function AgentEarnings() {
             }
             description={
               needsProfileCompletion
-                ? getAgentProfileCompletionDescription()
+                ? getAgentProfileCompletionDescription({ agentLaunchAccessAvailable })
                 : journeyAction.description
             }
             actionLabel={journeyAction.waiting ? 'Return to dashboard' : journeyAction.label}

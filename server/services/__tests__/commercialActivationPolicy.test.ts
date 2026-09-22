@@ -41,11 +41,23 @@ describe('commercial activation containment', () => {
     expect(getCommercialActivationStatus({ NODE_ENV: 'production' })).toMatchObject({
       mode: 'preparation_only',
       enabled: false,
+      productAvailability: {
+        agent_launch_access: false,
+        agency_launch_access: false,
+        developer_launch_access: false,
+      },
     });
   });
 
   it('only permits paid-state fixtures in governed test runtimes', () => {
     expect(isCommercialActivationAvailable({ NODE_ENV: 'test', VITEST: 'true' })).toBe(true);
+    expect(
+      getCommercialActivationStatus({ NODE_ENV: 'test', VITEST: 'true' }).productAvailability,
+    ).toEqual({
+      agent_launch_access: true,
+      agency_launch_access: true,
+      developer_launch_access: true,
+    });
     expect(isCommercialActivationAvailable({ NODE_ENV: 'test' })).toBe(false);
     expect(
       isCommercialActivationAvailable({

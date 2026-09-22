@@ -3,6 +3,7 @@ import { TRPCError } from '@trpc/server';
 import { isGovernedContainedScenarioFixtureActive } from '../_core/databaseAuthority/governedContainedScenarioFixture';
 import {
   COMMERCIAL_ACTIVATION_STATE,
+  PAID_MVP_LAUNCH_ACCESS_PRODUCT_KEYS,
   isPaidMvpLaunchAccessProductKey,
   isPaidMvpLaunchAccessProductEnabled,
   type PaidMvpLaunchAccessProductKey,
@@ -70,9 +71,15 @@ export function isAnyPaidMvpLaunchAccessActivationAvailable(
 }
 
 export function getCommercialActivationStatus(environment: RuntimeEnvironment = process.env) {
+  const productAvailability = {} as Record<PaidMvpLaunchAccessProductKey, boolean>;
+  for (const productKey of PAID_MVP_LAUNCH_ACCESS_PRODUCT_KEYS) {
+    productAvailability[productKey] = isCommercialActivationAvailable(environment, productKey);
+  }
+
   return {
     ...COMMERCIAL_ACTIVATION_STATE,
     enabled: isAnyPaidMvpLaunchAccessActivationAvailable(environment),
+    productAvailability,
   };
 }
 

@@ -5,7 +5,7 @@
  */
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { useListingWizardStore } from '@/hooks/useListingWizard';
+import { hydrateListingWizardForUser, useListingWizardStore } from '@/hooks/useListingWizard';
 import { useAutoSave } from '@/hooks/useAutoSave';
 import { SaveStatusIndicator } from '@/components/ui/SaveStatusIndicator';
 import { DraftManager } from '@/components/wizard/DraftManager';
@@ -57,7 +57,7 @@ import { LISTING_SUBMISSION_READINESS_THRESHOLD } from '@/../../shared/listing-w
 const ListingWizard: React.FC = () => {
   const store = useListingWizardStore();
   const [location, setLocation] = useLocation();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [showResumeDraftDialog, setShowResumeDraftDialog] = useState(false);
@@ -69,7 +69,14 @@ const ListingWizard: React.FC = () => {
   const [retryAttempt, setRetryAttempt] = useState(0);
   const [validationErrors, setValidationErrors] = useState<ValidationErrorResult | null>(null);
   const [showPreflightModal, setShowPreflightModal] = useState(false);
+  const [draftIdentityReady, setDraftIdentityReady] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
   const appliedSellerProspectId = useRef<number | null>(null);
+  const isDraftIdentityCurrent =
+    !authLoading &&
+    user?.id != null &&
+    draftIdentityReady &&
+    store.persistedOwnerId === user.id;
 
   // Auto-save hook - saves draft to localStorage automatically
   const {
@@ -108,7 +115,7 @@ const ListingWizard: React.FC = () => {
         await new Promise(resolve => setTimeout(resolve, 500));
       },
       debounceMs: 2000,
-      enabled: !isSubmitting && store.currentStep > 1, // Only auto-save after first step
+      enabled: isDraftIdentityCurrent && !isSubmitting && store.currentStep > 1, // Only auto-save after first step
       onError: error => {
         console.error('Auto-save error:', error);
         toast.error('Failed to auto-save draft');
@@ -139,26 +146,50 @@ const ListingWizard: React.FC = () => {
           : { href: '/dashboard', label: 'Back to dashboard' };
   const serverDraftStorageKey = user?.id ? `listing-wizard-server-draft:${user.id}` : null;
 
+  useEffect(() => {
+    if (authLoading) {
+      setDraftIdentityReady(false);
+      return;
+    }
+
+    let cancelled = false;
+    setDraftIdentityReady(false);
+    setIsInitialized(false);
+    setShowResumeDraftDialog(false);
+    setServerDraftId(null);
+    appliedSellerProspectId.current = null;
+
+    void hydrateListingWizardForUser(user?.id ?? null)
+      .catch(() => undefined)
+      .finally(() => {
+        if (!cancelled) setDraftIdentityReady(true);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authLoading, user?.id]);
+
   // Fetch existing listing if in edit mode
   const { data: existingListing, isLoading: isLoadingExisting } = trpc.listing.getById.useQuery(
     { id: Number(editId) },
-    { enabled: !!editId && isEditMode },
+    { enabled: isDraftIdentityCurrent && !!editId && isEditMode },
   );
 
   const { data: sellerProspectPrefill } = trpc.canvassing.getListingPrefill.useQuery(
     { sellerProspectId },
-    { enabled: hasSellerProspectHandoff && !isEditMode, retry: false },
+    { enabled: isDraftIdentityCurrent && hasSellerProspectHandoff && !isEditMode, retry: false },
   );
 
   const { data: preflight, isLoading: isPreflightLoading } =
     trpc.listing.getSubmissionPreflight.useQuery(undefined, {
-      enabled: !isEditMode,
+      enabled: isDraftIdentityCurrent && !isEditMode,
       refetchOnWindowFocus: true,
     });
 
   // Populate store with existing listing data
   useEffect(() => {
-    if (existingListing && isEditMode) {
+    if (isDraftIdentityCurrent && existingListing && isEditMode) {
       console.log('Populating wizard with existing listing:', existingListing);
 
       const listing = (existingListing as any).property || existingListing;
@@ -317,10 +348,11 @@ const ListingWizard: React.FC = () => {
       // Disable resume draft dialog
       setShowResumeDraftDialog(false);
     }
-  }, [existingListing, isEditMode]);
+  }, [isDraftIdentityCurrent, existingListing, isEditMode]);
 
   useEffect(() => {
     if (
+      !isDraftIdentityCurrent ||
       isEditMode ||
       !sellerProspectPrefill ||
       appliedSellerProspectId.current === sellerProspectPrefill.sellerProspectId
@@ -336,11 +368,11 @@ const ListingWizard: React.FC = () => {
     }
     setShowResumeDraftDialog(false);
     setWizardKey(previous => previous + 1);
-  }, [isEditMode, sellerProspectPrefill, store]);
+  }, [isDraftIdentityCurrent, isEditMode, sellerProspectPrefill, store]);
 
   // Check for session restoration after login
   useEffect(() => {
-    if (wasSessionExpired()) {
+    if (isDraftIdentityCurrent && wasSessionExpired()) {
       console.log('Session was expired, draft should be restored automatically');
       clearSessionExpiryFlags();
 
@@ -349,22 +381,22 @@ const ListingWizard: React.FC = () => {
         description: 'You can continue where you left off.',
       });
     }
-  }, []);
+  }, [isDraftIdentityCurrent]);
 
   useEffect(() => {
-    if (!isEditMode && preflight && !preflight.canPrepareDraft) {
+    if (isDraftIdentityCurrent && !isEditMode && preflight && !preflight.canPrepareDraft) {
       setShowPreflightModal(true);
     }
-  }, [isEditMode, preflight]);
+  }, [isDraftIdentityCurrent, isEditMode, preflight]);
 
   useEffect(() => {
-    if (isEditMode || !serverDraftStorageKey) return;
+    if (!isDraftIdentityCurrent || isEditMode || !serverDraftStorageKey) return;
 
     const storedId = Number(window.localStorage.getItem(serverDraftStorageKey));
     if (Number.isInteger(storedId) && storedId > 0) {
       setServerDraftId(storedId);
     }
-  }, [isEditMode, serverDraftStorageKey]);
+  }, [isDraftIdentityCurrent, isEditMode, serverDraftStorageKey]);
 
   const rememberServerDraft = (listingId: number) => {
     setServerDraftId(listingId);
@@ -380,10 +412,10 @@ const ListingWizard: React.FC = () => {
     }
   };
 
-  const [isInitialized, setIsInitialized] = useState(false);
-
   // Check for draft on mount and show resume dialog
   useEffect(() => {
+    if (!isDraftIdentityCurrent) return;
+
     // If editing, don't show draft dialog
     if (isEditMode) {
       setIsInitialized(true);
@@ -406,7 +438,7 @@ const ListingWizard: React.FC = () => {
     }
 
     setIsInitialized(true);
-  }, [isEditMode]); // Run when isEditMode is determined
+  }, [isDraftIdentityCurrent, isEditMode]); // Run when isEditMode is determined
 
   // Handle resume draft decision
   const handleResumeDraft = () => {
@@ -740,6 +772,14 @@ const ListingWizard: React.FC = () => {
     );
   }, [readiness.missing]);
   const showReadinessReview = store.currentStep === 8;
+
+  if (!isDraftIdentityCurrent) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#f7f6f3]">
+        <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-blue-600" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#f7f6f3] py-5 sm:py-8">

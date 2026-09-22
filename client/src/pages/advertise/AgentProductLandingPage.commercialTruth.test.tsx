@@ -1,6 +1,20 @@
 import { cleanup, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CommercialProduct } from '@/hooks/useCommercialCatalog';
+const { commercialActivationMock } = vi.hoisted(() => ({
+  commercialActivationMock: vi.fn(),
+}));
+
+vi.mock('@/lib/trpc', () => ({
+  trpc: {
+    billing: {
+      commercialActivation: {
+        useQuery: (...args: unknown[]) => commercialActivationMock(...args),
+      },
+    },
+  },
+}));
+
 import AgentProductLandingPage, { AgentCommercialLandingPage } from './AgentProductLandingPage';
 
 vi.mock('@/hooks/useCommercialCatalog', () => ({
@@ -68,6 +82,18 @@ const agentProduct = {
 } as unknown as CommercialProduct;
 
 beforeEach(() => {
+  commercialActivationMock.mockReturnValue({
+    data: {
+      enabled: false,
+      productAvailability: {
+        agent_launch_access: false,
+        agency_launch_access: false,
+        developer_launch_access: false,
+      },
+    },
+    isError: false,
+    refetch: vi.fn(),
+  });
   useCatalogMock.mockReturnValue({
     data: {
       authority: {
@@ -156,6 +182,48 @@ describe('public Agent product landing page', () => {
         '/login?mode=register&next=%2Fagent%2Fselect-package&role=agent',
       );
     });
+  });
+
+  it('uses the effective Agent product decision rather than another product availability', () => {
+    commercialActivationMock.mockReturnValue({
+      data: {
+        enabled: true,
+        productAvailability: {
+          agent_launch_access: true,
+          agency_launch_access: false,
+          developer_launch_access: false,
+        },
+      },
+      isError: false,
+      refetch: vi.fn(),
+    });
+
+    render(<AgentProductLandingPage />);
+
+    expect(screen.getByRole('link', { name: /Get Agent Launch Access/i })).toHaveAttribute(
+      'href',
+      '/agent/select-package',
+    );
+  });
+
+  it('keeps the Agent landing in preparation when only another product is available', () => {
+    commercialActivationMock.mockReturnValue({
+      data: {
+        enabled: true,
+        productAvailability: {
+          agent_launch_access: false,
+          agency_launch_access: true,
+          developer_launch_access: false,
+        },
+      },
+      isError: false,
+      refetch: vi.fn(),
+    });
+
+    render(<AgentProductLandingPage />);
+
+    expect(screen.queryByTestId('agent-launch-access-unavailable-card')).not.toBeInTheDocument();
+    expect(screen.getByText('Preparation-only onboarding')).toBeInTheDocument();
   });
 
   it('keeps account creation primary when the separately enabled commercial catalog is unavailable', () => {

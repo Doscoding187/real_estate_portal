@@ -29,7 +29,7 @@ describe('Agent journey support handoff', () => {
     expect(getAgentProfileCompletionDescription()).toBe(
       'Finish your professional profile and continue preparing your private workspace. Commercial activation, publishing, and new marketplace enquiries remain unavailable until the approved activation path opens.',
     );
-    expect(getAgentProfileCompletionDescription({ commercialActivationEnabled: true })).toBe(
+    expect(getAgentProfileCompletionDescription({ agentLaunchAccessAvailable: true })).toBe(
       'Finish your professional profile, then activate Launch Access for this workspace.',
     );
   });
@@ -38,7 +38,7 @@ describe('Agent journey support handoff', () => {
     expect(
       getAgentJourneyAction(
         { recommendedNextStep: 'select_package' },
-        { commercialActivationEnabled: true },
+        { agentLaunchAccessAvailable: true },
       ),
     ).toMatchObject({
       href: '/agent/select-package',

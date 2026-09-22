@@ -5,7 +5,7 @@ import { AgentJourneyStatusErrorState } from '@/components/agent/AgentJourneySta
 import { useAgentOnboardingStatus } from '@/hooks/useAgentOnboardingStatus';
 
 export default function AgentDashboard() {
-  const { status, isLoading, error, retry } = useAgentOnboardingStatus({
+  const { status, isLoading, error, retry, agentLaunchAccessAvailable } = useAgentOnboardingStatus({
     requireDashboardUnlocked: true,
   });
 
@@ -42,7 +42,7 @@ export default function AgentDashboard() {
   return (
     <AgentAppShell>
       <div className="flex flex-col gap-4">
-        <AgentStatusStrip />
+        <AgentStatusStrip agentLaunchAccessAvailable={agentLaunchAccessAvailable} />
         {!status.fullFeaturesUnlocked ? (
           <section className="rounded-xl border border-amber-200 bg-amber-50 p-5 text-amber-950">
             <h2 className="text-lg font-semibold">Prepare your professional workspace</h2>
@@ -58,7 +58,10 @@ export default function AgentDashboard() {
             </div>
           </section>
         ) : null}
-        <AgentDashboardOverview onboardingStatus={status} />
+        <AgentDashboardOverview
+          onboardingStatus={status}
+          agentLaunchAccessAvailable={agentLaunchAccessAvailable}
+        />
       </div>
     </AgentAppShell>
   );

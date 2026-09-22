@@ -130,6 +130,7 @@ export default function AgentCanvassing() {
     isLoading: statusLoading,
     error: statusError,
     retry: retryStatus,
+    agentLaunchAccessAvailable,
   } = useAgentOnboardingStatus({
     requireDashboardUnlocked: true,
   });
@@ -137,7 +138,7 @@ export default function AgentCanvassing() {
     enabled: !statusLoading && Boolean(status?.fullFeaturesUnlocked),
     retry: false,
   });
-  const journeyAction = getAgentJourneyAction(status);
+  const journeyAction = getAgentJourneyAction(status, { agentLaunchAccessAvailable });
   const needsProfileCompletion = isAgentProfileJourneyStep(status);
   const journeyLocked = !statusLoading && !status?.fullFeaturesUnlocked;
 
@@ -163,7 +164,7 @@ export default function AgentCanvassing() {
             }
             description={
               needsProfileCompletion
-                ? getAgentProfileCompletionDescription()
+                ? getAgentProfileCompletionDescription({ agentLaunchAccessAvailable })
                 : journeyAction.description
             }
             actionLabel={journeyAction.waiting ? 'Return to dashboard' : journeyAction.label}

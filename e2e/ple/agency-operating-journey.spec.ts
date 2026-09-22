@@ -227,7 +227,6 @@ test.describe('PLE agency operating browser acceptance', () => {
     const authority = resolveDatabaseAuthority({ operation: 'test-fixture' });
     if (
       authority.context.targetClass !== 'disposable-worktree' ||
-      process.env.PROPERTY_LISTIFY_GOVERNED_BROWSER_TEST_FIXTURE !== 'true' ||
       authority.context.targetFingerprintHash !==
         process.env.DATABASE_AUTHORITY_PARENT_FINGERPRINT
     ) {

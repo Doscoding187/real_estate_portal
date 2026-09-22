@@ -152,6 +152,7 @@ export default function AgentReferrals() {
     isLoading: statusLoading,
     error: statusError,
     retry: retryStatus,
+    agentLaunchAccessAvailable,
   } = useAgentOnboardingStatus({
     requireDashboardUnlocked: true,
   });
@@ -187,7 +188,7 @@ export default function AgentReferrals() {
   const hasFullNetworkAccess = networkStatusQuery.data?.hasAccess === true;
   const activeProgramCount = Number(networkStatusQuery.data?.accessCount || 0);
   const isLoading = opportunitiesQuery.isLoading || referralsQuery.isLoading;
-  const journeyAction = getAgentJourneyAction(status);
+  const journeyAction = getAgentJourneyAction(status, { agentLaunchAccessAvailable });
   const needsProfileCompletion = isAgentProfileJourneyStep(status);
   const journeyLocked = !statusLoading && !status?.fullFeaturesUnlocked;
 
@@ -235,7 +236,7 @@ export default function AgentReferrals() {
             }
             description={
               needsProfileCompletion
-                ? getAgentProfileCompletionDescription()
+                ? getAgentProfileCompletionDescription({ agentLaunchAccessAvailable })
                 : journeyAction.description
             }
             actionLabel={journeyAction.waiting ? 'Return to dashboard' : journeyAction.label}

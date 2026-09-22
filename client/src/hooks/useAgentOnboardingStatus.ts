@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useLocation } from 'wouter';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { apiFetch } from '@/lib/api';
+import { useCommercialProductAvailability } from '@/hooks/useCommercialProductAvailability';
 import type {
   AgentRecommendedNextStep,
   AgentSubscriptionDisplayStatus,
@@ -68,6 +69,7 @@ export function useAgentOnboardingStatus(options: UseAgentOnboardingStatusOption
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [requestVersion, setRequestVersion] = useState(0);
+  const commercialAvailability = useCommercialProductAvailability('agent_launch_access');
   const retry = useCallback(() => {
     setRequestVersion(version => version + 1);
   }, []);
@@ -125,5 +127,8 @@ export function useAgentOnboardingStatus(options: UseAgentOnboardingStatusOption
     isLoading: authLoading || isLoading,
     error,
     retry,
+    agentLaunchAccessAvailable: commercialAvailability.isAvailable,
+    commercialAvailabilityError: commercialAvailability.isError,
+    retryCommercialAvailability: commercialAvailability.refetch,
   };
 }

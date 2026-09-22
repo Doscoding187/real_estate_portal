@@ -17,7 +17,6 @@ import { toast } from 'sonner';
 import { trpc } from '@/lib/trpc';
 import { useAgentOnboardingStatus } from '@/hooks/useAgentOnboardingStatus';
 import { getAgentJourneyAction } from '@/lib/agentJourney';
-import { COMMERCIAL_ACTIVATION_STATE } from '@shared/commercialActivation';
 import { LocationAutocomplete } from '@/components/location/LocationAutocomplete';
 import {
   parseCanonicalAgentCoverageLocationId,
@@ -101,6 +100,7 @@ export default function AgentSettings() {
     isLoading: statusLoading,
     error: statusError,
     retry: retryStatus,
+    agentLaunchAccessAvailable,
   } = useAgentOnboardingStatus({
     requireDashboardUnlocked: true,
   });
@@ -214,19 +214,19 @@ export default function AgentSettings() {
   const hasSelectedCommercialTerm = Boolean(
     status?.packageSelected && status?.subscriptionStatus !== 'unassigned',
   );
-  const journeyAction = getAgentJourneyAction(status);
+  const journeyAction = getAgentJourneyAction(status, { agentLaunchAccessAvailable });
   const currentTierLabel = hasActiveCommercialTerm
     ? 'Agent Launch Access'
     : hasSelectedCommercialTerm
       ? 'Agent Launch Access activation'
-      : COMMERCIAL_ACTIVATION_STATE.enabled
+      : agentLaunchAccessAvailable
         ? 'No active commercial term'
         : 'Preparation-only onboarding';
   const currentTierDescription = hasActiveCommercialTerm
     ? 'Once-off 90-day access to the supported Agent workspace.'
     : hasSelectedCommercialTerm
       ? journeyAction.description
-      : COMMERCIAL_ACTIVATION_STATE.enabled
+      : agentLaunchAccessAvailable
         ? 'Start Agent Launch Access to publish inventory and receive enquiries.'
         : 'Complete your professional presence and prepare private inventory. Commercial activation and publishing remain unavailable until the approved activation path opens.';
   const trialEndsAt = status?.entitlements?.trialStatusDetail?.trialEndsAt

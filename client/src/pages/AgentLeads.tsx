@@ -212,6 +212,7 @@ export default function AgentLeads() {
     isLoading: statusLoading,
     error: statusError,
     retry: retryStatus,
+    agentLaunchAccessAvailable,
   } = useAgentOnboardingStatus({
     requireDashboardUnlocked: true,
   });
@@ -239,7 +240,7 @@ export default function AgentLeads() {
     !statusLoading &&
     Boolean(status?.entitlements?.canAccessExistingLeads) &&
     !status?.entitlements?.canReceiveLeads;
-  const journeyAction = getAgentJourneyAction(status);
+  const journeyAction = getAgentJourneyAction(status, { agentLaunchAccessAvailable });
   const needsProfileCompletion = isAgentProfileJourneyStep(status);
 
   const { data: responseSummary, isLoading: responseSummaryLoading } =
@@ -353,7 +354,7 @@ export default function AgentLeads() {
             }
             description={
               needsProfileCompletion
-                ? getAgentProfileCompletionDescription()
+                ? getAgentProfileCompletionDescription({ agentLaunchAccessAvailable })
                 : journeyAction.description
             }
             actionLabel={journeyAction.waiting ? 'Return to dashboard' : journeyAction.label}

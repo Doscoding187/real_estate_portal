@@ -1,31 +1,19 @@
 import { defineConfig, devices } from '@playwright/test';
 
-/**
- * Local-only acceptance from owner acquisition through the invited member to CRM.
- *
- * The reviewer fixture is prepared through its canonical database adapter.
- * The spec supplies and releases an explicitly marked disposable agency term
- * after proving pre-payment invitation containment. Its API process receives
- * the existing governed fixture marker only after Database Authority wrapping;
- * this does not enable normal commercial activation, initiate payment, or
- * follow a hosted URL.
- */
-const runtimeLog = '/tmp/property-listify-mvp-ple-agency-browser-runtime.log';
+const runtimeLog = '/tmp/property-listify-b04-independent-agent-paid-mvp-browser-runtime.log';
 
 export default defineConfig({
-  testDir: './e2e/ple',
-  outputDir: '/tmp/property-listify-mvp-ple-agency-browser-results',
-  timeout: 90_000,
-  expect: { timeout: 15_000 },
+  testDir: './e2e/b04',
+  outputDir: '/tmp/property-listify-b04-independent-agent-paid-mvp-browser-results',
+  timeout: 120_000,
+  expect: { timeout: 20_000 },
   fullyParallel: false,
   workers: 1,
   reporter: [
-    ['html', { outputFolder: '/tmp/property-listify-mvp-ple-agency-browser-report' }],
+    ['html', { outputFolder: '/tmp/property-listify-b04-independent-agent-paid-mvp-browser-report' }],
     ['list'],
   ],
   use: {
-    // Keep this proof on the owned local runtime even if a caller supplies
-    // another base URL through its shell environment.
     baseURL: 'http://localhost:5177',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',

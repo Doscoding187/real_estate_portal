@@ -15,10 +15,14 @@ interface EntityStatusCardProps {
   data: any; // Listing or Development object
   readiness: { score: number; missing: Record<string, string[]> };
   quality?: { score: number; breakdown: any };
-  onEdit: (id: number) => void;
-  onDelete: (id: number) => void;
+  onEdit?: (id: number) => void;
+  onDelete?: (id: number) => void;
   onView?: (id: number) => void;
   onViewEnquiries?: (id: number) => void;
+  editId?: number | null;
+  deleteId?: number | null;
+  viewId?: number | null;
+  editUnavailableLabel?: string;
   className?: string;
 }
 
@@ -31,6 +35,10 @@ export const EntityStatusCard: React.FC<EntityStatusCardProps> = ({
   onDelete,
   onView,
   onViewEnquiries,
+  editId,
+  deleteId,
+  viewId,
+  editUnavailableLabel,
   className,
 }) => {
   const isListing = type === 'listing';
@@ -90,6 +98,12 @@ export const EntityStatusCard: React.FC<EntityStatusCardProps> = ({
   const rejectionNote = data.rejectionNote;
 
   const title = isListing ? data.title : data.name;
+  const editTargetId = editId === undefined ? data.id : editId;
+  const deleteTargetId = deleteId === undefined ? data.id : deleteId;
+  const viewTargetId = viewId === undefined ? data.id : viewId;
+  const canEdit = Boolean(onEdit && editTargetId != null);
+  const canDelete = Boolean(onDelete && deleteTargetId != null);
+  const canView = Boolean(onView && viewTargetId != null);
 
   // Use robust helper for developments, or direct prop for listings
   const image = isListing ? data.primaryImage : getPrimaryDevelopmentImageUrl(data.images);
@@ -188,8 +202,11 @@ export const EntityStatusCard: React.FC<EntityStatusCardProps> = ({
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8 text-slate-400 hover:text-slate-900"
-                      onClick={() => onEdit(data.id)}
-                      title="Edit"
+                      disabled={!canEdit}
+                      onClick={() => {
+                        if (onEdit && editTargetId != null) onEdit(editTargetId);
+                      }}
+                      title={canEdit ? 'Edit' : editUnavailableLabel || 'Editing is unavailable'}
                     >
                       <Edit className="w-4 h-4" />
                     </Button>
@@ -197,7 +214,10 @@ export const EntityStatusCard: React.FC<EntityStatusCardProps> = ({
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8 text-slate-400 hover:text-rose-600 hover:bg-rose-50"
-                      onClick={() => onDelete(data.id)}
+                      disabled={!canDelete}
+                      onClick={() => {
+                        if (onDelete && deleteTargetId != null) onDelete(deleteTargetId);
+                      }}
                       title="Delete"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -209,6 +229,11 @@ export const EntityStatusCard: React.FC<EntityStatusCardProps> = ({
               <h3 className="font-semibold text-xl text-slate-900 line-clamp-1 mb-1">
                 {title || 'Untitled Property'}
               </h3>
+              {!canEdit && editUnavailableLabel ? (
+                <p className="mt-2 text-sm text-slate-500" role="status">
+                  {editUnavailableLabel}
+                </p>
+              ) : null}
               <div className="flex items-center gap-2 text-slate-500 text-sm mb-3">
                 <span>{data.address || data.city || 'No location set'}</span>
               </div>
@@ -241,7 +266,10 @@ export const EntityStatusCard: React.FC<EntityStatusCardProps> = ({
                         size="sm"
                         variant="outline"
                         className="mt-3 border-red-200 text-red-700 hover:bg-red-50 hover:text-red-900 hover:border-red-300"
-                        onClick={() => onEdit(data.id)}
+                        disabled={!canEdit}
+                        onClick={() => {
+                          if (onEdit && editTargetId != null) onEdit(editTargetId);
+                        }}
                       >
                         Fix & Resubmit
                       </Button>
@@ -276,8 +304,13 @@ export const EntityStatusCard: React.FC<EntityStatusCardProps> = ({
                       View Enquiries
                     </Button>
                   )}
-                  {onView && (
-                    <Button size="sm" onClick={() => onView(data.id)}>
+                  {canView && (
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        if (onView && viewTargetId != null) onView(viewTargetId);
+                      }}
+                    >
                       <Eye className="mr-2 h-4 w-4" />
                       {isListing ? 'View Property' : 'Open Development'}
                     </Button>
@@ -295,7 +328,14 @@ export const EntityStatusCard: React.FC<EntityStatusCardProps> = ({
                   </Button>
                 )}
                 {isDraft ? (
-                  <Button size="sm" onClick={() => onEdit(data.id)} className="font-medium">
+                  <Button
+                    size="sm"
+                    disabled={!canEdit}
+                    onClick={() => {
+                      if (onEdit && editTargetId != null) onEdit(editTargetId);
+                    }}
+                    className="font-medium"
+                  >
                     {readiness.score >= (isListing ? LISTING_SUBMISSION_READINESS_THRESHOLD : 90)
                       ? 'Review & Submit'
                       : 'Continue Setup'}

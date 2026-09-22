@@ -28,21 +28,14 @@ async function main(): Promise<void> {
   // settings (such as the session secret) too. Pass those values only to the
   // child processes; do not print or persist them.
   const environment = resolveDatabaseEnvironment({ processEnv: process.env });
-  // This marker reaches only the authority-wrapped browser test children after
-  // the disposable target above has been resolved and authorized. It lets an
-  // explicit browser fixture exercise its paid-state term without changing the
-  // immutable commercial release state for normal runtimes.
-  const browserFixtureEnvironment = {
-    ...databaseAuthorityChildEnvironment(authority, environment.values),
-    PROPERTY_LISTIFY_GOVERNED_BROWSER_TEST_FIXTURE: 'true',
-  };
+  const browserTestEnvironment = databaseAuthorityChildEnvironment(authority, environment.values);
 
   const rawArgs = process.argv.slice(2);
   const passthrough = rawArgs[0] === '--' ? rawArgs.slice(1) : rawArgs;
   const result = spawnSync('playwright', ['test', ...passthrough], {
     cwd: process.cwd(),
     stdio: 'inherit',
-    env: browserFixtureEnvironment,
+    env: browserTestEnvironment,
   });
   if (result.error) throw result.error;
   process.exit(result.status ?? 1);

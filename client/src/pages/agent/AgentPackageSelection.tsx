@@ -21,6 +21,7 @@ import {
   getCommercialTermPresentation,
 } from '@/lib/commercialCatalog';
 import { useCommercialCatalog, type CommercialProduct } from '@/hooks/useCommercialCatalog';
+import { useCommercialProductAvailability } from '@/hooks/useCommercialProductAvailability';
 import type { AgentOnboardingStatus } from '@/hooks/useAgentOnboardingStatus';
 import {
   ArrowRight,
@@ -35,7 +36,6 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { CommercialActivationNotice } from '@/components/commercial/CommercialActivationNotice';
-import { COMMERCIAL_ACTIVATION_STATE } from '@shared/commercialActivation';
 
 type RouterOutputs = inferRouterOutputs<AppRouter>;
 type AgentBillingWorkspace = RouterOutputs['billing']['agentWorkspace'];
@@ -339,7 +339,11 @@ function AgentManualEftPanel({
   );
 }
 
-export function CommercialAgentPackageSelection() {
+export function CommercialAgentPackageSelection({
+  agentLaunchAccessAvailable,
+}: {
+  agentLaunchAccessAvailable: boolean;
+}) {
   const [, setLocation] = useLocation();
   const search = useSearch();
   const { user, loading } = useAuth({ redirectOnUnauthenticated: true });
@@ -395,7 +399,7 @@ export function CommercialAgentPackageSelection() {
         if (cancelled) return;
 
         setStatus(result);
-        const journeyAction = getAgentJourneyAction(result, { commercialActivationEnabled: true });
+        const journeyAction = getAgentJourneyAction(result, { agentLaunchAccessAvailable });
         if (journeyAction.href !== '/agent/select-package') {
           setLocation(journeyAction.href);
         }
@@ -414,7 +418,7 @@ export function CommercialAgentPackageSelection() {
     return () => {
       cancelled = true;
     };
-  }, [loading, setLocation, user?.role]);
+  }, [agentLaunchAccessAvailable, loading, setLocation, user?.role]);
 
   const activeInvoice = invoiceResponse?.invoice ?? workspaceQuery.data?.activeInvoice ?? null;
   const bankDetails = invoiceResponse?.bankDetails ?? workspaceQuery.data?.bankDetails;
@@ -484,7 +488,7 @@ export function CommercialAgentPackageSelection() {
   const action = getCommercialActionPresentation(launchProduct);
 
   const handleRequestInvoice = async () => {
-    if (!COMMERCIAL_ACTIVATION_STATE.enabled) {
+    if (!agentLaunchAccessAvailable) {
       setLocation('/agent/dashboard');
       return;
     }
@@ -518,8 +522,8 @@ export function CommercialAgentPackageSelection() {
   };
 
   const handleProofSubmit = async () => {
-    if (!COMMERCIAL_ACTIVATION_STATE.enabled) {
-      toast.info(COMMERCIAL_ACTIVATION_STATE.message);
+    if (!agentLaunchAccessAvailable) {
+      toast.info('Agent Launch Access is unavailable while commercial availability is being verified.');
       return;
     }
     if (!activeInvoice) {
@@ -604,9 +608,6 @@ export function CommercialAgentPackageSelection() {
               The public Agent page explains the product. This step lets you confirm your
               professional presence and prepare for the assisted commercial activation process.
             </p>
-            <div className="mt-6 max-w-xl">
-              <CommercialActivationNotice />
-            </div>
             <a
               href="/advertise/sell/agents"
               className="mt-7 inline-flex items-center gap-2 text-sm font-bold text-slate-950 underline decoration-slate-300 underline-offset-4 hover:decoration-slate-950"
@@ -644,7 +645,7 @@ export function CommercialAgentPackageSelection() {
                   disabled={isRequestingInvoice}
                   onClick={() => void handleRequestInvoice()}
                 >
-                  {!COMMERCIAL_ACTIVATION_STATE.enabled
+                  {!agentLaunchAccessAvailable
                     ? 'Return to preparation workspace'
                     : isRequestingInvoice
                       ? 'Preparing invoice…'
@@ -661,7 +662,7 @@ export function CommercialAgentPackageSelection() {
                   Talk to Property Listify
                 </Button>
               </div>
-              {activeInvoice && COMMERCIAL_ACTIVATION_STATE.enabled ? (
+              {activeInvoice && agentLaunchAccessAvailable ? (
                 <AgentManualEftPanel
                   invoice={activeInvoice}
                   bankDetails={bankDetails}
@@ -718,7 +719,13 @@ export function CommercialAgentPackageSelection() {
   );
 }
 
-function PreparationAgentPackageSelection() {
+function PreparationAgentPackageSelection({
+  availabilityError,
+  onRetry,
+}: {
+  availabilityError?: boolean;
+  onRetry?: () => void;
+}) {
   const [, setLocation] = useLocation();
 
   return (
@@ -745,6 +752,15 @@ function PreparationAgentPackageSelection() {
             <CommercialActivationNotice />
           </div>
 
+          {availabilityError ? (
+            <div className="mt-5 flex flex-wrap items-center gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+              <span>Agent Launch Access could not be verified, so paid actions remain unavailable.</span>
+              <Button type="button" variant="outline" onClick={onRetry}>
+                Retry
+              </Button>
+            </div>
+          ) : null}
+
           <Card className="mt-8 border-slate-200 shadow-none">
             <CardContent className="p-6">
               <h2 className="text-xl font-semibold text-slate-950">Continue private preparation</h2>
@@ -767,9 +783,14 @@ function PreparationAgentPackageSelection() {
 }
 
 export default function AgentPackageSelection() {
-  return COMMERCIAL_ACTIVATION_STATE.enabled ? (
-    <CommercialAgentPackageSelection />
+  const availability = useCommercialProductAvailability('agent_launch_access');
+
+  return availability.isAvailable ? (
+    <CommercialAgentPackageSelection agentLaunchAccessAvailable={availability.isAvailable} />
   ) : (
-    <PreparationAgentPackageSelection />
+    <PreparationAgentPackageSelection
+      availabilityError={availability.isError}
+      onRetry={() => void availability.refetch()}
+    />
   );
 }

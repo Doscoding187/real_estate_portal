@@ -46,13 +46,13 @@ import {
 } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { toast } from 'sonner';
-import { CommercialActivationNotice } from '@/components/commercial/CommercialActivationNotice';
-import { COMMERCIAL_ACTIVATION_STATE } from '@shared/commercialActivation';
+import { useCommercialActivationAvailability } from '@/hooks/useCommercialProductAvailability';
 
 export default function SubscriptionManagementPage({
   initialTab = 'subscriptions',
 }: { initialTab?: string } = {}) {
   const utils = trpc.useUtils();
+  const commercialAvailability = useCommercialActivationAvailability();
   const [activeTab, setActiveTab] = useState(initialTab);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -60,6 +60,7 @@ export default function SubscriptionManagementPage({
   const [reviewPayment, setReviewPayment] = useState<{
     id: number;
     decision: 'approve' | 'duplicate';
+    commercialProductKey: string | null;
   } | null>(null);
   const [verifiedCents, setVerifiedCents] = useState('');
   const [financeNote, setFinanceNote] = useState('');
@@ -115,13 +116,20 @@ export default function SubscriptionManagementPage({
     },
   });
 
-  const handleVerifyPayment = (paymentId: number, status: 'verified' | 'rejected') => {
-    if (!COMMERCIAL_ACTIVATION_STATE.enabled) {
-      toast.info(COMMERCIAL_ACTIVATION_STATE.message);
+  const canReviewPayment = (commercialProductKey: unknown) =>
+    commercialAvailability.isProductAvailable(commercialProductKey);
+
+  const handleVerifyPayment = (
+    paymentId: number,
+    status: 'verified' | 'rejected',
+    commercialProductKey: string | null,
+  ) => {
+    if (!canReviewPayment(commercialProductKey)) {
+      toast.info(commercialAvailability.unavailableMessage);
       return;
     }
     if (status === 'verified') {
-      setReviewPayment({ id: paymentId, decision: 'approve' });
+      setReviewPayment({ id: paymentId, decision: 'approve', commercialProductKey });
       setVerifiedCents('');
       setFinanceNote('');
       setOverpaymentReconciled(false);
@@ -130,9 +138,9 @@ export default function SubscriptionManagementPage({
     verifyPaymentMutation.mutate({ paymentId, decision: 'reject' });
   };
 
-  const handleRequestCorrection = (paymentId: number) => {
-    if (!COMMERCIAL_ACTIVATION_STATE.enabled) {
-      toast.info(COMMERCIAL_ACTIVATION_STATE.message);
+  const handleRequestCorrection = (paymentId: number, commercialProductKey: string | null) => {
+    if (!canReviewPayment(commercialProductKey)) {
+      toast.info(commercialAvailability.unavailableMessage);
       return;
     }
     verifyPaymentMutation.mutate({
@@ -142,12 +150,12 @@ export default function SubscriptionManagementPage({
     });
   };
 
-  const handleDuplicatePayment = (paymentId: number) => {
-    if (!COMMERCIAL_ACTIVATION_STATE.enabled) {
-      toast.info(COMMERCIAL_ACTIVATION_STATE.message);
+  const handleDuplicatePayment = (paymentId: number, commercialProductKey: string | null) => {
+    if (!canReviewPayment(commercialProductKey)) {
+      toast.info(commercialAvailability.unavailableMessage);
       return;
     }
-    setReviewPayment({ id: paymentId, decision: 'duplicate' });
+    setReviewPayment({ id: paymentId, decision: 'duplicate', commercialProductKey });
     setFinanceNote('');
   };
 
@@ -216,7 +224,14 @@ export default function SubscriptionManagementPage({
 
   return (
     <div className="space-y-6 p-6 pb-20">
-      <CommercialActivationNotice />
+      {commercialAvailability.isError ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+          <span>{commercialAvailability.unavailableMessage}</span>
+          <Button variant="outline" onClick={() => void commercialAvailability.refetch()}>
+            Retry availability check
+          </Button>
+        </div>
+      ) : null}
       <Dialog open={reviewPayment !== null} onOpenChange={open => !open && setReviewPayment(null)}>
         <DialogContent>
           <DialogHeader>
@@ -266,7 +281,7 @@ export default function SubscriptionManagementPage({
           <DialogFooter>
             <Button
               disabled={
-                !COMMERCIAL_ACTIVATION_STATE.enabled ||
+                !canReviewPayment(reviewPayment?.commercialProductKey) ||
                 verifyPaymentMutation.isPending ||
                 (reviewPayment?.decision === 'approve' &&
                   (!Number.isSafeInteger(Number(verifiedCents)) || Number(verifiedCents) <= 0)) ||
@@ -554,8 +569,11 @@ export default function SubscriptionManagementPage({
                       </TableCell>
                     </TableRow>
                   ) : (
-                    financeRows.map(row => (
-                      <TableRow
+                    financeRows.map(row => {
+                      const paymentReviewAvailable = canReviewPayment(row.commercialProductKey);
+
+                      return (
+                        <TableRow
                         key={row.payment.id}
                         className="hover:bg-slate-50/50 transition-colors"
                       >
@@ -565,12 +583,17 @@ export default function SubscriptionManagementPage({
                         <TableCell>
                           <div className="flex flex-col">
                             <span className="font-medium">
-                              {row.agency?.name ||
+                              {row.agentUser?.name ||
+                                row.agentUser?.email ||
+                                row.agency?.name ||
                                 row.developerOrganisation?.name ||
                                 'Unknown account'}
                             </span>
                             <span className="text-xs text-slate-500">
-                              {row.agency?.email || row.developerOrganisation?.email || ''}
+                              {row.agentUser?.email ||
+                                row.agency?.email ||
+                                row.developerOrganisation?.email ||
+                                ''}
                             </span>
                           </div>
                         </TableCell>
@@ -607,9 +630,15 @@ export default function SubscriptionManagementPage({
                             <Button
                               size="sm"
                               variant="outline"
-                              disabled={!COMMERCIAL_ACTIVATION_STATE.enabled}
+                              disabled={!paymentReviewAvailable}
                               className="text-green-600 hover:bg-green-50 border-green-200"
-                              onClick={() => handleVerifyPayment(row.payment.id, 'verified')}
+                              onClick={() =>
+                                handleVerifyPayment(
+                                  row.payment.id,
+                                  'verified',
+                                  row.commercialProductKey,
+                                )
+                              }
                             >
                               <CheckCircle className="w-4 h-4 mr-1" />
                               Approve
@@ -617,34 +646,50 @@ export default function SubscriptionManagementPage({
                             <Button
                               size="sm"
                               variant="outline"
-                              disabled={!COMMERCIAL_ACTIVATION_STATE.enabled}
+                              disabled={!paymentReviewAvailable}
                               className="text-amber-600 hover:bg-amber-50 border-amber-200"
-                              onClick={() => handleRequestCorrection(row.payment.id)}
+                              onClick={() =>
+                                handleRequestCorrection(row.payment.id, row.commercialProductKey)
+                              }
                             >
                               Correction
                             </Button>
                             <Button
                               size="sm"
                               variant="outline"
-                              disabled={!COMMERCIAL_ACTIVATION_STATE.enabled}
+                              disabled={!paymentReviewAvailable}
                               className="text-slate-600 hover:bg-slate-50 border-slate-200"
-                              onClick={() => handleDuplicatePayment(row.payment.id)}
+                              onClick={() =>
+                                handleDuplicatePayment(row.payment.id, row.commercialProductKey)
+                              }
                             >
                               Duplicate
                             </Button>
                             <Button
                               size="sm"
                               variant="outline"
-                              disabled={!COMMERCIAL_ACTIVATION_STATE.enabled}
+                              disabled={!paymentReviewAvailable}
                               className="text-red-600 hover:bg-red-50 border-red-200"
-                              onClick={() => handleVerifyPayment(row.payment.id, 'rejected')}
+                              onClick={() =>
+                                handleVerifyPayment(
+                                  row.payment.id,
+                                  'rejected',
+                                  row.commercialProductKey,
+                                )
+                              }
                             >
                               <XCircle className="w-4 h-4" />
                             </Button>
                           </div>
+                          {!paymentReviewAvailable ? (
+                            <p className="mt-2 text-xs text-amber-700">
+                              Finance action is unavailable for this payment&apos;s commercial product.
+                            </p>
+                          ) : null}
                         </TableCell>
-                      </TableRow>
-                    ))
+                        </TableRow>
+                      );
+                    })
                   )}
                 </TableBody>
               </Table>

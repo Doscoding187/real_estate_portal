@@ -9,7 +9,6 @@ import { homedir } from 'node:os';
 const authority = resolveDatabaseAuthority({ operation: 'runtime-connect' });
 if (
   authority.context.targetClass !== 'disposable-worktree' ||
-  process.env.PROPERTY_LISTIFY_GOVERNED_BROWSER_TEST_FIXTURE !== 'true' ||
   authority.context.targetFingerprintHash !==
     process.env.DATABASE_AUTHORITY_PARENT_FINGERPRINT
 ) {

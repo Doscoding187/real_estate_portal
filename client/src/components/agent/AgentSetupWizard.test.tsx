@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const {
   apiFetchMock,
+  commercialActivationMock,
   profileQueryMock,
   publishProfileMutationMock,
   saveProfileMutationMock,
@@ -13,6 +14,7 @@ const {
   uploadMutationMock,
 } = vi.hoisted(() => ({
   apiFetchMock: vi.fn(),
+  commercialActivationMock: vi.fn(),
   profileQueryMock: vi.fn(),
   publishProfileMutationMock: vi.fn(),
   saveProfileMutationMock: vi.fn(),
@@ -34,6 +36,11 @@ vi.mock('@/lib/api', () => ({
 
 vi.mock('@/lib/trpc', () => ({
   trpc: {
+    billing: {
+      commercialActivation: {
+        useQuery: (...args: unknown[]) => commercialActivationMock(...args),
+      },
+    },
     agent: {
       getMyProfileOnboarding: {
         useQuery: (...args: unknown[]) => profileQueryMock(...args),
@@ -85,6 +92,18 @@ import { AgentSetupWizard } from './AgentSetupWizard';
 
 beforeEach(() => {
   vi.clearAllMocks();
+  commercialActivationMock.mockReturnValue({
+    data: {
+      enabled: false,
+      productAvailability: {
+        agent_launch_access: false,
+        agency_launch_access: false,
+        developer_launch_access: false,
+      },
+    },
+    isError: false,
+    refetch: vi.fn(),
+  });
   profileQueryMock.mockReturnValue({
     data: {
       agent: {
@@ -157,6 +176,44 @@ describe('AgentSetupWizard completion', () => {
     );
     expect(toastErrorMock).toHaveBeenCalledWith(
       'We could not confirm your next setup step. Your workspace will let you retry shortly.',
+    );
+  });
+
+  it('saves a corrected rejected profile without trying to republish it', async () => {
+    profileQueryMock.mockReturnValue({
+      data: {
+        agent: {
+          displayName: 'Test Agent',
+          phone: '+27820000000',
+          socialLinks: {},
+          areasServed: [],
+          status: 'rejected',
+        },
+        entitlements: { profileCompletionScore: 100 },
+      },
+      isLoading: false,
+    });
+    const publishProfile = vi.fn();
+    publishProfileMutationMock.mockReturnValue({
+      isPending: false,
+      mutateAsync: publishProfile,
+    });
+
+    render(<AgentSetupWizard />);
+
+    expect(
+      screen.getByText(/rejected status remains in place until an authorised reviewer/i),
+    ).toBeInTheDocument();
+    for (let step = 0; step < 4; step += 1) {
+      fireEvent.click(screen.getByRole('button', { name: 'Skip' }));
+    }
+    fireEvent.click(await screen.findByRole('button', { name: 'Complete Setup' }));
+
+    await waitFor(() => expect(setLocationMock).toHaveBeenCalledWith('/agent/dashboard'));
+    expect(saveProfileMutateAsyncMock).toHaveBeenCalled();
+    expect(publishProfile).not.toHaveBeenCalled();
+    expect(toastSuccessMock).toHaveBeenCalledWith(
+      'Your corrected profile has been saved. It remains rejected until an authorised reviewer reconsiders it.',
     );
   });
 });

@@ -82,10 +82,11 @@ export default function AgentTrainingSupport() {
     isLoading: statusLoading,
     error: statusError,
     retry: retryStatus,
+    agentLaunchAccessAvailable,
   } = useAgentOnboardingStatus();
   const trainingLocked = !statusLoading && !status?.dashboardUnlocked;
   const operationalDataEnabled = !statusLoading && Boolean(status?.fullFeaturesUnlocked);
-  const journeyAction = getAgentJourneyAction(status);
+  const journeyAction = getAgentJourneyAction(status, { agentLaunchAccessAvailable });
   const needsProfileCompletion = isAgentProfileJourneyStep(status);
 
   const { data: stats, isLoading: statsLoading } = trpc.agent.getDashboardStats.useQuery(
@@ -124,7 +125,7 @@ export default function AgentTrainingSupport() {
             }
             description={
               needsProfileCompletion
-                ? getAgentProfileCompletionDescription()
+                ? getAgentProfileCompletionDescription({ agentLaunchAccessAvailable })
                 : journeyAction.description
             }
             actionLabel={journeyAction.waiting ? 'Return to dashboard' : journeyAction.label}
