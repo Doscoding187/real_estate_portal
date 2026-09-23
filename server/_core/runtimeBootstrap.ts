@@ -134,7 +134,13 @@ export function loadAppRuntimeEnv(options?: { cwd?: string; env?: NodeJS.Process
       `Runtime environment changed from ${runtimeEnv} to ${finalRuntimeEnv} after environment loading.`,
     );
   }
-  env.NODE_ENV = runtimeEnv;
+  if ((runtimeEnv === 'staging' || runtimeEnv === 'production') &&
+      env.NODE_ENV && env.NODE_ENV !== 'production') {
+    throw new Error('Hosted staging and production require NODE_ENV=production.');
+  }
+  // APP_ENV names the logical target; hosted staging must exercise the same
+  // framework and cookie behavior as production.
+  env.NODE_ENV = runtimeEnv === 'staging' ? 'production' : runtimeEnv;
 
   return {
     runtimeEnv,

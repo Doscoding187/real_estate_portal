@@ -47,19 +47,22 @@ function normalizedEnvironment(valueToNormalize: string | undefined): string | n
 }
 
 function environmentConsistencyIssues(env: NodeJS.ProcessEnv, runtimeEnv: AppRuntimeEnv): string[] {
-  const declared = [
+  const declaredTargets = [
     env.APP_ENV,
     env.RAILWAY_ENVIRONMENT_NAME,
     env.RAILWAY_ENVIRONMENT,
     env.VERCEL_ENV,
-    env.NODE_ENV,
   ]
     .map(normalizedEnvironment)
     .filter((item): item is string => item !== null);
-  const anyDeployedDeclaration = declared.some(item => item === 'production' || item === 'staging');
+  const nodeMode = normalizedEnvironment(env.NODE_ENV);
+  const anyDeployedDeclaration =
+    runtimeEnv === 'production' || runtimeEnv === 'staging' || nodeMode === 'production' ||
+    declaredTargets.some(item => item === 'production' || item === 'staging');
   if (!anyDeployedDeclaration) return [];
-  if (declared.some(item => item !== runtimeEnv)) {
-    return ['Deployment environment declarations disagree; align APP_ENV and NODE_ENV.'];
+  if ((runtimeEnv !== 'production' && runtimeEnv !== 'staging') ||
+      declaredTargets.some(item => item !== runtimeEnv) || nodeMode !== 'production') {
+    return ['Deployment environment declarations disagree; APP_ENV/provider target must match and NODE_ENV must be production.'];
   }
   return [];
 }

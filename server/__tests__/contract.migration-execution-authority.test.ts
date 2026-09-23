@@ -250,6 +250,9 @@ describe('migration execution authority', () => {
       'start:prod:core',
       'start:server',
       'start:server:prodlike',
+      'start:hosted:api',
+      'email:supervisor',
+      'lead-delivery:worker',
     ];
 
     for (const name of startupScripts) {
@@ -277,7 +280,9 @@ describe('migration execution authority', () => {
       expect(source).not.toContain('db:migrate:test');
     }
 
-    expect(read('railway.json')).toContain('"startCommand": "pnpm start:prod"');
+    expect(read('railway.json')).toContain('"startCommand": "pnpm start:hosted:api"');
+    expect(read('railway.email-worker.json')).toContain('"startCommand": "pnpm email:supervisor"');
+    expect(read('railway.lead-job.json')).toContain('"startCommand": "pnpm lead-delivery:worker"');
   });
 
   it('proves top-level canonical discovery excludes archived SQL', () => {

@@ -199,7 +199,8 @@ export function getCommercialActivationOperatorStatus(
 ) {
   const config = getConfiguration(environment);
   const buildSha = String(
-    environment.RAILWAY_GIT_COMMIT_SHA ??
+    environment.BUILD_SHA ??
+      environment.RAILWAY_GIT_COMMIT_SHA ??
       environment.GITHUB_SHA ??
       environment.VERCEL_GIT_COMMIT_SHA ??
       'unknown',

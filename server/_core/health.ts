@@ -7,6 +7,8 @@ import {
 import { getCacheHealth } from './cache/redis';
 import { getAuthRateLimitStoreHealth, type AuthRateLimitStoreHealth } from './authRateLimitStore';
 import { resolveAppRuntimeEnv } from './runtimeBootstrap';
+import { hostedRuntimeConfigurationIssues, resolveHostedBuildSha } from './hostedRuntimeConfiguration';
+import { commercialTermNoticeScheduler } from '../services/commercialTermNoticeScheduler';
 import {
   getPublicLeadRateLimitStoreHealth,
   type PublicLeadRateLimitStoreHealth,
@@ -32,12 +34,15 @@ export interface ApiReadinessResponse {
   authRateLimit: AuthRateLimitStoreHealth;
   publicLeadRateLimit: PublicLeadRateLimitStoreHealth;
   s3: { ok: boolean; required: boolean };
+  configuration: { ok: boolean };
+  termScheduler: ReturnType<typeof commercialTermNoticeScheduler.status>;
 }
 
 export interface ApiVersionResponse {
   gitSha: string;
   buildTime: string | null;
   env: string;
+  releaseId: string | null;
 }
 
 const REQUIRED_S3_ENV_KEYS = [
@@ -52,6 +57,8 @@ function hasEnvValue(value: string | undefined): boolean {
 }
 
 function resolveBuildSha(env: NodeJS.ProcessEnv = process.env): string {
+  const hosted = resolveHostedBuildSha(env);
+  if (hosted) return hosted;
   const candidates = [
     env.RAILWAY_GIT_COMMIT_SHA,
     env.VERCEL_GIT_COMMIT_SHA,
@@ -110,15 +117,16 @@ export async function buildApiReadinessResponse(
   ]);
   const s3Required = runtimeEnv === 'production' || runtimeEnv === 'staging';
   const s3Ok = isS3Configured();
+  const configurationOk = hostedRuntimeConfigurationIssues().length === 0;
   return {
     ok:
       db.applicationReady &&
       cache.ok &&
       authRateLimit.ok &&
       publicLeadRateLimit.ok &&
-      (!s3Required || s3Ok),
+      (!s3Required || s3Ok) && configurationOk,
     kind: 'readiness',
-    env: process.env.NODE_ENV || 'development',
+    env: runtimeEnv,
     build: {
       sha: resolveBuildSha(),
       builtAt: resolveBuildTime(),
@@ -128,6 +136,8 @@ export async function buildApiReadinessResponse(
     authRateLimit,
     publicLeadRateLimit,
     s3: { ok: s3Ok, required: s3Required },
+    configuration: { ok: configurationOk },
+    termScheduler: commercialTermNoticeScheduler.status(),
   };
 }
 
@@ -152,7 +162,8 @@ export function buildApiVersionResponse(): ApiVersionResponse {
   return {
     gitSha: resolveBuildSha(),
     buildTime: resolveBuildTime(),
-    env: process.env.NODE_ENV || 'development',
+    env: resolveAppRuntimeEnv(),
+    releaseId: process.env.PAID_MVP_RELEASE_ID?.trim() || null,
   };
 }
 

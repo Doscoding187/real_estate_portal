@@ -199,6 +199,19 @@ async function queueDueNotices(window: NoticeWindow): Promise<number> {
 
 class CommercialTermNoticeScheduler {
   private timer: NodeJS.Timeout | null = null;
+  private running = false;
+  private lastSucceededAt: string | null = null;
+  private lastFailedAt: string | null = null;
+
+  status() {
+    return {
+      timerActive: this.timer !== null,
+      running: this.running,
+      lastSucceededAt: this.lastSucceededAt,
+      lastFailedAt: this.lastFailedAt,
+      intervalMs: intervalFromEnv(),
+    };
+  }
 
   async start(): Promise<void> {
     if (this.timer) return;
@@ -216,13 +229,20 @@ class CommercialTermNoticeScheduler {
   }
 
   async tick(): Promise<{ sent: number }> {
+    if (this.running) return { sent: 0 };
+    this.running = true;
     let sent = 0;
     try {
       for (const window of NOTICE_WINDOWS) {
         sent += await queueDueNotices(window);
       }
+      this.lastSucceededAt = new Date().toISOString();
+      console.info('[commercialTermNoticeScheduler] tick completed', { sent, at: this.lastSucceededAt });
     } catch (error) {
+      this.lastFailedAt = new Date().toISOString();
       console.error('[commercialTermNoticeScheduler] tick failed', error);
+    } finally {
+      this.running = false;
     }
     return { sent };
   }

@@ -21,4 +21,13 @@ export function validateEnvironmentConfig() {
       ].join(', ')}). Got: ${API_HOST}`,
     );
   }
+  if (DEPLOY_ENV !== 'development' && new URL(API_BASE_URL).protocol !== 'https:') {
+    throw new Error('CRITICAL ENV ERROR: deployed API origin must use HTTPS.');
+  }
+  if (DEPLOY_ENV === 'production' && import.meta.env.VITE_APP_URL !== 'https://www.propertylistifysa.co.za') {
+    throw new Error('CRITICAL ENV ERROR: production frontend origin is invalid.');
+  }
+  if (DEPLOY_ENV === 'staging' && import.meta.env.VITE_APP_URL !== 'https://staging.propertylistifysa.co.za') {
+    throw new Error('CRITICAL ENV ERROR: staging frontend origin is invalid.');
+  }
 }
