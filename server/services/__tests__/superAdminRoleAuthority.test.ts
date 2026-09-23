@@ -1,5 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
-import { updateUserRoleWithAudit } from '../superAdminRoleAuthority';
+import {
+  isManagedPlatformRole,
+  MANAGED_PLATFORM_ROLES,
+  updateUserRoleWithAudit,
+} from '../superAdminRoleAuthority';
 
 type RoleState = {
   target: { id: number; role: string; sessionVersion: number } | null;
@@ -52,6 +56,20 @@ function transactionalDatabase(initialTarget: RoleState['target'], failAudit = f
 }
 
 describe('super-admin role authority', () => {
+  it('matches the canonical persisted global role set', () => {
+    expect(MANAGED_PLATFORM_ROLES).toEqual([
+      'visitor',
+      'agent',
+      'agency_admin',
+      'property_developer',
+      'service_provider',
+      'super_admin',
+    ]);
+    expect(isManagedPlatformRole('property_developer')).toBe(true);
+    expect(isManagedPlatformRole('service_provider')).toBe(true);
+    expect(isManagedPlatformRole('platform_owner')).toBe(false);
+  });
+
   it('audits the before/after role and invalidates the target sessions in one transaction', async () => {
     const harness = transactionalDatabase({ id: 44, role: 'visitor', sessionVersion: 7 });
 

@@ -6,6 +6,10 @@ import { eq, like, or, desc, and, isNull } from 'drizzle-orm';
 import type { SQL } from 'drizzle-orm';
 import { getDb } from './db';
 import { logAudit } from './_core/auditLog';
+import {
+  MANAGED_PLATFORM_ROLES,
+  updateUserRoleWithAudit,
+} from './services/superAdminRoleAuthority';
 
 /**
  * User Management Router - Super Admin only
@@ -32,14 +36,7 @@ const userFiltersSchema = z.object({
 
 const updateUserRoleSchema = z.object({
   userId: z.number(),
-  role: z.enum([
-    'visitor',
-    'agent',
-    'agency_admin',
-    'property_developer',
-    'service_provider',
-    'super_admin',
-  ]),
+  role: z.enum(MANAGED_PLATFORM_ROLES),
 });
 
 const assignToAgencySchema = z.object({
@@ -296,42 +293,12 @@ export const userRouter = router({
       throw new Error('Database not available');
     }
 
-    // Get the user
-    const [user] = await db.select().from(users).where(eq(users.id, input.userId)).limit(1);
-
-    if (!user) {
-      throw new Error('User not found');
-    }
-
-    // Prevent demoting the last super admin
-    if (user.role === 'super_admin' && input.role !== 'super_admin') {
-      const superAdmins = await db.select().from(users).where(eq(users.role, 'super_admin'));
-
-      if (superAdmins.length === 1) {
-        throw new Error('Cannot demote the last super admin');
-      }
-    }
-
-    // Update role
-    await db
-      .update(users)
-      .set({
-        role: input.role,
-        updatedAt: new Date(),
-      })
-      .where(eq(users.id, input.userId));
-
-    // Audit log
-    await logAudit({
-      userId: ctx.user.id,
-      action: 'user.update_role',
-      targetType: 'user',
-      targetId: input.userId,
-      metadata: {
-        oldRole: user.role,
-        newRole: input.role,
-      },
-      req: ctx.req,
+    await updateUserRoleWithAudit({
+      database: db,
+      actorUserId: ctx.user.id,
+      targetUserId: input.userId,
+      role: input.role,
+      requestId: ctx.requestId,
     });
 
     const [updated] = await db.select().from(users).where(eq(users.id, input.userId));

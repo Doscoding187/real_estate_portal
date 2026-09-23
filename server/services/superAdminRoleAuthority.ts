@@ -3,7 +3,21 @@ import { eq, sql } from 'drizzle-orm';
 import { managerialAuditLogs, users } from '../../drizzle/schema';
 import { AuditActions } from '../_core/auditLog';
 
-export type ManagedPlatformRole = 'visitor' | 'agent' | 'agency_admin' | 'super_admin';
+/** Every role accepted by the canonical users.role model for global transitions. */
+export const MANAGED_PLATFORM_ROLES = [
+  'visitor',
+  'agent',
+  'agency_admin',
+  'property_developer',
+  'service_provider',
+  'super_admin',
+] as const;
+
+export type ManagedPlatformRole = (typeof MANAGED_PLATFORM_ROLES)[number];
+
+export function isManagedPlatformRole(value: unknown): value is ManagedPlatformRole {
+  return typeof value === 'string' && (MANAGED_PLATFORM_ROLES as readonly string[]).includes(value);
+}
 
 type RoleTransactionDatabase = {
   transaction<T>(callback: (tx: any) => Promise<T>): Promise<T>;
@@ -20,6 +34,10 @@ export async function updateUserRoleWithAudit(input: {
   role: ManagedPlatformRole;
   requestId: string;
 }): Promise<void> {
+  if (!isManagedPlatformRole(input.role)) {
+    throw new TRPCError({ code: 'BAD_REQUEST', message: 'Unsupported platform role.' });
+  }
+
   await input.database.transaction(async tx => {
     const [target] = await tx
       .select({
@@ -34,6 +52,23 @@ export async function updateUserRoleWithAudit(input: {
 
     if (!target) throw new TRPCError({ code: 'NOT_FOUND', message: 'User not found.' });
     if (target.role === input.role) return;
+
+    // Preserve the existing last-super-admin safeguard inside the same
+    // transaction and lock the matching role rows so concurrent demotions
+    // cannot both pass a stale count check.
+    if (target.role === 'super_admin' && input.role !== 'super_admin') {
+      const superAdmins = await tx
+        .select({ id: users.id })
+        .from(users)
+        .where(eq(users.role, 'super_admin'))
+        .for('update');
+      if (superAdmins.length <= 1) {
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message: 'Cannot demote the last super admin.',
+        });
+      }
+    }
 
     await tx
       .update(users)
