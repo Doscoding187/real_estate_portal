@@ -4,7 +4,7 @@
   "historyTable": "sql_migration_history",
   "attemptTable": "sql_migration_attempts",
   "lockName": "property_listify_manifest_migrations",
-  "expectedHead": "0092_transactional_email_attempts.sql",
+  "expectedHead": "0094_content_topics_primary_key.sql",
   "migrations": [
     {
       "sequence": 0,
@@ -976,6 +976,28 @@
       "checksum": "74217052481a7ad26dfddf4ac0f66e9b0c93e4c9dfdf9e20818b2ce45b2cc927",
       "parent": "0091_transactional_email_deliveries.sql",
       "parentChecksum": "f449f6485d7bc3bdbf53b83988cc9d92b1fa844a7f3079cc12dee5bdabcef813",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null,
+      "approvalReference": null
+    },
+    {
+      "sequence": 93,
+      "filename": "0093_user_onboarding_state_primary_key.sql",
+      "checksum": "fec12311f637e143f36d540e1faf07155c2035fdfeaa159466b14817dc990882",
+      "parent": "0092_transactional_email_attempts.sql",
+      "parentChecksum": "74217052481a7ad26dfddf4ac0f66e9b0c93e4c9dfdf9e20818b2ce45b2cc927",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null,
+      "approvalReference": null
+    },
+    {
+      "sequence": 94,
+      "filename": "0094_content_topics_primary_key.sql",
+      "checksum": "0645a178f556e24fa170d41b07a8ac73cff4e9404beedf1660a2bf54e72b4124",
+      "parent": "0093_user_onboarding_state_primary_key.sql",
+      "parentChecksum": "fec12311f637e143f36d540e1faf07155c2035fdfeaa159466b14817dc990882",
       "kind": "ddl",
       "statementPolicy": "single-ddl",
       "requiredReferenceDataVersion": null,

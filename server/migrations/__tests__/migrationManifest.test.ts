@@ -353,7 +353,7 @@ describe('canonical migration manifest', () => {
     expect(tidbSequenced.map(entry => entry.statementCount)).toEqual([
       4, 15, 3, 3, 3, 4, 3, 3, 3, 3,
     ]);
-    expect(manifest.expectedHead.filename).toBe('0092_transactional_email_attempts.sql');
+    expect(manifest.expectedHead.filename).toBe('0094_content_topics_primary_key.sql');
   });
 
   it('plans the identity-and-custody migration chain from the integrated 0007 head', () => {
@@ -369,11 +369,11 @@ describe('canonical migration manifest', () => {
         checksum: item.checksum,
       })),
       acceptedOldHead: currentIntegratedHead.filename,
-      expectedNewHead: '0092_transactional_email_attempts.sql',
+      expectedNewHead: '0094_content_topics_primary_key.sql',
     });
 
     expect(plan.acceptedOldHead).toBe('0007_paid_launch_access_invoice_term.sql');
-    expect(plan.pending).toHaveLength(85);
+    expect(plan.pending).toHaveLength(87);
     expect(plan.pending.map(item => item.filename)).toEqual([
       '0008_developer_organisations.sql',
       '0009_developer_organisation_memberships.sql',
@@ -460,8 +460,10 @@ describe('canonical migration manifest', () => {
       '0090_retire_disconnected_boost_campaigns.sql',
       '0091_transactional_email_deliveries.sql',
       '0092_transactional_email_attempts.sql',
+      '0093_user_onboarding_state_primary_key.sql',
+      '0094_content_topics_primary_key.sql',
     ]);
-    expect(plan.expectedNewHead).toBe('0092_transactional_email_attempts.sql');
+    expect(plan.expectedNewHead).toBe('0094_content_topics_primary_key.sql');
   });
 
   it('accepts an isolated 0000 -> 0001 -> 0002 progression in ancestry order', () => {
