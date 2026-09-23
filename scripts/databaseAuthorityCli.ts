@@ -84,6 +84,7 @@ type Command =
   | 'manifest'
   | 'data:manifest'
   | 'b08:inspector:provision'
+  | 'b08:inspect-metadata'
   | 'worktree:create'
   | 'worktree:dispose'
   | 'worktree:ack'
@@ -252,6 +253,121 @@ async function run(command: Command): Promise<void> {
 
   if (command === 'b08:inspector:provision') {
     print(await provisionB08AzureInspectionIdentity());
+    return;
+  }
+
+  if (command === 'b08:inspect-metadata') {
+    const authority = authorityFor('read-only-connect', 'read-only');
+    const decision = authorizationFor(authority);
+    if (
+      authority.context.targetFingerprintHash !==
+        'b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced' ||
+      authority.context.credentialClass !== 'read-only'
+    ) {
+      throw new Error('B08 metadata inspection refused: exact Azure read-only target required.');
+    }
+    const connection = await createAuthoritySqlConnection(authority, decision);
+    const rows = async (statement: string): Promise<Array<Record<string, unknown>>> => {
+      const result = await connection.query(statement);
+      return Array.isArray(result) && Array.isArray(result[0])
+        ? (result[0] as Array<Record<string, unknown>>)
+        : [];
+    };
+    try {
+      const session = (await rows(`SELECT VERSION() AS version, DATABASE() AS selected_database,
+        CURRENT_USER() AS current_identity, @@session.sql_mode AS sql_mode,
+        @@session.time_zone AS session_time_zone,
+        @@session.transaction_isolation AS transaction_isolation,
+        @@session.character_set_connection AS character_set_connection,
+        @@session.collation_connection AS collation_connection,
+        @@global.lower_case_table_names AS lower_case_table_names,
+        @@global.sql_generate_invisible_primary_key AS sql_generate_invisible_primary_key,
+        @@global.require_secure_transport AS require_secure_transport`))[0];
+      if (
+        session?.selected_database !== 'propertylistify_database' ||
+        !String(session.current_identity).startsWith('propertylistify_b08_inspector@')
+      ) {
+        throw new Error('B08 metadata inspection refused: selected database or identity differs.');
+      }
+      const tlsCipher = (await rows("SHOW SESSION STATUS LIKE 'Ssl_cipher'"))[0];
+      const tlsVersion = (await rows("SHOW SESSION STATUS LIKE 'Ssl_version'"))[0];
+      const tables = await rows(`SELECT TABLE_NAME AS table_name, TABLE_TYPE AS table_type,
+        TABLE_ROWS AS estimated_rows, ENGINE AS engine, TABLE_COLLATION AS table_collation
+        FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = DATABASE() ORDER BY TABLE_NAME`);
+      const specialColumns = await rows(`SELECT TABLE_NAME AS table_name, COLUMN_NAME AS column_name,
+        EXTRA AS extra, COLUMN_KEY AS column_key, DATA_TYPE AS data_type
+        FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE()
+        AND TABLE_NAME IN ('content_topics', 'user_onboarding_state') ORDER BY TABLE_NAME, ORDINAL_POSITION`);
+      const foreignKeys = await rows(`SELECT COUNT(*) AS total FROM INFORMATION_SCHEMA.REFERENTIAL_CONSTRAINTS
+        WHERE CONSTRAINT_SCHEMA = DATABASE()`);
+      const checks = await rows(`SELECT CONSTRAINT_NAME AS name, ENFORCED AS enforced
+        FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS WHERE TABLE_SCHEMA = DATABASE()
+        AND CONSTRAINT_TYPE = 'CHECK' ORDER BY CONSTRAINT_NAME`);
+      const indexes = await rows(`SELECT COUNT(DISTINCT CONCAT(TABLE_NAME, '.', INDEX_NAME)) AS total
+        FROM INFORMATION_SCHEMA.STATISTICS WHERE TABLE_SCHEMA = DATABASE()`);
+      const features = await rows(`SELECT
+        SUM(DATA_TYPE = 'json') AS json_columns,
+        SUM(DATA_TYPE IN ('timestamp', 'datetime') AND DATETIME_PRECISION = 6) AS microsecond_timestamps
+        FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE()`);
+      const grantRows = await rows('SHOW GRANTS');
+      const grants = grantRows.flatMap(row => Object.values(row)).map(String);
+      const usageOnly = grants.filter(grant => /^GRANT USAGE ON \*\.\*/i.test(grant)).length === 1;
+      const selectOnly = grants.filter(grant =>
+        /^GRANT SELECT ON [`']?propertylistify_database[`']?\.\* TO /i.test(grant),
+      ).length === 1;
+      print({
+        targetFingerprintHash: authority.context.targetFingerprintHash,
+        server: session.version,
+        selectedDatabase: session.selected_database,
+        inspectorIdentityVerified: true,
+        tls: {
+          cipherPresent: Boolean(tlsCipher?.Value),
+          version: tlsVersion?.Value ?? null,
+          certificateVerificationRequired: authority.context.tls.certificateVerificationRequired,
+          secureTransportRequired: session.require_secure_transport,
+        },
+        session: {
+          sqlMode: session.sql_mode,
+          timezone: session.session_time_zone,
+          transactionIsolation: session.transaction_isolation,
+          characterSet: session.character_set_connection,
+          collation: session.collation_connection,
+          lowerCaseTableNames: session.lower_case_table_names,
+          generateInvisiblePrimaryKey: session.sql_generate_invisible_primary_key,
+        },
+        tableInventory: {
+          count: tables.length,
+          names: tables.map(table => table.table_name),
+          estimatedNonempty: tables.filter(table => Number(table.estimated_rows) > 0).map(table => ({
+            table: table.table_name,
+            estimatedRows: table.estimated_rows,
+          })),
+          engines: [...new Set(tables.map(table => table.engine))],
+          collations: [...new Set(tables.map(table => table.table_collation))],
+        },
+        propertyImagesPhysicalNames: tables.filter(table =>
+          String(table.table_name).toLowerCase() === 'propertyimages',
+        ).map(table => table.table_name),
+        specialColumns,
+        migrationLedgerPresent: tables.some(table => table.table_name === 'sql_migration_history'),
+        migrationAttemptLedgerPresent: tables.some(table => table.table_name === 'sql_migration_attempts'),
+        foreignKeyCount: foreignKeys[0]?.total ?? null,
+        checks,
+        indexCount: indexes[0]?.total ?? null,
+        jsonColumnCount: features[0]?.json_columns ?? null,
+        microsecondTimestampCount: features[0]?.microsecond_timestamps ?? null,
+        grants: {
+          count: grants.length,
+          onlyUsageAndDatabaseSelect: usageOnly && selectOnly && grants.length === 2,
+          selectOnApprovedDatabase: selectOnly,
+          mutationPrivilegesPresent: grants.some(grant =>
+            /\b(?:INSERT|UPDATE|DELETE|CREATE|ALTER|DROP|INDEX|TRIGGER|GRANT OPTION)\b/i.test(grant),
+          ),
+        },
+      });
+    } finally {
+      await connection.end();
+    }
     return;
   }
 
@@ -604,6 +720,7 @@ const commands = new Set<Command>([
   'manifest',
   'data:manifest',
   'b08:inspector:provision',
+  'b08:inspect-metadata',
   'worktree:create',
   'worktree:dispose',
   'worktree:ack',

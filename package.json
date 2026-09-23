@@ -51,6 +51,7 @@
     "db:authority:status": "tsx scripts/databaseAuthorityStatus.ts",
     "db:authority:manifest": "tsx scripts/databaseAuthorityCli.ts manifest",
     "db:b08:inspector:provision": "tsx scripts/databaseAuthorityCli.ts b08:inspector:provision",
+    "db:b08:inspect-metadata": "tsx scripts/databaseAuthorityCli.ts b08:inspect-metadata",
     "db:data:manifest": "tsx scripts/databaseAuthorityCli.ts data:manifest",
     "db:authority:context": "tsx scripts/databaseAuthorityCli.ts context",
     "db:authority:utilities": "tsx scripts/databaseUtilityAuthorityCheck.ts",
