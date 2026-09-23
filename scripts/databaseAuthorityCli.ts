@@ -603,6 +603,7 @@ const commands = new Set<Command>([
   'context',
   'manifest',
   'data:manifest',
+  'b08:inspector:provision',
   'worktree:create',
   'worktree:dispose',
   'worktree:ack',
