@@ -302,7 +302,9 @@ export function resolveDatabaseAuthority(input: {
   if (parsed.protocol === 'mysql:') {
     const security = buildMysqlConnectionSecurityConfig(parsed.toString(), environment.runtimeMode);
     tlsRequired = Boolean(security.ssl);
-    certificateVerificationRequired = Boolean(security.ssl?.rejectUnauthorized);
+    certificateVerificationRequired = Boolean(
+      security.ssl?.rejectUnauthorized && security.ssl?.verifyIdentity,
+    );
   }
 
   const targetFingerprintHash = sha256(resolvedTargetFingerprint);
