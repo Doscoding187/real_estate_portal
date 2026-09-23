@@ -41,6 +41,14 @@
       "acknowledgement": "none",
       "evidence": "sanitized-ci-identity-provisioning"
     },
+    "inspection-identity-provision": {
+      "allowedTargetClasses": ["production"],
+      "credentialClasses": ["bootstrap-admin"],
+      "ownership": "none",
+      "approval": "protected-target",
+      "acknowledgement": "none",
+      "evidence": "exact-b08-azure-inspector-identity-and-read-only-grants"
+    },
     "migration-plan": {
       "allowedTargetClasses": ["clean-main-local", "disposable-worktree", "disposable-test"],
       "credentialClasses": ["read-only", "migration", "local-owner", "test-owner"],

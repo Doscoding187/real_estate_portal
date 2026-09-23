@@ -3,6 +3,7 @@ export const DATABASE_OPERATIONS = [
   'worker-connect',
   'read-only-connect',
   'ci-identity-bootstrap',
+  'inspection-identity-provision',
   'migration-plan',
   'migration-apply',
   'reference-seed',

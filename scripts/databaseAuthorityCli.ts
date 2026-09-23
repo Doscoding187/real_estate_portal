@@ -6,6 +6,7 @@ import {
   protectedDatabaseApprovalFromEnvironment,
 } from '../server/_core/databaseAuthority/authorization';
 import { createAuthoritySqlConnection } from '../server/_core/databaseAuthority/connectionAuthority';
+import { provisionB08AzureInspectionIdentity } from '../server/_core/databaseAuthority/b08AzureInspectionIdentity';
 import { resolveDatabaseAuthority } from '../server/_core/databaseAuthority/context';
 import {
   createOwnedWorktreeDatabase,
@@ -82,6 +83,7 @@ type Command =
   | 'context'
   | 'manifest'
   | 'data:manifest'
+  | 'b08:inspector:provision'
   | 'worktree:create'
   | 'worktree:dispose'
   | 'worktree:ack'
@@ -245,6 +247,11 @@ async function run(command: Command): Promise<void> {
   if (command === 'data:manifest') {
     assertDataRoleManifest();
     print(DATA_ROLE_MANIFEST);
+    return;
+  }
+
+  if (command === 'b08:inspector:provision') {
+    print(await provisionB08AzureInspectionIdentity());
     return;
   }
 

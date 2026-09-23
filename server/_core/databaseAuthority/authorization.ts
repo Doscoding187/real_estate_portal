@@ -36,7 +36,13 @@ export type ProtectedDatabaseApproval = {
   actor: string;
   operation: DatabaseOperation;
   targetFingerprintHash: string;
+  credentialClass?: DatabaseCredentialClass;
+  inspectionIdentity?: string;
 };
+
+export const B08_AZURE_TARGET_FINGERPRINT_HASH =
+  'b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced';
+export const B08_INSPECTION_IDENTITY = 'propertylistify_b08_inspector';
 
 export function protectedDatabaseApprovalFromEnvironment(
   authority: ResolvedDatabaseAuthority,
@@ -51,6 +57,8 @@ export function protectedDatabaseApprovalFromEnvironment(
     actor: actor ?? '',
     operation: authority.context.operation,
     targetFingerprintHash: fingerprint ?? '',
+    credentialClass: env.DATABASE_AUTHORITY_APPROVED_CREDENTIAL_CLASS as DatabaseCredentialClass | undefined,
+    inspectionIdentity: env.DATABASE_AUTHORITY_APPROVED_INSPECTION_IDENTITY,
   };
 }
 
@@ -161,7 +169,8 @@ function assertProtectedApproval(
     !approval.reference.trim() ||
     !approval.actor.trim() ||
     approval.operation !== context.operation ||
-    approval.targetFingerprintHash !== context.targetFingerprintHash
+    approval.targetFingerprintHash !== context.targetFingerprintHash ||
+    (approval.credentialClass != null && approval.credentialClass !== context.credentialClass)
   ) {
     throw new Error(
       'Database operation refused: protected target requires an exact operation and fingerprint approval.',
@@ -196,6 +205,14 @@ export function authorizeDatabaseOperation(
     throw new Error(
       `Database operation refused: credential class ${context.credentialClass} is not allowed for ${context.operation}.`,
     );
+  }
+  if (
+    context.operation === 'inspection-identity-provision' &&
+    (context.targetFingerprintHash !== B08_AZURE_TARGET_FINGERPRINT_HASH ||
+      input.approval?.credentialClass !== 'bootstrap-admin' ||
+      input.approval?.inspectionIdentity !== B08_INSPECTION_IDENTITY)
+  ) {
+    throw new Error('Database operation refused: exact B08 Azure inspection identity approval is required.');
   }
   assertOwnership(context, rule.ownership);
   if (
