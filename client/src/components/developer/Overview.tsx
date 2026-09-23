@@ -25,8 +25,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useDeveloperOnboardingStatus } from '@/hooks/useDeveloperOnboardingStatus';
+import { useCommercialProductAvailability } from '@/hooks/useCommercialProductAvailability';
 import { trpc } from '@/lib/trpc';
-import { COMMERCIAL_ACTIVATION_STATE } from '@shared/commercialActivation';
 
 type Range = '7d' | '30d' | '90d';
 
@@ -77,6 +77,7 @@ export default function Overview() {
   const [, setLocation] = useLocation();
   const [range, setRange] = useState<Range>('30d');
   const isSuperAdmin = user?.role === 'super_admin';
+  const commercialAvailability = useCommercialProductAvailability('developer_launch_access');
 
   const profileQuery = trpc.developer.getProfile.useQuery(undefined, {
     retry: false,
@@ -221,7 +222,7 @@ export default function Overview() {
                 </p>
               </div>
             </div>
-            {COMMERCIAL_ACTIVATION_STATE.enabled ? (
+            {commercialAvailability.isAvailable ? (
               <Button variant="outline" onClick={() => setLocation('/developer/plans')}>
                 Activate Launch Access
               </Button>

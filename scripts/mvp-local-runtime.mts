@@ -68,6 +68,41 @@ function governedB05EmailCapturePath(): string | null {
 
 const b05EmailCapturePath = governedB05EmailCapturePath();
 
+/**
+ * B06 has its own Developer-only capture mode. The actual verification
+ * message is written by the email boundary, but validate this configuration
+ * at runtime startup so it cannot be accidentally enabled with B05's Agency
+ * fixture or a normal application process.
+ */
+function governedB06EmailCapturePath(): string | null {
+  const capturePath = String(
+    process.env.PROPERTY_LISTIFY_GOVERNED_B06_EMAIL_CAPTURE_PATH || '',
+  ).trim();
+  if (!capturePath) return null;
+
+  const authorized =
+    process.env.NODE_ENV === 'test' &&
+    process.env.APP_ENV === 'test' &&
+    process.env.PROPERTY_LISTIFY_GOVERNED_BROWSER_TEST_FIXTURE === 'true' &&
+    process.env.PROPERTY_LISTIFY_GOVERNED_BROWSER_TEST_PRODUCT_KEYS === 'developer_launch_access' &&
+    Boolean(process.env.DATABASE_AUTHORITY_PARENT_FINGERPRINT) &&
+    Boolean(process.env.DATABASE_AUTHORITY_CORRELATION_ID);
+  if (!authorized) {
+    throw new Error('B06 local email capture requires the governed Developer-only browser fixture.');
+  }
+  if (!/^\/tmp\/property-listify-b06-[a-z0-9._-]+\.jsonl$/i.test(capturePath)) {
+    throw new Error('B06 local email capture path must be a private /tmp/property-listify-b06-*.jsonl artifact.');
+  }
+
+  chmodSync(capturePath, 0o600);
+  return capturePath;
+}
+
+const b06EmailCapturePath = governedB06EmailCapturePath();
+if (b05EmailCapturePath && b06EmailCapturePath) {
+  throw new Error('A governed browser runtime may enable exactly one product-specific email capture mode.');
+}
+
 function captureB05AgencyInvitation(options: {
   to: string;
   subject: string;

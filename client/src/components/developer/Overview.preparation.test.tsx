@@ -46,6 +46,14 @@ vi.mock('wouter', () => ({
   useLocation: () => ['/developer/dashboard', state.setLocation],
 }));
 
+vi.mock('@/hooks/useCommercialProductAvailability', () => ({
+  useCommercialProductAvailability: () => ({
+    isAvailable: false,
+    isError: false,
+    refetch: vi.fn(),
+  }),
+}));
+
 vi.mock('@/lib/trpc', () => ({
   trpc: {
     developer: {

@@ -88,21 +88,44 @@ export function LocationPhase() {
                 onGeocodingError={err => toast.error(err)}
               />
             </div>
-            {/* Hidden anchors for lat/lng field focusing */}
-            <input
-              type="text"
-              data-field="location.latitude"
-              value={developmentData.location.latitude || ''}
-              readOnly
-              className="sr-only"
-            />
-            <input
-              type="text"
-              data-field="location.longitude"
-              value={developmentData.location.longitude || ''}
-              readOnly
-              className="sr-only"
-            />
+            <div className="grid grid-cols-1 gap-4 rounded-lg border border-slate-200 bg-slate-50 p-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="latitude">Latitude</Label>
+                <Input
+                  id="latitude"
+                  data-field="location.latitude"
+                  type="number"
+                  inputMode="decimal"
+                  step="any"
+                  min="-90"
+                  max="90"
+                  placeholder="e.g. -26.2041"
+                  value={developmentData.location.latitude || ''}
+                  onChange={event => handleUpdate({ latitude: event.target.value })}
+                  className="h-11 bg-white"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="longitude">Longitude</Label>
+                <Input
+                  id="longitude"
+                  data-field="location.longitude"
+                  type="number"
+                  inputMode="decimal"
+                  step="any"
+                  min="-180"
+                  max="180"
+                  placeholder="e.g. 28.0473"
+                  value={developmentData.location.longitude || ''}
+                  onChange={event => handleUpdate({ longitude: event.target.value })}
+                  className="h-11 bg-white"
+                />
+              </div>
+              <p className="text-xs text-slate-500 md:col-span-2">
+                If the map is unavailable, enter the verified entrance coordinates. The location is
+                still checked when the development is saved and submitted.
+              </p>
+            </div>
           </div>
 
           <div className="grid gap-6 pt-4 border-t border-slate-100">

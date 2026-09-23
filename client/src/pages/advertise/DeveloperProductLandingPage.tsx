@@ -34,7 +34,7 @@ import {
 import { DeveloperWorkspacePreview } from './DeveloperWorkspacePreview';
 import { COMMERCIAL_HERO_CLASS } from './commercialHero';
 import { getAccountAuthHref, isHomepageHeroJourneyEnabled } from '@/lib/publicNavigation';
-import { COMMERCIAL_ACTIVATION_STATE } from '@shared/commercialActivation';
+import { useCommercialProductAvailability } from '@/hooks/useCommercialProductAvailability';
 
 const DEVELOPER_ACCOUNT_START_HREF = getAccountAuthHref('register', '/developer/setup', {
   registerRole: 'property_developer',
@@ -1075,7 +1075,13 @@ export function DeveloperCommercialLandingPage() {
   );
 }
 
-function DeveloperPreparationLandingPage() {
+function DeveloperPreparationLandingPage({
+  availabilityError,
+  onRetry,
+}: {
+  availabilityError?: boolean;
+  onRetry?: () => void;
+}) {
   return (
     <div className="min-h-screen bg-[var(--surface)] text-slate-950">
       <SEOHead
@@ -1129,6 +1135,21 @@ function DeveloperPreparationLandingPage() {
             </div>
           </div>
         </section>
+
+        {availabilityError ? (
+          <section className="bg-[var(--surface)] px-4 pb-12 sm:px-6 lg:px-8">
+            <div className="mx-auto flex max-w-4xl flex-wrap items-center justify-between gap-4 rounded-2xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-950">
+              <p>Developer Launch Access is temporarily unavailable. Paid actions remain closed.</p>
+              <button
+                type="button"
+                className="font-semibold underline underline-offset-4"
+                onClick={onRetry}
+              >
+                Retry availability check
+              </button>
+            </div>
+          </section>
+        ) : null}
 
         <section className="border-b border-slate-200 bg-white py-24 md:py-32">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -1214,9 +1235,14 @@ function DeveloperPreparationLandingPage() {
 }
 
 export default function DeveloperProductLandingPage() {
-  return COMMERCIAL_ACTIVATION_STATE.enabled ? (
+  const availability = useCommercialProductAvailability('developer_launch_access');
+
+  return availability.isAvailable ? (
     <DeveloperCommercialLandingPage />
   ) : (
-    <DeveloperPreparationLandingPage />
+    <DeveloperPreparationLandingPage
+      availabilityError={availability.isError}
+      onRetry={() => void availability.refetch()}
+    />
   );
 }

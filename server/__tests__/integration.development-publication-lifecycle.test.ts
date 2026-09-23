@@ -32,6 +32,7 @@ import {
   deleteDeveloperTestContext,
   type DeveloperTestContext,
 } from '../test-utils/developerTestContext';
+import { createConfirmedDeveloperTestMedia } from '../test-utils/developerMediaTestFixture';
 import {
   acquireDevelopmentIntegrationMutex,
   DEVELOPMENT_INTEGRATION_MUTEX_HOOK_TIMEOUT_MS,
@@ -97,6 +98,11 @@ async function createDevelopmentFor(
   } = {},
 ) {
   const suffix = options.suffix ?? `${Date.now()}-${Math.floor(Math.random() * 1_000_000)}`;
+  const images =
+    options.images ??
+    (fixture.developerContext
+      ? [await createConfirmedDeveloperTestMedia(fixture.developerContext)]
+      : []);
   const development = await developmentService.createDevelopment(fixture.userId, {
     name: `Lifecycle Development ${suffix}`,
     developmentType: 'residential',
@@ -111,7 +117,7 @@ async function createDevelopmentFor(
     description:
       options.description ??
       'A valid description for the developer submission flow with enough persisted detail to pass review.',
-    images: options.images ?? [{ url: 'https://example.com/lifecycle-hero.jpg', category: 'hero' }],
+    images,
     unitTypes: options.unitTypes ?? [
       {
         name: 'Two Bedroom Apartment',

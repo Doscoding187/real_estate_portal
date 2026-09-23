@@ -27,6 +27,7 @@ import {
 } from './billingProofStorage';
 import { deliverPendingAgencyInvitations } from './agencyInvitationDeliveryService';
 import { resolveCurrentAgencyMembershipForAgent } from './agencyMembershipService';
+import { resolveDeveloperActorForUser } from './developerActorResolution';
 import { activatePaidLaunchAccessForOwner, type SubscriptionOwnerType } from './planAccessService';
 import {
   isCommercialActivationAvailable,
@@ -893,25 +894,17 @@ async function assertDeveloperOwner(db: DbOrTx, user: BillingUser): Promise<numb
     });
   }
 
-  const [membership] = await db
-    .select({ organisationId: developerOrganisationMemberships.organisationId })
-    .from(developerOrganisationMemberships)
-    .innerJoin(
-      developerOrganisations,
-      eq(developerOrganisationMemberships.organisationId, developerOrganisations.id),
-    )
-    .where(
-      and(
-        eq(developerOrganisationMemberships.userId, user.id),
-        eq(developerOrganisationMemberships.status, 'active'),
-        eq(developerOrganisations.status, 'approved'),
-      ),
-    )
-    .limit(1);
-  if (!membership) {
+  const actor = await resolveDeveloperActorForUser(db, user.id);
+  if (!actor) {
     throw new TRPCError({ code: 'NOT_FOUND', message: 'Developer profile not found.' });
   }
-  return Number(membership.organisationId);
+  if (actor.organisation.status !== 'approved') {
+    throw new TRPCError({
+      code: 'PRECONDITION_FAILED',
+      message: 'Developer organisation approval is required before Launch Access billing.',
+    });
+  }
+  return actor.organisationId;
 }
 
 type LaunchBillingOwnerType = 'agent' | 'agency' | 'developer';
@@ -3260,26 +3253,13 @@ export async function getBillingDocumentForUser(input: { user: BillingUser; docu
   const isFinanceAdmin = isBillingFinanceAdmin(input.user);
   const isOwningAgencyUser =
     document.ownerType === 'agency' && Number(input.user.agencyId || 0) === document.ownerId;
-  const [developerOrganisation] =
+  const developerActor =
     input.user.role === 'property_developer'
-      ? await db
-          .select({ id: developerOrganisations.id })
-          .from(developerOrganisations)
-          .innerJoin(
-            developerOrganisationMemberships,
-            eq(developerOrganisationMemberships.organisationId, developerOrganisations.id),
-          )
-          .where(
-            and(
-              eq(developerOrganisationMemberships.userId, input.user.id),
-              eq(developerOrganisationMemberships.status, 'active'),
-            ),
-          )
-          .limit(1)
-      : [];
+      ? await resolveDeveloperActorForUser(db, input.user.id)
+      : null;
   const isOwningDeveloperUser =
     document.ownerType === 'developer' &&
-    Number(developerOrganisation?.id || 0) === document.ownerId;
+    Number(developerActor?.organisationId || 0) === document.ownerId;
   const isOwningAgentUser =
     document.ownerType === 'agent' &&
     input.user.role === 'agent' &&

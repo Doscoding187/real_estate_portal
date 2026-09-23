@@ -40,7 +40,7 @@ import { trpc } from '@/lib/trpc';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { CommercialActivationNotice } from '@/components/commercial/CommercialActivationNotice';
-import { COMMERCIAL_ACTIVATION_STATE } from '@shared/commercialActivation';
+import { useCommercialProductAvailability } from '@/hooks/useCommercialProductAvailability';
 
 const PLAN_STYLES = [
   {
@@ -94,7 +94,9 @@ export function CommercialDeveloperPlans() {
     },
   });
 
-  const products = catalog?.products || [];
+  const products = (catalog?.products || []).filter(
+    product => product.productKey === 'developer_launch_access',
+  );
   const currentPlanId = subscription?.commercial?.entitled
     ? (subscription.commercial.planId ?? null)
     : null;
@@ -107,11 +109,6 @@ export function CommercialDeveloperPlans() {
 
   const continueWithProduct = () => {
     if (!selectedProduct) return;
-    if (!COMMERCIAL_ACTIVATION_STATE.enabled) {
-      setSelectedProduct(null);
-      setLocation('/developer/dashboard');
-      return;
-    }
     if (
       selectedProduct.audience === 'developer' &&
       selectedProduct.term.kind === 'paid_launch_access' &&
@@ -299,9 +296,7 @@ export function CommercialDeveloperPlans() {
                       >
                         {isCurrentPlan
                           ? 'Current Plan'
-                          : COMMERCIAL_ACTIVATION_STATE.enabled
-                            ? action.label
-                            : 'Prepare workspace'}
+                          : action.label}
                         {!isCurrentPlan && <ArrowUpRight className="ml-2 h-4 w-4" />}
                       </Button>
                     </div>
@@ -348,8 +343,9 @@ export function CommercialDeveloperPlans() {
                 {getCommercialPricePresentation(selectedProduct).period || ''}
               </p>
               <p>
-                Commercial activation remains unavailable during this onboarding phase and will
-                require the approved payment and entitlement workflow later.
+                Developer Launch Access is once-off for 90 days and does not renew automatically.
+                An invoice is reusable while payment remains pending; selecting it never grants
+                publication or paid access.
               </p>
               <p>No promotion is shown unless it is configured by the commercial catalog.</p>
             </div>
@@ -361,9 +357,7 @@ export function CommercialDeveloperPlans() {
             <Button onClick={continueWithProduct} disabled={requestLaunchInvoice.isPending}>
               {requestLaunchInvoice.isPending
                 ? 'Requesting invoice…'
-                : COMMERCIAL_ACTIVATION_STATE.enabled
-                  ? 'Continue'
-                  : 'Open preparation workspace'}
+                : 'Continue'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -372,7 +366,13 @@ export function CommercialDeveloperPlans() {
   );
 }
 
-function PreparationDeveloperPlans() {
+function PreparationDeveloperPlans({
+  availabilityError,
+  onRetry,
+}: {
+  availabilityError?: boolean;
+  onRetry?: () => void;
+}) {
   const [, setLocation] = useLocation();
 
   return (
@@ -408,6 +408,15 @@ function PreparationDeveloperPlans() {
           <CommercialActivationNotice />
         </div>
 
+        {availabilityError ? (
+          <div className="mx-auto mb-6 flex max-w-3xl flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+            <p>Developer Launch Access could not be verified. Paid actions remain closed.</p>
+            <Button type="button" variant="outline" size="sm" onClick={onRetry}>
+              Retry availability check
+            </Button>
+          </div>
+        ) : null}
+
         <Card className="mx-auto max-w-2xl p-8 text-center">
           <Building2 className="mx-auto h-10 w-10 text-blue-600" />
           <h2 className="mt-4 text-2xl font-semibold text-slate-900">
@@ -432,9 +441,14 @@ function PreparationDeveloperPlans() {
 }
 
 export default function DeveloperPlans() {
-  return COMMERCIAL_ACTIVATION_STATE.enabled ? (
+  const availability = useCommercialProductAvailability('developer_launch_access');
+
+  return availability.isAvailable ? (
     <CommercialDeveloperPlans />
   ) : (
-    <PreparationDeveloperPlans />
+    <PreparationDeveloperPlans
+      availabilityError={availability.isError}
+      onRetry={() => void availability.refetch()}
+    />
   );
 }

@@ -12,6 +12,7 @@ import {
 } from '../../drizzle/schema';
 import { getDb } from '../db';
 import { resolveCurrentAgencyMembershipForAgent } from './agencyMembershipService';
+import { resolveDeveloperActorForUser } from './developerActorResolution';
 import {
   calculateCommercialTermEnd,
   getCommercialProductKey,
@@ -358,30 +359,14 @@ async function getOwnerContextForUser(
   }
 
   if (user.role === 'property_developer') {
-    const [membership] = await db
-      .select({ organisationId: developerOrganisationMemberships.organisationId })
-      .from(developerOrganisationMemberships)
-      .innerJoin(
-        developerOrganisations,
-        eq(developerOrganisationMemberships.organisationId, developerOrganisations.id),
-      )
-      .where(
-        and(
-          eq(developerOrganisationMemberships.userId, user.id),
-          eq(developerOrganisationMemberships.status, 'active'),
-          eq(developerOrganisations.status, 'approved'),
-        ),
-      )
-      .orderBy(developerOrganisationMemberships.id)
-      .limit(1);
-
     // Commercial access is owned by the Developer Organisation, not the
     // login row. Do not fall back to user.id or the retired developers row.
-    if (!membership) return null;
+    const actor = await resolveDeveloperActorForUser(db, user.id);
+    if (!actor || actor.organisation.status !== 'approved') return null;
 
     return {
       ownerType: 'developer',
-      ownerId: Number(membership.organisationId),
+      ownerId: actor.organisationId,
       ownerSource: 'developer_membership',
     };
   }

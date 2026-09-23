@@ -33,7 +33,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { CommercialActivationNotice } from '@/components/commercial/CommercialActivationNotice';
-import { COMMERCIAL_ACTIVATION_STATE } from '@shared/commercialActivation';
+import { useCommercialProductAvailability } from '@/hooks/useCommercialProductAvailability';
 
 const PLAN_PRESENTATION = {
   trial: {
@@ -72,14 +72,27 @@ function formatInvoiceAmount(amountMinor: number | null | undefined): string {
  * workspace unmounted until the separately authorised enabled runtime.
  */
 export default function BillingPanel() {
-  if (!COMMERCIAL_ACTIVATION_STATE.enabled) {
-    return <PreparationDeveloperBillingPanel />;
+  const availability = useCommercialProductAvailability('developer_launch_access');
+
+  if (!availability.isAvailable) {
+    return (
+      <PreparationDeveloperBillingPanel
+        availabilityError={availability.isError}
+        onRetry={() => void availability.refetch()}
+      />
+    );
   }
 
   return <CommercialDeveloperBillingPanel />;
 }
 
-function PreparationDeveloperBillingPanel() {
+function PreparationDeveloperBillingPanel({
+  availabilityError,
+  onRetry,
+}: {
+  availabilityError?: boolean;
+  onRetry?: () => void;
+}) {
   const [, setLocation] = useLocation();
 
   return (
@@ -122,6 +135,14 @@ function PreparationDeveloperBillingPanel() {
               Resume private drafts
             </Button>
           </div>
+          {availabilityError ? (
+            <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+              <p>Developer Launch Access could not be verified. Paid actions remain closed.</p>
+              <Button type="button" variant="outline" size="sm" onClick={onRetry}>
+                Retry availability check
+              </Button>
+            </div>
+          ) : null}
         </CardContent>
       </Card>
     </section>
@@ -157,7 +178,7 @@ export function CommercialDeveloperBillingPanel() {
   });
   const submitProof = trpc.billing.submitDeveloperPaymentProof.useMutation({
     onSuccess: async () => {
-      await workspaceQuery.refetch();
+      await Promise.all([refetch(), workspaceQuery.refetch()]);
       setProofFile(null);
       setBankReference('');
       toast.success('Proof submitted for finance review');
@@ -212,10 +233,6 @@ export function CommercialDeveloperBillingPanel() {
   }, [activeInvoice, paymentAmount]);
 
   const handleProofSubmit = async () => {
-    if (!COMMERCIAL_ACTIVATION_STATE.enabled) {
-      toast.info(COMMERCIAL_ACTIVATION_STATE.message);
-      return;
-    }
     if (!activeInvoice) {
       toast.error('Request an invoice before submitting payment proof');
       return;
@@ -264,7 +281,7 @@ export function CommercialDeveloperBillingPanel() {
     return (
       <div className="space-y-4">
         <CommercialActivationNotice />
-        {activeInvoice && COMMERCIAL_ACTIVATION_STATE.enabled && (
+        {activeInvoice && (
           <DeveloperManualEftPanel
             invoice={activeInvoice}
             bankDetails={workspace?.bankDetails}
@@ -464,7 +481,7 @@ export function CommercialDeveloperBillingPanel() {
         </CardContent>
       </Card>
 
-      {activeInvoice && COMMERCIAL_ACTIVATION_STATE.enabled && (
+      {activeInvoice && (
         <DeveloperManualEftPanel
           invoice={activeInvoice}
           bankDetails={workspace?.bankDetails}

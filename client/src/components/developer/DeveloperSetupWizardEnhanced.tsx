@@ -50,6 +50,47 @@ const STEPS = [
   { id: 4, title: 'Review', icon: FileText },
 ];
 
+const DEVELOPER_REGISTRATION_DRAFT_KEY = 'developer-registration-draft';
+
+type OwnedDeveloperRegistrationDraft = {
+  ownerUserId: string;
+  draft: Record<string, any>;
+};
+
+const developerRegistrationDraftKeyForUser = (userId: string) =>
+  `${DEVELOPER_REGISTRATION_DRAFT_KEY}:user-${encodeURIComponent(userId)}`;
+
+const readOwnedDeveloperRegistrationDraft = (userId: string | null) => {
+  if (!userId || typeof window === 'undefined') return null;
+
+  const key = developerRegistrationDraftKeyForUser(userId);
+  const raw = localStorage.getItem(key);
+  if (!raw) return null;
+
+  try {
+    const candidate = JSON.parse(raw) as OwnedDeveloperRegistrationDraft;
+    if (
+      !candidate ||
+      String(candidate.ownerUserId) !== userId ||
+      !candidate.draft ||
+      typeof candidate.draft !== 'object'
+    ) {
+      localStorage.removeItem(key);
+      return null;
+    }
+
+    return candidate.draft;
+  } catch {
+    localStorage.removeItem(key);
+    return null;
+  }
+};
+
+const clearOwnedDeveloperRegistrationDraft = (userId: string | null) => {
+  if (!userId || typeof window === 'undefined') return;
+  localStorage.removeItem(developerRegistrationDraftKeyForUser(userId));
+};
+
 export default function DeveloperSetupWizardEnhanced() {
   const [step, setStep] = useState(1);
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
@@ -99,7 +140,9 @@ export default function DeveloperSetupWizardEnhanced() {
     retry: false,
     refetchOnWindowFocus: false,
   });
-  const { data: user } = trpc.auth.me.useQuery();
+  const { data: user, isLoading: isUserLoading } = trpc.auth.me.useQuery();
+  const currentUserId = user?.id == null ? null : String(user.id);
+  const authIdentityResolved = !isUserLoading;
   const profileIsExplicitlyAbsent = getProfile.error?.data?.code === 'NOT_FOUND';
 
   const formValues = watch();
@@ -154,9 +197,21 @@ export default function DeveloperSetupWizardEnhanced() {
       ...formValues,
     },
     {
-      storageKey: 'developer-registration-draft',
       debounceMs: 2000,
-      enabled: step > 1 && !createProfile.isPending, // Only auto-save after first step
+      // Private browser state is owned by the authenticated principal.  Do
+      // not write or resume anything while auth is unresolved.
+      enabled:
+        authIdentityResolved &&
+        Boolean(currentUserId) &&
+        step > 1 &&
+        !createProfile.isPending,
+      onSave: draft => {
+        if (!currentUserId || typeof window === 'undefined') return;
+        localStorage.setItem(
+          developerRegistrationDraftKeyForUser(currentUserId),
+          JSON.stringify({ ownerUserId: currentUserId, draft }),
+        );
+      },
       onError: error => {
         console.error('Auto-save error:', error);
         toast.error('Failed to auto-save draft');
@@ -164,78 +219,71 @@ export default function DeveloperSetupWizardEnhanced() {
     },
   );
 
-  // Check for draft on mount and show resume dialog. An existing developer
-  // organisation makes any local registration draft stale — never offer it.
+  // Check for a draft only after authenticated identity resolves. An existing
+  // developer organisation makes any local registration draft stale — never
+  // offer it. The old unowned key is deliberately discarded rather than
+  // transferred to whichever account next opens this browser.
   useEffect(() => {
+    if (!authIdentityResolved || !currentUserId) {
+      setShowResumeDraftDialog(false);
+      return;
+    }
+
+    localStorage.removeItem(DEVELOPER_REGISTRATION_DRAFT_KEY);
+
     if (getProfile.data) {
       setShowResumeDraftDialog(false);
       return;
     }
 
-    const savedDraft = localStorage.getItem('developer-registration-draft');
+    const draft = readOwnedDeveloperRegistrationDraft(currentUserId);
+    const hasMeaningfulProgress =
+      draft?.step > 1 || draft?.name || draft?.specializations?.length > 0;
 
-    if (savedDraft) {
-      try {
-        const draft = JSON.parse(savedDraft);
-
-        // Check if there's meaningful progress (beyond step 1 or has data)
-        const hasMeaningfulProgress =
-          draft.step > 1 || draft.name || draft.specializations?.length > 0;
-
-        if (hasMeaningfulProgress) {
-          setShowResumeDraftDialog(true);
-        }
-      } catch (error) {
-        console.error('Error parsing draft:', error);
-        localStorage.removeItem('developer-registration-draft');
-      }
+    if (hasMeaningfulProgress) {
+      setShowResumeDraftDialog(true);
+    } else {
+      setShowResumeDraftDialog(false);
     }
-  }, [getProfile.data]);
+  }, [authIdentityResolved, currentUserId, getProfile.data]);
 
   // Handle resume draft decision
   const handleResumeDraft = () => {
     setShowResumeDraftDialog(false);
 
-    const savedDraft = localStorage.getItem('developer-registration-draft');
-    if (savedDraft) {
-      try {
-        const draft = JSON.parse(savedDraft);
+    const draft = readOwnedDeveloperRegistrationDraft(currentUserId);
+    if (draft) {
+      // Restore form values
+      reset({
+        name: draft.name || '',
+        description: draft.description || '',
+        category: draft.category || '',
+        establishedYear: draft.establishedYear || null,
+        website: draft.website || '',
+        email: draft.email || user?.email || '',
+        phone: draft.phone || '',
+        address: draft.address || '',
+        city: draft.city || '',
+        province: draft.province || '',
+        logo: draft.logo || null,
+        completedProjects: draft.completedProjects || 0,
+        currentProjects: draft.currentProjects || 0,
+        upcomingProjects: draft.upcomingProjects || 0,
+        specializations: draft.specializations || [],
+        termsAccepted: false,
+      });
 
-        // Restore form values
-        reset({
-          name: draft.name || '',
-          description: draft.description || '',
-          category: draft.category || '',
-          establishedYear: draft.establishedYear || null,
-          website: draft.website || '',
-          email: draft.email || user?.email || '',
-          phone: draft.phone || '',
-          address: draft.address || '',
-          city: draft.city || '',
-          province: draft.province || '',
-          logo: draft.logo || null,
-          completedProjects: draft.completedProjects || 0,
-          currentProjects: draft.currentProjects || 0,
-          upcomingProjects: draft.upcomingProjects || 0,
-          specializations: draft.specializations || [],
-          termsAccepted: false,
-        });
+      // Restore wizard state
+      setStep(draft.step || 1);
+      setCompletedSteps(draft.completedSteps || []);
 
-        // Restore wizard state
-        setStep(draft.step || 1);
-        setCompletedSteps(draft.completedSteps || []);
-
-        toast.success('Draft restored successfully!');
-      } catch (error) {
-        console.error('Error restoring draft:', error);
-        toast.error('Failed to restore draft');
-      }
+      toast.success('Draft restored successfully!');
     }
   };
 
   const handleStartFresh = () => {
     setShowResumeDraftDialog(false);
-    localStorage.removeItem('developer-registration-draft');
+    clearOwnedDeveloperRegistrationDraft(currentUserId);
     reset({
       name: '',
       description: '',
@@ -388,8 +436,8 @@ export default function DeveloperSetupWizardEnhanced() {
           : 'Profile submitted. Continue in your dashboard while we review it.',
       );
 
-      // Clear the draft from localStorage
-      localStorage.removeItem('developer-registration-draft');
+      // Clear only the authenticated principal's draft.
+      clearOwnedDeveloperRegistrationDraft(currentUserId);
 
       setLocation('/developer/dashboard?setup=complete');
     } catch (error: any) {

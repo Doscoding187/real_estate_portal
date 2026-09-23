@@ -5,8 +5,14 @@ import DeveloperProductLandingPage, {
   DeveloperCommercialLandingPage,
 } from './DeveloperProductLandingPage';
 
+const availabilityMock = vi.hoisted(() => vi.fn());
+
 vi.mock('@/hooks/useCommercialCatalog', () => ({
   useCommercialCatalog: vi.fn(),
+}));
+
+vi.mock('@/hooks/useCommercialProductAvailability', () => ({
+  useCommercialProductAvailability: (...args: unknown[]) => availabilityMock(...args),
 }));
 
 vi.mock('@/components/EnhancedNavbar', () => ({
@@ -65,6 +71,11 @@ const developerProduct = {
 } as unknown as CommercialProduct;
 
 beforeEach(() => {
+  availabilityMock.mockReturnValue({
+    isAvailable: false,
+    isError: false,
+    refetch: vi.fn(),
+  });
   useCatalogMock.mockReturnValue({
     data: {
       authority: {
@@ -136,6 +147,22 @@ describe('public Developer product landing page', () => {
     expect(
       screen.queryByRole('link', { name: /Contact Property Listify/i }),
     ).not.toBeInTheDocument();
+  });
+
+  it('mounts the paid surface only for the exact Developer Launch Access product', () => {
+    availabilityMock.mockReturnValue({
+      isAvailable: true,
+      isError: false,
+      refetch: vi.fn(),
+    });
+
+    render(<DeveloperProductLandingPage />);
+
+    expect(availabilityMock).toHaveBeenCalledWith('developer_launch_access');
+    expect(screen.getAllByText('Developer Launch Access').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('R1,499').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('90 days').length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/No automatic renewal/i).length).toBeGreaterThan(0);
   });
 
   it('retains the catalog-driven commercial presentation for a separately enabled runtime', () => {

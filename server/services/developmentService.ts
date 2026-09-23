@@ -21,6 +21,11 @@ import { buildDevelopmentRootPath } from './developmentRouteAuthority';
 import { developerIdentityService } from './developerIdentityService';
 import { getDeveloperPublicationAccess } from './developerPublicationAccess';
 import { publicDevelopmentDetailService } from './publicDevelopmentDetailService';
+import {
+  assertConfirmedDeveloperMediaAttachment,
+  type DeveloperMediaCategory,
+} from './developerMediaAuthority';
+import { resolveMediaDeliveryUrl } from '../_core/mediaStorage';
 
 import {
   developments,
@@ -242,6 +247,285 @@ function normalizeImages(input: unknown): unknown[] {
     }
   }
   return [];
+}
+
+type DeveloperMediaWriteContext = {
+  userId: number;
+  organisationId: number;
+  publisherId: number;
+  developmentId: number | null;
+};
+
+function parseMediaCollection(value: unknown): unknown[] {
+  if (Array.isArray(value)) return value;
+  if (value === null || value === undefined || value === '') return [];
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed : [value];
+    } catch {
+      return [value];
+    }
+  }
+  return [value];
+}
+
+function mediaAttachmentKey(value: unknown): string | null {
+  if (typeof value === 'string') return value.trim() || null;
+  if (!value || typeof value !== 'object') return null;
+  const item = value as Record<string, unknown>;
+  for (const candidate of [item.storageKey, item.key, item.url]) {
+    if (typeof candidate === 'string' && candidate.trim()) return candidate.trim();
+  }
+  return null;
+}
+
+function findExistingMediaAttachment(value: unknown, existing: unknown[]): unknown | null {
+  const key = mediaAttachmentKey(value);
+  if (!key) return null;
+  return (
+    existing.find(item => {
+      const itemKey = mediaAttachmentKey(item);
+      if (itemKey === key) return true;
+      if (!item || typeof item !== 'object' || !value || typeof value !== 'object') return false;
+      const itemRecord = item as Record<string, unknown>;
+      const valueRecord = value as Record<string, unknown>;
+      return (
+        typeof itemRecord.url === 'string' &&
+        itemRecord.url === valueRecord.url &&
+        typeof itemRecord.storageKey === 'string' &&
+        itemRecord.storageKey === valueRecord.storageKey
+      );
+    }) ?? null
+  );
+}
+
+function expectedMediaType(category: DeveloperMediaCategory): 'image' | 'video' | 'floorplan' | 'pdf' {
+  if (category === 'development_image' || category === 'unit_gallery') return 'image';
+  if (category === 'development_video') return 'video';
+  if (category === 'development_document') return 'pdf';
+  return 'floorplan';
+}
+
+async function authorizeDeveloperMediaCollection(input: {
+  incoming: unknown;
+  existing: unknown[];
+  category: DeveloperMediaCategory;
+  context: DeveloperMediaWriteContext;
+  receiptDevelopmentId: number | null;
+  receiptUnitId: string | null;
+}): Promise<unknown[]> {
+  const entries = parseMediaCollection(input.incoming);
+  const authorized: unknown[] = [];
+  for (const entry of entries) {
+    const retained = findExistingMediaAttachment(entry, input.existing);
+    if (retained !== null) {
+      // Existing persisted attachments are already authorised business data.
+      // Retaining/reordering/removing them never asks a Developer to upload a
+      // legitimate historical object again.
+      authorized.push(retained);
+      continue;
+    }
+    if (!entry || typeof entry !== 'object') {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'New Developer media must use a confirmed media receipt, not a URL.',
+      });
+    }
+    const item = entry as Record<string, unknown>;
+    const uploadReceipt =
+      typeof item.uploadReceipt === 'string'
+        ? item.uploadReceipt
+        : typeof item.mediaReceipt === 'string'
+          ? item.mediaReceipt
+          : null;
+    if (!uploadReceipt) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'New Developer media must be reserved, uploaded, and confirmed before attachment.',
+      });
+    }
+
+    let receipt;
+    try {
+      receipt = await assertConfirmedDeveloperMediaAttachment(uploadReceipt, {
+        userId: input.context.userId,
+        organisationId: input.context.organisationId,
+        publisherId: input.context.publisherId,
+        developmentId: input.receiptDevelopmentId,
+        unitId: input.receiptUnitId,
+        category: input.category,
+        mediaType: expectedMediaType(input.category),
+      });
+    } catch (error) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: error instanceof Error ? error.message : 'Developer media confirmation is invalid.',
+      });
+    }
+    const canonicalUrl = resolveMediaDeliveryUrl(receipt.key);
+    if (!canonicalUrl) {
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message: 'Developer media storage delivery is unavailable.',
+      });
+    }
+    const suppliedUrl = typeof item.url === 'string' ? item.url.trim() : '';
+    const suppliedKey =
+      typeof item.storageKey === 'string'
+        ? item.storageKey.trim()
+        : typeof item.key === 'string'
+          ? item.key.trim()
+          : '';
+    if ((suppliedUrl && suppliedUrl !== canonicalUrl) || (suppliedKey && suppliedKey !== receipt.key)) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'Developer media attachment does not match its confirmed storage object.',
+      });
+    }
+    authorized.push({
+      ...item,
+      url: canonicalUrl,
+      storageKey: receipt.key,
+      key: receipt.key,
+      mediaReceipt: uploadReceipt,
+      type: receipt.mediaType,
+      fileName: receipt.fileName,
+      fileSize: receipt.fileSize,
+    });
+  }
+  return authorized;
+}
+
+async function authorizeDeveloperDevelopmentMedia(input: {
+  database: any;
+  context: DeveloperMediaWriteContext;
+  incoming: {
+    images?: unknown;
+    videos?: unknown;
+    floorPlans?: unknown;
+    brochures?: unknown;
+    unitTypes?: unknown;
+  };
+  existing?: {
+    images?: unknown;
+    videos?: unknown;
+    floorPlans?: unknown;
+    brochures?: unknown;
+  };
+}) {
+  const result: Record<string, unknown> = {};
+  const existing = input.existing ?? {};
+  if (input.incoming.images !== undefined) {
+    result.images = await authorizeDeveloperMediaCollection({
+      incoming: input.incoming.images,
+      existing: parseMediaCollection(existing.images),
+      category: 'development_image',
+      context: input.context,
+      receiptDevelopmentId: input.context.developmentId,
+      receiptUnitId: null,
+    });
+  }
+  if (input.incoming.videos !== undefined) {
+    result.videos = await authorizeDeveloperMediaCollection({
+      incoming: input.incoming.videos,
+      existing: parseMediaCollection(existing.videos),
+      category: 'development_video',
+      context: input.context,
+      receiptDevelopmentId: input.context.developmentId,
+      receiptUnitId: null,
+    });
+  }
+  if (input.incoming.floorPlans !== undefined) {
+    result.floorPlans = await authorizeDeveloperMediaCollection({
+      incoming: input.incoming.floorPlans,
+      existing: parseMediaCollection(existing.floorPlans),
+      category: 'development_floorplan',
+      context: input.context,
+      receiptDevelopmentId: input.context.developmentId,
+      receiptUnitId: null,
+    });
+  }
+  if (input.incoming.brochures !== undefined) {
+    result.brochures = await authorizeDeveloperMediaCollection({
+      incoming: input.incoming.brochures,
+      existing: parseMediaCollection(existing.brochures),
+      category: 'development_document',
+      context: input.context,
+      receiptDevelopmentId: input.context.developmentId,
+      receiptUnitId: null,
+    });
+  }
+
+  if (input.incoming.unitTypes !== undefined) {
+    if (!Array.isArray(input.incoming.unitTypes)) {
+      throw new TRPCError({ code: 'BAD_REQUEST', message: 'Unit media requires a unit type array.' });
+    }
+    const currentUnits =
+      input.context.developmentId === null
+        ? []
+        : await input.database
+            .select({ id: unitTypes.id, baseMedia: unitTypes.baseMedia })
+            .from(unitTypes)
+            .where(eq(unitTypes.developmentId, input.context.developmentId));
+    const existingById = new Map(
+      currentUnits.map((unit: any) => [String(unit.id), parseJsonMaybeTwice(unit.baseMedia, {})]),
+    );
+
+    result.unitTypes = await Promise.all(
+      input.incoming.unitTypes.map(async (rawUnit: any) => {
+        if (!rawUnit || typeof rawUnit !== 'object' || rawUnit.baseMedia === undefined) return rawUnit;
+        const unitId = typeof rawUnit.id === 'string' ? rawUnit.id.trim() : '';
+        const existingBaseMedia = unitId ? existingById.get(unitId) : undefined;
+        const isPersistedUnit = Boolean(existingBaseMedia);
+        const rawBaseMedia =
+          typeof rawUnit.baseMedia === 'string'
+            ? parseJsonMaybeTwice(rawUnit.baseMedia, {})
+            : rawUnit.baseMedia;
+        if (!rawBaseMedia || typeof rawBaseMedia !== 'object') {
+          throw new TRPCError({ code: 'BAD_REQUEST', message: 'Unit media is invalid.' });
+        }
+        const baseMedia = rawBaseMedia as Record<string, unknown>;
+        const existingMedia =
+          existingBaseMedia && typeof existingBaseMedia === 'object'
+            ? (existingBaseMedia as Record<string, unknown>)
+            : {};
+        const receiptDevelopmentId = input.context.developmentId;
+        const receiptUnitId = isPersistedUnit ? unitId : null;
+        return {
+          ...rawUnit,
+          baseMedia: {
+            ...baseMedia,
+            ...(baseMedia.gallery !== undefined
+              ? {
+                  gallery: await authorizeDeveloperMediaCollection({
+                    incoming: baseMedia.gallery,
+                    existing: parseMediaCollection(existingMedia.gallery),
+                    category: 'unit_gallery',
+                    context: input.context,
+                    receiptDevelopmentId,
+                    receiptUnitId,
+                  }),
+                }
+              : {}),
+            ...(baseMedia.floorPlans !== undefined
+              ? {
+                  floorPlans: await authorizeDeveloperMediaCollection({
+                    incoming: baseMedia.floorPlans,
+                    existing: parseMediaCollection(existingMedia.floorPlans),
+                    category: 'unit_floorplan',
+                    context: input.context,
+                    receiptDevelopmentId,
+                    receiptUnitId,
+                  }),
+                }
+              : {}),
+          },
+        };
+      }),
+    );
+  }
+  return result;
 }
 
 function stringifyJsonValue(value: unknown, fallback: unknown): string {
@@ -791,7 +1075,7 @@ export async function createDevelopment(
   if (!db) throw new Error('Database not available');
 
   const { cataloguePublisherId, ownerType, ...restMetadata } = metadata;
-  const {
+  let {
     unitTypes: unitTypesData,
     amenities: amenitiesData,
     estateSpecs: estateSpecsData,
@@ -897,6 +1181,32 @@ export async function createDevelopment(
             : `Catalogue Publisher ${targetBrandId} not found`,
       });
     }
+  }
+
+  if (effectiveOwnerType === 'developer') {
+    const authorizedMedia = await authorizeDeveloperDevelopmentMedia({
+      database: db,
+      context: {
+        userId,
+        organisationId: developerProfileId!,
+        publisherId: resolvedCataloguePublisherId!,
+        // A create reservation is intentionally draft-scoped. The newly
+        // allocated development ID does not exist until this write succeeds.
+        developmentId: null,
+      },
+      incoming: {
+        images: imagesData,
+        videos: videosData,
+        floorPlans: floorPlansData,
+        brochures: brochuresData,
+        unitTypes: unitTypesData,
+      },
+    });
+    if ('images' in authorizedMedia) imagesData = authorizedMedia.images;
+    if ('videos' in authorizedMedia) videosData = authorizedMedia.videos;
+    if ('floorPlans' in authorizedMedia) floorPlansData = authorizedMedia.floorPlans;
+    if ('brochures' in authorizedMedia) brochuresData = authorizedMedia.brochures;
+    if ('unitTypes' in authorizedMedia) unitTypesData = authorizedMedia.unitTypes;
   }
 
   // 3) Marketing agency publisher integration is deliberately not part of
@@ -1263,7 +1573,7 @@ export async function updateDevelopment(
     developerPublisherId = devProfile.publisherId;
   }
 
-  const {
+  let {
     unitTypes: unitTypesData,
     amenities: amenitiesData,
     estateSpecs: estateSpecsData,
@@ -1636,6 +1946,42 @@ export async function updateDevelopment(
 
     const persistedPayload = { ...updatePayload };
 
+    if (superAdminCataloguePublisherId === null && current) {
+      const authorizedMedia = await authorizeDeveloperDevelopmentMedia({
+        database: writeDb,
+        context: {
+          userId,
+          organisationId: developerProfileId!,
+          publisherId: developerPublisherId!,
+          developmentId: id,
+        },
+        incoming: {
+          images: imagesData,
+          videos: videosData,
+          floorPlans: floorPlansData,
+          brochures: brochuresData,
+          unitTypes: unitTypesData,
+        },
+        existing: {
+          images: current.images,
+          videos: current.videos,
+          floorPlans: current.floorPlans,
+          brochures: current.brochures,
+        },
+      });
+      if ('images' in authorizedMedia) {
+        persistedPayload.images = JSON.stringify(normalizeImages(authorizedMedia.images));
+      }
+      if ('videos' in authorizedMedia) persistedPayload.videos = JSON.stringify(authorizedMedia.videos);
+      if ('floorPlans' in authorizedMedia) {
+        persistedPayload.floorPlans = JSON.stringify(authorizedMedia.floorPlans);
+      }
+      if ('brochures' in authorizedMedia) {
+        persistedPayload.brochures = JSON.stringify(authorizedMedia.brochures);
+      }
+      if ('unitTypes' in authorizedMedia) unitTypesData = authorizedMedia.unitTypes as any;
+    }
+
     // A live catalogue record cannot be edited in place. Until S1 adds
     // versioned pending revisions, the safe MVP contract is to take the
     // current public record private before the edited catalogue can be
@@ -1939,10 +2285,19 @@ export async function persistUnitTypes(
     `[persistUnitTypes] Processing ${unitTypesData?.length ?? 0} units for development ${developmentId}`,
   );
   if (unitTypesData?.length > 0) {
-    console.log(
-      '[persistUnitTypes] DEBUG FIRST UNIT RAW:',
-      JSON.stringify(unitTypesData[0], null, 2),
-    );
+    const firstUnit = unitTypesData[0] as Record<string, unknown>;
+    const baseMedia =
+      firstUnit?.baseMedia && typeof firstUnit.baseMedia === 'object'
+        ? (firstUnit.baseMedia as Record<string, unknown>)
+        : null;
+    // Receipt strings are short-lived attachment authority. Keep operational
+    // logging useful without emitting them into server or browser-test logs.
+    console.log('[persistUnitTypes] First unit summary:', {
+      id: firstUnit?.id ?? null,
+      name: firstUnit?.name ?? firstUnit?.label ?? null,
+      hasGalleryMedia: Array.isArray(baseMedia?.gallery) && baseMedia.gallery.length > 0,
+      hasFloorPlanMedia: Array.isArray(baseMedia?.floorPlans) && baseMedia.floorPlans.length > 0,
+    });
   }
 
   if (!unitTypesData) {

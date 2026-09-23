@@ -18,6 +18,14 @@ vi.mock('@/hooks/useCommercialCatalog', () => ({
   useCommercialCatalog: (...args: unknown[]) => catalogMock(...args),
 }));
 
+vi.mock('@/hooks/useCommercialProductAvailability', () => ({
+  useCommercialProductAvailability: () => ({
+    isAvailable: false,
+    isError: false,
+    refetch: vi.fn(),
+  }),
+}));
+
 vi.mock('@/lib/trpc', () => ({
   trpc: {
     developer: {

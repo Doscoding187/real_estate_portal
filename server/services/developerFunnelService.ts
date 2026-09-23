@@ -4,6 +4,7 @@ import { db } from '../db';
 import {
   developments,
   cataloguePublishers,
+  developerOrganisationMemberships,
   developerOrganisations,
   distributionAgentAccess,
   distributionIdentities,
@@ -63,11 +64,43 @@ type TransitionParams = {
 
 type AssignParams = {
   developerId: number;
+  organisationId: number;
+  actorUserId: number;
   leadId: number;
   ownerType: LeadOwnerType;
   ownerId: number | null;
   assignmentMode?: 'manual' | 'round_robin' | 'rule_based';
 };
+
+/**
+ * A Developer lead stays in the Developer/publisher custody selected by the
+ * lead query. This check governs only the person responsible for working it.
+ * It uses the canonical membership relationship, never a generic user,
+ * Agency, or client supplied role claim.
+ */
+async function requireActiveDeveloperOperator(params: {
+  organisationId: number;
+  userId: number;
+}) {
+  const [membership] = await db
+    .select({ id: developerOrganisationMemberships.id })
+    .from(developerOrganisationMemberships)
+    .where(
+      and(
+        eq(developerOrganisationMemberships.organisationId, params.organisationId),
+        eq(developerOrganisationMemberships.userId, params.userId),
+        eq(developerOrganisationMemberships.status, 'active'),
+      ),
+    )
+    .limit(1);
+
+  if (!membership) {
+    throw new TRPCError({
+      code: 'FORBIDDEN',
+      message: 'Lead assignee must be an active operator of this Developer organisation.',
+    });
+  }
+}
 
 type ActivityParams = {
   developerId: number;
@@ -155,8 +188,8 @@ export function getAvailableLeadOwnerTypes(
   distributionEnabledForDevelopment: boolean,
 ): LeadOwnerType[] {
   return distributionEnabledForDevelopment
-    ? ['developer_sales', 'agency', 'distribution_partner', 'unassigned']
-    : ['developer_sales', 'agency', 'unassigned'];
+    ? ['developer_sales', 'distribution_partner', 'unassigned']
+    : ['developer_sales', 'unassigned'];
 }
 
 export function evaluateDistributionAssignmentGate(input: {
@@ -808,6 +841,13 @@ export async function listDeveloperLeads(params: FunnelListParams) {
 }
 
 export async function assignDeveloperLead(params: AssignParams) {
+  // Re-read the actor membership at the write boundary so a removed or
+  // suspended operator cannot assign through a stale workspace projection.
+  await requireActiveDeveloperOperator({
+    organisationId: params.organisationId,
+    userId: params.actorUserId,
+  });
+
   const row = await getDeveloperLeadRow(params.developerId, params.leadId);
   const leadDevelopmentId = Number(row.lead.developmentId || 0);
   if (!Number.isFinite(leadDevelopmentId) || leadDevelopmentId <= 0) {
@@ -821,6 +861,16 @@ export async function assignDeveloperLead(params: AssignParams) {
     leadDevelopmentId,
   ]);
   const distributionEnabledForDevelopment = distributionEnabledMap.get(leadDevelopmentId) === true;
+
+  // Agency assignment is not an ordinary Developer authority. Separately
+  // governed distribution assignment remains behind its existing policy gate.
+  if (params.ownerType === 'agency') {
+    throw new TRPCError({
+      code: 'FORBIDDEN',
+      message: 'Agency users cannot be assigned as ordinary Developer lead operators.',
+    });
+  }
+
   const availableOwnerTypes = getAvailableLeadOwnerTypes(distributionEnabledForDevelopment);
 
   if (!availableOwnerTypes.includes(params.ownerType)) {
@@ -869,10 +919,23 @@ export async function assignDeveloperLead(params: AssignParams) {
     }
   }
 
-  if (params.ownerType === 'developer_sales' && !params.ownerId) {
+  if (params.ownerType === 'developer_sales') {
+    if (!params.ownerId) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'ownerId is required when ownerType is developer_sales.',
+      });
+    }
+    await requireActiveDeveloperOperator({
+      organisationId: params.organisationId,
+      userId: params.ownerId,
+    });
+  }
+
+  if (params.ownerType === 'unassigned' && params.ownerId !== null) {
     throw new TRPCError({
       code: 'BAD_REQUEST',
-      message: 'ownerId is required when ownerType is developer_sales.',
+      message: 'ownerId must be empty when a Developer lead is unassigned.',
     });
   }
 
@@ -885,10 +948,6 @@ export async function assignDeveloperLead(params: AssignParams) {
     updateSet.assignedTo = params.ownerId || null;
     updateSet.assignedAt = now;
     updateSet.notes = appendOwnerOverride(row.lead.notes, 'developer_sales');
-  } else if (params.ownerType === 'agency') {
-    updateSet.assignedTo = params.ownerId || null;
-    updateSet.assignedAt = now;
-    updateSet.notes = appendOwnerOverride(row.lead.notes, 'agency');
   } else if (params.ownerType === 'distribution_partner') {
     updateSet.assignedTo = params.ownerId || null;
     updateSet.assignedAt = now;

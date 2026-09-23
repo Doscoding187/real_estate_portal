@@ -7,6 +7,7 @@ import {
   writeLocalMediaObject,
 } from './mediaStorage';
 import { verifyListingMediaUploadToken } from '../services/listingMediaAuthority';
+import { verifyDeveloperMediaUploadReceipt } from '../services/developerMediaAuthority';
 import {
   verifyLandEvidenceDeliveryToken,
   verifyLandEvidenceUploadReservation,
@@ -40,8 +41,15 @@ async function handleLocalMediaUpload(req: Request, res: Response): Promise<void
     try {
       reservation = verifyListingMediaUploadToken(token, { requireConfirmed: false });
     } catch {
-      const privateReservation = verifyLandEvidenceUploadReservation(token);
-      reservation = { ...privateReservation, mediaType: privateReservation.contentType === 'application/pdf' ? 'pdf' : 'image' };
+      try {
+        reservation = verifyDeveloperMediaUploadReceipt(token, { requireConfirmed: false });
+      } catch {
+        const privateReservation = verifyLandEvidenceUploadReservation(token);
+        reservation = {
+          ...privateReservation,
+          mediaType: privateReservation.contentType === 'application/pdf' ? 'pdf' : 'image',
+        };
+      }
     }
     const requestContentType = String(req.headers['content-type'] || '')
       .split(';', 1)[0]

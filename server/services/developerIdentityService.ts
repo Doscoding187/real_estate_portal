@@ -11,6 +11,10 @@ import {
 } from '../../drizzle/schema';
 import { assertCataloguePublisherContentMutation } from './cataloguePublisherMutationPolicy';
 import { publicDevelopmentEligibilityConditions } from './publicDevelopmentEligibility';
+import {
+  resolveDeveloperActorForUser,
+  type DeveloperActorResolution,
+} from './developerActorResolution';
 
 export type PublisherAuthorityKind = 'platform_reference' | 'developer_first_party';
 export type DeveloperOrganisationStatus = 'pending' | 'approved' | 'rejected';
@@ -156,6 +160,10 @@ function identityFromRows(
     rejectionReason: organisation.rejectionReason,
     cataloguePublisherId: publisher.id,
   };
+}
+
+function identityFromResolution(resolution: DeveloperActorResolution): DeveloperIdentity {
+  return identityFromRows(resolution.organisation, resolution.membership, resolution.publisher);
 }
 
 async function loadIdentityForMembership(database: any, membershipId: number) {
@@ -307,24 +315,8 @@ export async function createDeveloperOrganisation(input: CreateDeveloperOrganisa
 export async function getDeveloperByUserId(userId: number): Promise<DeveloperIdentity | null> {
   const database = await getDb();
   if (!database) throw new Error('Database not available');
-  const memberships = await database
-    .select({ id: developerOrganisationMemberships.id })
-    .from(developerOrganisationMemberships)
-    .where(
-      and(
-        eq(developerOrganisationMemberships.userId, userId),
-        eq(developerOrganisationMemberships.status, 'active'),
-      ),
-    )
-    .orderBy(asc(developerOrganisationMemberships.id));
-
-  if (memberships.length > 1) {
-    throw new TRPCError({
-      code: 'CONFLICT',
-      message: 'Multiple active developer organisations require an explicit organisation context.',
-    });
-  }
-  return memberships[0] ? loadIdentityForMembership(database, memberships[0].id) : null;
+  const resolution = await resolveDeveloperActorForUser(database, userId);
+  return resolution ? identityFromResolution(resolution) : null;
 }
 
 export async function requireDeveloperIdentityByUserId(userId: number): Promise<DeveloperIdentity> {
@@ -842,6 +834,7 @@ export const developerIdentityService = {
   createDeveloperOrganisation,
   resubmitRejectedDeveloperOrganisation,
   getDeveloperByUserId,
+  resolveDeveloperActorForUser,
   requireDeveloperIdentityByUserId,
   getPublisherById,
   getPublisherBySlug,

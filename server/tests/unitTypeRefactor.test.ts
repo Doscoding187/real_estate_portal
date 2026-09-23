@@ -8,6 +8,7 @@ import {
   deleteDeveloperTestContext,
   type DeveloperTestContext,
 } from '../test-utils/developerTestContext';
+import { createConfirmedDeveloperTestMedia } from '../test-utils/developerMediaTestFixture';
 
 // Mock Data
 const TEST_DEV_NAME = 'Integration Test Dev Refactor';
@@ -114,8 +115,10 @@ describeWithDb('Unit Type Refactoring Integration', () => {
   });
 
   it('should persist V2 unit types correctly', async () => {
+    if (!developerContext) throw new Error('Developer fixture was not created.');
     const payload = {
       ...TEST_DEV_DATA,
+      images: [await createConfirmedDeveloperTestMedia(developerContext)],
       unitTypes: V2_UNIT_DATA,
     };
 
