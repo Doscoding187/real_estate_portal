@@ -7,6 +7,10 @@ import {
 import { getCacheHealth } from './cache/redis';
 import { getAuthRateLimitStoreHealth, type AuthRateLimitStoreHealth } from './authRateLimitStore';
 import { resolveAppRuntimeEnv } from './runtimeBootstrap';
+import {
+  getPublicLeadRateLimitStoreHealth,
+  type PublicLeadRateLimitStoreHealth,
+} from '../services/publicLeadRateLimitService';
 
 export interface ApiHealthResponse {
   ok: true;
@@ -26,6 +30,7 @@ export interface ApiReadinessResponse {
   db: LayeredDatabaseReadiness;
   cache: { ok: boolean; mode: 'redis' | 'memory' };
   authRateLimit: AuthRateLimitStoreHealth;
+  publicLeadRateLimit: PublicLeadRateLimitStoreHealth;
   s3: { ok: boolean; required: boolean };
 }
 
@@ -96,15 +101,22 @@ export async function buildApiReadinessResponse(
     authRateLimitStore?: Store;
   } = {},
 ): Promise<ApiReadinessResponse> {
-  const [db, cache, authRateLimit] = await Promise.all([
+  const runtimeEnv = resolveAppRuntimeEnv();
+  const [db, cache, authRateLimit, publicLeadRateLimit] = await Promise.all([
     assessRuntimeDatabaseReadiness(),
     checkCacheStatus(),
-    getAuthRateLimitStoreHealth(options.authRateLimitStore, resolveAppRuntimeEnv()),
+    getAuthRateLimitStoreHealth(options.authRateLimitStore, runtimeEnv),
+    getPublicLeadRateLimitStoreHealth(runtimeEnv),
   ]);
-  const s3Required = process.env.NODE_ENV === 'production';
+  const s3Required = runtimeEnv === 'production' || runtimeEnv === 'staging';
   const s3Ok = isS3Configured();
   return {
-    ok: db.applicationReady && cache.ok && authRateLimit.ok && (!s3Required || s3Ok),
+    ok:
+      db.applicationReady &&
+      cache.ok &&
+      authRateLimit.ok &&
+      publicLeadRateLimit.ok &&
+      (!s3Required || s3Ok),
     kind: 'readiness',
     env: process.env.NODE_ENV || 'development',
     build: {
@@ -114,6 +126,7 @@ export async function buildApiReadinessResponse(
     db,
     cache,
     authRateLimit,
+    publicLeadRateLimit,
     s3: { ok: s3Ok, required: s3Required },
   };
 }

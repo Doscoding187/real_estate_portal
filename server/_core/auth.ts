@@ -172,6 +172,15 @@ export class AuthService {
     return new Map(Object.entries(parsed));
   }
 
+  /** Revoke all sessions represented by the currently presented JWT version. */
+  async revokeSessionFromCookieHeader(cookieHeader: string | undefined): Promise<void> {
+    const cookies = this.parseCookies(cookieHeader);
+    const session = await this.verifySession(cookies.get(COOKIE_NAME));
+    if (!session) return;
+
+    await db.revokeUserSessions(session.userId, session.sessionVersion);
+  }
+
   /**
    * Authenticate a request and return the user
    * This is the main authentication method used in tRPC context

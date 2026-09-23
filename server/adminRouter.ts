@@ -46,11 +46,16 @@ import { resolvePropertiesForListings } from './services/inventoryLinkResolver';
 import { getDiscoveryOpsReport } from './services/discoveryOpsReportService';
 import { excludeLandFromGenericListingWorkflow } from './services/landLaunchContainmentService';
 import { reconcileUnknownTransactionalEmail, transactionalEmailBacklog } from './services/transactionalEmailDeliveryService';
+import { getCommercialActivationOperatorStatus } from './services/commercialActivationPolicy';
+import { updateUserRoleWithAudit } from './services/superAdminRoleAuthority';
 
 /**
  * Admin router - Super admin and agency admin endpoints
  */
 export const adminRouter = router({
+  getCommercialActivationStatus: superAdminProcedure.query(() =>
+    getCommercialActivationOperatorStatus(),
+  ),
   getTransactionalEmailBacklog: superAdminProcedure.query(async () => transactionalEmailBacklog()),
   reconcileUnknownTransactionalEmail: superAdminProcedure
     .input(z.object({ deliveryId: z.number().int().positive(),
@@ -649,15 +654,12 @@ export const adminRouter = router({
       const db = await getDb();
       if (!db) throw new Error('Database not available');
 
-      await db.update(users).set({ role: input.role }).where(eq(users.id, input.userId));
-
-      await logAudit({
-        userId: ctx.user.id,
-        action: AuditActions.UPDATE_USER_ROLE,
-        targetType: 'user',
-        targetId: input.userId,
-        metadata: { newRole: input.role },
-        req: ctx.req,
+      await updateUserRoleWithAudit({
+        database: db,
+        actorUserId: ctx.user.id,
+        targetUserId: input.userId,
+        role: input.role,
+        requestId: ctx.requestId,
       });
 
       return { success: true };

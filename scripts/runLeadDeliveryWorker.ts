@@ -1,4 +1,5 @@
 import { getWorkerDb, resetDb } from '../server/db-connection';
+import { assertNoDeployedTestConfiguration } from '../server/_core/securityRuntimeConfiguration';
 import {
   runLeadDeliveryWorker,
   type LeadDeliveryDispatcher,
@@ -30,6 +31,8 @@ const dispatcher: LeadDeliveryDispatcher = async claim => {
     error: `No idempotent provider adapter is registered for channel ${claim.channel}.`,
   };
 };
+
+assertNoDeployedTestConfiguration();
 
 const database = await getWorkerDb();
 if (!database) throw new Error('Database unavailable');

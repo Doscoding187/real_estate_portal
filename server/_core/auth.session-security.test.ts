@@ -14,6 +14,7 @@ const {
   mockUpdateUserLastSignIn,
   mockVerifyUserEmail,
   mockGetUserByPasswordResetToken,
+  mockRevokeUserSessions,
   mockUpdateUserPassword,
   mockUpdateUserPasswordResetToken,
 } = vi.hoisted(() => ({
@@ -27,6 +28,7 @@ const {
   mockUpdateUserLastSignIn: vi.fn(),
   mockVerifyUserEmail: vi.fn(),
   mockGetUserByPasswordResetToken: vi.fn(),
+  mockRevokeUserSessions: vi.fn(),
   mockUpdateUserPassword: vi.fn(),
   mockUpdateUserPasswordResetToken: vi.fn(),
 }));
@@ -42,6 +44,7 @@ vi.mock('../db', () => ({
   getUserByPasswordResetToken: mockGetUserByPasswordResetToken,
   updateUserPassword: mockUpdateUserPassword,
   updateUserPasswordResetToken: mockUpdateUserPasswordResetToken,
+  revokeUserSessions: mockRevokeUserSessions,
 }));
 
 vi.mock('./env', () => ({
@@ -57,7 +60,8 @@ vi.mock('./email', () => ({
 }));
 vi.mock('./emailService', () => ({ EmailService: { sendEmail: vi.fn() } }));
 
-import { AuthService } from './auth';
+import { AuthService, authService } from './auth';
+import { registerAuthRoutes } from './authRoutes';
 
 const sessionSecret = new TextEncoder().encode(
   'test-session-secret-that-is-long-enough-for-jwt-signing',
@@ -74,6 +78,30 @@ function user(overrides: Record<string, unknown> = {}) {
     sessionVersion: 1,
     ...overrides,
   } as any;
+}
+
+function captureAuthRoutes() {
+  const routes = new Map<string, (req: any, res: any) => unknown>();
+  const app = {
+    post(path: string, handler: (req: any, res: any) => unknown) {
+      routes.set(path, handler);
+      return this;
+    },
+    get(path: string, handler: (req: any, res: any) => unknown) {
+      routes.set(path, handler);
+      return this;
+    },
+  };
+  registerAuthRoutes(app as any);
+  return routes;
+}
+
+function createRouteResponse() {
+  const response: any = {};
+  response.clearCookie = vi.fn(() => response);
+  response.json = vi.fn(() => response);
+  response.status = vi.fn(() => response);
+  return response;
 }
 
 describe('session security', () => {
@@ -109,6 +137,77 @@ describe('session security', () => {
     mockGetAgentByUserId.mockResolvedValue(null);
     mockSendVerificationEmail.mockResolvedValue({ success: true });
     mockSendPasswordResetEmail.mockResolvedValue({ success: true });
+    mockRevokeUserSessions.mockResolvedValue(undefined);
+  });
+
+  it('revokes the presented session version on logout, invalidating every token for that user', async () => {
+    let databaseUser = user();
+    mockGetUserById.mockImplementation(async () => databaseUser);
+    mockRevokeUserSessions.mockImplementation(async (_userId: number, expectedVersion: number) => {
+      if (databaseUser.sessionVersion === expectedVersion) {
+        databaseUser = { ...databaseUser, sessionVersion: expectedVersion + 1 };
+      }
+    });
+
+    const firstToken = await authService.createSessionToken(42, 'agent@example.com', 'Agent Example', 1);
+    const rememberedToken = await authService.createSessionToken(42, 'agent@example.com', 'Agent Example', 1);
+    const routes = captureAuthRoutes();
+    const response = createRouteResponse();
+
+    await routes.get('/api/auth/logout')!({
+      headers: { cookie: `${COOKIE_NAME}=${firstToken}` },
+    } as any, response as any);
+
+    expect(mockRevokeUserSessions).toHaveBeenCalledWith(42, 1);
+    expect(response.clearCookie).toHaveBeenCalledWith(COOKIE_NAME, expect.any(Object));
+    expect(response.json).toHaveBeenCalledWith({
+      success: true,
+      message: 'Logged out successfully.',
+    });
+    for (const token of [firstToken, rememberedToken]) {
+      await expect(
+        authService.authenticateRequest({ headers: { cookie: `${COOKIE_NAME}=${token}` } } as any),
+      ).rejects.toMatchObject({ statusCode: 403 });
+    }
+  });
+
+  it.each([undefined, 'not-a-signed-session'])(
+    'safely clears logout cookies without database revocation for %s',
+    async cookieValue => {
+      const routes = captureAuthRoutes();
+      const response = createRouteResponse();
+      await routes.get('/api/auth/logout')!({
+        headers: { cookie: cookieValue ? `${COOKIE_NAME}=${cookieValue}` : undefined },
+      } as any, response as any);
+
+      expect(response.clearCookie).toHaveBeenCalledWith(COOKIE_NAME, expect.any(Object));
+      expect(response.json).toHaveBeenCalledWith({
+        success: true,
+        message: 'Logged out successfully.',
+      });
+      expect(mockRevokeUserSessions).not.toHaveBeenCalled();
+    },
+  );
+
+  it('does not report secure logout success if session revocation persistence fails', async () => {
+    mockRevokeUserSessions.mockRejectedValueOnce(new Error('database details must not escape'));
+    const token = await authService.createSessionToken(42, 'agent@example.com', 'Agent Example', 1);
+    const routes = captureAuthRoutes();
+    const response = createRouteResponse();
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    await routes.get('/api/auth/logout')!({
+      headers: { cookie: `${COOKIE_NAME}=${token}` },
+      requestId: 'logout-test-request',
+    } as any, response as any);
+
+    expect(response.status).toHaveBeenCalledWith(503);
+    expect(response.json).toHaveBeenCalledWith(expect.objectContaining({
+      error: expect.stringContaining('Secure logout'),
+      requestId: 'logout-test-request',
+    }));
+    expect(response.clearCookie).not.toHaveBeenCalled();
+    expect(errorSpy).toHaveBeenCalledWith('[Auth] Logout session revocation failed', expect.any(Object));
   });
 
   it('requires a session version in every signed session payload', async () => {

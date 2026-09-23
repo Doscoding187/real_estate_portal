@@ -696,6 +696,22 @@ export async function updateUserPassword(userId: number, passwordHash: string): 
     .where(eq(users.id, userId));
 }
 
+/** Revoke every session only if the presented session version is still current. */
+export async function revokeUserSessions(
+  userId: number,
+  expectedSessionVersion: number,
+): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  await db
+    .update(users)
+    .set({ sessionVersion: sql`${users.sessionVersion} + 1` })
+    .where(
+      and(eq(users.id, userId), eq(users.sessionVersion, expectedSessionVersion)),
+    );
+}
+
 /**
  * Get user by the stored SHA-256 email verification token digest.
  */

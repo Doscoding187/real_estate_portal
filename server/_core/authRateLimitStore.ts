@@ -33,6 +33,8 @@ type RedisAuthRateLimitStoreOptions = AuthRateLimitStoreConfiguration & {
   /** Test seams. Production callers use the node-redis defaults. */
   clientFactory?: typeof createClient;
   now?: () => number;
+  keyPrefix?: string;
+  scopeLabel?: string;
 };
 
 function parseBoundedInteger(
@@ -97,7 +99,7 @@ export function resolveAuthRateLimitStoreConfiguration(
  */
 export class RedisAuthRateLimitStore implements Store {
   readonly localKeys = false;
-  readonly prefix = AUTH_RATE_LIMIT_KEY_PREFIX;
+  readonly prefix: string;
   private client: AuthRateLimitRedisClient | null = null;
   private connection: Promise<unknown> | null = null;
   private windowMs = 15 * 60 * 1000;
@@ -105,6 +107,7 @@ export class RedisAuthRateLimitStore implements Store {
   private readonly cooldownMs: number;
   private readonly clientFactory: typeof createClient;
   private readonly now: () => number;
+  private readonly scopeLabel: string;
   private unavailableUntilMs = 0;
   private unavailable = false;
 
@@ -129,6 +132,8 @@ export class RedisAuthRateLimitStore implements Store {
     );
     this.clientFactory = options.clientFactory ?? createClient;
     this.now = options.now ?? Date.now;
+    this.prefix = options.keyPrefix ?? AUTH_RATE_LIMIT_KEY_PREFIX;
+    this.scopeLabel = options.scopeLabel ?? 'authentication';
   }
 
   init(options: Options) {
@@ -168,16 +173,18 @@ export class RedisAuthRateLimitStore implements Store {
     this.discardClient(client);
 
     if (!wasUnavailable) {
-      console.error(
-        '[AuthRateLimit] Distributed auth rate-limit store unavailable; failing authentication requests closed until retry.',
-        { retryAfterSeconds: this.unavailableError().retryAfterSeconds },
-      );
+      console.error('[RateLimit] Distributed rate-limit store unavailable; failing requests closed.', {
+        scope: this.scopeLabel,
+        retryAfterSeconds: this.unavailableError().retryAfterSeconds,
+      });
     }
   }
 
   private markRecovered(): void {
     if (this.unavailable) {
-      console.info('[AuthRateLimit] Distributed auth rate-limit store connection restored.');
+      console.info('[RateLimit] Distributed rate-limit store connection restored.', {
+        scope: this.scopeLabel,
+      });
     }
     this.unavailable = false;
     this.unavailableUntilMs = 0;
@@ -270,15 +277,24 @@ export class RedisAuthRateLimitStore implements Store {
 
   async increment(key: string) {
     const redisKey = this.key(key);
-    const totalHits = await this.execute(client => client.incr(redisKey));
-    if (totalHits === 1) {
-      await this.execute(client => client.pExpire(redisKey, this.windowMs));
+    const result = await this.execute(client =>
+      client.eval(
+        `local total = redis.call('INCR', KEYS[1])\nif total == 1 then redis.call('PEXPIRE', KEYS[1], ARGV[1]) end\nlocal ttl = redis.call('PTTL', KEYS[1])\nreturn {total, ttl}`,
+        { keys: [redisKey], arguments: [String(this.windowMs)] },
+      ),
+    );
+    if (!Array.isArray(result) || result.length < 2) {
+      throw new Error('Distributed rate-limit store returned an invalid counter result.');
     }
-    const remainingMs = await this.execute(client => client.pTTL(redisKey));
+    const totalHits = Number(result[0]);
+    const remainingMs = Number(result[1]);
+    if (!Number.isSafeInteger(totalHits) || totalHits < 1 || !Number.isFinite(remainingMs)) {
+      throw new Error('Distributed rate-limit store returned an invalid counter result.');
+    }
 
     return {
       totalHits,
-      resetTime: new Date(Date.now() + (remainingMs > 0 ? remainingMs : this.windowMs)),
+      resetTime: new Date(this.now() + (remainingMs > 0 ? remainingMs : this.windowMs)),
     };
   }
 

@@ -23,6 +23,16 @@ import { registerLocalMediaRoutes } from './localMediaRoutes';
 import { createAuthRateLimitStore } from './authRateLimitStore';
 import { handleAuthRateLimitStoreUnavailable } from './authRateLimitBoundary';
 import {
+  configurePublicLeadRateLimitStore,
+  shutdownPublicLeadRateLimitStore,
+} from '../services/publicLeadRateLimitService';
+import {
+  getCommercialActivationOperatorStatus,
+  initializeCommercialActivationPolicy,
+} from '../services/commercialActivationPolicy';
+import { assertDeployedSecurityConfiguration } from './securityRuntimeConfiguration';
+import { registerRequestBodyBoundary } from './requestBodyBoundary';
+import {
   applyApiSecurityHeaders,
   assertBrowserSecurityPolicy,
   createStateChangingOriginGuard,
@@ -31,6 +41,7 @@ import {
 } from './browserSecurity';
 import {
   assertDeployedTrustProxyConfiguration,
+  resolveAppRuntimeEnv,
   resolveTrustProxySetting,
 } from './runtimeBootstrap';
 
@@ -66,18 +77,19 @@ async function mountOptionalRouter(app: express.Express, mountPath: string, impo
 }
 
 async function startServer() {
+  const runtimeEnvironment = resolveAppRuntimeEnv();
+  assertDeployedSecurityConfiguration(process.env, runtimeEnvironment);
+  initializeCommercialActivationPolicy();
+
   console.log('[Server] startServer() called');
   console.log('[BUILD_MARKER][SERVER]', {
     commit: process.env.RAILWAY_GIT_COMMIT_SHA ?? process.env.GITHUB_SHA ?? 'unknown',
     env: process.env.NODE_ENV,
     startedAt: new Date().toISOString(),
   });
-
-  if (!process.env.JWT_SECRET) {
-    console.error('\n❌ CRITICAL ERROR: JWT_SECRET is not defined in environment variables.');
-    console.error('   Login functionality will fail with HTTP 500 errors.');
-    console.error('   Please set JWT_SECRET in your .env file or deployment configuration.\n');
-  }
+  console.info('[CommercialActivation] Resolved release configuration',
+    getCommercialActivationOperatorStatus(),
+  );
 
   console.log('[Server] Initializing cache...');
   await initializeCache();
@@ -118,6 +130,7 @@ async function startServer() {
   const authRateLimitStore = createAuthRateLimitStore({
     runtimeEnv: browserSecurityPolicy.runtimeEnv,
   });
+  configurePublicLeadRateLimitStore({ runtimeEnv: browserSecurityPolicy.runtimeEnv });
   const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: Number.isFinite(authRateLimitMax) && authRateLimitMax > 0 ? authRateLimitMax : 5,
@@ -178,8 +191,7 @@ async function startServer() {
     app.use(authPath, authLimiter, handleAuthRateLimitStoreUnavailable);
   }
 
-  app.use(express.json({ limit: '50mb' }));
-  app.use(express.urlencoded({ limit: '50mb', extended: true }));
+  registerRequestBodyBoundary(app);
   registerLocalMediaRoutes(app);
 
   // Force WWW redirect for the main production domain.
@@ -268,11 +280,17 @@ async function startServer() {
   });
 }
 
-startServer().catch(console.error);
+startServer().catch(error => {
+  console.error('[Startup] Application initialization failed.', {
+    message: error instanceof Error ? error.message : 'Unknown startup error.',
+  });
+  process.exitCode = 1;
+});
 
 process.on('SIGTERM', async () => {
   console.log('SIGTERM received, shutting down...');
   await savedSearchDeliveryScheduler.stop();
+  await shutdownPublicLeadRateLimitStore();
   await shutdownCache();
   process.exit(0);
 });
@@ -280,6 +298,7 @@ process.on('SIGTERM', async () => {
 process.on('SIGINT', async () => {
   console.log('SIGINT received, shutting down...');
   await savedSearchDeliveryScheduler.stop();
+  await shutdownPublicLeadRateLimitStore();
   await shutdownCache();
   process.exit(0);
 });

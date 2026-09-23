@@ -1347,7 +1347,7 @@ export const developerRouter = router({
         };
       }
 
-      if (!checkPublicLeadRateLimit(getPublicLeadClientIp(ctx))) {
+      if (!(await checkPublicLeadRateLimit(getPublicLeadClientIp(ctx), ctx.res))) {
         throw new TRPCError({
           code: 'TOO_MANY_REQUESTS',
           message: 'Too many lead submissions. Please try again in a minute.',

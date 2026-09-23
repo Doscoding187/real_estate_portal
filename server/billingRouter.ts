@@ -33,6 +33,7 @@ import {
   submitPaidLaunchAccessPaymentProof,
   submitDeveloperPaymentProof,
   updateSubscriptionLifecycle,
+  MAX_PROOF_BASE64_CHARS,
   type BillingCycle,
   type CanonicalSubscriptionStatus,
   type PaymentState,
@@ -85,7 +86,7 @@ const submitPaymentProofSchema = z.object({
     filename: z.string().min(1).max(255),
     mimeType: z.string().min(1).max(120),
     sizeBytes: z.number().int().positive(),
-    contentBase64: z.string().min(1),
+    contentBase64: z.string().min(1).max(MAX_PROOF_BASE64_CHARS),
   }),
 });
 

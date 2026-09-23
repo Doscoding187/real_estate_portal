@@ -276,8 +276,22 @@ export function registerAuthRoutes(app: Express) {
    * Logout (clear session cookie)
    * POST /api/auth/logout
    */
-  app.post('/api/auth/logout', (req: Request, res: Response) => {
+  app.post('/api/auth/logout', async (req: Request, res: Response) => {
     const cookieOptions = getSessionCookieOptions(req);
+    try {
+      await authService.revokeSessionFromCookieHeader(req.headers.cookie);
+    } catch (error) {
+      console.error('[Auth] Logout session revocation failed', {
+        requestId: getRequestId(req),
+        code: (error as any)?.code || null,
+        name: (error as any)?.name || null,
+      });
+      return res.status(503).json({
+        error: 'Secure logout is temporarily unavailable. Please retry shortly.',
+        requestId: getRequestId(req),
+      });
+    }
+
     res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
     res.json({ success: true, message: 'Logged out successfully.' });
   });

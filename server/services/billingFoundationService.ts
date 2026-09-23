@@ -120,7 +120,8 @@ type BillingUser = {
   name?: string | null;
 };
 
-const MAX_PROOF_BYTES = 10 * 1024 * 1024;
+export const MAX_PROOF_BYTES = 10 * 1024 * 1024;
+export const MAX_PROOF_BASE64_CHARS = Math.ceil(MAX_PROOF_BYTES / 3) * 4;
 const ALLOWED_PROOF_MIME_TYPES = new Set([
   'application/pdf',
   'image/jpeg',
@@ -1767,6 +1768,9 @@ export async function submitPaidLaunchAccessPaymentProof(input: LaunchPaymentPro
   if (input.file.sizeBytes <= 0 || input.file.sizeBytes > MAX_PROOF_BYTES) {
     throw new TRPCError({ code: 'BAD_REQUEST', message: 'Proof-of-payment file is too large.' });
   }
+  if (input.file.contentBase64.length > MAX_PROOF_BASE64_CHARS) {
+    throw new TRPCError({ code: 'BAD_REQUEST', message: 'Proof-of-payment file is too large.' });
+  }
   if (!Number.isSafeInteger(input.amount) || input.amount <= 0) {
     throw new TRPCError({
       code: 'BAD_REQUEST',
@@ -2040,6 +2044,9 @@ export async function submitAgencyPaymentProof(input: LaunchPaymentProofInput) {
     });
   }
   if (input.file.sizeBytes <= 0 || input.file.sizeBytes > MAX_PROOF_BYTES) {
+    throw new TRPCError({ code: 'BAD_REQUEST', message: 'Proof-of-payment file is too large.' });
+  }
+  if (input.file.contentBase64.length > MAX_PROOF_BASE64_CHARS) {
     throw new TRPCError({ code: 'BAD_REQUEST', message: 'Proof-of-payment file is too large.' });
   }
   if (!Number.isSafeInteger(input.amount) || input.amount <= 0) {

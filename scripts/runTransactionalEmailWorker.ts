@@ -1,6 +1,9 @@
 import { getWorkerDb, resetDb } from '../server/db-connection';
+import { assertNoDeployedTestConfiguration } from '../server/_core/securityRuntimeConfiguration';
 import { isTransactionalEmailConfigured } from '../server/_core/transactionalEmailConfig';
 import { consumeLaunchEmailEvents, runTransactionalEmailWorker, transactionalEmailBacklog } from '../server/services/transactionalEmailDeliveryService';
+
+assertNoDeployedTestConfiguration();
 
 if (!isTransactionalEmailConfigured()) {
   throw new Error('Transactional email worker requires configured Resend credentials and sender.');

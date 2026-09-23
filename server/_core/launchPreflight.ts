@@ -4,6 +4,14 @@ import { resolveBrowserSecurityPolicy } from './browserSecurity';
 import type { AppRuntimeEnv } from './runtimeBootstrap';
 import { resolveAppRuntimeEnv } from './runtimeBootstrap';
 import { resolveTransactionalEmailConfiguration, transactionalEmailOrigin } from './transactionalEmailConfig';
+import { deployedSecurityConfigurationIssues } from './securityRuntimeConfiguration';
+import {
+  PAID_MVP_APPROVAL_REF_ENV,
+  PAID_MVP_ENABLED_PRODUCT_KEYS_ENV,
+  PAID_MVP_RELEASE_ID_ENV,
+  resolveCommercialActivationConfiguration,
+} from '../services/commercialActivationPolicy';
+import { PAID_MVP_LAUNCH_ACCESS_PRODUCT_KEYS } from '../../shared/commercialActivation';
 
 export type LaunchPreflightLevel = 'required' | 'recommended';
 
@@ -29,6 +37,7 @@ const PLACEHOLDER_PATTERNS = [
   /not-payable/i,
   /local test/i,
   /onboarding@resend\.dev/i,
+  /^(?:your|test|testing|development|dev)[-_]/i,
   /^0+$/,
 ];
 
@@ -352,6 +361,71 @@ function distributedAuthRateLimitCheck(env: EnvLike) {
   });
 }
 
+function deployedSecurityConfigurationCheck(env: EnvLike, runtimeEnv: AppRuntimeEnv) {
+  const issues = deployedSecurityConfigurationIssues(env, runtimeEnv);
+  return makeCheck({
+    id: 'deployed-security-configuration',
+    level: 'required',
+    ok: issues.length === 0,
+    message:
+      issues[0] ||
+      'Authentication, upload signing, storage adapter, and test-mode configuration are safe for deployed runtime.',
+    missing: issues.length > 0 ? issues : undefined,
+  });
+}
+
+function paidMvpActivationCheck(env: EnvLike, runtimeEnv: AppRuntimeEnv) {
+  try {
+    const activation = resolveCommercialActivationConfiguration(env, runtimeEnv);
+    if (runtimeEnv !== 'production') {
+      return makeCheck({
+        id: 'paid-mvp-commercial-activation',
+        level: 'required',
+        ok: true,
+        message: activation.enabled
+          ? 'Staging activation is restricted to explicitly approved Paid MVP keys.'
+          : 'Commercial activation remains fail-closed outside the production release.',
+      });
+    }
+
+    const expectedKeys = [...PAID_MVP_LAUNCH_ACCESS_PRODUCT_KEYS].sort();
+    const enabledKeys = [...activation.enabledProductKeys].sort();
+    const exactProductSet =
+      activation.mode === 'paid_mvp_release' &&
+      enabledKeys.length === expectedKeys.length &&
+      enabledKeys.every((key, index) => key === expectedKeys[index]);
+    const missing = exactProductSet
+      ? []
+      : [
+          `${PAID_MVP_ENABLED_PRODUCT_KEYS_ENV}=agent_launch_access,agency_launch_access,developer_launch_access`,
+        ];
+    if (!activation.releaseId) missing.push(PAID_MVP_RELEASE_ID_ENV);
+    if (!activation.approvalRef) missing.push(PAID_MVP_APPROVAL_REF_ENV);
+
+    return makeCheck({
+      id: 'paid-mvp-commercial-activation',
+      level: 'required',
+      ok: missing.length === 0,
+      message:
+        missing.length === 0
+          ? 'Exactly the three approved Paid MVP products are tied to release approval metadata.'
+          : 'Production launch requires the exact three Paid MVP product keys and release metadata.',
+      missing: missing.length > 0 ? missing : undefined,
+    });
+  } catch (error) {
+    return makeCheck({
+      id: 'paid-mvp-commercial-activation',
+      level: 'required',
+      ok: false,
+      message:
+        error instanceof Error
+          ? error.message
+          : 'Paid MVP commercial activation configuration is invalid.',
+      missing: [PAID_MVP_ENABLED_PRODUCT_KEYS_ENV],
+    });
+  }
+}
+
 function recommendedPresenceCheck(env: EnvLike, id: string, keys: string[], message: string) {
   const missing = missingKeys(env, keys);
   return makeCheck({
@@ -371,6 +445,8 @@ export function runLaunchPreflight(options?: {
   const runtimeEnv = options?.runtimeEnv ?? resolveAppRuntimeEnv(env);
   const checks: LaunchPreflightCheck[] = [
     databaseCheck(env, runtimeEnv),
+    deployedSecurityConfigurationCheck(env, runtimeEnv),
+    paidMvpActivationCheck(env, runtimeEnv),
     jwtSecretCheck(env),
     ...urlChecks(env),
     browserSecurityCheck(env, runtimeEnv),
