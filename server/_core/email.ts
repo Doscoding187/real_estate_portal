@@ -1,16 +1,17 @@
 import { Resend } from 'resend';
 import { appendFileSync, chmodSync } from 'node:fs';
-import { ENV } from './env';
 import {
   DEPLOYED_TRANSACTIONAL_EMAIL_UNAVAILABLE_MESSAGE,
   isTransactionalEmailConfigured,
   permitsLocalEmailFallback,
+  resolveTransactionalEmailConfiguration,
+  transactionalEmailOrigin,
 } from './transactionalEmailConfig';
 
 let resendClient: Resend | null = null;
 
-type GovernedB06VerificationCapture = {
-  kind: 'developer_verification';
+type GovernedVerificationCapture = {
+  kind: 'agent_verification' | 'agency_verification' | 'developer_verification';
   to: string;
   subject: string;
   verificationUrl: string;
@@ -24,48 +25,59 @@ type GovernedB06VerificationCapture = {
  * authority-wrapped Developer fixture. It is not a mail transport and it is
  * never consulted by deployed runtime.
  */
-function governedB06VerificationCapturePath(): string | null {
-  const capturePath = String(
-    process.env.PROPERTY_LISTIFY_GOVERNED_B06_EMAIL_CAPTURE_PATH || '',
-  ).trim();
-  if (!capturePath) return null;
+function governedVerificationCapture(): { path: string; kind: GovernedVerificationCapture['kind'] } | null {
+  const b04Path = String(process.env.PROPERTY_LISTIFY_GOVERNED_B04_EMAIL_CAPTURE_PATH || '').trim();
+  const b05Path = String(process.env.PROPERTY_LISTIFY_GOVERNED_B05_EMAIL_CAPTURE_PATH || '').trim();
+  const b06Path = String(process.env.PROPERTY_LISTIFY_GOVERNED_B06_EMAIL_CAPTURE_PATH || '').trim();
+  if (!b04Path && !b05Path && !b06Path) return null;
+  if ([b04Path, b05Path, b06Path].filter(Boolean).length !== 1)
+    throw new Error('Only one governed verification capture may be enabled.');
+  const capturePath = b04Path || b05Path || b06Path;
 
   const authorized =
     process.env.NODE_ENV === 'test' &&
     process.env.APP_ENV === 'test' &&
     process.env.PROPERTY_LISTIFY_GOVERNED_BROWSER_TEST_FIXTURE === 'true' &&
-    process.env.PROPERTY_LISTIFY_GOVERNED_BROWSER_TEST_PRODUCT_KEYS ===
-      'developer_launch_access' &&
+    (b04Path
+      ? !process.env.PROPERTY_LISTIFY_GOVERNED_BROWSER_TEST_PRODUCT_KEYS ||
+        process.env.PROPERTY_LISTIFY_GOVERNED_BROWSER_TEST_PRODUCT_KEYS === 'agent_launch_access'
+      : process.env.PROPERTY_LISTIFY_GOVERNED_BROWSER_TEST_PRODUCT_KEYS ===
+        (b05Path ? 'agency_launch_access' : 'developer_launch_access')) &&
     Boolean(process.env.DATABASE_AUTHORITY_PARENT_FINGERPRINT) &&
     Boolean(process.env.DATABASE_AUTHORITY_CORRELATION_ID);
   if (!authorized) {
     throw new Error(
-      'B06 verification capture requires the governed Developer-only browser fixture.',
+      'Verification capture requires the governed product-specific browser fixture.',
     );
   }
-  if (!/^\/tmp\/property-listify-b06-[a-z0-9._-]+\.jsonl$/i.test(capturePath)) {
+  const pathPattern = b04Path
+    ? /^\/tmp\/property-listify-b04-[a-z0-9._-]+\.jsonl$/i
+    : b05Path
+      ? /^\/tmp\/property-listify-b05-[a-z0-9._-]+\.jsonl$/i
+      : /^\/tmp\/property-listify-b06-[a-z0-9._-]+\.jsonl$/i;
+  if (!pathPattern.test(capturePath)) {
     throw new Error(
-      'B06 verification capture path must be a private /tmp/property-listify-b06-*.jsonl artifact.',
+      'Verification capture path must be a private product-specific /tmp JSONL artifact.',
     );
   }
 
   chmodSync(capturePath, 0o600);
-  return capturePath;
+  return { path: capturePath, kind: b04Path ? 'agent_verification' : b05Path ? 'agency_verification' : 'developer_verification' };
 }
 
-function captureGovernedB06VerificationMessage(
-  message: Omit<GovernedB06VerificationCapture, 'kind' | 'capturedAt'>,
+function captureGovernedVerificationMessage(
+  message: Omit<GovernedVerificationCapture, 'kind' | 'capturedAt'>,
 ): boolean {
-  const capturePath = governedB06VerificationCapturePath();
-  if (!capturePath) return false;
+  const capture = governedVerificationCapture();
+  if (!capture) return false;
 
   appendFileSync(
-    capturePath,
+    capture.path,
     `${JSON.stringify({
-      kind: 'developer_verification',
+      kind: capture.kind,
       ...message,
       capturedAt: new Date().toISOString(),
-    } satisfies GovernedB06VerificationCapture)}\n`,
+    } satisfies GovernedVerificationCapture)}\n`,
     { encoding: 'utf8', mode: 0o600 },
   );
   return true;
@@ -101,43 +113,30 @@ export async function sendVerificationEmail({
   verificationToken,
   name,
 }: SendVerificationEmailParams) {
-  const rawApiBaseUrl =
-    process.env.VITE_API_URL ||
-    process.env.API_URL ||
-    process.env.RAILWAY_PUBLIC_DOMAIN ||
-    process.env.APP_URL ||
-    'http://localhost:3000';
-  const normalizedApiBaseUrl = rawApiBaseUrl.startsWith('http')
-    ? rawApiBaseUrl.replace(/\/+$/, '')
-    : `https://${rawApiBaseUrl.replace(/\/+$/, '')}`;
-  const verificationUrl = `${normalizedApiBaseUrl}/api/auth/verify-email?token=${verificationToken}`;
-
   const resend = getResend();
+  if (!resend && !permitsLocalEmailFallback()) throwUnavailableDeployedEmail();
+  const verificationUrl = `${transactionalEmailOrigin('api')}/api/auth/verify-email?token=${verificationToken}`;
+
   if (!resend) {
-    if (!permitsLocalEmailFallback()) {
-      throwUnavailableDeployedEmail();
-    }
-    const capturedInGovernedB06Sink = captureGovernedB06VerificationMessage({
+    const capturedInGovernedSink = captureGovernedVerificationMessage({
       to,
       subject: 'Verify your email - Property Listify',
       verificationUrl,
     });
     console.warn('[Email] RESEND_API_KEY missing — skipping sendVerificationEmail');
-    // Local development retains its existing inspectable URL. The B06 browser
-    // fixture writes the same application-generated URL only to its private
-    // capture artifact, so credential-like tokens do not enter Playwright
-    // output or a shared terminal transcript.
-    if (capturedInGovernedB06Sink) {
+    // The governed B06 fixture is the only permitted token-bearing capture.
+    // Ordinary local logs must never contain a credential-bearing URL.
+    if (capturedInGovernedSink) {
       console.log('[Email Local Dev] Verification URL captured in governed private sink.');
     } else {
-      console.log('[Email Local Dev] Verification URL:', verificationUrl);
+      console.log('[Email Local Dev] Verification delivery simulated.');
     }
     return { success: true, messageId: 'dev-mock-id' };
   }
 
   try {
     const { data, error } = await resend.emails.send({
-      from: ENV.resendFromEmail || 'Property Listify <onboarding@resend.dev>',
+      from: resolveTransactionalEmailConfiguration().from,
       to: [to],
       subject: 'Verify your email - Property Listify',
       html: `
@@ -194,15 +193,15 @@ export async function sendVerificationEmail({
     });
 
     if (error) {
-      console.error('[Email] Failed to send verification email:', error);
-      throw new Error(`Email send failed: ${error.message}`);
+      console.error('[Email] Verification provider rejected the message.');
+      throw new Error('Verification email delivery failed.');
     }
 
     console.log('[Email] Verification email sent successfully:', data?.id);
     return { success: true, messageId: data?.id };
-  } catch (error) {
-    console.error('[Email] Error sending verification email:', error);
-    throw error;
+  } catch {
+    console.error('[Email] Verification email delivery failed.');
+    throw new Error('Verification email delivery failed.');
   }
 }
 
@@ -217,21 +216,19 @@ export async function sendPasswordResetEmail({
   resetToken,
   name,
 }: SendPasswordResetEmailParams) {
-  const resetUrl = `${process.env.APP_URL || 'http://localhost:3000'}/reset-password?token=${resetToken}`;
-
   const resend = getResend();
+  if (!resend && !permitsLocalEmailFallback()) throwUnavailableDeployedEmail();
+  const resetUrl = `${transactionalEmailOrigin('app')}/reset-password?token=${resetToken}`;
+
   if (!resend) {
-    if (!permitsLocalEmailFallback()) {
-      throwUnavailableDeployedEmail();
-    }
     console.warn('[Email] RESEND_API_KEY missing — skipping sendPasswordResetEmail');
-    console.log('[Email Local Dev] Reset URL:', resetUrl);
+    console.log('[Email Local Dev] Password reset delivery simulated.');
     return { success: true, messageId: 'dev-mock-id' };
   }
 
   try {
     const { data, error } = await resend.emails.send({
-      from: ENV.resendFromEmail || 'Property Listify <onboarding@resend.dev>',
+      from: resolveTransactionalEmailConfiguration().from,
       to: [to],
       subject: 'Reset your password - Property Listify',
       html: `
@@ -289,14 +286,14 @@ export async function sendPasswordResetEmail({
     });
 
     if (error) {
-      console.error('[Email] Failed to send password reset email:', error);
-      throw new Error(`Email send failed: ${error.message}`);
+      console.error('[Email] Password reset provider rejected the message.');
+      throw new Error('Password reset email delivery failed.');
     }
 
     console.log('[Email] Password reset email sent successfully:', data?.id);
     return { success: true, messageId: data?.id };
-  } catch (error) {
-    console.error('[Email] Error sending password reset email:', error);
-    throw error;
+  } catch {
+    console.error('[Email] Password reset email delivery failed.');
+    throw new Error('Password reset email delivery failed.');
   }
 }

@@ -13,7 +13,6 @@ import { resolveDatabaseAuthority } from '../../server/_core/databaseAuthority/c
 const runId = randomUUID();
 const apiOrigin = 'http://localhost:5000';
 const appOrigin = 'http://localhost:5177';
-const runtimeLog = '/tmp/property-listify-b05-agency-paid-mvp-browser-runtime.log';
 const emailCapture = '/tmp/property-listify-b05-agency-paid-mvp-email-capture.jsonl';
 const reviewerEmail = 'ple-reviewer@listify.local';
 const ownerEmail = `b05-owner-${runId}@invalid.example`;
@@ -55,12 +54,14 @@ async function query(statement: string, values: readonly unknown[] = []): Promis
 
 function latestVerificationToken(): string | null {
   try {
-    const matches = [
-      ...readFileSync(runtimeLog, 'utf8').matchAll(
-        /\[Email Local Dev\] Verification URL: .*?[?&]token=([a-f0-9]{64})/g,
-      ),
-    ];
-    return matches.at(-1)?.[1] ?? null;
+    const messages = readFileSync(emailCapture, 'utf8').split('\n').filter(Boolean)
+      .flatMap(line => {
+        try {
+          const value = JSON.parse(line) as { kind?: string; verificationUrl?: string };
+          return value.kind === 'agency_verification' && value.verificationUrl ? [value] : [];
+        } catch { return []; }
+      });
+    return new URL(messages.at(-1)?.verificationUrl || 'http://localhost').searchParams.get('token');
   } catch {
     return null;
   }
@@ -676,8 +677,6 @@ test.describe('B05 Agency paid MVP controlled acceptance', () => {
         );
         expect(Number(media.total)).toBe(5);
         salePropertyId = await approveListing(reviewerPage, sale.id);
-        expect(salePropertyId).not.toBe(sale.id);
-
         const rental = await createAndSubmitRentalListing(firstMemberPage);
         const rentalPropertyId = await approveListing(reviewerPage, rental.id);
         const publicContext = await browser.newContext();

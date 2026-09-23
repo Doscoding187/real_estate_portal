@@ -27,7 +27,7 @@ describe('isolated CI physical credential boundary', () => {
 
   it('builds explicit application and worker grants without control-table DML', () => {
     const plan = buildIsolatedCiGrantPlan();
-    expect(plan.applicationTables).toHaveLength(212);
+    expect(plan.applicationTables).toHaveLength(214);
     expect(plan.statementsByCredential.runtime.every(statement => !statement.includes('.*'))).toBe(
       true,
     );
@@ -38,11 +38,22 @@ describe('isolated CI physical credential boundary', () => {
       'CREATE, ALTER, DROP, INDEX, REFERENCES',
     );
     expect(plan.workerTables).toEqual([
+      'billable_accounts',
+      'billing_audit_events',
+      'billing_invoices',
       'billing_provider_events',
       'catalogue_publishers',
+      'developer_organisation_memberships',
+      'invitations',
       'lead_deliveries',
       'lead_delivery_attempts',
       'leads',
+      'notifications',
+      'plans',
+      'subscriptions',
+      'transactional_email_attempts',
+      'transactional_email_deliveries',
+      'users',
     ]);
   });
 

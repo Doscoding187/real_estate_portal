@@ -1240,6 +1240,22 @@
       "approvedFiles": [
         "server/migrations/0090_retire_disconnected_boost_campaigns.sql"
       ]
+    },
+    {
+      "path": "server/migrations/0091_transactional_email_deliveries.sql",
+      "classification": "canonical active",
+      "purpose": "B10 durable transactional email intent, recipient, idempotency and claim authority",
+      "approvedFiles": [
+        "server/migrations/0091_transactional_email_deliveries.sql"
+      ]
+    },
+    {
+      "path": "server/migrations/0092_transactional_email_attempts.sql",
+      "classification": "canonical active",
+      "purpose": "B10 fenced provider attempt history for safe retry and ambiguous-outcome reconciliation",
+      "approvedFiles": [
+        "server/migrations/0092_transactional_email_attempts.sql"
+      ]
     }
   ],
   "prohibitedPaths": [

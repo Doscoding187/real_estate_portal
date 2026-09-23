@@ -4,11 +4,12 @@ import { defineConfig, devices } from '@playwright/test';
  * This proof deliberately uses the exact task-owned runtime rather than the
  * legacy browser configurations, several of which name a separate local
  * database. The API runtime keeps real account/session logic and writes its
- * development-only verification link to a private local log. The frontend is
+ * development-only verification link to a governed private capture. The frontend is
  * served separately so the browser follows the same cross-origin API path a
  * local stakeholder would use.
  */
 const runtimeLog = '/tmp/property-listify-mvp-prepayment-browser-runtime.log';
+const emailCapture = '/tmp/property-listify-b04-prepayment-browser-email-capture.jsonl';
 
 export default defineConfig({
   testDir: './e2e/prepayment',
@@ -37,10 +38,13 @@ export default defineConfig({
   ],
   webServer: [
     {
-      // The file contains temporary verification tokens. umask 077 and the
-      // redirected server output keep it local-only; it is neither printed by
-      // the test nor tracked by Git.
-      command: `sh -c 'umask 077; : > ${runtimeLog}; exec pnpm exec tsx scripts/mvp-local-runtime.mts >> ${runtimeLog} 2>&1'`,
+      // Temporary token material is written only to the governed mode-0600
+      // capture file; routine server output contains no verification URL.
+      command: `sh -c 'umask 077; : > ${runtimeLog}; : > ${emailCapture}; chmod 600 ${emailCapture}; exec pnpm exec tsx scripts/mvp-local-runtime.mts >> ${runtimeLog} 2>&1'`,
+      env: {
+        PROPERTY_LISTIFY_GOVERNED_BROWSER_TEST_FIXTURE: 'true',
+        PROPERTY_LISTIFY_GOVERNED_B04_EMAIL_CAPTURE_PATH: emailCapture,
+      },
       url: 'http://localhost:5000/api/health',
       reuseExistingServer: false,
       timeout: 120_000,

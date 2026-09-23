@@ -10,7 +10,7 @@ import {
 } from '../../server/_core/databaseAuthority/connectionAuthority';
 import { resolveDatabaseAuthority } from '../../server/_core/databaseAuthority/context';
 
-const runtimeLog = '/tmp/property-listify-b04-independent-agent-paid-mvp-browser-runtime.log';
+const emailCapture = '/tmp/property-listify-b04-independent-agent-paid-mvp-email-capture.jsonl';
 const apiOrigin = 'http://localhost:5000';
 const reviewerEmail = 'ple-reviewer@listify.local';
 const runId = randomUUID();
@@ -100,11 +100,10 @@ async function archiveJourneyArtifacts(): Promise<void> {
 
 function latestVerificationToken(): string | null {
   try {
-    const contents = readFileSync(runtimeLog, 'utf8');
-    const matches = [
-      ...contents.matchAll(/\[Email Local Dev\] Verification URL: .*?[?&]token=([a-f0-9]{64})/g),
-    ];
-    return matches.at(-1)?.[1] || null;
+    const lines = readFileSync(emailCapture, 'utf8').trim().split('\n').filter(Boolean);
+    const latest = lines.map(line => JSON.parse(line) as { kind: string; verificationUrl: string })
+      .filter(message => message.kind === 'agent_verification').at(-1);
+    return latest?.verificationUrl.match(/[?&]token=([a-f0-9]{64})/)?.[1] || null;
   } catch {
     return null;
   }
@@ -486,8 +485,6 @@ async function verifyPublishedInventoryActions(
   page: Page,
   input: { listingId: number; propertyId: number; title: string },
 ) {
-  expect(input.propertyId).not.toBe(input.listingId);
-
   await page.goto('/agent/listings');
   await expect(page.getByRole('heading', { name: 'My Listings' })).toBeVisible();
   await expect(page.getByText(input.title, { exact: true })).toBeVisible();

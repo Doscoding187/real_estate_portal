@@ -19,6 +19,8 @@
     "build:railway": "pnpm build:frontend",
     "start": "pnpm start:prod",
     "launch:preflight": "cross-env NODE_ENV=production APP_ENV=production tsx scripts/launch-preflight.ts",
+    "email:worker": "tsx scripts/runTransactionalEmailWorker.ts",
+    "email:backlog": "tsx scripts/transactionalEmailBacklog.ts",
     "check": "tsc -p tsconfig.check.json --noEmit",
     "type-check": "pnpm run check",
     "lint": "pnpm run lint:check",

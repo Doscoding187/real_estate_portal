@@ -9,22 +9,26 @@ const {
   mockGetUserByEmailVerificationTokenHash,
   mockGetUserById,
   mockSendVerificationEmail,
+  mockSendPasswordResetEmail,
   mockUpdateUserEmailVerificationTokenHash,
   mockUpdateUserLastSignIn,
   mockVerifyUserEmail,
   mockGetUserByPasswordResetToken,
   mockUpdateUserPassword,
+  mockUpdateUserPasswordResetToken,
 } = vi.hoisted(() => ({
   mockGetAgentByUserId: vi.fn(),
   mockGetUserByEmail: vi.fn(),
   mockGetUserByEmailVerificationTokenHash: vi.fn(),
   mockGetUserById: vi.fn(),
   mockSendVerificationEmail: vi.fn(),
+  mockSendPasswordResetEmail: vi.fn(),
   mockUpdateUserEmailVerificationTokenHash: vi.fn(),
   mockUpdateUserLastSignIn: vi.fn(),
   mockVerifyUserEmail: vi.fn(),
   mockGetUserByPasswordResetToken: vi.fn(),
   mockUpdateUserPassword: vi.fn(),
+  mockUpdateUserPasswordResetToken: vi.fn(),
 }));
 
 vi.mock('../db', () => ({
@@ -37,6 +41,7 @@ vi.mock('../db', () => ({
   verifyUserEmail: mockVerifyUserEmail,
   getUserByPasswordResetToken: mockGetUserByPasswordResetToken,
   updateUserPassword: mockUpdateUserPassword,
+  updateUserPasswordResetToken: mockUpdateUserPasswordResetToken,
 }));
 
 vi.mock('./env', () => ({
@@ -46,7 +51,10 @@ vi.mock('./env', () => ({
   },
 }));
 
-vi.mock('./email', () => ({ sendVerificationEmail: mockSendVerificationEmail }));
+vi.mock('./email', () => ({
+  sendVerificationEmail: mockSendVerificationEmail,
+  sendPasswordResetEmail: mockSendPasswordResetEmail,
+}));
 vi.mock('./emailService', () => ({ EmailService: { sendEmail: vi.fn() } }));
 
 import { AuthService } from './auth';
@@ -100,6 +108,7 @@ describe('session security', () => {
     vi.clearAllMocks();
     mockGetAgentByUserId.mockResolvedValue(null);
     mockSendVerificationEmail.mockResolvedValue({ success: true });
+    mockSendPasswordResetEmail.mockResolvedValue({ success: true });
   });
 
   it('requires a session version in every signed session payload', async () => {
@@ -159,6 +168,22 @@ describe('session security', () => {
     expect(storedDigest).toBe(createHash('sha256').update(rawToken).digest('hex'));
     expect(storedDigest).not.toBe(rawToken);
     expect(expiry.getTime()).toBeGreaterThan(Date.now());
+  });
+
+  it('stores only the reset-token digest and sends that exact one-time token through the auth email boundary', async () => {
+    const service = new AuthService();
+    mockGetUserByEmail.mockResolvedValue(user({ emailVerified: 1 }));
+
+    await expect(service.forgotPassword('agent@example.com')).resolves.toBe(true);
+
+    const sent = mockSendPasswordResetEmail.mock.calls[0][0];
+    const storedHash = mockUpdateUserPasswordResetToken.mock.calls[0][1];
+    const expiry = mockUpdateUserPasswordResetToken.mock.calls[0][2] as Date;
+    expect(sent.to).toBe('agent@example.com');
+    expect(storedHash).toBe(createHash('sha256').update(sent.resetToken).digest('hex'));
+    expect(storedHash).not.toBe(sent.resetToken);
+    expect(expiry.getTime()).toBeGreaterThan(Date.now());
+    expect(expiry.getTime()).toBeLessThanOrEqual(Date.now() + 60 * 60 * 1000);
   });
 
   it('rejects an expired verification token before changing the account', async () => {

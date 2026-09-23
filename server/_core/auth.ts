@@ -410,14 +410,20 @@ export class AuthService {
       return false;
     }
 
-    const emailSent = await EmailService.sendEmail({
-      to: reset.user.email!,
-      subject: 'Password Reset Request',
-      html: `<p>You requested a password reset. Click the link below to reset your password:</p><a href="${reset.resetLink}">${reset.resetLink}</a><p>This link will expire in 1 hour.</p>`,
-      text: `You requested a password reset. Copy and paste this link into your browser to reset your password: ${reset.resetLink}`,
-    });
-
-    return emailSent;
+    try {
+      await sendPasswordResetEmail({
+        to: reset.user.email!,
+        resetToken: reset.token,
+        name: reset.user.name || undefined,
+      });
+      return true;
+    } catch (error) {
+      console.error('[Auth] Password reset email delivery failed', {
+        code: (error as { code?: string } | null)?.code || null,
+        name: (error as { name?: string } | null)?.name || null,
+      });
+      return false;
+    }
   }
 
   /**
@@ -426,12 +432,12 @@ export class AuthService {
    */
   async generatePasswordResetLink(email: string): Promise<string | null> {
     const reset = await this.createPasswordReset(email);
-    return reset?.resetLink ?? null;
+    return reset ? `${ENV.appUrl}/reset-password?token=${reset.token}` : null;
   }
 
   private async createPasswordReset(
     email: string,
-  ): Promise<{ user: User; resetLink: string } | null> {
+  ): Promise<{ user: User; token: string } | null> {
     const user = await db.getUserByEmail(email);
     if (!user) return null;
 
@@ -445,8 +451,7 @@ export class AuthService {
     // Store hashed token and expiry in the database
     await db.updateUserPasswordResetToken(user.id, hashedToken, expiresAt);
 
-    const resetLink = `${ENV.appUrl}/reset-password?token=${token}`;
-    return { user, resetLink };
+    return { user, token };
   }
 
   /**

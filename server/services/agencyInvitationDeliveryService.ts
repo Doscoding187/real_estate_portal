@@ -6,10 +6,8 @@ import {
   invitations,
   plans,
   subscriptions,
-  users,
 } from '../../drizzle/schema';
 import { ENV } from '../_core/env';
-import { EmailService } from '../_core/emailService';
 import { getDb } from '../db';
 import { isCommercialActivationAvailable } from './commercialActivationPolicy';
 import { isPaidMvpLaunchAccessSubscriptionEntitled } from './planAccessService';
@@ -126,8 +124,8 @@ export type AgencyInvitationDeliveryResult = {
   failed: number;
 };
 
-export function buildAgencyInvitationUrl(token: string) {
-  return `${ENV.appUrl}/accept-invitation?token=${encodeURIComponent(token)}`;
+export function buildAgencyInvitationUrl(token: string, appOrigin = ENV.appUrl) {
+  return `${appOrigin}/accept-invitation?token=${encodeURIComponent(token)}`;
 }
 
 function invitationTokenHasElapsed(expiresAt: string | Date | null | undefined, now = Date.now()) {
@@ -143,18 +141,6 @@ function queuedInvitationNeedsRefresh(
     !INVITATION_TOKEN_PATTERN.test(String(invitation.token || '')) ||
     invitationTokenHasElapsed(invitation.expiresAt)
   );
-}
-
-function inviterName(
-  user?: Pick<typeof users.$inferSelect, 'name' | 'firstName' | 'lastName' | 'email'> | null,
-) {
-  const name = String(user?.name || '').trim();
-  if (name) return name;
-
-  const parts = [user?.firstName, user?.lastName].filter(Boolean).join(' ').trim();
-  if (parts) return parts;
-
-  return String(user?.email || '').split('@')[0] || 'Your agency team';
 }
 
 /**
@@ -251,29 +237,17 @@ export async function deliverAgencyInvitations(input: {
     if (!deliverableInvitation) continue;
     attempted += 1;
 
-    const [inviter] = await db
-      .select({
-        name: users.name,
-        firstName: users.firstName,
-        lastName: users.lastName,
-        email: users.email,
-      })
-      .from(users)
-      .where(eq(users.id, deliverableInvitation.invitedBy))
-      .limit(1);
-
-    const delivered = await EmailService.sendAgencyInvitationEmail(
-      deliverableInvitation.email,
-      inviterName(inviter),
-      agency.name,
-      buildAgencyInvitationUrl(deliverableInvitation.token),
-    );
-
-    if (delivered) {
+    const { queueAgencyInvitationEmail, runTransactionalEmailWorker } =
+      await import('./transactionalEmailDeliveryService');
+    const deliveryId = await queueAgencyInvitationEmail({ database: db, invitation: deliverableInvitation });
+    const outcome = deliveryId
+      ? await runTransactionalEmailWorker({ database: db, deliveryId })
+      : { accepted: 0 };
+    if (outcome.accepted) {
       sent += 1;
     } else {
       failed += 1;
-      console.error('[AgencyInvitationDelivery] Invitation email was not accepted by provider', {
+      console.error('[AgencyInvitationDelivery] Invitation email is pending or requires attention', {
         agencyId: input.agencyId,
         invitationId: deliverableInvitation.id,
       });

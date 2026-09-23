@@ -45,11 +45,20 @@ import { developmentService } from './services/developmentService';
 import { resolvePropertiesForListings } from './services/inventoryLinkResolver';
 import { getDiscoveryOpsReport } from './services/discoveryOpsReportService';
 import { excludeLandFromGenericListingWorkflow } from './services/landLaunchContainmentService';
+import { reconcileUnknownTransactionalEmail, transactionalEmailBacklog } from './services/transactionalEmailDeliveryService';
 
 /**
  * Admin router - Super admin and agency admin endpoints
  */
 export const adminRouter = router({
+  getTransactionalEmailBacklog: superAdminProcedure.query(async () => transactionalEmailBacklog()),
+  reconcileUnknownTransactionalEmail: superAdminProcedure
+    .input(z.object({ deliveryId: z.number().int().positive(),
+      outcome: z.enum(['accepted', 'permanent_failed']),
+      providerReference: z.string().max(255).optional(), note: z.string().trim().min(1).max(500) }))
+    .mutation(async ({ input, ctx }) => reconcileUnknownTransactionalEmail({
+      ...input, actorUserId: ctx.user.id,
+    })),
   getDiscoveryOpsReport: superAdminProcedure.query(async () => {
     return getDiscoveryOpsReport();
   }),

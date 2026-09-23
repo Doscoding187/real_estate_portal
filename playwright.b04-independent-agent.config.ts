@@ -1,6 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
 const runtimeLog = '/tmp/property-listify-b04-independent-agent-paid-mvp-browser-runtime.log';
+const emailCapture = '/tmp/property-listify-b04-independent-agent-paid-mvp-email-capture.jsonl';
 
 export default defineConfig({
   testDir: './e2e/b04',
@@ -27,9 +28,10 @@ export default defineConfig({
   ],
   webServer: [
     {
-      command: `sh -c 'umask 077; : > ${runtimeLog}; exec pnpm exec tsx scripts/mvp-local-runtime.mts >> ${runtimeLog} 2>&1'`,
+      command: `sh -c 'umask 077; : > ${runtimeLog}; : > ${emailCapture}; chmod 600 ${emailCapture}; exec pnpm exec tsx scripts/mvp-local-runtime.mts >> ${runtimeLog} 2>&1'`,
       env: {
         PROPERTY_LISTIFY_GOVERNED_BROWSER_TEST_FIXTURE: 'true',
+        PROPERTY_LISTIFY_GOVERNED_B04_EMAIL_CAPTURE_PATH: emailCapture,
       },
       url: 'http://localhost:5000/api/health',
       reuseExistingServer: false,

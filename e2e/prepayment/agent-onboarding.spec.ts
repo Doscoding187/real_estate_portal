@@ -10,7 +10,7 @@ import {
 } from '../../server/_core/databaseAuthority/connectionAuthority';
 import { resolveDatabaseAuthority } from '../../server/_core/databaseAuthority/context';
 
-const runtimeLog = '/tmp/property-listify-mvp-prepayment-browser-runtime.log';
+const emailCapture = '/tmp/property-listify-b04-prepayment-browser-email-capture.jsonl';
 const apiOrigin = 'http://localhost:5000';
 const webOrigin = 'http://localhost:5177';
 
@@ -31,11 +31,14 @@ async function query(statement: string, values: readonly unknown[] = []): Promis
 
 function latestVerificationToken(): string | null {
   try {
-    const log = readFileSync(runtimeLog, 'utf8');
-    const matches = [
-      ...log.matchAll(/\[Email Local Dev\] Verification URL: .*?[?&]token=([a-f0-9]{64})/g),
-    ];
-    return matches.at(-1)?.[1] || null;
+    const messages = readFileSync(emailCapture, 'utf8').split('\n').filter(Boolean)
+      .flatMap(line => {
+        try {
+          const value = JSON.parse(line) as { kind?: string; verificationUrl?: string };
+          return value.kind === 'agent_verification' && value.verificationUrl ? [value] : [];
+        } catch { return []; }
+      });
+    return new URL(messages.at(-1)?.verificationUrl || 'http://localhost').searchParams.get('token');
   } catch {
     return null;
   }

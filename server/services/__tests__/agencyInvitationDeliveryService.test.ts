@@ -1,19 +1,19 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { mockGetDb, mockSelect, mockUpdate, mockSendAgencyInvitationEmail } = vi.hoisted(() => ({
+const { mockGetDb, mockSelect, mockUpdate, mockQueueInvitation, mockRunWorker } = vi.hoisted(() => ({
   mockGetDb: vi.fn(),
   mockSelect: vi.fn(),
   mockUpdate: vi.fn(),
-  mockSendAgencyInvitationEmail: vi.fn(),
+  mockQueueInvitation: vi.fn(),
+  mockRunWorker: vi.fn(),
 }));
 
 const VALID_INVITATION_TOKEN = 'a'.repeat(64);
 
 vi.mock('../../db', () => ({ getDb: mockGetDb }));
-vi.mock('../../_core/emailService', () => ({
-  EmailService: {
-    sendAgencyInvitationEmail: mockSendAgencyInvitationEmail,
-  },
+vi.mock('../transactionalEmailDeliveryService', () => ({
+  queueAgencyInvitationEmail: mockQueueInvitation,
+  runTransactionalEmailWorker: mockRunWorker,
 }));
 
 import {
@@ -45,6 +45,8 @@ function updateResult() {
 describe('agency invitation delivery (canonical access gate)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockQueueInvitation.mockResolvedValue(901);
+    mockRunWorker.mockResolvedValue({ accepted: 1 });
     const database = { select: mockSelect, update: mockUpdate };
     mockGetDb.mockResolvedValue({
       ...database,
@@ -122,17 +124,13 @@ describe('agency invitation delivery (canonical access gate)', () => {
           },
         ]),
       );
-    mockSendAgencyInvitationEmail.mockResolvedValue(true);
 
     const result = await deliverAgencyInvitations({ agencyId: 44, invitationIds: [99] });
 
     expect(result).toEqual({ deferred: false, attempted: 1, sent: 1, failed: 0 });
-    expect(mockSendAgencyInvitationEmail).toHaveBeenCalledWith(
-      'agent@example.com',
-      'Agency Principal',
-      'Canonical Realty',
-      expect.stringContaining(`/accept-invitation?token=${VALID_INVITATION_TOKEN}`),
-    );
+    expect(mockQueueInvitation).toHaveBeenCalledWith(expect.objectContaining({
+      invitation: expect.objectContaining({ token: VALID_INVITATION_TOKEN }),
+    }));
   });
 
   it('keeps onboarding invitations queued while canonical access is pending payment', async () => {
@@ -141,7 +139,7 @@ describe('agency invitation delivery (canonical access gate)', () => {
     const result = await deliverAgencyInvitations({ agencyId: 44, invitationIds: [99] });
 
     expect(result).toEqual({ deferred: true, attempted: 0, sent: 0, failed: 0 });
-    expect(mockSendAgencyInvitationEmail).not.toHaveBeenCalled();
+    expect(mockQueueInvitation).not.toHaveBeenCalled();
   });
 
   it('keeps even a persisted active term queued while commercial activation is disabled', async () => {
@@ -154,7 +152,7 @@ describe('agency invitation delivery (canonical access gate)', () => {
     const result = await deliverAgencyInvitations({ agencyId: 44, invitationIds: [99] });
 
     expect(result).toEqual({ deferred: true, attempted: 0, sent: 0, failed: 0 });
-    expect(mockSendAgencyInvitationEmail).not.toHaveBeenCalled();
+    expect(mockQueueInvitation).not.toHaveBeenCalled();
   });
 
   it('refreshes an expired queued invitation only when paid delivery begins', async () => {
@@ -181,7 +179,6 @@ describe('agency invitation delivery (canonical access gate)', () => {
           },
         ]),
       );
-    mockSendAgencyInvitationEmail.mockResolvedValue(true);
 
     const result = await deliverAgencyInvitations({ agencyId: 44, invitationIds: [99] });
 
@@ -199,12 +196,9 @@ describe('agency invitation delivery (canonical access gate)', () => {
     };
     expect(refreshed.token).not.toBe('b'.repeat(64));
     expect(refreshed.expiresAt.getTime()).toBeGreaterThan(Date.now());
-    expect(mockSendAgencyInvitationEmail).toHaveBeenCalledWith(
-      'agent@example.com',
-      'Agency Principal',
-      'Canonical Realty',
-      expect.stringContaining(`token=${rotatedToken}`),
-    );
+    expect(mockQueueInvitation).toHaveBeenCalledWith(expect.objectContaining({
+      invitation: expect.objectContaining({ token: rotatedToken }),
+    }));
   });
 
   it('refreshes a malformed queued token only when paid delivery begins', async () => {
@@ -230,18 +224,14 @@ describe('agency invitation delivery (canonical access gate)', () => {
           },
         ]),
       );
-    mockSendAgencyInvitationEmail.mockResolvedValue(true);
 
     await deliverAgencyInvitations({ agencyId: 44, invitationIds: [99] });
 
     const refreshed = update.set.mock.calls[0]?.[0] as { token: string };
     expect(refreshed.token).toMatch(/^[a-f0-9]{64}$/);
-    expect(mockSendAgencyInvitationEmail).toHaveBeenCalledWith(
-      'agent@example.com',
-      'Agency Principal',
-      'Canonical Realty',
-      expect.stringContaining(`token=${rotatedToken}`),
-    );
+    expect(mockQueueInvitation).toHaveBeenCalledWith(expect.objectContaining({
+      invitation: expect.objectContaining({ token: rotatedToken }),
+    }));
   });
 
   it('defers grace_period because fixed Launch Access expires at term end', async () => {
@@ -258,7 +248,6 @@ describe('agency invitation delivery (canonical access gate)', () => {
           },
         ]),
       );
-    mockSendAgencyInvitationEmail.mockResolvedValue(true);
 
     const result = await deliverAgencyInvitations({ agencyId: 44 });
 
@@ -273,7 +262,7 @@ describe('agency invitation delivery (canonical access gate)', () => {
     const result = await deliverAgencyInvitations({ agencyId: 44, invitationIds: [99] });
 
     expect(result).toEqual({ deferred: true, attempted: 0, sent: 0, failed: 0 });
-    expect(mockSendAgencyInvitationEmail).not.toHaveBeenCalled();
+    expect(mockQueueInvitation).not.toHaveBeenCalled();
   });
 
   it('defers when no canonical subscription exists yet', async () => {
@@ -282,7 +271,7 @@ describe('agency invitation delivery (canonical access gate)', () => {
     const result = await deliverAgencyInvitations({ agencyId: 44, invitationIds: [99] });
 
     expect(result).toEqual({ deferred: true, attempted: 0, sent: 0, failed: 0 });
-    expect(mockSendAgencyInvitationEmail).not.toHaveBeenCalled();
+    expect(mockQueueInvitation).not.toHaveBeenCalled();
   });
 
   it('defers an active subscription whose fixed term has already elapsed', async () => {
@@ -293,7 +282,7 @@ describe('agency invitation delivery (canonical access gate)', () => {
     const result = await deliverAgencyInvitations({ agencyId: 44, invitationIds: [99] });
 
     expect(result).toEqual({ deferred: true, attempted: 0, sent: 0, failed: 0 });
-    expect(mockSendAgencyInvitationEmail).not.toHaveBeenCalled();
+    expect(mockQueueInvitation).not.toHaveBeenCalled();
   });
 
   it('delivers within a live grace window and defers an exhausted one', () => {

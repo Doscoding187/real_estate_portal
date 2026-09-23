@@ -15,7 +15,7 @@ const fixtureAgentEmail = `ple-member-${runId}@invalid.example`;
 const memberPassword = `Browser!${randomUUID()}9a`;
 const ownerEmail = `ple-owner-${runId}@invalid.example`;
 const agencyName = `PLE Acquisition ${runId.slice(0, 8)}`;
-const runtimeLog = '/tmp/property-listify-mvp-ple-agency-browser-runtime.log';
+const emailCapture = '/tmp/property-listify-b05-ple-agency-browser-email-capture.jsonl';
 const apiOrigin = 'http://localhost:5000';
 const fixtureReviewerEmail = 'ple-reviewer@listify.local';
 const onePixelPng = Buffer.from(
@@ -115,12 +115,14 @@ async function archiveJourneyArtifacts(): Promise<void> {
 }
 
 function latestVerificationToken(): string | null {
-  const matches = [
-    ...readFileSync(runtimeLog, 'utf8').matchAll(
-      /\[Email Local Dev\] Verification URL: .*?[?&]token=([a-f0-9]{64})/g,
-    ),
-  ];
-  return matches.at(-1)?.[1] ?? null;
+  const messages = readFileSync(emailCapture, 'utf8').split('\n').filter(Boolean)
+    .flatMap(line => {
+      try {
+        const value = JSON.parse(line) as { kind?: string; verificationUrl?: string };
+        return value.kind === 'agency_verification' && value.verificationUrl ? [value] : [];
+      } catch { return []; }
+    });
+  return new URL(messages.at(-1)?.verificationUrl || 'http://localhost').searchParams.get('token');
 }
 
 async function registerAndVerify(

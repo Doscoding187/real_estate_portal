@@ -3,7 +3,7 @@ import { isValidAuthRateLimitRedisUrl } from './authRateLimitStore';
 import { resolveBrowserSecurityPolicy } from './browserSecurity';
 import type { AppRuntimeEnv } from './runtimeBootstrap';
 import { resolveAppRuntimeEnv } from './runtimeBootstrap';
-import { resolveTransactionalEmailConfiguration } from './transactionalEmailConfig';
+import { resolveTransactionalEmailConfiguration, transactionalEmailOrigin } from './transactionalEmailConfig';
 
 export type LaunchPreflightLevel = 'required' | 'recommended';
 
@@ -298,9 +298,17 @@ function emailCheck(env: EnvLike) {
     !configuration.from
       ? 'RESEND_FROM_EMAIL or EMAIL_FROM'
       : !configuration.fromConfigured
-        ? `${configuration.fromKey} (placeholder)`
+        ? `${configuration.fromKey} (invalid or placeholder)`
         : null,
   ].filter(Boolean) as string[];
+
+  for (const kind of ['app', 'api'] as const) {
+    try {
+      transactionalEmailOrigin(kind, env);
+    } catch {
+      missing.push(`public ${kind} origin (HTTPS origin required)`);
+    }
+  }
 
   return makeCheck({
     id: 'transactional-email',

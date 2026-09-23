@@ -1,9 +1,10 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
-import { readFileSync } from 'node:fs';
+import { readFileSync, statSync } from 'node:fs';
 
 const base = 'http://127.0.0.1:5000';
-const runtimeLogPath = process.env.MVP_RUNTIME_LOG || '/tmp/listify-mvp-577-runtime.log';
+const emailCapturePath = process.env.PROPERTY_LISTIFY_GOVERNED_B04_EMAIL_CAPTURE_PATH ||
+  '/tmp/property-listify-b04-prepayment-browser-email-capture.jsonl';
 const ready = await (await fetch(`${base}/api/readiness`)).json();
 assert.equal(
   ready.db.targetFingerprintHash,
@@ -17,6 +18,22 @@ async function post(path: string, body: unknown, cookie = '') {
     redirect: 'manual',
   });
 }
+function latestVerificationToken(): string | null {
+  if (!/^\/tmp\/property-listify-b04-[a-z0-9._-]+\.jsonl$/i.test(emailCapturePath)) return null;
+  try {
+    if ((statSync(emailCapturePath).mode & 0o777) !== 0o600) return null;
+    const messages = readFileSync(emailCapturePath, 'utf8').split('\n').filter(Boolean)
+      .flatMap(line => {
+        try {
+          const value = JSON.parse(line) as { kind?: string; verificationUrl?: string };
+          return value.kind === 'agent_verification' && value.verificationUrl ? [value] : [];
+        } catch { return []; }
+      });
+    return new URL(messages.at(-1)?.verificationUrl || 'http://localhost').searchParams.get('token');
+  } catch {
+    return null;
+  }
+}
 async function account(role: string) {
   const email = `prepare-${randomUUID()}@invalid.example`;
   const password = `Prepare!${randomUUID()}`;
@@ -28,11 +45,8 @@ async function account(role: string) {
       role === 'agent' ? { displayName: 'Preparation Agent', phone: '+27820000000' } : undefined,
   });
   assert.equal(response.status, 201);
-  const verificationTokens = [
-    ...readFileSync(runtimeLogPath, 'utf8').matchAll(/Verification URL: .*?token=([a-f0-9]+)/g),
-  ];
-  const token = verificationTokens.at(-1)?.[1];
-  assert.ok(token, `No local verification token found in ${runtimeLogPath}`);
+  const token = latestVerificationToken();
+  assert.ok(token, 'No verification message was found in the private governed capture.');
   assert.equal(
     (await fetch(`${base}/api/auth/verify-email?token=${token}`, { redirect: 'manual' })).status,
     302,

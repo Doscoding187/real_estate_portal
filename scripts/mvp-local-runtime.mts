@@ -134,9 +134,6 @@ function captureB05AgencyInvitation(options: {
 const { EmailService } = await import('../server/_core/emailService');
 EmailService.sendEmail = async options => {
   captureB05AgencyInvitation(options);
-  const token = options.text?.match(/reset-password\?token=([a-f0-9]+)/)?.[1];
-  if (token)
-    console.log(`[MVP Local Sink] Reset URL: http://localhost:5177/reset-password?token=${token}`);
   return true;
 };
 await import('../server/_core/start');

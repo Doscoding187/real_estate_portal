@@ -4,7 +4,7 @@
   "historyTable": "sql_migration_history",
   "attemptTable": "sql_migration_attempts",
   "lockName": "property_listify_manifest_migrations",
-  "expectedHead": "0090_retire_disconnected_boost_campaigns.sql",
+  "expectedHead": "0092_transactional_email_attempts.sql",
   "migrations": [
     {
       "sequence": 0,
@@ -958,6 +958,28 @@
       "statementPolicy": "approved-exception",
       "requiredReferenceDataVersion": null,
       "approvalReference": "DBX-PRELAUNCH-RETIRE-DISCONNECTED-BOOST-CAMPAIGNS-2026-09-11-Edward"
+    },
+    {
+      "sequence": 91,
+      "filename": "0091_transactional_email_deliveries.sql",
+      "checksum": "f449f6485d7bc3bdbf53b83988cc9d92b1fa844a7f3079cc12dee5bdabcef813",
+      "parent": "0090_retire_disconnected_boost_campaigns.sql",
+      "parentChecksum": "767f3767f3a7f69d947ba150598cee45194ebfb64a11f52d7b3114c2b5467421",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null,
+      "approvalReference": null
+    },
+    {
+      "sequence": 92,
+      "filename": "0092_transactional_email_attempts.sql",
+      "checksum": "74217052481a7ad26dfddf4ac0f66e9b0c93e4c9dfdf9e20818b2ce45b2cc927",
+      "parent": "0091_transactional_email_deliveries.sql",
+      "parentChecksum": "f449f6485d7bc3bdbf53b83988cc9d92b1fa844a7f3079cc12dee5bdabcef813",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null,
+      "approvalReference": null
     }
   ]
 }

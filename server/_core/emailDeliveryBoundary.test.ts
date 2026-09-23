@@ -96,4 +96,24 @@ describe('transactional email delivery boundary', () => {
       }),
     ).rejects.toThrow('Transactional email is unavailable in this deployed runtime.');
   });
+
+  it('keeps verification and reset tokens out of ordinary local logs', async () => {
+    vi.stubEnv('NODE_ENV', 'development');
+    vi.stubEnv('APP_ENV', 'development');
+    await sendVerificationEmail({
+      to: 'stakeholder@example.test',
+      verificationToken: 'raw-verification-secret',
+    });
+    await sendPasswordResetEmail({
+      to: 'stakeholder@example.test',
+      resetToken: 'raw-reset-secret',
+    });
+    const logs = [
+      ...vi.mocked(console.log).mock.calls.flat(),
+      ...vi.mocked(console.warn).mock.calls.flat(),
+    ].join(' ');
+    expect(logs).not.toContain('raw-verification-secret');
+    expect(logs).not.toContain('raw-reset-secret');
+    expect(logs).not.toContain('token=');
+  });
 });
