@@ -13,7 +13,7 @@ contract.
 | Transactional email | supervised worker logs and `pnpm email:backlog` | no recent batch, unknown, permanent failure, unresolved identity, stale claim | assign B14 operator; inspect provider before reconciliation |
 | Lead delivery | cron history, worker summary/backlog, Lead Routing Audit | missed two consecutive runs, unknown/exhausted delivery, platform custody attention | assign B13 owner; verify internal CRM custody |
 | Private proof/media | B11 controlled object read and provider status | object unreadable or permission drift | hold finance review; preserve object and audit evidence |
-| Customer support | reply/bounce mailbox and B14 queue | unowned message or missed staffed period | assign primary/backup and customer response |
+| Customer support | reply/bounce mailbox and B14 queue | unowned message or missed staffed period | Edward responds; hold new payable intake and use the founder-unavailable procedure if the window is missed |
 
 Use the existing Railway, Vercel, Resend, Redis and object-store dashboards and
 an operator-owned schedule for the first cohort. Record checks during staffed

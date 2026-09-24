@@ -39,9 +39,9 @@ not merely repository configuration files.
    login alone does not grant paid publication.
 6. **Failure controls:** unmatched/partial/duplicate payment, rejected proof,
    unavailable private object, B10 unknown email outcome, B13 platform custody,
-   wrong role/tenant, expired entitlement and customer-support handover all
+   wrong role/tenant, expired entitlement and founder-unavailable pause/resume all
    remain visible and recoverable without direct SQL.
-7. **Operations:** B14 primary/backup rehearsal, B15 approved legal pages and
+7. **Operations:** B14 founder-only staffed/unavailable rehearsal, B15 approved legal pages and
    invoice disclosures, B17 monitoring/recovery signals, and a sanitized
    evidence packet with no customer secret or proof content.
 

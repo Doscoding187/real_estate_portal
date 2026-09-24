@@ -46,10 +46,15 @@ this preparation.
   lead cron and hosted custody/attention checks on the exact artifact.
 - B11: distinct private proof bucket and credential, controlled put/read,
   access denial, durability, retention and recovery proof.
-- B14: named backup, staffed hours, real queue handling and handover rehearsal.
-- B15: approved final legal/payment/privacy text and customer browser proof;
-  the [review draft](b15-customer-copy-review-draft-2026-09-24.md) is prepared,
-  while placeholder Terms/Privacy still block paid activation.
+- B14: Edward's daily weekday founder-only checks, a monitored support route,
+  proof that new sales/invoices/activation pause during an absence longer than
+  one business day, and a real single-operator queue/unavailability rehearsal.
+  A secondary operator is required only if this bounded model cannot meet the
+  customer obligations.
+- B15: Edward-approved final legal/payment/privacy text and customer browser
+  proof; the [approval candidate](b15-founder-approval-candidate-2026-09-24.md)
+  is prepared with unresolved public contact, address and provider facts.
+  Placeholder Terms/Privacy still block paid activation.
 - B17: actual continuous check/alert recipient and disposable backup/restore
   rehearsal.
 - B18: full exact-artifact Agent/Agency/Developer and failure-path acceptance.

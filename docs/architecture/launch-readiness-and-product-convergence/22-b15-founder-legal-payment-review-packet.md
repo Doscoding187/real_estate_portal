@@ -1,14 +1,18 @@
 # B15 founder review: legal, payment and disclosure
 
-Status: review packet prepared on 2026-09-24. Customer-facing Terms and Privacy
-are still placeholder pages in `client/src/pages/NavLandingPage.tsx`; `/terms`
-and `/privacy` resolve to them. This packet is not approved legal copy and does
-not close B15 or authorize payment collection.
+Status: Edward's proposed final wording is prepared for factual completion and
+approval. Customer-facing Terms and Privacy are still placeholder pages in
+`client/src/pages/NavLandingPage.tsx`; `/terms` and `/privacy` resolve to them.
+This packet does not close B15 or authorize payment collection.
 
-The [customer copy review draft](evidence/b15-customer-copy-review-draft-2026-09-24.md)
-contains the B01-derived payment disclosure, Launch Access terms and Privacy
-notice with unresolved facts marked in brackets. It is ready for founder and
-South African legal/accounting markup, not publication.
+The [Edward approval candidate](evidence/b15-founder-approval-candidate-2026-09-24.md)
+contains the proposed payment disclosure, Terms and Privacy notice. It carries
+the approved V1 operator assignment: Edward alone owns legal/release approval,
+finance and support; daily weekday checks; pause new sales, invoices and
+payment activation for an absence longer than one business day. The older
+[working draft](evidence/b15-customer-copy-review-draft-2026-09-24.md) is
+superseded for review. The candidate is not yet suitable for publication
+because the factual fields below are unresolved.
 
 ## Locked commercial facts from B01
 
@@ -23,35 +27,42 @@ South African legal/accounting markup, not publication.
 | Refund | Before activation after received funds, default full refund subject to verified payer and applicable law; no blanket no-refunds rule after activation |
 | Scope | Paid access is the three approved value loops; no promise of leads, sales, traffic, ranking, nationwide inventory or externally verified professional status |
 
-## Decisions and supplied facts needed before copy can be final
+## Facts and review needed before Edward can approve publication
 
-The founder and a South African legal/accounting reviewer should provide or
-approve the following in one marked-up version of the Terms, Privacy and
-invoice/payment text:
+Edward must provide or approve the following in one resolved version of the
+Terms, Privacy and invoice/payment text:
 
-1. Registered and service addresses, public support email and telephone,
-   company office-bearer details where required, and the exact bank/payee
-   display name. Do not publish a bank account number in this repository.
+1. Registered and legal-service address and monitored public support/privacy
+   mailbox. These remain founder-confirmation facts. The EFT payee is already
+   confirmed as **Property Listify (Pty) Ltd**. Do not publish a bank account
+   number in this repository. Edward does not currently offer a V1 public
+   support telephone; verify whether a company disclosure telephone is
+   required for this electronic offer before payment publication.
 2. Scope of service and customer eligibility for Agent, Agency and Developer;
    customer content and moderation rules; attribution and lead handling;
    suspension/expiry; dispute route and governing contact.
-3. Cancellation, refund and correction process before and after activation,
-   including timing, evidence, payer verification and statutory exceptions.
-   Confirm how a customer sees this before initiating EFT.
-4. Invoice/receipt wording, tax representation and accounting treatment.
-   Verify current VAT registration status with the accountant at release time;
-   do not infer status from expected first-cohort revenue.
-5. Privacy notice: responsible party and contact, purpose and legal basis for
-   account, enquiry, proof and lead processing; recipient categories and
-   provider locations; retention/deletion; access/correction/objection route;
-   cookies, direct marketing and incident contact. Include real B10 Resend,
-   B11 object storage, Railway/Vercel and database flows once bound.
+3. Review the candidate cancellation, refund and correction process before and
+   after activation, including payer verification, timing and statutory rights.
+   Confirm how a customer sees it before initiating EFT.
+4. Verify current VAT registration status and invoice/receipt wording at release
+   time; do not infer status from expected first-cohort revenue. The founder's
+   current statement and canonical B01 metadata say VAT is not charged.
+5. Complete the actual provider/location, retention/deletion and cookie
+   schedules after B10–B12 binding. Verify the candidate notice against the
+   released account, enquiry, proof and lead flows. Include real Resend, object
+   storage, Railway/frontend and database providers. Do not describe Azure as
+   the runtime while Railway remains on TiDB.
 6. Customer-facing acceptance mechanism and version/date of Terms and Privacy.
    A link to a placeholder page is not meaningful acceptance.
 
-The legal reviewer should confirm which consumer and electronic-commerce
-provisions apply to these specific B2B/B2C flows. Primary references for that
-review are the [Electronic Communications and Transactions Act](https://www.gov.za/documents/electronic-communications-and-transactions-act),
+The government-published [Electronic Communications and Transactions Act,
+section 43](https://www.gov.za/sites/default/files/gcis_document/201409/a25-02.pdf)
+lists a physical address and telephone among disclosures for a covered
+electronic offer. The founder has not supplied either for publication; the
+application of that provision and any lawful alternative must be resolved
+before taking payment. A South African legal/accounting review is prudent,
+while Edward remains the named V1 approver. Primary references are the
+[Electronic Communications and Transactions Act](https://www.gov.za/documents/electronic-communications-and-transactions-act),
 the [Consumer Protection Act](https://www.gov.za/documents/consumer-protection-act),
 and [POPIA](https://www.gov.za/documents/protection-personal-information-act).
 SARS publishes the [current VAT registration threshold](https://www.sars.gov.za/faq/what-is-the-new-threshold-for-vat-registration/);

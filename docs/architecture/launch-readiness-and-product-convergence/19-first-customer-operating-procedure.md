@@ -1,22 +1,38 @@
 # B14 first-customer operating procedure
 
-Status: prepared for a staffed rehearsal; no production or provider rehearsal is
-claimed. This procedure follows the founder-approved [B01 commercial policy](03-launch-register.md#lrc-pay-001-b01-founder-commercial-and-operating-decision--2026-09-17).
+Status: founder-only bootstrap model recorded; staffed and unavailable-state
+rehearsal remains open. No production or provider rehearsal is claimed. This
+procedure follows the founder-approved [B01 commercial policy](03-launch-register.md#lrc-pay-001-b01-founder-commercial-and-operating-decision--2026-09-17).
 
 ## Before the first payable customer
 
-Edward is the initial finance, moderation, support and release operator. Record
-a named backup with the same approved role, a contact route and a handover test
-before accepting payment. A single unavailable operator cannot leave payment
-proofs, customer support or platform-custodied leads unattended. Record the
-staffed hours and the customer-facing response promise; B01's normal target
-after a valid matched proof is within one business day.
+Edward is the V1 Founder/Managing Director/Release Approver, Finance Operator
+and Support Operator. No secondary operator is appointed. For the first 10–20
+paying customers, one operator is acceptable as a bounded bootstrap model if
+he performs the founder-approved daily weekday finance and support checks,
+monitors a public support/reply route, and checks email, leads and readiness
+within that schedule. Publish the response window without implying round-the-clock
+staffing. B01's normal target after a valid matched proof is within one
+business day; proof never activates access automatically.
+
+A named backup is not an automatic V1 requirement. Customer-owned leads remain
+in the authorized CRM even if an email alert fails. Manual EFT stays pending
+until Edward verifies funds. Platform-managed/manual leads, support and
+security incidents still need a human. Before accepting money, rehearse the
+actual Agent, Agency and Developer queues plus one exceptional platform-held
+lead with Edward alone. Accept the cohort only if every due obligation can be
+resolved or explicitly owned within the disclosed window. Reassess at 10
+customers, before expanding to 20, and after any missed check, delayed finance
+decision or unattended platform lead. Add a real authorized secondary operator
+if the founder-only schedule and pause procedure cannot meet those obligations;
+never create a nominal backup account to satisfy a checklist.
 
 Confirm the exact released SHA, product activation reference, readiness and
 legal pages under B16/B18. Confirm the B10 email supervisor and B13 lead cron
 are running, the B11 private bucket has passed a real controlled put/read, and
-the B17 monitor reaches the named primary and backup. These are separate
-acceptance records; a green API liveness response is insufficient.
+the B17 monitor reaches Edward through a route independent of the application.
+These are separate acceptance records; a green API liveness response is
+insufficient.
 
 ## Daily staffed checks
 
@@ -47,7 +63,38 @@ acceptance records; a green API liveness response is insufficient.
    A provider acceptance result does not prove mailbox delivery. Record a
    customer-safe follow-up where a required notice failed.
 
-## Interruptions and handover
+## Planned and unplanned unavailability
+
+Before a planned absence longer than one business day, Edward records the
+start and expected return in the protected operations log, clears or records
+every due finance, support, email and lead item, and stops issuing new payable
+invoices or accepting new paid onboarding or payment activation. Put an honest away notice on the
+approved support channel and, where the released product permits it, pause new
+payable intake. Tell customers with open obligations when to expect the next
+update. Do not accept payment with a known inability to meet the disclosed
+activation target. Customer-owned CRM leads stay visible to their authorized
+customer; platform-managed/manual leads need actual human follow-up before
+leaving the queue unattended.
+
+If Edward becomes unexpectedly unavailable for more than one business day,
+new sales, invoice issuance and payment activation are paused until he returns.
+Existing support requests stay queued with a clear response expectation.
+Automated workers may persist and
+alert but are not a human substitute. The service must preserve proofs, queue
+rows and leads without auto-approving payment or inventing delivery success.
+The first available authorized operator reviews the oldest obligations in
+this order: platform-managed leads and security/privacy incidents; customer
+access/outages; received funds and pending proofs; bounced/unknown essential
+email; other support. Until that review, no new finance approval occurs. If
+Edward cannot resume before the stated customer response window, there is no
+honest escalation to another human today: record the breach, tell affected
+customers as soon as contact is possible, resolve or refund as applicable, and
+do not reopen payable intake until the cadence is credible. A repeated breach
+or a time-sensitive lead that cannot wait until the next staffed check requires
+a real secondary operator or a narrower customer-facing service before
+further paid intake.
+
+## Interruptions and recovery
 
 For API/database/Redis failure, stop payable onboarding and new finance
 approvals. Record onset, affected release, readiness response and provider
@@ -57,20 +104,23 @@ unchanged while B08 is parked. Do not improvise a database switch.
 For an ambiguous email or lead delivery, preserve the unknown state and seek
 provider evidence; never blind retry. For a failed private-proof read, hold the
 finance decision until the original object is safely available. For a mismatch
-between bank receipt and invoice, do not approve. Notify the backup operator
-before a shift ends with open customer obligations.
+between bank receipt and invoice, do not approve. Record the next founder
+check time before ending a staffed period with open obligations.
 
 ## Rehearsal and evidence form
 
 Before paid activation, rehearse with controlled records: one correct Agent,
 Agency and Developer invoice/proof/finance/entitlement flow; one unmatched
 proof; one ambiguous email outcome; one platform-custodied lead; one private
-proof retrieval failure; and primary-to-backup handover. Record actor, UTC
-time, artifact SHA, target identity, sanitized IDs, observed before/after
+proof retrieval failure; and a planned founder-unavailable pause/resume with
+an outstanding support and lead item. Record actor, UTC time, artifact SHA,
+target identity, sanitized IDs, observed before/after
 states, recovery action and customer contact. No real customer proof or secret
 belongs in this repository. The run is accepted only when every pending
 obligation has an owner and the product state agrees with the audit record.
 
-Open human decisions: named backup, staffed hours, support/reply mailbox owner,
-bounce owner and escalation contact. Record these in the protected operations
-record before first payment; do not put personal contact details here.
+Open human facts: founder staffed hours, actual monitored support/reply route,
+bounce route, independent alert delivery, and the mechanism for pausing payable
+intake. Edward owns all four queues initially. Record these and the successful
+founder-only rehearsal in the protected operations record before first
+payment; do not put personal contact details here.
