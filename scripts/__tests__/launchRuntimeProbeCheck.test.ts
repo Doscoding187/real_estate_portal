@@ -48,6 +48,15 @@ describe('launch runtime probe', () => {
     ]));
   });
 
+  it('rejects a 200 HTML frontend fallback with no build identity', () => {
+    const input = healthy();
+    input.frontendVersion.body = null;
+    expect(evaluateLaunchRuntimeProbe(input)).toEqual(expect.arrayContaining([
+      'frontend-version: SHA mismatch',
+      'frontend-version: environment mismatch',
+    ]));
+  });
+
   it('does not mistake a green liveness endpoint for healthy readiness', () => {
     const input = healthy();
     input.apiReadiness.status = 503;
