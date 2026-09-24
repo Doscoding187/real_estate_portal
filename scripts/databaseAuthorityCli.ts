@@ -7,6 +7,7 @@ import {
 } from '../server/_core/databaseAuthority/authorization';
 import { createAuthoritySqlConnection } from '../server/_core/databaseAuthority/connectionAuthority';
 import { provisionB08AzureInspectionIdentity } from '../server/_core/databaseAuthority/b08AzureInspectionIdentity';
+import { provisionB08TidbSourceReader } from '../server/_core/databaseAuthority/b08TidbSourceReader';
 import {
   provisionB08AzureMigrationIdentity,
   verifyB08AzureMigrationIdentity,
@@ -97,6 +98,7 @@ type Command =
   | 'manifest'
   | 'data:manifest'
   | 'b08:inspector:provision'
+  | 'b08:tidb-reader:provision'
   | 'b08:inspect-metadata'
   | 'b08:migrator:provision'
   | 'b08:migrator:verify'
@@ -273,6 +275,11 @@ async function run(command: Command): Promise<void> {
 
   if (command === 'b08:inspector:provision') {
     print(await provisionB08AzureInspectionIdentity());
+    return;
+  }
+
+  if (command === 'b08:tidb-reader:provision') {
+    print(await provisionB08TidbSourceReader(requiredOption('ack')));
     return;
   }
 
@@ -778,6 +785,7 @@ const commands = new Set<Command>([
   'manifest',
   'data:manifest',
   'b08:inspector:provision',
+  'b08:tidb-reader:provision',
   'b08:inspect-metadata',
   'b08:migrator:provision',
   'b08:migrator:verify',

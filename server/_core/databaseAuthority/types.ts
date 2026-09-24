@@ -4,6 +4,7 @@ export const DATABASE_OPERATIONS = [
   'read-only-connect',
   'ci-identity-bootstrap',
   'inspection-identity-provision',
+  'tidb-source-reader-provision',
   'migration-identity-provision',
   'runtime-identities-provision',
   'runtime-ledger-read-grant',

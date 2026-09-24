@@ -38,6 +38,10 @@ export type ProtectedDatabaseApproval = {
   targetFingerprintHash: string;
   credentialClass?: DatabaseCredentialClass;
   inspectionIdentity?: string;
+  tidbSourceInstanceId?: string;
+  tidbSourceAdminIdentity?: string;
+  tidbSourceReaderIdentity?: string;
+  tidbSourceReaderPrivilegeSet?: string;
   migrationIdentity?: string;
   migrationPrivilegeSet?: string;
   runtimeIdentity?: string;
@@ -50,6 +54,12 @@ export type ProtectedDatabaseApproval = {
 export const B08_AZURE_TARGET_FINGERPRINT_HASH =
   'b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced';
 export const B08_INSPECTION_IDENTITY = 'propertylistify_b08_inspector';
+export const B08_TIDB_SOURCE_TARGET_FINGERPRINT_HASH =
+  '68f2582a6dc7af8c54cf6f31a396e8abe4c4030696c923b0ea3b1679ba6f5b5e';
+export const B08_TIDB_SOURCE_INSTANCE_ID = '10492391619114516879';
+export const B08_TIDB_SOURCE_ADMIN_IDENTITY = '42MAxcoJrgbJNnU.root';
+export const B08_TIDB_SOURCE_READER_IDENTITY = '42MAxcoJrgbJNnU.b08_reader';
+export const B08_TIDB_SOURCE_READER_PRIVILEGE_SET = 'listify_property_sa.*:SELECT';
 export const B08_MIGRATION_IDENTITY = 'propertylistify_release_migrator';
 export const B08_MIGRATION_PRIVILEGE_SET =
   'propertylistify_database.*:SELECT,INSERT,UPDATE,DELETE,CREATE,ALTER,DROP,INDEX,REFERENCES;*.*:SESSION_VARIABLES_ADMIN';
@@ -74,6 +84,10 @@ export function protectedDatabaseApprovalFromEnvironment(
     targetFingerprintHash: fingerprint ?? '',
     credentialClass: env.DATABASE_AUTHORITY_APPROVED_CREDENTIAL_CLASS as DatabaseCredentialClass | undefined,
     inspectionIdentity: env.DATABASE_AUTHORITY_APPROVED_INSPECTION_IDENTITY,
+    tidbSourceInstanceId: env.DATABASE_AUTHORITY_APPROVED_TIDB_SOURCE_INSTANCE_ID,
+    tidbSourceAdminIdentity: env.DATABASE_AUTHORITY_APPROVED_TIDB_SOURCE_ADMIN_IDENTITY,
+    tidbSourceReaderIdentity: env.DATABASE_AUTHORITY_APPROVED_TIDB_SOURCE_READER_IDENTITY,
+    tidbSourceReaderPrivilegeSet: env.DATABASE_AUTHORITY_APPROVED_TIDB_SOURCE_READER_PRIVILEGE_SET,
     migrationIdentity: env.DATABASE_AUTHORITY_APPROVED_MIGRATION_IDENTITY,
     migrationPrivilegeSet: env.DATABASE_AUTHORITY_APPROVED_MIGRATION_PRIVILEGE_SET,
     runtimeIdentity: env.DATABASE_AUTHORITY_APPROVED_RUNTIME_IDENTITY,
@@ -235,6 +249,18 @@ export function authorizeDatabaseOperation(
       input.approval?.inspectionIdentity !== B08_INSPECTION_IDENTITY)
   ) {
     throw new Error('Database operation refused: exact B08 Azure inspection identity approval is required.');
+  }
+  if (
+    context.operation === 'tidb-source-reader-provision' &&
+    (context.targetFingerprintHash !== B08_TIDB_SOURCE_TARGET_FINGERPRINT_HASH ||
+      context.provider !== 'tidb' ||
+      input.approval?.credentialClass !== 'bootstrap-admin' ||
+      input.approval?.tidbSourceInstanceId !== B08_TIDB_SOURCE_INSTANCE_ID ||
+      input.approval?.tidbSourceAdminIdentity !== B08_TIDB_SOURCE_ADMIN_IDENTITY ||
+      input.approval?.tidbSourceReaderIdentity !== B08_TIDB_SOURCE_READER_IDENTITY ||
+      input.approval?.tidbSourceReaderPrivilegeSet !== B08_TIDB_SOURCE_READER_PRIVILEGE_SET)
+  ) {
+    throw new Error('Database operation refused: exact B08 TiDB source reader approval is required.');
   }
   if (
     context.operation === 'migration-identity-provision' &&

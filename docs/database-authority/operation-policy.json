@@ -49,6 +49,14 @@
       "acknowledgement": "none",
       "evidence": "exact-b08-azure-inspector-identity-and-read-only-grants"
     },
+    "tidb-source-reader-provision": {
+      "allowedTargetClasses": ["production"],
+      "credentialClasses": ["bootstrap-admin"],
+      "ownership": "none",
+      "approval": "protected-target",
+      "acknowledgement": "exact-target",
+      "evidence": "exact-b08-tidb-source-cluster-reader-and-select-only-grant"
+    },
     "migration-identity-provision": {
       "allowedTargetClasses": ["production"],
       "credentialClasses": ["bootstrap-admin"],

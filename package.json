@@ -51,6 +51,7 @@
     "db:authority:status": "tsx scripts/databaseAuthorityStatus.ts",
     "db:authority:manifest": "tsx scripts/databaseAuthorityCli.ts manifest",
     "db:b08:inspector:provision": "tsx scripts/databaseAuthorityCli.ts b08:inspector:provision",
+    "db:b08:tidb-reader:provision": "tsx scripts/databaseAuthorityCli.ts b08:tidb-reader:provision",
     "db:b08:inspect-metadata": "tsx scripts/databaseAuthorityCli.ts b08:inspect-metadata",
     "db:b08:migrator:provision": "tsx scripts/databaseAuthorityCli.ts b08:migrator:provision",
     "db:b08:migrator:verify": "tsx scripts/databaseAuthorityCli.ts b08:migrator:verify",

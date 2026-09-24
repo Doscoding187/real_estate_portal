@@ -46,6 +46,7 @@ export class DatabaseTargetMismatchError extends Error {
 const SQL_CONNECTION_OPERATIONS: readonly DatabaseOperation[] = [
   'ci-identity-bootstrap',
   'inspection-identity-provision',
+  'tidb-source-reader-provision',
   'migration-identity-provision',
   'runtime-identities-provision',
   'runtime-ledger-read-grant',

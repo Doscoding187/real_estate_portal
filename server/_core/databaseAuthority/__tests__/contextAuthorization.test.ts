@@ -478,6 +478,49 @@ describe('immutable resolved database context and operation authorization', () =
     );
   });
 
+  it('confines TiDB source reader provisioning to the exact production source and SELECT-only grant', () => {
+    const identity = fixtureIdentity();
+    const resolve = (databaseUrl: string) => resolveDatabaseAuthority({
+      operation: 'tidb-source-reader-provision',
+      cwd: identity.worktreePath,
+      gitIdentity: identity,
+      explicitDatabaseUrl: databaseUrl,
+      credentialClass: 'bootstrap-admin',
+      processEnv: { NODE_ENV: 'production', APP_ENV: 'production' },
+    });
+    const source = resolve('mysql://gateway01.ap-northeast-1.prod.aws.tidbcloud.com:4000/listify_property_sa');
+    const approval = {
+      reference: 'B08-TIDB-TEST',
+      actor: 'test-reviewer',
+      operation: 'tidb-source-reader-provision' as const,
+      targetFingerprintHash: source.context.targetFingerprintHash,
+      credentialClass: 'bootstrap-admin' as const,
+      tidbSourceInstanceId: '10492391619114516879',
+      tidbSourceAdminIdentity: '42MAxcoJrgbJNnU.root',
+      tidbSourceReaderIdentity: '42MAxcoJrgbJNnU.b08_reader',
+      tidbSourceReaderPrivilegeSet: 'listify_property_sa.*:SELECT',
+    };
+    const acknowledgement = expectedDatabaseAcknowledgement(source.context);
+    expect(() => authorizeDatabaseOperation(source, { root: process.cwd(), approval, acknowledgement })).not.toThrow();
+    for (const changed of [
+      { tidbSourceInstanceId: 'different' },
+      { tidbSourceAdminIdentity: '292qWmvn2YGy2jW.root' },
+      { tidbSourceReaderIdentity: 'another_reader' },
+      { tidbSourceReaderPrivilegeSet: 'listify_property_sa.*:ALL PRIVILEGES' },
+    ]) {
+      expect(() => authorizeDatabaseOperation(source, {
+        root: process.cwd(), approval: { ...approval, ...changed }, acknowledgement,
+      })).toThrow('exact B08 TiDB source reader approval');
+    }
+    expect(() => authorizeDatabaseOperation(source, { root: process.cwd(), approval })).toThrow('exact acknowledgement');
+    const azure = resolve('mysql://propertylistify-mysql.mysql.database.azure.com:3306/propertylistify_database');
+    expect(() => authorizeDatabaseOperation(azure, {
+      root: process.cwd(),
+      approval: { ...approval, targetFingerprintHash: azure.context.targetFingerprintHash },
+      acknowledgement: expectedDatabaseAcknowledgement(azure.context),
+    })).toThrow('exact B08 TiDB source reader approval');
+  });
+
   it('confines B08 migration identity provisioning to the exact target, account, and privileges', () => {
     const identity = fixtureIdentity();
     const resolve = (databaseUrl: string) => resolveDatabaseAuthority({
