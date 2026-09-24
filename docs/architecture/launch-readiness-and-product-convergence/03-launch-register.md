@@ -37,7 +37,7 @@ production acceptance decision. Paid activation remains closed.
 | B14 first customer | [Operating procedure](19-first-customer-operating-procedure.md) prepared | Named backup, staffed hours, queue and finance handover rehearsal |
 | B15 legal/payment | [Founder review packet](22-b15-founder-legal-payment-review-packet.md) prepared | Approved final Terms/Privacy/payment copy and customer-browser proof |
 | B16 convergence | [Local candidate evidence](evidence/b16-no-spend-convergence-preparation-2026-09-24.md) | Final exact release approval and full integrated/hosted verification |
-| B17 monitoring/recovery | [No-cost contract](20-monitoring-and-recovery-contract.md) prepared | Actual continuous alert binding and disposable restore rehearsal |
+| B17 monitoring/recovery | [No-cost contract and exact-release probe](20-monitoring-and-recovery-contract.md) prepared | Actual continuous alert binding and disposable restore rehearsal |
 | B18 acceptance | [Exact-artifact checklist](21-production-v1-acceptance-preparation.md) prepared | Execute on the final protected production artifact after upstream gates |
 
 ## Stable issue identifiers

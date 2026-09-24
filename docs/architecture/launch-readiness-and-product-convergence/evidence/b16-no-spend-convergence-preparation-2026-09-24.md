@@ -14,6 +14,8 @@ work was integrated. The B12 contract now points to the current B08 boundary
 so its future topology cannot be mistaken for authorization to cut Railway over.
 The bounded B13 attention exit was applied as `e43ea6af`: unknown or exhausted
 lead deliveries now produce a nonzero cron result without resending them.
+The B17 read-only exact-release probe was integrated as `9c6fd841`; it does
+not bind a schedule or contact a protected service during local verification.
 
 ## Local gates on the assembled source
 
@@ -21,6 +23,7 @@ lead deliveries now produce a nonzero cron result without resending them.
 | --- | --- |
 | `pnpm check` before and after B13 integration | Passed |
 | Hosted proof/preflight/config focused tests | 3 files, 30 tests passed |
+| B17 probe evaluator | 4 focused tests passed; missing tuple exits 2 before network I/O |
 | `pnpm build` | Passed; pre-existing large-chunk warning retained |
 | `pnpm db:authority:check` | Passed: 36 static suites, 310 tests; 120 utility surfaces; 214 canonical tables; 95 active migrations; inventory and lifecycle current |
 | Worktree isolation | Dedicated `prep/b16-no-spend-convergence` worktree; no Railway, Azure or TiDB mutation |
