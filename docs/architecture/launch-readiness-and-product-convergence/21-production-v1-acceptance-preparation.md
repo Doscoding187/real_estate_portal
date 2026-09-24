@@ -59,6 +59,10 @@ private-proof store, real provider delivery and controlled external payment
 evidence before counting the paid loop as accepted. The walkthrough's cleanup
 was narrowed to its exact Agency owner and the governed Search-to-Lead
 scenario passed again afterward.
+The same disposable target also passed focused Agent publish/enquiry and
+Developer prepayment tests (2), plus six Developer/commercial integration
+files (44 tests). These are local regressions on the assembled source; B18
+still requires the complete hosted customer loops on the final artifact.
 
 Acceptance is withheld until every P0/P1 is resolved or explicitly accepted
 under launch authority, and the exact protected target/runtime tuple is the
