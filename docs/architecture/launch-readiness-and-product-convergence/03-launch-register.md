@@ -23,6 +23,23 @@ The remaining B08 gate is **FOUNDER SPEND GATE: Railway Pro / Static Outbound
 IPs**. Do not use an unsafe network shortcut. Continue launch-critical B10–B18
 engineering and evidence work that does not require new founder expenditure.
 
+## B10–B18 launch preparation snapshot — 2026-09-24
+
+This is a preparation status on the B16 task branch, not an integrated or
+production acceptance decision. Paid activation remains closed.
+
+| Workstream | Current preparation evidence | Remaining launch gate |
+| --- | --- | --- |
+| B10 email | [Engineering packet](evidence/b10-transactional-email-engineering-packet.md) and local worker proof | Real Resend domain/mailbox delivery, supervised worker, named reconciliation owner |
+| B11 media/proof | Hosted private-proof guardrail and [B11 evidence](evidence/b11-private-proof-readiness-2026-09-24.md); public media rejects local hosted fallback | Distinct durable private bucket/credential and real public/private object, access and recovery proof |
+| B12 runtime | [Hosted contract](../../b12-hosted-runtime-contract.md) and static preflight | Exact hosted DNS/TLS, service configuration, worker/cron and staging rehearsal; B08 remains parked |
+| B13 lead custody | [Recovery runbook](16-first-cohort-lead-custody-recovery-runbook.md), local custody proof and worker attention exit | Hosted cron cadence and first-cohort routing/custody exercise |
+| B14 first customer | [Operating procedure](19-first-customer-operating-procedure.md) prepared | Named backup, staffed hours, queue and finance handover rehearsal |
+| B15 legal/payment | [Founder review packet](22-b15-founder-legal-payment-review-packet.md) prepared | Approved final Terms/Privacy/payment copy and customer-browser proof |
+| B16 convergence | [Local candidate evidence](evidence/b16-no-spend-convergence-preparation-2026-09-24.md) | Final exact release approval and full integrated/hosted verification |
+| B17 monitoring/recovery | [No-cost contract](20-monitoring-and-recovery-contract.md) prepared | Actual continuous alert binding and disposable restore rehearsal |
+| B18 acceptance | [Exact-artifact checklist](21-production-v1-acceptance-preparation.md) prepared | Execute on the final protected production artifact after upstream gates |
+
 ## Stable issue identifiers
 
 Use `LRC-<SURFACE>-<NUMBER>`, where `<SURFACE>` is a stable short surface or journey code and `<NUMBER>` is a zero-padded sequence within that surface. Example form only: `LRC-SEARCH-001`.
