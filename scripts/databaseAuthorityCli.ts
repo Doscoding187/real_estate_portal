@@ -8,6 +8,8 @@ import {
 import { createAuthoritySqlConnection } from '../server/_core/databaseAuthority/connectionAuthority';
 import { provisionB08AzureInspectionIdentity } from '../server/_core/databaseAuthority/b08AzureInspectionIdentity';
 import { provisionB08TidbSourceReader } from '../server/_core/databaseAuthority/b08TidbSourceReader';
+import { inventoryB08TidbV1 } from '../server/_core/databaseAuthority/b08TidbV1Inventory';
+import { assessB08TidbV1ReadOnly } from '../server/_core/databaseAuthority/b08TidbV1Assessment';
 import {
   provisionB08AzureMigrationIdentity,
   verifyB08AzureMigrationIdentity,
@@ -99,6 +101,8 @@ type Command =
   | 'data:manifest'
   | 'b08:inspector:provision'
   | 'b08:tidb-reader:provision'
+  | 'b08:tidb-v1:inventory'
+  | 'b08:tidb-v1:assess'
   | 'b08:inspect-metadata'
   | 'b08:migrator:provision'
   | 'b08:migrator:verify'
@@ -280,6 +284,16 @@ async function run(command: Command): Promise<void> {
 
   if (command === 'b08:tidb-reader:provision') {
     print(await provisionB08TidbSourceReader(requiredOption('ack')));
+    return;
+  }
+
+  if (command === 'b08:tidb-v1:inventory') {
+    print(await inventoryB08TidbV1());
+    return;
+  }
+
+  if (command === 'b08:tidb-v1:assess') {
+    print(await assessB08TidbV1ReadOnly());
     return;
   }
 
@@ -786,6 +800,8 @@ const commands = new Set<Command>([
   'data:manifest',
   'b08:inspector:provision',
   'b08:tidb-reader:provision',
+  'b08:tidb-v1:inventory',
+  'b08:tidb-v1:assess',
   'b08:inspect-metadata',
   'b08:migrator:provision',
   'b08:migrator:verify',

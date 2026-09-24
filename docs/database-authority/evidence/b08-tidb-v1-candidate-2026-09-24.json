@@ -1,0 +1,309 @@
+{
+  "evidenceVersion": 1,
+  "decision": "TIDB V1 PRODUCTION CANDIDATE — FAIL",
+  "scope": "read-only assessment of current TiDB V1 candidacy; no Azure, Railway or TiDB application/schema mutation",
+  "instance": {
+    "name": "listify-property-canonical",
+    "id": "10492391619114516879",
+    "plan": "Starter",
+    "region": "AWS Tokyo (ap-northeast-1)",
+    "targetFingerprintHash": "68f2582a6dc7af8c54cf6f31a396e8abe4c4030696c923b0ea3b1679ba6f5b5e",
+    "selectedDatabase": "listify_property_sa",
+    "serverVersion": "8.0.11-TiDB-v8.5.3-serverless",
+    "edition": "Community",
+    "observedAt": "2026-09-24T10:06:16.727Z",
+    "authenticatedReader": "42MAxcoJrgbJNnU.b08_reader",
+    "tlsCipher": "TLS_AES_128_GCM_SHA256",
+    "hostnameVerified": true
+  },
+  "inventory": {
+    "observedAt": "2026-09-24T10:01:15.314Z",
+    "tableCount": 218,
+    "nonEmptyTableCount": 7,
+    "totalRows": 152,
+    "nonEmptyTables": [
+      {
+        "table": "agents",
+        "rows": 1
+      },
+      {
+        "table": "plan_entitlements",
+        "rows": 9
+      },
+      {
+        "table": "plans",
+        "rows": 3
+      },
+      {
+        "table": "platform_settings",
+        "rows": 1
+      },
+      {
+        "table": "sql_migration_attempts",
+        "rows": 71
+      },
+      {
+        "table": "sql_migration_history",
+        "rows": 66
+      },
+      {
+        "table": "users",
+        "rows": 1
+      }
+    ],
+    "applicationRowCount": 15
+  },
+  "databaseState": {
+    "variables": {
+      "tidb_enable_check_constraint": "ON",
+      "foreign_key_checks": "ON",
+      "tidb_txn_mode": "pessimistic",
+      "transaction_isolation": "REPEATABLE-READ",
+      "lower_case_table_names": "2",
+      "sql_mode": "ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION"
+    },
+    "constraints": [
+      {
+        "type": "FOREIGN KEY",
+        "count": 459
+      },
+      {
+        "type": "PRIMARY KEY",
+        "count": 216
+      },
+      {
+        "type": "UNIQUE",
+        "count": 73
+      }
+    ],
+    "checkConstraintCount": 0,
+    "representativeDdl": [
+      {
+        "table": "catalogue_publishers",
+        "checks": 0,
+        "foreignKeys": 2,
+        "invalidForeignKeys": 0
+      },
+      {
+        "table": "land_claims",
+        "checks": 0,
+        "foreignKeys": 3,
+        "invalidForeignKeys": 0
+      },
+      {
+        "table": "development_supersessions",
+        "checks": 0,
+        "foreignKeys": 5,
+        "invalidForeignKeys": 0
+      },
+      {
+        "table": "location_provider_mappings",
+        "checks": 0,
+        "foreignKeys": 3,
+        "invalidForeignKeys": 0
+      }
+    ],
+    "ledger": {
+      "count": 66,
+      "head": "0065_auth_verification_token_cleanup.sql",
+      "prefixMatchesCurrentManifest": true,
+      "firstMismatch": null,
+      "expectedCurrentHead": "0094_content_topics_primary_key.sql",
+      "expectedCurrentCount": 95
+    },
+    "attemptStates": [
+      {
+        "state": "failed",
+        "count": 1
+      },
+      {
+        "state": "failed_replaced",
+        "count": 2
+      },
+      {
+        "state": "reviewed_replacement",
+        "count": 2
+      },
+      {
+        "state": "succeeded",
+        "count": 66
+      }
+    ],
+    "incompleteAttempts": [
+      {
+        "migration_filename": "tidb_check_constraint_convergence_v1",
+        "state": "failed",
+        "completed_statement_count": 0,
+        "failure_class": "ER_CHECK_CONSTRAINT_CLAUSE_USING_FK_REFER_ACTION_COLUMN"
+      }
+    ],
+    "congruency": {
+      "congruent": false,
+      "desiredDigest": "a8ca8cf34bb3627594eab1b722b85115c6460225a0165db7992228a8547798e9",
+      "actualDigest": "028e79790681eb9921a58680060e1dc5cec26fc35360abbddac629945264b945",
+      "differenceCount": 168,
+      "differenceSummary": {
+        "table": 16,
+        "column": 112,
+        "foreign-key": 5,
+        "check": 22,
+        "index": 10,
+        "nullability": 1,
+        "default": 1,
+        "type": 1
+      },
+      "firstDifferencePaths": [
+        "table:agency_subscriptions",
+        "table:analytics_aggregations",
+        "table:billable_accounts",
+        "column:billing_audit_events.actor_user_id.ordinal",
+        "column:billing_audit_events.after_data.ordinal",
+        "column:billing_audit_events.before_data.ordinal",
+        "column:billing_audit_events.billable_account_id",
+        "foreign-key:billing_audit_events.billable_account_id",
+        "column:billing_audit_events.created_at.ordinal",
+        "column:billing_audit_events.event_type.ordinal",
+        "column:billing_audit_events.invoice_id.ordinal",
+        "column:billing_audit_events.message.ordinal",
+        "column:billing_audit_events.metadata.ordinal",
+        "column:billing_audit_events.payment_id.ordinal",
+        "column:billing_audit_events.subscription_id.ordinal",
+        "column:billing_invoices.amount_due.ordinal",
+        "column:billing_invoices.amount_paid.ordinal",
+        "column:billing_invoices.billable_account_id",
+        "foreign-key:billing_invoices.billable_account_id",
+        "column:billing_invoices.billing_cycle.ordinal",
+        "column:billing_invoices.commercial_term_kind.ordinal",
+        "column:billing_invoices.created_at.ordinal",
+        "column:billing_invoices.created_by.ordinal",
+        "column:billing_invoices.currency.ordinal",
+        "column:billing_invoices.discount_amount.ordinal",
+        "column:billing_invoices.due_at.ordinal",
+        "column:billing_invoices.invoice_number.ordinal",
+        "column:billing_invoices.issued_at.ordinal",
+        "column:billing_invoices.line_items.ordinal",
+        "column:billing_invoices.metadata.ordinal"
+      ]
+    },
+    "readOnlyExpressions": {
+      "jsonExtract": "7",
+      "microseconds": 123456
+    }
+  },
+  "railwayProduction": {
+    "workspacePlan": "HOBBY",
+    "deploymentId": "3996ee58-71f7-4976-b6a4-0cc3bc3c7731",
+    "deployedSha": "4e012b3044628fc06da7489c0055e9ce01bdc8d9",
+    "databaseProvider": "TiDB",
+    "databaseName": "listify_property_sa",
+    "readinessHttpStatus": 503,
+    "readinessOk": false,
+    "readinessCheckedAt": "2026-09-24T10:07:16.357Z",
+    "dbApplicationReady": false,
+    "dbLayers": {
+      "processLiveness": {
+        "state": "ready",
+        "code": "process-alive"
+      },
+      "serviceAvailable": {
+        "state": "ready",
+        "code": "target-connected"
+      },
+      "targetOwned": {
+        "state": "not-ready",
+        "code": "target-not-exact-owned-worktree"
+      },
+      "schemaMigrated": {
+        "state": "not-ready",
+        "code": "manifest-head-behind"
+      },
+      "schemaCongruent": {
+        "state": "not-ready",
+        "code": "schema-not-congruent"
+      },
+      "canonicalReferenceData": {
+        "state": "not-evaluated",
+        "code": "reference-not-evaluated"
+      },
+      "commercialReferenceData": {
+        "state": "not-ready",
+        "code": "foundation-blocked-by-schema"
+      },
+      "acceptanceScenario": {
+        "state": "not-evaluated",
+        "code": "scenario-not-evaluated"
+      },
+      "application": {
+        "state": "not-ready",
+        "code": "application-not-ready-for-requested-runtime"
+      },
+      "targetConnectivity": {
+        "state": "ready",
+        "code": "target-connected"
+      },
+      "migrationHead": {
+        "state": "not-ready",
+        "code": "manifest-head-behind"
+      },
+      "incompleteAttemptState": {
+        "state": "not-ready",
+        "code": "incomplete-migration-attempt"
+      },
+      "structuralSchema": {
+        "state": "not-ready",
+        "code": "required-schema-missing"
+      },
+      "requiredData": {
+        "state": "not-required",
+        "code": "requested-data-not-required"
+      },
+      "consumerApi": {
+        "state": "not-evaluated",
+        "code": "consumer-not-evaluated"
+      },
+      "browserJourney": {
+        "state": "not-evaluated",
+        "code": "browser-not-evaluated"
+      },
+      "release": {
+        "state": "not-ready",
+        "code": "release-blocked-by-migration-attempt-authority"
+      },
+      "fullDiagnostics": {
+        "state": "not-evaluated",
+        "code": "diagnostics-not-evaluated"
+      }
+    }
+  },
+  "exactArtifact": {
+    "manifestHead": "0094_content_topics_primary_key.sql",
+    "manifestDigest": "93d871e6f8760477f460b8821685d71d212374eb86ddd53bc6e2ccfc30608efc",
+    "desiredModelDigest": "a8ca8cf34bb3627594eab1b722b85115c6460225a0165db7992228a8547798e9",
+    "migrationCount": 95
+  },
+  "tiDbIncompatibility": {
+    "staticAuditAdmitted": false,
+    "overlappingCheckCount": 10,
+    "affectedFkCount": 15,
+    "earliestCurrentMigration": "0004_canonical_listing_location.sql",
+    "payingCustomerConstraintMigration": "0085_billing_billable_accounts.sql",
+    "historicalProductionFailure": "ER_CHECK_CONSTRAINT_CLAUSE_USING_FK_REFER_ACTION_COLUMN",
+    "historicalProof": "docs/database-authority/tidb-convergence-audit-2026-09-07.md",
+    "providerSource": "https://github.com/pingcap/tidb/blob/ac41d7e3c8fcc7ffdb97311e2996cc9fb178e4c9/pkg/table/constraint.go"
+  },
+  "conclusion": {
+    "existingDatabaseReusableAsIs": false,
+    "freshCanonicalDatabaseAtCurrentApprovedHeadProvenPossible": false,
+    "historicalTransferRequiredForThisAssessment": false,
+    "railwayProRequiredToKeepCurrentTiDbConnection": false,
+    "azureCutoverRequiredByPlatformInPrinciple": false,
+    "approvedCanonicalModelAndMigrationPathRequiresTiDbCompatibleCorrectionBeforeTiDbV1Launch": true
+  },
+  "sideEffects": {
+    "tidbDdl": false,
+    "tidbApplicationWrites": false,
+    "azureChanged": false,
+    "railwayChanged": false,
+    "tidbRetired": false
+  }
+}
