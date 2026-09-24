@@ -46,7 +46,7 @@ state. Bind it to a real independent schedule and alert recipient before
 calling monitoring continuous. The probe does not replace B10/B13 worker
 backlog checks or the B11 object read/recovery exercise.
 
-Local evidence: the probe evaluator's four focused tests and `pnpm check`
+Local evidence: the probe evaluator's five focused tests and `pnpm check`
 passed. Running `pnpm launch:probe` without an exact release tuple exited 2
 with a sanitized setup error, before any network request.
 
