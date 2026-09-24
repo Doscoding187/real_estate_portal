@@ -117,6 +117,24 @@ describe('launch preflight contract', () => {
     });
   });
 
+  it('rejects proof storage sharing the public media credentials or bucket', () => {
+    const result = runLaunchPreflight({
+      runtimeEnv: 'production',
+      env: productionEnv({
+        BILLING_PROOF_AWS_ACCESS_KEY_ID: 'AKIAPRODUCTIONKEY',
+        BILLING_PROOF_S3_BUCKET: 'listify-public-media-prod',
+      }),
+    });
+
+    expect(result.checks.find(check => check.id === 'billing-proof-storage')).toMatchObject({
+      ok: false,
+      missing: [
+        'BILLING_PROOF_AWS_ACCESS_KEY_ID (distinct from public media)',
+        'BILLING_PROOF_S3_BUCKET (distinct from public media)',
+      ],
+    });
+  });
+
   it('refuses a production browser boundary with a wildcard-like origin or missing proxy topology', () => {
     const result = runLaunchPreflight({
       runtimeEnv: 'production',
