@@ -7,6 +7,22 @@
 | Candidate status | Merged base 4e012b3044628fc06da7489c0055e9ce01bdc8d9; billing containment source c8c35fde44d00ff8b2ce83ca73fcb32dd522e9bc, Goal 10 agency acceptance `fbf592cc`, canonical private-work membership correction `5f37d3d1c14130f9078a17ea267e951547e65564`, canonical agency-inventory scope correction `0eaf2cc806d157f4e6b378721db48e69cef3ffb6`, canonical operational-workspace membership correction `32ce7524b642519300a5ae6daddac5ae2c393486`, canonical viewing/deal workspace membership correction `47e059efaf3404db0f16d3f86b7a577ddb4f1ff3`, canonical Agent Home workspace membership correction `a0fc9e8b95be1275844e11aaed4bf57bc1ff2bd3`, Land hard-containment `335838dff0c746b860eaaf2930412d4b38540db5`, generic Developer-row supplement `62ec0eede830e96eafc69dfd9e4f42a9645aa1ee`, and generic Developer-draft supplement `0280e9dd74b7fa9ed33da782427c27b56e80d6c2`, bounded assisted-onboarding intake `144e90d1531d2e85a407e5dabecfb4124c8394bf`, canonical agent-coverage authority `f40ca8a3bbed5bfc1f0ffeb675b2c9d10397f35e`, governed agent-and-agency-owner pre-payment browser acceptance and agency preparation-state correction `e9909ab6be90323a881f07a267777c64b1e075d3`, deferred-invitation-validity correction `0c4402078ffaced5664f6993dac3fe8f6d0ed504`, queued-invitation acceptance containment `415a947261a65c160f4fb77c39712050bab35b8`, Commercial generic-viewing boundary `d1545579fda2c32b466af4cf68ff6929c2e2be2b`, fixture-congruency correction `e50dbe956a50a0e0a1c071224fb1bffd46bdb4d4`, browser correction-loop acceptance `72dd80e0`, browser public discovery/enquiry/CRM acceptance `a2a4e52b6b6d215263bc1f765d75a670d00ad64e`, deployed transactional-email containment `3d2e01488755376486d96e2242f83d08895c8a62`, Johannesburg viewing correction `40a37c37`, independent-Agent public preparation truthfulness `7c939831`, Agency public preparation truthfulness `02788ff2`, shared public-advertising/Developer preparation-entry truthfulness `234ca6e4`, direct commercial-plans route containment `32224b0a`, authenticated Agent package-route containment `e1ccc2c8`, authenticated Agent preparation-lock wording correction `217aa1df`, authenticated Agency billing-route containment `d48544b9`, authenticated Developer plans containment `ada578a2`, authenticated Developer subscription-route containment `bb89b2b9`, legacy public `/activation` route containment `a0ceea70`, legacy Developer authoring-route containment `3ad9b1f5`, Developer pre-payment organisation/draft browser acceptance `9cd6d3e3`, Developer trust-control truthfulness `bb402332`, Developer approval/payment-gate acceptance `589135ce`, and direct administrator review-route authority containment `ddbb7e58` passed their stated local checks. The last complete authority-wrapped run reported 633 passed / 9 skipped files and 4,216 passed / 67 skipped tests before later viewing/public-entry changes. All remain task-branch evidence and await integration. |
 | Evidence method  | [Evidence Sequence and Provenance Contract](06-evidence-sequence-and-provenance-contract.md) governs material technical claims and their boundaries; this register remains the sole launch-disposition authority.                                                                                                                                                                                          |
 
+## B08 protected database disposition — 2026-09-24
+
+`AZURE ESTABLISHED — RAILWAY CUTOVER DEFERRED BY FOUNDER SPEND GATE`
+
+The canonical Azure database is established through
+`0094_content_topics_primary_key.sql`; see the
+[Azure establishment evidence](../../database-authority/evidence/b08-azure-establishment-2026-09-24.json)
+and the [founder disposition](../../database-authority/evidence/b08-founder-spend-gate-2026-09-24.json).
+Railway Production still uses TiDB. The closed TiDB V1 compatibility experiment
+does not authorize TiDB redesign, historical repair, or transfer. Both databases
+are preserved. No Railway database cutover is authorized in this disposition.
+
+The remaining B08 gate is **FOUNDER SPEND GATE: Railway Pro / Static Outbound
+IPs**. Do not use an unsafe network shortcut. Continue launch-critical B10–B18
+engineering and evidence work that does not require new founder expenditure.
+
 ## Stable issue identifiers
 
 Use `LRC-<SURFACE>-<NUMBER>`, where `<SURFACE>` is a stable short surface or journey code and `<NUMBER>` is a zero-padded sequence within that surface. Example form only: `LRC-SEARCH-001`.
