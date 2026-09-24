@@ -62,6 +62,14 @@ insufficient.
 6. Review the monitored reply/support mailbox and provider bounce outcomes.
    A provider acceptance result does not prove mailbox delivery. Record a
    customer-safe follow-up where a required notice failed.
+7. Only after taking ownership of due items, renew
+   `PAID_MVP_SALES_OPEN_UNTIL` through reviewed hosted configuration to the next
+   staffed weekday check. Use an exact UTC timestamp no more than 72 hours
+   ahead; a missed renewal must close new sales automatically. Verify the
+   operator status shows the new deadline and `salesPaused=false`. The app
+   checks expiry on each invoice or finance-approval request, without waiting
+   for a restart at the deadline. Record the renewal and next check time in
+   the protected operations log.
 
 ## Planned and unplanned unavailability
 
@@ -83,12 +91,21 @@ leaving the queue unattended.
 Existing invoices and submitted proofs remain recorded while sales are
 paused; no one is authorized to approve them in Edward's absence. On return,
 review those obligations and bank receipts first. Only then set
-`PAID_MVP_SALES_PAUSED=false` through the reviewed runtime configuration and
+`PAID_MVP_SALES_PAUSED=false` with a fresh `PAID_MVP_SALES_OPEN_UNTIL` through
+the reviewed runtime configuration and
 verify the public status and invoice route reopen. Do not change the enabled
 product list to pause sales: that list also gates existing paid access.
 
-If Edward becomes unexpectedly unavailable for more than one business day,
-new sales, invoice issuance and payment activation are paused until he returns.
+If Edward becomes unexpectedly unavailable, the last founder-renewed sales
+window expires no later than the next staffed weekday check and automatically
+pauses new invoices and finance approval. A missing window also keeps a hosted
+paid release paused. Existing paid access remains available. The server rejects
+late requests even if a browser still displays an older availability result.
+Existing invoices may still receive EFT funds and submitted proofs may still
+arrive; no proof activates access automatically. This automatic cutoff does not
+resolve existing obligations or replace a human operator. Before first payment,
+rehearse expiry on the exact hosted candidate with a short controlled window,
+then renew it and verify paid access stays active during the pause.
 Existing support requests stay queued with a clear response expectation.
 Automated workers may persist and
 alert but are not a human substitute. The service must preserve proofs, queue

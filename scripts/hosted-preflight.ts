@@ -1,7 +1,10 @@
 import { loadAppRuntimeEnv, resolveAppRuntimeEnv } from '../server/_core/runtimeBootstrap';
 import { hostedRuntimeConfigurationIssues, resolveHostedBuildSha } from '../server/_core/hostedRuntimeConfiguration';
 import { deployedTestConfigurationIssues } from '../server/_core/securityRuntimeConfiguration';
-import { resolveCommercialActivationConfiguration } from '../server/services/commercialActivationPolicy';
+import {
+  PAID_MVP_SALES_PAUSED_ENV,
+  resolveCommercialActivationConfiguration,
+} from '../server/services/commercialActivationPolicy';
 
 loadAppRuntimeEnv();
 const appEnv = resolveAppRuntimeEnv();
@@ -14,6 +17,15 @@ try {
   commercial = resolveCommercialActivationConfiguration(process.env, appEnv);
 } catch {
   issues.push('Commercial activation configuration is invalid.');
+}
+if (commercial?.mode === 'paid_mvp_release' &&
+    !commercial.salesOpenUntil && process.env[PAID_MVP_SALES_PAUSED_ENV] !== 'true') {
+  issues.push('Paid sales require a founder-renewed UTC sales window or an explicit sales pause.');
+}
+if (commercial?.mode === 'paid_mvp_release' && commercial.salesOpenUntil &&
+    Date.parse(commercial.salesOpenUntil) <= Date.now() &&
+    process.env[PAID_MVP_SALES_PAUSED_ENV] !== 'true') {
+  issues.push('The paid sales window has expired; renew it before opening new sales.');
 }
 console.log(JSON.stringify({
   appEnv,

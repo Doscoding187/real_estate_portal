@@ -25,6 +25,14 @@ runtime guard. It rejects new invoices and finance approval before database
 access while retaining already-paid product availability; public pages and
 Agency/Developer invoice actions show the pause. This is local source proof,
 not a Railway configuration change or hosted rehearsal.
+The bounded B14 follow-up adds `PAID_MVP_SALES_OPEN_UNTIL`: a hosted paid
+release without a founder-renewed UTC window remains paused, and an open
+window expires at request time without a scheduler or database write. The
+window cannot be set more than 72 hours ahead. Edward renews it at the daily
+weekday check; an unexpected absence therefore closes new invoice and finance
+approval requests by the next staffed check deadline. Existing paid product
+availability is unchanged. The exact hosted expiry/renewal rehearsal remains
+open; no Railway variable or deployment was changed.
 The [B15 browser data inventory](b15-browser-data-inventory-2026-09-24.md)
 records the candidate's real first-party analytics and device-local drafts.
 The global Google Analytics tag was removed from candidate HTML; the deployed
@@ -48,6 +56,7 @@ capture and provider retention facts remain B15/B18 requirements.
 | Disposable data and customer journey | Geography, Launch Access foundation and Search-to-Lead scenario prepared and verified; scenario verification ran in the governed test runtime. Location-discovery readiness is true, including 214 application tables. The Agency integrated walkthrough passed 12 tests with controlled local proof submission, Super Admin finance approval, canonical subscription activation, Agency approval, membership, inventory and lead follow-up. It does not prove hosted private S3 or real bank/provider evidence. |
 | Final local code gates | `pnpm check`, `pnpm db:authority:check` (36 suites, 310 tests, 120 classified utilities, 214 tables and 95 migrations), focused lifecycle tests (3), and the integrated Agency walkthrough (12) passed after the local authority/test changes. |
 | Integrated Agent/Developer regression on the assembled disposable target | Independent Agent publish/enquiry and Developer prepayment approval passed 2 focused tests. Six Developer/commercial integration files passed 44 tests, covering ownership, lead assignment, media, development publication, and paid commercial contracts. The governed Search-to-Lead scenario verifier passed again after these runs. |
+| B14 founder-window follow-up | On a freshly recreated owned disposable target, the governed `null → 0094` plan digest `2313cba3cb37e592a37ff86fb04c534ea32bde47b4f200992667d479db02e516` applied successfully, status reported head ready and no incomplete attempts, and congruency matched desired digest with zero differences. Three focused files passed 34 tests, including a 14-test Agency walkthrough: during a pause, a submitted proof remained pending and checkout/approval rejected; after approval, a later pause preserved active subscription access. Unit checks proved expiry at the exact deadline, missing-window fail closure, and rejection of invalid or overlong deadlines. The final next-weekday limit refinement passed its four focused tests and `pnpm check`. The disposable target was removed and its service stopped. This is local proof, not hosted acceptance. |
 
 The Agency walkthrough's old cleanup removed subscriptions by shared plan ID;
 a post-test scenario recheck caught the resulting fixture loss. Cleanup now

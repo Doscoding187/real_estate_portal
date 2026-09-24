@@ -23,7 +23,49 @@ const releaseEnvironment = {
 };
 
 describe('founder-only new-sales pause', () => {
-  afterEach(() => vi.unstubAllEnvs());
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllEnvs();
+  });
+
+  it('automatically pauses hosted sales at the renewed UTC deadline while preserving product access', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-09-24T09:00:00Z'));
+    const hosted = {
+      ...releaseEnvironment,
+      PAID_MVP_SALES_PAUSED: 'false',
+      PAID_MVP_SALES_OPEN_UNTIL: '2026-09-25T09:00:00Z',
+    };
+    expect(getCommercialActivationStatus(hosted).salesPaused).toBe(false);
+    expect(() => requirePaidMvpSalesOpen('Invoice requests', hosted)).not.toThrow();
+
+    vi.setSystemTime(new Date('2026-09-25T09:00:00Z'));
+    expect(getCommercialActivationStatus(hosted).salesPaused).toBe(true);
+    expect(() => requirePaidMvpSalesOpen('Invoice requests', hosted)).toThrow(/paused/);
+    expect(isCommercialActivationAvailable(hosted, 'agency_launch_access')).toBe(true);
+  });
+
+  it('fails closed without a hosted sales window and rejects an overlong or invalid deadline', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-09-24T09:00:00Z'));
+    const hosted = { ...releaseEnvironment, PAID_MVP_SALES_PAUSED: 'false' };
+    expect(getCommercialActivationStatus(hosted).salesPaused).toBe(true);
+    expect(() => requirePaidMvpSalesOpen('Invoice requests', hosted)).toThrow(/paused/);
+    expect(() => resolveCommercialActivationConfiguration({
+      ...hosted,
+      PAID_MVP_SALES_OPEN_UNTIL: '2026-09-25T09:00:01Z',
+    })).toThrow(/next weekday check/);
+    expect(() => resolveCommercialActivationConfiguration({
+      ...hosted,
+      PAID_MVP_SALES_OPEN_UNTIL: '2026-09-31T09:00:00Z',
+    })).toThrow(/valid UTC timestamp/);
+
+    vi.setSystemTime(new Date('2026-09-25T09:00:00Z')); // Friday to Monday
+    expect(() => resolveCommercialActivationConfiguration({
+      ...hosted,
+      PAID_MVP_SALES_OPEN_UNTIL: '2026-09-28T09:00:00Z',
+    })).not.toThrow();
+  });
 
   it('blocks new invoices while leaving the existing paid product active', () => {
     expect(isCommercialActivationAvailable(releaseEnvironment, 'agency_launch_access')).toBe(true);
@@ -39,6 +81,7 @@ describe('founder-only new-sales pause', () => {
       requirePaidMvpSalesOpen('Invoice requests', {
         ...releaseEnvironment,
         PAID_MVP_SALES_PAUSED: 'false',
+        PAID_MVP_SALES_OPEN_UNTIL: new Date(Date.now() + 60_000).toISOString(),
       }),
     ).not.toThrow();
     expect(() =>

@@ -220,6 +220,8 @@ describe('commercial activation containment', () => {
       ],
       releaseId: 'paid-mvp-rc-1',
       approvalRef: 'b16-approval-1',
+      salesPaused: true,
+      salesOpenUntil: null,
       buildSha: 'candidate-sha-1',
     });
     expect(getCommercialActivationStatus(production)).not.toHaveProperty('releaseId');

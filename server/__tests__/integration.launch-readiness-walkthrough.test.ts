@@ -10,7 +10,8 @@
  *  1. Principal registers + email verified
  *  2. Onboarding wizard completes (agency created, plan selected, invoice issued)
  *  3. Invoice and controlled payment proof submitted
- *  4. Finance approves → subscription activates → agency approval → membership established
+ *  4. Founder sales pause preserves pending proof; finance approves after resume
+ *     → subscription activates; a later pause preserves paid access
  *  5. Team invitation accepted by agent (conflation guard tested separately)
  *  6. Listing created + attributed to agency via membership
  *  7. Listing submitted for review (publication readiness gate)
@@ -337,8 +338,37 @@ describeWithDb('AGY-S8: full Agency journey walkthrough', () => {
     expect(pendingAccess.workspaceAccess.publishing).toBe(false);
   });
 
-  it('STAGE 4b: Super Admin verifies payment and subscription activation coherently', async () => {
+  it('STAGE 4b: Founder sales pause blocks new checkout and approval without changing the pending proof', async () => {
     superAdminCaller = caller({ id: superAdminUserId, role: 'super_admin' });
+    const [invoiceBefore] = await db.select().from(billingInvoices)
+      .where(eq(billingInvoices.id, invoiceId)).limit(1);
+    const [paymentBefore] = await db.select().from(billingPayments)
+      .where(eq(billingPayments.id, paymentId)).limit(1);
+    const previousPause = process.env.PAID_MVP_SALES_PAUSED;
+    process.env.PAID_MVP_SALES_PAUSED = 'true';
+    try {
+      expect((await principalCaller.billing.commercialActivation()).salesPaused).toBe(true);
+      await expect(principalCaller.billing.createCheckoutSession({ planId })).rejects.toThrow(/paused/);
+      await expect(superAdminCaller.billing.admin.reviewManualPayment({
+        paymentId,
+        decision: 'approve',
+        verifiedAmount: invoiceBefore.amountDue,
+        note: 'This approval must remain paused.',
+      })).rejects.toThrow(/paused/);
+      const [invoiceAfter] = await db.select().from(billingInvoices)
+        .where(eq(billingInvoices.id, invoiceId)).limit(1);
+      const [paymentAfter] = await db.select().from(billingPayments)
+        .where(eq(billingPayments.id, paymentId)).limit(1);
+      expect(invoiceAfter.status).toBe(invoiceBefore.status);
+      expect(paymentAfter.status).toBe(paymentBefore.status);
+      expect((await principalCaller.agency.getAccessState()).workspaceAccess.publishing).toBe(false);
+    } finally {
+      if (previousPause === undefined) delete process.env.PAID_MVP_SALES_PAUSED;
+      else process.env.PAID_MVP_SALES_PAUSED = previousPause;
+    }
+  });
+
+  it('STAGE 4c: Super Admin verifies payment and subscription activation coherently', async () => {
     const [invoice] = await db.select().from(billingInvoices)
       .where(eq(billingInvoices.id, invoiceId)).limit(1);
     const approved = await superAdminCaller.billing.admin.reviewManualPayment({
@@ -363,7 +393,22 @@ describeWithDb('AGY-S8: full Agency journey walkthrough', () => {
     expect(access.planAccessSource).toBe('subscriptions');
   });
 
-  it('STAGE 4c: Super Admin approves the agency before membership activation', async () => {
+  it('STAGE 4d: A later founder sales pause preserves the active Agency subscription', async () => {
+    const previousPause = process.env.PAID_MVP_SALES_PAUSED;
+    process.env.PAID_MVP_SALES_PAUSED = 'true';
+    try {
+      expect((await principalCaller.billing.commercialActivation()).salesPaused).toBe(true);
+      await expect(principalCaller.billing.createCheckoutSession({ planId })).rejects.toThrow(/paused/);
+      const access = await principalCaller.agency.getAccessState();
+      expect(access.billingStatus).toBe('active');
+      expect(access.planAccessSource).toBe('subscriptions');
+    } finally {
+      if (previousPause === undefined) delete process.env.PAID_MVP_SALES_PAUSED;
+      else process.env.PAID_MVP_SALES_PAUSED = previousPause;
+    }
+  });
+
+  it('STAGE 4e: Super Admin approves the agency before membership activation', async () => {
     const approved = await superAdminCaller.agency.verify({ id: agencyId, isVerified: true });
     expect(Number(approved.isVerified)).toBe(1);
     expect((await principalCaller.agency.getAccessState()).workspaceAccess.publishing).toBe(true);

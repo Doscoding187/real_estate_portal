@@ -40,7 +40,11 @@ not merely repository configuration files.
 6. **Failure controls:** unmatched/partial/duplicate payment, rejected proof,
    unavailable private object, B10 unknown email outcome, B13 platform custody,
    wrong role/tenant, expired entitlement and founder-unavailable pause/resume all
-   remain visible and recoverable without direct SQL.
+   remain visible and recoverable without direct SQL. On the hosted candidate,
+   set a short founder sales window, observe expiry automatically block new
+   invoices and finance approval, confirm existing paid access remains active,
+   then renew the window through reviewed configuration. A missing window must
+   also keep a hosted paid release paused.
 7. **Operations:** B14 founder-only staffed/unavailable rehearsal, B15 approved legal pages and
    invoice disclosures, B17 monitoring/recovery signals, and a sanitized
    evidence packet with no customer secret or proof content.

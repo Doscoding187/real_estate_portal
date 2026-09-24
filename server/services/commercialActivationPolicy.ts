@@ -15,6 +15,8 @@ export const PAID_MVP_ENABLED_PRODUCT_KEYS_ENV = 'PAID_MVP_ENABLED_PRODUCT_KEYS'
 export const PAID_MVP_RELEASE_ID_ENV = 'PAID_MVP_RELEASE_ID';
 export const PAID_MVP_APPROVAL_REF_ENV = 'PAID_MVP_APPROVAL_REF';
 export const PAID_MVP_SALES_PAUSED_ENV = 'PAID_MVP_SALES_PAUSED';
+export const PAID_MVP_SALES_OPEN_UNTIL_ENV = 'PAID_MVP_SALES_OPEN_UNTIL';
+const SALES_WINDOW_DAY_MS = 24 * 60 * 60 * 1000;
 const CONTROLLED_PRODUCT_KEYS_ENV = 'PROPERTY_LISTIFY_GOVERNED_BROWSER_TEST_PRODUCT_KEYS';
 
 export type CommercialActivationConfiguration = {
@@ -24,6 +26,7 @@ export type CommercialActivationConfiguration = {
   releaseId: string | null;
   approvalRef: string | null;
   salesPaused: boolean;
+  salesOpenUntil: string | null;
 };
 
 function isAuthorityWrappedBrowserFixture(environment: RuntimeEnvironment): boolean {
@@ -81,7 +84,32 @@ function preparationConfiguration(): CommercialActivationConfiguration {
     releaseId: null,
     approvalRef: null,
     salesPaused: false,
+    salesOpenUntil: null,
   });
+}
+
+function parseSalesOpenUntil(value: string | undefined): string | null {
+  if (value === undefined) return null;
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/.test(value)) {
+    throw new Error(`${PAID_MVP_SALES_OPEN_UNTIL_ENV} must be an exact UTC timestamp.`);
+  }
+  const parsed = new Date(value);
+  const normalized = value.includes('.') ? value : value.replace(/Z$/, '.000Z');
+  if (!Number.isFinite(parsed.getTime()) || parsed.toISOString() !== normalized) {
+    throw new Error(`${PAID_MVP_SALES_OPEN_UNTIL_ENV} is not a valid UTC timestamp.`);
+  }
+  const now = Date.now();
+  const utcDay = new Date(now).getUTCDay();
+  const daysToNextWeekday = utcDay === 5 ? 3 : utcDay === 6 ? 2 : 1;
+  if (parsed.getTime() - now > daysToNextWeekday * SALES_WINDOW_DAY_MS) {
+    throw new Error(`${PAID_MVP_SALES_OPEN_UNTIL_ENV} cannot exceed the next weekday check (72 hours maximum).`);
+  }
+  return value;
+}
+
+function effectiveSalesPause(config: CommercialActivationConfiguration): boolean {
+  return config.salesPaused ||
+    (config.salesOpenUntil !== null && Date.now() >= Date.parse(config.salesOpenUntil));
 }
 
 /**
@@ -111,6 +139,7 @@ export function resolveCommercialActivationConfiguration(
       releaseId: null,
       approvalRef: null,
       salesPaused: rawSalesPause === 'true',
+      salesOpenUntil: parseSalesOpenUntil(environment[PAID_MVP_SALES_OPEN_UNTIL_ENV]),
     });
   }
 
@@ -148,7 +177,9 @@ export function resolveCommercialActivationConfiguration(
     enabledProductKeys: Object.freeze([...keys]),
     releaseId: validateReleaseMetadata(releaseId, PAID_MVP_RELEASE_ID_ENV),
     approvalRef: validateReleaseMetadata(approvalRef, PAID_MVP_APPROVAL_REF_ENV),
-    salesPaused: rawSalesPause === 'true',
+    // A hosted paid release without a renewed window never opens sales by default.
+    salesPaused: rawSalesPause === 'true' || !environment[PAID_MVP_SALES_OPEN_UNTIL_ENV],
+    salesOpenUntil: parseSalesOpenUntil(environment[PAID_MVP_SALES_OPEN_UNTIL_ENV]),
   });
 }
 
@@ -164,10 +195,11 @@ export function initializeCommercialActivationPolicy(
 }
 
 function getConfiguration(environment: RuntimeEnvironment): CommercialActivationConfiguration {
-  if (environment === process.env && processActivationConfiguration) {
-    return processActivationConfiguration;
-  }
-  return resolveCommercialActivationConfiguration(environment);
+  const config = environment === process.env && processActivationConfiguration
+    ? processActivationConfiguration
+    : resolveCommercialActivationConfiguration(environment);
+  if (!effectiveSalesPause(config) || config.salesPaused) return config;
+  return Object.freeze({ ...config, salesPaused: true });
 }
 
 export function isCommercialActivationAvailable(
@@ -223,6 +255,7 @@ export function getCommercialActivationOperatorStatus(
     releaseId: config.releaseId,
     approvalRef: config.approvalRef,
     salesPaused: config.salesPaused,
+    salesOpenUntil: config.salesOpenUntil,
     buildSha: buildSha || 'unknown',
   };
 }
