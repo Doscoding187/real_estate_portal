@@ -1,37 +1,19 @@
-/**
- * Property-based tests for ServicesResultsPage heading and request summary.
- */
-
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import * as fc from 'fast-check';
 import { render, screen } from '@testing-library/react';
 import {
   SERVICE_CATEGORIES,
-  formatArea,
   formatCategoryLabel,
   type ServiceCategory,
 } from '@/features/services/catalog';
 
+const mockLead = vi.fn();
+
 vi.mock('@/lib/trpc', () => ({
   trpc: {
     servicesEngine: {
-      recommendProviders: {
-        useQuery: () => ({ data: [], isLoading: false, error: null }),
-      },
-      directorySearch: {
-        useQuery: () => ({ data: [], isLoading: false, error: null }),
-      },
-      leads: {
-        logEvent: {
-          useMutation: () => ({ mutate: vi.fn() }),
-        },
-      },
-      createLeadFromJourney: {
-        useMutation: () => ({
-          mutate: vi.fn(),
-          isPending: false,
-          error: null,
-        }),
+      getLead: {
+        useQuery: () => ({ data: mockLead(), isLoading: false, error: null }),
       },
     },
   },
@@ -49,109 +31,119 @@ vi.mock('wouter', async () => {
   };
 });
 
-vi.mock('@/lib/seo', () => ({
-  applySeo: vi.fn(),
-}));
+vi.mock('@/lib/seo', () => ({ applySeo: vi.fn() }));
 
 import ServicesResultsPage from '../ServicesResultsPage';
 
-function renderWithParams(params: {
-  category: ServiceCategory;
-  city?: string;
-  province?: string;
-  suburb?: string;
-}) {
-  const searchParams = new URLSearchParams();
-  searchParams.set('category', params.category);
-  if (params.city) searchParams.set('city', params.city);
-  if (params.province) searchParams.set('province', params.province);
-  if (params.suburb) searchParams.set('suburb', params.suburb);
-
-  Object.defineProperty(window, 'location', {
-    value: {
-      ...window.location,
-      search: `?${searchParams.toString()}`,
+function makeLead(category: ServiceCategory = 'home_improvement') {
+  return {
+    id: 42,
+    serviceCategory: category,
+    sourceSurface: 'directory',
+    intentStage: 'general',
+    propertyId: null,
+    listingId: null,
+    developmentId: null,
+    location: { city: 'Cape Town', province: 'Western Cape', suburb: 'Rondebosch' },
+    notes: 'Please contact me after 5pm.',
+    context: null,
+    status: 'new',
+    createdAt: '2026-01-10T00:00:00.000Z',
+    updatedAt: '2026-01-10T00:00:00.000Z',
+    requester: { name: 'Test requester' },
+    providerResponse: {
+      status: 'new',
+      note: 'We can call after 5pm.',
+      createdAt: '2026-01-10T00:00:00.000Z',
     },
+    provider: {
+      providerId: 7,
+      companyName: 'Cape Plumbing Co',
+      headline: 'Plumbing for property transfers',
+      verificationStatus: 'verified',
+      logoUrl: null,
+      services: [{ category: 'home_improvement', code: 'plumbing', displayName: 'Plumbing' }],
+      locations: [{ suburb: 'Rondebosch', city: 'Cape Town', province: 'Western Cape' }],
+      reviews: [],
+    },
+  };
+}
+
+function setSearch(search: string) {
+  Object.defineProperty(window, 'location', {
+    value: { ...window.location, search },
     writable: true,
     configurable: true,
   });
-
-  return render(<ServicesResultsPage />);
 }
 
-describe('ServicesResultsPage property coverage', () => {
+describe('ServicesResultsPage', () => {
   beforeEach(() => {
+    mockLead.mockReset();
+    mockLead.mockReturnValue(makeLead());
     sessionStorage.clear();
+    setSearch('');
   });
 
-  it('heading contains the human-readable category label for every ServiceCategory', () => {
+  it('renders the server-authoritative provider and request state', () => {
+    render(<ServicesResultsPage />);
+
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(
+      'Your request is with Cape Plumbing Co',
+    );
+    expect(screen.getByText('Request received')).toBeInTheDocument();
+    expect(screen.getByText('Cape Plumbing Co')).toBeInTheDocument();
+    expect(screen.getByText('Please contact me after 5pm.')).toBeInTheDocument();
+  });
+
+  it('shows a provider response when the provider has recorded one', () => {
+    render(<ServicesResultsPage />);
+    expect(screen.getByText('Provider response')).toBeInTheDocument();
+    expect(screen.getByText('We can call after 5pm.')).toBeInTheDocument();
+  });
+
+  it('does not expose a second request action after the request is saved', () => {
+    render(<ServicesResultsPage />);
+    expect(screen.queryByRole('button', { name: /request service/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /start another request/i })).toBeInTheDocument();
+  });
+
+  it('renders the human-readable category for every supported category', () => {
     fc.assert(
       fc.property(fc.constantFrom(...SERVICE_CATEGORIES), category => {
-        const { unmount } = renderWithParams({ category: category.value });
-        expect(screen.getByRole('heading', { level: 1 }).textContent ?? '').toContain(
-          formatCategoryLabel(category.value),
-        );
+        mockLead.mockReturnValue(makeLead(category.value));
+        const { unmount } = render(<ServicesResultsPage />);
+        expect(screen.getByText(formatCategoryLabel(category.value))).toBeInTheDocument();
         unmount();
       }),
       { numRuns: 6 },
     );
   });
 
-  it('heading contains the formatted location for any city/province combination', () => {
-    fc.assert(
-      fc.property(
-        fc.constantFrom(...SERVICE_CATEGORIES),
-        fc.string({ minLength: 1, maxLength: 20 }).filter(s => s.trim().length > 0 && !s.includes('&') && !s.includes('=')),
-        fc.string({ minLength: 1, maxLength: 20 }).filter(s => s.trim().length > 0 && !s.includes('&') && !s.includes('=')),
-        (category, city, province) => {
-          const { unmount } = renderWithParams({ category: category.value, city, province });
-          expect(screen.getByRole('heading', { level: 1 }).textContent ?? '').toContain(
-            formatArea(city, province, undefined),
-          );
-          unmount();
-        },
-      ),
-      { numRuns: 20 },
-    );
+  it('renders the server location and safely falls back when no location exists', () => {
+    mockLead.mockReturnValue({
+      ...makeLead(),
+      location: { city: null, province: null, suburb: null },
+    });
+    const { unmount } = render(<ServicesResultsPage />);
+    expect(screen.getByText('your area')).toBeInTheDocument();
+    unmount();
+
+    mockLead.mockReturnValue({
+      ...makeLead(),
+      location: { city: 'Durban', province: 'KwaZulu-Natal', suburb: null },
+    });
+    setSearch('?city=Durban&province=KwaZulu-Natal');
+    render(<ServicesResultsPage />);
+    expect(screen.getByText('Durban, KwaZulu-Natal')).toBeInTheDocument();
   });
 
-  it('heading falls back to "your area" when no location params are provided', () => {
-    fc.assert(
-      fc.property(fc.constantFrom(...SERVICE_CATEGORIES), category => {
-        const { unmount } = renderWithParams({ category: category.value });
-        expect(screen.getByRole('heading', { level: 1 }).textContent ?? '').toContain('your area');
-        unmount();
-      }),
-      { numRuns: 6 },
-    );
-  });
-
-  it('renders notes from the lead-scoped session context in the request summary', () => {
-    sessionStorage.setItem(
-      'service-lead-context-42',
-      JSON.stringify({
-        notes: 'Please contact me after 5pm.',
-      }),
-    );
-
-    renderWithParams({ category: 'home_improvement' });
-
-    expect(screen.getByText(/please contact me after 5pm\./i)).toBeInTheDocument();
-  });
-
-  it('falls back to lead-scoped session context for location when the query string is missing it', () => {
-    sessionStorage.setItem(
-      'service-lead-context-42',
-      JSON.stringify({
-        city: 'Cape Town',
-        province: 'Western Cape',
-      }),
-    );
-
-    renderWithParams({ category: 'home_improvement' });
-
-    expect(screen.getByRole('heading', { level: 1 }).textContent ?? '').toContain(
-      'Cape Town, Western Cape',
-    );
+  it('shows a clear unavailable state when the lead cannot be loaded', () => {
+    mockLead.mockReturnValue(null);
+    render(<ServicesResultsPage />);
+    expect(
+      screen.getByRole('heading', { name: /could not load this request/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /browse services/i })).toBeInTheDocument();
   });
 });

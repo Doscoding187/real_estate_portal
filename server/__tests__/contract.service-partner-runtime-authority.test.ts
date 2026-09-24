@@ -9,42 +9,26 @@ function read(path: string): string {
 }
 
 describe('canonical Service Partner server runtime authority', () => {
-  const service = read(
-    'server/services/servicesEngineService.ts',
-  );
+  const service = read('server/services/servicesEngineService.ts');
 
-  const router = read(
-    'server/servicesEngineRouter.ts',
-  );
+  const router = read('server/servicesEngineRouter.ts');
 
   it('uses partners as the sole Service Partner identity authority', () => {
     expect(service).toContain('partners');
 
-    expect(service).toContain(
-      'db.insert(partners)',
-    );
+    expect(service).toContain('insert(partners)');
 
-    expect(service).not.toContain(
-      'explorePartners',
-    );
+    expect(service).not.toContain('explorePartners');
 
-    expect(service).not.toContain(
-      'randomUUID',
-    );
+    expect(service).not.toContain('randomUUID');
   });
 
   it('uses integer user and provider identities in the service layer', () => {
-    expect(service).toMatch(
-      /getProviderByUserId\(userId:\s*number\)/,
-    );
+    expect(service).toMatch(/getProviderByUserId\(userId:\s*number\)/);
 
-    expect(service).not.toMatch(
-      /providerId\??:\s*string/,
-    );
+    expect(service).not.toMatch(/providerId\??:\s*string/);
 
-    expect(service).not.toMatch(
-      /userId\??:\s*string/,
-    );
+    expect(service).not.toMatch(/userId\??:\s*string/);
   });
 
   it('uses integer provider IDs across active Service Engine methods', () => {
@@ -53,9 +37,7 @@ describe('canonical Service Partner server runtime authority', () => {
       /replaceProviderServices\(providerId:\s*number,/,
       /replaceProviderLocations\(providerId:\s*number,/,
       /listProviderLeads\(providerId:\s*number,/,
-      /listMyExploreVideos\(providerId:\s*number,/,
       /getProviderDashboard\(providerId:\s*number,/,
-      /providerId:\s*number;\s*\n\s*title:/,
     ];
 
     for (const signature of requiredSignatures) {
@@ -64,26 +46,45 @@ describe('canonical Service Partner server runtime authority', () => {
   });
 
   it('resolves the authenticated provider as an integer ID', () => {
-    expect(router).toMatch(
-      /requireProviderId\(userId:\s*number\):\s*Promise<number>/,
-    );
+    expect(router).toMatch(/requireProviderId\(userId:\s*number\):\s*Promise<number>/);
 
-    expect(router).not.toMatch(
-      /requireProviderId\(userId:\s*number\):\s*Promise<string>/,
-    );
+    expect(router).not.toMatch(/requireProviderId\(userId:\s*number\):\s*Promise<string>/);
 
-    expect(router).not.toContain(
-      'String(provider.id)',
-    );
+    expect(router).not.toContain('String(provider.id)');
+  });
+
+  it('does not expose Explore publishing from the Services V1 server boundary', () => {
+    expect(service).not.toContain('serviceExploreVideos');
+    expect(router).not.toContain('submitExploreVideo');
+    expect(router).not.toContain('myExploreVideos');
+    expect(router).not.toContain('recommendProviders');
+    expect(router).not.toContain('logEvent');
+  });
+
+  it('enforces the Services V1 public and enquiry boundaries', () => {
+    expect(service).toContain('isProviderDirectoryEligible');
+    expect(service).toContain('publicDirectorySearch');
+    expect(service).toContain('getServiceLeadForViewer');
+    expect(service).toContain("eq(partners.verificationStatus, 'verified')");
+    expect(service).toContain('providerCoversLocation');
+    expect(service).toContain(".for('update')");
+    expect(service).toContain('eq(serviceLeads.requestId, requestId)');
+    expect(service).toContain('requestId,');
+    expect(service).toContain("property.status === 'published'");
+    expect(router).toContain('getLead: protectedProcedure');
+
+    expect(router).toContain('serviceCode: serviceCodeSchema');
+    expect(router).toContain('requestKey: requestKeySchema');
+    expect(router).toContain('requesterRole: user.role');
+    expect(router).toContain('checkPublicLeadRateLimit');
+
+    expect(router).not.toContain("'explore'");
+    expect(router).toContain('A request area is required');
   });
 
   it('accepts numeric provider IDs at public server boundaries', () => {
-    expect(router).not.toMatch(
-      /providerId:\s*z\.string\(\)/,
-    );
+    expect(router).not.toMatch(/providerId:\s*z\.string\(\)/);
 
-    expect(router).toMatch(
-      /providerId:\s*z\.number\(\)\.int\(\)\.positive\(\)/,
-    );
+    expect(router).toMatch(/providerId:\s*z\.number\(\)\.int\(\)\.positive\(\)/);
   });
 });

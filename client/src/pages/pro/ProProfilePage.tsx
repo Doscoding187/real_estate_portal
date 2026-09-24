@@ -49,8 +49,11 @@ function linesToLocations(text: string) {
 export default function ProProfilePage() {
   const { user, loading: authLoading } = useAuth({ redirectOnUnauthenticated: true });
   const [, setLocation] = useLocation();
-  const { status, isLoading: statusLoading, refetch: refetchStatus } =
-    useServiceProviderOnboardingStatus();
+  const {
+    status,
+    isLoading: statusLoading,
+    refetch: refetchStatus,
+  } = useServiceProviderOnboardingStatus();
 
   useEffect(() => {
     applySeo({
@@ -138,7 +141,12 @@ export default function ProProfilePage() {
     if (authLoading || myProfileQuery.isLoading || myProfileQuery.isFetching) return;
     if (user?.role !== 'service_provider') return;
     if (statusLoading) return;
-    if (profile || status?.hasProviderIdentity || registerIdentity.isPending || autoBootstrapAttempted)
+    if (
+      profile ||
+      status?.hasProviderIdentity ||
+      registerIdentity.isPending ||
+      autoBootstrapAttempted
+    )
       return;
 
     setAutoBootstrapAttempted(true);
@@ -212,19 +220,38 @@ export default function ProProfilePage() {
           </div>
           {status?.fullFeaturesUnlocked ? (
             <div className="flex items-center justify-between gap-3">
-              <p>Your partner profile is complete. Dashboard and Explore are fully unlocked.</p>
+              <p>
+                Your profile details are complete. Directory publication is reviewed separately.
+              </p>
               <Button variant="outline" onClick={() => setLocation('/service/dashboard')}>
-                Go to dashboard
+                Open workspace
               </Button>
             </div>
           ) : (
-            <p>
-              Complete the checklist below to unlock your full partner workspace and Explore
-              publishing.
-            </p>
+            <p>Complete the checklist below before requesting directory review.</p>
           )}
         </CardContent>
       </Card>
+
+      {profile && (
+        <Card className="border-slate-200">
+          <CardHeader>
+            <CardTitle>Directory publication</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2 text-sm text-slate-700">
+            <p className="font-medium text-slate-900">
+              {profile.isPublished
+                ? 'Published in the public directory'
+                : 'Held for directory review'}
+            </p>
+            <p>
+              {profile.isPublished
+                ? 'Consumers can discover this profile and send requests to your provider workspace.'
+                : 'Your profile is saved privately until the platform review is complete.'}
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       {!profile && (
         <Card>

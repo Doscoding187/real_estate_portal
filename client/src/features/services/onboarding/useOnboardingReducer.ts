@@ -39,8 +39,6 @@ export type OnboardingState = {
   contactEmail: string;
   contactPhone: string;
   websiteUrl: string;
-  logoFile: File | null;
-  logoPreviewUrl: string | null;
   // Step 3
   services: ServiceRow[];
   // Step 4
@@ -103,8 +101,6 @@ export const initialOnboardingState: OnboardingState = {
   contactEmail: '',
   contactPhone: '',
   websiteUrl: '',
-  logoFile: null,
-  logoPreviewUrl: null,
   services: [makeServiceRow()],
   locations: [makeLocationRow()],
   selectedPlan: null,
@@ -135,8 +131,6 @@ export function isOnboardingStatePristine(state: OnboardingState) {
     state.contactEmail !== '' ||
     state.contactPhone !== '' ||
     state.websiteUrl !== '' ||
-    state.logoFile !== null ||
-    state.logoPreviewUrl !== null ||
     state.selectedPlan !== null ||
     hasEditedServiceRows ||
     hasEditedLocationRows

@@ -737,7 +737,7 @@ export const PUBLIC_NAVIGATION_MENUS: PublicNavigationMenu[] = [
             label: 'Service providers',
             href: '/services',
             owner: 'services-engine',
-            capability: 'LAUNCH_READY',
+            capability: 'LIMITED_BUT_VALID',
             activeHref: '/services',
           }),
         ],
