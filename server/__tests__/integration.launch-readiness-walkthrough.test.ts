@@ -38,6 +38,7 @@ const describeWithDb: typeof describe = process.env.DATABASE_URL
       describe.skip(`${name} (requires DATABASE_URL disposable DB)`, fn)) as typeof describe;
 
 import { db } from '../db';
+import { getDb } from '../db-connection';
 import {
   agencies,
   agencyAgentMemberships,
@@ -93,6 +94,7 @@ async function insertId(result: any): Promise<number> {
 
 beforeAll(async () => {
   if (!process.env.DATABASE_URL) return;
+  await getDb();
   // The acceptance path mints a session token through the auth service.
 
 
@@ -170,7 +172,12 @@ afterAll(async () => {
   await db.delete(leads).where(eq(leads.agencyId, agencyId)).catch(() => undefined);
   await db.delete(listings).where(eq(listings.agencyId, agencyId)).catch(() => undefined);
   await db.delete(properties).where(eq(properties.sourceListingId, listingId)).catch(() => undefined);
-  await db.delete(subscriptions).where(eq(subscriptions.planId, planId)).catch(() => undefined);
+  if (agencyId) {
+    await db.delete(subscriptions).where(and(
+      eq(subscriptions.ownerType, 'agency'),
+      eq(subscriptions.ownerId, agencyId),
+    )).catch(() => undefined);
+  }
   if (planCreatedByTest) {
     await db.delete(planEntitlements).where(eq(planEntitlements.planId, planId)).catch(() => undefined);
     await db.delete(plans).where(eq(plans.id, planId)).catch(() => undefined);
@@ -302,6 +309,12 @@ describeWithDb('AGY-S8: full Agency journey walkthrough', () => {
 
     const [agencyRow] = await db.select().from(agencies).where(eq(agencies.id, agencyId)).limit(1);
     expect(String(agencyRow.subscriptionStatus)).toBe('active');
+  });
+
+  it('STAGE 4c: Super Admin approves the agency before membership activation', async () => {
+    const financeCaller = caller({ id: superAdminUserId, role: 'super_admin' });
+    const approved = await financeCaller.agency.verify({ id: agencyId, isVerified: true });
+    expect(Number(approved.isVerified)).toBe(1);
   });
 
   it('STAGE 5: Agent invitation accepted — canonical membership established', async () => {

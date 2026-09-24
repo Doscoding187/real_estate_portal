@@ -43,9 +43,20 @@ capture and provider retention facts remain B15/B18 requirements.
 | Worktree isolation | Dedicated `prep/b16-no-spend-convergence` worktree; no Railway, Azure or TiDB mutation |
 | B14 sales-pause guard | 6 focused client/server files, 25 tests passed with `SKIP_DB_INIT=1`; `pnpm check`, `pnpm build` and `pnpm db:authority:check` passed after the change. No database connection or provider mutation. |
 | B15 analytics source containment | `pnpm build` passed after removing the global Google tag; `rg` found no former tag URL or measurement ID in built HTML/assets. First-party event logging remains disclosed in the approval candidate. |
+| Fresh local database chain | Owned disposable MySQL target `af8dc5d6cb434ff5e3abcd89eb43518a4b58017d407a729e2a26df6a168408e8` applied `null → 0094` once under plan digest `2313cba3cb37e592a37ff86fb04c534ea32bde47b4f200992667d479db02e516`; all 95 migrations recorded. Post-apply plan has no pending migrations, status reports no incomplete attempts, and physical congruency matches desired digest `a8ca8cf34bb3627594eab1b722b85115c6460225a0165db7992228a8547798e9` with no differences and 23 enforced CHECK constraints. |
+| Local worktree account capability | `db:worktree:create` now grants only `SESSION_VARIABLES_ADMIN` in addition to the owned database privileges to the two loopback `listify_app` accounts. The runner proved GIPK OFF and UTC on its migration session. Focused lifecycle test passed (3 tests); no protected account or runner changed. |
+| Disposable data and customer journey | Geography, Launch Access foundation and Search-to-Lead scenario prepared and verified; scenario verification ran in the governed test runtime. Location-discovery readiness is true, including 214 application tables. The existing Agency integrated walkthrough passed 12 tests after it was aligned with the required Super Admin agency approval. Its direct subscription activation fixture is a test shortcut, so this result does not establish B03 payment/provider acceptance. |
+| Final local code gates | `pnpm check`, `pnpm db:authority:check` (36 suites, 310 tests, 120 classified utilities, 214 tables and 95 migrations), focused lifecycle tests (3), and the integrated Agency walkthrough (12) passed after the local authority/test changes. |
 
-These gates do not substitute for full integrated browser, disposable-database,
-hosted provider or production acceptance. The approved schema authority is
+The Agency walkthrough's old cleanup removed subscriptions by shared plan ID;
+a post-test scenario recheck caught the resulting fixture loss. Cleanup now
+targets only the walkthrough's Agency owner identity. The governed scenario
+adapter restored its fixture, the 12-stage walkthrough passed again, and the
+governed scenario verifier passed **after** that run. This local test repair
+does not change B03–B07 production behavior.
+
+These gates do not substitute for full integrated browser, hosted provider or
+production acceptance. The approved schema authority is
 still through `0094_content_topics_primary_key.sql`; no migration was added by
 this preparation.
 
