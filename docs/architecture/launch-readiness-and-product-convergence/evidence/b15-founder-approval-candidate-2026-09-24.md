@@ -139,8 +139,9 @@ enquiries. When you send an enquiry, we collect the details you submit and
 the target listing/context so the appropriate authorized recipient can answer.
 We use invoice, bank reconciliation and private proof information to manage
 manual EFT, refunds, the paid term and accounting. We use service logs,
-security events and support messages to protect the platform, investigate
-faults and answer requests. We process only for these service, contractual,
+security events, support messages and interaction events to protect the
+platform, investigate faults, understand use and answer requests. We process
+only for these service, contractual,
 legal, safety and legitimate operating purposes, and obtain consent where
 required. Do not submit another person's information without authority.
 
@@ -170,12 +171,17 @@ under its own obligations. Ask <PUBLIC_PRIVACY_EMAIL> for access, correction,
 deletion or objection as applicable. We will verify your identity, explain
 what we can change or retain, and answer through the monitored channel.
 
-**Cookies and messages.** A necessary secure session cookie keeps signed-in
-users authenticated. Additional cookies or tracking, if used on the released
-site, are listed with their purpose and choices in <COOKIE_SCHEDULE>. We send
-account, invitation, invoice, finance, support and term notices needed to run
-the service. Paid MVP does not include marketing campaigns; any future
-marketing requires its own lawful notice and choice.
+**Cookies, browser storage and messages.** A necessary secure session cookie
+keeps signed-in users authenticated. Your browser may also keep unfinished
+form drafts, recent choices and a temporary interaction identifier on your
+device. Some promotional-page actions send page, action, device, referrer,
+session and, when available, account identifiers to our own service logs.
+Google Fonts loads with the page; Google Maps may load when a map is shown.
+The released site's full cookie, device-storage and external-request schedule,
+including choices, is <COOKIE_SCHEDULE>. We send account, invitation, invoice,
+finance, support and term notices needed to run the service. Paid MVP does
+not include marketing campaigns; any future marketing requires its own lawful
+notice and choice.
 
 **Changes and complaints.** We will date material notice changes and make the
 current version available on the site. For a privacy complaint, contact
@@ -193,9 +199,9 @@ released service before approval:
 | `<SERVICE_ADDRESS>`, `<COMPANY_DISCLOSURE_PHONE>`, `<REGISTRATION_DISCLOSURE>` | Publishable physical/legal-service address, company disclosure telephone, place of registration and office bearers as applicable; verify with company records. Edward has not supplied a public support number. ECTA section 43 includes a telephone disclosure for covered electronic offers; this must be resolved before paid publication, either with a suitable company number or a reviewed applicability decision. |
 | `<PUBLIC_SUPPORT_EMAIL>`, `<PUBLIC_PRIVACY_EMAIL>` | Monitored public routes owned by Edward; prove inbound/reply and absence message. |
 | Staffed cadence | Edward-approved daily weekday finance/support checks; record actual local check time and match B14 rehearsal. |
-| `<PROVIDER_SCHEDULE>` | Current Railway/TiDB, frontend, Resend, cache and object storage providers, locations and transfer safeguards after binding. |
+| `<PROVIDER_SCHEDULE>` | Current Railway/TiDB, frontend, Resend, cache and object storage providers, plus Google Fonts/Maps and any released third-party media requests, locations and transfer safeguards after binding. |
 | `<RETENTION_SCHEDULE>` | Actual category-by-category period and deletion/hold rules, including private proofs and leads; verify implementation. |
-| `<COOKIE_SCHEDULE>` | Browser/network inventory of necessary and any additional cookies on the released artifact. |
+| `<COOKIE_SCHEDULE>` | Verify the [source inventory](b15-browser-data-inventory-2026-09-24.md) with a clean hosted browser/network capture. Include necessary cookies, device-local personal drafts and first-party interaction events; do not claim Google Analytics is disabled until the exact built artifact has been checked. |
 
 Founder approval is of the fully resolved text, invoice/payment wording and
 actual rendered routes. A South African legal/accounting review may improve

@@ -25,6 +25,11 @@ runtime guard. It rejects new invoices and finance approval before database
 access while retaining already-paid product availability; public pages and
 Agency/Developer invoice actions show the pause. This is local source proof,
 not a Railway configuration change or hosted rehearsal.
+The [B15 browser data inventory](b15-browser-data-inventory-2026-09-24.md)
+records the candidate's real first-party analytics and device-local drafts.
+The global Google Analytics tag was removed from candidate HTML; the deployed
+frontend remains unchanged until a reviewed release. Hosted network/storage
+capture and provider retention facts remain B15/B18 requirements.
 
 ## Local gates on the assembled source
 
@@ -37,6 +42,7 @@ not a Railway configuration change or hosted rehearsal.
 | `pnpm db:authority:check` | Passed: 36 static suites, 310 tests; 120 utility surfaces; 214 canonical tables; 95 active migrations; inventory and lifecycle current |
 | Worktree isolation | Dedicated `prep/b16-no-spend-convergence` worktree; no Railway, Azure or TiDB mutation |
 | B14 sales-pause guard | 6 focused client/server files, 25 tests passed with `SKIP_DB_INIT=1`; `pnpm check`, `pnpm build` and `pnpm db:authority:check` passed after the change. No database connection or provider mutation. |
+| B15 analytics source containment | `pnpm build` passed after removing the global Google tag; `rg` found no former tag URL or measurement ID in built HTML/assets. First-party event logging remains disclosed in the approval candidate. |
 
 These gates do not substitute for full integrated browser, disposable-database,
 hosted provider or production acceptance. The approved schema authority is

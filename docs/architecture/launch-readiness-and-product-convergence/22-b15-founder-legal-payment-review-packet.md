@@ -48,7 +48,10 @@ Terms, Privacy and invoice/payment text:
    time; do not infer status from expected first-cohort revenue. The founder's
    current statement and canonical B01 metadata say VAT is not charged.
 5. Complete the actual provider/location, retention/deletion and cookie
-   schedules after B10–B12 binding. Verify the candidate notice against the
+   schedules after B10–B12 binding. The [source-level browser data inventory](evidence/b15-browser-data-inventory-2026-09-24.md)
+   now identifies necessary session storage, device-local personal drafts,
+   first-party event logging, Google Fonts/Maps and the removed global Google
+   Analytics tag in the candidate. Verify the candidate notice against the
    released account, enquiry, proof and lead flows. Include real Resend, object
    storage, Railway/frontend and database providers. Do not describe Azure as
    the runtime while Railway remains on TiDB.
