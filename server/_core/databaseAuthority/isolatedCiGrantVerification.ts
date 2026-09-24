@@ -15,7 +15,7 @@ export function assertIsolatedCiGrants(
       const match = statement
         .trim()
         .match(
-          /^GRANT ([A-Z ,]+) ON (`[A-Za-z0-9_]+`|\*)\.(`[A-Za-z0-9_]+`|\*) TO ([`'])([a-z0-9_]+)\4@([`'])%\6$/,
+          /^GRANT ([A-Z_ ,]+) ON (`[A-Za-z0-9_]+`|\*)\.(`[A-Za-z0-9_]+`|\*) TO ([`'])([a-z0-9_]+)\4@([`'])%\6$/,
         );
       if (!match || match[5] !== username) {
         throw new Error('Isolated CI grants contain an unsupported statement or wrong account.');

@@ -25,4 +25,13 @@ describe('isolated CI semantic grant admission', () => {
   it('rejects missing required privileges', () => {
     expect(() => assertIsolatedCiGrants([actual[0]], expected, 'listify_ci_app')).toThrow();
   });
+  it('admits only the planned global session-variable privilege for the CI migrator', () => {
+    const dynamic = "GRANT SESSION_VARIABLES_ADMIN ON *.* TO 'listify_ci_migration'@'%'";
+    expect(assertIsolatedCiGrants([dynamic], [dynamic], 'listify_ci_migration')).toMatch(/^[a-f0-9]{64}$/);
+    expect(() => assertIsolatedCiGrants(
+      [dynamic, "GRANT CREATE USER ON *.* TO 'listify_ci_migration'@'%'"],
+      [dynamic],
+      'listify_ci_migration',
+    )).toThrow();
+  });
 });

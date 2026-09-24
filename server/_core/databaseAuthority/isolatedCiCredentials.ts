@@ -244,6 +244,16 @@ export function buildIsolatedCiGrantPlan(
   const migration = [
     `GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, ALTER, DROP, INDEX, REFERENCES ON ${database}.* TO ${quotedAccount(roleUsers.migration)}`,
   ];
+  if (
+    databaseName === ISOLATED_CI_DATABASE_NAME &&
+    roleUsers.migration === ISOLATED_CI_ROLE_USERS.migration
+  ) {
+    // The fresh-chain runner disables GIPK on its own session before DDL.
+    // Keep this global dynamic grant on the exact disposable CI migrator.
+    migration.push(
+      `GRANT SESSION_VARIABLES_ADMIN ON *.* TO ${quotedAccount(roleUsers.migration)}`,
+    );
+  }
   const statementsByCredential = { runtime, worker, 'read-only': verifier, migration } as const;
   return {
     databaseName,
