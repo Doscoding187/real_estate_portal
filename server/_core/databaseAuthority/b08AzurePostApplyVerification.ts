@@ -51,8 +51,13 @@ async function expectMysqlError(connection: AuthoritySqlConnection, sql: string,
   try {
     await connection.query(sql, values);
   } catch (error) {
-    if ((error as { code?: string }).code === expectedCode) return;
-    throw new Error(`B08 Azure behavior proof failed: expected ${expectedCode}, received another error.`);
+    const observedCode = String((error as { code?: unknown }).code ?? 'unknown')
+      .replace(/[^A-Z0-9_]/gi, '_').slice(0, 64);
+    // Azure MySQL reports the same missing-parent FK rejection as either
+    // ER_NO_REFERENCED_ROW (1216) or ER_NO_REFERENCED_ROW_2 (1452).
+    if (observedCode === expectedCode ||
+        (expectedCode === 'ER_NO_REFERENCED_ROW_2' && observedCode === 'ER_NO_REFERENCED_ROW')) return;
+    throw new Error(`B08 Azure behavior proof failed: expected ${expectedCode}, received ${observedCode}.`);
   }
   throw new Error(`B08 Azure behavior proof failed: expected ${expectedCode} rejection.`);
 }
@@ -91,6 +96,8 @@ export async function verifyB08AzureEstablishment(): Promise<Record<string, unkn
     const attempts = await rows(connection, `SELECT migration_filename, migration_checksum,
       plan_digest, target_fingerprint_hash, state, completed_statement_count
       FROM sql_migration_attempts ORDER BY migration_filename`);
+    const attemptTimes = (await rows(connection, `SELECT MIN(started_at) AS first_started_at,
+      MAX(finished_at) AS last_finished_at FROM sql_migration_attempts`))[0];
     if (history.length !== 95 || attempts.length !== 95) {
       throw new Error('B08 ledger verification refused: migration or attempt count differs.');
     }
@@ -150,6 +157,17 @@ export async function verifyB08AzureEstablishment(): Promise<Record<string, unkn
         JSON.stringify(propertyImagesPhysical) !== JSON.stringify(['propertyimages'])) {
       throw new Error('B08 ledger verification refused: physical table case differs.');
     }
+    const residue = (await rows(connection, `SELECT
+      (SELECT COUNT(*) FROM partner_tiers WHERE slug LIKE 'b08-json-%') AS partner_tiers,
+      (SELECT COUNT(*) FROM transactional_email_deliveries WHERE purpose = 'b08-proof') AS deliveries,
+      (SELECT COUNT(*) FROM users WHERE email LIKE 'b08-role-%@example.test') AS users,
+      (SELECT COUNT(*) FROM managerial_audit_logs WHERE action = 'b08_role_proof') AS role_audits`))[0];
+    const controlledRowsRemaining = Object.values(residue).reduce<number>(
+      (sum, value) => sum + Number(value), 0,
+    );
+    if (controlledRowsRemaining !== 0) {
+      throw new Error('B08 ledger verification refused: controlled verification rows remain.');
+    }
     return {
       verifiedAt: new Date().toISOString(),
       targetFingerprintHash: authority.context.targetFingerprintHash,
@@ -157,6 +175,8 @@ export async function verifyB08AzureEstablishment(): Promise<Record<string, unkn
       migrationCount: history.length,
       succeededAttemptCount: attempts.length,
       incompleteAttemptCount: 0,
+      firstAttemptStartedAt: attemptTimes.first_started_at,
+      lastAttemptFinishedAt: attemptTimes.last_finished_at,
       applyPlanDigest: EXPECTED_APPLY_PLAN_DIGEST,
       manifestDigest: manifest.manifestDigest,
       desiredModelDigest: comparison.desiredDigest,
@@ -169,6 +189,7 @@ export async function verifyB08AzureEstablishment(): Promise<Record<string, unkn
       foreignKeyCount: actual.tables.reduce((sum, table) => sum + table.foreignKeys.length, 0),
       unenforcedCheckCount: 0,
       myRowIdCount: 0,
+      controlledRowsRemaining,
       primaryKeys: Object.fromEntries(keyMap),
       tlsCipherPresent: true,
       lowerCaseTableNames: 1,

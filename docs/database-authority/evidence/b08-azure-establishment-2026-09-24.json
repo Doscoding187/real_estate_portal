@@ -1,0 +1,93 @@
+{
+  "evidenceVersion": 1,
+  "source": {
+    "sha": "0ed5d253568552d7b4492893c77ebc6850158220",
+    "tree": "4fca21e5b739a5abcc453964d16dba94c7887f2e"
+  },
+  "targetFingerprintHash": "b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced",
+  "authorizedOldHead": null,
+  "authorizedNewHead": "0094_content_topics_primary_key.sql",
+  "authorizedPlanDigest": "632f66e7eb10a16a4642a73fb4d2d8c0ebe15d4736ba17209141fa8dbab373ec",
+  "apply": {
+    "exitCode": 0,
+    "appliedMigrationCount": 95,
+    "freshSessionEvidence": {
+      "connectionId": "30",
+      "generatedInvisiblePrimaryKeyBefore": 1,
+      "generatedInvisiblePrimaryKeyAfter": 0,
+      "requirePrimaryKey": 0,
+      "lowerCaseTableNames": 1,
+      "timeZone": "+00:00"
+    }
+  },
+  "establishmentVerification": {
+    "verifiedAt": "2026-09-24T06:53:11.397Z",
+    "targetFingerprintHash": "b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced",
+    "migrationHead": "0094_content_topics_primary_key.sql",
+    "migrationCount": 95,
+    "succeededAttemptCount": 95,
+    "incompleteAttemptCount": 0,
+    "firstAttemptStartedAt": "2026-09-24T06:32:33.563Z",
+    "lastAttemptFinishedAt": "2026-09-24T06:40:37.585Z",
+    "applyPlanDigest": "632f66e7eb10a16a4642a73fb4d2d8c0ebe15d4736ba17209141fa8dbab373ec",
+    "manifestDigest": "93d871e6f8760477f460b8821685d71d212374eb86ddd53bc6e2ccfc30608efc",
+    "desiredModelDigest": "a8ca8cf34bb3627594eab1b722b85115c6460225a0165db7992228a8547798e9",
+    "actualModelDigest": "a8ca8cf34bb3627594eab1b722b85115c6460225a0165db7992228a8547798e9",
+    "schemaCongruent": true,
+    "physicalTableCount": 216,
+    "logicalPropertyImages": "propertyImages",
+    "physicalPropertyImages": [
+      "propertyimages"
+    ],
+    "caseFoldCollisionCount": 0,
+    "foreignKeyCount": 463,
+    "unenforcedCheckCount": 0,
+    "myRowIdCount": 0,
+    "controlledRowsRemaining": 0,
+    "primaryKeys": {
+      "content_topics": [
+        "content_id",
+        "topic_id"
+      ],
+      "user_onboarding_state": [
+        "user_id"
+      ]
+    },
+    "tlsCipherPresent": true,
+    "lowerCaseTableNames": 1
+  },
+  "behaviorVerification": {
+    "verifiedAt": "2026-09-24T06:52:06.564Z",
+    "targetFingerprintHash": "b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced",
+    "identity": "propertylistify_release_migrator",
+    "firstConnectionId": 42,
+    "tlsCipherPresent": true,
+    "timezone": "+00:00",
+    "isolation": "REPEATABLE-READ",
+    "foreignKeyRejection": true,
+    "checkRejection": true,
+    "jsonRoundTrip": true,
+    "microsecondTimestamp": true,
+    "transactionalEmailUniqueness": true,
+    "roleAuditTransaction": true,
+    "transactionRollback": true,
+    "forUpdate": true,
+    "getLockExclusion": true,
+    "controlledRowsRemaining": 0
+  },
+  "behaviorProviderNote": "Azure MySQL returned ER_NO_REFERENCED_ROW (1216) for the missing-parent FK check; the bounded verifier accepts only 1216 or 1452. Failed proof transactions were rolled back and read-only residue checks found zero rows.",
+  "firewall": {
+    "rule": "b08-release-apply-20260924",
+    "ip": "197.79.59.199",
+    "createdAt": "2026-09-24T06:30:51.1468846Z",
+    "removedAndVerifiedBy": "2026-09-24T06:55:06Z",
+    "removalVerified": true
+  },
+  "railway": {
+    "changed": false,
+    "writer": "TiDB"
+  },
+  "tidb": {
+    "retired": false
+  }
+}
