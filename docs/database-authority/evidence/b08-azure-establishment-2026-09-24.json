@@ -86,7 +86,13 @@
   "backup": {
     "automatedRetentionDays": 14,
     "serverState": "Ready",
-    "verifiedAt": "2026-09-24T07:00:16Z"
+    "verifiedAt": "2026-09-24T07:00:16Z",
+    "backupInventoryCheckedAt": "2026-09-24T07:28:14Z",
+    "latestFullBackupCompletedAt": "2026-09-23T14:08:22.967475Z",
+    "postApplyFullBackupObserved": false,
+    "earliestRestoreDate": "2026-09-16T14:38:39.587662Z",
+    "geoRedundantBackup": false,
+    "independentRestoreProven": false
   },
   "railway": {
     "changed": false,
