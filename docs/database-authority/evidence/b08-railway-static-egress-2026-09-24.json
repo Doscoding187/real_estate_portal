@@ -1,0 +1,41 @@
+{
+  "evidenceVersion": 1,
+  "observedAt": "2026-09-24T09:17:23Z",
+  "operation": "authorized Railway Production API static outbound IP assignment and independent readback",
+  "projectId": "8cdd7515-ddd2-4252-bbee-df5a5c209d4b",
+  "productionEnvironmentId": "63070d99-357a-40ba-99c3-6d1368f61652",
+  "apiServiceId": "db88a720-2d1f-4afc-a3a8-6228b6b08d3e",
+  "staticOutboundIp": {
+    "enabled": true,
+    "highAvailability": true,
+    "addresses": [
+      "208.77.246.240",
+      "208.77.246.241",
+      "208.77.246.242"
+    ],
+    "region": "sin",
+    "zone": "eqsg3a",
+    "assignmentCommitted": true,
+    "redeployRequiredForEffect": true,
+    "redeployTriggered": false
+  },
+  "workspace": {
+    "id": "84ae38a5-5e81-4bdb-bc8a-bacf177648b7",
+    "planAfterAssignment": "HOBBY",
+    "proUpgradePerformed": false
+  },
+  "deploymentReadback": {
+    "activeDeploymentId": "3996ee58-71f7-4976-b6a4-0cc3bc3c7731",
+    "activeSourceSha": "4e012b3044628fc06da7489c0055e9ce01bdc8d9",
+    "status": "SUCCESS",
+    "databaseProvider": "TiDB"
+  },
+  "interpretation": "Railway accepted and committed the static IP assignment while the workspace continued to report HOBBY. The addresses are assigned but must not be treated as effective service egress until a later deployment and network verification. No Pro billing upgrade was needed for this assignment despite the current published plan description.",
+  "scope": {
+    "railwayDatabaseUrlChanged": false,
+    "azureFirewallChanged": false,
+    "deploymentChanged": false,
+    "tidbSqlInspected": false,
+    "azureCutoverAuthorized": false
+  }
+}
