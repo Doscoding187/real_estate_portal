@@ -28,6 +28,11 @@ previous process may already have caused delivery. Provider reconciliation,
 provider credentials, worker supervision, and live external-email proof remain
 protected-release work.
 
+The scheduled one-shot lead worker prints redacted result/backlog counts and
+exits with code 2 when an unknown or exhausted delivery remains. Its scheduled
+run must be reviewed as an attention signal, including a platform-managed
+manual-custody item; this exit never authorizes an automatic resend.
+
 ## Trigger and cadence
 
 An assigned Property Listify operations owner checks `/admin/ecosystem` during
