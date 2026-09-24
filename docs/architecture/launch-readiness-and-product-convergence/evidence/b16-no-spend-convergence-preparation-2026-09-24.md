@@ -12,12 +12,14 @@ dedicated private-proof guardrail was applied as `6a78736f`, and the B14–B18
 operating/review preparation as `b5d6fb73`. No historical TiDB compatibility
 work was integrated. The B12 contract now points to the current B08 boundary
 so its future topology cannot be mistaken for authorization to cut Railway over.
+The bounded B13 attention exit was applied as `e43ea6af`: unknown or exhausted
+lead deliveries now produce a nonzero cron result without resending them.
 
 ## Local gates on the assembled source
 
 | Gate | Result |
 | --- | --- |
-| `pnpm check` | Passed |
+| `pnpm check` before and after B13 integration | Passed |
 | Hosted proof/preflight/config focused tests | 3 files, 30 tests passed |
 | `pnpm build` | Passed; pre-existing large-chunk warning retained |
 | `pnpm db:authority:check` | Passed: 36 static suites, 310 tests; 120 utility surfaces; 214 canonical tables; 95 active migrations; inventory and lifecycle current |
