@@ -36,7 +36,8 @@ inventory. Bucket names, key material and object keys were not emitted or
 stored in this evidence. No object read/write or permission change occurred.
 
 Therefore B11 cannot be closed by configuration alone. A separate private
-bucket and a bucket-scoped credential are required. Provisioning new AWS S3
-storage may incur usage charges; treat any unapproved incremental cost as a
-`FOUNDER SPEND GATE`. Do not reuse the public bucket or public access key for
-payment proofs.
+bucket and a bucket-scoped credential are required. AWS [charges for S3 object
+storage and requests](https://aws.amazon.com/s3/pricing/); the existing
+account's available credits or spend limit were not inspected. Treat any
+unapproved incremental cost as a `FOUNDER SPEND GATE`. Do not reuse the public
+bucket or public access key for payment proofs.

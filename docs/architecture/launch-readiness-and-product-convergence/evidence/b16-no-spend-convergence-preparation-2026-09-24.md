@@ -45,7 +45,7 @@ capture and provider retention facts remain B15/B18 requirements.
 | B15 analytics source containment | `pnpm build` passed after removing the global Google tag; `rg` found no former tag URL or measurement ID in built HTML/assets. First-party event logging remains disclosed in the approval candidate. |
 | Fresh local database chain | Owned disposable MySQL target `af8dc5d6cb434ff5e3abcd89eb43518a4b58017d407a729e2a26df6a168408e8` applied `null → 0094` once under plan digest `2313cba3cb37e592a37ff86fb04c534ea32bde47b4f200992667d479db02e516`; all 95 migrations recorded. Post-apply plan has no pending migrations, status reports no incomplete attempts, and physical congruency matches desired digest `a8ca8cf34bb3627594eab1b722b85115c6460225a0165db7992228a8547798e9` with no differences and 23 enforced CHECK constraints. |
 | Local worktree account capability | `db:worktree:create` now grants only `SESSION_VARIABLES_ADMIN` in addition to the owned database privileges to the two loopback `listify_app` accounts. The runner proved GIPK OFF and UTC on its migration session. Focused lifecycle test passed (3 tests); no protected account or runner changed. |
-| Disposable data and customer journey | Geography, Launch Access foundation and Search-to-Lead scenario prepared and verified; scenario verification ran in the governed test runtime. Location-discovery readiness is true, including 214 application tables. The existing Agency integrated walkthrough passed 12 tests after it was aligned with the required Super Admin agency approval. Its direct subscription activation fixture is a test shortcut, so this result does not establish B03 payment/provider acceptance. |
+| Disposable data and customer journey | Geography, Launch Access foundation and Search-to-Lead scenario prepared and verified; scenario verification ran in the governed test runtime. Location-discovery readiness is true, including 214 application tables. The Agency integrated walkthrough passed 12 tests with controlled local proof submission, Super Admin finance approval, canonical subscription activation, Agency approval, membership, inventory and lead follow-up. It does not prove hosted private S3 or real bank/provider evidence. |
 | Final local code gates | `pnpm check`, `pnpm db:authority:check` (36 suites, 310 tests, 120 classified utilities, 214 tables and 95 migrations), focused lifecycle tests (3), and the integrated Agency walkthrough (12) passed after the local authority/test changes. |
 
 The Agency walkthrough's old cleanup removed subscriptions by shared plan ID;
@@ -54,6 +54,16 @@ targets only the walkthrough's Agency owner identity. The governed scenario
 adapter restored its fixture, the 12-stage walkthrough passed again, and the
 governed scenario verifier passed **after** that run. This local test repair
 does not change B03–B07 production behavior.
+
+The later payment-backed rerun used a freshly established owned target at the
+same fingerprint and applied the same 95-file `null → 0094` plan. The first
+attempt exposed an obsolete test assertion that the retired
+`agencies.subscriptionStatus` snapshot must mirror an active Launch Access
+subscription. The canonical `subscriptions` row and Agency public projection
+are authoritative; the test now checks both. The corrected 12-test walkthrough
+passed, followed by a passing governed Search-to-Lead scenario verifier,
+schema congruency with zero differences, and location-discovery readiness with
+zero incomplete migration attempts. No B03 runtime code or schema was changed.
 
 These gates do not substitute for full integrated browser, hosted provider or
 production acceptance. The approved schema authority is
