@@ -9,6 +9,11 @@ reviewed cutover; they do not authorize changing Railway or activating paid
 products while B08 is parked. See the
 [central launch disposition](architecture/launch-readiness-and-product-convergence/03-launch-register.md#b08-protected-database-disposition--2026-09-24).
 
+The [2026-09-24 public hosted baseline](architecture/launch-readiness-and-product-convergence/evidence/b12-public-hosted-baseline-2026-09-24.json)
+shows valid production DNS/TLS, but the current API returns readiness 503 and
+the frontend `/version.json` serves HTML. Both intended staging names did not
+resolve. This single read-only observation is not B12 hosted acceptance.
+
 ## Topology and domains
 
 Browser → Vercel `https://www.propertylistifysa.co.za` → Railway Express `https://api.propertylistifysa.co.za` → B08 database, environment-owned Redis, B11 public/private S3, Resend. Vercel owns the frontend artifact; Railway owns API, one continuous email worker, and one lead cron. One API replica owns the B03 term scheduler. The apex redirects to `www` at Vercel/DNS configuration. The API serves no frontend files (`SKIP_FRONTEND=true`).

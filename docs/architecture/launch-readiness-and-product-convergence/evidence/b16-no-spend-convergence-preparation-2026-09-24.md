@@ -16,6 +16,10 @@ The bounded B13 attention exit was applied as `e43ea6af`: unknown or exhausted
 lead deliveries now produce a nonzero cron result without resending them.
 The B17 read-only exact-release probe was integrated as `9c6fd841`; it does
 not bind a schedule or contact a protected service during local verification.
+The [B12 public endpoint baseline](b12-public-hosted-baseline-2026-09-24.json)
+confirms production DNS/TLS is present, while the deployed API remains on an
+older SHA with readiness 503 and staging DNS is absent. It is a single
+read-only observation, not hosted acceptance.
 
 ## Local gates on the assembled source
 

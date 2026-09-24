@@ -32,7 +32,7 @@ production acceptance decision. Paid activation remains closed.
 | --- | --- | --- |
 | B10 email | [Engineering packet](evidence/b10-transactional-email-engineering-packet.md) and local worker proof | Real Resend domain/mailbox delivery, supervised worker, named reconciliation owner |
 | B11 media/proof | Hosted private-proof guardrail and [B11 evidence](evidence/b11-private-proof-readiness-2026-09-24.md); public media rejects local hosted fallback | Distinct durable private bucket/credential and real public/private object, access and recovery proof |
-| B12 runtime | [Hosted contract](../../b12-hosted-runtime-contract.md) and static preflight | Exact hosted DNS/TLS, service configuration, worker/cron and staging rehearsal; B08 remains parked |
+| B12 runtime | [Hosted contract](../../b12-hosted-runtime-contract.md), static preflight and [public endpoint baseline](evidence/b12-public-hosted-baseline-2026-09-24.json): production DNS/TLS live, current API readiness 503, staging names absent | Exact artifact/service configuration, worker/cron and staging rehearsal; B08 remains parked |
 | B13 lead custody | [Recovery runbook](16-first-cohort-lead-custody-recovery-runbook.md), local custody proof and worker attention exit | Hosted cron cadence and first-cohort routing/custody exercise |
 | B14 first customer | [Operating procedure](19-first-customer-operating-procedure.md) prepared | Named backup, staffed hours, queue and finance handover rehearsal |
 | B15 legal/payment | [Founder review packet](22-b15-founder-legal-payment-review-packet.md) prepared | Approved final Terms/Privacy/payment copy and customer-browser proof |
