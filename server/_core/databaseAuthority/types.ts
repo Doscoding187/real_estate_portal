@@ -5,6 +5,7 @@ export const DATABASE_OPERATIONS = [
   'ci-identity-bootstrap',
   'inspection-identity-provision',
   'migration-identity-provision',
+  'runtime-identities-provision',
   'b08-behavior-verify',
   'migration-plan',
   'migration-apply',

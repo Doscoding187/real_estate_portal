@@ -47,6 +47,7 @@ const SQL_CONNECTION_OPERATIONS: readonly DatabaseOperation[] = [
   'ci-identity-bootstrap',
   'inspection-identity-provision',
   'migration-identity-provision',
+  'runtime-identities-provision',
   'b08-behavior-verify',
   'read-only-connect',
   'migration-plan',

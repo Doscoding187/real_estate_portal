@@ -549,6 +549,41 @@ describe('immutable resolved database context and operation authorization', () =
     })).toThrow('exact B08 Azure behavior approval');
   });
 
+  it('confines B08 runtime identity provisioning to exact Azure accounts and grant digests', () => {
+    const identity = fixtureIdentity();
+    const authority = resolveDatabaseAuthority({
+      operation: 'runtime-identities-provision',
+      cwd: identity.worktreePath,
+      gitIdentity: identity,
+      explicitDatabaseUrl: 'mysql://admin:secret@propertylistify-mysql.mysql.database.azure.com:3306/propertylistify_database',
+      credentialClass: 'bootstrap-admin',
+      processEnv: { NODE_ENV: 'production', APP_ENV: 'production' },
+    });
+    const approval = {
+      reference: 'B08-RUNTIME-TEST', actor: 'test-reviewer',
+      operation: 'runtime-identities-provision' as const,
+      targetFingerprintHash: authority.context.targetFingerprintHash,
+      credentialClass: 'bootstrap-admin' as const,
+      runtimeIdentity: 'propertylistify_app_runtime',
+      workerIdentity: 'propertylistify_job_worker',
+      runtimeGrantDigest: '58f42389e76495048f32460f71c4cbe15bb85c9c1d5365426c0561383b75d1d5',
+      workerGrantDigest: '74b68ee103b3f1f345c7e7a0874b84fde128653977817cc59b5a2776b88f1f22',
+    };
+    const acknowledgement = expectedDatabaseAcknowledgement(authority.context);
+    expect(() => authorizeDatabaseOperation(authority, { root: process.cwd(), approval, acknowledgement })).not.toThrow();
+    for (const changed of [
+      { runtimeIdentity: 'another_user' },
+      { workerIdentity: 'another_user' },
+      { runtimeGrantDigest: 'different' },
+      { workerGrantDigest: 'different' },
+    ]) {
+      expect(() => authorizeDatabaseOperation(authority, {
+        root: process.cwd(), approval: { ...approval, ...changed }, acknowledgement,
+      })).toThrow('exact B08 Azure runtime identity approval');
+    }
+    expect(() => authorizeDatabaseOperation(authority, { root: process.cwd(), approval })).toThrow('exact acknowledgement');
+  });
+
   it('prevents a feature worktree from mutating listify_local', () => {
     const identity = fixtureIdentity();
     const authority = resolveDatabaseAuthority({

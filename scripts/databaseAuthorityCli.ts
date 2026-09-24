@@ -12,6 +12,10 @@ import {
   verifyB08AzureMigrationIdentity,
 } from '../server/_core/databaseAuthority/b08AzureMigrationIdentity';
 import {
+  provisionB08AzureRuntimeIdentities,
+  verifyB08AzureRuntimeIdentities,
+} from '../server/_core/databaseAuthority/b08AzureRuntimeIdentities';
+import {
   verifyB08AzureBehavior,
   verifyB08AzureEstablishment,
 } from '../server/_core/databaseAuthority/b08AzurePostApplyVerification';
@@ -95,6 +99,8 @@ type Command =
   | 'b08:inspect-metadata'
   | 'b08:migrator:provision'
   | 'b08:migrator:verify'
+  | 'b08:runtime:provision'
+  | 'b08:runtime:verify'
   | 'b08:verify-establishment'
   | 'b08:verify-behavior'
   | 'worktree:create'
@@ -275,6 +281,16 @@ async function run(command: Command): Promise<void> {
 
   if (command === 'b08:migrator:verify') {
     print(await verifyB08AzureMigrationIdentity());
+    return;
+  }
+
+  if (command === 'b08:runtime:provision') {
+    print(await provisionB08AzureRuntimeIdentities(requiredOption('ack')));
+    return;
+  }
+
+  if (command === 'b08:runtime:verify') {
+    print(await verifyB08AzureRuntimeIdentities());
     return;
   }
 
@@ -758,6 +774,8 @@ const commands = new Set<Command>([
   'b08:inspect-metadata',
   'b08:migrator:provision',
   'b08:migrator:verify',
+  'b08:runtime:provision',
+  'b08:runtime:verify',
   'b08:verify-establishment',
   'b08:verify-behavior',
   'worktree:create',

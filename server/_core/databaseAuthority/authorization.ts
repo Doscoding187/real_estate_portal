@@ -40,6 +40,10 @@ export type ProtectedDatabaseApproval = {
   inspectionIdentity?: string;
   migrationIdentity?: string;
   migrationPrivilegeSet?: string;
+  runtimeIdentity?: string;
+  workerIdentity?: string;
+  runtimeGrantDigest?: string;
+  workerGrantDigest?: string;
 };
 
 export const B08_AZURE_TARGET_FINGERPRINT_HASH =
@@ -48,6 +52,10 @@ export const B08_INSPECTION_IDENTITY = 'propertylistify_b08_inspector';
 export const B08_MIGRATION_IDENTITY = 'propertylistify_release_migrator';
 export const B08_MIGRATION_PRIVILEGE_SET =
   'propertylistify_database.*:SELECT,INSERT,UPDATE,DELETE,CREATE,ALTER,DROP,INDEX,REFERENCES;*.*:SESSION_VARIABLES_ADMIN';
+export const B08_RUNTIME_IDENTITY = 'propertylistify_app_runtime';
+export const B08_WORKER_IDENTITY = 'propertylistify_job_worker';
+export const B08_RUNTIME_GRANT_DIGEST = '58f42389e76495048f32460f71c4cbe15bb85c9c1d5365426c0561383b75d1d5';
+export const B08_WORKER_GRANT_DIGEST = '74b68ee103b3f1f345c7e7a0874b84fde128653977817cc59b5a2776b88f1f22';
 
 export function protectedDatabaseApprovalFromEnvironment(
   authority: ResolvedDatabaseAuthority,
@@ -66,6 +74,10 @@ export function protectedDatabaseApprovalFromEnvironment(
     inspectionIdentity: env.DATABASE_AUTHORITY_APPROVED_INSPECTION_IDENTITY,
     migrationIdentity: env.DATABASE_AUTHORITY_APPROVED_MIGRATION_IDENTITY,
     migrationPrivilegeSet: env.DATABASE_AUTHORITY_APPROVED_MIGRATION_PRIVILEGE_SET,
+    runtimeIdentity: env.DATABASE_AUTHORITY_APPROVED_RUNTIME_IDENTITY,
+    workerIdentity: env.DATABASE_AUTHORITY_APPROVED_WORKER_IDENTITY,
+    runtimeGrantDigest: env.DATABASE_AUTHORITY_APPROVED_RUNTIME_GRANT_DIGEST,
+    workerGrantDigest: env.DATABASE_AUTHORITY_APPROVED_WORKER_GRANT_DIGEST,
   };
 }
 
@@ -229,6 +241,17 @@ export function authorizeDatabaseOperation(
       input.approval?.migrationPrivilegeSet !== B08_MIGRATION_PRIVILEGE_SET)
   ) {
     throw new Error('Database operation refused: exact B08 Azure migration identity approval is required.');
+  }
+  if (
+    context.operation === 'runtime-identities-provision' &&
+    (context.targetFingerprintHash !== B08_AZURE_TARGET_FINGERPRINT_HASH ||
+      input.approval?.credentialClass !== 'bootstrap-admin' ||
+      input.approval?.runtimeIdentity !== B08_RUNTIME_IDENTITY ||
+      input.approval?.workerIdentity !== B08_WORKER_IDENTITY ||
+      input.approval?.runtimeGrantDigest !== B08_RUNTIME_GRANT_DIGEST ||
+      input.approval?.workerGrantDigest !== B08_WORKER_GRANT_DIGEST)
+  ) {
+    throw new Error('Database operation refused: exact B08 Azure runtime identity approval is required.');
   }
   if (
     context.operation === 'b08-behavior-verify' &&

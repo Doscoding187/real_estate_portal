@@ -54,6 +54,8 @@
     "db:b08:inspect-metadata": "tsx scripts/databaseAuthorityCli.ts b08:inspect-metadata",
     "db:b08:migrator:provision": "tsx scripts/databaseAuthorityCli.ts b08:migrator:provision",
     "db:b08:migrator:verify": "tsx scripts/databaseAuthorityCli.ts b08:migrator:verify",
+    "db:b08:runtime:provision": "tsx scripts/databaseAuthorityCli.ts b08:runtime:provision",
+    "db:b08:runtime:verify": "tsx scripts/databaseAuthorityCli.ts b08:runtime:verify",
     "db:b08:verify-establishment": "tsx scripts/databaseAuthorityCli.ts b08:verify-establishment",
     "db:b08:verify-behavior": "tsx scripts/databaseAuthorityCli.ts b08:verify-behavior",
     "db:data:manifest": "tsx scripts/databaseAuthorityCli.ts data:manifest",

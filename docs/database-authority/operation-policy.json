@@ -57,6 +57,14 @@
       "acknowledgement": "none",
       "evidence": "exact-b08-azure-migration-identity-and-approved-grants"
     },
+    "runtime-identities-provision": {
+      "allowedTargetClasses": ["production"],
+      "credentialClasses": ["bootstrap-admin"],
+      "ownership": "none",
+      "approval": "protected-target",
+      "acknowledgement": "exact-target",
+      "evidence": "exact-b08-azure-application-and-worker-identities-with-table-grants"
+    },
     "b08-behavior-verify": {
       "allowedTargetClasses": ["production"],
       "credentialClasses": ["migration"],
