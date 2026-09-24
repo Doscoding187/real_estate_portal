@@ -27,7 +27,7 @@ read-only observation, not hosted acceptance.
 | --- | --- |
 | `pnpm check` before and after B13 integration | Passed |
 | Hosted proof/preflight/config focused tests | 3 files, 30 tests passed |
-| B17 probe evaluator | 4 focused tests passed; missing tuple exits 2 before network I/O |
+| B17 probe evaluator | 5 focused tests passed, including the live HTML-fallback shape; missing tuple exits 2 before network I/O |
 | `pnpm build` | Passed; pre-existing large-chunk warning retained |
 | `pnpm db:authority:check` | Passed: 36 static suites, 310 tests; 120 utility surfaces; 214 canonical tables; 95 active migrations; inventory and lifecycle current |
 | Worktree isolation | Dedicated `prep/b16-no-spend-convergence` worktree; no Railway, Azure or TiDB mutation |
