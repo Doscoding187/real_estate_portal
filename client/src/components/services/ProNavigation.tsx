@@ -1,9 +1,8 @@
 import { Link, useLocation } from 'wouter';
 
 const PRO_NAV_ITEMS = [
-  { href: '/service/dashboard', label: 'Dashboard' },
+  { href: '/service/dashboard', label: 'Requests' },
   { href: '/service/profile', label: 'Profile' },
-  { href: '/service/explore', label: 'Explore' },
 ];
 
 export function ProNavigation() {

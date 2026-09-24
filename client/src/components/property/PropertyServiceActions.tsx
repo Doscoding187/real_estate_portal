@@ -39,7 +39,7 @@ function buildServiceRequestHref({
   if (city) query.set('city', city);
   if (province) query.set('province', province);
 
-  return `/services/request/${action.category}?${query.toString()}`;
+  return `/services/${action.category}?${query.toString()}`;
 }
 
 export function PropertyServiceActions({

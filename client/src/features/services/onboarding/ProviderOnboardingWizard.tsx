@@ -9,7 +9,7 @@
 import { lazy, Suspense, useEffect, useRef } from 'react';
 import { BadgeCheck, BriefcaseBusiness, MapPinned, Sparkles } from 'lucide-react';
 import { WizardProgressIndicator } from '@/components/services/WizardProgressIndicator';
-import { SA_PROVINCES, toProviderSlug, type SAProvince } from '@/features/services/catalog';
+import { SA_PROVINCES, type SAProvince } from '@/features/services/catalog';
 import { useServiceProviderOnboardingStatus } from '@/hooks/useServiceProviderOnboardingStatus';
 import { trpc } from '@/lib/trpc';
 import { isOnboardingStatePristine, useOnboardingReducer } from './useOnboardingReducer';
@@ -27,11 +27,11 @@ const ProProfilePageForm = lazy(() =>
 const TOTAL_STEPS = 5;
 
 const ENCOURAGING_COPY: Record<number, string> = {
-  1: "Let's get your business on the map - this takes about 2 minutes.",
-  2: 'A complete profile gets 3x more quote requests.',
-  3: 'Detailed services help us match you with the right leads.',
-  4: 'Coverage areas ensure you only get leads you can actually serve.',
-  5: 'Almost there - choose a plan and go live!',
+  1: "Let's get your business profile ready - this takes about 2 minutes.",
+  2: 'A clear profile helps consumers understand your business.',
+  3: 'Detailed services help consumers assess fit.',
+  4: 'Coverage areas show where you can operate.',
+  5: 'Almost there - review your details before directory review.',
 };
 
 type ProviderProfileData = {
@@ -84,11 +84,6 @@ export function ProviderOnboardingWizard() {
 
   const serverStep = status?.onboardingStep ?? 0;
   const isComplete = status?.fullFeaturesUnlocked ?? false;
-  const providerPublicPath = status?.provider?.providerId
-    ? `/services/provider/${encodeURIComponent(
-        toProviderSlug(status.provider.companyName, status.provider.providerId),
-      )}`
-    : '/service/profile';
   const effectiveStep =
     state.currentStep === 1 && serverStep > 0 ? serverStep + 1 : state.currentStep;
   const currentStep = Math.min(effectiveStep, TOTAL_STEPS + 1);
@@ -167,7 +162,7 @@ export function ProviderOnboardingWizard() {
               <div className="flex flex-wrap items-center gap-3">
                 <span className="inline-flex items-center gap-2 rounded-full border border-[#0f3d91]/15 bg-white/80 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-[#0f3d91]">
                   <Sparkles className="h-3.5 w-3.5" />
-                  Service Listify Pro
+                  Property Listify Services
                 </span>
                 <span className="inline-flex items-center gap-2 rounded-full bg-[#10294f] px-3 py-1 text-xs font-semibold text-white">
                   <BadgeCheck className="h-3.5 w-3.5" />
@@ -177,11 +172,12 @@ export function ProviderOnboardingWizard() {
 
               <div className="max-w-3xl space-y-4">
                 <h1 className="font-serif text-4xl leading-tight text-slate-950 md:text-6xl">
-                  Build your provider profile and start receiving better-fit leads.
+                  Build a provider profile for the Property Listify directory.
                 </h1>
                 <p className="max-w-2xl text-base leading-7 text-slate-700 md:text-lg">
-                  Service Listify Pro is where you define your business identity, public profile,
-                  services, and coverage areas so the marketplace can match you accurately.
+                  Property Listify Services is where you define your business identity, public
+                  profile, services, and coverage areas. The profile is reviewed before directory
+                  publication.
                 </p>
               </div>
 
@@ -197,7 +193,7 @@ export function ProviderOnboardingWizard() {
                     Outcome
                   </p>
                   <p className="mt-2 text-base font-semibold text-slate-950">
-                    A public profile plus lead access
+                    A profile ready for review
                   </p>
                 </div>
                 <div className="rounded-[1.5rem] border border-white/70 bg-white/85 p-4 shadow-sm">
@@ -205,7 +201,7 @@ export function ProviderOnboardingWizard() {
                     Focus
                   </p>
                   <p className="mt-2 text-base font-semibold text-slate-950">
-                    Coverage, trust, and provider fit
+                    Coverage, clarity, and response readiness
                   </p>
                 </div>
               </div>
@@ -219,15 +215,15 @@ export function ProviderOnboardingWizard() {
                 {[
                   {
                     icon: BriefcaseBusiness,
-                    text: 'A clearer public business profile for homeowners comparing providers.',
+                    text: 'A public business profile for consumers comparing providers.',
                   },
                   {
                     icon: MapPinned,
-                    text: 'Coverage areas that stop low-fit leads before they reach your inbox.',
+                    text: 'Coverage areas that help consumers assess whether you can serve their property need.',
                   },
                   {
                     icon: BadgeCheck,
-                    text: 'A better setup path into the dashboard, leads, and explore publishing tools.',
+                    text: 'A private workspace for requests after directory review.',
                   },
                 ].map(item => (
                   <div
@@ -258,11 +254,7 @@ export function ProviderOnboardingWizard() {
               className="rounded-[2rem] border border-[#0f3d91]/10 bg-white/92 p-4 shadow-[0_24px_90px_-50px_rgba(15,61,145,0.55)] md:p-6"
             >
               {currentStep === 1 && (
-                <BusinessBasicsStep
-                  state={state}
-                  dispatch={dispatch}
-                  onNext={() => goToStep(2)}
-                />
+                <BusinessBasicsStep state={state} dispatch={dispatch} onNext={() => goToStep(2)} />
               )}
               {currentStep === 2 && (
                 <ProfileDetailsStep
@@ -291,14 +283,11 @@ export function ProviderOnboardingWizard() {
               {currentStep === 5 && (
                 <SubscriptionPlanStep
                   state={state}
-                  dispatch={dispatch}
                   onNext={() => goToStep(6)}
                   onBack={() => goToStep(4)}
                 />
               )}
-              {currentStep === 6 && (
-                <CompletionScreen state={state} providerPublicPath={providerPublicPath} />
-              )}
+              {currentStep === 6 && <CompletionScreen state={state} />}
             </div>
           </section>
         </div>

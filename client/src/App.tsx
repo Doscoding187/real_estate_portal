@@ -85,7 +85,6 @@ const ProviderOnboardingWizard = lazy(() =>
     default: m.ProviderOnboardingWizard,
   })),
 );
-const ProExplorePage = lazy(() => import('./pages/pro/ProExplorePage'));
 
 const SuperAdminDashboard = lazy(() => import('@/pages/admin/SuperAdminDashboard'));
 const AdminPropertyReview = lazy(() => import('./pages/admin/AdminPropertyReview'));
@@ -470,11 +469,6 @@ function Router() {
               <ProviderOnboardingWizard />
             </RequireRole>
           </Route>
-          <Route path="/service/explore">
-            <RequireRole role="service_provider">
-              <ProExplorePage />
-            </RequireRole>
-          </Route>
           <Route path="/service">
             <Redirect to="/service/dashboard" />
           </Route>
@@ -484,10 +478,6 @@ function Router() {
           <Route path="/pro/profile">
             <Redirect to="/service/profile" />
           </Route>
-          <Route path="/pro/explore">
-            <Redirect to="/service/explore" />
-          </Route>
-
           {/* Services marketplace routes */}
           <Route path="/services/request/:category" component={ServicesRequestPage} />
           <Route path="/services/results/:leadId" component={ServicesResultsPage} />

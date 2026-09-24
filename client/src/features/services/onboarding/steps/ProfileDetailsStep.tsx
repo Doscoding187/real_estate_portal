@@ -11,8 +11,16 @@ import { trpc } from '@/lib/trpc';
 import { type OnboardingState, type OnboardingAction } from '../useOnboardingReducer';
 
 const HEADLINE_MAX = 180;
-const LOGO_MAX_BYTES = 5 * 1024 * 1024; // 5 MB
-const LOGO_ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+
+function isValidWebsiteUrl(value: string) {
+  if (!value.trim()) return true;
+  try {
+    const url = new URL(value.trim());
+    return url.protocol === 'http:' || url.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
 
 type ProfileDetailsStepProps = {
   state: OnboardingState;
@@ -32,34 +40,44 @@ export function ProfileDetailsStep({ state, dispatch, onNext, onBack }: ProfileD
       dispatch({ type: 'SET_PENDING', step: null });
       onNext();
     },
-    onError: (err) => {
-      dispatch({ type: 'SET_ERROR', step: 2, message: err.message || 'Failed to save. Please try again.' });
+    onError: err => {
+      dispatch({
+        type: 'SET_ERROR',
+        step: 2,
+        message: err.message || 'Failed to save. Please try again.',
+      });
       dispatch({ type: 'SET_PENDING', step: null });
     },
   });
 
-  function handleLogoChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (!LOGO_ACCEPTED_TYPES.includes(file.type)) {
-      dispatch({ type: 'SET_ERROR', step: 2, message: 'Please upload a JPEG, PNG, or WebP image.' });
-      return;
-    }
-    if (file.size > LOGO_MAX_BYTES) {
-      dispatch({ type: 'SET_ERROR', step: 2, message: 'Image must be under 5 MB.' });
-      return;
-    }
-
-    dispatch({ type: 'CLEAR_ERROR', step: 2 });
-    dispatch({ type: 'SET_FIELD', field: 'logoFile', value: file });
-    const previewUrl = URL.createObjectURL(file);
-    dispatch({ type: 'SET_FIELD', field: 'logoPreviewUrl', value: previewUrl });
-  }
-
   function handleContinue() {
     if (isPending) return;
+    if (!state.headline.trim() || !state.bio.trim()) {
+      dispatch({
+        type: 'SET_ERROR',
+        step: 2,
+        message: 'Add a headline and a short business description before continuing.',
+      });
+      return;
+    }
+    if (!state.contactEmail.trim() && !state.contactPhone.trim()) {
+      dispatch({
+        type: 'SET_ERROR',
+        step: 2,
+        message: 'Add an email address or phone number before continuing.',
+      });
+      return;
+    }
+    if (!isValidWebsiteUrl(state.websiteUrl)) {
+      dispatch({
+        type: 'SET_ERROR',
+        step: 2,
+        message: 'Enter a valid http or https website URL.',
+      });
+      return;
+    }
     dispatch({ type: 'SET_PENDING', step: 2 });
+
     dispatch({ type: 'CLEAR_ERROR', step: 2 });
     upsertProfile.mutate({
       headline: state.headline.trim() || undefined,
@@ -81,14 +99,22 @@ export function ProfileDetailsStep({ state, dispatch, onNext, onBack }: ProfileD
         <div className="space-y-1.5">
           <div className="flex items-center justify-between">
             <Label htmlFor="headline">Headline</Label>
-            <span className={`text-xs ${headlineRemaining < 20 ? 'text-amber-600' : 'text-slate-400'}`}>
+            <span
+              className={`text-xs ${headlineRemaining < 20 ? 'text-amber-600' : 'text-slate-400'}`}
+            >
               {headlineRemaining}/{HEADLINE_MAX}
             </span>
           </div>
           <Input
             id="headline"
             value={state.headline}
-            onChange={e => dispatch({ type: 'SET_FIELD', field: 'headline', value: e.target.value.slice(0, HEADLINE_MAX) })}
+            onChange={e =>
+              dispatch({
+                type: 'SET_FIELD',
+                field: 'headline',
+                value: e.target.value.slice(0, HEADLINE_MAX),
+              })
+            }
             placeholder="e.g. Trusted plumber serving Cape Town for 10+ years"
             maxLength={HEADLINE_MAX}
             disabled={isPending}
@@ -114,7 +140,9 @@ export function ProfileDetailsStep({ state, dispatch, onNext, onBack }: ProfileD
               id="contactEmail"
               type="email"
               value={state.contactEmail}
-              onChange={e => dispatch({ type: 'SET_FIELD', field: 'contactEmail', value: e.target.value })}
+              onChange={e =>
+                dispatch({ type: 'SET_FIELD', field: 'contactEmail', value: e.target.value })
+              }
               placeholder="hello@yourcompany.co.za"
               disabled={isPending}
             />
@@ -125,7 +153,9 @@ export function ProfileDetailsStep({ state, dispatch, onNext, onBack }: ProfileD
               id="contactPhone"
               type="tel"
               value={state.contactPhone}
-              onChange={e => dispatch({ type: 'SET_FIELD', field: 'contactPhone', value: e.target.value })}
+              onChange={e =>
+                dispatch({ type: 'SET_FIELD', field: 'contactPhone', value: e.target.value })
+              }
               placeholder="e.g. 082 000 0000"
               disabled={isPending}
             />
@@ -138,37 +168,20 @@ export function ProfileDetailsStep({ state, dispatch, onNext, onBack }: ProfileD
             id="websiteUrl"
             type="url"
             value={state.websiteUrl}
-            onChange={e => dispatch({ type: 'SET_FIELD', field: 'websiteUrl', value: e.target.value })}
+            onChange={e =>
+              dispatch({ type: 'SET_FIELD', field: 'websiteUrl', value: e.target.value })
+            }
             placeholder="https://yourcompany.co.za"
             disabled={isPending}
           />
         </div>
-
-        <div className="space-y-1.5">
-          <Label htmlFor="logoUpload">Business logo</Label>
-          <div className="flex items-center gap-4">
-            {state.logoPreviewUrl && (
-              <img
-                src={state.logoPreviewUrl}
-                alt="Logo preview"
-                className="h-16 w-16 rounded-lg object-cover border"
-              />
-            )}
-            <Input
-              id="logoUpload"
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              onChange={handleLogoChange}
-              disabled={isPending}
-              className="cursor-pointer"
-            />
-          </div>
-          <p className="text-xs text-slate-400">JPEG, PNG, or WebP · max 5 MB</p>
-        </div>
       </div>
 
       {error && (
-        <p role="alert" className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+        <p
+          role="alert"
+          className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
+        >
           {error}
         </p>
       )}

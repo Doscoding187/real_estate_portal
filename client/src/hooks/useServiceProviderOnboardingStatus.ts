@@ -14,8 +14,10 @@ export type ServiceProviderOnboardingStatus = {
     providerId: number;
     companyName: string;
     verificationStatus: 'pending' | 'verified' | 'rejected';
+    isPublished: boolean;
+    publicationStatus: 'published' | 'pending_review' | 'rejected';
     subscriptionTier: 'directory' | 'directory_explore' | 'ecosystem_pro';
-    subscriptionStatus: 'trial' | 'active' | 'expired' | 'cancelled';
+    subscriptionStatus: 'trial' | 'active' | 'past_due' | 'cancelled';
   } | null;
 };
 

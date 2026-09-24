@@ -30,7 +30,7 @@ export function ServiceHeroSearch({
   subtitle,
   defaultCategory = 'home_improvement',
   defaultLocation = '',
-  submitLabel = 'Start matching',
+  submitLabel = 'Browse providers',
   sourceSurface = 'directory',
   onSubmit,
 }: ServiceHeroSearchProps) {
@@ -49,7 +49,7 @@ export function ServiceHeroSearch({
       <div className="relative space-y-6">
         <div className="space-y-2">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-            Services Marketplace
+            Service directory
           </p>
           <h1 className="max-w-3xl text-3xl font-semibold tracking-tight text-slate-900 md:text-4xl">
             {title}
@@ -105,7 +105,8 @@ export function ServiceHeroSearch({
               <CategoryChips active={category} onSelect={setCategory} />
             </div>
             <p className="text-sm text-slate-600">
-              You are searching for <span className="font-medium text-slate-900">{categoryLabel}</span>.
+              You are searching for{' '}
+              <span className="font-medium text-slate-900">{categoryLabel}</span>.
             </p>
           </CardContent>
         </Card>
