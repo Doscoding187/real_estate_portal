@@ -22,8 +22,9 @@ and verify the actual provider/data handling facts before approval.
 > amount and owner before approving the correct access. The 90 days start when
 > that approval activates the term. The normal target after a valid, matched
 > proof is within one business day during our weekday checks; access is not
-> instant. If Edward is unavailable for more than one business day, new sales,
-> invoices and payment activation pause until he returns. For cancellation,
+> instant. When Edward is scheduled to be unavailable for more than one
+> business day, new sales, invoices and payment activation pause until he
+> returns. For cancellation,
 > refunds or a payment problem, contact
 > <PUBLIC_SUPPORT_EMAIL> and see the Terms below before paying.
 
@@ -107,7 +108,8 @@ reconciliation and never extends an entitlement by itself.
 Edward checks finance and support daily on weekdays. The normal target for a
 valid, matched payment proof is one business day during that schedule; this is
 not instant activation. If Edward is unavailable for more than one business
-day, new sales, invoice issuance and payment activation pause until he returns;
+day and the absence is known in advance, new sales, invoice issuance and
+payment activation pause until he returns;
 existing customer requests remain queued with a clear response expectation.
 Report a service, content, privacy or billing problem to
 <PUBLIC_SUPPORT_EMAIL>. We may pause new payable onboarding when finance,

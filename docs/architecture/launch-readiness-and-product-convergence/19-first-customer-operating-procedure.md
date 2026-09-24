@@ -68,13 +68,24 @@ insufficient.
 Before a planned absence longer than one business day, Edward records the
 start and expected return in the protected operations log, clears or records
 every due finance, support, email and lead item, and stops issuing new payable
-invoices or accepting new paid onboarding or payment activation. Put an honest away notice on the
-approved support channel and, where the released product permits it, pause new
-payable intake. Tell customers with open obligations when to expect the next
+invoices or accepting new paid onboarding or payment activation. For the paid
+release, set `PAID_MVP_SALES_PAUSED=true` through the reviewed hosted-runtime
+configuration and restart; confirm `billing.commercialActivation.salesPaused`
+is true, a controlled invoice request and finance approval both reject, and
+an existing paid customer's access still works. This is a sales intake control,
+not a commercial-entitlement switch. Put an honest away notice on the approved
+support channel. Tell customers with open obligations when to expect the next
 update. Do not accept payment with a known inability to meet the disclosed
 activation target. Customer-owned CRM leads stay visible to their authorized
 customer; platform-managed/manual leads need actual human follow-up before
 leaving the queue unattended.
+
+Existing invoices and submitted proofs remain recorded while sales are
+paused; no one is authorized to approve them in Edward's absence. On return,
+review those obligations and bank receipts first. Only then set
+`PAID_MVP_SALES_PAUSED=false` through the reviewed runtime configuration and
+verify the public status and invoice route reopen. Do not change the enabled
+product list to pause sales: that list also gates existing paid access.
 
 If Edward becomes unexpectedly unavailable for more than one business day,
 new sales, invoice issuance and payment activation are paused until he returns.
@@ -119,8 +130,8 @@ states, recovery action and customer contact. No real customer proof or secret
 belongs in this repository. The run is accepted only when every pending
 obligation has an owner and the product state agrees with the audit record.
 
-Open human facts: founder staffed hours, actual monitored support/reply route,
-bounce route, independent alert delivery, and the mechanism for pausing payable
-intake. Edward owns all four queues initially. Record these and the successful
+Open human facts: actual monitored support/reply route, bounce route,
+independent alert delivery, and hosted proof of the sales-pause control. Edward
+owns all four queues initially. Record these and the successful
 founder-only rehearsal in the protected operations record before first
 payment; do not put personal contact details here.

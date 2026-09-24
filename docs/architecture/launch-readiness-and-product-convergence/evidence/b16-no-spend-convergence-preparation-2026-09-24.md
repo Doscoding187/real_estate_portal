@@ -20,6 +20,11 @@ The [B12 public endpoint baseline](b12-public-hosted-baseline-2026-09-24.json)
 confirms production DNS/TLS is present, while the deployed API remains on an
 older SHA with readiness 503 and staging DNS is absent. It is a single
 read-only observation, not hosted acceptance.
+The B14 founder-only decision now has a separate `PAID_MVP_SALES_PAUSED`
+runtime guard. It rejects new invoices and finance approval before database
+access while retaining already-paid product availability; public pages and
+Agency/Developer invoice actions show the pause. This is local source proof,
+not a Railway configuration change or hosted rehearsal.
 
 ## Local gates on the assembled source
 
@@ -31,6 +36,7 @@ read-only observation, not hosted acceptance.
 | `pnpm build` | Passed; pre-existing large-chunk warning retained |
 | `pnpm db:authority:check` | Passed: 36 static suites, 310 tests; 120 utility surfaces; 214 canonical tables; 95 active migrations; inventory and lifecycle current |
 | Worktree isolation | Dedicated `prep/b16-no-spend-convergence` worktree; no Railway, Azure or TiDB mutation |
+| B14 sales-pause guard | 6 focused client/server files, 25 tests passed with `SKIP_DB_INIT=1`; `pnpm check`, `pnpm build` and `pnpm db:authority:check` passed after the change. No database connection or provider mutation. |
 
 These gates do not substitute for full integrated browser, disposable-database,
 hosted provider or production acceptance. The approved schema authority is

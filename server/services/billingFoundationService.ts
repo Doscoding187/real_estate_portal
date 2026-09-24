@@ -33,6 +33,7 @@ import {
   isCommercialActivationAvailable,
   requireAnyPaidMvpLaunchAccessActivation,
   requireCommercialActivation,
+  requirePaidMvpSalesOpen,
 } from './commercialActivationPolicy';
 import {
   getCommercialProductKey,
@@ -1072,6 +1073,7 @@ export async function requestPaidLaunchAccessInvoice(input: {
   planId?: number;
 }) {
   requireAnyPaidMvpLaunchAccessActivation('Invoice requests');
+  requirePaidMvpSalesOpen('Invoice requests');
   const db = await getDb();
   if (!db)
     throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
@@ -1329,6 +1331,7 @@ export async function startAgencyManualCheckout(input: {
   couponCode?: string;
 }) {
   requireAnyPaidMvpLaunchAccessActivation('Manual-EFT checkout');
+  requirePaidMvpSalesOpen('Manual-EFT checkout');
   const db = await getDb();
   if (!db)
     throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
@@ -2478,6 +2481,7 @@ export async function reviewManualPayment(input: {
   overpaymentReconciled?: boolean;
 }) {
   requireAnyPaidMvpLaunchAccessActivation('Payment review');
+  if (input.decision === 'approve') requirePaidMvpSalesOpen('Payment activation');
   const db = await getDb();
   if (!db)
     throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });

@@ -74,7 +74,7 @@ function ProductIcon({ index, className }: { index: number; className?: string }
   return <Icon className={className} />;
 }
 
-export function CommercialDeveloperPlans() {
+export function CommercialDeveloperPlans({ salesPaused = false }: { salesPaused?: boolean }) {
   const [, setLocation] = useLocation();
   const [selectedProduct, setSelectedProduct] = useState<CommercialProduct | null>(null);
   const { data: catalog, isLoading, isError } = useCommercialCatalog('developer');
@@ -108,7 +108,7 @@ export function CommercialDeveloperPlans() {
   };
 
   const continueWithProduct = () => {
-    if (!selectedProduct) return;
+    if (!selectedProduct || salesPaused) return;
     if (
       selectedProduct.audience === 'developer' &&
       selectedProduct.term.kind === 'paid_launch_access' &&
@@ -354,8 +354,10 @@ export function CommercialDeveloperPlans() {
             <Button variant="outline" onClick={() => setSelectedProduct(null)}>
               Cancel
             </Button>
-            <Button onClick={continueWithProduct} disabled={requestLaunchInvoice.isPending}>
-              {requestLaunchInvoice.isPending
+            <Button onClick={continueWithProduct} disabled={requestLaunchInvoice.isPending || salesPaused}>
+              {salesPaused
+                ? 'New sales paused'
+                : requestLaunchInvoice.isPending
                 ? 'Requesting invoice…'
                 : 'Continue'}
             </Button>
@@ -444,7 +446,7 @@ export default function DeveloperPlans() {
   const availability = useCommercialProductAvailability('developer_launch_access');
 
   return availability.isAvailable ? (
-    <CommercialDeveloperPlans />
+    <CommercialDeveloperPlans salesPaused={availability.salesPaused} />
   ) : (
     <PreparationDeveloperPlans
       availabilityError={availability.isError}

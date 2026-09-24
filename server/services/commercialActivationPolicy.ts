@@ -14,6 +14,7 @@ type RuntimeEnvironment = Record<string, string | undefined>;
 export const PAID_MVP_ENABLED_PRODUCT_KEYS_ENV = 'PAID_MVP_ENABLED_PRODUCT_KEYS';
 export const PAID_MVP_RELEASE_ID_ENV = 'PAID_MVP_RELEASE_ID';
 export const PAID_MVP_APPROVAL_REF_ENV = 'PAID_MVP_APPROVAL_REF';
+export const PAID_MVP_SALES_PAUSED_ENV = 'PAID_MVP_SALES_PAUSED';
 const CONTROLLED_PRODUCT_KEYS_ENV = 'PROPERTY_LISTIFY_GOVERNED_BROWSER_TEST_PRODUCT_KEYS';
 
 export type CommercialActivationConfiguration = {
@@ -22,6 +23,7 @@ export type CommercialActivationConfiguration = {
   enabledProductKeys: readonly PaidMvpLaunchAccessProductKey[];
   releaseId: string | null;
   approvalRef: string | null;
+  salesPaused: boolean;
 };
 
 function isAuthorityWrappedBrowserFixture(environment: RuntimeEnvironment): boolean {
@@ -78,6 +80,7 @@ function preparationConfiguration(): CommercialActivationConfiguration {
     enabledProductKeys: Object.freeze([]),
     releaseId: null,
     approvalRef: null,
+    salesPaused: false,
   });
 }
 
@@ -90,6 +93,10 @@ export function resolveCommercialActivationConfiguration(
   environment: RuntimeEnvironment = process.env,
   runtimeEnv: AppRuntimeEnv = runtimeEnvironment(environment),
 ): CommercialActivationConfiguration {
+  const rawSalesPause = environment[PAID_MVP_SALES_PAUSED_ENV];
+  if (rawSalesPause !== undefined && rawSalesPause !== 'true' && rawSalesPause !== 'false') {
+    throw new Error(`${PAID_MVP_SALES_PAUSED_ENV} must be exactly true or false.`);
+  }
   if (runtimeEnv === 'development' || runtimeEnv === 'test') {
     if (!isControlledFixture(environment)) return preparationConfiguration();
 
@@ -103,6 +110,7 @@ export function resolveCommercialActivationConfiguration(
       enabledProductKeys: Object.freeze([...keys]),
       releaseId: null,
       approvalRef: null,
+      salesPaused: rawSalesPause === 'true',
     });
   }
 
@@ -140,6 +148,7 @@ export function resolveCommercialActivationConfiguration(
     enabledProductKeys: Object.freeze([...keys]),
     releaseId: validateReleaseMetadata(releaseId, PAID_MVP_RELEASE_ID_ENV),
     approvalRef: validateReleaseMetadata(approvalRef, PAID_MVP_APPROVAL_REF_ENV),
+    salesPaused: rawSalesPause === 'true',
   });
 }
 
@@ -190,6 +199,7 @@ export function getCommercialActivationStatus(environment: RuntimeEnvironment = 
     enabled: config.enabled,
     enabledProductKeys: config.enabledProductKeys,
     productAvailability,
+    salesPaused: config.salesPaused,
   };
 }
 
@@ -212,8 +222,21 @@ export function getCommercialActivationOperatorStatus(
     enabledProductKeys: config.enabledProductKeys,
     releaseId: config.releaseId,
     approvalRef: config.approvalRef,
+    salesPaused: config.salesPaused,
     buildSha: buildSha || 'unknown',
   };
+}
+
+/** Suspend new invoices and finance activation without disabling paid access. */
+export function requirePaidMvpSalesOpen(
+  operation: string,
+  environment: RuntimeEnvironment = process.env,
+): void {
+  if (!getConfiguration(environment).salesPaused) return;
+  throw new TRPCError({
+    code: 'PRECONDITION_FAILED',
+    message: `${operation} is paused while the founder is unavailable. Existing customer access remains available.`,
+  });
 }
 
 /** Fail closed before an invoice, payment, or entitlement mutation can begin. */

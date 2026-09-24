@@ -19,6 +19,7 @@ export function useCommercialActivationAvailability() {
   return {
     ...query,
     isProductAvailable,
+    salesPaused: query.data?.salesPaused === true,
     unavailableMessage:
       query.data?.message ??
       'Commercial availability could not be verified. Paid actions remain unavailable until it can.',

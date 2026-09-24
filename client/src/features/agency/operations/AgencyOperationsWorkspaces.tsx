@@ -142,7 +142,7 @@ export function AgencyBillingWorkspace(props: WorkspaceContentProps) {
     );
   }
 
-  return <CommercialAgencyBillingWorkspace {...props} />;
+  return <CommercialAgencyBillingWorkspace {...props} salesPaused={availability.salesPaused} />;
 }
 
 function PreparationAgencyBillingWorkspace({
@@ -214,7 +214,10 @@ function PreparationTile({ title, detail }: { title: string; detail: string }) {
   );
 }
 
-export function CommercialAgencyBillingWorkspace(_props: WorkspaceContentProps) {
+export function CommercialAgencyBillingWorkspace(
+  _props: WorkspaceContentProps & { salesPaused?: boolean },
+) {
+  const salesPaused = _props.salesPaused === true;
   const utils = trpc.useUtils();
   const invoiceIdFromUrl =
     typeof window !== 'undefined'
@@ -282,6 +285,7 @@ export function CommercialAgencyBillingWorkspace(_props: WorkspaceContentProps) 
   );
 
   const handleStartCheckout = (planId: number) => {
+    if (salesPaused) return;
     // `startAgencyManualCheckout` recognizes the exact canonical Agency
     // Launch Access plan and delegates to the fixed once-off invoice authority.
     // Its legacy cycle parameter is retained at the API boundary only.
@@ -549,12 +553,17 @@ export function CommercialAgencyBillingWorkspace(_props: WorkspaceContentProps) 
                     variant={activeInvoice ? 'outline' : 'default'}
                     disabled={
                       startCheckout.isPending ||
-                      !eftCanIssueInvoices
+                      !eftCanIssueInvoices ||
+                      salesPaused
                     }
                     onClick={() => handleStartCheckout(plan.id)}
                     className="mt-4 w-full"
                   >
-                    {activeInvoice ? 'Continue to outstanding invoice' : 'Request R999 invoice'}
+                    {salesPaused
+                      ? 'New sales paused'
+                      : activeInvoice
+                        ? 'Continue to outstanding invoice'
+                        : 'Request R999 invoice'}
                     <ArrowRight className="h-4 w-4" />
                   </Button>
                 </div>

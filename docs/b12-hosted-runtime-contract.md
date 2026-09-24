@@ -54,6 +54,7 @@ The session cookie remains `pl_session_v2`, host-only on the API, HttpOnly, Secu
 | `COMMERCIAL_TERM_NOTICE_INTERVAL_MS` | O; default 15 min | O; default 15 min | no | B03 API-owned scheduler |
 | `EMAIL_WORKER_POLL_MS` | O; default 10 sec | O; default 10 sec | no | B12 bounded 1–60 sec |
 | `PAID_MVP_ENABLED_PRODUCT_KEYS`, `PAID_MVP_RELEASE_ID`, `PAID_MVP_APPROVAL_REF` | absent until approved controlled rehearsal | absent until B16 approval P | approval ref non-secret | B07/B16 exact three-product activation |
+| `PAID_MVP_SALES_PAUSED` | `false` unless testing an approved pause | `false` during staffed sales; `true` for a founder absence longer than one business day | non-secret boolean; exact `true` or `false` | B14 pauses new invoices and finance activation while preserving existing paid access; change requires reviewed runtime configuration and restart |
 | `BILLING_EFT_*`, `BILLING_SUPPORT_EMAIL` | controlled staging P | approved payable details P | bank details sensitive | B03 commercial launch preflight |
 | `GOOGLE_MAPS_API_KEY`, `VITE_GOOGLE_MAPS_API_KEY` | O/P if map UX in hosted proof | O/P for map UX | keys yes | launch preflight recommendation |
 | governed browser fixture/capture selectors, `LISTIFY_E2E_DATABASE_URL`, `VITEST`, `S2_DB_TESTS`, `VITE_USE_MOCK_EMAILS=true`, `SL_PHONE_OTP_DEV_MODE=1` | F | F | varies | B07/B12 deployed containment |

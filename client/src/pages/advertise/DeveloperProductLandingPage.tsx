@@ -35,6 +35,7 @@ import { DeveloperWorkspacePreview } from './DeveloperWorkspacePreview';
 import { COMMERCIAL_HERO_CLASS } from './commercialHero';
 import { getAccountAuthHref, isHomepageHeroJourneyEnabled } from '@/lib/publicNavigation';
 import { useCommercialProductAvailability } from '@/hooks/useCommercialProductAvailability';
+import { SalesPauseNotice } from '@/components/commercial/SalesPauseNotice';
 
 const DEVELOPER_ACCOUNT_START_HREF = getAccountAuthHref('register', '/developer/setup', {
   registerRole: 'property_developer',
@@ -1238,7 +1239,10 @@ export default function DeveloperProductLandingPage() {
   const availability = useCommercialProductAvailability('developer_launch_access');
 
   return availability.isAvailable ? (
-    <DeveloperCommercialLandingPage />
+    <>
+      {availability.salesPaused ? <SalesPauseNotice /> : null}
+      <DeveloperCommercialLandingPage />
+    </>
   ) : (
     <DeveloperPreparationLandingPage
       availabilityError={availability.isError}

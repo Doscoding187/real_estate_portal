@@ -27,6 +27,7 @@ import { CommercialActivationNotice } from '@/components/commercial/CommercialAc
 import { AgentWorkspacePreview } from './AgentWorkspacePreview';
 import { useCommercialCatalog, type CommercialProduct } from '@/hooks/useCommercialCatalog';
 import { useCommercialProductAvailability } from '@/hooks/useCommercialProductAvailability';
+import { SalesPauseNotice } from '@/components/commercial/SalesPauseNotice';
 import {
   formatCommercialLimitLabel,
   formatCommercialLimitValue,
@@ -1077,7 +1078,10 @@ export default function AgentProductLandingPage() {
   const availability = useCommercialProductAvailability('agent_launch_access');
 
   return availability.isAvailable ? (
-    <AgentCommercialLandingPage />
+    <>
+      {availability.salesPaused ? <SalesPauseNotice /> : null}
+      <AgentCommercialLandingPage />
+    </>
   ) : (
     <AgentPreparationLandingPage
       availabilityError={availability.isError}

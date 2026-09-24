@@ -25,6 +25,7 @@ import { SEOHead } from '@/components/advertise/SEOHead';
 import { CommercialActivationNotice } from '@/components/commercial/CommercialActivationNotice';
 import { useCommercialCatalog, type CommercialProduct } from '@/hooks/useCommercialCatalog';
 import { useCommercialProductAvailability } from '@/hooks/useCommercialProductAvailability';
+import { SalesPauseNotice } from '@/components/commercial/SalesPauseNotice';
 import {
   formatCommercialLimitLabel,
   formatCommercialLimitValue,
@@ -1454,7 +1455,10 @@ export default function AgencyProductLandingPage() {
   const availability = useCommercialProductAvailability('agency_launch_access');
 
   return availability.isAvailable ? (
-    <AgencyCommercialLandingPage />
+    <>
+      {availability.salesPaused ? <SalesPauseNotice /> : null}
+      <AgencyCommercialLandingPage />
+    </>
   ) : (
     <AgencyPreparationLandingPage
       availabilityError={availability.isError}
