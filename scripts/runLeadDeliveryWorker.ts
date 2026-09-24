@@ -48,6 +48,9 @@ try {
     result,
     backlog,
   }));
+  if (result.unknown || backlog.unknown || backlog.exhausted) {
+    process.exitCode = 2;
+  }
 } finally {
   await shutdownDb();
 }
