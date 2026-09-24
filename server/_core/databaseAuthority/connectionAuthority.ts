@@ -48,6 +48,7 @@ const SQL_CONNECTION_OPERATIONS: readonly DatabaseOperation[] = [
   'inspection-identity-provision',
   'migration-identity-provision',
   'runtime-identities-provision',
+  'runtime-ledger-read-grant',
   'b08-behavior-verify',
   'read-only-connect',
   'migration-plan',

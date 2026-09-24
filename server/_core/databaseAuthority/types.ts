@@ -6,6 +6,7 @@ export const DATABASE_OPERATIONS = [
   'inspection-identity-provision',
   'migration-identity-provision',
   'runtime-identities-provision',
+  'runtime-ledger-read-grant',
   'b08-behavior-verify',
   'migration-plan',
   'migration-apply',

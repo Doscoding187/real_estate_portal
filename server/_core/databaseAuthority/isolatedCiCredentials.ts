@@ -165,6 +165,7 @@ export function buildIsolatedCiGrantPlan(
     tables?: readonly string[];
     databaseName?: string;
     roleUsers?: { runtime: string; worker: string; 'read-only': string; migration: string };
+    runtimeLedgerRead?: boolean;
   } = {},
 ): IsolatedCiGrantPlan {
   const root = input.root ?? process.cwd();
@@ -195,6 +196,12 @@ export function buildIsolatedCiGrantPlan(
     table =>
       `GRANT SELECT, INSERT, UPDATE, DELETE ON ${database}.${quotedIdentifier(table)} TO ${quotedAccount(roleUsers.runtime)}`,
   );
+  if (input.runtimeLedgerRead) {
+    runtime.push(
+      `GRANT SELECT ON ${database}.\`sql_migration_history\` TO ${quotedAccount(roleUsers.runtime)}`,
+      `GRANT SELECT ON ${database}.\`sql_migration_attempts\` TO ${quotedAccount(roleUsers.runtime)}`,
+    );
+  }
   const workerTables = [
     'billable_accounts',
     'billing_audit_events',

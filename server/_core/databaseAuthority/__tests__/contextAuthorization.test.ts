@@ -584,6 +584,32 @@ describe('immutable resolved database context and operation authorization', () =
     expect(() => authorizeDatabaseOperation(authority, { root: process.cwd(), approval })).toThrow('exact acknowledgement');
   });
 
+  it('confines the runtime ledger-read amendment to the exact old and new grant plans', () => {
+    const identity = fixtureIdentity();
+    const authority = resolveDatabaseAuthority({
+      operation: 'runtime-ledger-read-grant', cwd: identity.worktreePath,
+      gitIdentity: identity,
+      explicitDatabaseUrl: 'mysql://admin:secret@propertylistify-mysql.mysql.database.azure.com:3306/propertylistify_database',
+      credentialClass: 'bootstrap-admin',
+      processEnv: { NODE_ENV: 'production', APP_ENV: 'production' },
+    });
+    const approval = {
+      reference: 'B08-LEDGER-READ-TEST', actor: 'test-reviewer',
+      operation: 'runtime-ledger-read-grant' as const,
+      targetFingerprintHash: authority.context.targetFingerprintHash,
+      credentialClass: 'bootstrap-admin' as const,
+      runtimeIdentity: 'propertylistify_app_runtime',
+      runtimePreviousGrantDigest: '58f42389e76495048f32460f71c4cbe15bb85c9c1d5365426c0561383b75d1d5',
+      runtimeGrantDigest: '90c9d4aca03ac0820ebfe0fdbbbfef0617859bc6959e610be3b949ec27457fd9',
+    };
+    const acknowledgement = expectedDatabaseAcknowledgement(authority.context);
+    expect(() => authorizeDatabaseOperation(authority, { root: process.cwd(), approval, acknowledgement })).not.toThrow();
+    expect(() => authorizeDatabaseOperation(authority, {
+      root: process.cwd(), approval: { ...approval, runtimeGrantDigest: 'different' }, acknowledgement,
+    })).toThrow('exact B08 Azure ledger-read grant approval');
+    expect(() => authorizeDatabaseOperation(authority, { root: process.cwd(), approval })).toThrow('exact acknowledgement');
+  });
+
   it('prevents a feature worktree from mutating listify_local', () => {
     const identity = fixtureIdentity();
     const authority = resolveDatabaseAuthority({

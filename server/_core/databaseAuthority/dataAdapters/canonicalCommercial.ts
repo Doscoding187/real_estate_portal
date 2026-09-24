@@ -1,4 +1,4 @@
-import type { AuthorizedDatabaseOperation } from '../authorization';
+import { B08_AZURE_TARGET_FINGERPRINT_HASH, type AuthorizedDatabaseOperation } from '../authorization';
 import type { AuthoritySqlConnection } from '../connectionAuthority';
 import type { ResolvedDatabaseAuthority } from '../types';
 import {
@@ -704,7 +704,10 @@ export async function verifyCanonicalCommercialReference(input: {
 }): Promise<CommercialReferenceEvidence> {
   const releaseScoped = input.decision.operation === 'release-reference-verify';
   assertOperation(input.decision, ['verification', 'readiness', 'release-reference-verify']);
-  const ownership = releaseScoped
+  const protectedReadiness = input.decision.operation === 'readiness' &&
+    input.authority.context.targetFingerprintHash === B08_AZURE_TARGET_FINGERPRINT_HASH &&
+    input.authority.context.targetClass === 'production';
+  const ownership = releaseScoped || protectedReadiness
     ? requireProtectedCommercialReferenceTarget(input.authority)
     : requireReferenceAdapterTarget(input.authority, input.profileRoot);
   const manifest = await requireAcceptedMigrationHead({

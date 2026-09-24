@@ -7,6 +7,7 @@ import {
   authorizeDatabaseOperation,
   B08_AZURE_TARGET_FINGERPRINT_HASH,
   B08_RUNTIME_GRANT_DIGEST,
+  B08_RUNTIME_LEDGER_READ_GRANT_DIGEST,
   B08_RUNTIME_IDENTITY,
   B08_WORKER_GRANT_DIGEST,
   B08_WORKER_IDENTITY,
@@ -42,7 +43,7 @@ function credentialUrl(path: string): string {
   return url;
 }
 
-function plan() {
+function plan(runtimeLedgerRead = false) {
   const result = buildIsolatedCiGrantPlan({
     databaseName: 'propertylistify_database',
     roleUsers: {
@@ -51,10 +52,12 @@ function plan() {
       'read-only': 'propertylistify_b08_inspector',
       migration: 'propertylistify_release_migrator',
     },
+    runtimeLedgerRead,
   });
   if (
     result.applicationTables.length !== 214 || result.workerTables.length !== 16 ||
-    result.fingerprints.runtime !== B08_RUNTIME_GRANT_DIGEST ||
+    result.fingerprints.runtime !== (runtimeLedgerRead
+      ? B08_RUNTIME_LEDGER_READ_GRANT_DIGEST : B08_RUNTIME_GRANT_DIGEST) ||
     result.fingerprints.worker !== B08_WORKER_GRANT_DIGEST ||
     result.applicationTables.some(name => /^sql_migration_/.test(name))
   ) throw new Error('B08 runtime identity refused: canonical grant plan differs from reviewed inventory.');
@@ -145,12 +148,62 @@ export async function provisionB08AzureRuntimeIdentities(acknowledgement: string
   };
 }
 
+export async function grantB08AzureRuntimeLedgerRead(acknowledgement: string): Promise<{
+  targetFingerprintHash: string;
+  identity: string;
+  addedPrivileges: readonly string[];
+  grantPlanDigest: string;
+  actualGrantDigest: string;
+}> {
+  const before = plan();
+  const after = plan(true);
+  const added = after.statementsByCredential.runtime.filter(
+    statement => !before.statementsByCredential.runtime.includes(statement),
+  );
+  if (added.length !== 2 ||
+      !added.some(statement => statement.includes('`sql_migration_history`')) ||
+      !added.some(statement => statement.includes('`sql_migration_attempts`'))) {
+    throw new Error('B08 ledger-read grant refused: change exceeds the two control-table SELECT grants.');
+  }
+  const establishment = await verifyB08AzureEstablishment();
+  if (establishment.migrationHead !== '0094_content_topics_primary_key.sql' ||
+      establishment.incompleteAttemptCount !== 0 || !establishment.schemaCongruent) {
+    throw new Error('B08 ledger-read grant refused: established schema proof changed.');
+  }
+  const authority = resolveDatabaseAuthority({
+    operation: 'runtime-ledger-read-grant', explicitDatabaseUrl: credentialUrl(adminFile),
+    credentialClass: 'bootstrap-admin',
+  });
+  assertTarget(authority.context.targetFingerprintHash, authority.context.databaseName,
+    authority.context.tls.required, authority.context.tls.certificateVerificationRequired);
+  const decision = authorizeDatabaseOperation(authority, {
+    approval: protectedDatabaseApprovalFromEnvironment(authority), acknowledgement,
+  });
+  const connection = await createAuthoritySqlConnection(authority, decision);
+  try {
+    const account = `'${B08_RUNTIME_IDENTITY}'@'%'`;
+    const current = await rows(connection, `SHOW GRANTS FOR ${account}`);
+    assertGrants(current.flatMap(row => Object.values(row).map(String)),
+      before.statementsByCredential.runtime, B08_RUNTIME_IDENTITY);
+    for (const statement of added) await connection.execute(statement);
+    const verified = await rows(connection, `SHOW GRANTS FOR ${account}`);
+    return {
+      targetFingerprintHash: authority.context.targetFingerprintHash,
+      identity: B08_RUNTIME_IDENTITY,
+      addedPrivileges: ['sql_migration_history:SELECT', 'sql_migration_attempts:SELECT'],
+      grantPlanDigest: after.fingerprints.runtime,
+      actualGrantDigest: assertGrants(verified.flatMap(row => Object.values(row).map(String)),
+        after.statementsByCredential.runtime, B08_RUNTIME_IDENTITY),
+    };
+  } finally { await connection.end(); }
+}
+
 export async function verifyB08AzureRuntimeIdentities(): Promise<{
   targetFingerprintHash: string;
   runtime: { identity: string; selectedDatabase: string; tlsVersion: string; grantDigest: string };
   worker: { identity: string; selectedDatabase: string; tlsVersion: string; grantDigest: string };
 }> {
-  const grants = plan();
+  const grants = plan(true);
   const verified: Record<string, { identity: string; selectedDatabase: string; tlsVersion: string; grantDigest: string }> = {};
   for (const role of ['runtime', 'worker'] as const) {
     const identity = roles[role];

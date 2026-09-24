@@ -12,6 +12,7 @@ import {
   verifyB08AzureMigrationIdentity,
 } from '../server/_core/databaseAuthority/b08AzureMigrationIdentity';
 import {
+  grantB08AzureRuntimeLedgerRead,
   provisionB08AzureRuntimeIdentities,
   verifyB08AzureRuntimeIdentities,
 } from '../server/_core/databaseAuthority/b08AzureRuntimeIdentities';
@@ -101,6 +102,7 @@ type Command =
   | 'b08:migrator:verify'
   | 'b08:runtime:provision'
   | 'b08:runtime:verify'
+  | 'b08:runtime:grant-ledger-read'
   | 'b08:verify-establishment'
   | 'b08:verify-behavior'
   | 'worktree:create'
@@ -291,6 +293,11 @@ async function run(command: Command): Promise<void> {
 
   if (command === 'b08:runtime:verify') {
     print(await verifyB08AzureRuntimeIdentities());
+    return;
+  }
+
+  if (command === 'b08:runtime:grant-ledger-read') {
+    print(await grantB08AzureRuntimeLedgerRead(requiredOption('ack')));
     return;
   }
 
@@ -776,6 +783,7 @@ const commands = new Set<Command>([
   'b08:migrator:verify',
   'b08:runtime:provision',
   'b08:runtime:verify',
+  'b08:runtime:grant-ledger-read',
   'b08:verify-establishment',
   'b08:verify-behavior',
   'worktree:create',

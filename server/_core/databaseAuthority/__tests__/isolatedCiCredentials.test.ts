@@ -57,6 +57,19 @@ describe('isolated CI physical credential boundary', () => {
     ]);
   });
 
+  it('adds only SELECT on both migration ledgers for protected runtime readiness', () => {
+    const baseline = buildIsolatedCiGrantPlan();
+    const readiness = buildIsolatedCiGrantPlan({ runtimeLedgerRead: true });
+    const added = readiness.statementsByCredential.runtime.filter(
+      statement => !baseline.statementsByCredential.runtime.includes(statement),
+    );
+    expect(added).toEqual([
+      "GRANT SELECT ON `listify_test`.`sql_migration_history` TO 'listify_ci_app'@'%'",
+      "GRANT SELECT ON `listify_test`.`sql_migration_attempts` TO 'listify_ci_app'@'%'",
+    ]);
+    expect(readiness.statementsByCredential.worker).toEqual(baseline.statementsByCredential.worker);
+  });
+
   it('binds a role to the operation and exact target identity', () => {
     expect(isolatedCiCredentialClassForOperation('worker-connect')).toBe('worker');
     const processEnv = {

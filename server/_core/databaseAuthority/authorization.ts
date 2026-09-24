@@ -43,6 +43,7 @@ export type ProtectedDatabaseApproval = {
   runtimeIdentity?: string;
   workerIdentity?: string;
   runtimeGrantDigest?: string;
+  runtimePreviousGrantDigest?: string;
   workerGrantDigest?: string;
 };
 
@@ -55,6 +56,7 @@ export const B08_MIGRATION_PRIVILEGE_SET =
 export const B08_RUNTIME_IDENTITY = 'propertylistify_app_runtime';
 export const B08_WORKER_IDENTITY = 'propertylistify_job_worker';
 export const B08_RUNTIME_GRANT_DIGEST = '58f42389e76495048f32460f71c4cbe15bb85c9c1d5365426c0561383b75d1d5';
+export const B08_RUNTIME_LEDGER_READ_GRANT_DIGEST = '90c9d4aca03ac0820ebfe0fdbbbfef0617859bc6959e610be3b949ec27457fd9';
 export const B08_WORKER_GRANT_DIGEST = '74b68ee103b3f1f345c7e7a0874b84fde128653977817cc59b5a2776b88f1f22';
 
 export function protectedDatabaseApprovalFromEnvironment(
@@ -77,6 +79,7 @@ export function protectedDatabaseApprovalFromEnvironment(
     runtimeIdentity: env.DATABASE_AUTHORITY_APPROVED_RUNTIME_IDENTITY,
     workerIdentity: env.DATABASE_AUTHORITY_APPROVED_WORKER_IDENTITY,
     runtimeGrantDigest: env.DATABASE_AUTHORITY_APPROVED_RUNTIME_GRANT_DIGEST,
+    runtimePreviousGrantDigest: env.DATABASE_AUTHORITY_APPROVED_RUNTIME_PREVIOUS_GRANT_DIGEST,
     workerGrantDigest: env.DATABASE_AUTHORITY_APPROVED_WORKER_GRANT_DIGEST,
   };
 }
@@ -252,6 +255,16 @@ export function authorizeDatabaseOperation(
       input.approval?.workerGrantDigest !== B08_WORKER_GRANT_DIGEST)
   ) {
     throw new Error('Database operation refused: exact B08 Azure runtime identity approval is required.');
+  }
+  if (
+    context.operation === 'runtime-ledger-read-grant' &&
+    (context.targetFingerprintHash !== B08_AZURE_TARGET_FINGERPRINT_HASH ||
+      input.approval?.credentialClass !== 'bootstrap-admin' ||
+      input.approval?.runtimeIdentity !== B08_RUNTIME_IDENTITY ||
+      input.approval?.runtimePreviousGrantDigest !== B08_RUNTIME_GRANT_DIGEST ||
+      input.approval?.runtimeGrantDigest !== B08_RUNTIME_LEDGER_READ_GRANT_DIGEST)
+  ) {
+    throw new Error('Database operation refused: exact B08 Azure ledger-read grant approval is required.');
   }
   if (
     context.operation === 'b08-behavior-verify' &&
