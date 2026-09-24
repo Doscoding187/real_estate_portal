@@ -5,6 +5,11 @@ are still placeholder pages in `client/src/pages/NavLandingPage.tsx`; `/terms`
 and `/privacy` resolve to them. This packet is not approved legal copy and does
 not close B15 or authorize payment collection.
 
+The [customer copy review draft](evidence/b15-customer-copy-review-draft-2026-09-24.md)
+contains the B01-derived payment disclosure, Launch Access terms and Privacy
+notice with unresolved facts marked in brackets. It is ready for founder and
+South African legal/accounting markup, not publication.
+
 ## Locked commercial facts from B01
 
 | Topic | Founder-approved fact to carry into final copy |

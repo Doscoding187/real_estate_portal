@@ -48,7 +48,8 @@ this preparation.
   access denial, durability, retention and recovery proof.
 - B14: named backup, staffed hours, real queue handling and handover rehearsal.
 - B15: approved final legal/payment/privacy text and customer browser proof;
-  placeholder Terms/Privacy still block paid activation.
+  the [review draft](b15-customer-copy-review-draft-2026-09-24.md) is prepared,
+  while placeholder Terms/Privacy still block paid activation.
 - B17: actual continuous check/alert recipient and disposable backup/restore
   rehearsal.
 - B18: full exact-artifact Agent/Agency/Developer and failure-path acceptance.

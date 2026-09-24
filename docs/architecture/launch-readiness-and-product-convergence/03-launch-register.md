@@ -35,7 +35,7 @@ production acceptance decision. Paid activation remains closed.
 | B12 runtime | [Hosted contract](../../b12-hosted-runtime-contract.md), static preflight and [public endpoint baseline](evidence/b12-public-hosted-baseline-2026-09-24.json): production DNS/TLS live, current API readiness 503, staging names absent | Exact artifact/service configuration, worker/cron and staging rehearsal; B08 remains parked |
 | B13 lead custody | [Recovery runbook](16-first-cohort-lead-custody-recovery-runbook.md), local custody proof and worker attention exit | Hosted cron cadence and first-cohort routing/custody exercise |
 | B14 first customer | [Operating procedure](19-first-customer-operating-procedure.md) prepared | Named backup, staffed hours, queue and finance handover rehearsal |
-| B15 legal/payment | [Founder review packet](22-b15-founder-legal-payment-review-packet.md) prepared | Approved final Terms/Privacy/payment copy and customer-browser proof |
+| B15 legal/payment | [Founder review packet](22-b15-founder-legal-payment-review-packet.md) and [customer copy draft](evidence/b15-customer-copy-review-draft-2026-09-24.md) prepared | Approved final Terms/Privacy/payment copy and customer-browser proof |
 | B16 convergence | [Local candidate evidence](evidence/b16-no-spend-convergence-preparation-2026-09-24.md) | Final exact release approval and full integrated/hosted verification |
 | B17 monitoring/recovery | [No-cost contract and exact-release probe](20-monitoring-and-recovery-contract.md) prepared | Actual continuous alert binding and disposable restore rehearsal |
 | B18 acceptance | [Exact-artifact checklist](21-production-v1-acceptance-preparation.md) prepared | Execute on the final protected production artifact after upstream gates |
