@@ -19,6 +19,7 @@
     "build:railway": "pnpm build:backend",
     "start": "pnpm start:prod",
     "launch:preflight": "cross-env NODE_ENV=production APP_ENV=production tsx scripts/launch-preflight.ts",
+    "launch:probe": "tsx scripts/launchRuntimeProbe.ts",
     "email:worker": "tsx scripts/runTransactionalEmailWorker.ts",
     "email:supervisor": "tsx scripts/runTransactionalEmailSupervisor.ts",
     "hosted:preflight": "tsx scripts/hosted-preflight.ts",

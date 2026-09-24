@@ -1,8 +1,9 @@
 # B17 no-cost monitoring and recovery contract
 
-Status: operating contract prepared; hosted continuous monitoring and restore
-rehearsal are pending an exact B16 release and provider access. No new paid
-monitoring product is required by this contract.
+Status: operating contract and read-only exact-release probe prepared. Hosted
+continuous monitoring and restore rehearsal are pending an exact B16 release
+and provider access. No new paid monitoring product is required by this
+contract.
 
 | Signal | Source | Attention condition | First action |
 | --- | --- | --- | --- |
@@ -21,6 +22,33 @@ schedule must be bound in the protected provider configuration before paid
 activation; an unscheduled local script or laptop is not continuous monitoring.
 Do not expose DB credentials, proof objects, recipient addresses or provider
 response bodies in a monitoring payload.
+
+## Exact hosted release probe
+
+`pnpm launch:probe` is a read-only, external HTTPS check for the accepted
+frontend/API pair. Set these non-secret variables from B16's exact release
+record before running it:
+
+| Variable | Exact expected value |
+| --- | --- |
+| `LAUNCH_PROBE_FRONTEND_URL`, `LAUNCH_PROBE_API_URL` | HTTPS origins, with no path, query or credentials |
+| `LAUNCH_PROBE_FRONTEND_SHA`, `LAUNCH_PROBE_API_SHA` | Full accepted 40-character build SHAs |
+| `LAUNCH_PROBE_TARGET_FINGERPRINT` | Exact 64-character Database Authority target fingerprint |
+| `LAUNCH_PROBE_ENV` | `staging` or `production` |
+| `LAUNCH_PROBE_RELEASE_ID` | Exact release ID, or literal `none` before activation |
+
+The probe compares `/version.json`, `/api/version`, `/api/health` and
+`/api/readiness`; it requires the expected database target, Redis-backed
+rate-limit/cache health, public S3 configuration and a successful term-scheduler
+tick within 45 minutes. It prints only endpoint origins and sanitized failure
+codes. Exit 2 is attention; no probe operation writes provider or application
+state. Bind it to a real independent schedule and alert recipient before
+calling monitoring continuous. The probe does not replace B10/B13 worker
+backlog checks or the B11 object read/recovery exercise.
+
+Local evidence: the probe evaluator's four focused tests and `pnpm check`
+passed. Running `pnpm launch:probe` without an exact release tuple exited 2
+with a sanitized setup error, before any network request.
 
 ## Recovery sequence
 
