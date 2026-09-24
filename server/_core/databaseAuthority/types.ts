@@ -4,6 +4,8 @@ export const DATABASE_OPERATIONS = [
   'read-only-connect',
   'ci-identity-bootstrap',
   'inspection-identity-provision',
+  'migration-identity-provision',
+  'b08-behavior-verify',
   'migration-plan',
   'migration-apply',
   'reference-seed',

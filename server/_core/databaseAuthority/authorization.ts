@@ -38,11 +38,16 @@ export type ProtectedDatabaseApproval = {
   targetFingerprintHash: string;
   credentialClass?: DatabaseCredentialClass;
   inspectionIdentity?: string;
+  migrationIdentity?: string;
+  migrationPrivilegeSet?: string;
 };
 
 export const B08_AZURE_TARGET_FINGERPRINT_HASH =
   'b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced';
 export const B08_INSPECTION_IDENTITY = 'propertylistify_b08_inspector';
+export const B08_MIGRATION_IDENTITY = 'propertylistify_release_migrator';
+export const B08_MIGRATION_PRIVILEGE_SET =
+  'propertylistify_database.*:SELECT,INSERT,UPDATE,DELETE,CREATE,ALTER,DROP,INDEX,REFERENCES;*.*:SESSION_VARIABLES_ADMIN';
 
 export function protectedDatabaseApprovalFromEnvironment(
   authority: ResolvedDatabaseAuthority,
@@ -59,6 +64,8 @@ export function protectedDatabaseApprovalFromEnvironment(
     targetFingerprintHash: fingerprint ?? '',
     credentialClass: env.DATABASE_AUTHORITY_APPROVED_CREDENTIAL_CLASS as DatabaseCredentialClass | undefined,
     inspectionIdentity: env.DATABASE_AUTHORITY_APPROVED_INSPECTION_IDENTITY,
+    migrationIdentity: env.DATABASE_AUTHORITY_APPROVED_MIGRATION_IDENTITY,
+    migrationPrivilegeSet: env.DATABASE_AUTHORITY_APPROVED_MIGRATION_PRIVILEGE_SET,
   };
 }
 
@@ -213,6 +220,24 @@ export function authorizeDatabaseOperation(
       input.approval?.inspectionIdentity !== B08_INSPECTION_IDENTITY)
   ) {
     throw new Error('Database operation refused: exact B08 Azure inspection identity approval is required.');
+  }
+  if (
+    context.operation === 'migration-identity-provision' &&
+    (context.targetFingerprintHash !== B08_AZURE_TARGET_FINGERPRINT_HASH ||
+      input.approval?.credentialClass !== 'bootstrap-admin' ||
+      input.approval?.migrationIdentity !== B08_MIGRATION_IDENTITY ||
+      input.approval?.migrationPrivilegeSet !== B08_MIGRATION_PRIVILEGE_SET)
+  ) {
+    throw new Error('Database operation refused: exact B08 Azure migration identity approval is required.');
+  }
+  if (
+    context.operation === 'b08-behavior-verify' &&
+    (context.targetFingerprintHash !== B08_AZURE_TARGET_FINGERPRINT_HASH ||
+      input.approval?.credentialClass !== 'migration' ||
+      input.approval?.migrationIdentity !== B08_MIGRATION_IDENTITY ||
+      input.approval?.migrationPrivilegeSet !== B08_MIGRATION_PRIVILEGE_SET)
+  ) {
+    throw new Error('Database operation refused: exact B08 Azure behavior approval is required.');
   }
   assertOwnership(context, rule.ownership);
   if (

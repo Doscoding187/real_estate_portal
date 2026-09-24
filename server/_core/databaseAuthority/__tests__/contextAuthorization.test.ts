@@ -478,6 +478,77 @@ describe('immutable resolved database context and operation authorization', () =
     );
   });
 
+  it('confines B08 migration identity provisioning to the exact target, account, and privileges', () => {
+    const identity = fixtureIdentity();
+    const resolve = (databaseUrl: string) => resolveDatabaseAuthority({
+      operation: 'migration-identity-provision',
+      cwd: identity.worktreePath,
+      gitIdentity: identity,
+      explicitDatabaseUrl: databaseUrl,
+      credentialClass: 'bootstrap-admin',
+      processEnv: { NODE_ENV: 'production', APP_ENV: 'production' },
+    });
+    const target = 'mysql://propertylistify-mysql.mysql.database.azure.com:3306/propertylistify_database';
+    const authority = resolve(target);
+    const approval = {
+      reference: 'B08-TEST-ONLY',
+      actor: 'test-reviewer',
+      operation: 'migration-identity-provision' as const,
+      targetFingerprintHash: authority.context.targetFingerprintHash,
+      credentialClass: 'bootstrap-admin' as const,
+      migrationIdentity: 'propertylistify_release_migrator',
+      migrationPrivilegeSet: 'propertylistify_database.*:SELECT,INSERT,UPDATE,DELETE,CREATE,ALTER,DROP,INDEX,REFERENCES;*.*:SESSION_VARIABLES_ADMIN',
+    };
+    expect(() => authorizeDatabaseOperation(authority, { root: process.cwd(), approval })).not.toThrow();
+    for (const changed of [
+      { migrationIdentity: 'another_user' },
+      { migrationPrivilegeSet: 'propertylistify_database.*:ALL PRIVILEGES' },
+      { credentialClass: 'migration' as const },
+    ]) {
+      expect(() => authorizeDatabaseOperation(authority, {
+        root: process.cwd(), approval: { ...approval, ...changed },
+      })).toThrow('exact B08 Azure migration identity approval');
+    }
+    const tidb = resolve('mysql://old.tidbcloud.com:3306/listify_property_sa');
+    expect(() => authorizeDatabaseOperation(tidb, {
+      root: process.cwd(),
+      approval: { ...approval, targetFingerprintHash: tidb.context.targetFingerprintHash },
+    })).toThrow('exact B08 Azure migration identity approval');
+  });
+
+  it('confines B08 transactional behavior proof to the reviewed Azure migration identity', () => {
+    const identity = fixtureIdentity();
+    const authority = resolveDatabaseAuthority({
+      operation: 'b08-behavior-verify',
+      cwd: identity.worktreePath,
+      gitIdentity: identity,
+      explicitDatabaseUrl: 'mysql://propertylistify-mysql.mysql.database.azure.com:3306/propertylistify_database',
+      credentialClass: 'migration',
+      processEnv: {
+        APP_ENV: 'production', NODE_ENV: 'production',
+        DATABASE_MIGRATION_URL: 'mysql://propertylistify_release_migrator:proof@propertylistify-mysql.mysql.database.azure.com:3306/propertylistify_database',
+      },
+    });
+    const approval = {
+      reference: 'B08-TEST-ONLY', actor: 'test-reviewer',
+      operation: 'b08-behavior-verify' as const,
+      targetFingerprintHash: authority.context.targetFingerprintHash,
+      credentialClass: 'migration' as const,
+      migrationIdentity: 'propertylistify_release_migrator',
+      migrationPrivilegeSet: 'propertylistify_database.*:SELECT,INSERT,UPDATE,DELETE,CREATE,ALTER,DROP,INDEX,REFERENCES;*.*:SESSION_VARIABLES_ADMIN',
+    };
+    const acknowledgement = expectedDatabaseAcknowledgement(authority.context);
+    expect(() => authorizeDatabaseOperation(authority, {
+      root: process.cwd(), approval, acknowledgement,
+    })).not.toThrow();
+    expect(() => authorizeDatabaseOperation(authority, {
+      root: process.cwd(), approval,
+    })).toThrow('exact acknowledgement');
+    expect(() => authorizeDatabaseOperation(authority, {
+      root: process.cwd(), approval: { ...approval, migrationIdentity: 'other' }, acknowledgement,
+    })).toThrow('exact B08 Azure behavior approval');
+  });
+
   it('prevents a feature worktree from mutating listify_local', () => {
     const identity = fixtureIdentity();
     const authority = resolveDatabaseAuthority({

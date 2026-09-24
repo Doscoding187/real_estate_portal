@@ -7,6 +7,14 @@ import {
 } from '../server/_core/databaseAuthority/authorization';
 import { createAuthoritySqlConnection } from '../server/_core/databaseAuthority/connectionAuthority';
 import { provisionB08AzureInspectionIdentity } from '../server/_core/databaseAuthority/b08AzureInspectionIdentity';
+import {
+  provisionB08AzureMigrationIdentity,
+  verifyB08AzureMigrationIdentity,
+} from '../server/_core/databaseAuthority/b08AzureMigrationIdentity';
+import {
+  verifyB08AzureBehavior,
+  verifyB08AzureEstablishment,
+} from '../server/_core/databaseAuthority/b08AzurePostApplyVerification';
 import { resolveDatabaseAuthority } from '../server/_core/databaseAuthority/context';
 import {
   createOwnedWorktreeDatabase,
@@ -85,6 +93,10 @@ type Command =
   | 'data:manifest'
   | 'b08:inspector:provision'
   | 'b08:inspect-metadata'
+  | 'b08:migrator:provision'
+  | 'b08:migrator:verify'
+  | 'b08:verify-establishment'
+  | 'b08:verify-behavior'
   | 'worktree:create'
   | 'worktree:dispose'
   | 'worktree:ack'
@@ -256,6 +268,26 @@ async function run(command: Command): Promise<void> {
     return;
   }
 
+  if (command === 'b08:migrator:provision') {
+    print(await provisionB08AzureMigrationIdentity());
+    return;
+  }
+
+  if (command === 'b08:migrator:verify') {
+    print(await verifyB08AzureMigrationIdentity());
+    return;
+  }
+
+  if (command === 'b08:verify-establishment') {
+    print(await verifyB08AzureEstablishment());
+    return;
+  }
+
+  if (command === 'b08:verify-behavior') {
+    print(await verifyB08AzureBehavior(requiredOption('ack')));
+    return;
+  }
+
   if (command === 'b08:inspect-metadata') {
     const authority = authorityFor('read-only-connect', 'read-only');
     const decision = authorizationFor(authority);
@@ -282,6 +314,7 @@ async function run(command: Command): Promise<void> {
         @@session.collation_connection AS collation_connection,
         @@global.lower_case_table_names AS lower_case_table_names,
         @@global.sql_generate_invisible_primary_key AS sql_generate_invisible_primary_key,
+        @@session.sql_require_primary_key AS sql_require_primary_key,
         @@global.require_secure_transport AS require_secure_transport`))[0];
       if (
         session?.selected_database !== 'propertylistify_database' ||
@@ -334,6 +367,7 @@ async function run(command: Command): Promise<void> {
           collation: session.collation_connection,
           lowerCaseTableNames: session.lower_case_table_names,
           generateInvisiblePrimaryKey: session.sql_generate_invisible_primary_key,
+          requirePrimaryKey: session.sql_require_primary_key,
         },
         tableInventory: {
           count: tables.length,
@@ -722,6 +756,10 @@ const commands = new Set<Command>([
   'data:manifest',
   'b08:inspector:provision',
   'b08:inspect-metadata',
+  'b08:migrator:provision',
+  'b08:migrator:verify',
+  'b08:verify-establishment',
+  'b08:verify-behavior',
   'worktree:create',
   'worktree:dispose',
   'worktree:ack',
