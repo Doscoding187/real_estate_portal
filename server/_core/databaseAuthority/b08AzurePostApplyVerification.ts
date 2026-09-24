@@ -63,7 +63,8 @@ async function expectMysqlError(connection: AuthoritySqlConnection, sql: string,
 }
 
 export async function verifyB08AzureEstablishment(): Promise<Record<string, unknown>> {
-  const env = { ...process.env, APP_ENV: 'production', NODE_ENV: 'production', DATABASE_URL: inspectorUrl() };
+  const env = { ...process.env, APP_ENV: 'production', NODE_ENV: 'production',
+    DATABASE_URL: inspectorUrl(), DATABASE_AUTHORITY_APPROVED_CREDENTIAL_CLASS: 'read-only' };
   const authority = resolveDatabaseAuthority({ operation: 'verification', processEnv: env, credentialClass: 'read-only' });
   if (authority.context.targetFingerprintHash !== B08_AZURE_TARGET_FINGERPRINT_HASH ||
       authority.context.databaseName !== 'propertylistify_database' ||

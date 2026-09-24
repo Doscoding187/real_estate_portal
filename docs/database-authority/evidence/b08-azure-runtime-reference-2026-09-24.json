@@ -1,0 +1,67 @@
+{
+  "evidenceVersion": 1,
+  "verifiedBy": "2026-09-24T07:12:48Z",
+  "source": {
+    "schemaSha": "0ed5d253568552d7b4492893c77ebc6850158220",
+    "schemaTree": "4fca21e5b739a5abcc453964d16dba94c7887f2e",
+    "runtimeAuthorityCommit": "e09e6708"
+  },
+  "targetFingerprintHash": "b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced",
+  "runtime": {
+    "identity": "propertylistify_app_runtime",
+    "credentialClass": "runtime",
+    "secretFileMode": "0600",
+    "grantedApplicationTables": 214,
+    "grantPlanDigest": "58f42389e76495048f32460f71c4cbe15bb85c9c1d5365426c0561383b75d1d5",
+    "actualGrantDigest": "e3d55046b37767d9a940d010c17fac11f7187a3d96818742f91e3bc5ad9e50f0",
+    "selectedDatabase": "propertylistify_database",
+    "tlsVersion": "TLSv1.3",
+    "migrationControlTableDml": false,
+    "ddlOrAdministrativeGrants": false
+  },
+  "worker": {
+    "identity": "propertylistify_job_worker",
+    "credentialClass": "worker",
+    "secretFileMode": "0600",
+    "grantedTables": 16,
+    "grantPlanDigest": "74b68ee103b3f1f345c7e7a0874b84fde128653977817cc59b5a2776b88f1f22",
+    "actualGrantDigest": "c2c77dc7add46e0f82418d31fea95172eb0f81734ce0d0828a20e29cb080c5f3",
+    "selectedDatabase": "propertylistify_database",
+    "tlsVersion": "TLSv1.3",
+    "migrationControlTableDml": false,
+    "ddlOrAdministrativeGrants": false
+  },
+  "commercialReference": {
+    "adapter": "canonical-commercial",
+    "version": "canonical-commercial-v4",
+    "digest": "5741e5c5bee4f02d5a2d0e84e5b55caed085623996a0bb107ee6c493c0a8ff86",
+    "plannedPendingRows": 11,
+    "appliedAndVerifiedProductKeys": [
+      "agent_launch_access",
+      "agency_launch_access",
+      "developer_launch_access"
+    ],
+    "verifiedMigrationHead": "0094_content_topics_primary_key.sql"
+  },
+  "postReferenceEstablishment": {
+    "verifiedAt": "2026-09-24T07:11:29.237Z",
+    "migrationCount": 95,
+    "succeededAttemptCount": 95,
+    "incompleteAttemptCount": 0,
+    "schemaCongruent": true,
+    "desiredAndActualModelDigest": "a8ca8cf34bb3627594eab1b722b85115c6460225a0165db7992228a8547798e9",
+    "myRowIdCount": 0,
+    "controlledRowsRemaining": 0
+  },
+  "firewall": {
+    "temporaryRule": "b08-runtime-identity-20260924",
+    "startIp": "197.79.59.199",
+    "endIp": "197.79.59.199",
+    "removedAndVerifiedBy": "2026-09-24T07:12:48Z"
+  },
+  "railway": {
+    "changed": false,
+    "writer": "TiDB"
+  },
+  "tidbRetired": false
+}
