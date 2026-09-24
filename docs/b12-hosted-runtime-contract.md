@@ -13,6 +13,10 @@ The [2026-09-24 public hosted baseline](architecture/launch-readiness-and-produc
 shows valid production DNS/TLS, but the current API returns readiness 503 and
 the frontend `/version.json` serves HTML. Both intended staging names did not
 resolve. This single read-only observation is not B12 hosted acceptance.
+The [Railway variable-only preflight](architecture/launch-readiness-and-product-convergence/evidence/b12-railway-variable-preflight-2026-09-24.md)
+lists nine current configuration gaps against the candidate code and confirms
+that email/lead worker services have not been created. No provider settings
+were changed by that read.
 
 ## Topology and domains
 

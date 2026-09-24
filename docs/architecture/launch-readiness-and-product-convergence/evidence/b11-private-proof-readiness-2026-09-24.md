@@ -25,3 +25,18 @@ Provision and bind a private durable bucket with credentials scoped to that
 bucket; verify put/read, private access denial, process restart persistence,
 retention, and recovery using controlled test data. The hosted B12 preflight
 must pass with these same settings before paid activation.
+
+## Existing AWS account read-only inventory — 2026-09-24
+
+At 15:25 UTC the configured Railway Production AWS access key performed only
+`ListBuckets` and `GetBucketLocation` reads. The account exposed **one** bucket:
+the configured public media bucket. Its location matched the configured AWS
+region. No distinct private-proof bucket exists in the accessible account
+inventory. Bucket names, key material and object keys were not emitted or
+stored in this evidence. No object read/write or permission change occurred.
+
+Therefore B11 cannot be closed by configuration alone. A separate private
+bucket and a bucket-scoped credential are required. Provisioning new AWS S3
+storage may incur usage charges; treat any unapproved incremental cost as a
+`FOUNDER SPEND GATE`. Do not reuse the public bucket or public access key for
+payment proofs.
