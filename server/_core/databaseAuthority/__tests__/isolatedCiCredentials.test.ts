@@ -40,6 +40,9 @@ describe('isolated CI physical credential boundary', () => {
     expect(plan.statementsByCredential.migration[1]).toBe(
       "GRANT SESSION_VARIABLES_ADMIN ON *.* TO 'listify_ci_migration'@'%'",
     );
+    expect(plan.statementsByCredential.migration[2]).toBe(
+      "GRANT CREATE TEMPORARY TABLES ON `listify_test`.* TO 'listify_ci_migration'@'%'",
+    );
     expect(plan.statementsByCredential.runtime.join(' ')).not.toContain('SESSION_VARIABLES_ADMIN');
     expect(plan.statementsByCredential.worker.join(' ')).not.toContain('SESSION_VARIABLES_ADMIN');
     expect(plan.workerTables).toEqual([

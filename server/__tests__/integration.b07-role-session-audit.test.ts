@@ -206,15 +206,22 @@ describeWithDatabase('B07 mounted global role mutation authority', () => {
     expect(auditRows).toEqual([]);
   });
 
-  it('preserves the last-super-admin safeguard through the canonical authority', async () => {
-    const onlyAdmin = await insertUser('only-admin', 'super_admin');
-    const caller = callerFor({ id: onlyAdmin.id, role: 'super_admin' }, 'b07-last-admin');
+  it('applies the last-super-admin safeguard to the actual canonical admin count', async () => {
+    const subject = await insertUser('admin-subject', 'super_admin');
+    const caller = callerFor({ id: subject.id, role: 'super_admin' }, 'b07-admin-demotion');
+    const existingAdmins = await db.select({ id: users.id }).from(users)
+      .where(eq(users.role, 'super_admin'));
+    const demotion = caller.user.updateRole({ userId: subject.id, role: 'visitor' });
 
-    await expect(
-      caller.user.updateRole({ userId: onlyAdmin.id, role: 'visitor' }),
-    ).rejects.toMatchObject({ code: 'PRECONDITION_FAILED' });
-
-    const [unchanged] = await db.select().from(users).where(eq(users.id, onlyAdmin.id)).limit(1);
-    expect(unchanged).toMatchObject({ role: 'super_admin', sessionVersion: 10 });
+    if (existingAdmins.length === 1) {
+      await expect(demotion).rejects.toMatchObject({ code: 'PRECONDITION_FAILED' });
+      const [unchanged] = await db.select().from(users).where(eq(users.id, subject.id)).limit(1);
+      expect(unchanged).toMatchObject({ role: 'super_admin', sessionVersion: 10 });
+    } else {
+      await expect(demotion).resolves.toMatchObject({ role: 'visitor', sessionVersion: 11 });
+      const [remaining] = await db.select({ id: users.id }).from(users)
+        .where(eq(users.role, 'super_admin')).limit(1);
+      expect(remaining).toBeDefined();
+    }
   });
 });

@@ -141,4 +141,19 @@ describe('super-admin role authority', () => {
       }),
     ).rejects.toMatchObject({ code: 'NOT_FOUND' });
   });
+
+  it('rejects demotion of the last super admin before changing role or session version', async () => {
+    const harness = transactionalDatabase({ id: 44, role: 'super_admin', sessionVersion: 7 });
+    await expect(updateUserRoleWithAudit({
+      database: harness.database,
+      actorUserId: 44,
+      targetUserId: 44,
+      role: 'visitor',
+      requestId: 'last-admin-demotion',
+    })).rejects.toMatchObject({ code: 'PRECONDITION_FAILED' });
+    expect(harness.snapshot()).toEqual({
+      target: { id: 44, role: 'super_admin', sessionVersion: 7 },
+      audit: [],
+    });
+  });
 });

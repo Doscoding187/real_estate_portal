@@ -312,10 +312,10 @@ const commercialAvailabilityRow = (id: number, commercialSpaceId: number) => ({
   vatTreatment: 'excluded',
   availabilityState: 'available_confirmed',
   occupationDate: null,
-  lastConfirmedAt: '2026-08-20 00:00:00',
+  lastConfirmedAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
   confirmationSource: 'broker',
   confirmationSourceLabel: 'Broker / agent',
-  reconfirmationDueAt: '2026-09-20 00:00:00',
+  reconfirmationDueAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
 });
 
 const commercialSpaceRow = (id: number, commercialAssetId: number) => ({

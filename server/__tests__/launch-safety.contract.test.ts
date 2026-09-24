@@ -19,9 +19,10 @@ describe('launch safety contract', () => {
     const railway = readRepoFile('railway.json');
     const packageJson = readRepoFile('package.json');
 
-    expect(railway).toContain('"startCommand": "pnpm start:prod"');
+    expect(railway).toContain('"startCommand": "pnpm start:hosted:api"');
     expect(packageJson).toContain('"start": "pnpm start:prod"');
     expect(packageJson).not.toContain('start:prod:with-migrations');
+    expect(railway).not.toContain('db:migrate');
   });
 
   it('keeps committed email env examples shell-safe', () => {

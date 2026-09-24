@@ -49,6 +49,7 @@ type DevelopmentOptions = {
   description?: string;
   transactionType?: 'for_sale' | 'auction';
   unitTypes?: Array<Record<string, unknown>>;
+  images?: Array<Record<string, unknown>>;
 };
 
 type PublicationState = {
@@ -183,7 +184,7 @@ async function insertDevelopment(
       description:
         options.description ??
         'A canonical platform-curated development description with sufficient persisted detail for publication readiness.',
-      images: [{ url: 'https://example.com/platform-publication-hero.jpg', category: 'hero' }],
+      images: options.images ?? [{ url: 'https://example.com/platform-publication-hero.jpg', category: 'hero' }],
       unitTypes: options.unitTypes ?? [canonicalUnitType()],
     } as any,
     {},
@@ -627,7 +628,9 @@ describeWithDb('Developer Engine platform-curated publication authority integrat
   it('rejects retained generic Land availability changes through the developer API', async () => {
     const developerUserId = await insertUser('property_developer');
     const developerIdentity = await insertDeveloperIdentity(developerUserId);
-    const developmentId = await insertDevelopment(developerUserId, developerIdentity.publisherId);
+    const developmentId = await insertDevelopment(developerUserId, developerIdentity.publisherId, {
+      images: [],
+    });
     const db = await database();
     const [unit] = await db
       .select({ id: unitTypes.id, availableUnits: unitTypes.availableUnits })
@@ -910,6 +913,7 @@ describeWithDb('Developer Engine platform-curated publication authority integrat
     const developmentId = await insertDevelopment(
       developerUserId,
       developerIdentity.publisherId,
+      { images: [] },
     );
 
     await expectRejectedWithoutMutation(

@@ -65,12 +65,12 @@ describe('Developer Engine S2 supersession authority contracts', () => {
   });
 
   it('routes the independently hosted Vercel frontend through the canonical backend authority', () => {
-    const vercel = source('vercel.json');
+    const vercel = source('vercel.ts');
     const middleware = source('middleware.ts');
     const routing = source('shared/developmentSupersessionRouting.ts');
 
-    expect(vercel).toContain('"outputDirectory": "dist/public"');
-    expect(vercel).toContain('"dest": "/index.html"');
+    expect(vercel).toContain("outputDirectory: 'dist/public'");
+    expect(vercel).toContain("dest: '/index.html'");
     expect(middleware).toContain("matcher: '/development/:path*'");
     expect(middleware).toContain('probeDevelopmentSupersession');
     expect(middleware).toContain('status: 307');

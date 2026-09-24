@@ -166,7 +166,7 @@ describe('provider-independent billing foundation contract', () => {
     expect(listingPublicationEntitlementService).toContain("'max_active_listings'");
     expect(billingSchema).toContain("ownerType: mysqlEnum('owner_type'");
     expect(billingSchema).toContain("unique('uq_subscriptions_owner')");
-    expect(agentEntitlements).toContain('isPaidSubscriptionEntitled');
+    expect(agentEntitlements).toContain('isPaidMvpLaunchAccessSubscriptionEntitled');
   });
 
   it('keeps the interim billing owner allow-list closed', () => {

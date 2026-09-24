@@ -252,6 +252,9 @@ export function buildIsolatedCiGrantPlan(
     // Keep this global dynamic grant on the exact disposable CI migrator.
     migration.push(
       `GRANT SESSION_VARIABLES_ADMIN ON *.* TO ${quotedAccount(roleUsers.migration)}`,
+      // The isolated PK precondition integration test shadows canonical tables
+      // on its own connection. Production migration authority does not need this.
+      `GRANT CREATE TEMPORARY TABLES ON ${database}.* TO ${quotedAccount(roleUsers.migration)}`,
     );
   }
   const statementsByCredential = { runtime, worker, 'read-only': verifier, migration } as const;

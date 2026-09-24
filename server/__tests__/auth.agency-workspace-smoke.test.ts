@@ -6,11 +6,13 @@ import { COOKIE_NAME } from '@shared/const';
 
 const {
   mockLogin,
+  mockRevokeSessionFromCookieHeader,
   mockGetDb,
   mockGetAgencyDashboardStats,
   mockGetAgentEntitlementsForUserId,
 } = vi.hoisted(() => ({
   mockLogin: vi.fn(),
+  mockRevokeSessionFromCookieHeader: vi.fn(),
   mockGetDb: vi.fn(),
   mockGetAgencyDashboardStats: vi.fn(),
   mockGetAgentEntitlementsForUserId: vi.fn(),
@@ -19,6 +21,7 @@ const {
 vi.mock('../_core/auth', () => ({
   authService: {
     login: mockLogin,
+    revokeSessionFromCookieHeader: mockRevokeSessionFromCookieHeader,
   },
 }));
 
@@ -67,6 +70,7 @@ describe('auth to agency workspace smoke', () => {
       user: agencyUser,
       sessionToken: 'agency-smoke-session-token',
     });
+    mockRevokeSessionFromCookieHeader.mockResolvedValue(undefined);
 
     mockGetDb.mockResolvedValue({
       select: vi.fn(() => ({
@@ -148,6 +152,9 @@ describe('auth to agency workspace smoke', () => {
       const logoutPayload = await logoutResponse.json();
 
       expect(logoutResponse.status).toBe(200);
+      expect(mockRevokeSessionFromCookieHeader).toHaveBeenCalledWith(
+        setCookie.split(';')[0],
+      );
       expect(logoutPayload.success).toBe(true);
       expect(logoutResponse.headers.get('set-cookie') || '').toContain(`${COOKIE_NAME}=`);
     } finally {

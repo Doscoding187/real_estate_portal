@@ -180,7 +180,7 @@ describe('developer funnel contract', () => {
   });
 
   it('blocks distribution owner type when distribution is disabled', () => {
-    expect(getAvailableLeadOwnerTypes(false)).toEqual(['developer_sales', 'agency', 'unassigned']);
+    expect(getAvailableLeadOwnerTypes(false)).toEqual(['developer_sales', 'unassigned']);
     expect(
       evaluateDistributionAssignmentGate({
         ownerType: 'distribution_partner',

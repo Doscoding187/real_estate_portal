@@ -458,10 +458,31 @@ guardedDescribe('agency principal bootstrap persisted acceptance', () => {
     const approval = approvalResult.value;
     expect(approval.success).toBe(true);
     if (checkoutDuringApprovalResult.status === 'fulfilled') {
-      expect(checkoutDuringApprovalResult.value.invoice.id).toBe(checkout.invoice.id);
-      expect(checkoutDuringApprovalResult.value.paymentReference).toBe(checkout.paymentReference);
+      // The request may acquire the owner lock before or after finance approval.
+      // Before approval it reuses the original invoice; after approval it may
+      // issue the first separate, unpaid 90-day renewal invoice.
+      expect(checkoutDuringApprovalResult.value.invoice.id).toBeGreaterThan(0);
     } else {
       expect(checkoutDuringApprovalResult.reason).toMatchObject({ code: 'CONFLICT' });
+    }
+    const [activatedSubscription] = await db.select({
+      currentPeriodEnd: subscriptions.currentPeriodEnd,
+    }).from(subscriptions).where(and(
+      eq(subscriptions.ownerType, 'agency'),
+      eq(subscriptions.ownerId, createdOnboarding.agencyId),
+    )).limit(1);
+    const renewalCheckout = await attachedCaller.billing.startManualEftCheckout({
+      planId,
+      billingCycle: 'monthly',
+    });
+    expect(renewalCheckout.invoice.id).not.toBe(checkout.invoice.id);
+    expect(renewalCheckout.invoice.status).toBe('issued');
+    if (
+      checkoutDuringApprovalResult.status === 'fulfilled' &&
+      checkoutDuringApprovalResult.value.invoice.id !== checkout.invoice.id
+    ) {
+      expect(renewalCheckout.invoice.id).toBe(checkoutDuringApprovalResult.value.invoice.id);
+      expect(renewalCheckout.paymentReference).toBe(checkoutDuringApprovalResult.value.paymentReference);
     }
     const concurrentInvoices = await db
       .select()
@@ -472,15 +493,21 @@ guardedDescribe('agency principal bootstrap persisted acceptance', () => {
           eq(billingInvoices.ownerId, createdOnboarding.agencyId),
         ),
       );
-    expect(concurrentInvoices).toHaveLength(1);
+    expect(concurrentInvoices).toHaveLength(2);
     expect(
       concurrentInvoices.filter(invoice =>
         ['issued', 'submitted', 'partially_paid', 'overdue'].includes(invoice.status),
       ),
-    ).toHaveLength(0);
-    expect(concurrentInvoices.map(invoice => invoice.paymentReference)).toEqual([
-      checkout.paymentReference,
-    ]);
+    ).toHaveLength(1);
+    expect(concurrentInvoices.find(invoice => invoice.id === checkout.invoice.id)?.status).toBe('paid');
+    expect(new Set(concurrentInvoices.map(invoice => invoice.paymentReference)).size).toBe(2);
+    const [unchangedSubscription] = await db.select({
+      currentPeriodEnd: subscriptions.currentPeriodEnd,
+    }).from(subscriptions).where(and(
+      eq(subscriptions.ownerType, 'agency'),
+      eq(subscriptions.ownerId, createdOnboarding.agencyId),
+    )).limit(1);
+    expect(unchangedSubscription?.currentPeriodEnd).toBe(activatedSubscription?.currentPeriodEnd);
     expect(
       await db
         .select()
@@ -510,9 +537,11 @@ guardedDescribe('agency principal bootstrap persisted acceptance', () => {
         })
       ).idempotent,
     ).toBe(true);
-    await expect(
-      attachedCaller.billing.startManualEftCheckout({ planId, billingCycle: 'monthly' }),
-    ).rejects.toMatchObject({ code: 'CONFLICT' });
+    const renewalRetry = await attachedCaller.billing.startManualEftCheckout({
+      planId,
+      billingCycle: 'monthly',
+    });
+    expect(renewalRetry.invoice.id).toBe(renewalCheckout.invoice.id);
 
     const retry = await principalCaller.agency.createOnboarding(
       onboardingInput(`${suffix}-ignored`, planId + 100),

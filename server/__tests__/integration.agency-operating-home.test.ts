@@ -102,6 +102,13 @@ async function seedAgency(input: { verified?: number; daysRemaining?: number | n
         price: 99_900,
         currency: 'ZAR',
         interval: 'month',
+        metadata: {
+          commercial_product_key: 'agency_launch_access',
+          commercial_term_kind: 'paid_launch_access',
+          commercial_term_duration_days: 90,
+          commercial_requires_verified_payment: true,
+          commercial_auto_renews: false,
+        },
         isPopular: 0,
         sortOrder: 100,
         isActive: 1,
