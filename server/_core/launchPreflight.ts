@@ -279,12 +279,16 @@ function billingProofStorageCheck(env: EnvLike) {
     !(readEnv(env, 'BILLING_PROOF_S3_REGION') || readEnv(env, 'AWS_REGION'))
       ? 'BILLING_PROOF_S3_REGION or AWS_REGION'
       : null,
-    !(readEnv(env, 'BILLING_PROOF_AWS_ACCESS_KEY_ID') || readEnv(env, 'AWS_ACCESS_KEY_ID'))
-      ? 'BILLING_PROOF_AWS_ACCESS_KEY_ID or AWS_ACCESS_KEY_ID'
+    !readEnv(env, 'BILLING_PROOF_AWS_ACCESS_KEY_ID')
+      ? 'BILLING_PROOF_AWS_ACCESS_KEY_ID'
       : null,
-    !(readEnv(env, 'BILLING_PROOF_AWS_SECRET_ACCESS_KEY') || readEnv(env, 'AWS_SECRET_ACCESS_KEY'))
-      ? 'BILLING_PROOF_AWS_SECRET_ACCESS_KEY or AWS_SECRET_ACCESS_KEY'
+    !readEnv(env, 'BILLING_PROOF_AWS_SECRET_ACCESS_KEY')
+      ? 'BILLING_PROOF_AWS_SECRET_ACCESS_KEY'
       : null,
+    readEnv(env, 'BILLING_PROOF_AWS_ACCESS_KEY_ID') === readEnv(env, 'AWS_ACCESS_KEY_ID')
+      ? 'BILLING_PROOF_AWS_ACCESS_KEY_ID (distinct from public media)' : null,
+    readEnv(env, 'BILLING_PROOF_S3_BUCKET') === readEnv(env, 'S3_BUCKET_NAME')
+      ? 'BILLING_PROOF_S3_BUCKET (distinct from public media)' : null,
   ].filter(Boolean) as string[];
 
   return makeCheck({

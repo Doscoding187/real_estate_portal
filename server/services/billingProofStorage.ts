@@ -35,7 +35,8 @@ export class BillingProofStorageConfigurationError extends Error {
 }
 
 function isProductionRuntime() {
-  return process.env.NODE_ENV === 'production';
+  return process.env.NODE_ENV === 'production' ||
+    process.env.APP_ENV === 'production' || process.env.APP_ENV === 'staging';
 }
 
 function normalizeAdapter(value?: string | null): BillingProofStorageAdapter {
@@ -75,14 +76,25 @@ export function getBillingProofStorageStatus(): BillingProofStorageStatus {
 
   const bucket = process.env.BILLING_PROOF_S3_BUCKET || '';
   const region = process.env.BILLING_PROOF_S3_REGION || process.env.AWS_REGION || '';
-  const accessKeyId = process.env.BILLING_PROOF_AWS_ACCESS_KEY_ID || process.env.AWS_ACCESS_KEY_ID || '';
-  const secretAccessKey =
-    process.env.BILLING_PROOF_AWS_SECRET_ACCESS_KEY || process.env.AWS_SECRET_ACCESS_KEY || '';
+  const dedicatedAccessKeyId = process.env.BILLING_PROOF_AWS_ACCESS_KEY_ID || '';
+  const dedicatedSecretAccessKey = process.env.BILLING_PROOF_AWS_SECRET_ACCESS_KEY || '';
+  const accessKeyId = production
+    ? dedicatedAccessKeyId : dedicatedAccessKeyId || process.env.AWS_ACCESS_KEY_ID || '';
+  const secretAccessKey = production
+    ? dedicatedSecretAccessKey : dedicatedSecretAccessKey || process.env.AWS_SECRET_ACCESS_KEY || '';
   const missing = [
     !bucket ? 'BILLING_PROOF_S3_BUCKET' : null,
+    production && bucket && bucket === process.env.S3_BUCKET_NAME
+      ? 'BILLING_PROOF_S3_BUCKET (must differ from public media)' : null,
     !region ? 'BILLING_PROOF_S3_REGION or AWS_REGION' : null,
-    !accessKeyId ? 'BILLING_PROOF_AWS_ACCESS_KEY_ID or AWS_ACCESS_KEY_ID' : null,
-    !secretAccessKey ? 'BILLING_PROOF_AWS_SECRET_ACCESS_KEY or AWS_SECRET_ACCESS_KEY' : null,
+    !accessKeyId
+      ? production ? 'BILLING_PROOF_AWS_ACCESS_KEY_ID' : 'BILLING_PROOF_AWS_ACCESS_KEY_ID or AWS_ACCESS_KEY_ID'
+      : null,
+    !secretAccessKey
+      ? production ? 'BILLING_PROOF_AWS_SECRET_ACCESS_KEY' : 'BILLING_PROOF_AWS_SECRET_ACCESS_KEY or AWS_SECRET_ACCESS_KEY'
+      : null,
+    production && dedicatedAccessKeyId && dedicatedAccessKeyId === process.env.AWS_ACCESS_KEY_ID
+      ? 'BILLING_PROOF_AWS_ACCESS_KEY_ID (must differ from public media)' : null,
   ].filter(Boolean) as string[];
 
   return {
@@ -116,9 +128,10 @@ function resolveStorageConfig(): BillingProofStorageConfig {
     bucket: process.env.BILLING_PROOF_S3_BUCKET || '',
     region: process.env.BILLING_PROOF_S3_REGION || process.env.AWS_REGION || '',
     prefix: normalizeKey(process.env.BILLING_PROOF_S3_PREFIX || 'billing-proofs'),
-    accessKeyId: process.env.BILLING_PROOF_AWS_ACCESS_KEY_ID || process.env.AWS_ACCESS_KEY_ID,
-    secretAccessKey:
-      process.env.BILLING_PROOF_AWS_SECRET_ACCESS_KEY || process.env.AWS_SECRET_ACCESS_KEY,
+    accessKeyId: process.env.BILLING_PROOF_AWS_ACCESS_KEY_ID ||
+      (isProductionRuntime() ? undefined : process.env.AWS_ACCESS_KEY_ID),
+    secretAccessKey: process.env.BILLING_PROOF_AWS_SECRET_ACCESS_KEY ||
+      (isProductionRuntime() ? undefined : process.env.AWS_SECRET_ACCESS_KEY),
   };
 }
 
@@ -211,6 +224,11 @@ export async function readBillingProofDocument(input: {
   const normalizedStorageKey = normalizeKey(input.storageKey);
 
   if (adapter === 'local') {
+    if (isProductionRuntime()) {
+      throw new BillingProofStorageConfigurationError(
+        'Hosted billing proof retrieval cannot use local storage.',
+      );
+    }
     const absolutePath = path.join(getLocalRoot(), normalizedStorageKey);
     return readFile(absolutePath);
   }
@@ -219,9 +237,10 @@ export async function readBillingProofDocument(input: {
   const region = String(
     input.metadata?.storage_region || process.env.BILLING_PROOF_S3_REGION || process.env.AWS_REGION || '',
   );
-  const accessKeyId = process.env.BILLING_PROOF_AWS_ACCESS_KEY_ID || process.env.AWS_ACCESS_KEY_ID;
-  const secretAccessKey =
-    process.env.BILLING_PROOF_AWS_SECRET_ACCESS_KEY || process.env.AWS_SECRET_ACCESS_KEY;
+  const accessKeyId = process.env.BILLING_PROOF_AWS_ACCESS_KEY_ID ||
+    (isProductionRuntime() ? undefined : process.env.AWS_ACCESS_KEY_ID);
+  const secretAccessKey = process.env.BILLING_PROOF_AWS_SECRET_ACCESS_KEY ||
+    (isProductionRuntime() ? undefined : process.env.AWS_SECRET_ACCESS_KEY);
 
   if (!bucket || !region || !accessKeyId || !secretAccessKey) {
     throw new BillingProofStorageConfigurationError(
