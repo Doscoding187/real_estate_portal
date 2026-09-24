@@ -50,6 +50,14 @@ do not charge or seed a real customer for this proof. Clean controlled data
 through governed application or verification paths. An observed failure is a
 finding with an owner and severity, never silently normalized into a pass.
 
+The [B16 disposable-database walkthrough](evidence/b16-no-spend-convergence-preparation-2026-09-24.md)
+passed the local 95-migration canonical chain and 12 Agency integration tests,
+including Super Admin approval before invitation acceptance. Its subscription
+activation is a direct test fixture, so B18 must still exercise the actual
+payment-proof and finance-approval routes before counting the paid loop as
+accepted. The walkthrough's cleanup was narrowed to its exact Agency owner and
+the governed Search-to-Lead scenario passed again afterward.
+
 Acceptance is withheld until every P0/P1 is resolved or explicitly accepted
 under launch authority, and the exact protected target/runtime tuple is the
 one actually deployed. The Railway Pro/static outbound IP spend gate is a

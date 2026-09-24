@@ -49,6 +49,8 @@ backlog checks or the B11 object read/recovery exercise.
 Local evidence: the probe evaluator's five focused tests and `pnpm check`
 passed. Running `pnpm launch:probe` without an exact release tuple exited 2
 with a sanitized setup error, before any network request.
+The [Railway read-only recovery baseline](evidence/b17-railway-readonly-baseline-2026-09-24.md)
+records the existing Production services and the backup evidence still needed.
 
 ## Recovery sequence
 
