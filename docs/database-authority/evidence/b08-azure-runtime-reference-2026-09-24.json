@@ -1,10 +1,11 @@
 {
   "evidenceVersion": 1,
-  "verifiedBy": "2026-09-24T07:12:48Z",
+  "verifiedBy": "2026-09-24T07:23:33Z",
   "source": {
     "schemaSha": "0ed5d253568552d7b4492893c77ebc6850158220",
     "schemaTree": "4fca21e5b739a5abcc453964d16dba94c7887f2e",
-    "runtimeAuthorityCommit": "e09e6708"
+    "runtimeAuthorityCommit": "e09e6708",
+    "readinessCorrectionCommit": "8a2d9a31"
   },
   "targetFingerprintHash": "b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced",
   "runtime": {
@@ -12,8 +13,11 @@
     "credentialClass": "runtime",
     "secretFileMode": "0600",
     "grantedApplicationTables": 214,
-    "grantPlanDigest": "58f42389e76495048f32460f71c4cbe15bb85c9c1d5365426c0561383b75d1d5",
-    "actualGrantDigest": "e3d55046b37767d9a940d010c17fac11f7187a3d96818742f91e3bc5ad9e50f0",
+    "initialGrantPlanDigest": "58f42389e76495048f32460f71c4cbe15bb85c9c1d5365426c0561383b75d1d5",
+    "initialActualGrantDigest": "e3d55046b37767d9a940d010c17fac11f7187a3d96818742f91e3bc5ad9e50f0",
+    "grantPlanDigest": "90c9d4aca03ac0820ebfe0fdbbbfef0617859bc6959e610be3b949ec27457fd9",
+    "actualGrantDigest": "8a3dfba4d927add0e52624a931e5be2b4b1a9907f7830f36a1825036462630f9",
+    "ledgerSelectOnly": ["sql_migration_history", "sql_migration_attempts"],
     "selectedDatabase": "propertylistify_database",
     "tlsVersion": "TLSv1.3",
     "migrationControlTableDml": false,
@@ -53,11 +57,28 @@
     "myRowIdCount": 0,
     "controlledRowsRemaining": 0
   },
+  "runtimeDatabaseReadiness": {
+    "checkedAt": "2026-09-24T07:22:00.128Z",
+    "applicationReady": true,
+    "targetOwned": "approved-protected-target",
+    "migrationHead": "0094_content_topics_primary_key.sql",
+    "incompleteAttempts": 0,
+    "requiredApplicationTables": 214,
+    "schemaCongruent": true,
+    "desiredAndActualModelDigest": "a8ca8cf34bb3627594eab1b722b85115c6460225a0165db7992228a8547798e9",
+    "commercialFoundationReady": true,
+    "consumerApiEvaluated": false,
+    "browserJourneyEvaluated": false
+  },
   "firewall": {
     "temporaryRule": "b08-runtime-identity-20260924",
     "startIp": "197.79.59.199",
     "endIp": "197.79.59.199",
-    "removedAndVerifiedBy": "2026-09-24T07:12:48Z"
+    "removedAndVerifiedBy": "2026-09-24T07:12:48Z",
+    "readinessRule": "b08-runtime-readiness-20260924",
+    "readinessRuleStartIp": "197.79.59.199",
+    "readinessRuleEndIp": "197.79.59.199",
+    "readinessRuleRemovedAndVerifiedBy": "2026-09-24T07:23:33Z"
   },
   "railway": {
     "changed": false,
