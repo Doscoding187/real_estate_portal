@@ -150,18 +150,46 @@ function uniqueStringList(values: string[]): string[] {
 
 export function extractSubmitImages(
   wizardData: Record<string, any>,
-): { url: string; category?: string }[] {
-  const images: { url: string; category?: string }[] = [];
-  const heroUrl =
-    typeof wizardData.heroImage === 'string'
-      ? wizardData.heroImage
-      : (wizardData.heroImage?.url ?? wizardData.media?.heroImage?.url);
-  if (heroUrl) images.push({ url: heroUrl, category: 'hero' });
-
+): { url: string; category?: string; [key: string]: unknown }[] {
+  const images: { url: string; category?: string; [key: string]: unknown }[] = [];
   const photos = wizardData.media?.photos ?? [];
+  const rootHero = wizardData.heroImage;
+  const mediaHero = wizardData.media?.heroImage;
+  const rootHeroUrl = typeof rootHero === 'string' ? rootHero : rootHero?.url;
+  // The workflow exposes a string root `heroImage` for validation, while the
+  // media step retains the confirmed object (including its receipt) in the
+  // photo collection.  Prefer that authoritative object whenever the URLs
+  // identify the same hero; otherwise a valid confirmed upload is reduced to
+  // an arbitrary URL at the shared write boundary.
+  const hero =
+    (rootHero && typeof rootHero === 'object' ? rootHero : undefined) ??
+    (mediaHero && typeof mediaHero === 'object' ? mediaHero : undefined) ??
+    photos.find((photo: unknown) => {
+      if (!photo || typeof photo !== 'object') return false;
+      const url = (photo as Record<string, unknown>).url;
+      return typeof url === 'string' && url === rootHeroUrl;
+    }) ??
+    rootHero ??
+    mediaHero;
+  const heroUrl = typeof hero === 'string' ? hero : hero?.url;
+  const authorityFields = (item: unknown) => {
+    if (!item || typeof item !== 'object') return {};
+    const source = item as Record<string, unknown>;
+    const result: Record<string, unknown> = {};
+    for (const field of ['uploadReceipt', 'mediaReceipt', 'storageKey', 'key', 'fileName', 'fileSize']) {
+      if (source[field] !== undefined) result[field] = source[field];
+    }
+    return result;
+  };
+  if (heroUrl) images.push({ url: heroUrl, category: 'hero', ...authorityFields(hero) });
+
   photos.forEach((photo: { url: string; category?: string }) => {
     if (photo?.url && photo.url !== heroUrl) {
-      images.push({ url: photo.url, category: photo.category });
+      images.push({
+        url: photo.url,
+        category: photo.category,
+        ...authorityFields(photo),
+      });
     }
   });
 
@@ -191,6 +219,26 @@ export function extractSubmitDocumentUrls(wizardData: Record<string, any>): stri
       typeof document === 'string' ? document : document.url,
     )
     .filter(Boolean) as string[];
+}
+
+function extractConfirmedMediaItems(value: unknown): Array<string | Record<string, unknown>> {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map(item => {
+      if (typeof item === 'string') return item;
+      if (!item || typeof item !== 'object' || typeof (item as any).url !== 'string') return null;
+      const source = item as Record<string, unknown>;
+      const hasAuthority = ['uploadReceipt', 'mediaReceipt', 'storageKey', 'key'].some(
+        field => source[field] !== undefined,
+      );
+      if (!hasAuthority) return source.url as string;
+      const result: Record<string, unknown> = { url: source.url };
+      for (const field of ['uploadReceipt', 'mediaReceipt', 'storageKey', 'key', 'fileName', 'fileSize', 'type']) {
+        if (source[field] !== undefined) result[field] = source[field];
+      }
+      return result;
+    })
+    .filter((item): item is string | Record<string, unknown> => item !== null);
 }
 
 function hasSubmitMediaSource(wizardData: Record<string, any>): boolean {
@@ -544,14 +592,18 @@ export function buildDevelopmentSubmitPayload(input: DevelopmentSubmitPayloadInp
   const rentRange = getRentRange(unitTypes, isLand);
   const auctionRange = getAuctionRange(unitTypes, isLand);
   const images = extractSubmitImages(submitSource);
-  const videos = extractSubmitVideoUrls(submitSource);
+  const videos = extractConfirmedMediaItems(submitSource.media?.videos ?? []);
   // The wizard does not yet manage development-level floor plans (unit-level
   // floor plans live in unit baseMedia). Only send the bucket when the wizard
   // actually holds one, otherwise omit it so updateDevelopment preserves any
   // existing column value instead of wiping it to an empty array.
   const wizardManagesFloorPlans = Array.isArray((submitSource as any)?.media?.floorPlans);
-  const floorPlans = wizardManagesFloorPlans ? extractSubmitFloorPlanUrls(submitSource) : undefined;
-  const brochures = extractSubmitDocumentUrls(submitSource);
+  const floorPlans = wizardManagesFloorPlans
+    ? extractConfirmedMediaItems(submitSource.media?.floorPlans ?? [])
+    : undefined;
+  const brochures = extractConfirmedMediaItems(
+    submitSource.media?.documents ?? submitSource.media?.brochures ?? [],
+  );
   const mediaPayload = hasSubmitMediaSource(submitSource)
     ? {
         images,
@@ -560,9 +612,17 @@ export function buildDevelopmentSubmitPayload(input: DevelopmentSubmitPayloadInp
         brochures,
         media: {
           photos: images,
-          videos: videos.map(url => ({ url })),
-          ...(floorPlans !== undefined ? { floorPlans: floorPlans.map(url => ({ url })) } : {}),
-          brochures: brochures.map(url => ({ url })),
+          videos: videos.map(video => (typeof video === 'string' ? { url: video } : video)),
+          ...(floorPlans !== undefined
+            ? {
+                floorPlans: floorPlans.map(floorPlan =>
+                  typeof floorPlan === 'string' ? { url: floorPlan } : floorPlan,
+                ),
+              }
+            : {}),
+          brochures: brochures.map(brochure =>
+            typeof brochure === 'string' ? { url: brochure } : brochure,
+          ),
         },
       }
     : {};

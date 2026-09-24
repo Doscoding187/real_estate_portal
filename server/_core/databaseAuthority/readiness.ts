@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import {
   authorizeDatabaseOperation,
+  B08_AZURE_TARGET_FINGERPRINT_HASH,
   type AuthorizedDatabaseOperation,
   protectedDatabaseApprovalFromEnvironment,
 } from './authorization';
@@ -152,7 +153,18 @@ function notEvaluatedLayers() {
   };
 }
 
-function targetOwnershipLayer(authority: ResolvedDatabaseAuthority): ReadinessLayer {
+function targetOwnershipLayer(
+  authority: ResolvedDatabaseAuthority,
+  authorization?: AuthorizedDatabaseOperation,
+): ReadinessLayer {
+  if (authority.context.targetClass === 'production' &&
+      authority.context.targetFingerprintHash === B08_AZURE_TARGET_FINGERPRINT_HASH &&
+      authority.context.databaseName === 'propertylistify_database' &&
+      authority.context.tls.required && authority.context.tls.certificateVerificationRequired &&
+      authorization?.targetFingerprintHash === B08_AZURE_TARGET_FINGERPRINT_HASH) {
+    return layer('ready', 'approved-protected-target',
+      'The exact authorized B08 Azure production target is selected.');
+  }
   try {
     const ownership = requireReferenceAdapterTarget(authority);
     if (authority.context.targetClass === 'disposable-test') {
@@ -224,9 +236,10 @@ async function schemaCongruencyLayer(
     );
   }
   try {
+    const desired = normalizedDesiredSchema(canonicalSchema);
     const report = compareNormalizedSchemas(
-      normalizedDesiredSchema(canonicalSchema),
-      await normalizedPhysicalSchema(connection, provider),
+      desired,
+      await normalizedPhysicalSchema(connection, provider, desired),
     );
     const capability = await readTiDbCheckConstraintCapability(connection, provider);
     return schemaCongruencyReadinessLayer(report, capability);
@@ -365,7 +378,19 @@ export async function assessAuthorizedDatabaseReadiness(input: {
   }
 
   const requiredTables = inventoryTables(root);
-  const missingTables = requiredTables.filter(table => !tables.has(table));
+  const azureModeOne = context.targetFingerprintHash === B08_AZURE_TARGET_FINGERPRINT_HASH &&
+    context.targetClass === 'production';
+  if (azureModeOne) {
+    const mode = await queryRows(input.connection,
+      'SELECT @@global.lower_case_table_names AS lower_case_table_names');
+    if (Number(rowValue(mode[0] ?? {}, 'lower_case_table_names')) !== 1) {
+      throw new Error('B08 Azure readiness refused: lower_case_table_names is not 1.');
+    }
+  }
+  const physicalNames = azureModeOne
+    ? new Set([...tables].map(table => table.toLowerCase())) : tables;
+  const missingTables = requiredTables.filter(table =>
+    !physicalNames.has(azureModeOne ? table.toLowerCase() : table));
   const structuralSchema =
     missingTables.length === 0
       ? layer(
@@ -381,7 +406,7 @@ export async function assessAuthorizedDatabaseReadiness(input: {
           }.`,
         );
   const serviceAvailable = targetConnectivity;
-  const targetOwned = targetOwnershipLayer(input.authority);
+  const targetOwned = targetOwnershipLayer(input.authority, input.authorization);
   const schemaMigrated = migrationHead;
   const schemaCongruent = await schemaCongruencyLayer(input.connection, root, context.provider);
   let canonicalReferenceData = layer(

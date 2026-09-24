@@ -84,6 +84,17 @@ describe('public development eligibility authority', () => {
     });
   });
 
+  it('keeps a live Land development out of every generic public catalogue while Land is deferred', () => {
+    const result = evaluatePublicDevelopmentEligibility(
+      catalogue({ development: { developmentType: 'land' }, unitTypes: [] }),
+    );
+
+    expect(result).toMatchObject({
+      eligible: false,
+      reasons: expect.arrayContaining(['land_vertical_deferred']),
+    });
+  });
+
   it('keeps an approved developer development private without Launch Access', () => {
     const result = evaluatePublicDevelopmentEligibility(
       catalogue({

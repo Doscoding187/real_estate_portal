@@ -1,3 +1,8 @@
+import {
+  isPaidMvpLaunchAccessProductKey,
+  type PaidMvpLaunchAccessProductKey,
+} from '../../shared/commercialActivation';
+
 export const COMMERCIAL_TERM_KINDS = [
   'free_trial',
   'paid_launch_access',
@@ -22,6 +27,8 @@ export type VerifiedPaymentLike = {
 
 type PlanTermSource = {
   name?: string | null;
+  segment?: string | null;
+  isActive?: boolean | number | null;
   price?: number | null;
   priceMonthly?: number | null;
   trialDays?: number | null;
@@ -130,6 +137,40 @@ export function getCommercialProductKey(plan: PlanTermSource): string {
 }
 
 /**
+ * A paid-MVP entitlement is intentionally stricter than a generic paid plan.
+ * This shared check keeps historical recurring, trial, and future product rows
+ * from being mistaken for one of the approved 90-day Launch Access terms.
+ */
+export function getPaidMvpLaunchAccessProductKey(
+  plan: PlanTermSource,
+  expectedOwnerType?: 'agent' | 'agency' | 'developer',
+): PaidMvpLaunchAccessProductKey | null {
+  // Public read/capture paths must fail closed if a corrupted join or an
+  // incomplete fixture supplies no canonical plan row.
+  if (!plan || typeof plan !== 'object') return null;
+  const productKey = getCommercialProductKey(plan);
+  if (!isPaidMvpLaunchAccessProductKey(productKey)) return null;
+  if (expectedOwnerType && plan.segment !== expectedOwnerType) return null;
+  // The canonical plan row must explicitly be live.  Treat a partial or
+  // malformed projection as ineligible rather than inheriting launch access
+  // from a matching name alone.
+  if (Number(plan.isActive) !== 1) return null;
+
+  const term = resolveCommercialTerm(plan);
+  if (
+    term.kind !== 'paid_launch_access' ||
+    term.durationDays !== 90 ||
+    !term.requiresVerifiedPayment ||
+    term.autoRenews
+  ) {
+    return null;
+  }
+
+  const expectedKey = `${expectedOwnerType || plan.segment || ''}_launch_access`;
+  return productKey === expectedKey ? productKey : null;
+}
+
+/**
  * A launch fee is intentionally separate from the recurring plan price
  * columns. Those columns are non-null in the historical schema and a zero
  * value is therefore only a storage placeholder until the founder-approved
@@ -160,9 +201,30 @@ export function hasConfiguredCommercialPrice(plan: PlanTermSource): boolean {
 
 export function calculateCommercialTermEnd(start: Date, term: CommercialTerm): Date | null {
   if (term.kind !== 'paid_launch_access' || !term.durationDays) return null;
-  const end = new Date(start);
-  end.setUTCDate(end.getUTCDate() + term.durationDays);
-  return end;
+  return new Date(start.getTime() + term.durationDays * 24 * 60 * 60 * 1000);
+}
+
+/**
+ * Canonical commercial timestamps stored in MySQL DATETIME columns are UTC.
+ * Parsing them through the host-local timezone makes a fixed access term end
+ * at different moments on different workers, so normalize the SQL shape
+ * before evaluating any commercial authority.
+ */
+export function parseCanonicalCommercialTimestamp(
+  value: string | Date | null | undefined,
+): number | null {
+  if (!value) return null;
+  if (value instanceof Date) {
+    const timestamp = value.getTime();
+    return Number.isFinite(timestamp) ? timestamp : null;
+  }
+
+  const normalized = value.trim();
+  const utcValue = /^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(?:\.\d+)?$/.test(normalized)
+    ? `${normalized.replace(' ', 'T')}Z`
+    : normalized;
+  const timestamp = new Date(utcValue).getTime();
+  return Number.isFinite(timestamp) ? timestamp : null;
 }
 
 export function isPaidCommercialTermExpired(
@@ -173,9 +235,14 @@ export function isPaidCommercialTermExpired(
 ): boolean {
   if (term.kind !== 'paid_launch_access') return false;
   if (status !== 'active' && status !== 'grace_period') return false;
-  if (!currentPeriodEnd) return false;
-  const end = currentPeriodEnd instanceof Date ? currentPeriodEnd : new Date(currentPeriodEnd);
-  return !Number.isNaN(end.getTime()) && end.getTime() <= now.getTime();
+
+  // An active fixed-term Launch Access subscription cannot be valid without
+  // a canonical end. Grace periods retain their separate grace deadline
+  // authority, which is evaluated by the subscription row predicate.
+  if (!currentPeriodEnd) return status === 'active';
+
+  const end = parseCanonicalCommercialTimestamp(currentPeriodEnd);
+  return end === null || end <= now.getTime();
 }
 
 export function validatePaidLaunchAccessPayment(

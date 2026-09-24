@@ -22,8 +22,18 @@ export type DeveloperOnboardingStatus = {
   } | null;
 };
 
-export function useDeveloperOnboardingStatus() {
-  const { user, loading: authLoading } = useAuth({ redirectOnUnauthenticated: true });
+export type DeveloperOnboardingStatusOptions = {
+  /**
+   * Workspace routes that already own a contextual auth return path can turn
+   * this off so a nested status read cannot replace that path with `/login`.
+   */
+  redirectOnUnauthenticated?: boolean;
+};
+
+export function useDeveloperOnboardingStatus({
+  redirectOnUnauthenticated = true,
+}: DeveloperOnboardingStatusOptions = {}) {
+  const { user, loading: authLoading } = useAuth({ redirectOnUnauthenticated });
 
   const statusQuery = trpc.developer.getOnboardingStatus.useQuery(undefined, {
     enabled: user?.role === 'property_developer',

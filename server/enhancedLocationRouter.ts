@@ -17,6 +17,8 @@ import {
   COMMERCIAL_PUBLIC_JOURNEY_HANDOFF_MESSAGE,
   isCommercialMarketingPropertyType,
 } from '../shared/commercial-domain';
+import { excludeLandFromGenericPublicProjection } from './services/landLaunchContainmentService';
+import { resolvePublicPropertyEligibilityIds } from './services/publicPropertyEligibilityService';
 
 function rejectCommercialPropertyTypes(values: readonly unknown[] | undefined): void {
   if (!values?.some(value => isCommercialMarketingPropertyType(value))) return;
@@ -135,6 +137,7 @@ export const enhancedLocationRouter = router({
       const conditions = [
         eq(properties.status, 'published'),
         ne(properties.propertyType, 'commercial'),
+        excludeLandFromGenericPublicProjection(),
       ];
 
       // Location-based filtering
@@ -300,8 +303,20 @@ export const enhancedLocationRouter = router({
         );
       }
 
-      // Add pagination
-      const results = await orderedQuery.limit(input.limit).offset(input.offset);
+      // A published projection is not a current commercial assertion. Resolve
+      // the complete ordered candidate set through the shared public
+      // eligibility authority before applying pagination; otherwise an
+      // expired paid listing can remain discoverable on this legacy route.
+      const orderedCandidates = await orderedQuery;
+      const eligibleIds = new Set(
+        await resolvePublicPropertyEligibilityIds(
+          orderedCandidates.map(property => Number(property.id)),
+        ),
+      );
+      const eligibleCandidates = orderedCandidates.filter(property =>
+        eligibleIds.has(Number(property.id)),
+      );
+      const results = eligibleCandidates.slice(input.offset, input.offset + input.limit);
 
       // Enhance results with amenity data if requested
       const enhancedResults = await Promise.all(
@@ -333,8 +348,8 @@ export const enhancedLocationRouter = router({
 
       return {
         properties: enhancedResults,
-        total: enhancedResults.length,
-        hasMore: enhancedResults.length === input.limit,
+        total: eligibleCandidates.length,
+        hasMore: input.offset + input.limit < eligibleCandidates.length,
       };
     }),
 
@@ -473,6 +488,7 @@ export const enhancedLocationRouter = router({
       const conditions = [
         eq(properties.status, 'published'),
         ne(properties.propertyType, 'commercial'),
+        excludeLandFromGenericPublicProjection(),
       ];
       if (input.filters?.propertyType?.length) {
         conditions.push(
@@ -486,29 +502,48 @@ export const enhancedLocationRouter = router({
         conditions.push(sql`${properties.price} <= ${input.filters.maxPrice}`);
       }
 
+      const candidateRows = await db
+        .select({
+          id: properties.id,
+          latitude: properties.publicLatitude,
+          longitude: properties.publicLongitude,
+        })
+        .from(properties)
+        .where(and(...conditions));
+      const eligibleIds = new Set(
+        await resolvePublicPropertyEligibilityIds(candidateRows.map(row => Number(row.id))),
+      );
+      const countsByCell = new Map<string, number>();
+      for (const row of candidateRows) {
+        if (!eligibleIds.has(Number(row.id))) continue;
+        const latitude = Number(row.latitude);
+        const longitude = Number(row.longitude);
+        if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) continue;
+        const cellRow = Math.min(
+          input.gridSize - 1,
+          Math.max(0, Math.floor((latitude - input.bounds.south) / latStep)),
+        );
+        const cellColumn = Math.min(
+          input.gridSize - 1,
+          Math.max(0, Math.floor((longitude - input.bounds.west) / lngStep)),
+        );
+        const key = `${cellRow}:${cellColumn}`;
+        countsByCell.set(key, (countsByCell.get(key) || 0) + 1);
+      }
+
       for (let i = 0; i < input.gridSize; i++) {
         for (let j = 0; j < input.gridSize; j++) {
           const gridLat = input.bounds.south + i * latStep;
           const gridLng = input.bounds.west + j * lngStep;
+          const cellCount = countsByCell.get(`${i}:${j}`) || 0;
 
-          const cellConditions = [
-            ...conditions,
-            sql`${properties.publicLatitude} BETWEEN ${gridLat} AND ${gridLat + latStep}`,
-            sql`${properties.publicLongitude} BETWEEN ${gridLng} AND ${gridLng + lngStep}`,
-          ];
-
-          const [countResult] = await db
-            .select({ count: count() })
-            .from(properties)
-            .where(and(...cellConditions));
-
-          if (countResult?.count > 0) {
+          if (cellCount > 0) {
             heatmapData.push({
               latitude: gridLat + latStep / 2,
               longitude: gridLng + lngStep / 2,
-              count: countResult.count,
-              weight: Math.min(countResult.count / 10, 1),
-              intensity: Math.min(countResult.count / 5, 0.8),
+              count: cellCount,
+              weight: Math.min(cellCount / 10, 1),
+              intensity: Math.min(cellCount / 5, 0.8),
             });
           }
         }
@@ -543,10 +578,19 @@ export const enhancedLocationRouter = router({
         throw new Error('Property not found');
       }
 
-      if (isCommercialMarketingPropertyType(referenceProperty.propertyType)) {
+      const referenceEligibility = await resolvePublicPropertyEligibilityIds([input.propertyId]);
+      if (referenceEligibility.length === 0) return [];
+
+      if (
+        isCommercialMarketingPropertyType(referenceProperty.propertyType) ||
+        referenceProperty.propertyType === 'plot'
+      ) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
-          message: COMMERCIAL_PUBLIC_JOURNEY_HANDOFF_MESSAGE,
+          message:
+            referenceProperty.propertyType === 'plot'
+              ? 'Land uses the dedicated Land journey and is unavailable through generic property discovery.'
+              : COMMERCIAL_PUBLIC_JOURNEY_HANDOFF_MESSAGE,
         });
       }
 
@@ -564,6 +608,7 @@ export const enhancedLocationRouter = router({
       const conditions = [
         eq(properties.status, 'published'),
         ne(properties.propertyType, 'commercial'),
+        excludeLandFromGenericPublicProjection(),
         sql`${properties.id} != ${input.propertyId}`,
         sql`${properties.publicLatitude} IS NOT NULL
           AND ${properties.publicLongitude} IS NOT NULL
@@ -595,7 +640,7 @@ export const enhancedLocationRouter = router({
         );
       }
 
-      const similarProperties = await db
+      const similarCandidates = await db
         .select({
           id: properties.id,
           title: properties.title,
@@ -622,8 +667,15 @@ export const enhancedLocationRouter = router({
         })
         .from(properties)
         .where(and(...conditions))
-        .orderBy(sql`distance_km ASC`)
-        .limit(input.limit);
+        .orderBy(sql`distance_km ASC`);
+      const eligibleIds = new Set(
+        await resolvePublicPropertyEligibilityIds(
+          similarCandidates.map(property => Number(property.id)),
+        ),
+      );
+      const similarProperties = similarCandidates
+        .filter(property => eligibleIds.has(Number(property.id)))
+        .slice(0, input.limit);
 
       return similarProperties.map(property => {
         const publicCoordinates = normalizeCoordinatePair(property.latitude, property.longitude);
@@ -685,6 +737,7 @@ export const enhancedLocationRouter = router({
       const conditions = [
         eq(properties.status, 'published'),
         ne(properties.propertyType, 'commercial'),
+        excludeLandFromGenericPublicProjection(),
       ];
 
       if (locationValue && locationFilter) {
@@ -702,6 +755,23 @@ export const enhancedLocationRouter = router({
       if (input.listingType) {
         conditions.push(eq(properties.listingType, input.listingType as any));
       }
+
+      // Location insights are a public inventory aggregate. Restrict the
+      // aggregate to IDs admitted by the same eligibility authority used by
+      // cards and detail, so expired paid inventory cannot inflate counts or
+      // price statistics.
+      const candidateRows = await db
+        .select({ id: properties.id })
+        .from(properties)
+        .where(and(...conditions));
+      const eligibleIds = await resolvePublicPropertyEligibilityIds(
+        candidateRows.map(row => Number(row.id)),
+      );
+      conditions.push(
+        eligibleIds.length > 0
+          ? inArray(properties.id, eligibleIds)
+          : sql`1 = 0`,
+      );
 
       // Get price statistics
       const [priceStats] = await db

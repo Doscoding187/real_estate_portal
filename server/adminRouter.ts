@@ -44,11 +44,26 @@ import { nowAsDbTimestamp } from './utils/dbTypeUtils';
 import { developmentService } from './services/developmentService';
 import { resolvePropertiesForListings } from './services/inventoryLinkResolver';
 import { getDiscoveryOpsReport } from './services/discoveryOpsReportService';
+import { excludeLandFromGenericListingWorkflow } from './services/landLaunchContainmentService';
+import { reconcileUnknownTransactionalEmail, transactionalEmailBacklog } from './services/transactionalEmailDeliveryService';
+import { getCommercialActivationOperatorStatus } from './services/commercialActivationPolicy';
+import { updateUserRoleWithAudit } from './services/superAdminRoleAuthority';
 
 /**
  * Admin router - Super admin and agency admin endpoints
  */
 export const adminRouter = router({
+  getCommercialActivationStatus: superAdminProcedure.query(() =>
+    getCommercialActivationOperatorStatus(),
+  ),
+  getTransactionalEmailBacklog: superAdminProcedure.query(async () => transactionalEmailBacklog()),
+  reconcileUnknownTransactionalEmail: superAdminProcedure
+    .input(z.object({ deliveryId: z.number().int().positive(),
+      outcome: z.enum(['accepted', 'permanent_failed']),
+      providerReference: z.string().max(255).optional(), note: z.string().trim().min(1).max(500) }))
+    .mutation(async ({ input, ctx }) => reconcileUnknownTransactionalEmail({
+      ...input, actorUserId: ctx.user.id,
+    })),
   getDiscoveryOpsReport: superAdminProcedure.query(async () => {
     return getDiscoveryOpsReport();
   }),
@@ -70,7 +85,12 @@ export const adminRouter = router({
         updatedAt: listings.updatedAt,
       })
       .from(listings)
-      .where(inArray(listings.status, ['approved', 'published']))
+      .where(
+        and(
+          inArray(listings.status, ['approved', 'published']),
+          excludeLandFromGenericListingWorkflow(),
+        ),
+      )
       .orderBy(desc(listings.updatedAt));
 
     const resolvedMap = await resolvePropertiesForListings(db, candidateListings);
@@ -506,7 +526,10 @@ export const adminRouter = router({
         const offset = (input.page - 1) * input.limit;
 
         // Build where conditions
-        const conditions: SQL[] = [];
+        // This is the generic Listing oversight surface. The deferred Land
+        // vertical has its own specialist authority and must not reappear as
+        // a generic moderation candidate through an older direct route.
+        const conditions: SQL[] = [excludeLandFromGenericListingWorkflow()];
         if (input.role) conditions.push(eq(users.role, input.role));
         if (input.agencyId) conditions.push(eq(users.agencyId, input.agencyId));
         const search = input.search?.trim();
@@ -631,15 +654,12 @@ export const adminRouter = router({
       const db = await getDb();
       if (!db) throw new Error('Database not available');
 
-      await db.update(users).set({ role: input.role }).where(eq(users.id, input.userId));
-
-      await logAudit({
-        userId: ctx.user.id,
-        action: AuditActions.UPDATE_USER_ROLE,
-        targetType: 'user',
-        targetId: input.userId,
-        metadata: { newRole: input.role },
-        req: ctx.req,
+      await updateUserRoleWithAudit({
+        database: db,
+        actorUserId: ctx.user.id,
+        targetUserId: input.userId,
+        role: input.role,
+        requestId: ctx.requestId,
       });
 
       return { success: true };
@@ -1262,6 +1282,7 @@ export const adminRouter = router({
           status: agents.status,
           rejectionReason: agents.rejectionReason,
           createdAt: agents.createdAt,
+          updatedAt: agents.updatedAt,
           approvedAt: agents.approvedAt,
         })
         .from(agents)
@@ -1284,24 +1305,43 @@ export const adminRouter = router({
       const db = await getDb();
       if (!db) throw new Error('Database not available');
 
+      const [agent] = await db
+        .select({ userId: agents.userId, status: agents.status })
+        .from(agents)
+        .where(eq(agents.id, input.agentId))
+        .limit(1);
+
+      if (!agent) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Agent application not found',
+        });
+      }
+
+      if (agent.status !== 'pending' && agent.status !== 'rejected') {
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message:
+            agent.status === 'suspended'
+              ? 'Suspended agent accounts must be restored through their dedicated review process'
+              : 'Only pending or rejected agent profiles can be approved',
+        });
+      }
+
       await db
         .update(agents)
         .set({
           status: 'approved',
+          rejectionReason: null,
           approvedBy: ctx.user.id,
           approvedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
           updatedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
         })
         .where(eq(agents.id, input.agentId));
 
-      const [approvedAgent] = await db
-        .select({ userId: agents.userId })
-        .from(agents)
-        .where(eq(agents.id, input.agentId))
-        .limit(1);
-      if (approvedAgent?.userId) {
+      if (agent.userId) {
         await db.insert(notifications).values({
-          userId: approvedAgent.userId,
+          userId: agent.userId,
           type: 'system_alert',
           title: 'Profile approved',
           content:
@@ -1316,7 +1356,7 @@ export const adminRouter = router({
         action: AuditActions.APPROVE_JOIN_REQUEST,
         targetType: 'agent',
         targetId: input.agentId,
-        metadata: { status: 'approved' },
+        metadata: { status: 'approved', previousStatus: agent.status },
         req: ctx.req,
       });
 

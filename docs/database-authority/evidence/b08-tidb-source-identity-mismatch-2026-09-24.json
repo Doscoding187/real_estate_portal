@@ -1,0 +1,35 @@
+{
+  "evidenceVersion": 1,
+  "observedAt": "2026-09-24T09:22:43Z",
+  "operation": "read-only source identity comparison before TiDB reader provisioning",
+  "railwayProduction": {
+    "projectId": "8cdd7515-ddd2-4252-bbee-df5a5c209d4b",
+    "environmentId": "63070d99-357a-40ba-99c3-6d1368f61652",
+    "apiServiceId": "db88a720-2d1f-4afc-a3a8-6228b6b08d3e",
+    "databaseHost": "gateway01.ap-northeast-1.prod.aws.tidbcloud.com",
+    "databasePort": 4000,
+    "databaseName": "listify_property_sa",
+    "runtimeUsername": "42MAxcoJrgbJNnU.app-runtime",
+    "clusterPrefix": "42MAxcoJrgbJNnU"
+  },
+  "suppliedAdministrator": {
+    "databaseHost": "gateway01.ap-northeast-1.prod.aws.tidbcloud.com",
+    "databasePort": 4000,
+    "username": "292qWmvn2YGy2jW.root",
+    "clusterPrefix": "292qWmvn2YGy2jW",
+    "loginSucceeded": true,
+    "tlsHostnameVerified": true,
+    "tlsCipher": "TLS_AES_128_GCM_SHA256",
+    "selectedDatabase": null,
+    "databaseNameAlsoVisible": true,
+    "applicationRowsInspected": false
+  },
+  "finding": "The shared TiDB gateway and database name do not identify the same cluster. The supplied administrator prefix differs from Railway Production's runtime prefix, so it cannot establish an authorized production read-only identity for the current source.",
+  "disposition": {
+    "readerProvisioned": false,
+    "tidbDataInventoryStarted": false,
+    "sqlMutationPerformed": false,
+    "requiresCorrectClusterCredential": true,
+    "azureCutoverAuthorized": false
+  }
+}

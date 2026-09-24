@@ -21,14 +21,13 @@ import {
   type EntitlementMap,
   type PlanAccessProjection,
 } from './planAccessService';
-import { resolveCommercialTerm } from './commercialTerm';
+import { parseCanonicalCommercialTimestamp, resolveCommercialTerm } from './commercialTerm';
 
 type DeveloperLimitType = 'developments' | 'leads' | 'teamMembers';
 
 function toDate(value: string | Date | null | undefined): Date | null {
-  if (!value) return null;
-  const parsed = value instanceof Date ? value : new Date(value);
-  return Number.isNaN(parsed.getTime()) ? null : parsed;
+  const timestamp = parseCanonicalCommercialTimestamp(value);
+  return timestamp === null ? null : new Date(timestamp);
 }
 
 function getEntitlementNumberFromKeys(entitlements: EntitlementMap, keys: string[]): number {
@@ -166,10 +165,10 @@ export class DeveloperSubscriptionService {
   }
 
   /**
- * Return canonical commercial state plus usage derived from the current
- * organisation-owned facts. No historical developer subscription or usage
- * table is created or consulted by the new identity authority.
-  */
+   * Return canonical commercial state plus usage derived from the current
+   * organisation-owned facts. No historical developer subscription or usage
+   * table is created or consulted by the new identity authority.
+   */
   async getSubscription(developerId: number): Promise<DeveloperSubscriptionWithDetails | null> {
     const projection = await getPlanAccessProjectionForDeveloperId(developerId);
     if (
@@ -371,10 +370,7 @@ export class DeveloperSubscriptionService {
           .select({ count: sql<number>`COUNT(*)` })
           .from(leads)
           .where(
-            and(
-              eq(leads.cataloguePublisherId, publisherId),
-              gte(leads.createdAt, monthStartValue),
-            ),
+            and(eq(leads.cataloguePublisherId, publisherId), gte(leads.createdAt, monthStartValue)),
           )
       : [{ count: 0 }];
     const [memberResult] = await database

@@ -615,6 +615,7 @@ export function AgencyLeadsWorkspace(props: WorkspaceContentProps) {
                         inventory.
                       </div>
                     ) : null}
+                    <p className="text-xs text-slate-500">Viewing times use Africa/Johannesburg.</p>
                     <Input
                       type="datetime-local"
                       value={viewingAt}

@@ -522,7 +522,6 @@ export default function LeadsManager() {
             <SelectContent>
               <SelectItem value="all">All owners</SelectItem>
               <SelectItem value="developer_sales">Developer sales</SelectItem>
-              <SelectItem value="agency">Agency</SelectItem>
               <SelectItem value="unassigned">Unassigned</SelectItem>
             </SelectContent>
           </Select>

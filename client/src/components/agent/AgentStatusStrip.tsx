@@ -11,6 +11,9 @@ type StatusPayload = {
   approvalStatus: 'pending' | 'approved' | 'rejected' | 'suspended';
   subscriptionStatus?: string;
   recommendedNextStep?: AgentRecommendedNextStep;
+  commercial?: {
+    ownerSource?: 'individual_agent' | 'agency_admin' | 'agency_membership' | 'developer_membership';
+  };
 };
 
 type ApprovalTone = {
@@ -36,7 +39,8 @@ const APPROVAL_TONES: Record<string, ApprovalTone> = {
   },
   rejected: {
     label: 'Profile needs attention',
-    detail: 'Your profile was not approved. Contact Property Listify support for next steps.',
+    detail:
+      'Correct and save your profile details. An authorised reviewer must reconsider it before its status can change.',
     className: 'border-rose-200 bg-rose-50 text-rose-900',
     icon: ShieldX,
   },
@@ -48,7 +52,11 @@ const APPROVAL_TONES: Record<string, ApprovalTone> = {
   },
 };
 
-export function AgentStatusStrip() {
+export function AgentStatusStrip({
+  agentLaunchAccessAvailable = false,
+}: {
+  agentLaunchAccessAvailable?: boolean;
+}) {
   const [status, setStatus] = useState<StatusPayload | null>(null);
 
   useEffect(() => {
@@ -77,14 +85,21 @@ export function AgentStatusStrip() {
     suspended: 'Launch Access suspended',
   };
   const commercialLabel =
-    paidStates[status.subscriptionStatus ?? ''] ??
-    (status.packageSelected ? 'Commercial term in progress' : 'Launch Access not started');
-  const journeyAction = getAgentJourneyAction(status);
+    status.commercial?.ownerSource === 'agency_membership'
+      ? 'Your agency manages Launch Access'
+      : !agentLaunchAccessAvailable
+        ? 'Preparation-only onboarding'
+        : status.recommendedNextStep === 'await_agency_activation'
+      ? 'Agency Launch Access pending'
+      : (paidStates[status.subscriptionStatus ?? ''] ??
+        (status.packageSelected ? 'Commercial term in progress' : 'Launch Access not started'));
+  const journeyAction = getAgentJourneyAction(status, { agentLaunchAccessAvailable });
   const showJourneyAction = [
     'select_package',
     'complete_payment',
     'renew_launch_access',
     'contact_support',
+    'await_agency_activation',
   ].includes(status.recommendedNextStep || 'select_package');
 
   return (

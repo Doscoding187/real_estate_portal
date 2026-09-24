@@ -6,6 +6,7 @@ const {
   mockResolvePropertyForListing,
   mockCommercialLeadContextCandidateIds,
   mockLoadCommercialLeadContext,
+  mockResolveCurrentAgencyMembershipForAgent,
 } =
   vi.hoisted(() => ({
     mockGetDb: vi.fn(),
@@ -13,6 +14,7 @@ const {
     mockResolvePropertyForListing: vi.fn(),
     mockCommercialLeadContextCandidateIds: vi.fn(),
     mockLoadCommercialLeadContext: vi.fn(),
+    mockResolveCurrentAgencyMembershipForAgent: vi.fn(),
   }));
 
 vi.mock('../db', () => ({
@@ -35,6 +37,10 @@ vi.mock('../services/commercialLeadContextService', () => ({
   commercialLeadContextCandidateIds: mockCommercialLeadContextCandidateIds,
   loadCommercialLeadContext: mockLoadCommercialLeadContext,
   loadCommercialLeadContexts: vi.fn(),
+}));
+
+vi.mock('../services/agencyMembershipService', () => ({
+  resolveCurrentAgencyMembershipForAgent: mockResolveCurrentAgencyMembershipForAgent,
 }));
 
 import { agentRouter } from '../agentRouter';
@@ -84,10 +90,11 @@ describe('agent canonical inventory authority', () => {
         .map(lead => Number(lead.id)),
     );
     mockLoadCommercialLeadContext.mockResolvedValue(null);
+    mockResolveCurrentAgencyMembershipForAgent.mockResolvedValue(null);
   });
 
   it('requests only canonical scheduling options', async () => {
-    const select = createSelectSequence([[{ id: 7 }]]);
+    const select = createSelectSequence([[{ id: 7, status: 'approved' }]]);
     mockGetDb.mockResolvedValue({ select } as any);
     mockGetAgentInventorySchedulingOptions.mockResolvedValue([]);
 
@@ -99,7 +106,7 @@ describe('agent canonical inventory authority', () => {
 
   it('blocks showing booking when no canonical property link exists', async () => {
     const select = createSelectSequence([
-      [{ id: 7 }],
+      [{ id: 7, status: 'approved' }],
       [
         {
           id: 55,
@@ -133,7 +140,7 @@ describe('agent canonical inventory authority', () => {
     await expect(
       caller.bookShowing({
         listingId: 55,
-        scheduledAt: '2026-03-12T10:00:00.000Z',
+        scheduledAt: '2026-03-12 10:00:00',
         visitorName: 'Buyer Example',
       }),
     ).rejects.toThrow('not linked to canonical property inventory');
@@ -143,7 +150,7 @@ describe('agent canonical inventory authority', () => {
 
   it('persists the canonical property id when booking a showing', async () => {
     const select = createSelectSequence([
-      [{ id: 7 }],
+      [{ id: 7, status: 'approved' }],
       [
         {
           id: 55,
@@ -187,7 +194,7 @@ describe('agent canonical inventory authority', () => {
         propertyId: 5001,
         agentId: 7,
         visitorName: 'Buyer Example',
-        scheduledAt: '2026-03-12T10:00:00.000Z',
+        scheduledAt: '2026-03-12 10:00:00',
         status: 'confirmed',
       }),
     );
@@ -195,7 +202,7 @@ describe('agent canonical inventory authority', () => {
 
   it('does not let a Commercial lead be booked against unrelated generic inventory', async () => {
     const select = createSelectSequence([
-      [{ id: 7 }],
+      [{ id: 7, status: 'approved' }],
       [
         {
           id: 55,
@@ -250,7 +257,7 @@ describe('agent canonical inventory authority', () => {
 
   it('keeps Commercial property records out of generic agent inventory', async () => {
     const select = createOrderedSelectSequence([
-      [{ id: 7 }],
+      [{ id: 7, status: 'approved' }],
       [
         {
           id: 501,
@@ -277,6 +284,7 @@ describe('agent canonical inventory authority', () => {
 
   it('refuses a generic agent archive for a Commercial property record', async () => {
     const select = createSelectSequence([
+      [{ id: 7, status: 'approved' }],
       [
         {
           id: 503,

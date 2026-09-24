@@ -1,0 +1,34 @@
+{
+  "evidenceVersion": 1,
+  "observedAt": "2026-09-24T09:32:29Z",
+  "operation": "source-instance identification from Railway Production configuration and TiDB Cloud Connect details supplied by the owner",
+  "railwayProduction": {
+    "projectId": "8cdd7515-ddd2-4252-bbee-df5a5c209d4b",
+    "environmentId": "63070d99-357a-40ba-99c3-6d1368f61652",
+    "serviceId": "db88a720-2d1f-4afc-a3a8-6228b6b08d3e",
+    "databaseHost": "gateway01.ap-northeast-1.prod.aws.tidbcloud.com",
+    "databasePort": 4000,
+    "databaseName": "listify_property_sa",
+    "usernamePrefix": "42MAxcoJrgbJNnU"
+  },
+  "tidbCloudOwnerReported": {
+    "instanceName": "listify-property-canonical",
+    "instanceId": "10492391619114516879",
+    "status": "Active",
+    "plan": "Starter",
+    "region": "AWS Tokyo (ap-northeast-1)",
+    "tidbVersion": "v8.5.3",
+    "connectUsername": "42MAxcoJrgbJNnU.root",
+    "connectDatabase": "listify_property_sa",
+    "passwordProvided": false,
+    "caPathProvided": false
+  },
+  "disposition": {
+    "instanceNameAndPrefixMatchRailway": true,
+    "directSourceConnectionVerified": false,
+    "readerProvisioned": false,
+    "sourceDataInventoried": false,
+    "sourceMutationPerformed": false,
+    "cutoverAuthorized": false
+  }
+}

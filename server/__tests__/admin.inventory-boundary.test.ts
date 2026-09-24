@@ -197,4 +197,24 @@ describe('admin canonical inventory boundary and settings', () => {
     expect(mockSetPlatformSetting).toHaveBeenCalledWith('maintenance_mode', false, 99);
     expect(result).toEqual({ success: true });
   });
+
+  it('exposes commercial release status only to super-admin operators', async () => {
+    const status = await createSuperAdminCaller().getCommercialActivationStatus();
+    expect(['preparation_only', 'valid']).toContain(status.status);
+    expect(typeof status.enabled).toBe('boolean');
+    expect(Array.isArray(status.enabledProductKeys)).toBe(true);
+    expect(status.releaseId === null || typeof status.releaseId === 'string').toBe(true);
+    expect(status.approvalRef === null || typeof status.approvalRef === 'string').toBe(true);
+    expect(typeof status.buildSha).toBe('string');
+
+    const ordinaryCaller = adminRouter.createCaller({
+      user: { id: 12, role: 'visitor', email: 'customer@example.test' } as any,
+      req: {} as any,
+      res: {} as any,
+      requestId: 'customer-status-denied',
+    } as any);
+    await expect(ordinaryCaller.getCommercialActivationStatus()).rejects.toMatchObject({
+      code: 'FORBIDDEN',
+    });
+  });
 });

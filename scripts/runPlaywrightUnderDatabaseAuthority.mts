@@ -28,13 +28,14 @@ async function main(): Promise<void> {
   // settings (such as the session secret) too. Pass those values only to the
   // child processes; do not print or persist them.
   const environment = resolveDatabaseEnvironment({ processEnv: process.env });
+  const browserTestEnvironment = databaseAuthorityChildEnvironment(authority, environment.values);
 
   const rawArgs = process.argv.slice(2);
   const passthrough = rawArgs[0] === '--' ? rawArgs.slice(1) : rawArgs;
   const result = spawnSync('playwright', ['test', ...passthrough], {
     cwd: process.cwd(),
     stdio: 'inherit',
-    env: databaseAuthorityChildEnvironment(authority, environment.values),
+    env: browserTestEnvironment,
   });
   if (result.error) throw result.error;
   process.exit(result.status ?? 1);

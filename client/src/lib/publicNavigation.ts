@@ -7,6 +7,7 @@ import {
 import { PROVINCE_SLUGS } from '@/lib/locationUtils';
 import { parseDeployEnv } from './env.contract';
 import { COMMERCIAL_SEARCH_QUERY_KEYS } from '@shared/commercialSearchContract';
+import { isLandVerticalAvailable } from '@shared/landLaunchPolicy';
 
 export type PublicNavigationCapabilityStatus =
   | 'LAUNCH_READY'
@@ -237,8 +238,9 @@ export const PUBLIC_HERO_JOURNEYS: readonly PublicHeroJourneyDefinition[] = [
     mobileLabel: 'Plots & Land',
     kind: 'property-search',
     destination: '/plots-and-land',
-    // Product-complete locally; hosted exposure remains controlled by the
-    // existing public-journey release manifest.
+    // The specialist implementation remains available for a separately
+    // accepted release, but the first-cohort disposition is deferred by the
+    // shared Land launch policy.
     productHomepageVisible: true,
     productHomepageEnabled: true,
     supportedFields: ['location', 'landType', 'sizeMin', 'sizeMax', 'minPrice', 'maxPrice'],
@@ -301,11 +303,15 @@ export function getPublicHeroJourney(
     PUBLIC_HERO_JOURNEY_BY_KEY.get(key) ||
     PUBLIC_HERO_JOURNEY_BY_KEY.get(DEFAULT_PUBLIC_HERO_JOURNEY)!;
   const released = isPublicHeroJourneyReleased(journey.key, releaseContext);
+  const productDispositionAllowsExposure =
+    journey.key !== 'plot_land' || isLandVerticalAvailable();
 
   return {
     ...journey,
-    homepageVisible: journey.productHomepageVisible && released,
-    homepageEnabled: journey.productHomepageEnabled && released,
+    homepageVisible:
+      journey.productHomepageVisible && released && productDispositionAllowsExposure,
+    homepageEnabled:
+      journey.productHomepageEnabled && released && productDispositionAllowsExposure,
   };
 }
 
@@ -463,7 +469,7 @@ export const PUBLIC_NAVIGATION_MENUS: PublicNavigationMenu[] = [
             label: 'Plots and land',
             href: getPublicHeroJourney('plot_land').destination,
             owner: 'land-engine',
-            capability: 'LAUNCH_READY',
+            capability: 'DEFERRED',
             activeHref: '/plots-and-land',
             journey: 'plot_land',
           }),

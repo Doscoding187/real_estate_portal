@@ -1,4 +1,5 @@
 export * from './core';
+export * from './transactionalEmail';
 export * from './agencies';
 export * from './locations';
 export * from './googlePlacesMonitoring';

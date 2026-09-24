@@ -40,7 +40,8 @@
       "scripts/databaseAuthorityStatus.ts",
       "scripts/databaseUtilityAuthorityCheck.ts",
       "scripts/generateCanonicalModelInventory.ts",
-      "scripts/verifyIsolatedCiDatabaseIdentities.ts"
+      "scripts/verifyIsolatedCiDatabaseIdentities.ts",
+      "server/_core/databaseAuthority/b08AzureInspectionIdentity.ts"
     ],
     "supportedDiagnostics": ["scripts/print-db-target.ts", "scripts/schema-sanity-check.mjs"],
     "supportedReplacements": [
@@ -272,7 +273,7 @@
     "verify-cleanup.ts"
   ],
   "classificationDefinitions": {
-    "canonicalAndAuthoritySupport": "Repository-owned authority inspection, contract orchestration, target guards and workflow helpers. These do not create a competing migration, seed or repair authority.",
+    "canonicalAndAuthoritySupport": "Repository-owned authority inspection, contract orchestration, target guards and workflow helpers, including the exact B08 Azure inspector identity provisioner. These do not create a competing migration, seed or repair authority.",
     "supportedDiagnostics": "The two retained offline diagnostics: schema:sanity and db:target. Connected verification remains under the supported db:verify commands.",
     "supportedReplacements": "Guarded supported diagnostic verification, local lifecycle shell authority and disposable E2E orchestration.",
     "localTestLifecycle": "Canonical local/test database initialization and lifecycle orchestration; role-specific reference, foundation, demo, scenario and test-fixture data is owned by the named Database Authority adapters.",
@@ -294,7 +295,7 @@
       "retiredOperationalExceptions": 3,
       "retiredPaths": ["database-check.ts", "quick-check.ts", "scripts/quick-check.ts"]
     },
-    "guardedOperationalSurfaceCountAtClosure": 119,
+    "guardedOperationalSurfaceCountAtClosure": 120,
     "operationalSurfaceDefinition": "A current source path within the guard boundary that has direct database-client, execution, SQL mutation/inspection, or ambient-target capability signals. Historical documentation, ordinary runtime data access, migrations, tests and non-capable authority files are not counted as operational surfaces."
   },
   "policy": {

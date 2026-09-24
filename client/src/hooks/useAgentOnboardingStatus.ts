@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useLocation } from 'wouter';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { apiFetch } from '@/lib/api';
+import { useCommercialProductAvailability } from '@/hooks/useCommercialProductAvailability';
 import type {
   AgentRecommendedNextStep,
   AgentSubscriptionDisplayStatus,
@@ -11,6 +12,7 @@ export type AgentEntitlementsSnapshot = {
   trialExpired: boolean;
   canPublishListings: boolean;
   canReceiveLeads: boolean;
+  canAccessExistingLeads: boolean;
   canAppearInDirectory: boolean;
   trialStatusDetail: {
     status: 'active' | 'expired' | 'none';
@@ -40,6 +42,11 @@ export type AgentOnboardingStatus = {
   recommendedNextStep: AgentRecommendedNextStep;
   subscriptionTier: string;
   subscriptionStatus: AgentSubscriptionDisplayStatus;
+  commercial?: {
+    ownerType: 'agent' | 'agency' | 'developer';
+    ownerId: number;
+    ownerSource: 'individual_agent' | 'agency_admin' | 'agency_membership' | 'developer_membership';
+  };
   trialStartedAt?: string | null;
   trialEndsAt?: string | null;
   profile?: {
@@ -62,6 +69,7 @@ export function useAgentOnboardingStatus(options: UseAgentOnboardingStatusOption
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [requestVersion, setRequestVersion] = useState(0);
+  const commercialAvailability = useCommercialProductAvailability('agent_launch_access');
   const retry = useCallback(() => {
     setRequestVersion(version => version + 1);
   }, []);
@@ -119,5 +127,8 @@ export function useAgentOnboardingStatus(options: UseAgentOnboardingStatusOption
     isLoading: authLoading || isLoading,
     error,
     retry,
+    agentLaunchAccessAvailable: commercialAvailability.isAvailable,
+    commercialAvailabilityError: commercialAvailability.isError,
+    retryCommercialAvailability: commercialAvailability.refetch,
   };
 }

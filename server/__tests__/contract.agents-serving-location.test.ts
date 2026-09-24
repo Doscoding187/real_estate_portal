@@ -29,7 +29,20 @@ function makeQueueDb(results: Array<Record<string, unknown>[] | Record<string, u
   };
 }
 
-const SUBURB_ROW = [{ name: 'Bryanston' }];
+const SUBURB_ROW = [{ id: 501 }];
+
+const launchPlan = (segment: 'agent' | 'agency') => ({
+  name: `${segment}_launch_access`,
+  segment,
+  isActive: 1,
+  metadata: {
+    commercial_term_kind: 'paid_launch_access',
+    commercial_product_key: `${segment}_launch_access`,
+    commercial_term_duration_days: 90,
+    commercial_requires_verified_payment: true,
+    commercial_auto_renews: false,
+  },
+});
 
 const baseAgent = {
   id: 33,
@@ -39,10 +52,9 @@ const baseAgent = {
   lastName: 'Nkosi',
   profileImage: 'amina.jpg',
   isVerified: 1,
-  areasServed: 'Bryanston, Sandton',
-  agencyName: null,
-  agencyLogo: null,
-  agencyVerified: null,
+  areasServed: JSON.stringify([
+    { canonicalLocationId: 'suburb:501', label: 'Bryanston, Sandton, Gauteng' },
+  ]),
 };
 
 describe('agents serving location authority', () => {
@@ -50,7 +62,16 @@ describe('agents serving location authority', () => {
     const { db } = makeQueueDb([
       SUBURB_ROW,
       [baseAgent],
-      [{ ownerId: 70, status: 'active', currentPeriodEnd: '2099-01-01 00:00:00' }],
+      [
+        {
+          subscription: {
+            ownerId: 70,
+            status: 'active',
+            currentPeriodEnd: '2099-01-01 00:00:00',
+          },
+          plan: launchPlan('agent'),
+        },
+      ],
     ]);
     const result: AgentAreaRecommendationDto[] = await findAgentsServingLocation(
       db as never,
@@ -70,16 +91,13 @@ describe('agents serving location authority', () => {
     });
   });
 
-  it('excludes an unentitled solo agent affiliated with an unverified agency', async () => {
-    const { db } = makeQueueDb([
-      SUBURB_ROW,
-      [{ ...baseAgent, userId: 71, isVerified: 0, agencyVerified: 0 }],
-    ]);
+  it('excludes an unentitled agent without a verified current agency membership', async () => {
+    const { db } = makeQueueDb([SUBURB_ROW, [{ ...baseAgent, userId: 71, isVerified: 0 }], [], []]);
     const result = await findAgentsServingLocation(db as never, 'suburb', 501);
     expect(result).toEqual([]);
   });
 
-  it('includes an unbadged agent whose agency is verified', async () => {
+  it('includes an unbadged agent whose current canonical membership belongs to a verified agency', async () => {
     const { db } = makeQueueDb([
       SUBURB_ROW,
       [
@@ -87,9 +105,35 @@ describe('agents serving location authority', () => {
           ...baseAgent,
           userId: 72,
           isVerified: 0,
-          agencyName: 'North Star Realty',
-          agencyLogo: 'northstar.png',
-          agencyVerified: 1,
+        },
+      ],
+      [],
+      [
+        {
+          id: 901,
+          agentId: 33,
+          agencyId: 81,
+          status: 'active',
+          effectiveFrom: null,
+          effectiveTo: null,
+        },
+      ],
+      [
+        {
+          id: 81,
+          name: 'North Star Realty',
+          logo: 'northstar.png',
+          isVerified: 1,
+        },
+      ],
+      [
+        {
+          subscription: {
+            ownerId: 81,
+            status: 'active',
+            currentPeriodEnd: '2099-01-01 00:00:00',
+          },
+          plan: launchPlan('agency'),
         },
       ],
     ]);
@@ -105,10 +149,31 @@ describe('agents serving location authority', () => {
   it('fails closed on partial or non-exact area claims', async () => {
     const { db } = makeQueueDb([
       SUBURB_ROW,
-      [{ ...baseAgent, areasServed: 'Bryanston Ext, Sandton City' }],
+      [
+        {
+          ...baseAgent,
+          areasServed: JSON.stringify([
+            { canonicalLocationId: 'suburb:502', label: 'Bryanston Ext, Sandton City' },
+          ]),
+        },
+      ],
     ]);
     const result = await findAgentsServingLocation(db as never, 'suburb', 501);
     expect(result).toEqual([]);
+  });
+
+  it('does not retain text matching in the canonical recipient boundary', () => {
+    const source = readFileSync(
+      path.resolve(process.cwd(), 'server/services/agentPublicProfileService.ts'),
+      'utf8',
+    );
+
+    expect(source).toContain("JSON_OBJECT('canonicalLocationId'");
+    expect(source).not.toContain('LOWER(${agents.areasServed}) LIKE');
+    expect(source).not.toContain('splitTextList(agent.areasServed)');
+    expect(source).not.toContain('leftJoin(agencies, eq(agents.agencyId, agencies.id))');
+    expect(source).toContain('listCurrentActiveAgencyMembershipsByAgentId');
+    expect(source).toContain("eq(subscriptions.ownerType, 'agent')");
   });
 
   it('returns nothing for an unknown or retired location', async () => {

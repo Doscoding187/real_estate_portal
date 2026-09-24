@@ -23,6 +23,14 @@ vi.mock('@/hooks/useDeveloperOnboardingStatus', () => ({
   useDeveloperOnboardingStatus: (...args: unknown[]) => onboardingStatusMock(...args),
 }));
 
+vi.mock('@/hooks/useCommercialProductAvailability', () => ({
+  useCommercialProductAvailability: () => ({
+    isAvailable: false,
+    isError: false,
+    refetch: vi.fn(),
+  }),
+}));
+
 vi.mock('@/components/developer/DeveloperLayout', () => ({
   DeveloperLayout: ({ children }: { children: ReactNode }) => children,
 }));
@@ -61,6 +69,14 @@ afterEach(() => {
 });
 
 describe('Developer workspace onboarding-status failure handling', () => {
+  it('keeps contextual authentication redirects owned by the workspace router', () => {
+    onboardingStatusMock.mockReturnValue(approvedStatusState());
+
+    render(createElement(DeveloperRoutes));
+
+    expect(onboardingStatusMock).toHaveBeenCalledWith({ redirectOnUnauthenticated: false });
+  });
+
   it('never mistakes a failed status query for a missing organisation', () => {
     onboardingStatusMock.mockReturnValue({
       status: null,

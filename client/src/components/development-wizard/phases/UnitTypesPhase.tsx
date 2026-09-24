@@ -216,6 +216,7 @@ export function UnitTypesPhase() {
   );
   const isRental = transactionType === 'for_rent';
   const isAuction = transactionType === 'auction';
+  const editingDevelopmentId = useDevelopmentWizard(state => state.editingId);
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -281,7 +282,8 @@ export function UnitTypesPhase() {
 
   const [unitGallery, setUnitGallery] = useState<MediaItem[]>([]);
   const [floorPlanImages, setFloorPlanImages] = useState<MediaItem[]>([]);
-  const presignMutation = trpc.upload.presign.useMutation();
+  const reserveMediaUpload = trpc.developer.reserveMediaUpload.useMutation();
+  const confirmMediaUpload = trpc.developer.confirmMediaUpload.useMutation();
 
   // Auto-Save Draft (Only when adding new unit)
   useEffect(() => {
@@ -788,36 +790,48 @@ export function UnitTypesPhase() {
   };
 
   const handleMediaUpload = async (files: File[], category: 'gallery' | 'floorPlans') => {
-    // Simplified upload logic for brevity in this execution block
-    // (In production this would reuse the robust uploader from MediaPhase)
-    for (const file of files) {
-      const { url, publicUrl } = await presignMutation.mutateAsync({
-        filename: file.name,
-        contentType: file.type,
-      });
-      const uploadResponse = await fetch(url, {
-        method: 'PUT',
-        body: file,
-        headers: { 'Content-Type': file.type },
-      });
-      if (!uploadResponse.ok) {
-        throw new Error(`Upload failed with status ${uploadResponse.status}.`);
+    try {
+      for (const file of files) {
+        const persistedUnitId =
+          editingId && !editingId.startsWith('unit-') ? editingId : undefined;
+        const reservation = await reserveMediaUpload.mutateAsync({
+          filename: file.name,
+          contentType: file.type,
+          category: category === 'gallery' ? 'unit_gallery' : 'unit_floorplan',
+          ...(editingDevelopmentId ? { developmentId: editingDevelopmentId } : {}),
+          ...(persistedUnitId ? { unitId: persistedUnitId } : {}),
+        });
+        const uploadResponse = await fetch(reservation.uploadUrl, {
+          method: 'PUT',
+          body: file,
+          headers: { 'Content-Type': file.type },
+        });
+        if (!uploadResponse.ok) {
+          throw new Error(`Upload failed with status ${uploadResponse.status}.`);
+        }
+        const confirmed = await confirmMediaUpload.mutateAsync({
+          uploadReceipt: reservation.uploadReceipt,
+        });
+        const newItem: MediaItem = {
+          id: `u-${Date.now()}-${Math.random()}`,
+          url: confirmed.url,
+          type: category === 'floorPlans' && file.type === 'application/pdf' ? 'pdf' : 'image',
+          category: category === 'gallery' ? 'photo' : 'floorplan',
+          isPrimary: category === 'gallery' && unitGallery.length === 0,
+          displayOrder: 0,
+          fileName: confirmed.fileName,
+          fileSize: confirmed.fileSize,
+          storageKey: confirmed.key,
+          uploadReceipt: confirmed.uploadReceipt,
+        };
+
+        if (category === 'gallery') setUnitGallery(prev => [...prev, newItem]);
+        else setFloorPlanImages(prev => [...prev, newItem]);
       }
-
-      const newItem: MediaItem = {
-        id: `u-${Date.now()}-${Math.random()}`,
-        url: publicUrl,
-        type: 'image',
-        category: category === 'gallery' ? 'photo' : 'floorplan',
-        isPrimary: category === 'gallery' && unitGallery.length === 0,
-        displayOrder: 0,
-        fileName: file.name,
-      };
-
-      if (category === 'gallery') setUnitGallery(prev => [...prev, newItem]);
-      else setFloorPlanImages(prev => [...prev, newItem]);
+      toast.success('Upload complete');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Unit media upload failed.');
     }
-    toast.success('Upload complete');
   };
 
   // --- RENDERERS ---
@@ -1685,8 +1699,10 @@ export function UnitTypesPhase() {
                         onReorder={reordered => {
                           setUnitGallery(
                             reordered.map(
-                              (r, i) =>
-                                ({
+                              (r, i) => {
+                                const existing = unitGallery.find(item => item.id === r.id);
+                                return {
+                                  ...existing,
                                   id: r.id,
                                   url: r.url,
                                   type: 'image',
@@ -1694,7 +1710,8 @@ export function UnitTypesPhase() {
                                   isPrimary: i === 0,
                                   displayOrder: i,
                                   fileName: r.fileName,
-                                }) as MediaItem,
+                                } as MediaItem;
+                              },
                             ),
                           );
                         }}

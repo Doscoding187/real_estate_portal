@@ -100,6 +100,7 @@ export function FinalisationPhase({
     classification,
     listingIdentity,
     setPhase,
+    setWorkflowStep,
     reset,
     validateForPublish,
     getCardFieldRecommendations,
@@ -643,7 +644,7 @@ export function FinalisationPhase({
               title="Identity & Type"
               icon={Home}
               step={1}
-              onEdit={() => setPhase(1)}
+              onEdit={() => setWorkflowStep('identity_market')}
               data={
                 <div className="grid grid-cols-2 gap-4">
                   <div>
@@ -670,7 +671,7 @@ export function FinalisationPhase({
               title="Location"
               icon={MapPin}
               step={2}
-              onEdit={() => setPhase(5)}
+              onEdit={() => setWorkflowStep('location')}
               data={
                 <div>
                   <span className="block text-xs uppercase text-slate-400 font-semibold tracking-wider">
@@ -690,7 +691,7 @@ export function FinalisationPhase({
               title="Amenities & Features"
               icon={Share2}
               step={6}
-              onEdit={() => setPhase(7)}
+              onEdit={() => setWorkflowStep('amenities_features')}
               data={
                 <div className="flex flex-wrap gap-2">
                   {reviewAmenities.map((a: string) => (
@@ -709,7 +710,7 @@ export function FinalisationPhase({
               title="Marketing & Media"
               icon={ImageIcon}
               step={8}
-              onEdit={() => setPhase(9)}
+              onEdit={() => setWorkflowStep('marketing_summary')}
               data={
                 <div className="space-y-3">
                   <p className="line-clamp-2 italic text-slate-500">
@@ -771,7 +772,7 @@ export function FinalisationPhase({
               title="Unit Configuration"
               icon={Layers}
               step={9}
-              onEdit={() => setPhase(10)}
+              onEdit={() => setWorkflowStep('unit_types')}
               data={
                 <div className="space-y-2">
                   {(wizardData.unitTypes ?? []).length === 0 ? (

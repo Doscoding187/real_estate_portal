@@ -233,17 +233,43 @@ describe('commercial catalog projection', () => {
   });
 
   it('filters products by the requested canonical audience', () => {
-    const developerPlan = plan({ id: 42, segment: 'developer', name: 'developer_growth' });
-    const inactivePlan = plan({ id: 43, isActive: 0 });
+    const launchMetadata = (fee: number) => ({
+      commercial_term_kind: 'paid_launch_access',
+      commercial_term_duration_days: 90,
+      commercial_requires_verified_payment: true,
+      commercial_auto_renews: false,
+      commercial_price_configured: true,
+      commercial_launch_fee_minor: fee,
+    });
+    const agencyLaunchPlan = plan({
+      id: 41,
+      name: 'agency_launch_access',
+      displayName: 'Agency Launch Access',
+      metadata: launchMetadata(99_900),
+    });
+    const developerPlan = plan({
+      id: 42,
+      segment: 'developer',
+      name: 'developer_launch_access',
+      displayName: 'Developer Launch Access',
+      metadata: launchMetadata(149_900),
+    });
+    const inactivePlan = plan({
+      id: 43,
+      name: 'agent_launch_access',
+      segment: 'agent',
+      metadata: launchMetadata(49_900),
+      isActive: 0,
+    });
 
-    expect(filterCommercialPlans([plan(), developerPlan, inactivePlan], 'agency')).toEqual([
-      plan(),
+    expect(filterCommercialPlans([agencyLaunchPlan, developerPlan, inactivePlan], 'agency')).toEqual([
+      agencyLaunchPlan,
     ]);
-    expect(filterCommercialPlans([plan(), developerPlan, inactivePlan], 'developer')).toEqual([
+    expect(filterCommercialPlans([agencyLaunchPlan, developerPlan, inactivePlan], 'developer')).toEqual([
       developerPlan,
     ]);
-    expect(filterCommercialPlans([plan(), developerPlan, inactivePlan])).toEqual([
-      plan(),
+    expect(filterCommercialPlans([agencyLaunchPlan, developerPlan, inactivePlan])).toEqual([
+      agencyLaunchPlan,
       developerPlan,
     ]);
   });

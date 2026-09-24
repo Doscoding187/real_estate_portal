@@ -48,6 +48,15 @@ export type MigrationLockEvidence = {
   ownershipVerified: true;
 };
 
+export type FreshEstablishmentSessionEvidence = {
+  connectionId: string;
+  generatedInvisiblePrimaryKeyBefore: 0 | 1;
+  generatedInvisiblePrimaryKeyAfter: 0;
+  requirePrimaryKey: 0;
+  lowerCaseTableNames: 0 | 1;
+  timeZone: '+00:00';
+};
+
 export type MigrationPlan = {
   planVersion: 1;
   planId: string;
@@ -178,6 +187,85 @@ export async function queryMigrationRows(
   values: readonly unknown[] = [],
 ): Promise<Array<Record<string, unknown>>> {
   return rowsFromResult(await connection.execute(statement, values));
+}
+
+export async function establishFreshMysqlMigrationSession(
+  connection: AuthoritySqlConnection,
+): Promise<FreshEstablishmentSessionEvidence> {
+  const flag = (value: unknown): 0 | 1 | null =>
+    String(value) === '0' ? 0 : String(value) === '1' ? 1 : null;
+  const before = (await queryMigrationRows(connection,
+    'SELECT CONNECTION_ID() AS connection_id, @@session.sql_generate_invisible_primary_key AS generated_invisible_primary_key, @@session.sql_require_primary_key AS require_primary_key, @@global.lower_case_table_names AS lower_case_table_names, @@session.time_zone AS time_zone',
+  ))[0] ?? {};
+  const connectionId = String(rowValue(before, 'connection_id') ?? '');
+  const generatedBefore = flag(rowValue(before, 'generated_invisible_primary_key'));
+  const requirePrimaryKey = flag(rowValue(before, 'require_primary_key'));
+  const lowerCaseTableNames = flag(rowValue(before, 'lower_case_table_names'));
+  if (!connectionId || generatedBefore === null ||
+      lowerCaseTableNames === null || requirePrimaryKey === null ||
+      rowValue(before, 'time_zone') !== '+00:00') {
+    throw new Error('Fresh MySQL establishment refused: session settings could not be verified.');
+  }
+  if (requirePrimaryKey !== 0) {
+    throw new Error('Fresh MySQL establishment refused: sql_require_primary_key=ON prevents the immutable baseline.');
+  }
+  try {
+    await connection.query('SET SESSION sql_generate_invisible_primary_key = OFF');
+  } catch (error) {
+    const code = String((error as { code?: unknown })?.code ?? 'unknown')
+      .replace(/[^A-Z0-9_]/gi, '_').slice(0, 64);
+    throw new Error(`Fresh MySQL establishment refused: generated invisible primary keys could not be disabled for this session (${code}).`);
+  }
+  const after = (await queryMigrationRows(connection,
+    'SELECT CONNECTION_ID() AS connection_id, @@session.sql_generate_invisible_primary_key AS generated_invisible_primary_key, @@session.sql_require_primary_key AS require_primary_key, @@global.lower_case_table_names AS lower_case_table_names, @@session.time_zone AS time_zone',
+  ))[0] ?? {};
+  if (String(rowValue(after, 'connection_id') ?? '') !== connectionId ||
+      flag(rowValue(after, 'generated_invisible_primary_key')) !== 0 ||
+      flag(rowValue(after, 'require_primary_key')) !== 0 ||
+      flag(rowValue(after, 'lower_case_table_names')) !== lowerCaseTableNames ||
+      rowValue(after, 'time_zone') !== '+00:00') {
+    throw new Error('Fresh MySQL establishment refused: migration session contract changed or could not be verified.');
+  }
+  return {
+    connectionId,
+    generatedInvisiblePrimaryKeyBefore: generatedBefore,
+    generatedInvisiblePrimaryKeyAfter: 0,
+    requirePrimaryKey: 0,
+    lowerCaseTableNames,
+    timeZone: '+00:00',
+  };
+}
+
+export async function assertPrimaryKeyMigrationPreconditions(
+  connection: AuthoritySqlConnection,
+  filename: string,
+): Promise<void> {
+  const checks: Record<string, { table: string; nullPredicate: string; columns: string }> = {
+    '0093_user_onboarding_state_primary_key.sql': {
+      table: 'user_onboarding_state',
+      nullPredicate: '`user_id` IS NULL',
+      columns: '`user_id`',
+    },
+    '0094_content_topics_primary_key.sql': {
+      table: 'content_topics',
+      nullPredicate: '`content_id` IS NULL OR `topic_id` IS NULL',
+      columns: '`content_id`, `topic_id`',
+    },
+  };
+  const check = checks[filename];
+  if (!check) return;
+  const nullRows = await queryMigrationRows(connection,
+    `SELECT 1 AS conflict FROM \`${check.table}\` WHERE ${check.nullPredicate} LIMIT 1`,
+  );
+  if (nullRows.length > 0) {
+    throw new Error(`Primary-key migration precondition failed for ${check.table}: null identity component.`);
+  }
+  const duplicateRows = await queryMigrationRows(connection,
+    `SELECT 1 AS conflict FROM \`${check.table}\` GROUP BY ${check.columns} HAVING COUNT(*) > 1 LIMIT 1`,
+  );
+  if (duplicateRows.length > 0) {
+    throw new Error(`Primary-key migration precondition failed for ${check.table}: duplicate identity.`);
+  }
 }
 
 export async function assertRunnerConnectionTarget(
@@ -602,6 +690,7 @@ async function applyPlan(input: {
     )!;
     const statements = parseSqlStatements(readFileSync(entry.absolutePath, 'utf8'));
     await assertRunnerConnectionTarget(input.connection, input.authority);
+    await assertPrimaryKeyMigrationPreconditions(input.connection, migration.filename);
     const attemptId = await beginAttempt(
       input.connection,
       input.authority,
@@ -696,6 +785,7 @@ export async function runSqlMigrations(options: SqlMigrationOptions = {}) {
   );
   let lockAcquired = false;
   let lockEvidence: MigrationLockEvidence | null = null;
+  let freshSessionEvidence: FreshEstablishmentSessionEvidence | null = null;
   try {
     await assertRunnerConnectionTarget(connection, authority);
     const initialState = await readDatabaseMigrationState(connection, manifest);
@@ -720,7 +810,11 @@ export async function runSqlMigrations(options: SqlMigrationOptions = {}) {
     }
 
     if (mode === 'plan') {
-      return { mode, plan, lock: null, applied: [] as string[] };
+      return { mode, plan, lock: null, applied: [] as string[], freshSessionEvidence: null };
+    }
+
+    if (initialControlState === 'fresh-establishment' && authority.context.provider === 'mysql') {
+      freshSessionEvidence = await establishFreshMysqlMigrationSession(connection);
     }
 
     // TiDB can accept CHECK syntax while enforcement is disabled and then
@@ -768,7 +862,7 @@ export async function runSqlMigrations(options: SqlMigrationOptions = {}) {
         options.applicationArtifact ?? process.env.GITHUB_SHA ?? process.env.RAILWAY_GIT_COMMIT_SHA,
       lockEvidence: lockEvidence!,
     });
-    return { mode, plan: lockedPlan, lock: lockEvidence, applied };
+    return { mode, plan: lockedPlan, lock: lockEvidence, applied, freshSessionEvidence };
   } finally {
     if (lockAcquired) {
       await releaseMigrationLock(connection, manifest.document.lockName);
@@ -793,6 +887,7 @@ if (isDirectExecution) {
             expectedNewHead: result.plan.expectedNewHead,
             lock: result.lock,
             applied: result.applied,
+            freshSessionEvidence: result.freshSessionEvidence,
           },
           null,
           2,

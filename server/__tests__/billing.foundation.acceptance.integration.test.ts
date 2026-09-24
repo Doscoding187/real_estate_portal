@@ -411,7 +411,7 @@ describeWithDb('billing foundation persisted acceptance', () => {
         })
         .where(eq(subscriptions.id, renewedRows.subscription.id));
       const expiredAccess = await agencyCaller.agency.getAccessState();
-      expect(expiredAccess.billingStatus).toBe('active');
+      expect(expiredAccess.billingStatus).toBe('expired');
       expect(expiredAccess.workspaceAccess.publishing).toBe(false);
     },
     45_000,

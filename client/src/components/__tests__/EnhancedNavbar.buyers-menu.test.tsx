@@ -64,10 +64,9 @@ describe('EnhancedNavbar buyer discovery menu', () => {
     const developmentsLinks = within(region).getAllByRole('link', { name: 'New developments' });
     expect(developmentsLinks).toHaveLength(1);
     expect(developmentsLinks[0]).toHaveAttribute('href', '/new-developments');
-    expect(within(region).getByRole('link', { name: 'Plots and land' })).toHaveAttribute(
-      'href',
-      '/plots-and-land',
-    );
+    expect(
+      within(region).queryByRole('link', { name: 'Plots and land' }),
+    ).not.toBeInTheDocument();
     expect(
       within(region).queryByRole('link', { name: 'Commercial property' }),
     ).not.toBeInTheDocument();

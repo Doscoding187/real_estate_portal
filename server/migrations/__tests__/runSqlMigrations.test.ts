@@ -16,6 +16,8 @@ import {
   buildMysqlMigrationConnectionConfig,
   canonicalBaselineCutoverError,
   migrationChecksum,
+  assertPrimaryKeyMigrationPreconditions,
+  establishFreshMysqlMigrationSession,
   runSqlMigrations,
   sortMigrationFiles,
 } from '../runSqlMigrations';
@@ -154,6 +156,13 @@ class FakeMigrationConnection implements AuthoritySqlConnection {
   ended = false;
   connectionId = '314';
   lockOwnerConnectionId = '314';
+  generatedInvisiblePrimaryKey = 1;
+  requirePrimaryKey = 0;
+  lowerCaseTableNames = 1;
+  refuseGeneratedKeySetting = false;
+  ignoreGeneratedKeySetting = false;
+  switchConnectionAfterSetting = false;
+  primaryKeyConflict: 'null' | 'duplicate' | null = null;
 
   constructor(selectedDatabase: string) {
     this.selectedDatabase = selectedDatabase;
@@ -171,6 +180,26 @@ class FakeMigrationConnection implements AuthoritySqlConnection {
     }
     if (statement.startsWith('SELECT DATABASE()')) {
       return [[{ database_name: this.selectedDatabase }]];
+    }
+    if (statement.startsWith('SELECT CONNECTION_ID() AS connection_id, @@session.sql_generate_invisible_primary_key')) {
+      return [[{
+        connection_id: this.connectionId,
+        generated_invisible_primary_key: this.generatedInvisiblePrimaryKey,
+        require_primary_key: this.requirePrimaryKey,
+        lower_case_table_names: this.lowerCaseTableNames,
+        time_zone: '+00:00',
+      }]];
+    }
+    if (statement === 'SET SESSION sql_generate_invisible_primary_key = OFF') {
+      if (this.refuseGeneratedKeySetting) throw new Error('permission denied');
+      if (!this.ignoreGeneratedKeySetting) this.generatedInvisiblePrimaryKey = 0;
+      if (this.switchConnectionAfterSetting) this.connectionId = '315';
+      return {};
+    }
+    if (statement.includes(' AS conflict FROM `')) {
+      if (this.primaryKeyConflict === 'null' && statement.includes(' WHERE ')) return [[{ conflict: 1 }]];
+      if (this.primaryKeyConflict === 'duplicate' && statement.includes(' GROUP BY ')) return [[{ conflict: 1 }]];
+      return [[]];
     }
     if (statement.startsWith('SHOW GLOBAL VARIABLES LIKE')) {
       return [[
@@ -601,6 +630,63 @@ describe('manifest migration planning and durable attempts', () => {
     ]);
     expect(connection.historyTablePresent).toBe(true);
     expect(connection.attemptTablePresent).toBe(true);
+    expect(result.freshSessionEvidence).toMatchObject({
+      connectionId: '314',
+      generatedInvisiblePrimaryKeyBefore: 1,
+      generatedInvisiblePrimaryKeyAfter: 0,
+      requirePrimaryKey: 0,
+      lowerCaseTableNames: 1,
+      timeZone: '+00:00',
+    });
+    expect(connection.queryCalls.some(call => call.statement === 'SET SESSION sql_generate_invisible_primary_key = OFF')).toBe(true);
+    expect(connection.calls.findIndex(call => call.statement === 'SET SESSION sql_generate_invisible_primary_key = OFF'))
+      .toBeLessThan(connection.calls.findIndex(call => call.statement.includes('GET_LOCK')));
+  });
+
+  it.each([
+    ['cannot set', (connection: FakeMigrationConnection) => { connection.refuseGeneratedKeySetting = true; }],
+    ['cannot verify', (connection: FakeMigrationConnection) => { connection.ignoreGeneratedKeySetting = true; }],
+    ['requires a primary key', (connection: FakeMigrationConnection) => { connection.requirePrimaryKey = 1; }],
+  ])('refuses fresh DDL when the session %s', async (_label, configure) => {
+    const fixture = migrationFixture(false);
+    const { authority, authorization } = authorityFor('apply');
+    const connection = new FakeMigrationConnection(authority.context.databaseName);
+    configure(connection);
+    await expect(runSqlMigrations({
+      mode: 'apply', migrationsDir: fixture.root, manifestPath: fixture.manifestPath,
+      authority, authorization, acceptedOldHead: null,
+      expectedNewHead: fixture.entries[0].filename,
+      connectionFactory: async () => connection,
+    })).rejects.toThrow('Fresh MySQL establishment refused');
+    expect(connection.calls.some(call => call.statement.includes('GET_LOCK'))).toBe(false);
+    expect(connection.calls.some(call => call.statement.startsWith('CREATE TABLE'))).toBe(false);
+  });
+
+  it('rejects a session switch after setting GIPK off', async () => {
+    const connection = new FakeMigrationConnection('fixture');
+    connection.switchConnectionAfterSetting = true;
+    await expect(establishFreshMysqlMigrationSession(connection))
+      .rejects.toThrow('migration session contract changed');
+  });
+
+  it('rejects duplicate or null PK identities before a migration attempt', async () => {
+    const connection = new FakeMigrationConnection('fixture');
+    connection.primaryKeyConflict = 'duplicate';
+    await expect(assertPrimaryKeyMigrationPreconditions(connection, '0093_user_onboarding_state_primary_key.sql'))
+      .rejects.toThrow('duplicate identity');
+    await expect(assertPrimaryKeyMigrationPreconditions(connection, '0094_content_topics_primary_key.sql'))
+      .rejects.toThrow('duplicate identity');
+    connection.primaryKeyConflict = 'null';
+    await expect(assertPrimaryKeyMigrationPreconditions(connection, '0093_user_onboarding_state_primary_key.sql'))
+      .rejects.toThrow('null identity component');
+    await expect(assertPrimaryKeyMigrationPreconditions(connection, '0094_content_topics_primary_key.sql'))
+      .rejects.toThrow('null identity component');
+    expect(connection.calls.some(call => call.statement.startsWith('ALTER TABLE'))).toBe(false);
+    connection.primaryKeyConflict = null;
+    await expect(assertPrimaryKeyMigrationPreconditions(connection, '0093_user_onboarding_state_primary_key.sql'))
+      .resolves.toBeUndefined();
+    await expect(assertPrimaryKeyMigrationPreconditions(connection, '0094_content_topics_primary_key.sql'))
+      .resolves.toBeUndefined();
   });
 
   it('uses the non-prepared query path for transactional control statements', async () => {

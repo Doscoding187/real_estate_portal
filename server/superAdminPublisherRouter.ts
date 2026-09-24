@@ -17,6 +17,7 @@ import { resolveOperatingIdentity } from './_core/identityResolver';
 import type { EnhancedTRPCContext } from './_core/publisherContext';
 import { sanitizeDraftData } from './lib/sanitizeDraftData';
 import { getDeveloperOperatingHome } from './services/developerOperatingHome';
+import { assertLandDevelopmentDraftOperationAvailable } from './services/developerEngineContainment';
 
 async function requireActivePublisherContext(ctx: EnhancedTRPCContext, cataloguePublisherId: number) {
   const identity = await resolveOperatingIdentity(ctx, {
@@ -395,6 +396,10 @@ export const superAdminPublisherRouter = router({
     )
     .mutation(async ({ input, ctx }) => {
       const operatingContext = await requireActivePublisherContext(ctx, input.cataloguePublisherId);
+      assertLandDevelopmentDraftOperationAvailable(
+        input.draftData,
+        'Land development draft preparation',
+      );
       const sanitized = sanitizeDraftData(input.draftData ?? {});
       const currentStep = Math.max(0, Number((sanitized as any).currentPhase ?? 0));
       const progress = Math.min(100, Math.max(0, Math.round((currentStep / 11) * 100)));
@@ -413,13 +418,17 @@ export const superAdminPublisherRouter = router({
 
       if (input.id) {
         const [existing] = await database
-          .select({ id: developmentDrafts.id })
+          .select({ id: developmentDrafts.id, draftData: developmentDrafts.draftData })
           .from(developmentDrafts)
           .where(and(eq(developmentDrafts.id, input.id), scope))
           .limit(1);
         if (!existing) {
           throw new TRPCError({ code: 'NOT_FOUND', message: 'Curated draft not found' });
         }
+        assertLandDevelopmentDraftOperationAvailable(
+          existing.draftData,
+          'Land development draft preparation',
+        );
 
         await database
           .update(developmentDrafts)

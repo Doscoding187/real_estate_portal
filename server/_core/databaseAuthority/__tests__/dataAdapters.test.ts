@@ -195,11 +195,11 @@ describe('bounded Database Authority data adapters', () => {
           !('runtimeCompatibilityIds' in row) && !('environmentRuntimeCompatibilityIds' in row),
       ),
     ).toBe(true);
-    expect(SEARCH_TO_LEAD_SCENARIO_VERSION).toBe('search-to-lead-v3');
+    expect(SEARCH_TO_LEAD_SCENARIO_VERSION).toBe('search-to-lead-v5');
     expect(SEARCH_TO_LEAD_SCENARIO_DIGEST).toMatch(/^[a-f0-9]{64}$/);
     expect(CANONICAL_FOUNDATION_VERSION).toBe('canonical-launch-foundation-v1');
     expect(CANONICAL_FOUNDATION_DIGEST).toMatch(/^[a-f0-9]{64}$/);
-    expect(CANONICAL_COMMERCIAL_VERSION).toBe('canonical-commercial-v3');
+    expect(CANONICAL_COMMERCIAL_VERSION).toBe('canonical-commercial-v4');
     expect(CANONICAL_COMMERCIAL_DIGEST).toMatch(/^[a-f0-9]{64}$/);
     expect(CANONICAL_DEVELOPER_LAUNCH_ACCESS).toMatchObject({
       name: 'developer_launch_access',
@@ -217,6 +217,7 @@ describe('bounded Database Authority data adapters', () => {
       commercial_price_configured: true,
       commercial_launch_fee_minor: 149900,
       commercial_billing_interval: 'once_off',
+      tax_treatment: 'not_vat_registered',
     });
   });
 
@@ -402,7 +403,7 @@ describe('bounded Database Authority data adapters', () => {
     ]);
     expect(plan.products.every(product => product.state === 'missing')).toBe(true);
     expect(plan.pending.filter(item => item.action === 'insert_plan')).toHaveLength(3);
-    expect(plan.migrationHead).toBe('0090_retire_disconnected_boost_campaigns.sql');
+    expect(plan.migrationHead).toBe('0094_content_topics_primary_key.sql');
   });
 
   it('fails closed when a protected commercial row conflicts with canonical authority', async () => {

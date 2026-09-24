@@ -1,6 +1,9 @@
-import { getWorkerDb, resetDb } from '../server/db-connection';
+import { getWorkerDb, shutdownDb } from '../server/db-connection';
+import { assertNoDeployedTestConfiguration } from '../server/_core/securityRuntimeConfiguration';
+import { assertHostedRuntimeConfiguration } from '../server/_core/hostedRuntimeConfiguration';
 import {
   runLeadDeliveryWorker,
+  getLeadDeliveryBacklog,
   type LeadDeliveryDispatcher,
 } from '../server/services/leadDeliveryService';
 import { dispatchPublisherLeadDelivery } from '../server/services/publisherLeadService';
@@ -31,11 +34,23 @@ const dispatcher: LeadDeliveryDispatcher = async claim => {
   };
 };
 
+assertNoDeployedTestConfiguration();
+assertHostedRuntimeConfiguration();
+
 const database = await getWorkerDb();
 if (!database) throw new Error('Database unavailable');
 try {
   const result = await runLeadDeliveryWorker({ database, dispatcher, limit: 25 });
-  console.log(JSON.stringify(result));
+  const backlog = await getLeadDeliveryBacklog(database);
+  console.log(JSON.stringify({
+    kind: 'lead-delivery-run',
+    completedAt: new Date().toISOString(),
+    result,
+    backlog,
+  }));
+  if (result.unknown || backlog.unknown || backlog.exhausted) {
+    process.exitCode = 2;
+  }
 } finally {
-  resetDb();
+  await shutdownDb();
 }

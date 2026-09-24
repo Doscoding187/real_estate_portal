@@ -337,6 +337,322 @@ describe('immutable resolved database context and operation authorization', () =
     });
   });
 
+  it('registers only the exact Azure production target for approved read-only operations', () => {
+    const identity = fixtureIdentity();
+    const target =
+      'mysql://propertylistify-mysql.mysql.database.azure.com:3306/propertylistify_database';
+    const resolve = (
+      operation: 'read-only-connect' | 'diagnostics' | 'readiness' | 'release-plan' | 'release-apply' | 'runtime-connect',
+      credentialClass: 'read-only' | 'runtime' | 'lifecycle-admin' = 'read-only',
+      databaseUrl = target,
+    ) =>
+      resolveDatabaseAuthority({
+        operation,
+        cwd: identity.worktreePath,
+        gitIdentity: identity,
+        explicitDatabaseUrl: databaseUrl,
+        credentialClass,
+        processEnv: { NODE_ENV: 'production', APP_ENV: 'production' },
+      });
+
+    for (const operation of ['read-only-connect', 'diagnostics', 'readiness', 'release-plan'] as const) {
+      const authority = resolve(operation);
+      expect(authority.context.targetClass).toBe('production');
+      expect(authority.context.targetFingerprint).toBe(target);
+      expect(authority.context.targetFingerprintHash).toBe(
+        'b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced',
+      );
+      expect(authority.context.tls).toEqual({
+        required: true,
+        certificateVerificationRequired: true,
+      });
+      expect(() => authorizeDatabaseOperation(authority, { root: process.cwd() })).toThrow(
+        'protected target requires an exact operation and fingerprint approval',
+      );
+      expect(() =>
+        authorizeDatabaseOperation(authority, {
+          root: process.cwd(),
+          approval: {
+            reference: 'B08-TEST-ONLY',
+            actor: 'test-reviewer',
+            operation: 'runtime-connect',
+            targetFingerprintHash: authority.context.targetFingerprintHash,
+          },
+        }),
+      ).toThrow('protected target requires an exact operation and fingerprint approval');
+      expect(() =>
+        authorizeDatabaseOperation(authority, {
+          root: process.cwd(),
+          approval: {
+            reference: 'B08-TEST-ONLY',
+            actor: 'test-reviewer',
+            operation,
+            targetFingerprintHash: 'not-the-approved-target',
+          },
+        }),
+      ).toThrow('protected target requires an exact operation and fingerprint approval');
+      expect(() =>
+        authorizeDatabaseOperation(authority, {
+          root: process.cwd(),
+          approval: {
+            reference: 'B08-TEST-ONLY',
+            actor: 'test-reviewer',
+            operation,
+            targetFingerprintHash: authority.context.targetFingerprintHash,
+          },
+        }),
+      ).not.toThrow();
+    }
+
+    for (const other of [
+      'mysql://other.mysql.database.azure.com:3306/propertylistify_database',
+      'mysql://propertylistify-mysql.mysql.database.azure.com:3306/propertylistify_other',
+      'mysql://propertylistify-mysql.mysql.database.azure.com:3307/propertylistify_database',
+    ]) {
+      const authority = resolve('read-only-connect', 'read-only', other);
+      expect(authority.context.targetClass).toBe('shared-remote');
+      expect(() => authorizeDatabaseOperation(authority, { root: process.cwd() })).toThrow(
+        'fails closed',
+      );
+    }
+
+    for (const [operation, credentialClass] of [
+      ['release-apply', 'read-only'],
+      ['runtime-connect', 'read-only'],
+      ['read-only-connect', 'lifecycle-admin'],
+    ] as const) {
+      const authority = resolve(operation, credentialClass);
+      expect(() => authorizeDatabaseOperation(authority, { root: process.cwd() })).toThrow(
+        'credential class',
+      );
+    }
+  });
+
+  it('confines B08 inspection identity provisioning to the exact Azure target and account', () => {
+    const identity = fixtureIdentity();
+    const resolve = (databaseUrl: string, credentialClass: 'bootstrap-admin' | 'runtime' = 'bootstrap-admin') =>
+      resolveDatabaseAuthority({
+        operation: 'inspection-identity-provision',
+        cwd: identity.worktreePath,
+        gitIdentity: identity,
+        explicitDatabaseUrl: databaseUrl,
+        credentialClass,
+        processEnv: { NODE_ENV: 'production', APP_ENV: 'production' },
+      });
+    const target = 'mysql://propertylistify-mysql.mysql.database.azure.com:3306/propertylistify_database';
+    const authority = resolve(target);
+    const approval = {
+      reference: 'B08-TEST-ONLY',
+      actor: 'test-reviewer',
+      operation: 'inspection-identity-provision' as const,
+      targetFingerprintHash: authority.context.targetFingerprintHash,
+      credentialClass: 'bootstrap-admin' as const,
+      inspectionIdentity: 'propertylistify_b08_inspector',
+    };
+    expect(() => authorizeDatabaseOperation(authority, { root: process.cwd() })).toThrow(
+      'exact B08 Azure inspection identity approval',
+    );
+    expect(() => authorizeDatabaseOperation(authority, {
+      root: process.cwd(),
+      approval: { ...approval, inspectionIdentity: 'some_other_user' },
+    })).toThrow('exact B08 Azure inspection identity approval');
+    expect(() => authorizeDatabaseOperation(authority, {
+      root: process.cwd(),
+      approval: { ...approval, credentialClass: 'read-only' },
+    })).toThrow('exact B08 Azure inspection identity approval');
+    expect(() => authorizeDatabaseOperation(authority, {
+      root: process.cwd(),
+      approval: { ...approval, targetFingerprintHash: 'wrong' },
+    })).toThrow('protected target requires an exact operation and fingerprint approval');
+    expect(() => authorizeDatabaseOperation(authority, { root: process.cwd(), approval })).not.toThrow();
+
+    const tidb = resolve('mysql://old.tidbcloud.com:3306/listify_property_sa');
+    expect(tidb.context.targetClass).toBe('production');
+    expect(() => authorizeDatabaseOperation(tidb, {
+      root: process.cwd(),
+      approval: { ...approval, targetFingerprintHash: tidb.context.targetFingerprintHash },
+    })).toThrow('exact B08 Azure inspection identity approval');
+    const wrongClass = resolve(target, 'runtime');
+    expect(() => authorizeDatabaseOperation(wrongClass, { root: process.cwd(), approval })).toThrow(
+      'credential class',
+    );
+  });
+
+  it('confines TiDB source reader provisioning to the exact production source and SELECT-only grant', () => {
+    const identity = fixtureIdentity();
+    const resolve = (databaseUrl: string) => resolveDatabaseAuthority({
+      operation: 'tidb-source-reader-provision',
+      cwd: identity.worktreePath,
+      gitIdentity: identity,
+      explicitDatabaseUrl: databaseUrl,
+      credentialClass: 'bootstrap-admin',
+      processEnv: { NODE_ENV: 'production', APP_ENV: 'production' },
+    });
+    const source = resolve('mysql://gateway01.ap-northeast-1.prod.aws.tidbcloud.com:4000/listify_property_sa');
+    const approval = {
+      reference: 'B08-TIDB-TEST',
+      actor: 'test-reviewer',
+      operation: 'tidb-source-reader-provision' as const,
+      targetFingerprintHash: source.context.targetFingerprintHash,
+      credentialClass: 'bootstrap-admin' as const,
+      tidbSourceInstanceId: '10492391619114516879',
+      tidbSourceAdminIdentity: '42MAxcoJrgbJNnU.root',
+      tidbSourceReaderIdentity: '42MAxcoJrgbJNnU.b08_reader',
+      tidbSourceReaderPrivilegeSet: 'listify_property_sa.*:SELECT',
+    };
+    const acknowledgement = expectedDatabaseAcknowledgement(source.context);
+    expect(() => authorizeDatabaseOperation(source, { root: process.cwd(), approval, acknowledgement })).not.toThrow();
+    for (const changed of [
+      { tidbSourceInstanceId: 'different' },
+      { tidbSourceAdminIdentity: '292qWmvn2YGy2jW.root' },
+      { tidbSourceReaderIdentity: 'another_reader' },
+      { tidbSourceReaderPrivilegeSet: 'listify_property_sa.*:ALL PRIVILEGES' },
+    ]) {
+      expect(() => authorizeDatabaseOperation(source, {
+        root: process.cwd(), approval: { ...approval, ...changed }, acknowledgement,
+      })).toThrow('exact B08 TiDB source reader approval');
+    }
+    expect(() => authorizeDatabaseOperation(source, { root: process.cwd(), approval })).toThrow('exact acknowledgement');
+    const azure = resolve('mysql://propertylistify-mysql.mysql.database.azure.com:3306/propertylistify_database');
+    expect(() => authorizeDatabaseOperation(azure, {
+      root: process.cwd(),
+      approval: { ...approval, targetFingerprintHash: azure.context.targetFingerprintHash },
+      acknowledgement: expectedDatabaseAcknowledgement(azure.context),
+    })).toThrow('exact B08 TiDB source reader approval');
+  });
+
+  it('confines B08 migration identity provisioning to the exact target, account, and privileges', () => {
+    const identity = fixtureIdentity();
+    const resolve = (databaseUrl: string) => resolveDatabaseAuthority({
+      operation: 'migration-identity-provision',
+      cwd: identity.worktreePath,
+      gitIdentity: identity,
+      explicitDatabaseUrl: databaseUrl,
+      credentialClass: 'bootstrap-admin',
+      processEnv: { NODE_ENV: 'production', APP_ENV: 'production' },
+    });
+    const target = 'mysql://propertylistify-mysql.mysql.database.azure.com:3306/propertylistify_database';
+    const authority = resolve(target);
+    const approval = {
+      reference: 'B08-TEST-ONLY',
+      actor: 'test-reviewer',
+      operation: 'migration-identity-provision' as const,
+      targetFingerprintHash: authority.context.targetFingerprintHash,
+      credentialClass: 'bootstrap-admin' as const,
+      migrationIdentity: 'propertylistify_release_migrator',
+      migrationPrivilegeSet: 'propertylistify_database.*:SELECT,INSERT,UPDATE,DELETE,CREATE,ALTER,DROP,INDEX,REFERENCES;*.*:SESSION_VARIABLES_ADMIN',
+    };
+    expect(() => authorizeDatabaseOperation(authority, { root: process.cwd(), approval })).not.toThrow();
+    for (const changed of [
+      { migrationIdentity: 'another_user' },
+      { migrationPrivilegeSet: 'propertylistify_database.*:ALL PRIVILEGES' },
+      { credentialClass: 'migration' as const },
+    ]) {
+      expect(() => authorizeDatabaseOperation(authority, {
+        root: process.cwd(), approval: { ...approval, ...changed },
+      })).toThrow('exact B08 Azure migration identity approval');
+    }
+    const tidb = resolve('mysql://old.tidbcloud.com:3306/listify_property_sa');
+    expect(() => authorizeDatabaseOperation(tidb, {
+      root: process.cwd(),
+      approval: { ...approval, targetFingerprintHash: tidb.context.targetFingerprintHash },
+    })).toThrow('exact B08 Azure migration identity approval');
+  });
+
+  it('confines B08 transactional behavior proof to the reviewed Azure migration identity', () => {
+    const identity = fixtureIdentity();
+    const authority = resolveDatabaseAuthority({
+      operation: 'b08-behavior-verify',
+      cwd: identity.worktreePath,
+      gitIdentity: identity,
+      explicitDatabaseUrl: 'mysql://propertylistify-mysql.mysql.database.azure.com:3306/propertylistify_database',
+      credentialClass: 'migration',
+      processEnv: {
+        APP_ENV: 'production', NODE_ENV: 'production',
+        DATABASE_MIGRATION_URL: 'mysql://propertylistify_release_migrator:proof@propertylistify-mysql.mysql.database.azure.com:3306/propertylistify_database',
+      },
+    });
+    const approval = {
+      reference: 'B08-TEST-ONLY', actor: 'test-reviewer',
+      operation: 'b08-behavior-verify' as const,
+      targetFingerprintHash: authority.context.targetFingerprintHash,
+      credentialClass: 'migration' as const,
+      migrationIdentity: 'propertylistify_release_migrator',
+      migrationPrivilegeSet: 'propertylistify_database.*:SELECT,INSERT,UPDATE,DELETE,CREATE,ALTER,DROP,INDEX,REFERENCES;*.*:SESSION_VARIABLES_ADMIN',
+    };
+    const acknowledgement = expectedDatabaseAcknowledgement(authority.context);
+    expect(() => authorizeDatabaseOperation(authority, {
+      root: process.cwd(), approval, acknowledgement,
+    })).not.toThrow();
+    expect(() => authorizeDatabaseOperation(authority, {
+      root: process.cwd(), approval,
+    })).toThrow('exact acknowledgement');
+    expect(() => authorizeDatabaseOperation(authority, {
+      root: process.cwd(), approval: { ...approval, migrationIdentity: 'other' }, acknowledgement,
+    })).toThrow('exact B08 Azure behavior approval');
+  });
+
+  it('confines B08 runtime identity provisioning to exact Azure accounts and grant digests', () => {
+    const identity = fixtureIdentity();
+    const authority = resolveDatabaseAuthority({
+      operation: 'runtime-identities-provision',
+      cwd: identity.worktreePath,
+      gitIdentity: identity,
+      explicitDatabaseUrl: 'mysql://admin:secret@propertylistify-mysql.mysql.database.azure.com:3306/propertylistify_database',
+      credentialClass: 'bootstrap-admin',
+      processEnv: { NODE_ENV: 'production', APP_ENV: 'production' },
+    });
+    const approval = {
+      reference: 'B08-RUNTIME-TEST', actor: 'test-reviewer',
+      operation: 'runtime-identities-provision' as const,
+      targetFingerprintHash: authority.context.targetFingerprintHash,
+      credentialClass: 'bootstrap-admin' as const,
+      runtimeIdentity: 'propertylistify_app_runtime',
+      workerIdentity: 'propertylistify_job_worker',
+      runtimeGrantDigest: '58f42389e76495048f32460f71c4cbe15bb85c9c1d5365426c0561383b75d1d5',
+      workerGrantDigest: '74b68ee103b3f1f345c7e7a0874b84fde128653977817cc59b5a2776b88f1f22',
+    };
+    const acknowledgement = expectedDatabaseAcknowledgement(authority.context);
+    expect(() => authorizeDatabaseOperation(authority, { root: process.cwd(), approval, acknowledgement })).not.toThrow();
+    for (const changed of [
+      { runtimeIdentity: 'another_user' },
+      { workerIdentity: 'another_user' },
+      { runtimeGrantDigest: 'different' },
+      { workerGrantDigest: 'different' },
+    ]) {
+      expect(() => authorizeDatabaseOperation(authority, {
+        root: process.cwd(), approval: { ...approval, ...changed }, acknowledgement,
+      })).toThrow('exact B08 Azure runtime identity approval');
+    }
+    expect(() => authorizeDatabaseOperation(authority, { root: process.cwd(), approval })).toThrow('exact acknowledgement');
+  });
+
+  it('confines the runtime ledger-read amendment to the exact old and new grant plans', () => {
+    const identity = fixtureIdentity();
+    const authority = resolveDatabaseAuthority({
+      operation: 'runtime-ledger-read-grant', cwd: identity.worktreePath,
+      gitIdentity: identity,
+      explicitDatabaseUrl: 'mysql://admin:secret@propertylistify-mysql.mysql.database.azure.com:3306/propertylistify_database',
+      credentialClass: 'bootstrap-admin',
+      processEnv: { NODE_ENV: 'production', APP_ENV: 'production' },
+    });
+    const approval = {
+      reference: 'B08-LEDGER-READ-TEST', actor: 'test-reviewer',
+      operation: 'runtime-ledger-read-grant' as const,
+      targetFingerprintHash: authority.context.targetFingerprintHash,
+      credentialClass: 'bootstrap-admin' as const,
+      runtimeIdentity: 'propertylistify_app_runtime',
+      runtimePreviousGrantDigest: '58f42389e76495048f32460f71c4cbe15bb85c9c1d5365426c0561383b75d1d5',
+      runtimeGrantDigest: '90c9d4aca03ac0820ebfe0fdbbbfef0617859bc6959e610be3b949ec27457fd9',
+    };
+    const acknowledgement = expectedDatabaseAcknowledgement(authority.context);
+    expect(() => authorizeDatabaseOperation(authority, { root: process.cwd(), approval, acknowledgement })).not.toThrow();
+    expect(() => authorizeDatabaseOperation(authority, {
+      root: process.cwd(), approval: { ...approval, runtimeGrantDigest: 'different' }, acknowledgement,
+    })).toThrow('exact B08 Azure ledger-read grant approval');
+    expect(() => authorizeDatabaseOperation(authority, { root: process.cwd(), approval })).toThrow('exact acknowledgement');
+  });
+
   it('prevents a feature worktree from mutating listify_local', () => {
     const identity = fixtureIdentity();
     const authority = resolveDatabaseAuthority({

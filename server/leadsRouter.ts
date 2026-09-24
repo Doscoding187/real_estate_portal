@@ -173,7 +173,7 @@ export const leadsRouter = router({
         };
       }
 
-      if (!checkPublicLeadRateLimit(ip)) {
+      if (!(await checkPublicLeadRateLimit(ip, ctx.res))) {
         logLeadEvent('rate_limit_trigger', {
           requestId,
           ip,

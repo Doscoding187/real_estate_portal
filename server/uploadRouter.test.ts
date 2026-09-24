@@ -98,6 +98,8 @@ describe('legacy upload.presign local adapter convergence', () => {
   });
 
   it('does not permit local storage when production is selected', async () => {
+    vi.stubEnv('NODE_ENV', 'production');
+    vi.stubEnv('APP_ENV', 'production');
     env.ENV.isProduction = true;
     env.ENV.mediaStorageAdapter = 'local';
 
@@ -105,6 +107,8 @@ describe('legacy upload.presign local adapter convergence', () => {
       caller.presign({ filename: 'ridge.png', contentType: 'image/png' }),
     ).rejects.toThrow(/Failed to generate upload URL/i);
 
+    vi.stubEnv('NODE_ENV', 'test');
+    vi.stubEnv('APP_ENV', 'test');
     env.ENV.isProduction = false;
     env.ENV.mediaStorageAdapter = 'local';
   });

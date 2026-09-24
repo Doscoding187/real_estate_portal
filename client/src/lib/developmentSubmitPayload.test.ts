@@ -7,6 +7,7 @@ import {
   buildDevelopmentUpdatePayload,
   buildDevelopmentWizardDataFromCanonicalSnapshot,
   buildDevelopmentSubmitPayload,
+  extractSubmitImages,
   normalizeAmenitiesPayload,
   normalizeSubmitUnitTypes,
   resolveSubmitUnitTypes,
@@ -17,6 +18,31 @@ import {
 } from '../../../shared/developmentPayloadOwnership';
 
 describe('development submit payload helpers', () => {
+  it('retains a confirmed hero receipt when workflow validation exposes its URL at the root', () => {
+    const images = extractSubmitImages({
+      heroImage: '/api/media/properties/draft-101/hero.png',
+      media: {
+        photos: [
+          {
+            url: '/api/media/properties/draft-101/hero.png',
+            category: 'hero',
+            storageKey: 'properties/draft-101/hero.png',
+            uploadReceipt: 'confirmed-developer-receipt',
+          },
+        ],
+      },
+    });
+
+    expect(images).toEqual([
+      {
+        url: '/api/media/properties/draft-101/hero.png',
+        category: 'hero',
+        storageKey: 'properties/draft-101/hero.png',
+        uploadReceipt: 'confirmed-developer-receipt',
+      },
+    ]);
+  });
+
   it('normalizes amenity sources from arrays, JSON strings, and grouped objects', () => {
     expect(normalizeAmenitiesPayload(['Pool', '', 'Gym'])).toEqual(['Pool', 'Gym']);
     expect(normalizeAmenitiesPayload('["Security","Fibre"]')).toEqual(['Security', 'Fibre']);

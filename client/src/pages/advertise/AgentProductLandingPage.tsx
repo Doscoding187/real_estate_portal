@@ -23,8 +23,11 @@ import {
 import { EnhancedNavbar } from '@/components/EnhancedNavbar';
 import { Footer } from '@/components/Footer';
 import { SEOHead } from '@/components/advertise/SEOHead';
+import { CommercialActivationNotice } from '@/components/commercial/CommercialActivationNotice';
 import { AgentWorkspacePreview } from './AgentWorkspacePreview';
 import { useCommercialCatalog, type CommercialProduct } from '@/hooks/useCommercialCatalog';
+import { useCommercialProductAvailability } from '@/hooks/useCommercialProductAvailability';
+import { SalesPauseNotice } from '@/components/commercial/SalesPauseNotice';
 import {
   formatCommercialLimitLabel,
   formatCommercialLimitValue,
@@ -37,6 +40,10 @@ import { getAccountAuthHref } from '@/lib/publicNavigation';
 import { COMMERCIAL_HERO_CLASS } from './commercialHero';
 
 const AGENT_ACCOUNT_START_HREF = getAccountAuthHref('register', '/agent/select-package', {
+  registerRole: 'agent',
+});
+
+const AGENT_PREPARATION_START_HREF = getAccountAuthHref('register', '/agent/setup', {
   registerRole: 'agent',
 });
 
@@ -445,7 +452,7 @@ function FaqSection() {
   );
 }
 
-export default function AgentProductLandingPage() {
+export function AgentCommercialLandingPage() {
   const catalog = useCommercialCatalog('agent');
   const product = catalog.data?.products.find(
     item => item.productKey === 'agent_launch_access' && item.term.kind === 'paid_launch_access',
@@ -901,5 +908,184 @@ export default function AgentProductLandingPage() {
       </script>
       <Footer />
     </div>
+  );
+}
+
+function AgentPreparationLandingPage({
+  availabilityError,
+  onRetry,
+}: {
+  availabilityError?: boolean;
+  onRetry?: () => void;
+}) {
+  return (
+    <div className="min-h-screen bg-[var(--surface)] text-slate-950">
+      <SEOHead
+        title="Prepare your Agent presence | Property Listify"
+        description="Create your Property Listify Agent account, complete your professional presence and prepare private listing drafts before commercial activation."
+        canonicalUrl="/advertise/sell/agents"
+      />
+      <EnhancedNavbar />
+
+      <main id="main-content">
+        <section data-commercial-hero="true" className={COMMERCIAL_HERO_CLASS}>
+          <div
+            className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_78%_18%,rgba(0,92,168,0.28),transparent_34%)]"
+            aria-hidden="true"
+          />
+          <div className="mx-auto max-w-screen-2xl px-4 pb-20 pt-10 sm:px-6 lg:px-8 lg:pb-28 lg:pt-14">
+            <a
+              href="/advertise"
+              className="inline-flex items-center gap-2 text-sm font-semibold text-slate-400 transition hover:text-white"
+            >
+              <ArrowRight className="h-4 w-4 rotate-180" aria-hidden="true" />
+              Back to Advertise
+            </a>
+
+            <div className="mt-14 grid items-center gap-12 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,.72fr)] lg:gap-16">
+              <div className="relative z-10 max-w-3xl">
+                <p className="text-xs font-bold uppercase tracking-[0.22em] text-blue-300">
+                  For independent property agents
+                </p>
+                <h1 className="mt-6 font-serif text-5xl font-semibold leading-[1.03] tracking-[-0.05em] text-white sm:text-6xl lg:text-7xl">
+                  Establish your Agent presence and prepare private inventory.
+                </h1>
+                <p className="mt-7 max-w-2xl text-lg leading-8 text-slate-300 sm:text-xl sm:leading-9">
+                  Create and verify your account, complete your professional profile and coverage,
+                  then create, save and return to private listing drafts while commercial activation
+                  remains protected.
+                </p>
+                <div className="mt-9 flex flex-wrap gap-3">
+                  <a
+                    href={AGENT_PREPARATION_START_HREF}
+                    className="inline-flex items-center gap-2 rounded-2xl bg-[var(--conversion)] px-5 py-3.5 text-sm font-bold text-white shadow-lg shadow-orange-950/25 transition hover:bg-[var(--conversion-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
+                  >
+                    Start Agent preparation
+                    <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                  </a>
+                  <a
+                    href="/agents"
+                    className="inline-flex items-center gap-2 rounded-2xl border border-white/35 bg-white/10 px-5 py-3.5 text-sm font-bold text-white shadow-sm transition hover:border-white/60 hover:bg-white/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
+                  >
+                    See agent presences <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                  </a>
+                </div>
+              </div>
+
+              <div className="relative rounded-[30px] border border-white/15 bg-white/10 p-6 shadow-[0_28px_80px_rgba(15,23,42,0.24)] backdrop-blur sm:p-8">
+                <CommercialActivationNotice />
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="border-b border-slate-200 bg-white py-24 md:py-32">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <SectionIntro
+              eyebrow="Prepare for participation"
+              title="Start the work that can be completed before commercial activation."
+            >
+              Preparation gives you a place to establish your professional presence and organise
+              inventory. It does not grant marketplace publication or paid commercial access.
+            </SectionIntro>
+            <div className="mt-12 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+              {[
+                {
+                  icon: ShieldCheck,
+                  title: 'Create and verify your account',
+                  text: 'Start with an Agent account and complete the required verification steps.',
+                },
+                {
+                  icon: UserRound,
+                  title: 'Complete your professional presence',
+                  text: 'Add your profile information and the canonical coverage needed for your Agent presence.',
+                },
+                {
+                  icon: ListChecks,
+                  title: 'Prepare private listing drafts',
+                  text: 'Create, save, reopen and continue working on inventory without making it public.',
+                },
+                {
+                  icon: ClipboardCheck,
+                  title: 'Be ready for activation',
+                  text: 'Complete the onboarding information required for the later commercial path.',
+                },
+              ].map(item => {
+                const Icon = item.icon;
+                return (
+                  <article
+                    key={item.title}
+                    className="rounded-[24px] border border-slate-200 bg-[var(--surface)] p-6 shadow-[0_16px_45px_rgba(15,23,42,0.05)]"
+                  >
+                    <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-50 text-[var(--brand-blue)]">
+                      <Icon className="h-5 w-5" aria-hidden="true" />
+                    </span>
+                    <h2 className="mt-6 text-xl font-bold leading-tight text-slate-950">
+                      {item.title}
+                    </h2>
+                    <p className="mt-3 text-sm leading-7 text-slate-600">{item.text}</p>
+                  </article>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+
+        <section className="bg-[var(--surface)] py-20 md:py-24">
+          <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
+            <div className="rounded-[30px] border border-amber-200 bg-amber-50 p-7 md:p-10">
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-amber-800">
+                What remains protected
+              </p>
+              <h2 className="mt-4 text-3xl font-bold tracking-[-0.035em] text-slate-950 md:text-4xl">
+                Publication and marketplace participation follow approved commercial activation.
+              </h2>
+              <p className="mt-5 max-w-3xl text-base leading-8 text-slate-700">
+                Private drafts stay private. Publishing, marketplace visibility and new marketplace
+                enquiries are unavailable until the required commercial activation is approved.
+              </p>
+              <a
+                href={AGENT_PREPARATION_START_HREF}
+                className="mt-7 inline-flex items-center gap-2 rounded-2xl bg-[var(--conversion)] px-5 py-3.5 text-sm font-bold text-white shadow-lg shadow-orange-900/15 transition hover:bg-[var(--conversion-hover)]"
+              >
+                Start Agent preparation <ArrowRight className="h-4 w-4" aria-hidden="true" />
+              </a>
+            </div>
+          </div>
+        </section>
+        {availabilityError ? (
+          <section className="bg-[var(--surface)] px-4 pb-12 sm:px-6 lg:px-8">
+            <div className="mx-auto flex max-w-4xl flex-wrap items-center justify-between gap-4 rounded-2xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-950">
+              <p>Agent Launch Access is temporarily unavailable. Paid actions remain closed.</p>
+              <button
+                type="button"
+                className="font-semibold underline underline-offset-4"
+                onClick={onRetry}
+              >
+                Retry availability check
+              </button>
+            </div>
+          </section>
+        ) : null}
+      </main>
+
+      <Footer />
+    </div>
+  );
+}
+
+export default function AgentProductLandingPage() {
+  const availability = useCommercialProductAvailability('agent_launch_access');
+
+  return availability.isAvailable ? (
+    <>
+      {availability.salesPaused ? <SalesPauseNotice /> : null}
+      <AgentCommercialLandingPage />
+    </>
+  ) : (
+    <AgentPreparationLandingPage
+      availabilityError={availability.isError}
+      onRetry={() => void availability.refetch()}
+    />
   );
 }

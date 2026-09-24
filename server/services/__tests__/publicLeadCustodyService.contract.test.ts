@@ -12,10 +12,11 @@ const activeAgent = {
   agencyId: null,
   status: 'approved',
   isVerified: 1,
+  hasActivePaidEntitlement: true,
   userRole: 'agent',
 };
 
-const verifiedAgency = { id: 44, isVerified: 1 };
+const verifiedAgency = { id: 44, isVerified: 1, hasActivePaidEntitlement: true };
 const approvedDeveloper = {
   id: 7,
   userId: 70,
@@ -39,6 +40,51 @@ describe('publicLeadCustodyService contract', () => {
     expect(
       resolvePublicAgentProfileCustody({
         agent: { ...activeAgent, isVerified: 0, hasActivePaidEntitlement: false },
+      }),
+    ).toMatchObject({ leadCustody: 'attention_required', recipientType: 'manual' });
+  });
+
+  it('does not let a verified/badged agent substitute identity for Launch Access', () => {
+    expect(
+      resolvePublicAgentProfileCustody({
+        agent: { ...activeAgent, hasActivePaidEntitlement: false, isVerified: 1 },
+      }),
+    ).toMatchObject({ leadCustody: 'attention_required', recipientType: 'manual' });
+  });
+
+  it('routes a current unbadged agency member through the agency entitlement from a direct profile', () => {
+    expect(
+      resolvePublicAgentProfileCustody({
+        agent: {
+          ...activeAgent,
+          id: 34,
+          agencyId: 44,
+          isVerified: 0,
+          hasActivePaidEntitlement: false,
+          hasActiveAgencyEntitlement: true,
+          hasCurrentMembership: true,
+        },
+      }),
+    ).toMatchObject({
+      leadCustody: 'verified_customer_recipient',
+      recipientType: 'agent',
+      recipientId: 34,
+      agencyId: null,
+    });
+  });
+
+  it('does not let an agency entitlement bypass a missing current membership on a direct profile', () => {
+    expect(
+      resolvePublicAgentProfileCustody({
+        agent: {
+          ...activeAgent,
+          id: 34,
+          agencyId: 44,
+          isVerified: 0,
+          hasActivePaidEntitlement: false,
+          hasActiveAgencyEntitlement: true,
+          hasCurrentMembership: false,
+        },
       }),
     ).toMatchObject({ leadCustody: 'attention_required', recipientType: 'manual' });
   });
@@ -72,10 +118,60 @@ describe('publicLeadCustodyService contract', () => {
     });
   });
 
+  it('routes an approved agency member through the agency entitlement without a personal plan or badge', () => {
+    expect(
+      resolvePublicPropertyCustody({
+        propertyAgentId: 34,
+        sourceListingAgencyId: 44,
+        directAgent: {
+          ...activeAgent,
+          id: 34,
+          agencyId: 44,
+          isVerified: 0,
+          hasActivePaidEntitlement: false,
+          hasActiveAgencyEntitlement: true,
+          hasCurrentMembership: true,
+        },
+        directAgentAgency: verifiedAgency,
+        sourceAgency: verifiedAgency,
+      }),
+    ).toMatchObject({
+      leadCustody: 'verified_customer_recipient',
+      recipientType: 'agent',
+      recipientId: 34,
+      agencyId: 44,
+    });
+  });
+
+  it('does not let an agency entitlement bypass a missing current membership', () => {
+    expect(
+      resolvePublicPropertyCustody({
+        propertyAgentId: 34,
+        sourceListingAgencyId: 44,
+        directAgent: {
+          ...activeAgent,
+          id: 34,
+          agencyId: 44,
+          isVerified: 0,
+          hasActivePaidEntitlement: false,
+          hasActiveAgencyEntitlement: true,
+          hasCurrentMembership: false,
+        },
+        directAgentAgency: verifiedAgency,
+        sourceAgency: verifiedAgency,
+      }),
+    ).toMatchObject({ leadCustody: 'attention_required', recipientType: 'manual' });
+  });
+
   it('holds an approved solo agent without commercial entitlement for attention', () => {
     const resolution = resolvePublicPropertyCustody({
       propertyAgentId: 35,
-      directAgent: { ...activeAgent, id: 35, isVerified: 0 },
+      directAgent: {
+        ...activeAgent,
+        id: 35,
+        isVerified: 0,
+        hasActivePaidEntitlement: false,
+      },
     });
     expect(resolution).toMatchObject({ leadCustody: 'attention_required', recipientType: 'manual' });
     expect(resolution.reason).toContain('not an eligible active recipient');
@@ -100,7 +196,13 @@ describe('publicLeadCustodyService contract', () => {
     expect(
       resolvePublicPropertyCustody({
         propertyAgentId: 33,
-        directAgent: { ...activeAgent, agencyId: 44, hasCurrentMembership: true },
+        directAgent: {
+          ...activeAgent,
+          agencyId: 44,
+          hasActivePaidEntitlement: false,
+          hasActiveAgencyEntitlement: true,
+          hasCurrentMembership: true,
+        },
         directAgentAgency: verifiedAgency,
       }),
     ).toMatchObject({
@@ -119,6 +221,8 @@ describe('publicLeadCustodyService contract', () => {
         directAgent: {
           ...activeAgent,
           agencyId: 44,
+          hasActivePaidEntitlement: false,
+          hasActiveAgencyEntitlement: true,
           hasCurrentMembership: false,
         },
         directAgentAgency: verifiedAgency,
@@ -151,7 +255,7 @@ describe('publicLeadCustodyService contract', () => {
         sourceListingAgencyId: 55,
         directAgent: { ...activeAgent, agencyId: 44 },
         directAgentAgency: verifiedAgency,
-        sourceAgency: { id: 55, isVerified: 1 },
+        sourceAgency: { id: 55, isVerified: 1, hasActivePaidEntitlement: true },
       }),
     ).toMatchObject({ leadCustody: 'attention_required', recipientType: 'manual' });
   });
@@ -173,6 +277,7 @@ describe('publicLeadCustodyService contract', () => {
         developerId: 7,
         developerBrandProfileId: 13,
         devOwnerType: 'developer',
+        hasActiveCommercialEntitlement: true,
         developer: approvedDeveloper,
         brand: {
           id: 13,
@@ -183,6 +288,24 @@ describe('publicLeadCustodyService contract', () => {
         },
       }),
     ).toMatchObject({ recipientType: 'developer', recipientId: 7, leadCustody: 'verified_customer_recipient' });
+  });
+
+  it('does not let legacy developer policy input bypass current Launch Access', () => {
+    expect(
+      resolvePublicDevelopmentCustody({
+        developerId: 7,
+        developerBrandProfileId: 13,
+        devOwnerType: 'developer',
+        hasActiveCommercialEntitlement: false,
+        developer: approvedDeveloper,
+        brand: {
+          id: 13,
+          ownerType: 'developer',
+          linkedDeveloperAccountId: 7,
+          isVisible: 1,
+        },
+      }),
+    ).toMatchObject({ leadCustody: 'attention_required', recipientType: 'manual' });
   });
 
   it('holds conflicting developer and brand ownership for attention', () => {

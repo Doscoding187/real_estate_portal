@@ -46,13 +46,25 @@ import {
 } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { toast } from 'sonner';
+import { useCommercialActivationAvailability } from '@/hooks/useCommercialProductAvailability';
 
-export default function SubscriptionManagementPage({ initialTab = 'subscriptions' }: { initialTab?: string } = {}) {
+export default function SubscriptionManagementPage({
+  initialTab = 'subscriptions',
+}: { initialTab?: string } = {}) {
   const utils = trpc.useUtils();
+  const commercialAvailability = useCommercialActivationAvailability();
   const [activeTab, setActiveTab] = useState(initialTab);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [page, setPage] = useState(1);
+  const [reviewPayment, setReviewPayment] = useState<{
+    id: number;
+    decision: 'approve' | 'duplicate';
+    commercialProductKey: string | null;
+  } | null>(null);
+  const [verifiedCents, setVerifiedCents] = useState('');
+  const [financeNote, setFinanceNote] = useState('');
+  const [overpaymentReconciled, setOverpaymentReconciled] = useState(false);
 
   // Queries
   const {
@@ -70,10 +82,12 @@ export default function SubscriptionManagementPage({ initialTab = 'subscriptions
     },
   );
 
-  const { data: plansData, isLoading: isLoadingPlans } =
-    trpc.billing.plans.useQuery({ segment: 'agency' }, {
+  const { data: plansData, isLoading: isLoadingPlans } = trpc.billing.plans.useQuery(
+    { segment: 'agency' },
+    {
       enabled: activeTab === 'plans',
-    });
+    },
+  );
 
   const {
     data: proofsData,
@@ -93,7 +107,8 @@ export default function SubscriptionManagementPage({ initialTab = 'subscriptions
   // Mutations
   const verifyPaymentMutation = trpc.billing.admin.reviewManualPayment.useMutation({
     onSuccess: () => {
-      toast.success('Payment verified successfully');
+      toast.success('Finance review recorded');
+      setReviewPayment(null);
       refetchProofs();
     },
     onError: error => {
@@ -101,19 +116,47 @@ export default function SubscriptionManagementPage({ initialTab = 'subscriptions
     },
   });
 
-  const handleVerifyPayment = (paymentId: number, status: 'verified' | 'rejected') => {
-    verifyPaymentMutation.mutate({
-      paymentId,
-      decision: status === 'verified' ? 'approve' : 'reject',
-    });
+  const canReviewPayment = (commercialProductKey: unknown) =>
+    commercialAvailability.isProductAvailable(commercialProductKey);
+
+  const handleVerifyPayment = (
+    paymentId: number,
+    status: 'verified' | 'rejected',
+    commercialProductKey: string | null,
+  ) => {
+    if (!canReviewPayment(commercialProductKey)) {
+      toast.info(commercialAvailability.unavailableMessage);
+      return;
+    }
+    if (status === 'verified') {
+      setReviewPayment({ id: paymentId, decision: 'approve', commercialProductKey });
+      setVerifiedCents('');
+      setFinanceNote('');
+      setOverpaymentReconciled(false);
+      return;
+    }
+    verifyPaymentMutation.mutate({ paymentId, decision: 'reject' });
   };
 
-  const handleRequestCorrection = (paymentId: number) => {
+  const handleRequestCorrection = (paymentId: number, commercialProductKey: string | null) => {
+    if (!canReviewPayment(commercialProductKey)) {
+      toast.info(commercialAvailability.unavailableMessage);
+      return;
+    }
     verifyPaymentMutation.mutate({
       paymentId,
       decision: 'request_correction',
       note: 'Finance team requested a corrected proof of payment.',
     });
+  };
+
+  const handleDuplicatePayment = (paymentId: number, commercialProductKey: string | null) => {
+    if (!canReviewPayment(commercialProductKey)) {
+      toast.info(commercialAvailability.unavailableMessage);
+      return;
+    }
+    setReviewPayment({ id: paymentId, decision: 'duplicate', commercialProductKey });
+    setFinanceNote('');
   };
 
   const handleViewProof = async (documentId?: number | null) => {
@@ -181,6 +224,90 @@ export default function SubscriptionManagementPage({ initialTab = 'subscriptions
 
   return (
     <div className="space-y-6 p-6 pb-20">
+      {commercialAvailability.isError ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+          <span>{commercialAvailability.unavailableMessage}</span>
+          <Button variant="outline" onClick={() => void commercialAvailability.refetch()}>
+            Retry availability check
+          </Button>
+        </div>
+      ) : null}
+      <Dialog open={reviewPayment !== null} onOpenChange={open => !open && setReviewPayment(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {reviewPayment?.decision === 'duplicate'
+                ? 'Record duplicate payment proof'
+                : 'Reconcile received EFT funds'}
+            </DialogTitle>
+            <DialogDescription>
+              {reviewPayment?.decision === 'duplicate'
+                ? 'Do not approve or extend access. Record the manual treatment for this duplicate proof.'
+                : 'Match actual bank receipt to the invoice and payer. Uploaded proof alone is not payment verification.'}
+            </DialogDescription>
+          </DialogHeader>
+          {reviewPayment?.decision === 'approve' ? (
+            <label>
+              Verified amount in cents
+              <Input
+                type="number"
+                min="1"
+                step="1"
+                value={verifiedCents}
+                onChange={event => setVerifiedCents(event.target.value)}
+              />
+            </label>
+          ) : null}
+          <label>
+            {reviewPayment?.decision === 'duplicate'
+              ? 'Manual treatment note'
+              : 'Finance reconciliation note'}
+            <Input
+              value={financeNote}
+              maxLength={2000}
+              onChange={event => setFinanceNote(event.target.value)}
+            />
+          </label>
+          {reviewPayment?.decision === 'approve' ? (
+            <label>
+              <input
+                type="checkbox"
+                checked={overpaymentReconciled}
+                onChange={event => setOverpaymentReconciled(event.target.checked)}
+              />
+              I have reconciled any excess and recorded its manual treatment in the note.
+            </label>
+          ) : null}
+          <DialogFooter>
+            <Button
+              disabled={
+                !canReviewPayment(reviewPayment?.commercialProductKey) ||
+                verifyPaymentMutation.isPending ||
+                (reviewPayment?.decision === 'approve' &&
+                  (!Number.isSafeInteger(Number(verifiedCents)) || Number(verifiedCents) <= 0)) ||
+                !financeNote.trim()
+              }
+              onClick={() =>
+                verifyPaymentMutation.mutate({
+                  paymentId: reviewPayment!.id,
+                  decision: reviewPayment!.decision,
+                  ...(reviewPayment?.decision === 'approve'
+                    ? {
+                        verifiedAmount: Number(verifiedCents),
+                        overpaymentReconciled,
+                      }
+                    : {}),
+                  note: financeNote.trim(),
+                })
+              }
+            >
+              {reviewPayment?.decision === 'duplicate'
+                ? 'Record duplicate proof'
+                : 'Confirm finance approval'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
@@ -442,18 +569,31 @@ export default function SubscriptionManagementPage({ initialTab = 'subscriptions
                       </TableCell>
                     </TableRow>
                   ) : (
-                    financeRows.map(row => (
-                      <TableRow key={row.payment.id} className="hover:bg-slate-50/50 transition-colors">
-                        <TableCell>{new Date(row.payment.createdAt).toLocaleDateString()}</TableCell>
+                    financeRows.map(row => {
+                      const paymentReviewAvailable = canReviewPayment(row.commercialProductKey);
+
+                      return (
+                        <TableRow
+                        key={row.payment.id}
+                        className="hover:bg-slate-50/50 transition-colors"
+                      >
+                        <TableCell>
+                          {new Date(row.payment.createdAt).toLocaleDateString()}
+                        </TableCell>
                         <TableCell>
                           <div className="flex flex-col">
                             <span className="font-medium">
-                              {row.agency?.name ||
+                              {row.agentUser?.name ||
+                                row.agentUser?.email ||
+                                row.agency?.name ||
                                 row.developerOrganisation?.name ||
                                 'Unknown account'}
                             </span>
                             <span className="text-xs text-slate-500">
-                              {row.agency?.email || row.developerOrganisation?.email || ''}
+                              {row.agentUser?.email ||
+                                row.agency?.email ||
+                                row.developerOrganisation?.email ||
+                                ''}
                             </span>
                           </div>
                         </TableCell>
@@ -465,7 +605,9 @@ export default function SubscriptionManagementPage({ initialTab = 'subscriptions
                             <Badge variant="outline" className="w-fit font-mono text-xs">
                               {row.payment.paymentReference}
                             </Badge>
-                            <span className="text-xs text-slate-500">{row.invoice.invoiceNumber}</span>
+                            <span className="text-xs text-slate-500">
+                              {row.invoice.invoiceNumber}
+                            </span>
                           </div>
                         </TableCell>
                         <TableCell>
@@ -488,8 +630,15 @@ export default function SubscriptionManagementPage({ initialTab = 'subscriptions
                             <Button
                               size="sm"
                               variant="outline"
+                              disabled={!paymentReviewAvailable}
                               className="text-green-600 hover:bg-green-50 border-green-200"
-                              onClick={() => handleVerifyPayment(row.payment.id, 'verified')}
+                              onClick={() =>
+                                handleVerifyPayment(
+                                  row.payment.id,
+                                  'verified',
+                                  row.commercialProductKey,
+                                )
+                              }
                             >
                               <CheckCircle className="w-4 h-4 mr-1" />
                               Approve
@@ -497,23 +646,50 @@ export default function SubscriptionManagementPage({ initialTab = 'subscriptions
                             <Button
                               size="sm"
                               variant="outline"
+                              disabled={!paymentReviewAvailable}
                               className="text-amber-600 hover:bg-amber-50 border-amber-200"
-                              onClick={() => handleRequestCorrection(row.payment.id)}
+                              onClick={() =>
+                                handleRequestCorrection(row.payment.id, row.commercialProductKey)
+                              }
                             >
                               Correction
                             </Button>
                             <Button
                               size="sm"
                               variant="outline"
+                              disabled={!paymentReviewAvailable}
+                              className="text-slate-600 hover:bg-slate-50 border-slate-200"
+                              onClick={() =>
+                                handleDuplicatePayment(row.payment.id, row.commercialProductKey)
+                              }
+                            >
+                              Duplicate
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={!paymentReviewAvailable}
                               className="text-red-600 hover:bg-red-50 border-red-200"
-                              onClick={() => handleVerifyPayment(row.payment.id, 'rejected')}
+                              onClick={() =>
+                                handleVerifyPayment(
+                                  row.payment.id,
+                                  'rejected',
+                                  row.commercialProductKey,
+                                )
+                              }
                             >
                               <XCircle className="w-4 h-4" />
                             </Button>
                           </div>
+                          {!paymentReviewAvailable ? (
+                            <p className="mt-2 text-xs text-amber-700">
+                              Finance action is unavailable for this payment&apos;s commercial product.
+                            </p>
+                          ) : null}
                         </TableCell>
-                      </TableRow>
-                    ))
+                        </TableRow>
+                      );
+                    })
                   )}
                 </TableBody>
               </Table>

@@ -5,7 +5,7 @@
  */
 
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { createJSONStorage, persist, type StateStorage } from 'zustand/middleware';
 import type {
   ListingWizardState,
   ListingAction,
@@ -43,6 +43,7 @@ import { trpc } from '@/lib/trpc';
 import { useLocation } from 'wouter';
 
 interface ListingWizardStore extends ListingWizardState {
+  persistedOwnerId: number | null;
   // Navigation
   goToStep: (step: number) => void;
   nextStep: () => boolean;
@@ -117,6 +118,70 @@ const initialState: ListingWizardState = {
   status: 'draft',
 };
 
+const LISTING_WIZARD_STORAGE_KEY = 'listing-wizard-storage';
+
+let authenticatedListingWizardOwnerId: number | null = null;
+let suppressListingWizardPersistence = false;
+
+function getPersistedOwnerId(value: string | null): number | null {
+  if (!value) return null;
+
+  try {
+    const parsed = JSON.parse(value) as { state?: { persistedOwnerId?: unknown } };
+    const ownerId = parsed.state?.persistedOwnerId;
+    return typeof ownerId === 'number' && Number.isSafeInteger(ownerId) && ownerId > 0
+      ? ownerId
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+const listingWizardStateStorage: StateStorage = {
+  getItem: name => {
+    if (typeof window === 'undefined' || authenticatedListingWizardOwnerId == null) return null;
+
+    const value = window.localStorage.getItem(name);
+    if (!value) return null;
+
+    if (getPersistedOwnerId(value) === authenticatedListingWizardOwnerId) return value;
+
+    window.localStorage.removeItem(name);
+    return null;
+  },
+  setItem: (name, value) => {
+    if (
+      typeof window === 'undefined' ||
+      suppressListingWizardPersistence ||
+      authenticatedListingWizardOwnerId == null ||
+      getPersistedOwnerId(value) !== authenticatedListingWizardOwnerId
+    ) {
+      return;
+    }
+
+    window.localStorage.setItem(name, value);
+  },
+  removeItem: name => {
+    if (typeof window !== 'undefined') window.localStorage.removeItem(name);
+  },
+};
+
+function emptyPrivateDraft(ownerId: number | null) {
+  return {
+    ...initialState,
+    action: undefined,
+    propertyType: undefined,
+    pricing: undefined,
+    propertyDetails: undefined,
+    location: undefined,
+    basicInfo: undefined,
+    additionalInfo: undefined,
+    displayMediaType: undefined,
+    mainMediaId: undefined,
+    persistedOwnerId: ownerId,
+  };
+}
+
 type WizardNavigationState = Pick<
   ListingWizardState,
   | 'action'
@@ -131,7 +196,13 @@ type WizardNavigationState = Pick<
   | 'mainMediaId'
 >;
 
-export function getLocationValidationIssues(
+/**
+ * Checks the location evidence that must exist before a user can confirm it.
+ * Confirmation itself remains a separate lifecycle state: the wizard must not
+ * use the post-confirmation navigation rule to disable its own confirmation
+ * control.
+ */
+export function getLocationEvidenceValidationIssues(
   state: Pick<WizardNavigationState, 'propertyType' | 'location'>,
 ): string[] {
   const location = state.location;
@@ -160,6 +231,16 @@ export function getLocationValidationIssues(
       issues.push(coordinates.error.issues[0]?.message || 'Enter a valid map location.');
     }
   }
+
+  return issues;
+}
+
+export function getLocationValidationIssues(
+  state: Pick<WizardNavigationState, 'propertyType' | 'location'>,
+): string[] {
+  const location = state.location;
+  const issues = getLocationEvidenceValidationIssues(state);
+  if (!location) return issues;
 
   if (location.locationConfirmationState !== 'confirmed') {
     issues.push('Confirm the current location before continuing.');
@@ -259,6 +340,7 @@ export const useListingWizardStore = create<ListingWizardStore>()(
   persist(
     (set, get) => ({
       ...initialState,
+      persistedOwnerId: null,
 
       // Navigation
       goToStep: step => {
@@ -698,19 +780,7 @@ export const useListingWizardStore = create<ListingWizardStore>()(
       },
 
       reset: () => {
-        set({
-          ...initialState,
-          action: undefined,
-          propertyType: undefined,
-          pricing: undefined,
-          propertyDetails: undefined,
-          location: undefined,
-          basicInfo: undefined,
-          additionalInfo: undefined,
-          mainMediaId: undefined,
-        });
-        // Clear persisted storage to ensure fresh start
-        localStorage.removeItem('listing-wizard-storage');
+        set(emptyPrivateDraft(get().persistedOwnerId));
       },
 
       loadListing: async listingId => {
@@ -723,8 +793,11 @@ export const useListingWizardStore = create<ListingWizardStore>()(
       },
     }),
     {
-      name: 'listing-wizard-storage',
+      name: LISTING_WIZARD_STORAGE_KEY,
+      storage: createJSONStorage(() => listingWizardStateStorage),
+      skipHydration: true,
       partialize: state => ({
+        persistedOwnerId: state.persistedOwnerId,
         // Only persist certain fields
         action: state.action,
         propertyType: state.propertyType,
@@ -745,3 +818,21 @@ export const useListingWizardStore = create<ListingWizardStore>()(
     },
   ),
 );
+
+export async function hydrateListingWizardForUser(userId: number | null): Promise<void> {
+  authenticatedListingWizardOwnerId = userId;
+  suppressListingWizardPersistence = true;
+  useListingWizardStore.setState(emptyPrivateDraft(userId));
+  suppressListingWizardPersistence = false;
+
+  if (userId == null || typeof window === 'undefined') return;
+
+  await useListingWizardStore.persist.rehydrate();
+
+  if (useListingWizardStore.getState().persistedOwnerId !== userId) {
+    suppressListingWizardPersistence = true;
+    useListingWizardStore.setState(emptyPrivateDraft(userId));
+    suppressListingWizardPersistence = false;
+    window.localStorage.removeItem(LISTING_WIZARD_STORAGE_KEY);
+  }
+}

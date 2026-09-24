@@ -25,6 +25,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useDeveloperOnboardingStatus } from '@/hooks/useDeveloperOnboardingStatus';
+import { useCommercialProductAvailability } from '@/hooks/useCommercialProductAvailability';
 import { trpc } from '@/lib/trpc';
 
 type Range = '7d' | '30d' | '90d';
@@ -63,6 +64,7 @@ function lifecycleVariant(state: string): 'default' | 'secondary' | 'destructive
 
 function accessLabel(reason: string): string {
   if (reason === 'active_launch_access') return 'Launch Access active';
+  if (reason === 'commercial_activation_unavailable') return 'Commercial activation unavailable';
   if (reason === 'expired_launch_access') return 'Launch Access expired';
   if (reason === 'inactive_launch_access') return 'Launch Access inactive';
   if (reason === 'invalid_launch_access') return 'Launch Access needs attention';
@@ -75,6 +77,7 @@ export default function Overview() {
   const [, setLocation] = useLocation();
   const [range, setRange] = useState<Range>('30d');
   const isSuperAdmin = user?.role === 'super_admin';
+  const commercialAvailability = useCommercialProductAvailability('developer_launch_access');
 
   const profileQuery = trpc.developer.getProfile.useQuery(undefined, {
     retry: false,
@@ -219,9 +222,15 @@ export default function Overview() {
                 </p>
               </div>
             </div>
-            <Button variant="outline" onClick={() => setLocation('/developer/plans')}>
-              Activate Launch Access
-            </Button>
+            {commercialAvailability.isAvailable ? (
+              <Button variant="outline" onClick={() => setLocation('/developer/plans')}>
+                Activate Launch Access
+              </Button>
+            ) : (
+              <Button variant="outline" onClick={() => setLocation('/developer/developments')}>
+                Manage private developments
+              </Button>
+            )}
           </CardContent>
         </Card>
       )}

@@ -2,9 +2,9 @@
 
 | Field | Value |
 | --- | --- |
-| Status | Founder-approved AAE-S1B internal audience-proposition architecture; not public copy, commercial availability or a pricing decision |
+| Status | Founder-approved AAE-S1B internal audience-proposition architecture; not public copy or commercial availability. B01 narrowly amends the Independent Agent, Agency and Developer commercial rows below. |
 | Relationship | Amends the AAE-S0 audience structure by adding private property owners/direct listers and individual/portfolio property investors; applies existing S1A evidence only through qualified reuse and does not amend or supersede S1A. |
-| Reading rule | “Current support” means delivered or qualified S1A evidence only. Exploratory directions are not current value; commercial motions are hypotheses for later authority. Audience problem statements are strategic hypotheses derived from AAE-S0 and must not be presented as measured customer prevalence without separate customer evidence. |
+| Reading rule | “Current support” means delivered or qualified S1A evidence only. Exploratory directions are not current value; commercial motions are hypotheses for later authority except the narrow B01 Paid MVP policy for Independent Agent, Agency and Developer Launch Access. Audience problem statements are strategic hypotheses derived from AAE-S0 and must not be presented as measured customer prevalence without separate customer evidence. |
 
 ## Consumers and property seekers
 
@@ -58,9 +58,9 @@
 | Traceability | `AGT-PROP-01`–`AGT-PROP-04` |
 | Discovery / Trust / Operations / Progression | Eligible publication and media / profile foundation, not professional verification / listing, performance, qualification, assignment, canvassing, mandate and entitlement foundations / enquiry capture, viewing, offer and transaction foundations. |
 | Current support | Delivered: `AGT-07`. Qualified: `AGT-01`, `AGT-03`–`AGT-15`; product demonstration `PRF-16`. |
-| Exploratory / limitations / prohibited | Paid visibility `AGT-16` is exploratory / plans, publication eligibility, verification, CRM, quantity, quality, exclusivity, performance and response remain unresolved or prohibited / no verified professional, qualified lead, CRM integration, ROI, free-trial, pricing or guaranteed-mandate claim. |
-| Commercial motion / conversion objective | Subscription or early-access package is a hypothesis only / later S1C must define whether a qualified professional can enter a governed activation path. |
-| Later-authority decisions | Self-service versus assisted motion, eligibility, plan/entitlement authority, onboarding destination, price/offer, proof and route experience. |
+| Exploratory / limitations / prohibited | Paid visibility `AGT-16` remains exploratory. B01 permits no broad “full platform”, verified-professional, qualified-lead, CRM-replacement, ROI, traffic, ranking, enquiry, sale or mandate claim. The MVP value floor is the approved profile/coverage → inventory/media → review/publication → public discovery → attributed enquiry → workspace/follow-up loop. |
+| Commercial motion / conversion objective | B01 approves Independent Agent Launch Access at R499 ZAR once-off for 90 days, via manual EFT and authorised finance activation after actual-payment reconciliation. It does not authorise a public route or normal-runtime activation. |
+| Later-authority decisions | B03/B04/B15 must prove activation, journey, public wording and legal/invoice treatment. Future package, promotion, trial and broader Agent-workspace decisions remain outside B01. |
 
 ## Agencies
 
@@ -72,9 +72,9 @@
 | Traceability | `AGY-PROP-01`–`AGY-PROP-04` |
 | Discovery / Trust / Operations / Progression | Agency-linked inventory/publication foundations / membership and role foundations / workspace, accountability, branding, oversight, reporting and commission foundations / routing, viewing and transaction-work foundations. |
 | Current support | Qualified: `AGY-01`–`AGY-10`, plus `AGT-04`, `AGT-09`–`AGT-14`; demonstration `PRF-17`. |
-| Exploratory / limitations / prohibited | Multi-office administration `AGY-11` exploratory / no enterprise readiness, complete governance, team performance, lead allocation, package or commission-result claim. |
-| Commercial motion / conversion objective | Standard or assisted agency proposition remains a hypothesis / establish a qualified agency relationship or discovery conversation, not purchase. |
-| Later-authority decisions | Separate agency product versus agent volume tier, role scope, branches, commercial units, activation and route contract. |
+| Exploratory / limitations / prohibited | Multi-office administration `AGY-11` remains exploratory. B01 permits no unlimited-seat, enterprise-readiness, complete-governance, performance, lead-result or commission-result claim. The MVP value floor is owner/identity → paid agency → genuine invitation/canonical membership → agency inventory/authorised publication → public discovery → agency-owned enquiry → assignment/reassignment/follow-up. |
+| Commercial motion / conversion objective | B01 approves Agency Launch Access at R999 ZAR once-off for 90 days, via manual EFT and authorised finance activation after actual-payment reconciliation. Legitimate members operate under the active agency entitlement; they do not buy duplicate Independent Agent access. No public route or normal-runtime activation is authorised. |
+| Later-authority decisions | B03/B05/B10/B14/B15 must prove finance activation, genuine invitation/membership, journey, operations and legal/invoice treatment. Future agency packages, branches and broader commercial units remain outside B01. |
 
 ## Developers
 
@@ -86,9 +86,9 @@
 | Traceability | `DEV-PROP-01`–`DEV-PROP-04` |
 | Discovery / Trust / Operations / Progression | Public development/profile, unit and media foundations / content context, not compliance proof / creation, approval, inventory, routing and distribution foundations / supported lead capture and routing. |
 | Current support | Qualified: `DEV-01`–`DEV-10`, `DEV-13`; demonstration `PRF-18`. |
-| Exploratory / limitations / prohibited | Milestones `DEV-11` and campaign analytics `DEV-12` exploratory / publication approval, public availability, compliance, project-sales outcomes, campaign reach and buyer quality are not established. |
-| Commercial motion / conversion objective | Assisted project, subscription or campaign model is a hypothesis only / begin a governed project qualification or relationship process. |
-| Later-authority decisions | Project versus package value unit, approval/compliance policy, distribution participation, commercial model, proof, onboarding and public route. |
+| Exploratory / limitations / prohibited | Milestones `DEV-11` and campaign analytics `DEV-12` remain exploratory. B01 permits no campaign, project-sales, reach, buyer-quality, compliance or whole-workspace promise. Its minimum floor is account/approved organisation → organisation-owned activation → development/unit/media → review/publication → public discovery/detail → attributed Developer enquiry → operating-environment follow-up. |
+| Commercial motion / conversion objective | B01 approves Developer Launch Access at R1,499 ZAR once-off for 90 days, via manual EFT and authorised finance activation after actual-payment reconciliation. The entitlement is organisation-owned and allows an unlimited legitimate development portfolio subject to moderation and system safeguards; a brand/profile approval is not inventory-publication entitlement. No public route or normal-runtime activation is authorised. |
+| Later-authority decisions | B02/B03/B06/B10/B14/B15 must prove the organisation-to-inventory-to-enquiry journey, activation, operations and legal/invoice treatment. Future campaigns, project packages, promotions and broader Developer workspace propositions remain outside B01. |
 
 ## Service providers
 

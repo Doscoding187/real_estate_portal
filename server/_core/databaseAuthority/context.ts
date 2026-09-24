@@ -23,6 +23,10 @@ const LOCAL_LOOPBACK_PORTS = new Set(['3307']);
 // CI owns its isolated test service separately; the local development service
 // above remains pinned to 127.0.0.1:3307.
 const TEST_LOOPBACK_PORTS = new Set(['3306', '3307']);
+const REGISTERED_PROTECTED_REMOTE_TARGETS: Readonly<Record<string, 'production'>> = Object.freeze({
+  'mysql://propertylistify-mysql.mysql.database.azure.com:3306/propertylistify_database':
+    'production',
+});
 const CREDENTIAL_CLASSES = new Set<DatabaseCredentialClass>([
   'runtime',
   'worker',
@@ -278,7 +282,10 @@ export function resolveDatabaseAuthority(input: {
       targetClass = 'disposable-test';
     }
   } else if (!resolvedLocal) {
-    if (resolvedDatabaseName === 'listify_property_sa') {
+    const registeredClass = REGISTERED_PROTECTED_REMOTE_TARGETS[resolvedTargetFingerprint];
+    if (registeredClass) {
+      targetClass = registeredClass;
+    } else if (resolvedDatabaseName === 'listify_property_sa') {
       targetClass = 'production';
     } else if (resolvedDatabaseName === 'listify_staging') {
       targetClass = 'staging';
@@ -295,7 +302,9 @@ export function resolveDatabaseAuthority(input: {
   if (parsed.protocol === 'mysql:') {
     const security = buildMysqlConnectionSecurityConfig(parsed.toString(), environment.runtimeMode);
     tlsRequired = Boolean(security.ssl);
-    certificateVerificationRequired = Boolean(security.ssl?.rejectUnauthorized);
+    certificateVerificationRequired = Boolean(
+      security.ssl?.rejectUnauthorized && security.ssl?.verifyIdentity,
+    );
   }
 
   const targetFingerprintHash = sha256(resolvedTargetFingerprint);

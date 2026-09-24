@@ -38,8 +38,9 @@ export function AgencySetupAccountBoundary() {
           Agency setup needs an Agency owner account
         </h1>
         <p className="mt-3 text-sm leading-6 text-slate-600">
-          You are signed in as {roleLabel}. Agency setup creates your agency's commercial account
-          and issues its Launch Access invoice, so it cannot run under this sign-in.
+          You are signed in as {roleLabel}. Agency setup establishes a separate Agency workspace and
+          saves its preparation information, so it cannot run under this sign-in. Commercial
+          activation remains protected until separately approved.
         </p>
 
         <div className="mt-6 flex flex-col gap-3">
@@ -65,9 +66,9 @@ export function AgencySetupAccountBoundary() {
       {isAgent ? (
         <p className="mt-4 text-center text-sm text-slate-600">
           Looking for individual agent access instead?{' '}
-          <Link href="/agent/select-package">
+          <Link href="/agent/dashboard">
             <span className="font-semibold text-blue-700 hover:underline">
-              Continue to Agent Launch Access
+              Return to Agent preparation
             </span>
           </Link>
         </p>

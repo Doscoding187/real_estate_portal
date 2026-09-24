@@ -6,6 +6,8 @@ export type AgencyMembershipRow = typeof agencyAgentMemberships.$inferSelect;
 
 export type AgencyMembershipLifecycleStatus = 'active' | 'suspended' | 'left';
 
+export class AgencyMembershipAuthorityError extends Error {}
+
 type DatabaseHandle = {
   select: (fields?: unknown) => any;
   insert: (table: unknown) => any;
@@ -55,6 +57,25 @@ export async function listCurrentAgencyMembershipsForAgent(
 }
 
 /**
+ * Resolves the one current agency affiliation that can authorize an agent.
+ * More than one active row is an authority violation, never a choice the
+ * caller may make from profile or listing projections.
+ */
+export async function resolveCurrentAgencyMembershipForAgent(
+  db: DatabaseHandle,
+  agentId: number,
+  evaluatedAt: Date = new Date(),
+): Promise<AgencyMembershipRow | null> {
+  const memberships = await listCurrentAgencyMembershipsForAgent(db, agentId, evaluatedAt);
+  if (memberships.length > 1) {
+    throw new AgencyMembershipAuthorityError(
+      'An agent cannot hold more than one current agency membership.',
+    );
+  }
+  return memberships[0] ?? null;
+}
+
+/**
  * Batch form of the currency check for routing/assignment surfaces: returns
  * the subset of agentIds that currently hold an active membership in any
  * agency. Agents without agency affiliation are not represented here — the
@@ -82,10 +103,43 @@ export async function listCurrentActiveMembershipAgentIds(
   return current;
 }
 
+/**
+ * Return the one current canonical agency membership for each requested
+ * agent. Public ownership decisions need the agency id as well as the fact
+ * that membership is current; deriving that id from the mutable agent profile
+ * would reintroduce the stale/self-assigned affiliation authority defect.
+ * Multiple current rows are an authority violation and fail closed.
+ */
+export async function listCurrentActiveAgencyMembershipsByAgentId(
+  db: DatabaseHandle,
+  agentIds: number[],
+  evaluatedAt: Date = new Date(),
+): Promise<Map<number, AgencyMembershipRow>> {
+  const uniqueIds = [...new Set(agentIds.filter(id => Number.isSafeInteger(id) && id > 0))];
+  if (uniqueIds.length === 0) return new Map();
+
+  const rows = await db
+    .select()
+    .from(agencyAgentMemberships)
+    .where(inArray(agencyAgentMemberships.agentId, uniqueIds));
+
+  const current = new Map<number, AgencyMembershipRow>();
+  for (const row of rows) {
+    if (!isCurrentActiveAgencyMembership(row, evaluatedAt)) continue;
+    const agentId = Number(row.agentId);
+    if (current.has(agentId)) {
+      throw new AgencyMembershipAuthorityError(
+        'An agent cannot hold more than one current agency membership.',
+      );
+    }
+    current.set(agentId, row);
+  }
+  return current;
+}
+
 function toDbTimestamp(value: Date): string {
   return value.toISOString().slice(0, 19).replace('T', ' ');
 }
-
 
 export type AgencyMembershipDb = NonNullable<Awaited<ReturnType<typeof getDb>>>;
 
@@ -106,7 +160,6 @@ export interface EndCanonicalAgencyMembershipInput {
   terminalStatus: 'suspended' | 'left';
   actorUserId: number;
 }
-
 
 /**
  * Maintain the authoritative membership row for an agency↔agent pair.
@@ -256,8 +309,9 @@ export async function establishCanonicalAgencyMembership(
   return { state: existing ? 'reactivated' : 'created' };
 }
 
-
-export async function endCanonicalAgencyMembership(input: EndCanonicalAgencyMembershipInput): Promise<boolean> {
+export async function endCanonicalAgencyMembership(
+  input: EndCanonicalAgencyMembershipInput,
+): Promise<boolean> {
   await maintainAgencyAgentMembership(input.db, {
     agencyId: input.agencyId,
     agentId: input.agentId,
@@ -267,7 +321,6 @@ export async function endCanonicalAgencyMembership(input: EndCanonicalAgencyMemb
   return true;
 }
 
-
 export async function ensureApprovedAgencyAgentProfile(input: {
   db: AgencyMembershipDb;
   user: typeof users.$inferSelect;
@@ -275,11 +328,7 @@ export async function ensureApprovedAgencyAgentProfile(input: {
   actorUserId: number;
 }): Promise<number> {
   const { db, user, agencyId, actorUserId } = input;
-  const [existingAgent] = await db
-    .select()
-    .from(agents)
-    .where(eq(agents.userId, user.id))
-    .limit(1);
+  const [existingAgent] = await db.select().from(agents).where(eq(agents.userId, user.id)).limit(1);
 
   if (existingAgent) {
     if (existingAgent.agencyId !== agencyId || existingAgent.status !== 'approved') {

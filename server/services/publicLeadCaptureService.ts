@@ -2,8 +2,7 @@ import { TRPCError } from '@trpc/server';
 import { and, eq, inArray, sql } from 'drizzle-orm';
 import { getDb } from '../db';
 import { slLeadContexts, slMessages, users } from '../../drizzle/schema';
-import { agencyAgentMemberships } from '../../drizzle/schema';
-import { listCurrentActiveMembershipAgentIds } from './agencyMembershipService';
+import { listCurrentActiveAgencyMembershipsByAgentId } from './agencyMembershipService';
 import {
   agencies,
   agents,
@@ -17,6 +16,7 @@ import {
   leads,
   listings,
   notifications,
+  plans,
   properties,
   subscriptions,
   unitTypes,
@@ -46,7 +46,8 @@ import {
 import { evaluatePublicDevelopmentEligibility } from './publicDevelopmentEligibility';
 import { getDeveloperPublicationAccess } from './developerPublicationAccess';
 import { EmailService } from '../_core/emailService';
-import { isPaidSubscriptionRowEntitled } from './planAccessService';
+import { isPaidMvpLaunchAccessSubscriptionEntitled } from './planAccessService';
+import { isCommercialActivationAvailable } from './commercialActivationPolicy';
 import { resolvePublicPropertyEligibility } from './publicPropertyEligibilityService';
 import { resolvePublicLandLeadCustody } from './landPublicService';
 import { resolveSharedLivingLeadCustody, ensureLeadContextRow } from './sharedLivingEnquiryService';
@@ -493,13 +494,13 @@ async function isRecipientCommerciallyDeliverable(
   const database = await getDb();
   if (!database) return { eligible: false, reason: 'Enquiry delivery is temporarily unavailable.' };
 
+  const commercialAgencyId = positiveId(agencyId);
+
   if (agentId) {
     const [agent] = await database
       .select({
         status: agents.status,
         userId: agents.userId,
-        isVerified: agents.isVerified,
-        agencyId: agents.agencyId,
       })
       .from(agents)
       .where(eq(agents.id, agentId))
@@ -510,72 +511,134 @@ async function isRecipientCommerciallyDeliverable(
         reason: 'The assigned listing agent is not an approved recipient.',
       };
     }
-    let entitled = false;
-    if (agent.userId) {
-      const [subscription] = await database
-        .select({ status: subscriptions.status, currentPeriodEnd: subscriptions.currentPeriodEnd })
+
+    const individualSubscriptions = agent.userId
+      ? await database
+          .select({ subscription: subscriptions, plan: plans })
+          .from(subscriptions)
+          .innerJoin(plans, eq(subscriptions.planId, plans.id))
+          .where(
+            and(
+              eq(subscriptions.ownerType, 'agent'),
+              eq(subscriptions.ownerId, Number(agent.userId)),
+              sql`EXISTS (
+                SELECT 1 FROM ${billableAccounts} account
+                WHERE account.id = ${subscriptions.billableAccountId}
+                  AND account.account_kind = 'agent'
+                  AND account.user_id = ${agent.userId}
+              )`,
+            ),
+          )
+      : [];
+
+    let agencyEntitled = false;
+    if (commercialAgencyId) {
+      // A Commercial Listing carries durable supplier custody, but new public
+      // opportunities still require the assigned person to hold a current
+      // canonical membership in that same commercial owner. Never derive
+      // this relationship from the mutable Agent profile affiliation.
+      const membership = (
+        await listCurrentActiveAgencyMembershipsByAgentId(database, [Number(agentId)])
+      ).get(Number(agentId));
+      if (!membership || Number(membership.agencyId) !== commercialAgencyId) {
+        return {
+          eligible: false,
+          reason:
+            'The assigned listing agent no longer holds a current membership in the owning agency.',
+        };
+      }
+
+      const agencySubscriptions = await database
+        .select({ subscription: subscriptions, plan: plans })
         .from(subscriptions)
-        .where(sql`EXISTS (
-          SELECT 1 FROM ${billableAccounts} account
-          WHERE account.id = ${subscriptions.billableAccountId}
-            AND account.account_kind = 'agent'
-            AND account.user_id = ${agent.userId}
-        )`)
-        .limit(1);
-      entitled = isPaidSubscriptionRowEntitled(
-        subscription ?? { status: null, currentPeriodEnd: null },
-      );
+        .innerJoin(plans, eq(subscriptions.planId, plans.id))
+        .where(
+          and(
+            eq(subscriptions.ownerType, 'agency'),
+            eq(subscriptions.ownerId, commercialAgencyId),
+            sql`EXISTS (
+              SELECT 1 FROM ${billableAccounts} account
+              WHERE account.id = ${subscriptions.billableAccountId}
+                AND account.account_kind = 'agency'
+                AND account.agency_id = ${subscriptions.ownerId}
+            )`,
+          ),
+        );
+      agencyEntitled =
+        isCommercialActivationAvailable(process.env, 'agency_launch_access') &&
+        agencySubscriptions.some(subscription =>
+          isPaidMvpLaunchAccessSubscriptionEntitled(
+            subscription.subscription,
+            subscription.plan,
+            'agency',
+          ),
+        );
     }
-    const badged = Number(agent.isVerified || 0) === 1;
-    if (!(badged || entitled)) {
+
+    const individuallyEntitled =
+      isCommercialActivationAvailable(process.env, 'agent_launch_access') &&
+      individualSubscriptions.some(subscription =>
+        isPaidMvpLaunchAccessSubscriptionEntitled(
+          subscription.subscription,
+          subscription.plan,
+          'agent',
+        ),
+      );
+    // If the inventory names an agency commercial owner, current membership
+    // and that agency's term are the only authority. An individual term must
+    // not keep a member receiving new enquiries after agency expiry.
+    if (!(commercialAgencyId ? agencyEntitled : individuallyEntitled)) {
       return {
         eligible: false,
         reason: 'The assigned listing agent is not an eligible active recipient.',
       };
     }
 
-    // Membership currency mirrors the public custody policy: an
-    // agency-affiliated agent must have a current canonical membership before
-    // receiving a public enquiry, even when the legacy profile remains
-    // approved/verified. Use both persisted claims because a materialized
-    // Commercial Listing can retain its agency custody while an Agent profile
-    // is later edited; either claim makes the recipient agency-affiliated.
-    const agencyAffiliated =
-      positiveId(agent.agencyId) !== undefined || positiveId(agencyId) !== undefined;
-    if (agencyAffiliated) {
-      const [membership] = await database
-        .select({ id: agencyAgentMemberships.id })
-        .from(agencyAgentMemberships)
-        .where(eq(agencyAgentMemberships.agentId, Number(agentId)))
-        .limit(1);
-      if (!membership) {
-        return {
-          eligible: false,
-          reason: 'The assigned listing agent no longer holds a current agency membership.',
-        };
-      }
-      const current = await listCurrentActiveMembershipAgentIds(database, [Number(agentId)]);
-      if (!current.has(Number(agentId))) {
-        return {
-          eligible: false,
-          reason: 'The assigned listing agent no longer holds a current agency membership.',
-        };
-      }
-    }
-
     return { eligible: true, reason: '' };
   }
 
-  if (agencyId) {
+  if (commercialAgencyId) {
     const [agency] = await database
       .select({ isVerified: agencies.isVerified })
       .from(agencies)
-      .where(eq(agencies.id, agencyId))
+      .where(eq(agencies.id, commercialAgencyId))
       .limit(1);
     if (!agency || Number(agency.isVerified || 0) !== 1) {
       return {
         eligible: false,
         reason: 'The owning agency is not an active verified organization.',
+      };
+    }
+
+    const agencySubscriptions = await database
+      .select({ subscription: subscriptions, plan: plans })
+      .from(subscriptions)
+      .innerJoin(plans, eq(subscriptions.planId, plans.id))
+      .where(
+        and(
+          eq(subscriptions.ownerType, 'agency'),
+          eq(subscriptions.ownerId, commercialAgencyId),
+          sql`EXISTS (
+            SELECT 1 FROM ${billableAccounts} account
+            WHERE account.id = ${subscriptions.billableAccountId}
+              AND account.account_kind = 'agency'
+              AND account.agency_id = ${subscriptions.ownerId}
+          )`,
+        ),
+      );
+    if (
+      !isCommercialActivationAvailable(process.env, 'agency_launch_access') ||
+      !agencySubscriptions.some(subscription =>
+        isPaidMvpLaunchAccessSubscriptionEntitled(
+          subscription.subscription,
+          subscription.plan,
+          'agency',
+        ),
+      )
+    ) {
+      return {
+        eligible: false,
+        reason: 'The owning agency is not commercially eligible to receive new enquiries.',
       };
     }
     return { eligible: true, reason: '' };
@@ -761,17 +824,50 @@ export async function resolveLeadOwnership(
       });
     }
 
-    const [subscription] = agent.userId
+    // Canonical membership, rather than the mutable profile agency field,
+    // determines whether this public professional is currently agency-backed.
+    // It also supplies the only agency id permitted to affect public
+    // commercial eligibility.
+    const membership = (
+      await listCurrentActiveAgencyMembershipsByAgentId(database, [Number(agent.id)])
+    ).get(Number(agent.id));
+    const canonicalAgencyId = membership ? Number(membership.agencyId) : null;
+
+    const individualSubscriptions = agent.userId
       ? await database
-          .select({ status: subscriptions.status, currentPeriodEnd: subscriptions.currentPeriodEnd })
+          .select({ subscription: subscriptions, plan: plans })
           .from(subscriptions)
-          .where(sql`EXISTS (
-            SELECT 1 FROM ${billableAccounts} account
-            WHERE account.id = ${subscriptions.billableAccountId}
-              AND account.account_kind = 'agent'
-              AND account.user_id = ${agent.userId}
-          )`)
-          .limit(1)
+          .innerJoin(plans, eq(subscriptions.planId, plans.id))
+          .where(
+            and(
+              eq(subscriptions.ownerType, 'agent'),
+              eq(subscriptions.ownerId, Number(agent.userId)),
+              sql`EXISTS (
+                SELECT 1 FROM ${billableAccounts} account
+                WHERE account.id = ${subscriptions.billableAccountId}
+                  AND account.account_kind = 'agent'
+                  AND account.user_id = ${agent.userId}
+              )`,
+            ),
+          )
+      : [];
+    const agencySubscriptions = canonicalAgencyId
+      ? await database
+          .select({ subscription: subscriptions, plan: plans })
+          .from(subscriptions)
+          .innerJoin(plans, eq(subscriptions.planId, plans.id))
+          .where(
+            and(
+              eq(subscriptions.ownerType, 'agency'),
+              eq(subscriptions.ownerId, canonicalAgencyId),
+              sql`EXISTS (
+                SELECT 1 FROM ${billableAccounts} account
+                WHERE account.id = ${subscriptions.billableAccountId}
+                  AND account.account_kind = 'agency'
+                  AND account.agency_id = ${subscriptions.ownerId}
+              )`,
+            ),
+          )
       : [];
     const [agentUser] = agent.userId
       ? await database
@@ -780,22 +876,35 @@ export async function resolveLeadOwnership(
           .where(eq(users.id, agent.userId))
           .limit(1)
       : [];
-    const hasCurrentMembership = agent.agencyId
-      ? (await listCurrentActiveMembershipAgentIds(database, [Number(agent.id)])).has(Number(agent.id))
-      : true;
 
     const custody = resolvePublicAgentProfileCustody({
       agent: {
         id: Number(agent.id),
         userId: agent.userId == null ? null : Number(agent.userId),
-        agencyId: agent.agencyId == null ? null : Number(agent.agencyId),
+        agencyId: canonicalAgencyId,
         status: agent.status || null,
-        isVerified: Number(agent.isVerified || 0),
-        hasActivePaidEntitlement: isPaidSubscriptionRowEntitled(subscription ?? {
-          status: null,
-          currentPeriodEnd: null,
-        }),
-        hasCurrentMembership,
+        hasActivePaidEntitlement:
+          isCommercialActivationAvailable(process.env, 'agent_launch_access') &&
+          individualSubscriptions.some(subscription =>
+            isPaidMvpLaunchAccessSubscriptionEntitled(
+              subscription.subscription,
+              subscription.plan,
+              'agent',
+            ),
+          ),
+        hasActiveAgencyEntitlement:
+          isCommercialActivationAvailable(process.env, 'agency_launch_access') &&
+          agencySubscriptions.some(subscription =>
+            isPaidMvpLaunchAccessSubscriptionEntitled(
+              subscription.subscription,
+              subscription.plan,
+              'agency',
+            ),
+          ),
+        // A non-null agency id above can only originate from `membership`,
+        // so a profile's stale or forged association cannot satisfy this
+        // boundary. Independent agents are not membership-scoped.
+        hasCurrentMembership: true,
         userRole: agentUser?.role || null,
       },
     });
@@ -1104,6 +1213,7 @@ export async function resolveLeadOwnership(
       developer: developerId ? developerMap.get(developerId) : null,
       brand,
       brandReferenceInvalid,
+      hasActiveCommercialEntitlement: commercialAccess,
     });
 
     if (custody.leadCustody === 'attention_required') {
@@ -1125,10 +1235,15 @@ export async function resolveLeadOwnership(
   if (targetKind === 'brand') {
     const developerId = positiveId(brand?.developerOrganisationId);
     const developerMap = await loadDeveloperCandidates(database, developerId ? [developerId] : []);
+    const commercialAccess =
+      brand?.authorityKind === 'developer_first_party' && developerId
+        ? (await getDeveloperPublicationAccess(developerId, { db: database })).eligible
+        : true;
     const custody = resolvePublicBrandOnlyCustody({
       cataloguePublisherId: canonicalBrandId!,
       brand: brand as PublicBrandOwnershipCandidate,
       developer: developerId ? developerMap.get(developerId) : null,
+      hasActiveCommercialEntitlement: commercialAccess,
     });
 
     if (custody.leadCustody === 'attention_required') {

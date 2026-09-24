@@ -2,7 +2,14 @@ import { randomUUID } from 'node:crypto';
 import { afterEach, describe, expect, it } from 'vitest';
 import { eq } from 'drizzle-orm';
 
-import { listingApprovalQueue, listingAnalytics, listingMedia, listings, users } from '../../drizzle/schema';
+import {
+  agents,
+  listingApprovalQueue,
+  listingAnalytics,
+  listingMedia,
+  listings,
+  users,
+} from '../../drizzle/schema';
 import { appRouter } from '../routers';
 import { createListing, getDb } from '../db';
 import { createListingMediaUploadToken } from '../services/listingMediaAuthority';
@@ -11,6 +18,7 @@ const describeDatabase = process.env.DATABASE_URL ? describe : describe.skip;
 
 describeDatabase('listing media tenant boundary', () => {
   let ownerId = 0;
+  let ownerAgentId = 0;
   let outsiderId = 0;
   let listingId = 0;
 
@@ -23,9 +31,11 @@ describeDatabase('listing media tenant boundary', () => {
       await db.delete(listingAnalytics).where(eq(listingAnalytics.listingId, listingId));
       await db.delete(listings).where(eq(listings.id, listingId));
     }
+    if (ownerAgentId) await db.delete(agents).where(eq(agents.id, ownerAgentId));
     if (outsiderId) await db.delete(users).where(eq(users.id, outsiderId));
     if (ownerId) await db.delete(users).where(eq(users.id, ownerId));
     ownerId = 0;
+    ownerAgentId = 0;
     outsiderId = 0;
     listingId = 0;
   });
@@ -42,6 +52,18 @@ describeDatabase('listing media tenant boundary', () => {
       emailVerified: 1,
     } as any);
     ownerId = Number(ownerInsert.insertId);
+    const [ownerAgentInsert] = await db.insert(agents).values({
+      userId: ownerId,
+      firstName: 'Media',
+      lastName: 'Owner',
+      displayName: 'Media Owner',
+      email: `media-owner-${suffix}@invalid.example`,
+      role: 'agent',
+      isVerified: 0,
+      isFeatured: 0,
+      status: 'approved',
+    } as any);
+    ownerAgentId = Number(ownerAgentInsert.insertId);
     const [outsiderInsert] = await db.insert(users).values({
       email: `media-outsider-${suffix}@invalid.example`,
       name: 'Media Outsider',
@@ -75,6 +97,14 @@ describeDatabase('listing media tenant boundary', () => {
       user: { id: outsiderId, email: `media-outsider-${suffix}@invalid.example`, role: 'agent' },
     } as any);
 
+    await expect(outsider.listing.getById({ id: listingId })).rejects.toMatchObject({
+      code: 'FORBIDDEN',
+    });
+
+    await expect(
+      outsider.listing.update({ id: listingId, title: 'Unauthorized private listing edit' }),
+    ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+
     await expect(
       outsider.listing.uploadMedia({
         listingId,
@@ -103,6 +133,18 @@ describeDatabase('listing media tenant boundary', () => {
       emailVerified: 1,
     } as any);
     ownerId = Number(ownerInsert.insertId);
+    const [ownerAgentInsert] = await db.insert(agents).values({
+      userId: ownerId,
+      firstName: 'Media',
+      lastName: 'Delete Owner',
+      displayName: 'Media Delete Owner',
+      email: `media-delete-owner-${suffix}@invalid.example`,
+      role: 'agent',
+      isVerified: 0,
+      isFeatured: 0,
+      status: 'approved',
+    } as any);
+    ownerAgentId = Number(ownerAgentInsert.insertId);
 
     listingId = await createListing({
       userId: ownerId,
@@ -161,6 +203,18 @@ describeDatabase('listing media tenant boundary', () => {
       emailVerified: 1,
     } as any);
     ownerId = Number(ownerInsert.insertId);
+    const [ownerAgentInsert] = await db.insert(agents).values({
+      userId: ownerId,
+      firstName: 'Media',
+      lastName: 'Reassigned Owner',
+      displayName: 'Media Reassigned Owner',
+      email: `media-reassigned-owner-${suffix}@invalid.example`,
+      role: 'agent',
+      isVerified: 0,
+      isFeatured: 0,
+      status: 'approved',
+    } as any);
+    ownerAgentId = Number(ownerAgentInsert.insertId);
     const [newOwnerInsert] = await db.insert(users).values({
       email: `media-reassigned-new-owner-${suffix}@invalid.example`,
       name: 'Media Reassigned New Owner',
@@ -197,13 +251,19 @@ describeDatabase('listing media tenant boundary', () => {
       listingId,
     });
 
-    await db.update(listings).set({ ownerId: outsiderId, agentId: null, agencyId: null } as any)
+    await db
+      .update(listings)
+      .set({ ownerId: outsiderId, agentId: null, agencyId: null } as any)
       .where(eq(listings.id, listingId));
 
     const owner = appRouter.createCaller({
       req: { headers: {} },
       res: {},
-      user: { id: ownerId, email: `media-reassigned-owner-${suffix}@invalid.example`, role: 'agent' },
+      user: {
+        id: ownerId,
+        email: `media-reassigned-owner-${suffix}@invalid.example`,
+        role: 'agent',
+      },
     } as any);
 
     await expect(owner.listing.confirmMediaUpload({ uploadToken: token })).rejects.toMatchObject({

@@ -106,17 +106,21 @@ export function LocationTrendingFeedSection({
   const [internalTab, setInternalTab] = useState<FeedTab | null>(neutralMode ? null : 'buy');
   const rentJourneyEnabled = isHomepageHeroJourneyEnabled('rent');
   const developmentsJourneyEnabled = isHomepageHeroJourneyEnabled('developments');
+  const landJourneyEnabled = isHomepageHeroJourneyEnabled('plot_land');
   const requestedActiveTab = controlledActiveTab !== undefined ? controlledActiveTab : internalTab;
   const activeTab =
     requestedActiveTab === 'rent' && !rentJourneyEnabled
       ? null
       : requestedActiveTab === 'developments' && !developmentsJourneyEnabled
         ? null
+        : requestedActiveTab === 'plot_land' && !landJourneyEnabled
+          ? null
         : requestedActiveTab;
   const visibleFeedTabs = FEED_TABS.filter(
     tab =>
       (tab.value !== 'rent' || rentJourneyEnabled) &&
-      (tab.value !== 'developments' || developmentsJourneyEnabled),
+      (tab.value !== 'developments' || developmentsJourneyEnabled) &&
+      (tab.value !== 'plot_land' || landJourneyEnabled),
   );
   const sharedLivingHandsOff = activeTab === 'shared_living';
 

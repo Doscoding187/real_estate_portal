@@ -1,0 +1,51 @@
+{
+  "evidenceVersion": 1,
+  "observedAtUtc": "2026-09-24 14:23:29 UTC",
+  "scope": "public read-only DNS and HTTPS endpoints; no provider settings or protected data accessed",
+  "productionFrontend": {
+    "origin": "https://www.propertylistifysa.co.za",
+    "dnsResolved": true,
+    "tlsCertificateValidated": true,
+    "versionPath": "/version.json",
+    "versionHttpStatus": 200,
+    "versionContentType": "text/html; charset=utf-8",
+    "exactFrontendBuildIdentityAvailable": false
+  },
+  "productionApi": {
+    "origin": "https://api.propertylistifysa.co.za",
+    "dnsResolved": true,
+    "tlsCertificateValidated": true,
+    "healthHttpStatus": 200,
+    "healthKind": "liveness",
+    "versionHttpStatus": 200,
+    "deployedGitSha": "4e012b3044628fc06da7489c0055e9ce01bdc8d9",
+    "releaseId": null,
+    "readinessHttpStatus": 503,
+    "applicationReady": false,
+    "databaseTargetFingerprintHash": "68f2582a6dc7af8c54cf6f31a396e8abe4c4030696c923b0ea3b1679ba6f5b5e",
+    "readinessCodes": {
+      "targetConnectivity": "target-connected",
+      "migrationHead": "manifest-head-behind",
+      "incompleteAttemptState": "incomplete-migration-attempt",
+      "schemaCongruent": "schema-not-congruent",
+      "commercialReferenceData": "foundation-blocked-by-schema"
+    },
+    "cacheMode": "memory",
+    "authRateLimitMode": "redis",
+    "publicMediaConfigurationOk": true
+  },
+  "staging": {
+    "frontendHost": "staging.propertylistifysa.co.za",
+    "apiHost": "api-staging.propertylistifysa.co.za",
+    "frontendDnsResolved": false,
+    "apiDnsResolved": false
+  },
+  "interpretation": "Production DNS/TLS is live, but current deployed artifacts and database readiness do not meet B12/B16/B18 acceptance. Staging DNS is absent. This is a single public observation, not continuous monitoring or a deployment authorization.",
+  "changesMade": {
+    "railway": false,
+    "azure": false,
+    "tidb": false,
+    "dns": false,
+    "deployment": false
+  }
+}

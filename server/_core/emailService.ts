@@ -1,4 +1,9 @@
 import { ENV } from './env';
+import {
+  isTransactionalEmailConfigured,
+  permitsLocalEmailFallback,
+  resolveTransactionalEmailConfiguration,
+} from './transactionalEmailConfig';
 
 // Email service interface
 export interface EmailData {
@@ -13,7 +18,8 @@ export interface EmailData {
 // In production, you'd integrate with services like SendGrid, AWS SES, etc.
 import { Resend } from 'resend';
 
-const resend = ENV.resendApiKey ? new Resend(ENV.resendApiKey) : null;
+const emailConfiguration = resolveTransactionalEmailConfiguration();
+const resend = isTransactionalEmailConfigured() ? new Resend(emailConfiguration.apiKey) : null;
 
 export class EmailService {
   static async sendEmail(emailData: EmailData): Promise<boolean> {
@@ -21,16 +27,19 @@ export class EmailService {
       // If Resend is configured, use it
       if (resend) {
         try {
-          const { data, error } = await resend.emails.send({
-            from: ENV.resendFromEmail,
-            to: emailData.to,
-            subject: emailData.subject,
-            html: emailData.html,
-            text: emailData.text,
-          }, emailData.idempotencyKey ? { idempotencyKey: emailData.idempotencyKey } : undefined);
+          const { data, error } = await resend.emails.send(
+            {
+              from: emailConfiguration.from,
+              to: emailData.to,
+              subject: emailData.subject,
+              html: emailData.html,
+              text: emailData.text,
+            },
+            emailData.idempotencyKey ? { idempotencyKey: emailData.idempotencyKey } : undefined,
+          );
 
           if (error) {
-            console.error('[Email] Resend API Error:', error);
+            console.error('[Email] Resend rejected a transactional message.');
             // Fallback to logging if Resend fails? Or just return false?
             // For now, let's log and return false to indicate failure
             return false;
@@ -38,29 +47,28 @@ export class EmailService {
 
           console.log('[Email] Sent via Resend:', data?.id);
           return true;
-        } catch (resendError) {
-          console.error('[Email] Resend Exception:', resendError);
+        } catch {
+          console.error('[Email] Resend transactional outcome is unknown.');
           return false;
         }
       }
 
-      // Fallback: Log email to console (Development/No API Key)
+      if (!permitsLocalEmailFallback()) {
+        console.error('[Email] Transactional email is unconfigured for deployed runtime', {
+          runtimeEnv: process.env.APP_ENV ?? process.env.NODE_ENV ?? 'development',
+        });
+        return false;
+      }
+
+      // Fallback: Log email to console for local development and tests only.
       console.log('[Email] Sending email (Mock/Log):', {
-        to: emailData.to,
-        subject: emailData.subject,
+        recipientDomain: emailData.to.split('@')[1] || '[invalid]',
         // Don't log HTML content for security
       });
 
-      if (process.env.NODE_ENV === 'development') {
-        console.log('[Email] Development mode - email content:');
-        console.log('Subject:', emailData.subject);
-        console.log('To:', emailData.to);
-        console.log('HTML length:', emailData.html.length);
-      }
-
       return true;
-    } catch (error) {
-      console.error('[Email] Failed to send email:', error);
+    } catch {
+      console.error('[Email] Transactional email failed.');
       return false;
     }
   }

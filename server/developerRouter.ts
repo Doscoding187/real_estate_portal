@@ -8,6 +8,8 @@ import { developerSubscriptionService } from './services/developerSubscriptionSe
 import { developmentService } from './services/developmentService';
 import { publicDevelopmentSearchService } from './services/publicDevelopmentSearchService';
 import { searchPublicLand } from './services/landPublicService';
+import { isLandVerticalAvailable } from '../shared/landLaunchPolicy';
+import { assertLandDevelopmentDraftOperationAvailable } from './services/developerEngineContainment';
 import { getDeveloperByUserId, requireDeveloperProfileByUserId } from './services/developerService'; // [NEW] Import service methods
 import { getPublisherById } from './services/cataloguePublisherService';
 import { cataloguePublisherService } from './services/cataloguePublisherService';
@@ -73,6 +75,14 @@ import {
 import { getDeveloperPublicationAccess } from './services/developerPublicationAccess';
 import type { DeveloperPublicationAccess } from './services/developerPublicationAccess';
 import {
+  confirmDeveloperMediaUpload,
+  developerMediaBadRequest,
+  DEVELOPER_MEDIA_CATEGORIES,
+  reserveDeveloperMediaUpload,
+  verifyDeveloperMediaUploadReceipt,
+  type DeveloperMediaCategory,
+} from './services/developerMediaAuthority';
+import {
   checkPublicLeadRateLimit,
   getPublicLeadClientIp,
 } from './services/publicLeadRateLimitService';
@@ -104,6 +114,49 @@ export const DeveloperOperatingHomeInputSchema = z
     range: z.enum(['7d', '30d', '90d']).default('30d'),
   })
   .strict();
+
+async function assertDeveloperMediaScope(input: {
+  publisherId: number;
+  developmentId: number | null;
+  unitId: string | null;
+}) {
+  if (input.developmentId === null) {
+    if (input.unitId !== null) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'A unit media receipt requires its owned development scope.',
+      });
+    }
+    return;
+  }
+
+  const dbConn = await db.getDb();
+  if (!dbConn) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database unavailable.' });
+  const [development] = await dbConn
+    .select({ id: developments.id })
+    .from(developments)
+    .where(
+      and(
+        eq(developments.id, input.developmentId),
+        eq(developments.cataloguePublisherId, input.publisherId),
+      ),
+    )
+    .limit(1);
+  if (!development) {
+    throw new TRPCError({ code: 'NOT_FOUND', message: 'Development not found for this Developer organisation.' });
+  }
+
+  if (input.unitId !== null) {
+    const [unit] = await dbConn
+      .select({ id: unitTypes.id })
+      .from(unitTypes)
+      .where(and(eq(unitTypes.id, input.unitId), eq(unitTypes.developmentId, input.developmentId)))
+      .limit(1);
+    if (!unit) {
+      throw new TRPCError({ code: 'NOT_FOUND', message: 'Unit type does not belong to this development.' });
+    }
+  }
+}
 
 type DevelopmentHomeIdentityRow = Pick<
   typeof developments.$inferSelect,
@@ -582,6 +635,10 @@ export const developerRouter = router({
           message: 'The draft publisher must belong to the authenticated organisation.',
         });
       }
+      assertLandDevelopmentDraftOperationAvailable(
+        input.draftData,
+        'Land development draft preparation',
+      );
 
       if (input.id) {
         const updateSet: Record<string, any> = {
@@ -589,13 +646,11 @@ export const developerRouter = router({
           draftData: sanitized,
           progress,
           currentStep,
-          lastModified: new Date().toISOString(),
-          cataloguePublisherId: profile.publisherId,
-          developerOrganisationId: profile.organisationId,
+          lastModified: new Date(),
         };
 
         const [existingDraft] = await dbConn
-          .select({ id: developmentDrafts.id })
+          .select({ id: developmentDrafts.id, draftData: developmentDrafts.draftData })
           .from(developmentDrafts)
           .where(
             and(
@@ -608,6 +663,10 @@ export const developerRouter = router({
         if (!existingDraft) {
           throw new TRPCError({ code: 'NOT_FOUND', message: 'Draft not found' });
         }
+        assertLandDevelopmentDraftOperationAvailable(
+          existingDraft.draftData,
+          'Land development draft preparation',
+        );
 
         await dbConn
           .update(developmentDrafts)
@@ -1144,6 +1203,9 @@ export const developerRouter = router({
         }
 
         if (input.tab === 'plot_land') {
+          if (!isLandVerticalAvailable()) {
+            return { items: [], source: 'land' };
+          }
           const publicLand = await searchPublicLand({
             ...(locationFilter.province ? { province: locationFilter.province } : {}),
             ...(locationFilter.city ? { city: locationFilter.city } : {}),
@@ -1285,7 +1347,7 @@ export const developerRouter = router({
         };
       }
 
-      if (!checkPublicLeadRateLimit(getPublicLeadClientIp(ctx))) {
+      if (!(await checkPublicLeadRateLimit(getPublicLeadClientIp(ctx), ctx.res))) {
         throw new TRPCError({
           code: 'TOO_MANY_REQUESTS',
           message: 'Too many lead submissions. Please try again in a minute.',
@@ -1362,9 +1424,12 @@ export const developerRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const profile = await requireDeveloperProfileByUserId(requireUser(ctx).id);
+      const user = requireUser(ctx);
+      const profile = await requireDeveloperProfileByUserId(user.id);
       return await assignDeveloperLead({
         developerId: profile.publisherId,
+        organisationId: profile.organisationId,
+        actorUserId: user.id,
         leadId: input.leadId,
         ownerType: input.ownerType,
         ownerId: input.ownerId ?? null,
@@ -1504,6 +1569,76 @@ export const developerRouter = router({
         sla: input?.sla,
         limit: input?.limit,
       });
+    }),
+
+  /**
+   * Developer media has a separate receipt from generic uploads. The client
+   * never supplies organisation, publisher, development, or unit authority;
+   * those are resolved here and rechecked again at confirmation and write.
+   */
+  reserveMediaUpload: protectedProcedure
+    .input(
+      z.object({
+        filename: z.string().trim().min(1).max(255),
+        contentType: z.string().trim().min(1).max(255),
+        category: z.enum(DEVELOPER_MEDIA_CATEGORIES),
+        developmentId: z.number().int().positive().optional(),
+        unitId: z.string().trim().min(1).max(36).optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const user = requireUser(ctx);
+      const profile = await requireDeveloperProfileByUserId(user.id);
+      const developmentId = input.developmentId ?? null;
+      const unitId = input.unitId ?? null;
+      await assertDeveloperMediaScope({
+        publisherId: profile.publisherId,
+        developmentId,
+        unitId,
+      });
+      try {
+        return await reserveDeveloperMediaUpload({
+          userId: user.id,
+          organisationId: profile.organisationId,
+          publisherId: profile.publisherId,
+          developmentId,
+          unitId,
+          category: input.category as DeveloperMediaCategory,
+          fileName: input.filename,
+          contentType: input.contentType,
+        });
+      } catch (error) {
+        throw developerMediaBadRequest(error);
+      }
+    }),
+
+  confirmMediaUpload: protectedProcedure
+    .input(z.object({ uploadReceipt: z.string().trim().min(1) }))
+    .mutation(async ({ ctx, input }) => {
+      const user = requireUser(ctx);
+      const profile = await requireDeveloperProfileByUserId(user.id);
+      try {
+        const receipt = verifyDeveloperMediaUploadReceipt(input.uploadReceipt, {
+          userId: user.id,
+          organisationId: profile.organisationId,
+          publisherId: profile.publisherId,
+          requireConfirmed: false,
+        });
+        await assertDeveloperMediaScope({
+          publisherId: profile.publisherId,
+          developmentId: receipt.developmentId,
+          unitId: receipt.unitId,
+        });
+        return await confirmDeveloperMediaUpload({
+          uploadReceipt: input.uploadReceipt,
+          userId: user.id,
+          organisationId: profile.organisationId,
+          publisherId: profile.publisherId,
+        });
+      } catch (error) {
+        if (error instanceof TRPCError) throw error;
+        throw developerMediaBadRequest(error);
+      }
     }),
 
   createDevelopment: protectedProcedure

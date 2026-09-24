@@ -3,6 +3,15 @@ import { isValidAuthRateLimitRedisUrl } from './authRateLimitStore';
 import { resolveBrowserSecurityPolicy } from './browserSecurity';
 import type { AppRuntimeEnv } from './runtimeBootstrap';
 import { resolveAppRuntimeEnv } from './runtimeBootstrap';
+import { resolveTransactionalEmailConfiguration, transactionalEmailOrigin } from './transactionalEmailConfig';
+import { deployedSecurityConfigurationIssues } from './securityRuntimeConfiguration';
+import {
+  PAID_MVP_APPROVAL_REF_ENV,
+  PAID_MVP_ENABLED_PRODUCT_KEYS_ENV,
+  PAID_MVP_RELEASE_ID_ENV,
+  resolveCommercialActivationConfiguration,
+} from '../services/commercialActivationPolicy';
+import { PAID_MVP_LAUNCH_ACCESS_PRODUCT_KEYS } from '../../shared/commercialActivation';
 
 export type LaunchPreflightLevel = 'required' | 'recommended';
 
@@ -28,6 +37,7 @@ const PLACEHOLDER_PATTERNS = [
   /not-payable/i,
   /local test/i,
   /onboarding@resend\.dev/i,
+  /^(?:your|test|testing|development|dev)[-_]/i,
   /^0+$/,
 ];
 
@@ -269,12 +279,16 @@ function billingProofStorageCheck(env: EnvLike) {
     !(readEnv(env, 'BILLING_PROOF_S3_REGION') || readEnv(env, 'AWS_REGION'))
       ? 'BILLING_PROOF_S3_REGION or AWS_REGION'
       : null,
-    !(readEnv(env, 'BILLING_PROOF_AWS_ACCESS_KEY_ID') || readEnv(env, 'AWS_ACCESS_KEY_ID'))
-      ? 'BILLING_PROOF_AWS_ACCESS_KEY_ID or AWS_ACCESS_KEY_ID'
+    !readEnv(env, 'BILLING_PROOF_AWS_ACCESS_KEY_ID')
+      ? 'BILLING_PROOF_AWS_ACCESS_KEY_ID'
       : null,
-    !(readEnv(env, 'BILLING_PROOF_AWS_SECRET_ACCESS_KEY') || readEnv(env, 'AWS_SECRET_ACCESS_KEY'))
-      ? 'BILLING_PROOF_AWS_SECRET_ACCESS_KEY or AWS_SECRET_ACCESS_KEY'
+    !readEnv(env, 'BILLING_PROOF_AWS_SECRET_ACCESS_KEY')
+      ? 'BILLING_PROOF_AWS_SECRET_ACCESS_KEY'
       : null,
+    readEnv(env, 'BILLING_PROOF_AWS_ACCESS_KEY_ID') === readEnv(env, 'AWS_ACCESS_KEY_ID')
+      ? 'BILLING_PROOF_AWS_ACCESS_KEY_ID (distinct from public media)' : null,
+    readEnv(env, 'BILLING_PROOF_S3_BUCKET') === readEnv(env, 'S3_BUCKET_NAME')
+      ? 'BILLING_PROOF_S3_BUCKET (distinct from public media)' : null,
   ].filter(Boolean) as string[];
 
   return makeCheck({
@@ -287,12 +301,27 @@ function billingProofStorageCheck(env: EnvLike) {
 }
 
 function emailCheck(env: EnvLike) {
-  const from = firstValue(env, ['RESEND_FROM_EMAIL', 'EMAIL_FROM']);
+  const configuration = resolveTransactionalEmailConfiguration(env);
   const missing = [
-    !readEnv(env, 'RESEND_API_KEY') ? 'RESEND_API_KEY' : null,
-    !from ? 'RESEND_FROM_EMAIL or EMAIL_FROM' : null,
-    from && hasPlaceholder(from.value) ? `${from.key} (placeholder)` : null,
+    !configuration.apiKey
+      ? 'RESEND_API_KEY'
+      : !configuration.apiKeyConfigured
+        ? 'RESEND_API_KEY (placeholder)'
+        : null,
+    !configuration.from
+      ? 'RESEND_FROM_EMAIL or EMAIL_FROM'
+      : !configuration.fromConfigured
+        ? `${configuration.fromKey} (invalid or placeholder)`
+        : null,
   ].filter(Boolean) as string[];
+
+  for (const kind of ['app', 'api'] as const) {
+    try {
+      transactionalEmailOrigin(kind, env);
+    } catch {
+      missing.push(`public ${kind} origin (HTTPS origin required)`);
+    }
+  }
 
   return makeCheck({
     id: 'transactional-email',
@@ -336,6 +365,71 @@ function distributedAuthRateLimitCheck(env: EnvLike) {
   });
 }
 
+function deployedSecurityConfigurationCheck(env: EnvLike, runtimeEnv: AppRuntimeEnv) {
+  const issues = deployedSecurityConfigurationIssues(env, runtimeEnv);
+  return makeCheck({
+    id: 'deployed-security-configuration',
+    level: 'required',
+    ok: issues.length === 0,
+    message:
+      issues[0] ||
+      'Authentication, upload signing, storage adapter, and test-mode configuration are safe for deployed runtime.',
+    missing: issues.length > 0 ? issues : undefined,
+  });
+}
+
+function paidMvpActivationCheck(env: EnvLike, runtimeEnv: AppRuntimeEnv) {
+  try {
+    const activation = resolveCommercialActivationConfiguration(env, runtimeEnv);
+    if (runtimeEnv !== 'production') {
+      return makeCheck({
+        id: 'paid-mvp-commercial-activation',
+        level: 'required',
+        ok: true,
+        message: activation.enabled
+          ? 'Staging activation is restricted to explicitly approved Paid MVP keys.'
+          : 'Commercial activation remains fail-closed outside the production release.',
+      });
+    }
+
+    const expectedKeys = [...PAID_MVP_LAUNCH_ACCESS_PRODUCT_KEYS].sort();
+    const enabledKeys = [...activation.enabledProductKeys].sort();
+    const exactProductSet =
+      activation.mode === 'paid_mvp_release' &&
+      enabledKeys.length === expectedKeys.length &&
+      enabledKeys.every((key, index) => key === expectedKeys[index]);
+    const missing = exactProductSet
+      ? []
+      : [
+          `${PAID_MVP_ENABLED_PRODUCT_KEYS_ENV}=agent_launch_access,agency_launch_access,developer_launch_access`,
+        ];
+    if (!activation.releaseId) missing.push(PAID_MVP_RELEASE_ID_ENV);
+    if (!activation.approvalRef) missing.push(PAID_MVP_APPROVAL_REF_ENV);
+
+    return makeCheck({
+      id: 'paid-mvp-commercial-activation',
+      level: 'required',
+      ok: missing.length === 0,
+      message:
+        missing.length === 0
+          ? 'Exactly the three approved Paid MVP products are tied to release approval metadata.'
+          : 'Production launch requires the exact three Paid MVP product keys and release metadata.',
+      missing: missing.length > 0 ? missing : undefined,
+    });
+  } catch (error) {
+    return makeCheck({
+      id: 'paid-mvp-commercial-activation',
+      level: 'required',
+      ok: false,
+      message:
+        error instanceof Error
+          ? error.message
+          : 'Paid MVP commercial activation configuration is invalid.',
+      missing: [PAID_MVP_ENABLED_PRODUCT_KEYS_ENV],
+    });
+  }
+}
+
 function recommendedPresenceCheck(env: EnvLike, id: string, keys: string[], message: string) {
   const missing = missingKeys(env, keys);
   return makeCheck({
@@ -355,6 +449,8 @@ export function runLaunchPreflight(options?: {
   const runtimeEnv = options?.runtimeEnv ?? resolveAppRuntimeEnv(env);
   const checks: LaunchPreflightCheck[] = [
     databaseCheck(env, runtimeEnv),
+    deployedSecurityConfigurationCheck(env, runtimeEnv),
+    paidMvpActivationCheck(env, runtimeEnv),
     jwtSecretCheck(env),
     ...urlChecks(env),
     browserSecurityCheck(env, runtimeEnv),

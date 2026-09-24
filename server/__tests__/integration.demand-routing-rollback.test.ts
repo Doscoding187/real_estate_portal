@@ -7,13 +7,17 @@ import {
   agencies,
   agencyAgentMemberships,
   agents,
+  billableAccounts,
   demandCampaigns,
   demandLeadAssignments,
   demandLeadMatches,
   demandLeads,
+  demandUnmatchedLeads,
   leads,
   notifications,
+  plans,
   properties,
+  subscriptions,
   users,
 } from '../../drizzle/schema';
 import { captureDemandLeadFromCampaign } from '../services/demandEngineService';
@@ -25,18 +29,40 @@ describeDatabase('demand routing transaction rollback', () => {
     userId: 0,
     agencyId: 0,
     agentId: 0,
-    propertyId: 0,
-    campaignId: 0,
-  };
+  propertyId: 0,
+  campaignId: 0,
+  billableAccountId: 0,
+  subscriptionId: 0,
+};
 
   afterEach(async () => {
     const db = await getDb();
     if (!db) return;
     if (created.campaignId) {
+      await db
+        .delete(demandLeadAssignments)
+        .where(eq(demandLeadAssignments.campaignId, created.campaignId));
+      await db
+        .delete(demandLeadMatches)
+        .where(eq(demandLeadMatches.campaignId, created.campaignId));
+      await db
+        .delete(demandUnmatchedLeads)
+        .where(eq(demandUnmatchedLeads.campaignId, created.campaignId));
       await db.delete(demandLeads).where(eq(demandLeads.campaignId, created.campaignId));
       await db.delete(demandCampaigns).where(eq(demandCampaigns.id, created.campaignId));
     }
+    if (created.agentId) {
+      await db
+        .delete(leads)
+        .where(and(eq(leads.source, 'demand'), eq(leads.agentId, created.agentId)));
+    }
     if (created.propertyId) await db.delete(properties).where(eq(properties.id, created.propertyId));
+    if (created.subscriptionId) {
+      await db.delete(subscriptions).where(eq(subscriptions.id, created.subscriptionId));
+    }
+    if (created.billableAccountId) {
+      await db.delete(billableAccounts).where(eq(billableAccounts.id, created.billableAccountId));
+    }
     if (created.agentId) {
       await db.delete(agencyAgentMemberships).where(eq(agencyAgentMemberships.agentId, created.agentId));
       await db.delete(agents).where(eq(agents.id, created.agentId));
@@ -48,12 +74,16 @@ describeDatabase('demand routing transaction rollback', () => {
     created.agentId = 0;
     created.propertyId = 0;
     created.campaignId = 0;
+    created.billableAccountId = 0;
+    created.subscriptionId = 0;
   });
 
   it('rolls back the complete demand routing graph when the transaction fails after routing', async () => {
     const db = await getDb();
     if (!db) throw new Error('Database not available');
     const suffix = randomUUID();
+    const demandCity = `Demand City ${suffix}`;
+    const demandProvince = `Demand Province ${suffix}`;
 
     const [userInsert] = await db.insert(users).values({
       email: `demand-rollback-${suffix}@invalid.example`,
@@ -93,6 +123,41 @@ describeDatabase('demand routing transaction rollback', () => {
       updatedBy: created.userId,
     } as any);
 
+    const [launchPlan] = await db
+      .select({ id: plans.id })
+      .from(plans)
+      .where(
+        and(
+          eq(plans.name, 'agency_launch_access'),
+          eq(plans.segment, 'agency'),
+          eq(plans.isActive, 1),
+        ),
+      )
+      .limit(1);
+    expect(launchPlan?.id).toBeTruthy();
+
+    const [billableAccountInsert] = await db.insert(billableAccounts).values({
+      accountKind: 'agency',
+      agencyId: created.agencyId,
+    } as any);
+    created.billableAccountId = Number(billableAccountInsert.insertId);
+    const activeAt = new Date();
+    const activeUntil = new Date(activeAt.getTime() + 24 * 60 * 60 * 1000);
+    const [subscriptionInsert] = await db.insert(subscriptions).values({
+      ownerType: 'agency',
+      ownerId: created.agencyId,
+      billableAccountId: created.billableAccountId,
+      planId: launchPlan!.id,
+      status: 'active',
+      currentPeriodStart: activeAt.toISOString().slice(0, 19).replace('T', ' '),
+      currentPeriodEnd: activeUntil.toISOString().slice(0, 19).replace('T', ' '),
+      cancelAtPeriodEnd: 0,
+      billingCycleAnchor: activeUntil.toISOString().slice(0, 19).replace('T', ' '),
+      createdBy: created.userId,
+      updatedBy: created.userId,
+    } as any);
+    created.subscriptionId = Number(subscriptionInsert.insertId);
+
     const [propertyInsert] = await db.insert(properties).values({
       title: `Demand Rollback Property ${suffix}`,
       description: 'Physical transaction rollback fixture',
@@ -104,8 +169,8 @@ describeDatabase('demand routing transaction rollback', () => {
       bathrooms: 2,
       area: 140,
       address: '1 Rollback Street',
-      city: 'Johannesburg',
-      province: 'Gauteng',
+      city: demandCity,
+      province: demandProvince,
       status: 'available',
       featured: 0,
       views: 0,
@@ -124,16 +189,19 @@ describeDatabase('demand routing transaction rollback', () => {
       sourceChannel: 'manual',
       distributionMode: 'exclusive',
       sharedRecipientCount: 1,
-      city: 'Johannesburg',
-      province: 'Gauteng',
+      city: demandCity,
+      province: demandProvince,
       propertyType: 'house',
     } as any);
     created.campaignId = Number(campaignInsert.insertId);
 
+    let routedBeforeRollback: Awaited<ReturnType<typeof captureDemandLeadFromCampaign>> | null = null;
     const originalTransaction = db.transaction.bind(db);
     (db as any).transaction = async (run: (tx: any) => Promise<unknown>) =>
       originalTransaction(async (tx: any) => {
-        await run(tx);
+        routedBeforeRollback = (await run(tx)) as Awaited<
+          ReturnType<typeof captureDemandLeadFromCampaign>
+        >;
         throw new Error('injected demand routing failure');
       });
 
@@ -144,12 +212,18 @@ describeDatabase('demand routing transaction rollback', () => {
           name: 'Rollback Buyer',
           email: `rollback-buyer-${suffix}@invalid.example`,
           message: 'This must not survive the failed routing transaction.',
-          criteria: { city: 'Johannesburg', province: 'Gauteng', propertyType: 'house' },
+          criteria: { city: demandCity, province: demandProvince, propertyType: 'house' },
         }),
       ).rejects.toThrow('injected demand routing failure');
     } finally {
       (db as any).transaction = originalTransaction;
     }
+
+    // The active Agency term was sufficient to route before the injected
+    // rollback. The original transactional assertions below prove none of
+    // that temporary routing graph survived the failed transaction.
+    expect(routedBeforeRollback?.leadIds).toHaveLength(1);
+    expect(routedBeforeRollback?.assignedAgentIds).toEqual([created.agentId]);
 
     const survivingDemandLeads = await db
       .select({ id: demandLeads.id })
@@ -180,5 +254,31 @@ describeDatabase('demand routing transaction rollback', () => {
       .from(notifications)
       .where(eq(notifications.userId, created.userId));
     expect(survivingNotifications).toHaveLength(0);
+
+    // Once the same Agency term expires, matching inventory remains retained
+    // but must not create a fresh paid lead or assignment. The demand record
+    // is preserved as unmatched operational history instead.
+    await db
+      .update(subscriptions)
+      .set({ currentPeriodEnd: '2020-01-01 00:00:00' })
+      .where(eq(subscriptions.id, created.subscriptionId));
+    const expiredResult = await captureDemandLeadFromCampaign({
+      campaignId: created.campaignId,
+      name: 'Expired-term Buyer',
+      email: `expired-demand-${suffix}@invalid.example`,
+      message: 'This must not become a new paid enquiry after expiry.',
+      criteria: { city: demandCity, province: demandProvince, propertyType: 'house' },
+    });
+    expect(expiredResult).toMatchObject({
+      leadIds: [],
+      assignedAgentIds: [],
+      assignmentType: null,
+      unmatched: true,
+    });
+    const expiredLeads = await db
+      .select({ id: leads.id })
+      .from(leads)
+      .where(and(eq(leads.source, 'demand'), eq(leads.agentId, created.agentId)));
+    expect(expiredLeads).toHaveLength(0);
   }, 30_000);
 });

@@ -1,8 +1,11 @@
 import { lazy, Suspense } from 'react';
+import { BriefcaseBusiness, Building2, UsersRound } from 'lucide-react';
 import { EnhancedNavbar } from '@/components/EnhancedNavbar';
 import { Footer } from '@/components/Footer';
+import { CommercialActivationNotice } from '@/components/commercial/CommercialActivationNotice';
 import { SEOHead } from '@/components/advertise/SEOHead';
 import { StructuredData } from '@/components/advertise/StructuredData';
+import { VisualPathCard } from '@/components/advertise/VisualPathCard';
 import { useAdvertiseAnalytics } from '@/hooks/useAdvertiseAnalytics';
 import { useCommercialCatalog } from '@/hooks/useCommercialCatalog';
 import { SectionErrorBoundary } from '@/components/advertise/AdvertiseErrorBoundary';
@@ -54,9 +57,51 @@ import { LiveDemandSection } from '@/components/advertise/LiveDemandSection';
 import { HeroSection } from '@/components/advertise/HeroSection';
 import { toAbsoluteUrl } from '@/lib/seo/structuredData';
 import { RoleWorkspaceHeroPreview } from './advertise/RoleWorkspaceHeroPreview';
+import { COMMERCIAL_ACTIVATION_STATE } from '@shared/commercialActivation';
 
-export default function AdvertiseWithUs() {
-  useAdvertiseAnalytics();
+const PREPARATION_PATHS = [
+  {
+    title: 'For Agents',
+    description:
+      'Establish your professional presence, complete the available onboarding work, and prepare private listing drafts.',
+    icon: BriefcaseBusiness,
+    href: '/advertise/sell/agents',
+    ctaText: 'Start Agent preparation',
+    benefits: [
+      'Account and profile preparation',
+      'Canonical coverage setup',
+      'Private listing drafts',
+    ],
+  },
+  {
+    title: 'For Agencies',
+    description:
+      'Create an owner account, establish your Agency identity, and prepare private inventory before activation.',
+    icon: UsersRound,
+    href: '/advertise/sell/agencies',
+    ctaText: 'Start Agency preparation',
+    benefits: [
+      'Agency owner account',
+      'Identity and branding preparation',
+      'Private inventory workspace',
+    ],
+  },
+  {
+    title: 'For Developers',
+    description:
+      'Establish your Developer organisation for review and prepare private development drafts.',
+    icon: Building2,
+    href: '/advertise/sell/developers',
+    ctaText: 'Start Developer preparation',
+    benefits: [
+      'Developer organisation setup',
+      'Organisation review state',
+      'Private development drafts',
+    ],
+  },
+];
+
+export function CommercialAdvertiseWithUs() {
   const { data: commercialCatalog } = useCommercialCatalog();
 
   return (
@@ -214,5 +259,91 @@ export default function AdvertiseWithUs() {
 
       <Footer />
     </div>
+  );
+}
+
+function PreparationAdvertiseWithUs() {
+  return (
+    <div data-testid="advertise-preparation-page" className="flex min-h-screen flex-col bg-white">
+      <SEOHead
+        title="Prepare your Property Listify workspace | Property Listify"
+        description="Choose an available Property Listify preparation path, establish your role-specific presence, and prepare private inventory before commercial activation."
+        canonicalUrl="/advertise"
+      />
+      <EnhancedNavbar />
+
+      <main id="main-content" className="flex-1 bg-white">
+        <section className="border-b border-slate-200 bg-slate-950 py-20 text-white md:py-28">
+          <div className="mx-auto grid max-w-7xl gap-10 px-4 sm:px-6 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,.72fr)] lg:items-center lg:gap-16 lg:px-8">
+            <div className="max-w-3xl">
+              <p className="text-xs font-bold uppercase tracking-[0.22em] text-blue-300">
+                For property professionals
+              </p>
+              <h1 className="mt-6 text-4xl font-bold leading-tight tracking-tight text-white md:text-5xl lg:text-6xl">
+                Prepare your Property Listify workspace before commercial activation.
+              </h1>
+              <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-300 md:text-xl">
+                Start with the role that fits your business. You can establish the available account
+                and organisation details, then prepare private inventory while publication and paid
+                participation remain protected.
+              </p>
+            </div>
+            <div className="rounded-[28px] border border-white/15 bg-white/10 p-6 shadow-[0_28px_80px_rgba(15,23,42,0.24)] backdrop-blur sm:p-8">
+              <CommercialActivationNotice />
+            </div>
+          </div>
+        </section>
+
+        <section id="audience-gateways" className="bg-slate-50 py-20 md:py-28">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <div className="mx-auto max-w-3xl text-center">
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-700">
+                Choose your preparation path
+              </p>
+              <h2 className="mt-4 text-3xl font-extrabold tracking-tight text-slate-950 md:text-5xl">
+                Establish the parts of your workspace that are available now.
+              </h2>
+              <p className="mt-5 text-lg leading-8 text-slate-600">
+                Each role has an existing private preparation path. Marketplace publication,
+                commercial activation, and new marketplace opportunities remain subject to their
+                existing approval and entitlement controls.
+              </p>
+            </div>
+            <div className="mt-12 grid grid-cols-1 gap-8 md:grid-cols-3">
+              {PREPARATION_PATHS.map(path => (
+                <div key={path.href} data-testid="advertise-preparation-path">
+                  <VisualPathCard {...path} />
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="border-t border-slate-200 bg-white py-20 md:py-24">
+          <div className="mx-auto max-w-4xl px-4 text-center sm:px-6 lg:px-8">
+            <h2 className="text-3xl font-bold tracking-tight text-slate-950 md:text-4xl">
+              Private preparation remains separate from public participation.
+            </h2>
+            <p className="mt-5 text-base leading-8 text-slate-600 md:text-lg">
+              Preparing an account, organisation, or draft does not activate payment, grant a
+              commercial entitlement, or make inventory public. Those transitions remain governed by
+              the existing approval, review, and activation requirements.
+            </p>
+          </div>
+        </section>
+      </main>
+
+      <Footer />
+    </div>
+  );
+}
+
+export default function AdvertiseWithUs() {
+  useAdvertiseAnalytics();
+
+  return COMMERCIAL_ACTIVATION_STATE.enabled ? (
+    <CommercialAdvertiseWithUs />
+  ) : (
+    <PreparationAdvertiseWithUs />
   );
 }

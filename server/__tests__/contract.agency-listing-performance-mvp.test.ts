@@ -29,12 +29,21 @@ describe('agency listing performance API contract', () => {
     expect(revisionPath).toMatch(
       /code:\s*'CONFLICT',\s*message:\s*'Another listing revision is already in progress\./,
     );
-    expect(revisionPath).toContain('await requirePerformanceListingAccess(db, user, review.listingId);');
+    expect(reviewPath).toContain(
+      'const actor = await requireCurrentAgencyWorkspaceActor(db, user);',
+    );
+    expect(revisionPath).toContain(
+      'await requirePerformanceListingAccess(db, actor, review.listingId);',
+    );
   });
 
   it('persists the seller contact date separately from the immutable snapshot boundary', () => {
-    expect(source).toContain('contactDate: input.contactDate ? toDbTimestampRequired(input.contactDate) : null');
+    expect(source).toContain(
+      'contactDate: input.contactDate ? toDbTimestampRequired(input.contactDate) : null',
+    );
     expect(source).toContain('reviewPeriodStart: snapshot.metrics.reviewPeriodStart');
-    expect(readFileSync(path.join(root, 'drizzle/schema/listingPerformance.ts'), 'utf8')).toContain("contactDate: timestamp('contact_date'");
+    expect(readFileSync(path.join(root, 'drizzle/schema/listingPerformance.ts'), 'utf8')).toContain(
+      "contactDate: timestamp('contact_date'",
+    );
   });
 });

@@ -13,12 +13,20 @@ import { EntityStatusCard } from '@/components/dashboard/EntityStatusCard';
 import { AgentFeatureLockedState } from '@/components/agent/AgentFeatureLockedState';
 import { AgentJourneyStatusErrorState } from '@/components/agent/AgentJourneyStatusErrorState';
 import { useAgentOnboardingStatus } from '@/hooks/useAgentOnboardingStatus';
-import { getAgentJourneyAction, isAgentProfileJourneyStep } from '@/lib/agentJourney';
+import {
+  getAgentJourneyAction,
+  getAgentProfileCompletionDescription,
+  isAgentProfileJourneyStep,
+} from '@/lib/agentJourney';
 import { calculateListingReadiness } from '@/lib/readiness';
+import {
+  getPrivateListingActionIds,
+  getPublicAgentListingActionIds,
+} from '@/lib/agentListingActionIds';
 import { cn } from '@/lib/utils';
 
-type ListingTab = 'active' | 'pending' | 'draft' | 'sold' | 'archived';
-type ListingStatusFilter = 'pending_review' | 'draft';
+type ListingTab = 'active' | 'pending' | 'draft' | 'rejected' | 'sold' | 'archived';
+type ListingStatusFilter = 'pending_review' | 'draft' | 'rejected';
 
 function listingTabFromLocation(location: string): ListingTab {
   // Wouter may expose the pathname without its search string, while the
@@ -33,6 +41,7 @@ function listingTabFromLocation(location: string): ListingTab {
 
   return requestedTab === 'pending' ||
     requestedTab === 'draft' ||
+    requestedTab === 'rejected' ||
     requestedTab === 'sold' ||
     requestedTab === 'archived'
     ? requestedTab
@@ -47,6 +56,7 @@ export default function AgentListings() {
     isLoading: statusLoading,
     error: statusError,
     retry: retryStatus,
+    agentLaunchAccessAvailable,
   } = useAgentOnboardingStatus({
     requireDashboardUnlocked: true,
   });
@@ -59,10 +69,13 @@ export default function AgentListings() {
 
   // Map tabs to status for API
   const getListingStatusForTab = (tab: ListingTab): ListingStatusFilter => {
-    return tab === 'pending' ? 'pending_review' : 'draft';
+    if (tab === 'pending') return 'pending_review';
+    if (tab === 'rejected') return 'rejected';
+    return 'draft';
   };
 
-  const isDraftOrPending = activeTab === 'draft' || activeTab === 'pending';
+  const isDraftOrPending =
+    activeTab === 'draft' || activeTab === 'pending' || activeTab === 'rejected';
   const dashboardUnlocked = !statusLoading && Boolean(status?.dashboardUnlocked);
   const operationalDataEnabled = !statusLoading && Boolean(status?.fullFeaturesUnlocked);
 
@@ -161,6 +174,8 @@ export default function AgentListings() {
 
   const normalizeDraftListing = (listing: DraftListing) => ({
     id: listing.id,
+    listingId: listing.id,
+    publicPropertyId: null,
     title: listing.title,
     address: listing.address,
     city: listing.city,
@@ -180,6 +195,7 @@ export default function AgentListings() {
     status: listing.status === 'pending_review' ? 'pending' : listing.status,
     approvalStatus: listing.approvalStatus,
     readinessScore: listing.readinessScore,
+    rejectionReason: listing.rejectionReason,
     rejectionReasons: listing.rejectionReasons,
     rejectionNote: listing.rejectionNote,
     readiness: calculateListingReadiness(listing),
@@ -189,6 +205,8 @@ export default function AgentListings() {
 
   const normalizeAgentListing = (listing: AgentListing) => ({
     ...listing,
+    listingId: listing.sourceListingId == null ? null : Number(listing.sourceListingId),
+    publicPropertyId: Number(listing.id),
     price:
       listing.pricing?.askingPrice ||
       listing.pricing?.monthlyRent ||
@@ -214,7 +232,7 @@ export default function AgentListings() {
   );
 
   const listingAccessLocked = !statusLoading && !status?.entitlements?.canPublishListings;
-  const journeyAction = getAgentJourneyAction(status);
+  const journeyAction = getAgentJourneyAction(status, { agentLaunchAccessAvailable });
   const needsProfileCompletion = isAgentProfileJourneyStep(status);
   const startListing = () => {
     if (statusLoading || journeyAction.waiting) return;
@@ -324,7 +342,7 @@ export default function AgentListings() {
               className="w-full"
             >
               <TabsList
-                className={cn(agentPageStyles.tabsList, 'mb-6 grid w-full max-w-3xl grid-cols-5')}
+                className={cn(agentPageStyles.tabsList, 'mb-6 grid w-full max-w-4xl grid-cols-6')}
               >
                 <TabsTrigger value="active" className={agentPageStyles.tabTrigger}>
                   Active
@@ -334,6 +352,9 @@ export default function AgentListings() {
                 </TabsTrigger>
                 <TabsTrigger value="draft" className={agentPageStyles.tabTrigger}>
                   Drafts
+                </TabsTrigger>
+                <TabsTrigger value="rejected" className={agentPageStyles.tabTrigger}>
+                  Changes needed
                 </TabsTrigger>
                 <TabsTrigger value="sold" className={agentPageStyles.tabTrigger}>
                   Sold
@@ -356,7 +377,7 @@ export default function AgentListings() {
                     }
                     description={
                       needsProfileCompletion
-                        ? 'Complete the remaining professional profile details, then activate Launch Access to publish and manage inventory.'
+                        ? getAgentProfileCompletionDescription({ agentLaunchAccessAvailable })
                         : journeyAction.description
                     }
                     actionLabel={
@@ -401,17 +422,46 @@ export default function AgentListings() {
                   </div>
                 ) : (
                   <div className="flex flex-col gap-4">
-                    {filteredListings?.map(listing => (
-                      <EntityStatusCard
-                        key={listing.id}
-                        type="listing"
-                        data={listing}
-                        readiness={listing.readiness}
-                        onEdit={id => setLocation(`/listings/create?id=${id}&edit=true`)}
-                        onDelete={id => handleDelete(id)}
-                        onView={id => setLocation(`/property/${id}`)}
-                      />
-                    ))}
+                    {filteredListings?.map(listing => {
+                      const privateActionIds = isDraftOrPending
+                        ? getPrivateListingActionIds(listing.listingId)
+                        : null;
+                      const publicActionIds = isDraftOrPending
+                        ? null
+                        : getPublicAgentListingActionIds({
+                            propertyId: listing.publicPropertyId,
+                            sourceListingId: listing.listingId,
+                          });
+                      const editListingId =
+                        privateActionIds?.editListingId ?? publicActionIds?.editListingId ?? null;
+                      const deleteId =
+                        privateActionIds?.deleteListingId ?? publicActionIds?.deletePropertyId ?? null;
+                      const publicPropertyId = publicActionIds?.publicPropertyId ?? null;
+                      const editUnavailableLabel =
+                        !isDraftOrPending && editListingId == null
+                          ? 'This public listing no longer has a source listing that can be edited.'
+                          : undefined;
+
+                      return (
+                        <EntityStatusCard
+                          key={listing.id}
+                          type="listing"
+                          data={listing}
+                          readiness={listing.readiness}
+                          editId={editListingId}
+                          deleteId={deleteId}
+                          viewId={publicPropertyId}
+                          editUnavailableLabel={editUnavailableLabel}
+                          onEdit={id => setLocation(`/listings/create?id=${id}&edit=true`)}
+                          onDelete={id => handleDelete(id)}
+                          onView={
+                            publicPropertyId == null
+                              ? undefined
+                              : id => setLocation(`/property/${id}`)
+                          }
+                        />
+                      );
+                    })}
                   </div>
                 )}
               </TabsContent>

@@ -173,6 +173,20 @@ async function main(): Promise<void> {
   const migration = await authorityConnection('migration-apply');
   try {
     await currentUser(migration.connection, ISOLATED_CI_ROLE_USERS.migration);
+    const before: any = await migration.connection.query(
+      'SELECT CONNECTION_ID() AS connection_id, @@session.sql_generate_invisible_primary_key AS gipk',
+    );
+    const beforeRow = Array.isArray(before?.[0]) ? before[0][0] : undefined;
+    await migration.connection.query('SET SESSION sql_generate_invisible_primary_key = OFF');
+    const after: any = await migration.connection.query(
+      'SELECT CONNECTION_ID() AS connection_id, @@session.sql_generate_invisible_primary_key AS gipk',
+    );
+    const afterRow = Array.isArray(after?.[0]) ? after[0][0] : undefined;
+    if (!beforeRow?.connection_id ||
+        Number(afterRow?.connection_id) !== Number(beforeRow.connection_id) ||
+        Number(afterRow?.gipk) !== 0) {
+      throw new Error('Isolated CI migration identity cannot disable GIPK on the same session.');
+    }
     await migration.connection.execute(
       'UPDATE `sql_migration_history` SET `duration_ms` = `duration_ms` WHERE 1 = 0',
     );
@@ -210,6 +224,7 @@ async function main(): Promise<void> {
         'worker-job-dml',
         'verifier-metadata-read',
         'migration-ledger-dml',
+        'migration-session-gipk-off',
       ],
       negativeOperations: [
         'application-control-write-and-ddl',

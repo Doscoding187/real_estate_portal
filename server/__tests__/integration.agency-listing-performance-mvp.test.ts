@@ -5,12 +5,13 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { and, eq } from 'drizzle-orm';
 
 import {
-  agencies, agencyBranding, agents, billableAccounts, agencyDealOfferVersions, agencyDeals, agencyListingPerformanceActivity,
+  agencies, agencyAgentMemberships, agencyBranding, agents, billableAccounts, agencyDealOfferVersions, agencyDeals, agencyListingPerformanceActivity,
   agencyListingPerformanceReviews, cities, listingAnalytics, listingApprovalQueue, listingLeads, listings,
   planEntitlements, plans, properties, provinces, showings, suburbs, subscriptions, users,
 } from '../../drizzle/schema';
 import { approveListing, createListing, getDb, submitListingForReview } from '../db';
 import { appRouter } from '../routers';
+import { establishCanonicalAgencyMembership } from '../services/agencyMembershipService';
 
 dotenv.config({ path: path.resolve(process.cwd(), '.env.test'), override: true });
 
@@ -71,7 +72,7 @@ async function makeAgencyPublicationReady(agencyId: number, suffix: string) {
   const db = await getDb(); if (!db) throw new Error('Database not available');
   const [brandingResult] = await db.insert(agencyBranding).values({ agencyId, companyName: `Performance Agency ${suffix}`, primaryColor: '#0f766e', secondaryColor: '#334155', isEnabled: 1 } as any);
   ids.branding.push(idOf(brandingResult));
-  const [planResult] = await db.insert(plans).values({ name: `performance-publication-${suffix}`, displayName: 'Performance Publication Test Plan', description: 'Canonical agency publication fixture for performance coverage.', segment: 'agency', price: 99_000, priceMonthly: 99_000, currency: 'ZAR', interval: 'month', trialDays: 0, features: JSON.stringify(['Listings', 'Publishing']), limits: JSON.stringify({ max_active_listings: 50 }), isActive: 1, isPopular: 0, sortOrder: 999 } as any);
+  const [planResult] = await db.insert(plans).values({ name: `performance-publication-${suffix}`, displayName: 'Performance Publication Test Plan', description: 'Canonical agency publication fixture for performance coverage.', segment: 'agency', price: 99_000, priceMonthly: 99_000, currency: 'ZAR', interval: 'month', trialDays: 0, features: JSON.stringify(['Listings', 'Publishing']), limits: JSON.stringify({ max_active_listings: 50 }), metadata: { commercial_product_key: 'agency_launch_access', commercial_term_kind: 'paid_launch_access', commercial_term_duration_days: 90, commercial_requires_verified_payment: true, commercial_auto_renews: false }, isActive: 1, isPopular: 0, sortOrder: 999 } as any);
   const planId = idOf(planResult); ids.plans.push(planId);
   const [entitlementResult] = await db.insert(planEntitlements).values({ planId, featureKey: 'max_active_listings', valueJson: 50 } as any);
   ids.planEntitlements.push(idOf(entitlementResult));
@@ -105,6 +106,7 @@ afterEach(async () => {
   for (const subscriptionId of ids.subscriptions) await db.delete(subscriptions).where(eq(subscriptions.id, subscriptionId));
   for (const planEntitlementId of ids.planEntitlements) await db.delete(planEntitlements).where(eq(planEntitlements.id, planEntitlementId));
   for (const brandingId of ids.branding) await db.delete(agencyBranding).where(eq(agencyBranding.id, brandingId));
+  for (const agentId of ids.agents) await db.delete(agencyAgentMemberships).where(eq(agencyAgentMemberships.agentId, agentId));
   for (const agentId of ids.agents) await db.delete(agents).where(eq(agents.id, agentId));
   for (const userId of ids.users) await db.delete(users).where(eq(users.id, userId));
   for (const agencyId of ids.agencies) await db.delete(agencies).where(eq(agencies.id, agencyId));
@@ -120,7 +122,9 @@ guardedDescribe('agency listing performance MVP persisted integration', () => {
     const agencyId = await makeAgency('Performance Agency'); const outsideAgencyId = await makeAgency('Outside Performance Agency');
     await makeAgencyPublicationReady(agencyId, suffix);
     const managerId = await user(agencyId, 'agency_admin', suffix, 'Manager'); const assignedUserId = await user(agencyId, 'agent', suffix, 'Assigned'); const unassignedUserId = await user(agencyId, 'agent', suffix, 'Unassigned'); const outsideManagerId = await user(outsideAgencyId, 'agency_admin', suffix, 'Outside');
-    const assignedAgentId = await agent(agencyId, assignedUserId, suffix, 'Assigned'); await agent(agencyId, unassignedUserId, suffix, 'Unassigned');
+    const assignedAgentId = await agent(agencyId, assignedUserId, suffix, 'Assigned'); const unassignedAgentId = await agent(agencyId, unassignedUserId, suffix, 'Unassigned');
+    await establishCanonicalAgencyMembership({ db, agencyId, agentId: assignedAgentId, actorUserId: managerId });
+    await establishCanonicalAgencyMembership({ db, agencyId, agentId: unassignedAgentId, actorUserId: managerId });
     const manager = caller({ id: managerId, role: 'agency_admin', agencyId }); const assigned = caller({ id: assignedUserId, role: 'agent', agencyId }); const unassigned = caller({ id: unassignedUserId, role: 'agent', agencyId }); const outsider = caller({ id: outsideManagerId, role: 'agency_admin', agencyId: outsideAgencyId });
     const canonical = await publishedListing(managerId, agencyId, assignedAgentId, suffix);
     await db.update(listings).set({ status: 'draft' } as any).where(eq(listings.id, canonical.id));

@@ -13,6 +13,7 @@ const agent = {
   agencyId: null,
   status: 'approved',
   isVerified: 1,
+  hasActivePaidEntitlement: true,
   userRole: 'agent',
   firstName: 'Amina',
   lastName: 'Nkosi',
@@ -32,6 +33,7 @@ const agency = {
   phone: '+27210000000',
   email: 'hello@north-star.example',
   isVerified: 1,
+  hasActivePaidEntitlement: true,
 };
 
 function evidence(
@@ -163,7 +165,7 @@ describe('public property eligibility authority', () => {
     expect(result.get(9003)?.property.id).toBe(504);
   });
 
-  it('publishes a verified independent agent with an actionable identity', () => {
+  it('publishes an approved independent agent with current Launch Access and an actionable identity', () => {
     const result = evaluatePublicPropertySupplyEvidence(evidence());
 
     expect(result).toMatchObject({
@@ -184,7 +186,13 @@ describe('public property eligibility authority', () => {
   });
 
   it('publishes an assigned agent and verified agency as one identity', () => {
-    const agencyAgent = { ...agent, agencyId: 44, hasCurrentMembership: true };
+    const agencyAgent = {
+      ...agent,
+      agencyId: 44,
+      hasActivePaidEntitlement: false,
+      hasActiveAgencyEntitlement: true,
+      hasCurrentMembership: true,
+    };
     const result = evaluatePublicPropertySupplyEvidence(
       evidence({
         sourceListing: { id: 9001, ownerId: 70, agentId: 33, agencyId: 44 },
@@ -211,6 +219,36 @@ describe('public property eligibility authority', () => {
     });
   });
 
+  it('publishes an agency member with the agency entitlement and no individual badge', () => {
+    const agencyAgent = {
+      ...agent,
+      agencyId: 44,
+      isVerified: 0,
+      hasActivePaidEntitlement: false,
+      hasActiveAgencyEntitlement: true,
+      hasCurrentMembership: true,
+    };
+    const result = evaluatePublicPropertySupplyEvidence(
+      evidence({
+        sourceListing: { id: 9001, ownerId: 70, agentId: 33, agencyId: 44 },
+        propertyOwner: { id: 70, role: 'agent', agencyId: 44 },
+        sourceOwner: { id: 70, role: 'agent', agencyId: 44 },
+        directAgent: agencyAgent,
+        sourceAgent: agencyAgent,
+        directAgentAgency: agency,
+        sourceAgentAgency: agency,
+        sourceAgency: agency,
+        ownerAgency: agency,
+      }),
+    );
+
+    expect(result).toMatchObject({
+      eligible: true,
+      custody: { recipientType: 'agent', recipientId: 33, agencyId: 44 },
+      publicIdentity: { agentId: 33, agencyId: 44 },
+    });
+  });
+
   it('withholds the public identity when an affiliated agent loses membership currency', () => {
     const lapsedAgencyAgent = { ...agent, agencyId: 44, hasCurrentMembership: false };
     const result = evaluatePublicPropertySupplyEvidence(
@@ -230,7 +268,7 @@ describe('public property eligibility authority', () => {
     expect(result.eligible).toBe(false);
   });
 
-  it('publishes verified agency inventory without inventing an agent', () => {
+  it('publishes Agency Launch Access inventory without inventing an agent', () => {
     const result = evaluatePublicPropertySupplyEvidence(
       evidence({
         property: {
@@ -365,7 +403,13 @@ describe('public property eligibility authority', () => {
   });
 
   it.each([
-    ['unverified agent', { directAgent: { ...agent, isVerified: 0 }, sourceAgent: { ...agent, isVerified: 0 } }],
+    [
+      'verified/badged agent without Launch Access',
+      {
+        directAgent: { ...agent, hasActivePaidEntitlement: false },
+        sourceAgent: { ...agent, hasActivePaidEntitlement: false },
+      },
+    ],
     ['stale owner', { property: { id: 501, ownerId: 99, agentId: 33, developmentId: null, cataloguePublisherId: null } }],
     ['stale agent', { property: { id: 501, ownerId: 70, agentId: 34, developmentId: null, cataloguePublisherId: null } }],
     ['wrong source evidence', { approvedSourceListingId: 9002 }],
