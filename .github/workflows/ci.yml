@@ -168,6 +168,63 @@ jobs:
           S2_DB_TESTS: '1'
         run: pnpm test:authority -- server/__tests__/integration.developer-engine-s2-supersession.test.ts server/__tests__/integration.billing-billable-account.test.ts --reporter=basic
 
+  location-authority:
+    name: Location Authority
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.22.3'
+          cache: 'pnpm'
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Record exact source recovery status
+        run: pnpm geography:coverage:source-status -- --json
+
+      - name: Require missing exact sources to fail closed
+        run: |
+          if pnpm geography:coverage:source-status -- --strict; then
+            echo "Exact geography sources unexpectedly available in hermetic CI." >&2
+            exit 1
+          fi
+
+      - name: Require full regeneration to fail closed without exact sources
+        run: |
+          set +e
+          output="$(pnpm geography:coverage:check 2>&1)"
+          status=$?
+          set -e
+          printf '%s\n' "${output}"
+          test "${status}" -ne 0
+          case "${output}" in
+            *"Canonical layer files not found"*) ;;
+            *) exit 1 ;;
+          esac
+
+      - name: Verify aggregate location authority
+        run: pnpm location:authority:check
+
+      - name: Run checked-in geography artifact probes
+        run: pnpm geography:coverage:probes
+
+      - name: Run focused location authority contracts
+        run: pnpm location:authority:test
+
   lint-and-typecheck:
     name: Lint & TypeCheck
     runs-on: ubuntu-latest

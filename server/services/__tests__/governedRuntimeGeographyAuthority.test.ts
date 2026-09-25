@@ -5,19 +5,14 @@ import {
   gautengFactualRuntimeProjectionAuthority,
 } from '../governedRuntimeGeographyReference';
 import { GAUTENG_SEARCH_AREA_CANDIDATE_DEFINITIONS } from '../gautengSearchAreaCandidateDefinitions';
-import {
-  SearchAreaAuthority,
-  type ResolveSearchAreaOptions,
-} from '../searchAreaAuthority';
+import { SearchAreaAuthority, type ResolveSearchAreaOptions } from '../searchAreaAuthority';
 import type { SearchAreaDefinition } from '../searchAreaDefinitions';
 import {
   buildSearchAreaQueryBoundary,
   combineSearchAreaQueryBoundaries,
   getSearchAreaQueryMembers,
 } from '../searchAreaQueryBoundary';
-import {
-  createRuntimeGeographyAuthority,
-} from '../runtimeGeographyResolverService';
+import { createRuntimeGeographyAuthority } from '../runtimeGeographyResolverService';
 import type {
   RuntimeGeographyAuthority,
   RuntimeGeographyAuthorityRecord,
@@ -36,7 +31,10 @@ const EXPECTED_CANDIDATE_AREAS = [
 const EAST_RAND_ID = 'pl-sa-gp-20f043e9ba8ece627365f5ad';
 
 function runtimeRecord(
-  input: Pick<RuntimeGeographyAuthorityRecord, 'runtimeNaturalKey' | 'scopeKind' | 'factualLocationId' | 'factualPreferredName' | 'factualType'> &
+  input: Pick<
+    RuntimeGeographyAuthorityRecord,
+    'runtimeNaturalKey' | 'scopeKind' | 'factualLocationId' | 'factualPreferredName' | 'factualType'
+  > &
     Partial<RuntimeGeographyAuthorityRecord>,
 ): RuntimeGeographyAuthorityRecord {
   return {
@@ -76,13 +74,13 @@ describe('governed Gauteng runtime geography and Search Area authority', () => {
       EXPECTED_CANDIDATE_AREAS,
     );
 
-    const memberships = GAUTENG_SEARCH_AREA_CANDIDATE_DEFINITIONS.flatMap(area =>
-      area.members ?? [],
+    const memberships = GAUTENG_SEARCH_AREA_CANDIDATE_DEFINITIONS.flatMap(
+      area => area.members ?? [],
     );
     expect(memberships).toHaveLength(61);
-    expect(memberships.filter(member => member.resolutionState === 'projection_ready')).toHaveLength(
-      61,
-    );
+    expect(
+      memberships.filter(member => member.resolutionState === 'projection_ready'),
+    ).toHaveLength(61);
     expect(memberships.filter(member => member.resolutionState === 'unresolved')).toHaveLength(0);
     expect(
       memberships.some(member => member.factualLocationId === 'pl-gp-v01-455d2715587edce120f0'),
@@ -105,8 +103,8 @@ describe('governed Gauteng runtime geography and Search Area authority', () => {
   });
 
   it('keeps the retired Midrand source identity in provenance without current membership', () => {
-    const memberships = GAUTENG_SEARCH_AREA_CANDIDATE_DEFINITIONS.flatMap(area =>
-      area.members ?? [],
+    const memberships = GAUTENG_SEARCH_AREA_CANDIDATE_DEFINITIONS.flatMap(
+      area => area.members ?? [],
     );
     const historical = GAUTENG_FACTUAL_RUNTIME_PROJECTION_ENTRIES.find(
       entry => entry.factualLocationId === 'pl-gp-v01-455d2715587edce120f0',
@@ -206,9 +204,9 @@ describe('governed Gauteng runtime geography and Search Area authority', () => {
         acceptedContextRelationship: item.contextRelationship,
       });
       expect(entry?.evidenceProvenance?.length).toBeGreaterThan(0);
-      expect(entry?.evidenceProvenance?.every(evidence => evidence.sourceUrl.startsWith('http'))).toBe(
-        true,
-      );
+      expect(
+        entry?.evidenceProvenance?.every(evidence => evidence.sourceUrl.startsWith('http')),
+      ).toBe(true);
       expect(JSON.stringify(entry)).not.toMatch(/(?:province|city|suburb):[0-9]+/);
     }
 
@@ -247,7 +245,9 @@ describe('governed Gauteng runtime geography and Search Area authority', () => {
 
     const projectedFactualIds = new Set(rows.flatMap(row => row.factualLocationIds));
     expect(projectedFactualIds.size).toBe(1424);
-    const memberships = GAUTENG_SEARCH_AREA_CANDIDATE_DEFINITIONS.flatMap(area => area.members ?? []);
+    const memberships = GAUTENG_SEARCH_AREA_CANDIDATE_DEFINITIONS.flatMap(
+      area => area.members ?? [],
+    );
     expect(
       memberships.filter(
         member => member.runtimeReferenceStatus === 'reference_data_expansion_required',
@@ -257,7 +257,7 @@ describe('governed Gauteng runtime geography and Search Area authority', () => {
       GAUTENG_FACTUAL_RUNTIME_PROJECTION_ENTRIES.filter(
         entry => entry.runtimeReferenceStatus === 'reference_data_expansion_required',
       ),
-      ).toHaveLength(1423);
+    ).toHaveLength(1423);
   });
 
   it('resolves a governed natural key through the existing environment resolver', async () => {
@@ -286,6 +286,64 @@ describe('governed Gauteng runtime geography and Search Area authority', () => {
       scopeKind: 'metro_city',
       factualLocationId: 'pl-gp-v01-7a1604bd1ce2d85ce2c5',
       factualType: 'town',
+    });
+  });
+
+  it('resolves a co-published runtime key only when the exact factual member is supplied', async () => {
+    const resolver = createRuntimeGeographyAuthority({
+      projectionAuthority: gautengFactualRuntimeProjectionAuthority,
+      publicLocationResolver: {
+        resolvePublicLocation: async options => {
+          expect(options).toEqual({
+            provinceSlug: 'gauteng',
+            citySlug: 'randfontein',
+            suburbSlug: 'eikepark',
+          });
+          return {
+            status: 'resolved' as const,
+            location: {
+              level: 'suburb' as const,
+              province: { id: 77, name: 'Gauteng', slug: 'gauteng', code: 'GP' },
+              city: { id: 901, name: 'Randfontein', slug: 'randfontein', provinceId: 77 },
+              suburb: {
+                id: 902,
+                name: 'Eikepark',
+                slug: 'eikepark',
+                cityId: 901,
+              },
+              confidence: 'exact' as const,
+              fallbackLevel: 'none' as const,
+              originalIntent: 'Eikepark, Randfontein',
+            },
+          };
+        },
+      },
+    });
+    const first = 'pl-gp-v01-1e32c07668460cae218f';
+    const second = 'pl-gp-v01-b4b64a12d456a96f5779';
+
+    expect(
+      await resolver.resolveRuntimeNaturalKey('gauteng/randfontein/eikepark', 'locality'),
+    ).toBeNull();
+    expect(
+      await resolver.resolveRuntimeNaturalKey(
+        'gauteng/randfontein/eikepark',
+        'locality',
+        'pl-gp-v01-00000000000000000000',
+      ),
+    ).toBeNull();
+    expect(
+      await resolver.resolveRuntimeNaturalKey('gauteng/randfontein/eikepark', 'locality', first),
+    ).toMatchObject({
+      canonicalLocationId: 'suburb:902',
+      factualLocationId: first,
+      factualPreferredName: 'Eikepark',
+    });
+    expect(
+      await resolver.resolveRuntimeNaturalKey('gauteng/randfontein/eikepark', 'locality', second),
+    ).toMatchObject({
+      canonicalLocationId: 'suburb:902',
+      factualLocationId: second,
     });
   });
 

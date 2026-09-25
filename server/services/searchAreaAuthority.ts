@@ -709,6 +709,7 @@ export class SearchAreaAuthority {
         const member = await this.runtimeGeographyAuthority.resolveRuntimeNaturalKey(
           memberDefinition.runtimeNaturalKey,
           memberDefinition.scopeKind,
+          memberDefinition.factualLocationId,
         );
         if (!member) {
           return unavailable(searchAreaId, 'runtime_member_natural_key_unresolved');

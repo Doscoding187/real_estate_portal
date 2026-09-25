@@ -1,0 +1,51 @@
+{
+  "record_version": "0.1",
+  "recorded_at": "2026-09-25",
+  "contract": "docs/architecture/geography-coverage-contract.md",
+  "territory": {
+    "country": "ZA",
+    "province": "Gauteng",
+    "province_slug": "gauteng",
+    "manifest": "data/geography-coverage-v0.1/gauteng-territory-manifest.v0.1.json"
+  },
+  "status": "exact_source_unrecoverable",
+  "required_inputs": [
+    {
+      "name": "factual_canonical_geography",
+      "relative_path": "gauteng_factual_canonical_geography_v0.1.jsonl",
+      "expected_sha256": "1fe0e2e3101bd7e459f484b7125dc1ce1f0327104002b184ef0e90d4236b7b7f"
+    },
+    {
+      "name": "factual_canonical_names",
+      "relative_path": "gauteng_factual_canonical_names_v0.1.jsonl",
+      "expected_sha256": "a87891bc2e4167130d7e5eb649516a34aedaa071278ce8fe25df19f511669b51"
+    }
+  ],
+  "last_authoritative_checkpoint": {
+    "commit": "bd39aa38e4f7158164f3572b62db827fbf01c1a7",
+    "branch": "feat/gauteng-factual-canonical-v0-1",
+    "worktree": "/home/edwardspc/Desktop/Dev/listify-gauteng-factual-canonical-v0-1",
+    "canonical_root": "/home/edwardspc/Desktop/Dev/listify-gauteng-factual-canonical-v0-1/data/gauteng-factual-canonical-v0.1/output"
+  },
+  "investigation": {
+    "scope": [
+      "reachable Git refs and commit history",
+      "archive refs and dangling Git objects",
+      "repository worktrees",
+      "working-tree and ignored-file searches",
+      "the recorded external canonical-root worktree"
+    ],
+    "result": "No exact byte match for either required SHA-256 checkpoint exists in the investigated locations."
+  },
+  "authority_decision": {
+    "source_replacement": "prohibited",
+    "checked_in_outputs": "frozen_evidence_and_current_runtime_projection",
+    "full_regeneration": "blocked_until_exact_source_is_restored",
+    "territory_expansion": "prohibited_from_synthesized_source"
+  },
+  "verification_state": {
+    "artifact_integrity_check": "required",
+    "coverage_probes": "required",
+    "full_source_regeneration_check": "expected_to_fail_closed_while_sources_are_missing"
+  }
+}

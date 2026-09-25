@@ -1,0 +1,31 @@
+{
+  "schema_version": "0.1",
+  "catalog_id": "property-listify-location-authority-catalog-v0.1",
+  "sources": [
+    {
+      "source_id": "za-gp",
+      "root_natural_key": "gauteng",
+      "factual_id_namespaces": [
+        "gp"
+      ],
+      "manifest": {
+        "path": "data/geography-coverage-v0.1/gauteng-territory-manifest.v0.1.json",
+        "sha256": "d4abd0b0303a7fdcd57e4a20f64bfbeece2c91dc7e0f953875cfbe90dfcb9b0f"
+      },
+      "runtime_projection": {
+        "path": "data/geography-coverage-v0.1/output/gauteng_runtime_reference_projection_v0.2.json",
+        "sha256": "faad65e4216c2fb62886e5561984a8b82fe3b750942a4bb38c2eba12a8141399"
+      },
+      "factual_mapping": {
+        "path": "data/geography-coverage-v0.1/output/gauteng_factual_runtime_mapping_v0.2.jsonl",
+        "sha256": "ed709559ba69b28b6dcc20fc7381478f2e822ff8436bcaaf7dcaaddd410c63fa"
+      },
+      "expected_manifest_version": "0.1",
+      "expected_projection_version": "gauteng-runtime-reference-projection-v0.3",
+      "expected_runtime_rows": 1414,
+      "expected_factual_entries": 1480,
+      "expected_projection_ready_entries": 1424,
+      "expected_co_published_natural_keys": 14
+    }
+  ]
+}
