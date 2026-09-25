@@ -1,0 +1,145 @@
+{
+  "admission_version": "gauteng-place-admission-v0.1",
+  "generated_from": {
+    "source_authority_version": "gauteng-source-authority-v0.2",
+    "source_snapshot_id": "14666e91befd11e1aea6b220c520678fbafbfc2c12383392e29c9e727fa0a06e",
+    "source_manifest_path": "data/gauteng-source-authority-v0.2/gauteng_source_manifest_v0.2.json",
+    "source_manifest_sha256": "334b2a6be8a575b677ade9668e61203574f80231a88d63a39fdd64b5d806bf7b",
+    "compact_artifacts": [
+      {
+        "path": "data/gauteng-source-authority-v0.2/gauteng_factual_canonical_geography_v0.2.jsonl",
+        "sha256": "7bba9cc217b207466916647cb674d637366eb45ed0c7c01b88c62c625e91884e",
+        "size_bytes": 7089504
+      },
+      {
+        "path": "data/gauteng-source-authority-v0.2/gauteng_factual_canonical_names_v0.2.jsonl",
+        "sha256": "b5021e21df8728416e0bb7d0f7858c824cb9bca4bd382b8f98cbbeed285d79fd",
+        "size_bytes": 1212239
+      },
+      {
+        "path": "data/gauteng-source-authority-v0.2/gauteng_factual_canonical_source_links_v0.2.jsonl",
+        "sha256": "23559b7fd42c139aefbad4174fca3eadcfc7f9e717c5fa86b6d2b5888612dba7",
+        "size_bytes": 3918425
+      },
+      {
+        "path": "data/gauteng-source-authority-v0.2/gauteng_candidate_dispositions_v0.2.jsonl",
+        "sha256": "73212b62fb2999ae2d785b5c338bc6774e949c49b08de67252a1b6e245348943",
+        "size_bytes": 14338060
+      }
+    ],
+    "comparison_baseline": {
+      "note": "The v0.1 committed artifacts are retained as comparison and regression evidence only. Their factual source JSONLs are unrecoverable and were not used as forward authority.",
+      "catalogue": "data/geography-coverage-v0.1/territory-catalog.v0.1.json",
+      "catalogue_sha256": "ad32a26dbaa40d03f63545d5f9af0918cbea2e1d65c8166817b15c52e5d6f8c4",
+      "factual_identity_count": 1480,
+      "runtime_row_count": 1414,
+      "queued_count": 116,
+      "awaiting_accepted_parent_edge": 11,
+      "duplicate_natural_key_within_parent": 8,
+      "natural_key_owned_by_accepted_row": 3,
+      "co_published_natural_keys": 14,
+      "parent_evidence_inputs": 103
+    }
+  },
+  "governed_policy": {
+    "container_types": [
+      "district_municipality",
+      "local_municipality",
+      "province"
+    ],
+    "settlement_merge_max_km": 15,
+    "merge_requires_same_administrative_context": true,
+    "type_disagreement_never_blocks_merge": true,
+    "preferred_public_name_selection": "official role, then source preferred_common; within a class the most independently sourced assertion wins, ties broken by text",
+    "one_containment_parent_per_place": true,
+    "search_scope_authorization_in_slice_2": 0,
+    "place_id_allocation": "assigned from a committed registry; never derived from name, slug, coordinates, parent, classification, natural key or source identity"
+  },
+  "counts": {
+    "source_identities": 1488,
+    "source_name_assertions": 2459,
+    "source_links": 2971,
+    "source_candidates": 4350,
+    "admitted_places": 1466,
+    "merged_equivalence_groups": 22,
+    "absorbed_source_identities": 22,
+    "single_identity_places": 1444,
+    "group_kinds": {
+      "administrative_container": 31,
+      "single_identity": 1414,
+      "merged_same_referent": 21
+    },
+    "verification": {
+      "provisional": 1377,
+      "verified": 89
+    },
+    "licensing": {
+      "mixed_odbl_supported": 472,
+      "osm_only_odbl_provisional": 720,
+      "permissive_supported": 274
+    },
+    "names": 2476,
+    "name_roles": {
+      "preferred_public": 1466,
+      "common": 984,
+      "alternate_spelling": 18,
+      "historical": 8
+    },
+    "searchable_names": 1919,
+    "preferred_public_names": 1466,
+    "relationships": 1465,
+    "relationship_types": {
+      "administratively_contains": 1465
+    },
+    "containment_parent_count": 1465,
+    "evidence_rows": 4463,
+    "external_mappings": 2971,
+    "disposition_ledger_rows": 4350,
+    "dispositions": {
+      "quarantined_candidate": 2754,
+      "rejected_non_independent": 108,
+      "admitted_as_place_primary": 1466,
+      "admitted_merged_into_place": 22
+    },
+    "parent_evidence_inputs": 103,
+    "parent_evidence_classification": {
+      "total_edges": 478,
+      "by_class": {
+        "insufficient_ambiguous_evidence": 41,
+        "non_geographic_relationship": 311,
+        "administrative_containment_candidate": 125,
+        "historical_superseded_evidence": 1
+      },
+      "by_disposition": {
+        "not_admitted_in_slice_2": 478
+      }
+    }
+  },
+  "place_id_registry": {
+    "path": "data/gauteng-place-admission-v0.1/gauteng_place_id_registry.v0.1.json",
+    "allocated_ids": 1466,
+    "allocation_sequence": 1466,
+    "ids_minted_this_run": 0,
+    "ids_reused_this_run": 1466
+  },
+  "invariants_asserted": [
+    "every source identity maps to exactly one admitted Place",
+    "place count equals distinct assigned ids",
+    "one preferred public name per Place",
+    "every name, relationship and evidence row references an admitted Place",
+    "every relationship has evidence and is not self-referential",
+    "containment is a forest: one parent, no cycles",
+    "no relationship-driven search widening in Slice 2",
+    "scope, eligibility and classification combinations satisfy the database invariants",
+    "the disposition ledger covers every source candidate"
+  ],
+  "outputs": {
+    "places": "data/gauteng-place-admission-v0.1/gauteng_place_admission_v0.1.jsonl",
+    "names": "data/gauteng-place-admission-v0.1/gauteng_place_names_v0.1.jsonl",
+    "relationships": "data/gauteng-place-admission-v0.1/gauteng_place_relationships_v0.1.jsonl",
+    "evidence": "data/gauteng-place-admission-v0.1/gauteng_place_evidence_v0.1.jsonl",
+    "external_mappings": "data/gauteng-place-admission-v0.1/gauteng_place_external_mappings_v0.1.jsonl",
+    "disposition_ledger": "data/gauteng-place-admission-v0.1/gauteng_place_disposition_ledger_v0.1.jsonl",
+    "parent_evidence_classification": "data/gauteng-place-admission-v0.1/gauteng_parent_evidence_classification_v0.1.json"
+  }
+}

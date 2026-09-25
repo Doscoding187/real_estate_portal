@@ -1,0 +1,264 @@
+{
+  "authority_version": "gauteng-source-authority-v0.2",
+  "source_snapshot_id": "14666e91befd11e1aea6b220c520678fbafbfc2c12383392e29c9e727fa0a06e",
+  "source_manifest": {
+    "path": "data/gauteng-source-authority-v0.2/gauteng_source_manifest_v0.2.json",
+    "sha256": "334b2a6be8a575b677ade9668e61203574f80231a88d63a39fdd64b5d806bf7b",
+    "size_bytes": 43332
+  },
+  "compact_artifacts": [
+    {
+      "kind": "geography",
+      "path": "data/gauteng-source-authority-v0.2/gauteng_factual_canonical_geography_v0.2.jsonl",
+      "sha256": "7bba9cc217b207466916647cb674d637366eb45ed0c7c01b88c62c625e91884e",
+      "size_bytes": 7089504
+    },
+    {
+      "kind": "names",
+      "path": "data/gauteng-source-authority-v0.2/gauteng_factual_canonical_names_v0.2.jsonl",
+      "sha256": "b5021e21df8728416e0bb7d0f7858c824cb9bca4bd382b8f98cbbeed285d79fd",
+      "size_bytes": 1212239
+    },
+    {
+      "kind": "source_links",
+      "path": "data/gauteng-source-authority-v0.2/gauteng_factual_canonical_source_links_v0.2.jsonl",
+      "sha256": "23559b7fd42c139aefbad4174fca3eadcfc7f9e717c5fa86b6d2b5888612dba7",
+      "size_bytes": 3918425
+    },
+    {
+      "kind": "candidate_dispositions",
+      "path": "data/gauteng-source-authority-v0.2/gauteng_candidate_dispositions_v0.2.jsonl",
+      "sha256": "73212b62fb2999ae2d785b5c338bc6774e949c49b08de67252a1b6e245348943",
+      "size_bytes": 14338060
+    }
+  ],
+  "derived_input_digests": {
+    "candidate_catalogue": {
+      "path": "output/gauteng_candidate_catalogue_v0.1.jsonl",
+      "sha256": "1e3836e9e3eba89d358f67a7adf1e8ddcd4eca5beb22ecdf4894321e07f68398",
+      "size_bytes": 14846968
+    },
+    "candidate_matches": {
+      "path": "output/gauteng_candidate_matches_v0.1.jsonl",
+      "sha256": "57f5c97850b207f21ebf62cf9c7309bf8d598db84bb10423a0cb41cac0685ad8",
+      "size_bytes": 6701854
+    },
+    "source_records": {
+      "path": "output/gauteng_source_records_v0.1.jsonl",
+      "sha256": "8522df5de0f9c64cd914f0e824dd3e5f7a8b8b574b5e61c8f993a0cb4ac0bd30",
+      "size_bytes": 18759690
+    },
+    "source_assertions": {
+      "path": "output/gauteng_source_assertions_v0.1.jsonl",
+      "sha256": "3c62876a5e6ced1be64dda6faeb08de795b1da97861eb5b9d97551001d07a56d",
+      "size_bytes": 39878320
+    },
+    "promotion_simulation": {
+      "path": "../gauteng-canonical-promotion-v0.2/output/gauteng_canonical_promotion_simulation_v0.2.jsonl",
+      "sha256": "3df0cd872823abb0ac430c219e91c190fad636f96ee712c8afb9c587303ae21a",
+      "size_bytes": 19593643
+    },
+    "geography": {
+      "path": "../gauteng-factual-canonical-v0.1/output/gauteng_factual_canonical_geography_v0.1.jsonl",
+      "sha256": "6b649b981bda50e750877eb6e68d59f83b2ead99e2e37a750dc5022edd249e60",
+      "size_bytes": 8278256
+    },
+    "names": {
+      "path": "../gauteng-factual-canonical-v0.1/output/gauteng_factual_canonical_names_v0.1.jsonl",
+      "sha256": "a1be38fac7235e7a3fffa1270b376bdb5d951d816847679235696e5cc12436f2",
+      "size_bytes": 3211522
+    },
+    "source_links": {
+      "path": "../gauteng-factual-canonical-v0.1/output/gauteng_factual_canonical_source_links_v0.1.jsonl",
+      "sha256": "c7dd9e13a6d3efea6530af52746df7d24f041188b2ee0c4cafdc458e5393846f",
+      "size_bytes": 10314140
+    },
+    "summary": {
+      "path": "../gauteng-factual-canonical-v0.1/output/gauteng_factual_canonical_summary_v0.1.json",
+      "sha256": "0c906fe52bd8fd938224341e61bbcfa7c0dd8888cff01ad21a776e8221125a9f",
+      "size_bytes": 131881
+    }
+  },
+  "counts": {
+    "geography_identities": 1488,
+    "name_assertions": 2459,
+    "source_links": 2971,
+    "candidate_dispositions": 4350,
+    "source_artifacts": 19
+  },
+  "canonical_result": {
+    "aliases_or_official_name_assertion_count": 990,
+    "auto_promoted": 94,
+    "by_canonical_type": {
+      "city": 7,
+      "district_municipality": 8,
+      "local_municipality": 22,
+      "locality": 155,
+      "neighbourhood": 38,
+      "province": 2,
+      "suburb": 887,
+      "town": 336,
+      "village": 33
+    },
+    "candidate_only_retained_outside_canonical": 2754,
+    "difference_from_expected": 8,
+    "expected_accepted_identity_count": 1480,
+    "formal_founder_review_rows": 0,
+    "historical_name_assertion_count": 11,
+    "identities_with_admin_uncertainty": 39,
+    "identities_with_alias_or_official_name_assertions": 477,
+    "identities_with_boundary_conflict": 39,
+    "identities_with_historical_name_assertions": 10,
+    "identities_with_spatial_uncertainty": 39,
+    "identities_with_unresolved_type": 475,
+    "name_assertion_count": 2459,
+    "non_searchable_source_label_count": 532,
+    "provisional_attribute_identities": 1394,
+    "rejected_non_independent_retained_outside_canonical": 108,
+    "source_link_count": 2971,
+    "total_factual_canonical_identities": 1488
+  },
+  "count_reconciliation": {
+    "historical_expected_identity_count": 1480,
+    "vnext_identity_count": 1488,
+    "delta": 8,
+    "status": "fresh_source_snapshot_delta_recorded_not_a_v0_1_reconstruction_gate"
+  },
+  "candidate_layer": {
+    "candidate_matches_not_deleted": true,
+    "candidate_only": 2754,
+    "rejected_non_independent": 108,
+    "source_assertions_not_deleted": true,
+    "source_records_not_deleted": true,
+    "total_candidates": 4350
+  },
+  "licensing_distribution": {
+    "by_canonical_licensing_classification": {
+      "mixed_odbl_supported": 476,
+      "osm_only_odbl_provisional": 728,
+      "permissive_supported": 284
+    },
+    "mixed_odbl_supported": 476,
+    "odbl_evidence_remains_non_proprietary": true,
+    "osm_only_odbl_provisional": 728,
+    "permissive_supported": 284
+  },
+  "special_gates": {
+    "kyalami": {
+      "canonical_location_id": null,
+      "existing_candidate_interpretations": [
+        {
+          "candidate_location_id": "pl-geo-v01-za-gp-bf3bda5e9b73324fb944",
+          "candidate_type": "neighbourhood",
+          "licence_state": "PERMISSIVE_OR_ATTRIBUTION_ONLY",
+          "preferred_name": "Kyalami",
+          "promotion_class": "candidate_only",
+          "sources": [
+            "geonames"
+          ]
+        }
+      ],
+      "identity_relationship": "official spelling correction; one factual identity",
+      "licence_gate": {
+        "reason": "Official identity evidence is strong, but a reusable commercial persistence/derivative-use right for the official web/GIS/database material was not established.",
+        "required_next_step": "Obtain written permission or an explicit commercial-compatible licence from the relevant rights holder, then attach the official evidence to the existing Kyalami candidate without changing unrelated canonical IDs.",
+        "status": "blocked"
+      },
+      "machine_canonical_decision": "candidate_only_until_commercial_reuse_gate",
+      "official_corrected_name": "Khayalami",
+      "preferred_common_consumer_name": "Kyalami",
+      "related_names_must_remain_separate": [
+        "Kyalami Estate / Khayalami Estate",
+        "Kyalami Hills / Khayalami Hills",
+        "Kyalami AH / Khayalami AH",
+        "Kyalami Gardens / Khayalami Gardens",
+        "Kyalami Ridge / Khayalami Ridge",
+        "other Kyalami-family places"
+      ],
+      "research_status": "official_identity_evidence_found_licence_gate_unresolved",
+      "sources": [
+        {
+          "commercial_reuse_status": "not_cleared",
+          "finding": "Khayalami is recorded as a correction of spelling from Kyalami for a township in the City of Joburg Municipality area in Gauteng.",
+          "published_or_reference_date": "2016-06-17",
+          "source": "South African Government Gazette 40081, GoN 730",
+          "url": "https://www.gov.za/sites/default/files/gcis_document/201606/40081gon730.pdf"
+        },
+        {
+          "commercial_reuse_status": "no_explicit_commercial_derivative_licence_found",
+          "finding": "The official GIS lookup maps KYALAMI proper and the named Kyalami-family places to KHAYALAMI spellings.",
+          "published_or_reference_date": null,
+          "source": "City of Johannesburg Corporate Geo-Informatics Online Maps",
+          "url": "https://joburg.itntnetworks.co.za/online-maps/"
+        },
+        {
+          "commercial_reuse_status": "no_explicit_commercial_derivative_licence_verified",
+          "finding": "The Department identifies the South African Geographical Names Council process and publishes an approved-names database resource.",
+          "published_or_reference_date": null,
+          "source": "Department of Sport, Arts and Culture geographical-names process",
+          "url": "https://www.dsac.gov.za/South%20African%20Geographical%20Names%20process"
+        },
+        {
+          "commercial_reuse_status": "permission_required_for_commercial_use",
+          "finding": "The accessible terms limit ordinary copying to non-commercial informational/reference purposes and require prior written permission for commercial use.",
+          "published_or_reference_date": null,
+          "source": "South African Government website terms",
+          "url": "https://www.gov.za/terms-and-conditions-use-0"
+        }
+      ]
+    }
+  },
+  "source_license_observations": [
+    {
+      "licence_class": "CC_BY",
+      "artifact_count": 6,
+      "artifact_ids": [
+        "geoboundaries:api:adm1",
+        "geoboundaries:api:adm2",
+        "geoboundaries:api:adm3",
+        "geoboundaries:geojson:adm1",
+        "geoboundaries:geojson:adm2",
+        "geoboundaries:geojson:adm3"
+      ]
+    },
+    {
+      "licence_class": "CC_BY_4",
+      "artifact_count": 7,
+      "artifact_ids": [
+        "geonames:ZA.zip",
+        "geonames:admin1CodesASCII.txt",
+        "geonames:admin2Codes.txt",
+        "geonames:alternatenames:ZA.zip",
+        "geonames:featureCodes_en.txt",
+        "geonames:hierarchy.zip",
+        "geonames:readme.txt"
+      ]
+    },
+    {
+      "licence_class": "NO_RESTRICTION_GNS",
+      "artifact_count": 5,
+      "artifact_ids": [
+        "nga_gns:country:zaf",
+        "nga_gns:data-dictionary",
+        "nga_gns:data-index",
+        "nga_gns:landing",
+        "nga_gns:reference"
+      ]
+    },
+    {
+      "licence_class": "ODBL_1",
+      "artifact_count": 1,
+      "artifact_ids": [
+        "osm:geofabrik:south-africa-latest-pbf"
+      ]
+    }
+  ],
+  "raw_source_pack_committed": false,
+  "source_closure_status": "vnext_compact_authority_ready",
+  "supersession": {
+    "old_source": "gauteng-source-authority-v0.1",
+    "old_source_status": "exact_source_unrecoverable",
+    "old_generated_output_used_as_vnext_input": false,
+    "old_runtime_projection_activated_by_this_pack": false
+  }
+}

@@ -17,6 +17,10 @@ import {
   verifyCanonicalGeography,
 } from '../server/_core/databaseAuthority/dataAdapters/canonicalGeography';
 import {
+  prepareCanonicalPlaces,
+  verifyCanonicalPlaces,
+} from '../server/_core/databaseAuthority/dataAdapters/canonicalPlaces';
+import {
   assertDataRoleManifest,
   DATA_ROLE_MANIFEST,
 } from '../server/_core/databaseAuthority/dataAdapters/dataRoleManifest';
@@ -87,6 +91,8 @@ type Command =
   | 'worktree:ack'
   | 'migration:plan'
   | 'migration:apply'
+  | 'places:prepare'
+  | 'places:verify'
   | 'migration-recovery:plan'
   | 'migration-recovery:apply'
   | 'release-migration-recovery:plan'
@@ -439,6 +445,24 @@ async function run(command: Command): Promise<void> {
     return;
   }
 
+  if (command === 'places:prepare' || command === 'places:verify') {
+    const isPrepare = command === 'places:prepare';
+    const operation: DatabaseOperation = isPrepare ? 'reference-seed' : 'verification';
+    const authority = authorityFor(operation, isPrepare ? 'local-owner' : undefined);
+    const decision = authorizationFor(authority);
+    const connection = await createAuthoritySqlConnection(authority, decision);
+    try {
+      print(
+        isPrepare
+          ? await prepareCanonicalPlaces({ authority, decision, connection })
+          : await verifyCanonicalPlaces({ authority, decision, connection }),
+      );
+    } finally {
+      await connection.end();
+    }
+    return;
+  }
+
   if (
     command === 'reference:prepare' ||
     command === 'reference:verify' ||
@@ -619,6 +643,8 @@ const commands = new Set<Command>([
   'schema:tidb-audit',
   'reference:prepare',
   'reference:verify',
+  'places:prepare',
+  'places:verify',
   'foundation:prepare',
   'foundation:verify',
   'scenario:prepare',

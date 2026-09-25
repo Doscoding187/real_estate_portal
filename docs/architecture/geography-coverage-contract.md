@@ -879,3 +879,93 @@ would be speculative. No consumer, resolver, or the three-level runtime tables
 were changed; no Search Area was activated; no provider behaviour was altered;
 no geography was retired; Western Cape and the Gauteng admission repair were not
 started.
+
+
+## 19. Slice 2 delivery record — Gauteng Place admission (v0.5)
+
+Slice 2 admits the reproducible Gauteng v0.2 evidence into the Place Authority.
+It is an identity-admission step, not a three-level projection repair, and it
+changes no runtime consumer: `LOCATION_AUTHORITY_CATALOG_INDEX_PATH` is
+untouched, public search is untouched, and `provinces`, `cities`, `suburbs`,
+`locations` and the v0.1 projection all remain in service.
+
+**Source baseline.** The digest-pinned v0.2 compact source
+(`source_snapshot_id 14666e91…`, authority `gauteng-source-authority-v0.2`) is
+the forward factual baseline, verified by digest before any row is written. The
+v0.1 artifacts are retained as comparison and regression evidence only; their
+unrecoverable factual JSONLs were not used as forward authority.
+
+**Source identity is not Place identity.** 1,488 accepted source identities were
+adjudicated into **1,466 Places**: 22 equivalences were merged and 1,444 Places
+rest on a single source identity. Every one of the 4,350 source candidates
+carries an explicit disposition — 1,466 admitted as a Place primary, 22 admitted
+as merged equivalents, 2,754 quarantined candidates, 108 rejected as
+non-independent — so source multiplicity never dictated Place multiplicity.
+
+**Adjudication basis** is evidence, never name equality:
+
+- a unique administrative container (a territory has one Gauteng), which resolved
+  the two v0.2 "Gauteng" province records to one Place; and
+- same normalized name, the same admitted administrative context, and
+  representative points within a governed 15 km distance, which resolved
+  classification disagreements such as Soweto (town vs city) and Sandton
+  (suburb vs city) to one Place each.
+
+Distinct real-world referents that share a name were preserved: Diepkloof, Waverley
+and Midrand remain two Places each, on separated administrative context and
+distance.
+
+**Relationships** use only the V1 vocabulary. 1,465 `administratively_contains`
+edges form a single-parent forest with exactly one root, each evidenced by the
+source's geoBoundaries administrative context. No settlement, market, succession
+or co-location relationship is emitted, because the approved source provides no
+evidence for one. `search_scope_authorized` is `0` on every edge: Slice 2
+authorizes no relationship-driven search widening.
+
+**The 103 governed v0.1 parent-evidence inputs** were inspected and all 478
+edges were classified. None was promoted to administrative containment. The
+dominant class is a refuse collection area list (183 edges), which denotes a
+service area; a further spread of tender, load-rotation, water, valuation-roll,
+IDP and spatial-framework classes denote service, delivery or planning areas.
+Classifications with plausible administrative semantics are recorded as
+candidates but remain unadmitted, because they reference v0.1 source identities
+and no governed crosswalk from `pl-gp-v01-*` to an admitted Place exists.
+
+**Name policy** produced 2,476 name assertions with exactly one
+`preferred_public` name per Place, chosen by a governed selection over recorded
+name assertions rather than input order. 18 extension surface forms
+(`Ext N` ↔ `Extension N` ↔ `Ext. N`) were generated as **names** for Places the
+source had already admitted; no Place was ever generated from a name pattern.
+
+**Kyalami was not admitted.** It has no accepted identity in the source and its
+candidate remains quarantined, so the licence and evidence gate is respected.
+Commercial importance is not an evidence class.
+
+**Materializer.** `dataAdapters/canonicalPlaces.ts` is the smallest Database
+Authority mechanism the governed admission source now justifies. It is
+digest-aware, fail-closed, idempotent, transactional, and refuses to remap an
+existing Place identity. Two guards are specific to this authority: OSM-only
+Places may be materialized only on a disposable target until the founder ODbL
+gate clears (D3), and a stored Place whose identity-bearing values differ from
+the package aborts the load rather than being silently updated.
+
+**Physical proof** on a newly owned disposable target, disposed afterwards: 98
+migrations applied `0000`→`0097`; physical congruency congruent with matching
+desired and actual digests and 0 differences; 39 of 39 CHECK constraints
+enforced; first load wrote 1,466 Places, 2,476 names, 1,465 relationships, 4,463
+evidence rows and 2,971 external mappings; the second load wrote 0 evidence rows
+and changed nothing; a 39-assertion behavioural probe passed, covering every
+named pressure test, the name model, containment forest and cycles, orphans,
+duplicate provider mappings, the database's refusal of an illegal scope, a
+malformed identity, an unevidenced relationship, a self-reference and a duplicate
+containment edge, plus byte-identical idempotency and unchanged Place IDs across a
+rerun.
+
+**Known open cases carried forward, not closed by this slice.** Eden Park and
+Azaadville have no admitted Place and remain quarantined coverage cases. Reiger
+Park is admitted under its evidenced spelling `Reigerpark`, while the two-word
+`Reiger Park` candidate stays quarantined. `Broadacres` is covered by a Place
+named `Broadacres AH`. Sky City is absent from the approved source entirely and is
+recorded as a living-geography evidence-acquisition case. Soweto has no admitted
+settlement relationship to its constituent places, because the approved source
+carries no evidence for one.
