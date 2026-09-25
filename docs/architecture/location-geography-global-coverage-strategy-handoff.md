@@ -126,11 +126,18 @@ The numeric values such as `city:30` and `suburb:51` are environment-specific
 runtime handles. They are not durable geography identities and must not be
 copied between environments.
 
-The generated Gauteng runtime projection currently contains 66 governed
-reference rows, while the local preview database materializes 9 provinces, 30
-cities, and 51 suburbs. That is a meaningful improvement over the initial
-bounded fixture, but it is still a runtime slice—not the 1,480-record factual
-catalogue.
+**Superseded count (contract v0.5, Section 13).** The figures previously recorded
+here — 66 governed reference rows, and a local preview database materializing
+"9 provinces, 30 cities, and 51 suburbs" — are **stale** and must not be cited.
+The authoritative reviewed checkpoint is recorded in
+[`geography-coverage-contract.md`](./geography-coverage-contract.md) Section 13,
+with exact digests and the reconciliation of conflicting counts. In summary: the
+Gauteng v0.1 default catalog holds 1,480 factual identities projecting to 1,414
+runtime rows with 116 queued; the v0.2 candidate is uncommitted and is not
+authority. Note also that the 9 provinces are a static foundation minimum, of
+which only Gauteng has real coverage — the 8 remaining provinces are
+single-row placeholders, so the "national" total must not be read as national
+coverage.
 
 ### 3.4 Public search path
 
@@ -454,21 +461,41 @@ Do not:
 
 ## 10. Decisions OX Alpha must make before implementation
 
+**RESOLVED (contract v0.5, 2026-09-25).** All eight questions below were
+answered and are recorded as binding decisions in
+[`geography-coverage-contract.md`](./geography-coverage-contract.md). That
+contract is the single authority for geography decisions. This section is
+retained only as a historical question list and **must not be read as an open
+decision surface or as a competing doctrine**.
+
 1. Which geography levels are publicly searchable in the first global release?
+   → **D1** (three derived scopes: province, metro-city, locality).
 2. Are executable provisional identities selectable, or suggestion-only until
    promoted?
+   → **D2** (selectable with `provisional` status).
 3. Which global data sources and licenses are acceptable for reusable product
    data?
+   → **D3**.
 4. Should estates and developments be exact locations, child localities, or
    separate discovery entities?
+   → **D4** (v0.5: non-statutory Places require evidenced referents; a
+   Development may be discoverable before it qualifies as a geographic Place).
 5. What is the public behavior for a valid but not-yet-covered place?
-6. What coverage and freshness targets define “complete” for a territory?
+   → **D5** (honest no-result plus a suggest-a-location path; never widened).
+6. What coverage and freshness targets define "complete" for a territory?
+   → **D6**.
 7. Which locations receive SEO pages, and which remain search-only?
+   → **D7**.
 8. How are multilingual names, transliterations, and alternate scripts
    represented and ranked?
+   → **D8** (v0.5: names are assertions with roles; preferred naming is a
+   governed selection policy, not a substitute for evidence).
 
-These decisions should be recorded in the geography contract before schema or
-bulk-data implementation begins.
+Decisions added by contract v0.5, beyond the questions above: **D0** (canonical
+identity is a typed Place), **D9** (identity continuity), **D10** (typed,
+evidenced relationships), **D11** (factual and non-statutory admission), **D12**
+(publication/search eligibility, derived scopes, ambiguity), **D13** (Place
+Intelligence ownership boundary).
 
 ## 11. Repository authority and handoff references
 

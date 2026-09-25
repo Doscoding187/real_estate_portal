@@ -2,9 +2,11 @@
 
 **Status:** Active authority for territory geography coverage work
 **Owner:** OX Alpha (implementation) / Edward (founder approval boundary)
-**Version:** 0.3 (2026-09-25)
+**Version:** 0.5 (2026-09-25)
 **Supersedes:** ad-hoc per-location additions; complements the runtime
-convergence v0.1 bounded slice without rewriting it.
+convergence v0.1 bounded slice without rewriting it; supersedes v0.3
+Section 2 D1, D4 and D8 as noted inline; records the approved typed canonical
+Place Authority doctrine and the reviewed Gauteng checkpoint.
 
 This contract records the product and data decisions that govern the
 territory-wide geography coverage pipeline. It is the Phase 0 artifact of the
@@ -41,6 +43,13 @@ silently converted into a canonical public geography identity. Numeric
 `province`, `city`, and `suburb` IDs remain target-environment handles and never
 become durable geography identity.
 
+**v0.5 note.** The chain above is unchanged in responsibility, but its third
+layer is now governed by D0: deterministic Place identity and dispositions,
+with search scope **derived** (D1, D12) rather than imposed by storage. The
+"canonical public location IDs" terminus is a target-environment handle over
+stable Place identity, not the identity itself. Section 14 records the minimum
+V1 concepts; none is implemented by this contract version.
+
 ## 1. Coverage contract
 
 For every geography Property Listify has approved for a territory, a user can
@@ -54,20 +63,57 @@ coverage path.
 
 These decisions are binding until explicitly revised.
 
-### D1 — Publicly searchable levels in the first global release
+**v0.5 provenance.** D0–D13 are recorded by senior architecture review. D1, D4
+and D8 are carried forward from v0.3 with the supersessions stated inline. D2,
+D3, D5, D6 and D7 are carried forward unchanged; v0.3 notes on D3 and D6 record
+current enforcement gaps without weakening the rule. D9–D13 are new.
 
-Searchable runtime scopes are exactly the existing three executable levels:
+### D0 — Canonical identity is a typed Place, not a storage level (v0.5)
 
-| Factual type | Runtime scope | Storage |
-| --- | --- | --- |
-| province | `province` | provinces |
-| city, town | `metro_city` | cities |
-| suburb, locality, neighbourhood, village, township | `locality` | suburbs |
+Property Listify adopts a **typed canonical Place Authority** as the long-term
+geographic identity foundation.
 
-Municipalities (district and local) are parent **context**, never searchable
-scopes, in release 1. They appear only inside factual context metadata.
-Factual types remain preserved on every projection row; no type is rewritten
-to fit storage.
+A **Place** is an identifiable geographic referent. A Place identity:
+
+- is **stable** and **opaque**;
+- is **assigned once** and **never reused**;
+- is **independent of** names, slugs, classifications, parent assignments and
+  boundary changes;
+- is never derived from a numeric database key, a provider place ID, or display
+  text.
+
+Names, classification, lifecycle status, verification state and
+publication/search eligibility are **separate concepts** from identity. A change
+to any of them does not mint a new Place, and a Place is not invalidated by them.
+
+The existing `province → city → suburb` model is retained as a **derived
+search-scope abstraction** (D1) and is no longer the identity or storage model.
+
+This decision governs all future work in: Listings, Developments, Explore,
+Location/Suburb Guides, Agents, Agencies, Services, Canvassing, Demand, Saved
+Searches, location intelligence and market intelligence. It does **not** by
+itself migrate any consumer; consumer convergence is deferred to
+consumer-specific workstreams and is governed by Section 10 exit conditions.
+
+### D1 — Publicly searchable levels (v0.5: derived, not structural)
+
+**Preserved from v0.3.** Publicly searchable scopes remain exactly three:
+
+| Factual type | Search scope |
+| --- | --- |
+| province | `province` |
+| city, town | `metro_city` |
+| suburb, locality, neighbourhood, village, township | `locality` |
+
+**Superseded in v0.5:** the `Storage` column of the v0.3 table. The mapping to
+physical tables `provinces` / `cities` / `suburbs` is **no longer a binding
+constraint**. These three scopes are now **deterministic projections** computed
+from Place identity plus accepted relationships.
+
+Municipalities (district and local) remain parent **context**, never searchable
+scopes. Place type is preserved on every Place and every projection; no type is
+rewritten to fit storage. Unsupported or ambiguous resolution must fail
+visibly; there is no silent widening (D5, D12).
 
 ### D2 — Provisional identities are selectable
 
@@ -84,19 +130,48 @@ surfaces (admin coverage dashboard, research queue) expose it.
   publications; GeoNames (CC0/attributed); Wikidata (CC0); geoBoundaries
   gbOpen (CC BY 4.0); OSM/Geofabrik (ODbL 1.0); NGA GNS (no restriction).
 - Google Places and any future commercial provider are **evidence and
-  enrichment only**. Provider place IDs can never become public identity.
+  enrichment only**. Provider place IDs can never become public identity, and a
+  provider observation must never create or promote a public geography row.
 - ODbL obligation: `osm_only_odbl_provisional` rows may be materialized in
   disposable development/preview targets under this contract. Any staging or
   production release of OSM-only rows requires the founder-owned production
   ODbL database-strategy gate to be cleared first. The adapter must keep row
   licensing classification observable so that gate is enforceable mechanically.
 
-### D4 — Estates and developments
+**v0.5 correction:** the v0.3 text of this decision is normative but was
+unenforced. Three live runtime paths can currently write provider observations
+into `provinces` / `cities` / `suburbs` without a governance gate
+(`server/services/listingLocationResolver.ts`, `server/locationRouter.ts`
+`saveGooglePlaceLocation`, `server/services/locationPagesServiceEnhanced.ts`).
+Those paths are classified **RETIRED** in Section 10 with an exit condition. The
+rule above is binding; the current code does not yet satisfy it.
 
-Estate/residential-development candidates are **child localities**: projected
-at `suburb` storage with factual type preserved, once an accepted parent chain
-exists. Promotion to a separate discovery entity is deferred until listing
-supply justifies it (future decision, not part of release 1).
+### D4 — Estates, developments and non-statutory places (v0.5: superseded)
+
+**Superseded in v0.5.** The v0.3 rule — estate/residential-development
+candidates are child localities projected at `suburb` storage — is withdrawn. It
+required a non-statutory referent to be expressed as a factual locality, which
+conflates market identity with geographic fact and made the storage model
+dictate product policy.
+
+Replacement rules:
+
+- A **non-statutory Place** (estate, precinct, development, or other referent
+  that is not a statutory geographic unit) may become a Place **only when its
+  referent is sufficiently evidenced**. Demand, provider suggestion or commercial
+  submission alone is **never** sufficient.
+- Search demand, provider suggestions and commercial submissions create
+  **candidates and research priority** only. They never create public geographic
+  authority.
+- A **Development** may be discoverable as a Development before it qualifies as a
+  geographic Place. Development discoverability is a domain concern and does not
+  require, imply, or anticipate a Place.
+- Classification is preserved on the Place and is never rewritten to fit a
+  storage level.
+
+The v0.3 consequence — `estate_discovery_entity_deferred` queueing, with the note
+"promotion to a separate discovery entity is deferred" — remains historically
+accurate and is retained in the queue artifacts as evidence.
 
 ### D5 — Public behavior for valid-but-not-covered places
 
@@ -110,9 +185,9 @@ evidence for authoring, never as canonical public scopes.
 
 A territory is "complete" when:
 
-1. every accepted factual identity has an explicit disposition (promoted /
-   provisional / candidate-queued / rejected-retired);
-2. every promoted identity has a deterministic executable projection;
+1. every accepted Place has an explicit disposition (promoted / provisional /
+   candidate-queued / rejected-retired);
+2. every promoted Place has a deterministic executable projection;
 3. all materialized parent chains verify in the target environment;
 4. generated probes (municipalities, towns, townships, suburbs,
    neighbourhoods, extensions, same-name cases) resolve end-to-end;
@@ -123,6 +198,11 @@ Refresh cadence: full regeneration is deterministic from versioned inputs;
 territory refreshes re-run the pipeline and diff dispositions. Ad hoc manual
 rows are prohibited everywhere.
 
+**v0.5 status note:** criterion 6 is **not met**. `locationCoverageTelemetry`
+computes a `resolved` / `no_result` signal but persists nothing, and
+`location_searches.locationId` is `NOT NULL`, so an unresolved search cannot be
+recorded. This is tracked as a required condition in Section 14.
+
 ### D7 — SEO pages
 
 SEO pages are generated for Tier A identities at province/city/locality levels
@@ -130,15 +210,129 @@ with listing supply or strategic market value. Tier B remains search-only
 until promoted. Same-name localities require disambiguated paths (parent
 segments) before any page generation.
 
-### D8 — Multilingual names and transliterations
+### D8 — Names are assertions attached to Places (v0.5: supplemented)
 
-One preferred display name per identity. Alternate spellings, language forms,
-transliterations, abbreviations, and historical names are **aliases**:
-generated from accepted name assertions plus governed normalization patterns
-(e.g. `Extension N` ↔ `Ext N`). Aliases never create canonical records.
-Matching ranks: exact preferred > exact alias > prefix preferred > prefix
-alias > substring. Identifier-like labels (QIDs, codes, URLs) stay
-non-searchable provenance.
+Names are **assertions attached to Places**, not properties of identity. The
+authority must distinguish, where supported:
+
+- preferred public name;
+- official name;
+- common name;
+- historical name;
+- alternate spelling;
+- language form.
+
+These roles **may overlap**; one string may legitimately hold more than one
+role. Roles are recorded per assertion with source and validity, not collapsed
+into a single display string.
+
+**Selection policy (binding, v0.5).** Public-preferred naming is a **governed
+selection policy over evidenced names**. It is a deterministic function of
+recorded name assertions and their roles, and it is **not** a substitute for
+factual evidence and **not** a free-text editorial choice. Where a source
+declares a name as primary, that declaration is recorded as a name assertion
+and is eligible for selection; where sources disagree, the selection is resolved
+by the recorded roles and evidence, never by ingestion or sort order.
+
+**Superseded in v0.5:** the v0.3 implication that ingestion order could decide
+the preferred name. That is what produced the reviewed regression in which the
+Gauteng place known publicly as *Centurion* was projected with preferred name
+*Lyttelton* and its required acceptance probe failed (Section 13). A rename does
+**not** automatically create a new Place.
+
+Alternate spellings, language forms, transliterations, abbreviations and
+historical names remain **aliases**: generated from accepted name assertions plus
+governed normalization patterns (e.g. `Extension N` ↔ `Ext N`). Aliases never
+create Places or canonical records. Matching ranks: exact preferred > exact
+alias > prefix preferred > prefix alias > substring. Identifier-like labels
+(QIDs, codes, URLs) stay non-searchable provenance.
+
+### D9 — Identity continuity
+
+Place identity is preserved across change. The following are **Place-level
+facts** and must never mint a new Place on their own:
+
+- renaming;
+- reclassification;
+- spelling or language change;
+- parent reassignment;
+- boundary revision;
+- source or licence change;
+- promotion or demotion between eligibility tiers.
+
+The following require an **explicit, recorded identity-continuity decision**
+before they may alter the Place graph: **merges, splits, annexations and
+boundary changes**. Each such decision must be traceable, must name the affected
+Place identities, and must state the disposition of every member identity. No
+continuity decision may be inferred from ingestion order, name similarity, or
+spatial proximity.
+
+### D10 — Typed, evidenced relationships
+
+Containment and association are modelled as **typed, evidenced relationships**,
+not as one ambiguous generic parent pointer.
+
+Administrative containment, settlement membership, market association,
+succession and other relationship kinds **must not share an ambiguous generic
+meaning**. Each relationship carries its type, its evidence reference, and, where
+applicable, its validity.
+
+Relationship storage is **relational**. A graph database is not adopted.
+
+### D11 — Factual and non-statutory admission
+
+Admission of a Place to public geographic authority requires evidenced
+referent identity.
+
+- **Search demand, provider suggestions and commercial submissions create
+  candidates and research priority. They never create public geographic
+  authority.**
+- Candidate status is visible in internal surfaces and does not confer public
+  searchability or SEO eligibility.
+- A non-statutory Place requires sufficient evidence of its referent before it
+  may be published as geographic authority (D4).
+- Provider and commercial signals raise **research priority**; they are never
+  authority inputs.
+
+### D12 — Publication and search eligibility, and derived scopes
+
+Publication and search eligibility are recorded **per Place**, separately from
+identity, classification and lifecycle. Eligibility is a deterministic function
+of recorded lifecycle, verification, licence and tier state — never an ad hoc
+per-surface decision.
+
+Search scopes are deterministic projections from Place identity plus **accepted**
+relationships (D1). Only relationship types **explicitly authorized** to affect
+executable search scope may expand or narrow it. A relationship that exists in
+the graph but is not authorized for search scope has **no** effect on query
+boundaries.
+
+Ambiguity is a first-class resolution outcome. Resolution distinguishes
+**resolved**, **ambiguous** (two or more candidate Places) and **no_result**.
+Ambiguity is never collapsed to a single answer and is never widened.
+
+**No silent widening** is binding without exception: no unresolved or ambiguous
+query may be broadened to a parent, sibling set, or territory.
+
+### D13 — Place Intelligence and Suburb Guides ownership boundary (v0.5)
+
+The ownership boundary is permanent.
+
+**Place Authority owns:** identity, names, classification, relationships,
+evidence and provenance, geographic lifecycle.
+
+**Other domains own:** listings, developments, sale/rental statistics, market
+trends, schools, amenities, transport, agents, agencies, service providers,
+Explore content, guides and editorial content, buyer/seller intelligence.
+
+Those systems **reference** Place. They **do not redefine** geography.
+
+Every historical intelligence calculation must retain the **scope/boundary
+version** used for that calculation, so that a stable Place identity does not
+conceal a changing geographic population. A Place identity is stable; the set of
+listings, statistics or market facts associated with it is not.
+
+
 
 ## 3. Coverage tiers
 
@@ -176,6 +370,12 @@ the generated disposition artifacts, which are the audit trail.
    public identity.
 5. Existing v0.1 bounded-slice natural keys are frozen authority: the v0.2
    projection must reproduce them exactly.
+6. **v0.5:** parent assignment is one relationship kind among several (D10).
+   A parent pointer never carries administrative, settlement, market or
+   succession meaning simultaneously, and a relationship that is not explicitly
+   authorized for search scope has no effect on query boundaries (D12). The
+   three-level natural key remains a valid *presentation* path, not a statement
+   that a place has exactly one kind of parent.
 
 ## 5. Pipeline and artifacts
 
@@ -205,6 +405,20 @@ It must refuse inputs whose checksums do not match the recorded checkpoints.
 - All database writes go through Database Authority reference adapters on
   authorized targets; `LAND_PUBLIC_CLASSIFICATIONS` remains the Land
   allow-list; one geography authority per Land request.
+- **v0.5:** a Place identity is never minted, reused, or invalidated by a
+  rename, reclassification, spelling change, parent reassignment, boundary
+  revision, or tier change. Merges, splits and annexations require an explicit
+  recorded continuity decision (D9).
+- **v0.5:** search demand, provider suggestions and commercial submissions
+  create candidates and research priority only. They never create public
+  geographic authority, and a high search count is never an evidence class
+  (D11).
+- **v0.5:** a rename does not create a Place, and a preferred-name change is a
+  governed selection over recorded name assertions, never an identity change
+  and never a side effect of ingestion or sort order (D8).
+- **v0.5:** ambiguity is reported as ambiguity. It is never resolved by
+  silently preferring one candidate, and never widened to a parent or territory
+  (D12).
 
 ## 7. Acceptance probes (Gauteng pilot)
 
@@ -269,28 +483,41 @@ remain governed follow-on work with the dispositions below.
 
 ## 10. Legacy authority disposition matrix
 
-| Asset or path | Disposition | Authority role and required action |
-| --- | --- | --- |
-| `docs/architecture/geography-coverage-contract.md` and the active territory manifest | **CANONICAL** | Govern policy, accepted inputs, sources, parent decisions, and licensing. Preserve and version them. |
-| `data/geography-coverage-v0.1/output/gauteng_runtime_reference_projection_v0.2.json` | **CANONICAL** | Frozen current Gauteng runtime row authority. Load by digest; do not rewrite while Slice 1 is reviewable. |
-| `data/geography-coverage-v0.1/output/gauteng_factual_runtime_mapping_v0.2.jsonl` | **CANONICAL** | Frozen current factual-to-runtime disposition bridge. Every factual identity remains distinct, including co-published members. |
-| `data/geography-coverage-v0.1/output/gauteng_coverage_disposition_v0.1.json` and `gauteng_review_queue_v0.1.jsonl` | **CANONICAL** | Preserve counts, reasons, candidate evidence, and research obligations; never materialize blocked rows publicly. |
-| `data/geography-coverage-v0.1/territory-catalog.v0.1.json` | **CANONICAL** | Digest-pinned registry of immutable territory artifacts. It contains no copied geography rows and cannot override a source artifact. |
-| `shared/factualRuntimeGeographyBridge.ts`, `shared/runtimeGeography.ts`, and the governed runtime reference loader | **CANONICAL** | Validate IDs, projection shape, natural-key hierarchy, and exact governed co-publication. Reject malformed or ambiguous source data. |
-| `server/_core/databaseAuthority/dataAdapters/canonicalGeography.ts` and the `provinces`, `cities`, and `suburbs` tables | **CANONICAL** | Materialize and verify governed natural keys on authorized targets. Numeric IDs are environment-local handles. |
-| Static `PROVINCES`, `CITIES`, and `SUBURBS` arrays in the Database Authority geography adapter | **TRANSITIONAL** | Retain only as the reviewed foundation minimum in Slice 1. Replace them with a versioned generated foundation source in a later database-reference slice; do not add more hand entries. |
-| `server/services/searchAreaDefinitions.ts` and the Search Area execution contracts | **CANONICAL, SEPARATE** | Search Areas remain a separate governed market identity. Candidate evidence and activation decisions are not factual geography and are outside this Slice 1 change. |
-| `data/gauteng-search-area-candidates-v0.1/` and `data/gauteng-search-area-research-v0.1/` | **ARCHIVED EVIDENCE** | Preserve definitions, membership research, and provenance. Never copy a Search Area into a factual row or infer factual identity from membership. |
-| Google/provider IDs, labels, and `location_provider_mappings` | **ARCHIVED EVIDENCE** | Retain for enrichment, encounter review, and provenance. A provider observation must not create or promote a public geography row. |
-| `server/services/locationAutoPopulation.ts`, provider-driven geography writes, and retired auto-population completion notes | **RETIRED** | No runtime authority or compatibility fallback remains. Preserve historical artifacts only where they document research or incidents. |
-| Legacy `locations` rows, `locations.id`, `listings.locationId`, `developments.locationId`, and geography text columns | **TRANSITIONAL** | Preserve current consumers and historical evidence, but resolve new cross-environment identity through governed natural keys and typed target handles. Do not copy numeric IDs between environments. |
-| Direct classic-table discovery, `resolveLocation` widening, free-text geography execution, and location-page text matching | **TRANSITIONAL** | Classify and remove in bounded consumer-convergence slices. They do not become canonical by being read from the canonical tables. |
-| Agents, Agencies, Services, Canvassing, Demand, Saved Searches, Explore, Developments, and location-page geography fields | **TRANSITIONAL** | Retain current behavior for Slice 1, then converge each family to typed canonical location IDs without rewriting unrelated product logic. |
-| `data/gauteng-candidate-catalogue-v0.1/`, `data/gauteng-canonical-promotion-v0.1/`, `v0.2/`, and `data/gauteng-factual-canonical-v0.1/` summaries | **ARCHIVED EVIDENCE** | Retain provenance and research history. Do not bulk-migrate them around the governed projection and disposition checks. |
-| Superseded numeric runtime handles, provider place IDs, display text, and hard-coded client maps | **DO NOT MIGRATE** | They may be read only inside an explicitly bounded transitional consumer. They never become canonical factual or cross-environment identity. |
+**v0.5 rule.** A disposition is not a compatibility approval. Any runtime
+fallback outside this matrix is audit debt, not authority.
 
-A disposition is not a compatibility approval. Any runtime fallback outside
-this matrix is audit debt, not authority.
+**v0.5 rule.** No runtime component is retired merely because the Place model
+has been chosen. A component that is still required before cutover remains
+required, and stays in service until its exit condition is met.
+
+**v0.5 rule.** Every `TRANSITIONAL` row carries an explicit **exit condition**.
+A transitional row with no exit condition is an audit defect and must not be
+introduced. Exit conditions name the slice and the observable condition that
+closes them.
+
+| Asset or path | Disposition | Authority role and required action | Exit condition |
+| --- | --- | --- | --- |
+| `docs/architecture/geography-coverage-contract.md` and the active territory manifest | **CANONICAL** | Govern policy, accepted inputs, sources, parent decisions, and licensing. Preserve and version them. | — |
+| `data/geography-coverage-v0.1/output/gauteng_runtime_reference_projection_v0.2.json` | **CANONICAL** | Frozen current Gauteng runtime row authority. Load by digest; do not rewrite while Slice 1 is reviewable. | Superseded only by an activated successor catalog with recorded digests. |
+| `data/geography-coverage-v0.1/output/gauteng_factual_runtime_mapping_v0.2.jsonl` | **CANONICAL** | Frozen current factual-to-runtime disposition bridge. Every factual identity remains distinct, including co-published members. | Superseded only by an activated successor mapping with recorded digests. |
+| `data/geography-coverage-v0.1/output/gauteng_coverage_disposition_v0.1.json` and `gauteng_review_queue_v0.1.jsonl` | **CANONICAL** | Preserve counts, reasons, candidate evidence, and research obligations; never materialize blocked rows publicly. | — |
+| `data/geography-coverage-v0.1/territory-catalog.v0.1.json` | **CANONICAL** | Digest-pinned registry of immutable territory artifacts. It contains no copied geography rows and cannot override a source artifact. | Default until an activation slice repoints `LOCATION_AUTHORITY_CATALOG_INDEX_PATH`. |
+| `shared/factualRuntimeGeographyBridge.ts`, `shared/runtimeGeography.ts`, and the governed runtime reference loader | **CANONICAL** | Validate IDs, projection shape, natural-key hierarchy, and exact governed co-publication. Reject malformed or ambiguous source data. | — |
+| `server/_core/databaseAuthority/dataAdapters/canonicalGeography.ts` | **CANONICAL** | Materialize and verify governed natural keys on authorized targets. Numeric IDs are environment-local handles. The adapter's target **row shape** is transitional (see next row); its upsert-by-natural-key and fail-closed conflict behaviour are canonical. | — |
+| The `provinces`, `cities`, and `suburbs` **tables** as identity storage | **TRANSITIONAL** | Required until Place cutover. Continue to serve as the materialized projection of governed natural keys. | Closes when every domain in Section 10's consumer row references Place, and these tables are retired through the approved retirement mechanism. |
+| Static `PROVINCES`, `CITIES`, and `SUBURBS` arrays in the Database Authority geography adapter | **TRANSITIONAL** | Retain as the reviewed foundation minimum. Do not add more hand entries. | Closes when a versioned generated foundation source replaces the hand arrays. |
+| `server/services/searchAreaDefinitions.ts`, `searchAreaAuthority.ts` and the Search Area execution contracts | **CANONICAL, SEPARATE** | Search Areas remain a separate governed market identity. They have separate IDs, explicit membership, and explicit authorized journeys. They never become factual Places and never establish factual containment. | Migrates onto the approved persisted `search_area` / `search_area_member` model when that implementation slice arrives. No new Search Area service or registry may be created in the interim. |
+| `data/gauteng-search-area-candidates-v0.1/` and `data/gauteng-search-area-research-v0.1/` | **ARCHIVED EVIDENCE** | Preserve definitions, membership research, and provenance. Never copy a Search Area into a factual row or infer factual identity from membership. | — |
+| Google/provider IDs, labels, and `location_provider_mappings` | **ARCHIVED EVIDENCE** | Retain for enrichment, encounter review, and provenance. A provider observation must not create or promote a public geography row. | — |
+| `server/services/locationAutoPopulation.ts` and retired auto-population completion notes | **RETIRED** | Dead code with no runtime import. Preserve historical artifacts only where they document research or incidents. | Already closed. |
+| **Live provider-driven geography writes**: `listingLocationResolver.ts` suburb insert, `locationRouter.ts` `saveGooglePlaceLocation`, `locationPagesServiceEnhanced.ts` `findOrCreateLocation` / `syncLegacyTables` | **RETIRED** | These paths write provider observations into `provinces`/`cities`/`suburbs` with no governance gate, which violates D3. `saveGooglePlaceLocation` is additionally an unauthenticated `publicProcedure` mutation and references columns absent from the current schema. | Closes when each path is removed or reduced to recording an observation, and D3 is enforced executably rather than by prose. Tracked in Section 14. |
+| Legacy `locations` rows, `locations.id`, `listings.locationId`, `developments.locationId`, and geography text columns | **TRANSITIONAL** | Preserve current consumers and historical evidence, but resolve new cross-environment identity through governed natural keys and typed target handles. Do not copy numeric IDs between environments. | Closes when the parallel `locations` hierarchy is retired and consumers reference Place identity. |
+| Direct classic-table discovery, `resolveLocation` widening, free-text geography execution, and location-page text matching | **TRANSITIONAL** | Classify and remove in bounded consumer-convergence slices. They do not become canonical by being read from the canonical tables. | Closes when no public search path matches geography by display text; the hybrid ID-or-text matcher in property search is the last instance. |
+| Agents, Agencies, Services, Canvassing, Demand, Saved Searches, Explore, Developments, and location-page geography fields | **TRANSITIONAL** | Retain current behavior, then converge each family to typed canonical Place references without rewriting unrelated product logic. Cardinality intent is recorded in Section 12. | Closes per domain, each with its own convergence slice and its own verification. |
+| `data/gauteng-candidate-catalogue-v0.1/`, `data/gauteng-canonical-promotion-v0.1/`, `v0.2/`, and `data/gauteng-factual-canonical-v0.1/` summaries | **ARCHIVED EVIDENCE** | Retain provenance and research history. Do not bulk-migrate them around the governed projection and disposition checks. | — |
+| Superseded numeric runtime handles, provider place IDs, display text, and hard-coded client maps (e.g. `locationUtils.ts` `CITY_PROVINCE_MAP`, `EnhancedNavbar.tsx` hard-coded suburb list) | **DO NOT MIGRATE** | They may be read only inside an explicitly bounded transitional consumer. They never become canonical factual or cross-environment identity. | — |
+
+
 
 ## 11. Gauteng exact-source recovery status
 
@@ -340,3 +567,195 @@ database operation:
 8. Gauteng projection and mapping bytes remain unchanged from the integration
    base; and
 9. typecheck, lint, focused tests, and CI contract checks pass.
+
+## 13. Reviewed Gauteng checkpoint (v0.5)
+
+This section is the authoritative factual baseline for all implementation work.
+Counts here were re-derived from the committed artifacts at the reviewed commit;
+no figure is carried forward from an earlier report without recomputation.
+
+**Reviewed commit:** `4356c0f7f` — `feat(location): establish canonical geography foundation`, on branch `feat/gauteng-source-authority-closure`, from worktree
+`.../.worktrees/property-listify-place-authority-slice0`. `4356c0f7` is **not yet
+merged into `main`** (`main` is at `ad0c4247`).
+
+### 13.1 Authoritative artifacts and digests (v0.1 default catalog, source `za-gp`)
+
+| Artifact | SHA-256 |
+| --- | --- |
+| `data/geography-coverage-v0.1/territory-catalog.v0.1.json` | `ad32a26dbaa40d03f63545d5f9af0918cbea2e1d65c8166817b15c52e5d6f8c4` |
+| `data/geography-coverage-v0.1/gauteng-territory-manifest.v0.1.json` | `d4abd0b0303a7fdcd57e4a20f64bfbeece2c91dc7e0f953875cfbe90dfcb9b0f` |
+| `data/geography-coverage-v0.1/output/gauteng_runtime_reference_projection_v0.2.json` | `faad65e4216c2fb62886e5561984a8b82fe3b750942a4bb38c2eba12a8141399` |
+| `data/geography-coverage-v0.1/output/gauteng_factual_runtime_mapping_v0.2.jsonl` | `ed709559ba69b28b6dcc20fc7381478f2e822ff8436bcaaf7dcaaddd410c63fa` |
+| `data/geography-coverage-v0.1/output/gauteng_coverage_disposition_v0.1.json` | `d80601e2b368190c31650a68c3f38d1ba351e9e05803ebd01ff21ae7a860d232` |
+| `data/geography-coverage-v0.1/output/gauteng_review_queue_v0.1.jsonl` | `d8e3521a20a9d906cc12ae13236e5aafdfd78291612068048a09cb5bbbab424a` |
+| `data/geography-coverage-v0.1/source-recovery.v0.1.json` | `7da0238c549590898db794b9d8cbf74b0a95cf22c36b6509caa60913645c699a` |
+
+Authoritative v0.1 counts: 1,480 factual identities; 1,414 runtime rows; 64
+carried; 1,364 newly promoted identities; **116 queued**; 60 represented by
+carried rows; 2 alias drops; **14 governed co-published keys**.
+
+### 13.2 Parent-evidence inputs
+
+The v0.1 manifest `inputs.researched_parent_edges` references **103** files, and
+**all 103 are present**. Of these, 102 match the
+`*parent-evidence.v0.1.resolved.json` naming pattern and one does not:
+`meyerton-midvaal-jurisdictional-place-evidence.v0.1.resolved.json`. That single
+exception is the whole of the "103 vs 102" discrepancy. The research
+directory holds the same 102 parent-evidence files plus that one jurisdictional
+file, alongside two audit reports.
+
+Across all 103 referenced files there are **29 distinct parent natural keys**.
+Two source copies of the evidence exist — `.../research/` and
+`.../output/*.resolved.json` — and the manifest references the `output/` form.
+The `output/` form is authoritative for generation; the `research/` form is
+preserved as source research.
+
+### 13.3 Count reconciliation
+
+The conflicting figures in earlier reports are **not** in conflict. Each is a
+correct count of a different, precisely identified state.
+
+| Figure | Meaning | State |
+| --- | --- | --- |
+| 103 parent-evidence files | Manifest `inputs.researched_parent_edges` entries | v0.1 committed |
+| 102 parent-evidence files | Files matching the `parent-evidence` name pattern | v0.1 committed |
+| 11 `awaiting_accepted_parent_edge` | v0.1 review queue | v0.1 committed |
+| 8 `duplicate_natural_key_within_parent` | v0.1 review queue | v0.1 committed |
+| 3 `natural_key_owned_by_accepted_row` | v0.1 review queue | v0.1 committed |
+| 116 | Total v0.1 review-queue rows | v0.1 committed |
+| 452 / 24 | **Admission-analysis subset**, not queue counts | v0.2 candidate, uncommitted |
+| 467 / 36 | Actual v0.2 review-queue rows | v0.2 candidate, uncommitted |
+| 535 | Total v0.2 review-queue rows | v0.2 candidate, uncommitted |
+
+The 452 and 24 figures came from an admission diff that classified **the 489
+v0.1 rows removed by the v0.2 projection** and then reported only the subset
+traceable to a v0.1 *promoted* runtime row. The full v0.2 queue is larger because
+it also contains identities that had no v0.1 promoted predecessor:
+
+- `awaiting_accepted_parent_edge`: 467 total = 422 traceable to a v0.1 promoted
+  row + 30 matched by same name + 45 v0.2-only.
+- `duplicate_natural_key_within_parent`: 36 total = 20 traceable to a v0.1
+  promoted row + 16 v0.2-only (Soweto ×2, Fordsburg ×2, Ekangala ×2, Slovoville
+  ×2, Northdene ×2, Kromdraai ×2, Elandsfontein ×2, Menlo Park ×1).
+- 535 = 467 parent + 36 duplicate + 30 context-only municipality + 2
+  province-scope-owned.
+
+**Authoritative going forward:** the v0.1 committed figures in 13.1 and 13.2,
+because v0.1 is the active default catalog. The v0.2 figures are recorded as
+candidate state only, and v0.2 is **uncommitted** — it is not a checkpoint and
+must not be treated as authority until it is committed with recorded digests.
+
+### 13.4 Reproducibility status
+
+**Regenerates deterministically today:**
+
+- the v0.2 candidate projection, mapping, disposition and review queue, from the
+  checked-in compact source plus the v0.2 territory manifest —
+  `generate.mjs --check` passes and is byte-identical;
+- the v0.2 compact source artifacts from the 19 digest-pinned raw artifacts, if
+  and only if the raw snapshot is re-acquired into disposable storage;
+- all v0.1 outputs from the v0.1 **generated** artifacts (they are load-by-digest
+  and internally consistent).
+
+**Cannot be regenerated:**
+
+- the v0.1 **factual canonical source** (geography and names JSONL). The
+  configured root
+  `/home/edwardspc/Desktop/Dev/listify-gauteng-factual-canonical-v0-1/...` is
+  absent, both files are missing, and `source-status.mjs --strict` exits 1 with
+  `exact_source_unrecoverable`. `generate.mjs --check` for v0.1 exits 1.
+
+This is recorded, permanent, and is **not** to be worked around. Missing inputs
+must not be synthesized, approximated, or regenerated from the projection. The
+v0.2 compact source is the only reproducible factual baseline.
+
+## 14. Minimum V1 Place model (recorded, not implemented)
+
+**Conceptual only.** No table, migration, or runtime behaviour is created by this
+section. The concepts are approved for Slice 1; implementation is deferred.
+
+- `place` — identity, classification, lifecycle, licence state, and the
+  authorization flags that govern searchability, publication and SEO eligibility
+  as separate recorded concepts.
+- `place_name` — name assertions with role, searchability, status, source
+  reference and validity, supporting the D8 selection policy.
+- `place_relationship` — typed, evidenced relationships (D10), relational
+  storage only, with an explicit authorization flag for search-scope effect
+  (D12).
+- `place_evidence` — every evidence assertion, including unresolved provider and
+  demand signals, with review status. Signals land here and **never** create
+  authority directly (D11).
+- `place_external_mapping` — provider observations as evidence and enrichment
+  only; never identity (D3).
+- `search_area` — Property Listify-owned market identity, separate IDs, explicit
+  journeys. Never a factual Place.
+- `search_area_member` — explicit membership evidence, never factual
+  containment.
+
+Additionally retained as first-class requirements:
+
+- versioned territory and admission manifests;
+- deterministic Place → search-scope projection (D1, D12);
+- traceable identity revision, merge and split decisions (D9);
+- executable authority validation.
+
+**No new Search Area service or registry may be created.** The existing Search
+Area authority converges onto this model when its implementation slice arrives.
+
+## 15. Domain cardinality intent (recorded, not implemented)
+
+One Place Authority does **not** imply one foreign key per domain. The intended
+cardinality is recorded here so that consumer workstreams can proceed
+independently. Implementation is deferred to consumer-specific workstreams.
+
+| Domain | Intended cardinality |
+| --- | --- |
+| Listing | One primary resolved geographic assignment for a property or site. |
+| Development | One or more geographic site or phase assignments, plus optional presentation or estate associations. |
+| Agent | Optional base location, plus many coverage or expertise Places or scopes. |
+| Agency | Branches and locations, plus many coverage associations. |
+| Service Provider | Multiple operating locations and service-specific coverage. |
+| Canvassing | Targeting sets, plus independently located properties and prospects. |
+| Demand | May target multiple Places, or one governed Search Area. |
+| Saved Search | Versioned geographic query intent, not merely one Place reference. |
+| Explore content | Zero-to-many geographic or subject associations. |
+
+## 16. Province 2 (Western Cape) admission gate
+
+Western Cape canonical admission must not begin until **all** of the following
+hold:
+
+1. The Place Authority decision (D0) is recorded in this contract, versioned,
+   and reviewed.
+2. The minimum V1 concepts in Section 14 are frozen, and the `place`,
+   `place_name`, `place_relationship`, `place_evidence`,
+   `place_external_mapping`, `search_area` and `search_area_member` model is
+   declared in the canonical schema with digests recorded in
+   `drizzle/schema/canonical-model-inventory.json`.
+3. The Gauteng admission repair has landed: all 14 Section 7 acceptance probes
+   resolve, `must_stay_non_public` is honoured, the runtime row delta against
+   the v0.1 baseline is non-negative or every removal is individually approved,
+   and the reconciliation gaps in Section 13.3 are closed.
+4. The D3 violation is closed: the live provider-driven geography write paths
+   in Section 10 are removed or reduced to recording an observation.
+5. D6 criterion 6 is met: unresolved-search evidence is persisted and reaches a
+   governed research queue.
+6. Every `TRANSITIONAL` row in Section 10 has a recorded, reviewable exit
+   condition, and the Gauteng checkpoint is pinned to a committed SHA with
+   recorded digests.
+
+**Rationale.** The v0.1 baseline proves the three-level model only for one
+province. Loading eight further provinces before the identity model is settled
+repeats the per-province parent-evidence and natural-key-collision failure
+observed in the v0.2 candidate, and multiplies the cost of a later cutover.
+
+## 17. Slice 0 completion record (v0.5)
+
+Slice 0 is decision and checkpoint only. It created no tables, no migrations,
+no database changes, and no consumer convergence. It did not begin Western
+Cape, did not activate Search Areas, did not alter provider behaviour, and did
+not modify the Gauteng factual identities or the v0.1 and v0.2 artifacts.
+
+The authoritative geography checkpoint for all implementation work is
+Section 13. Any later figure that differs from it must be re-derived from the
+committed artifacts and reconciled in the manner recorded in Section 13.3.
