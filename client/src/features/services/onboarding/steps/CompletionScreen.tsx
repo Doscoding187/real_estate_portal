@@ -27,9 +27,6 @@ export function CompletionScreen({ state }: CompletionScreenProps) {
       </div>
 
       <div className="flex w-full max-w-xs flex-col gap-3">
-        <Link href="/service/dashboard">
-          <Button className="w-full">Open provider workspace</Button>
-        </Link>
         <Link href="/service/profile">
           <Button className="w-full" variant="outline">
             Review profile details

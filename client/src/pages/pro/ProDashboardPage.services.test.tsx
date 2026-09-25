@@ -9,6 +9,7 @@ const mockStatus = {
   locationsConfigured: true,
   onboardingStep: 4,
   dashboardUnlocked: true,
+  hasAssignedRequests: false,
   fullFeaturesUnlocked: true,
   recommendedNextStep: '/service/dashboard',
   provider: {
@@ -103,6 +104,43 @@ describe('ProDashboardPage Services V1 inbox', () => {
     expect(screen.getByText(/requester@example.com/)).toBeInTheDocument();
     expect(screen.getByText(/Need a repair before transfer/)).toBeInTheDocument();
     expect(screen.getByText('Sandton, Johannesburg, Gauteng')).toBeInTheDocument();
+  });
+
+  it('keeps unpublished providers out of the workspace', () => {
+    mockStatus.dashboardUnlocked = false;
+    mockStatus.provider.isPublished = false;
+
+    render(<ProDashboardPage />);
+
+    expect(screen.getByRole('heading', { name: /workspace not available/i })).toBeInTheDocument();
+    expect(screen.queryByText('Request inbox')).not.toBeInTheDocument();
+
+    mockStatus.dashboardUnlocked = true;
+    mockStatus.provider.isPublished = true;
+  });
+
+  it('does not render the workspace before publication', () => {
+    const previous = mockStatus.dashboardUnlocked;
+    mockStatus.dashboardUnlocked = false;
+
+    render(<ProDashboardPage />);
+
+    expect(screen.getByText(/provider workspace not available/i)).toBeInTheDocument();
+    mockStatus.dashboardUnlocked = previous;
+  });
+
+  it('retains custody of assigned requests after depublication', () => {
+    mockStatus.dashboardUnlocked = true;
+    mockStatus.hasAssignedRequests = true;
+    mockStatus.provider.isPublished = false;
+
+    render(<ProDashboardPage />);
+
+    expect(screen.getByText('Request inbox')).toBeInTheDocument();
+
+    mockStatus.dashboardUnlocked = true;
+    mockStatus.hasAssignedRequests = false;
+    mockStatus.provider.isPublished = true;
   });
 
   it('offers a provider response action for the assigned request', () => {

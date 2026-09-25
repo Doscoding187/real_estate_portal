@@ -8,6 +8,7 @@ export type ServiceProviderOnboardingStatus = {
   locationsConfigured: boolean;
   onboardingStep: number;
   dashboardUnlocked: boolean;
+  hasAssignedRequests: boolean;
   fullFeaturesUnlocked: boolean;
   recommendedNextStep: string;
   provider: {

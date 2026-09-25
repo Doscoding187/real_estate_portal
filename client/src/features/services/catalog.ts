@@ -19,6 +19,56 @@ export type IntentStage =
 export type SourceSurface = 'directory' | 'explore' | 'journey_injection' | 'agent_dashboard';
 export type ServiceRequestSourceSurface = Exclude<SourceSurface, 'explore'>;
 
+export type ServiceJourneyContext = {
+  category?: string | null;
+  providerId?: string | number | null;
+  serviceCode?: string | null;
+  suburb?: string | null;
+  city?: string | null;
+  province?: string | null;
+  propertyId?: string | number | null;
+  listingId?: string | number | null;
+  developmentId?: string | number | null;
+  propertyLinked?: string | boolean | null;
+  intentStage?: string | null;
+  sourceSurface?: string | null;
+  sourceDetail?: string | null;
+  reasonKey?: string | null;
+};
+
+const SERVICE_JOURNEY_INTENT_STAGES = new Set([
+  'seller_valuation',
+  'seller_listing_prep',
+  'buyer_saved_property',
+  'buyer_offer_intent',
+  'buyer_move_ready',
+  'developer_listing_wizard',
+  'agent_dashboard',
+  'general',
+]);
+const SERVICE_JOURNEY_SOURCE_SURFACES = new Set([
+  'directory',
+  'journey_injection',
+  'agent_dashboard',
+]);
+
+const SERVICE_JOURNEY_QUERY_KEYS = [
+  'category',
+  'providerId',
+  'serviceCode',
+  'suburb',
+  'city',
+  'province',
+  'propertyId',
+  'listingId',
+  'developmentId',
+  'propertyLinked',
+  'intentStage',
+  'sourceSurface',
+  'sourceDetail',
+  'reasonKey',
+] as const;
+
 export type ServiceCategoryMeta = {
   value: ServiceCategory;
   label: string;
@@ -163,6 +213,98 @@ export function slugifyLocationSegment(value: string) {
 
 export function toServiceCategorySlug(category: ServiceCategory) {
   return String(category).replace(/_/g, '-');
+}
+
+function setServiceJourneyContext(params: URLSearchParams, context: ServiceJourneyContext) {
+  for (const key of SERVICE_JOURNEY_QUERY_KEYS) {
+    const value = context[key];
+    if (value === undefined || value === null || !String(value).trim()) continue;
+    if (
+      key === 'propertyLinked' &&
+      value !== true &&
+      value !== false &&
+      value !== 'true' &&
+      value !== 'false'
+    )
+      continue;
+    if (key === 'intentStage' && !SERVICE_JOURNEY_INTENT_STAGES.has(String(value))) continue;
+    if (key === 'sourceSurface' && !SERVICE_JOURNEY_SOURCE_SURFACES.has(String(value))) continue;
+    params.set(key, String(value));
+  }
+}
+
+export function serviceJourneyContextFromSearch(search: string): ServiceJourneyContext {
+  const params = new URLSearchParams(search);
+  const context: ServiceJourneyContext = {};
+  for (const key of SERVICE_JOURNEY_QUERY_KEYS) {
+    const value = params.get(key);
+    if (value === null) continue;
+    if (key === 'propertyLinked' && value !== 'true' && value !== 'false') continue;
+    if (key === 'intentStage' && !SERVICE_JOURNEY_INTENT_STAGES.has(value)) continue;
+    if (key === 'sourceSurface' && !SERVICE_JOURNEY_SOURCE_SURFACES.has(value)) continue;
+    context[key] = value;
+  }
+  return context;
+}
+
+export function buildServiceRequestPath(
+  category: ServiceCategory,
+  providerId: number,
+  serviceCode: string,
+  context: ServiceJourneyContext = {},
+) {
+  const params = new URLSearchParams();
+  setServiceJourneyContext(params, {
+    ...context,
+    category,
+    providerId,
+    serviceCode,
+  });
+  return `/services/request/${toServiceCategorySlug(category)}?${params.toString()}`;
+}
+
+export function buildServiceCategoryPath(
+  category: ServiceCategory,
+  context: ServiceJourneyContext = {},
+) {
+  const params = new URLSearchParams();
+  setServiceJourneyContext(params, { ...context, category });
+  const query = params.toString();
+  return `/services/${toServiceCategorySlug(category)}${query ? `?${query}` : ''}`;
+}
+
+export function buildServiceLocationPath(
+  category: ServiceCategory,
+  location: { suburb?: string | null; city?: string | null; province?: string | null },
+  context: ServiceJourneyContext = {},
+) {
+  const params = new URLSearchParams();
+  const combined = { ...context, ...location, category };
+  setServiceJourneyContext(params, combined);
+  const city = slugifyLocationSegment(location.city || '');
+  const province = slugifyLocationSegment(location.province || '');
+  const query = params.toString();
+  if (city && province) {
+    return `/services/${toServiceCategorySlug(category)}/${city}/${province}${query ? `?${query}` : ''}`;
+  }
+  return `/services/${toServiceCategorySlug(category)}${query ? `?${query}` : ''}`;
+}
+
+export function buildProviderProfilePath(
+  slug: string,
+  search = '',
+  context: ServiceJourneyContext = {},
+) {
+  const params = new URLSearchParams(search);
+  for (const key of SERVICE_JOURNEY_QUERY_KEYS) {
+    params.delete(key);
+  }
+  setServiceJourneyContext(params, {
+    ...serviceJourneyContextFromSearch(search),
+    ...context,
+  });
+  const query = params.toString();
+  return `/services/provider/${encodeURIComponent(slug)}${query ? `?${query}` : ''}`;
 }
 
 export function serviceCategoryFromSlug(slug: string): ServiceCategory | null {

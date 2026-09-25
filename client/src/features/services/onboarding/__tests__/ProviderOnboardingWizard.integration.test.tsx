@@ -1,29 +1,26 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 
+const mockStatus = vi.fn();
+const mockProfile = vi.fn();
+const mockProfileLoading = vi.fn(() => false);
+const mockReplaceServices = vi.fn();
+const mockReplaceLocations = vi.fn();
+
 vi.mock('@/lib/trpc', () => ({
   trpc: {
     servicesEngine: {
       myOnboardingStatus: {
         useQuery: () => ({
-          data: {
-            hasProviderIdentity: false,
-            profileConfigured: false,
-            servicesConfigured: false,
-            locationsConfigured: false,
-            onboardingStep: 0,
-            dashboardUnlocked: false,
-            fullFeaturesUnlocked: false,
-            recommendedNextStep: '/service/profile',
-            provider: null,
-          },
+          data: mockStatus(),
           isLoading: false,
           error: null,
         }),
       },
       myProviderProfile: {
-        useQuery: () => ({ data: null, isLoading: false, error: null }),
+        useQuery: () => ({ data: mockProfile(), isLoading: mockProfileLoading(), error: null }),
       },
+
       registerProviderIdentity: {
         useMutation: ({ onSuccess }: { onSuccess: (data: unknown) => void }) => ({
           mutate: () => onSuccess({}),
@@ -40,14 +37,20 @@ vi.mock('@/lib/trpc', () => ({
       },
       replaceProviderServices: {
         useMutation: ({ onSuccess }: { onSuccess: (data: unknown) => void }) => ({
-          mutate: () => onSuccess({}),
+          mutate: (input: unknown) => {
+            mockReplaceServices(input);
+            onSuccess({});
+          },
           isPending: false,
           error: null,
         }),
       },
       replaceProviderLocations: {
         useMutation: ({ onSuccess }: { onSuccess: (data: unknown) => void }) => ({
-          mutate: () => onSuccess({}),
+          mutate: (input: unknown) => {
+            mockReplaceLocations(input);
+            onSuccess({});
+          },
           isPending: false,
           error: null,
         }),
@@ -86,9 +89,51 @@ async function clickContinue() {
 }
 
 describe('ProviderOnboardingWizard', () => {
+  beforeEach(() => {
+    mockStatus.mockReset();
+    mockProfile.mockReset();
+    mockProfileLoading.mockReset();
+    mockProfileLoading.mockReturnValue(false);
+    mockReplaceServices.mockReset();
+
+    mockReplaceLocations.mockReset();
+    mockStatus.mockReturnValue({
+      hasProviderIdentity: false,
+      profileConfigured: false,
+      servicesConfigured: false,
+      locationsConfigured: false,
+      onboardingStep: 0,
+      dashboardUnlocked: false,
+      fullFeaturesUnlocked: false,
+      recommendedNextStep: '/service/profile',
+      provider: null,
+    });
+    mockProfile.mockReturnValue(null);
+  });
+
   it('shows the five-step setup flow', () => {
     render(<ProviderOnboardingWizard />);
     expect(screen.getByText('Step 1 of 5')).toBeInTheDocument();
+  });
+
+  it('does not expose editable steps while an existing profile is still hydrating', () => {
+    mockStatus.mockReturnValue({
+      hasProviderIdentity: true,
+      profileConfigured: true,
+      servicesConfigured: false,
+      locationsConfigured: false,
+      onboardingStep: 2,
+      dashboardUnlocked: false,
+      fullFeaturesUnlocked: false,
+      recommendedNextStep: '/service/profile',
+      provider: null,
+    });
+    mockProfileLoading.mockReturnValue(true);
+
+    render(<ProviderOnboardingWizard />);
+
+    expect(screen.getByText(/loading your provider profile/i)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /continue/i })).not.toBeInTheDocument();
   });
 
   it('completes setup with a truthful directory-review state', async () => {
@@ -128,6 +173,109 @@ describe('ProviderOnboardingWizard', () => {
       expect(screen.getByText('Profile setup complete')).toBeInTheDocument();
     });
     expect(screen.getByText(/not publicly published yet/i)).toBeInTheDocument();
+  });
+
+  it('does not render editable steps before existing profile hydration completes', () => {
+    mockStatus.mockReturnValue({
+      hasProviderIdentity: true,
+      profileConfigured: true,
+      servicesConfigured: false,
+      locationsConfigured: false,
+      onboardingStep: 2,
+      dashboardUnlocked: false,
+      fullFeaturesUnlocked: false,
+      recommendedNextStep: '/service/profile',
+      provider: null,
+    });
+    mockProfileLoading.mockReturnValue(true);
+
+    render(<ProviderOnboardingWizard />);
+
+    expect(screen.getByText(/loading your provider profile/i)).toBeInTheDocument();
+    expect(screen.queryByText('Step 1 of 5')).not.toBeInTheDocument();
+  });
+
+  it('hydrates existing service and location metadata before editing', async () => {
+    mockStatus.mockReturnValue({
+      hasProviderIdentity: true,
+      profileConfigured: true,
+      servicesConfigured: false,
+      locationsConfigured: false,
+      onboardingStep: 2,
+      dashboardUnlocked: false,
+      fullFeaturesUnlocked: false,
+      recommendedNextStep: '/service/profile',
+      provider: null,
+    });
+    mockProfile.mockReturnValue({
+      companyName: 'Existing Provider',
+      headline: 'Existing headline',
+      bio: 'Existing bio',
+      contactEmail: 'hello@example.com',
+      contactPhone: '',
+      websiteUrl: '',
+      services: [
+        {
+          id: 41,
+          code: 'plumbing',
+          displayName: 'Plumbing repairs',
+          description: 'Existing description',
+          category: 'home_improvement',
+          minPrice: 250,
+          maxPrice: 900,
+          currency: 'ZAR',
+          isActive: false,
+        },
+      ],
+      locations: [
+        {
+          id: 51,
+          suburb: 'Sandton',
+          city: 'Johannesburg',
+          province: 'Gauteng',
+          countryCode: 'ZA',
+          postalCode: '2196',
+          radiusKm: 40,
+          isPrimary: true,
+        },
+      ],
+    });
+
+    render(<ProviderOnboardingWizard />);
+    await waitFor(() => expect(screen.getByText('Step 3 of 5')).toBeInTheDocument());
+    expect(screen.getByLabelText(/service name/i)).toHaveValue('Plumbing repairs');
+    const activeToggle = screen.getByLabelText(/available for requests/i);
+    expect(activeToggle).not.toBeChecked();
+    fireEvent.click(activeToggle);
+    fireEvent.click(screen.getByRole('button', { name: /continue/i }));
+    await waitFor(() => expect(screen.getByText('Step 4 of 5')).toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button', { name: /continue/i }));
+
+    await waitFor(() => expect(mockReplaceServices).toHaveBeenCalled());
+    expect(mockReplaceServices.mock.calls[0]?.[0]).toEqual({
+      services: [
+        expect.objectContaining({
+          id: 41,
+          code: 'plumbing',
+          description: 'Existing description',
+          minPrice: 250,
+          maxPrice: 900,
+          currency: 'ZAR',
+          isActive: true,
+        }),
+      ],
+    });
+    expect(mockReplaceLocations.mock.calls[0]?.[0]).toEqual({
+      locations: [
+        expect.objectContaining({
+          id: 51,
+          countryCode: 'ZA',
+          postalCode: '2196',
+          radiusKm: 40,
+          isPrimary: true,
+        }),
+      ],
+    });
   });
 
   it('does not promise paid placement or Explore publishing', () => {

@@ -43,6 +43,8 @@ The existing six-category authority remains in use:
 5. See only requests assigned to that provider identity, including requester account contact details, project notes, location, and property context.
 6. Mark the request accepted, quoted, won, lost, or expired and add a response note through the existing lead event authority.
 
+Publication is required for new request acquisition. Once a request has been assigned, the provider retains read and response custody for that existing request even if publication or subscription state later changes; a never-published provider without assigned requests remains outside the workspace.
+
 ## Authorities reused
 
 | Concern                               | Authority                                                                         |
@@ -63,7 +65,7 @@ Services does not dual-write to platform `leads`, `partnerLeads`, or Explore con
 ## Trust and publication rules
 
 - Public directory queries require `partners.isActive = 1`, `partners.verificationStatus = 'verified'`, `service_provider_profiles.directoryActive = 1`, and an active or trial subscription state.
-- A provider must publish at least one active service and one listed coverage area.
+- A provider must publish at least one active service and one listed coverage area. A location row counts as coverage only when province, city, or suburb contains a normalized value; blank rows do not satisfy publication or directory queries.
 - Provider clients cannot set verification, moderation, directory publication, or subscription tier flags.
 - Public profile responses do not return provider email or phone fields.
 - The only public trust badge is **Platform verified**, backed by the canonical partner verification state.
@@ -83,7 +85,9 @@ A later schema-authority workstream must decide:
 - whether radius is a real distance claim or only a provider preference;
 - canonical location snapshots on a service request.
 
-No migration or schema change is included in this workstream.
+No new migration or schema change is included in this workstream; the integration consumes the current mainline `0080_service_lead_request_idempotency.sql` authority.
+
+Provider service and location replacement is non-destructive: omitted structured fields and canonical rows not represented by a compact editor remain unchanged, inactive services remain available to the provider editor, and an empty or all-blank location replacement is rejected rather than deleting existing coverage.
 
 ## Enquiry privacy and response custody
 
@@ -91,7 +95,7 @@ No migration or schema change is included in this workstream.
 
 Requester email and phone are read from the canonical user record for the assigned provider and the explicit `super_admin` operational exception. V1 does not persist a separate contact snapshot or a separate messaging/quote record. A later authority is required if immutable contact consent/evidence, threaded messaging, formal quotes, or response SLA tracking becomes part of the product.
 
-Service request writes require a stable request key, the existing public-lead rate-limit boundary, a V1 source surface, and an allowlisted context payload. Property, listing, and development context IDs are checked against their canonical records, publication/ownership state, and relationships before persistence; caller-supplied context cannot override the validated service, provider, or request key. The approved `0080_service_lead_request_idempotency.sql` migration supplies the unique `service_leads.request_id` authority. The V1 write derives a fixed-length request ID from the authenticated requester and stable request key. Matching retries are serialized against the requester record and replay the original lead; a reused key with a changed payload fails rather than creating a second request. The request confirmation reads the persisted lead rather than duplicating notes, contact, or journey context in a result URL or browser storage.
+Service request writes require a stable request key, the existing public-lead rate-limit boundary, a V1 source surface, and an allowlisted context payload. Property, listing, and development context IDs are checked against their canonical records, publication/ownership state, and relationships before persistence; caller-supplied context cannot override the validated service, provider, or request key. The approved `0080_service_lead_request_idempotency.sql` migration supplies the unique `service_leads.request_id` authority. The V1 write derives a fixed-length request ID from the authenticated requester and stable request key without duplicating the raw key in context JSON. Matching retries are serialized against the requester record and replay the original lead only when the normalized provider, category, attribution, geography, property, listing, development, service, and allowlisted context payload are equivalent. A reused key with a changed `sourceDetail`, `reasonKey`, `propertyLinked`, or other material payload fails rather than creating a second request. The request confirmation reads the persisted lead rather than duplicating notes, contact, or journey context in a result URL or browser storage.
 
 ## Surface disposition
 

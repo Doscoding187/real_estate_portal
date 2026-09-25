@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useLocation } from 'wouter';
 import {
   ArrowRight,
   Camera,
@@ -18,13 +17,20 @@ import { Button } from '@/components/ui/button';
 import { ProviderCard, type ProviderDirectoryItem } from '@/components/services/ProviderCard';
 import {
   SERVICE_CATEGORIES,
+  buildProviderProfilePath,
+  buildServiceCategoryPath,
+  buildServiceLocationPath,
+  buildServiceRequestPath,
   formatArea,
   getCategoryMeta,
   parseServiceLocationInput,
+  serviceJourneyContextFromSearch,
+  toProviderSlug,
   type ServiceCategory,
 } from '@/features/services/catalog';
 import { ProviderCardSkeleton } from '@/components/services/ServicesSkeletons';
 import { applySeo } from '@/lib/seo';
+import { useServicesLocation } from '@/features/services/useServicesLocation';
 
 const CATEGORY_ICONS: Record<ServiceCategory, LucideIcon> = {
   home_improvement: Hammer,
@@ -53,49 +59,35 @@ function getLastSearchLocation(): LastSearchLocation | null {
   }
 }
 
-function locationQuery(location: string) {
-  const parsed = parseServiceLocationInput(location);
-  const query = new URLSearchParams();
-  if (parsed.suburb) query.set('suburb', parsed.suburb);
-  if (parsed.city) query.set('city', parsed.city);
-  if (parsed.province) query.set('province', parsed.province);
-  return query;
-}
-
-function categoryPath(category: ServiceCategory, search: URLSearchParams) {
-  const query = search.toString();
-  return `/services/${category}${query ? `?${query}` : ''}`;
-}
-
-function providerRequestPath(
-  providerId: number,
-  category: ServiceCategory,
-  serviceCode: string,
-  location?: LastSearchLocation,
-) {
-  const search = new URLSearchParams({
-    providerId: String(providerId),
-    serviceCode,
-  });
-  if (location?.suburb) search.set('suburb', location.suburb);
-  if (location?.city) search.set('city', location.city);
-  if (location?.province) search.set('province', location.province);
-  return `/services/request/${category}?${search.toString()}`;
-}
-
 export default function ServicesHomePage() {
-  const [, setLocation] = useLocation();
+  const { search, setLocation } = useServicesLocation();
+  const journeyContext = serviceJourneyContextFromSearch(search);
   const [selectedCategory, setSelectedCategory] = useState<ServiceCategory>('home_improvement');
   const [searchLocation, setSearchLocation] = useState('');
   const lastLocation = useMemo(() => getLastSearchLocation(), []);
+  const journeyLocation = {
+    suburb: journeyContext.suburb || undefined,
+    city: journeyContext.city || undefined,
+    province: journeyContext.province || undefined,
+  };
+  const hasJourneyLocation = Boolean(
+    journeyLocation.suburb || journeyLocation.city || journeyLocation.province,
+  );
+  const effectiveLocation: LastSearchLocation = hasJourneyLocation
+    ? journeyLocation
+    : lastLocation || {};
   const hasKnownLocation = Boolean(
-    lastLocation?.suburb || lastLocation?.city || lastLocation?.province,
+    effectiveLocation.suburb || effectiveLocation.city || effectiveLocation.province,
   );
   const locationLabel = formatArea(
-    lastLocation?.city,
-    lastLocation?.province,
-    lastLocation?.suburb,
+    effectiveLocation.city,
+    effectiveLocation.province,
+    effectiveLocation.suburb,
   );
+  const navigationContext = {
+    ...journeyContext,
+    ...effectiveLocation,
+  };
 
   const providersQuery = trpc.servicesEngine.directorySearch.useQuery(
     {
@@ -103,9 +95,9 @@ export default function ServicesHomePage() {
       limit: 12,
       ...(hasKnownLocation
         ? {
-            suburb: lastLocation?.suburb,
-            city: lastLocation?.city,
-            province: lastLocation?.province,
+            suburb: effectiveLocation.suburb,
+            city: effectiveLocation.city,
+            province: effectiveLocation.province,
           }
         : {}),
     },
@@ -127,8 +119,8 @@ export default function ServicesHomePage() {
   }, []);
 
   function submitSearch(category: ServiceCategory, rawLocation: string) {
-    const search = locationQuery(rawLocation);
-    setLocation(categoryPath(category, search));
+    const location = parseServiceLocationInput(rawLocation);
+    setLocation(buildServiceLocationPath(category, location, navigationContext));
   }
 
   return (
@@ -264,7 +256,9 @@ export default function ServicesHomePage() {
             <Button
               variant="outline"
               className="self-start text-blue-700 md:self-auto"
-              onClick={() => setLocation(`/services/${selectedCategory}`)}
+              onClick={() =>
+                setLocation(buildServiceCategoryPath(selectedCategory, navigationContext))
+              }
             >
               Open category
               <ArrowRight className="ml-2 h-4 w-4" />
@@ -288,17 +282,30 @@ export default function ServicesHomePage() {
                   key={provider.providerId}
                   provider={provider}
                   serviceCategory={selectedCategory}
-                  onCta={providerId =>
-                    setLocation(
-                      providerRequestPath(
-                        providerId,
-                        selectedCategory,
+                  profileHref={buildProviderProfilePath(
+                    toProviderSlug(provider.companyName, provider.providerId),
+                    '',
+                    {
+                      ...journeyContext,
+                      ...effectiveLocation,
+                      category: selectedCategory,
+                      providerId: provider.providerId,
+                      serviceCode:
                         provider.services?.find(service => service.category === selectedCategory)
                           ?.code || '',
-                        lastLocation || undefined,
-                      ),
-                    )
-                  }
+                    },
+                  )}
+                  onCta={providerId => {
+                    const serviceCode =
+                      provider.services?.find(service => service.category === selectedCategory)
+                        ?.code || '';
+                    setLocation(
+                      buildServiceRequestPath(selectedCategory, providerId, serviceCode, {
+                        ...journeyContext,
+                        ...effectiveLocation,
+                      }),
+                    );
+                  }}
                 />
               ))}
             {!isLoading && !hasError && providers.length === 0 && (
@@ -336,7 +343,9 @@ export default function ServicesHomePage() {
             </div>
             <Button
               className="mt-8 bg-white text-slate-950 hover:bg-slate-100"
-              onClick={() => setLocation(`/services/${selectedCategory}`)}
+              onClick={() =>
+                setLocation(buildServiceCategoryPath(selectedCategory, navigationContext))
+              }
             >
               Find a provider
             </Button>
@@ -352,7 +361,12 @@ export default function ServicesHomePage() {
               {selectedCategoryMeta.subtitle} Start with the directory when you want to compare
               providers, or go straight to a request when you already know what you need.
             </p>
-            <Button className="mt-7" onClick={() => setLocation(`/services/${selectedCategory}`)}>
+            <Button
+              className="mt-7"
+              onClick={() =>
+                setLocation(buildServiceCategoryPath(selectedCategory, navigationContext))
+              }
+            >
               Browse {selectedCategoryMeta.label}
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>

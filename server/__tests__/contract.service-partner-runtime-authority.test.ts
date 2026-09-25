@@ -69,7 +69,13 @@ describe('canonical Service Partner server runtime authority', () => {
     expect(service).toContain('providerCoversLocation');
     expect(service).toContain(".for('update')");
     expect(service).toContain('eq(serviceLeads.requestId, requestId)');
+    expect(service).toContain('serviceRequestContextsMatch');
+    expect(service).toContain('hasProviderCoverage');
+    expect(service).not.toContain('JSON_UNQUOTE(JSON_EXTRACT');
+    expect(service).not.toContain('requestKey,');
+    expect(router).toContain('{16,120}');
     expect(service).toContain('requestId,');
+
     expect(service).toContain("property.status === 'published'");
     expect(router).toContain('getLead: protectedProcedure');
 

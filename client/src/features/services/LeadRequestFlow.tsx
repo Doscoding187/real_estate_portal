@@ -38,6 +38,8 @@ export type LeadWizardSubmit = {
   propertyId?: number;
   listingId?: number;
   developmentId?: number;
+  sourceDetail?: string;
+  propertyLinked?: boolean;
   reasonKey?: string;
 };
 
@@ -52,6 +54,10 @@ export type LeadRequestFlowProps = {
   defaultIntentStage?: IntentStage;
   defaultSourceSurface?: ServiceRequestSourceSurface;
   propertyId?: number;
+  listingId?: number;
+  developmentId?: number;
+  sourceDetail?: string;
+  propertyLinked?: boolean;
   reasonKey?: string;
   submitting?: boolean;
   error?: string | null;
@@ -86,6 +92,10 @@ export function LeadRequestFlow({
   defaultIntentStage = 'general',
   defaultSourceSurface = 'directory',
   propertyId,
+  listingId,
+  developmentId,
+  sourceDetail,
+  propertyLinked,
   reasonKey,
   submitting = false,
   error,
@@ -141,7 +151,12 @@ export function LeadRequestFlow({
       intentStage: defaultIntentStage,
       sourceSurface: defaultSourceSurface,
       propertyId,
+      listingId,
+      developmentId,
+      sourceDetail,
+      propertyLinked,
       reasonKey,
+
       notes: state.notes.trim(),
       suburb: state.suburb || undefined,
       city: state.city || undefined,

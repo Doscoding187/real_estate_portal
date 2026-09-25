@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Link, useLocation, useRoute } from 'wouter';
+import { Link, useRoute } from 'wouter';
 import { trpc } from '@/lib/trpc';
 import {
   formatCategoryLabel,
@@ -8,13 +8,20 @@ import {
   parseServiceLocationInput,
   SA_PROVINCES,
   serviceCategoryFromSlug,
+  serviceJourneyContextFromSearch,
   slugifyLocationSegment,
+  toProviderSlug,
   toServiceCategorySlug,
+  buildProviderProfilePath,
+  buildServiceCategoryPath,
+  buildServiceLocationPath,
+  buildServiceRequestPath,
   type ServiceCategory,
 } from '@/features/services/catalog';
 import { ServiceHeroSearch } from '@/components/services/ServiceHeroSearch';
 import { ProviderCard, type ProviderDirectoryItem } from '@/components/services/ProviderCard';
 import { TrustStepsRow } from '@/components/services/TrustStepsRow';
+import { useServicesLocation } from '@/features/services/useServicesLocation';
 import { applySeo } from '@/lib/seo';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -37,7 +44,7 @@ function provinceLabelFromSlug(value: string) {
 
 export default function ServicesLocalizedCategoryPage() {
   const [, params] = useRoute('/services/:category/:city/:province');
-  const [, setLocation] = useLocation();
+  const { search, setLocation } = useServicesLocation();
   const categoryParam = safeDecode(String(params?.category || '').trim());
   const cityParam = safeDecode(String(params?.city || '').trim());
   const provinceParam = safeDecode(String(params?.province || '').trim());
@@ -46,26 +53,58 @@ export default function ServicesLocalizedCategoryPage() {
   const canonicalCategorySlug = toServiceCategorySlug(category);
   const canonicalCitySlug = slugifyLocationSegment(cityParam);
   const canonicalProvinceSlug = slugifyLocationSegment(provinceParam);
-  const canonicalPath = `/services/${canonicalCategorySlug}/${canonicalCitySlug}/${canonicalProvinceSlug}`;
-  const city = canonicalCitySlug.replace(/-/g, ' ');
-  const province = provinceLabelFromSlug(canonicalProvinceSlug);
+  const canonicalRoutePath = `/services/${canonicalCategorySlug}/${canonicalCitySlug}/${canonicalProvinceSlug}`;
+  const canonicalPath = canonicalRoutePath;
+  const searchContext = serviceJourneyContextFromSearch(search);
+  const hasConflictingGeography = Boolean(
+    (searchContext.city && slugifyLocationSegment(searchContext.city) !== canonicalCitySlug) ||
+    (searchContext.province &&
+      slugifyLocationSegment(searchContext.province) !== canonicalProvinceSlug),
+  );
+  const city = searchContext.city || canonicalCitySlug.replace(/-/g, ' ');
+  const province = searchContext.province || provinceLabelFromSlug(canonicalProvinceSlug);
+  const journeyContext = {
+    ...searchContext,
+    city,
+    province,
+  };
+  const widerCategoryContext = {
+    ...journeyContext,
+    suburb: undefined,
+    city: undefined,
+    province: undefined,
+  };
 
   useEffect(() => {
-    if (!parsedCategory || !canonicalCitySlug || !canonicalProvinceSlug) return;
+    if (!parsedCategory || !canonicalCitySlug || !canonicalProvinceSlug || hasConflictingGeography)
+      return;
 
-    if (window.location.pathname !== canonicalPath) {
-      setLocation(canonicalPath, { replace: true });
+    if (window.location.pathname !== canonicalRoutePath) {
+      setLocation(`${canonicalRoutePath}${search}`, { replace: true });
     }
-  }, [canonicalCitySlug, canonicalPath, canonicalProvinceSlug, parsedCategory, setLocation]);
+  }, [
+    canonicalCitySlug,
+    canonicalRoutePath,
+    canonicalProvinceSlug,
+    hasConflictingGeography,
+    parsedCategory,
+    search,
+    setLocation,
+  ]);
 
   const providersQuery = trpc.servicesEngine.directorySearch.useQuery(
     {
       category,
+      suburb: journeyContext.suburb || undefined,
       city: city || undefined,
       province: province || undefined,
       limit: 20,
     },
-    { enabled: Boolean(parsedCategory && canonicalCitySlug && canonicalProvinceSlug) },
+    {
+      enabled: Boolean(
+        parsedCategory && canonicalCitySlug && canonicalProvinceSlug && !hasConflictingGeography,
+      ),
+    },
   );
   const providers = (providersQuery.data || []) as ProviderDirectoryItem[];
   const categoryMeta = getCategoryMeta(category);
@@ -78,7 +117,7 @@ export default function ServicesLocalizedCategoryPage() {
     });
   }, [canonicalPath, category, city, province]);
 
-  if (!parsedCategory || !canonicalCitySlug || !canonicalProvinceSlug) {
+  if (!parsedCategory || !canonicalCitySlug || !canonicalProvinceSlug || hasConflictingGeography) {
     return (
       <main className="min-h-screen bg-[#f7f4ec] px-4 py-12 md:px-6">
         <Card className="mx-auto max-w-3xl border-[#0f3d91]/10 bg-white shadow-sm">
@@ -123,7 +162,7 @@ export default function ServicesLocalizedCategoryPage() {
               <div className="flex flex-wrap gap-3">
                 <Button
                   className="h-12 rounded-full bg-[#0f3d91] px-6 text-sm font-semibold text-white hover:bg-[#0a2e6e]"
-                  onClick={() => setLocation(`/services/${category}`)}
+                  onClick={() => setLocation(buildServiceCategoryPath(category, journeyContext))}
                 >
                   Browse providers
                   <ArrowRight className="ml-2 h-4 w-4" />
@@ -131,7 +170,9 @@ export default function ServicesLocalizedCategoryPage() {
                 <Button
                   variant="outline"
                   className="h-12 rounded-full border-[#0f3d91]/20 bg-white/85 px-6 text-sm font-semibold text-[#0f3d91] hover:bg-white"
-                  onClick={() => setLocation(`/services/${category}`)}
+                  onClick={() =>
+                    setLocation(buildServiceCategoryPath(category, widerCategoryContext))
+                  }
                 >
                   Browse all areas
                 </Button>
@@ -167,16 +208,7 @@ export default function ServicesLocalizedCategoryPage() {
                   subtitle="Change the service or search another listed area."
                   onSubmit={({ category: selectedCategory, location }) => {
                     const parsed = parseServiceLocationInput(location);
-                    const search = new URLSearchParams();
-                    if (parsed.suburb) search.set('suburb', parsed.suburb);
-                    if (parsed.city) search.set('city', parsed.city);
-                    if (parsed.province) search.set('province', parsed.province);
-                    const query = search.toString();
-                    setLocation(
-                      `/services/${toServiceCategorySlug(selectedCategory)}${
-                        query ? `?${query}` : ''
-                      }`,
-                    );
+                    setLocation(buildServiceLocationPath(selectedCategory, parsed, journeyContext));
                   }}
                 />
               </div>
@@ -216,7 +248,7 @@ export default function ServicesLocalizedCategoryPage() {
                 </h2>
               </div>
               <Link
-                href={`/services/${category}`}
+                href={buildServiceCategoryPath(category, widerCategoryContext)}
                 className="hidden text-sm font-semibold text-[#0f3d91] md:inline-flex md:items-center md:gap-2"
               >
                 View wider category
@@ -243,11 +275,26 @@ export default function ServicesLocalizedCategoryPage() {
                     key={provider.providerId}
                     provider={provider}
                     serviceCategory={category}
-                    onCta={providerId =>
+                    profileHref={buildProviderProfilePath(
+                      toProviderSlug(provider.companyName, provider.providerId),
+                      search,
+                      {
+                        ...journeyContext,
+                        category,
+                        providerId: provider.providerId,
+                        serviceCode:
+                          provider.services?.find(service => service.category === category)?.code ||
+                          '',
+                      },
+                    )}
+                    onCta={providerId => {
+                      const serviceCode =
+                        provider.services?.find(service => service.category === category)?.code ||
+                        '';
                       setLocation(
-                        `/services/request/${category}?providerId=${providerId}&serviceCode=${encodeURIComponent(provider.services?.find(service => service.category === category)?.code || '')}&city=${encodeURIComponent(city)}&province=${encodeURIComponent(province)}`,
-                      )
-                    }
+                        buildServiceRequestPath(category, providerId, serviceCode, journeyContext),
+                      );
+                    }}
                   />
                 ))}
               {!providersQuery.isLoading && !providersQuery.error && providers.length === 0 && (
