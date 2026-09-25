@@ -12,6 +12,8 @@ import {
   getCategoryMeta,
   SA_PROVINCES,
   serviceCategoryFromSlug,
+  serviceJourneyContextFromSearch,
+  buildServiceCategoryPath,
   type IntentStage,
   type ServiceCategory,
   type ServiceRequestSourceSurface,
@@ -43,14 +45,45 @@ function parsePositiveInteger(value: string | null) {
   return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : undefined;
 }
 
-function parseIntentStage(value: string | null): IntentStage {
-  return INTENT_STAGES.includes(value as IntentStage) ? (value as IntentStage) : 'general';
+function parseIntentStage(value: string | null): IntentStage | null {
+  if (!value) return 'general';
+  return INTENT_STAGES.includes(value as IntentStage) ? (value as IntentStage) : null;
 }
 
-function parseSourceSurface(value: string | null): ServiceRequestSourceSurface {
+function parseSourceSurface(value: string | null): ServiceRequestSourceSurface | null {
+  if (!value) return 'directory';
   return SOURCE_SURFACES.includes(value as ServiceRequestSourceSurface)
     ? (value as ServiceRequestSourceSurface)
-    : 'directory';
+    : null;
+}
+
+function getRequestStorage() {
+  if (typeof window === 'undefined') return null;
+  try {
+    return window.sessionStorage;
+  } catch {
+    return null;
+  }
+}
+
+function removeStoredRequestKey(key: string) {
+  const storage = getRequestStorage();
+  if (!storage) return;
+  try {
+    storage.removeItem(key);
+  } catch {
+    return;
+  }
+}
+
+function storeRequestKey(key: string, value: string) {
+  const storage = getRequestStorage();
+  if (!storage) return;
+  try {
+    storage.setItem(key, value);
+  } catch {
+    return;
+  }
 }
 
 function createRequestKey() {
@@ -85,9 +118,16 @@ export default function ServicesRequestPage() {
   const providerId = parsePositiveInteger(query.get('providerId'));
   const serviceCode = query.get('serviceCode')?.trim() || '';
   const propertyId = parsePositiveInteger(query.get('propertyId'));
+  const listingId = parsePositiveInteger(query.get('listingId'));
+  const developmentId = parsePositiveInteger(query.get('developmentId'));
   const intentStage = parseIntentStage(query.get('intentStage'));
   const sourceSurface = parseSourceSurface(query.get('sourceSurface'));
+  const sourceDetail = query.get('sourceDetail')?.trim() || undefined;
   const reasonKey = query.get('reasonKey')?.trim() || undefined;
+  const propertyLinkedValue = query.get('propertyLinked')?.trim();
+  const propertyLinked =
+    propertyLinkedValue === 'true' ? true : propertyLinkedValue === 'false' ? false : undefined;
+  const journeyContext = serviceJourneyContextFromSearch(search);
   const latestSubmissionRef = useRef<{
     category: ServiceCategory;
     intentStage: string;
@@ -97,24 +137,27 @@ export default function ServicesRequestPage() {
     province?: string;
     notes?: string;
     propertyId?: number;
+    listingId?: number;
+    developmentId?: number;
     serviceCode?: string;
+    sourceDetail?: string;
+    propertyLinked?: boolean;
     reasonKey?: string;
   } | null>(null);
   const requestKeyRef = useRef<string | null>(null);
   const requestTargetRef = useRef('');
-  const requestTarget = [
-    providerId,
-    serviceCode,
-    category,
-    intentStage,
-    sourceSurface,
-    propertyId || '',
-    initialLocation.suburb,
-    initialLocation.city,
-    initialLocation.province,
-  ].join(':');
+  const requestTarget = [providerId, serviceCode, category].join(':');
+  const requestStorageKey = `services-request-key:${requestTarget}`;
   if (!requestKeyRef.current || requestTargetRef.current !== requestTarget) {
-    requestKeyRef.current = createRequestKey();
+    const storage = getRequestStorage();
+    let storedKey: string | null = null;
+    try {
+      storedKey = storage?.getItem(requestStorageKey) || null;
+    } catch {
+      storedKey = null;
+    }
+    requestKeyRef.current = storedKey || createRequestKey();
+    storeRequestKey(requestStorageKey, requestKeyRef.current);
     requestTargetRef.current = requestTarget;
   }
 
@@ -136,6 +179,7 @@ export default function ServicesRequestPage() {
 
   const createLead = trpc.servicesEngine.createLeadFromJourney.useMutation({
     onSuccess: data => {
+      removeStoredRequestKey(requestStorageKey);
       const latestSubmission = latestSubmissionRef.current;
       const nextCategory = latestSubmission?.category || category;
       const nextCity = latestSubmission?.city || '';
@@ -144,14 +188,28 @@ export default function ServicesRequestPage() {
       const leadId = Number(data.leadId || data.leadIds?.[0] || 0);
 
       if (!leadId) {
-        const search = new URLSearchParams({
-          request: 'unmatched',
-          category: nextCategory,
-        });
-        if (nextCity) search.set('city', nextCity);
-        if (nextProvince) search.set('province', nextProvince);
-        if (nextSuburb) search.set('suburb', nextSuburb);
-        setLocation(`/services/${nextCategory}?${search.toString()}`);
+        const fallbackContext = {
+          ...journeyContext,
+          ...(latestSubmission?.propertyId ? { propertyId: latestSubmission.propertyId } : {}),
+          ...(latestSubmission?.listingId ? { listingId: latestSubmission.listingId } : {}),
+          ...(latestSubmission?.developmentId
+            ? { developmentId: latestSubmission.developmentId }
+            : {}),
+          ...(latestSubmission?.intentStage ? { intentStage: latestSubmission.intentStage } : {}),
+          ...(latestSubmission?.sourceSurface
+            ? { sourceSurface: latestSubmission.sourceSurface }
+            : {}),
+          ...(latestSubmission?.sourceDetail
+            ? { sourceDetail: latestSubmission.sourceDetail }
+            : {}),
+          ...(latestSubmission?.reasonKey ? { reasonKey: latestSubmission.reasonKey } : {}),
+          city: nextCity,
+          province: nextProvince,
+          suburb: nextSuburb,
+        };
+        const fallbackPath = buildServiceCategoryPath(nextCategory, fallbackContext);
+        setLocation(`${fallbackPath}${fallbackPath.includes('?') ? '&' : '?'}request=unmatched`);
+
         return;
       }
 
@@ -178,6 +236,25 @@ export default function ServicesRequestPage() {
     );
   }
 
+  if (intentStage === null || sourceSurface === null) {
+    return (
+      <main className="min-h-screen bg-[#f7f4ec] px-4 py-12 md:px-6">
+        <Card className="mx-auto max-w-3xl border-[#0f3d91]/10 bg-white shadow-sm">
+          <CardContent className="space-y-4 p-8">
+            <h1 className="text-2xl font-semibold text-slate-950">Journey context unavailable</h1>
+            <p className="text-sm leading-6 text-slate-600">
+              This request contains unsupported attribution context. Return to the directory and
+              choose a provider from a supported journey.
+            </p>
+            <Button onClick={() => setLocation(buildServiceCategoryPath(category, journeyContext))}>
+              Browse services
+            </Button>
+          </CardContent>
+        </Card>
+      </main>
+    );
+  }
+
   if (!providerId || !serviceCode) {
     return (
       <main className="min-h-screen bg-[#f7f4ec] px-4 py-12 md:px-6">
@@ -189,7 +266,7 @@ export default function ServicesRequestPage() {
               Browse published {formatCategoryLabel(category).toLowerCase()} providers before
               continuing.
             </p>
-            <Button onClick={() => setLocation(`/services/${category}`)}>
+            <Button onClick={() => setLocation(buildServiceCategoryPath(category, journeyContext))}>
               Browse {formatCategoryLabel(category)} providers
             </Button>
           </CardContent>
@@ -223,7 +300,7 @@ export default function ServicesRequestPage() {
                 >
                   <Button className="bg-[#0f3d91] hover:bg-[#0a2e6e]">Go to login</Button>
                 </Link>
-                <Link href={`/services/${category}`}>
+                <Link href={buildServiceCategoryPath(category, journeyContext)}>
                   <Button variant="outline">Back to {formatCategoryLabel(category)}</Button>
                 </Link>
               </div>
@@ -273,7 +350,7 @@ export default function ServicesRequestPage() {
                   Start request
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
-                <Link href={`/services/${category}`}>
+                <Link href={buildServiceCategoryPath(category, journeyContext)}>
                   <Button
                     variant="outline"
                     className="h-12 rounded-full border-[#0f3d91]/20 bg-white/85 px-6 text-sm font-semibold text-[#0f3d91] hover:bg-white"
@@ -355,10 +432,17 @@ export default function ServicesRequestPage() {
                 providerId,
                 serviceCode,
                 category,
-                intentStage,
-                sourceSurface,
+                intentStage || 'general',
+                sourceSurface || 'directory',
+
                 propertyId || '',
+                listingId || '',
+                developmentId || '',
+                sourceDetail || '',
+                propertyLinked === undefined ? '' : String(propertyLinked),
+                reasonKey || '',
                 initialLocation.suburb,
+
                 initialLocation.city,
                 initialLocation.province,
               ].join(':')}
@@ -372,6 +456,10 @@ export default function ServicesRequestPage() {
               defaultIntentStage={intentStage}
               defaultSourceSurface={sourceSurface}
               propertyId={propertyId}
+              listingId={listingId}
+              developmentId={developmentId}
+              sourceDetail={sourceDetail}
+              propertyLinked={propertyLinked}
               reasonKey={reasonKey}
               submitting={createLead.isPending}
               error={createLead.error?.message ?? null}
@@ -385,8 +473,20 @@ export default function ServicesRequestPage() {
                   suburb: payload.suburb,
                   notes: payload.notes,
                   propertyId: payload.propertyId,
+                  listingId: payload.listingId,
+                  developmentId: payload.developmentId,
                   serviceCode,
+                  sourceDetail: payload.sourceDetail,
+                  propertyLinked: payload.propertyLinked,
                   reasonKey: payload.reasonKey,
+                };
+                const requestContext = {
+                  ...(payload.sourceDetail ? { sourceDetail: payload.sourceDetail } : {}),
+                  ...(payload.reasonKey ? { reasonKey: payload.reasonKey } : {}),
+                  ...(payload.propertyLinked !== undefined
+                    ? { propertyLinked: payload.propertyLinked }
+                    : {}),
+                  ...(serviceCode ? { serviceCode } : {}),
                 };
                 createLead.mutate({
                   requestKey: requestKeyRef.current || createRequestKey(),
@@ -403,16 +503,7 @@ export default function ServicesRequestPage() {
                   suburb: payload.suburb,
                   notes: payload.notes,
                   serviceCode,
-                  context: payload.propertyId
-                    ? {
-                        sourceDetail: 'property_detail',
-                        reasonKey: payload.reasonKey,
-                        propertyLinked: true,
-                        serviceCode: serviceCode || null,
-                      }
-                    : serviceCode
-                      ? { serviceCode }
-                      : undefined,
+                  context: Object.keys(requestContext).length > 0 ? requestContext : undefined,
                 });
               }}
             />

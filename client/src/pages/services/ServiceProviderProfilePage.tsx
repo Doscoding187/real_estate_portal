@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useLocation, useRoute } from 'wouter';
+import { Link, useRoute } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ProviderBadges } from '@/components/services/ProviderBadges';
@@ -8,10 +8,14 @@ import {
   providerIdFromSlug,
   formatPriceRange,
   formatCategoryLabel,
+  serviceCategoryFromSlug,
+  serviceJourneyContextFromSearch,
+  buildServiceRequestPath,
   type ServiceCategory,
 } from '@/features/services/catalog';
 import { trpc } from '@/lib/trpc';
 import { applySeo } from '@/lib/seo';
+import { useServicesLocation } from '@/features/services/useServicesLocation';
 import { ArrowRight, BadgeCheck, MapPinned, Sparkles } from 'lucide-react';
 
 function safeDecode(value: string) {
@@ -24,19 +28,30 @@ function safeDecode(value: string) {
 
 export default function ServiceProviderProfilePage() {
   const [, params] = useRoute('/services/provider/:slug');
-  const [, setLocation] = useLocation();
+  const { search, setLocation } = useServicesLocation();
   const slug = String(params?.slug || '');
   const providerId = providerIdFromSlug(safeDecode(slug));
+  const journeyContext = serviceJourneyContextFromSearch(search);
+  const requestedCategory = journeyContext.category
+    ? serviceCategoryFromSlug(journeyContext.category)
+    : null;
   const profileQuery = trpc.servicesEngine.getProviderPublicProfile.useQuery(
     { providerId: providerId || 0 },
     { enabled: Boolean(providerId) },
   );
   const profile = profileQuery.data;
-  const [selectedServiceCode, setSelectedServiceCode] = useState<string | null>(null);
+  const [selectedServiceCode, setSelectedServiceCode] = useState<string | null>(
+    journeyContext.serviceCode || null,
+  );
   const defaultService =
     profile?.services?.find(service => service.code === selectedServiceCode) ||
+    (journeyContext.serviceCode
+      ? profile?.services?.find(service => service.code === journeyContext.serviceCode)
+      : undefined) ||
     profile?.services?.[0];
-  const defaultCategory = (defaultService?.category || 'home_improvement') as ServiceCategory;
+  const defaultCategory = (defaultService?.category ||
+    requestedCategory ||
+    'home_improvement') as ServiceCategory;
 
   useEffect(() => {
     const providerName = profile?.companyName || 'Service provider';
@@ -90,9 +105,13 @@ export default function ServiceProviderProfilePage() {
     );
   }
 
-  const requestPath = `/services/request/${defaultCategory}?providerId=${providerId}${
-    defaultService?.code ? `&serviceCode=${encodeURIComponent(defaultService.code)}` : ''
-  }`;
+  const reviewsPath = `/services/reviews/${providerId}${search || ''}`;
+  const requestPath = buildServiceRequestPath(
+    defaultCategory,
+    providerId,
+    defaultService?.code || journeyContext.serviceCode || '',
+    journeyContext,
+  );
 
   return (
     <main className="min-h-screen bg-[#f7f4ec]">
@@ -150,7 +169,7 @@ export default function ServiceProviderProfilePage() {
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
                 {profile.reviews.length > 0 && (
-                  <Link href={`/services/reviews/${providerId}`}>
+                  <Link href={reviewsPath}>
                     <Button variant="outline">Published feedback</Button>
                   </Link>
                 )}

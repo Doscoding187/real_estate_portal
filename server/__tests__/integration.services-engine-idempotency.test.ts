@@ -1,6 +1,6 @@
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { afterEach, describe, expect, it } from 'vitest';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 
 import { getDb } from '../db-connection';
 import {
@@ -17,21 +17,40 @@ import { servicesEngineService } from '../services/servicesEngineService';
 
 const describeDatabase = process.env.DATABASE_URL ? describe : describe.skip;
 
+function expectedRequestId(requesterUserId: number, requestKey: string) {
+  return `sv1:${createHash('sha256')
+    .update(JSON.stringify([requesterUserId, requestKey]))
+    .digest('hex')}`;
+}
+
 describeDatabase('services engine durable lead idempotency', () => {
   let requesterUserId = 0;
+  let secondaryRequesterUserId = 0;
   let providerUserId = 0;
   let providerId = 0;
 
   afterEach(async () => {
     const db = await getDb();
     if (!db) return;
-    if (requesterUserId) {
-      await db.delete(serviceLeads).where(eq(serviceLeads.requesterUserId, requesterUserId));
+    if (requesterUserId || secondaryRequesterUserId) {
+      await db
+        .delete(serviceLeads)
+        .where(
+          inArray(
+            serviceLeads.requesterUserId,
+            [requesterUserId, secondaryRequesterUserId].filter(Boolean),
+          ),
+        );
     }
+
     if (providerId) await db.delete(partners).where(eq(partners.id, providerId));
     if (providerUserId) await db.delete(users).where(eq(users.id, providerUserId));
+    if (secondaryRequesterUserId)
+      await db.delete(users).where(eq(users.id, secondaryRequesterUserId));
     if (requesterUserId) await db.delete(users).where(eq(users.id, requesterUserId));
     requesterUserId = 0;
+    secondaryRequesterUserId = 0;
+
     providerUserId = 0;
     providerId = 0;
   });
@@ -115,9 +134,8 @@ describeDatabase('services engine durable lead idempotency', () => {
     expect(rows[0]).toMatchObject({
       id: first.leadId,
       providerId,
-      requestId: expect.stringMatching(/^sv1:[a-f0-9]{64}$/),
+      requestId: expectedRequestId(requesterUserId, input.requestKey),
       contextJson: expect.objectContaining({
-        requestKey: input.requestKey,
         serviceCode: 'removals',
       }),
     });
@@ -128,6 +146,35 @@ describeDatabase('services engine durable lead idempotency', () => {
         and(eq(serviceLeadEvents.leadId, rows[0]!.id), eq(serviceLeadEvents.eventType, 'created')),
       );
     expect(events).toHaveLength(1);
+
+    const replay = await servicesEngineService.createLeadFromContext(input);
+    expect(replay.leadId).toBe(first.leadId);
+
+    const [secondaryInsert] = await db.insert(users).values({
+      email: `services-requester-secondary-${suffix}@invalid.example`,
+      name: 'Services Secondary Requester',
+      role: 'visitor',
+      emailVerified: 1,
+    } as any);
+    secondaryRequesterUserId = Number(secondaryInsert.insertId);
+    const secondary = await servicesEngineService.createLeadFromContext({
+      ...input,
+      requesterUserId: secondaryRequesterUserId,
+    });
+    expect(secondary.leadId).not.toBe(first.leadId);
+    expect(secondary.leadId).toBeGreaterThan(0);
+
+    const requesterRows = await db
+      .select({ id: serviceLeads.id, requestId: serviceLeads.requestId })
+      .from(serviceLeads)
+      .where(inArray(serviceLeads.requesterUserId, [requesterUserId, secondaryRequesterUserId]));
+    expect(requesterRows).toHaveLength(2);
+    expect(requesterRows.map(row => row.requestId).sort()).toEqual(
+      [
+        expectedRequestId(requesterUserId, input.requestKey),
+        expectedRequestId(secondaryRequesterUserId, input.requestKey),
+      ].sort(),
+    );
 
     await expect(
       servicesEngineService.createLeadFromContext({ ...input, notes: 'Changed payload' }),

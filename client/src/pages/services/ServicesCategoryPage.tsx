@@ -6,8 +6,14 @@ import {
   getCategoryMeta,
   parseServiceLocationInput,
   serviceCategoryFromSlug,
+  serviceJourneyContextFromSearch,
   slugifyLocationSegment,
+  toProviderSlug,
   toServiceCategorySlug,
+  buildProviderProfilePath,
+  buildServiceCategoryPath,
+  buildServiceLocationPath,
+  buildServiceRequestPath,
   type ServiceCategory,
 } from '@/features/services/catalog';
 import { ServiceHeroSearch } from '@/components/services/ServiceHeroSearch';
@@ -22,53 +28,6 @@ import { useServicesLocation } from '@/features/services/useServicesLocation';
 
 function normalizeLocation(location: string) {
   return parseServiceLocationInput(location);
-}
-
-function providerRequestPath(
-  providerId: number,
-  category: ServiceCategory,
-  serviceCode: string,
-  location: { city?: string; suburb?: string; province?: string },
-  context: {
-    propertyId?: string;
-    intentStage?: string;
-    sourceSurface?: string;
-    reasonKey?: string;
-  } = {},
-) {
-  const search = new URLSearchParams({
-    providerId: String(providerId),
-    serviceCode,
-  });
-  if (location.suburb) search.set('suburb', location.suburb);
-  if (location.city) search.set('city', location.city);
-  if (location.province) search.set('province', location.province);
-  if (context.propertyId) search.set('propertyId', context.propertyId);
-  if (context.intentStage) search.set('intentStage', context.intentStage);
-  if (context.sourceSurface) search.set('sourceSurface', context.sourceSurface);
-  if (context.reasonKey) search.set('reasonKey', context.reasonKey);
-  return `/services/request/${category}?${search.toString()}`;
-}
-
-function categoryPath(
-  category: ServiceCategory,
-  location: { city?: string | null; suburb?: string | null; province?: string | null },
-  context: {
-    propertyId?: string | null;
-    intentStage?: string | null;
-    sourceSurface?: string | null;
-    reasonKey?: string | null;
-  } = {},
-) {
-  const search = new URLSearchParams();
-  if (location.suburb) search.set('suburb', location.suburb);
-  if (location.city) search.set('city', location.city);
-  if (location.province) search.set('province', location.province);
-  if (context.propertyId) search.set('propertyId', context.propertyId);
-  if (context.intentStage) search.set('intentStage', context.intentStage);
-  if (context.sourceSurface) search.set('sourceSurface', context.sourceSurface);
-  if (context.reasonKey) search.set('reasonKey', context.reasonKey);
-  return `/services/${toServiceCategorySlug(category)}${search.toString() ? `?${search.toString()}` : ''}`;
 }
 
 export default function ServicesCategoryPage() {
@@ -87,11 +46,20 @@ export default function ServicesCategoryPage() {
       suburb: params.get('suburb') || undefined,
       province: params.get('province') || undefined,
       propertyId: params.get('propertyId') || undefined,
+      listingId: params.get('listingId') || undefined,
+      developmentId: params.get('developmentId') || undefined,
       intentStage: params.get('intentStage') || undefined,
       sourceSurface: params.get('sourceSurface') || undefined,
+      sourceDetail: params.get('sourceDetail') || undefined,
       reasonKey: params.get('reasonKey') || undefined,
     };
   }, [search]);
+  const journeyContext = {
+    ...serviceJourneyContextFromSearch(search),
+    city: initialQuery.city,
+    suburb: initialQuery.suburb,
+    province: initialQuery.province,
+  };
   const [searchText, setSearchText] = useState(initialQuery.query || '');
 
   const providersQuery = trpc.servicesEngine.directorySearch.useQuery(
@@ -142,14 +110,7 @@ export default function ServicesCategoryPage() {
 
   function submitLocation(selectedCategory: ServiceCategory, location: string) {
     const normalized = normalizeLocation(location);
-    setLocation(
-      categoryPath(selectedCategory, normalized, {
-        propertyId: initialQuery.propertyId,
-        intentStage: initialQuery.intentStage,
-        sourceSurface: initialQuery.sourceSurface,
-        reasonKey: initialQuery.reasonKey,
-      }),
-    );
+    setLocation(buildServiceLocationPath(selectedCategory, normalized, journeyContext));
   }
 
   return (
@@ -181,16 +142,7 @@ export default function ServicesCategoryPage() {
               <div className="flex flex-wrap gap-3">
                 <Button
                   className="h-12 rounded-full bg-[#0f3d91] px-6 text-sm font-semibold text-white hover:bg-[#0a2e6e]"
-                  onClick={() =>
-                    setLocation(
-                      categoryPath(category, initialQuery, {
-                        propertyId: initialQuery.propertyId,
-                        intentStage: initialQuery.intentStage,
-                        sourceSurface: initialQuery.sourceSurface,
-                        reasonKey: initialQuery.reasonKey,
-                      }),
-                    )
-                  }
+                  onClick={() => setLocation(buildServiceCategoryPath(category, journeyContext))}
                 >
                   Browse providers
                   <ArrowRight className="ml-2 h-4 w-4" />
@@ -316,27 +268,26 @@ export default function ServicesCategoryPage() {
                     key={provider.providerId}
                     provider={provider}
                     serviceCategory={category}
-                    onCta={providerId =>
-                      setLocation(
-                        providerRequestPath(
-                          providerId,
-                          category,
+                    profileHref={buildProviderProfilePath(
+                      toProviderSlug(provider.companyName, provider.providerId),
+                      search,
+                      {
+                        ...journeyContext,
+                        category,
+                        providerId: provider.providerId,
+                        serviceCode:
                           provider.services?.find(service => service.category === category)?.code ||
-                            '',
-                          {
-                            city: initialQuery.city,
-                            suburb: initialQuery.suburb,
-                            province: initialQuery.province,
-                          },
-                          {
-                            propertyId: initialQuery.propertyId,
-                            intentStage: initialQuery.intentStage,
-                            sourceSurface: initialQuery.sourceSurface,
-                            reasonKey: initialQuery.reasonKey,
-                          },
-                        ),
-                      )
-                    }
+                          '',
+                      },
+                    )}
+                    onCta={providerId => {
+                      const serviceCode =
+                        provider.services?.find(service => service.category === category)?.code ||
+                        '';
+                      setLocation(
+                        buildServiceRequestPath(category, providerId, serviceCode, journeyContext),
+                      );
+                    }}
                   />
                 ))}
               {!providersQuery.isLoading && !providersQuery.error && providers.length === 0 && (

@@ -51,15 +51,24 @@ type ProviderProfileData = {
       | 'insurance'
       | 'media_marketing'
       | null;
+    id?: number;
+    code?: string | null;
     displayName?: string | null;
+    description?: string | null;
     minPrice?: number | null;
     maxPrice?: number | null;
+    currency?: string | null;
+    isActive?: boolean | null;
   }>;
   locations?: Array<{
+    id?: number;
     suburb?: string | null;
     city?: string | null;
     province?: string | null;
+    countryCode?: string | null;
+    postalCode?: string | null;
     radiusKm?: number | null;
+    isPrimary?: boolean | null;
   }>;
 } | null;
 
@@ -109,20 +118,29 @@ export function ProviderOnboardingWizard() {
         selectedPlan: profile.subscriptionTier || null,
         services: (profile.services || []).map(service => ({
           id: makeRowId('svc'),
+          recordId: service.id,
+          code: service.code || '',
           displayName: service.displayName || '',
+          description: service.description || '',
           category: service.category || 'home_improvement',
           minPrice: service.minPrice != null ? String(service.minPrice) : '',
           maxPrice: service.maxPrice != null ? String(service.maxPrice) : '',
+          currency: 'ZAR',
+          isActive: service.isActive !== false,
         })),
-        locations: (profile.locations || []).map(location => ({
+        locations: (profile.locations || []).map((location, index) => ({
           id: makeRowId('loc'),
+          recordId: location.id,
           suburb: location.suburb || '',
           city: location.city || '',
           province: toProvince(location.province),
+          countryCode: location.countryCode || 'ZA',
+          postalCode: location.postalCode || '',
           radiusKm:
             location.radiusKm != null && Number.isFinite(Number(location.radiusKm))
               ? String(location.radiusKm)
               : '25',
+          isPrimary: location.isPrimary === true || (location.isPrimary == null && index === 0),
         })),
       },
     });
@@ -139,6 +157,26 @@ export function ProviderOnboardingWizard() {
       <main className="min-h-screen bg-[#f7f4ec]">
         <div className="mx-auto w-full max-w-2xl px-4 py-12 text-center text-sm text-slate-500 md:px-6">
           Preparing your profile...
+        </div>
+      </main>
+    );
+  }
+
+  if (status?.hasProviderIdentity && profileQuery.isLoading) {
+    return (
+      <main className="min-h-screen bg-[#f7f4ec] px-4 py-8 md:px-6">
+        <div className="mx-auto max-w-2xl text-sm text-slate-500">
+          Loading your provider profile…
+        </div>
+      </main>
+    );
+  }
+
+  if (status?.hasProviderIdentity && profileQuery.isError) {
+    return (
+      <main className="min-h-screen bg-[#f7f4ec] px-4 py-8 md:px-6">
+        <div className="mx-auto max-w-2xl rounded-2xl border border-red-200 bg-red-50 p-6 text-sm text-red-800">
+          We could not load your provider profile. Refresh before editing it.
         </div>
       </main>
     );

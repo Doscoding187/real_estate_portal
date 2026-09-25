@@ -1,6 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import fc from 'fast-check';
-import { formatPriceRange, parseServiceLocationInput } from '../catalog';
+import {
+  buildServiceLocationPath,
+  buildServiceRequestPath,
+  formatPriceRange,
+  parseServiceLocationInput,
+  serviceJourneyContextFromSearch,
+} from '../catalog';
 
 describe('catalog.ts — Property-Based Tests', () => {
   describe('Property 13: ZAR price range formatting', () => {
@@ -53,6 +59,44 @@ describe('catalog.ts — Property-Based Tests', () => {
         { numRuns: 20 },
       );
     });
+  });
+
+  it('round-trips the allowlisted journey context without inventing values', () => {
+    const context = {
+      category: 'moving',
+      providerId: 42,
+      serviceCode: 'removals',
+      propertyId: 7,
+      listingId: 8,
+      developmentId: 9,
+      propertyLinked: true,
+      intentStage: 'buyer_move_ready',
+
+      sourceSurface: 'journey_injection',
+      sourceDetail: 'saved_property',
+      reasonKey: 'move_ready',
+      suburb: 'Rondebosch',
+      city: 'Cape Town',
+      province: 'Western Cape',
+    } as const;
+
+    const requestPath = buildServiceRequestPath('moving', 42, 'removals', context);
+    const requestUrl = new URL(requestPath, 'https://property-listify.test');
+    expect(requestUrl.pathname).toBe('/services/request/moving');
+    expect(Object.fromEntries(requestUrl.searchParams.entries())).toEqual(
+      Object.fromEntries(Object.entries(context).map(([key, value]) => [key, String(value)])),
+    );
+
+    const localizedPath = buildServiceLocationPath(
+      'moving',
+      { city: 'Cape Town', province: 'Western Cape' },
+      context,
+    );
+    const localizedUrl = new URL(localizedPath, 'https://property-listify.test');
+    expect(localizedUrl.pathname).toBe('/services/moving/cape-town/western-cape');
+    expect(serviceJourneyContextFromSearch(localizedUrl.search)).toEqual(
+      Object.fromEntries(Object.entries(context).map(([key, value]) => [key, String(value)])),
+    );
   });
 
   it('keeps city-only and province-only location input typed', () => {

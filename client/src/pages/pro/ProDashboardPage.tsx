@@ -13,6 +13,8 @@ import { useServiceProviderOnboardingStatus } from '@/hooks/useServiceProviderOn
 import { formatCategoryLabel } from '@/features/services/catalog';
 import { ArrowRight, BadgeCheck, BriefcaseBusiness, Clock3, Sparkles } from 'lucide-react';
 
+const LEADS_PAGE_SIZE = 50;
+
 const NEXT_STATUSES: Record<string, string[]> = {
   new: ['accepted', 'expired', 'lost'],
   accepted: ['quoted', 'won', 'lost', 'expired'],
@@ -31,6 +33,7 @@ export default function ProDashboardPage() {
   const [, setLocation] = useLocation();
   const { status, isLoading: statusLoading } = useServiceProviderOnboardingStatus();
   const [responseNotes, setResponseNotes] = useState<Record<number, string>>({});
+  const [leadsPage, setLeadsPage] = useState(0);
 
   useEffect(() => {
     applySeo({
@@ -44,17 +47,17 @@ export default function ProDashboardPage() {
 
   useEffect(() => {
     if (statusLoading) return;
-    if (!status?.hasProviderIdentity && window.location.pathname !== '/service/profile') {
+    if (!status?.dashboardUnlocked && window.location.pathname !== '/service/profile') {
       setLocation('/service/profile');
     }
-  }, [setLocation, status?.hasProviderIdentity, statusLoading]);
+  }, [setLocation, status?.dashboardUnlocked, statusLoading]);
 
   const dashboardQuery = trpc.servicesEngine.myProviderDashboard.useQuery(
     { days: 30 },
     { enabled: Boolean(status?.dashboardUnlocked) },
   );
   const leadsQuery = trpc.servicesEngine.myProviderLeads.useQuery(
-    { limit: 50 },
+    { limit: LEADS_PAGE_SIZE, offset: leadsPage * LEADS_PAGE_SIZE },
     { enabled: Boolean(status?.dashboardUnlocked) },
   );
   const updateLead = trpc.servicesEngine.updateMyLeadStatus.useMutation({
@@ -78,6 +81,24 @@ export default function ProDashboardPage() {
         <div className="mx-auto max-w-7xl text-sm text-slate-500">
           Preparing your provider workspace...
         </div>
+      </main>
+    );
+  }
+
+  if (!status?.dashboardUnlocked) {
+    return (
+      <main className="min-h-screen bg-[#f7f4ec] px-4 py-8 md:px-6">
+        <Card className="mx-auto max-w-3xl border-[#0f3d91]/10 bg-white shadow-sm">
+          <CardContent className="space-y-4 p-8">
+            <h1 className="text-2xl font-semibold text-slate-950">
+              Provider workspace not available
+            </h1>
+            <p className="text-sm leading-6 text-slate-600">
+              Your provider workspace opens after your profile is published in the directory.
+            </p>
+            <Button onClick={() => setLocation('/service/profile')}>Review provider profile</Button>
+          </CardContent>
+        </Card>
       </main>
     );
   }
@@ -345,6 +366,27 @@ export default function ProDashboardPage() {
                   <div className="rounded-[1rem] border border-dashed border-slate-300 bg-slate-50/80 p-6 text-sm leading-6 text-slate-600">
                     No requests yet. Once your profile is published, consumer requests assigned to
                     your provider identity will appear here.
+                  </div>
+                )}
+                {!leadsQuery.isLoading && !leadsQuery.error && leads.length > 0 && (
+                  <div className="flex items-center justify-between border-t border-slate-100 pt-4 text-sm text-slate-600">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={leadsPage === 0 || leadsQuery.isFetching}
+                      onClick={() => setLeadsPage(page => Math.max(0, page - 1))}
+                    >
+                      Previous
+                    </Button>
+                    <span>Page {leadsPage + 1}</span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={leads.length < LEADS_PAGE_SIZE || leadsQuery.isFetching}
+                      onClick={() => setLeadsPage(page => page + 1)}
+                    >
+                      Next
+                    </Button>
                   </div>
                 )}
               </CardContent>

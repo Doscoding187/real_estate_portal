@@ -95,6 +95,7 @@ type ProviderProfileResult = {
     minPrice: number | null;
     maxPrice: number | null;
     currency: string;
+    isActive: boolean;
   }>;
   locations: Array<{
     id: number;
@@ -124,8 +125,10 @@ type PublicProviderProfileResult = Omit<
   | 'subscriptionStatus'
   | 'contactEmail'
   | 'contactPhone'
+  | 'services'
   | 'locations'
 > & {
+  services: Array<Omit<ProviderProfileResult['services'][number], 'isActive'>>;
   locations: Array<Omit<ProviderProfileResult['locations'][number], 'radiusKm'>>;
 };
 
@@ -133,6 +136,10 @@ function normalizeText(value: string | null | undefined): string | null {
   if (!value) return null;
   const normalized = value.trim();
   return normalized.length > 0 ? normalized : null;
+}
+
+function normalizeGeographyValue(value: string | null | undefined): string | null {
+  return normalizeText(value)?.toLowerCase() || null;
 }
 
 const SERVICE_REQUEST_CONTEXT_KEYS = new Set([
@@ -205,6 +212,22 @@ function newProviderSubscriptionValues(providerId: number) {
   };
 }
 
+function serviceLocationKey(location: {
+  countryCode?: string | null;
+  province?: string | null;
+  city?: string | null;
+  suburb?: string | null;
+}) {
+  return [
+    normalizeText(location.countryCode) || 'ZA',
+    location.province,
+    location.city,
+    location.suburb,
+  ]
+    .map(value => normalizeText(value)?.toLowerCase() || '')
+    .join('|');
+}
+
 function normalizePublicWebsiteUrl(value: string | null | undefined): string | null {
   const normalized = normalizeText(value);
   if (!normalized) return null;
@@ -229,6 +252,38 @@ function getServiceCodeFromContext(value: unknown): string | null {
   return typeof serviceCode === 'string' && serviceCode.trim() ? serviceCode.trim() : null;
 }
 
+function getComparableServiceRequestContext(value: unknown): Record<string, unknown> {
+  let parsed = value;
+  if (typeof value === 'string') {
+    try {
+      parsed = JSON.parse(value);
+    } catch {
+      return {};
+    }
+  }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {};
+  const comparable = { ...(parsed as Record<string, unknown>) };
+  delete comparable.requestKey;
+  return normalizeServiceRequestContext(comparable);
+}
+
+function serviceRequestContextsMatch(existing: unknown, requested: Record<string, unknown>) {
+  const existingContext = getComparableServiceRequestContext(existing);
+  const keys = new Set([...Object.keys(existingContext), ...Object.keys(requested)]);
+  return [...keys].every(key => {
+    const existingValue = existingContext[key];
+    const requestedValue = requested[key];
+    if (
+      key === 'serviceCode' &&
+      typeof existingValue === 'string' &&
+      typeof requestedValue === 'string'
+    ) {
+      return existingValue.toLowerCase() === requestedValue.toLowerCase();
+    }
+    return existingValue === requestedValue;
+  });
+}
+
 export function isProviderDirectoryEligible(input: {
   verificationStatus: string | null | undefined;
   isActive: boolean;
@@ -240,6 +295,18 @@ export function isProviderDirectoryEligible(input: {
     input.directoryActive &&
     input.verificationStatus === 'verified' &&
     (input.subscriptionStatus === 'trial' || input.subscriptionStatus === 'active')
+  );
+}
+
+export function hasProviderCoverage(location: {
+  province?: string | null;
+  city?: string | null;
+  suburb?: string | null;
+}) {
+  return Boolean(
+    normalizeText(location.province) ||
+    normalizeText(location.city) ||
+    normalizeText(location.suburb),
   );
 }
 
@@ -262,6 +329,7 @@ export function providerCoversLocation(
   if (!province && !city && !suburb) return true;
 
   return locations.some(providerLocation => {
+    if (!hasProviderCoverage(providerLocation)) return false;
     if (
       province &&
       String(providerLocation.province || '')
@@ -288,6 +356,91 @@ export function providerCoversLocation(
     }
     return true;
   });
+}
+
+async function lockAndValidateProviderForLead(
+  executor: any,
+  providerId: number,
+  category: ServiceCategory,
+  serviceCode: string,
+  location: { province: string | null; city: string | null; suburb: string | null },
+): Promise<string> {
+  await executor
+    .select({ id: partners.id })
+    .from(partners)
+    .where(eq(partners.id, providerId))
+    .limit(1)
+    .for('update');
+
+  await executor
+    .select({ id: serviceProviderProfiles.id })
+    .from(serviceProviderProfiles)
+    .where(eq(serviceProviderProfiles.providerId, providerId))
+    .limit(1)
+    .for('update');
+
+  const [providerState] = await executor
+    .select({
+      isActive: partners.isActive,
+      verificationStatus: partners.verificationStatus,
+      directoryActive: serviceProviderProfiles.directoryActive,
+      subscriptionStatus: serviceProviderSubscriptions.status,
+    })
+    .from(partners)
+    .innerJoin(serviceProviderProfiles, eq(serviceProviderProfiles.providerId, partners.id))
+    .leftJoin(
+      serviceProviderSubscriptions,
+      eq(serviceProviderSubscriptions.providerId, partners.id),
+    )
+    .where(eq(partners.id, providerId))
+    .limit(1);
+
+  const services = await executor
+    .select({
+      category: serviceProviderServices.serviceCategory,
+      code: serviceProviderServices.serviceCode,
+      isActive: serviceProviderServices.isActive,
+    })
+    .from(serviceProviderServices)
+    .where(eq(serviceProviderServices.providerId, providerId))
+    .for('update');
+
+  const locations = await executor
+    .select({
+      province: serviceProviderLocations.province,
+      city: serviceProviderLocations.city,
+      suburb: serviceProviderLocations.suburb,
+    })
+    .from(serviceProviderLocations)
+    .where(eq(serviceProviderLocations.providerId, providerId))
+    .for('update');
+
+  if (
+    !providerState ||
+    !isProviderDirectoryEligible({
+      verificationStatus: providerState.verificationStatus,
+      isActive: Number(providerState.isActive || 0) === 1,
+      directoryActive: Number(providerState.directoryActive || 0) === 1,
+      subscriptionStatus: providerState.subscriptionStatus,
+    }) ||
+    !services.some(service => Number(service.isActive || 0) === 1)
+  ) {
+    throw new Error('This provider is not currently available');
+  }
+
+  const matchingService = services.find(
+    service =>
+      service.category === category &&
+      String(service.code).toLowerCase() === serviceCode.toLowerCase() &&
+      Number(service.isActive || 0) === 1,
+  );
+  if (!matchingService) {
+    throw new Error('This provider does not offer the selected service');
+  }
+  if (!providerCoversLocation(locations, location)) {
+    throw new Error('This provider does not list coverage for the selected area');
+  }
+  return matchingService.code;
 }
 
 const LEAD_STATUS_TRANSITIONS: Record<ServiceLeadStatus, ServiceLeadStatus[]> = {
@@ -334,6 +487,7 @@ export type UpsertProviderProfileInput = {
 };
 
 type ReplaceProviderServiceInput = {
+  id?: number | null;
   category: ServiceCategory;
   code: string;
   displayName: string;
@@ -345,6 +499,7 @@ type ReplaceProviderServiceInput = {
 };
 
 type ReplaceProviderLocationInput = {
+  id?: number | null;
   province?: string | null;
   city?: string | null;
   suburb?: string | null;
@@ -403,6 +558,19 @@ export class ServicesEngineService {
     return provider || null;
   }
 
+  async hasProviderLeads(providerId: number) {
+    const db = await getDb();
+    if (!db) throw new Error('Database not available');
+
+    const [lead] = await db
+      .select({ id: serviceLeads.id })
+      .from(serviceLeads)
+      .where(eq(serviceLeads.providerId, providerId))
+      .limit(1);
+
+    return Boolean(lead);
+  }
+
   private async getProviderProfile(
     providerId: number,
     includePrivate: boolean,
@@ -452,14 +620,10 @@ export class ServicesEngineService {
         minPrice: serviceProviderServices.minPrice,
         maxPrice: serviceProviderServices.maxPrice,
         currency: serviceProviderServices.currency,
+        isActive: serviceProviderServices.isActive,
       })
       .from(serviceProviderServices)
-      .where(
-        and(
-          eq(serviceProviderServices.providerId, providerId),
-          eq(serviceProviderServices.isActive, 1),
-        ),
-      )
+      .where(eq(serviceProviderServices.providerId, providerId))
       .orderBy(serviceProviderServices.displayName);
 
     const locations = await db
@@ -506,17 +670,22 @@ export class ServicesEngineService {
       maxPrice:
         item.maxPrice !== null && item.maxPrice !== undefined ? Number(item.maxPrice) : null,
       currency: item.currency,
+      isActive: Number(item.isActive || 0) === 1,
     }));
-    const locationsResult = locations.map(item => ({
-      id: Number(item.id),
-      countryCode: item.countryCode,
-      province: item.province || null,
-      city: item.city || null,
-      suburb: item.suburb || null,
-      postalCode: item.postalCode || null,
-      radiusKm: Number(item.radiusKm || 25),
-      isPrimary: Number(item.isPrimary || 0) === 1,
-    }));
+
+    const locationsResult = locations
+      .map(item => ({
+        id: Number(item.id),
+        countryCode: item.countryCode,
+        province: item.province || null,
+        city: item.city || null,
+        suburb: item.suburb || null,
+        postalCode: item.postalCode || null,
+        radiusKm: Number(item.radiusKm || 25),
+        isPrimary: Number(item.isPrimary || 0) === 1,
+      }))
+      .filter(hasProviderCoverage);
+    const activeServicesResult = servicesResult.filter(service => service.isActive);
     const isPublished =
       isProviderDirectoryEligible({
         verificationStatus: base.verificationStatus,
@@ -524,7 +693,7 @@ export class ServicesEngineService {
         directoryActive: Number(base.directoryActive || 0) === 1,
         subscriptionStatus: base.subscriptionStatus,
       }) &&
-      servicesResult.length > 0 &&
+      activeServicesResult.length > 0 &&
       locationsResult.length > 0;
 
     const common: ProviderProfileResult = {
@@ -544,7 +713,7 @@ export class ServicesEngineService {
       bio: base.profileBio || null,
       websiteUrl: normalizePublicWebsiteUrl(base.profileWebsiteUrl),
 
-      services: servicesResult,
+      services: includePrivate ? servicesResult : activeServicesResult,
 
       locations: locationsResult,
       reviews: reviewRows.map(item => ({
@@ -586,7 +755,7 @@ export class ServicesEngineService {
       headline: profile.headline,
       bio: profile.bio,
       websiteUrl: profile.websiteUrl,
-      services: profile.services,
+      services: profile.services.map(({ isActive: _isActive, ...service }) => service),
 
       locations: profile.locations.map(location => ({
         id: location.id,
@@ -745,10 +914,6 @@ export class ServicesEngineService {
           websiteUrl: profileValues.websiteUrl,
           contactEmail: profileValues.contactEmail,
           contactPhone: profileValues.contactPhone,
-          moderationTier: profileValues.moderationTier,
-          directoryActive: profileValues.directoryActive,
-          exploreCreatorActive: profileValues.exploreCreatorActive,
-          dashboardActive: profileValues.dashboardActive,
           metadata: profileValues.metadata,
         },
       });
@@ -766,44 +931,124 @@ export class ServicesEngineService {
     const db = await getDb();
     if (!db) throw new Error('Database not available');
 
-    const rows = services
+    const submitted = services
       .filter(item => normalizeText(item.code) && normalizeText(item.displayName))
-      .map(item => {
-        const minPrice = item.minPrice ?? null;
-        const maxPrice = item.maxPrice ?? null;
-        const currency = (normalizeText(item.currency) || 'ZAR').toUpperCase();
-        if (currency !== 'ZAR') throw new Error('Service prices must use ZAR');
-        if (minPrice !== null && maxPrice !== null && minPrice > maxPrice) {
-          throw new Error('Minimum price must not exceed maximum price');
-        }
-        return {
-          providerId,
-          serviceCategory: item.category,
-          serviceCode: String(item.code).trim(),
-          displayName: String(item.displayName).trim(),
-          description: normalizeText(item.description) || null,
-          minPrice,
-          maxPrice,
-          currency,
-          isActive: item.isActive === false ? 0 : 1,
-        };
-      });
+      .map(item => ({
+        id: item.id ? Number(item.id) : null,
+        category: item.category,
+        code: String(item.code).trim(),
+        displayName: String(item.displayName).trim(),
+        description: item.description,
+        minPrice: item.minPrice,
+        maxPrice: item.maxPrice,
+        currency: item.currency,
+        isActive: item.isActive,
+      }));
 
-    const serviceCodes = new Set<string>();
-    for (const row of rows) {
-      const normalizedCode = row.serviceCode.toLowerCase();
-      if (serviceCodes.has(normalizedCode)) {
-        throw new Error('Service codes must be unique within a provider profile');
+    if (submitted.length === 0) {
+      throw new Error('At least one service is required');
+    }
+
+    for (const item of submitted) {
+      const currency = (normalizeText(item.currency) || 'ZAR').toUpperCase();
+      if (currency !== 'ZAR') throw new Error('Service prices must use ZAR');
+      if (
+        item.minPrice !== undefined &&
+        item.minPrice !== null &&
+        item.maxPrice !== undefined &&
+        item.maxPrice !== null &&
+        item.minPrice > item.maxPrice
+      ) {
+        throw new Error('Minimum price must not exceed maximum price');
       }
-      serviceCodes.add(normalizedCode);
     }
 
     await db.transaction(async tx => {
-      await tx
-        .delete(serviceProviderServices)
-        .where(eq(serviceProviderServices.providerId, providerId));
-      if (rows.length > 0) {
-        await tx.insert(serviceProviderServices).values(rows);
+      const existing = await tx
+        .select()
+        .from(serviceProviderServices)
+        .where(eq(serviceProviderServices.providerId, providerId))
+        .for('update');
+
+      const submittedById = new Map(
+        submitted.filter(item => item.id).map(item => [item.id as number, item]),
+      );
+      const submittedByCode = new Map(
+        submitted.filter(item => !item.id).map(item => [item.code.toLowerCase(), item]),
+      );
+      const claimed = new Set<number>();
+      const serviceCodes = new Set<string>();
+
+      for (const row of existing) {
+        const id = Number(row.id);
+        const input =
+          submittedById.get(id) || submittedByCode.get(String(row.serviceCode).toLowerCase());
+        if (!input) {
+          serviceCodes.add(String(row.serviceCode).toLowerCase());
+          continue;
+        }
+        claimed.add(id);
+        const currency =
+          input.currency === undefined
+            ? String(row.currency || 'ZAR').toUpperCase()
+            : (normalizeText(input.currency) || 'ZAR').toUpperCase();
+        if (currency !== 'ZAR') throw new Error('Service prices must use ZAR');
+        const minPrice = input.minPrice === undefined ? row.minPrice : input.minPrice;
+        const maxPrice = input.maxPrice === undefined ? row.maxPrice : input.maxPrice;
+        if (minPrice !== null && maxPrice !== null && Number(minPrice) > Number(maxPrice)) {
+          throw new Error('Minimum price must not exceed maximum price');
+        }
+        const code = input.code;
+        const previousCode = String(row.serviceCode).toLowerCase();
+        if (serviceCodes.has(code.toLowerCase()) && previousCode !== code.toLowerCase()) {
+          throw new Error('Service codes must be unique within a provider profile');
+        }
+        serviceCodes.add(code.toLowerCase());
+
+        await tx
+          .update(serviceProviderServices)
+          .set({
+            serviceCategory: input.category,
+            serviceCode: code,
+            displayName: input.displayName,
+            description:
+              input.description === undefined
+                ? row.description
+                : normalizeText(input.description) || null,
+            minPrice: minPrice === undefined ? null : minPrice,
+            maxPrice: maxPrice === undefined ? null : maxPrice,
+            currency,
+            isActive: input.isActive === undefined ? row.isActive : input.isActive ? 1 : 0,
+          })
+          .where(eq(serviceProviderServices.id, id));
+      }
+
+      for (const item of submitted) {
+        if (item.id && claimed.has(item.id)) continue;
+        const existingCode = item.id
+          ? existing.find(row => Number(row.id) === item.id)?.serviceCode
+          : undefined;
+        const code = existingCode || item.code;
+        if (serviceCodes.has(code.toLowerCase())) {
+          throw new Error('Service codes must be unique within a provider profile');
+        }
+        serviceCodes.add(code.toLowerCase());
+        const minPrice = item.minPrice ?? null;
+        const maxPrice = item.maxPrice ?? null;
+        if (minPrice !== null && maxPrice !== null && minPrice > maxPrice) {
+          throw new Error('Minimum price must not exceed maximum price');
+        }
+        await tx.insert(serviceProviderServices).values({
+          providerId,
+          serviceCategory: item.category,
+          serviceCode: code,
+          displayName: item.displayName,
+          description: normalizeText(item.description) || null,
+          minPrice,
+          maxPrice,
+          currency: (normalizeText(item.currency) || 'ZAR').toUpperCase(),
+          isActive: item.isActive === false ? 0 : 1,
+        });
       }
     });
 
@@ -818,25 +1063,152 @@ export class ServicesEngineService {
     const db = await getDb();
     if (!db) throw new Error('Database not available');
 
-    const normalized = locations
+    const submitted = locations
       .map((location, index) => ({
-        providerId,
-        countryCode: normalizeText(location.countryCode) || 'ZA',
-        province: normalizeText(location.province) || null,
-        city: normalizeText(location.city) || null,
-        suburb: normalizeText(location.suburb) || null,
-        postalCode: normalizeText(location.postalCode) || null,
-        radiusKm: Number.isFinite(Number(location.radiusKm)) ? Number(location.radiusKm) : 25,
-        isPrimary: location.isPrimary || index === 0 ? 1 : 0,
+        id: location.id ? Number(location.id) : null,
+        countryCode:
+          location.countryCode === undefined
+            ? undefined
+            : normalizeText(location.countryCode) || 'ZA',
+        province:
+          location.province === undefined ? undefined : normalizeText(location.province) || null,
+        city: location.city === undefined ? undefined : normalizeText(location.city) || null,
+        suburb: location.suburb === undefined ? undefined : normalizeText(location.suburb) || null,
+        postalCode:
+          location.postalCode === undefined
+            ? undefined
+            : normalizeText(location.postalCode) || null,
+        radiusKm:
+          location.radiusKm === undefined
+            ? undefined
+            : Number.isFinite(Number(location.radiusKm))
+              ? Number(location.radiusKm)
+              : 25,
+        isPrimary: location.isPrimary === undefined ? index === 0 : location.isPrimary,
       }))
-      .filter(location => location.province || location.city || location.suburb);
+      .filter(location => hasProviderCoverage(location));
+
+    if (submitted.length === 0) {
+      throw new Error('At least one valid coverage area is required');
+    }
+
+    const submittedKeys = new Set<string>();
+    const submittedIds = submitted
+      .map(location => location.id)
+      .filter((id): id is number => Boolean(id));
+    if (new Set(submittedIds).size !== submittedIds.length) {
+      throw new Error('Coverage area updates must use unique location IDs');
+    }
+    for (const location of submitted) {
+      const key = serviceLocationKey(location);
+      if (submittedKeys.has(key)) {
+        throw new Error('Coverage areas must be unique within a provider profile');
+      }
+      submittedKeys.add(key);
+    }
 
     await db.transaction(async tx => {
       await tx
-        .delete(serviceProviderLocations)
-        .where(eq(serviceProviderLocations.providerId, providerId));
-      if (normalized.length > 0) {
-        await tx.insert(serviceProviderLocations).values(normalized);
+        .select({ id: partners.id })
+        .from(partners)
+        .where(eq(partners.id, providerId))
+        .limit(1)
+        .for('update');
+      const existing = await tx
+        .select()
+        .from(serviceProviderLocations)
+        .where(eq(serviceProviderLocations.providerId, providerId))
+        .for('update');
+      const existingByKey = new Map<string, number[]>();
+      for (const row of existing) {
+        const key = serviceLocationKey(row);
+        const ids = existingByKey.get(key) || [];
+        ids.push(Number(row.id));
+        existingByKey.set(key, ids);
+      }
+      const submittedById = new Map<number, (typeof submitted)[number]>();
+      const submittedKeys = new Set<string>();
+      for (const location of submitted) {
+        if (location.id !== null) {
+          if (submittedById.has(location.id)) {
+            throw new Error('Coverage area identifiers must be unique');
+          }
+          submittedById.set(location.id, location);
+          continue;
+        }
+        const key = serviceLocationKey(location);
+        if (submittedKeys.has(key)) {
+          throw new Error('Coverage areas must be unique within a provider profile');
+        }
+        submittedKeys.add(key);
+        const matchingIds = existingByKey.get(key) || [];
+        if (matchingIds.length > 1) {
+          throw new Error('Coverage areas must be unique within a provider profile');
+        }
+        if (matchingIds[0]) submittedById.set(matchingIds[0], location);
+      }
+
+      const existingIds = new Set(existing.map(row => Number(row.id)));
+      if ([...submittedById.keys()].some(id => !existingIds.has(id))) {
+        throw new Error('Coverage area not found for this provider');
+      }
+
+      const finalKeys = new Set<string>();
+      for (const row of existing) {
+        const id = Number(row.id);
+        const input = submittedById.get(id);
+        const key = serviceLocationKey(input || row);
+        if (finalKeys.has(key)) {
+          throw new Error('Coverage areas must be unique within a provider profile');
+        }
+        finalKeys.add(key);
+      }
+      const matchedExistingKeys = new Set(
+        [...submittedById.values()].map(location => serviceLocationKey(location)),
+      );
+      for (const location of submitted) {
+        if (location.id !== null || matchedExistingKeys.has(serviceLocationKey(location))) continue;
+        const key = serviceLocationKey(location);
+        if (finalKeys.has(key)) {
+          throw new Error('Coverage areas must be unique within a provider profile');
+        }
+        finalKeys.add(key);
+      }
+
+      const claimed = new Set<number>();
+      const claimedKeys = new Set<string>();
+      for (const row of existing) {
+        const id = Number(row.id);
+        const input = submittedById.get(id);
+        if (!input) continue;
+        claimed.add(id);
+        claimedKeys.add(serviceLocationKey(input));
+        await tx
+          .update(serviceProviderLocations)
+          .set({
+            countryCode: input.countryCode === undefined ? row.countryCode : input.countryCode,
+            province: input.province === undefined ? row.province : input.province,
+            city: input.city === undefined ? row.city : input.city,
+            suburb: input.suburb === undefined ? row.suburb : input.suburb,
+            postalCode: input.postalCode === undefined ? row.postalCode : input.postalCode,
+            radiusKm: input.radiusKm === undefined ? row.radiusKm : input.radiusKm,
+            isPrimary: input.isPrimary === undefined ? row.isPrimary : input.isPrimary ? 1 : 0,
+          })
+          .where(eq(serviceProviderLocations.id, id));
+      }
+
+      for (const location of submitted) {
+        if (location.id !== null || claimedKeys.has(serviceLocationKey(location))) continue;
+        await tx.insert(serviceProviderLocations).values({
+          providerId,
+          countryCode: location.countryCode || 'ZA',
+          province: location.province ?? null,
+          city: location.city ?? null,
+          suburb: location.suburb ?? null,
+          postalCode: location.postalCode ?? null,
+          radiusKm: location.radiusKm ?? 25,
+          isPrimary: location.isPrimary ? 1 : 0,
+        });
       }
     });
 
@@ -888,9 +1260,7 @@ export class ServicesEngineService {
           inArray(serviceProviderSubscriptions.status, ['trial', 'active']),
         ),
       )
-      .orderBy(partners.companyName, partners.id)
-
-      .limit(300);
+      .orderBy(partners.companyName, partners.id);
 
     if (baseRows.length === 0) {
       return [];
@@ -942,6 +1312,7 @@ export class ServicesEngineService {
     const locationsByProvider = new Map<number, ProviderDirectoryRecord['locations']>();
     for (const row of locations) {
       const current = locationsByProvider.get(row.providerId) || [];
+      if (!hasProviderCoverage(row)) continue;
       current.push({
         province: row.province || null,
         city: row.city || null,
@@ -1078,10 +1449,10 @@ export class ServicesEngineService {
     const propertyId = normalizeOptionalPositiveId(input.propertyId, 'property');
     const listingId = normalizeOptionalPositiveId(input.listingId, 'listing');
     const developmentId = normalizeOptionalPositiveId(input.developmentId, 'development');
+    const normalizedInputContext = normalizeServiceRequestContext(input.context);
     if (
-      input.context &&
-      Object.prototype.hasOwnProperty.call(input.context, 'propertyLinked') &&
-      input.context.propertyLinked !== Boolean(propertyId)
+      Object.prototype.hasOwnProperty.call(normalizedInputContext, 'propertyLinked') &&
+      normalizedInputContext.propertyLinked !== Boolean(propertyId)
     ) {
       throw new Error('Request context is unavailable');
     }
@@ -1102,9 +1473,9 @@ export class ServicesEngineService {
     }
 
     const requestedContext = {
-      ...normalizeServiceRequestContext(input.context),
+      ...normalizedInputContext,
+      ...(propertyId ? { propertyLinked: true } : {}),
       serviceCode: requestedServiceCode,
-      requestKey,
     };
     const resultForLead = (id: number) => ({
       leadId: id,
@@ -1147,14 +1518,15 @@ export class ServicesEngineService {
       existing.sourceSurface === input.sourceSurface &&
       existing.intentStage === input.intentStage &&
       normalizeText(existing.notes) === notes &&
-      normalizeText(existing.geoProvince) === province &&
-      normalizeText(existing.geoCity) === city &&
-      normalizeText(existing.geoSuburb) === suburb &&
+      normalizeGeographyValue(existing.geoProvince) === normalizeGeographyValue(province) &&
+      normalizeGeographyValue(existing.geoCity) === normalizeGeographyValue(city) &&
+      normalizeGeographyValue(existing.geoSuburb) === normalizeGeographyValue(suburb) &&
       Number(existing.propertyId || 0) === Number(propertyId || 0) &&
       Number(existing.listingId || 0) === Number(listingId || 0) &&
       Number(existing.developmentId || 0) === Number(developmentId || 0) &&
       getServiceCodeFromContext(existing.contextJson)?.toLowerCase() ===
-        requestedServiceCode.toLowerCase();
+        requestedServiceCode.toLowerCase() &&
+      serviceRequestContextsMatch(existing.contextJson, requestedContext);
 
     const existingBeforeValidation = await findExistingRequest(db);
     if (existingBeforeValidation) {
@@ -1248,7 +1620,7 @@ export class ServicesEngineService {
     if (!matchingService) {
       throw new Error('This provider does not offer the selected service');
     }
-    const serviceCode = matchingService.code;
+    let serviceCode = matchingService.code;
 
     if (
       !providerCoversLocation(profile.locations, {
@@ -1284,6 +1656,18 @@ export class ServicesEngineService {
         leadId = Number(existingLead.id);
         return;
       }
+
+      serviceCode = await lockAndValidateProviderForLead(
+        tx,
+        providerId,
+        input.category,
+        serviceCode,
+        {
+          province,
+          city,
+          suburb,
+        },
+      );
 
       const insertResult = await tx.insert(serviceLeads).values({
         requestId,
@@ -1555,7 +1939,7 @@ export class ServicesEngineService {
     };
   }
 
-  async listProviderLeads(providerId: number, limit = 50) {
+  async listProviderLeads(providerId: number, limit = 50, offset = 0) {
     const db = await getDb();
     if (!db) throw new Error('Database not available');
 
@@ -1586,7 +1970,8 @@ export class ServicesEngineService {
       .leftJoin(users, eq(users.id, serviceLeads.requesterUserId))
       .where(eq(serviceLeads.providerId, providerId))
       .orderBy(desc(serviceLeads.createdAt))
-      .limit(Math.max(1, Math.min(100, Number(limit || 50))));
+      .limit(Math.max(1, Math.min(100, Number(limit || 50))))
+      .offset(Math.max(0, Number(offset || 0)));
 
     return leads.map(lead => ({
       ...lead,

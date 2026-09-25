@@ -65,14 +65,15 @@ export function ServicesOfferedStep({ state, dispatch, onNext, onBack }: Service
     const services = state.services
       .filter(s => s.displayName.trim().length > 0)
       .map(s => ({
+        id: s.recordId,
         category: s.category,
-        code: s.displayName.trim().toLowerCase().replace(/\s+/g, '_').slice(0, 80),
+        code: s.code || s.displayName.trim().toLowerCase().replace(/\s+/g, '_').slice(0, 80),
         displayName: s.displayName.trim(),
+        description: s.description || undefined,
         minPrice: s.minPrice ? Number(s.minPrice) : undefined,
         maxPrice: s.maxPrice ? Number(s.maxPrice) : undefined,
-        currency: 'ZAR' as const,
-
-        isActive: true,
+        currency: s.currency,
+        isActive: s.isActive,
       }));
 
     replaceServices.mutate({ services });
@@ -94,15 +95,35 @@ export function ServicesOfferedStep({ state, dispatch, onNext, onBack }: Service
               <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                 Service {index + 1}
               </span>
-              <button
-                type="button"
-                onClick={() => dispatch({ type: 'REMOVE_SERVICE', id: svc.id })}
-                disabled={isPending || state.services.length <= 1}
-                className="text-slate-400 hover:text-red-500 disabled:opacity-30"
-                aria-label={`Remove service ${index + 1}`}
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
+              {!svc.recordId && (
+                <button
+                  type="button"
+                  onClick={() => dispatch({ type: 'REMOVE_SERVICE', id: svc.id })}
+                  disabled={isPending || state.services.length <= 1}
+                  className="text-slate-400 hover:text-red-500 disabled:opacity-30"
+                  aria-label={`Remove service ${index + 1}`}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2 text-sm text-slate-700">
+              <input
+                id={`svc-active-${svc.id}`}
+                type="checkbox"
+                checked={svc.isActive}
+                onChange={e =>
+                  dispatch({
+                    type: 'UPDATE_SERVICE',
+                    id: svc.id,
+                    field: 'isActive',
+                    value: e.target.checked,
+                  })
+                }
+                disabled={isPending}
+              />
+              <Label htmlFor={`svc-active-${svc.id}`}>Available for requests</Label>
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2">

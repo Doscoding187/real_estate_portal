@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/button';
 import { trpc } from '@/lib/trpc';
 import { applySeo } from '@/lib/seo';
 import { ArrowRight, BadgeCheck, Sparkles } from 'lucide-react';
-import { toProviderSlug } from '@/features/services/catalog';
+import { buildProviderProfilePath, toProviderSlug } from '@/features/services/catalog';
+import { useServicesLocation } from '@/features/services/useServicesLocation';
 
 function parsePositiveInteger(value: string | undefined): number | null {
   if (!value || !/^\d+$/.test(value)) return null;
@@ -14,6 +15,7 @@ function parsePositiveInteger(value: string | undefined): number | null {
 }
 
 export default function ServiceProviderReviewsPage() {
+  const { search } = useServicesLocation();
   const [, params] = useRoute('/services/reviews/:providerId');
   const providerId = parsePositiveInteger(params?.providerId);
   const routeProviderId = providerId || 0;
@@ -31,6 +33,9 @@ export default function ServiceProviderReviewsPage() {
   const profileSlug = profile
     ? toProviderSlug(profile.companyName, profile.providerId)
     : String(routeProviderId);
+  const backToProfilePath = buildProviderProfilePath(profileSlug, search, {
+    providerId: routeProviderId,
+  });
 
   useEffect(() => {
     applySeo({
@@ -113,7 +118,7 @@ export default function ServiceProviderReviewsPage() {
                   </p>
                 </div>
               </div>
-              <Link href={`/services/provider/${profileSlug}`}>
+              <Link href={backToProfilePath}>
                 <Button variant="outline">
                   Back to profile
                   <ArrowRight className="ml-2 h-4 w-4" />

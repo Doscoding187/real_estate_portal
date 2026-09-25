@@ -10,7 +10,16 @@ type SubscriptionPlanStepProps = {
 };
 
 export function SubscriptionPlanStep({ state, onNext, onBack }: SubscriptionPlanStepProps) {
+  const hasActiveService = state.services.some(
+    service => service.isActive && service.displayName.trim().length > 0,
+  );
+  const hasCoverage = state.locations.some(location =>
+    Boolean(location.suburb.trim() || location.city.trim() || location.province),
+  );
+  const canFinish = hasActiveService && hasCoverage;
+
   function finishSetup() {
+    if (!canFinish) return;
     onNext();
   }
 
@@ -50,11 +59,20 @@ export function SubscriptionPlanStep({ state, onNext, onBack }: SubscriptionPlan
         </div>
       </div>
 
+      {!canFinish && (
+        <p role="alert" className="text-sm text-amber-800">
+          Activate at least one service and add at least one listed coverage area before finishing
+          setup.
+        </p>
+      )}
+
       <div className="flex gap-3">
         <Button variant="outline" onClick={onBack}>
           Back
         </Button>
-        <Button onClick={finishSetup}>Finish setup</Button>
+        <Button onClick={finishSetup} disabled={!canFinish}>
+          Finish setup
+        </Button>
       </div>
     </div>
   );

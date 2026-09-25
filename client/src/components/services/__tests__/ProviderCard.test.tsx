@@ -82,6 +82,20 @@ describe('ProviderCard', () => {
     expect(screen.getByText('Coverage not listed')).toBeInTheDocument();
   });
 
+  it('preserves an explicit journey context on the profile link', () => {
+    render(
+      <ProviderCard
+        provider={buildProvider()}
+        profileHref="/services/provider/acme-builders--123?propertyId=7&reasonKey=saved_property"
+      />,
+    );
+
+    expect(screen.getByRole('link', { name: /view profile/i })).toHaveAttribute(
+      'href',
+      '/services/provider/acme-builders--123?propertyId=7&reasonKey=saved_property',
+    );
+  });
+
   it('does not render a dead request action without an attribution callback', () => {
     render(<ProviderCard provider={buildProvider()} />);
     expect(screen.queryByRole('button', { name: /request/i })).not.toBeInTheDocument();

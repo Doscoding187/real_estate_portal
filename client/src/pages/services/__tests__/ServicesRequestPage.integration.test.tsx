@@ -34,7 +34,10 @@ vi.mock('wouter', async () => {
   const actual = await vi.importActual<typeof import('wouter')>('wouter');
   return {
     ...actual,
-    useRoute: () => [true, { category: 'home_improvement' }],
+    useRoute: () => {
+      const category = window.location.pathname.split('/')[3] || 'home-improvement';
+      return [true, { category }];
+    },
     useLocation: () => ['/services/request/home_improvement', mockSetLocation],
     Link: ({ href, children }: { href: string; children: React.ReactNode }) => (
       <a href={href}>{children}</a>
@@ -90,6 +93,36 @@ describe('ServicesRequestPage', () => {
     });
   });
 
+  it('keeps the request usable when session storage is unavailable', async () => {
+    const getItem = vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new DOMException('Storage unavailable', 'SecurityError');
+    });
+    const setItem = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new DOMException('Storage unavailable', 'SecurityError');
+    });
+    const removeItem = vi.spyOn(Storage.prototype, 'removeItem').mockImplementation(() => {
+      throw new DOMException('Storage unavailable', 'SecurityError');
+    });
+
+    render(<ServicesRequestPage />);
+
+    fireEvent.click(screen.getByRole('button', { name: /continue/i }));
+    fireEvent.change(screen.getByLabelText(/city/i), { target: { value: 'Cape Town' } });
+    fireEvent.click(screen.getByRole('button', { name: /continue/i }));
+    fireEvent.change(screen.getByPlaceholderText(/describe what you need/i), {
+      target: { value: 'Need a plumbing inspection.' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /submit request/i }));
+
+    await waitFor(() => {
+      expect(mockSetLocation).toHaveBeenCalledWith('/services/results/99');
+    });
+
+    getItem.mockRestore();
+    setItem.mockRestore();
+    removeItem.mockRestore();
+  });
+
   it('carries the submitted location and project notes into the request context', async () => {
     render(<ServicesRequestPage />);
 
@@ -143,7 +176,45 @@ describe('ServicesRequestPage', () => {
     });
   });
 
-  it('falls back safely for invalid journey query values', async () => {
+  it('forwards the complete contextual journey into the request mutation', async () => {
+    window.history.pushState(
+      {},
+      '',
+      '/services/request/moving?providerId=42&serviceCode=removals&propertyId=7&listingId=8&developmentId=9&intentStage=buyer_move_ready&sourceSurface=journey_injection&sourceDetail=saved_property&reasonKey=move_ready&propertyLinked=true&suburb=Rondebosch&city=Cape%20Town&province=Western%20Cape',
+    );
+    render(<ServicesRequestPage />);
+
+    const requestKeyStorageKey = 'services-request-key:42:removals:moving';
+    expect(sessionStorage.getItem(requestKeyStorageKey)).toBeTruthy();
+    expect(requestKeyStorageKey).not.toContain('property');
+
+    fireEvent.click(screen.getByRole('button', { name: /continue/i }));
+    fireEvent.click(screen.getByRole('button', { name: /continue/i }));
+    fireEvent.change(screen.getByPlaceholderText(/describe what you need/i), {
+      target: { value: 'Please quote for a move.' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /submit request/i }));
+
+    await waitFor(() => {
+      expect(mockMutate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          propertyId: 7,
+          listingId: 8,
+          developmentId: 9,
+          intentStage: 'buyer_move_ready',
+          sourceSurface: 'journey_injection',
+          context: {
+            sourceDetail: 'saved_property',
+            reasonKey: 'move_ready',
+            propertyLinked: true,
+            serviceCode: 'removals',
+          },
+        }),
+      );
+    });
+  });
+
+  it('rejects unsupported journey attribution instead of rewriting it', () => {
     window.history.pushState(
       {},
       '',
@@ -151,24 +222,10 @@ describe('ServicesRequestPage', () => {
     );
     render(<ServicesRequestPage />);
 
-    fireEvent.click(screen.getByRole('button', { name: /continue/i }));
-    fireEvent.change(screen.getByLabelText(/city/i), { target: { value: 'Cape Town' } });
-    fireEvent.click(screen.getByRole('button', { name: /continue/i }));
-    fireEvent.change(screen.getByPlaceholderText(/describe what you need/i), {
-      target: { value: 'Need a plumbing inspection.' },
-    });
-    fireEvent.click(screen.getByRole('button', { name: /submit request/i }));
-
-    await waitFor(() => {
-      expect(mockMutate).toHaveBeenCalledWith(
-        expect.objectContaining({
-          intentStage: 'general',
-
-          sourceSurface: 'directory',
-          propertyId: undefined,
-        }),
-      );
-    });
+    expect(
+      screen.getByRole('heading', { name: /journey context unavailable/i }),
+    ).toBeInTheDocument();
+    expect(mockMutate).not.toHaveBeenCalled();
   });
 
   it('requires a provider before opening the request flow', () => {

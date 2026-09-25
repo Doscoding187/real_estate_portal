@@ -33,6 +33,7 @@ type ProviderCardProps = {
   ctaLabel?: string;
   onCta?: (providerId: number, serviceCode?: string) => void;
   onViewProfile?: (providerId: number) => void;
+  profileHref?: string;
 };
 
 export function ProviderCard({
@@ -42,6 +43,7 @@ export function ProviderCard({
   ctaLabel = 'Request service',
   onCta,
   onViewProfile,
+  profileHref,
 }: ProviderCardProps) {
   const topService =
     provider.services?.find(service => service.category === serviceCategory) ||
@@ -92,7 +94,7 @@ export function ProviderCard({
           {onCta && (
             <Button onClick={() => onCta(provider.providerId, topService?.code)}>{ctaLabel}</Button>
           )}
-          <Link href={`/services/provider/${providerSlug}`}>
+          <Link href={profileHref || `/services/provider/${providerSlug}`}>
             <Button variant="outline" onClick={() => onViewProfile?.(provider.providerId)}>
               View profile
             </Button>

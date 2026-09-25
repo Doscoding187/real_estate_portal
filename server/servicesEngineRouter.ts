@@ -2,7 +2,7 @@ import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 import { protectedProcedure, publicProcedure, router } from './_core/trpc';
 import { requireUser } from './_core/requireUser';
-import { servicesEngineService } from './services/servicesEngineService';
+import { hasProviderCoverage, servicesEngineService } from './services/servicesEngineService';
 import {
   checkPublicLeadRateLimit,
   getPublicLeadClientIp,
@@ -78,6 +78,18 @@ async function requireProviderId(userId: number): Promise<number> {
   return providerId;
 }
 
+async function requireProviderWorkspaceId(userId: number): Promise<number> {
+  const providerId = await requireProviderId(userId);
+  const profile = await servicesEngineService.getMyProviderProfile(userId);
+  if (profile?.isPublished || (await servicesEngineService.hasProviderLeads(providerId))) {
+    return providerId;
+  }
+  throw new TRPCError({
+    code: 'PRECONDITION_FAILED',
+    message: 'Provider workspace is available after directory publication or an assigned request.',
+  });
+}
+
 function requireProviderRole(role: string | null | undefined) {
   if (role !== 'service_provider') {
     throw new TRPCError({
@@ -102,16 +114,26 @@ export const servicesEngineRouter = router({
       String(profile.bio || '').trim() &&
       (String(profile.contactEmail || '').trim() || String(profile.contactPhone || '').trim()),
     );
-    const servicesConfigured = Boolean(profile && (profile.services || []).length > 0);
-    const locationsConfigured = Boolean(profile && (profile.locations || []).length > 0);
+    const servicesConfigured = Boolean(
+      profile && (profile.services || []).some(service => service.isActive),
+    );
+    const locationsConfigured = Boolean(
+      profile && (profile.locations || []).some(hasProviderCoverage),
+    );
+    const hasAssignedRequests = provider?.id
+      ? await servicesEngineService.hasProviderLeads(provider.id)
+      : false;
 
     let onboardingStep = 0;
     if (hasProviderIdentity) onboardingStep = 1;
-    if (profileConfigured) onboardingStep = 2;
-    if (servicesConfigured) onboardingStep = 3;
-    if (locationsConfigured) onboardingStep = 4;
+    if (onboardingStep >= 1 && profileConfigured) onboardingStep = 2;
+    if (onboardingStep >= 2 && servicesConfigured) onboardingStep = 3;
+    if (onboardingStep >= 3 && locationsConfigured) onboardingStep = 4;
 
-    const dashboardUnlocked = hasProviderIdentity;
+    const dashboardUnlocked = Boolean(
+      profile?.isPublished || (hasProviderIdentity && hasAssignedRequests),
+    );
+
     const fullFeaturesUnlocked =
       hasProviderIdentity && profileConfigured && servicesConfigured && locationsConfigured;
     const recommendedNextStep = !hasProviderIdentity
@@ -147,6 +169,7 @@ export const servicesEngineRouter = router({
       locationsConfigured,
       onboardingStep,
       dashboardUnlocked,
+      hasAssignedRequests,
       fullFeaturesUnlocked,
       recommendedNextStep,
       provider: profile
@@ -199,12 +222,12 @@ export const servicesEngineRouter = router({
       requireProviderRole(user.role);
       const providerId = await requireProviderId(user.id);
       return servicesEngineService.upsertProviderProfile(providerId, {
-        headline: input.headline ?? null,
-        bio: input.bio ?? null,
-        websiteUrl: input.websiteUrl ?? null,
-        contactEmail: input.contactEmail ?? null,
-        contactPhone: input.contactPhone ?? null,
-        metadata: input.metadata ?? null,
+        headline: input.headline,
+        bio: input.bio,
+        websiteUrl: input.websiteUrl,
+        contactEmail: input.contactEmail,
+        contactPhone: input.contactPhone,
+        metadata: input.metadata,
       });
     }),
 
@@ -214,7 +237,9 @@ export const servicesEngineRouter = router({
         services: z.array(
           z
             .object({
+              id: z.number().int().positive().optional(),
               category: serviceCategorySchema,
+
               code: z.string().trim().min(2).max(80),
               displayName: z.string().trim().min(2).max(140),
               description: z.string().trim().max(2000).optional(),
@@ -249,7 +274,9 @@ export const servicesEngineRouter = router({
       z.object({
         locations: z.array(
           z.object({
+            id: z.number().int().positive().optional(),
             province: z.string().trim().max(120).optional(),
+
             city: z.string().trim().max(120).optional(),
             suburb: z.string().trim().max(120).optional(),
             countryCode: z.string().trim().max(2).optional(),
@@ -432,7 +459,7 @@ export const servicesEngineRouter = router({
     .mutation(async ({ ctx, input }) => {
       const user = requireUser(ctx);
       requireProviderRole(user.role);
-      const providerId = await requireProviderId(user.id);
+      const providerId = await requireProviderWorkspaceId(user.id);
 
       try {
         await servicesEngineService.updateProviderLeadStatus({
@@ -468,13 +495,18 @@ export const servicesEngineRouter = router({
     .input(
       z.object({
         limit: z.number().int().min(1).max(100).optional(),
+        offset: z.number().int().min(0).max(10000).optional(),
       }),
     )
     .query(async ({ ctx, input }) => {
       const user = requireUser(ctx);
       requireProviderRole(user.role);
-      const providerId = await requireProviderId(user.id);
-      return servicesEngineService.listProviderLeads(providerId, input.limit || 50);
+      const providerId = await requireProviderWorkspaceId(user.id);
+      return servicesEngineService.listProviderLeads(
+        providerId,
+        input.limit || 50,
+        input.offset || 0,
+      );
     }),
 
   myProviderProfile: protectedProcedure.query(async ({ ctx }) => {
@@ -492,7 +524,7 @@ export const servicesEngineRouter = router({
     .query(async ({ ctx, input }) => {
       const user = requireUser(ctx);
       requireProviderRole(user.role);
-      const providerId = await requireProviderId(user.id);
+      const providerId = await requireProviderWorkspaceId(user.id);
       return servicesEngineService.getProviderDashboard(providerId, input.days || 30);
     }),
 });
