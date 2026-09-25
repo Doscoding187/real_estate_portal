@@ -4,7 +4,7 @@
   "historyTable": "sql_migration_history",
   "attemptTable": "sql_migration_attempts",
   "lockName": "property_listify_manifest_migrations",
-  "expectedHead": "0090_retire_disconnected_boost_campaigns.sql",
+  "expectedHead": "0097_place_authority_search_area_member.sql",
   "migrations": [
     {
       "sequence": 0,
@@ -958,6 +958,76 @@
       "statementPolicy": "approved-exception",
       "requiredReferenceDataVersion": null,
       "approvalReference": "DBX-PRELAUNCH-RETIRE-DISCONNECTED-BOOST-CAMPAIGNS-2026-09-11-Edward"
+    },
+    {
+      "sequence": 91,
+      "filename": "0091_place_authority_place.sql",
+      "checksum": "069b8bc80ee446d52e8dfe2cb79517d618dd23c18a8d5d898070bc12f4c39f4d",
+      "parent": "0090_retire_disconnected_boost_campaigns.sql",
+      "parentChecksum": "767f3767f3a7f69d947ba150598cee45194ebfb64a11f52d7b3114c2b5467421",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 92,
+      "filename": "0092_place_authority_place_name.sql",
+      "checksum": "5b36144d8111e293b54d81332415d60433918cc94af59213e1be32faee7a07ab",
+      "parent": "0091_place_authority_place.sql",
+      "parentChecksum": "069b8bc80ee446d52e8dfe2cb79517d618dd23c18a8d5d898070bc12f4c39f4d",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 93,
+      "filename": "0093_place_authority_place_relationship.sql",
+      "checksum": "aa7a4062b219c5f39c431e7b92ace483319bf606a9137d28ee402c8e5df1bdd6",
+      "parent": "0092_place_authority_place_name.sql",
+      "parentChecksum": "5b36144d8111e293b54d81332415d60433918cc94af59213e1be32faee7a07ab",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 94,
+      "filename": "0094_place_authority_place_evidence.sql",
+      "checksum": "9440ee01bd67cd4d9ffe5701e118621aa85db02cddc68aadc76f6ed8ab16696b",
+      "parent": "0093_place_authority_place_relationship.sql",
+      "parentChecksum": "aa7a4062b219c5f39c431e7b92ace483319bf606a9137d28ee402c8e5df1bdd6",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 95,
+      "filename": "0095_place_authority_place_external_mapping.sql",
+      "checksum": "c8179fb8dc3436cab4307cb0cb2bc2727ca34e5d6bd7279e4f59ffff7773a6bf",
+      "parent": "0094_place_authority_place_evidence.sql",
+      "parentChecksum": "9440ee01bd67cd4d9ffe5701e118621aa85db02cddc68aadc76f6ed8ab16696b",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 96,
+      "filename": "0096_place_authority_search_area.sql",
+      "checksum": "5f598cf793ca29003767ad976a512dfa50a65e8cbf0ae2250848c482e8624542",
+      "parent": "0095_place_authority_place_external_mapping.sql",
+      "parentChecksum": "c8179fb8dc3436cab4307cb0cb2bc2727ca34e5d6bd7279e4f59ffff7773a6bf",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 97,
+      "filename": "0097_place_authority_search_area_member.sql",
+      "checksum": "e705ab7d0b350af78f17c5316f79918b73e77b37ff2d567a2c0cc4e690efac0e",
+      "parent": "0096_place_authority_search_area.sql",
+      "parentChecksum": "5f598cf793ca29003767ad976a512dfa50a65e8cbf0ae2250848c482e8624542",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
     }
   ]
 }

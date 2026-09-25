@@ -504,6 +504,7 @@ closes them.
 | `data/geography-coverage-v0.1/territory-catalog.v0.1.json` | **CANONICAL** | Digest-pinned registry of immutable territory artifacts. It contains no copied geography rows and cannot override a source artifact. | Default until an activation slice repoints `LOCATION_AUTHORITY_CATALOG_INDEX_PATH`. |
 | `shared/factualRuntimeGeographyBridge.ts`, `shared/runtimeGeography.ts`, and the governed runtime reference loader | **CANONICAL** | Validate IDs, projection shape, natural-key hierarchy, and exact governed co-publication. Reject malformed or ambiguous source data. | — |
 | `server/_core/databaseAuthority/dataAdapters/canonicalGeography.ts` | **CANONICAL** | Materialize and verify governed natural keys on authorized targets. Numeric IDs are environment-local handles. The adapter's target **row shape** is transitional (see next row); its upsert-by-natural-key and fail-closed conflict behaviour are canonical. | — |
+| `place`, `place_name`, `place_relationship`, `place_evidence`, `place_external_mapping`, `search_area`, `search_area_member` (migrations 0091–0097) | **CANONICAL** | The minimum V1 Place Authority foundation approved in Section 14, established by Slice 1. Identity is the opaque `place_id` primary key; no numeric surrogate exists. Identity dimensions are separate columns, and every contract invariant is a database CHECK constraint. Empty by design: no Place is populated and no consumer references these tables yet. | — |
 | The `provinces`, `cities`, and `suburbs` **tables** as identity storage | **TRANSITIONAL** | Required until Place cutover. Continue to serve as the materialized projection of governed natural keys. | Closes when every domain in Section 10's consumer row references Place, and these tables are retired through the approved retirement mechanism. |
 | Static `PROVINCES`, `CITIES`, and `SUBURBS` arrays in the Database Authority geography adapter | **TRANSITIONAL** | Retain as the reviewed foundation minimum. Do not add more hand entries. | Closes when a versioned generated foundation source replaces the hand arrays. |
 | `server/services/searchAreaDefinitions.ts`, `searchAreaAuthority.ts` and the Search Area execution contracts | **CANONICAL, SEPARATE** | Search Areas remain a separate governed market identity. They have separate IDs, explicit membership, and explicit authorized journeys. They never become factual Places and never establish factual containment. | Migrates onto the approved persisted `search_area` / `search_area_member` model when that implementation slice arrives. No new Search Area service or registry may be created in the interim. |
@@ -669,10 +670,14 @@ This is recorded, permanent, and is **not** to be worked around. Missing inputs
 must not be synthesized, approximated, or regenerated from the projection. The
 v0.2 compact source is the only reproducible factual baseline.
 
-## 14. Minimum V1 Place model (recorded, not implemented)
+## 14. Minimum V1 Place model
 
-**Conceptual only.** No table, migration, or runtime behaviour is created by this
-section. The concepts are approved for Slice 1; implementation is deferred.
+**Approved at Slice 0; the physical foundation was established by Slice 1**
+(section 18). The concepts below define the required surface. The tables exist
+and are empty; no Place is populated and no consumer references them yet, so the
+model is authoritative in **structure only**. The field-level detail recorded
+here is normative for the concepts; the authoritative physical shape is
+`drizzle/schema/placeAuthority.ts` plus migrations 0091–0097.
 
 - `place` — identity, classification, lifecycle, licence state, and the
   authorization flags that govern searchability, publication and SEO eligibility
@@ -759,3 +764,74 @@ not modify the Gauteng factual identities or the v0.1 and v0.2 artifacts.
 The authoritative geography checkpoint for all implementation work is
 Section 13. Any later figure that differs from it must be re-derived from the
 committed artifacts and reconciled in the manner recorded in Section 13.3.
+
+## 18. Slice 1 delivery record — canonical Place foundation (v0.5)
+
+Slice 1 establishes the database/schema foundation only. It is proven through
+Database Authority and changes no runtime consumer.
+
+**Delivered.** Migrations 0091–0097, one `CREATE TABLE` per migration in
+dependency order, registered in the canonical migration manifest and classified
+in `migration-tree-authority.json`:
+
+| Migration | Table |
+| --- | --- |
+| 0091 | `place` |
+| 0092 | `place_name` |
+| 0093 | `place_relationship` |
+| 0094 | `place_evidence` |
+| 0095 | `place_external_mapping` |
+| 0096 | `search_area` |
+| 0097 | `search_area_member` |
+
+**Identity strategy.** `place_id` (`pl-place-01-<24 hex>`) is the primary key and
+the durable cross-environment identity. **No numeric surrogate was introduced**:
+no consumer references one, every child foreign key targets `place_id`, and an
+unused environment-local integer would be a second identity-shaped column on the
+most authoritative table in the system. `place` and `search_area` therefore carry
+exactly one identifier each.
+
+**Identity dimensions are separate columns**, never one status field:
+`place_classification`, `verification_status`, `lifecycle_status`,
+`publication_eligible`, `search_eligible`, and the derived `search_scope`.
+
+**Fourteen CHECK constraints** encode only invariants the contract states
+explicitly, so impossible combinations are rejected by the database:
+
+- a `candidate` Place carries no publication or search eligibility (D11);
+- a `non_statutory` Place must be `verified` before it is publishable (D4);
+- publication implies search eligibility (D12);
+- a `retired` Place carries no eligibility (D9);
+- a search scope requires an active, searchable Place (D1, D12);
+- eligibility flags are booleans, not free integers;
+- a superseded or withdrawn name is not searchable (D8);
+- a relationship cannot reference itself (D10);
+- a provider or commercial evidence assertion must name its provider (D11);
+- an evidence row with no Place must carry the query subject (D11).
+
+**Two DDL defects were found and corrected during physical proof.** Both were
+caught by physical congruency rather than by the static gate, and both now have
+regression coverage:
+
+1. `place.id` and `search_area.id` were declared as unindexed `AUTO_INCREMENT`
+   columns. MySQL rejects an AUTO_INCREMENT column that is not a key, so 0091
+   failed to apply. The unjustified surrogate was removed entirely.
+2. `supersedes_place_id` and the relationship edge columns were emitted with a
+   duplicate `place_id` SQL name, and string defaults were written as expression
+   defaults (`DEFAULT ('x')`), which MySQL reports as `_utf8mb4'x'` and which
+   never matches the desired model. Both were corrected.
+
+**Proof recorded.** On an owned disposable worktree target: 98 migrations applied
+from `0000` to `0097`; physical congruency **congruent** with matching desired and
+actual digests, **0** differences, **0** omitted differences, and **37 of 37** CHECK
+constraints physically enforced. The static gate passes 316 tests, including 23
+new executable Place Authority contract tests registered in
+`vitest.database-authority-static.config.ts`.
+
+**Explicitly not done in Slice 1.** No Place is populated; no source-to-Place
+generator exists yet; no `place`-shaped Database Authority reference adapter was
+added, because there is no governed source to reference and an empty adapter
+would be speculative. No consumer, resolver, or the three-level runtime tables
+were changed; no Search Area was activated; no provider behaviour was altered;
+no geography was retired; Western Cape and the Gauteng admission repair were not
+started.

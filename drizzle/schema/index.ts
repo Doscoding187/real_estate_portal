@@ -1,6 +1,7 @@
 export * from './core';
 export * from './agencies';
 export * from './locations';
+export * from './placeAuthority';
 export * from './googlePlacesMonitoring';
 export * from './billing';
 export * from './partners';

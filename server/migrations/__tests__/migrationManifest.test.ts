@@ -353,7 +353,7 @@ describe('canonical migration manifest', () => {
     expect(tidbSequenced.map(entry => entry.statementCount)).toEqual([
       4, 15, 3, 3, 3, 4, 3, 3, 3, 3,
     ]);
-    expect(manifest.expectedHead.filename).toBe('0090_retire_disconnected_boost_campaigns.sql');
+    expect(manifest.expectedHead.filename).toBe('0097_place_authority_search_area_member.sql');
   });
 
   it('plans the identity-and-custody migration chain from the integrated 0007 head', () => {
@@ -369,11 +369,11 @@ describe('canonical migration manifest', () => {
         checksum: item.checksum,
       })),
       acceptedOldHead: currentIntegratedHead.filename,
-      expectedNewHead: '0090_retire_disconnected_boost_campaigns.sql',
+      expectedNewHead: '0097_place_authority_search_area_member.sql',
     });
 
     expect(plan.acceptedOldHead).toBe('0007_paid_launch_access_invoice_term.sql');
-    expect(plan.pending).toHaveLength(83);
+    expect(plan.pending).toHaveLength(90);
     expect(plan.pending.map(item => item.filename)).toEqual([
       '0008_developer_organisations.sql',
       '0009_developer_organisation_memberships.sql',
@@ -458,8 +458,15 @@ describe('canonical migration manifest', () => {
       '0088_retire_obsolete_billing_families.sql',
       '0089_retire_disconnected_analytics_aggregations.sql',
       '0090_retire_disconnected_boost_campaigns.sql',
+      '0091_place_authority_place.sql',
+      '0092_place_authority_place_name.sql',
+      '0093_place_authority_place_relationship.sql',
+      '0094_place_authority_place_evidence.sql',
+      '0095_place_authority_place_external_mapping.sql',
+      '0096_place_authority_search_area.sql',
+      '0097_place_authority_search_area_member.sql',
     ]);
-    expect(plan.expectedNewHead).toBe('0090_retire_disconnected_boost_campaigns.sql');
+    expect(plan.expectedNewHead).toBe('0097_place_authority_search_area_member.sql');
   });
 
   it('accepts an isolated 0000 -> 0001 -> 0002 progression in ancestry order', () => {

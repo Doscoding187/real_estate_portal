@@ -457,8 +457,15 @@ describe('migration execution authority', () => {
       '0088_retire_obsolete_billing_families.sql',
       '0089_retire_disconnected_analytics_aggregations.sql',
       '0090_retire_disconnected_boost_campaigns.sql',
+      '0091_place_authority_place.sql',
+      '0092_place_authority_place_name.sql',
+      '0093_place_authority_place_relationship.sql',
+      '0094_place_authority_place_evidence.sql',
+      '0095_place_authority_place_external_mapping.sql',
+      '0096_place_authority_search_area.sql',
+      '0097_place_authority_search_area_member.sql',
     ]);
-    expect(executionManifest.expectedHead).toBe('0090_retire_disconnected_boost_campaigns.sql');
+    expect(executionManifest.expectedHead).toBe('0097_place_authority_search_area_member.sql');
     expect(archivedSqlFiles.length).toBeGreaterThan(0);
     expect(activeSqlFiles.some(file => file.includes('_archived'))).toBe(false);
     expect(executionManifest.historyTable).toBe('sql_migration_history');
