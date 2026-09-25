@@ -686,7 +686,8 @@ here is normative for the concepts; the authoritative physical shape is
   reference and validity, supporting the D8 selection policy.
 - `place_relationship` — typed, evidenced relationships (D10), relational
   storage only, with an explicit authorization flag for search-scope effect
-  (D12).
+  (D12). This is the **sole** authority for containment and for identity
+  succession. There is no parent column and no succession column on `place`.
 - `place_evidence` — every evidence assertion, including unresolved provider and
   demand signals, with review status. Signals land here and **never** create
   authority directly (D11).
@@ -809,23 +810,66 @@ explicitly, so impossible combinations are rejected by the database:
 - a provider or commercial evidence assertion must name its provider (D11);
 - an evidence row with no Place must carry the query subject (D11).
 
-**Two DDL defects were found and corrected during physical proof.** Both were
-caught by physical congruency rather than by the static gate, and both now have
-regression coverage:
+**Three authority defects were found and corrected during the Slice 1
+authority-closure review.** All three were invisible to the static gate, and the
+third was invisible to physical congruency as well.
 
-1. `place.id` and `search_area.id` were declared as unindexed `AUTO_INCREMENT`
-   columns. MySQL rejects an AUTO_INCREMENT column that is not a key, so 0091
-   failed to apply. The unjustified surrogate was removed entirely.
-2. `supersedes_place_id` and the relationship edge columns were emitted with a
-   duplicate `place_id` SQL name, and string defaults were written as expression
-   defaults (`DEFAULT ('x')`), which MySQL reports as `_utf8mb4'x'` and which
-   never matches the desired model. Both were corrected.
+1. `place.search_scope` was a plain nullable column with no constraint tying it
+   to `place_type`. Any writer could assert a scope contradicting the
+   classification, and a reclassification could leave a stale scope behind. It is
+   now a deterministic function of `place_type` enforced by
+   `chk_place_search_scope_derived_from_type`: a scope may be absent, but it may
+   never contradict the classification, and a type D1 gives no searchable scope
+   may not carry one.
+2. `place.supersedes_place_id` duplicated identity succession that
+   `place_relationship` already expressed as a typed, evidenced edge. Two
+   independently writable authorities for one fact could disagree undetected,
+   which D9 forbids, and one nullable column cannot satisfy D9's requirement to
+   state the disposition of every member identity. **The column was removed;
+   succession lives only in `place_relationship`.**
+3. The relationship vocabulary carried two types that duplicated authority held
+   elsewhere. `search_area_member` restated the `search_area_member` table, which
+   is the single authority for Search Area membership. `preceded_by` is the
+   inverse of `succeeds` and was stored as a second writable authority for the
+   same fact. **Both were removed; the inverse is derived by reversal and the
+   V1 vocabulary is five types.**
+
+A fourth defect was found by a physical write probe after congruency had already
+passed: **`place_id` was declared `varchar(32)` while the governed identity
+format `pl-place-01-<24 hex>` is 36 characters.** No compliant Place identity
+could ever have been stored. Desired and physical agreed with each other, so
+congruency could not detect it. Every `place_id` column is now `varchar(40)`,
+FK-consistent, and `chk_place_id_format` pins the exact governed shape so a
+malformed or foreign-namespace identity is unrepresentable.
+
+These were corrected by amending migrations 0091–0097 in place rather than adding
+corrective follow-up migrations. That is sound here and only here because the
+migrations are unmerged and unadopted, the tables are empty, and the sole target
+that applied them was a disposable worktree database that was disposed. A
+corrective `DROP COLUMN` or `MODIFY COLUMN` would have required a recorded
+approval reference that does not exist, and fabricating one is not acceptable.
+**Any future amendment after adoption requires a new corrective migration and
+the approved-exception route.**
+
+**Behavioural proof against the live database.** 30 assertions on an owned
+disposable target, each confirmed by the database rejecting or accepting the
+write: scope cannot contradict classification; a reclassification that would
+leave a stale scope is rejected, while reclassification with a correctly
+reprojected scope is accepted; a type D1 gives no scope to can never carry one;
+no succession column exists; `preceded_by` and `search_area_member` are
+unrepresentable as Place relationships; a relationship requires evidence and
+cannot reference itself; identical name text on two Places is accepted, as is one
+Place holding the same text under two justified roles; a duplicate assertion and a
+withdrawn-but-searchable name are rejected; unresolved evidence needs a subject; a
+provider observation must name its provider; a malformed or Search-Area identity
+is rejected and a compliant 36-character identity is stored. The target was left
+empty, as found.
 
 **Proof recorded.** On an owned disposable worktree target: 98 migrations applied
 from `0000` to `0097`; physical congruency **congruent** with matching desired and
-actual digests, **0** differences, **0** omitted differences, and **37 of 37** CHECK
-constraints physically enforced. The static gate passes 316 tests, including 23
-new executable Place Authority contract tests registered in
+actual digests, **0** differences, **0** omitted differences, and **39 of 39** CHECK
+constraints physically enforced. The static gate passes 326 tests, including 32
+executable Place Authority contract tests registered in
 `vitest.database-authority-static.config.ts`.
 
 **Explicitly not done in Slice 1.** No Place is populated; no source-to-Place

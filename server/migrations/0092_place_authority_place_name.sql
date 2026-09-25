@@ -10,7 +10,7 @@
 -- the name, which is how superseded names are retained without being searchable.
 CREATE TABLE `place_name` (
   `id` int AUTO_INCREMENT NOT NULL,
-  `place_id` varchar(32) NOT NULL,
+  `place_id` varchar(40) NOT NULL,
   `name` varchar(255) NOT NULL,
   `normalized_name` varchar(255) NOT NULL,
   `name_role` enum('preferred_public','official','common','historical','alternate_spelling','language_form') NOT NULL,

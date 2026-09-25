@@ -148,19 +148,35 @@ export type PlaceNameState = (typeof PLACE_NAME_STATES)[number];
 
 /**
  * Typed relationship kinds (D10). Administrative containment, settlement
- * membership, market association and succession never share one generic
- * meaning, so they are distinct values here rather than one `parent` column.
+ * membership, market association and succession never share one ambiguous
+ * generic meaning.
+ *
+ * Two kinds are deliberately absent:
+ *
+ * - `preceded_by` is the inverse of `succeeds` and is **derived** by reversing a
+ *   `succeeds` edge. Storing both directions would give one fact two writable
+ *   authorities.
+ * - `search_area_member` belongs to the `search_area_member` table, which is the
+ *   single authority for Search Area membership. A Place relationship must never
+ *   restate it.
  */
 export const PLACE_RELATIONSHIP_TYPES = [
   'administratively_contains',
   'settlement_within',
   'market_association',
-  'search_area_member',
   'succeeds',
-  'preceded_by',
   'co_located_with',
 ] as const;
 export type PlaceRelationshipType = (typeof PLACE_RELATIONSHIP_TYPES)[number];
+
+/**
+ * Relationship kinds authorized to affect an executable search scope (D12).
+ *
+ * Deliberately empty. Every relationship defaults to `search_scope_authorized = 0`,
+ * and authorization is granted per edge by the materializer when a contract
+ * decision permits it. No relationship is implicitly a search expansion.
+ */
+export const PLACE_RELATIONSHIP_SEARCH_AUTHORIZED_TYPES: readonly PlaceRelationshipType[] = [];
 
 /** Search Areas remain a separate Property Listify authority (contract Section 10). */
 export const SEARCH_AREA_LIFECYCLES = ['active', 'preview', 'disabled'] as const;
@@ -169,7 +185,14 @@ export type SearchAreaLifecycle = (typeof SEARCH_AREA_LIFECYCLES)[number];
 export const SEARCH_AREA_MEMBER_STATES = ['active', 'disputed', 'excluded'] as const;
 export type SearchAreaMemberState = (typeof SEARCH_AREA_MEMBER_STATES)[number];
 
-const placeIdColumn = (name = 'place_id') => varchar(name, { length: 32 });
+/**
+ * `pl-place-01-<24 hex>` is 36 characters. The column is 40 so a compliant
+ * identity always fits; `chk_place_id_format` then pins the exact governed shape
+ * so a non-conformant identity can never be stored at all.
+ */
+const PLACE_ID_COLUMN_LENGTH = 40;
+
+const placeIdColumn = (name = 'place_id') => varchar(name, { length: PLACE_ID_COLUMN_LENGTH });
 
 export const place = mysqlTable(
   'place',
@@ -189,9 +212,15 @@ export const place = mysqlTable(
     publicationEligible: int('publication_eligible').default(0).notNull(),
     searchEligible: int('search_eligible').default(0).notNull(),
     /**
-     * Derived search scope (D1, D12). `null` for a non-statutory or otherwise
-     * unprojected referent: a Place is not required to be searchable, and a
-     * scope is a projection, never identity.
+     * Derived search scope (D1, D12). A deterministic projection of `placeType`,
+     * never an independently writable geographic fact: the database rejects any
+     * value that contradicts the classification, and a type D1 gives no
+     * searchable scope may not carry one at all.
+     *
+     * A scope may be absent. A Place need not be projected yet, and that is a
+     * completeness question rather than an authority conflict. The scope's owner
+     * is the Place Authority materializer; no application write may introduce a
+     * scope of its own.
      */
     searchScope: mysqlEnum('search_scope', ['province', 'metro_city', 'locality']),
     licensingClassification: mysqlEnum('licensing_classification', [
@@ -199,7 +228,6 @@ export const place = mysqlTable(
       'permissive_supported',
       'osm_only_odbl_provisional',
     ]),
-    supersedesPlaceId: placeIdColumn('supersedes_place_id'),
     createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
   },
@@ -209,6 +237,12 @@ export const place = mysqlTable(
     index('idx_place_type').on(table.placeType),
     index('idx_place_verification').on(table.verificationStatus),
     index('idx_place_search_eligible').on(table.searchEligible, table.lifecycleStatus),
+    // D0: the identity format itself is governed. A malformed or foreign-format
+    // identity must be unrepresentable, not merely discouraged.
+    check(
+      'chk_place_id_format',
+      sql.raw("`place_id` LIKE 'pl-place-01-%' AND CHAR_LENGTH(`place_id`) = 36"),
+    ),
     // Eligibility flags are booleans, not free integers.
     check('chk_place_publication_eligible_boolean', sql.raw('`publication_eligible` IN (0,1)')),
     check('chk_place_search_eligible_boolean', sql.raw('`search_eligible` IN (0,1)')),
@@ -236,6 +270,20 @@ export const place = mysqlTable(
     check(
       'chk_place_publication_implies_search',
       sql.raw('`publication_eligible` = 0 OR `search_eligible` = 1'),
+    ),
+    // D1/D12: a search scope is a deterministic projection of the Place's own
+    // classification. It may be absent, but it may never contradict the type, and
+    // a type D1 gives no searchable scope may not carry one. This is what stops
+    // the column becoming an independently writable geographic fact, and what
+    // stops a reclassification leaving a stale scope behind.
+    check(
+      'chk_place_search_scope_derived_from_type',
+      sql.raw(
+        "(`place_type` = 'province' AND (`search_scope` IS NULL OR `search_scope` = 'province'))" +
+          " OR (`place_type` IN ('city','town') AND (`search_scope` IS NULL OR `search_scope` = 'metro_city'))" +
+          " OR (`place_type` IN ('township','suburb','neighbourhood','locality','village') AND (`search_scope` IS NULL OR `search_scope` = 'locality'))" +
+          " OR (`place_type` IN ('district_municipality','local_municipality','estate','precinct','development','other') AND `search_scope` IS NULL)",
+      ),
     ),
     // D12: a retired referent carries no eligibility.
     check(

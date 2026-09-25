@@ -962,7 +962,7 @@
     {
       "sequence": 91,
       "filename": "0091_place_authority_place.sql",
-      "checksum": "069b8bc80ee446d52e8dfe2cb79517d618dd23c18a8d5d898070bc12f4c39f4d",
+      "checksum": "eea3a79c694d49f9668b24817d9c5b8108b8c1b1bf0a102c162af97f0e90d703",
       "parent": "0090_retire_disconnected_boost_campaigns.sql",
       "parentChecksum": "767f3767f3a7f69d947ba150598cee45194ebfb64a11f52d7b3114c2b5467421",
       "kind": "ddl",
@@ -972,9 +972,9 @@
     {
       "sequence": 92,
       "filename": "0092_place_authority_place_name.sql",
-      "checksum": "5b36144d8111e293b54d81332415d60433918cc94af59213e1be32faee7a07ab",
+      "checksum": "95e305184f82d8ccbb830d7009a9091f50ad8511b1332507e9601bc9f02da02b",
       "parent": "0091_place_authority_place.sql",
-      "parentChecksum": "069b8bc80ee446d52e8dfe2cb79517d618dd23c18a8d5d898070bc12f4c39f4d",
+      "parentChecksum": "eea3a79c694d49f9668b24817d9c5b8108b8c1b1bf0a102c162af97f0e90d703",
       "kind": "ddl",
       "statementPolicy": "single-ddl",
       "requiredReferenceDataVersion": null
@@ -982,9 +982,9 @@
     {
       "sequence": 93,
       "filename": "0093_place_authority_place_relationship.sql",
-      "checksum": "aa7a4062b219c5f39c431e7b92ace483319bf606a9137d28ee402c8e5df1bdd6",
+      "checksum": "8275e78ba10916537732eb1bea7f49d7c63177a402c50f331d5ccbcffbe77202",
       "parent": "0092_place_authority_place_name.sql",
-      "parentChecksum": "5b36144d8111e293b54d81332415d60433918cc94af59213e1be32faee7a07ab",
+      "parentChecksum": "95e305184f82d8ccbb830d7009a9091f50ad8511b1332507e9601bc9f02da02b",
       "kind": "ddl",
       "statementPolicy": "single-ddl",
       "requiredReferenceDataVersion": null
@@ -992,9 +992,9 @@
     {
       "sequence": 94,
       "filename": "0094_place_authority_place_evidence.sql",
-      "checksum": "9440ee01bd67cd4d9ffe5701e118621aa85db02cddc68aadc76f6ed8ab16696b",
+      "checksum": "d9c39faff56bca01399f46601bcd54875e66a5734093709287c5a14bb0d913a4",
       "parent": "0093_place_authority_place_relationship.sql",
-      "parentChecksum": "aa7a4062b219c5f39c431e7b92ace483319bf606a9137d28ee402c8e5df1bdd6",
+      "parentChecksum": "8275e78ba10916537732eb1bea7f49d7c63177a402c50f331d5ccbcffbe77202",
       "kind": "ddl",
       "statementPolicy": "single-ddl",
       "requiredReferenceDataVersion": null
@@ -1002,9 +1002,9 @@
     {
       "sequence": 95,
       "filename": "0095_place_authority_place_external_mapping.sql",
-      "checksum": "c8179fb8dc3436cab4307cb0cb2bc2727ca34e5d6bd7279e4f59ffff7773a6bf",
+      "checksum": "703fa916a67899940d04e3d51123dd2b20f6c8d7f14d87b81da5a76942b4a05d",
       "parent": "0094_place_authority_place_evidence.sql",
-      "parentChecksum": "9440ee01bd67cd4d9ffe5701e118621aa85db02cddc68aadc76f6ed8ab16696b",
+      "parentChecksum": "d9c39faff56bca01399f46601bcd54875e66a5734093709287c5a14bb0d913a4",
       "kind": "ddl",
       "statementPolicy": "single-ddl",
       "requiredReferenceDataVersion": null
@@ -1014,7 +1014,7 @@
       "filename": "0096_place_authority_search_area.sql",
       "checksum": "5f598cf793ca29003767ad976a512dfa50a65e8cbf0ae2250848c482e8624542",
       "parent": "0095_place_authority_place_external_mapping.sql",
-      "parentChecksum": "c8179fb8dc3436cab4307cb0cb2bc2727ca34e5d6bd7279e4f59ffff7773a6bf",
+      "parentChecksum": "703fa916a67899940d04e3d51123dd2b20f6c8d7f14d87b81da5a76942b4a05d",
       "kind": "ddl",
       "statementPolicy": "single-ddl",
       "requiredReferenceDataVersion": null
@@ -1022,7 +1022,7 @@
     {
       "sequence": 97,
       "filename": "0097_place_authority_search_area_member.sql",
-      "checksum": "e705ab7d0b350af78f17c5316f79918b73e77b37ff2d567a2c0cc4e690efac0e",
+      "checksum": "0e0650eb710ea6d49267432af42aebf2fb3c91a1d53187c4aae8b3e50db67fe3",
       "parent": "0096_place_authority_search_area.sql",
       "parentChecksum": "5f598cf793ca29003767ad976a512dfa50a65e8cbf0ae2250848c482e8624542",
       "kind": "ddl",

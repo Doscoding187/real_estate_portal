@@ -7,7 +7,7 @@
 CREATE TABLE `search_area_member` (
   `id` int AUTO_INCREMENT NOT NULL,
   `search_area_id` varchar(64) NOT NULL,
-  `place_id` varchar(32) NOT NULL,
+  `place_id` varchar(40) NOT NULL,
   `member_state` enum('active','disputed','excluded') NOT NULL DEFAULT 'active',
   `evidence_source` varchar(64) NOT NULL,
   `created_at` timestamp NOT NULL DEFAULT (now()),

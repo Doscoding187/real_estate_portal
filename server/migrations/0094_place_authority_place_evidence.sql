@@ -11,7 +11,7 @@
 -- a signal to carry the query subject so it is actionable as research input.
 CREATE TABLE `place_evidence` (
   `id` int AUTO_INCREMENT NOT NULL,
-  `place_id` varchar(32),
+  `place_id` varchar(40),
   `evidence_kind` enum('source_record','municipal_register','parent_edge','provider_observation','commercial_submission','search_demand','unresolved_query','ambiguous_query','continuity_decision') NOT NULL,
   `evidence_state` enum('recorded','under_review','accepted','rejected') NOT NULL DEFAULT 'recorded',
   `subject` varchar(500),

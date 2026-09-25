@@ -5,7 +5,7 @@
 -- an existing Place and holds no eligibility or authority columns of its own.
 CREATE TABLE `place_external_mapping` (
   `id` int AUTO_INCREMENT NOT NULL,
-  `place_id` varchar(32) NOT NULL,
+  `place_id` varchar(40) NOT NULL,
   `provider` varchar(64) NOT NULL,
   `provider_record_id` varchar(255) NOT NULL,
   `provider_label` varchar(255),

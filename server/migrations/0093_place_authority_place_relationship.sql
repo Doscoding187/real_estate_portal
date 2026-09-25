@@ -9,11 +9,23 @@
 -- graph has no effect on an executable query boundary unless its type is
 -- explicitly authorized (D12). Relationships are not automatically search
 -- expansion. Storage is relational; no graph database is adopted (D10).
+--
+-- The vocabulary is deliberately five types. `preceded_by` is absent because it
+-- is the inverse of `succeeds` and is derived by reversing a `succeeds` edge;
+-- storing both directions would give one fact two writable authorities.
+-- `search_area_member` is absent because the `search_area_member` table is the
+-- single authority for Search Area membership, and a Place relationship must
+-- never restate it.
+--
+-- `administratively_contains` and `settlement_within` are NOT inverses of one
+-- another. A referent may be administratively within one municipality and
+-- understood as settled within another, so the two are separate assertions and
+-- neither may be derived from the other.
 CREATE TABLE `place_relationship` (
   `id` int AUTO_INCREMENT NOT NULL,
-  `from_place_id` varchar(32) NOT NULL,
-  `to_place_id` varchar(32) NOT NULL,
-  `relationship_type` enum('administratively_contains','settlement_within','market_association','search_area_member','succeeds','preceded_by','co_located_with') NOT NULL,
+  `from_place_id` varchar(40) NOT NULL,
+  `to_place_id` varchar(40) NOT NULL,
+  `relationship_type` enum('administratively_contains','settlement_within','market_association','succeeds','co_located_with') NOT NULL,
   `search_scope_authorized` int NOT NULL DEFAULT (0),
   `evidence_source` varchar(64) NOT NULL,
   `valid_from` varchar(10),

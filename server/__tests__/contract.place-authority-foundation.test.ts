@@ -10,6 +10,7 @@ import {
   PLACE_LIFECYCLE_STATUSES,
   PLACE_NAME_ROLES,
   PLACE_NAME_STATES,
+  PLACE_RELATIONSHIP_SEARCH_AUTHORIZED_TYPES,
   PLACE_RELATIONSHIP_TYPES,
   PLACE_TYPES,
   PLACE_VERIFICATION_STATUSES,
@@ -69,6 +70,8 @@ const CONTRACT_CHECKS: Record<string, readonly string[]> = {
     'chk_place_non_statutory_requires_evidence',
     'chk_place_publication_implies_search',
     'chk_place_retired_not_eligible',
+    'chk_place_search_scope_derived_from_type',
+    'chk_place_id_format',
   ],
   place_name: ['chk_place_name_searchable_boolean', 'chk_place_name_inactive_not_searchable'],
   place_relationship: [
@@ -134,6 +137,42 @@ describe('Place Authority: canonical model surface', () => {
     for (const forbidden of ['name', 'slug', 'preferredName', 'displayName']) {
       expect(placeColumns[forbidden], `place must not expose ${forbidden}`).toBeUndefined();
     }
+  });
+
+  it('can physically store every compliant identity, and reject a malformed one', () => {
+    // A governed identity format is worthless if the column cannot hold it. The
+    // `pl-place-01-` prefix plus 24 hex characters is 36 characters, so the
+    // column must be wider than that and pinned to the exact shape.
+    const normalized = normalizedDesiredSchema(canonical);
+    const placeTable = normalized.tables.find(table => table.name === 'place');
+    const placeId = placeTable?.columns.find(column => column.name === 'place_id');
+    expect(placeId?.type, 'place_id must be wide enough for the governed format').toMatch(
+      /varchar\(40\)/,
+    );
+    // Every child column must match the parent exactly, or the foreign key cannot
+    // be created.
+    for (const tableName of [
+      'place_name',
+      'place_relationship',
+      'place_evidence',
+      'place_external_mapping',
+      'search_area_member',
+    ]) {
+      const table = normalized.tables.find(candidate => candidate.name === tableName);
+      for (const foreignKey of table?.foreignKeys ?? []) {
+        if (!foreignKey.name.includes('->place.')) continue;
+        for (const column of foreignKey.columns) {
+          const columnSpec = table?.columns.find(candidate => candidate.name === column);
+          expect(columnSpec?.type, `${tableName}.${column} must match place.place_id`).toMatch(
+            /varchar\(40\)/,
+          );
+        }
+      }
+    }
+    // The exact governed shape is enforced by the database, not only in code.
+    const formatCheck = placeTable?.checks.find(check => check.name === 'chk_place_id_format');
+    expect(formatCheck).toBeDefined();
+    expect(formatCheck?.expression).toContain('pl-place-01-');
   });
 
   it('uses a durable identity format that is not a name or slug encoding', () => {
@@ -215,17 +254,29 @@ describe('Place Authority: identity dimensions stay separate', () => {
     expect(PLACE_NAME_STATES).toEqual(['active', 'superseded', 'withdrawn']);
     // D10: administrative containment, settlement membership, market association
     // and succession must not share one ambiguous generic meaning.
-    for (const type of [
+    expect(PLACE_RELATIONSHIP_TYPES).toEqual([
       'administratively_contains',
       'settlement_within',
       'market_association',
       'succeeds',
-      'preceded_by',
-    ] as const) {
-      expect(PLACE_RELATIONSHIP_TYPES).toContain(type);
-    }
+      'co_located_with',
+    ]);
+    // D10 forbids one ambiguous generic meaning.
     expect(PLACE_RELATIONSHIP_TYPES).not.toContain('parent');
     expect(PLACE_RELATIONSHIP_TYPES).not.toContain('related_to');
+    expect(PLACE_RELATIONSHIP_TYPES).not.toContain('contains');
+    // One fact, one writable authority: the inverse of `succeeds` is derived by
+    // reversal, and Search Area membership belongs to the `search_area_member`
+    // table. Neither may be restated as a Place relationship.
+    expect(PLACE_RELATIONSHIP_TYPES).not.toContain('preceded_by');
+    expect(PLACE_RELATIONSHIP_TYPES).not.toContain('search_area_member');
+  });
+
+  it('authorizes no relationship type for search-scope expansion by default', () => {
+    // D12: a relationship has no effect on an executable query boundary unless its
+    // type is explicitly authorized. The V1 set is deliberately empty, so no
+    // relationship is an implicit widening.
+    expect(PLACE_RELATIONSHIP_SEARCH_AUTHORIZED_TYPES).toEqual([]);
   });
 
   it('records every demand signal kind as evidence, never as authority', () => {
@@ -321,8 +372,8 @@ describe('Place Authority: contract invariants are enforced by the database', ()
     expect(placeRelationship.fromPlaceId.name).toBe('from_place_id');
     expect(placeRelationship.toPlaceId.name).toBe('to_place_id');
     const sqlForRelationship = migrationSql('0093_place_authority_place_relationship.sql');
-    expect(sqlForRelationship).toContain('`from_place_id` varchar(32) NOT NULL');
-    expect(sqlForRelationship).toContain('`to_place_id` varchar(32) NOT NULL');
+    expect(sqlForRelationship).toContain('`from_place_id` varchar(40) NOT NULL');
+    expect(sqlForRelationship).toContain('`to_place_id` varchar(40) NOT NULL');
     // A single column may not back two logical properties.
     const names = [placeRelationship.fromPlaceId.name, placeRelationship.toPlaceId.name];
     expect(new Set(names).size).toBe(names.length);
@@ -339,13 +390,18 @@ describe('Place Authority: contract invariants are enforced by the database', ()
       const names = (table?.columns ?? []).map(column => column.name);
       expect(new Set(names).size, `${tableName} has duplicate column names`).toBe(names.length);
     }
-    // The continuity reference must be its own column, never a second place_id.
-    const placeColumns = normalized.tables
-      .find(table => table.name === 'place')
-      ?.columns.map(column => column.name);
-    expect(placeColumns).toContain('supersedes_place_id');
+    // Identity succession has exactly one authority: the typed `succeeds`
+    // relationship edge. `place` must therefore carry no succession column, or
+    // one fact would have two independently writable authorities (D9).
+    const placeColumns = (
+      normalized.tables.find(table => table.name === 'place')?.columns ?? []
+    ).map(column => column.name);
     expect(
-      placeColumns?.filter(name => name === 'place_id'),
+      placeColumns.filter(name => /supersed|replaces?|succeed/i.test(name)),
+      'place must not carry a succession field; place_relationship is the only authority',
+    ).toEqual([]);
+    expect(
+      placeColumns.filter(name => name === 'place_id'),
       'place must declare place_id exactly once',
     ).toHaveLength(1);
   });
@@ -361,6 +417,53 @@ describe('Place Authority: contract invariants are enforced by the database', ()
         /DEFAULT \('/,
       );
     }
+  });
+
+  it('derives search scope from place type so it can never contradict classification', () => {
+    // D1/D12: `province` / `metro_city` / `locality` are derived executable scopes,
+    // never an independent geographic fact. A scope may be absent, but it may
+    // never disagree with the Place's own classification, and a type D1 gives no
+    // searchable scope may not carry one at all.
+    const placeCheck = normalizedDesiredSchema(canonical)
+      .tables.find(table => table.name === 'place')
+      ?.checks.find(check => check.name === 'chk_place_search_scope_derived_from_type');
+    expect(placeCheck, 'the scope derivation invariant must be a database CHECK').toBeDefined();
+    const expression = placeCheck?.expression ?? '';
+
+    // Every D1 mapping is stated, so a future type cannot be added without a scope
+    // decision being made explicitly.
+    for (const scoped of [
+      "= 'province'",
+      "'city','town'",
+      "'township','suburb','neighbourhood','locality','village'",
+      "'district_municipality','local_municipality','estate','precinct','development','other'",
+    ]) {
+      expect(expression, `scope derivation must state ${scoped}`).toContain(scoped);
+    }
+    // The three derived scopes are the only permitted values.
+    expect(expression).toContain("`search_scope` = 'province'");
+    expect(expression).toContain("`search_scope` = 'metro_city'");
+    expect(expression).toContain("`search_scope` = 'locality'");
+
+    // The same invariant must exist physically, not only in the desired model.
+    expect(migrationSql('0091_place_authority_place.sql')).toContain(
+      'chk_place_search_scope_derived_from_type',
+    );
+  });
+
+  it('gives succession exactly one writable authority', () => {
+    // D9 binding rule: a succession, replacement, merge or split relationship must
+    // not have two independently writable authorities. `place` carries no such
+    // column; `place_relationship` with type `succeeds` is the only one.
+    const normalized = normalizedDesiredSchema(canonical);
+    const placeColumns = (
+      normalized.tables.find(table => table.name === 'place')?.columns ?? []
+    ).map(column => column.name);
+    expect(placeColumns.filter(name => /supersed|replaces?/i.test(name))).toEqual([]);
+    expect(migrationSql('0091_place_authority_place.sql')).not.toContain('supersedes_place_id');
+    // And the typed edge exists with mandatory evidence.
+    expect(PLACE_RELATIONSHIP_TYPES).toContain('succeeds');
+    expect(placeRelationship.evidenceSource.notNull).toBe(true);
   });
 
   it('defaults relationships to no search-scope effect, so a relationship is never implicit widening', () => {
@@ -410,6 +513,116 @@ describe('Place Authority: Search Area remains a separate authority', () => {
 
   it('defaults lifecycle to preview so a Search Area is never active by existing', () => {
     expect(searchArea.lifecycle.default).toBe('preview');
+  });
+});
+
+describe('Place Authority: name-role integrity (D8)', () => {
+  it('permits a name to hold several roles on one Place without duplicating identity', () => {
+    // D8: roles may overlap. A name may legitimately be both common and official.
+    // The uniqueness key is (place_id, name_role, name), so the same text on the
+    // same Place under distinct justified roles is representable.
+    const key = (
+      normalizedDesiredSchema(canonical).tables.find(table => table.name === 'place_name')
+        ?.indexes ?? []
+    ).find(index => index.name === 'place_name_place_role_name_uq');
+    expect(key?.unique).toBe(true);
+    expect(key?.columns).toEqual(['place_id', 'name_role', 'name']);
+
+    // The overlapping roles D8 names must all be expressible.
+    for (const role of ['preferred_public', 'official', 'common'] as const) {
+      expect(PLACE_NAME_ROLES).toContain(role);
+    }
+  });
+
+  it('permits the same text on different Places, and many names on one Place', () => {
+    // A name never mints a Place: the key is anchored on place_id, so identical
+    // text in two different Places is not a conflict, and one Place may hold many
+    // distinct assertions. This is what keeps same-name identities (Diepkloof in
+    // two municipalities, Sandton as city and suburb) representable without
+    // merging them.
+    const columns = (
+      normalizedDesiredSchema(canonical).tables.find(table => table.name === 'place_name')
+        ?.columns ?? []
+    ).map(c => c.name);
+    expect(columns).toContain('place_id');
+    // The key's first column is the identity, so place_id is the discriminator.
+    expect(columns).not.toContain('place');
+  });
+
+  it('keeps ingestion order out of preferred public naming', () => {
+    // D8: preferred naming is a governed selection policy over recorded name
+    // assertions, never a side effect of insertion order. The table carries no
+    // ordinal, sequence, priority or "is currently preferred" flag that a writer
+    // could set while inserting, so ordering cannot silently decide the outcome.
+    const columns = (
+      normalizedDesiredSchema(canonical).tables.find(table => table.name === 'place_name')
+        ?.columns ?? []
+    ).map(c => c.name);
+    for (const forbidden of [
+      'sort_order',
+      'ordinal',
+      'priority',
+      'sequence',
+      'rank',
+      'is_preferred',
+      'is_current',
+    ]) {
+      expect(columns, `place_name must not expose ${forbidden}`).not.toContain(forbidden);
+    }
+    // Selection is expressed by the role, and role is part of the uniqueness key.
+    expect(columns).toContain('name_role');
+    expect(columns).toContain('name_state');
+  });
+
+  it('keeps assertion-level corroboration in place_evidence, not duplicated name rows', () => {
+    // Two sources asserting the identical name and role collapse to one
+    // `place_name` row, which is deliberate: a second identical assertion is not a
+    // second name. Corroborating and contradicting evidence is recorded against
+    // `place_evidence`, which is the table whose purpose it is. This is a
+    // recorded design decision, not an accident.
+    const nameColumns = (
+      normalizedDesiredSchema(canonical).tables.find(table => table.name === 'place_name')
+        ?.columns ?? []
+    ).map(c => c.name);
+    expect(nameColumns).toContain('evidence_source');
+    const evidenceColumns = (
+      normalizedDesiredSchema(canonical).tables.find(table => table.name === 'place_evidence')
+        ?.columns ?? []
+    ).map(c => c.name);
+    expect(evidenceColumns).toContain('place_id');
+    expect(evidenceColumns).toContain('evidence_kind');
+    expect(evidenceColumns).toContain('provider');
+  });
+});
+
+describe('Place Authority: containment authority is singular', () => {
+  it('holds the authoritative containment assertion only in place_relationship', () => {
+    // No convenience parent or containment field may exist anywhere else, because
+    // two writable containment assertions could disagree with nothing detecting it.
+    const normalized = normalizedDesiredSchema(canonical);
+    for (const tableName of PLACE_AUTHORITY_TABLES) {
+      const table = normalized.tables.find(candidate => candidate.name === tableName);
+      const suspect = (table?.columns ?? [])
+        .map(column => column.name)
+        .filter(name => /^(parent|child|container|ancestor|hierarch)/i.test(name));
+      expect(suspect, `${tableName} must not carry a containment column`).toEqual([]);
+    }
+    // Containment is expressed only as typed, evidenced edges.
+    expect(PLACE_RELATIONSHIP_TYPES).toContain('administratively_contains');
+    expect(PLACE_RELATIONSHIP_TYPES).toContain('settlement_within');
+  });
+
+  it('keeps administrative containment and settlement membership distinct assertions', () => {
+    // D10: these are not inverses of one another. A referent may be
+    // administratively within one municipality and understood as settled within
+    // another, so neither may be derived from the other, and both are stored in
+    // one canonical direction with the traversal inverse derived by reversal.
+    const placeRelationshipSql = migrationSql('0093_place_authority_place_relationship.sql');
+    expect(placeRelationshipSql).toContain('administratively_contains');
+    expect(placeRelationshipSql).toContain('settlement_within');
+    // A single unique edge key per (from, to, type) means neither can be inferred
+    // from the other.
+    expect(placeRelationshipSql).toContain('place_relationship_edge_uq');
   });
 });
 
