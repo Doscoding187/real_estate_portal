@@ -1,5 +1,11 @@
 # Property Listify Launch Readiness and Product Convergence
 
+> **Current Paid MVP entry point — 2026-09-25:** use the
+> [central blocker dispositions](03-launch-register.md#paid-mvp-working-disposition--2026-09-25)
+> and [senior evidence review](23-paid-mvp-senior-reconciliation-2026-09-25.md).
+> The older stage/governance snapshot below is historical and does not describe
+> the current Paid MVP candidate or grant a release approval.
+
 | Field                    | Current authority                                                                                                                                                                                                                                                                                                   |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Programme status         | **GME-B2 and the Worktree Lifecycle Reconciliation Audit are complete. Founder disposition review deferred broad retirement and identified six launch-domain worktrees for conditional future review. Stage 2B is authorized as a bounded local-environment contract and non-mutating-diagnostics implementation.** |

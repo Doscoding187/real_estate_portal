@@ -1,5 +1,8 @@
 # B05 Agency Paid MVP Closure Packet
 
+> **Senior review 2026-09-25:** EVIDENCE INCOMPLETE: B10 records a later unsuccessful joined Agency run; current complete proof is required.
+> Current authority: [central register](../03-launch-register.md#paid-mvp-working-disposition--2026-09-25). The packet below preserves its original execution claims.
+
 ## A. Status
 
 **B05 — EVIDENCE PASS — REVIEW PENDING.**

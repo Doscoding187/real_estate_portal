@@ -1,5 +1,8 @@
 # B03 Paid Lifecycle and Expiry Closure Packet
 
+> **Senior review 2026-09-25:** REVIEW FAILED / REMAINS OPEN: the later production activation policy invalidates the product-less legacy containment claim.
+> Current authority: [central register](../03-launch-register.md#paid-mvp-working-disposition--2026-09-25). The packet below preserves its original execution claims.
+
 | Field | Record |
 | --- | --- |
 | Scope | B03 payment, finance approval, commercial activation, renewal, expiry, and historical lead custody |

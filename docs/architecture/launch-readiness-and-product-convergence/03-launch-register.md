@@ -1,11 +1,50 @@
 # Central Launch Register
 
-| Field            | Authority                                                                                                                                                                                                                                                                                                                                                                                                  |
-| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Status           | Canonical billing and activation containment, Goals 1–10 agency-membership/workspace/commercial-term/private-preparation/review/public-discovery/enquiry/CRM/first-cohort-recovery corrections, canonical private-work, inventory, operational-workspace, viewing/deal workspace, and Agent Home workspace membership authority, Land hard-containment with generic Developer-row and draft supplements, a bounded assisted-onboarding intake, canonical agent-coverage authority, governed agent-and-agency-owner pre-payment browser acceptance, agency preparation-state, deferred-invitation-validity, queued-invitation-acceptance corrections, the Commercial generic-viewing boundary, local browser proof of the member author/review/public-discovery/enquiry/CRM slices, deployed transactional-email false-success containment, truthful shared public advertising plus independent-Agent, Agency, and Developer preparation entry, direct public commercial-plans plus authenticated Agent/Agency/Developer commercial-route containment, the persisted pending Developer-organisation/private-draft browser slice, the authorised Developer-approval-to-professional-presence/payment-gate boundary, and the direct administrator-review route authority boundary are verified on the task-owned branch. The retained complete authority-wrapped suite predates later viewing and public-entry corrections; those changes have their own focused, browser, compile, lint, and static-authority evidence. All task-branch evidence awaits integration; named support operations/disclosures, normal-runtime commercial activation, external provider reliability, and protected release remain open or blocked as recorded below.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
-| Scope            | Central launch disposition and verification register. It is not an implementation backlog.                                                                                                                                                                                                                                                                                                                 |
-| Candidate status | Merged base 4e012b3044628fc06da7489c0055e9ce01bdc8d9; billing containment source c8c35fde44d00ff8b2ce83ca73fcb32dd522e9bc, Goal 10 agency acceptance `fbf592cc`, canonical private-work membership correction `5f37d3d1c14130f9078a17ea267e951547e65564`, canonical agency-inventory scope correction `0eaf2cc806d157f4e6b378721db48e69cef3ffb6`, canonical operational-workspace membership correction `32ce7524b642519300a5ae6daddac5ae2c393486`, canonical viewing/deal workspace membership correction `47e059efaf3404db0f16d3f86b7a577ddb4f1ff3`, canonical Agent Home workspace membership correction `a0fc9e8b95be1275844e11aaed4bf57bc1ff2bd3`, Land hard-containment `335838dff0c746b860eaaf2930412d4b38540db5`, generic Developer-row supplement `62ec0eede830e96eafc69dfd9e4f42a9645aa1ee`, and generic Developer-draft supplement `0280e9dd74b7fa9ed33da782427c27b56e80d6c2`, bounded assisted-onboarding intake `144e90d1531d2e85a407e5dabecfb4124c8394bf`, canonical agent-coverage authority `f40ca8a3bbed5bfc1f0ffeb675b2c9d10397f35e`, governed agent-and-agency-owner pre-payment browser acceptance and agency preparation-state correction `e9909ab6be90323a881f07a267777c64b1e075d3`, deferred-invitation-validity correction `0c4402078ffaced5664f6993dac3fe8f6d0ed504`, queued-invitation acceptance containment `415a947261a65c160f4fb77c39712050bab35b8`, Commercial generic-viewing boundary `d1545579fda2c32b466af4cf68ff6929c2e2be2b`, fixture-congruency correction `e50dbe956a50a0e0a1c071224fb1bffd46bdb4d4`, browser correction-loop acceptance `72dd80e0`, browser public discovery/enquiry/CRM acceptance `a2a4e52b6b6d215263bc1f765d75a670d00ad64e`, deployed transactional-email containment `3d2e01488755376486d96e2242f83d08895c8a62`, Johannesburg viewing correction `40a37c37`, independent-Agent public preparation truthfulness `7c939831`, Agency public preparation truthfulness `02788ff2`, shared public-advertising/Developer preparation-entry truthfulness `234ca6e4`, direct commercial-plans route containment `32224b0a`, authenticated Agent package-route containment `e1ccc2c8`, authenticated Agent preparation-lock wording correction `217aa1df`, authenticated Agency billing-route containment `d48544b9`, authenticated Developer plans containment `ada578a2`, authenticated Developer subscription-route containment `bb89b2b9`, legacy public `/activation` route containment `a0ceea70`, legacy Developer authoring-route containment `3ad9b1f5`, Developer pre-payment organisation/draft browser acceptance `9cd6d3e3`, Developer trust-control truthfulness `bb402332`, Developer approval/payment-gate acceptance `589135ce`, and direct administrator review-route authority containment `ddbb7e58` passed their stated local checks. The last complete authority-wrapped run reported 633 passed / 9 skipped files and 4,216 passed / 67 skipped tests before later viewing/public-entry changes. All remain task-branch evidence and await integration. |
-| Evidence method  | [Evidence Sequence and Provenance Contract](06-evidence-sequence-and-provenance-contract.md) governs material technical claims and their boundaries; this register remains the sole launch-disposition authority.                                                                                                                                                                                          |
+| Field | Authority |
+| --- | --- |
+| Status | **NO-GO. September 25 senior reconciliation: 3 CLOSED; 15 remain.** The current package decisions below supersede older summaries and self-declared closure candidates. |
+| Scope | Sole launch-disposition authority for the canonical Paid MVP. B01–B18 are work packages linked to existing LRC findings and release gates, not new issue IDs. Services V1/PR #581 and Explore product work are excluded. |
+| Source | Published main `4e012b3044628fc06da7489c0055e9ce01bdc8d9`; reviewed candidate PR #580 `e8974ec34b919ceab37bdbd7e7379f96f3abce99`, tree `28d63e530449ee7357a5979684aea42ee2077bdc`. Candidate changes and this reconciliation are not merged to main. |
+| Evidence | [Senior review and per-package records](23-paid-mvp-senior-reconciliation-2026-09-25.md), [fresh evidence](evidence/paid-mvp-audit-2026-09-25/), [original package criteria](19-paid-mvp-launch-blocker-audit.md), [provenance contract](06-evidence-sequence-and-provenance-contract.md). |
+
+## Paid MVP working disposition — 2026-09-25
+
+This table is the current working authority. Full risk, evidence, dependencies,
+source applicability and senior decisions are in the linked per-package records.
+**CLOSED is scoped to the package purpose:** B01 is policy, B02 fresh CI, B04 the
+application journey. Their integration/provider acceptance is still required
+under the existing B16/B18 and shared packages. No row authorizes activation.
+
+| Blocker | Purpose | Previous status | Senior review result | Current status | Remaining action | Launch gating? |
+| --- | --- | --- | --- | --- | --- | --- |
+| [B01](23-paid-mvp-senior-reconciliation-2026-09-25.md#b01--actual-paid-offer-and-launch-boundary) | Agreed paid offer and owner boundary | CLOSED — founder approved | ACCEPT; retain policy closure | CLOSED | Carry approved terms into B15/B18 | No separate B01 gap |
+| [B02](23-paid-mvp-senior-reconciliation-2026-09-25.md#b02--fresh-hosted-ci-contract) | Fresh schema/consumer CI works | Original failed; later fix passed | ACCEPT; exact-tree CI/artifacts verified | CLOSED | B16 owns post-merge checks | No separate B02 gap |
+| [B03](23-paid-mvp-senior-reconciliation-2026-09-25.md#b03--payment-finance-activation-renewal-and-expiry) | Correct money, product, owner and term | EVIDENCE PASS / REVIEW PENDING | REVIEW FAILED; later release gate admits generic legacy paths | OPEN | Reject unsupported persisted plans/owners; production-mode finance negatives | Yes |
+| [B04](23-paid-mvp-senior-reconciliation-2026-09-25.md#b04--independent-agent-paid-value-loop) | Agent paid application journey | EVIDENCE PASS / REVIEW PENDING | ACCEPT application contract; provider/integration limits retained | CLOSED | Refresh with B16/B18 after shared fixes | No separate B04 gap |
+| [B05](23-paid-mvp-senior-reconciliation-2026-09-25.md#b05--agency-paid-value-loop-and-invitation) | Agency/member paid operation | EVIDENCE PASS / REVIEW PENDING | EVIDENCE INCOMPLETE; later joined browser run failed | EVIDENCE INCOMPLETE | Diagnose profile-setup run and retain complete current pass | Yes |
+| [B06](23-paid-mvp-senior-reconciliation-2026-09-25.md#b06--developer-paid-organisation-to-enquiry-loop) | Developer organisation/inventory/enquiry | EVIDENCE PASS / REVIEW PENDING | EVIDENCE INCOMPLETE; later authoring browser run crashed | EVIDENCE INCOMPLETE | Diagnose/rerun full loop; retain independent published-expiry proof | Yes |
+| [B07](23-paid-mvp-senior-reconciliation-2026-09-25.md#b07--security-revocation-and-paid-release-containment) | Security and release containment | Local implementation; release review pending | REVIEW FAILED; same product-less gate finding as B03 | OPEN | Consume B03 correction; final paid-route/role/tenant negatives | Yes |
+| [B08](23-paid-mvp-senior-reconciliation-2026-09-25.md#b08--protected-production-database-admission) | Safe launch database and credentials | Azure established; cutover spend gate | Establishment evidence accepted; launch binding incomplete | BLOCKED BY DEPENDENCY | Founder egress/spend decision, reviewed exact network/credential release | Yes |
+| [B09](23-paid-mvp-senior-reconciliation-2026-09-25.md#b09--source-data-transfer-or-signed-preservation-disposition) | Preserve required source business records | Inventory pending; absent from latest snapshot | EVIDENCE INCOMPLETE; source artifact explicitly not inventoried | MANUAL ACTION REQUIRED | Approved census and signed data disposition; reconcile if transfer needed | Yes |
+| [B10](23-paid-mvp-senior-reconciliation-2026-09-25.md#b10--real-account-invitation-and-billing-email) | Real essential email delivery | Engineering pass; provider pending | Engineering evidence accepted; delivery unproven | HOSTED VERIFICATION REQUIRED | Verified sender, real receipt/reply/bounce, supervised worker | Yes |
+| [B11](23-paid-mvp-senior-reconciliation-2026-09-25.md#b11--durable-public-media-and-private-payment-proof) | Durable media; private financial proof | Guardrails ready; storage/spend gate | EVIDENCE INCOMPLETE for provider | MANUAL ACTION REQUIRED | Dedicated private storage/credential and real access/durability/recovery proof | Yes |
+| [B12](23-paid-mvp-senior-reconciliation-2026-09-25.md#b12--hosted-runtime-sessions-and-shared-abuse-controls) | Usable hosted runtime and sessions | Hosted rehearsal pending | EVIDENCE INCOMPLETE; live readiness 503, preview failure | HOSTED VERIFICATION REQUIRED | Diagnose preview; bind exact artifacts/config/services and rehearse | Yes |
+| [B13](23-paid-mvp-senior-reconciliation-2026-09-25.md#b13--durable-actionable-enquiries-and-supervised-work) | No lost or misdirected accepted enquiries | Local custody/attention proof | EVIDENCE INCOMPLETE for operation | HOSTED VERIFICATION REQUIRED | Lead cron, custody/retry/attention and operator exercise | Yes |
+| [B14](23-paid-mvp-senior-reconciliation-2026-09-25.md#b14--staffed-finance-moderation-support-and-escalation) | Operable finance, moderation and support | Founder-only model prepared; rehearsal pending | Model retained; operational proof incomplete | MANUAL ACTION REQUIRED | Monitored contacts and actual queue/absence/pause/renewal rehearsal | Yes |
+| [B15](23-paid-mvp-senior-reconciliation-2026-09-25.md#b15--approved-disclosures-and-customer-consent) | Approved truthful customer commitments | Founder approval draft prepared | EVIDENCE INCOMPLETE; unresolved facts/final approval | MANUAL ACTION REQUIRED | Approve real facts/copy; implement and prove disclosures/consent | Yes |
+| [B16](23-paid-mvp-senior-reconciliation-2026-09-25.md#b16--independent-whole-candidate-review-and-safe-integration) | One reviewed integrated release | Draft candidate; GitHub green, Vercel failed | REVIEW FAILED; open code/evidence gates | BLOCKED BY DEPENDENCY | Correct findings, current journeys/CI, whole-diff review and approved integration | Yes |
+| [B17](23-paid-mvp-senior-reconciliation-2026-09-25.md#b17--recovery-capacity-and-monitoring) | Recoverable service at launch workload | Probe/runbook ready; restore pending | EVIDENCE INCOMPLETE; no measured restore/capacity proof | HOSTED VERIFICATION REQUIRED | Bind alerts, prove restore/recovery and master-plan capacity thresholds | Yes |
+| [B18](23-paid-mvp-senior-reconciliation-2026-09-25.md#b18--exact-artifact-paid-acceptance-and-go-live) | Exact paid launch acceptance and GO | Checklist prepared; not performed | EVIDENCE INCOMPLETE; NO-GO | BLOCKED BY DEPENDENCY | Close upstream gates; exact three-actor acceptance, cutover, explicit GO | Yes |
+
+**Next single blocker: B03.** Its bounded product/owner containment correction
+also supplies B07's shared finding. See the review's
+[remaining path](23-paid-mvp-senior-reconciliation-2026-09-25.md#5-exact-remaining-execution-path)
+and [work categories/consolidation](23-paid-mvp-senior-reconciliation-2026-09-25.md#6-reduced-launch-remainder-and-next-assignment).
+
+The September 24 snapshots and dated LRC records below remain historical
+support. Their local implementation claims do not override this current table.
+The B01 policy decision is closed; the broader LRC-PAY-001 runtime finding is
+open, including the September 25 supplement below.
 
 ## B08 protected database disposition — 2026-09-24
 
@@ -19,8 +58,9 @@ Railway Production still uses TiDB. The closed TiDB V1 compatibility experiment
 does not authorize TiDB redesign, historical repair, or transfer. Both databases
 are preserved. No Railway database cutover is authorized in this disposition.
 
-The remaining B08 gate is **FOUNDER SPEND GATE: Railway Pro / Static Outbound
-IPs**. Do not use an unsafe network shortcut. Continue launch-critical B10–B18
+The next B08 dependency is **FOUNDER SPEND GATE: Railway Pro / Static Outbound
+IPs**. Launch closure also requires the exact runtime/network admission recorded
+in the September 25 table; B09 preservation and B17 recovery/capacity remain separate gates. Do not use an unsafe network shortcut. Continue launch-critical B10–B18
 engineering and evidence work that does not require new founder expenditure.
 
 ## B10–B18 launch preparation snapshot — 2026-09-24
@@ -70,7 +110,7 @@ Do not reuse identifiers. A corrected finding retains its original ID and gains 
 | Status                                  | Open, authorised, in progress, integrated verified, production verified, deferred, or closed |
 | Notes                                   | Decision rationale, dependencies, and expiry/removal condition where relevant                |
 
-## Compact register index
+## Historical LRC register index
 
 This index is for navigation and programme oversight. Its **Full record** column must link to the matching complete record in this document once a real finding exists; the expected anchor form is `#lrc-search-001`.
 
@@ -267,6 +307,30 @@ future workspace feature.
 | Developer must prove the distinct organisation-to-development/unit/public-enquiry/follow-up loop. The term-notice scheduler only queries agent/agency owners, not developer organisations.                                                                                                                                                                                                        | B02, B03, B06, B10    |
 | Edward is the founder-approved sole finance/support operator for the first 10–20 customers, with daily weekday checks and a new-sales/payment-activation pause for an absence longer than one business day. No backup is appointed; the monitored queue and unavailable/resume procedure still require a hosted rehearsal. | B14                   |
 | Invoice/payment disclosure, VAT wording, Terms/Privacy, cancellation/refund/dispute text and the current placeholder/broken legal links need legal/accounting review based on the closed B01 policy and recorded supplier identity.                                                                                                                                                                                                               | B15                   |
+
+### LRC-PAY-001 enabled-release containment supplement — 2026-09-25
+
+| Field | Record |
+| --- | --- |
+| Issue ID | LRC-PAY-001; shared work packages B03/B07 |
+| Date observed | 2026-09-25 |
+| Exact Git SHA | `e8974ec34b919ceab37bdbd7e7379f96f3abce99`; release-policy change introduced after B03 in `da17c0df` |
+| Page or journey | Direct recurring Agency checkout/proof, finance review and subscription lifecycle under an enabled Paid MVP release |
+| URL | `billing.startManualEftCheckout`, `billing.createCheckoutSession`, `billing.submitPaymentProof`, `billing.admin.reviewManualPayment`; source/pure-policy review, no hosted mutation |
+| User role | Agency administrator, authorized finance reviewer; persisted-plan authority required in addition to role |
+| Viewport or device | Not applicable: server-policy reproduction and source review |
+| Current behaviour | Generic product-less gate returns true with any approved paid product enabled. Retained recurring and unknown-plan branches use it as though it remained closed. |
+| Expected behaviour | Only exact approved product/owner combinations may create or mutate paid commercial state; unsupported plans fail closed in production. |
+| Evidence reference | [Senior finding](23-paid-mvp-senior-reconciliation-2026-09-25.md#3-blocking-code-finding-product-less-commercial-gate), [read-only reproduction/result](evidence/paid-mvp-audit-2026-09-25/productless-gate-result.json) |
+| Severity | L1: unsupported commercial writes become reachable at activation; no current production exploitation claimed |
+| Owning engine | Canonical billing / paid-release security |
+| Launch decision | Fix within B03; consume shared evidence in B07. Do not enable release first. |
+| Approved implementation branch/worktree | Pending next bounded assignment; this branch is audit/reconciliation only |
+| Pull request or commit | Finding in candidate PR #580; correction pending |
+| Integrated verification | Pending; candidate is not on main |
+| Production verification | Pending; no payment/entitlement mutation performed |
+| Status | OPEN — senior review failed |
+| Notes | B01 policy remains closed. Retain proven fixed terms, account ownership and custody. Reject unsupported persisted plans; verify production-mode negative cases. |
 
 ### LRC-MEM-001
 

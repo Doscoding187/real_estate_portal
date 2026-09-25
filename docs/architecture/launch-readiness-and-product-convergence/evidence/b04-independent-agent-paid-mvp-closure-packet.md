@@ -1,5 +1,8 @@
 # B04 Independent Agent Paid MVP Closure Packet
 
+> **Senior review 2026-09-25:** ACCEPT / CLOSED for the B04 application work package; shared release/provider gates remain open.
+> Current authority: [central register](../03-launch-register.md#paid-mvp-working-disposition--2026-09-25). The packet below preserves its original execution claims.
+
 ## A. Status
 
 **B04 — EVIDENCE PASS — REVIEW PENDING.**
