@@ -12,7 +12,8 @@ The six B06 launch-critical findings are corrected and the joined Developer paid
 | --- | --- |
 | Branch | feat/b06-developer-paid-mvp |
 | Worktree | /home/edwardspc/Desktop/Dev/worktrees/property-listify-b06-developer-paid-mvp |
-| Starting HEAD / B05 authority | e8b813917268d9a707ecb31e8261be5a585c8c18 |
+| Accepted B06 source candidate / starting HEAD | f686e8c4ae3e956a4f98cc1e7c4e2947fddf1778 |
+| B05 authority parent | e8b813917268d9a707ecb31e8261be5a585c8c18 |
 | Merge base | e8b813917268d9a707ecb31e8261be5a585c8c18 |
 | B03 / B04 / B05 ancestry | c96bfb5ef628633e0008cd6b4e94fa29c434746e / 6ace317eb20220a790cc0ce750e03558dbe34898 / e8b813917268d9a707ecb31e8261be5a585c8c18 |
 | Ancestry proof | git merge-base --is-ancestor succeeded for B03, B04, and B05 before implementation and commit. |
@@ -187,7 +188,7 @@ playwright.b06-developer-paid-mvp.config.ts and e2e/b06/developer-paid-mvp.spec.
 - **Schema and migrations:** none. Existing B03 organisation, billable account, invoice/payment/subscription/term, publisher, development, unit, and enquiry models remain authoritative.
 - **Prepared data:** canonical reference geography, Launch Access foundation, controlled scenario, and privileged reviewer/finance fixtures were prepared through Database Authority.
 - **Disposable state created:** new Developer principal, generated verification, pending organisation, membership, publisher, invoice, proof, verified payment, organisation term, development, aggregate unit, confirmed media, moderation, public discovery, enquiry, operational history, and scoped expiry.
-- **Terminal mutation:** only the run-owned subscription was expired through an exact-target governed disposable operation after application unpublish of the same run-owned development.
+- **Terminal mutation:** the exact run-owned subscription was expired through a governed disposable operation while its approved development still had `isPublished=1`. Public search/detail withdrawal and fresh-enquiry denial were asserted before any unpublish. Only after those assertions did the app unpublish; a fresh publication replay then returned 403 and history remained.
 - **Protected resources:** none touched.
 
 ## K. Joined browser evidence and controlled substitutions
@@ -196,9 +197,9 @@ playwright.b06-developer-paid-mvp.config.ts and e2e/b06/developer-paid-mvp.spec.
 pnpm test:browser:authority -- --config=playwright.b06-developer-paid-mvp.config.ts
 ~~~
 
-**PASS: 1 browser journey in 1.4 minutes** on target fingerprint 46f7559f85952d40.
+**Current run: PASS, 1 browser journey in 2.0 minutes (107,167 ms test body) on target fingerprint 46f7559f85952d40.** The complete sanitized report is `b06-developer-paid-mvp-browser-report-2026-09-25.json`; it records all 370 steps and browser diagnostics.
 
-The browser starts its own frontend/backend processes with reuseExistingServer false, uses real sessions/routes, and does not seed a paid, published, or completed Developer. It captures an actual application-generated verification message only to a mode-0600 JSONL file under /tmp; raw verification URLs/tokens are neither queried from SQL nor committed. B10 is controlled transport capture, not a production provider. B11 is the real local storage reserve/upload/confirmation/attach path. Finance/reviewer actions use governed privileged fixtures; terminal expiry is limited to the run-owned disposable term.
+The browser starts its own frontend/backend processes with reuseExistingServer false, uses real sessions/routes, and does not seed a paid, published, or completed Developer. It captures an actual application-generated verification message only to a mode-0600 JSONL file under /tmp; raw verification URLs/tokens are neither queried from SQL nor committed. B10 is controlled transport capture, not a production provider. B11 is the real local storage reserve/upload/confirmation/attach path. Finance/reviewer actions use governed privileged fixtures; terminal expiry is limited to the run-owned disposable term. Expiry assertions confirm the term is expired while the approved development remains published, then prove fresh discovery/detail/enquiry withdrawal before app unpublish.
 
 ## L. Security negatives
 
@@ -216,7 +217,7 @@ The browser starts its own frontend/backend processes with reuseExistingServer f
 
 | Command | Result |
 | --- | --- |
-| pnpm test:browser:authority -- --config=playwright.b06-developer-paid-mvp.config.ts | PASS; 1 joined browser journey in 1.4 minutes. |
+| pnpm test:browser:authority -- --config=playwright.b06-developer-paid-mvp.config.ts | Current run PASS; 1 joined journey, all 370 steps passed, zero skipped, 107,167 ms body. See 2026-09-25 complete sanitized browser report. |
 | pnpm test:authority -- server/__tests__/integration.developer-actor-resolution.test.ts server/__tests__/integration.developer-lead-assignment-authority.test.ts server/__tests__/integration.developer-media-authority.test.ts server/__tests__/integration.development-publication-lifecycle.test.ts | PASS; 4 files, 31 tests. |
 | pnpm test:authority -- server/__tests__/commercial-launch-access-s4.integration.test.ts server/__tests__/developer.subscription-commercial.contract.test.ts | PASS; 2 files, 13 tests. |
 | pnpm vitest run setup/wizard/payload/media focused files | PASS; 46 tests and 3 pre-existing skipped refactor tests. |
@@ -250,3 +251,52 @@ No B06-owned P0 or P1 remains.
 ## P. Proposed disposition
 
 B06 is ready for independent senior closure review. It is not merged to main, and this packet does not claim senior closure.
+
+## Q. Current B06 completion run — 2026-09-25
+
+### Source, dependency, and target identity
+
+- Dedicated task worktree: `/home/edwardspc/Desktop/Dev/worktrees/property-listify-b06-developer-paid-mvp`, branch `feat/b06-developer-paid-mvp`.
+- Clean starting source candidate: `f686e8c4ae3e956a4f98cc1e7c4e2947fddf1778`; its parent is accepted B05 `e8b813917268d9a707ecb31e8261be5a585c8c18`. B03 `c96bfb5ef628633e0008cd6b4e94fa29c434746e`, B04 `6ace317eb20220a790cc0ce750e03558dbe34898`, and B05 are ancestors of the candidate.
+- `pnpm --version` was 10.4.1; `pnpm install --frozen-lockfile` passed.
+- Database Authority status passed against exact worktree-owned disposable target `mysql://127.0.0.1:3307/listify_wt_b06_developer_paid_mvp_b7611429cb57`, fingerprint `46f7559f85952d402c6eade3482914ed2b658793db44cddf082e330e7c847466`. Migration head is `0090_retire_disconnected_boost_campaigns.sql`, manifest digest `a511e70ae06ffbae4027cf02b1de8cc0f586ff7c23cb7cb11a0990606cf728ed`; status was manifest-head-ready and schema-congruent.
+- Canonical reference/foundation/scenario and PLE reviewer fixtures were prepared and verified. The bare `pnpm db:scenario:verify` invocation was refused by the test-environment gate without a DB attempt; the repository-governed `NODE_ENV=test APP_ENV=test pnpm db:scenario:verify` then passed for `search-to-lead-v5`, including Gauteng, Johannesburg, Sandton, discovery, and enquiry prerequisites. This was an environment-gate correction, not a Database Authority failure.
+
+### Gauteng diagnosis
+
+The reported province-selector crash/timeout did not reproduce. In the current browser run, organisation setup selected Gauteng in 1,511 ms and development location selected Gauteng in 1,446 ms; the option clicks themselves completed in 566 ms and 621 ms. All 370 browser steps passed, with zero skipped steps, zero failed steps, and zero uncaught page errors.
+
+Fixture evidence is positive: the governed scenario verifier found the required Gauteng/Johannesburg/Sandton geography and public discovery/enquiry prerequisites. Browser/environment evidence records local Google Maps `BillingNotEnabledMapError`, 74 failed requests (58 analytics collection requests, 11 Google Maps requests, one login transition, and four app API requests aborted during route transitions), and three expected HTTP errors: pre-verification login 401, pre-profile `developer.getProfile` 404, and post-expiry publication replay 403. There were no 5xx responses. These events did not prevent either province selection or the journey. The report does not establish a causal link between the local Maps billing configuration and the earlier reported timeout. No product defect was reproduced, so no runtime product code was changed. There were also 9 console-error entries and no uncaught page errors; the full event records are in the sanitized report.
+
+### Current journey and expiry acceptance mapping
+
+The exact browser command was:
+
+~~~sh
+pnpm test:browser:authority -- --config=playwright.b06-developer-paid-mvp.config.ts
+~~~
+
+It passed on Chromium `145.0.7632.6`, Node `v22.22.3`, Linux: registration and real verification; distinct organisation reviewer approval; one organisation-owned once-off invoice and finance-verified 90-day access; mounted development, aggregate unit, and confirmed hero/gallery/floor-plan authoring; independent moderation; public discovery/detail; unit enquiry; same-organisation self-assignment, follow-up, activity and retained history.
+
+The expiry proof now checks the run-owned term and development before expiry (`active`, approved, `isPublished=1`) and verifies the development remains publicly discoverable and directly addressable. After expiring only that exact organisation-owned subscription, the test confirms the term is expired while the development remains approved and `isPublished=1`, then verifies fresh search excludes it, direct detail is not found, and a fresh enquiry returns 404. Only after these withdrawal assertions does the app unpublish it; publication replay then returns 403. The final database assertions retain the organisation, membership, publisher, development, unit inventory, lead, and activity/follow-up history. Thus unpublishing did not establish the expiry withdrawal.
+
+An interim expiry assertion attempted to replay publication on an already-published development and received 409 because the publication service reports the duplicate before evaluating access. That was a test-ordering mismatch, not an expiry defect. The final sequence proves withdrawal while `isPublished=1`, then unpublishes only after the withdrawal checks, and confirms a fresh publication is denied with 403.
+
+The authority regression command passed with 4 files and 31 tests in 26.90 seconds. It proves zero/one/multiple organisation resolution and fail-closed ambiguity; same-organisation assignment and cross-organisation/Agency/suspended/unrelated denial; signed media ownership, confirmation, scope and expiry; and publication lifecycle expiry that removes public eligibility while retaining the approved development.
+
+### Environment substitutions and durable report
+
+B10 verification email used a local private JSONL capture (application-generated message; private URL/token excluded from shared artifacts). B11 media used the real local filesystem reserve/upload/confirmation path, not hosted durable storage. Reviewer and finance actions used the local governed PLE fixtures. Google Maps billing was disabled in this local environment. These are explicit local substitutes; no production provider was contacted.
+
+The complete sanitized run report, including every nested Playwright step and all diagnostic events, is `b06-developer-paid-mvp-browser-report-2026-09-25.json`. The authority result and per-file acceptance mapping are `b06-developer-paid-mvp-authority-regressions-2026-09-25.json`. The report omits entered values, email addresses, URL query values, credential assignments, request identifiers, and local path prefixes. Its checksums, plus the updated browser spec checksum, are recorded in `b06-developer-paid-mvp-SHA256SUMS-2026-09-25.txt`.
+
+| Artifact | SHA-256 |
+| --- | --- |
+| `e2e/b06/developer-paid-mvp.spec.ts` | `4ed246ae0b400010e3f7bba6ac5ff75cfa2d4554d7ed657fb671a28bff848c5f` |
+| Sanitized complete browser report JSON | `4fac64b841edce281be8cedca068246a2dd220aef220b386879203039e806221` |
+| Authority regression result JSON | `255b19175d012834400cc8e025ba38df241265e442c0855389a4f12775f933f9` |
+| SHA256SUMS manifest | `c79cb2334757b807f9c14d40c0f595d5cf19a9d632fa49e18875bf45c0797f35` |
+
+After verification, the exact B06 disposable database was disposed with its emitted acknowledgement; the Database Authority service was cleanly stopped through its validated Unix socket, recovery reported a safe no-op, and service status confirmed stopped. The exact B06 worktree media namespace and private browser/email/report artifacts were removed; 390 media/object-metadata files were removed from that namespace.
+
+The only B06-owned source change after the accepted candidate is the browser acceptance spec: it instruments redacted browser diagnostics and corrects the expiry order/assertions. There is no runtime product change from this investigation. No B07 final review, merge, deployment, or production activation is claimed.

@@ -1,0 +1,5563 @@
+{
+  "command": "pnpm test:browser:authority -- --config=playwright.b06-developer-paid-mvp.config.ts",
+  "result": "passed",
+  "terminalSummary": "1 passed (2.0m); test body 107167ms (about 1.8m)",
+  "sourceIdentity": {
+    "branch": "feat/b06-developer-paid-mvp",
+    "sourceHead": "f686e8c4ae3e956a4f98cc1e7c4e2947fddf1778",
+    "databaseTargetFingerprint": "46f7559f85952d402c6eade3482914ed2b658793db44cddf082e330e7c847466"
+  },
+  "test": {
+    "title": "registers, verifies, establishes and approves a Developer organisation before payment",
+    "project": "Desktop Chrome",
+    "status": "passed",
+    "durationMs": 107167,
+    "startedAtUtc": "2026-09-25T17:47:56.168Z",
+    "retry": 0,
+    "stepCount": 370,
+    "stepsSkipped": 0,
+    "stepsFailed": 0,
+    "errors": [],
+    "steps": [
+      {
+        "title": "Before Hooks",
+        "durationMs": 517,
+        "outcome": "passed",
+        "children": [
+          {
+            "title": "beforeAll hook",
+            "durationMs": 159,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Fixture \"browser\"",
+            "durationMs": 213,
+            "outcome": "passed",
+            "children": [
+              {
+                "title": "Launch browser",
+                "durationMs": 206,
+                "outcome": "passed",
+                "children": []
+              }
+            ]
+          },
+          {
+            "title": "Fixture \"context\"",
+            "durationMs": 26,
+            "outcome": "passed",
+            "children": [
+              {
+                "title": "Create context",
+                "durationMs": 14,
+                "outcome": "passed",
+                "children": []
+              }
+            ]
+          },
+          {
+            "title": "Fixture \"page\"",
+            "durationMs": 102,
+            "outcome": "passed",
+            "children": [
+              {
+                "title": "Create page",
+                "durationMs": 99,
+                "outcome": "passed",
+                "children": []
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "title": "Create context",
+        "durationMs": 11,
+        "outcome": "passed",
+        "children": []
+      },
+      {
+        "title": "Create page",
+        "durationMs": 56,
+        "outcome": "passed",
+        "children": []
+      },
+      {
+        "title": "Developer-only commercial surface and real registration",
+        "durationMs": 25076,
+        "outcome": "passed",
+        "children": [
+          {
+            "title": "Navigate to \"/advertise/sell/developers\"",
+            "durationMs": 13099,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBeVisible\" getByTestId('developer-launch-access-card')",
+            "durationMs": 1723,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBeVisible\" getByText(/R\\s?1[\\s,]?499/).first()",
+            "durationMs": 423,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBeVisible\" getByText(/once-off/i).first()",
+            "durationMs": 22,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBeVisible\" getByText(/90 days/i).first()",
+            "durationMs": 32,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBeVisible\" getByText(/no automatic renewal/i).first()",
+            "durationMs": 23,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"not toContainText\" getByTestId('developer-launch-access-card')",
+            "durationMs": 8,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toHaveCount\" getByRole('link', { name: /PayFast|card payment|monthly subscription/i })",
+            "durationMs": 30,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toHaveCount\" getByRole('button', { name: /PayFast|card payment|monthly subscription/i })",
+            "durationMs": 15,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Click getByTestId('developer-launch-access-card').getByRole('link')",
+            "durationMs": 257,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toHaveURL\"",
+            "durationMs": 3512,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Fill \"[VALUE REDACTED]\" getByRole('dialog').locator('input[name=\"name\"]')",
+            "durationMs": 1192,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Fill \"[VALUE REDACTED]\" getByRole('dialog').locator('input[name=\"email\"]')",
+            "durationMs": 65,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Fill \"[VALUE REDACTED]\" getByRole('dialog').locator('input[name=\"password\"]')",
+            "durationMs": 32,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Fill \"[VALUE REDACTED]\" getByRole('dialog').locator('input[name=\"confirmPassword\"]')",
+            "durationMs": 36,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Wait for event \"response\"",
+            "durationMs": 646,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Click getByRole('dialog').getByRole('button', { name: 'Continue to company onboarding' })",
+            "durationMs": 531,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBe\"",
+            "durationMs": 0,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Navigate to \"/login?[QUERY REDACTED]\"",
+            "durationMs": 1010,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Fill \"[VALUE REDACTED]\" getByRole('dialog', { name: 'Welcome back' }).getByPlaceholder('[EMAIL REDACTED]')",
+            "durationMs": 803,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Fill \"[VALUE REDACTED]\" getByRole('dialog', { name: 'Welcome back' }).getByPlaceholder('Enter your password')",
+            "durationMs": 63,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Wait for event \"response\"",
+            "durationMs": 720,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Click getByRole('dialog', { name: 'Welcome back' }).getByRole('button', { name: 'Sign in' })",
+            "durationMs": 694,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toContain\"",
+            "durationMs": 14,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"poll toBe\"",
+            "durationMs": 6,
+            "outcome": "passed",
+            "children": [
+              {
+                "title": "Expect \"toBe\"",
+                "durationMs": 1,
+                "outcome": "passed",
+                "children": []
+              }
+            ]
+          },
+          {
+            "title": "Expect \"toBe\"",
+            "durationMs": 0,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBe\"",
+            "durationMs": 0,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBe\"",
+            "durationMs": 0,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Navigate to \"/api/auth/verify-email?[QUERY REDACTED]\"",
+            "durationMs": 1070,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toHaveURL\"",
+            "durationMs": 125,
+            "outcome": "passed",
+            "children": []
+          }
+        ]
+      },
+      {
+        "title": "Mounted organisation setup creates exactly one pending organisation and publisher",
+        "durationMs": 10130,
+        "outcome": "passed",
+        "children": [
+          {
+            "title": "Expect \"toBeVisible\" getByRole('heading', { name: 'Developer Registration' })",
+            "durationMs": 2360,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Fill \"[VALUE REDACTED]\" getByPlaceholder('Enter your company name')",
+            "durationMs": 558,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Fill \"[VALUE REDACTED]\" getByPlaceholder('Describe your company\\'s focus and expertise...')",
+            "durationMs": 528,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBeVisible\" getByText('Select your primary focus', { exact: true })",
+            "durationMs": 17,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Click getByText('Select your primary focus', { exact: true })",
+            "durationMs": 373,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Click getByRole('option', { name: 'Residential Development', exact: true })",
+            "durationMs": 672,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Click getByRole('button', { name: 'Next Step', exact: true })",
+            "durationMs": 400,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Fill \"[VALUE REDACTED]\" getByPlaceholder('[EMAIL REDACTED]')",
+            "durationMs": 58,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Fill \"[VALUE REDACTED]\" getByPlaceholder('+27 11 123 4567')",
+            "durationMs": 130,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Fill \"[VALUE REDACTED]\" getByPlaceholder('123 Business Street, Business Park')",
+            "durationMs": 192,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Organisation geography selects Gauteng",
+            "durationMs": 1511,
+            "outcome": "passed",
+            "children": [
+              {
+                "title": "Fill \"[VALUE REDACTED]\" getByPlaceholder('Cape Town')",
+                "durationMs": 371,
+                "outcome": "passed",
+                "children": []
+              },
+              {
+                "title": "Expect \"toBeVisible\" getByText('Select province', { exact: true })",
+                "durationMs": 34,
+                "outcome": "passed",
+                "children": []
+              },
+              {
+                "title": "Click getByText('Select province', { exact: true })",
+                "durationMs": 519,
+                "outcome": "passed",
+                "children": []
+              },
+              {
+                "title": "Click getByRole('option', { name: 'Gauteng', exact: true })",
+                "durationMs": 566,
+                "outcome": "passed",
+                "children": []
+              }
+            ]
+          },
+          {
+            "title": "Click getByRole('button', { name: 'Next Step', exact: true })",
+            "durationMs": 492,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Click getByRole('button', { name: 'Select Residential specialization', exact: true })",
+            "durationMs": 939,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Click getByRole('button', { name: 'Next Step', exact: true })",
+            "durationMs": 632,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Check getByLabel(/I agree to the terms and conditions/i)",
+            "durationMs": 326,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Wait for event \"response\"",
+            "durationMs": 661,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Click getByRole('button', { name: /Submit.*Application/i })",
+            "durationMs": 548,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBe\"",
+            "durationMs": 1,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toHaveURL\"",
+            "durationMs": 64,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toMatchObject\"",
+            "durationMs": 1,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBeGreaterThan\"",
+            "durationMs": 1,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBeGreaterThan\"",
+            "durationMs": 1,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBe\"",
+            "durationMs": 1,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toMatchObject\"",
+            "durationMs": 37,
+            "outcome": "passed",
+            "children": []
+          }
+        ]
+      },
+      {
+        "title": "A distinct privileged reviewer approves the organisation without creating paid access",
+        "durationMs": 7412,
+        "outcome": "passed",
+        "children": [
+          {
+            "title": "Navigate to \"/login?[QUERY REDACTED]\"",
+            "durationMs": 2313,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBeVisible\" getByRole('dialog', { name: 'Welcome back' })",
+            "durationMs": 839,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Fill \"[VALUE REDACTED]\" getByRole('dialog', { name: 'Welcome back' }).getByPlaceholder('[EMAIL REDACTED]')",
+            "durationMs": 143,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Fill \"[VALUE REDACTED]\" getByRole('dialog', { name: 'Welcome back' }).getByPlaceholder('Enter your password')",
+            "durationMs": 108,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Wait for event \"response\"",
+            "durationMs": 899,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Click getByRole('dialog', { name: 'Welcome back' }).getByRole('button', { name: 'Sign in' })",
+            "durationMs": 789,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBe\"",
+            "durationMs": 1,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toHaveURL\"",
+            "durationMs": 491,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBeVisible\" getByRole('heading', { name: 'Developers' })",
+            "durationMs": 2128,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBeVisible\" getByText('B06 Developer 5d8210f8', { exact: true }).locator('xpath=ancestor::div[.//button[normalize-space()=\"Approve\"]][1]')",
+            "durationMs": 17,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Wait for event \"response\"",
+            "durationMs": 284,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Click getByText('B06 Developer 5d8210f8', { exact: true }).locator('xpath=ancestor::div[.//button[normalize-space()=\"Approve\"]][1]').getByRole('button', { name: 'Approve', exact: true })",
+            "durationMs": 101,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBe\"",
+            "durationMs": 0,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBeVisible\" getByText('Developer approved successfully')",
+            "durationMs": 90,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBe\"",
+            "durationMs": 1,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBe\"",
+            "durationMs": 2,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBe\"",
+            "durationMs": 0,
+            "outcome": "passed",
+            "children": []
+          }
+        ]
+      },
+      {
+        "title": "Accept dialog",
+        "durationMs": 4,
+        "outcome": "passed",
+        "children": []
+      },
+      {
+        "title": "The approved organisation issues and resumes one exact Developer Launch Access invoice",
+        "durationMs": 5171,
+        "outcome": "passed",
+        "children": [
+          {
+            "title": "Navigate to \"/developer/plans\"",
+            "durationMs": 927,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBeVisible\" getByRole('heading', { name: 'Scale Your Property Development Business' })",
+            "durationMs": 1083,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBeVisible\" getByText('Developer Launch Access', { exact: true })",
+            "durationMs": 4,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBeVisible\" getByText(/R\\s?1[\\s,]?499/).first()",
+            "durationMs": 5,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBeVisible\" getByText('Paid Launch Access · 90 days', { exact: true })",
+            "durationMs": 5,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBeEnabled\" getByRole('button', { name: 'Request Launch Access invoice', exact: true })",
+            "durationMs": 5,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Click getByRole('button', { name: 'Request Launch Access invoice', exact: true })",
+            "durationMs": 192,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBeVisible\" getByRole('dialog').getByText(/once-off for 90 days and does not renew automatically/i)",
+            "durationMs": 6,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Wait for event \"response\"",
+            "durationMs": 600,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Click getByRole('dialog').getByRole('button', { name: 'Continue', exact: true })",
+            "durationMs": 459,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBe\"",
+            "durationMs": 0,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toHaveURL\"",
+            "durationMs": 55,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toMatchObject\"",
+            "durationMs": 3,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Navigate to \"/developer/plans\"",
+            "durationMs": 474,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Click getByRole('button', { name: 'Request Launch Access invoice', exact: true })",
+            "durationMs": 1349,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Wait for event \"response\"",
+            "durationMs": 408,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Click getByRole('dialog').getByRole('button', { name: 'Continue', exact: true })",
+            "durationMs": 324,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBe\"",
+            "durationMs": 0,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBe\"",
+            "durationMs": 0,
+            "outcome": "passed",
+            "children": []
+          }
+        ]
+      },
+      {
+        "title": "Private EFT proof stays under finance review until a distinct finance approval",
+        "durationMs": 4641,
+        "outcome": "passed",
+        "children": [
+          {
+            "title": "Navigate to \"/developer/subscription\"",
+            "durationMs": 532,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBeVisible\" getByText('Developer Launch Access invoice', { exact: true })",
+            "durationMs": 1201,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Fill \"[VALUE REDACTED]\" locator('#developer-payment-amount')",
+            "durationMs": 28,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Fill \"[VALUE REDACTED]\" locator('#developer-bank-reference')",
+            "durationMs": 69,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Fill \"[VALUE REDACTED]\" locator('#developer-payer-name')",
+            "durationMs": 102,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Set input files locator('#developer-proof-file')",
+            "durationMs": 58,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Wait for event \"response\"",
+            "durationMs": 221,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Click getByRole('button', { name: 'Submit proof for review', exact: true })",
+            "durationMs": 133,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBe\"",
+            "durationMs": 0,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBeVisible\" getByText('Proof submitted for finance review', { exact: true })",
+            "durationMs": 146,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toMatchObject\"",
+            "durationMs": 2,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Navigate to \"/admin/finance\"",
+            "durationMs": 629,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBeVisible\" getByRole('heading', { name: 'Subscription Management' })",
+            "durationMs": 548,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Click getByRole('tab', { name: /payment verification/i })",
+            "durationMs": 211,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBeVisible\" getByRole('row').filter({ hasText: '[EMAIL REDACTED]' }).first()",
+            "durationMs": 61,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Click getByRole('row').filter({ hasText: '[EMAIL REDACTED]' }).first().getByRole('button', { name: 'Approve', exact: true })",
+            "durationMs": 203,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Fill \"[VALUE REDACTED]\" getByLabel('Verified amount in cents')",
+            "durationMs": 85,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Fill \"[VALUE REDACTED]\" getByLabel('Finance reconciliation note')",
+            "durationMs": 64,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Wait for event \"response\"",
+            "durationMs": 348,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Click getByRole('button', { name: 'Confirm finance approval', exact: true })",
+            "durationMs": 140,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBe\"",
+            "durationMs": 1,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBeVisible\" getByText('Finance review recorded', { exact: true })",
+            "durationMs": 48,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toMatchObject\"",
+            "durationMs": 1,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBe\"",
+            "durationMs": 1,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBeGreaterThan\"",
+            "durationMs": 0,
+            "outcome": "passed",
+            "children": []
+          }
+        ]
+      },
+      {
+        "title": "The paid Developer authors a residential development, confirmed media, and aggregate unit inventory through the mounted wizard",
+        "durationMs": 22190,
+        "outcome": "passed",
+        "children": [
+          {
+            "title": "Navigate to \"/developer/create-development\"",
+            "durationMs": 722,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBeVisible\" getByRole('heading', { name: 'Project Setup', exact: true })",
+            "durationMs": 1029,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Click getByText('Residential Development', { exact: true })",
+            "durationMs": 142,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Click getByText('For Sale', { exact: true })",
+            "durationMs": 137,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Click getByRole('button', { name: 'Start Wizard', exact: true })",
+            "durationMs": 247,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBeVisible\" getByRole('heading', { name: 'Configuration', exact: true })",
+            "durationMs": 6,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Click getByText('Apartment Complex', { exact: true })",
+            "durationMs": 181,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Click getByText('Apartment Block', { exact: true })",
+            "durationMs": 1049,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Click getByRole('button', { name: 'Next', exact: true })",
+            "durationMs": 291,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBeVisible\" getByRole('heading', { name: 'Identity & Market', exact: true }).first()",
+            "durationMs": 9,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Fill \"[VALUE REDACTED]\" locator('#name')",
+            "durationMs": 121,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Fill \"[VALUE REDACTED]\" locator('#subtitle')",
+            "durationMs": 114,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBeVisible\" getByText('Select development status', { exact: true })",
+            "durationMs": 21,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Click getByText('Select development status', { exact: true })",
+            "durationMs": 445,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Click getByRole('option', { name: 'Selling', exact: true })",
+            "durationMs": 308,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Fill \"[VALUE REDACTED]\" locator('#launchDate')",
+            "durationMs": 130,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Fill \"[VALUE REDACTED]\" locator('#completionDate')",
+            "durationMs": 244,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Check locator('#ownership-full-title')",
+            "durationMs": 153,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Click getByRole('button', { name: 'Next', exact: true })",
+            "durationMs": 224,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBeVisible\" getByRole('heading', { name: 'Location', exact: true }).first()",
+            "durationMs": 11,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Development location selects Gauteng",
+            "durationMs": 1446,
+            "outcome": "passed",
+            "children": [
+              {
+                "title": "Fill \"[VALUE REDACTED]\" locator('#latitude')",
+                "durationMs": 102,
+                "outcome": "passed",
+                "children": []
+              },
+              {
+                "title": "Fill \"[VALUE REDACTED]\" locator('#longitude')",
+                "durationMs": 95,
+                "outcome": "passed",
+                "children": []
+              },
+              {
+                "title": "Fill \"[VALUE REDACTED]\" locator('#address')",
+                "durationMs": 108,
+                "outcome": "passed",
+                "children": []
+              },
+              {
+                "title": "Fill \"[VALUE REDACTED]\" locator('#city')",
+                "durationMs": 102,
+                "outcome": "passed",
+                "children": []
+              },
+              {
+                "title": "Fill \"[VALUE REDACTED]\" locator('#suburb')",
+                "durationMs": 97,
+                "outcome": "passed",
+                "children": []
+              },
+              {
+                "title": "Expect \"toBeVisible\" getByText('Select Province', { exact: true })",
+                "durationMs": 20,
+                "outcome": "passed",
+                "children": []
+              },
+              {
+                "title": "Click getByText('Select Province', { exact: true })",
+                "durationMs": 281,
+                "outcome": "passed",
+                "children": []
+              },
+              {
+                "title": "Click getByRole('option', { name: 'Gauteng', exact: true })",
+                "durationMs": 621,
+                "outcome": "passed",
+                "children": []
+              }
+            ]
+          },
+          {
+            "title": "Click getByRole('button', { name: 'Next', exact: true })",
+            "durationMs": 218,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBeVisible\" getByRole('heading', { name: 'Governance & Finances', exact: true }).first()",
+            "durationMs": 8,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Click getByRole('button', { name: 'Next', exact: true })",
+            "durationMs": 264,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBeVisible\" getByRole('heading', { name: 'Amenities & Features', exact: true }).first()",
+            "durationMs": 4,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Click getByRole('button', { name: 'Next', exact: true })",
+            "durationMs": 151,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBeVisible\" getByRole('heading', { name: 'Marketing Summary', exact: true }).first()",
+            "durationMs": 8,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Fill \"[VALUE REDACTED]\" getByPlaceholder('Describe the lifestyle, location benefits, and unique selling points...')",
+            "durationMs": 65,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Fill \"[VALUE REDACTED]\" getByPlaceholder('e.g. No Transfer Duty')",
+            "durationMs": 32,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Press \"Enter\" getByPlaceholder('e.g. No Transfer Duty')",
+            "durationMs": 73,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Fill \"[VALUE REDACTED]\" getByPlaceholder('e.g. No Transfer Duty')",
+            "durationMs": 107,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Press \"Enter\" getByPlaceholder('e.g. No Transfer Duty')",
+            "durationMs": 118,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Fill \"[VALUE REDACTED]\" getByPlaceholder('e.g. No Transfer Duty')",
+            "durationMs": 59,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Press \"Enter\" getByPlaceholder('e.g. No Transfer Duty')",
+            "durationMs": 86,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Click getByRole('button', { name: 'Next', exact: true })",
+            "durationMs": 147,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBeVisible\" getByRole('heading', { name: 'Media', exact: true }).first()",
+            "durationMs": 11,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Wait for event \"response\"",
+            "durationMs": 359,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Set input files locator('input[type=\"file\"]').first()",
+            "durationMs": 33,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBe\"",
+            "durationMs": 1,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBeVisible\" getByAltText('Hero')",
+            "durationMs": 81,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Click getByRole('button', { name: 'Next', exact: true })",
+            "durationMs": 1178,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBeVisible\" getByRole('heading', { name: 'Unit Types', exact: true }).first()",
+            "durationMs": 16,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Click getByRole('button', { name: 'Add Unit Type', exact: true })",
+            "durationMs": 1415,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBeVisible\" getByRole('dialog', { name: 'Add Unit Type' })",
+            "durationMs": 12,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Fill \"[VALUE REDACTED]\" getByRole('dialog', { name: 'Add Unit Type' }).getByPlaceholder('e.g. 2 Bedroom Garden Apartment')",
+            "durationMs": 244,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Fill \"[VALUE REDACTED]\" getByRole('dialog', { name: 'Add Unit Type' }).getByPlaceholder('Highlight unique features...')",
+            "durationMs": 175,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Fill \"[VALUE REDACTED]\" getByRole('dialog', { name: 'Add Unit Type' }).getByPlaceholder('e.g. 70')",
+            "durationMs": 139,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Click getByRole('dialog', { name: 'Add Unit Type' }).getByRole('button', { name: /Next: Pricing/i })",
+            "durationMs": 279,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Fill \"[VALUE REDACTED]\" getByRole('dialog', { name: 'Add Unit Type' }).getByPlaceholder('0')",
+            "durationMs": 138,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Click getByRole('dialog', { name: 'Add Unit Type' }).getByRole('button', { name: /Next: Media/i })",
+            "durationMs": 224,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Wait for event \"response\"",
+            "durationMs": 450,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Set input files getByRole('dialog', { name: 'Add Unit Type' }).locator('#unit-gallery-upload')",
+            "durationMs": 30,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBe\"",
+            "durationMs": 0,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Wait for event \"response\"",
+            "durationMs": 525,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Set input files getByRole('dialog', { name: 'Add Unit Type' }).locator('#floorplan-upload')",
+            "durationMs": 178,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBe\"",
+            "durationMs": 0,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBeVisible\" getByRole('dialog', { name: 'Add Unit Type' }).getByText('b06-unit-floorplan.png', { exact: true })",
+            "durationMs": 205,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Click getByRole('dialog', { name: 'Add Unit Type' }).getByRole('button', { name: /Next: Features/i })",
+            "durationMs": 660,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Click getByRole('dialog', { name: 'Add Unit Type' }).getByRole('button', { name: /Next: Stock/i })",
+            "durationMs": 235,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Fill \"[VALUE REDACTED]\" getByRole('dialog', { name: 'Add Unit Type' }).getByText('Available Units', { exact: true }).locator('..').locator('input')",
+            "durationMs": 108,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Click getByRole('dialog', { name: 'Add Unit Type' }).getByRole('button', { name: 'Save Unit Type', exact: true })",
+            "durationMs": 468,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBeVisible\" getByText('Two Bedroom Launch Apartment', { exact: true })",
+            "durationMs": 19,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Click getByRole('button', { name: 'Next', exact: true })",
+            "durationMs": 603,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBeVisible\" getByRole('heading', { name: 'Review & Submit', exact: true }).first()",
+            "durationMs": 7,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Wait for event \"response\"",
+            "durationMs": 313,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Click getByRole('button', { name: 'Save Draft', exact: true })",
+            "durationMs": 228,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBe\"",
+            "durationMs": 0,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBeVisible\" getByText('Draft saved', { exact: true })",
+            "durationMs": 142,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Navigate to \"/developer/drafts\"",
+            "durationMs": 719,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBeVisible\" getByRole('heading', { name: 'My Development Drafts', exact: true })",
+            "durationMs": 2182,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBeVisible\" getByText('B06 Developer 5d8210f8 Residences', { exact: true })",
+            "durationMs": 6,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Click getByRole('button', { name: 'Resume', exact: true })",
+            "durationMs": 156,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBeVisible\" getByRole('heading', { name: 'Review & Submit', exact: true })",
+            "durationMs": 14,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Click getByText('Marketing & Media', { exact: true }).locator('..').locator('..').getByRole('button', { name: 'Edit', exact: true })",
+            "durationMs": 343,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBeVisible\" getByRole('heading', { name: 'Marketing Summary', exact: true }).first()",
+            "durationMs": 6,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Press \"End\" getByPlaceholder('Describe the lifestyle, location benefits, and unique selling points...')",
+            "durationMs": 27,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Type \"[VALUE REDACTED]\" getByPlaceholder('Describe the lifestyle, location benefits, and unique selling points...')",
+            "durationMs": 1528,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Click getByRole('button', { name: 'Next', exact: true })",
+            "durationMs": 155,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBeVisible\" getByRole('heading', { name: 'Media', exact: true }).first()",
+            "durationMs": 10,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBeVisible\" getByAltText('Hero')",
+            "durationMs": 5,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Click getByRole('button', { name: 'Next', exact: true })",
+            "durationMs": 255,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBeVisible\" getByRole('heading', { name: 'Unit Types', exact: true }).first()",
+            "durationMs": 4,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBeVisible\" getByText('Two Bedroom Launch Apartment', { exact: true })",
+            "durationMs": 6,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Click getByRole('button', { name: 'Next', exact: true })",
+            "durationMs": 141,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBeVisible\" getByRole('heading', { name: 'Review & Submit', exact: true }).first()",
+            "durationMs": 9,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBeGreaterThan\"",
+            "durationMs": 4,
+            "outcome": "passed",
+            "children": []
+          }
+        ]
+      },
+      {
+        "title": "The Development is submitted and independently approved for public publication",
+        "durationMs": 4705,
+        "outcome": "passed",
+        "children": [
+          {
+            "title": "Click getByRole('button', { name: 'Submit for Review', exact: true })",
+            "durationMs": 188,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBeVisible\" getByRole('dialog', { name: 'Confirm Submission for Review' })",
+            "durationMs": 7,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Wait for event \"response\"",
+            "durationMs": 583,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Wait for event \"response\"",
+            "durationMs": 706,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Click getByRole('dialog', { name: 'Confirm Submission for Review' }).getByRole('button', { name: 'Confirm & Submit', exact: true })",
+            "durationMs": 430,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBe\"",
+            "durationMs": 0,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBe\"",
+            "durationMs": 0,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toContain\"",
+            "durationMs": 0,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"not toBe\"",
+            "durationMs": 0,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toHaveURL\"",
+            "durationMs": 41,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"poll toHaveLength\"",
+            "durationMs": 6,
+            "outcome": "passed",
+            "children": [
+              {
+                "title": "Expect \"toHaveLength\"",
+                "durationMs": 1,
+                "outcome": "passed",
+                "children": []
+              }
+            ]
+          },
+          {
+            "title": "Expect \"toMatchObject\"",
+            "durationMs": 0,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toContain\"",
+            "durationMs": 0,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBeGreaterThan\"",
+            "durationMs": 1,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toMatch\"",
+            "durationMs": 1,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Navigate to \"/admin/development-approvals\"",
+            "durationMs": 944,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBeVisible\" getByRole('heading', { name: 'Development Management', exact: true })",
+            "durationMs": 1154,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBeVisible\" getByRole('row').filter({ hasText: 'B06 Developer 5d8210f8 Residences' }).first()",
+            "durationMs": 123,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Click getByRole('row').filter({ hasText: 'B06 Developer 5d8210f8 Residences' }).first().getByRole('button', { name: 'Review Application', exact: true })",
+            "durationMs": 351,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBeVisible\" getByRole('dialog', { name: 'Review Development Application' }).getByText('Two Bedroom Launch Apartment', { exact: true })",
+            "durationMs": 82,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Click getByRole('dialog', { name: 'Review Development Application' }).getByRole('button', { name: 'Approve', exact: true })",
+            "durationMs": 348,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Wait for event \"response\"",
+            "durationMs": 584,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Click getByRole('dialog', { name: 'Review Development Application' }).getByRole('button', { name: 'Confirm Approval', exact: true })",
+            "durationMs": 487,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBe\"",
+            "durationMs": 1,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBeVisible\" getByText('Development approved and published successfully', { exact: true })",
+            "durationMs": 92,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toMatchObject\"",
+            "durationMs": 0,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toContain\"",
+            "durationMs": 3,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"not toBe\"",
+            "durationMs": 0,
+            "outcome": "passed",
+            "children": []
+          }
+        ]
+      },
+      {
+        "title": "Public discovery renders the approved Developer development and captures one unit enquiry",
+        "durationMs": 6984,
+        "outcome": "passed",
+        "children": [
+          {
+            "title": "Create context",
+            "durationMs": 29,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Create page",
+            "durationMs": 76,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Wait for event \"response\"",
+            "durationMs": 3232,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Navigate to \"/new-developments?[QUERY REDACTED]\"",
+            "durationMs": 2554,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBe\"",
+            "durationMs": 0,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBeVisible\" getByText('B06 Developer 5d8210f8 Residences', { exact: true })",
+            "durationMs": 395,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Click getByText('B06 Developer 5d8210f8 Residences', { exact: true })",
+            "durationMs": 163,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toHaveURL\"",
+            "durationMs": 13,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBeVisible\" getByRole('heading', { name: 'B06 Developer 5d8210f8 Residences', exact: true }).first()",
+            "durationMs": 1096,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBeVisible\" locator('p:visible').filter({ hasText: 'B06 Developer 5d8210f8' }).first()",
+            "durationMs": 54,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBeVisible\" getByText('Two Bedroom Launch Apartment', { exact: true })",
+            "durationMs": 23,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBeVisible\" getByText('6 available', { exact: true })",
+            "durationMs": 15,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"poll toBeGreaterThan\"",
+            "durationMs": 6,
+            "outcome": "passed",
+            "children": [
+              {
+                "title": "Query count locator('img[src*=\"/api/local-media/object\"]')",
+                "durationMs": 3,
+                "outcome": "passed",
+                "children": []
+              },
+              {
+                "title": "Expect \"toBeGreaterThan\"",
+                "durationMs": 0,
+                "outcome": "passed",
+                "children": []
+              }
+            ]
+          },
+          {
+            "title": "Wait for event \"request\"",
+            "durationMs": 987,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Click getByRole('button', { name: 'Request Callback', exact: true }).first()",
+            "durationMs": 354,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBeVisible\" getByRole('dialog', { name: 'Contact Sales Team' })",
+            "durationMs": 44,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Fill \"[VALUE REDACTED]\" getByRole('dialog', { name: 'Contact Sales Team' }).getByPlaceholder('Full name')",
+            "durationMs": 155,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Fill \"[VALUE REDACTED]\" getByRole('dialog', { name: 'Contact Sales Team' }).getByPlaceholder('Email address')",
+            "durationMs": 92,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Fill \"[VALUE REDACTED]\" getByRole('dialog', { name: 'Contact Sales Team' }).getByPlaceholder('Phone number')",
+            "durationMs": 62,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Fill \"[VALUE REDACTED]\" getByRole('dialog', { name: 'Contact Sales Team' }).getByPlaceholder('Message (optional)')",
+            "durationMs": 54,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Check getByRole('dialog', { name: 'Contact Sales Team' }).locator('#development-lead-consent')",
+            "durationMs": 100,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Click getByRole('dialog', { name: 'Contact Sales Team' }).getByRole('button', { name: 'Send Enquiry', exact: true })",
+            "durationMs": 108,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"not toBe\"",
+            "durationMs": 0,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "POST \"/api/trpc/developer.createLead?[QUERY REDACTED]\"",
+            "durationMs": 55,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBe\"",
+            "durationMs": 0,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toHaveCount\" getByRole('dialog', { name: 'Contact Sales Team' })",
+            "durationMs": 557,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Close context",
+            "durationMs": 18,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toMatchObject\"",
+            "durationMs": 0,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBeGreaterThan\"",
+            "durationMs": 1,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBeGreaterThan\"",
+            "durationMs": 1,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBe\"",
+            "durationMs": 0,
+            "outcome": "passed",
+            "children": []
+          }
+        ]
+      },
+      {
+        "title": "The canonical Developer operator assigns, contacts, notes, and schedules the retained enquiry",
+        "durationMs": 7868,
+        "outcome": "passed",
+        "children": [
+          {
+            "title": "Navigate to \"/developer/leads\"",
+            "durationMs": 782,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBeVisible\" getByRole('heading', { name: 'Leads Control Center', exact: true })",
+            "durationMs": 1148,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBeVisible\" getByText('B06 Prospect 5d8210f8', { exact: true }).first()",
+            "durationMs": 353,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Click getByText('B06 Prospect 5d8210f8', { exact: true }).first()",
+            "durationMs": 88,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Wait for event \"response\"",
+            "durationMs": 299,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Click getByRole('button', { name: 'Assign to Me', exact: true })",
+            "durationMs": 237,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBe\"",
+            "durationMs": 1,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"poll toEqual\"",
+            "durationMs": 9,
+            "outcome": "passed",
+            "children": [
+              {
+                "title": "Expect \"toEqual\"",
+                "durationMs": 3,
+                "outcome": "passed",
+                "children": []
+              }
+            ]
+          },
+          {
+            "title": "Click getByText('Transition Stage', { exact: true }).locator('..').getByRole('combobox')",
+            "durationMs": 487,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Click getByRole('option', { name: 'contacted', exact: true })",
+            "durationMs": 328,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Fill \"[VALUE REDACTED]\" getByText('Transition Stage', { exact: true }).locator('..').getByPlaceholder('Optional transition note...')",
+            "durationMs": 154,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Wait for event \"response\"",
+            "durationMs": 284,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Click getByText('Transition Stage', { exact: true }).locator('..').getByRole('button', { name: 'Move Lead', exact: true })",
+            "durationMs": 210,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBe\"",
+            "durationMs": 2,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Click getByRole('button', { name: /^Contacted/ })",
+            "durationMs": 385,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBeVisible\" getByText('B06 Prospect 5d8210f8', { exact: true }).first()",
+            "durationMs": 346,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Click getByText('B06 Prospect 5d8210f8', { exact: true }).first()",
+            "durationMs": 74,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Fill \"[VALUE REDACTED]\" getByText('Log Activity', { exact: true }).locator('..').getByPlaceholder('What happened?')",
+            "durationMs": 130,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Wait for event \"response\"",
+            "durationMs": 196,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Click getByText('Log Activity', { exact: true }).locator('..').getByRole('button', { name: 'Save Activity', exact: true })",
+            "durationMs": 121,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBe\"",
+            "durationMs": 0,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Click getByText('Next Action', { exact: true }).locator('..').getByRole('button', { name: 'Follow up in 2 days', exact: true })",
+            "durationMs": 270,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Wait for event \"response\"",
+            "durationMs": 446,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Click getByText('Next Action', { exact: true }).locator('..').getByRole('button', { name: 'Save Next Action', exact: true })",
+            "durationMs": 369,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBe\"",
+            "durationMs": 1,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Navigate to \"/developer/leads?[QUERY REDACTED]\"",
+            "durationMs": 732,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBeVisible\" getByText('B06 Prospect 5d8210f8', { exact: true }).first()",
+            "durationMs": 1290,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toMatchObject\"",
+            "durationMs": 0,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBeTruthy\"",
+            "durationMs": 1,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBeTruthy\"",
+            "durationMs": 0,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toContain\"",
+            "durationMs": 1,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toContain\"",
+            "durationMs": 1,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBeGreaterThanOrEqual\"",
+            "durationMs": 0,
+            "outcome": "passed",
+            "children": []
+          }
+        ]
+      },
+      {
+        "title": "A scoped expiry stops fresh publication and enquiry while retaining Developer business history",
+        "durationMs": 10512,
+        "outcome": "passed",
+        "children": [
+          {
+            "title": "Expect \"toMatchObject\"",
+            "durationMs": 1,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Create context",
+            "durationMs": 7,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Create page",
+            "durationMs": 65,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Wait for event \"response\"",
+            "durationMs": 1430,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Navigate to \"/new-developments?[QUERY REDACTED]\"",
+            "durationMs": 2610,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBe\"",
+            "durationMs": 0,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBeVisible\" getByText('B06 Developer 5d8210f8 Residences', { exact: true })",
+            "durationMs": 144,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Navigate to \"/development/b06-developer-5d8210f8-residences-rs2dvm\"",
+            "durationMs": 803,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBeVisible\" getByRole('heading', { name: 'B06 Developer 5d8210f8 Residences', exact: true }).first()",
+            "durationMs": 989,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Close context",
+            "durationMs": 22,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toMatchObject\"",
+            "durationMs": 0,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Create context",
+            "durationMs": 7,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Create page",
+            "durationMs": 69,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Wait for event \"response\"",
+            "durationMs": 1725,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Navigate to \"/new-developments?[QUERY REDACTED]\"",
+            "durationMs": 3412,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBe\"",
+            "durationMs": 0,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toHaveCount\" getByText('B06 Developer 5d8210f8 Residences', { exact: true })",
+            "durationMs": 54,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Navigate to \"/development/b06-developer-5d8210f8-residences-rs2dvm\"",
+            "durationMs": 877,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBeVisible\" getByRole('heading', { name: 'Development Not Found', exact: true })",
+            "durationMs": 677,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "POST \"/api/trpc/developer.createLead?[QUERY REDACTED]\"",
+            "durationMs": 54,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBe\"",
+            "durationMs": 0,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Close context",
+            "durationMs": 16,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Evaluate",
+            "durationMs": 103,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBe\"",
+            "durationMs": 0,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toMatchObject\"",
+            "durationMs": 1,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Evaluate",
+            "durationMs": 183,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBe\"",
+            "durationMs": 0,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toMatchObject\"",
+            "durationMs": 0,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBeGreaterThanOrEqual\"",
+            "durationMs": 1,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBe\"",
+            "durationMs": 0,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Expect \"toBeGreaterThanOrEqual\"",
+            "durationMs": 1,
+            "outcome": "passed",
+            "children": []
+          }
+        ]
+      },
+      {
+        "title": "Close context",
+        "durationMs": 40,
+        "outcome": "passed",
+        "children": []
+      },
+      {
+        "title": "After Hooks",
+        "durationMs": 2002,
+        "outcome": "passed",
+        "children": [
+          {
+            "title": "afterEach hook",
+            "durationMs": 6,
+            "outcome": "passed",
+            "children": [
+              {
+                "title": "Attach \"browser-diagnostics.json\"",
+                "durationMs": 3,
+                "outcome": "passed",
+                "children": []
+              }
+            ]
+          },
+          {
+            "title": "Fixture \"page\"",
+            "durationMs": 1,
+            "outcome": "passed",
+            "children": []
+          },
+          {
+            "title": "Fixture \"context\"",
+            "durationMs": 1952,
+            "outcome": "passed",
+            "children": [
+              {
+                "title": "Close context",
+                "durationMs": 1822,
+                "outcome": "passed",
+                "children": []
+              }
+            ]
+          },
+          {
+            "title": "afterAll hook",
+            "durationMs": 31,
+            "outcome": "passed",
+            "children": []
+          }
+        ]
+      }
+    ]
+  },
+  "runtime": {
+    "browser": "145.0.7632.6",
+    "node": "v22.22.3",
+    "platform": "linux"
+  },
+  "diagnostics": {
+    "uncaughtPageErrorCount": 0,
+    "consoleErrorCount": 9,
+    "requestFailureCount": 74,
+    "httpErrorResponseCount": 3,
+    "uncaughtPageErrors": [],
+    "consoleErrors": [
+      {
+        "context": "developer-owner",
+        "kind": "console-error",
+        "timeUtc": "2026-09-25T17:48:15.887Z",
+        "elapsedMs": 19797,
+        "journeyStep": "Developer-only commercial surface and real registration",
+        "pagePath": "/developer/plans",
+        "message": "[API Query Error] TRPCClientError: Network request failed before the API returned a response.\nRequest ID: [REDACTED]\nURL: http://localhost:5000/api/trpc/developer.getProfile,developer.getNewLeadCount,billing.commercialActivation?[QUERY REDACTED]\n\nMost likely causes:\n- API gateway / upstream failure\n- Backend process crash or restart\n- Temporary network interruption\n    at TRPCClientError2.from (http://localhost:5177/@fs<B06_WORKTREE>/node_modules/.vite/deps/chunk-TDWCZ5Y7.js?[QUERY REDACTED])\n    at http://localhost:5177/@fs<B06_WORKTREE>/node_modules/.vite/deps/chunk-TDWCZ5Y7.js?[QUERY REDACTED]"
+      },
+      {
+        "context": "developer-owner",
+        "kind": "console-error",
+        "timeUtc": "2026-09-25T17:48:15.893Z",
+        "elapsedMs": 19803,
+        "journeyStep": "Developer-only commercial surface and real registration",
+        "pagePath": "/developer/plans",
+        "message": "[API Query Error] TRPCClientError: Network request failed before the API returned a response.\nRequest ID: [REDACTED]\nURL: http://localhost:5000/api/trpc/developer.getProfile,developer.getNewLeadCount,billing.commercialActivation?[QUERY REDACTED]\n\nMost likely causes:\n- API gateway / upstream failure\n- Backend process crash or restart\n- Temporary network interruption\n    at TRPCClientError2.from (http://localhost:5177/@fs<B06_WORKTREE>/node_modules/.vite/deps/chunk-TDWCZ5Y7.js?[QUERY REDACTED])\n    at http://localhost:5177/@fs<B06_WORKTREE>/node_modules/.vite/deps/chunk-TDWCZ5Y7.js?[QUERY REDACTED]"
+      },
+      {
+        "context": "developer-owner",
+        "kind": "console-error",
+        "timeUtc": "2026-09-25T17:48:15.893Z",
+        "elapsedMs": 19803,
+        "journeyStep": "Developer-only commercial surface and real registration",
+        "pagePath": "/developer/plans",
+        "message": "[API Query Error] TRPCClientError: Network request failed before the API returned a response.\nRequest ID: [REDACTED]\nURL: http://localhost:5000/api/trpc/developer.getProfile,developer.getNewLeadCount,billing.commercialActivation?[QUERY REDACTED]\n\nMost likely causes:\n- API gateway / upstream failure\n- Backend process crash or restart\n- Temporary network interruption\n    at TRPCClientError2.from (http://localhost:5177/@fs<B06_WORKTREE>/node_modules/.vite/deps/chunk-TDWCZ5Y7.js?[QUERY REDACTED])\n    at http://localhost:5177/@fs<B06_WORKTREE>/node_modules/.vite/deps/chunk-TDWCZ5Y7.js?[QUERY REDACTED]"
+      },
+      {
+        "context": "developer-owner",
+        "kind": "console-error",
+        "timeUtc": "2026-09-25T17:48:20.662Z",
+        "elapsedMs": 24572,
+        "journeyStep": "Developer-only commercial surface and real registration",
+        "pagePath": "/login",
+        "message": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+      },
+      {
+        "context": "developer-owner",
+        "kind": "console-error",
+        "timeUtc": "2026-09-25T17:48:20.667Z",
+        "elapsedMs": 24577,
+        "journeyStep": "Developer-only commercial surface and real registration",
+        "pagePath": "/login",
+        "message": "[API] Error response: {error: Please verify your email address before logging in., code: [REDACTED], email: [EMAIL]}"
+      },
+      {
+        "context": "developer-owner",
+        "kind": "console-error",
+        "timeUtc": "2026-09-25T17:48:23.089Z",
+        "elapsedMs": 26999,
+        "journeyStep": "Mounted organisation setup creates exactly one pending organisation and publisher",
+        "pagePath": "/developer/setup",
+        "message": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+      },
+      {
+        "context": "developer-owner",
+        "kind": "console-error",
+        "timeUtc": "2026-09-25T17:48:23.102Z",
+        "elapsedMs": 27012,
+        "journeyStep": "Mounted organisation setup creates exactly one pending organisation and publisher",
+        "pagePath": "/developer/setup",
+        "message": "[API Query Error] TRPCClientError: Developer profile not found.\n    at TRPCClientError2.from (http://localhost:5177/@fs<B06_WORKTREE>/node_modules/.vite/deps/chunk-TDWCZ5Y7.js?[QUERY REDACTED])\n    at http://localhost:5177/@fs<B06_WORKTREE>/node_modules/.vite/deps/chunk-TDWCZ5Y7.js?[QUERY REDACTED]"
+      },
+      {
+        "context": "developer-owner",
+        "kind": "console-error",
+        "timeUtc": "2026-09-25T17:48:57.183Z",
+        "elapsedMs": 61093,
+        "journeyStep": "The paid Developer authors a residential development, confirmed media, and aggregate unit inventory through the mounted wizard",
+        "pagePath": "/developer/create-development",
+        "message": "Google Maps JavaScript API error: BillingNotEnabledMapError\nhttps://developers.google.com/maps/documentation/javascript/error-messages#billing-not-enabled-map-error"
+      },
+      {
+        "context": "developer-owner",
+        "kind": "console-error",
+        "timeUtc": "2026-09-25T17:49:41.466Z",
+        "elapsedMs": 105376,
+        "journeyStep": "A scoped expiry stops fresh publication and enquiry while retaining Developer business history",
+        "pagePath": "/developer/leads",
+        "message": "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+      }
+    ],
+    "requestFailures": [
+      {
+        "context": "developer-owner",
+        "kind": "request-failure",
+        "timeUtc": "2026-09-25T17:48:04.868Z",
+        "elapsedMs": 8778,
+        "journeyStep": "Developer-only commercial surface and real registration",
+        "pagePath": "/advertise/sell/developers",
+        "message": "net::ERR_ABORTED",
+        "method": "POST",
+        "requestPath": "/g/collect"
+      },
+      {
+        "context": "developer-owner",
+        "kind": "request-failure",
+        "timeUtc": "2026-09-25T17:48:09.449Z",
+        "elapsedMs": 13359,
+        "journeyStep": "Developer-only commercial surface and real registration",
+        "pagePath": "/advertise/sell/developers",
+        "message": "net::ERR_ABORTED",
+        "method": "POST",
+        "requestPath": "/g/collect"
+      },
+      {
+        "context": "developer-owner",
+        "kind": "request-failure",
+        "timeUtc": "2026-09-25T17:48:12.432Z",
+        "elapsedMs": 16342,
+        "journeyStep": "Developer-only commercial surface and real registration",
+        "pagePath": "/advertise/sell/developers",
+        "message": "net::ERR_ABORTED",
+        "method": "POST",
+        "requestPath": "/g/collect"
+      },
+      {
+        "context": "developer-owner",
+        "kind": "request-failure",
+        "timeUtc": "2026-09-25T17:48:12.933Z",
+        "elapsedMs": 16843,
+        "journeyStep": "Developer-only commercial surface and real registration",
+        "pagePath": "/developer/plans",
+        "message": "net::ERR_ABORTED",
+        "method": "POST",
+        "requestPath": "/g/collect"
+      },
+      {
+        "context": "developer-owner",
+        "kind": "request-failure",
+        "timeUtc": "2026-09-25T17:48:15.788Z",
+        "elapsedMs": 19698,
+        "journeyStep": "Developer-only commercial surface and real registration",
+        "pagePath": "/developer/plans",
+        "message": "net::ERR_ABORTED",
+        "method": "GET",
+        "requestPath": "/login"
+      },
+      {
+        "context": "developer-owner",
+        "kind": "request-failure",
+        "timeUtc": "2026-09-25T17:48:15.886Z",
+        "elapsedMs": 19796,
+        "journeyStep": "Developer-only commercial surface and real registration",
+        "pagePath": "/developer/plans",
+        "message": "net::ERR_ABORTED",
+        "method": "POST",
+        "requestPath": "/g/collect"
+      },
+      {
+        "context": "developer-owner",
+        "kind": "request-failure",
+        "timeUtc": "2026-09-25T17:48:15.886Z",
+        "elapsedMs": 19796,
+        "journeyStep": "Developer-only commercial surface and real registration",
+        "pagePath": "/developer/plans",
+        "message": "net::ERR_ABORTED",
+        "method": "GET",
+        "requestPath": "/api/trpc/developer.getProfile,developer.getNewLeadCount,billing.commercialActivation"
+      },
+      {
+        "context": "developer-owner",
+        "kind": "request-failure",
+        "timeUtc": "2026-09-25T17:48:15.886Z",
+        "elapsedMs": 19796,
+        "journeyStep": "Developer-only commercial surface and real registration",
+        "pagePath": "/developer/plans",
+        "message": "net::ERR_ABORTED",
+        "method": "POST",
+        "requestPath": "/g/collect"
+      },
+      {
+        "context": "developer-owner",
+        "kind": "request-failure",
+        "timeUtc": "2026-09-25T17:48:16.314Z",
+        "elapsedMs": 20224,
+        "journeyStep": "Developer-only commercial surface and real registration",
+        "pagePath": "/login",
+        "message": "net::ERR_ABORTED",
+        "method": "POST",
+        "requestPath": "/g/collect"
+      },
+      {
+        "context": "developer-owner",
+        "kind": "request-failure",
+        "timeUtc": "2026-09-25T17:48:17.499Z",
+        "elapsedMs": 21409,
+        "journeyStep": "Developer-only commercial surface and real registration",
+        "pagePath": "/login",
+        "message": "net::ERR_ABORTED",
+        "method": "POST",
+        "requestPath": "/g/collect"
+      },
+      {
+        "context": "developer-owner",
+        "kind": "request-failure",
+        "timeUtc": "2026-09-25T17:48:18.300Z",
+        "elapsedMs": 22210,
+        "journeyStep": "Developer-only commercial surface and real registration",
+        "pagePath": "/login",
+        "message": "net::ERR_ABORTED",
+        "method": "POST",
+        "requestPath": "/g/collect"
+      },
+      {
+        "context": "developer-owner",
+        "kind": "request-failure",
+        "timeUtc": "2026-09-25T17:48:18.303Z",
+        "elapsedMs": 22213,
+        "journeyStep": "Developer-only commercial surface and real registration",
+        "pagePath": "/login",
+        "message": "net::ERR_ABORTED",
+        "method": "POST",
+        "requestPath": "/g/collect"
+      },
+      {
+        "context": "developer-owner",
+        "kind": "request-failure",
+        "timeUtc": "2026-09-25T17:48:18.799Z",
+        "elapsedMs": 22709,
+        "journeyStep": "Developer-only commercial surface and real registration",
+        "pagePath": "/login",
+        "message": "net::ERR_ABORTED",
+        "method": "POST",
+        "requestPath": "/g/collect"
+      },
+      {
+        "context": "developer-owner",
+        "kind": "request-failure",
+        "timeUtc": "2026-09-25T17:48:20.138Z",
+        "elapsedMs": 24048,
+        "journeyStep": "Developer-only commercial surface and real registration",
+        "pagePath": "/login",
+        "message": "net::ERR_ABORTED",
+        "method": "POST",
+        "requestPath": "/g/collect"
+      },
+      {
+        "context": "developer-owner",
+        "kind": "request-failure",
+        "timeUtc": "2026-09-25T17:48:21.445Z",
+        "elapsedMs": 25355,
+        "journeyStep": "Developer-only commercial surface and real registration",
+        "pagePath": "/developer/setup",
+        "message": "net::ERR_ABORTED",
+        "method": "POST",
+        "requestPath": "/g/collect"
+      },
+      {
+        "context": "developer-owner",
+        "kind": "request-failure",
+        "timeUtc": "2026-09-25T17:48:25.330Z",
+        "elapsedMs": 29240,
+        "journeyStep": "Mounted organisation setup creates exactly one pending organisation and publisher",
+        "pagePath": "/developer/setup",
+        "message": "net::ERR_ABORTED",
+        "method": "POST",
+        "requestPath": "/g/collect"
+      },
+      {
+        "context": "developer-owner",
+        "kind": "request-failure",
+        "timeUtc": "2026-09-25T17:48:30.188Z",
+        "elapsedMs": 34098,
+        "journeyStep": "Mounted organisation setup creates exactly one pending organisation and publisher",
+        "pagePath": "/developer/setup",
+        "message": "net::ERR_ABORTED",
+        "method": "POST",
+        "requestPath": "/g/collect"
+      },
+      {
+        "context": "platform-reviewer",
+        "kind": "request-failure",
+        "timeUtc": "2026-09-25T17:48:35.156Z",
+        "elapsedMs": 39066,
+        "journeyStep": "A distinct privileged reviewer approves the organisation without creating paid access",
+        "pagePath": "/login",
+        "message": "net::ERR_ABORTED",
+        "method": "POST",
+        "requestPath": "/g/collect"
+      },
+      {
+        "context": "platform-reviewer",
+        "kind": "request-failure",
+        "timeUtc": "2026-09-25T17:48:35.765Z",
+        "elapsedMs": 39675,
+        "journeyStep": "A distinct privileged reviewer approves the organisation without creating paid access",
+        "pagePath": "/login",
+        "message": "net::ERR_ABORTED",
+        "method": "POST",
+        "requestPath": "/g/collect"
+      },
+      {
+        "context": "platform-reviewer",
+        "kind": "request-failure",
+        "timeUtc": "2026-09-25T17:48:36.618Z",
+        "elapsedMs": 40528,
+        "journeyStep": "A distinct privileged reviewer approves the organisation without creating paid access",
+        "pagePath": "/login",
+        "message": "net::ERR_ABORTED",
+        "method": "POST",
+        "requestPath": "/g/collect"
+      },
+      {
+        "context": "platform-reviewer",
+        "kind": "request-failure",
+        "timeUtc": "2026-09-25T17:48:36.618Z",
+        "elapsedMs": 40528,
+        "journeyStep": "A distinct privileged reviewer approves the organisation without creating paid access",
+        "pagePath": "/login",
+        "message": "net::ERR_ABORTED",
+        "method": "POST",
+        "requestPath": "/g/collect"
+      },
+      {
+        "context": "platform-reviewer",
+        "kind": "request-failure",
+        "timeUtc": "2026-09-25T17:48:37.097Z",
+        "elapsedMs": 41007,
+        "journeyStep": "A distinct privileged reviewer approves the organisation without creating paid access",
+        "pagePath": "/admin/developers",
+        "message": "net::ERR_ABORTED",
+        "method": "POST",
+        "requestPath": "/g/collect"
+      },
+      {
+        "context": "developer-owner",
+        "kind": "request-failure",
+        "timeUtc": "2026-09-25T17:48:38.109Z",
+        "elapsedMs": 42019,
+        "journeyStep": "A distinct privileged reviewer approves the organisation without creating paid access",
+        "pagePath": "/developer/dashboard",
+        "message": "net::ERR_ABORTED",
+        "method": "POST",
+        "requestPath": "/g/collect"
+      },
+      {
+        "context": "developer-owner",
+        "kind": "request-failure",
+        "timeUtc": "2026-09-25T17:48:39.490Z",
+        "elapsedMs": 43400,
+        "journeyStep": "The approved organisation issues and resumes one exact Developer Launch Access invoice",
+        "pagePath": "/developer/dashboard",
+        "message": "net::ERR_ABORTED",
+        "method": "POST",
+        "requestPath": "/g/collect"
+      },
+      {
+        "context": "developer-owner",
+        "kind": "request-failure",
+        "timeUtc": "2026-09-25T17:48:39.970Z",
+        "elapsedMs": 43880,
+        "journeyStep": "The approved organisation issues and resumes one exact Developer Launch Access invoice",
+        "pagePath": "/developer/plans",
+        "message": "net::ERR_ABORTED",
+        "method": "POST",
+        "requestPath": "/g/collect"
+      },
+      {
+        "context": "platform-reviewer",
+        "kind": "request-failure",
+        "timeUtc": "2026-09-25T17:48:42.113Z",
+        "elapsedMs": 46023,
+        "journeyStep": "The approved organisation issues and resumes one exact Developer Launch Access invoice",
+        "pagePath": "/admin/developers",
+        "message": "net::ERR_ABORTED",
+        "method": "POST",
+        "requestPath": "/g/collect"
+      },
+      {
+        "context": "developer-owner",
+        "kind": "request-failure",
+        "timeUtc": "2026-09-25T17:48:42.394Z",
+        "elapsedMs": 46304,
+        "journeyStep": "The approved organisation issues and resumes one exact Developer Launch Access invoice",
+        "pagePath": "/developer/subscription",
+        "message": "net::ERR_ABORTED",
+        "method": "GET",
+        "requestPath": "/api/trpc/developer.getSubscription,billing.developerWorkspace"
+      },
+      {
+        "context": "developer-owner",
+        "kind": "request-failure",
+        "timeUtc": "2026-09-25T17:48:42.396Z",
+        "elapsedMs": 46306,
+        "journeyStep": "The approved organisation issues and resumes one exact Developer Launch Access invoice",
+        "pagePath": "/developer/subscription",
+        "message": "net::ERR_ABORTED",
+        "method": "POST",
+        "requestPath": "/g/collect"
+      },
+      {
+        "context": "developer-owner",
+        "kind": "request-failure",
+        "timeUtc": "2026-09-25T17:48:42.396Z",
+        "elapsedMs": 46306,
+        "journeyStep": "The approved organisation issues and resumes one exact Developer Launch Access invoice",
+        "pagePath": "/developer/subscription",
+        "message": "net::ERR_ABORTED",
+        "method": "POST",
+        "requestPath": "/g/collect"
+      },
+      {
+        "context": "developer-owner",
+        "kind": "request-failure",
+        "timeUtc": "2026-09-25T17:48:42.914Z",
+        "elapsedMs": 46824,
+        "journeyStep": "The approved organisation issues and resumes one exact Developer Launch Access invoice",
+        "pagePath": "/developer/plans",
+        "message": "net::ERR_ABORTED",
+        "method": "POST",
+        "requestPath": "/g/collect"
+      },
+      {
+        "context": "developer-owner",
+        "kind": "request-failure",
+        "timeUtc": "2026-09-25T17:48:44.652Z",
+        "elapsedMs": 48562,
+        "journeyStep": "Private EFT proof stays under finance review until a distinct finance approval",
+        "pagePath": "/developer/subscription",
+        "message": "net::ERR_ABORTED",
+        "method": "GET",
+        "requestPath": "/api/trpc/developer.getSubscription,billing.developerWorkspace"
+      },
+      {
+        "context": "developer-owner",
+        "kind": "request-failure",
+        "timeUtc": "2026-09-25T17:48:44.652Z",
+        "elapsedMs": 48562,
+        "journeyStep": "Private EFT proof stays under finance review until a distinct finance approval",
+        "pagePath": "/developer/subscription",
+        "message": "net::ERR_ABORTED",
+        "method": "POST",
+        "requestPath": "/g/collect"
+      },
+      {
+        "context": "developer-owner",
+        "kind": "request-failure",
+        "timeUtc": "2026-09-25T17:48:44.652Z",
+        "elapsedMs": 48562,
+        "journeyStep": "Private EFT proof stays under finance review until a distinct finance approval",
+        "pagePath": "/developer/subscription",
+        "message": "net::ERR_ABORTED",
+        "method": "POST",
+        "requestPath": "/g/collect"
+      },
+      {
+        "context": "developer-owner",
+        "kind": "request-failure",
+        "timeUtc": "2026-09-25T17:48:45.194Z",
+        "elapsedMs": 49104,
+        "journeyStep": "Private EFT proof stays under finance review until a distinct finance approval",
+        "pagePath": "/developer/subscription",
+        "message": "net::ERR_ABORTED",
+        "method": "POST",
+        "requestPath": "/g/collect"
+      },
+      {
+        "context": "platform-reviewer",
+        "kind": "request-failure",
+        "timeUtc": "2026-09-25T17:48:47.038Z",
+        "elapsedMs": 50948,
+        "journeyStep": "Private EFT proof stays under finance review until a distinct finance approval",
+        "pagePath": "/admin/developers",
+        "message": "net::ERR_ABORTED",
+        "method": "POST",
+        "requestPath": "/g/collect"
+      },
+      {
+        "context": "platform-reviewer",
+        "kind": "request-failure",
+        "timeUtc": "2026-09-25T17:48:47.426Z",
+        "elapsedMs": 51336,
+        "journeyStep": "Private EFT proof stays under finance review until a distinct finance approval",
+        "pagePath": "/admin/finance",
+        "message": "net::ERR_ABORTED",
+        "method": "POST",
+        "requestPath": "/g/collect"
+      },
+      {
+        "context": "developer-owner",
+        "kind": "request-failure",
+        "timeUtc": "2026-09-25T17:48:49.273Z",
+        "elapsedMs": 53183,
+        "journeyStep": "The paid Developer authors a residential development, confirmed media, and aggregate unit inventory through the mounted wizard",
+        "pagePath": "/developer/subscription",
+        "message": "net::ERR_ABORTED",
+        "method": "POST",
+        "requestPath": "/g/collect"
+      },
+      {
+        "context": "developer-owner",
+        "kind": "request-failure",
+        "timeUtc": "2026-09-25T17:48:49.273Z",
+        "elapsedMs": 53183,
+        "journeyStep": "The paid Developer authors a residential development, confirmed media, and aggregate unit inventory through the mounted wizard",
+        "pagePath": "/developer/subscription",
+        "message": "net::ERR_ABORTED",
+        "method": "POST",
+        "requestPath": "/g/collect"
+      },
+      {
+        "context": "developer-owner",
+        "kind": "request-failure",
+        "timeUtc": "2026-09-25T17:48:49.673Z",
+        "elapsedMs": 53583,
+        "journeyStep": "The paid Developer authors a residential development, confirmed media, and aggregate unit inventory through the mounted wizard",
+        "pagePath": "/developer/create-development",
+        "message": "net::ERR_ABORTED",
+        "method": "POST",
+        "requestPath": "/g/collect"
+      },
+      {
+        "context": "platform-reviewer",
+        "kind": "request-failure",
+        "timeUtc": "2026-09-25T17:48:52.387Z",
+        "elapsedMs": 56297,
+        "journeyStep": "The paid Developer authors a residential development, confirmed media, and aggregate unit inventory through the mounted wizard",
+        "pagePath": "/admin/finance",
+        "message": "net::ERR_ABORTED",
+        "method": "POST",
+        "requestPath": "/g/collect"
+      },
+      {
+        "context": "developer-owner",
+        "kind": "request-failure",
+        "timeUtc": "2026-09-25T17:48:54.844Z",
+        "elapsedMs": 58754,
+        "journeyStep": "The paid Developer authors a residential development, confirmed media, and aggregate unit inventory through the mounted wizard",
+        "pagePath": "/developer/create-development",
+        "message": "net::ERR_ABORTED",
+        "method": "POST",
+        "requestPath": "/g/collect"
+      },
+      {
+        "context": "developer-owner",
+        "kind": "request-failure",
+        "timeUtc": "2026-09-25T17:48:57.275Z",
+        "elapsedMs": 61185,
+        "journeyStep": "The paid Developer authors a residential development, confirmed media, and aggregate unit inventory through the mounted wizard",
+        "pagePath": "/developer/create-development",
+        "message": "net::ERR_ABORTED",
+        "method": "GET",
+        "requestPath": "/maps/vt"
+      },
+      {
+        "context": "developer-owner",
+        "kind": "request-failure",
+        "timeUtc": "2026-09-25T17:48:57.275Z",
+        "elapsedMs": 61185,
+        "journeyStep": "The paid Developer authors a residential development, confirmed media, and aggregate unit inventory through the mounted wizard",
+        "pagePath": "/developer/create-development",
+        "message": "net::ERR_ABORTED",
+        "method": "GET",
+        "requestPath": "/maps/vt"
+      },
+      {
+        "context": "developer-owner",
+        "kind": "request-failure",
+        "timeUtc": "2026-09-25T17:48:57.275Z",
+        "elapsedMs": 61185,
+        "journeyStep": "The paid Developer authors a residential development, confirmed media, and aggregate unit inventory through the mounted wizard",
+        "pagePath": "/developer/create-development",
+        "message": "net::ERR_ABORTED",
+        "method": "GET",
+        "requestPath": "/maps/vt"
+      },
+      {
+        "context": "developer-owner",
+        "kind": "request-failure",
+        "timeUtc": "2026-09-25T17:48:57.277Z",
+        "elapsedMs": 61187,
+        "journeyStep": "The paid Developer authors a residential development, confirmed media, and aggregate unit inventory through the mounted wizard",
+        "pagePath": "/developer/create-development",
+        "message": "net::ERR_ABORTED",
+        "method": "GET",
+        "requestPath": "/maps/vt"
+      },
+      {
+        "context": "developer-owner",
+        "kind": "request-failure",
+        "timeUtc": "2026-09-25T17:48:57.277Z",
+        "elapsedMs": 61187,
+        "journeyStep": "The paid Developer authors a residential development, confirmed media, and aggregate unit inventory through the mounted wizard",
+        "pagePath": "/developer/create-development",
+        "message": "net::ERR_ABORTED",
+        "method": "GET",
+        "requestPath": "/maps/vt"
+      },
+      {
+        "context": "developer-owner",
+        "kind": "request-failure",
+        "timeUtc": "2026-09-25T17:48:57.277Z",
+        "elapsedMs": 61187,
+        "journeyStep": "The paid Developer authors a residential development, confirmed media, and aggregate unit inventory through the mounted wizard",
+        "pagePath": "/developer/create-development",
+        "message": "net::ERR_ABORTED",
+        "method": "GET",
+        "requestPath": "/maps/vt"
+      },
+      {
+        "context": "developer-owner",
+        "kind": "request-failure",
+        "timeUtc": "2026-09-25T17:48:57.277Z",
+        "elapsedMs": 61187,
+        "journeyStep": "The paid Developer authors a residential development, confirmed media, and aggregate unit inventory through the mounted wizard",
+        "pagePath": "/developer/create-development",
+        "message": "net::ERR_ABORTED",
+        "method": "GET",
+        "requestPath": "/maps/vt"
+      },
+      {
+        "context": "developer-owner",
+        "kind": "request-failure",
+        "timeUtc": "2026-09-25T17:48:57.277Z",
+        "elapsedMs": 61187,
+        "journeyStep": "The paid Developer authors a residential development, confirmed media, and aggregate unit inventory through the mounted wizard",
+        "pagePath": "/developer/create-development",
+        "message": "net::ERR_ABORTED",
+        "method": "GET",
+        "requestPath": "/maps/vt"
+      },
+      {
+        "context": "developer-owner",
+        "kind": "request-failure",
+        "timeUtc": "2026-09-25T17:49:05.936Z",
+        "elapsedMs": 69846,
+        "journeyStep": "The paid Developer authors a residential development, confirmed media, and aggregate unit inventory through the mounted wizard",
+        "pagePath": "/developer/create-development",
+        "message": "net::ERR_ABORTED",
+        "method": "POST",
+        "requestPath": "/g/collect"
+      },
+      {
+        "context": "developer-owner",
+        "kind": "request-failure",
+        "timeUtc": "2026-09-25T17:49:06.276Z",
+        "elapsedMs": 70186,
+        "journeyStep": "The paid Developer authors a residential development, confirmed media, and aggregate unit inventory through the mounted wizard",
+        "pagePath": "/developer/drafts",
+        "message": "net::ERR_ABORTED",
+        "method": "POST",
+        "requestPath": "/g/collect"
+      },
+      {
+        "context": "developer-owner",
+        "kind": "request-failure",
+        "timeUtc": "2026-09-25T17:49:11.271Z",
+        "elapsedMs": 75181,
+        "journeyStep": "The paid Developer authors a residential development, confirmed media, and aggregate unit inventory through the mounted wizard",
+        "pagePath": "/developer/create-development",
+        "message": "net::ERR_ABORTED",
+        "method": "POST",
+        "requestPath": "/g/collect"
+      },
+      {
+        "context": "platform-reviewer",
+        "kind": "request-failure",
+        "timeUtc": "2026-09-25T17:49:12.481Z",
+        "elapsedMs": 76391,
+        "journeyStep": "The Development is submitted and independently approved for public publication",
+        "pagePath": "/admin/finance",
+        "message": "net::ERR_ABORTED",
+        "method": "POST",
+        "requestPath": "/g/collect"
+      },
+      {
+        "context": "platform-reviewer",
+        "kind": "request-failure",
+        "timeUtc": "2026-09-25T17:49:13.049Z",
+        "elapsedMs": 76959,
+        "journeyStep": "The Development is submitted and independently approved for public publication",
+        "pagePath": "/admin/development-approvals",
+        "message": "net::ERR_ABORTED",
+        "method": "POST",
+        "requestPath": "/g/collect"
+      },
+      {
+        "context": "platform-reviewer",
+        "kind": "request-failure",
+        "timeUtc": "2026-09-25T17:49:17.935Z",
+        "elapsedMs": 81845,
+        "journeyStep": "Public discovery renders the approved Developer development and captures one unit enquiry",
+        "pagePath": "/admin/development-approvals",
+        "message": "net::ERR_ABORTED",
+        "method": "POST",
+        "requestPath": "/g/collect"
+      },
+      {
+        "context": "developer-owner",
+        "kind": "request-failure",
+        "timeUtc": "2026-09-25T17:49:18.586Z",
+        "elapsedMs": 82496,
+        "journeyStep": "Public discovery renders the approved Developer development and captures one unit enquiry",
+        "pagePath": "/developer/developments",
+        "message": "net::ERR_ABORTED",
+        "method": "POST",
+        "requestPath": "/g/collect"
+      },
+      {
+        "context": "public-buyer",
+        "kind": "request-failure",
+        "timeUtc": "2026-09-25T17:49:19.168Z",
+        "elapsedMs": 83078,
+        "journeyStep": "Public discovery renders the approved Developer development and captures one unit enquiry",
+        "pagePath": "/new-developments",
+        "message": "net::ERR_ABORTED",
+        "method": "POST",
+        "requestPath": "/g/collect"
+      },
+      {
+        "context": "public-buyer",
+        "kind": "request-failure",
+        "timeUtc": "2026-09-25T17:49:21.659Z",
+        "elapsedMs": 85569,
+        "journeyStep": "Public discovery renders the approved Developer development and captures one unit enquiry",
+        "pagePath": "/development/b06-developer-5d8210f8-residences-rs2dvm",
+        "message": "net::ERR_ABORTED",
+        "method": "POST",
+        "requestPath": "/g/collect"
+      },
+      {
+        "context": "public-buyer",
+        "kind": "request-failure",
+        "timeUtc": "2026-09-25T17:49:21.828Z",
+        "elapsedMs": 85738,
+        "journeyStep": "Public discovery renders the approved Developer development and captures one unit enquiry",
+        "pagePath": "/development/b06-developer-5d8210f8-residences-rs2dvm",
+        "message": "net::ERR_BLOCKED_BY_ORB",
+        "method": "GET",
+        "requestPath": "/maps/api/staticmap"
+      },
+      {
+        "context": "developer-owner",
+        "kind": "request-failure",
+        "timeUtc": "2026-09-25T17:49:23.141Z",
+        "elapsedMs": 87051,
+        "journeyStep": "The canonical Developer operator assigns, contacts, notes, and schedules the retained enquiry",
+        "pagePath": "/developer/developments",
+        "message": "net::ERR_ABORTED",
+        "method": "POST",
+        "requestPath": "/g/collect"
+      },
+      {
+        "context": "developer-owner",
+        "kind": "request-failure",
+        "timeUtc": "2026-09-25T17:49:23.541Z",
+        "elapsedMs": 87451,
+        "journeyStep": "The canonical Developer operator assigns, contacts, notes, and schedules the retained enquiry",
+        "pagePath": "/developer/leads",
+        "message": "net::ERR_ABORTED",
+        "method": "POST",
+        "requestPath": "/g/collect"
+      },
+      {
+        "context": "developer-owner",
+        "kind": "request-failure",
+        "timeUtc": "2026-09-25T17:49:28.635Z",
+        "elapsedMs": 92545,
+        "journeyStep": "The canonical Developer operator assigns, contacts, notes, and schedules the retained enquiry",
+        "pagePath": "/developer/leads",
+        "message": "net::ERR_ABORTED",
+        "method": "POST",
+        "requestPath": "/g/collect"
+      },
+      {
+        "context": "developer-owner",
+        "kind": "request-failure",
+        "timeUtc": "2026-09-25T17:49:29.108Z",
+        "elapsedMs": 93018,
+        "journeyStep": "The canonical Developer operator assigns, contacts, notes, and schedules the retained enquiry",
+        "pagePath": "/developer/leads",
+        "message": "net::ERR_ABORTED",
+        "method": "POST",
+        "requestPath": "/g/collect"
+      },
+      {
+        "context": "developer-owner",
+        "kind": "request-failure",
+        "timeUtc": "2026-09-25T17:49:29.108Z",
+        "elapsedMs": 93018,
+        "journeyStep": "The canonical Developer operator assigns, contacts, notes, and schedules the retained enquiry",
+        "pagePath": "/developer/leads",
+        "message": "net::ERR_ABORTED",
+        "method": "GET",
+        "requestPath": "/api/trpc/developer.getLeads,developer.getFunnelAttention,developer.getOperatingHome"
+      },
+      {
+        "context": "developer-owner",
+        "kind": "request-failure",
+        "timeUtc": "2026-09-25T17:49:29.483Z",
+        "elapsedMs": 93393,
+        "journeyStep": "The canonical Developer operator assigns, contacts, notes, and schedules the retained enquiry",
+        "pagePath": "/developer/leads",
+        "message": "net::ERR_ABORTED",
+        "method": "POST",
+        "requestPath": "/g/collect"
+      },
+      {
+        "context": "public-before-expiry",
+        "kind": "request-failure",
+        "timeUtc": "2026-09-25T17:49:32.897Z",
+        "elapsedMs": 96807,
+        "journeyStep": "A scoped expiry stops fresh publication and enquiry while retaining Developer business history",
+        "pagePath": "/new-developments",
+        "message": "net::ERR_ABORTED",
+        "method": "POST",
+        "requestPath": "/g/collect"
+      },
+      {
+        "context": "public-before-expiry",
+        "kind": "request-failure",
+        "timeUtc": "2026-09-25T17:49:33.903Z",
+        "elapsedMs": 97813,
+        "journeyStep": "A scoped expiry stops fresh publication and enquiry while retaining Developer business history",
+        "pagePath": "/new-developments",
+        "message": "net::ERR_ABORTED",
+        "method": "GET",
+        "requestPath": "/maps/api/mapsjs/gen_204"
+      },
+      {
+        "context": "public-before-expiry",
+        "kind": "request-failure",
+        "timeUtc": "2026-09-25T17:49:33.903Z",
+        "elapsedMs": 97813,
+        "journeyStep": "A scoped expiry stops fresh publication and enquiry while retaining Developer business history",
+        "pagePath": "/new-developments",
+        "message": "net::ERR_ABORTED",
+        "method": "POST",
+        "requestPath": "/g/collect"
+      },
+      {
+        "context": "public-before-expiry",
+        "kind": "request-failure",
+        "timeUtc": "2026-09-25T17:49:34.359Z",
+        "elapsedMs": 98269,
+        "journeyStep": "A scoped expiry stops fresh publication and enquiry while retaining Developer business history",
+        "pagePath": "/development/b06-developer-5d8210f8-residences-rs2dvm",
+        "message": "net::ERR_ABORTED",
+        "method": "POST",
+        "requestPath": "/g/collect"
+      },
+      {
+        "context": "developer-owner",
+        "kind": "request-failure",
+        "timeUtc": "2026-09-25T17:49:34.528Z",
+        "elapsedMs": 98438,
+        "journeyStep": "A scoped expiry stops fresh publication and enquiry while retaining Developer business history",
+        "pagePath": "/developer/leads",
+        "message": "net::ERR_ABORTED",
+        "method": "POST",
+        "requestPath": "/g/collect"
+      },
+      {
+        "context": "public-after-expiry",
+        "kind": "request-failure",
+        "timeUtc": "2026-09-25T17:49:38.075Z",
+        "elapsedMs": 101985,
+        "journeyStep": "A scoped expiry stops fresh publication and enquiry while retaining Developer business history",
+        "pagePath": "/new-developments",
+        "message": "net::ERR_ABORTED",
+        "method": "POST",
+        "requestPath": "/g/collect"
+      },
+      {
+        "context": "public-after-expiry",
+        "kind": "request-failure",
+        "timeUtc": "2026-09-25T17:49:39.472Z",
+        "elapsedMs": 103382,
+        "journeyStep": "A scoped expiry stops fresh publication and enquiry while retaining Developer business history",
+        "pagePath": "/new-developments",
+        "message": "net::ERR_ABORTED",
+        "method": "POST",
+        "requestPath": "/g/collect"
+      },
+      {
+        "context": "public-after-expiry",
+        "kind": "request-failure",
+        "timeUtc": "2026-09-25T17:49:39.472Z",
+        "elapsedMs": 103382,
+        "journeyStep": "A scoped expiry stops fresh publication and enquiry while retaining Developer business history",
+        "pagePath": "/new-developments",
+        "message": "net::ERR_ABORTED",
+        "method": "GET",
+        "requestPath": "/maps/api/mapsjs/gen_204"
+      },
+      {
+        "context": "public-after-expiry",
+        "kind": "request-failure",
+        "timeUtc": "2026-09-25T17:49:39.884Z",
+        "elapsedMs": 103794,
+        "journeyStep": "A scoped expiry stops fresh publication and enquiry while retaining Developer business history",
+        "pagePath": "/development/b06-developer-5d8210f8-residences-rs2dvm",
+        "message": "net::ERR_ABORTED",
+        "method": "POST",
+        "requestPath": "/g/collect"
+      }
+    ],
+    "httpErrorResponses": [
+      {
+        "context": "developer-owner",
+        "kind": "http-error-response",
+        "timeUtc": "2026-09-25T17:48:20.618Z",
+        "elapsedMs": 24528,
+        "journeyStep": "Developer-only commercial surface and real registration",
+        "pagePath": "/login",
+        "message": "HTTP 401 Unauthorized",
+        "method": "POST",
+        "requestPath": "/api/auth/login",
+        "responseStatus": 401
+      },
+      {
+        "context": "developer-owner",
+        "kind": "http-error-response",
+        "timeUtc": "2026-09-25T17:48:23.089Z",
+        "elapsedMs": 26999,
+        "journeyStep": "Mounted organisation setup creates exactly one pending organisation and publisher",
+        "pagePath": "/developer/setup",
+        "message": "HTTP 404 Not Found",
+        "method": "GET",
+        "requestPath": "/api/trpc/developer.getProfile",
+        "responseStatus": 404
+      },
+      {
+        "context": "developer-owner",
+        "kind": "http-error-response",
+        "timeUtc": "2026-09-25T17:49:41.460Z",
+        "elapsedMs": 105370,
+        "journeyStep": "A scoped expiry stops fresh publication and enquiry while retaining Developer business history",
+        "pagePath": "/developer/leads",
+        "message": "HTTP 403 Forbidden",
+        "method": "POST",
+        "requestPath": "/api/trpc/developer.publishDevelopment",
+        "responseStatus": 403
+      }
+    ],
+    "requestFailureGroups": [
+      {
+        "method": "GET",
+        "requestPath": "/api/trpc/developer.getLeads,developer.getFunnelAttention,developer.getOperatingHome",
+        "message": "net::ERR_ABORTED",
+        "count": 1
+      },
+      {
+        "method": "GET",
+        "requestPath": "/api/trpc/developer.getProfile,developer.getNewLeadCount,billing.commercialActivation",
+        "message": "net::ERR_ABORTED",
+        "count": 1
+      },
+      {
+        "method": "GET",
+        "requestPath": "/api/trpc/developer.getSubscription,billing.developerWorkspace",
+        "message": "net::ERR_ABORTED",
+        "count": 2
+      },
+      {
+        "method": "GET",
+        "requestPath": "/login",
+        "message": "net::ERR_ABORTED",
+        "count": 1
+      },
+      {
+        "method": "GET",
+        "requestPath": "/maps/api/mapsjs/gen_204",
+        "message": "net::ERR_ABORTED",
+        "count": 2
+      },
+      {
+        "method": "GET",
+        "requestPath": "/maps/api/staticmap",
+        "message": "net::ERR_BLOCKED_BY_ORB",
+        "count": 1
+      },
+      {
+        "method": "GET",
+        "requestPath": "/maps/vt",
+        "message": "net::ERR_ABORTED",
+        "count": 8
+      },
+      {
+        "method": "POST",
+        "requestPath": "/g/collect",
+        "message": "net::ERR_ABORTED",
+        "count": 58
+      }
+    ],
+    "httpErrorGroups": [
+      {
+        "method": "GET",
+        "requestPath": "/api/trpc/developer.getProfile",
+        "responseStatus": 404,
+        "message": "HTTP 404 Not Found",
+        "count": 1
+      },
+      {
+        "method": "POST",
+        "requestPath": "/api/auth/login",
+        "responseStatus": 401,
+        "message": "HTTP 401 Unauthorized",
+        "count": 1
+      },
+      {
+        "method": "POST",
+        "requestPath": "/api/trpc/developer.publishDevelopment",
+        "responseStatus": 403,
+        "message": "HTTP 403 Forbidden",
+        "count": 1
+      }
+    ],
+    "messagesRedacted": true
+  },
+  "interpretation": {
+    "gautengSelection": "Both Developer organisation setup and development location selected Gauteng successfully in this run; no crash, timeout, or failed step was reported.",
+    "httpErrors": [
+      {
+        "status": 401,
+        "path": "/api/auth/login",
+        "context": "Deliberate pre-verification login denial during registration."
+      },
+      {
+        "status": 404,
+        "path": "/api/trpc/developer.getProfile",
+        "context": "Initial organisation setup before a Developer profile exists."
+      },
+      {
+        "status": 403,
+        "path": "/api/trpc/developer.publishDevelopment",
+        "context": "Expected denied publication replay after expiry withdrawal had already been proved while published."
+      }
+    ],
+    "environment": "Local Google Maps configuration emitted BillingNotEnabledMapError; map and analytics request cancellations were observed. They did not prevent either Gauteng selection or the joined journey."
+  },
+  "redactions": [
+    "Entered values in Fill/Type step titles",
+    "Email addresses",
+    "URL query values",
+    "Credential and secret assignments",
+    "Unique request identifiers and local worktree paths"
+  ],
+  "steps": [
+    {
+      "title": "Before Hooks",
+      "durationMs": 517,
+      "outcome": "passed",
+      "children": [
+        {
+          "title": "beforeAll hook",
+          "durationMs": 159,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Fixture \"browser\"",
+          "durationMs": 213,
+          "outcome": "passed",
+          "children": [
+            {
+              "title": "Launch browser",
+              "durationMs": 206,
+              "outcome": "passed",
+              "children": []
+            }
+          ]
+        },
+        {
+          "title": "Fixture \"context\"",
+          "durationMs": 26,
+          "outcome": "passed",
+          "children": [
+            {
+              "title": "Create context",
+              "durationMs": 14,
+              "outcome": "passed",
+              "children": []
+            }
+          ]
+        },
+        {
+          "title": "Fixture \"page\"",
+          "durationMs": 102,
+          "outcome": "passed",
+          "children": [
+            {
+              "title": "Create page",
+              "durationMs": 99,
+              "outcome": "passed",
+              "children": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Create context",
+      "durationMs": 11,
+      "outcome": "passed",
+      "children": []
+    },
+    {
+      "title": "Create page",
+      "durationMs": 56,
+      "outcome": "passed",
+      "children": []
+    },
+    {
+      "title": "Developer-only commercial surface and real registration",
+      "durationMs": 25076,
+      "outcome": "passed",
+      "children": [
+        {
+          "title": "Navigate to \"/advertise/sell/developers\"",
+          "durationMs": 13099,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByTestId('developer-launch-access-card')",
+          "durationMs": 1723,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByText(/R\\s?1[\\s,]?499/).first()",
+          "durationMs": 423,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByText(/once-off/i).first()",
+          "durationMs": 22,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByText(/90 days/i).first()",
+          "durationMs": 32,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByText(/no automatic renewal/i).first()",
+          "durationMs": 23,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"not toContainText\" getByTestId('developer-launch-access-card')",
+          "durationMs": 8,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toHaveCount\" getByRole('link', { name: /PayFast|card payment|monthly subscription/i })",
+          "durationMs": 30,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toHaveCount\" getByRole('button', { name: /PayFast|card payment|monthly subscription/i })",
+          "durationMs": 15,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Click getByTestId('developer-launch-access-card').getByRole('link')",
+          "durationMs": 257,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toHaveURL\"",
+          "durationMs": 3512,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Fill \"[VALUE REDACTED]\" getByRole('dialog').locator('input[name=\"name\"]')",
+          "durationMs": 1192,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Fill \"[VALUE REDACTED]\" getByRole('dialog').locator('input[name=\"email\"]')",
+          "durationMs": 65,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Fill \"[VALUE REDACTED]\" getByRole('dialog').locator('input[name=\"password\"]')",
+          "durationMs": 32,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Fill \"[VALUE REDACTED]\" getByRole('dialog').locator('input[name=\"confirmPassword\"]')",
+          "durationMs": 36,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Wait for event \"response\"",
+          "durationMs": 646,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Click getByRole('dialog').getByRole('button', { name: 'Continue to company onboarding' })",
+          "durationMs": 531,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBe\"",
+          "durationMs": 0,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Navigate to \"/login?[QUERY REDACTED]\"",
+          "durationMs": 1010,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Fill \"[VALUE REDACTED]\" getByRole('dialog', { name: 'Welcome back' }).getByPlaceholder('[EMAIL REDACTED]')",
+          "durationMs": 803,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Fill \"[VALUE REDACTED]\" getByRole('dialog', { name: 'Welcome back' }).getByPlaceholder('Enter your password')",
+          "durationMs": 63,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Wait for event \"response\"",
+          "durationMs": 720,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Click getByRole('dialog', { name: 'Welcome back' }).getByRole('button', { name: 'Sign in' })",
+          "durationMs": 694,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toContain\"",
+          "durationMs": 14,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"poll toBe\"",
+          "durationMs": 6,
+          "outcome": "passed",
+          "children": [
+            {
+              "title": "Expect \"toBe\"",
+              "durationMs": 1,
+              "outcome": "passed",
+              "children": []
+            }
+          ]
+        },
+        {
+          "title": "Expect \"toBe\"",
+          "durationMs": 0,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBe\"",
+          "durationMs": 0,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBe\"",
+          "durationMs": 0,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Navigate to \"/api/auth/verify-email?[QUERY REDACTED]\"",
+          "durationMs": 1070,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toHaveURL\"",
+          "durationMs": 125,
+          "outcome": "passed",
+          "children": []
+        }
+      ]
+    },
+    {
+      "title": "Mounted organisation setup creates exactly one pending organisation and publisher",
+      "durationMs": 10130,
+      "outcome": "passed",
+      "children": [
+        {
+          "title": "Expect \"toBeVisible\" getByRole('heading', { name: 'Developer Registration' })",
+          "durationMs": 2360,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Fill \"[VALUE REDACTED]\" getByPlaceholder('Enter your company name')",
+          "durationMs": 558,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Fill \"[VALUE REDACTED]\" getByPlaceholder('Describe your company\\'s focus and expertise...')",
+          "durationMs": 528,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByText('Select your primary focus', { exact: true })",
+          "durationMs": 17,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Click getByText('Select your primary focus', { exact: true })",
+          "durationMs": 373,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Click getByRole('option', { name: 'Residential Development', exact: true })",
+          "durationMs": 672,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Click getByRole('button', { name: 'Next Step', exact: true })",
+          "durationMs": 400,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Fill \"[VALUE REDACTED]\" getByPlaceholder('[EMAIL REDACTED]')",
+          "durationMs": 58,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Fill \"[VALUE REDACTED]\" getByPlaceholder('+27 11 123 4567')",
+          "durationMs": 130,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Fill \"[VALUE REDACTED]\" getByPlaceholder('123 Business Street, Business Park')",
+          "durationMs": 192,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Organisation geography selects Gauteng",
+          "durationMs": 1511,
+          "outcome": "passed",
+          "children": [
+            {
+              "title": "Fill \"[VALUE REDACTED]\" getByPlaceholder('Cape Town')",
+              "durationMs": 371,
+              "outcome": "passed",
+              "children": []
+            },
+            {
+              "title": "Expect \"toBeVisible\" getByText('Select province', { exact: true })",
+              "durationMs": 34,
+              "outcome": "passed",
+              "children": []
+            },
+            {
+              "title": "Click getByText('Select province', { exact: true })",
+              "durationMs": 519,
+              "outcome": "passed",
+              "children": []
+            },
+            {
+              "title": "Click getByRole('option', { name: 'Gauteng', exact: true })",
+              "durationMs": 566,
+              "outcome": "passed",
+              "children": []
+            }
+          ]
+        },
+        {
+          "title": "Click getByRole('button', { name: 'Next Step', exact: true })",
+          "durationMs": 492,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Click getByRole('button', { name: 'Select Residential specialization', exact: true })",
+          "durationMs": 939,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Click getByRole('button', { name: 'Next Step', exact: true })",
+          "durationMs": 632,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Check getByLabel(/I agree to the terms and conditions/i)",
+          "durationMs": 326,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Wait for event \"response\"",
+          "durationMs": 661,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Click getByRole('button', { name: /Submit.*Application/i })",
+          "durationMs": 548,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBe\"",
+          "durationMs": 1,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toHaveURL\"",
+          "durationMs": 64,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toMatchObject\"",
+          "durationMs": 1,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBeGreaterThan\"",
+          "durationMs": 1,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBeGreaterThan\"",
+          "durationMs": 1,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBe\"",
+          "durationMs": 1,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toMatchObject\"",
+          "durationMs": 37,
+          "outcome": "passed",
+          "children": []
+        }
+      ]
+    },
+    {
+      "title": "A distinct privileged reviewer approves the organisation without creating paid access",
+      "durationMs": 7412,
+      "outcome": "passed",
+      "children": [
+        {
+          "title": "Navigate to \"/login?[QUERY REDACTED]\"",
+          "durationMs": 2313,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByRole('dialog', { name: 'Welcome back' })",
+          "durationMs": 839,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Fill \"[VALUE REDACTED]\" getByRole('dialog', { name: 'Welcome back' }).getByPlaceholder('[EMAIL REDACTED]')",
+          "durationMs": 143,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Fill \"[VALUE REDACTED]\" getByRole('dialog', { name: 'Welcome back' }).getByPlaceholder('Enter your password')",
+          "durationMs": 108,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Wait for event \"response\"",
+          "durationMs": 899,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Click getByRole('dialog', { name: 'Welcome back' }).getByRole('button', { name: 'Sign in' })",
+          "durationMs": 789,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBe\"",
+          "durationMs": 1,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toHaveURL\"",
+          "durationMs": 491,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByRole('heading', { name: 'Developers' })",
+          "durationMs": 2128,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByText('B06 Developer 5d8210f8', { exact: true }).locator('xpath=ancestor::div[.//button[normalize-space()=\"Approve\"]][1]')",
+          "durationMs": 17,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Wait for event \"response\"",
+          "durationMs": 284,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Click getByText('B06 Developer 5d8210f8', { exact: true }).locator('xpath=ancestor::div[.//button[normalize-space()=\"Approve\"]][1]').getByRole('button', { name: 'Approve', exact: true })",
+          "durationMs": 101,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBe\"",
+          "durationMs": 0,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByText('Developer approved successfully')",
+          "durationMs": 90,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBe\"",
+          "durationMs": 1,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBe\"",
+          "durationMs": 2,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBe\"",
+          "durationMs": 0,
+          "outcome": "passed",
+          "children": []
+        }
+      ]
+    },
+    {
+      "title": "Accept dialog",
+      "durationMs": 4,
+      "outcome": "passed",
+      "children": []
+    },
+    {
+      "title": "The approved organisation issues and resumes one exact Developer Launch Access invoice",
+      "durationMs": 5171,
+      "outcome": "passed",
+      "children": [
+        {
+          "title": "Navigate to \"/developer/plans\"",
+          "durationMs": 927,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByRole('heading', { name: 'Scale Your Property Development Business' })",
+          "durationMs": 1083,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByText('Developer Launch Access', { exact: true })",
+          "durationMs": 4,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByText(/R\\s?1[\\s,]?499/).first()",
+          "durationMs": 5,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByText('Paid Launch Access · 90 days', { exact: true })",
+          "durationMs": 5,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBeEnabled\" getByRole('button', { name: 'Request Launch Access invoice', exact: true })",
+          "durationMs": 5,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Click getByRole('button', { name: 'Request Launch Access invoice', exact: true })",
+          "durationMs": 192,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByRole('dialog').getByText(/once-off for 90 days and does not renew automatically/i)",
+          "durationMs": 6,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Wait for event \"response\"",
+          "durationMs": 600,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Click getByRole('dialog').getByRole('button', { name: 'Continue', exact: true })",
+          "durationMs": 459,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBe\"",
+          "durationMs": 0,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toHaveURL\"",
+          "durationMs": 55,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toMatchObject\"",
+          "durationMs": 3,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Navigate to \"/developer/plans\"",
+          "durationMs": 474,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Click getByRole('button', { name: 'Request Launch Access invoice', exact: true })",
+          "durationMs": 1349,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Wait for event \"response\"",
+          "durationMs": 408,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Click getByRole('dialog').getByRole('button', { name: 'Continue', exact: true })",
+          "durationMs": 324,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBe\"",
+          "durationMs": 0,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBe\"",
+          "durationMs": 0,
+          "outcome": "passed",
+          "children": []
+        }
+      ]
+    },
+    {
+      "title": "Private EFT proof stays under finance review until a distinct finance approval",
+      "durationMs": 4641,
+      "outcome": "passed",
+      "children": [
+        {
+          "title": "Navigate to \"/developer/subscription\"",
+          "durationMs": 532,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByText('Developer Launch Access invoice', { exact: true })",
+          "durationMs": 1201,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Fill \"[VALUE REDACTED]\" locator('#developer-payment-amount')",
+          "durationMs": 28,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Fill \"[VALUE REDACTED]\" locator('#developer-bank-reference')",
+          "durationMs": 69,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Fill \"[VALUE REDACTED]\" locator('#developer-payer-name')",
+          "durationMs": 102,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Set input files locator('#developer-proof-file')",
+          "durationMs": 58,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Wait for event \"response\"",
+          "durationMs": 221,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Click getByRole('button', { name: 'Submit proof for review', exact: true })",
+          "durationMs": 133,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBe\"",
+          "durationMs": 0,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByText('Proof submitted for finance review', { exact: true })",
+          "durationMs": 146,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toMatchObject\"",
+          "durationMs": 2,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Navigate to \"/admin/finance\"",
+          "durationMs": 629,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByRole('heading', { name: 'Subscription Management' })",
+          "durationMs": 548,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Click getByRole('tab', { name: /payment verification/i })",
+          "durationMs": 211,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByRole('row').filter({ hasText: '[EMAIL REDACTED]' }).first()",
+          "durationMs": 61,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Click getByRole('row').filter({ hasText: '[EMAIL REDACTED]' }).first().getByRole('button', { name: 'Approve', exact: true })",
+          "durationMs": 203,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Fill \"[VALUE REDACTED]\" getByLabel('Verified amount in cents')",
+          "durationMs": 85,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Fill \"[VALUE REDACTED]\" getByLabel('Finance reconciliation note')",
+          "durationMs": 64,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Wait for event \"response\"",
+          "durationMs": 348,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Click getByRole('button', { name: 'Confirm finance approval', exact: true })",
+          "durationMs": 140,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBe\"",
+          "durationMs": 1,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByText('Finance review recorded', { exact: true })",
+          "durationMs": 48,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toMatchObject\"",
+          "durationMs": 1,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBe\"",
+          "durationMs": 1,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBeGreaterThan\"",
+          "durationMs": 0,
+          "outcome": "passed",
+          "children": []
+        }
+      ]
+    },
+    {
+      "title": "The paid Developer authors a residential development, confirmed media, and aggregate unit inventory through the mounted wizard",
+      "durationMs": 22190,
+      "outcome": "passed",
+      "children": [
+        {
+          "title": "Navigate to \"/developer/create-development\"",
+          "durationMs": 722,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByRole('heading', { name: 'Project Setup', exact: true })",
+          "durationMs": 1029,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Click getByText('Residential Development', { exact: true })",
+          "durationMs": 142,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Click getByText('For Sale', { exact: true })",
+          "durationMs": 137,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Click getByRole('button', { name: 'Start Wizard', exact: true })",
+          "durationMs": 247,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByRole('heading', { name: 'Configuration', exact: true })",
+          "durationMs": 6,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Click getByText('Apartment Complex', { exact: true })",
+          "durationMs": 181,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Click getByText('Apartment Block', { exact: true })",
+          "durationMs": 1049,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Click getByRole('button', { name: 'Next', exact: true })",
+          "durationMs": 291,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByRole('heading', { name: 'Identity & Market', exact: true }).first()",
+          "durationMs": 9,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Fill \"[VALUE REDACTED]\" locator('#name')",
+          "durationMs": 121,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Fill \"[VALUE REDACTED]\" locator('#subtitle')",
+          "durationMs": 114,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByText('Select development status', { exact: true })",
+          "durationMs": 21,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Click getByText('Select development status', { exact: true })",
+          "durationMs": 445,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Click getByRole('option', { name: 'Selling', exact: true })",
+          "durationMs": 308,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Fill \"[VALUE REDACTED]\" locator('#launchDate')",
+          "durationMs": 130,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Fill \"[VALUE REDACTED]\" locator('#completionDate')",
+          "durationMs": 244,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Check locator('#ownership-full-title')",
+          "durationMs": 153,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Click getByRole('button', { name: 'Next', exact: true })",
+          "durationMs": 224,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByRole('heading', { name: 'Location', exact: true }).first()",
+          "durationMs": 11,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Development location selects Gauteng",
+          "durationMs": 1446,
+          "outcome": "passed",
+          "children": [
+            {
+              "title": "Fill \"[VALUE REDACTED]\" locator('#latitude')",
+              "durationMs": 102,
+              "outcome": "passed",
+              "children": []
+            },
+            {
+              "title": "Fill \"[VALUE REDACTED]\" locator('#longitude')",
+              "durationMs": 95,
+              "outcome": "passed",
+              "children": []
+            },
+            {
+              "title": "Fill \"[VALUE REDACTED]\" locator('#address')",
+              "durationMs": 108,
+              "outcome": "passed",
+              "children": []
+            },
+            {
+              "title": "Fill \"[VALUE REDACTED]\" locator('#city')",
+              "durationMs": 102,
+              "outcome": "passed",
+              "children": []
+            },
+            {
+              "title": "Fill \"[VALUE REDACTED]\" locator('#suburb')",
+              "durationMs": 97,
+              "outcome": "passed",
+              "children": []
+            },
+            {
+              "title": "Expect \"toBeVisible\" getByText('Select Province', { exact: true })",
+              "durationMs": 20,
+              "outcome": "passed",
+              "children": []
+            },
+            {
+              "title": "Click getByText('Select Province', { exact: true })",
+              "durationMs": 281,
+              "outcome": "passed",
+              "children": []
+            },
+            {
+              "title": "Click getByRole('option', { name: 'Gauteng', exact: true })",
+              "durationMs": 621,
+              "outcome": "passed",
+              "children": []
+            }
+          ]
+        },
+        {
+          "title": "Click getByRole('button', { name: 'Next', exact: true })",
+          "durationMs": 218,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByRole('heading', { name: 'Governance & Finances', exact: true }).first()",
+          "durationMs": 8,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Click getByRole('button', { name: 'Next', exact: true })",
+          "durationMs": 264,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByRole('heading', { name: 'Amenities & Features', exact: true }).first()",
+          "durationMs": 4,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Click getByRole('button', { name: 'Next', exact: true })",
+          "durationMs": 151,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByRole('heading', { name: 'Marketing Summary', exact: true }).first()",
+          "durationMs": 8,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Fill \"[VALUE REDACTED]\" getByPlaceholder('Describe the lifestyle, location benefits, and unique selling points...')",
+          "durationMs": 65,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Fill \"[VALUE REDACTED]\" getByPlaceholder('e.g. No Transfer Duty')",
+          "durationMs": 32,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Press \"Enter\" getByPlaceholder('e.g. No Transfer Duty')",
+          "durationMs": 73,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Fill \"[VALUE REDACTED]\" getByPlaceholder('e.g. No Transfer Duty')",
+          "durationMs": 107,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Press \"Enter\" getByPlaceholder('e.g. No Transfer Duty')",
+          "durationMs": 118,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Fill \"[VALUE REDACTED]\" getByPlaceholder('e.g. No Transfer Duty')",
+          "durationMs": 59,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Press \"Enter\" getByPlaceholder('e.g. No Transfer Duty')",
+          "durationMs": 86,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Click getByRole('button', { name: 'Next', exact: true })",
+          "durationMs": 147,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByRole('heading', { name: 'Media', exact: true }).first()",
+          "durationMs": 11,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Wait for event \"response\"",
+          "durationMs": 359,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Set input files locator('input[type=\"file\"]').first()",
+          "durationMs": 33,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBe\"",
+          "durationMs": 1,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByAltText('Hero')",
+          "durationMs": 81,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Click getByRole('button', { name: 'Next', exact: true })",
+          "durationMs": 1178,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByRole('heading', { name: 'Unit Types', exact: true }).first()",
+          "durationMs": 16,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Click getByRole('button', { name: 'Add Unit Type', exact: true })",
+          "durationMs": 1415,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByRole('dialog', { name: 'Add Unit Type' })",
+          "durationMs": 12,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Fill \"[VALUE REDACTED]\" getByRole('dialog', { name: 'Add Unit Type' }).getByPlaceholder('e.g. 2 Bedroom Garden Apartment')",
+          "durationMs": 244,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Fill \"[VALUE REDACTED]\" getByRole('dialog', { name: 'Add Unit Type' }).getByPlaceholder('Highlight unique features...')",
+          "durationMs": 175,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Fill \"[VALUE REDACTED]\" getByRole('dialog', { name: 'Add Unit Type' }).getByPlaceholder('e.g. 70')",
+          "durationMs": 139,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Click getByRole('dialog', { name: 'Add Unit Type' }).getByRole('button', { name: /Next: Pricing/i })",
+          "durationMs": 279,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Fill \"[VALUE REDACTED]\" getByRole('dialog', { name: 'Add Unit Type' }).getByPlaceholder('0')",
+          "durationMs": 138,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Click getByRole('dialog', { name: 'Add Unit Type' }).getByRole('button', { name: /Next: Media/i })",
+          "durationMs": 224,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Wait for event \"response\"",
+          "durationMs": 450,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Set input files getByRole('dialog', { name: 'Add Unit Type' }).locator('#unit-gallery-upload')",
+          "durationMs": 30,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBe\"",
+          "durationMs": 0,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Wait for event \"response\"",
+          "durationMs": 525,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Set input files getByRole('dialog', { name: 'Add Unit Type' }).locator('#floorplan-upload')",
+          "durationMs": 178,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBe\"",
+          "durationMs": 0,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByRole('dialog', { name: 'Add Unit Type' }).getByText('b06-unit-floorplan.png', { exact: true })",
+          "durationMs": 205,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Click getByRole('dialog', { name: 'Add Unit Type' }).getByRole('button', { name: /Next: Features/i })",
+          "durationMs": 660,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Click getByRole('dialog', { name: 'Add Unit Type' }).getByRole('button', { name: /Next: Stock/i })",
+          "durationMs": 235,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Fill \"[VALUE REDACTED]\" getByRole('dialog', { name: 'Add Unit Type' }).getByText('Available Units', { exact: true }).locator('..').locator('input')",
+          "durationMs": 108,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Click getByRole('dialog', { name: 'Add Unit Type' }).getByRole('button', { name: 'Save Unit Type', exact: true })",
+          "durationMs": 468,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByText('Two Bedroom Launch Apartment', { exact: true })",
+          "durationMs": 19,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Click getByRole('button', { name: 'Next', exact: true })",
+          "durationMs": 603,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByRole('heading', { name: 'Review & Submit', exact: true }).first()",
+          "durationMs": 7,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Wait for event \"response\"",
+          "durationMs": 313,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Click getByRole('button', { name: 'Save Draft', exact: true })",
+          "durationMs": 228,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBe\"",
+          "durationMs": 0,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByText('Draft saved', { exact: true })",
+          "durationMs": 142,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Navigate to \"/developer/drafts\"",
+          "durationMs": 719,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByRole('heading', { name: 'My Development Drafts', exact: true })",
+          "durationMs": 2182,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByText('B06 Developer 5d8210f8 Residences', { exact: true })",
+          "durationMs": 6,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Click getByRole('button', { name: 'Resume', exact: true })",
+          "durationMs": 156,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByRole('heading', { name: 'Review & Submit', exact: true })",
+          "durationMs": 14,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Click getByText('Marketing & Media', { exact: true }).locator('..').locator('..').getByRole('button', { name: 'Edit', exact: true })",
+          "durationMs": 343,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByRole('heading', { name: 'Marketing Summary', exact: true }).first()",
+          "durationMs": 6,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Press \"End\" getByPlaceholder('Describe the lifestyle, location benefits, and unique selling points...')",
+          "durationMs": 27,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Type \"[VALUE REDACTED]\" getByPlaceholder('Describe the lifestyle, location benefits, and unique selling points...')",
+          "durationMs": 1528,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Click getByRole('button', { name: 'Next', exact: true })",
+          "durationMs": 155,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByRole('heading', { name: 'Media', exact: true }).first()",
+          "durationMs": 10,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByAltText('Hero')",
+          "durationMs": 5,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Click getByRole('button', { name: 'Next', exact: true })",
+          "durationMs": 255,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByRole('heading', { name: 'Unit Types', exact: true }).first()",
+          "durationMs": 4,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByText('Two Bedroom Launch Apartment', { exact: true })",
+          "durationMs": 6,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Click getByRole('button', { name: 'Next', exact: true })",
+          "durationMs": 141,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByRole('heading', { name: 'Review & Submit', exact: true }).first()",
+          "durationMs": 9,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBeGreaterThan\"",
+          "durationMs": 4,
+          "outcome": "passed",
+          "children": []
+        }
+      ]
+    },
+    {
+      "title": "The Development is submitted and independently approved for public publication",
+      "durationMs": 4705,
+      "outcome": "passed",
+      "children": [
+        {
+          "title": "Click getByRole('button', { name: 'Submit for Review', exact: true })",
+          "durationMs": 188,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByRole('dialog', { name: 'Confirm Submission for Review' })",
+          "durationMs": 7,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Wait for event \"response\"",
+          "durationMs": 583,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Wait for event \"response\"",
+          "durationMs": 706,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Click getByRole('dialog', { name: 'Confirm Submission for Review' }).getByRole('button', { name: 'Confirm & Submit', exact: true })",
+          "durationMs": 430,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBe\"",
+          "durationMs": 0,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBe\"",
+          "durationMs": 0,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toContain\"",
+          "durationMs": 0,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"not toBe\"",
+          "durationMs": 0,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toHaveURL\"",
+          "durationMs": 41,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"poll toHaveLength\"",
+          "durationMs": 6,
+          "outcome": "passed",
+          "children": [
+            {
+              "title": "Expect \"toHaveLength\"",
+              "durationMs": 1,
+              "outcome": "passed",
+              "children": []
+            }
+          ]
+        },
+        {
+          "title": "Expect \"toMatchObject\"",
+          "durationMs": 0,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toContain\"",
+          "durationMs": 0,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBeGreaterThan\"",
+          "durationMs": 1,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toMatch\"",
+          "durationMs": 1,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Navigate to \"/admin/development-approvals\"",
+          "durationMs": 944,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByRole('heading', { name: 'Development Management', exact: true })",
+          "durationMs": 1154,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByRole('row').filter({ hasText: 'B06 Developer 5d8210f8 Residences' }).first()",
+          "durationMs": 123,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Click getByRole('row').filter({ hasText: 'B06 Developer 5d8210f8 Residences' }).first().getByRole('button', { name: 'Review Application', exact: true })",
+          "durationMs": 351,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByRole('dialog', { name: 'Review Development Application' }).getByText('Two Bedroom Launch Apartment', { exact: true })",
+          "durationMs": 82,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Click getByRole('dialog', { name: 'Review Development Application' }).getByRole('button', { name: 'Approve', exact: true })",
+          "durationMs": 348,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Wait for event \"response\"",
+          "durationMs": 584,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Click getByRole('dialog', { name: 'Review Development Application' }).getByRole('button', { name: 'Confirm Approval', exact: true })",
+          "durationMs": 487,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBe\"",
+          "durationMs": 1,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByText('Development approved and published successfully', { exact: true })",
+          "durationMs": 92,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toMatchObject\"",
+          "durationMs": 0,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toContain\"",
+          "durationMs": 3,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"not toBe\"",
+          "durationMs": 0,
+          "outcome": "passed",
+          "children": []
+        }
+      ]
+    },
+    {
+      "title": "Public discovery renders the approved Developer development and captures one unit enquiry",
+      "durationMs": 6984,
+      "outcome": "passed",
+      "children": [
+        {
+          "title": "Create context",
+          "durationMs": 29,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Create page",
+          "durationMs": 76,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Wait for event \"response\"",
+          "durationMs": 3232,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Navigate to \"/new-developments?[QUERY REDACTED]\"",
+          "durationMs": 2554,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBe\"",
+          "durationMs": 0,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByText('B06 Developer 5d8210f8 Residences', { exact: true })",
+          "durationMs": 395,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Click getByText('B06 Developer 5d8210f8 Residences', { exact: true })",
+          "durationMs": 163,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toHaveURL\"",
+          "durationMs": 13,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByRole('heading', { name: 'B06 Developer 5d8210f8 Residences', exact: true }).first()",
+          "durationMs": 1096,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" locator('p:visible').filter({ hasText: 'B06 Developer 5d8210f8' }).first()",
+          "durationMs": 54,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByText('Two Bedroom Launch Apartment', { exact: true })",
+          "durationMs": 23,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByText('6 available', { exact: true })",
+          "durationMs": 15,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"poll toBeGreaterThan\"",
+          "durationMs": 6,
+          "outcome": "passed",
+          "children": [
+            {
+              "title": "Query count locator('img[src*=\"/api/local-media/object\"]')",
+              "durationMs": 3,
+              "outcome": "passed",
+              "children": []
+            },
+            {
+              "title": "Expect \"toBeGreaterThan\"",
+              "durationMs": 0,
+              "outcome": "passed",
+              "children": []
+            }
+          ]
+        },
+        {
+          "title": "Wait for event \"request\"",
+          "durationMs": 987,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Click getByRole('button', { name: 'Request Callback', exact: true }).first()",
+          "durationMs": 354,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByRole('dialog', { name: 'Contact Sales Team' })",
+          "durationMs": 44,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Fill \"[VALUE REDACTED]\" getByRole('dialog', { name: 'Contact Sales Team' }).getByPlaceholder('Full name')",
+          "durationMs": 155,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Fill \"[VALUE REDACTED]\" getByRole('dialog', { name: 'Contact Sales Team' }).getByPlaceholder('Email address')",
+          "durationMs": 92,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Fill \"[VALUE REDACTED]\" getByRole('dialog', { name: 'Contact Sales Team' }).getByPlaceholder('Phone number')",
+          "durationMs": 62,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Fill \"[VALUE REDACTED]\" getByRole('dialog', { name: 'Contact Sales Team' }).getByPlaceholder('Message (optional)')",
+          "durationMs": 54,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Check getByRole('dialog', { name: 'Contact Sales Team' }).locator('#development-lead-consent')",
+          "durationMs": 100,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Click getByRole('dialog', { name: 'Contact Sales Team' }).getByRole('button', { name: 'Send Enquiry', exact: true })",
+          "durationMs": 108,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"not toBe\"",
+          "durationMs": 0,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "POST \"/api/trpc/developer.createLead?[QUERY REDACTED]\"",
+          "durationMs": 55,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBe\"",
+          "durationMs": 0,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toHaveCount\" getByRole('dialog', { name: 'Contact Sales Team' })",
+          "durationMs": 557,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Close context",
+          "durationMs": 18,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toMatchObject\"",
+          "durationMs": 0,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBeGreaterThan\"",
+          "durationMs": 1,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBeGreaterThan\"",
+          "durationMs": 1,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBe\"",
+          "durationMs": 0,
+          "outcome": "passed",
+          "children": []
+        }
+      ]
+    },
+    {
+      "title": "The canonical Developer operator assigns, contacts, notes, and schedules the retained enquiry",
+      "durationMs": 7868,
+      "outcome": "passed",
+      "children": [
+        {
+          "title": "Navigate to \"/developer/leads\"",
+          "durationMs": 782,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByRole('heading', { name: 'Leads Control Center', exact: true })",
+          "durationMs": 1148,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByText('B06 Prospect 5d8210f8', { exact: true }).first()",
+          "durationMs": 353,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Click getByText('B06 Prospect 5d8210f8', { exact: true }).first()",
+          "durationMs": 88,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Wait for event \"response\"",
+          "durationMs": 299,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Click getByRole('button', { name: 'Assign to Me', exact: true })",
+          "durationMs": 237,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBe\"",
+          "durationMs": 1,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"poll toEqual\"",
+          "durationMs": 9,
+          "outcome": "passed",
+          "children": [
+            {
+              "title": "Expect \"toEqual\"",
+              "durationMs": 3,
+              "outcome": "passed",
+              "children": []
+            }
+          ]
+        },
+        {
+          "title": "Click getByText('Transition Stage', { exact: true }).locator('..').getByRole('combobox')",
+          "durationMs": 487,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Click getByRole('option', { name: 'contacted', exact: true })",
+          "durationMs": 328,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Fill \"[VALUE REDACTED]\" getByText('Transition Stage', { exact: true }).locator('..').getByPlaceholder('Optional transition note...')",
+          "durationMs": 154,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Wait for event \"response\"",
+          "durationMs": 284,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Click getByText('Transition Stage', { exact: true }).locator('..').getByRole('button', { name: 'Move Lead', exact: true })",
+          "durationMs": 210,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBe\"",
+          "durationMs": 2,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Click getByRole('button', { name: /^Contacted/ })",
+          "durationMs": 385,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByText('B06 Prospect 5d8210f8', { exact: true }).first()",
+          "durationMs": 346,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Click getByText('B06 Prospect 5d8210f8', { exact: true }).first()",
+          "durationMs": 74,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Fill \"[VALUE REDACTED]\" getByText('Log Activity', { exact: true }).locator('..').getByPlaceholder('What happened?')",
+          "durationMs": 130,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Wait for event \"response\"",
+          "durationMs": 196,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Click getByText('Log Activity', { exact: true }).locator('..').getByRole('button', { name: 'Save Activity', exact: true })",
+          "durationMs": 121,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBe\"",
+          "durationMs": 0,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Click getByText('Next Action', { exact: true }).locator('..').getByRole('button', { name: 'Follow up in 2 days', exact: true })",
+          "durationMs": 270,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Wait for event \"response\"",
+          "durationMs": 446,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Click getByText('Next Action', { exact: true }).locator('..').getByRole('button', { name: 'Save Next Action', exact: true })",
+          "durationMs": 369,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBe\"",
+          "durationMs": 1,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Navigate to \"/developer/leads?[QUERY REDACTED]\"",
+          "durationMs": 732,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByText('B06 Prospect 5d8210f8', { exact: true }).first()",
+          "durationMs": 1290,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toMatchObject\"",
+          "durationMs": 0,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBeTruthy\"",
+          "durationMs": 1,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBeTruthy\"",
+          "durationMs": 0,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toContain\"",
+          "durationMs": 1,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toContain\"",
+          "durationMs": 1,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBeGreaterThanOrEqual\"",
+          "durationMs": 0,
+          "outcome": "passed",
+          "children": []
+        }
+      ]
+    },
+    {
+      "title": "A scoped expiry stops fresh publication and enquiry while retaining Developer business history",
+      "durationMs": 10512,
+      "outcome": "passed",
+      "children": [
+        {
+          "title": "Expect \"toMatchObject\"",
+          "durationMs": 1,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Create context",
+          "durationMs": 7,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Create page",
+          "durationMs": 65,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Wait for event \"response\"",
+          "durationMs": 1430,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Navigate to \"/new-developments?[QUERY REDACTED]\"",
+          "durationMs": 2610,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBe\"",
+          "durationMs": 0,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByText('B06 Developer 5d8210f8 Residences', { exact: true })",
+          "durationMs": 144,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Navigate to \"/development/b06-developer-5d8210f8-residences-rs2dvm\"",
+          "durationMs": 803,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByRole('heading', { name: 'B06 Developer 5d8210f8 Residences', exact: true }).first()",
+          "durationMs": 989,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Close context",
+          "durationMs": 22,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toMatchObject\"",
+          "durationMs": 0,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Create context",
+          "durationMs": 7,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Create page",
+          "durationMs": 69,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Wait for event \"response\"",
+          "durationMs": 1725,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Navigate to \"/new-developments?[QUERY REDACTED]\"",
+          "durationMs": 3412,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBe\"",
+          "durationMs": 0,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toHaveCount\" getByText('B06 Developer 5d8210f8 Residences', { exact: true })",
+          "durationMs": 54,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Navigate to \"/development/b06-developer-5d8210f8-residences-rs2dvm\"",
+          "durationMs": 877,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByRole('heading', { name: 'Development Not Found', exact: true })",
+          "durationMs": 677,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "POST \"/api/trpc/developer.createLead?[QUERY REDACTED]\"",
+          "durationMs": 54,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBe\"",
+          "durationMs": 0,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Close context",
+          "durationMs": 16,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Evaluate",
+          "durationMs": 103,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBe\"",
+          "durationMs": 0,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toMatchObject\"",
+          "durationMs": 1,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Evaluate",
+          "durationMs": 183,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBe\"",
+          "durationMs": 0,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toMatchObject\"",
+          "durationMs": 0,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBeGreaterThanOrEqual\"",
+          "durationMs": 1,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBe\"",
+          "durationMs": 0,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Expect \"toBeGreaterThanOrEqual\"",
+          "durationMs": 1,
+          "outcome": "passed",
+          "children": []
+        }
+      ]
+    },
+    {
+      "title": "Close context",
+      "durationMs": 40,
+      "outcome": "passed",
+      "children": []
+    },
+    {
+      "title": "After Hooks",
+      "durationMs": 2002,
+      "outcome": "passed",
+      "children": [
+        {
+          "title": "afterEach hook",
+          "durationMs": 6,
+          "outcome": "passed",
+          "children": [
+            {
+              "title": "Attach \"browser-diagnostics.json\"",
+              "durationMs": 3,
+              "outcome": "passed",
+              "children": []
+            }
+          ]
+        },
+        {
+          "title": "Fixture \"page\"",
+          "durationMs": 1,
+          "outcome": "passed",
+          "children": []
+        },
+        {
+          "title": "Fixture \"context\"",
+          "durationMs": 1952,
+          "outcome": "passed",
+          "children": [
+            {
+              "title": "Close context",
+              "durationMs": 1822,
+              "outcome": "passed",
+              "children": []
+            }
+          ]
+        },
+        {
+          "title": "afterAll hook",
+          "durationMs": 31,
+          "outcome": "passed",
+          "children": []
+        }
+      ]
+    }
+  ]
+}

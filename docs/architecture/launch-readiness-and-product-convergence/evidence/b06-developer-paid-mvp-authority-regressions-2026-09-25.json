@@ -1,0 +1,44 @@
+{
+  "runDateUtc": "2026-09-25",
+  "sourceIdentity": {
+    "branch": "feat/b06-developer-paid-mvp",
+    "sourceHead": "f686e8c4ae3e956a4f98cc1e7c4e2947fddf1778"
+  },
+  "databaseTarget": {
+    "classification": "disposable-worktree",
+    "ownership": "exact-worktree-owned",
+    "sanitizedUrl": "mysql://127.0.0.1:3307/listify_wt_b06_developer_paid_mvp_b7611429cb57",
+    "fingerprint": "46f7559f85952d402c6eade3482914ed2b658793db44cddf082e330e7c847466",
+    "manifestDigest": "a511e70ae06ffbae4027cf02b1de8cc0f586ff7c23cb7cb11a0990606cf728ed",
+    "migrationHead": "0090_retire_disconnected_boost_campaigns.sql"
+  },
+  "command": "pnpm test:authority -- server/__tests__/integration.developer-actor-resolution.test.ts server/__tests__/integration.developer-lead-assignment-authority.test.ts server/__tests__/integration.developer-media-authority.test.ts server/__tests__/integration.development-publication-lifecycle.test.ts",
+  "result": "passed",
+  "exitCode": 0,
+  "testFilesPassed": 4,
+  "testsPassed": 31,
+  "duration": "26.90s",
+  "files": [
+    {
+      "path": "server/__tests__/integration.developer-actor-resolution.test.ts",
+      "passed": 4,
+      "covers": "Zero memberships; exactly one coherent Developer organisation; multiple memberships fail closed; unapproved and missing-publisher denial."
+    },
+    {
+      "path": "server/__tests__/integration.developer-lead-assignment-authority.test.ts",
+      "passed": 2,
+      "covers": "Self and same-organisation active assignment/unassignment; foreign, cross-Developer, Agency, suspended, and unrelated assignment denied; custody preserved."
+    },
+    {
+      "path": "server/__tests__/integration.developer-media-authority.test.ts",
+      "passed": 3,
+      "covers": "Signed media reserve/upload/confirm/attach; ownership and scope; missing and expired receipts denied."
+    },
+    {
+      "path": "server/__tests__/integration.development-publication-lifecycle.test.ts",
+      "passed": 22,
+      "covers": "Public eligibility lifecycle; term expiry withdraws public eligibility without destroying approved development; retained owner-scoped history."
+    }
+  ],
+  "privacy": "No credentials, tokens, or raw regression logs are included; local DB credentials in the private run log are not copied into shared evidence."
+}

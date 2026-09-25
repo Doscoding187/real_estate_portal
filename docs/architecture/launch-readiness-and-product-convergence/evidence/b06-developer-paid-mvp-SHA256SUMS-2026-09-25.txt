@@ -1,0 +1,3 @@
+4ed246ae0b400010e3f7bba6ac5ff75cfa2d4554d7ed657fb671a28bff848c5f  e2e/b06/developer-paid-mvp.spec.ts
+4fac64b841edce281be8cedca068246a2dd220aef220b386879203039e806221  docs/architecture/launch-readiness-and-product-convergence/evidence/b06-developer-paid-mvp-browser-report-2026-09-25.json
+255b19175d012834400cc8e025ba38df241265e442c0855389a4f12775f933f9  docs/architecture/launch-readiness-and-product-convergence/evidence/b06-developer-paid-mvp-authority-regressions-2026-09-25.json
