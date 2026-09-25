@@ -1,0 +1,4993 @@
+{
+  "reportType": "B06 sanitized Playwright nested-step and diagnostics report",
+  "runLabel": "final-current-pass",
+  "command": "pnpm test:browser:authority -- --config=playwright.b06-developer-paid-mvp.config.ts",
+  "test": {
+    "title": "registers, verifies, establishes and approves a Developer organisation before payment",
+    "projectName": "Desktop Chrome",
+    "outcome": "expected",
+    "ok": true,
+    "durationMs": 68580,
+    "startTime": "2026-09-25T21:39:38.522Z",
+    "resultDurationMs": 68580
+  },
+  "runtime": {
+    "browserVersion": "145.0.7632.6",
+    "nodeVersion": "v22.22.3",
+    "platform": "linux"
+  },
+  "steps": [
+    {
+      "title": "Before Hooks",
+      "category": null,
+      "outcome": "passed",
+      "durationMs": 523,
+      "startTime": "2026-09-25T21:39:38.530Z",
+      "location": null,
+      "steps": [
+        {
+          "title": "beforeAll hook",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 202,
+          "startTime": "2026-09-25T21:39:38.533Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 328,
+            "column": 8
+          },
+          "steps": []
+        },
+        {
+          "title": "Fixture \"browser\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 169,
+          "startTime": "2026-09-25T21:39:38.755Z",
+          "location": null,
+          "steps": [
+            {
+              "title": "Launch browser",
+              "category": null,
+              "outcome": "passed",
+              "durationMs": 163,
+              "startTime": "2026-09-25T21:39:38.760Z",
+              "location": null,
+              "steps": []
+            }
+          ]
+        },
+        {
+          "title": "Fixture \"context\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 37,
+          "startTime": "2026-09-25T21:39:38.937Z",
+          "location": null,
+          "steps": [
+            {
+              "title": "Create context",
+              "category": null,
+              "outcome": "passed",
+              "durationMs": 32,
+              "startTime": "2026-09-25T21:39:38.940Z",
+              "location": null,
+              "steps": []
+            }
+          ]
+        },
+        {
+          "title": "Fixture \"page\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 78,
+          "startTime": "2026-09-25T21:39:38.975Z",
+          "location": null,
+          "steps": [
+            {
+              "title": "Create page",
+              "category": null,
+              "outcome": "passed",
+              "durationMs": 75,
+              "startTime": "2026-09-25T21:39:38.978Z",
+              "location": null,
+              "steps": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Create context",
+      "category": null,
+      "outcome": "passed",
+      "durationMs": 11,
+      "startTime": "2026-09-25T21:39:39.065Z",
+      "location": {
+        "file": "developer-paid-mvp.spec.ts",
+        "line": 352,
+        "column": 29
+      },
+      "steps": []
+    },
+    {
+      "title": "Create page",
+      "category": null,
+      "outcome": "passed",
+      "durationMs": 79,
+      "startTime": "2026-09-25T21:39:39.080Z",
+      "location": {
+        "file": "developer-paid-mvp.spec.ts",
+        "line": 353,
+        "column": 48
+      },
+      "steps": []
+    },
+    {
+      "title": "Developer-only commercial surface and real registration",
+      "category": null,
+      "outcome": "passed",
+      "durationMs": 9820,
+      "startTime": "2026-09-25T21:39:39.165Z",
+      "location": {
+        "file": "developer-paid-mvp.spec.ts",
+        "line": 134,
+        "column": 23
+      },
+      "steps": [
+        {
+          "title": "Navigate to \"/advertise/sell/developers\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 1599,
+          "startTime": "2026-09-25T21:39:39.172Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 372,
+            "column": 25
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByTestId('developer-launch-access-card')",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 1144,
+          "startTime": "2026-09-25T21:39:40.786Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 373,
+            "column": 77
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByText(/R\\s?1[\\s,]?499/).first()",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 191,
+          "startTime": "2026-09-25T21:39:41.934Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 374,
+            "column": 69
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByText(/once-off/i).first()",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 12,
+          "startTime": "2026-09-25T21:39:42.127Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 375,
+            "column": 64
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByText(/90 days/i).first()",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 11,
+          "startTime": "2026-09-25T21:39:42.145Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 376,
+            "column": 63
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByText(/no automatic renewal/i).first()",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 18,
+          "startTime": "2026-09-25T21:39:42.157Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 377,
+            "column": 76
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"not toContainText\" getByTestId('developer-launch-access-card')",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 8,
+          "startTime": "2026-09-25T21:39:42.176Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 379,
+            "column": 38
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toHaveCount\" getByRole('link', { name: /PayFast|card payment|monthly subscription/i })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 17,
+          "startTime": "2026-09-25T21:39:42.186Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 380,
+            "column": 107
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toHaveCount\" getByRole('button', { name: /PayFast|card payment|monthly subscription/i })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 6,
+          "startTime": "2026-09-25T21:39:42.204Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 381,
+            "column": 109
+          },
+          "steps": []
+        },
+        {
+          "title": "Click getByTestId('developer-launch-access-card').getByRole('link')",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 97,
+          "startTime": "2026-09-25T21:39:42.212Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 387,
+            "column": 12
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toHaveURL\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 3194,
+          "startTime": "2026-09-25T21:39:42.316Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 388,
+            "column": 33
+          },
+          "steps": []
+        },
+        {
+          "title": "Fill \"B06 Developer Principal\" getByRole('dialog').locator('input[name=\"name\"]')",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 457,
+          "startTime": "2026-09-25T21:39:45.521Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 390,
+            "column": 58
+          },
+          "steps": []
+        },
+        {
+          "title": "Fill \"[EMAIL]\" getByRole('dialog').locator('input[name=\"email\"]')",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 20,
+          "startTime": "2026-09-25T21:39:45.981Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 391,
+            "column": 59
+          },
+          "steps": []
+        },
+        {
+          "title": "Fill \"B06!58f4ed01-6bf8-46a9-b8f9-fb572f8117f49a\" getByRole('dialog').locator('input[name=\"password\"]')",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 10,
+          "startTime": "2026-09-25T21:39:46.003Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 392,
+            "column": 62
+          },
+          "steps": []
+        },
+        {
+          "title": "Fill \"B06!58f4ed01-6bf8-46a9-b8f9-fb572f8117f49a\" getByRole('dialog').locator('input[name=\"confirmPassword\"]')",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 53,
+          "startTime": "2026-09-25T21:39:46.015Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 393,
+            "column": 69
+          },
+          "steps": []
+        },
+        {
+          "title": "Wait for event \"response\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 406,
+          "startTime": "2026-09-25T21:39:46.070Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 394,
+            "column": 38
+          },
+          "steps": []
+        },
+        {
+          "title": "Click getByRole('dialog').getByRole('button', { name: 'Continue to company onboarding' })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 250,
+          "startTime": "2026-09-25T21:39:46.073Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 397,
+            "column": 92
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBe\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 1,
+          "startTime": "2026-09-25T21:39:46.477Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 398,
+            "column": 45
+          },
+          "steps": []
+        },
+        {
+          "title": "Navigate to \"/login?mode=signin&next=%2Fdeveloper%2Fdashboard\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 519,
+          "startTime": "2026-09-25T21:39:46.479Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 401,
+            "column": 25
+          },
+          "steps": []
+        },
+        {
+          "title": "Fill \"[EMAIL]\" getByRole('dialog', { name: 'Welcome back' }).getByPlaceholder('[EMAIL]')",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 540,
+          "startTime": "2026-09-25T21:39:47.000Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 403,
+            "column": 62
+          },
+          "steps": []
+        },
+        {
+          "title": "Fill \"B06!58f4ed01-6bf8-46a9-b8f9-fb572f8117f49a\" getByRole('dialog', { name: 'Welcome back' }).getByPlaceholder('Enter your password')",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 28,
+          "startTime": "2026-09-25T21:39:47.542Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 404,
+            "column": 66
+          },
+          "steps": []
+        },
+        {
+          "title": "Wait for event \"response\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 775,
+          "startTime": "2026-09-25T21:39:47.572Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 405,
+            "column": 36
+          },
+          "steps": []
+        },
+        {
+          "title": "Click getByRole('dialog', { name: 'Welcome back' }).getByRole('button', { name: 'Sign in' })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 696,
+          "startTime": "2026-09-25T21:39:47.574Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 408,
+            "column": 67
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toContain\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 0,
+          "startTime": "2026-09-25T21:39:48.354Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 412,
+            "column": 28
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"poll toBe\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 6,
+          "startTime": "2026-09-25T21:39:48.356Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 186,
+            "column": 6
+          },
+          "steps": [
+            {
+              "title": "Expect \"toBe\"",
+              "category": null,
+              "outcome": "passed",
+              "durationMs": 3,
+              "startTime": "2026-09-25T21:39:48.359Z",
+              "location": null,
+              "steps": []
+            }
+          ]
+        },
+        {
+          "title": "Expect \"toBe\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 0,
+          "startTime": "2026-09-25T21:39:48.367Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 192,
+            "column": 25
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBe\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 0,
+          "startTime": "2026-09-25T21:39:48.369Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 193,
+            "column": 27
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBe\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 0,
+          "startTime": "2026-09-25T21:39:48.372Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 194,
+            "column": 44
+          },
+          "steps": []
+        },
+        {
+          "title": "Navigate to \"/api/auth/verify-email?[QUERY REDACTED]\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 544,
+          "startTime": "2026-09-25T21:39:48.374Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 415,
+            "column": 25
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toHaveURL\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 66,
+          "startTime": "2026-09-25T21:39:48.919Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 416,
+            "column": 33
+          },
+          "steps": []
+        }
+      ]
+    },
+    {
+      "title": "Mounted organisation setup creates exactly one pending organisation and publisher",
+      "category": null,
+      "outcome": "passed",
+      "durationMs": 5660,
+      "startTime": "2026-09-25T21:39:48.986Z",
+      "location": {
+        "file": "developer-paid-mvp.spec.ts",
+        "line": 134,
+        "column": 23
+      },
+      "steps": [
+        {
+          "title": "Expect \"toBeVisible\" getByRole('heading', { name: 'Developer Registration' })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 1224,
+          "startTime": "2026-09-25T21:39:48.991Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 265,
+            "column": 79
+          },
+          "steps": []
+        },
+        {
+          "title": "Fill \"B06 Developer 8f1aa4cd\" getByPlaceholder('Enter your company name')",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 257,
+          "startTime": "2026-09-25T21:39:50.216Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 266,
+            "column": 58
+          },
+          "steps": []
+        },
+        {
+          "title": "Fill \"A real B06 Developer organisation completing the paid development and enquiry journey.\" getByPlaceholder('Describe your company\\'s focus and expertise...')",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 78,
+          "startTime": "2026-09-25T21:39:50.475Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 269,
+            "column": 6
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByText('Select your primary focus', { exact: true })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 9,
+          "startTime": "2026-09-25T21:39:50.558Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 254,
+            "column": 25
+          },
+          "steps": []
+        },
+        {
+          "title": "Click getByText('Select your primary focus', { exact: true })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 228,
+          "startTime": "2026-09-25T21:39:50.568Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 255,
+            "column": 17
+          },
+          "steps": []
+        },
+        {
+          "title": "Click getByRole('option', { name: 'Residential Development', exact: true })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 407,
+          "startTime": "2026-09-25T21:39:50.803Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 256,
+            "column": 69
+          },
+          "steps": []
+        },
+        {
+          "title": "Click getByRole('button', { name: 'Next Step', exact: true })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 305,
+          "startTime": "2026-09-25T21:39:51.211Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 271,
+            "column": 70
+          },
+          "steps": []
+        },
+        {
+          "title": "Fill \"[EMAIL]\" getByPlaceholder('[EMAIL]')",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 40,
+          "startTime": "2026-09-25T21:39:51.518Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 273,
+            "column": 58
+          },
+          "steps": []
+        },
+        {
+          "title": "Fill \"[PHONE REDACTED]\" getByPlaceholder('[PHONE REDACTED]')",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 109,
+          "startTime": "2026-09-25T21:39:51.560Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 274,
+            "column": 50
+          },
+          "steps": []
+        },
+        {
+          "title": "Fill \"6 B06 Developer Road\" getByPlaceholder('123 Business Street, Business Park')",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 124,
+          "startTime": "2026-09-25T21:39:51.673Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 275,
+            "column": 69
+          },
+          "steps": []
+        },
+        {
+          "title": "Organisation geography selects Gauteng",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 731,
+          "startTime": "2026-09-25T21:39:51.798Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 134,
+            "column": 23
+          },
+          "steps": [
+            {
+              "title": "Fill \"Johannesburg\" getByPlaceholder('Cape Town')",
+              "category": null,
+              "outcome": "passed",
+              "durationMs": 83,
+              "startTime": "2026-09-25T21:39:51.799Z",
+              "location": {
+                "file": "developer-paid-mvp.spec.ts",
+                "line": 277,
+                "column": 46
+              },
+              "steps": []
+            },
+            {
+              "title": "Expect \"toBeVisible\" getByText('Select province', { exact: true })",
+              "category": null,
+              "outcome": "passed",
+              "durationMs": 5,
+              "startTime": "2026-09-25T21:39:51.884Z",
+              "location": {
+                "file": "developer-paid-mvp.spec.ts",
+                "line": 254,
+                "column": 25
+              },
+              "steps": []
+            },
+            {
+              "title": "Click getByText('Select province', { exact: true })",
+              "category": null,
+              "outcome": "passed",
+              "durationMs": 352,
+              "startTime": "2026-09-25T21:39:51.893Z",
+              "location": {
+                "file": "developer-paid-mvp.spec.ts",
+                "line": 255,
+                "column": 17
+              },
+              "steps": []
+            },
+            {
+              "title": "Click getByRole('option', { name: 'Gauteng', exact: true })",
+              "category": null,
+              "outcome": "passed",
+              "durationMs": 283,
+              "startTime": "2026-09-25T21:39:52.246Z",
+              "location": {
+                "file": "developer-paid-mvp.spec.ts",
+                "line": 256,
+                "column": 69
+              },
+              "steps": []
+            }
+          ]
+        },
+        {
+          "title": "Click getByRole('button', { name: 'Next Step', exact: true })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 206,
+          "startTime": "2026-09-25T21:39:52.530Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 280,
+            "column": 70
+          },
+          "steps": []
+        },
+        {
+          "title": "Click getByRole('button', { name: 'Select Residential specialization', exact: true })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 601,
+          "startTime": "2026-09-25T21:39:52.740Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 284,
+            "column": 6
+          },
+          "steps": []
+        },
+        {
+          "title": "Click getByRole('button', { name: 'Next Step', exact: true })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 412,
+          "startTime": "2026-09-25T21:39:53.343Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 285,
+            "column": 70
+          },
+          "steps": []
+        },
+        {
+          "title": "Check getByLabel(/I agree to the terms and conditions/i)",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 529,
+          "startTime": "2026-09-25T21:39:53.757Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 286,
+            "column": 65
+          },
+          "steps": []
+        },
+        {
+          "title": "Wait for event \"response\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 279,
+          "startTime": "2026-09-25T21:39:54.291Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 287,
+            "column": 26
+          },
+          "steps": []
+        },
+        {
+          "title": "Click getByRole('button', { name: /Submit.*Application/i })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 190,
+          "startTime": "2026-09-25T21:39:54.294Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 290,
+            "column": 68
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBe\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 1,
+          "startTime": "2026-09-25T21:39:54.575Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 291,
+            "column": 38
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toHaveURL\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 24,
+          "startTime": "2026-09-25T21:39:54.578Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 292,
+            "column": 22
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toMatchObject\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 4,
+          "startTime": "2026-09-25T21:39:54.618Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 434,
+            "column": 26
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBeGreaterThan\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 0,
+          "startTime": "2026-09-25T21:39:54.629Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 440,
+            "column": 49
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBeGreaterThan\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 0,
+          "startTime": "2026-09-25T21:39:54.633Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 441,
+            "column": 46
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBe\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 0,
+          "startTime": "2026-09-25T21:39:54.634Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 442,
+            "column": 58
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toMatchObject\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 1,
+          "startTime": "2026-09-25T21:39:54.645Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 456,
+            "column": 24
+          },
+          "steps": []
+        }
+      ]
+    },
+    {
+      "title": "A distinct privileged reviewer approves the organisation without creating paid access",
+      "category": null,
+      "outcome": "passed",
+      "durationMs": 4607,
+      "startTime": "2026-09-25T21:39:54.648Z",
+      "location": {
+        "file": "developer-paid-mvp.spec.ts",
+        "line": 134,
+        "column": 23
+      },
+      "steps": [
+        {
+          "title": "Navigate to \"/login?mode=signin&next=%2Fadmin%2Fdevelopers\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 1150,
+          "startTime": "2026-09-25T21:39:54.651Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 235,
+            "column": 14
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByRole('dialog', { name: 'Welcome back' })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 526,
+          "startTime": "2026-09-25T21:39:55.802Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 237,
+            "column": 24
+          },
+          "steps": []
+        },
+        {
+          "title": "Fill \"[EMAIL]\" getByRole('dialog', { name: 'Welcome back' }).getByPlaceholder('[EMAIL]')",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 90,
+          "startTime": "2026-09-25T21:39:56.332Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 238,
+            "column": 52
+          },
+          "steps": []
+        },
+        {
+          "title": "Fill \"6af12c7d34404c4237b51b5a7ed4ccc16c74f96a1ebdab2172fb126e38c54c61\" getByRole('dialog', { name: 'Welcome back' }).getByPlaceholder('Enter your password')",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 93,
+          "startTime": "2026-09-25T21:39:56.427Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 239,
+            "column": 56
+          },
+          "steps": []
+        },
+        {
+          "title": "Wait for event \"response\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 668,
+          "startTime": "2026-09-25T21:39:56.522Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 240,
+            "column": 25
+          },
+          "steps": []
+        },
+        {
+          "title": "Click getByRole('dialog', { name: 'Welcome back' }).getByRole('button', { name: 'Sign in' })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 604,
+          "startTime": "2026-09-25T21:39:56.524Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 243,
+            "column": 57
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBe\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 1,
+          "startTime": "2026-09-25T21:39:57.191Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 244,
+            "column": 37
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toHaveURL\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 485,
+          "startTime": "2026-09-25T21:39:57.193Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 245,
+            "column": 22
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByRole('heading', { name: 'Developers' })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 1070,
+          "startTime": "2026-09-25T21:39:57.679Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 461,
+            "column": 81
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByText('B06 Developer 8f1aa4cd', { exact: true }).locator('xpath=ancestor::div[.//button[normalize-space()=\"Approve\"]][1]')",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 10,
+          "startTime": "2026-09-25T21:39:58.752Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 465,
+            "column": 40
+          },
+          "steps": []
+        },
+        {
+          "title": "Wait for event \"response\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 396,
+          "startTime": "2026-09-25T21:39:58.770Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 467,
+            "column": 39
+          },
+          "steps": []
+        },
+        {
+          "title": "Click getByText('B06 Developer 8f1aa4cd', { exact: true }).locator('xpath=ancestor::div[.//button[normalize-space()=\"Approve\"]][1]').getByRole('button', { name: 'Approve', exact: true })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 215,
+          "startTime": "2026-09-25T21:39:58.774Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 472,
+            "column": 86
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBe\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 1,
+          "startTime": "2026-09-25T21:39:59.168Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 473,
+            "column": 43
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByText('Developer approved successfully')",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 77,
+          "startTime": "2026-09-25T21:39:59.171Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 474,
+            "column": 81
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBe\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 0,
+          "startTime": "2026-09-25T21:39:59.252Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 490,
+            "column": 49
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBe\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 1,
+          "startTime": "2026-09-25T21:39:59.253Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 494,
+            "column": 52
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBe\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 0,
+          "startTime": "2026-09-25T21:39:59.255Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 495,
+            "column": 50
+          },
+          "steps": []
+        }
+      ]
+    },
+    {
+      "title": "Accept dialog",
+      "category": null,
+      "outcome": "passed",
+      "durationMs": 5,
+      "startTime": "2026-09-25T21:39:58.965Z",
+      "location": {
+        "file": "developer-paid-mvp.spec.ts",
+        "line": 466,
+        "column": 54
+      },
+      "steps": []
+    },
+    {
+      "title": "The approved organisation issues and resumes one exact Developer Launch Access invoice",
+      "category": null,
+      "outcome": "passed",
+      "durationMs": 4000,
+      "startTime": "2026-09-25T21:39:59.256Z",
+      "location": {
+        "file": "developer-paid-mvp.spec.ts",
+        "line": 134,
+        "column": 23
+      },
+      "steps": [
+        {
+          "title": "Navigate to \"/developer/plans\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 514,
+          "startTime": "2026-09-25T21:39:59.257Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 499,
+            "column": 25
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByRole('heading', { name: 'Scale Your Property Development Business' })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 584,
+          "startTime": "2026-09-25T21:39:59.772Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 500,
+            "column": 108
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByText('Developer Launch Access', { exact: true })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 140,
+          "startTime": "2026-09-25T21:40:00.357Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 501,
+            "column": 87
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByText(/R\\s?1[\\s,]?499/).first()",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 6,
+          "startTime": "2026-09-25T21:40:00.499Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 502,
+            "column": 69
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByText('Paid Launch Access · 90 days', { exact: true })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 5,
+          "startTime": "2026-09-25T21:40:00.506Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 503,
+            "column": 92
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBeEnabled\" getByRole('button', { name: 'Request Launch Access invoice', exact: true })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 10,
+          "startTime": "2026-09-25T21:40:00.512Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 508,
+            "column": 38
+          },
+          "steps": []
+        },
+        {
+          "title": "Click getByRole('button', { name: 'Request Launch Access invoice', exact: true })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 143,
+          "startTime": "2026-09-25T21:40:00.523Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 509,
+            "column": 30
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByRole('dialog').getByText(/once-off for 90 days and does not renew automatically/i)",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 5,
+          "startTime": "2026-09-25T21:40:00.668Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 511,
+            "column": 104
+          },
+          "steps": []
+        },
+        {
+          "title": "Wait for event \"response\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 383,
+          "startTime": "2026-09-25T21:40:00.675Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 512,
+            "column": 34
+          },
+          "steps": []
+        },
+        {
+          "title": "Click getByRole('dialog').getByRole('button', { name: 'Continue', exact: true })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 231,
+          "startTime": "2026-09-25T21:40:00.676Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 517,
+            "column": 83
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBe\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 0,
+          "startTime": "2026-09-25T21:40:01.062Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 518,
+            "column": 41
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toHaveURL\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 68,
+          "startTime": "2026-09-25T21:40:01.063Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 519,
+            "column": 33
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toMatchObject\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 2,
+          "startTime": "2026-09-25T21:40:01.140Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 536,
+            "column": 25
+          },
+          "steps": []
+        },
+        {
+          "title": "Navigate to \"/developer/plans\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 403,
+          "startTime": "2026-09-25T21:40:01.144Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 551,
+            "column": 25
+          },
+          "steps": []
+        },
+        {
+          "title": "Click getByRole('button', { name: 'Request Launch Access invoice', exact: true })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 1261,
+          "startTime": "2026-09-25T21:40:01.557Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 552,
+            "column": 101
+          },
+          "steps": []
+        },
+        {
+          "title": "Wait for event \"response\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 430,
+          "startTime": "2026-09-25T21:40:02.820Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 553,
+            "column": 35
+          },
+          "steps": []
+        },
+        {
+          "title": "Click getByRole('dialog').getByRole('button', { name: 'Continue', exact: true })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 324,
+          "startTime": "2026-09-25T21:40:02.823Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 558,
+            "column": 100
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBe\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 0,
+          "startTime": "2026-09-25T21:40:03.252Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 559,
+            "column": 42
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBe\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 0,
+          "startTime": "2026-09-25T21:40:03.256Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 564,
+            "column": 44
+          },
+          "steps": []
+        }
+      ]
+    },
+    {
+      "title": "Private EFT proof stays under finance review until a distinct finance approval",
+      "category": null,
+      "outcome": "passed",
+      "durationMs": 3872,
+      "startTime": "2026-09-25T21:40:03.256Z",
+      "location": {
+        "file": "developer-paid-mvp.spec.ts",
+        "line": 134,
+        "column": 23
+      },
+      "steps": [
+        {
+          "title": "Navigate to \"/developer/subscription\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 422,
+          "startTime": "2026-09-25T21:40:03.258Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 568,
+            "column": 25
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByText('Developer Launch Access invoice', { exact: true })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 993,
+          "startTime": "2026-09-25T21:40:03.681Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 569,
+            "column": 95
+          },
+          "steps": []
+        },
+        {
+          "title": "Fill \"1499.00\" locator('#developer-payment-amount')",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 8,
+          "startTime": "2026-09-25T21:40:04.675Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 570,
+            "column": 62
+          },
+          "steps": []
+        },
+        {
+          "title": "Fill \"B06-EFT-8f1aa4cd\" locator('#developer-bank-reference')",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 70,
+          "startTime": "2026-09-25T21:40:04.686Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 571,
+            "column": 62
+          },
+          "steps": []
+        },
+        {
+          "title": "Fill \"B06 Developer 8f1aa4cd\" locator('#developer-payer-name')",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 56,
+          "startTime": "2026-09-25T21:40:04.764Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 572,
+            "column": 58
+          },
+          "steps": []
+        },
+        {
+          "title": "Set input files locator('#developer-proof-file')",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 44,
+          "startTime": "2026-09-25T21:40:04.821Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 573,
+            "column": 9
+          },
+          "steps": []
+        },
+        {
+          "title": "Wait for event \"response\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 241,
+          "startTime": "2026-09-25T21:40:04.868Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 578,
+            "column": 33
+          },
+          "steps": []
+        },
+        {
+          "title": "Click getByRole('button', { name: 'Submit proof for review', exact: true })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 74,
+          "startTime": "2026-09-25T21:40:04.869Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 583,
+            "column": 95
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBe\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 1,
+          "startTime": "2026-09-25T21:40:05.112Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 584,
+            "column": 40
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByText('Proof submitted for finance review', { exact: true })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 141,
+          "startTime": "2026-09-25T21:40:05.115Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 585,
+            "column": 98
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toMatchObject\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 0,
+          "startTime": "2026-09-25T21:40:05.259Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 597,
+            "column": 29
+          },
+          "steps": []
+        },
+        {
+          "title": "Navigate to \"/admin/finance\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 537,
+          "startTime": "2026-09-25T21:40:05.260Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 605,
+            "column": 28
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByRole('heading', { name: 'Subscription Management' })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 518,
+          "startTime": "2026-09-25T21:40:05.798Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 606,
+            "column": 94
+          },
+          "steps": []
+        },
+        {
+          "title": "Click getByRole('tab', { name: /payment verification/i })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 100,
+          "startTime": "2026-09-25T21:40:06.318Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 607,
+            "column": 80
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByRole('row').filter({ hasText: '[EMAIL]' }).first()",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 11,
+          "startTime": "2026-09-25T21:40:06.419Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 609,
+            "column": 34
+          },
+          "steps": []
+        },
+        {
+          "title": "Click getByRole('row').filter({ hasText: '[EMAIL]' }).first().getByRole('button', { name: 'Approve', exact: true })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 187,
+          "startTime": "2026-09-25T21:40:06.431Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 610,
+            "column": 80
+          },
+          "steps": []
+        },
+        {
+          "title": "Fill \"149900\" getByLabel('Verified amount in cents')",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 59,
+          "startTime": "2026-09-25T21:40:06.619Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 611,
+            "column": 67
+          },
+          "steps": []
+        },
+        {
+          "title": "Fill \"B06 controlled finance reconciliation for the Developer-organisation-owned EFT invoice.\" getByLabel('Finance reconciliation note')",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 55,
+          "startTime": "2026-09-25T21:40:06.683Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 612,
+            "column": 70
+          },
+          "steps": []
+        },
+        {
+          "title": "Wait for event \"response\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 290,
+          "startTime": "2026-09-25T21:40:06.745Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 615,
+            "column": 46
+          },
+          "steps": []
+        },
+        {
+          "title": "Click getByRole('button', { name: 'Confirm finance approval', exact: true })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 153,
+          "startTime": "2026-09-25T21:40:06.750Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 620,
+            "column": 99
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBe\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 1,
+          "startTime": "2026-09-25T21:40:07.041Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 621,
+            "column": 50
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByText('Finance review recorded', { exact: true })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 65,
+          "startTime": "2026-09-25T21:40:07.045Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 622,
+            "column": 90
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toMatchObject\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 0,
+          "startTime": "2026-09-25T21:40:07.117Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 637,
+            "column": 22
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBe\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 0,
+          "startTime": "2026-09-25T21:40:07.118Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 646,
+            "column": 42
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBeGreaterThan\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 0,
+          "startTime": "2026-09-25T21:40:07.121Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 650,
+            "column": 29
+          },
+          "steps": []
+        }
+      ]
+    },
+    {
+      "title": "The paid Developer authors a residential development, confirmed media, and aggregate unit inventory through the mounted wizard",
+      "category": null,
+      "outcome": "passed",
+      "durationMs": 16340,
+      "startTime": "2026-09-25T21:40:07.131Z",
+      "location": {
+        "file": "developer-paid-mvp.spec.ts",
+        "line": 134,
+        "column": 23
+      },
+      "steps": [
+        {
+          "title": "Navigate to \"/developer/create-development\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 500,
+          "startTime": "2026-09-25T21:40:07.139Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 654,
+            "column": 25
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByRole('heading', { name: 'Project Setup', exact: true })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 765,
+          "startTime": "2026-09-25T21:40:07.642Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 655,
+            "column": 94
+          },
+          "steps": []
+        },
+        {
+          "title": "Click getByText('Residential Development', { exact: true })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 114,
+          "startTime": "2026-09-25T21:40:08.409Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 656,
+            "column": 79
+          },
+          "steps": []
+        },
+        {
+          "title": "Click getByText('For Sale', { exact: true })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 114,
+          "startTime": "2026-09-25T21:40:08.526Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 657,
+            "column": 64
+          },
+          "steps": []
+        },
+        {
+          "title": "Click getByRole('button', { name: 'Start Wizard', exact: true })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 120,
+          "startTime": "2026-09-25T21:40:08.641Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 658,
+            "column": 84
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByRole('heading', { name: 'Configuration', exact: true })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 4,
+          "startTime": "2026-09-25T21:40:08.762Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 660,
+            "column": 94
+          },
+          "steps": []
+        },
+        {
+          "title": "Click getByText('Apartment Complex', { exact: true })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 116,
+          "startTime": "2026-09-25T21:40:08.768Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 661,
+            "column": 73
+          },
+          "steps": []
+        },
+        {
+          "title": "Click getByText('Apartment Block', { exact: true })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 993,
+          "startTime": "2026-09-25T21:40:08.885Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 662,
+            "column": 71
+          },
+          "steps": []
+        },
+        {
+          "title": "Click getByRole('button', { name: 'Next', exact: true })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 221,
+          "startTime": "2026-09-25T21:40:09.879Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 260,
+            "column": 65
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByRole('heading', { name: 'Identity & Market', exact: true }).first()",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 5,
+          "startTime": "2026-09-25T21:40:10.102Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 261,
+            "column": 91
+          },
+          "steps": []
+        },
+        {
+          "title": "Fill \"B06 Developer 8f1aa4cd Residences\" locator('#name')",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 96,
+          "startTime": "2026-09-25T21:40:10.108Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 665,
+            "column": 42
+          },
+          "steps": []
+        },
+        {
+          "title": "Fill \"A real B06 paid Developer residential launch.\" locator('#subtitle')",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 88,
+          "startTime": "2026-09-25T21:40:10.207Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 666,
+            "column": 46
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByText('Select development status', { exact: true })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 17,
+          "startTime": "2026-09-25T21:40:10.298Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 254,
+            "column": 25
+          },
+          "steps": []
+        },
+        {
+          "title": "Click getByText('Select development status', { exact: true })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 519,
+          "startTime": "2026-09-25T21:40:10.319Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 255,
+            "column": 17
+          },
+          "steps": []
+        },
+        {
+          "title": "Click getByRole('option', { name: 'Selling', exact: true })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 345,
+          "startTime": "2026-09-25T21:40:10.839Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 256,
+            "column": 69
+          },
+          "steps": []
+        },
+        {
+          "title": "Fill \"2027-01-15\" locator('#launchDate')",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 68,
+          "startTime": "2026-09-25T21:40:11.186Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 668,
+            "column": 48
+          },
+          "steps": []
+        },
+        {
+          "title": "Fill \"2028-06-30\" locator('#completionDate')",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 145,
+          "startTime": "2026-09-25T21:40:11.256Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 669,
+            "column": 52
+          },
+          "steps": []
+        },
+        {
+          "title": "Check locator('#ownership-full-title')",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 157,
+          "startTime": "2026-09-25T21:40:11.405Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 670,
+            "column": 58
+          },
+          "steps": []
+        },
+        {
+          "title": "Click getByRole('button', { name: 'Next', exact: true })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 129,
+          "startTime": "2026-09-25T21:40:11.563Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 260,
+            "column": 65
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByRole('heading', { name: 'Location', exact: true }).first()",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 6,
+          "startTime": "2026-09-25T21:40:11.693Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 261,
+            "column": 91
+          },
+          "steps": []
+        },
+        {
+          "title": "Development location selects Gauteng",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 1053,
+          "startTime": "2026-09-25T21:40:11.700Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 134,
+            "column": 23
+          },
+          "steps": [
+            {
+              "title": "Fill \"-26.2041\" locator('#latitude')",
+              "category": null,
+              "outcome": "passed",
+              "durationMs": 59,
+              "startTime": "2026-09-25T21:40:11.703Z",
+              "location": {
+                "file": "developer-paid-mvp.spec.ts",
+                "line": 674,
+                "column": 48
+              },
+              "steps": []
+            },
+            {
+              "title": "Fill \"28.0473\" locator('#longitude')",
+              "category": null,
+              "outcome": "passed",
+              "durationMs": 68,
+              "startTime": "2026-09-25T21:40:11.769Z",
+              "location": {
+                "file": "developer-paid-mvp.spec.ts",
+                "line": 675,
+                "column": 49
+              },
+              "steps": []
+            },
+            {
+              "title": "Fill \"90 B06 Launch Avenue\" locator('#address')",
+              "category": null,
+              "outcome": "passed",
+              "durationMs": 71,
+              "startTime": "2026-09-25T21:40:11.843Z",
+              "location": {
+                "file": "developer-paid-mvp.spec.ts",
+                "line": 676,
+                "column": 47
+              },
+              "steps": []
+            },
+            {
+              "title": "Fill \"Johannesburg\" locator('#city')",
+              "category": null,
+              "outcome": "passed",
+              "durationMs": 87,
+              "startTime": "2026-09-25T21:40:11.917Z",
+              "location": {
+                "file": "developer-paid-mvp.spec.ts",
+                "line": 677,
+                "column": 44
+              },
+              "steps": []
+            },
+            {
+              "title": "Fill \"Braamfontein\" locator('#suburb')",
+              "category": null,
+              "outcome": "passed",
+              "durationMs": 68,
+              "startTime": "2026-09-25T21:40:12.008Z",
+              "location": {
+                "file": "developer-paid-mvp.spec.ts",
+                "line": 678,
+                "column": 46
+              },
+              "steps": []
+            },
+            {
+              "title": "Expect \"toBeVisible\" getByText('Select Province', { exact: true })",
+              "category": null,
+              "outcome": "passed",
+              "durationMs": 14,
+              "startTime": "2026-09-25T21:40:12.083Z",
+              "location": {
+                "file": "developer-paid-mvp.spec.ts",
+                "line": 254,
+                "column": 25
+              },
+              "steps": []
+            },
+            {
+              "title": "Click getByText('Select Province', { exact: true })",
+              "category": null,
+              "outcome": "passed",
+              "durationMs": 372,
+              "startTime": "2026-09-25T21:40:12.098Z",
+              "location": {
+                "file": "developer-paid-mvp.spec.ts",
+                "line": 255,
+                "column": 17
+              },
+              "steps": []
+            },
+            {
+              "title": "Click getByRole('option', { name: 'Gauteng', exact: true })",
+              "category": null,
+              "outcome": "passed",
+              "durationMs": 280,
+              "startTime": "2026-09-25T21:40:12.473Z",
+              "location": {
+                "file": "developer-paid-mvp.spec.ts",
+                "line": 256,
+                "column": 69
+              },
+              "steps": []
+            }
+          ]
+        },
+        {
+          "title": "Click getByRole('button', { name: 'Next', exact: true })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 170,
+          "startTime": "2026-09-25T21:40:12.761Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 260,
+            "column": 65
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByRole('heading', { name: 'Governance & Finances', exact: true }).first()",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 45,
+          "startTime": "2026-09-25T21:40:12.935Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 261,
+            "column": 91
+          },
+          "steps": []
+        },
+        {
+          "title": "Click getByRole('button', { name: 'Next', exact: true })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 328,
+          "startTime": "2026-09-25T21:40:12.981Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 260,
+            "column": 65
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByRole('heading', { name: 'Amenities & Features', exact: true }).first()",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 6,
+          "startTime": "2026-09-25T21:40:13.311Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 261,
+            "column": 91
+          },
+          "steps": []
+        },
+        {
+          "title": "Click getByRole('button', { name: 'Next', exact: true })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 122,
+          "startTime": "2026-09-25T21:40:13.318Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 260,
+            "column": 65
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByRole('heading', { name: 'Marketing Summary', exact: true }).first()",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 17,
+          "startTime": "2026-09-25T21:40:13.441Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 261,
+            "column": 91
+          },
+          "steps": []
+        },
+        {
+          "title": "Fill \"B06 Developer Residences is a legitimate residential apartment launch with measured unit availability, central Johannesburg access, confirmed media, and a first-party Developer sales journey for buyers.\" getByPlaceholder('Describe the lifestyle, location benefits, and unique selling points...')",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 48,
+          "startTime": "2026-09-25T21:40:13.461Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 687,
+            "column": 12
+          },
+          "steps": []
+        },
+        {
+          "title": "Fill \"Confirmed first-party Developer\" getByPlaceholder('e.g. No Transfer Duty')",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 40,
+          "startTime": "2026-09-25T21:40:13.513Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 692,
+            "column": 32
+          },
+          "steps": []
+        },
+        {
+          "title": "Press \"Enter\" getByPlaceholder('e.g. No Transfer Duty')",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 48,
+          "startTime": "2026-09-25T21:40:13.555Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 693,
+            "column": 32
+          },
+          "steps": []
+        },
+        {
+          "title": "Fill \"Available apartment inventory\" getByPlaceholder('e.g. No Transfer Duty')",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 43,
+          "startTime": "2026-09-25T21:40:13.604Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 692,
+            "column": 32
+          },
+          "steps": []
+        },
+        {
+          "title": "Press \"Enter\" getByPlaceholder('e.g. No Transfer Duty')",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 121,
+          "startTime": "2026-09-25T21:40:13.651Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 693,
+            "column": 32
+          },
+          "steps": []
+        },
+        {
+          "title": "Fill \"Central Johannesburg location\" getByPlaceholder('e.g. No Transfer Duty')",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 52,
+          "startTime": "2026-09-25T21:40:13.778Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 692,
+            "column": 32
+          },
+          "steps": []
+        },
+        {
+          "title": "Press \"Enter\" getByPlaceholder('e.g. No Transfer Duty')",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 67,
+          "startTime": "2026-09-25T21:40:13.832Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 693,
+            "column": 32
+          },
+          "steps": []
+        },
+        {
+          "title": "Click getByRole('button', { name: 'Next', exact: true })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 207,
+          "startTime": "2026-09-25T21:40:13.900Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 260,
+            "column": 65
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByRole('heading', { name: 'Media', exact: true }).first()",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 5,
+          "startTime": "2026-09-25T21:40:14.109Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 261,
+            "column": 91
+          },
+          "steps": []
+        },
+        {
+          "title": "Wait for event \"response\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 308,
+          "startTime": "2026-09-25T21:40:14.116Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 697,
+            "column": 53
+          },
+          "steps": []
+        },
+        {
+          "title": "Set input files locator('input[type=\"file\"]').first()",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 22,
+          "startTime": "2026-09-25T21:40:14.118Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 702,
+            "column": 9
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBe\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 0,
+          "startTime": "2026-09-25T21:40:14.426Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 707,
+            "column": 60
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByAltText('Hero')",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 66,
+          "startTime": "2026-09-25T21:40:14.428Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 708,
+            "column": 54
+          },
+          "steps": []
+        },
+        {
+          "title": "Click getByRole('button', { name: 'Next', exact: true })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 369,
+          "startTime": "2026-09-25T21:40:14.498Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 260,
+            "column": 65
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByRole('heading', { name: 'Unit Types', exact: true }).first()",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 8,
+          "startTime": "2026-09-25T21:40:14.868Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 261,
+            "column": 91
+          },
+          "steps": []
+        },
+        {
+          "title": "Click getByRole('button', { name: 'Add Unit Type', exact: true })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 1226,
+          "startTime": "2026-09-25T21:40:14.884Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 711,
+            "column": 85
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByRole('dialog', { name: 'Add Unit Type' })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 7,
+          "startTime": "2026-09-25T21:40:16.112Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 713,
+            "column": 34
+          },
+          "steps": []
+        },
+        {
+          "title": "Fill \"Two Bedroom Launch Apartment\" getByRole('dialog', { name: 'Add Unit Type' }).getByPlaceholder('e.g. 2 Bedroom Garden Apartment')",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 197,
+          "startTime": "2026-09-25T21:40:16.121Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 714,
+            "column": 78
+          },
+          "steps": []
+        },
+        {
+          "title": "Fill \"A two bedroom apartment with confirmed floor-plan media, practical size, and available aggregate stock.\" getByRole('dialog', { name: 'Add Unit Type' }).getByPlaceholder('Highlight unique features...')",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 145,
+          "startTime": "2026-09-25T21:40:16.319Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 715,
+            "column": 75
+          },
+          "steps": []
+        },
+        {
+          "title": "Fill \"78\" getByRole('dialog', { name: 'Add Unit Type' }).getByPlaceholder('e.g. 70')",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 81,
+          "startTime": "2026-09-25T21:40:16.468Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 718,
+            "column": 54
+          },
+          "steps": []
+        },
+        {
+          "title": "Click getByRole('dialog', { name: 'Add Unit Type' }).getByRole('button', { name: /Next: Pricing/i })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 122,
+          "startTime": "2026-09-25T21:40:16.553Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 719,
+            "column": 74
+          },
+          "steps": []
+        },
+        {
+          "title": "Fill \"1499000\" getByRole('dialog', { name: 'Add Unit Type' }).getByPlaceholder('0')",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 24,
+          "startTime": "2026-09-25T21:40:16.677Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 720,
+            "column": 48
+          },
+          "steps": []
+        },
+        {
+          "title": "Click getByRole('dialog', { name: 'Add Unit Type' }).getByRole('button', { name: /Next: Media/i })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 128,
+          "startTime": "2026-09-25T21:40:16.702Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 721,
+            "column": 72
+          },
+          "steps": []
+        },
+        {
+          "title": "Wait for event \"response\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 226,
+          "startTime": "2026-09-25T21:40:16.832Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 723,
+            "column": 48
+          },
+          "steps": []
+        },
+        {
+          "title": "Set input files getByRole('dialog', { name: 'Add Unit Type' }).locator('#unit-gallery-upload')",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 16,
+          "startTime": "2026-09-25T21:40:16.834Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 728,
+            "column": 9
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBe\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 0,
+          "startTime": "2026-09-25T21:40:17.061Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 733,
+            "column": 55
+          },
+          "steps": []
+        },
+        {
+          "title": "Wait for event \"response\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 355,
+          "startTime": "2026-09-25T21:40:17.063Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 734,
+            "column": 50
+          },
+          "steps": []
+        },
+        {
+          "title": "Set input files getByRole('dialog', { name: 'Add Unit Type' }).locator('#floorplan-upload')",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 95,
+          "startTime": "2026-09-25T21:40:17.072Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 739,
+            "column": 9
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBe\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 1,
+          "startTime": "2026-09-25T21:40:17.425Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 744,
+            "column": 57
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByRole('dialog', { name: 'Add Unit Type' }).getByText('b06-unit-floorplan.png', { exact: true })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 83,
+          "startTime": "2026-09-25T21:40:17.427Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 745,
+            "column": 87
+          },
+          "steps": []
+        },
+        {
+          "title": "Click getByRole('dialog', { name: 'Add Unit Type' }).getByRole('button', { name: /Next: Features/i })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 232,
+          "startTime": "2026-09-25T21:40:17.513Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 746,
+            "column": 75
+          },
+          "steps": []
+        },
+        {
+          "title": "Click getByRole('dialog', { name: 'Add Unit Type' }).getByRole('button', { name: /Next: Stock/i })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 136,
+          "startTime": "2026-09-25T21:40:17.747Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 747,
+            "column": 72
+          },
+          "steps": []
+        },
+        {
+          "title": "Fill \"6\" getByRole('dialog', { name: 'Add Unit Type' }).getByText('Available Units', { exact: true }).locator('..').locator('input')",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 28,
+          "startTime": "2026-09-25T21:40:17.886Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 748,
+            "column": 103
+          },
+          "steps": []
+        },
+        {
+          "title": "Click getByRole('dialog', { name: 'Add Unit Type' }).getByRole('button', { name: 'Save Unit Type', exact: true })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 177,
+          "startTime": "2026-09-25T21:40:17.916Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 749,
+            "column": 87
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByText('Two Bedroom Launch Apartment', { exact: true })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 7,
+          "startTime": "2026-09-25T21:40:18.094Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 750,
+            "column": 92
+          },
+          "steps": []
+        },
+        {
+          "title": "Click getByRole('button', { name: 'Next', exact: true })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 547,
+          "startTime": "2026-09-25T21:40:18.142Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 260,
+            "column": 65
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByRole('heading', { name: 'Review & Submit', exact: true }).first()",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 8,
+          "startTime": "2026-09-25T21:40:18.690Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 261,
+            "column": 91
+          },
+          "steps": []
+        },
+        {
+          "title": "Wait for event \"response\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 260,
+          "startTime": "2026-09-25T21:40:18.699Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 753,
+            "column": 38
+          },
+          "steps": []
+        },
+        {
+          "title": "Click getByRole('button', { name: 'Save Draft', exact: true })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 187,
+          "startTime": "2026-09-25T21:40:18.701Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 756,
+            "column": 82
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBe\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 0,
+          "startTime": "2026-09-25T21:40:18.961Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 757,
+            "column": 45
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByText('Draft saved', { exact: true })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 59,
+          "startTime": "2026-09-25T21:40:18.972Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 758,
+            "column": 75
+          },
+          "steps": []
+        },
+        {
+          "title": "Navigate to \"/developer/drafts\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 488,
+          "startTime": "2026-09-25T21:40:19.033Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 760,
+            "column": 25
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByRole('heading', { name: 'My Development Drafts', exact: true })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 1056,
+          "startTime": "2026-09-25T21:40:19.522Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 761,
+            "column": 102
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByText('B06 Developer 8f1aa4cd Residences', { exact: true })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 6,
+          "startTime": "2026-09-25T21:40:20.579Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 762,
+            "column": 91
+          },
+          "steps": []
+        },
+        {
+          "title": "Click getByRole('button', { name: 'Resume', exact: true })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 180,
+          "startTime": "2026-09-25T21:40:20.587Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 763,
+            "column": 78
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByRole('heading', { name: 'Review & Submit', exact: true })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 33,
+          "startTime": "2026-09-25T21:40:20.768Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 764,
+            "column": 96
+          },
+          "steps": []
+        },
+        {
+          "title": "Click getByText('Marketing & Media', { exact: true }).locator('..').locator('..').getByRole('button', { name: 'Edit', exact: true })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 239,
+          "startTime": "2026-09-25T21:40:20.802Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 770,
+            "column": 82
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByRole('heading', { name: 'Marketing Summary', exact: true }).first()",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 16,
+          "startTime": "2026-09-25T21:40:21.042Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 771,
+            "column": 106
+          },
+          "steps": []
+        },
+        {
+          "title": "Press \"End\" getByPlaceholder('Describe the lifestyle, location benefits, and unique selling points...')",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 25,
+          "startTime": "2026-09-25T21:40:21.060Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 774,
+            "column": 12
+          },
+          "steps": []
+        },
+        {
+          "title": "Type \" This wording was reviewed after the durable draft reload.\" getByPlaceholder('Describe the lifestyle, location benefits, and unique selling points...')",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 1717,
+          "startTime": "2026-09-25T21:40:21.089Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 777,
+            "column": 12
+          },
+          "steps": []
+        },
+        {
+          "title": "Click getByRole('button', { name: 'Next', exact: true })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 225,
+          "startTime": "2026-09-25T21:40:22.807Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 260,
+            "column": 65
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByRole('heading', { name: 'Media', exact: true }).first()",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 5,
+          "startTime": "2026-09-25T21:40:23.033Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 261,
+            "column": 91
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByAltText('Hero')",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 3,
+          "startTime": "2026-09-25T21:40:23.039Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 779,
+            "column": 54
+          },
+          "steps": []
+        },
+        {
+          "title": "Click getByRole('button', { name: 'Next', exact: true })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 257,
+          "startTime": "2026-09-25T21:40:23.044Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 260,
+            "column": 65
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByRole('heading', { name: 'Unit Types', exact: true }).first()",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 7,
+          "startTime": "2026-09-25T21:40:23.305Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 261,
+            "column": 91
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByText('Two Bedroom Launch Apartment', { exact: true })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 8,
+          "startTime": "2026-09-25T21:40:23.313Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 781,
+            "column": 92
+          },
+          "steps": []
+        },
+        {
+          "title": "Click getByRole('button', { name: 'Next', exact: true })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 136,
+          "startTime": "2026-09-25T21:40:23.323Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 260,
+            "column": 65
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByRole('heading', { name: 'Review & Submit', exact: true }).first()",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 5,
+          "startTime": "2026-09-25T21:40:23.461Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 261,
+            "column": 91
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBeGreaterThan\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 0,
+          "startTime": "2026-09-25T21:40:23.471Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 792,
+            "column": 49
+          },
+          "steps": []
+        }
+      ]
+    },
+    {
+      "title": "The Development is submitted and independently approved for public publication",
+      "category": null,
+      "outcome": "passed",
+      "durationMs": 3718,
+      "startTime": "2026-09-25T21:40:23.473Z",
+      "location": {
+        "file": "developer-paid-mvp.spec.ts",
+        "line": 134,
+        "column": 23
+      },
+      "steps": [
+        {
+          "title": "Click getByRole('button', { name: 'Submit for Review', exact: true })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 216,
+          "startTime": "2026-09-25T21:40:23.476Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 796,
+            "column": 89
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByRole('dialog', { name: 'Confirm Submission for Review' })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 5,
+          "startTime": "2026-09-25T21:40:23.694Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 798,
+            "column": 36
+          },
+          "steps": []
+        },
+        {
+          "title": "Wait for event \"response\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 432,
+          "startTime": "2026-09-25T21:40:23.701Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 799,
+            "column": 35
+          },
+          "steps": []
+        },
+        {
+          "title": "Wait for event \"response\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 566,
+          "startTime": "2026-09-25T21:40:23.703Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 803,
+            "column": 37
+          },
+          "steps": []
+        },
+        {
+          "title": "Click getByRole('dialog', { name: 'Confirm Submission for Review' }).getByRole('button', { name: 'Confirm & Submit', exact: true })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 327,
+          "startTime": "2026-09-25T21:40:23.704Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 807,
+            "column": 91
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBe\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 0,
+          "startTime": "2026-09-25T21:40:24.134Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 808,
+            "column": 42
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBe\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 0,
+          "startTime": "2026-09-25T21:40:24.270Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 810,
+            "column": 44
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toContain\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 0,
+          "startTime": "2026-09-25T21:40:24.276Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 813,
+            "column": 35
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"not toBe\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 0,
+          "startTime": "2026-09-25T21:40:24.277Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 814,
+            "column": 44
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toHaveURL\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 63,
+          "startTime": "2026-09-25T21:40:24.278Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 815,
+            "column": 33
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"poll toHaveLength\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 11,
+          "startTime": "2026-09-25T21:40:24.342Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 834,
+            "column": 12
+          },
+          "steps": [
+            {
+              "title": "Expect \"toHaveLength\"",
+              "category": null,
+              "outcome": "passed",
+              "durationMs": 1,
+              "startTime": "2026-09-25T21:40:24.352Z",
+              "location": {
+                "file": "developer-paid-mvp.spec.ts",
+                "line": 817,
+                "column": 9
+              },
+              "steps": []
+            }
+          ]
+        },
+        {
+          "title": "Expect \"toMatchObject\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 0,
+          "startTime": "2026-09-25T21:40:24.357Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 848,
+            "column": 38
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toContain\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 0,
+          "startTime": "2026-09-25T21:40:24.358Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 855,
+            "column": 56
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBeGreaterThan\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 0,
+          "startTime": "2026-09-25T21:40:24.359Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 858,
+            "column": 31
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toMatch\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 0,
+          "startTime": "2026-09-25T21:40:24.360Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 859,
+            "column": 28
+          },
+          "steps": []
+        },
+        {
+          "title": "Navigate to \"/admin/development-approvals\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 717,
+          "startTime": "2026-09-25T21:40:24.363Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 861,
+            "column": 28
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByRole('heading', { name: 'Development Management', exact: true })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 1004,
+          "startTime": "2026-09-25T21:40:25.084Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 862,
+            "column": 106
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByRole('row').filter({ hasText: 'B06 Developer 8f1aa4cd Residences' }).first()",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 7,
+          "startTime": "2026-09-25T21:40:26.089Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 864,
+            "column": 33
+          },
+          "steps": []
+        },
+        {
+          "title": "Click getByRole('row').filter({ hasText: 'B06 Developer 8f1aa4cd Residences' }).first().getByRole('button', { name: 'Review Application', exact: true })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 170,
+          "startTime": "2026-09-25T21:40:26.100Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 865,
+            "column": 90
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByRole('dialog', { name: 'Review Development Application' }).getByText('Two Bedroom Launch Apartment', { exact: true })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 162,
+          "startTime": "2026-09-25T21:40:26.271Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 867,
+            "column": 95
+          },
+          "steps": []
+        },
+        {
+          "title": "Click getByRole('dialog', { name: 'Review Development Application' }).getByRole('button', { name: 'Approve', exact: true })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 284,
+          "startTime": "2026-09-25T21:40:26.434Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 868,
+            "column": 82
+          },
+          "steps": []
+        },
+        {
+          "title": "Wait for event \"response\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 383,
+          "startTime": "2026-09-25T21:40:26.719Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 869,
+            "column": 39
+          },
+          "steps": []
+        },
+        {
+          "title": "Click getByRole('dialog', { name: 'Review Development Application' }).getByRole('button', { name: 'Confirm Approval', exact: true })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 297,
+          "startTime": "2026-09-25T21:40:26.721Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 873,
+            "column": 91
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBe\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 0,
+          "startTime": "2026-09-25T21:40:27.106Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 874,
+            "column": 43
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByText('Development approved and published successfully', { exact: true })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 71,
+          "startTime": "2026-09-25T21:40:27.107Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 875,
+            "column": 114
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toMatchObject\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 0,
+          "startTime": "2026-09-25T21:40:27.185Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 883,
+            "column": 37
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toContain\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 1,
+          "startTime": "2026-09-25T21:40:27.189Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 884,
+            "column": 52
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"not toBe\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 1,
+          "startTime": "2026-09-25T21:40:27.190Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 886,
+            "column": 37
+          },
+          "steps": []
+        }
+      ]
+    },
+    {
+      "title": "Public discovery renders the approved Developer development and captures one unit enquiry",
+      "category": null,
+      "outcome": "passed",
+      "durationMs": 5692,
+      "startTime": "2026-09-25T21:40:27.191Z",
+      "location": {
+        "file": "developer-paid-mvp.spec.ts",
+        "line": 134,
+        "column": 23
+      },
+      "steps": [
+        {
+          "title": "Create context",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 17,
+          "startTime": "2026-09-25T21:40:27.194Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 890,
+            "column": 30
+          },
+          "steps": []
+        },
+        {
+          "title": "Create page",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 47,
+          "startTime": "2026-09-25T21:40:27.217Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 891,
+            "column": 46
+          },
+          "steps": []
+        },
+        {
+          "title": "Wait for event \"response\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 1832,
+          "startTime": "2026-09-25T21:40:27.267Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 896,
+            "column": 42
+          },
+          "steps": []
+        },
+        {
+          "title": "Navigate to \"/new-developments?city=johannesburg\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 1143,
+          "startTime": "2026-09-25T21:40:27.269Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 906,
+            "column": 27
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBe\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 0,
+          "startTime": "2026-09-25T21:40:29.100Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 907,
+            "column": 49
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByText('B06 Developer 8f1aa4cd Residences', { exact: true })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 319,
+          "startTime": "2026-09-25T21:40:29.101Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 908,
+            "column": 93
+          },
+          "steps": []
+        },
+        {
+          "title": "Click getByText('B06 Developer 8f1aa4cd Residences', { exact: true })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 130,
+          "startTime": "2026-09-25T21:40:29.422Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 909,
+            "column": 85
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toHaveURL\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 13,
+          "startTime": "2026-09-25T21:40:29.555Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 910,
+            "column": 35
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByRole('heading', { name: 'B06 Developer 8f1aa4cd Residences', exact: true }).first()",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 1937,
+          "startTime": "2026-09-25T21:40:29.571Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 911,
+            "column": 118
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" locator('p:visible').filter({ hasText: 'B06 Developer 8f1aa4cd' }).first()",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 7,
+          "startTime": "2026-09-25T21:40:31.509Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 914,
+            "column": 13
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByText('Two Bedroom Launch Apartment', { exact: true })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 5,
+          "startTime": "2026-09-25T21:40:31.517Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 915,
+            "column": 94
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByText('6 available', { exact: true })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 8,
+          "startTime": "2026-09-25T21:40:31.523Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 916,
+            "column": 77
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"poll toBeGreaterThan\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 7,
+          "startTime": "2026-09-25T21:40:31.532Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 919,
+            "column": 14
+          },
+          "steps": [
+            {
+              "title": "Query count locator('img[src*=\"/api/local-media/object\"]')",
+              "category": null,
+              "outcome": "passed",
+              "durationMs": 5,
+              "startTime": "2026-09-25T21:40:31.533Z",
+              "location": {
+                "file": "developer-paid-mvp.spec.ts",
+                "line": 918,
+                "column": 82
+              },
+              "steps": []
+            },
+            {
+              "title": "Expect \"toBeGreaterThan\"",
+              "category": null,
+              "outcome": "passed",
+              "durationMs": 0,
+              "startTime": "2026-09-25T21:40:31.539Z",
+              "location": {
+                "file": "developer-paid-mvp.spec.ts",
+                "line": 917,
+                "column": 11
+              },
+              "steps": []
+            }
+          ]
+        },
+        {
+          "title": "Wait for event \"request\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 670,
+          "startTime": "2026-09-25T21:40:31.541Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 921,
+            "column": 37
+          },
+          "steps": []
+        },
+        {
+          "title": "Click getByRole('button', { name: 'Request Callback', exact: true }).first()",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 267,
+          "startTime": "2026-09-25T21:40:31.542Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 926,
+            "column": 98
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByRole('dialog', { name: 'Contact Sales Team' })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 10,
+          "startTime": "2026-09-25T21:40:31.809Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 928,
+            "column": 33
+          },
+          "steps": []
+        },
+        {
+          "title": "Fill \"B06 Prospect 8f1aa4cd\" getByRole('dialog', { name: 'Contact Sales Team' }).getByPlaceholder('Full name')",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 52,
+          "startTime": "2026-09-25T21:40:31.821Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 929,
+            "column": 55
+          },
+          "steps": []
+        },
+        {
+          "title": "Fill \"[EMAIL]\" getByRole('dialog', { name: 'Contact Sales Team' }).getByPlaceholder('Email address')",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 61,
+          "startTime": "2026-09-25T21:40:31.875Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 930,
+            "column": 59
+          },
+          "steps": []
+        },
+        {
+          "title": "Fill \"[PHONE REDACTED]\" getByRole('dialog', { name: 'Contact Sales Team' }).getByPlaceholder('Phone number')",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 66,
+          "startTime": "2026-09-25T21:40:31.937Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 931,
+            "column": 58
+          },
+          "steps": []
+        },
+        {
+          "title": "Fill \"Please contact me about the confirmed two-bedroom availability.\" getByRole('dialog', { name: 'Contact Sales Team' }).getByPlaceholder('Message (optional)')",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 50,
+          "startTime": "2026-09-25T21:40:32.011Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 932,
+            "column": 64
+          },
+          "steps": []
+        },
+        {
+          "title": "Check getByRole('dialog', { name: 'Contact Sales Team' }).locator('#development-lead-consent')",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 77,
+          "startTime": "2026-09-25T21:40:32.063Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 935,
+            "column": 62
+          },
+          "steps": []
+        },
+        {
+          "title": "Click getByRole('dialog', { name: 'Contact Sales Team' }).getByRole('button', { name: 'Send Enquiry', exact: true })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 71,
+          "startTime": "2026-09-25T21:40:32.141Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 936,
+            "column": 84
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"not toBe\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 0,
+          "startTime": "2026-09-25T21:40:32.274Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 942,
+            "column": 45
+          },
+          "steps": []
+        },
+        {
+          "title": "POST \"/api/trpc/developer.createLead?[QUERY REDACTED]\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 46,
+          "startTime": "2026-09-25T21:40:32.277Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 944,
+            "column": 50
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBe\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 0,
+          "startTime": "2026-09-25T21:40:32.324Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 949,
+            "column": 35
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toHaveCount\" getByRole('dialog', { name: 'Contact Sales Team' })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 465,
+          "startTime": "2026-09-25T21:40:32.324Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 950,
+            "column": 33
+          },
+          "steps": []
+        },
+        {
+          "title": "Close context",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 8,
+          "startTime": "2026-09-25T21:40:32.865Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 952,
+            "column": 11
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toMatchObject\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 0,
+          "startTime": "2026-09-25T21:40:32.877Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 971,
+            "column": 22
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBeGreaterThan\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 0,
+          "startTime": "2026-09-25T21:40:32.878Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 981,
+            "column": 24
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBeGreaterThan\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 0,
+          "startTime": "2026-09-25T21:40:32.879Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 982,
+            "column": 29
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBe\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 0,
+          "startTime": "2026-09-25T21:40:32.883Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 987,
+            "column": 43
+          },
+          "steps": []
+        }
+      ]
+    },
+    {
+      "title": "The canonical Developer operator assigns, contacts, notes, and schedules the retained enquiry",
+      "category": null,
+      "outcome": "passed",
+      "durationMs": 8261,
+      "startTime": "2026-09-25T21:40:32.884Z",
+      "location": {
+        "file": "developer-paid-mvp.spec.ts",
+        "line": 134,
+        "column": 23
+      },
+      "steps": [
+        {
+          "title": "Navigate to \"/developer/leads\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 568,
+          "startTime": "2026-09-25T21:40:32.885Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 991,
+            "column": 25
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByRole('heading', { name: 'Leads Control Center', exact: true })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 1406,
+          "startTime": "2026-09-25T21:40:33.454Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 992,
+            "column": 101
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByText('B06 Prospect 8f1aa4cd', { exact: true }).first()",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 20,
+          "startTime": "2026-09-25T21:40:34.865Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 994,
+            "column": 32
+          },
+          "steps": []
+        },
+        {
+          "title": "Click getByText('B06 Prospect 8f1aa4cd', { exact: true }).first()",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 139,
+          "startTime": "2026-09-25T21:40:34.888Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 995,
+            "column": 24
+          },
+          "steps": []
+        },
+        {
+          "title": "Wait for event \"response\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 396,
+          "startTime": "2026-09-25T21:40:35.031Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 997,
+            "column": 36
+          },
+          "steps": []
+        },
+        {
+          "title": "Click getByRole('button', { name: 'Assign to Me', exact: true })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 304,
+          "startTime": "2026-09-25T21:40:35.040Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 1001,
+            "column": 84
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBe\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 0,
+          "startTime": "2026-09-25T21:40:35.428Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 1002,
+            "column": 43
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"poll toEqual\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 6,
+          "startTime": "2026-09-25T21:40:35.432Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 1010,
+            "column": 12
+          },
+          "steps": [
+            {
+              "title": "Expect \"toEqual\"",
+              "category": null,
+              "outcome": "passed",
+              "durationMs": 1,
+              "startTime": "2026-09-25T21:40:35.437Z",
+              "location": {
+                "file": "developer-paid-mvp.spec.ts",
+                "line": 1003,
+                "column": 9
+              },
+              "steps": []
+            }
+          ]
+        },
+        {
+          "title": "Click getByText('Transition Stage', { exact: true }).locator('..').getByRole('combobox')",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 647,
+          "startTime": "2026-09-25T21:40:35.439Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 1013,
+            "column": 55
+          },
+          "steps": []
+        },
+        {
+          "title": "Click getByRole('option', { name: 'contacted', exact: true })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 341,
+          "startTime": "2026-09-25T21:40:36.089Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 1014,
+            "column": 81
+          },
+          "steps": []
+        },
+        {
+          "title": "Fill \"Initial buyer contact recorded by the canonical Developer operator.\" getByText('Transition Stage', { exact: true }).locator('..').getByPlaceholder('Optional transition note...')",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 152,
+          "startTime": "2026-09-25T21:40:36.431Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 1015,
+            "column": 81
+          },
+          "steps": []
+        },
+        {
+          "title": "Wait for event \"response\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 350,
+          "startTime": "2026-09-25T21:40:36.586Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 1018,
+            "column": 40
+          },
+          "steps": []
+        },
+        {
+          "title": "Click getByText('Transition Stage', { exact: true }).locator('..').getByRole('button', { name: 'Move Lead', exact: true })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 273,
+          "startTime": "2026-09-25T21:40:36.590Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 1022,
+            "column": 89
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBe\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 0,
+          "startTime": "2026-09-25T21:40:36.937Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 1023,
+            "column": 47
+          },
+          "steps": []
+        },
+        {
+          "title": "Click getByRole('button', { name: /^Contacted/ })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 400,
+          "startTime": "2026-09-25T21:40:36.939Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 1028,
+            "column": 69
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByText('B06 Prospect 8f1aa4cd', { exact: true }).first()",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 303,
+          "startTime": "2026-09-25T21:40:37.340Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 1029,
+            "column": 32
+          },
+          "steps": []
+        },
+        {
+          "title": "Click getByText('B06 Prospect 8f1aa4cd', { exact: true }).first()",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 94,
+          "startTime": "2026-09-25T21:40:37.647Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 1030,
+            "column": 24
+          },
+          "steps": []
+        },
+        {
+          "title": "Fill \"Called the buyer and confirmed the requested two-bedroom availability.\" getByText('Log Activity', { exact: true }).locator('..').getByPlaceholder('What happened?')",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 231,
+          "startTime": "2026-09-25T21:40:37.743Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 1033,
+            "column": 66
+          },
+          "steps": []
+        },
+        {
+          "title": "Wait for event \"response\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 396,
+          "startTime": "2026-09-25T21:40:37.978Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 1036,
+            "column": 36
+          },
+          "steps": []
+        },
+        {
+          "title": "Click getByText('Log Activity', { exact: true }).locator('..').getByRole('button', { name: 'Save Activity', exact: true })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 273,
+          "startTime": "2026-09-25T21:40:37.982Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 1040,
+            "column": 91
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBe\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 1,
+          "startTime": "2026-09-25T21:40:38.375Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 1041,
+            "column": 43
+          },
+          "steps": []
+        },
+        {
+          "title": "Click getByText('Next Action', { exact: true }).locator('..').getByRole('button', { name: 'Follow up in 2 days', exact: true })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 522,
+          "startTime": "2026-09-25T21:40:38.378Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 1044,
+            "column": 99
+          },
+          "steps": []
+        },
+        {
+          "title": "Wait for event \"response\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 338,
+          "startTime": "2026-09-25T21:40:38.902Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 1045,
+            "column": 38
+          },
+          "steps": []
+        },
+        {
+          "title": "Click getByText('Next Action', { exact: true }).locator('..').getByRole('button', { name: 'Save Next Action', exact: true })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 263,
+          "startTime": "2026-09-25T21:40:38.906Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 1049,
+            "column": 96
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBe\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 0,
+          "startTime": "2026-09-25T21:40:39.244Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 1050,
+            "column": 45
+          },
+          "steps": []
+        },
+        {
+          "title": "Navigate to \"/developer/leads?stage=contacted\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 606,
+          "startTime": "2026-09-25T21:40:39.245Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 1052,
+            "column": 25
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByText('B06 Prospect 8f1aa4cd', { exact: true }).first()",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 1268,
+          "startTime": "2026-09-25T21:40:39.854Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 1053,
+            "column": 105
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toMatchObject\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 0,
+          "startTime": "2026-09-25T21:40:41.126Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 1065,
+            "column": 30
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBeTruthy\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 1,
+          "startTime": "2026-09-25T21:40:41.127Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 1071,
+            "column": 46
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBeTruthy\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 5,
+          "startTime": "2026-09-25T21:40:41.129Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 1072,
+            "column": 43
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toContain\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 0,
+          "startTime": "2026-09-25T21:40:41.137Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 1073,
+            "column": 44
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toContain\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 0,
+          "startTime": "2026-09-25T21:40:41.138Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 1074,
+            "column": 44
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBeGreaterThanOrEqual\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 4,
+          "startTime": "2026-09-25T21:40:41.140Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 1079,
+            "column": 45
+          },
+          "steps": []
+        }
+      ]
+    },
+    {
+      "title": "A scoped expiry stops fresh publication and enquiry while retaining Developer business history",
+      "category": null,
+      "outcome": "passed",
+      "durationMs": 5576,
+      "startTime": "2026-09-25T21:40:41.145Z",
+      "location": {
+        "file": "developer-paid-mvp.spec.ts",
+        "line": 134,
+        "column": 23
+      },
+      "steps": [
+        {
+          "title": "Expect \"toMatchObject\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 0,
+          "startTime": "2026-09-25T21:40:41.149Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 1100,
+            "column": 28
+          },
+          "steps": []
+        },
+        {
+          "title": "Create context",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 8,
+          "startTime": "2026-09-25T21:40:41.151Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 1107,
+            "column": 38
+          },
+          "steps": []
+        },
+        {
+          "title": "Create page",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 80,
+          "startTime": "2026-09-25T21:40:41.161Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 1108,
+            "column": 62
+          },
+          "steps": []
+        },
+        {
+          "title": "Wait for event \"response\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 1516,
+          "startTime": "2026-09-25T21:40:41.244Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 1111,
+            "column": 51
+          },
+          "steps": []
+        },
+        {
+          "title": "Navigate to \"/new-developments?city=johannesburg\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 1071,
+          "startTime": "2026-09-25T21:40:41.246Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 1117,
+            "column": 35
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBe\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 1,
+          "startTime": "2026-09-25T21:40:42.761Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 1118,
+            "column": 50
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByText('B06 Developer 8f1aa4cd Residences', { exact: true })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 237,
+          "startTime": "2026-09-25T21:40:42.762Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 1119,
+            "column": 101
+          },
+          "steps": []
+        },
+        {
+          "title": "Navigate to \"/development/[RUN-OWNED-DEVELOPMENT-SLUG]\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 436,
+          "startTime": "2026-09-25T21:40:43.003Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 1121,
+            "column": 35
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByRole('heading', { name: 'B06 Developer 8f1aa4cd Residences', exact: true }).first()",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 641,
+          "startTime": "2026-09-25T21:40:43.440Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 1124,
+            "column": 13
+          },
+          "steps": []
+        },
+        {
+          "title": "Close context",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 7,
+          "startTime": "2026-09-25T21:40:44.166Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 1126,
+            "column": 11
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toMatchObject\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 0,
+          "startTime": "2026-09-25T21:40:44.184Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 1156,
+            "column": 29
+          },
+          "steps": []
+        },
+        {
+          "title": "Create context",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 9,
+          "startTime": "2026-09-25T21:40:44.187Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 1163,
+            "column": 38
+          },
+          "steps": []
+        },
+        {
+          "title": "Create page",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 29,
+          "startTime": "2026-09-25T21:40:44.198Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 1164,
+            "column": 62
+          },
+          "steps": []
+        },
+        {
+          "title": "Wait for event \"response\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 1231,
+          "startTime": "2026-09-25T21:40:44.231Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 1167,
+            "column": 51
+          },
+          "steps": []
+        },
+        {
+          "title": "Navigate to \"/new-developments?city=johannesburg\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 789,
+          "startTime": "2026-09-25T21:40:44.233Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 1173,
+            "column": 35
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBe\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 0,
+          "startTime": "2026-09-25T21:40:45.464Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 1174,
+            "column": 50
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toHaveCount\" getByText('B06 Developer 8f1aa4cd Residences', { exact: true })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 137,
+          "startTime": "2026-09-25T21:40:45.465Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 1175,
+            "column": 101
+          },
+          "steps": []
+        },
+        {
+          "title": "Navigate to \"/development/[RUN-OWNED-DEVELOPMENT-SLUG]\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 336,
+          "startTime": "2026-09-25T21:40:45.605Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 1177,
+            "column": 35
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBeVisible\" getByRole('heading', { name: 'Development Not Found', exact: true })",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 549,
+          "startTime": "2026-09-25T21:40:45.943Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 1180,
+            "column": 13
+          },
+          "steps": []
+        },
+        {
+          "title": "POST \"/api/trpc/developer.createLead?[QUERY REDACTED]\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 22,
+          "startTime": "2026-09-25T21:40:46.494Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 1182,
+            "column": 64
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBe\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 0,
+          "startTime": "2026-09-25T21:40:46.517Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 1190,
+            "column": 41
+          },
+          "steps": []
+        },
+        {
+          "title": "Close context",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 9,
+          "startTime": "2026-09-25T21:40:46.586Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 1192,
+            "column": 11
+          },
+          "steps": []
+        },
+        {
+          "title": "Evaluate",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 59,
+          "startTime": "2026-09-25T21:40:46.598Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 1195,
+            "column": 43
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBe\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 1,
+          "startTime": "2026-09-25T21:40:46.659Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 1207,
+            "column": 27
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toMatchObject\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 1,
+          "startTime": "2026-09-25T21:40:46.664Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 1225,
+            "column": 36
+          },
+          "steps": []
+        },
+        {
+          "title": "Evaluate",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 39,
+          "startTime": "2026-09-25T21:40:46.667Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 1227,
+            "column": 51
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBe\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 0,
+          "startTime": "2026-09-25T21:40:46.708Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 1239,
+            "column": 35
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toMatchObject\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 2,
+          "startTime": "2026-09-25T21:40:46.713Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 1259,
+            "column": 26
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBeGreaterThanOrEqual\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 0,
+          "startTime": "2026-09-25T21:40:46.717Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 1265,
+            "column": 44
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBe\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 0,
+          "startTime": "2026-09-25T21:40:46.720Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 1266,
+            "column": 44
+          },
+          "steps": []
+        },
+        {
+          "title": "Expect \"toBeGreaterThanOrEqual\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 0,
+          "startTime": "2026-09-25T21:40:46.721Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 1267,
+            "column": 48
+          },
+          "steps": []
+        }
+      ]
+    },
+    {
+      "title": "Close context",
+      "category": null,
+      "outcome": "passed",
+      "durationMs": 10,
+      "startTime": "2026-09-25T21:40:46.860Z",
+      "location": {
+        "file": "developer-paid-mvp.spec.ts",
+        "line": 1270,
+        "column": 7
+      },
+      "steps": []
+    },
+    {
+      "title": "After Hooks",
+      "category": null,
+      "outcome": "passed",
+      "durationMs": 672,
+      "startTime": "2026-09-25T21:40:46.871Z",
+      "location": null,
+      "steps": [
+        {
+          "title": "afterEach hook",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 3,
+          "startTime": "2026-09-25T21:40:46.871Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 298,
+            "column": 8
+          },
+          "steps": [
+            {
+              "title": "Attach \"browser-diagnostics.json\"",
+              "category": null,
+              "outcome": "passed",
+              "durationMs": 1,
+              "startTime": "2026-09-25T21:40:46.873Z",
+              "location": {
+                "file": "developer-paid-mvp.spec.ts",
+                "line": 303,
+                "column": 20
+              },
+              "steps": []
+            }
+          ]
+        },
+        {
+          "title": "Fixture \"page\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 0,
+          "startTime": "2026-09-25T21:40:46.874Z",
+          "location": null,
+          "steps": []
+        },
+        {
+          "title": "Fixture \"context\"",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 644,
+          "startTime": "2026-09-25T21:40:46.875Z",
+          "location": null,
+          "steps": [
+            {
+              "title": "Close context",
+              "category": null,
+              "outcome": "passed",
+              "durationMs": 547,
+              "startTime": "2026-09-25T21:40:46.972Z",
+              "location": null,
+              "steps": []
+            }
+          ]
+        },
+        {
+          "title": "afterAll hook",
+          "category": null,
+          "outcome": "passed",
+          "durationMs": 17,
+          "startTime": "2026-09-25T21:40:47.526Z",
+          "location": {
+            "file": "developer-paid-mvp.spec.ts",
+            "line": 343,
+            "column": 8
+          },
+          "steps": []
+        }
+      ]
+    }
+  ],
+  "diagnostics": {
+    "uncaughtPageErrorCount": 0,
+    "consoleErrorCount": 6,
+    "requestFailureCount": 8,
+    "httpErrorResponseCount": 3,
+    "messagesRedacted": true,
+    "events": [
+      {
+        "context": "developer-owner",
+        "kind": "request-failure",
+        "timeUtc": "2026-09-25T21:39:44.967Z",
+        "elapsedMs": 6524,
+        "journeyStep": "Developer-only commercial surface and real registration",
+        "pagePath": "/developer/plans",
+        "message": "net::ERR_ABORTED",
+        "method": "GET",
+        "requestPath": "/login"
+      },
+      {
+        "context": "developer-owner",
+        "kind": "http-error-response",
+        "timeUtc": "2026-09-25T21:39:48.347Z",
+        "elapsedMs": 9904,
+        "journeyStep": "Developer-only commercial surface and real registration",
+        "pagePath": "/login",
+        "message": "HTTP 401 Unauthorized",
+        "method": "POST",
+        "requestPath": "/api/auth/login",
+        "responseStatus": 401
+      },
+      {
+        "context": "developer-owner",
+        "kind": "console-error",
+        "timeUtc": "2026-09-25T21:39:48.375Z",
+        "elapsedMs": 9932,
+        "journeyStep": "Developer-only commercial surface and real registration",
+        "pagePath": "/login",
+        "message": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+      },
+      {
+        "context": "developer-owner",
+        "kind": "console-error",
+        "timeUtc": "2026-09-25T21:39:48.375Z",
+        "elapsedMs": 9932,
+        "journeyStep": "Developer-only commercial surface and real registration",
+        "pagePath": "/login",
+        "message": "[API] Error response: {error: Please verify your email address before logging in., code: [REDACTED], email: [EMAIL]}"
+      },
+      {
+        "context": "developer-owner",
+        "kind": "console-error",
+        "timeUtc": "2026-09-25T21:39:49.705Z",
+        "elapsedMs": 11262,
+        "journeyStep": "Mounted organisation setup creates exactly one pending organisation and publisher",
+        "pagePath": "/developer/setup",
+        "message": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+      },
+      {
+        "context": "developer-owner",
+        "kind": "http-error-response",
+        "timeUtc": "2026-09-25T21:39:49.705Z",
+        "elapsedMs": 11262,
+        "journeyStep": "Mounted organisation setup creates exactly one pending organisation and publisher",
+        "pagePath": "/developer/setup",
+        "message": "HTTP 404 Not Found",
+        "method": "GET",
+        "requestPath": "/api/trpc/developer.getProfile",
+        "responseStatus": 404
+      },
+      {
+        "context": "developer-owner",
+        "kind": "console-error",
+        "timeUtc": "2026-09-25T21:39:49.708Z",
+        "elapsedMs": 11265,
+        "journeyStep": "Mounted organisation setup creates exactly one pending organisation and publisher",
+        "pagePath": "/developer/setup",
+        "message": "[API Query Error] TRPCClientError: Developer profile not found.\n    at TRPCClientError2.from (http://localhost:5177/@fs[WORKTREE]/node_modules/.vite/deps/chunk-LDACPNFW.js?[QUERY REDACTED]\n    at http://localhost:5177/@fs[WORKTREE]/node_modules/.vite/deps/chunk-LDACPNFW.js?[QUERY REDACTED]"
+      },
+      {
+        "context": "developer-owner",
+        "kind": "request-failure",
+        "timeUtc": "2026-09-25T21:40:01.185Z",
+        "elapsedMs": 22742,
+        "journeyStep": "The approved organisation issues and resumes one exact Developer Launch Access invoice",
+        "pagePath": "/developer/subscription",
+        "message": "net::ERR_ABORTED",
+        "method": "GET",
+        "requestPath": "/api/trpc/developer.getSubscription,billing.developerWorkspace"
+      },
+      {
+        "context": "developer-owner",
+        "kind": "request-failure",
+        "timeUtc": "2026-09-25T21:40:19.084Z",
+        "elapsedMs": 40641,
+        "journeyStep": "The paid Developer authors a residential development, confirmed media, and aggregate unit inventory through the mounted wizard",
+        "pagePath": "/developer/create-development",
+        "message": "net::ERR_ABORTED",
+        "method": "GET",
+        "requestPath": "/api/trpc/developer.getDraft"
+      },
+      {
+        "context": "developer-owner",
+        "kind": "console-error",
+        "timeUtc": "2026-09-25T21:40:19.085Z",
+        "elapsedMs": 40642,
+        "journeyStep": "The paid Developer authors a residential development, confirmed media, and aggregate unit inventory through the mounted wizard",
+        "pagePath": "/developer/create-development",
+        "message": "[API Query Error] TRPCClientError: Network request failed before the API returned a response.\nRequest ID: [REQUEST ID REDACTED]\nURL: http://localhost:5000/api/trpc/developer.getDraft?[QUERY REDACTED]\n\nMost likely causes:\n- API gateway / upstream failure\n- Backend process crash or restart\n- Temporary network interruption\n    at TRPCClientError2.from (http://localhost:5177/@fs[WORKTREE]/node_modules/.vite/deps/chunk-LDACPNFW.js?[QUERY REDACTED]\n    at http://localhost:5177/@fs[WORKTREE]/node_modules/.vite/deps/chunk-LDACPNFW.js?[QUERY REDACTED]"
+      },
+      {
+        "context": "public-buyer",
+        "kind": "request-failure",
+        "timeUtc": "2026-09-25T21:40:31.878Z",
+        "elapsedMs": 53435,
+        "journeyStep": "Public discovery renders the approved Developer development and captures one unit enquiry",
+        "pagePath": "/development/[RUN-OWNED-DEVELOPMENT-SLUG]",
+        "message": "net::ERR_BLOCKED_BY_ORB",
+        "method": "GET",
+        "requestPath": "/maps/api/staticmap"
+      },
+      {
+        "context": "developer-owner",
+        "kind": "request-failure",
+        "timeUtc": "2026-09-25T21:40:39.391Z",
+        "elapsedMs": 60948,
+        "journeyStep": "The canonical Developer operator assigns, contacts, notes, and schedules the retained enquiry",
+        "pagePath": "/developer/leads",
+        "message": "net::ERR_ABORTED",
+        "method": "GET",
+        "requestPath": "/api/trpc/developer.getLeads,developer.getFunnelAttention,developer.getOperatingHome"
+      },
+      {
+        "context": "public-before-expiry",
+        "kind": "request-failure",
+        "timeUtc": "2026-09-25T21:40:43.052Z",
+        "elapsedMs": 64609,
+        "journeyStep": "A scoped expiry stops fresh publication and enquiry while retaining Developer business history",
+        "pagePath": "/new-developments",
+        "message": "net::ERR_ABORTED",
+        "method": "GET",
+        "requestPath": "/maps/api/js"
+      },
+      {
+        "context": "public-after-expiry",
+        "kind": "request-failure",
+        "timeUtc": "2026-09-25T21:40:45.649Z",
+        "elapsedMs": 67206,
+        "journeyStep": "A scoped expiry stops fresh publication and enquiry while retaining Developer business history",
+        "pagePath": "/new-developments",
+        "message": "net::ERR_ABORTED",
+        "method": "GET",
+        "requestPath": "/maps/api/js"
+      },
+      {
+        "context": "public-after-expiry",
+        "kind": "request-failure",
+        "timeUtc": "2026-09-25T21:40:45.649Z",
+        "elapsedMs": 67206,
+        "journeyStep": "A scoped expiry stops fresh publication and enquiry while retaining Developer business history",
+        "pagePath": "/new-developments",
+        "message": "net::ERR_ABORTED",
+        "method": "GET",
+        "requestPath": "/s/inter/v20/UcC73FwrK3iLTeHuS_nVMrMxCp50SjIa1ZL7.woff2"
+      },
+      {
+        "context": "developer-owner",
+        "kind": "http-error-response",
+        "timeUtc": "2026-09-25T21:40:46.705Z",
+        "elapsedMs": 68262,
+        "journeyStep": "A scoped expiry stops fresh publication and enquiry while retaining Developer business history",
+        "pagePath": "/developer/leads",
+        "message": "HTTP 403 Forbidden",
+        "method": "POST",
+        "requestPath": "/api/trpc/developer.publishDevelopment",
+        "responseStatus": 403
+      },
+      {
+        "context": "developer-owner",
+        "kind": "console-error",
+        "timeUtc": "2026-09-25T21:40:46.706Z",
+        "elapsedMs": 68263,
+        "journeyStep": "A scoped expiry stops fresh publication and enquiry while retaining Developer business history",
+        "pagePath": "/developer/leads",
+        "message": "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+      }
+    ]
+  }
+}

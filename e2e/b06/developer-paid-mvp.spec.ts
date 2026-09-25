@@ -31,6 +31,23 @@ type CapturedVerification = {
   capturedAt: string;
 };
 
+type BrowserDiagnostic = {
+  context: string;
+  kind: 'uncaught-page-error' | 'console-error' | 'request-failure' | 'http-error-response';
+  timeUtc: string;
+  elapsedMs: number;
+  journeyStep: string;
+  pagePath: string;
+  message: string;
+  method?: string;
+  requestPath?: string;
+  responseStatus?: number;
+};
+
+const browserDiagnostics: BrowserDiagnostic[] = [];
+const browserDiagnosticsStartedAt = Date.now();
+let activeJourneyStep = 'outside a named journey step';
+
 let connection: AuthoritySqlConnection | undefined;
 
 function rowsFrom(result: unknown): Row[] {
@@ -60,6 +77,94 @@ function capturedVerifications(): CapturedVerification[] {
   } catch {
     return [];
   }
+}
+
+function redactBrowserDiagnostic(value: string): string {
+  return value
+    .replace(/\b(?:https?:\/\/|\/api\/)[^\s'"<>}]*/gi, url => {
+      const queryIndex = url.indexOf('?');
+      return queryIndex < 0 ? url : `${url.slice(0, queryIndex)}?[QUERY REDACTED]`;
+    })
+    .replace(
+      /([?&](?:token|code|secret|password|access_token|refresh_token)=)[^&\s#]*/gi,
+      '$1[REDACTED]',
+    )
+    .replace(
+      /((?:token|code|secret|password|authorization|cookie)["']?\s*[:=]\s*["']?)[^"',\s}&]+["']?/gi,
+      '$1[REDACTED]',
+    )
+    .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, '[EMAIL]')
+    .slice(0, 1_000);
+}
+
+function browserUrlPath(value: string): string {
+  try {
+    return new URL(value).pathname || '/';
+  } catch {
+    return value.split(/[?#]/, 1)[0];
+  }
+}
+
+function recordBrowserDiagnostic(
+  page: Page,
+  context: string,
+  kind: BrowserDiagnostic['kind'],
+  message: string,
+  request: { method?: string; url?: string; responseStatus?: number } = {},
+): void {
+  const now = Date.now();
+  browserDiagnostics.push({
+    context,
+    kind,
+    timeUtc: new Date(now).toISOString(),
+    elapsedMs: now - browserDiagnosticsStartedAt,
+    journeyStep: activeJourneyStep,
+    pagePath: browserUrlPath(page.url()),
+    message: redactBrowserDiagnostic(message),
+    ...(request.method ? { method: request.method } : {}),
+    ...(request.url ? { requestPath: browserUrlPath(request.url) } : {}),
+    ...(request.responseStatus ? { responseStatus: request.responseStatus } : {}),
+  });
+}
+
+async function browserJourneyStep<T>(title: string, body: () => Promise<T>): Promise<T> {
+  const previousStep = activeJourneyStep;
+  activeJourneyStep = title;
+  try {
+    return await test.step(title, body);
+  } finally {
+    activeJourneyStep = previousStep;
+  }
+}
+
+function monitorBrowserPage(page: Page, context: string): void {
+  page.on('pageerror', error => {
+    recordBrowserDiagnostic(page, context, 'uncaught-page-error', `${error.name}: ${error.message}`);
+  });
+  page.on('console', message => {
+    if (message.type() !== 'error') return;
+    recordBrowserDiagnostic(page, context, 'console-error', message.text());
+  });
+  page.on('requestfailed', request => {
+    recordBrowserDiagnostic(
+      page,
+      context,
+      'request-failure',
+      request.failure()?.errorText || 'Request failed without a browser error text.',
+      { method: request.method(), url: request.url() },
+    );
+  });
+  page.on('response', response => {
+    if (response.status() < 400) return;
+    const request = response.request();
+    recordBrowserDiagnostic(
+      page,
+      context,
+      'http-error-response',
+      `HTTP ${response.status()} ${response.statusText()}`,
+      { method: request.method(), url: response.url(), responseStatus: response.status() },
+    );
+  });
 }
 
 async function waitForVerificationEmail(
@@ -168,8 +273,10 @@ async function completeDeveloperOrganisationSetup(page: Page) {
   await page.getByPlaceholder('contact@yourcompany.com').fill(ownerEmail);
   await page.getByPlaceholder('+27 11 123 4567').fill('+27115550106');
   await page.getByPlaceholder('123 Business Street, Business Park').fill('6 B06 Developer Road');
-  await page.getByPlaceholder('Cape Town').fill('Johannesburg');
-  await selectRadixOption(page, 'Select province', 'Gauteng');
+  await browserJourneyStep('Organisation geography selects Gauteng', async () => {
+    await page.getByPlaceholder('Cape Town').fill('Johannesburg');
+    await selectRadixOption(page, 'Select province', 'Gauteng');
+  });
   await page.getByRole('button', { name: 'Next Step', exact: true }).click();
 
   await page
@@ -187,6 +294,36 @@ async function completeDeveloperOrganisationSetup(page: Page) {
 
 test.describe('B06 Developer paid MVP controlled acceptance', () => {
   test.describe.configure({ mode: 'serial' });
+
+  test.afterEach(async ({ browser }, testInfo) => {
+    const pageErrors = browserDiagnostics.filter(entry => entry.kind === 'uncaught-page-error');
+    const consoleErrors = browserDiagnostics.filter(entry => entry.kind === 'console-error');
+    const requestFailures = browserDiagnostics.filter(entry => entry.kind === 'request-failure');
+    const httpErrorResponses = browserDiagnostics.filter(entry => entry.kind === 'http-error-response');
+    await testInfo.attach('browser-diagnostics.json', {
+      body: Buffer.from(
+        JSON.stringify(
+          {
+            browserVersion: browser.version(),
+            nodeVersion: process.version,
+            platform: process.platform,
+            uncaughtPageErrorCount: pageErrors.length,
+            consoleErrorCount: consoleErrors.length,
+            requestFailureCount: requestFailures.length,
+            httpErrorResponseCount: httpErrorResponses.length,
+            uncaughtPageErrors: pageErrors,
+            consoleErrors,
+            requestFailures,
+            httpErrorResponses,
+            messagesRedacted: true,
+          },
+          null,
+          2,
+        ),
+      ),
+      contentType: 'application/json',
+    });
+  });
 
   test.beforeAll(async () => {
     const authority = resolveDatabaseAuthority({ operation: 'test-fixture' });
@@ -211,8 +348,10 @@ test.describe('B06 Developer paid MVP controlled acceptance', () => {
     page: ownerPage,
     browser,
   }) => {
+    monitorBrowserPage(ownerPage, 'developer-owner');
     const reviewerContext = await browser.newContext();
     const reviewerPage = await reviewerContext.newPage();
+    monitorBrowserPage(reviewerPage, 'platform-reviewer');
     let organisationId = 0;
     let publisherId = 0;
     let billableAccountId = 0;
@@ -229,7 +368,7 @@ test.describe('B06 Developer paid MVP controlled acceptance', () => {
     let publishRequestPostData = '';
 
     try {
-      await test.step('Developer-only commercial surface and real registration', async () => {
+      await browserJourneyStep('Developer-only commercial surface and real registration', async () => {
         await ownerPage.goto('/advertise/sell/developers');
         await expect(ownerPage.getByTestId('developer-launch-access-card')).toBeVisible();
         await expect(ownerPage.getByText(/R\s?1[\s,]?499/).first()).toBeVisible();
@@ -277,7 +416,7 @@ test.describe('B06 Developer paid MVP controlled acceptance', () => {
         await expect(ownerPage).toHaveURL(/\/developer\/setup\?verified=true/);
       });
 
-      await test.step('Mounted organisation setup creates exactly one pending organisation and publisher', async () => {
+      await browserJourneyStep('Mounted organisation setup creates exactly one pending organisation and publisher', async () => {
         await completeDeveloperOrganisationSetup(ownerPage);
         const [identity] = await query(
           `SELECT organisation.id AS organisationId, organisation.status AS organisationStatus,
@@ -317,7 +456,7 @@ test.describe('B06 Developer paid MVP controlled acceptance', () => {
         expect(counts).toMatchObject({ organisations: 1, publishers: 1 });
       });
 
-      await test.step('A distinct privileged reviewer approves the organisation without creating paid access', async () => {
+      await browserJourneyStep('A distinct privileged reviewer approves the organisation without creating paid access', async () => {
         await signInAsReviewer(reviewerPage, '/admin/developers');
         await expect(reviewerPage.getByRole('heading', { name: 'Developers' })).toBeVisible();
         const organisationCard = reviewerPage
@@ -356,7 +495,7 @@ test.describe('B06 Developer paid MVP controlled acceptance', () => {
         expect(Number(approvalOnly.activeTerms)).toBe(0);
       });
 
-      await test.step('The approved organisation issues and resumes one exact Developer Launch Access invoice', async () => {
+      await browserJourneyStep('The approved organisation issues and resumes one exact Developer Launch Access invoice', async () => {
         await ownerPage.goto('/developer/plans');
         await expect(ownerPage.getByRole('heading', { name: 'Scale Your Property Development Business' })).toBeVisible();
         await expect(ownerPage.getByText('Developer Launch Access', { exact: true })).toBeVisible();
@@ -425,7 +564,7 @@ test.describe('B06 Developer paid MVP controlled acceptance', () => {
         expect(Number(invoiceCount.total)).toBe(1);
       });
 
-      await test.step('Private EFT proof stays under finance review until a distinct finance approval', async () => {
+      await browserJourneyStep('Private EFT proof stays under finance review until a distinct finance approval', async () => {
         await ownerPage.goto('/developer/subscription');
         await expect(ownerPage.getByText('Developer Launch Access invoice', { exact: true })).toBeVisible();
         await ownerPage.locator('#developer-payment-amount').fill('1499.00');
@@ -511,7 +650,7 @@ test.describe('B06 Developer paid MVP controlled acceptance', () => {
         expect(publisherId).toBeGreaterThan(0);
       });
 
-      await test.step('The paid Developer authors a residential development, confirmed media, and aggregate unit inventory through the mounted wizard', async () => {
+      await browserJourneyStep('The paid Developer authors a residential development, confirmed media, and aggregate unit inventory through the mounted wizard', async () => {
         await ownerPage.goto('/developer/create-development');
         await expect(ownerPage.getByRole('heading', { name: 'Project Setup', exact: true })).toBeVisible();
         await ownerPage.getByText('Residential Development', { exact: true }).click();
@@ -531,12 +670,14 @@ test.describe('B06 Developer paid MVP controlled acceptance', () => {
         await ownerPage.locator('#ownership-full-title').check();
         await advanceDevelopmentWizard(ownerPage, 'Location');
 
-        await ownerPage.locator('#latitude').fill('-26.2041');
-        await ownerPage.locator('#longitude').fill('28.0473');
-        await ownerPage.locator('#address').fill('90 B06 Launch Avenue');
-        await ownerPage.locator('#city').fill('Johannesburg');
-        await ownerPage.locator('#suburb').fill('Braamfontein');
-        await selectRadixOption(ownerPage, 'Select Province', 'Gauteng');
+        await browserJourneyStep('Development location selects Gauteng', async () => {
+          await ownerPage.locator('#latitude').fill('-26.2041');
+          await ownerPage.locator('#longitude').fill('28.0473');
+          await ownerPage.locator('#address').fill('90 B06 Launch Avenue');
+          await ownerPage.locator('#city').fill('Johannesburg');
+          await ownerPage.locator('#suburb').fill('Braamfontein');
+          await selectRadixOption(ownerPage, 'Select Province', 'Gauteng');
+        });
         await advanceDevelopmentWizard(ownerPage, 'Governance & Finances');
         await advanceDevelopmentWizard(ownerPage, 'Amenities & Features');
 
@@ -651,7 +792,7 @@ test.describe('B06 Developer paid MVP controlled acceptance', () => {
         expect(Number(draftProjection.draftId)).toBeGreaterThan(0);
       });
 
-      await test.step('The Development is submitted and independently approved for public publication', async () => {
+      await browserJourneyStep('The Development is submitted and independently approved for public publication', async () => {
         await ownerPage.getByRole('button', { name: 'Submit for Review', exact: true }).click();
         const confirmation = ownerPage.getByRole('dialog', { name: 'Confirm Submission for Review' });
         await expect(confirmation).toBeVisible();
@@ -745,9 +886,10 @@ test.describe('B06 Developer paid MVP controlled acceptance', () => {
         expect(developmentSlug).not.toBe('');
       });
 
-      await test.step('Public discovery renders the approved Developer development and captures one unit enquiry', async () => {
+      await browserJourneyStep('Public discovery renders the approved Developer development and captures one unit enquiry', async () => {
         const buyerContext = await browser.newContext();
         const buyerPage = await buyerContext.newPage();
+        monitorBrowserPage(buyerPage, 'public-buyer');
         const prospectName = `B06 Prospect ${runId.slice(0, 8)}`;
         const prospectEmail = `b06-prospect-${runId}@example.test`;
         try {
@@ -845,7 +987,7 @@ test.describe('B06 Developer paid MVP controlled acceptance', () => {
         expect(Number(replayCount.total)).toBe(1);
       });
 
-      await test.step('The canonical Developer operator assigns, contacts, notes, and schedules the retained enquiry', async () => {
+      await browserJourneyStep('The canonical Developer operator assigns, contacts, notes, and schedules the retained enquiry', async () => {
         await ownerPage.goto('/developer/leads');
         await expect(ownerPage.getByRole('heading', { name: 'Leads Control Center', exact: true })).toBeVisible();
         const prospect = ownerPage.getByText(`B06 Prospect ${runId.slice(0, 8)}`, { exact: true }).first();
@@ -937,7 +1079,119 @@ test.describe('B06 Developer paid MVP controlled acceptance', () => {
         expect(Number(activityCount.total)).toBeGreaterThanOrEqual(3);
       });
 
-      await test.step('A scoped expiry stops fresh publication and enquiry while retaining Developer business history', async () => {
+      await browserJourneyStep('A scoped expiry stops fresh publication and enquiry while retaining Developer business history', async () => {
+        const [activeTerm] = await query(
+          `SELECT subscription.current_period_end > UTC_TIMESTAMP() AS termCurrent,
+                  subscription.status AS subscriptionStatus,
+                  development.approval_status AS approvalStatus,
+                  development.isPublished AS isPublished
+             FROM subscriptions subscription
+             INNER JOIN developments development ON development.id = ?
+             INNER JOIN catalogue_publishers publisher
+               ON publisher.id = development.catalogue_publisher_id
+            WHERE subscription.id = ?
+              AND subscription.billable_account_id = ?
+              AND subscription.owner_type = 'developer'
+              AND subscription.owner_id = publisher.developer_organisation_id
+              AND publisher.developer_organisation_id = ?
+              AND publisher.id = ?`,
+          [developmentId, subscriptionId, billableAccountId, organisationId, publisherId],
+        );
+        expect(activeTerm).toMatchObject({
+          termCurrent: 1,
+          subscriptionStatus: 'active',
+          approvalStatus: 'approved',
+          isPublished: 1,
+        });
+
+        const currentPublicContext = await browser.newContext();
+        const currentPublicPage = await currentPublicContext.newPage();
+        monitorBrowserPage(currentPublicPage, 'public-before-expiry');
+        try {
+          const currentSearch = currentPublicPage.waitForResponse(
+            candidate =>
+              candidate.url().includes('properties.searchDevelopments') &&
+              candidate.request().method() === 'GET',
+            { timeout: 45_000 },
+          );
+          await currentPublicPage.goto('/new-developments?city=johannesburg');
+          expect((await currentSearch).status()).toBe(200);
+          await expect(currentPublicPage.getByText(`${developerName} Residences`, { exact: true })).toBeVisible();
+
+          await currentPublicPage.goto(`/development/${developmentSlug}`);
+          await expect(
+            currentPublicPage.getByRole('heading', { name: `${developerName} Residences`, exact: true }).first(),
+          ).toBeVisible();
+        } finally {
+          await currentPublicContext.close();
+        }
+
+        await connection!.execute(
+          `UPDATE subscriptions
+              SET current_period_end = DATE_SUB(UTC_TIMESTAMP(), INTERVAL 1 MINUTE)
+            WHERE id = ?
+              AND billable_account_id = ?
+              AND owner_type = 'developer'
+              AND owner_id = ?
+              AND status = 'active'`,
+          [subscriptionId, billableAccountId, organisationId],
+        );
+        const [expiredTerm] = await query(
+          `SELECT subscription.current_period_end < UTC_TIMESTAMP() AS expired,
+                  subscription.status AS subscriptionStatus,
+                  development.approval_status AS approvalStatus,
+                  development.isPublished AS isPublished
+             FROM subscriptions subscription
+             INNER JOIN developments development ON development.id = ?
+             INNER JOIN catalogue_publishers publisher
+               ON publisher.id = development.catalogue_publisher_id
+            WHERE subscription.id = ?
+              AND subscription.billable_account_id = ?
+              AND subscription.owner_type = 'developer'
+              AND subscription.owner_id = publisher.developer_organisation_id
+              AND publisher.developer_organisation_id = ?
+              AND publisher.id = ?`,
+          [developmentId, subscriptionId, billableAccountId, organisationId, publisherId],
+        );
+        expect(expiredTerm).toMatchObject({
+          expired: 1,
+          subscriptionStatus: 'active',
+          approvalStatus: 'approved',
+          isPublished: 1,
+        });
+
+        const expiredPublicContext = await browser.newContext();
+        const expiredPublicPage = await expiredPublicContext.newPage();
+        monitorBrowserPage(expiredPublicPage, 'public-after-expiry');
+        try {
+          const expiredSearch = expiredPublicPage.waitForResponse(
+            candidate =>
+              candidate.url().includes('properties.searchDevelopments') &&
+              candidate.request().method() === 'GET',
+            { timeout: 45_000 },
+          );
+          await expiredPublicPage.goto('/new-developments?city=johannesburg');
+          expect((await expiredSearch).status()).toBe(200);
+          await expect(expiredPublicPage.getByText(`${developerName} Residences`, { exact: true })).toHaveCount(0);
+
+          await expiredPublicPage.goto(`/development/${developmentSlug}`);
+          await expect(
+            expiredPublicPage.getByRole('heading', { name: 'Development Not Found', exact: true }),
+          ).toBeVisible();
+
+          const freshCapture = await expiredPublicPage.request.fetch(publicCaptureUrl, {
+            method: 'POST',
+            headers: { 'content-type': publicCaptureContentType },
+            data: withFreshCaptureRequestId(
+              publicCapturePostData,
+              `b06-expired-${runId}-${Date.now()}`,
+            ),
+          });
+          expect(freshCapture.status()).toBe(404);
+        } finally {
+          await expiredPublicContext.close();
+        }
+
         const unpublish = await ownerPage.evaluate(
           async ({ url, postData }) => {
             const response = await fetch(url.replace('developer.publishDevelopment', 'developer.unpublishDevelopment'), {
@@ -952,23 +1206,23 @@ test.describe('B06 Developer paid MVP controlled acceptance', () => {
         );
         expect(unpublish).toBe(200);
 
-        await connection!.execute(
-          `UPDATE subscriptions
-              SET current_period_end = DATE_SUB(UTC_TIMESTAMP(), INTERVAL 1 MINUTE)
-            WHERE id = ?
-              AND billable_account_id = ?
-              AND owner_type = 'developer'
-              AND owner_id = ?
-              AND status = 'active'`,
-          [subscriptionId, billableAccountId, organisationId],
+        const [expiredUnpublished] = await query(
+          `SELECT subscription.current_period_end < UTC_TIMESTAMP() AS expired,
+                  development.approval_status AS approvalStatus,
+                  development.isPublished AS isPublished
+             FROM subscriptions subscription
+             INNER JOIN developments development ON development.id = ?
+             INNER JOIN catalogue_publishers publisher
+               ON publisher.id = development.catalogue_publisher_id
+            WHERE subscription.id = ?
+              AND subscription.billable_account_id = ?
+              AND subscription.owner_type = 'developer'
+              AND subscription.owner_id = publisher.developer_organisation_id
+              AND publisher.developer_organisation_id = ?
+              AND publisher.id = ?`,
+          [developmentId, subscriptionId, billableAccountId, organisationId, publisherId],
         );
-        const [expiredTerm] = await query(
-          `SELECT current_period_end < UTC_TIMESTAMP() AS expired
-             FROM subscriptions
-            WHERE id = ? AND billable_account_id = ? AND owner_type = 'developer' AND owner_id = ?`,
-          [subscriptionId, billableAccountId, organisationId],
-        );
-        expect(Number(expiredTerm.expired)).toBe(1);
+        expect(expiredUnpublished).toMatchObject({ expired: 1, approvalStatus: 'approved', isPublished: 0 });
 
         const deniedPublication = await ownerPage.evaluate(
           async ({ url, postData }) => {
@@ -983,32 +1237,6 @@ test.describe('B06 Developer paid MVP controlled acceptance', () => {
           { url: publishRequestUrl, postData: publishRequestPostData },
         );
         expect(deniedPublication).toBe(403);
-
-        const expiredPublicContext = await browser.newContext();
-        const expiredPublicPage = await expiredPublicContext.newPage();
-        try {
-          const expiredSearch = expiredPublicPage.waitForResponse(
-            candidate =>
-              candidate.url().includes('properties.searchDevelopments') &&
-              candidate.request().method() === 'GET',
-            { timeout: 45_000 },
-          );
-          await expiredPublicPage.goto('/new-developments?city=johannesburg');
-          expect((await expiredSearch).status()).toBe(200);
-          await expect(expiredPublicPage.getByText(`${developerName} Residences`, { exact: true })).toHaveCount(0);
-
-          const freshCapture = await expiredPublicPage.request.fetch(publicCaptureUrl, {
-            method: 'POST',
-            headers: { 'content-type': publicCaptureContentType },
-            data: withFreshCaptureRequestId(
-              publicCapturePostData,
-              `b06-expired-${runId}-${Date.now()}`,
-            ),
-          });
-          expect(freshCapture.status()).toBe(404);
-        } finally {
-          await expiredPublicContext.close();
-        }
 
         const [retained] = await query(
           `SELECT organisation.id AS organisationId, membership.status AS membershipStatus,

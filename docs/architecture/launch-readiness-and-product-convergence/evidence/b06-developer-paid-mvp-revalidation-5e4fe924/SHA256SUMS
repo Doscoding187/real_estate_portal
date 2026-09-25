@@ -1,0 +1,5 @@
+93866de13f3fd9a9da780818207ff6f5ecf1b7d357459041d36c379e1cb8ed8b  docs/architecture/launch-readiness-and-product-convergence/evidence/b06-developer-paid-mvp-revalidation-5e4fe924/browser-initial-report.sanitized.json
+5419f85c9ea9f670f0709a869acef58ea8b86d92b3021dddacb2fb87a4355b11  docs/architecture/launch-readiness-and-product-convergence/evidence/b06-developer-paid-mvp-revalidation-5e4fe924/browser-final-report.sanitized.json
+5aaf678a285339bd9eec8f78dfcf3cc97d3c682ca731d0c98d5360f7d86bbe35  docs/architecture/launch-readiness-and-product-convergence/evidence/b06-developer-paid-mvp-revalidation-5e4fe924/revalidation.md
+2ce67a21dc05c0bcb9cae67ea8001dbe7a594c71cc48d92f06db57dfb17944d7  e2e/b06/developer-paid-mvp.spec.ts
+a565f7331ef0a76881c135ad39c965b99b0bd75827b3edea3b7fd70eb822b9f1  pnpm-lock.yaml
