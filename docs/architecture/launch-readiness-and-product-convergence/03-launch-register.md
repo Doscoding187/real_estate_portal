@@ -6,6 +6,7 @@
 | Scope | Sole launch-disposition authority for the canonical Paid MVP. B01–B18 are work packages linked to existing LRC findings and release gates, not new issue IDs. Services V1/PR #581 and Explore product work are excluded. |
 | Source | Published main `4e012b3044628fc06da7489c0055e9ce01bdc8d9`; reviewed candidate PR #580 `e8974ec34b919ceab37bdbd7e7379f96f3abce99`, tree `28d63e530449ee7357a5979684aea42ee2077bdc`. Candidate changes and this reconciliation are not merged to main. |
 | Evidence | [Senior review and per-package records](23-paid-mvp-senior-reconciliation-2026-09-25.md), [fresh evidence](evidence/paid-mvp-audit-2026-09-25/), [original package criteria](19-paid-mvp-launch-blocker-audit.md), [provenance contract](06-evidence-sequence-and-provenance-contract.md). |
+| Execution | [Paid MVP launch closure plan — 25 September](24-paid-mvp-launch-closure-execution-plan.md) supplies the binding dependency sequence, founder/agent queues, closure criteria and first B03 instruction. The user accepted the reconciliation; planning changes no blocker status and grants no protected operation or activation. |
 
 ## Paid MVP working disposition — 2026-09-25
 
@@ -36,8 +37,8 @@ under the existing B16/B18 and shared packages. No row authorizes activation.
 | [B17](23-paid-mvp-senior-reconciliation-2026-09-25.md#b17--recovery-capacity-and-monitoring) | Recoverable service at launch workload | Probe/runbook ready; restore pending | EVIDENCE INCOMPLETE; no measured restore/capacity proof | HOSTED VERIFICATION REQUIRED | Bind alerts, prove restore/recovery and master-plan capacity thresholds | Yes |
 | [B18](23-paid-mvp-senior-reconciliation-2026-09-25.md#b18--exact-artifact-paid-acceptance-and-go-live) | Exact paid launch acceptance and GO | Checklist prepared; not performed | EVIDENCE INCOMPLETE; NO-GO | BLOCKED BY DEPENDENCY | Close upstream gates; exact three-actor acceptance, cutover, explicit GO | Yes |
 
-**Next single blocker: B03.** Its bounded product/owner containment correction
-also supplies B07's shared finding. See the review's
+**Next single blocker: B03.** Use the [first implementation instruction](24-paid-mvp-launch-closure-execution-plan.md#9-first-implementation-instruction--b03-only).
+Its bounded product/owner containment correction also supplies B07's shared finding. See the review's
 [remaining path](23-paid-mvp-senior-reconciliation-2026-09-25.md#5-exact-remaining-execution-path)
 and [work categories/consolidation](23-paid-mvp-senior-reconciliation-2026-09-25.md#6-reduced-launch-remainder-and-next-assignment).
 

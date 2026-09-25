@@ -2,6 +2,15 @@
 
 Status: repository contract only. No hosted rehearsal, DNS change, protected database operation, or Paid MVP activation is authorized by this file.
 
+Execution sequencing follows the accepted reconciliation's
+[25 September closure plan](architecture/launch-readiness-and-product-convergence/24-paid-mvp-launch-closure-execution-plan.md#3-integration-azure-and-commercial-activation-boundaries).
+B16 accepts the integrated artifact and deployment containment; public paid
+opening requires B18/G7 and Edward's explicit GO. A separately approved isolated
+hosted payment rehearsal uses its own target, accounts, release/approval
+references and short staffed window, with the normal canonical product keys.
+It never copies production release configuration or uses hosted test bypasses.
+References below to B16 activation are subject to this release boundary.
+
 Current B08 boundary (2026-09-24): Azure is established through 0094, while
 Railway Production still uses TiDB. Railway Pro/static outbound IPs is a
 founder spend gate. The topology and rehearsal steps below describe the later
@@ -22,7 +31,7 @@ were changed by that read.
 
 Browser → Vercel `https://www.propertylistifysa.co.za` → Railway Express `https://api.propertylistifysa.co.za` → B08 database, environment-owned Redis, B11 public/private S3, Resend. Vercel owns the frontend artifact; Railway owns API, one continuous email worker, and one lead cron. One API replica owns the B03 term scheduler. The apex redirects to `www` at Vercel/DNS configuration. The API serves no frontend files (`SKIP_FRONTEND=true`).
 
-The intended authenticated staging pair is `https://staging.propertylistifysa.co.za` and `https://api-staging.propertylistifysa.co.za`; these names are **not evidence of live DNS**. Founder must confirm domain control and attach valid certificates before deploying. Staging and production have separate database, Redis, S3 public bucket, S3 private bucket, Resend identity, and secrets. Staging never receives production customer data or production commercial activation. Generic Vercel preview hosts are untrusted, unauthenticated previews. They receive noindex rules and never enter API CORS.
+The intended authenticated staging pair is `https://staging.propertylistifysa.co.za` and `https://api-staging.propertylistifysa.co.za`; these names are **not evidence of live DNS**. Founder must confirm domain control and attach valid certificates before deploying. Staging and production have separate database, Redis, S3 public bucket, S3 private bucket, Resend identity, and secrets. Staging never receives production customer data or production commercial activation configuration. Separately approved isolated rehearsal activation follows the boundary above. Generic Vercel preview hosts are untrusted, unauthenticated previews. They receive noindex rules and never enter API CORS.
 
 `APP_ENV` is the logical target (`development`, `test`, `staging`, `production`). `NODE_ENV=production` is required for both hosted targets. Backend `APP_URL`, `FRONTEND_URL`, `BASE_URL`, `NEXT_PUBLIC_APP_URL`, and `VITE_APP_URL` when supplied must equal the exact HTTPS frontend origin. `API_URL`, `VITE_API_URL`, and `VITE_API_BASE_URL` when supplied must equal the exact HTTPS API origin. `CORS_ALLOWED_ORIGINS` may be absent or must equal `APP_URL`. No URL may have a path. Frontend builds use `VITE_DEPLOY_ENV` and require exact environment-specific `VITE_APP_URL` and `VITE_API_URL`. Vercel production additionally requires `VITE_DEPLOY_ENV=production`.
 
@@ -88,7 +97,7 @@ The API closes its HTTP listener, stops both local schedulers, closes Redis/cach
 
 ## Hosted rehearsal (staging only)
 
-Founder supplies staging DNS/TLS, Railway/Vercel access, isolated B08 staging DB, Redis, separate S3 buckets and scoped credentials, controlled Resend sender/key and safe accounts. Record provider project/environment/service/deployment IDs without secrets. Do not supply production customer data or production commercial product keys.
+Founder supplies staging DNS/TLS, Railway/Vercel access, isolated B08 staging DB, Redis, separate S3 buckets and scoped credentials, controlled Resend sender/key and safe accounts. Record provider project/environment/service/deployment IDs without secrets. Do not supply production customer data or copy production commercial release configuration. Canonical product identifiers may be used only for a separately approved isolated paid rehearsal under the boundary above.
 
 1. Confirm domain certificates and HTTP→HTTPS redirects for both hosts; confirm apex redirect separately as production domain preparation.
 2. Deploy one exact SHA to API, email and lead services. Capture effective build/start/cron/replica/restart settings; confirm no inherited API command. `pnpm hosted:preflight`, `/api/health`, `/api/readiness`, `/api/version` and migration head via B08 read-only authority must agree.

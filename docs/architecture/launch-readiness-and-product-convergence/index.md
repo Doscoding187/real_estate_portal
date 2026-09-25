@@ -2,7 +2,9 @@
 
 > **Current Paid MVP entry point — 2026-09-25:** use the
 > [central blocker dispositions](03-launch-register.md#paid-mvp-working-disposition--2026-09-25)
-> and [senior evidence review](23-paid-mvp-senior-reconciliation-2026-09-25.md).
+> and accepted [senior evidence review](23-paid-mvp-senior-reconciliation-2026-09-25.md).
+> Execute through the [launch closure plan](24-paid-mvp-launch-closure-execution-plan.md):
+> B03 first, one engineering assignment and senior review at a time, with parallel founder preparation.
 > The older stage/governance snapshot below is historical and does not describe
 > the current Paid MVP candidate or grant a release approval.
 

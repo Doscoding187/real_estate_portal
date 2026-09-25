@@ -1,6 +1,10 @@
 # B18 Production V1 acceptance preparation
 
 Status: exact-artifact checklist prepared; no production acceptance has run.
+The [25 September closure plan](24-paid-mvp-launch-closure-execution-plan.md#3-integration-azure-and-commercial-activation-boundaries)
+now governs execution order: B16 integration, separately approved isolated paid
+rehearsal, G6 cutover approval, then B18/G7 public opening. References below to
+B16 activation do not authorize public sales before that final GO.
 The B08 disposition in the [central launch register](03-launch-register.md#b08-protected-database-disposition--2026-09-24)
 keeps Railway on TiDB while Azure cutover is deferred by the founder spend
 gate. This checklist does not authorize deployment, database change or paid
