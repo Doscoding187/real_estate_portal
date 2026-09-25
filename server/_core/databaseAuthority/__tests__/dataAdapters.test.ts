@@ -181,7 +181,9 @@ describe('bounded Database Authority data adapters', () => {
       cities: 10,
       suburbs: 10,
     });
-    expect(GOVERNED_RUNTIME_REFERENCE_VERSION).toBe('gauteng-runtime-reference-projection-v0.3');
+    expect(GOVERNED_RUNTIME_REFERENCE_VERSION).toBe(
+      'property-listify-location-authority-catalog-v0.1',
+    );
     expect(GOVERNED_RUNTIME_REFERENCE_DIGEST).toMatch(/^[a-f0-9]{64}$/);
     expect(GOVERNED_RUNTIME_REFERENCE_ROWS).toHaveLength(1414);
     expect(GOVERNED_RUNTIME_GEOGRAPHY_EXPECTED_ROWS).toEqual({

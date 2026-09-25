@@ -234,6 +234,14 @@ const SUBURBS = [
   },
 ] as const;
 
+type ProvinceReference = {
+  name: string;
+  code: string;
+  slug: string;
+  latitude?: string | number;
+  longitude?: string | number;
+};
+
 type CityReference = {
   provinceSlug: string;
   name: string;
@@ -285,6 +293,36 @@ const GOVERNED_SUBURB_REFERENCES: readonly SuburbReference[] =
     ...(row.publicationStatus ? { publicationStatus: row.publicationStatus } : {}),
   }));
 
+const GOVERNED_PROVINCE_REFERENCES: readonly ProvinceReference[] = GOVERNED_RUNTIME_REFERENCE_ROWS.filter(
+  row => row.runtimeStorageLevel === 'province',
+).map(row => {
+  if (!row.code) {
+    throw new Error(`Governed province ${row.runtimeNaturalKey} requires a canonical code.`);
+  }
+  return {
+    name: row.name,
+    code: row.code,
+    slug: row.slug,
+    ...(row.latitude !== undefined ? { latitude: row.latitude } : {}),
+    ...(row.longitude !== undefined ? { longitude: row.longitude } : {}),
+  };
+});
+
+const EFFECTIVE_PROVINCES: readonly ProvinceReference[] = (() => {
+  const bySlug = new Map<string, ProvinceReference>();
+  for (const province of [...PROVINCES, ...GOVERNED_PROVINCE_REFERENCES]) {
+    const existing = bySlug.get(province.slug);
+    if (!existing) {
+      bySlug.set(province.slug, province);
+      continue;
+    }
+    if (existing.name !== province.name || existing.code !== province.code) {
+      throw new Error(`Conflicting governed province identity ${province.slug}.`);
+    }
+  }
+  return [...bySlug.values()].sort((left, right) => left.slug.localeCompare(right.slug));
+})();
+
 const REFERENCE_PAYLOAD = Object.freeze({ provinces: PROVINCES, cities: CITIES, suburbs: SUBURBS });
 export const CANONICAL_GEOGRAPHY_DIGEST = stableDigest(REFERENCE_PAYLOAD);
 export const CANONICAL_GEOGRAPHY_EXPECTED_ROWS = Object.freeze({
@@ -293,12 +331,7 @@ export const CANONICAL_GEOGRAPHY_EXPECTED_ROWS = Object.freeze({
   suburbs: SUBURBS.length,
 });
 export const GOVERNED_RUNTIME_GEOGRAPHY_EXPECTED_ROWS = Object.freeze({
-  provinces: new Set([
-    ...PROVINCES.map(item => item.slug),
-    ...GOVERNED_RUNTIME_REFERENCE_ROWS.filter(row => row.runtimeStorageLevel === 'province').map(
-      row => row.runtimeNaturalKey,
-    ),
-  ]).size,
+  provinces: new Set(EFFECTIVE_PROVINCES.map(item => item.slug)).size,
   cities: new Set([
     ...CITIES.map(item => `${item.provinceSlug}/${item.slug}`),
     ...GOVERNED_RUNTIME_REFERENCE_ROWS.filter(row => row.runtimeStorageLevel === 'city').map(
@@ -316,7 +349,7 @@ export const GOVERNED_RUNTIME_GEOGRAPHY_EXPECTED_ROWS = Object.freeze({
   ]).size,
 });
 export const GOVERNED_RUNTIME_REFERENCE_DIGEST = stableDigest(GOVERNED_RUNTIME_REFERENCE_ROWS);
-const PROVINCE_SLUG_PLACEHOLDERS = PROVINCES.map(() => '?').join(', ');
+const PROVINCE_SLUG_PLACEHOLDERS = EFFECTIVE_PROVINCES.map(() => '?').join(', ');
 
 export type GeographyReferenceEvidence = AdapterEvidence & {
   expected: { provinces: number; cities: number; suburbs: number };
@@ -349,7 +382,7 @@ function asId(row: Record<string, unknown>, label: string, idField = 'id'): numb
 
 async function ensureProvince(
   connection: AuthoritySqlConnection,
-  item: (typeof PROVINCES)[number],
+  item: ProvinceReference,
 ): Promise<RowIdentity> {
   const rows = await queryRows(
     connection,
@@ -478,20 +511,50 @@ export async function verifyCanonicalGeographyReferenceData(
        LEFT JOIN suburbs s ON s.cityId = c.id
       WHERE p.slug IN (${PROVINCE_SLUG_PLACEHOLDERS})
       ORDER BY p.slug, c.slug, s.slug`,
-    PROVINCES.map(item => item.slug),
+    EFFECTIVE_PROVINCES.map(item => item.slug),
   );
   const provinceRows = new Map<string, Record<string, unknown>>();
   const cityRows = new Map<string, Record<string, unknown>>();
   const suburbRows = new Map<string, Record<string, unknown>>();
   for (const row of rows) {
     const provinceSlug = String(rowValue(row, 'province_slug') ?? '');
-    if (provinceSlug) provinceRows.set(provinceSlug, row);
+    if (provinceSlug) {
+      const existing = provinceRows.get(provinceSlug);
+      if (
+        existing &&
+        (String(rowValue(existing, 'province_id')) !== String(rowValue(row, 'province_id')) ||
+          String(rowValue(existing, 'province_name')) !== String(rowValue(row, 'province_name')))
+      ) {
+        throw new Error(`Canonical geography has duplicate province identity ${provinceSlug}.`);
+      }
+      provinceRows.set(provinceSlug, row);
+    }
     const citySlug = String(rowValue(row, 'city_slug') ?? '');
     const cityNaturalKey = citySlug ? `${provinceSlug}/${citySlug}` : '';
-    if (cityNaturalKey) cityRows.set(cityNaturalKey, row);
+    if (cityNaturalKey) {
+      const existing = cityRows.get(cityNaturalKey);
+      if (
+        existing &&
+        (String(rowValue(existing, 'city_id')) !== String(rowValue(row, 'city_id')) ||
+          String(rowValue(existing, 'city_name')) !== String(rowValue(row, 'city_name')))
+      ) {
+        throw new Error(`Canonical geography has duplicate city identity ${cityNaturalKey}.`);
+      }
+      cityRows.set(cityNaturalKey, row);
+    }
     const suburbSlug = String(rowValue(row, 'suburb_slug') ?? '');
     const suburbNaturalKey = suburbSlug ? `${cityNaturalKey}/${suburbSlug}` : '';
-    if (suburbNaturalKey) suburbRows.set(suburbNaturalKey, row);
+    if (suburbNaturalKey) {
+      const existing = suburbRows.get(suburbNaturalKey);
+      if (
+        existing &&
+        (String(rowValue(existing, 'suburb_id')) !== String(rowValue(row, 'suburb_id')) ||
+          String(rowValue(existing, 'suburb_name')) !== String(rowValue(row, 'suburb_name')))
+      ) {
+        throw new Error(`Canonical geography has duplicate suburb identity ${suburbNaturalKey}.`);
+      }
+      suburbRows.set(suburbNaturalKey, row);
+    }
     if (
       citySlug &&
       Number(rowValue(row, 'city_province_id')) !== Number(rowValue(row, 'province_id'))
@@ -505,7 +568,7 @@ export async function verifyCanonicalGeographyReferenceData(
       throw new Error(`Canonical geography suburb ${suburbSlug} is attached to the wrong city.`);
     }
   }
-  for (const item of PROVINCES) {
+  for (const item of EFFECTIVE_PROVINCES) {
     const row = provinceRows.get(item.slug);
     if (!row) throw new Error(`Canonical geography is missing province ${item.slug}.`);
     if (
@@ -598,7 +661,7 @@ export async function prepareCanonicalGeography(input: {
   });
   await withTransaction(input.connection, async () => {
     const provinces = new Map<string, RowIdentity>();
-    for (const item of PROVINCES)
+    for (const item of EFFECTIVE_PROVINCES)
       provinces.set(item.slug, await ensureProvince(input.connection, item));
     const cities = new Map<string, RowIdentity>();
     for (const item of [...CITIES, ...GOVERNED_CITY_REFERENCES]) {

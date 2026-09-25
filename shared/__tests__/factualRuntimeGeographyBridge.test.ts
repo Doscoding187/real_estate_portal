@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   FactualRuntimeGeographyBridge,
   FactualRuntimeProjectionAuthority,
+  factualGeographyIdNamespace,
+  isFactualGeographyId,
   type FactualRuntimeMappingEntry,
   type FactualRuntimeProjectionEntry,
 } from '../factualRuntimeGeographyBridge';
@@ -11,9 +13,7 @@ const LOCALITY_FACTUAL_ID = 'pl-gp-v01-418038409a1c0a00d9bc';
 const AMBIGUOUS_FACTUAL_ID = 'pl-gp-v01-455d2715587edce120f0';
 const KYALAMI_FACTUAL_ID = 'pl-gp-v01-bf3bda5e9b73324fb944';
 
-function entry(
-  overrides: Partial<FactualRuntimeMappingEntry> = {},
-): FactualRuntimeMappingEntry {
+function entry(overrides: Partial<FactualRuntimeMappingEntry> = {}): FactualRuntimeMappingEntry {
   return {
     factualLocationId: 'pl-gp-v01-1234567890abcdef1234',
     factualPreferredName: 'Example Place',
@@ -60,17 +60,17 @@ describe('factual-to-runtime geography bridge', () => {
       }),
     ]);
 
-    expect(
-      authority.resolveFactualLocation('pl-gp-v01-7a1604bd1ce2d85ce2c5'),
-    ).toMatchObject({
+    expect(authority.resolveFactualLocation('pl-gp-v01-7a1604bd1ce2d85ce2c5')).toMatchObject({
       status: 'resolved',
       projection: {
         factualType: 'town',
         runtimeSearchScopeKind: 'metro_city',
         runtimeNaturalKey: 'gauteng/benoni',
-        environmentRuntimeCompatibilityIds: undefined,
       },
     });
+    expect(authority.resolveFactualLocation('pl-gp-v01-7a1604bd1ce2d85ce2c5')).not.toHaveProperty(
+      'projection.environmentRuntimeCompatibilityIds',
+    );
     expect(authority.resolveNaturalKey('gauteng/benoni')).toMatchObject({
       status: 'resolved',
       projection: { factualPreferredName: 'Benoni' },
@@ -104,6 +104,79 @@ describe('factual-to-runtime geography bridge', () => {
       status: 'resolved',
       projection: { factualType: 'locality' },
     });
+  });
+
+  it('accepts frozen Gauteng and territory-neutral factual identities without widening identity syntax', () => {
+    const genericId = 'pl-geo-v01-test-nz-0123456789abcdef0123';
+
+    expect(isFactualGeographyId('pl-gp-v01-1234567890abcdef1234')).toBe(true);
+    expect(factualGeographyIdNamespace('pl-gp-v01-1234567890abcdef1234')).toBe('gp');
+    expect(isFactualGeographyId(genericId)).toBe(true);
+    expect(factualGeographyIdNamespace(genericId)).toBe('test-nz');
+    expect(isFactualGeographyId('pl-sa-gp-01da060bb6c5807438a654e9')).toBe(false);
+    expect(isFactualGeographyId('pl-geo-v02-test-nz-0123456789abcdef0123')).toBe(false);
+    expect(isFactualGeographyId('pl-geo-v01-test-nz-0123456789ABCDEF0123')).toBe(false);
+  });
+
+  it('resolves a governed co-published key only for the exact selected factual member', () => {
+    const first = projectionEntry({
+      factualLocationId: 'pl-geo-v01-test-nz-00000000000000000001',
+      factualPreferredName: 'Example Place',
+      factualContext: ['Test Region'],
+    });
+    const second = projectionEntry({
+      factualLocationId: 'pl-geo-v01-test-nz-00000000000000000002',
+      factualPreferredName: 'Example Place',
+      factualContext: ['Test Region'],
+    });
+    const authority = new FactualRuntimeProjectionAuthority(
+      [first, second],
+      [
+        {
+          runtimeNaturalKey: 'gauteng/example-place',
+          factualLocationIds: [first.factualLocationId, second.factualLocationId],
+        },
+      ],
+    );
+
+    expect(authority.resolveNaturalKey('gauteng/example-place')).toMatchObject({
+      status: 'blocked',
+      projectionStatus: 'ambiguous_projection',
+    });
+    expect(
+      authority.resolveNaturalKey(
+        'gauteng/example-place',
+        'pl-geo-v01-test-nz-00000000000000000003',
+      ),
+    ).toMatchObject({ status: 'blocked', projectionStatus: 'ambiguous_projection' });
+    expect(
+      authority.resolveNaturalKey('gauteng/example-place', first.factualLocationId),
+    ).toMatchObject({ status: 'resolved', projection: first });
+    expect(
+      authority.resolveNaturalKey('gauteng/example-place', second.factualLocationId),
+    ).toMatchObject({ status: 'resolved', projection: second });
+  });
+
+  it('rejects a co-publication registry that does not match the factual projections', () => {
+    expect(
+      () =>
+        new FactualRuntimeProjectionAuthority(
+          [
+            projectionEntry({
+              factualLocationId: 'pl-geo-v01-test-nz-00000000000000000001',
+            }),
+            projectionEntry({
+              factualLocationId: 'pl-geo-v01-test-nz-00000000000000000002',
+            }),
+          ],
+          [
+            {
+              runtimeNaturalKey: 'gauteng/example-place',
+              factualLocationIds: ['pl-geo-v01-test-nz-00000000000000000001'],
+            },
+          ],
+        ),
+    ).toThrow('at least two factual identities');
   });
 
   it('fails closed when two factual identities claim one natural key', () => {
@@ -264,9 +337,7 @@ describe('factual-to-runtime geography bridge', () => {
       ...entry(),
       nameOnlyMatch: true,
     } as unknown as FactualRuntimeMappingEntry;
-    expect(() => new FactualRuntimeGeographyBridge([nameOnlyEntry])).toThrow(
-      'name-only mapping',
-    );
+    expect(() => new FactualRuntimeGeographyBridge([nameOnlyEntry])).toThrow('name-only mapping');
     expect(() => new FactualRuntimeGeographyBridge([entry(), entry()])).toThrow(
       'Duplicate factual geography identity',
     );

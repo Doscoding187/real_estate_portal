@@ -36,5 +36,6 @@ export interface RuntimeGeographyAuthority {
   resolveRuntimeNaturalKey(
     runtimeNaturalKey: string,
     scopeKind: RuntimeSearchScopeKind,
+    expectedFactualLocationId?: string,
   ): Promise<RuntimeGeographyAuthorityRecord | null>;
 }
