@@ -54,6 +54,8 @@ Publication is required for new request acquisition. Once a request has been ass
 | Provider services                     | `service_provider_services`                                                       |
 | Provider coverage                     | `service_provider_locations`                                                      |
 | Provider subscription state           | `service_provider_subscriptions`                                                  |
+| Reviewed publication                  | `partners.verificationStatus` and `service_provider_profiles.directoryActive`      |
+| Publication audit trail               | `audit_logs` via the reviewed Services publication action                         |
 | Consumer requests                     | `service_leads`                                                                   |
 | Request events and provider responses | `serviceLeadEvents`                                                               |
 | Requester contact                     | canonical `users` record                                                          |
@@ -73,6 +75,24 @@ Services does not dual-write to platform `leads`, `partnerLeads`, or Explore con
 - Directory results are ordered deterministically by provider name, not by trust, subscription, rating, or engagement score.
 - Public coverage is described as **listed coverage** and is matched exactly against the fields supplied by the provider. It is not represented as a canonical radius or distance calculation.
 
+## Reviewed publication authority
+
+Publication is a reviewed super-admin transition, not a provider self-service mutation. A new canonical partner starts at `verificationStatus = 'pending'` with `directoryActive = 0`, so a newly onboarded provider is never public.
+
+The Services server exposes exactly two super-admin-only publication procedures: a readiness inspection that reports canonical provider/profile readiness, and the reviewed transition itself with three decisions:
+
+- `publish` — writes `partners.verificationStatus = 'verified'` and `service_provider_profiles.directoryActive = 1` in one transaction;
+- `unpublish` — withdraws `directoryActive` without rejecting the canonical partner;
+- `reject` — writes `partners.verificationStatus = 'rejected'` and withdraws `directoryActive`.
+
+Authorization boundary: the transition requires the existing `super_admin` authority on the canonical `partners` identity. No service-provider role, and no provider self-service mutation, can reach either procedure or write `directoryActive`, `verificationStatus`, `moderationTier`, or a subscription tier.
+
+Publication fails closed. `publish` is refused, with the blocking reasons named, unless the provider has an existing profile with a complete public profile (headline, biography, and at least one contact channel), at least one active service, at least one valid listed coverage row, an eligible subscription state, and an active canonical partner.
+
+The two publication fields cannot drift into an impossible state. The reviewed transition writes them together, and withdrawing partner verification anywhere in the platform also withdraws Services directory publication in the same transaction. Public read paths independently re-check the full eligibility conjunction, so a drifted row is never treated as published.
+
+Every reviewed decision is recorded in the canonical `audit_logs` authority with the acting operator, decision, before/after publication state, and readiness blockers. Publication requires no new infrastructure: it reuses the existing `super_admin` role, the canonical `partners` identity, and the existing audit trail.
+
 ## Location limitation
 
 The current Services tables store display-text province, city, suburb, coordinates, and radius, but do not store typed canonical location IDs or a governed coverage relation. Services V1 therefore uses exact, non-widening matching on the submitted fields and labels the result as listed coverage.
@@ -87,7 +107,7 @@ A later schema-authority workstream must decide:
 
 No new migration or schema change is included in this workstream; the integration consumes the current mainline `0080_service_lead_request_idempotency.sql` authority.
 
-Provider service and location replacement is non-destructive: omitted structured fields and canonical rows not represented by a compact editor remain unchanged, inactive services remain available to the provider editor, and an empty or all-blank location replacement is rejected rather than deleting existing coverage.
+Provider service and coverage replacement is authoritative over the submitted canonical set. Submitted row identifiers must belong to the authenticated provider; an identifier owned by another provider is rejected rather than silently inserted. Changing a service code or a coverage tuple updates the owned canonical row in place, so no active orphan or duplicate is created. A service that is intentionally removed from the submitted set is deactivated and stays visible to the provider editor, and a coverage row that is intentionally removed — including one the provider blanked out — stops matching immediately. Structured fields the caller did not intentionally change are preserved, and an empty or all-blank location replacement is still rejected rather than deleting existing coverage. Blank coverage rows never satisfy publication or directory queries, and canonical coverage and service-code uniqueness remain enforced.
 
 ## Enquiry privacy and response custody
 
@@ -95,7 +115,7 @@ Provider service and location replacement is non-destructive: omitted structured
 
 Requester email and phone are read from the canonical user record for the assigned provider and the explicit `super_admin` operational exception. V1 does not persist a separate contact snapshot or a separate messaging/quote record. A later authority is required if immutable contact consent/evidence, threaded messaging, formal quotes, or response SLA tracking becomes part of the product.
 
-Service request writes require a stable request key, the existing public-lead rate-limit boundary, a V1 source surface, and an allowlisted context payload. Property, listing, and development context IDs are checked against their canonical records, publication/ownership state, and relationships before persistence; caller-supplied context cannot override the validated service, provider, or request key. The approved `0080_service_lead_request_idempotency.sql` migration supplies the unique `service_leads.request_id` authority. The V1 write derives a fixed-length request ID from the authenticated requester and stable request key without duplicating the raw key in context JSON. Matching retries are serialized against the requester record and replay the original lead only when the normalized provider, category, attribution, geography, property, listing, development, service, and allowlisted context payload are equivalent. A reused key with a changed `sourceDetail`, `reasonKey`, `propertyLinked`, or other material payload fails rather than creating a second request. The request confirmation reads the persisted lead rather than duplicating notes, contact, or journey context in a result URL or browser storage.
+Service request writes require a stable request key, the existing public-lead rate-limit boundary, a V1 source surface, and an allowlisted context payload. Property, listing, and development context IDs are checked against their canonical records, publication/ownership state, and relationships before persistence; caller-supplied context cannot override the validated service, provider, or request key. The approved `0080_service_lead_request_idempotency.sql` migration supplies the unique `service_leads.request_id` authority. The V1 write derives a fixed-length request ID from the authenticated requester and stable request key without duplicating the raw key in context JSON. Matching retries are serialized against the requester record and replay the original lead only when the normalized provider, category, attribution, geography, property, listing, development, service, and allowlisted context payload are equivalent. A reused key with a changed `sourceDetail`, `reasonKey`, `propertyLinked`, or other material payload fails rather than creating a second request. A stored request context that cannot be read as an allowlisted V1 payload fails closed with a distinct replay-unavailable error rather than a misleading "key already used" conflict. Provider lead pagination is ordered by `createdAt DESC, id DESC` so paging is stable when timestamps collide. The request confirmation reads the persisted lead rather than duplicating notes, contact, or journey context in a result URL or browser storage.
 
 ## Surface disposition
 
@@ -128,7 +148,7 @@ Explore must not read private provider contact fields, service leads, request no
 These are explicit launch dependencies, not hidden implementation shortcuts:
 
 1. Canonical provider coverage geography and request location authority.
-2. Audited manual provider publication/approval workflow with an accountable operator. Services V1 has no provider-side review-submission or approval state; completing setup means the private profile is ready for that operator review.
+2. An accountable `super_admin` reviewer operating the reviewed publication transition. The workflow and its fail-closed readiness gate are implemented; the remaining dependency is operational staffing and a review queue for the operator.
 3. Durable requester contact/consent evidence if contact details must be retained beyond the canonical user record.
 4. Provider messaging or formal quote semantics if status updates are insufficient for the next cohort.
 5. Review authorship, moderation, and aggregate recalculation before ratings become a public trust signal.

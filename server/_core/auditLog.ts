@@ -80,4 +80,7 @@ export const AuditActions = {
   UPDATE_SUBSCRIPTION: 'update_subscription',
   EXPORT_DATA: 'export_data',
   UPDATE_DEVELOPMENT: 'update_development',
+
+  // Services V1 reviewed publication authority
+  REVIEW_SERVICE_PROVIDER_PUBLICATION: 'services.provider_publication_reviewed',
 } as const;

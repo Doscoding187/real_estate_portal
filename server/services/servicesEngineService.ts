@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { and, desc, eq, inArray } from 'drizzle-orm';
 import {
+  auditLogs,
   developers,
   developments,
   listings,
@@ -21,12 +22,39 @@ import {
   users,
 } from '../../drizzle/schema';
 import { getDb } from '../db';
+import { AuditActions } from '../_core/auditLog';
 
 export type ServiceCategory = (typeof SERVICE_CATEGORY_VALUES)[number];
 export type ServiceIntentStage = (typeof SERVICE_INTENT_STAGE_VALUES)[number];
 export type ServiceLeadEventType = (typeof SERVICE_LEAD_EVENT_TYPE_VALUES)[number];
 export type ServiceSourceSurface = (typeof SERVICE_SOURCE_SURFACE_VALUES)[number];
 export type ServiceLeadStatus = (typeof SERVICE_LEAD_STATUS_VALUES)[number];
+
+export const SERVICE_PROVIDER_PUBLICATION_DECISIONS = [
+  'publish',
+  'unpublish',
+  'reject',
+] as const;
+
+export type ServiceProviderPublicationDecision =
+  (typeof SERVICE_PROVIDER_PUBLICATION_DECISIONS)[number];
+
+export type ServiceProviderPublicationReadiness = {
+  providerId: number;
+  companyName: string | null;
+  verificationStatus: 'pending' | 'verified' | 'rejected';
+  isActive: boolean;
+  directoryActive: boolean;
+  profileExists: boolean;
+  profileComplete: boolean;
+  subscriptionStatus: 'trial' | 'active' | 'past_due' | 'cancelled' | null;
+  activeServiceCount: number;
+  validCoverageCount: number;
+  isPublished: boolean;
+  readyForPublication: boolean;
+  publicationDriftDetected: boolean;
+  blockers: string[];
+};
 
 type ProviderDirectoryRecord = {
   providerId: number;
@@ -177,6 +205,9 @@ function isValidServiceRequestKey(value: string): boolean {
   return /^[A-Za-z0-9_-]{16,120}$/.test(value);
 }
 
+export const SERVICE_REQUEST_REPLAY_UNAVAILABLE =
+  'A previous request for this key cannot be replayed safely';
+
 function normalizeOptionalPositiveId(
   value: number | null | undefined,
   label: string,
@@ -252,23 +283,29 @@ function getServiceCodeFromContext(value: unknown): string | null {
   return typeof serviceCode === 'string' && serviceCode.trim() ? serviceCode.trim() : null;
 }
 
-function getComparableServiceRequestContext(value: unknown): Record<string, unknown> {
+function getComparableServiceRequestContext(value: unknown): Record<string, unknown> | null {
   let parsed = value;
   if (typeof value === 'string') {
     try {
       parsed = JSON.parse(value);
     } catch {
-      return {};
+      return null;
     }
   }
-  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {};
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return null;
   const comparable = { ...(parsed as Record<string, unknown>) };
   delete comparable.requestKey;
-  return normalizeServiceRequestContext(comparable);
+  try {
+    return normalizeServiceRequestContext(comparable);
+  } catch {
+    return null;
+  }
 }
 
-function serviceRequestContextsMatch(existing: unknown, requested: Record<string, unknown>) {
-  const existingContext = getComparableServiceRequestContext(existing);
+function serviceRequestContextsMatch(
+  existingContext: Record<string, unknown>,
+  requested: Record<string, unknown>,
+) {
   const keys = new Set([...Object.keys(existingContext), ...Object.keys(requested)]);
   return [...keys].every(key => {
     const existingValue = existingContext[key];
@@ -518,6 +555,14 @@ type DirectorySearchInput = {
   suburb?: string;
   limit?: number;
 };
+
+/**
+ * The public directory filters category, coverage, and text in memory so that
+ * V1 matching stays exact. The eligible-candidate scan is therefore bounded to a
+ * production-scale prefix of the deterministic company-name ordering instead of
+ * loading the entire eligible directory before the in-memory limit is applied.
+ */
+export const SERVICES_DIRECTORY_CANDIDATE_SCAN_LIMIT = 1000;
 
 type CreateServiceLeadInput = {
   requesterUserId?: number | null;
@@ -809,6 +854,231 @@ export class ServicesEngineService {
     return this.getProviderProfile(Number(provider.id), true);
   }
 
+  private async readProviderPublicationReadiness(
+    executor: any,
+    providerId: number,
+  ): Promise<ServiceProviderPublicationReadiness | null> {
+    const [base] = await executor
+      .select({
+        providerId: partners.id,
+        companyName: partners.companyName,
+        verificationStatus: partners.verificationStatus,
+        isActive: partners.isActive,
+        profileId: serviceProviderProfiles.id,
+        headline: serviceProviderProfiles.headline,
+        bio: serviceProviderProfiles.bio,
+        contactEmail: serviceProviderProfiles.contactEmail,
+        contactPhone: serviceProviderProfiles.contactPhone,
+        directoryActive: serviceProviderProfiles.directoryActive,
+        subscriptionStatus: serviceProviderSubscriptions.status,
+      })
+      .from(partners)
+      .leftJoin(serviceProviderProfiles, eq(serviceProviderProfiles.providerId, partners.id))
+      .leftJoin(
+        serviceProviderSubscriptions,
+        eq(serviceProviderSubscriptions.providerId, partners.id),
+      )
+      .where(eq(partners.id, providerId))
+      .limit(1);
+
+    if (!base) return null;
+
+    const services = await executor
+      .select({ isActive: serviceProviderServices.isActive })
+      .from(serviceProviderServices)
+      .where(eq(serviceProviderServices.providerId, providerId));
+    const locations = await executor
+      .select({
+        province: serviceProviderLocations.province,
+        city: serviceProviderLocations.city,
+        suburb: serviceProviderLocations.suburb,
+      })
+      .from(serviceProviderLocations)
+      .where(eq(serviceProviderLocations.providerId, providerId));
+
+    const profileExists = Boolean(base.profileId);
+    const isActive = Number(base.isActive || 0) === 1;
+    const directoryActive = Number(base.directoryActive || 0) === 1;
+    const verificationStatus = (base.verificationStatus ||
+      'pending') as 'pending' | 'verified' | 'rejected';
+    const subscriptionStatus =
+      (base.subscriptionStatus as ServiceProviderPublicationReadiness['subscriptionStatus']) ||
+      null;
+    const profileComplete = Boolean(
+      normalizeText(base.headline) &&
+        normalizeText(base.bio) &&
+        (normalizeText(base.contactEmail) || normalizeText(base.contactPhone)),
+    );
+    const activeServiceCount = (services || []).filter(
+      service => Number(service.isActive || 0) === 1,
+    ).length;
+    const validCoverageCount = (locations || []).filter(hasProviderCoverage).length;
+
+    const blockers: string[] = [];
+    if (!isActive) blockers.push('partner_inactive');
+    if (!profileExists) blockers.push('profile_missing');
+    else if (!profileComplete) blockers.push('profile_incomplete');
+    if (activeServiceCount === 0) blockers.push('no_active_service');
+    if (validCoverageCount === 0) blockers.push('no_valid_coverage');
+    if (subscriptionStatus !== 'trial' && subscriptionStatus !== 'active') {
+      blockers.push('subscription_ineligible');
+    }
+
+    return {
+      providerId: Number(base.providerId),
+      companyName: base.companyName || null,
+      verificationStatus,
+      isActive,
+      directoryActive,
+      profileExists,
+      profileComplete,
+      subscriptionStatus,
+      activeServiceCount,
+      validCoverageCount,
+      isPublished:
+        isProviderDirectoryEligible({
+          verificationStatus,
+          isActive,
+          directoryActive,
+          subscriptionStatus,
+        }) &&
+        activeServiceCount > 0 &&
+        validCoverageCount > 0,
+      readyForPublication: blockers.length === 0,
+      publicationDriftDetected: directoryActive && verificationStatus !== 'verified',
+      blockers,
+    };
+  }
+
+  async getProviderPublicationReadiness(
+    providerId: number,
+  ): Promise<ServiceProviderPublicationReadiness> {
+    const db = await getDb();
+    if (!db) throw new Error('Database not available');
+
+    const readiness = await this.readProviderPublicationReadiness(db, Number(providerId));
+    if (!readiness) throw new Error('Provider not found');
+    return readiness;
+  }
+
+  /**
+   * Reviewed Services publication authority. `partners.verificationStatus` and
+   * `service_provider_profiles.directoryActive` are only ever written together
+   * in this transaction so the public directory can never observe a published
+   * profile whose canonical partner is not verified.
+   */
+  async reviewProviderPublication(input: {
+    providerId: number;
+    decision: ServiceProviderPublicationDecision;
+    actorUserId: number;
+    notes?: string | null;
+  }) {
+    const db = await getDb();
+    if (!db) throw new Error('Database not available');
+
+    const providerId = Number(input.providerId);
+    if (!Number.isInteger(providerId) || providerId <= 0) {
+      throw new Error('Provider not found');
+    }
+    const actorUserId = Number(input.actorUserId);
+    if (!Number.isInteger(actorUserId) || actorUserId <= 0) {
+      throw new Error('A reviewing operator is required');
+    }
+    const decision = SERVICE_PROVIDER_PUBLICATION_DECISIONS.find(
+      value => value === input.decision,
+    );
+    if (!decision) {
+      throw new Error('Unsupported publication decision');
+    }
+    const notes = normalizeText(input.notes);
+
+    return db.transaction(async tx => {
+      await tx
+        .select({ id: partners.id })
+        .from(partners)
+        .where(eq(partners.id, providerId))
+        .limit(1)
+        .for('update');
+
+      const readiness = await this.readProviderPublicationReadiness(tx, providerId);
+      if (!readiness) {
+        throw new Error('Provider not found');
+      }
+
+      const before = {
+        verificationStatus: readiness.verificationStatus,
+        directoryActive: readiness.directoryActive,
+        isActive: readiness.isActive,
+      };
+      let after = before;
+      let changed = false;
+
+      if (decision === 'publish') {
+        if (!readiness.readyForPublication) {
+          throw new Error(
+            `Provider is not ready for publication: ${readiness.blockers.join(', ')}`,
+          );
+        }
+        await tx
+          .update(partners)
+          .set({ verificationStatus: 'verified' })
+          .where(eq(partners.id, providerId));
+        await tx
+          .update(serviceProviderProfiles)
+          .set({ directoryActive: 1 })
+          .where(eq(serviceProviderProfiles.providerId, providerId));
+        after = { ...before, verificationStatus: 'verified' as const, directoryActive: true };
+        changed = before.verificationStatus !== 'verified' || !before.directoryActive;
+      } else if (decision === 'unpublish') {
+        if (readiness.directoryActive) {
+          await tx
+            .update(serviceProviderProfiles)
+            .set({ directoryActive: 0 })
+            .where(eq(serviceProviderProfiles.providerId, providerId));
+          changed = true;
+        }
+        after = { ...before, directoryActive: false };
+      } else {
+        await tx
+          .update(partners)
+          .set({ verificationStatus: 'rejected' })
+          .where(eq(partners.id, providerId));
+        if (readiness.directoryActive) {
+          await tx
+            .update(serviceProviderProfiles)
+            .set({ directoryActive: 0 })
+            .where(eq(serviceProviderProfiles.providerId, providerId));
+        }
+        after = { ...before, verificationStatus: 'rejected' as const, directoryActive: false };
+        changed = before.verificationStatus !== 'rejected' || before.directoryActive;
+      }
+
+      await tx.insert(auditLogs).values({
+        userId: actorUserId,
+        action: AuditActions.REVIEW_SERVICE_PROVIDER_PUBLICATION,
+        targetType: 'service_provider',
+        targetId: providerId,
+        metadata: JSON.stringify({
+          decision,
+          changed,
+          notes,
+          before,
+          after,
+          blockers: readiness.blockers,
+        }),
+      });
+
+      return {
+        providerId,
+        decision,
+        changed,
+        verificationStatus: after.verificationStatus,
+        directoryActive: after.directoryActive,
+        isPublished: decision === 'publish',
+      };
+    });
+  }
+
   async upsertProviderIdentity(input: UpsertProviderIdentityInput) {
     const db = await getDb();
     if (!db) throw new Error('Database not available');
@@ -963,6 +1233,13 @@ export class ServicesEngineService {
       }
     }
 
+    const submittedRowIds = services
+      .map(item => (item.id ? Number(item.id) : null))
+      .filter((id): id is number => id !== null);
+    if (new Set(submittedRowIds).size !== submittedRowIds.length) {
+      throw new Error('Service updates must use unique service IDs');
+    }
+
     await db.transaction(async tx => {
       const existing = await tx
         .select()
@@ -970,24 +1247,51 @@ export class ServicesEngineService {
         .where(eq(serviceProviderServices.providerId, providerId))
         .for('update');
 
-      const submittedById = new Map(
-        submitted.filter(item => item.id).map(item => [item.id as number, item]),
+      type ExistingServiceRow = (typeof existing)[number];
+      const existingById = new Map<number, ExistingServiceRow>(
+        existing.map(row => [Number(row.id), row]),
       );
-      const submittedByCode = new Map(
-        submitted.filter(item => !item.id).map(item => [item.code.toLowerCase(), item]),
-      );
-      const claimed = new Set<number>();
-      const serviceCodes = new Set<string>();
+      if (submittedRowIds.some(id => !existingById.has(id))) {
+        throw new Error('Service not found for this provider');
+      }
 
+      // Resolve which owned canonical row each submitted service updates. An
+      // explicit ID always wins; an ID-less item adopts the existing row that
+      // already holds its code so a code change never orphans a row.
+      const existingIdByCode = new Map<string, number>();
       for (const row of existing) {
-        const id = Number(row.id);
-        const input =
-          submittedById.get(id) || submittedByCode.get(String(row.serviceCode).toLowerCase());
-        if (!input) {
-          serviceCodes.add(String(row.serviceCode).toLowerCase());
-          continue;
+        const code = String(row.serviceCode).toLowerCase();
+        if (!existingIdByCode.has(code)) existingIdByCode.set(code, Number(row.id));
+      }
+      const claimByRowId = new Map<number, (typeof submitted)[number]>();
+      const claimedItemIds = new Set<(typeof submitted)[number]>();
+      for (const item of submitted) {
+        const rowId = item.id ?? existingIdByCode.get(item.code.toLowerCase()) ?? null;
+        if (rowId === null) continue;
+        if (claimByRowId.has(rowId)) {
+          throw new Error('Service codes must be unique within a provider profile');
         }
-        claimed.add(id);
+        claimByRowId.set(rowId, item);
+        claimedItemIds.add(item);
+      }
+
+      // Codes held by rows outside the submitted set stay on those rows, so a
+      // claimed row may not take one of them even when the holder is deactivated.
+      const retainedCodes = new Set(
+        existing
+          .filter(row => !claimByRowId.has(Number(row.id)))
+          .map(row => String(row.serviceCode).toLowerCase()),
+      );
+      const finalCodes = new Set<string>();
+      const assertAvailableCode = (code: string) => {
+        if (retainedCodes.has(code) || finalCodes.has(code)) {
+          throw new Error('Service codes must be unique within a provider profile');
+        }
+        finalCodes.add(code);
+      };
+
+      for (const [rowId, input] of claimByRowId) {
+        const row = existingById.get(rowId)!;
         const currency =
           input.currency === undefined
             ? String(row.currency || 'ZAR').toUpperCase()
@@ -998,18 +1302,13 @@ export class ServicesEngineService {
         if (minPrice !== null && maxPrice !== null && Number(minPrice) > Number(maxPrice)) {
           throw new Error('Minimum price must not exceed maximum price');
         }
-        const code = input.code;
-        const previousCode = String(row.serviceCode).toLowerCase();
-        if (serviceCodes.has(code.toLowerCase()) && previousCode !== code.toLowerCase()) {
-          throw new Error('Service codes must be unique within a provider profile');
-        }
-        serviceCodes.add(code.toLowerCase());
+        assertAvailableCode(input.code.toLowerCase());
 
         await tx
           .update(serviceProviderServices)
           .set({
             serviceCategory: input.category,
-            serviceCode: code,
+            serviceCode: input.code,
             displayName: input.displayName,
             description:
               input.description === undefined
@@ -1020,19 +1319,12 @@ export class ServicesEngineService {
             currency,
             isActive: input.isActive === undefined ? row.isActive : input.isActive ? 1 : 0,
           })
-          .where(eq(serviceProviderServices.id, id));
+          .where(eq(serviceProviderServices.id, rowId));
       }
 
       for (const item of submitted) {
-        if (item.id && claimed.has(item.id)) continue;
-        const existingCode = item.id
-          ? existing.find(row => Number(row.id) === item.id)?.serviceCode
-          : undefined;
-        const code = existingCode || item.code;
-        if (serviceCodes.has(code.toLowerCase())) {
-          throw new Error('Service codes must be unique within a provider profile');
-        }
-        serviceCodes.add(code.toLowerCase());
+        if (claimedItemIds.has(item)) continue;
+        assertAvailableCode(item.code.toLowerCase());
         const minPrice = item.minPrice ?? null;
         const maxPrice = item.maxPrice ?? null;
         if (minPrice !== null && maxPrice !== null && minPrice > maxPrice) {
@@ -1041,7 +1333,7 @@ export class ServicesEngineService {
         await tx.insert(serviceProviderServices).values({
           providerId,
           serviceCategory: item.category,
-          serviceCode: code,
+          serviceCode: item.code,
           displayName: item.displayName,
           description: normalizeText(item.description) || null,
           minPrice,
@@ -1049,6 +1341,15 @@ export class ServicesEngineService {
           currency: (normalizeText(item.currency) || 'ZAR').toUpperCase(),
           isActive: item.isActive === false ? 0 : 1,
         });
+      }
+
+      for (const row of existing) {
+        const id = Number(row.id);
+        if (claimByRowId.has(id) || Number(row.isActive || 0) !== 1) continue;
+        await tx
+          .update(serviceProviderServices)
+          .set({ isActive: 0 })
+          .where(eq(serviceProviderServices.id, id));
       }
     });
 
@@ -1093,10 +1394,10 @@ export class ServicesEngineService {
     }
 
     const submittedKeys = new Set<string>();
-    const submittedIds = submitted
-      .map(location => location.id)
-      .filter((id): id is number => Boolean(id));
-    if (new Set(submittedIds).size !== submittedIds.length) {
+    const submittedRowIds = locations
+      .map(location => (location.id ? Number(location.id) : null))
+      .filter((id): id is number => id !== null);
+    if (new Set(submittedRowIds).size !== submittedRowIds.length) {
       throw new Error('Coverage area updates must use unique location IDs');
     }
     for (const location of submitted) {
@@ -1149,7 +1450,7 @@ export class ServicesEngineService {
       }
 
       const existingIds = new Set(existing.map(row => Number(row.id)));
-      if ([...submittedById.keys()].some(id => !existingIds.has(id))) {
+      if (submittedRowIds.some(id => !existingIds.has(id))) {
         throw new Error('Coverage area not found for this provider');
       }
 
@@ -1157,7 +1458,8 @@ export class ServicesEngineService {
       for (const row of existing) {
         const id = Number(row.id);
         const input = submittedById.get(id);
-        const key = serviceLocationKey(input || row);
+        if (!input) continue;
+        const key = serviceLocationKey(input);
         if (finalKeys.has(key)) {
           throw new Error('Coverage areas must be unique within a provider profile');
         }
@@ -1210,6 +1512,12 @@ export class ServicesEngineService {
           isPrimary: location.isPrimary ? 1 : 0,
         });
       }
+
+      for (const row of existing) {
+        const id = Number(row.id);
+        if (claimed.has(id)) continue;
+        await tx.delete(serviceProviderLocations).where(eq(serviceProviderLocations.id, id));
+      }
     });
 
     return db
@@ -1260,7 +1568,8 @@ export class ServicesEngineService {
           inArray(serviceProviderSubscriptions.status, ['trial', 'active']),
         ),
       )
-      .orderBy(partners.companyName, partners.id);
+      .orderBy(partners.companyName, partners.id)
+      .limit(SERVICES_DIRECTORY_CANDIDATE_SCAN_LIMIT);
 
     if (baseRows.length === 0) {
       return [];
@@ -1510,23 +1819,30 @@ export class ServicesEngineService {
       return existing;
     };
 
-    const matchesExistingRequest = (existing: any) =>
-      Boolean(existing) &&
-      Number(existing.requesterUserId || 0) === requesterUserId &&
-      Number(existing.providerId || 0) === providerId &&
-      existing.serviceCategory === input.category &&
-      existing.sourceSurface === input.sourceSurface &&
-      existing.intentStage === input.intentStage &&
-      normalizeText(existing.notes) === notes &&
-      normalizeGeographyValue(existing.geoProvince) === normalizeGeographyValue(province) &&
-      normalizeGeographyValue(existing.geoCity) === normalizeGeographyValue(city) &&
-      normalizeGeographyValue(existing.geoSuburb) === normalizeGeographyValue(suburb) &&
-      Number(existing.propertyId || 0) === Number(propertyId || 0) &&
-      Number(existing.listingId || 0) === Number(listingId || 0) &&
-      Number(existing.developmentId || 0) === Number(developmentId || 0) &&
-      getServiceCodeFromContext(existing.contextJson)?.toLowerCase() ===
-        requestedServiceCode.toLowerCase() &&
-      serviceRequestContextsMatch(existing.contextJson, requestedContext);
+    const matchesExistingRequest = (existing: any) => {
+      if (!existing) return false;
+      const existingContext = getComparableServiceRequestContext(existing.contextJson);
+      if (!existingContext) {
+        throw new Error(SERVICE_REQUEST_REPLAY_UNAVAILABLE);
+      }
+      return (
+        Number(existing.requesterUserId || 0) === requesterUserId &&
+        Number(existing.providerId || 0) === providerId &&
+        existing.serviceCategory === input.category &&
+        existing.sourceSurface === input.sourceSurface &&
+        existing.intentStage === input.intentStage &&
+        normalizeText(existing.notes) === notes &&
+        normalizeGeographyValue(existing.geoProvince) === normalizeGeographyValue(province) &&
+        normalizeGeographyValue(existing.geoCity) === normalizeGeographyValue(city) &&
+        normalizeGeographyValue(existing.geoSuburb) === normalizeGeographyValue(suburb) &&
+        Number(existing.propertyId || 0) === Number(propertyId || 0) &&
+        Number(existing.listingId || 0) === Number(listingId || 0) &&
+        Number(existing.developmentId || 0) === Number(developmentId || 0) &&
+        getServiceCodeFromContext(existing.contextJson)?.toLowerCase() ===
+          requestedServiceCode.toLowerCase() &&
+        serviceRequestContextsMatch(existingContext, requestedContext)
+      );
+    };
 
     const existingBeforeValidation = await findExistingRequest(db);
     if (existingBeforeValidation) {
@@ -1969,7 +2285,7 @@ export class ServicesEngineService {
       .from(serviceLeads)
       .leftJoin(users, eq(users.id, serviceLeads.requesterUserId))
       .where(eq(serviceLeads.providerId, providerId))
-      .orderBy(desc(serviceLeads.createdAt))
+      .orderBy(desc(serviceLeads.createdAt), desc(serviceLeads.id))
       .limit(Math.max(1, Math.min(100, Number(limit || 50))))
       .offset(Math.max(0, Number(offset || 0)));
 

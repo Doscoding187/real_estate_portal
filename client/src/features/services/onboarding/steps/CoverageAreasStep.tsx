@@ -79,17 +79,15 @@ export function CoverageAreasStep({ state, dispatch, onNext, onBack }: CoverageA
               <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                 {index === 0 ? 'Primary area' : `Area ${index + 1}`}
               </span>
-              {!loc.recordId && (
-                <button
-                  type="button"
-                  onClick={() => dispatch({ type: 'REMOVE_LOCATION', id: loc.id })}
-                  disabled={isPending || state.locations.length <= 1}
-                  className="text-slate-400 hover:text-red-500 disabled:opacity-30"
-                  aria-label={`Remove area ${index + 1}`}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={() => dispatch({ type: 'REMOVE_LOCATION', id: loc.id })}
+                disabled={isPending || state.locations.length <= 1}
+                className="text-slate-400 hover:text-red-500 disabled:opacity-30"
+                aria-label={`Remove area ${index + 1}`}
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2">

@@ -1,8 +1,17 @@
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
-import { protectedProcedure, publicProcedure, router } from './_core/trpc';
+import {
+  protectedProcedure,
+  publicProcedure,
+  router,
+  superAdminProcedure,
+} from './_core/trpc';
 import { requireUser } from './_core/requireUser';
-import { hasProviderCoverage, servicesEngineService } from './services/servicesEngineService';
+import {
+  hasProviderCoverage,
+  SERVICE_REQUEST_REPLAY_UNAVAILABLE,
+  servicesEngineService,
+} from './services/servicesEngineService';
 import {
   checkPublicLeadRateLimit,
   getPublicLeadClientIp,
@@ -97,6 +106,28 @@ function requireProviderRole(role: string | null | undefined) {
       message: 'Partner access is limited to service provider accounts.',
     });
   }
+}
+
+const PROVIDER_REPLACEMENT_VALIDATION_MESSAGES = [
+  'At least one service is required',
+  'At least one valid coverage area is required',
+  'Service prices must use ZAR',
+  'Minimum price must not exceed maximum price',
+  'Service codes must be unique within a provider profile',
+  'Service updates must use unique service IDs',
+  'Service not found for this provider',
+  'Coverage area updates must use unique location IDs',
+  'Coverage area identifiers must be unique',
+  'Coverage areas must be unique within a provider profile',
+  'Coverage area not found for this provider',
+];
+
+function throwProviderReplacementError(error: unknown): never {
+  const message = String((error as { message?: unknown })?.message || '');
+  if (PROVIDER_REPLACEMENT_VALIDATION_MESSAGES.includes(message)) {
+    throw new TRPCError({ code: 'BAD_REQUEST', message });
+  }
+  throw error;
 }
 
 export const servicesEngineRouter = router({
@@ -266,7 +297,11 @@ export const servicesEngineRouter = router({
       const user = requireUser(ctx);
       requireProviderRole(user.role);
       const providerId = await requireProviderId(user.id);
-      return servicesEngineService.replaceProviderServices(providerId, input.services);
+      try {
+        return await servicesEngineService.replaceProviderServices(providerId, input.services);
+      } catch (error) {
+        throwProviderReplacementError(error);
+      }
     }),
 
   replaceProviderLocations: protectedProcedure
@@ -291,7 +326,63 @@ export const servicesEngineRouter = router({
       const user = requireUser(ctx);
       requireProviderRole(user.role);
       const providerId = await requireProviderId(user.id);
-      return servicesEngineService.replaceProviderLocations(providerId, input.locations);
+      try {
+        return await servicesEngineService.replaceProviderLocations(providerId, input.locations);
+      } catch (error) {
+        throwProviderReplacementError(error);
+      }
+    }),
+
+  providerPublicationReadiness: superAdminProcedure
+    .input(
+      z.object({
+        providerId: z.number().int().positive(),
+      }),
+    )
+    .query(async ({ input }) => {
+      try {
+        return await servicesEngineService.getProviderPublicationReadiness(input.providerId);
+      } catch (error: any) {
+        if (String(error?.message || '') === 'Provider not found') {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Provider not found' });
+        }
+        throw error;
+      }
+    }),
+
+  reviewProviderPublication: superAdminProcedure
+    .input(
+      z.object({
+        providerId: z.number().int().positive(),
+        decision: z.enum(['publish', 'unpublish', 'reject']),
+        notes: z.string().trim().max(500).optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const user = requireUser(ctx);
+      try {
+        return await servicesEngineService.reviewProviderPublication({
+          providerId: input.providerId,
+          decision: input.decision,
+          actorUserId: user.id,
+          notes: input.notes ?? null,
+        });
+      } catch (error: any) {
+        const message = String(error?.message || '');
+        if (message === 'Provider not found') {
+          throw new TRPCError({ code: 'NOT_FOUND', message });
+        }
+        if (message === 'A reviewing operator is required') {
+          throw new TRPCError({ code: 'FORBIDDEN', message });
+        }
+        if (message === 'Unsupported publication decision') {
+          throw new TRPCError({ code: 'BAD_REQUEST', message });
+        }
+        if (message.startsWith('Provider is not ready for publication')) {
+          throw new TRPCError({ code: 'PRECONDITION_FAILED', message });
+        }
+        throw error;
+      }
     }),
 
   directorySearch: publicProcedure
@@ -442,6 +533,9 @@ export const servicesEngineRouter = router({
           throw new TRPCError({ code: 'BAD_REQUEST', message });
         }
         if (message === 'Request key has already been used') {
+          throw new TRPCError({ code: 'CONFLICT', message });
+        }
+        if (message === SERVICE_REQUEST_REPLAY_UNAVAILABLE) {
           throw new TRPCError({ code: 'CONFLICT', message });
         }
         throw error;

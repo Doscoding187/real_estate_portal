@@ -94,3 +94,46 @@ describe('canonical Service Partner server runtime authority', () => {
     expect(router).toMatch(/providerId:\s*z\.number\(\)\.int\(\)\.positive\(\)/);
   });
 });
+
+describe('canonical Service Partner publication authority', () => {
+  const service = read('server/services/servicesEngineService.ts');
+  const router = read('server/servicesEngineRouter.ts');
+  const db = read('server/db.ts');
+  const auditLog = read('server/_core/auditLog.ts');
+
+  it('exposes the reviewed publication transition only to super administrators', () => {
+    expect(router).toContain('reviewProviderPublication: superAdminProcedure');
+    expect(router).toContain('providerPublicationReadiness: superAdminProcedure');
+  });
+
+  it('keeps publication controls out of provider self-service mutations', () => {
+    // The Services provider surface exposes no publication or verification
+    // writer at all; the reviewed transition is the only writer.
+    expect(router).not.toContain('directoryActive');
+    expect(router).not.toMatch(/verificationStatus:\s*z\./);
+    expect(router).not.toMatch(/moderationTier:\s*z\./);
+    expect(router).toContain('requireProviderRole(user.role)');
+  });
+
+  it('writes canonical verification and directory publication in one reviewed transition', () => {
+    expect(service).toContain('reviewProviderPublication');
+    expect(service).toContain('Provider is not ready for publication');
+    expect(service).toMatch(
+      /update\(partners\)\s*\.set\(\{ verificationStatus: 'verified' \}\)[\s\S]{0,400}update\(serviceProviderProfiles\)\s*\.set\(\{ directoryActive: 1 \}\)/,
+    );
+    expect(service).toContain('publicationDriftDetected');
+  });
+
+  it('records the reviewed publication transition in the canonical audit trail', () => {
+    expect(auditLog).toContain('REVIEW_SERVICE_PROVIDER_PUBLICATION');
+    expect(service).toContain('AuditActions.REVIEW_SERVICE_PROVIDER_PUBLICATION');
+    expect(service).toContain("targetType: 'service_provider'");
+  });
+
+  it('withdraws Services directory publication when partner verification is withdrawn', () => {
+    expect(db).toContain('withdrawsVerification');
+    expect(db).toMatch(
+      /withdrawsVerification[\s\S]{0,600}update\(serviceProviderProfiles\)\s*\.set\(\{ directoryActive: 0 \}\)/,
+    );
+  });
+});

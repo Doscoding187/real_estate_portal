@@ -278,6 +278,93 @@ describe('ProviderOnboardingWizard', () => {
     });
   });
 
+  it('lets a provider remove a persisted service and persisted coverage area', async () => {
+    mockStatus.mockReturnValue({
+      hasProviderIdentity: true,
+      profileConfigured: true,
+      servicesConfigured: false,
+      locationsConfigured: false,
+      onboardingStep: 2,
+      dashboardUnlocked: false,
+      fullFeaturesUnlocked: false,
+      recommendedNextStep: '/service/profile',
+      provider: null,
+    });
+    mockProfile.mockReturnValue({
+      companyName: 'Existing Provider',
+      headline: 'Existing headline',
+      bio: 'Existing bio',
+      contactEmail: 'hello@example.com',
+      contactPhone: '',
+      websiteUrl: '',
+      services: [
+        {
+          id: 41,
+          code: 'plumbing',
+          displayName: 'Plumbing repairs',
+          description: 'Existing description',
+          category: 'home_improvement',
+          minPrice: 250,
+          maxPrice: 900,
+          currency: 'ZAR',
+          isActive: true,
+        },
+        {
+          id: 42,
+          code: 'electrical',
+          displayName: 'Electrical work',
+          description: '',
+          category: 'home_improvement',
+          minPrice: null,
+          maxPrice: null,
+          currency: 'ZAR',
+          isActive: true,
+        },
+      ],
+      locations: [
+        {
+          id: 51,
+          suburb: 'Sandton',
+          city: 'Johannesburg',
+          province: 'Gauteng',
+          countryCode: 'ZA',
+          postalCode: '2196',
+          radiusKm: 40,
+          isPrimary: true,
+        },
+        {
+          id: 52,
+          suburb: 'Arcadia',
+          city: 'Pretoria',
+          province: 'Gauteng',
+          countryCode: 'ZA',
+          postalCode: '0008',
+          radiusKm: 20,
+          isPrimary: false,
+        },
+      ],
+    });
+
+    render(<ProviderOnboardingWizard />);
+    await waitFor(() => expect(screen.getByText('Step 3 of 5')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole('button', { name: 'Remove service 2' }));
+    fireEvent.click(screen.getByRole('button', { name: /continue/i }));
+    await waitFor(() => expect(screen.getByText('Step 4 of 5')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole('button', { name: 'Remove area 2' }));
+    fireEvent.click(screen.getByRole('button', { name: /continue/i }));
+
+    await waitFor(() => expect(mockReplaceServices).toHaveBeenCalled());
+    expect(mockReplaceServices.mock.calls[0]?.[0]).toEqual({
+      services: [expect.objectContaining({ id: 41, code: 'plumbing' })],
+    });
+    await waitFor(() => expect(mockReplaceLocations).toHaveBeenCalled());
+    expect(mockReplaceLocations.mock.calls[0]?.[0]).toEqual({
+      locations: [expect.objectContaining({ id: 51, suburb: 'Sandton' })],
+    });
+  });
+
   it('does not promise paid placement or Explore publishing', () => {
     render(<ProviderOnboardingWizard />);
     expect(screen.queryByText(/paid plan/i)).not.toBeInTheDocument();

@@ -95,17 +95,15 @@ export function ServicesOfferedStep({ state, dispatch, onNext, onBack }: Service
               <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                 Service {index + 1}
               </span>
-              {!svc.recordId && (
-                <button
-                  type="button"
-                  onClick={() => dispatch({ type: 'REMOVE_SERVICE', id: svc.id })}
-                  disabled={isPending || state.services.length <= 1}
-                  className="text-slate-400 hover:text-red-500 disabled:opacity-30"
-                  aria-label={`Remove service ${index + 1}`}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={() => dispatch({ type: 'REMOVE_SERVICE', id: svc.id })}
+                disabled={isPending || state.services.length <= 1}
+                className="text-slate-400 hover:text-red-500 disabled:opacity-30"
+                aria-label={`Remove service ${index + 1}`}
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
             </div>
 
             <div className="flex items-center gap-2 text-sm text-slate-700">
