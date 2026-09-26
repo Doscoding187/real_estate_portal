@@ -1,8 +1,13 @@
 import { createHash } from 'node:crypto';
-import { eq } from 'drizzle-orm';
+import { desc, eq } from 'drizzle-orm';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { serviceProviderLocations } from '../../../drizzle/schema';
+import {
+  serviceLeads,
+  serviceProviderLocations,
+  serviceProviderProfiles,
+  serviceProviderServices,
+} from '../../../drizzle/schema';
 
 const { mockGetDb } = vi.hoisted(() => ({
   mockGetDb: vi.fn(),
@@ -15,6 +20,7 @@ import {
   hasProviderCoverage,
   isProviderDirectoryEligible,
   providerCoversLocation,
+  SERVICES_DIRECTORY_CANDIDATE_SCAN_LIMIT,
   servicesEngineService,
 } from '../servicesEngineService';
 
@@ -44,6 +50,43 @@ function makeSelectQuery(rows: unknown[], lock = false) {
     query.limit.mockResolvedValue(rows);
   }
   return query;
+}
+
+/**
+ * A drizzle-shaped query double that chains every builder method and resolves the
+ * supplied rows when awaited, so one helper covers base reads, ordered reads,
+ * and `for('update')` reads regardless of which method ends the chain.
+ */
+function makeQuery(rows: unknown[] = []) {
+  const query: Record<string, ReturnType<typeof vi.fn>> = {
+    from: vi.fn(),
+    innerJoin: vi.fn(),
+    leftJoin: vi.fn(),
+    where: vi.fn(),
+    orderBy: vi.fn(),
+    limit: vi.fn(),
+    offset: vi.fn(),
+    for: vi.fn(),
+  };
+  for (const key of Object.keys(query)) {
+    query[key]!.mockReturnValue(query);
+  }
+  query.then = (resolve: (value: unknown) => unknown, reject?: (reason: unknown) => unknown) =>
+    Promise.resolve(rows).then(resolve, reject);
+  return query;
+}
+
+function makeUpdateMock() {
+  const where = vi.fn().mockResolvedValue({ affectedRows: 1 });
+  const set = vi.fn(() => ({ where }));
+  const update = vi.fn(() => ({ set }));
+  return { update, set, where };
+}
+
+function makeDeleteMock() {
+  const where = vi.fn().mockResolvedValue({ affectedRows: 1 });
+  const deleteFn = vi.fn(() => ({ where }));
+  return { delete: deleteFn, where };
 }
 
 function makeLeadRow(overrides: Record<string, unknown> = {}) {
@@ -404,7 +447,7 @@ describe('Services V1 provider edit preservation', () => {
     expect(insert).not.toHaveBeenCalled();
   });
 
-  it('rejects an ID update that collides with an omitted location tuple', async () => {
+  it('rejects two submitted coverage rows that claim the same geographic tuple', async () => {
     const existing = [
       {
         id: 23,
@@ -428,6 +471,7 @@ describe('Services V1 provider edit preservation', () => {
       },
     ];
     const update = vi.fn(() => ({ set: vi.fn() }));
+    const deleteFn = vi.fn(() => ({ where: vi.fn() }));
     const existingQuery = makeSelectQuery(existing, true);
     const tx = {
       select: vi
@@ -435,6 +479,7 @@ describe('Services V1 provider edit preservation', () => {
         .mockReturnValueOnce(makeSelectQuery([{ id: 20 }], true))
         .mockReturnValueOnce(existingQuery),
       update,
+      delete: deleteFn,
       insert: vi.fn(),
     };
     mockGetDb.mockResolvedValue({
@@ -454,10 +499,83 @@ describe('Services V1 provider edit preservation', () => {
           city: 'Pretoria',
           suburb: 'Arcadia',
         },
+        {
+          id: 24,
+          province: 'Gauteng',
+          city: 'Pretoria',
+          suburb: 'Arcadia',
+        },
       ]),
     ).rejects.toThrow('Coverage areas must be unique');
 
     expect(update).not.toHaveBeenCalled();
+    expect(deleteFn).not.toHaveBeenCalled();
+  });
+
+  it('moves coverage onto a tuple whose previous row is being removed', async () => {
+    const existing = [
+      {
+        id: 23,
+        countryCode: 'ZA',
+        province: 'Gauteng',
+        city: 'Johannesburg',
+        suburb: 'Sandton',
+        postalCode: '2196',
+        radiusKm: 40,
+        isPrimary: 1,
+      },
+      {
+        id: 24,
+        countryCode: 'ZA',
+        province: 'Gauteng',
+        city: 'Pretoria',
+        suburb: 'Arcadia',
+        postalCode: '0008',
+        radiusKm: 20,
+        isPrimary: 0,
+      },
+    ];
+    const where = vi.fn().mockResolvedValue({ affectedRows: 1 });
+    const updateSet = vi.fn(() => ({ where }));
+    const update = vi.fn(() => ({ set: updateSet }));
+    const deleteWhere = vi.fn().mockResolvedValue({ affectedRows: 1 });
+    const deleteFn = vi.fn(() => ({ where: deleteWhere }));
+    const insert = vi.fn();
+    const existingQuery = makeSelectQuery(existing, true);
+    const tx = {
+      select: vi
+        .fn()
+        .mockReturnValueOnce(makeSelectQuery([{ id: 20 }], true))
+        .mockReturnValueOnce(existingQuery),
+      update,
+      delete: deleteFn,
+      insert,
+    };
+    mockGetDb.mockResolvedValue({
+      transaction: vi.fn(async callback => callback(tx)),
+      select: vi.fn(() => ({
+        from: vi.fn(() => ({
+          where: vi.fn(() => ({ orderBy: vi.fn().mockResolvedValue(existing) })),
+        })),
+      })),
+    });
+
+    await servicesEngineService.replaceProviderLocations(20, [
+      {
+        id: 23,
+        province: 'Gauteng',
+        city: 'Pretoria',
+        suburb: 'Arcadia',
+      },
+    ]);
+
+    expect(update).toHaveBeenCalledTimes(1);
+    expect(updateSet).toHaveBeenCalledWith(
+      expect.objectContaining({ city: 'Pretoria', suburb: 'Arcadia' }),
+    );
+    expect(deleteFn).toHaveBeenCalledWith(serviceProviderLocations);
+    expect(deleteWhere).toHaveBeenCalledWith(eq(serviceProviderLocations.id, 24));
+    expect(insert).not.toHaveBeenCalled();
   });
 
   it('matches an ID-less location update by the exact geographic tuple', async () => {
@@ -486,6 +604,8 @@ describe('Services V1 provider edit preservation', () => {
     const where = vi.fn().mockResolvedValue({ affectedRows: 1 });
     const updateSet = vi.fn(() => ({ where }));
     const update = vi.fn(() => ({ set: updateSet }));
+    const deleteWhere = vi.fn().mockResolvedValue({ affectedRows: 1 });
+    const deleteFn = vi.fn(() => ({ where: deleteWhere }));
     const insert = vi.fn();
     const existingQuery = makeSelectQuery(existing, true);
     const tx = {
@@ -494,6 +614,7 @@ describe('Services V1 provider edit preservation', () => {
         .mockReturnValueOnce(makeSelectQuery([{ id: 20 }], true))
         .mockReturnValueOnce(existingQuery),
       update,
+      delete: deleteFn,
       insert,
     };
     const db = {
@@ -520,6 +641,9 @@ describe('Services V1 provider edit preservation', () => {
     expect(update).toHaveBeenCalledWith(serviceProviderLocations);
     expect(where).toHaveBeenCalledWith(eq(serviceProviderLocations.id, 24));
     expect(insert).not.toHaveBeenCalled();
+    // The row left out of the canonical set stops being published coverage.
+    expect(deleteFn).toHaveBeenCalledTimes(1);
+    expect(deleteWhere).toHaveBeenCalledWith(eq(serviceProviderLocations.id, 23));
   });
 
   it('rejects an empty location replacement instead of deleting existing coverage', async () => {
@@ -657,6 +781,26 @@ describe('Services V1 enquiry attribution', () => {
     expect(transaction.insert).toHaveBeenCalledTimes(3);
     expect(values).toHaveBeenCalledTimes(3);
     expect(providerLookup).toHaveBeenCalledWith(33);
+
+    // A newly onboarded provider identity starts unreviewed and unpublished.
+    const insertedProfiles = values.mock.calls
+      .map(call => call[0])
+      .filter(value => value && 'directoryActive' in value);
+    expect(insertedProfiles).toHaveLength(1);
+    expect(insertedProfiles[0]).toMatchObject({
+      providerId: 33,
+      directoryActive: 0,
+      moderationTier: 'basic',
+    });
+    const insertedPartners = values.mock.calls
+      .map(call => call[0])
+      .filter(value => value && 'verificationStatus' in value);
+    expect(insertedPartners).toHaveLength(1);
+    expect(insertedPartners[0]).toMatchObject({
+      userId: 10,
+      verificationStatus: 'pending',
+      isActive: 1,
+    });
     userLookup.mockRestore();
     providerLookup.mockRestore();
   });
@@ -957,5 +1101,750 @@ describe('Services V1 enquiry attribution', () => {
     ).rejects.toThrow('Select a provider');
 
     expect(insert).not.toHaveBeenCalled();
+  });
+});
+
+const READY_PUBLICATION_BASE_ROW = {
+  providerId: 20,
+  companyName: 'Provider Company',
+  verificationStatus: 'pending',
+  isActive: 1,
+  profileId: 21,
+  headline: 'Property service provider',
+  bio: 'A truthful provider biography.',
+  contactEmail: 'provider@example.com',
+  contactPhone: null,
+  directoryActive: 0,
+  subscriptionStatus: 'trial',
+};
+
+function mockReadinessDb(baseRow: Record<string, unknown>, services: unknown[], locations: unknown[]) {
+  const readinessQueries = [makeQuery([baseRow]), makeQuery(services), makeQuery(locations)];
+  const dbSelect = vi.fn(() => readinessQueries.shift() ?? makeQuery([]));
+  return { dbSelect };
+}
+
+describe('Services V1 reviewed publication authority', () => {
+  it('keeps a newly onboarded provider out of the public directory', async () => {
+    const { dbSelect } = mockReadinessDb(READY_PUBLICATION_BASE_ROW, [{ isActive: 1 }], [
+      { province: 'Gauteng', city: 'Johannesburg', suburb: 'Sandton' },
+    ]);
+    mockGetDb.mockResolvedValue({ select: dbSelect });
+
+    const readiness = await servicesEngineService.getProviderPublicationReadiness(20);
+
+    expect(readiness).toMatchObject({
+      providerId: 20,
+      verificationStatus: 'pending',
+      directoryActive: false,
+      readyForPublication: true,
+      isPublished: false,
+      publicationDriftDetected: false,
+      blockers: [],
+    });
+    expect(
+      isProviderDirectoryEligible({
+        verificationStatus: readiness.verificationStatus,
+        isActive: readiness.isActive,
+        directoryActive: readiness.directoryActive,
+        subscriptionStatus: readiness.subscriptionStatus,
+      }),
+    ).toBe(false);
+  });
+
+  it('reports every readiness blocker a reviewer must resolve', async () => {
+    const { dbSelect } = mockReadinessDb(
+      {
+        ...READY_PUBLICATION_BASE_ROW,
+        profileId: null,
+        headline: null,
+        bio: null,
+        contactEmail: null,
+        contactPhone: null,
+        subscriptionStatus: 'cancelled',
+      },
+      [{ isActive: 0 }],
+      [{ province: null, city: null, suburb: null }],
+    );
+    mockGetDb.mockResolvedValue({ select: dbSelect });
+
+    const readiness = await servicesEngineService.getProviderPublicationReadiness(20);
+
+    expect(readiness.readyForPublication).toBe(false);
+    expect(readiness.blockers).toEqual([
+      'profile_missing',
+      'no_active_service',
+      'no_valid_coverage',
+      'subscription_ineligible',
+    ]);
+  });
+
+  it('fails closed when publication readiness is absent', async () => {
+    const { update, set } = makeUpdateMock();
+    const insertValues = vi.fn().mockResolvedValue({});
+    const tx = {
+      select: vi
+        .fn()
+        .mockReturnValueOnce(makeQuery([{ id: 20 }]))
+        .mockReturnValueOnce(makeQuery([READY_PUBLICATION_BASE_ROW]))
+        .mockReturnValueOnce(makeQuery([{ isActive: 0 }]))
+        .mockReturnValueOnce(makeQuery([{ province: 'Gauteng' }])),
+      update,
+      insert: vi.fn(() => ({ values: insertValues })),
+    };
+    mockGetDb.mockResolvedValue({
+      transaction: vi.fn(async (callback: (tx: typeof tx) => Promise<unknown>) => callback(tx)),
+    });
+
+    await expect(
+      servicesEngineService.reviewProviderPublication({
+        providerId: 20,
+        decision: 'publish',
+        actorUserId: 5,
+      }),
+    ).rejects.toThrow('Provider is not ready for publication: no_active_service');
+
+    expect(update).not.toHaveBeenCalled();
+    expect(insertValues).not.toHaveBeenCalled();
+    expect(set).not.toHaveBeenCalled();
+  });
+
+  it('performs the reviewed publication transition and records it in the audit trail', async () => {
+    const { update, set } = makeUpdateMock();
+    const insertValues = vi.fn().mockResolvedValue({});
+    const tx = {
+      select: vi
+        .fn()
+        .mockReturnValueOnce(makeQuery([{ id: 20 }]))
+        .mockReturnValueOnce(makeQuery([READY_PUBLICATION_BASE_ROW]))
+        .mockReturnValueOnce(makeQuery([{ isActive: 1 }]))
+        .mockReturnValueOnce(makeQuery([{ province: 'Gauteng' }])),
+      update,
+      insert: vi.fn(() => ({ values: insertValues })),
+    };
+    mockGetDb.mockResolvedValue({
+      transaction: vi.fn(async (callback: (tx: typeof tx) => Promise<unknown>) => callback(tx)),
+    });
+
+    const result = await servicesEngineService.reviewProviderPublication({
+      providerId: 20,
+      decision: 'publish',
+      actorUserId: 5,
+      notes: 'Identity documents checked.',
+    });
+
+    expect(result).toEqual({
+      providerId: 20,
+      decision: 'publish',
+      changed: true,
+      verificationStatus: 'verified',
+      directoryActive: true,
+      isPublished: true,
+    });
+    expect(set).toHaveBeenNthCalledWith(1, { verificationStatus: 'verified' });
+    expect(set).toHaveBeenNthCalledWith(2, { directoryActive: 1 });
+    expect(insertValues).toHaveBeenCalledTimes(1);
+    const auditEntry = insertValues.mock.calls[0][0];
+    expect(auditEntry).toMatchObject({
+      userId: 5,
+      action: 'services.provider_publication_reviewed',
+      targetType: 'service_provider',
+      targetId: 20,
+    });
+    const auditMetadata = JSON.parse(String(auditEntry.metadata));
+    expect(auditMetadata).toMatchObject({
+      decision: 'publish',
+      changed: true,
+      notes: 'Identity documents checked.',
+      before: { verificationStatus: 'pending', directoryActive: false },
+      after: { verificationStatus: 'verified', directoryActive: true },
+    });
+  });
+
+  it('rejects a provider and clears directory publication in the same transition', async () => {
+    const { update, set } = makeUpdateMock();
+    const insertValues = vi.fn().mockResolvedValue({});
+    const tx = {
+      select: vi
+        .fn()
+        .mockReturnValueOnce(makeQuery([{ id: 20 }]))
+        .mockReturnValueOnce(
+          makeQuery([{ ...READY_PUBLICATION_BASE_ROW, verificationStatus: 'verified', directoryActive: 1 }]),
+        )
+        .mockReturnValueOnce(makeQuery([{ isActive: 1 }]))
+        .mockReturnValueOnce(makeQuery([{ province: 'Gauteng' }])),
+      update,
+      insert: vi.fn(() => ({ values: insertValues })),
+    };
+    mockGetDb.mockResolvedValue({
+      transaction: vi.fn(async (callback: (tx: typeof tx) => Promise<unknown>) => callback(tx)),
+    });
+
+    const result = await servicesEngineService.reviewProviderPublication({
+      providerId: 20,
+      decision: 'reject',
+      actorUserId: 5,
+    });
+
+    expect(result).toMatchObject({
+      decision: 'reject',
+      verificationStatus: 'rejected',
+      directoryActive: false,
+      isPublished: false,
+    });
+    expect(set).toHaveBeenNthCalledWith(1, { verificationStatus: 'rejected' });
+    expect(set).toHaveBeenNthCalledWith(2, { directoryActive: 0 });
+  });
+
+  it('unpublishes without rejecting the canonical partner', async () => {
+    const { update, set } = makeUpdateMock();
+    const insertValues = vi.fn().mockResolvedValue({});
+    const tx = {
+      select: vi
+        .fn()
+        .mockReturnValueOnce(makeQuery([{ id: 20 }]))
+        .mockReturnValueOnce(
+          makeQuery([{ ...READY_PUBLICATION_BASE_ROW, verificationStatus: 'verified', directoryActive: 1 }]),
+        )
+        .mockReturnValueOnce(makeQuery([{ isActive: 1 }]))
+        .mockReturnValueOnce(makeQuery([{ province: 'Gauteng' }])),
+      update,
+      insert: vi.fn(() => ({ values: insertValues })),
+    };
+    mockGetDb.mockResolvedValue({
+      transaction: vi.fn(async (callback: (tx: typeof tx) => Promise<unknown>) => callback(tx)),
+    });
+
+    const result = await servicesEngineService.reviewProviderPublication({
+      providerId: 20,
+      decision: 'unpublish',
+      actorUserId: 5,
+    });
+
+    expect(result).toMatchObject({
+      decision: 'unpublish',
+      verificationStatus: 'verified',
+      directoryActive: false,
+      isPublished: false,
+    });
+    expect(update).toHaveBeenCalledTimes(1);
+    expect(update).toHaveBeenCalledWith(serviceProviderProfiles);
+    expect(set).toHaveBeenCalledTimes(1);
+    expect(set).toHaveBeenCalledWith({ directoryActive: 0 });
+  });
+
+  it('refuses a publication review without an accountable operator', async () => {
+    mockGetDb.mockResolvedValue({});
+
+    await expect(
+      servicesEngineService.reviewProviderPublication({
+        providerId: 20,
+        decision: 'publish',
+        actorUserId: 0,
+      }),
+    ).rejects.toThrow('A reviewing operator is required');
+  });
+
+  it('surfaces a published provider in the public profile and directory', async () => {
+    const publicProfileDb = {
+      select: vi
+        .fn()
+        .mockReturnValueOnce(
+          makeQuery([
+            {
+              ...READY_PUBLICATION_BASE_ROW,
+              verificationStatus: 'verified',
+              directoryActive: 1,
+              description: 'Provider description',
+              logoUrl: null,
+              websiteUrl: 'https://provider.example.com',
+            },
+          ]),
+        )
+        .mockReturnValueOnce(
+          makeQuery([
+            {
+              id: 31,
+              category: 'home_improvement',
+              code: 'plumbing',
+              displayName: 'Plumbing',
+              description: null,
+              minPrice: null,
+              maxPrice: null,
+              currency: 'ZAR',
+              isActive: 1,
+            },
+          ]),
+        )
+        .mockReturnValueOnce(
+          makeQuery([
+            {
+              id: 41,
+              countryCode: 'ZA',
+              province: 'Gauteng',
+              city: 'Johannesburg',
+              suburb: 'Sandton',
+              postalCode: null,
+              radiusKm: 25,
+              isPrimary: 1,
+            },
+          ]),
+        )
+        .mockReturnValueOnce(makeQuery([])),
+    };
+    mockGetDb.mockResolvedValue(publicProfileDb);
+
+    const profile = await servicesEngineService.getProviderPublicProfile(20);
+
+    expect(profile).toMatchObject({
+      providerId: 20,
+      isPublished: true,
+      publicationStatus: 'published',
+      services: [{ code: 'plumbing' }],
+      locations: [{ suburb: 'Sandton' }],
+    });
+
+    const directoryDb = {
+      select: vi
+        .fn()
+        .mockReturnValueOnce(
+          makeQuery([
+            {
+              providerId: 20,
+              companyName: 'Provider Company',
+              logoUrl: null,
+              verificationStatus: 'verified',
+              trustScore: '50.00',
+              isActive: 1,
+              headline: 'Property service provider',
+              bio: 'A truthful provider biography.',
+              moderationTier: 'verified',
+              averageRating: '0.00',
+              reviewCount: 0,
+              subscriptionTier: 'directory',
+              subscriptionStatus: 'trial',
+            },
+          ]),
+        )
+        .mockReturnValueOnce(
+          makeQuery([
+            {
+              providerId: 20,
+              category: 'home_improvement',
+              code: 'plumbing',
+              displayName: 'Plumbing',
+              minPrice: null,
+              maxPrice: null,
+            },
+          ]),
+        )
+        .mockReturnValueOnce(
+          makeQuery([
+            {
+              providerId: 20,
+              province: 'Gauteng',
+              city: 'Johannesburg',
+              suburb: 'Sandton',
+              radiusKm: 25,
+            },
+          ]),
+        ),
+    };
+    mockGetDb.mockResolvedValue(directoryDb);
+
+    const directory = await servicesEngineService.publicDirectorySearch({});
+
+    expect(directory).toHaveLength(1);
+    expect(directory[0]).toMatchObject({ providerId: 20, companyName: 'Provider Company' });
+  });
+
+  it('makes a rejected or unpublished provider unavailable for new requests', async () => {
+    const insert = vi.fn();
+    mockGetDb.mockResolvedValue({
+      select: vi.fn(() => makeQuery([])),
+      transaction: vi.fn(
+        async (callback: (tx: { select: ReturnType<typeof vi.fn>; insert: typeof insert }) => Promise<unknown>) =>
+          callback({
+            select: vi
+              .fn()
+              .mockReturnValueOnce(makeQuery([{ id: 10 }]))
+              .mockReturnValueOnce(makeQuery([]))
+              .mockReturnValueOnce(makeQuery([{ id: 20 }]))
+              .mockReturnValueOnce(makeQuery([{ id: 21 }]))
+              .mockReturnValueOnce(
+                makeQuery([
+                  {
+                    isActive: 1,
+                    verificationStatus: 'rejected',
+                    directoryActive: 0,
+                    subscriptionStatus: 'trial',
+                  },
+                ]),
+              )
+              .mockReturnValueOnce(makeQuery([{ category: 'home_improvement', code: 'plumbing', isActive: 1 }]))
+              .mockReturnValueOnce(makeQuery([{ province: 'Gauteng' }])),
+            insert,
+          }),
+      ),
+    });
+
+    const profileSpy = vi
+      .spyOn(servicesEngineService, 'getProviderPublicProfile')
+      .mockResolvedValue(null as never);
+
+    await expect(
+      servicesEngineService.createLeadFromContext({
+        requesterUserId: 10,
+        requestKey: 'service-request-key-123456',
+        providerId: 20,
+        category: 'home_improvement',
+        sourceSurface: 'directory',
+        intentStage: 'general',
+        province: 'Gauteng',
+        city: 'Johannesburg',
+        suburb: 'Sandton',
+        serviceCode: 'plumbing',
+        notes: 'Need a repair.',
+      }),
+    ).rejects.toThrow('This provider is not currently available');
+
+    expect(insert).not.toHaveBeenCalled();
+    profileSpy.mockRestore();
+  });
+});
+
+describe('Services V1 authoritative service replacement', () => {
+  const existingServiceRows = [
+    {
+      id: 31,
+      providerId: 20,
+      serviceCategory: 'home_improvement',
+      serviceCode: 'plumbing',
+      displayName: 'Plumbing',
+      description: 'Existing description',
+      minPrice: 250,
+      maxPrice: 900,
+      currency: 'ZAR',
+      isActive: 1,
+    },
+    {
+      id: 32,
+      providerId: 20,
+      serviceCategory: 'finance_legal',
+      serviceCode: 'conveyancing',
+      displayName: 'Conveyancing',
+      description: null,
+      minPrice: null,
+      maxPrice: null,
+      currency: 'ZAR',
+      isActive: 1,
+    },
+  ];
+
+  function mockServiceReplacementDb(existing: unknown[]) {
+    const { update, set, where } = makeUpdateMock();
+    const insert = vi.fn();
+    const tx = {
+      select: vi.fn(() => ({
+        from: vi.fn(() => ({
+          where: vi.fn(() => ({ for: vi.fn().mockResolvedValue(existing) })),
+        })),
+      })),
+      update,
+      insert,
+    };
+    const db = {
+      transaction: vi.fn(async (callback: (tx: typeof tx) => Promise<unknown>) => callback(tx)),
+      select: vi.fn(() => ({
+        from: vi.fn(() => ({
+          where: vi.fn(() => ({ orderBy: vi.fn().mockResolvedValue(existing) })),
+        })),
+      })),
+    };
+    mockGetDb.mockResolvedValue(db);
+    return { tx, update, set, where, insert };
+  }
+
+  it('rejects a service ID that belongs to another provider', async () => {
+    const { update, insert } = mockServiceReplacementDb(existingServiceRows);
+
+    await expect(
+      servicesEngineService.replaceProviderServices(20, [
+        { id: 999, category: 'home_improvement', code: 'plumbing', displayName: 'Plumbing' },
+      ]),
+    ).rejects.toThrow('Service not found for this provider');
+
+    expect(update).not.toHaveBeenCalled();
+    expect(insert).not.toHaveBeenCalled();
+  });
+
+  it('updates the owned canonical row when a service code changes', async () => {
+    const { set, insert, update } = mockServiceReplacementDb(existingServiceRows);
+
+    await servicesEngineService.replaceProviderServices(20, [
+      { id: 31, category: 'home_improvement', code: 'emergency-plumbing', displayName: 'Emergency plumbing' },
+      { id: 32, category: 'finance_legal', code: 'conveyancing', displayName: 'Conveyancing' },
+    ]);
+
+    expect(update).toHaveBeenCalledWith(serviceProviderServices);
+    expect(set).toHaveBeenCalledTimes(2);
+    expect(set).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ serviceCode: 'emergency-plumbing', displayName: 'Emergency plumbing' }),
+    );
+    expect(insert).not.toHaveBeenCalled();
+  });
+
+  it('deactivates services removed from the submitted canonical set', async () => {
+    const { set, where, insert } = mockServiceReplacementDb(existingServiceRows);
+
+    await servicesEngineService.replaceProviderServices(20, [
+      { id: 31, category: 'home_improvement', code: 'plumbing', displayName: 'Plumbing' },
+    ]);
+
+    expect(set).toHaveBeenLastCalledWith({ isActive: 0 });
+    expect(where).toHaveBeenLastCalledWith(eq(serviceProviderServices.id, 32));
+    expect(insert).not.toHaveBeenCalled();
+  });
+
+  it('refuses a code change that would duplicate an omitted service code', async () => {
+    const { update, insert } = mockServiceReplacementDb(existingServiceRows);
+
+    await expect(
+      servicesEngineService.replaceProviderServices(20, [
+        { id: 31, category: 'home_improvement', code: 'conveyancing', displayName: 'Plumbing' },
+      ]),
+    ).rejects.toThrow('Service codes must be unique within a provider profile');
+
+    expect(update).not.toHaveBeenCalled();
+    expect(insert).not.toHaveBeenCalled();
+  });
+
+  it('refuses two submitted services that claim the same code', async () => {
+    const { update, insert } = mockServiceReplacementDb(existingServiceRows);
+
+    await expect(
+      servicesEngineService.replaceProviderServices(20, [
+        { id: 31, category: 'home_improvement', code: 'plumbing', displayName: 'Plumbing' },
+        { category: 'home_improvement', code: 'PLUMBING', displayName: 'Plumbing again' },
+      ]),
+    ).rejects.toThrow('Service codes must be unique within a provider profile');
+
+    expect(update).not.toHaveBeenCalled();
+    expect(insert).not.toHaveBeenCalled();
+  });
+});
+
+describe('Services V1 authoritative coverage replacement', () => {
+  const existingCoverageRows = [
+    {
+      id: 41,
+      providerId: 20,
+      countryCode: 'ZA',
+      province: 'Gauteng',
+      city: 'Johannesburg',
+      suburb: 'Sandton',
+      postalCode: '2196',
+      radiusKm: 40,
+      isPrimary: 1,
+    },
+    {
+      id: 42,
+      providerId: 20,
+      countryCode: 'ZA',
+      province: 'Gauteng',
+      city: 'Pretoria',
+      suburb: 'Arcadia',
+      postalCode: '0008',
+      radiusKm: 20,
+      isPrimary: 0,
+    },
+  ];
+
+  function mockCoverageReplacementDb(existing: unknown[], returned = existing) {
+    const { update, set, where } = makeUpdateMock();
+    const { delete: deleteFn, where: deleteWhere } = makeDeleteMock();
+    const insertValues = vi.fn().mockResolvedValue([{ insertId: 99 }]);
+    const insert = vi.fn(() => ({ values: insertValues }));
+    const tx = {
+      select: vi
+        .fn()
+        .mockReturnValueOnce(makeQuery([{ id: 20 }]))
+        .mockReturnValueOnce({
+          from: vi.fn(() => ({
+            where: vi.fn(() => ({ for: vi.fn().mockResolvedValue(existing) })),
+          })),
+        }),
+      update,
+      delete: deleteFn,
+      insert,
+    };
+    const db = {
+      transaction: vi.fn(async (callback: (tx: typeof tx) => Promise<unknown>) => callback(tx)),
+      select: vi.fn(() => ({
+        from: vi.fn(() => ({
+          where: vi.fn(() => ({ orderBy: vi.fn().mockResolvedValue(returned) })),
+        })),
+      })),
+    };
+    mockGetDb.mockResolvedValue(db);
+    return { tx, update, set, where, insert, insertValues, deleteFn, deleteWhere };
+  }
+
+  it('rejects a coverage ID that belongs to another provider', async () => {
+    const { update, deleteFn, insert } = mockCoverageReplacementDb(existingCoverageRows);
+
+    await expect(
+      servicesEngineService.replaceProviderLocations(20, [
+        { id: 999, province: 'Gauteng', city: 'Johannesburg', suburb: 'Sandton' },
+      ]),
+    ).rejects.toThrow('Coverage area not found for this provider');
+
+    expect(update).not.toHaveBeenCalled();
+    expect(deleteFn).not.toHaveBeenCalled();
+    expect(insert).not.toHaveBeenCalled();
+  });
+
+  it('stops matching coverage that is removed from the canonical set', async () => {
+    const returned = existingCoverageRows.filter(row => row.id === 41);
+    const { set, deleteFn, deleteWhere, insert } = mockCoverageReplacementDb(
+      existingCoverageRows,
+      returned,
+    );
+
+    const rows = (await servicesEngineService.replaceProviderLocations(20, [
+      { id: 41, province: 'Gauteng', city: 'Johannesburg', suburb: 'Sandton' },
+    ])) as Array<{ suburb: string | null; city: string | null; province: string | null }>;
+
+    expect(set).toHaveBeenCalledTimes(1);
+    expect(deleteFn).toHaveBeenCalledWith(serviceProviderLocations);
+    expect(deleteWhere).toHaveBeenCalledWith(eq(serviceProviderLocations.id, 42));
+    expect(insert).not.toHaveBeenCalled();
+    expect(
+      providerCoversLocation(rows, { province: 'Gauteng', city: 'Pretoria', suburb: 'Arcadia' }),
+    ).toBe(false);
+    expect(
+      providerCoversLocation(rows, { province: 'Gauteng', city: 'Johannesburg', suburb: 'Sandton' }),
+    ).toBe(true);
+  });
+
+  it('edits a coverage tuple in place without creating an active duplicate', async () => {
+    const { update, set, where, deleteFn, insert } = mockCoverageReplacementDb(existingCoverageRows);
+
+    await servicesEngineService.replaceProviderLocations(20, [
+      { id: 41, province: 'Gauteng', city: 'Johannesburg', suburb: 'Bryanston' },
+      { id: 42, province: 'Gauteng', city: 'Pretoria', suburb: 'Arcadia' },
+    ]);
+
+    expect(update).toHaveBeenCalledTimes(2);
+    expect(update).toHaveBeenCalledWith(serviceProviderLocations);
+    expect(set).toHaveBeenCalledWith(
+      expect.objectContaining({ suburb: 'Bryanston', postalCode: '2196', radiusKm: 40 }),
+    );
+    expect(where).toHaveBeenCalledWith(eq(serviceProviderLocations.id, 41));
+    expect(deleteFn).not.toHaveBeenCalled();
+    expect(insert).not.toHaveBeenCalled();
+  });
+
+  it('removes a persisted coverage row the provider blanked out', async () => {
+    const { deleteFn, deleteWhere, insertValues } = mockCoverageReplacementDb(existingCoverageRows);
+
+    await servicesEngineService.replaceProviderLocations(20, [
+      { id: 41, province: 'Gauteng', city: 'Johannesburg', suburb: 'Sandton' },
+      { id: 42, province: '', city: '', suburb: '' },
+    ]);
+
+    expect(deleteFn).toHaveBeenCalledWith(serviceProviderLocations);
+    expect(deleteWhere).toHaveBeenCalledWith(eq(serviceProviderLocations.id, 42));
+    expect(insertValues).not.toHaveBeenCalled();
+  });
+});
+
+describe('Services V1 bounded and deterministic reads', () => {
+  it('orders provider leads by creation time and identifier', async () => {
+    const query = makeQuery([makeLeadRow()]);
+    mockGetDb.mockResolvedValue({ select: vi.fn(() => query) });
+
+    await servicesEngineService.listProviderLeads(20, 25, 50);
+
+    expect(query.orderBy).toHaveBeenCalledWith(
+      desc(serviceLeads.createdAt),
+      desc(serviceLeads.id),
+    );
+  });
+
+  it('bounds the eligible-provider candidate scan before in-memory filtering', async () => {
+    const baseQuery = makeQuery([]);
+    const servicesQuery = makeQuery([]);
+    const locationsQuery = makeQuery([]);
+    const selectQueue = [baseQuery, servicesQuery, locationsQuery];
+    mockGetDb.mockResolvedValue({ select: vi.fn(() => selectQueue.shift() ?? makeQuery([])) });
+
+    await servicesEngineService.publicDirectorySearch({});
+
+    expect(baseQuery.limit).toHaveBeenCalledWith(SERVICES_DIRECTORY_CANDIDATE_SCAN_LIMIT);
+  });
+
+  it('fails closed with a deterministic error for an unreadable stored request context', async () => {
+    const insert = vi.fn();
+    mockGetDb.mockResolvedValue({
+      select: vi.fn(() =>
+        makeQuery([
+          makeLeadRow({
+            contextJson: '{"serviceCode":"plumbing","unapprovedKey":',
+          }),
+        ]),
+      ),
+      transaction: vi.fn(
+        async (callback: (tx: unknown) => Promise<unknown>) =>
+          callback({ select: vi.fn(), insert }),
+      ),
+    });
+
+    await expect(
+      servicesEngineService.createLeadFromContext({
+        requesterUserId: 10,
+        requestKey: 'service-request-key-123456',
+        providerId: 20,
+        category: 'home_improvement',
+        sourceSurface: 'directory',
+        intentStage: 'general',
+        province: 'Gauteng',
+        city: 'Johannesburg',
+        suburb: 'Sandton',
+        serviceCode: 'plumbing',
+        notes: 'Need a repair before transfer.',
+      }),
+    ).rejects.toThrow('A previous request for this key cannot be replayed safely');
+
+    expect(insert).not.toHaveBeenCalled();
+  });
+
+  it('fails closed when the stored request context carries a non-allowlisted key', async () => {
+    mockGetDb.mockResolvedValue({
+      select: vi.fn(() =>
+        makeQuery([
+          makeLeadRow({
+            contextJson: { serviceCode: 'plumbing', legacyFlag: 'retired' },
+          }),
+        ]),
+      ),
+    });
+
+    await expect(
+      servicesEngineService.createLeadFromContext({
+        requesterUserId: 10,
+        requestKey: 'service-request-key-123456',
+        providerId: 20,
+        category: 'home_improvement',
+        sourceSurface: 'directory',
+        intentStage: 'general',
+        province: 'Gauteng',
+        city: 'Johannesburg',
+        suburb: 'Sandton',
+        serviceCode: 'plumbing',
+        notes: 'Need a repair before transfer.',
+      }),
+    ).rejects.toThrow('A previous request for this key cannot be replayed safely');
   });
 });

@@ -66,6 +66,7 @@ import {
   commercialAvailabilities,
   commercialAssets,
   commercialSpaces,
+  serviceProviderProfiles,
 } from '../drizzle/schema';
 
 import { ENV } from './_core/env';
@@ -4824,7 +4825,21 @@ export async function updatePartner(id: number, data: Partial<typeof partners.$i
   const db = await getDb();
   if (!db) throw new Error('Database not available');
 
-  await db.update(partners).set(data).where(eq(partners.id, id));
+  const withdrawsVerification =
+    data.verificationStatus !== undefined && data.verificationStatus !== 'verified';
+
+  await db.transaction(async tx => {
+    await tx.update(partners).set(data).where(eq(partners.id, id));
+    if (withdrawsVerification) {
+      // A provider can never stay listed in a published directory while the
+      // canonical partner is unverified. Withdrawal of verification always
+      // withdraws Services directory publication in the same transaction.
+      await tx
+        .update(serviceProviderProfiles)
+        .set({ directoryActive: 0 })
+        .where(eq(serviceProviderProfiles.providerId, id));
+    }
+  });
   return { success: true };
 }
 
