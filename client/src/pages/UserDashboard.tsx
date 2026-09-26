@@ -1033,7 +1033,7 @@ export default function UserDashboard() {
           'Your affordability plan is active and your seller context is strong enough to start valuation prep without losing buyer momentum.',
         primaryLabel: 'Open valuation prep',
         primaryHref:
-          '/services/request/inspection_compliance?intentStage=seller_valuation&sourceSurface=journey_injection',
+          '/services/inspection_compliance?intentStage=seller_valuation&sourceSurface=journey_injection&reasonKey=seller_valuation_prep',
         secondaryLabel: 'Refine buyability plan',
       };
     }
@@ -1276,7 +1276,7 @@ export default function UserDashboard() {
                     variant="outline"
                     onClick={() =>
                       setLocation(
-                        '/services/request/inspection_compliance?intentStage=seller_valuation&sourceSurface=journey_injection',
+                        '/services/inspection_compliance?intentStage=seller_valuation&sourceSurface=journey_injection&reasonKey=seller_valuation_prep',
                       )
                     }
                   >
@@ -1836,7 +1836,7 @@ export default function UserDashboard() {
                       className="h-auto w-full justify-between whitespace-normal rounded-2xl px-4 py-4 text-left"
                       onClick={() =>
                         setLocation(
-                          '/services/request/inspection_compliance?intentStage=seller_valuation&sourceSurface=journey_injection',
+                          '/services/inspection_compliance?intentStage=seller_valuation&sourceSurface=journey_injection&reasonKey=seller_valuation_prep',
                         )
                       }
                     >
@@ -1854,7 +1854,7 @@ export default function UserDashboard() {
                       className="h-auto w-full justify-between whitespace-normal rounded-2xl px-4 py-4 text-left"
                       onClick={() =>
                         setLocation(
-                          '/services/request/media_marketing?intentStage=seller_listing_prep&sourceSurface=journey_injection',
+                          '/services/media_marketing?intentStage=seller_listing_prep&sourceSurface=journey_injection&reasonKey=seller_listing_prep',
                         )
                       }
                     >

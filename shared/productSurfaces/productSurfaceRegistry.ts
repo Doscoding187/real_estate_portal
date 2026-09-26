@@ -273,10 +273,11 @@ export const PRODUCT_SURFACES: ProductSurface[] = [
     id: 'service-provider-workspace',
     domain: 'services',
     disposition: 'pilot',
-    routePatterns: ['/service/dashboard', '/service/profile', '/service/explore'],
-    aliasPatterns: ['/service', '/pro/dashboard', '/pro/profile', '/pro/explore'],
+    routePatterns: ['/service/dashboard', '/service/profile'],
+    aliasPatterns: ['/service', '/pro/dashboard', '/pro/profile'],
     owner: 'product',
-    notes: 'Provider operations for the curated pilot cohort; response/quote loop still completing.',
+    notes:
+      'Provider operations for the curated pilot cohort; request custody and publication review are manually operated.',
   },
   {
     id: 'land-vertical',
@@ -359,7 +360,13 @@ export const PRODUCT_SURFACES: ProductSurface[] = [
     id: 'professional-discovery',
     domain: 'consumer-property',
     disposition: 'launch',
-    routePatterns: ['/agents', '/agents/:slug', '/a/:slug', '/agent/profile/:agentId', '/agent/:id'],
+    routePatterns: [
+      '/agents',
+      '/agents/:slug',
+      '/a/:slug',
+      '/agent/profile/:agentId',
+      '/agent/:id',
+    ],
     owner: 'product',
     notes:
       'Public professional profiles. Declared after /agent/* workspace surfaces so workspace paths win first-match.',
@@ -415,7 +422,8 @@ export const PRODUCT_SURFACES: ProductSurface[] = [
     ],
     aliasPatterns: ['/developer/success', '/development-wizard', '/developments/create'],
     owner: 'product',
-    notes: 'Supply-side authoring and funnel. Placeholder routes removed under boundary enforcement.',
+    notes:
+      'Supply-side authoring and funnel. Placeholder routes removed under boundary enforcement.',
   },
   {
     id: 'developer-workspace-deferred-modules',

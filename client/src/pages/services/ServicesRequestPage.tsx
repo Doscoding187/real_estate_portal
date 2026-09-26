@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef } from 'react';
-import { Link, useLocation, useRoute } from 'wouter';
+import { Link, useRoute } from 'wouter';
 import { toast } from 'sonner';
 import { ArrowRight, BadgeCheck, LockKeyhole, Sparkles } from 'lucide-react';
 import { useAuth } from '@/_core/hooks/useAuth';
@@ -10,16 +10,16 @@ import { trpc } from '@/lib/trpc';
 import {
   formatCategoryLabel,
   getCategoryMeta,
+  SA_PROVINCES,
   serviceCategoryFromSlug,
+  serviceJourneyContextFromSearch,
+  buildServiceCategoryPath,
   type IntentStage,
   type ServiceCategory,
-  type SourceSurface,
+  type ServiceRequestSourceSurface,
 } from '@/features/services/catalog';
 import { applySeo } from '@/lib/seo';
-
-function currentQuery() {
-  return new URLSearchParams(window.location.search);
-}
+import { useServicesLocation } from '@/features/services/useServicesLocation';
 
 const INTENT_STAGES: IntentStage[] = [
   'seller_valuation',
@@ -32,51 +32,102 @@ const INTENT_STAGES: IntentStage[] = [
   'general',
 ];
 
-const SOURCE_SURFACES: SourceSurface[] = [
+const SOURCE_SURFACES: ServiceRequestSourceSurface[] = [
   'directory',
-  'explore',
   'journey_injection',
   'agent_dashboard',
 ];
 
 function parsePositiveInteger(value: string | null) {
-  if (!value) return undefined;
+  if (!value || !/^\d+$/.test(value)) return undefined;
 
   const parsed = Number(value);
-  return Number.isInteger(parsed) && parsed > 0 ? parsed : undefined;
+  return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : undefined;
 }
 
-function parseIntentStage(value: string | null): IntentStage {
-  return INTENT_STAGES.includes(value as IntentStage)
-    ? (value as IntentStage)
-    : 'general';
+function parseIntentStage(value: string | null): IntentStage | null {
+  if (!value) return 'general';
+  return INTENT_STAGES.includes(value as IntentStage) ? (value as IntentStage) : null;
 }
 
-function parseSourceSurface(value: string | null): SourceSurface {
-  return SOURCE_SURFACES.includes(value as SourceSurface)
-    ? (value as SourceSurface)
-    : 'directory';
+function parseSourceSurface(value: string | null): ServiceRequestSourceSurface | null {
+  if (!value) return 'directory';
+  return SOURCE_SURFACES.includes(value as ServiceRequestSourceSurface)
+    ? (value as ServiceRequestSourceSurface)
+    : null;
+}
+
+function getRequestStorage() {
+  if (typeof window === 'undefined') return null;
+  try {
+    return window.sessionStorage;
+  } catch {
+    return null;
+  }
+}
+
+function removeStoredRequestKey(key: string) {
+  const storage = getRequestStorage();
+  if (!storage) return;
+  try {
+    storage.removeItem(key);
+  } catch {
+    return;
+  }
+}
+
+function storeRequestKey(key: string, value: string) {
+  const storage = getRequestStorage();
+  if (!storage) return;
+  try {
+    storage.setItem(key, value);
+  } catch {
+    return;
+  }
+}
+
+function createRequestKey() {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return `service-request-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
 export default function ServicesRequestPage() {
   const [, params] = useRoute('/services/request/:category');
-  const [, setLocation] = useLocation();
+  const { search, setLocation } = useServicesLocation();
   const auth = useAuth();
 
   const categoryParam = String(params?.category || '').trim();
-  const category =
-    serviceCategoryFromSlug(categoryParam) || ('home_improvement' as ServiceCategory);
+  const parsedCategory = serviceCategoryFromSlug(categoryParam);
+  const category = parsedCategory || ('home_improvement' as ServiceCategory);
   const categoryMeta = getCategoryMeta(category);
 
-  const query = useMemo(() => currentQuery(), []);
-  const defaultLocation = [query.get('suburb'), query.get('city'), query.get('province')]
+  const query = useMemo(() => new URLSearchParams(search), [search]);
+  const rawProvince = query.get('province')?.trim() || '';
+  const initialLocation = {
+    suburb: query.get('suburb')?.trim() || '',
+    city: query.get('city')?.trim() || '',
+    province:
+      SA_PROVINCES.find(province => province.toLowerCase() === rawProvince.toLowerCase()) ||
+      rawProvince,
+  };
+  const defaultLocation = [initialLocation.suburb, initialLocation.city, initialLocation.province]
     .filter(Boolean)
     .join(', ');
   const providerId = parsePositiveInteger(query.get('providerId'));
+  const serviceCode = query.get('serviceCode')?.trim() || '';
   const propertyId = parsePositiveInteger(query.get('propertyId'));
+  const listingId = parsePositiveInteger(query.get('listingId'));
+  const developmentId = parsePositiveInteger(query.get('developmentId'));
   const intentStage = parseIntentStage(query.get('intentStage'));
   const sourceSurface = parseSourceSurface(query.get('sourceSurface'));
+  const sourceDetail = query.get('sourceDetail')?.trim() || undefined;
   const reasonKey = query.get('reasonKey')?.trim() || undefined;
+  const propertyLinkedValue = query.get('propertyLinked')?.trim();
+  const propertyLinked =
+    propertyLinkedValue === 'true' ? true : propertyLinkedValue === 'false' ? false : undefined;
+  const journeyContext = serviceJourneyContextFromSearch(search);
   const latestSubmissionRef = useRef<{
     category: ServiceCategory;
     intentStage: string;
@@ -86,60 +137,143 @@ export default function ServicesRequestPage() {
     province?: string;
     notes?: string;
     propertyId?: number;
+    listingId?: number;
+    developmentId?: number;
+    serviceCode?: string;
+    sourceDetail?: string;
+    propertyLinked?: boolean;
     reasonKey?: string;
   } | null>(null);
+  const requestKeyRef = useRef<string | null>(null);
+  const requestTargetRef = useRef('');
+  const requestTarget = [providerId, serviceCode, category].join(':');
+  const requestStorageKey = `services-request-key:${requestTarget}`;
+  if (!requestKeyRef.current || requestTargetRef.current !== requestTarget) {
+    const storage = getRequestStorage();
+    let storedKey: string | null = null;
+    try {
+      storedKey = storage?.getItem(requestStorageKey) || null;
+    } catch {
+      storedKey = null;
+    }
+    requestKeyRef.current = storedKey || createRequestKey();
+    storeRequestKey(requestStorageKey, requestKeyRef.current);
+    requestTargetRef.current = requestTarget;
+  }
 
   useEffect(() => {
     const categoryLabel = formatCategoryLabel(category);
     applySeo({
-      title: `Request ${categoryLabel} Quotes | Services`,
-      description: `Share your project details and get matched with local ${categoryLabel.toLowerCase()} providers.`,
+      title: `Request ${categoryLabel} | Property Listify Services`,
+      description: `Share your project details with a published ${categoryLabel.toLowerCase()} provider.`,
       canonicalPath: `/services/request/${encodeURIComponent(category)}`,
       noindex: true,
     });
   }, [category]);
 
+  const selectedProviderQuery = trpc.servicesEngine.getProviderPublicProfile.useQuery(
+    { providerId: providerId || 0 },
+    { enabled: Boolean(providerId && parsedCategory) },
+  );
+  const selectedProvider = selectedProviderQuery.data;
+
   const createLead = trpc.servicesEngine.createLeadFromJourney.useMutation({
     onSuccess: data => {
-      const leadId = Number(data.leadIds?.[0] || 0);
+      removeStoredRequestKey(requestStorageKey);
       const latestSubmission = latestSubmissionRef.current;
       const nextCategory = latestSubmission?.category || category;
       const nextCity = latestSubmission?.city || '';
       const nextProvince = latestSubmission?.province || '';
       const nextSuburb = latestSubmission?.suburb || '';
-      const nextIntentStage = latestSubmission?.intentStage || 'general';
-      const nextSourceSurface = latestSubmission?.sourceSurface || 'directory';
-      const nextPropertyId = latestSubmission?.propertyId;
-      const nextReasonKey = latestSubmission?.reasonKey;
+      const leadId = Number(data.leadId || data.leadIds?.[0] || 0);
 
-      try {
-        const leadContext = JSON.stringify({
-          category: nextCategory,
-          providerIds: data.providerIds,
-          unmatched: Boolean(data.unmatched),
-          notes: latestSubmission?.notes || '',
+      if (!leadId) {
+        const fallbackContext = {
+          ...journeyContext,
+          ...(latestSubmission?.propertyId ? { propertyId: latestSubmission.propertyId } : {}),
+          ...(latestSubmission?.listingId ? { listingId: latestSubmission.listingId } : {}),
+          ...(latestSubmission?.developmentId
+            ? { developmentId: latestSubmission.developmentId }
+            : {}),
+          ...(latestSubmission?.intentStage ? { intentStage: latestSubmission.intentStage } : {}),
+          ...(latestSubmission?.sourceSurface
+            ? { sourceSurface: latestSubmission.sourceSurface }
+            : {}),
+          ...(latestSubmission?.sourceDetail
+            ? { sourceDetail: latestSubmission.sourceDetail }
+            : {}),
+          ...(latestSubmission?.reasonKey ? { reasonKey: latestSubmission.reasonKey } : {}),
           city: nextCity,
           province: nextProvince,
           suburb: nextSuburb,
-          intentStage: nextIntentStage,
-          sourceSurface: nextSourceSurface,
-          propertyId: nextPropertyId,
-          reasonKey: nextReasonKey,
-          propertyLinked: Boolean(nextPropertyId),
-        });
-        sessionStorage.setItem(`service-lead-context-${leadId}`, leadContext);
-      } catch {
-        // Non-fatal fallback if sessionStorage is unavailable.
+        };
+        const fallbackPath = buildServiceCategoryPath(nextCategory, fallbackContext);
+        setLocation(`${fallbackPath}${fallbackPath.includes('?') ? '&' : '?'}request=unmatched`);
+
+        return;
       }
 
-      setLocation(
-        `/services/results/${leadId}?category=${encodeURIComponent(nextCategory)}&city=${encodeURIComponent(nextCity)}&province=${encodeURIComponent(nextProvince)}&suburb=${encodeURIComponent(nextSuburb)}&intentStage=${encodeURIComponent(nextIntentStage)}&sourceSurface=${encodeURIComponent(nextSourceSurface)}&unmatched=${data.unmatched ? '1' : '0'}`,
-      );
+      setLocation(`/services/results/${leadId}`);
     },
     onError: error => {
       toast.error(error.message || 'Unable to submit service request');
     },
   });
+
+  if (!parsedCategory) {
+    return (
+      <main className="min-h-screen bg-[#f7f4ec] px-4 py-12 md:px-6">
+        <Card className="mx-auto max-w-3xl border-[#0f3d91]/10 bg-white shadow-sm">
+          <CardContent className="space-y-4 p-8">
+            <h1 className="text-2xl font-semibold text-slate-950">Service category unavailable</h1>
+            <p className="text-sm leading-6 text-slate-600">
+              Choose a supported service category before starting a provider request.
+            </p>
+            <Button onClick={() => setLocation('/services')}>Browse services</Button>
+          </CardContent>
+        </Card>
+      </main>
+    );
+  }
+
+  if (intentStage === null || sourceSurface === null) {
+    return (
+      <main className="min-h-screen bg-[#f7f4ec] px-4 py-12 md:px-6">
+        <Card className="mx-auto max-w-3xl border-[#0f3d91]/10 bg-white shadow-sm">
+          <CardContent className="space-y-4 p-8">
+            <h1 className="text-2xl font-semibold text-slate-950">Journey context unavailable</h1>
+            <p className="text-sm leading-6 text-slate-600">
+              This request contains unsupported attribution context. Return to the directory and
+              choose a provider from a supported journey.
+            </p>
+            <Button onClick={() => setLocation(buildServiceCategoryPath(category, journeyContext))}>
+              Browse services
+            </Button>
+          </CardContent>
+        </Card>
+      </main>
+    );
+  }
+
+  if (!providerId || !serviceCode) {
+    return (
+      <main className="min-h-screen bg-[#f7f4ec] px-4 py-12 md:px-6">
+        <Card className="mx-auto max-w-3xl border-[#0f3d91]/10 bg-white shadow-sm">
+          <CardContent className="space-y-4 p-8">
+            <h1 className="text-2xl font-semibold text-slate-950">Choose a provider and service</h1>
+            <p className="text-sm leading-6 text-slate-600">
+              Services V1 sends one attributable request to the provider and service you select.
+              Browse published {formatCategoryLabel(category).toLowerCase()} providers before
+              continuing.
+            </p>
+            <Button onClick={() => setLocation(buildServiceCategoryPath(category, journeyContext))}>
+              Browse {formatCategoryLabel(category)} providers
+            </Button>
+          </CardContent>
+        </Card>
+      </main>
+    );
+  }
 
   if (!auth.loading && !auth.isAuthenticated) {
     return (
@@ -151,12 +285,14 @@ export default function ServicesRequestPage() {
                 <LockKeyhole className="h-3.5 w-3.5" />
                 Sign-in required
               </div>
-              <CardTitle className="pt-3 text-2xl">Sign in to submit your service request</CardTitle>
+              <CardTitle className="pt-3 text-2xl">
+                Sign in to submit your service request
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4 p-6">
               <p className="text-sm leading-6 text-slate-600">
-                We need your account to track provider matches, quote responses, and request
-                updates.
+                We need your account so the provider can receive your request and you can track its
+                status.
               </p>
               <div className="flex items-center gap-2">
                 <Link
@@ -164,7 +300,7 @@ export default function ServicesRequestPage() {
                 >
                   <Button className="bg-[#0f3d91] hover:bg-[#0a2e6e]">Go to login</Button>
                 </Link>
-                <Link href={`/services/${category}`}>
+                <Link href={buildServiceCategoryPath(category, journeyContext)}>
                   <Button variant="outline">Back to {formatCategoryLabel(category)}</Button>
                 </Link>
               </div>
@@ -185,21 +321,21 @@ export default function ServicesRequestPage() {
               <div className="flex flex-wrap items-center gap-3">
                 <span className="inline-flex items-center gap-2 rounded-full border border-[#0f3d91]/15 bg-white/80 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-[#0f3d91]">
                   <Sparkles className="h-3.5 w-3.5" />
-                  Service Listify
+                  Property Listify Services
                 </span>
                 <span className="inline-flex items-center gap-2 rounded-full bg-[#10294f] px-3 py-1 text-xs font-semibold text-white">
                   <BadgeCheck className="h-3.5 w-3.5" />
-                  Request matching
+                  Provider request
                 </span>
               </div>
 
               <div className="max-w-3xl space-y-4">
                 <h1 className="font-serif text-4xl leading-tight text-slate-950 md:text-6xl">
-                  Get matched for {formatCategoryLabel(category).toLowerCase()}.
+                  Request a {formatCategoryLabel(category).toLowerCase()} professional.
                 </h1>
                 <p className="max-w-2xl text-base leading-7 text-slate-700 md:text-lg">
-                  {categoryMeta.subtitle} Tell us what you need and we will route your request to
-                  providers ranked for your context.
+                  {categoryMeta.subtitle} Tell us what you need and send one request to the provider
+                  you choose.
                 </p>
               </div>
 
@@ -214,7 +350,7 @@ export default function ServicesRequestPage() {
                   Start request
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
-                <Link href={`/services/${category}`}>
+                <Link href={buildServiceCategoryPath(category, journeyContext)}>
                   <Button
                     variant="outline"
                     className="h-12 rounded-full border-[#0f3d91]/20 bg-white/85 px-6 text-sm font-semibold text-[#0f3d91] hover:bg-white"
@@ -229,9 +365,7 @@ export default function ServicesRequestPage() {
                   <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
                     Service lane
                   </p>
-                  <p className="mt-2 text-xl font-semibold text-slate-950">
-                    {categoryMeta.label}
-                  </p>
+                  <p className="mt-2 text-xl font-semibold text-slate-950">{categoryMeta.label}</p>
                 </div>
                 <div className="rounded-[1.5rem] border border-white/70 bg-white/85 p-4 shadow-sm">
                   <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
@@ -248,6 +382,20 @@ export default function ServicesRequestPage() {
                   </p>
                 </div>
               </div>
+              {selectedProvider && (
+                <div className="rounded-[1.5rem] border border-blue-200 bg-blue-50 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-blue-700">
+                    Requesting this provider
+                  </p>
+                  <p className="mt-2 text-base font-semibold text-slate-950">
+                    {selectedProvider.companyName}
+                  </p>
+                  <p className="mt-1 text-sm text-slate-600">
+                    {selectedProvider.headline ||
+                      'Review the provider profile before sending your request.'}
+                  </p>
+                </div>
+              )}
             </div>
 
             <div className="rounded-[2rem] bg-[#10294f] p-6 text-white shadow-[0_24px_90px_-40px_rgba(16,41,79,0.8)]">
@@ -258,7 +406,7 @@ export default function ServicesRequestPage() {
                 {[
                   'Choose the right category for your project.',
                   'Add the area where the work will happen.',
-                  'Describe the job clearly so better-fit providers can respond.',
+                  'Describe the job clearly so the provider can assess fit.',
                 ].map((item, index) => (
                   <div
                     key={item}
@@ -272,19 +420,46 @@ export default function ServicesRequestPage() {
                 ))}
               </div>
               <p className="mt-5 text-sm leading-6 text-white/70">
-                We keep this flow short so you can reach matching results quickly without losing
-                detail.
+                The request is sent to one provider and its status stays visible in the provider
+                workspace.
               </p>
             </div>
           </section>
 
           <section id="service-request-flow" className="grid gap-4">
             <LeadRequestFlow
+              key={[
+                providerId,
+                serviceCode,
+                category,
+                intentStage || 'general',
+                sourceSurface || 'directory',
+
+                propertyId || '',
+                listingId || '',
+                developmentId || '',
+                sourceDetail || '',
+                propertyLinked === undefined ? '' : String(propertyLinked),
+                reasonKey || '',
+                initialLocation.suburb,
+
+                initialLocation.city,
+                initialLocation.province,
+              ].join(':')}
               defaultCategory={category}
               defaultLocation={defaultLocation}
+              defaultLocationParts={{
+                suburb: initialLocation.suburb || undefined,
+                city: initialLocation.city || undefined,
+                province: initialLocation.province || undefined,
+              }}
               defaultIntentStage={intentStage}
               defaultSourceSurface={sourceSurface}
               propertyId={propertyId}
+              listingId={listingId}
+              developmentId={developmentId}
+              sourceDetail={sourceDetail}
+              propertyLinked={propertyLinked}
               reasonKey={reasonKey}
               submitting={createLead.isPending}
               error={createLead.error?.message ?? null}
@@ -298,11 +473,26 @@ export default function ServicesRequestPage() {
                   suburb: payload.suburb,
                   notes: payload.notes,
                   propertyId: payload.propertyId,
+                  listingId: payload.listingId,
+                  developmentId: payload.developmentId,
+                  serviceCode,
+                  sourceDetail: payload.sourceDetail,
+                  propertyLinked: payload.propertyLinked,
                   reasonKey: payload.reasonKey,
                 };
+                const requestContext = {
+                  ...(payload.sourceDetail ? { sourceDetail: payload.sourceDetail } : {}),
+                  ...(payload.reasonKey ? { reasonKey: payload.reasonKey } : {}),
+                  ...(payload.propertyLinked !== undefined
+                    ? { propertyLinked: payload.propertyLinked }
+                    : {}),
+                  ...(serviceCode ? { serviceCode } : {}),
+                };
                 createLead.mutate({
+                  requestKey: requestKeyRef.current || createRequestKey(),
                   providerId,
                   category: payload.category,
+
                   sourceSurface: payload.sourceSurface,
                   intentStage: payload.intentStage,
                   propertyId: payload.propertyId,
@@ -312,13 +502,8 @@ export default function ServicesRequestPage() {
                   city: payload.city,
                   suburb: payload.suburb,
                   notes: payload.notes,
-                  context: payload.propertyId
-                    ? {
-                        sourceDetail: 'property_detail',
-                        reasonKey: payload.reasonKey,
-                        propertyLinked: true,
-                      }
-                    : undefined,
+                  serviceCode,
+                  context: Object.keys(requestContext).length > 0 ? requestContext : undefined,
                 });
               }}
             />

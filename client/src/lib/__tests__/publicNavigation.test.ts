@@ -258,10 +258,11 @@ describe('public navigation authority', () => {
     expect(sharedLivingItem?.capability).toBe('LAUNCH_READY');
     // Staged exposure: hidden from hosted builds until named in the release
     // manifest, exactly like Commercial and Developments before it.
-    const releasedContext = { hostedReleaseControlled: true, supplementalReleasedJourneys: ['shared_living'] };
-    expect(
-      isPublicNavigationVisible(sharedLivingItem!, 'desktop', releasedContext),
-    ).toBe(true);
+    const releasedContext = {
+      hostedReleaseControlled: true,
+      supplementalReleasedJourneys: ['shared_living'],
+    };
+    expect(isPublicNavigationVisible(sharedLivingItem!, 'desktop', releasedContext)).toBe(true);
     expect(
       isPublicNavigationVisible(sharedLivingItem!, 'desktop', {
         hostedReleaseControlled: true,
@@ -342,7 +343,8 @@ describe('public navigation authority', () => {
     [{ role: 'property_developer' }, '/developer/dashboard'],
     [{ role: 'agency_admin' }, '/agency/overview'],
     [{ role: 'agent' }, '/agent/dashboard'],
-    [{ role: 'service_provider' }, '/service/dashboard'],
+    [{ role: 'service_provider' }, '/service/profile'],
+
     [{ role: 'visitor', hasReferrerIdentity: true }, '/distribution/partner/overview'],
     [{ role: 'visitor' }, '/user/dashboard'],
   ])('resolves %s to %s', (user, href) => {
@@ -360,7 +362,8 @@ describe('public navigation authority', () => {
     [{ role: 'property_developer' }, '/developer/dashboard'],
     [{ role: 'agency_admin' }, '/agency/overview'],
     [{ role: 'agent' }, '/agent/dashboard'],
-    [{ role: 'service_provider' }, '/service/dashboard'],
+    [{ role: 'service_provider' }, '/service/profile'],
+
     [{ role: 'visitor', hasReferrerIdentity: true }, '/distribution/partner/overview'],
     [{ role: 'referrer' }, '/distribution/partner/overview'],
     [{ role: 'visitor' }, '/user/dashboard'],
@@ -381,15 +384,15 @@ describe('public navigation authority', () => {
   });
 
   it('builds a register href with role preselection and an encoded internal next path', () => {
-    expect(
-      getAccountAuthHref('register', '/agency/setup', { registerRole: 'agency_admin' }),
-    ).toBe('/login?mode=register&next=%2Fagency%2Fsetup&role=agency_admin');
+    expect(getAccountAuthHref('register', '/agency/setup', { registerRole: 'agency_admin' })).toBe(
+      '/login?mode=register&next=%2Fagency%2Fsetup&role=agency_admin',
+    );
   });
 
   it('does not attach role preselection to sign-in hrefs', () => {
-    expect(
-      getAccountAuthHref('signin', '/agency/setup', { registerRole: 'agency_admin' }),
-    ).toBe('/login?mode=signin&next=%2Fagency%2Fsetup');
+    expect(getAccountAuthHref('signin', '/agency/setup', { registerRole: 'agency_admin' })).toBe(
+      '/login?mode=signin&next=%2Fagency%2Fsetup',
+    );
   });
 
   it('ignores empty register role preselection', () => {

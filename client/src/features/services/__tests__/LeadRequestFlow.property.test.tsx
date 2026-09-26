@@ -35,6 +35,11 @@ function getAllTextContent(container: HTMLElement): string {
 /** Navigate the flow to a specific step by clicking Continue */
 function navigateToStep(container: HTMLElement, targetStep: number) {
   for (let step = 1; step < targetStep; step++) {
+    if (step === 2) {
+      fireEvent.change(screen.getByLabelText(/city/i), {
+        target: { value: 'Johannesburg' },
+      });
+    }
     const continueBtn = screen.getByRole('button', { name: /continue/i });
     fireEvent.click(continueBtn);
   }
@@ -51,10 +56,7 @@ describe('LeadRequestFlow — Property 8: no internal jargon exposed', () => {
       fc.property(fc.constantFrom(...SERVICE_CATEGORIES), category => {
         const onSubmit = vi.fn();
         const { container } = render(
-          <LeadRequestFlow
-            defaultCategory={category.value}
-            onSubmit={onSubmit}
-          />,
+          <LeadRequestFlow defaultCategory={category.value} onSubmit={onSubmit} />,
         );
 
         const text = getAllTextContent(container);
@@ -74,10 +76,7 @@ describe('LeadRequestFlow — Property 8: no internal jargon exposed', () => {
       fc.property(fc.constantFrom(...SERVICE_CATEGORIES), category => {
         const onSubmit = vi.fn();
         const { container } = render(
-          <LeadRequestFlow
-            defaultCategory={category.value}
-            onSubmit={onSubmit}
-          />,
+          <LeadRequestFlow defaultCategory={category.value} onSubmit={onSubmit} />,
         );
 
         // Navigate to step 2
@@ -100,10 +99,7 @@ describe('LeadRequestFlow — Property 8: no internal jargon exposed', () => {
       fc.property(fc.constantFrom(...SERVICE_CATEGORIES), category => {
         const onSubmit = vi.fn();
         const { container } = render(
-          <LeadRequestFlow
-            defaultCategory={category.value}
-            onSubmit={onSubmit}
-          />,
+          <LeadRequestFlow defaultCategory={category.value} onSubmit={onSubmit} />,
         );
 
         // Navigate to step 3
@@ -129,10 +125,7 @@ describe('LeadRequestFlow — Property 8: no internal jargon exposed', () => {
         (category, targetStep) => {
           const onSubmit = vi.fn();
           const { container } = render(
-            <LeadRequestFlow
-              defaultCategory={category.value}
-              onSubmit={onSubmit}
-            />,
+            <LeadRequestFlow defaultCategory={category.value} onSubmit={onSubmit} />,
           );
 
           // Navigate to the target step
@@ -164,9 +157,13 @@ describe('LeadRequestFlow — Property 10: data preserved on back navigation', (
         // Pick a category
         fc.constantFrom(...SERVICE_CATEGORIES),
         // Pick a suburb (non-empty printable string, no commas to avoid parsing issues)
-        fc.string({ minLength: 1, maxLength: 30 }).filter(s => !s.includes(',') && s.trim().length > 0),
+        fc
+          .string({ minLength: 1, maxLength: 30 })
+          .filter(s => !s.includes(',') && s.trim().length > 0),
         // Pick a city
-        fc.string({ minLength: 1, maxLength: 30 }).filter(s => !s.includes(',') && s.trim().length > 0),
+        fc
+          .string({ minLength: 1, maxLength: 30 })
+          .filter(s => !s.includes(',') && s.trim().length > 0),
         // Pick a province from SA_PROVINCES
         fc.constantFrom(...SA_PROVINCES),
         // Pick notes
@@ -174,10 +171,7 @@ describe('LeadRequestFlow — Property 10: data preserved on back navigation', (
         (category, suburb, city, province, notes) => {
           const onSubmit = vi.fn();
           const { container } = render(
-            <LeadRequestFlow
-              defaultCategory={category.value}
-              onSubmit={onSubmit}
-            />,
+            <LeadRequestFlow defaultCategory={category.value} onSubmit={onSubmit} />,
           );
 
           // Step 1: select a different category tile if needed (category is already set via defaultCategory)
@@ -230,7 +224,9 @@ describe('LeadRequestFlow — Property 10: data preserved on back navigation', (
           fireEvent.click(backBtn2);
 
           // Verify step 1 category is preserved
-          const selectedTile = container.querySelector('[aria-checked="true"]') as HTMLElement | null;
+          const selectedTile = container.querySelector(
+            '[aria-checked="true"]',
+          ) as HTMLElement | null;
           expect(selectedTile).not.toBeNull();
           expect(selectedTile?.getAttribute('aria-label')).toBe(category.label);
 
@@ -260,47 +256,27 @@ describe('LeadRequestFlow — Property 10: data preserved on back navigation', (
 
 describe('LeadRequestFlow — unit tests', () => {
   it('renders step 1 with category tiles by default', () => {
-    render(
-      <LeadRequestFlow
-        defaultCategory="home_improvement"
-        onSubmit={vi.fn()}
-      />,
-    );
+    render(<LeadRequestFlow defaultCategory="home_improvement" onSubmit={vi.fn()} />);
 
     expect(screen.getByText('What service do you need?')).toBeInTheDocument();
     expect(screen.getByRole('radiogroup')).toBeInTheDocument();
   });
 
   it('shows "Step 1 of 3" progress indicator on step 1', () => {
-    render(
-      <LeadRequestFlow
-        defaultCategory="home_improvement"
-        onSubmit={vi.fn()}
-      />,
-    );
+    render(<LeadRequestFlow defaultCategory="home_improvement" onSubmit={vi.fn()} />);
 
     expect(screen.getByText('Step 1 of 3')).toBeInTheDocument();
   });
 
   it('Continue button is enabled on step 1 when a category is selected (defaultCategory)', () => {
-    render(
-      <LeadRequestFlow
-        defaultCategory="home_improvement"
-        onSubmit={vi.fn()}
-      />,
-    );
+    render(<LeadRequestFlow defaultCategory="home_improvement" onSubmit={vi.fn()} />);
 
     const continueBtn = screen.getByRole('button', { name: /continue/i });
     expect(continueBtn).not.toBeDisabled();
   });
 
   it('navigates to step 2 when Continue is clicked on step 1', () => {
-    render(
-      <LeadRequestFlow
-        defaultCategory="home_improvement"
-        onSubmit={vi.fn()}
-      />,
-    );
+    render(<LeadRequestFlow defaultCategory="home_improvement" onSubmit={vi.fn()} />);
 
     fireEvent.click(screen.getByRole('button', { name: /continue/i }));
 
@@ -308,15 +284,45 @@ describe('LeadRequestFlow — unit tests', () => {
     expect(screen.getByLabelText(/suburb/i)).toBeInTheDocument();
   });
 
-  it('navigates to step 3 when Continue is clicked on step 2', () => {
+  it('keeps city and province defaults in their typed fields', () => {
     render(
       <LeadRequestFlow
         defaultCategory="home_improvement"
+        defaultLocation="Cape Town, Western Cape"
         onSubmit={vi.fn()}
       />,
     );
 
     fireEvent.click(screen.getByRole('button', { name: /continue/i }));
+
+    expect(screen.getByLabelText(/suburb/i)).toHaveValue('');
+    expect(screen.getByLabelText(/city/i)).toHaveValue('Cape Town');
+    expect(screen.getByLabelText(/province/i)).toHaveValue('Western Cape');
+  });
+
+  it('requires an area and project description before submission', () => {
+    const onSubmit = vi.fn();
+    render(<LeadRequestFlow defaultCategory="home_improvement" onSubmit={onSubmit} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /continue/i }));
+    fireEvent.click(screen.getByRole('button', { name: /continue/i }));
+    expect(screen.getByRole('alert')).toHaveTextContent(/add at least one area/i);
+    expect(onSubmit).not.toHaveBeenCalled();
+
+    fireEvent.change(screen.getByLabelText(/city/i), { target: { value: 'Cape Town' } });
+    fireEvent.click(screen.getByRole('button', { name: /continue/i }));
+    fireEvent.click(screen.getByRole('button', { name: /submit request/i }));
+    expect(screen.getByRole('alert')).toHaveTextContent(/project description/i);
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it('navigates to step 3 when Continue is clicked on step 2', () => {
+    render(<LeadRequestFlow defaultCategory="home_improvement" onSubmit={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /continue/i }));
+    fireEvent.change(screen.getByLabelText(/city/i), {
+      target: { value: 'Johannesburg' },
+    });
     fireEvent.click(screen.getByRole('button', { name: /continue/i }));
 
     expect(screen.getByText('Step 3 of 3')).toBeInTheDocument();
@@ -324,14 +330,12 @@ describe('LeadRequestFlow — unit tests', () => {
   });
 
   it('shows Submit request button on step 3', () => {
-    render(
-      <LeadRequestFlow
-        defaultCategory="home_improvement"
-        onSubmit={vi.fn()}
-      />,
-    );
+    render(<LeadRequestFlow defaultCategory="home_improvement" onSubmit={vi.fn()} />);
 
     fireEvent.click(screen.getByRole('button', { name: /continue/i }));
+    fireEvent.change(screen.getByLabelText(/city/i), {
+      target: { value: 'Johannesburg' },
+    });
     fireEvent.click(screen.getByRole('button', { name: /continue/i }));
 
     expect(screen.getByRole('button', { name: /submit request/i })).toBeInTheDocument();
@@ -339,15 +343,14 @@ describe('LeadRequestFlow — unit tests', () => {
 
   it('disables submit button and shows loading indicator when submitting=true', () => {
     render(
-      <LeadRequestFlow
-        defaultCategory="home_improvement"
-        submitting={true}
-        onSubmit={vi.fn()}
-      />,
+      <LeadRequestFlow defaultCategory="home_improvement" submitting={true} onSubmit={vi.fn()} />,
     );
 
     // Navigate to step 3
     fireEvent.click(screen.getByRole('button', { name: /continue/i }));
+    fireEvent.change(screen.getByLabelText(/city/i), {
+      target: { value: 'Johannesburg' },
+    });
     fireEvent.click(screen.getByRole('button', { name: /continue/i }));
 
     const submitBtn = screen.getByRole('button', { name: /submitting/i });
@@ -365,6 +368,9 @@ describe('LeadRequestFlow — unit tests', () => {
 
     // Navigate to step 3
     fireEvent.click(screen.getByRole('button', { name: /continue/i }));
+    fireEvent.change(screen.getByLabelText(/city/i), {
+      target: { value: 'Johannesburg' },
+    });
     fireEvent.click(screen.getByRole('button', { name: /continue/i }));
 
     expect(screen.getByRole('alert')).toHaveTextContent('Something went wrong');
@@ -372,17 +378,18 @@ describe('LeadRequestFlow — unit tests', () => {
 
   it('calls onSubmit with hardcoded intentStage and sourceSurface', () => {
     const onSubmit = vi.fn();
-    render(
-      <LeadRequestFlow
-        defaultCategory="home_improvement"
-        onSubmit={onSubmit}
-      />,
-    );
+    render(<LeadRequestFlow defaultCategory="home_improvement" onSubmit={onSubmit} />);
 
     // Navigate to step 3
     fireEvent.click(screen.getByRole('button', { name: /continue/i }));
+    fireEvent.change(screen.getByLabelText(/city/i), {
+      target: { value: 'Johannesburg' },
+    });
     fireEvent.click(screen.getByRole('button', { name: /continue/i }));
 
+    fireEvent.change(screen.getByPlaceholderText(/describe what you need/i), {
+      target: { value: 'I need help with a property service.' },
+    });
     fireEvent.click(screen.getByRole('button', { name: /submit request/i }));
 
     expect(onSubmit).toHaveBeenCalledWith(
@@ -394,23 +401,13 @@ describe('LeadRequestFlow — unit tests', () => {
   });
 
   it('Back button is disabled on step 1', () => {
-    render(
-      <LeadRequestFlow
-        defaultCategory="home_improvement"
-        onSubmit={vi.fn()}
-      />,
-    );
+    render(<LeadRequestFlow defaultCategory="home_improvement" onSubmit={vi.fn()} />);
 
     expect(screen.getByRole('button', { name: /back/i })).toBeDisabled();
   });
 
   it('Back button navigates from step 2 to step 1', () => {
-    render(
-      <LeadRequestFlow
-        defaultCategory="home_improvement"
-        onSubmit={vi.fn()}
-      />,
-    );
+    render(<LeadRequestFlow defaultCategory="home_improvement" onSubmit={vi.fn()} />);
 
     fireEvent.click(screen.getByRole('button', { name: /continue/i }));
     expect(screen.getByText('Step 2 of 3')).toBeInTheDocument();
@@ -421,10 +418,7 @@ describe('LeadRequestFlow — unit tests', () => {
 
   it('step content container has aria-live="polite"', () => {
     const { container } = render(
-      <LeadRequestFlow
-        defaultCategory="home_improvement"
-        onSubmit={vi.fn()}
-      />,
+      <LeadRequestFlow defaultCategory="home_improvement" onSubmit={vi.fn()} />,
     );
 
     const liveRegion = container.querySelector('[aria-live="polite"]');
@@ -432,17 +426,14 @@ describe('LeadRequestFlow — unit tests', () => {
   });
 
   it('SA_PROVINCES are rendered in the province select on step 2', () => {
-    render(
-      <LeadRequestFlow
-        defaultCategory="home_improvement"
-        onSubmit={vi.fn()}
-      />,
-    );
+    render(<LeadRequestFlow defaultCategory="home_improvement" onSubmit={vi.fn()} />);
 
     fireEvent.click(screen.getByRole('button', { name: /continue/i }));
 
     const provinceSelect = screen.getByLabelText(/province/i) as HTMLSelectElement;
-    const options = Array.from(provinceSelect.options).map(o => o.value).filter(Boolean);
+    const options = Array.from(provinceSelect.options)
+      .map(o => o.value)
+      .filter(Boolean);
 
     expect(options).toEqual(expect.arrayContaining([...SA_PROVINCES]));
   });

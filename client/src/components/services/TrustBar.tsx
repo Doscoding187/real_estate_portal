@@ -11,7 +11,7 @@
  * Requirements: 2.1, 2.2, 2.3, 2.4, 2.5
  */
 
-import { ShieldCheck, Star, MapPin } from 'lucide-react';
+import { ShieldCheck, MapPin } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { ProviderDirectoryItem } from './ProviderCard';
 
@@ -43,21 +43,8 @@ function deriveVerifiedCount(providers: ProviderDirectoryItem[]): number {
   return providers.filter(p => p.verificationStatus === 'verified').length;
 }
 
-/**
- * Derives the average rating from a providers array (non-null values only).
- * Returns null if no providers have a rating.
- */
-function deriveAverageRating(providers: ProviderDirectoryItem[]): number | null {
-  const ratings = providers
-    .map(p => p.averageRating)
-    .filter((r): r is number => r != null && r > 0);
-  if (ratings.length === 0) return null;
-  return ratings.reduce((sum, r) => sum + r, 0) / ratings.length;
-}
-
 export function TrustBar({ providers, isLoading }: TrustBarProps) {
   const verifiedCount = deriveVerifiedCount(providers);
-  const averageRating = deriveAverageRating(providers);
 
   return (
     <div
@@ -75,21 +62,6 @@ export function TrustBar({ providers, isLoading }: TrustBarProps) {
               {formatVerifiedCount(verifiedCount)}
             </span>{' '}
             <span className="text-muted-foreground">verified providers</span>
-          </span>
-        )}
-      </div>
-
-      {/* Trust signal 2: Average platform rating */}
-      <div className="flex items-center gap-2">
-        <Star className="h-5 w-5 shrink-0 text-amber-500" aria-hidden="true" />
-        {isLoading ? (
-          <Skeleton className="h-4 w-36" />
-        ) : (
-          <span>
-            <span className="font-semibold text-foreground" data-testid="average-rating">
-              {averageRating != null ? formatRating(averageRating) : '—'}
-            </span>{' '}
-            <span className="text-muted-foreground">rated by homeowners</span>
           </span>
         )}
       </div>

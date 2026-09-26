@@ -14,18 +14,27 @@ import { type ServiceCategory, type SAProvince } from '../catalog';
 
 export type ServiceRow = {
   id: string;
+  recordId?: number;
+  code: string;
   displayName: string;
+  description: string;
   category: ServiceCategory;
   minPrice: string; // string for input binding, parsed to number on submit
   maxPrice: string;
+  currency: 'ZAR';
+  isActive: boolean;
 };
 
 export type LocationRow = {
   id: string;
+  recordId?: number;
   suburb: string;
   city: string;
   province: SAProvince | '';
+  countryCode: string;
+  postalCode: string;
   radiusKm: string; // string for input binding, defaults to '25'
+  isPrimary: boolean;
 };
 
 export type OnboardingState = {
@@ -39,8 +48,6 @@ export type OnboardingState = {
   contactEmail: string;
   contactPhone: string;
   websiteUrl: string;
-  logoFile: File | null;
-  logoPreviewUrl: string | null;
   // Step 3
   services: ServiceRow[];
   // Step 4
@@ -58,7 +65,7 @@ export type OnboardingAction =
   | { type: 'HYDRATE'; value: Partial<OnboardingState> }
   | { type: 'ADD_SERVICE' }
   | { type: 'REMOVE_SERVICE'; id: string }
-  | { type: 'UPDATE_SERVICE'; id: string; field: keyof ServiceRow; value: string }
+  | { type: 'UPDATE_SERVICE'; id: string; field: keyof ServiceRow; value: string | boolean }
   | { type: 'ADD_LOCATION' }
   | { type: 'REMOVE_LOCATION'; id: string }
   | { type: 'UPDATE_LOCATION'; id: string; field: keyof LocationRow; value: string }
@@ -73,10 +80,14 @@ export type OnboardingAction =
 function makeServiceRow(): ServiceRow {
   return {
     id: crypto.randomUUID(),
+    code: '',
     displayName: '',
+    description: '',
     category: 'home_improvement',
     minPrice: '',
     maxPrice: '',
+    currency: 'ZAR',
+    isActive: true,
   };
 }
 
@@ -86,7 +97,10 @@ function makeLocationRow(): LocationRow {
     suburb: '',
     city: '',
     province: '',
+    countryCode: 'ZA',
+    postalCode: '',
     radiusKm: '25',
+    isPrimary: true,
   };
 }
 
@@ -103,8 +117,6 @@ export const initialOnboardingState: OnboardingState = {
   contactEmail: '',
   contactPhone: '',
   websiteUrl: '',
-  logoFile: null,
-  logoPreviewUrl: null,
   services: [makeServiceRow()],
   locations: [makeLocationRow()],
   selectedPlan: null,
@@ -115,17 +127,24 @@ export const initialOnboardingState: OnboardingState = {
 export function isOnboardingStatePristine(state: OnboardingState) {
   const hasEditedServiceRows =
     state.services.length !== 1 ||
+    state.services[0]?.code !== '' ||
     state.services[0]?.displayName !== '' ||
+    state.services[0]?.description !== '' ||
     state.services[0]?.category !== 'home_improvement' ||
     state.services[0]?.minPrice !== '' ||
-    state.services[0]?.maxPrice !== '';
+    state.services[0]?.maxPrice !== '' ||
+    state.services[0]?.currency !== 'ZAR' ||
+    state.services[0]?.isActive !== true;
 
   const hasEditedLocationRows =
     state.locations.length !== 1 ||
     state.locations[0]?.suburb !== '' ||
     state.locations[0]?.city !== '' ||
     state.locations[0]?.province !== '' ||
-    state.locations[0]?.radiusKm !== '25';
+    state.locations[0]?.countryCode !== 'ZA' ||
+    state.locations[0]?.postalCode !== '' ||
+    state.locations[0]?.radiusKm !== '25' ||
+    state.locations[0]?.isPrimary !== true;
 
   return !(
     state.companyName !== '' ||
@@ -135,8 +154,6 @@ export function isOnboardingStatePristine(state: OnboardingState) {
     state.contactEmail !== '' ||
     state.contactPhone !== '' ||
     state.websiteUrl !== '' ||
-    state.logoFile !== null ||
-    state.logoPreviewUrl !== null ||
     state.selectedPlan !== null ||
     hasEditedServiceRows ||
     hasEditedLocationRows

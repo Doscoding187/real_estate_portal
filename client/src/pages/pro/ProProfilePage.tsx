@@ -12,45 +12,98 @@ import { applySeo } from '@/lib/seo';
 import { ProNavigation } from '@/components/services/ProNavigation';
 import { useServiceProviderOnboardingStatus } from '@/hooks/useServiceProviderOnboardingStatus';
 
-function linesToServices(text: string) {
+function normalizeLocationValue(value: unknown) {
+  return String(value ?? '')
+    .trim()
+    .toLowerCase();
+}
+
+function locationIdentity(location: {
+  countryCode?: string | null;
+  province?: string | null;
+  city?: string | null;
+  suburb?: string | null;
+}) {
+  return [location.countryCode, location.province, location.city, location.suburb]
+    .map(normalizeLocationValue)
+    .join('|');
+}
+
+export function linesToServices(
+  text: string,
+  existingServices: any[] = [],
+  activeOverrides: Record<string, boolean> = {},
+) {
   return text
     .split('\n')
     .map(line => line.trim())
     .filter(Boolean)
     .map(line => {
       const [category, code, displayName] = line.split(',').map(part => part.trim());
+      const previous =
+        existingServices.find(
+          service => code && service.code?.toLowerCase() === code.toLowerCase(),
+        ) || {};
       const safeCategory = SERVICE_CATEGORIES.some(item => item.value === category)
         ? (category as ServiceCategory)
-        : ('home_improvement' as ServiceCategory);
+        : previous.category || ('home_improvement' as ServiceCategory);
       return {
+        id: previous.id,
         category: safeCategory,
-        code: code || `code-${Math.random().toString(36).slice(2, 7)}`,
-        displayName: displayName || code || 'Service',
+        code: code || previous.code || `code-${Math.random().toString(36).slice(2, 7)}`,
+        displayName: displayName || previous.displayName || code || 'Service',
+        description: previous.description ?? undefined,
+        minPrice: previous.minPrice ?? undefined,
+        maxPrice: previous.maxPrice ?? undefined,
+        currency: 'ZAR' as const,
+        isActive:
+          activeOverrides[
+            String(code || previous.code || '')
+              .trim()
+              .toLowerCase()
+          ] ?? previous.isActive !== false,
       };
     });
 }
 
-function linesToLocations(text: string) {
+export function linesToLocations(text: string, existingLocations: any[] = []) {
   return text
     .split('\n')
     .map(line => line.trim())
     .filter(Boolean)
     .map((line, index) => {
       const [suburb, city, province] = line.split(',').map(part => part.trim());
+      const identity = locationIdentity({ countryCode: 'ZA', suburb, city, province });
+      const previous =
+        existingLocations.find(
+          location =>
+            locationIdentity({
+              ...location,
+              countryCode: normalizeLocationValue(location.countryCode) || 'ZA',
+            }) === identity,
+        ) || {};
       return {
+        id: previous.id,
         suburb: suburb || undefined,
         city: city || undefined,
         province: province || undefined,
-        isPrimary: index === 0,
+        countryCode: previous.countryCode || 'ZA',
+        postalCode: previous.postalCode ?? undefined,
+        radiusKm: previous.radiusKm ?? 25,
+        isPrimary: previous.isPrimary ?? index === 0,
       };
-    });
+    })
+    .filter(location => location.suburb || location.city || location.province);
 }
 
 export default function ProProfilePage() {
   const { user, loading: authLoading } = useAuth({ redirectOnUnauthenticated: true });
   const [, setLocation] = useLocation();
-  const { status, isLoading: statusLoading, refetch: refetchStatus } =
-    useServiceProviderOnboardingStatus();
+  const {
+    status,
+    isLoading: statusLoading,
+    refetch: refetchStatus,
+  } = useServiceProviderOnboardingStatus();
 
   useEffect(() => {
     applySeo({
@@ -101,6 +154,7 @@ export default function ProProfilePage() {
   const [contactPhone, setContactPhone] = useState('');
   const [websiteUrl, setWebsiteUrl] = useState('');
   const [servicesText, setServicesText] = useState('');
+  const [serviceActiveOverrides, setServiceActiveOverrides] = useState<Record<string, boolean>>({});
   const [locationsText, setLocationsText] = useState('');
   const [autoBootstrapAttempted, setAutoBootstrapAttempted] = useState(false);
 
@@ -127,6 +181,7 @@ export default function ProProfilePage() {
         .map((item: any) => [item.category, item.code, item.displayName].filter(Boolean).join(', '))
         .join('\n'),
     );
+    setServiceActiveOverrides({});
     setLocationsText(
       (profile.locations || [])
         .map((item: any) => [item.suburb, item.city, item.province].filter(Boolean).join(', '))
@@ -138,7 +193,12 @@ export default function ProProfilePage() {
     if (authLoading || myProfileQuery.isLoading || myProfileQuery.isFetching) return;
     if (user?.role !== 'service_provider') return;
     if (statusLoading) return;
-    if (profile || status?.hasProviderIdentity || registerIdentity.isPending || autoBootstrapAttempted)
+    if (
+      profile ||
+      status?.hasProviderIdentity ||
+      registerIdentity.isPending ||
+      autoBootstrapAttempted
+    )
       return;
 
     setAutoBootstrapAttempted(true);
@@ -210,21 +270,40 @@ export default function ProProfilePage() {
               {status?.locationsConfigured ? 'Coverage added' : 'Add service areas'}
             </span>
           </div>
-          {status?.fullFeaturesUnlocked ? (
+          {status?.dashboardUnlocked ? (
             <div className="flex items-center justify-between gap-3">
-              <p>Your partner profile is complete. Dashboard and Explore are fully unlocked.</p>
+              <p>
+                Your profile details are complete. Directory publication is reviewed separately.
+              </p>
               <Button variant="outline" onClick={() => setLocation('/service/dashboard')}>
-                Go to dashboard
+                Open workspace
               </Button>
             </div>
           ) : (
-            <p>
-              Complete the checklist below to unlock your full partner workspace and Explore
-              publishing.
-            </p>
+            <p>Complete the checklist below before requesting directory review.</p>
           )}
         </CardContent>
       </Card>
+
+      {profile && (
+        <Card className="border-slate-200">
+          <CardHeader>
+            <CardTitle>Directory publication</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2 text-sm text-slate-700">
+            <p className="font-medium text-slate-900">
+              {profile.isPublished
+                ? 'Published in the public directory'
+                : 'Held for directory review'}
+            </p>
+            <p>
+              {profile.isPublished
+                ? 'Consumers can discover this profile and send requests to your provider workspace.'
+                : 'Your profile is saved privately until the platform review is complete.'}
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       {!profile && (
         <Card>
@@ -327,11 +406,53 @@ export default function ProProfilePage() {
                   />
                 </label>
               </div>
+              {profile?.services && profile.services.length > 0 && (
+                <div className="space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Service availability
+                  </p>
+                  {profile.services.map((service: any) => {
+                    const serviceKey = String(service.code || service.id || service.displayName)
+                      .trim()
+                      .toLowerCase();
+                    const checked =
+                      serviceActiveOverrides[serviceKey] ?? service.isActive !== false;
+                    return (
+                      <label
+                        key={service.id || serviceKey}
+                        className="flex items-center gap-2 text-sm text-slate-700"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={event => {
+                            const nextChecked = event.target.checked;
+                            setServiceActiveOverrides(current => ({
+                              ...current,
+                              [serviceKey]: nextChecked,
+                            }));
+                          }}
+                        />
+                        <span>
+                          {service.displayName || service.code || 'Service'} —{' '}
+                          {checked ? 'Available for requests' : 'Inactive'}
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
               <div className="flex flex-wrap gap-2">
                 <Button
                   disabled={saving}
                   onClick={() =>
-                    replaceServices.mutate({ services: linesToServices(servicesText) as any })
+                    replaceServices.mutate({
+                      services: linesToServices(
+                        servicesText,
+                        profile?.services || [],
+                        serviceActiveOverrides,
+                      ),
+                    })
                   }
                 >
                   Save services
@@ -340,7 +461,9 @@ export default function ProProfilePage() {
                   variant="outline"
                   disabled={saving}
                   onClick={() =>
-                    replaceLocations.mutate({ locations: linesToLocations(locationsText) as any })
+                    replaceLocations.mutate({
+                      locations: linesToLocations(locationsText, profile?.locations || []),
+                    })
                   }
                 >
                   Save locations

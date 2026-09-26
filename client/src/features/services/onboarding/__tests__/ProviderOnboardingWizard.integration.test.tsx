@@ -1,70 +1,56 @@
-/**
- * Integration Test: ProviderOnboardingWizard
- *
- * Asserts that stepping through all 5 wizard steps with mocked mutations
- * reaches the "You're live!" completion screen.
- *
- * Requirements: 12.1
- */
-
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 
-// ---------------------------------------------------------------------------
-// Mock tRPC mutations and status query
-// ---------------------------------------------------------------------------
+const mockStatus = vi.fn();
+const mockProfile = vi.fn();
+const mockProfileLoading = vi.fn(() => false);
+const mockReplaceServices = vi.fn();
+const mockReplaceLocations = vi.fn();
 
 vi.mock('@/lib/trpc', () => ({
   trpc: {
     servicesEngine: {
       myOnboardingStatus: {
         useQuery: () => ({
-          data: {
-            hasProviderIdentity: false,
-            profileConfigured: false,
-            servicesConfigured: false,
-            locationsConfigured: false,
-            onboardingStep: 0,
-            dashboardUnlocked: false,
-            fullFeaturesUnlocked: false,
-            recommendedNextStep: '/service/profile',
-            provider: null,
-          },
+          data: mockStatus(),
           isLoading: false,
           error: null,
         }),
       },
       myProviderProfile: {
-        useQuery: () => ({
-          data: null,
-          isLoading: false,
-          error: null,
-        }),
+        useQuery: () => ({ data: mockProfile(), isLoading: mockProfileLoading(), error: null }),
       },
+
       registerProviderIdentity: {
-        useMutation: ({ onSuccess }: { onSuccess: (data: any) => void }) => ({
-          mutate: () => { onSuccess({}); },
+        useMutation: ({ onSuccess }: { onSuccess: (data: unknown) => void }) => ({
+          mutate: () => onSuccess({}),
           isPending: false,
           error: null,
         }),
       },
       upsertProviderProfile: {
-        useMutation: ({ onSuccess }: { onSuccess: (data: any) => void }) => ({
-          mutate: () => { onSuccess({}); },
+        useMutation: ({ onSuccess }: { onSuccess: (data: unknown) => void }) => ({
+          mutate: () => onSuccess({}),
           isPending: false,
           error: null,
         }),
       },
       replaceProviderServices: {
-        useMutation: ({ onSuccess }: { onSuccess: (data: any) => void }) => ({
-          mutate: () => { onSuccess({}); },
+        useMutation: ({ onSuccess }: { onSuccess: (data: unknown) => void }) => ({
+          mutate: (input: unknown) => {
+            mockReplaceServices(input);
+            onSuccess({});
+          },
           isPending: false,
           error: null,
         }),
       },
       replaceProviderLocations: {
-        useMutation: ({ onSuccess }: { onSuccess: (data: any) => void }) => ({
-          mutate: () => { onSuccess({}); },
+        useMutation: ({ onSuccess }: { onSuccess: (data: unknown) => void }) => ({
+          mutate: (input: unknown) => {
+            mockReplaceLocations(input);
+            onSuccess({});
+          },
           isPending: false,
           error: null,
         }),
@@ -92,100 +78,296 @@ vi.mock('wouter', async () => {
   };
 });
 
-// ---------------------------------------------------------------------------
-// Import after mocks
-// ---------------------------------------------------------------------------
-
 import { ProviderOnboardingWizard } from '../ProviderOnboardingWizard';
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
 async function clickContinue() {
-  const btn = screen.getByRole('button', { name: /continue/i });
-  fireEvent.click(btn);
-  await waitFor(() => expect(screen.queryByRole('button', { name: /saving/i })).not.toBeInTheDocument());
+  const button = screen.getByRole('button', { name: /continue/i });
+  fireEvent.click(button);
+  await waitFor(() =>
+    expect(screen.queryByRole('button', { name: /saving/i })).not.toBeInTheDocument(),
+  );
 }
 
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
+describe('ProviderOnboardingWizard', () => {
+  beforeEach(() => {
+    mockStatus.mockReset();
+    mockProfile.mockReset();
+    mockProfileLoading.mockReset();
+    mockProfileLoading.mockReturnValue(false);
+    mockReplaceServices.mockReset();
 
-describe('ProviderOnboardingWizard — integration', () => {
-  it('shows Step 1 of 5 on initial render', () => {
+    mockReplaceLocations.mockReset();
+    mockStatus.mockReturnValue({
+      hasProviderIdentity: false,
+      profileConfigured: false,
+      servicesConfigured: false,
+      locationsConfigured: false,
+      onboardingStep: 0,
+      dashboardUnlocked: false,
+      fullFeaturesUnlocked: false,
+      recommendedNextStep: '/service/profile',
+      provider: null,
+    });
+    mockProfile.mockReturnValue(null);
+  });
+
+  it('shows the five-step setup flow', () => {
     render(<ProviderOnboardingWizard />);
     expect(screen.getByText('Step 1 of 5')).toBeInTheDocument();
   });
 
-  it('completes all 5 steps and reaches the "You\'re live!" completion screen', async () => {
+  it('does not expose editable steps while an existing profile is still hydrating', () => {
+    mockStatus.mockReturnValue({
+      hasProviderIdentity: true,
+      profileConfigured: true,
+      servicesConfigured: false,
+      locationsConfigured: false,
+      onboardingStep: 2,
+      dashboardUnlocked: false,
+      fullFeaturesUnlocked: false,
+      recommendedNextStep: '/service/profile',
+      provider: null,
+    });
+    mockProfileLoading.mockReturnValue(true);
+
     render(<ProviderOnboardingWizard />);
 
-    // Step 1: Business Basics — enter company name and continue
-    expect(screen.getByText('Step 1 of 5')).toBeInTheDocument();
-    const companyInput = screen.getByLabelText(/business name/i);
-    fireEvent.change(companyInput, { target: { value: 'Acme Plumbing' } });
-    await clickContinue();
+    expect(screen.getByText(/loading your provider profile/i)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /continue/i })).not.toBeInTheDocument();
+  });
 
-    // Step 2: Profile Details
+  it('completes setup with a truthful directory-review state', async () => {
+    render(<ProviderOnboardingWizard />);
+
+    fireEvent.change(screen.getByLabelText(/business name/i), {
+      target: { value: 'Acme Plumbing' },
+    });
+    await clickContinue();
     await waitFor(() => expect(screen.getByText('Step 2 of 5')).toBeInTheDocument());
+    fireEvent.change(screen.getByLabelText(/headline/i), {
+      target: { value: 'Clear property services' },
+    });
+    fireEvent.change(screen.getByLabelText(/about your business/i), {
+      target: { value: 'We provide clear property services.' },
+    });
+    fireEvent.change(screen.getByLabelText(/contact email/i), {
+      target: { value: 'hello@acme.example' },
+    });
     await clickContinue();
 
-    // Step 3: Services Offered — default row is present, continue
     await waitFor(() => expect(screen.getByText('Step 3 of 5')).toBeInTheDocument());
-    // Fill in a service name to enable Continue
-    const serviceNameInput = screen.getByPlaceholderText(/geyser replacement/i);
-    fireEvent.change(serviceNameInput, { target: { value: 'Plumbing repair' } });
+    fireEvent.change(screen.getByPlaceholderText(/geyser replacement/i), {
+      target: { value: 'Plumbing repair' },
+    });
     await clickContinue();
-
-    // Step 4: Coverage Areas — fill city to enable Continue
     await waitFor(() => expect(screen.getByText('Step 4 of 5')).toBeInTheDocument());
-    const cityInput = screen.getByPlaceholderText(/johannesburg/i);
-    fireEvent.change(cityInput, { target: { value: 'Cape Town' } });
+    fireEvent.change(screen.getByPlaceholderText(/johannesburg/i), {
+      target: { value: 'Cape Town' },
+    });
     await clickContinue();
-
-    // Step 5: Subscription Plan — click Go live
     await waitFor(() => expect(screen.getByText('Step 5 of 5')).toBeInTheDocument());
-    const goLiveBtn = screen.getByRole('button', { name: /go live/i });
-    fireEvent.click(goLiveBtn);
 
-    // Completion screen
+    fireEvent.click(screen.getByRole('button', { name: /finish setup/i }));
+
     await waitFor(() => {
-      expect(screen.getByText("You're live!")).toBeInTheDocument();
+      expect(screen.getByText('Profile setup complete')).toBeInTheDocument();
+    });
+    expect(screen.getByText(/not publicly published yet/i)).toBeInTheDocument();
+  });
+
+  it('does not render editable steps before existing profile hydration completes', () => {
+    mockStatus.mockReturnValue({
+      hasProviderIdentity: true,
+      profileConfigured: true,
+      servicesConfigured: false,
+      locationsConfigured: false,
+      onboardingStep: 2,
+      dashboardUnlocked: false,
+      fullFeaturesUnlocked: false,
+      recommendedNextStep: '/service/profile',
+      provider: null,
+    });
+    mockProfileLoading.mockReturnValue(true);
+
+    render(<ProviderOnboardingWizard />);
+
+    expect(screen.getByText(/loading your provider profile/i)).toBeInTheDocument();
+    expect(screen.queryByText('Step 1 of 5')).not.toBeInTheDocument();
+  });
+
+  it('hydrates existing service and location metadata before editing', async () => {
+    mockStatus.mockReturnValue({
+      hasProviderIdentity: true,
+      profileConfigured: true,
+      servicesConfigured: false,
+      locationsConfigured: false,
+      onboardingStep: 2,
+      dashboardUnlocked: false,
+      fullFeaturesUnlocked: false,
+      recommendedNextStep: '/service/profile',
+      provider: null,
+    });
+    mockProfile.mockReturnValue({
+      companyName: 'Existing Provider',
+      headline: 'Existing headline',
+      bio: 'Existing bio',
+      contactEmail: 'hello@example.com',
+      contactPhone: '',
+      websiteUrl: '',
+      services: [
+        {
+          id: 41,
+          code: 'plumbing',
+          displayName: 'Plumbing repairs',
+          description: 'Existing description',
+          category: 'home_improvement',
+          minPrice: 250,
+          maxPrice: 900,
+          currency: 'ZAR',
+          isActive: false,
+        },
+      ],
+      locations: [
+        {
+          id: 51,
+          suburb: 'Sandton',
+          city: 'Johannesburg',
+          province: 'Gauteng',
+          countryCode: 'ZA',
+          postalCode: '2196',
+          radiusKm: 40,
+          isPrimary: true,
+        },
+      ],
+    });
+
+    render(<ProviderOnboardingWizard />);
+    await waitFor(() => expect(screen.getByText('Step 3 of 5')).toBeInTheDocument());
+    expect(screen.getByLabelText(/service name/i)).toHaveValue('Plumbing repairs');
+    const activeToggle = screen.getByLabelText(/available for requests/i);
+    expect(activeToggle).not.toBeChecked();
+    fireEvent.click(activeToggle);
+    fireEvent.click(screen.getByRole('button', { name: /continue/i }));
+    await waitFor(() => expect(screen.getByText('Step 4 of 5')).toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button', { name: /continue/i }));
+
+    await waitFor(() => expect(mockReplaceServices).toHaveBeenCalled());
+    expect(mockReplaceServices.mock.calls[0]?.[0]).toEqual({
+      services: [
+        expect.objectContaining({
+          id: 41,
+          code: 'plumbing',
+          description: 'Existing description',
+          minPrice: 250,
+          maxPrice: 900,
+          currency: 'ZAR',
+          isActive: true,
+        }),
+      ],
+    });
+    expect(mockReplaceLocations.mock.calls[0]?.[0]).toEqual({
+      locations: [
+        expect.objectContaining({
+          id: 51,
+          countryCode: 'ZA',
+          postalCode: '2196',
+          radiusKm: 40,
+          isPrimary: true,
+        }),
+      ],
     });
   });
 
-  it('renders the WizardProgressIndicator on each step 1–5', async () => {
-    render(<ProviderOnboardingWizard />);
+  it('lets a provider remove a persisted service and persisted coverage area', async () => {
+    mockStatus.mockReturnValue({
+      hasProviderIdentity: true,
+      profileConfigured: true,
+      servicesConfigured: false,
+      locationsConfigured: false,
+      onboardingStep: 2,
+      dashboardUnlocked: false,
+      fullFeaturesUnlocked: false,
+      recommendedNextStep: '/service/profile',
+      provider: null,
+    });
+    mockProfile.mockReturnValue({
+      companyName: 'Existing Provider',
+      headline: 'Existing headline',
+      bio: 'Existing bio',
+      contactEmail: 'hello@example.com',
+      contactPhone: '',
+      websiteUrl: '',
+      services: [
+        {
+          id: 41,
+          code: 'plumbing',
+          displayName: 'Plumbing repairs',
+          description: 'Existing description',
+          category: 'home_improvement',
+          minPrice: 250,
+          maxPrice: 900,
+          currency: 'ZAR',
+          isActive: true,
+        },
+        {
+          id: 42,
+          code: 'electrical',
+          displayName: 'Electrical work',
+          description: '',
+          category: 'home_improvement',
+          minPrice: null,
+          maxPrice: null,
+          currency: 'ZAR',
+          isActive: true,
+        },
+      ],
+      locations: [
+        {
+          id: 51,
+          suburb: 'Sandton',
+          city: 'Johannesburg',
+          province: 'Gauteng',
+          countryCode: 'ZA',
+          postalCode: '2196',
+          radiusKm: 40,
+          isPrimary: true,
+        },
+        {
+          id: 52,
+          suburb: 'Arcadia',
+          city: 'Pretoria',
+          province: 'Gauteng',
+          countryCode: 'ZA',
+          postalCode: '0008',
+          radiusKm: 20,
+          isPrimary: false,
+        },
+      ],
+    });
 
-    // Step 1
-    expect(screen.getByRole('progressbar')).toBeInTheDocument();
-    expect(screen.getByText('Step 1 of 5')).toBeInTheDocument();
+    render(<ProviderOnboardingWizard />);
+    await waitFor(() => expect(screen.getByText('Step 3 of 5')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole('button', { name: 'Remove service 2' }));
+    fireEvent.click(screen.getByRole('button', { name: /continue/i }));
+    await waitFor(() => expect(screen.getByText('Step 4 of 5')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole('button', { name: 'Remove area 2' }));
+    fireEvent.click(screen.getByRole('button', { name: /continue/i }));
+
+    await waitFor(() => expect(mockReplaceServices).toHaveBeenCalled());
+    expect(mockReplaceServices.mock.calls[0]?.[0]).toEqual({
+      services: [expect.objectContaining({ id: 41, code: 'plumbing' })],
+    });
+    await waitFor(() => expect(mockReplaceLocations).toHaveBeenCalled());
+    expect(mockReplaceLocations.mock.calls[0]?.[0]).toEqual({
+      locations: [expect.objectContaining({ id: 51, suburb: 'Sandton' })],
+    });
   });
 
-  it('does NOT render WizardProgressIndicator on the completion screen', async () => {
+  it('does not promise paid placement or Explore publishing', () => {
     render(<ProviderOnboardingWizard />);
-
-    // Navigate through all steps
-    const companyInput = screen.getByLabelText(/business name/i);
-    fireEvent.change(companyInput, { target: { value: 'Test Co' } });
-    await clickContinue();
-    await waitFor(() => screen.getByText('Step 2 of 5'));
-    await clickContinue();
-    await waitFor(() => screen.getByText('Step 3 of 5'));
-    const svcInput = screen.getByPlaceholderText(/geyser replacement/i);
-    fireEvent.change(svcInput, { target: { value: 'Electrical' } });
-    await clickContinue();
-    await waitFor(() => screen.getByText('Step 4 of 5'));
-    const cityInput = screen.getByPlaceholderText(/johannesburg/i);
-    fireEvent.change(cityInput, { target: { value: 'Durban' } });
-    await clickContinue();
-    await waitFor(() => screen.getByText('Step 5 of 5'));
-    fireEvent.click(screen.getByRole('button', { name: /go live/i }));
-
-    await waitFor(() => screen.getByText("You're live!"));
-
-    // No progress bar on completion screen
-    expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
+    expect(screen.queryByText(/paid plan/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/go live/i)).not.toBeInTheDocument();
   });
 });

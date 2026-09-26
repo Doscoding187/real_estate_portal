@@ -30,14 +30,18 @@ export function CoverageAreasStep({ state, dispatch, onNext, onBack }: CoverageA
       dispatch({ type: 'SET_PENDING', step: null });
       onNext();
     },
-    onError: (err) => {
-      dispatch({ type: 'SET_ERROR', step: 4, message: err.message || 'Failed to save. Please try again.' });
+    onError: err => {
+      dispatch({
+        type: 'SET_ERROR',
+        step: 4,
+        message: err.message || 'Failed to save. Please try again.',
+      });
       dispatch({ type: 'SET_PENDING', step: null });
     },
   });
 
   const hasValidRow = state.locations.some(
-    l => l.city.trim().length > 0 || l.province.length > 0,
+    l => l.suburb.trim().length > 0 || l.city.trim().length > 0 || l.province.length > 0,
   );
 
   function handleContinue() {
@@ -45,12 +49,15 @@ export function CoverageAreasStep({ state, dispatch, onNext, onBack }: CoverageA
     dispatch({ type: 'SET_PENDING', step: 4 });
     dispatch({ type: 'CLEAR_ERROR', step: 4 });
 
-    const locations = state.locations.map((loc, index) => ({
+    const locations = state.locations.map(loc => ({
+      id: loc.recordId,
       suburb: loc.suburb.trim() || undefined,
       city: loc.city.trim() || undefined,
       province: loc.province || undefined,
+      countryCode: loc.countryCode || 'ZA',
+      postalCode: loc.postalCode.trim() || undefined,
       radiusKm: loc.radiusKm ? Number(loc.radiusKm) : 25,
-      isPrimary: index === 0,
+      isPrimary: loc.isPrimary,
     }));
 
     replaceLocations.mutate({ locations });
@@ -60,7 +67,9 @@ export function CoverageAreasStep({ state, dispatch, onNext, onBack }: CoverageA
     <div className="space-y-6">
       <div className="space-y-1">
         <h2 className="text-xl font-semibold text-slate-900">Where do you operate?</h2>
-        <p className="text-sm text-slate-500">Define the areas you serve so we can match you with nearby leads</p>
+        <p className="text-sm text-slate-500">
+          List the areas you serve so consumers can check your coverage
+        </p>
       </div>
 
       <div className="space-y-3">
@@ -87,7 +96,14 @@ export function CoverageAreasStep({ state, dispatch, onNext, onBack }: CoverageA
                 <Input
                   id={`loc-suburb-${loc.id}`}
                   value={loc.suburb}
-                  onChange={e => dispatch({ type: 'UPDATE_LOCATION', id: loc.id, field: 'suburb', value: e.target.value })}
+                  onChange={e =>
+                    dispatch({
+                      type: 'UPDATE_LOCATION',
+                      id: loc.id,
+                      field: 'suburb',
+                      value: e.target.value,
+                    })
+                  }
                   placeholder="e.g. Sandton"
                   disabled={isPending}
                 />
@@ -98,7 +114,14 @@ export function CoverageAreasStep({ state, dispatch, onNext, onBack }: CoverageA
                 <Input
                   id={`loc-city-${loc.id}`}
                   value={loc.city}
-                  onChange={e => dispatch({ type: 'UPDATE_LOCATION', id: loc.id, field: 'city', value: e.target.value })}
+                  onChange={e =>
+                    dispatch({
+                      type: 'UPDATE_LOCATION',
+                      id: loc.id,
+                      field: 'city',
+                      value: e.target.value,
+                    })
+                  }
                   placeholder="e.g. Johannesburg"
                   disabled={isPending}
                 />
@@ -109,13 +132,22 @@ export function CoverageAreasStep({ state, dispatch, onNext, onBack }: CoverageA
                 <select
                   id={`loc-province-${loc.id}`}
                   value={loc.province}
-                  onChange={e => dispatch({ type: 'UPDATE_LOCATION', id: loc.id, field: 'province', value: e.target.value })}
+                  onChange={e =>
+                    dispatch({
+                      type: 'UPDATE_LOCATION',
+                      id: loc.id,
+                      field: 'province',
+                      value: e.target.value,
+                    })
+                  }
                   disabled={isPending}
                   className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                 >
                   <option value="">Select province</option>
                   {SA_PROVINCES.map(p => (
-                    <option key={p} value={p}>{p}</option>
+                    <option key={p} value={p}>
+                      {p}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -128,7 +160,14 @@ export function CoverageAreasStep({ state, dispatch, onNext, onBack }: CoverageA
                   min={1}
                   max={250}
                   value={loc.radiusKm}
-                  onChange={e => dispatch({ type: 'UPDATE_LOCATION', id: loc.id, field: 'radiusKm', value: e.target.value })}
+                  onChange={e =>
+                    dispatch({
+                      type: 'UPDATE_LOCATION',
+                      id: loc.id,
+                      field: 'radiusKm',
+                      value: e.target.value,
+                    })
+                  }
                   disabled={isPending}
                 />
               </div>
@@ -149,7 +188,10 @@ export function CoverageAreasStep({ state, dispatch, onNext, onBack }: CoverageA
       </div>
 
       {error && (
-        <p role="alert" className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+        <p
+          role="alert"
+          className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
+        >
           {error}
         </p>
       )}
