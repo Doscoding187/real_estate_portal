@@ -78,6 +78,31 @@
       "osm_only_odbl_provisional": 720,
       "permissive_supported": 274
     },
+    "scope_establishment": {
+      "established": 1436,
+      "not_established": 30,
+      "by_scope": {
+        "locality": {
+          "established": 1096,
+          "not_established": 0
+        },
+        "metro_city": {
+          "established": 339,
+          "not_established": 0
+        },
+        "province": {
+          "established": 1,
+          "not_established": 0
+        }
+      }
+    },
+    "executable_places": 1436,
+    "executable_by_scope": {
+      "locality": 1096,
+      "metro_city": 339,
+      "province": 1
+    },
+    "admitted_without_executable_scope": 30,
     "names": 2476,
     "name_roles": {
       "preferred_public": 1466,
@@ -131,6 +156,10 @@
     "containment is a forest: one parent, no cycles",
     "no relationship-driven search widening in Slice 2",
     "scope, eligibility and classification combinations satisfy the database invariants",
+    "every scoped Place has an evidenced province context, the only mandatory ancestry requirement",
+    "no artificial settlement parent is introduced to complete a search hierarchy",
+    "no municipality is re-typed or promoted into the metro_city search tier",
+    "a Place without a governed executable scope stays admitted but is neither searchable nor publishable",
     "the disposition ledger covers every source candidate"
   ],
   "outputs": {

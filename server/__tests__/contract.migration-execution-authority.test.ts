@@ -464,8 +464,10 @@ describe('migration execution authority', () => {
       '0095_place_authority_place_external_mapping.sql',
       '0096_place_authority_search_area.sql',
       '0097_place_authority_search_area_member.sql',
+        '0098_saved_searches_canonical_place_reference.sql',
+        '0099_saved_searches_canonical_place_reference_fk.sql',
     ]);
-    expect(executionManifest.expectedHead).toBe('0097_place_authority_search_area_member.sql');
+    expect(executionManifest.expectedHead).toBe('0099_saved_searches_canonical_place_reference_fk.sql');
     expect(archivedSqlFiles.length).toBeGreaterThan(0);
     expect(activeSqlFiles.some(file => file.includes('_archived'))).toBe(false);
     expect(executionManifest.historyTable).toBe('sql_migration_history');

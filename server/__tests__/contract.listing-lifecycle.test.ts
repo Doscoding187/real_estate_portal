@@ -75,12 +75,6 @@ vi.mock('../services/inventoryLinkResolver', () => ({
   ),
 }));
 
-vi.mock('../services/locationPagesServiceEnhanced', () => ({
-  locationPagesServiceEnhanced: {
-    resolveLocation: vi.fn(() => Promise.resolve({ id: 999, name: 'Test City' })),
-  },
-}));
-
 import { appRouter } from '../routers';
 import { ListingPublicationEntitlementError } from '../services/listingPublicationEntitlementService';
 import { createListingMediaUploadToken } from '../services/listingMediaAuthority';

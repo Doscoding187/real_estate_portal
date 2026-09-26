@@ -12,7 +12,7 @@
 
 import { describe, it, expect } from 'vitest';
 import fc from 'fast-check';
-import { generateSlug, generateSEOContent } from '../locationPagesServiceEnhanced';
+import { generateSlug, generateSEOContent } from '../locationSeoContent';
 
 describe('LocationPagesServiceEnhanced - Property Tests', () => {
   /**

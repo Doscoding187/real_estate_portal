@@ -18,6 +18,7 @@ import { aiAgentRouter } from './routers/aiAgentRouter';
 import { videoRouter } from './videoRouter';
 import { billingRouter } from './billingRouter';
 import { locationRouter } from './locationRouter';
+import { placeAuthorityRouter } from './placeAuthorityRouter';
 import { enhancedLocationRouter } from './enhancedLocationRouter';
 import { googleMapsRouter } from './googleMapsRouter';
 import { priceInsightsRouter } from './priceInsightsRouter';
@@ -139,6 +140,8 @@ const appRouterConfig = {
   video: videoRouter,
   billing: billingRouter,
   location: locationRouter,
+  // Slice 3: internal executable Place Authority boundary. Not a public switch.
+  placeAuthority: placeAuthorityRouter,
   enhancedLocation: enhancedLocationRouter,
   googleMaps: googleMapsRouter,
   priceInsights: priceInsightsRouter,

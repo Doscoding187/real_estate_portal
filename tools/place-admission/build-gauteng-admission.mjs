@@ -653,6 +653,109 @@ relationshipRows.sort(
 );
 
 /* ------------------------------------------------------------------ *
+ * 4b. Governed scope establishment (D1), resolved after the hierarchy
+ * ------------------------------------------------------------------ */
+
+/**
+ * A `search_scope` states which product-search granularity a Place can
+ * represent. `D1_SCOPE_BY_TYPE` says which scope a *type* may carry; it does not
+ * decide whether that scope is *established*. Establishment is resolved here,
+ * once the hierarchy is known, and it is deliberately weaker than a
+ * three-tier ancestry requirement.
+ *
+ * province / metro_city / locality are derived search-scope **categories**, not
+ * mandatory levels in the canonical containment hierarchy. The canonical case is
+ *
+ *   Gauteng (province) -> City of Johannesburg (municipality) -> Bryanston (locality)
+ *
+ * Bryanston is a legitimate locality scope with no city Place anywhere above it.
+ * Requiring a metro_city ancestor would force a fake city node into good
+ * geography purely so the search abstraction would have three tiers, which is
+ * exactly the flattening Place Authority exists to eliminate. The administrative
+ * context of a Place is its containment chain; the scope is a category applied to
+ * it. Those are different facts and are not required to coincide.
+ *
+ * The binding requirement is therefore only that a scoped Place has an
+ * **evidenced administrative chain to the province**. A scope that cannot reach a
+ * province is not executable, because a search with no provincial bound is
+ * unbounded.
+ *
+ * A container carrying no scope (a district or local municipality) is skipped and
+ * never promoted. It is factual context, not a search level, and a municipality
+ * is never re-typed as a city to complete a hierarchy.
+ *
+ * A Place whose chain does not reach a province keeps its identity and loses its
+ * scope: an absent scope is the contract's own encoding of "not executable",
+ * because `chk_place_scope_requires_searchable` forbids a scope without
+ * searchability and `chk_place_search_scope_derived_from_type` forbids a
+ * municipality from carrying a scope at all.
+ */
+// A scope category requires an evidenced province context, not a fixed depth.
+const REQUIRED_COARSER_SCOPES = {
+  province: [],
+  metro_city: ['province'],
+  locality: ['province'],
+};
+
+/** Scoped ancestors of a Place, root first, following containment only. */
+function evidencedScopedAncestors(placeId) {
+  const scopes = [];
+  const seen = new Set([placeId]);
+  let cursor = containmentParent.get(placeId) ?? null;
+  while (cursor && !seen.has(cursor)) {
+    seen.add(cursor);
+    const scope = placeRows.find(row => row.place_id === cursor)?.search_scope ?? null;
+    if (scope) scopes.push(scope);
+    cursor = containmentParent.get(cursor) ?? null;
+  }
+  return scopes.reverse();
+}
+
+const scopeEstablishment = { established: 0, not_established: 0, by_scope: {} };
+
+for (const row of placeRows) {
+  const scope = row.search_scope;
+  if (scope == null) {
+    scopeEstablishment.not_established += 1;
+    continue;
+  }
+  const required = REQUIRED_COARSER_SCOPES[scope];
+  const evidenced = evidencedScopedAncestors(row.place_id);
+  const established = required.every((level, depth) => evidenced[depth] === level);
+
+  const tally = (scopeEstablishment.by_scope[scope] ??= { established: 0, not_established: 0 });
+  if (established) {
+    tally.established += 1;
+    scopeEstablishment.established += 1;
+    row.scope_establishment = {
+      established: true,
+      required_coarser_scopes: required,
+      evidenced_scoped_ancestors: evidenced,
+    };
+    continue;
+  }
+
+  // No governed executable scope. The Place stays admitted as an identity and
+  // stops being executable. Publication is a strict subset of search, so it is
+  // withdrawn with the scope.
+  tally.not_established += 1;
+  scopeEstablishment.not_established += 1;
+  row.scope_establishment = {
+    established: false,
+    required_coarser_scopes: required,
+    evidenced_scoped_ancestors: evidenced,
+    missing_coarser_scopes: required.filter((level, depth) => evidenced[depth] !== level),
+    reason:
+      'no_governed_executable_scope: the containment path does not evidence every ' +
+      'coarser search scope this level requires, and a context-only container is ' +
+      'never promoted to a search level',
+  };
+  row.search_scope = null;
+  row.search_eligible = 0;
+  row.publication_eligible = 0;
+}
+
+/* ------------------------------------------------------------------ *
  * 7. Evidence and external mappings
  * ------------------------------------------------------------------ */
 
@@ -908,6 +1011,50 @@ evidenceRows.sort(
 const problems = [];
 const assertInvariant = (condition, message) => { if (!condition) problems.push(message); };
 
+/* Guard the two moves this scope contract explicitly forbids, so a future
+ * rebuild cannot quietly reintroduce them to satisfy a search vocabulary. */
+{
+  const typeById = new Map(placeRows.map(row => [row.place_id, row.place_type]));
+  const parents = new Set(
+    relationshipRows
+      .filter(row => row.relationship_type === 'administratively_contains')
+      .map(row => row.to_place_id),
+  );
+  // No settlement Place may be inserted as a container purely to give a locality
+  // a metro_city ancestor.
+  const settlementContainers = [...parents].filter(id => typeById.get(id) === 'city' || typeById.get(id) === 'town');
+  assertInvariant(
+    settlementContainers.length === 0,
+    `no artificial settlement parent may be introduced to complete a search hierarchy: ${settlementContainers.length} found`,
+  );
+  // No municipality may be re-typed as a city or town to occupy the metro tier.
+  for (const row of placeRows) {
+    assertInvariant(
+      row.place_type !== 'city' && row.place_type !== 'town'
+        ? true
+        : row.scope_establishment?.evidenced_scoped_ancestors?.includes('province') === true,
+      `a metro_city scope must be backed by an evidenced province context: ${row.place_id}`,
+    );
+  }
+  // Every scoped Place must have an evidenced province context, which is the only
+  // mandatory ancestry requirement.
+  for (const row of placeRows) {
+    if (row.search_scope == null || row.search_scope === 'province') continue;
+    assertInvariant(
+      row.scope_establishment?.evidenced_scoped_ancestors?.[0] === 'province',
+      `scoped Place ${row.place_id} has no evidenced province context`,
+    );
+  }
+  // Municipalities stay factual context Places and never become search scopes.
+  for (const row of placeRows) {
+    if (row.place_type !== 'local_municipality' && row.place_type !== 'district_municipality') continue;
+    assertInvariant(
+      row.search_scope == null && row.search_eligible === 0 && row.publication_eligible === 0,
+      `a municipality must remain a context-only Place: ${row.place_id}`,
+    );
+  }
+}
+
 const admittedPlaces = new Set(placeRows.map(p => p.place_id));
 assertInvariant(placeIdByIdentity.size === identities.length, 'every source identity maps to a Place');
 assertInvariant(
@@ -1109,6 +1256,19 @@ const manifest = {
     group_kinds: groupKindTally,
     verification: verificationTally,
     licensing: licensingTally,
+    scope_establishment: scopeEstablishment,
+    executable_places: placeRows.filter(row => row.search_eligible === 1).length,
+    executable_by_scope: Object.fromEntries(
+      Object.entries(
+        placeRows
+          .filter(row => row.search_eligible === 1)
+          .reduce((tally, row) => {
+            tally[row.search_scope] = (tally[row.search_scope] ?? 0) + 1;
+            return tally;
+          }, {}),
+      ).sort(([a], [b]) => byIdLex(a, b)),
+    ),
+    admitted_without_executable_scope: placeRows.filter(row => row.search_eligible === 0).length,
     names: nameRows.length,
     name_roles: nameRoleTally,
     searchable_names: nameRows.filter(r => r.is_searchable === 1).length,
@@ -1139,6 +1299,10 @@ const manifest = {
     'containment is a forest: one parent, no cycles',
     'no relationship-driven search widening in Slice 2',
     'scope, eligibility and classification combinations satisfy the database invariants',
+    'every scoped Place has an evidenced province context, the only mandatory ancestry requirement',
+    'no artificial settlement parent is introduced to complete a search hierarchy',
+    'no municipality is re-typed or promoted into the metro_city search tier',
+    'a Place without a governed executable scope stays admitted but is neither searchable nor publishable',
     'the disposition ledger covers every source candidate',
   ],
   outputs: {

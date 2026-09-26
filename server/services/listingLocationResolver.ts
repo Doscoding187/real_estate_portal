@@ -1,4 +1,4 @@
-import { and, eq, ne, or, sql } from 'drizzle-orm';
+import { and, eq, isNull, ne, or, sql } from 'drizzle-orm';
 import { getDb } from '../db-connection';
 import {
   cities,
@@ -6,6 +6,7 @@ import {
   provinces,
   suburbs,
 } from '../../drizzle/schema';
+import { placeEvidence } from '../../drizzle/schema/placeAuthority';
 import {
   coordinatePairSchema,
   LOCATION_CONTRACT_VERSION,
@@ -117,6 +118,64 @@ export class ListingLocationResolutionError extends Error {
     this.name = 'ListingLocationResolutionError';
     this.code = code;
   }
+}
+
+/**
+ * Place Authority D3: record a provider locality that has no admitted Place as
+ * unresolved evidence, and return nothing that could be mistaken for a canonical
+ * locality.
+ *
+ * The row deliberately has no `place_id`. A provider label is an observation, and
+ * recording it must never require inventing a Place referent (D11). The subject
+ * carries only the candidate's own normalized name and the resolved city context
+ * — no free-form address, no coordinates, no person, so the signal is
+ * privacy-safe. A repeat observation raises research priority and nothing else.
+ */
+async function recordUnresolvedLocalityCandidate(input: {
+  localityName: string;
+  localitySlug: string;
+  cityId: number;
+  postalCode: string | null;
+  latitude: string;
+  longitude: string;
+  providerLocationPlaceId: string | null;
+}): Promise<void> {
+  const db = await getDb();
+  const subject = `locality_candidate:${input.localitySlug}`;
+  const existing = await db
+    .select({ id: placeEvidence.id })
+    .from(placeEvidence)
+    .where(
+      and(
+        isNull(placeEvidence.placeId),
+        eq(placeEvidence.evidenceKind, 'provider_observation'),
+        eq(placeEvidence.subject, subject),
+      ),
+    )
+    .limit(1);
+
+  if (existing.length > 0) {
+    await db
+      .update(placeEvidence)
+      .set({ researchPriority: 1 })
+      .where(eq(placeEvidence.id, existing[0].id));
+    return;
+  }
+
+  await db.insert(placeEvidence).values({
+    placeId: null,
+    evidenceKind: 'provider_observation',
+    evidenceState: 'recorded',
+    subject,
+    provider: 'listing_location_resolver',
+    providerRecordId: input.providerLocationPlaceId,
+    researchPriority: 0,
+    note:
+      'Provider locality is not an admitted Place. No canonical locality was created; ' +
+      `admission required before use. city_id=${input.cityId}; ` +
+      `postal_present=${input.postalCode ? 'yes' : 'no'}; ` +
+      `coordinates_present=${input.latitude && input.longitude ? 'yes' : 'no'}`,
+  });
 }
 
 function clean(value: unknown): string {
@@ -721,25 +780,29 @@ export async function resolveCanonicalListingLocation(
         'conflict',
       );
     }
-    if (!conflictingSlug) {
-      const [created] = await db
-        .insert(suburbs)
-        .values({
-          cityId,
-          name: suburbName,
-          slug: suburbSlug,
-          postalCode: clean(input.postalCode) || null,
-          latitude: String(coordinatePair.latitude),
-          longitude: String(coordinatePair.longitude),
-          status: 'provisional',
-          origin: 'provider',
-        })
-        .execute();
-      suburbId = Number((created as any).insertId);
-      suburb = { id: suburbId, name: suburbName, cityId, slug: suburbSlug };
-    } else {
+    if (conflictingSlug) {
       suburb = conflictingSlug;
       suburbId = conflictingSlug.id;
+    } else {
+      // Place Authority D3: a provider observation may not create a canonical
+      // locality. The provider result is recorded as unresolved evidence against
+      // no Place, and resolution fails closed so a human or an admission run
+      // decides. There is no provisional auto-insert and no silent fallback to
+      // the provider's own name.
+      await recordUnresolvedLocalityCandidate({
+        localityName: suburbName,
+        localitySlug: suburbSlug,
+        cityId,
+        postalCode: clean(input.postalCode) || null,
+        latitude: String(coordinatePair.latitude),
+        longitude: String(coordinatePair.longitude),
+        providerLocationPlaceId: clean(input.providerLocationPlaceId),
+      });
+      throw new ListingLocationResolutionError(
+        'The provider locality is not an admitted Place. It has been recorded as ' +
+          'unresolved evidence and requires admission before a listing can use it.',
+        'unresolved',
+      );
     }
   }
 

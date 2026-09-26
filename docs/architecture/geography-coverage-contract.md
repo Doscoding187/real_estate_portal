@@ -969,3 +969,108 @@ named `Broadacres AH`. Sky City is absent from the approved source entirely and 
 recorded as a living-geography evidence-acquisition case. Soweto has no admitted
 settlement relationship to its constituent places, because the approved source
 carries no evidence for one.
+
+## 20. Scope contract repair — search scopes are categories, not levels (v0.5)
+
+Slice 2 originally derived `search_scope` from `place_type` alone. Physical proof
+during Slice 3 showed that was too weak in one direction and, when first
+corrected, far too strong in the other. Both errors are resolved here.
+
+### 20.1 The corrected rule
+
+`province / metro_city / locality` are **product search-scope categories**. They
+are not mandatory levels in the canonical Place containment hierarchy.
+
+`D1_SCOPE_BY_TYPE` still decides which scope a *type* may carry.
+`scope_establishment` decides whether that scope is *established*, and the only
+mandatory ancestry requirement is an **evidenced administrative chain to the
+province**:
+
+| scope | required evidence |
+| --- | --- |
+| `province` | none; a province-scoped Place is its own provincial bound |
+| `metro_city` | an evidenced chain to a province |
+| `locality` | an evidenced chain to a province |
+
+A scope that cannot reach a province is refused, because a search with no
+provincial bound is unbounded. Nothing else about the ancestry is mandatory.
+
+### 20.2 The canonical case
+
+```
+Gauteng                    Place, province
++-- City of Johannesburg   Place, municipality, context-only
+    +-- Bryanston          Place, suburb, locality scope
+```
+
+Bryanston executes as a `locality` with an evidenced Gauteng context and **no
+metro_city ancestor**. This is correct. The absence of a city Place between the
+municipality and the suburb is not an admission defect.
+
+The UI may render `Bryanston, Johannesburg, Gauteng`. That presentation does not
+mean the database must assert that Bryanston is administratively contained by a
+Place classified as a city. Forcing one would corrupt good geography to satisfy a
+vocabulary, which is exactly what Place Authority exists to prevent.
+
+### 20.3 What is forbidden, and is now asserted
+
+- No artificial settlement parent may be inserted to give a locality a
+  `metro_city` ancestor. Asserted: no containment edge has a `city` or `town`
+  parent.
+- No municipality may be re-typed as a `city` or `town` to occupy the metro tier.
+  Asserted: every `local_municipality` and `district_municipality` Place carries
+  a null scope and is neither searchable nor publishable.
+- `metro_city` is not redefined to mean municipality, and the scope vocabulary is
+  not renamed. `metro_city` remains the scope of `city` and `town` Places only.
+- No new municipality Place type is introduced to complete a search ladder. A
+  factual classification change requires its own evidence-based justification.
+
+The three source records carrying `proposed_type_hints` naming
+`metropolitan_municipality` (City of Johannesburg, City of Tshwane, Ekurhuleni)
+remain `local_municipality` Places. They are recorded as a future
+Place-classification question, deliberately not resolved here.
+
+### 20.4 Two distinct capabilities
+
+`search_eligible` means the Place can participate in canonical discovery.
+`search_scope` states which product-search granularity it can represent. Neither
+requires every conceptual scope above it to exist in its administrative ancestry.
+
+**Exact Place execution** resolves one selected Place to its own context.
+**Broad scope expansion** would include further Places. They are separate
+capabilities, and only the first is proven.
+
+Expansion is refused unless membership in an executable scope is explicitly
+governed. Containment must not become market or city expansion because names are
+similar, `market_association` remains non-expanding, and no generic relationship
+traversal is permitted. Nothing in this admission authorises expansion: every
+`search_scope_authorized` flag is 0.
+
+### 20.5 Repaired figures
+
+Regenerated under the corrected rule, not reverted. The same 1,466 identities and
+1,465 containment edges are unchanged; only executability was recomputed.
+
+- 1,436 searchable: 1,096 `locality`, 339 `metro_city`, 1 `province`.
+- 69 publishable. The earlier figure of 28 was wrong because it had wrongly
+  withdrawn every locality scope.
+- 30 Places admitted with no executable scope: the district and local
+  municipalities, which are factual context Places and never search levels.
+- 89 verified, 1,377 provisional, 720 OSM-only: all unchanged.
+- Materializer content digest
+  `d7859a2e7face1dec4e648bac65a0866b82ef1297178232dbaef2541177adf70`.
+
+### 20.6 Broad-scope expansion still unsupported
+
+The following remain governed gaps, recorded rather than guessed:
+
+- `Johannesburg` as a broad search target does **not** expand to every Place whose
+  municipality is City of Johannesburg. Those are different relationships, and
+  only exact execution is proven.
+- `Soweto` does **not** expand to its constituent or market localities. The
+  admitted source carries no evidenced settlement membership.
+- No `metro_city` or locality Place has a governed member set for expansion.
+
+Establishing them requires explicit semantics, such as evidenced settlement
+membership or a governed executable-scope membership projection, or a Search
+Area. None is invented here.

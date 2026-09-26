@@ -639,8 +639,8 @@ describe('Place Authority: Slice 1 changed no existing authority', () => {
     }
   });
 
-  it('adds no Place reference to any product consumer table', () => {
-    // No consumer migration is authorised in Slice 1. Asserted as a real foreign
+  it('holds Place references to an explicit allow-list of consumers only', () => {
+    // Asserted as a real foreign
     // key into `place`, not by column-name matching: consumers legitimately keep
     // pre-existing provider columns such as `listings.place_id`, which is a
     // Google place id and must NOT be confused with Place Authority identity.
@@ -657,16 +657,26 @@ describe('Place Authority: Slice 1 changed no existing authority', () => {
       'service_provider_locations',
       'demand_campaigns',
       'seller_prospects',
-      'saved_searches',
       'agent_coverage_areas',
     ];
+    // Slice 3 approved exactly one additive consumer reference: saved_searches,
+    // the existing governed home of a versioned geographic query intent. It is
+    // the allow-list, so a second consumer gaining a Place reference still fails.
+    const APPROVED_PLACE_CONSUMERS = ['saved_searches'];
     for (const consumer of consumers) {
       const table = normalized.tables.find(candidate => candidate.name === consumer);
       if (!table) continue;
       const placeReferences = (table.foreignKeys ?? [])
         .map(key => key.name)
         .filter(name => name.includes('->place.'));
-      expect(placeReferences, `${consumer} must not reference Place in Slice 1`).toEqual([]);
+      if (APPROVED_PLACE_CONSUMERS.includes(consumer)) {
+        // Exactly one reference, to the canonical identity, and nothing wider.
+        expect(placeReferences, `${consumer} must hold exactly one Place reference`).toEqual([
+          'place_id->place.place_id',
+        ]);
+        continue;
+      }
+      expect(placeReferences, `${consumer} must not reference Place`).toEqual([]);
     }
   });
 
@@ -680,6 +690,11 @@ describe('Place Authority: Slice 1 changed no existing authority', () => {
       expect(entry, filename).toBeDefined();
       expect(entry?.checksum).toMatch(/^[a-f0-9]{64}$/);
     }
-    expect(manifest.expectedHead).toBe(MIGRATIONS[MIGRATIONS.length - 1]);
+    // The canonical head is whatever the manifest declares — not necessarily the
+    // last Place migration, since later consumer slices extend the chain. It must
+    // still resolve to a registered, digested entry, so a dangling head fails.
+    const head = manifest.migrations.find(item => item.filename === manifest.expectedHead);
+    expect(head, `canonical head ${manifest.expectedHead} must be registered`).toBeDefined();
+    expect(head?.checksum).toMatch(/^[a-f0-9]{64}$/);
   });
 });

@@ -4,7 +4,7 @@
   "historyTable": "sql_migration_history",
   "attemptTable": "sql_migration_attempts",
   "lockName": "property_listify_manifest_migrations",
-  "expectedHead": "0097_place_authority_search_area_member.sql",
+  "expectedHead": "0099_saved_searches_canonical_place_reference_fk.sql",
   "migrations": [
     {
       "sequence": 0,
@@ -1025,6 +1025,26 @@
       "checksum": "0e0650eb710ea6d49267432af42aebf2fb3c91a1d53187c4aae8b3e50db67fe3",
       "parent": "0096_place_authority_search_area.sql",
       "parentChecksum": "5f598cf793ca29003767ad976a512dfa50a65e8cbf0ae2250848c482e8624542",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 98,
+      "filename": "0098_saved_searches_canonical_place_reference.sql",
+      "checksum": "21babcf0b3823a4cac98fa35174df0e628f8afc0db2ae29eadb02ecc624e6859",
+      "parent": "0097_place_authority_search_area_member.sql",
+      "parentChecksum": "0e0650eb710ea6d49267432af42aebf2fb3c91a1d53187c4aae8b3e50db67fe3",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 99,
+      "filename": "0099_saved_searches_canonical_place_reference_fk.sql",
+      "checksum": "27098ecba5c8bee31f314ccb47ea694bdcfaeff81870f6506264877b2bb30583",
+      "parent": "0098_saved_searches_canonical_place_reference.sql",
+      "parentChecksum": "21babcf0b3823a4cac98fa35174df0e628f8afc0db2ae29eadb02ecc624e6859",
       "kind": "ddl",
       "statementPolicy": "single-ddl",
       "requiredReferenceDataVersion": null

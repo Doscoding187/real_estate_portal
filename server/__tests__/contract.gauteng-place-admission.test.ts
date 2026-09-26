@@ -308,6 +308,111 @@ describe('Gauteng Place admission: schema alignment', () => {
     }
   });
 
+  it('gives every scoped Place an evidenced province context', () => {
+    // province / metro_city / locality are product search-scope categories, not
+    // mandatory levels of the factual containment hierarchy. The only mandatory
+    // ancestry requirement is a governed chain to the province, so a suburb under
+    // a municipality is a legitimate locality scope with no city Place above it.
+    const scopeById = new Map(places.map(p => [p.place_id, p.search_scope]));
+    const parentByChild = new Map(
+      relationships
+        .filter(r => r.relationship_type === 'administratively_contains')
+        .map(r => [r.from_place_id, r.to_place_id]),
+    );
+    const scopedAncestors = (placeId: string): string[] => {
+      const scopes: string[] = [];
+      const seen = new Set([placeId]);
+      let cursor = parentByChild.get(placeId);
+      while (cursor && !seen.has(cursor)) {
+        seen.add(cursor);
+        const scope = scopeById.get(cursor);
+        if (scope) scopes.push(scope);
+        cursor = parentByChild.get(cursor);
+      }
+      return scopes.reverse();
+    };
+
+    for (const place of places) {
+      if (place.search_scope == null) {
+        // Admitted without a scope: context-only, neither searchable nor
+        // publishable, because the database forbids either without a scope.
+        expect(place.search_eligible, `${place.place_id} must not be searchable`).toBe(0);
+        expect(place.publication_eligible).toBe(0);
+        continue;
+      }
+      expect(place.search_eligible, `${place.place_id} must be searchable`).toBe(1);
+      if (place.search_scope === 'province') continue; // its own context
+      // The root-most scoped ancestor must be the province. That is the only
+      // mandatory level, and a scope without a provincial bound is unbounded.
+      expect(
+        scopedAncestors(place.place_id)[0],
+        `${place.place_id} claims ${place.search_scope} with no evidenced province context`,
+      ).toBe('province');
+    }
+  });
+
+  it('introduces no artificial metro-city parent and re-types no municipality', () => {
+    // The repair must make geography truthful, not reshape it to match the UI.
+    const typeById = new Map(places.map(p => [p.place_id, p.place_type]));
+    const parents = new Set(
+      relationships
+        .filter(r => r.relationship_type === 'administratively_contains')
+        .map(r => r.to_place_id),
+    );
+    // A settlement Place is never inserted as a container to give a locality a
+    // metro_city ancestor.
+    for (const parentId of parents) {
+      expect(
+        ['city', 'town'],
+        `${parentId} must not be a settlement container introduced for a search hierarchy`,
+      ).not.toContain(typeById.get(parentId));
+    }
+    // Every municipality stays a factual context Place and never becomes a scope.
+    const municipalities = places.filter(
+      p => p.place_type === 'local_municipality' || p.place_type === 'district_municipality',
+    );
+    expect(municipalities.length).toBeGreaterThan(0);
+    for (const place of municipalities) {
+      expect(place.search_scope, `${place.place_id} municipality must carry no scope`).toBeNull();
+      expect(place.search_eligible).toBe(0);
+      expect(place.publication_eligible).toBe(0);
+    }
+    // metro_city remains the scope of city/town Places only, and locality the
+    // scope of settlement-level Places only. The vocabulary is not redefined.
+    for (const place of places) {
+      if (place.search_scope === 'metro_city') expect(place.place_type).toMatch(/^(city|town)$/);
+      if (place.search_scope === 'locality') {
+        expect(place.place_type).toMatch(
+          /^(township|suburb|neighbourhood|locality|village)$/,
+        );
+      }
+    }
+  });
+
+  it('does not authorise any relationship-driven broad scope expansion', () => {
+    // Exact Place execution and broad scope expansion are separate capabilities.
+    // Nothing in this admission may turn a containment edge into a market edge.
+    for (const edge of relationships) {
+      expect(edge.search_scope_authorized, `${edge.from_place_id} must not widen search`).toBe(0);
+    }
+    const scopeEstablishment = places.filter(
+      p => (p as unknown as { scope_establishment?: { established: boolean } }).scope_establishment
+        ?.established === true,
+    );
+    expect(scopeEstablishment.length).toBeGreaterThan(0);
+    // Establishment proves a province context, never a descendant set.
+    for (const place of scopeEstablishment) {
+      const establishment = (
+        place as unknown as {
+          scope_establishment: { evidenced_scoped_ancestors: string[]; required_coarser_scopes: string[] };
+        }
+      ).scope_establishment;
+      expect(establishment.required_coarser_scopes).toEqual(
+        place.search_scope === 'province' ? [] : ['province'],
+      );
+    }
+  });
+
   it('leaves the three-level runtime and every consumer untouched', () => {
     const normalized = normalizedDesiredSchema(schema);
     const desiredTableNames = new Set(normalized.tables.map(t => t.name));
