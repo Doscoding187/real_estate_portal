@@ -138,7 +138,8 @@ All green at the Phase 3 gate:
 
 Physical proof is always performed on a freshly created, owned, disposable
 target and the target is disposed afterwards. Never reuse a target to claim a
-from-zero proof.
+from-zero proof. The Phase 1 and 2 proof target
+`listify_wt_place_authority_slice0_f2af5b9a6482` was disposed after the gate.
 
 ## Unresolved research backlog
 
