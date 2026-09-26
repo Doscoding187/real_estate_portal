@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   getCommercialActivationStatus,
   getCommercialActivationOperatorStatus,
+  initializeCommercialActivationPolicy,
   isCommercialActivationAvailable,
   resolveCommercialActivationConfiguration,
   requireCommercialActivation,
@@ -31,6 +32,7 @@ import { activatePaidLaunchAccessForOwner } from '../planAccessService';
 describe('commercial activation containment', () => {
   afterEach(() => {
     vi.unstubAllEnvs();
+    initializeCommercialActivationPolicy();
   });
 
   it('is disabled for development and deployed runtimes', () => {
@@ -126,7 +128,9 @@ describe('commercial activation containment', () => {
 
     expect(isCommercialActivationAvailable(agencyOnlyFixture, 'agency_launch_access')).toBe(true);
     expect(isCommercialActivationAvailable(agencyOnlyFixture, 'agent_launch_access')).toBe(false);
-    expect(isCommercialActivationAvailable(agencyOnlyFixture, 'developer_launch_access')).toBe(false);
+    expect(isCommercialActivationAvailable(agencyOnlyFixture, 'developer_launch_access')).toBe(
+      false,
+    );
     expect(getCommercialActivationStatus(agencyOnlyFixture).productAvailability).toEqual({
       agent_launch_access: false,
       agency_launch_access: true,
@@ -153,13 +157,15 @@ describe('commercial activation containment', () => {
     ['duplicate', 'agent_launch_access,agent_launch_access'],
     ['empty component', 'agent_launch_access,,agency_launch_access'],
   ])('rejects a production activation list with a %s component', (_label, productKeys) => {
-    expect(() => resolveCommercialActivationConfiguration({
-      NODE_ENV: 'production',
-      APP_ENV: 'production',
-      PAID_MVP_ENABLED_PRODUCT_KEYS: productKeys,
-      PAID_MVP_RELEASE_ID: 'paid-mvp-rc-1',
-      PAID_MVP_APPROVAL_REF: 'b16-approval-1',
-    })).toThrow();
+    expect(() =>
+      resolveCommercialActivationConfiguration({
+        NODE_ENV: 'production',
+        APP_ENV: 'production',
+        PAID_MVP_ENABLED_PRODUCT_KEYS: productKeys,
+        PAID_MVP_RELEASE_ID: 'paid-mvp-rc-1',
+        PAID_MVP_APPROVAL_REF: 'b16-approval-1',
+      }),
+    ).toThrow();
   });
 
   it('enables only the exact three product keys with release metadata in production', () => {
@@ -185,19 +191,77 @@ describe('commercial activation containment', () => {
     expect(Object.isFrozen(release.enabledProductKeys)).toBe(true);
   });
 
+  it('requires an exact persisted product for mutations in a production paid release', async () => {
+    vi.stubEnv('NODE_ENV', 'production');
+    vi.stubEnv('APP_ENV', 'production');
+    vi.stubEnv(
+      'PAID_MVP_ENABLED_PRODUCT_KEYS',
+      'agent_launch_access,agency_launch_access,developer_launch_access',
+    );
+    vi.stubEnv('PAID_MVP_RELEASE_ID', 'b03-containment-rc-1');
+    vi.stubEnv('PAID_MVP_APPROVAL_REF', 'b03-review-1');
+    vi.stubEnv('PAID_MVP_SALES_PAUSED', 'false');
+    vi.stubEnv('PAID_MVP_SALES_OPEN_UNTIL', new Date(Date.now() + 60 * 60 * 1000).toISOString());
+
+    try {
+      const configuration = initializeCommercialActivationPolicy();
+      expect(configuration).toMatchObject({
+        mode: 'paid_mvp_release',
+        enabled: true,
+        releaseId: 'b03-containment-rc-1',
+        approvalRef: 'b03-review-1',
+        salesPaused: false,
+      });
+      expect(isCommercialActivationAvailable()).toBe(true);
+      for (const productKey of [
+        'agent_launch_access',
+        'agency_launch_access',
+        'developer_launch_access',
+      ] as const) {
+        expect(() =>
+          requireCommercialActivation('Approved product mutation', productKey),
+        ).not.toThrow();
+      }
+      expect(() => requireCommercialActivation('Unbound persisted plan mutation')).toThrow(
+        /approved persisted Paid MVP product and matching owner/i,
+      );
+      const unboundProduct = /approved persisted Paid MVP product and matching owner/i;
+      await expect(
+        recordBillingProviderEvent({
+          provider: 'test-provider',
+          providerEventId: 'b03-unbound-event',
+          eventType: 'payment.succeeded',
+          payload: {},
+        }),
+      ).rejects.toThrow(unboundProduct);
+      await expect(claimBillingProviderEvent(1)).rejects.toThrow(unboundProduct);
+      await expect(completeBillingProviderEvent(1, 'b03-claim', 'applied')).rejects.toThrow(
+        unboundProduct,
+      );
+      await expect(failBillingProviderEvent(1, 'b03-claim', 'failed')).rejects.toThrow(
+        unboundProduct,
+      );
+    } finally {
+      vi.unstubAllEnvs();
+      initializeCommercialActivationPolicy();
+    }
+  });
+
   it('does not treat client-like or customer-state fields as activation authority', () => {
-    expect(isCommercialActivationAvailable({
-      NODE_ENV: 'production',
-      APP_ENV: 'production',
-      enabled: true,
-      productAvailability: {
-        agent_launch_access: true,
-        agency_launch_access: true,
-        developer_launch_access: true,
-        all: true,
-      },
-      customerDatabaseCommercialEnabled: true,
-    } as any)).toBe(false);
+    expect(
+      isCommercialActivationAvailable({
+        NODE_ENV: 'production',
+        APP_ENV: 'production',
+        enabled: true,
+        productAvailability: {
+          agent_launch_access: true,
+          agency_launch_access: true,
+          developer_launch_access: true,
+          all: true,
+        },
+        customerDatabaseCommercialEnabled: true,
+      } as any),
+    ).toBe(false);
   });
 
   it('keeps release references in the super-admin status projection only', () => {
@@ -229,29 +293,36 @@ describe('commercial activation containment', () => {
   });
 
   it('rejects production subsets and missing release metadata', () => {
-    expect(() => resolveCommercialActivationConfiguration({
-      NODE_ENV: 'production',
-      APP_ENV: 'production',
-      PAID_MVP_ENABLED_PRODUCT_KEYS: 'agent_launch_access',
-      PAID_MVP_RELEASE_ID: 'paid-mvp-rc-1',
-      PAID_MVP_APPROVAL_REF: 'b16-approval-1',
-    })).toThrow(/exactly the three/i);
-    expect(() => resolveCommercialActivationConfiguration({
-      NODE_ENV: 'staging',
-      APP_ENV: 'staging',
-      PAID_MVP_ENABLED_PRODUCT_KEYS: 'agent_launch_access',
-      PAID_MVP_RELEASE_ID: 'paid-mvp-rc-1',
-    })).toThrow(/APPROVAL_REF/);
-    expect(() => resolveCommercialActivationConfiguration({
-      NODE_ENV: 'production',
-      APP_ENV: 'production',
-      PAID_MVP_RELEASE_ID: 'paid-mvp-rc-1',
-      PAID_MVP_APPROVAL_REF: 'b16-approval-1',
-    })).toThrow(/without an enabled product list/);
+    expect(() =>
+      resolveCommercialActivationConfiguration({
+        NODE_ENV: 'production',
+        APP_ENV: 'production',
+        PAID_MVP_ENABLED_PRODUCT_KEYS: 'agent_launch_access',
+        PAID_MVP_RELEASE_ID: 'paid-mvp-rc-1',
+        PAID_MVP_APPROVAL_REF: 'b16-approval-1',
+      }),
+    ).toThrow(/exactly the three/i);
+    expect(() =>
+      resolveCommercialActivationConfiguration({
+        NODE_ENV: 'staging',
+        APP_ENV: 'staging',
+        PAID_MVP_ENABLED_PRODUCT_KEYS: 'agent_launch_access',
+        PAID_MVP_RELEASE_ID: 'paid-mvp-rc-1',
+      }),
+    ).toThrow(/APPROVAL_REF/);
+    expect(() =>
+      resolveCommercialActivationConfiguration({
+        NODE_ENV: 'production',
+        APP_ENV: 'production',
+        PAID_MVP_RELEASE_ID: 'paid-mvp-rc-1',
+        PAID_MVP_APPROVAL_REF: 'b16-approval-1',
+      }),
+    ).toThrow(/without an enabled product list/);
   });
 
   it('fails closed before a commercial mutation starts', () => {
     vi.stubEnv('NODE_ENV', 'development');
+    initializeCommercialActivationPolicy();
     expect(() => requireCommercialActivation('Payment review')).toThrow(
       /preparation-only onboarding/,
     );
@@ -265,13 +336,16 @@ describe('commercial activation containment', () => {
     };
     expect(isPaidMvpLaunchAccessProductEnabled('agent_launch_access', boundedRelease)).toBe(true);
     expect(isPaidMvpLaunchAccessProductEnabled('agency_launch_access', boundedRelease)).toBe(false);
-    expect(isPaidMvpLaunchAccessProductEnabled('developer_launch_access', boundedRelease)).toBe(false);
+    expect(isPaidMvpLaunchAccessProductEnabled('developer_launch_access', boundedRelease)).toBe(
+      false,
+    );
     expect(isPaidMvpLaunchAccessProductEnabled('land_launch_access', boundedRelease)).toBe(false);
     expect(isCommercialActivationAvailable({ NODE_ENV: 'production' })).toBe(false);
   });
 
   it('does not expose EFT account details while activation is disabled', () => {
     vi.stubEnv('NODE_ENV', 'development');
+    initializeCommercialActivationPolicy();
     expect(getManualEftBankDetails()).toMatchObject({
       configured: false,
       canIssueInvoices: false,
@@ -281,6 +355,7 @@ describe('commercial activation containment', () => {
 
   it('blocks invoice, proof, finance, entitlement, and provider paths before database work', async () => {
     vi.stubEnv('NODE_ENV', 'development');
+    initializeCommercialActivationPolicy();
     const expected = /preparation-only onboarding/;
 
     await expect(

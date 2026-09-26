@@ -45,8 +45,12 @@ describe('commercial term semantics', () => {
     expect(getPaidMvpLaunchAccessProductKey(launchPlan, 'developer')).toBe(
       'developer_launch_access',
     );
-    expect(getPaidMvpLaunchAccessProductKey({ ...launchPlan, isActive: 0 }, 'developer')).toBeNull();
-    expect(getPaidMvpLaunchAccessProductKey({ ...launchPlan, segment: 'agent' }, 'developer')).toBeNull();
+    expect(
+      getPaidMvpLaunchAccessProductKey({ ...launchPlan, isActive: 0 }, 'developer'),
+    ).toBeNull();
+    expect(
+      getPaidMvpLaunchAccessProductKey({ ...launchPlan, segment: 'agent' }, 'developer'),
+    ).toBeNull();
     expect(
       getPaidMvpLaunchAccessProductKey(
         {
@@ -59,6 +63,119 @@ describe('commercial term semantics', () => {
         'developer',
       ),
     ).toBeNull();
+  });
+
+  it('accepts only the three diagonal persisted product and owner pairs', () => {
+    const supported = [
+      ['agent', 'agent_launch_access'],
+      ['agency', 'agency_launch_access'],
+      ['developer', 'developer_launch_access'],
+    ] as const;
+    const owners = ['agent', 'agency', 'developer'] as const;
+
+    for (const [planOwner, productKey] of supported) {
+      const plan = {
+        ...launchPlan,
+        name: productKey,
+        segment: planOwner,
+        metadata: {
+          ...launchPlan.metadata,
+          commercial_product_key: productKey,
+        },
+      };
+
+      for (const owner of owners) {
+        expect(getPaidMvpLaunchAccessProductKey(plan, owner)).toBe(
+          owner === planOwner ? productKey : null,
+        );
+      }
+    }
+  });
+
+  it('rejects missing, unknown, and recurring persisted products', () => {
+    expect(
+      getPaidMvpLaunchAccessProductKey(
+        {
+          ...launchPlan,
+          name: 'legacy_developer_plan',
+          metadata: { ...launchPlan.metadata, commercial_product_key: undefined },
+        },
+        'developer',
+      ),
+    ).toBeNull();
+    expect(
+      getPaidMvpLaunchAccessProductKey(
+        {
+          ...launchPlan,
+          metadata: { ...launchPlan.metadata, commercial_product_key: 'unapproved_plan' },
+        },
+        'developer',
+      ),
+    ).toBeNull();
+    expect(
+      getPaidMvpLaunchAccessProductKey(
+        {
+          ...launchPlan,
+          metadata: {
+            ...launchPlan.metadata,
+            commercial_term_kind: 'recurring_subscription',
+            commercial_auto_renews: true,
+          },
+        },
+        'developer',
+      ),
+    ).toBeNull();
+  });
+
+  it('rejects malformed persisted authority metadata instead of falling back to the plan name', () => {
+    const agencyPlan = {
+      ...launchPlan,
+      name: 'agency_launch_access',
+      segment: 'agency',
+      metadata: {
+        ...launchPlan.metadata,
+        commercial_product_key: 'agency_launch_access',
+      },
+    };
+    const malformedPlans = [
+      {
+        ...agencyPlan,
+        metadata: { ...agencyPlan.metadata, commercial_product_key: 'FORGED INVALID' },
+      },
+      {
+        ...agencyPlan,
+        metadata: { ...agencyPlan.metadata, commercial_requires_verified_payment: 'invalid' },
+      },
+      {
+        ...agencyPlan,
+        metadata: { ...agencyPlan.metadata, commercial_auto_renews: 'invalid' },
+      },
+      {
+        ...agencyPlan,
+        metadata: { ...agencyPlan.metadata, commercial_requires_verified_payment: undefined },
+      },
+      {
+        ...agencyPlan,
+        metadata: { ...agencyPlan.metadata, commercial_auto_renews: undefined },
+      },
+      {
+        ...agencyPlan,
+        metadata: {
+          ...agencyPlan.metadata,
+          commercial_product_key: 'agency_launch_access',
+          commercialProductKey: 'developer_launch_access',
+        },
+      },
+      {
+        ...agencyPlan,
+        metadata: { ...agencyPlan.metadata, commercial_term_duration_days: '90' },
+      },
+    ];
+
+    for (const plan of malformedPlans) {
+      expect(getPaidMvpLaunchAccessProductKey(plan, 'agency')).toBeNull();
+    }
+    expect(getCommercialProductKey(malformedPlans[0]!)).toBe('unidentified_product');
   });
 
   it('keeps free trials and normal recurring subscriptions as separate terms', () => {

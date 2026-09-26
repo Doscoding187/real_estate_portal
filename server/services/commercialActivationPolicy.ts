@@ -277,7 +277,22 @@ export function requireCommercialActivation(
   operation: string,
   productKey?: PaidMvpLaunchAccessProductKey,
 ): void {
-  if (isCommercialActivationAvailable(process.env, productKey)) return;
+  const configuration = getConfiguration(process.env);
+  if (
+    (productKey && configuration.enabledProductKeys.includes(productKey)) ||
+    (!productKey &&
+      configuration.mode === 'governed_test_fixture' &&
+      configuration.enabledProductKeys.length > 0)
+  ) {
+    return;
+  }
+
+  if (!productKey && configuration.mode === 'paid_mvp_release') {
+    throw new TRPCError({
+      code: 'PRECONDITION_FAILED',
+      message: `${operation} requires an approved persisted Paid MVP product and matching owner.`,
+    });
+  }
 
   throw new TRPCError({
     code: 'PRECONDITION_FAILED',
