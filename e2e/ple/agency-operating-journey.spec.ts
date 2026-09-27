@@ -272,8 +272,18 @@ test.describe('PLE agency operating browser acceptance', () => {
     page,
   }) => {
     await page.goto('/advertise/sell/agencies');
-    await expect(page.getByText('Preparation-only onboarding')).toBeVisible();
-    await page.getByRole('link', { name: 'Start Agency preparation' }).first().click();
+    // The authority-wrapped PLE fixture enables this exact product so later
+    // journey stages can exercise Agency-specific entitlement and email
+    // capture. Its public entry point is therefore the Launch Access landing;
+    // the onboarding flow still proves that no invoice, payment or publishing
+    // activation occurs before the explicit disposable entitlement fixture.
+    await expect(
+      page.getByRole('heading', {
+        name: 'Run more of your agency from one connected operating workspace.',
+      }),
+    ).toBeVisible();
+    await expect(page.getByTestId('agency-launch-access-card')).toBeVisible();
+    await page.getByRole('link', { name: 'Create your Agency owner account' }).first().click();
     await registerAndVerify(page, {
       email: ownerEmail,
       password: `Browser!${randomUUID()}9a`,

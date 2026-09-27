@@ -34,6 +34,7 @@ function isAuthorityWrappedBrowserFixture(environment: RuntimeEnvironment): bool
     environment.NODE_ENV === 'test' &&
     environment.APP_ENV === 'test' &&
     environment.PROPERTY_LISTIFY_GOVERNED_BROWSER_TEST_FIXTURE === 'true' &&
+    Boolean(environment[CONTROLLED_PRODUCT_KEYS_ENV]?.trim()) &&
     Boolean(environment.DATABASE_AUTHORITY_PARENT_FINGERPRINT) &&
     Boolean(environment.DATABASE_AUTHORITY_CORRELATION_ID)
   );

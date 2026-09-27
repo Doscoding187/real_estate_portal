@@ -68,6 +68,7 @@ describe('commercial activation containment', () => {
         NODE_ENV: 'test',
         APP_ENV: 'test',
         PROPERTY_LISTIFY_GOVERNED_BROWSER_TEST_FIXTURE: 'true',
+        PROPERTY_LISTIFY_GOVERNED_BROWSER_TEST_PRODUCT_KEYS: 'agent_launch_access',
         DATABASE_AUTHORITY_PARENT_FINGERPRINT: 'owned-target',
         DATABASE_AUTHORITY_CORRELATION_ID: 'authority-run',
       }),
@@ -135,6 +136,29 @@ describe('commercial activation containment', () => {
       agent_launch_access: false,
       agency_launch_access: true,
       developer_launch_access: false,
+    });
+  });
+
+  it('keeps email-only browser fixtures in preparation mode without an explicit product selector', () => {
+    const prepaymentEmailFixture = {
+      NODE_ENV: 'test',
+      APP_ENV: 'test',
+      PROPERTY_LISTIFY_GOVERNED_BROWSER_TEST_FIXTURE: 'true',
+      PROPERTY_LISTIFY_GOVERNED_B04_EMAIL_CAPTURE_PATH:
+        '/tmp/property-listify-b04-prepayment-browser-email-capture.jsonl',
+      DATABASE_AUTHORITY_PARENT_FINGERPRINT: 'owned-target',
+      DATABASE_AUTHORITY_CORRELATION_ID: 'prepayment-email-only',
+    };
+
+    expect(isCommercialActivationAvailable(prepaymentEmailFixture)).toBe(false);
+    expect(getCommercialActivationStatus(prepaymentEmailFixture)).toMatchObject({
+      mode: 'preparation_only',
+      enabled: false,
+      productAvailability: {
+        agent_launch_access: false,
+        agency_launch_access: false,
+        developer_launch_access: false,
+      },
     });
   });
 
