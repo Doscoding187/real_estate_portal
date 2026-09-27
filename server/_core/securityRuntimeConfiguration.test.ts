@@ -44,6 +44,19 @@ describe('deployed security configuration', () => {
     },
   );
 
+  it.each([
+    ['browser fixture', 'PROPERTY_LISTIFY_GOVERNED_BROWSER_TEST_FIXTURE', 'true'],
+    ['browser product selector', 'PROPERTY_LISTIFY_GOVERNED_BROWSER_TEST_PRODUCT_KEYS', 'agent_launch_access'],
+    ['scenario fixture', 'PROPERTY_LISTIFY_GOVERNED_SCENARIO_TEST_FIXTURE', 'true'],
+    ['B04 email capture', 'PROPERTY_LISTIFY_GOVERNED_B04_EMAIL_CAPTURE_PATH', '/tmp/property-listify-b04-capture.jsonl'],
+    ['B05 email capture', 'PROPERTY_LISTIFY_GOVERNED_B05_EMAIL_CAPTURE_PATH', '/tmp/property-listify-b05-capture.jsonl'],
+    ['B06 email capture', 'PROPERTY_LISTIFY_GOVERNED_B06_EMAIL_CAPTURE_PATH', '/tmp/property-listify-b06-capture.jsonl'],
+  ])('rejects the %s selector in production', (_label, key, value) => {
+    const env = deployedEnv({ [key]: value });
+    expect(deployedSecurityConfigurationIssues(env, 'production').join(' ')).toContain(key);
+    expect(() => assertNoDeployedTestConfiguration(env, 'production')).toThrow(/test-only/);
+  });
+
   it('rejects capture paths, fake database selectors, and environment contradictions', () => {
     expect(() => assertNoDeployedTestConfiguration(
       deployedEnv({ PROPERTY_LISTIFY_GOVERNED_B06_EMAIL_CAPTURE_PATH: '/tmp/capture.jsonl' }),

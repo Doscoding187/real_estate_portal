@@ -4,11 +4,11 @@ import { defineConfig, devices } from '@playwright/test';
  * Local-only acceptance from owner acquisition through the invited member to CRM.
  *
  * The reviewer fixture is prepared through its canonical database adapter.
- * The spec supplies and releases an explicitly marked disposable agency term
- * after proving pre-payment invitation containment. Its API process receives
- * the existing governed fixture marker only after Database Authority wrapping;
- * this does not enable normal commercial activation, initiate payment, or
- * follow a hosted URL.
+ * The exact Agency product selector is an authority-wrapped browser-fixture
+ * override, so the first public page is the Agency Launch Access landing (not
+ * the generic preparation-only landing). The spec supplies and releases an
+ * explicitly marked disposable agency term only after proving pre-payment
+ * invitation containment. No payment is initiated and no hosted URL is used.
  */
 const runtimeLog = '/tmp/property-listify-mvp-ple-agency-browser-runtime.log';
 const emailCapture = '/tmp/property-listify-b05-ple-agency-browser-email-capture.jsonl';

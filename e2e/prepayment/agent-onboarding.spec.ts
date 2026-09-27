@@ -11,6 +11,7 @@ import {
 import { resolveDatabaseAuthority } from '../../server/_core/databaseAuthority/context';
 
 const emailCapture = '/tmp/property-listify-b04-prepayment-browser-email-capture.jsonl';
+const runtimeLog = '/tmp/property-listify-mvp-prepayment-browser-runtime.log';
 const apiOrigin = 'http://localhost:5000';
 const webOrigin = 'http://localhost:5177';
 
@@ -315,7 +316,28 @@ test.describe('pre-payment onboarding browser acceptance', () => {
     await expect(coverageChoice).toBeVisible();
     await coverageChoice.click();
     await expect(page.locator('button[aria-label^="Remove "]')).toHaveCount(1);
+    const coverageSaveResponse = page.waitForResponse(
+      response =>
+        response.url().includes('agent.updateMyProfileOnboarding') &&
+        response.request().method() === 'POST',
+    );
     await page.getByRole('button', { name: 'Save & Continue' }).click();
+    const savedProfileResponse = await coverageSaveResponse;
+    expect(savedProfileResponse.ok(), await savedProfileResponse.text()).toBeTruthy();
+
+    const [savedCoverage] = await query(
+      `SELECT a.areasServed
+         FROM users u
+         INNER JOIN agents a ON a.userId = u.id
+         WHERE u.email = ?
+         LIMIT 1`,
+      [email],
+    );
+    expect(JSON.parse(String(savedCoverage.areasServed || '[]'))).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ label: 'Sandton, Johannesburg, Gauteng' }),
+      ]),
+    );
 
     // Once core contact and canonical coverage are saved, the Agent has a
     // preparation workspace but remains profile-incomplete. The reachable
