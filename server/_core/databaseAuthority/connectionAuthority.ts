@@ -1,3 +1,17 @@
+import { randomUUID } from 'node:crypto';
+import * as canonicalSchema from '../../../drizzle/schema';
+import { loadAndValidateMigrationManifest } from '../../migrations/migrationManifest';
+import {
+  normalizedDesiredSchema,
+  normalizedPhysicalSchema,
+  compareNormalizedSchemas,
+} from './schemaCongruency';
+import {
+  REHEARSAL,
+  assertRehearsalAuthorization,
+  verifyRehearsalResource,
+} from './rehearsalAuthority';
+import { compileRehearsalProbe, rehearsalCleanup, type RehearsalProbe } from './rehearsalProbes';
 import mysql from 'mysql2/promise';
 import { buildMysqlConnectionSecurityConfig } from '../databaseTls';
 import {
@@ -214,5 +228,141 @@ export async function createLocalLifecycleAdminConnection(
     return wrapped;
   } catch {
     throw new Error('Lifecycle administration could not connect to the approved local server.');
+  }
+}
+
+/** Dedicated remote rehearsal path. Generic SQL/runtime factories never admit this operation. */
+export async function createAuthorityRehearsalSession(
+  authority: ResolvedDatabaseAuthority,
+  decision: AuthorizedDatabaseOperation,
+): Promise<{
+  run: (connection: 0 | 1, probe: RehearsalProbe, slots?: readonly number[]) => Promise<unknown>;
+  end: () => Promise<void>;
+}> {
+  assertAuthorizedDatabaseOperation(authority, decision, ['rehearsal-regression']);
+  const checkApproval = () =>
+    assertRehearsalAuthorization(authority.context, decision.approvalReference ?? undefined);
+  checkApproval();
+  await verifyRehearsalResource();
+  const u = new URL(readDatabaseCredentialUrl(authority.credential));
+  // Do not pass arbitrary URI options to mysql2 (host/socket/multipleStatements overrides).
+  if (u.search && u.search !== '?sslaccept=strict')
+    throw new Error('Rehearsal refused: unsupported connection options.');
+  if (
+    u.hostname !== REHEARSAL.hostname ||
+    u.pathname !== `/${REHEARSAL.database}` ||
+    (u.port && u.port !== '3306') ||
+    u.protocol !== 'mysql:'
+  )
+    throw new Error('Rehearsal credential identity mismatch.');
+  const connections: mysql.Connection[] = [];
+  const nonce = randomUUID();
+  const lock = 'property-listify:azure84:bounded-rehearsal';
+  let initialized = false;
+  let closed = false;
+  let statements = 0;
+  const queryRows = async (c: mysql.Connection, sql: string) => (await c.query(sql))[0] as any[];
+  try {
+    for (let i = 0; i < 2; i++) {
+      const c = await mysql.createConnection({
+        host: REHEARSAL.hostname,
+        port: 3306,
+        database: REHEARSAL.database,
+        user: decodeURIComponent(u.username),
+        password: decodeURIComponent(u.password),
+        ssl: { rejectUnauthorized: true, verifyIdentity: true, minVersion: 'TLSv1.2' },
+        timezone: 'Z',
+        multipleStatements: false,
+        connectTimeout: 15000,
+      });
+      connections.push(c);
+      await configureUtcSession(c);
+      await verifySelectedTarget(c, authority);
+      const [identity] = await queryRows(
+        c,
+        'SELECT VERSION() version,@@session.time_zone time_zone',
+      );
+      const tls = await queryRows(c, "SHOW SESSION STATUS LIKE 'Ssl_cipher'");
+      if (
+        !/^8\.(0|4)\./.test(identity?.version) ||
+        !String(identity?.version).endsWith('-azure') ||
+        identity?.time_zone !== '+00:00' ||
+        !tls[0]?.Value
+      )
+        throw new Error('Rehearsal SQL identity/TLS/UTC verification failed.');
+    }
+    const [acquired]: any = await connections[0].query('SELECT GET_LOCK(?,0) acquired', [lock]);
+    if (Number(acquired[0]?.acquired) !== 1)
+      throw new Error('Rehearsal already owned by another session.');
+    const desired = normalizedDesiredSchema(canonicalSchema);
+    const physical = await normalizedPhysicalSchema(
+      connections[0] as AuthoritySqlConnection,
+      'mysql',
+      desired,
+    );
+    if (
+      desired.digest !== REHEARSAL.modelDigest ||
+      !compareNormalizedSchemas(desired, physical).congruent
+    )
+      throw new Error('Rehearsal schema authority mismatch.');
+    const manifest = loadAndValidateMigrationManifest();
+    if (manifest.manifestDigest !== REHEARSAL.manifestDigest)
+      throw new Error('Rehearsal manifest authority mismatch.');
+    const history = await queryRows(
+      connections[0],
+      'SELECT filename,checksum FROM sql_migration_history ORDER BY numeric_version',
+    );
+    if (
+      history.length !== manifest.orderedMigrations.length ||
+      !manifest.orderedMigrations.every(
+        (e, i) => e.filename === history[i]?.filename && e.checksum === history[i]?.checksum,
+      )
+    )
+      throw new Error('Rehearsal ledger mismatch.');
+    const incomplete = await queryRows(
+      connections[0],
+      "SELECT state FROM sql_migration_attempts WHERE state <> 'succeeded'",
+    );
+    if (incomplete.length) throw new Error('Rehearsal incomplete attempt evidence.');
+    const triggers = await queryRows(
+      connections[0],
+      'SELECT TRIGGER_NAME FROM information_schema.TRIGGERS WHERE TRIGGER_SCHEMA=DATABASE()',
+    );
+    if (triggers.length) throw new Error('Rehearsal triggers are not permitted.');
+    // Strong current-target invariant: only canonical reference rows may pre-exist.
+    // This prevents fixture cascades touching an unobserved business/customer row.
+    for (const table of desired.tables) {
+      if (['plans', 'plan_entitlements'].includes(table.name)) continue;
+      if (!/^[A-Za-z0-9_]+$/.test(table.name))
+        throw new Error('Invalid canonical table identifier.');
+      const rows = await queryRows(connections[0], `SELECT 1 FROM \`${table.name}\` LIMIT 1`);
+      if (rows.length) throw new Error(`Rehearsal requires empty business tables: ${table.name}.`);
+    }
+    initialized = true;
+    return {
+      run: async (index, probe, slots = []) => {
+        if (closed || (index !== 0 && index !== 1) || ++statements > 256)
+          throw new Error('Rehearsal closed or probe budget exceeded.');
+        checkApproval();
+        const statement = compileRehearsalProbe(probe, slots, nonce);
+        return connections[index].query(statement.sql, statement.values);
+      },
+      end: async () => {
+        if (closed) return;
+        closed = true;
+        try {
+          for (const c of connections) await c.query('ROLLBACK');
+          checkApproval();
+          await connections[0].query('START TRANSACTION');
+          for (const statement of rehearsalCleanup(nonce))
+            await connections[0].query(statement.sql, statement.values);
+          await connections[0].query('COMMIT');
+        } finally {
+          await Promise.all(connections.map(c => c.end()));
+        }
+      },
+    };
+  } finally {
+    if (!initialized) await Promise.all(connections.map(c => c.end()));
   }
 }

@@ -1,3 +1,4 @@
+import { assertRehearsalAuthorization } from './rehearsalAuthority';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import {
@@ -179,6 +180,12 @@ export function authorizeDatabaseOperation(
   } = {},
 ): AuthorizedDatabaseOperation {
   const context = authority.context;
+  if (
+    context.targetClass === 'disposable-rehearsal' ||
+    context.operation === 'rehearsal-regression'
+  ) {
+    assertRehearsalAuthorization(context, input.approval?.reference);
+  }
   const policy = input.policy ?? loadDatabaseOperationPolicy(input.root ?? context.repository.root);
   const rule = policy.operations[context.operation];
 
