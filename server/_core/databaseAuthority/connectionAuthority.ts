@@ -347,7 +347,7 @@ export async function createAuthorityRehearsalSession(
       modelDigest: desired.digest,
       manifestDigest: manifest.manifestDigest,
       migrationCount: history.length,
-      head: history.at(-1)?.filename,
+      head: history[history.length - 1]?.filename,
       schema: physical,
       identity: await queryRows(
         connections[0],
