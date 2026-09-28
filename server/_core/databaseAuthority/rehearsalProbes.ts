@@ -30,6 +30,7 @@ export const REHEARSAL_PROBES = [
   'json.delete',
   'read.window',
   'read.identity',
+  'read.one',
 ] as const;
 export type RehearsalProbe = (typeof REHEARSAL_PROBES)[number];
 const numericId = (slot: number) => 1_900_000_000 + slot;
@@ -58,6 +59,7 @@ export function compileRehearsalProbe(
     'transaction.rollback-savepoint': 'ROLLBACK TO SAVEPOINT rehearsal_probe',
     'read.window':
       'WITH p AS (SELECT 2 n UNION ALL SELECT 1) SELECT n,ROW_NUMBER() OVER (ORDER BY n) AS row_number_result FROM p',
+    'read.one': 'SELECT 1 AS ok',
     'read.identity':
       'SELECT VERSION() version,DATABASE() selected_database,@@session.time_zone time_zone,@@session.transaction_isolation isolation_level',
   };
@@ -109,7 +111,7 @@ export function compileRehearsalProbe(
     ],
     'email.read': [
       1,
-      "SELECT *,DATE_FORMAT(created_at,'%f') AS microseconds FROM transactional_email_deliveries WHERE id = ?",
+      "SELECT *,DATE_FORMAT(created_at,'%f') AS microseconds,DATE_FORMAT(claim_expires_at,'%f') AS claim_microseconds FROM transactional_email_deliveries WHERE id = ?",
       [id],
     ],
     'email.claim': [
