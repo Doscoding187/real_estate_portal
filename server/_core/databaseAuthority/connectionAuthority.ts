@@ -235,14 +235,17 @@ export async function createLocalLifecycleAdminConnection(
 export async function createAuthorityRehearsalSession(
   authority: ResolvedDatabaseAuthority,
   decision: AuthorizedDatabaseOperation,
+  mode: 'preflight' | 'regression' = 'regression',
 ): Promise<{
   run: (connection: 0 | 1, probe: RehearsalProbe, slots?: readonly number[]) => Promise<unknown>;
   end: () => Promise<void>;
+  evidence: Record<string, unknown>;
 }> {
   assertAuthorizedDatabaseOperation(authority, decision, ['rehearsal-regression']);
   const checkApproval = () =>
     assertRehearsalAuthorization(authority.context, decision.approvalReference ?? undefined);
   checkApproval();
+  if (mode !== 'preflight' && mode !== 'regression') throw new Error('Unknown rehearsal mode.');
   await verifyRehearsalResource();
   const u = new URL(readDatabaseCredentialUrl(authority.credential));
   // Do not pass arbitrary URI options to mysql2 (host/socket/multipleStatements overrides).
@@ -261,6 +264,7 @@ export async function createAuthorityRehearsalSession(
   let initialized = false;
   let closed = false;
   let statements = 0;
+  let writeAttempted = false;
   const queryRows = async (c: mysql.Connection, sql: string) => (await c.query(sql))[0] as any[];
   try {
     for (let i = 0; i < 2; i++) {
@@ -338,19 +342,40 @@ export async function createAuthorityRehearsalSession(
       const rows = await queryRows(connections[0], `SELECT 1 FROM \`${table.name}\` LIMIT 1`);
       if (rows.length) throw new Error(`Rehearsal requires empty business tables: ${table.name}.`);
     }
+    const evidence = {
+      mode,
+      modelDigest: desired.digest,
+      manifestDigest: manifest.manifestDigest,
+      migrationCount: history.length,
+      head: history.at(-1)?.filename,
+      schema: physical,
+      identity: await queryRows(
+        connections[0],
+        'SELECT VERSION() version,DATABASE() selected_database,@@version_comment version_comment,@@session.time_zone time_zone,@@system_time_zone system_time_zone,@@sql_mode sql_mode,@@lower_case_table_names lower_case_table_names,@@character_set_server character_set_server,@@collation_server collation_server,@@transaction_isolation transaction_isolation',
+      ),
+      plans: await queryRows(connections[0], 'SELECT * FROM plans ORDER BY id'),
+      entitlements: await queryRows(connections[0], 'SELECT * FROM plan_entitlements ORDER BY id'),
+    };
     initialized = true;
     return {
+      evidence,
       run: async (index, probe, slots = []) => {
         if (closed || (index !== 0 && index !== 1) || ++statements > 256)
           throw new Error('Rehearsal closed or probe budget exceeded.');
         checkApproval();
         const statement = compileRehearsalProbe(probe, slots, nonce);
+        const mutates = /^(INSERT|UPDATE|DELETE)\b/.test(statement.sql);
+        if (mode === 'preflight' && !/^(SELECT|WITH)\b/.test(statement.sql))
+          throw new Error('Read-only rehearsal preflight refuses non-read probes.');
+        // Mark before dispatch: a failed/ambiguous write still requires bounded cleanup.
+        if (mutates) writeAttempted = true;
         return connections[index].query(statement.sql, statement.values);
       },
       end: async () => {
         if (closed) return;
         closed = true;
         try {
+          if (!writeAttempted) return;
           for (const c of connections) await c.query('ROLLBACK');
           checkApproval();
           await connections[0].query('START TRANSACTION');

@@ -113,6 +113,26 @@ describe('rehearsal connection boundary (mock transport, no live DB)', () => {
     ).toBe(false);
     await expect(session.run(0, 'user.insert', [0])).rejects.toThrow('closed');
   });
+  it('preflight proves identity and closes without DML or transaction controls', async () => {
+    const { a, d } = authority();
+    const session = await createAuthorityRehearsalSession(a, d, 'preflight');
+    expect(session.evidence.migrationCount).toBe(95);
+    await session.run(0, 'read.identity');
+    for (const probe of ['user.insert', 'transaction.begin', 'transaction.commit'] as const)
+      await expect(session.run(0, probe, probe === 'user.insert' ? [0] : [])).rejects.toThrow(
+        'Read-only',
+      );
+    await session.end();
+    expect(mocks.queries.some(q => /^(INSERT|UPDATE|DELETE|START|COMMIT|ROLLBACK)/.test(q))).toBe(
+      false,
+    );
+  });
+  it('a regression session with no writes closes without cleanup DML', async () => {
+    const { a, d } = authority();
+    const session = await createAuthorityRehearsalSession(a, d);
+    await session.end();
+    expect(mocks.queries.some(q => /^(INSERT|UPDATE|DELETE)/.test(q))).toBe(false);
+  });
   it('cannot connect when live ARM evidence is unavailable', async () => {
     mocks.arm.mockRejectedValue(new Error('ARM refused'));
     const { a, d } = authority();
@@ -137,7 +157,7 @@ describe('rehearsal connection boundary (mock transport, no live DB)', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-10-05T00:00:00Z'));
     await expect(session.run(0, 'user.insert', [0])).rejects.toThrow('expired');
-    await expect(session.end()).rejects.toThrow('expired');
+    await expect(session.end()).resolves.toBeUndefined();
     expect(mocks.queries.some(q => /^(INSERT|UPDATE|DELETE)/.test(q))).toBe(false);
   });
 });

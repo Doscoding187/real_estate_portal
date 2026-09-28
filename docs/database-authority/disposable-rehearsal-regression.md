@@ -130,3 +130,15 @@ Safety: no live write probes, migrations, Azure resize/upgrade, retained-target
 access/change, TiDB write, production DATABASE_URL change or deployment occurred.
 No credential or connection string is included. Existing shared-remote/unknown
 refusal and production protections remain intact.
+
+## Corridor lifecycle correction — 2026-09-28
+
+The principal authorized bounded engineering corrections and continuation of the
+rehearsal. `createAuthorityRehearsalSession(..., 'preflight')` now performs the
+same ARM/TLS/UTC/schema/ledger/empty-business-table checks and returns evidence,
+but refuses every non-read catalogue probe. Closing a session with no attempted
+DML closes its connections without cleanup DML. Once DML is attempted, including
+an ambiguous failure, mandatory bounded cleanup remains in force. No protected
+classification, fingerprint, purpose, expiry, migration or reference permission
+is broadened. Preflight is a mode of the existing exact-target authority, not a
+parallel read connection or generic shared-remote exception.
