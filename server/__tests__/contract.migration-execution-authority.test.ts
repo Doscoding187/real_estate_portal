@@ -457,8 +457,12 @@ describe('migration execution authority', () => {
       '0088_retire_obsolete_billing_families.sql',
       '0089_retire_disconnected_analytics_aggregations.sql',
       '0090_retire_disconnected_boost_campaigns.sql',
+      '0091_transactional_email_deliveries.sql',
+      '0092_transactional_email_attempts.sql',
+      '0093_user_onboarding_state_primary_key.sql',
+      '0094_content_topics_primary_key.sql',
     ]);
-    expect(executionManifest.expectedHead).toBe('0090_retire_disconnected_boost_campaigns.sql');
+    expect(executionManifest.expectedHead).toBe('0094_content_topics_primary_key.sql');
     expect(archivedSqlFiles.length).toBeGreaterThan(0);
     expect(activeSqlFiles.some(file => file.includes('_archived'))).toBe(false);
     expect(executionManifest.historyTable).toBe('sql_migration_history');

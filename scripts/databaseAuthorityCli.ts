@@ -398,6 +398,7 @@ async function run(command: Command): Promise<void> {
       expectedNewHead: result.plan.expectedNewHead,
       lock: result.lock,
       applied: result.applied,
+      freshSessionEvidence: result.freshSessionEvidence,
     });
     return;
   }
@@ -563,7 +564,7 @@ async function run(command: Command): Promise<void> {
   const connection = await createAuthoritySqlConnection(authority, decision);
   try {
     const desired = normalizedDesiredSchema(schema);
-    const actual = await normalizedPhysicalSchema(connection, authority.context.provider);
+    const actual = await normalizedPhysicalSchema(connection, authority.context.provider, desired);
     const report = compareNormalizedSchemas(desired, actual);
     const physicalCheckEnforcement = summarizeCheckConstraintEnforcement(actual);
     const checkConstraintEnforcement = await readTiDbCheckConstraintCapability(

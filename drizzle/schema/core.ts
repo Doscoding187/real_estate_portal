@@ -164,6 +164,7 @@ export const emailTemplates = mysqlTable('email_templates', {
 export const userOnboardingState = mysqlTable('user_onboarding_state', {
   userId: int('user_id')
     .notNull()
+    .primaryKey()
     .references(() => users.id, { onDelete: 'cascade' }),
   isFirstSession: tinyint('is_first_session').default(1),
   welcomeOverlayShown: tinyint('welcome_overlay_shown').default(0),

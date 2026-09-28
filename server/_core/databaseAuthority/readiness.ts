@@ -224,9 +224,10 @@ async function schemaCongruencyLayer(
     );
   }
   try {
+    const desired = normalizedDesiredSchema(canonicalSchema);
     const report = compareNormalizedSchemas(
-      normalizedDesiredSchema(canonicalSchema),
-      await normalizedPhysicalSchema(connection, provider),
+      desired,
+      await normalizedPhysicalSchema(connection, provider, desired),
     );
     const capability = await readTiDbCheckConstraintCapability(connection, provider);
     return schemaCongruencyReadinessLayer(report, capability);

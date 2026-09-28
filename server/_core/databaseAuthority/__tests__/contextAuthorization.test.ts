@@ -337,6 +337,97 @@ describe('immutable resolved database context and operation authorization', () =
     });
   });
 
+  it('registers only the exact Azure production target for approved read-only operations', () => {
+    const identity = fixtureIdentity();
+    const target =
+      'mysql://propertylistify-mysql.mysql.database.azure.com:3306/propertylistify_database';
+    const resolve = (
+      operation: 'read-only-connect' | 'diagnostics' | 'readiness' | 'release-plan' | 'release-apply' | 'runtime-connect',
+      credentialClass: 'read-only' | 'runtime' | 'lifecycle-admin' = 'read-only',
+      databaseUrl = target,
+    ) =>
+      resolveDatabaseAuthority({
+        operation,
+        cwd: identity.worktreePath,
+        gitIdentity: identity,
+        explicitDatabaseUrl: databaseUrl,
+        credentialClass,
+        processEnv: { NODE_ENV: 'production', APP_ENV: 'production' },
+      });
+
+    for (const operation of ['read-only-connect', 'diagnostics', 'readiness', 'release-plan'] as const) {
+      const authority = resolve(operation);
+      expect(authority.context.targetClass).toBe('production');
+      expect(authority.context.targetFingerprint).toBe(target);
+      expect(authority.context.targetFingerprintHash).toBe(
+        'b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced',
+      );
+      expect(authority.context.tls).toEqual({
+        required: true,
+        certificateVerificationRequired: true,
+      });
+      expect(() => authorizeDatabaseOperation(authority, { root: process.cwd() })).toThrow(
+        'protected target requires an exact operation and fingerprint approval',
+      );
+      expect(() =>
+        authorizeDatabaseOperation(authority, {
+          root: process.cwd(),
+          approval: {
+            reference: 'B08-TEST-ONLY',
+            actor: 'test-reviewer',
+            operation: 'runtime-connect',
+            targetFingerprintHash: authority.context.targetFingerprintHash,
+          },
+        }),
+      ).toThrow('protected target requires an exact operation and fingerprint approval');
+      expect(() =>
+        authorizeDatabaseOperation(authority, {
+          root: process.cwd(),
+          approval: {
+            reference: 'B08-TEST-ONLY',
+            actor: 'test-reviewer',
+            operation,
+            targetFingerprintHash: 'not-the-approved-target',
+          },
+        }),
+      ).toThrow('protected target requires an exact operation and fingerprint approval');
+      expect(() =>
+        authorizeDatabaseOperation(authority, {
+          root: process.cwd(),
+          approval: {
+            reference: 'B08-TEST-ONLY',
+            actor: 'test-reviewer',
+            operation,
+            targetFingerprintHash: authority.context.targetFingerprintHash,
+          },
+        }),
+      ).not.toThrow();
+    }
+
+    for (const other of [
+      'mysql://other.mysql.database.azure.com:3306/propertylistify_database',
+      'mysql://propertylistify-mysql.mysql.database.azure.com:3306/propertylistify_other',
+      'mysql://propertylistify-mysql.mysql.database.azure.com:3307/propertylistify_database',
+    ]) {
+      const authority = resolve('read-only-connect', 'read-only', other);
+      expect(authority.context.targetClass).toBe('shared-remote');
+      expect(() => authorizeDatabaseOperation(authority, { root: process.cwd() })).toThrow(
+        'fails closed',
+      );
+    }
+
+    for (const [operation, credentialClass] of [
+      ['release-apply', 'read-only'],
+      ['runtime-connect', 'read-only'],
+      ['read-only-connect', 'lifecycle-admin'],
+    ] as const) {
+      const authority = resolve(operation, credentialClass);
+      expect(() => authorizeDatabaseOperation(authority, { root: process.cwd() })).toThrow(
+        'credential class',
+      );
+    }
+  });
+
   it('prevents a feature worktree from mutating listify_local', () => {
     const identity = fixtureIdentity();
     const authority = resolveDatabaseAuthority({

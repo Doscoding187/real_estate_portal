@@ -5,6 +5,7 @@ import { billableAccounts, userOnboardingState, users } from '../drizzle/schema'
 import { eq, like, or, desc, and, isNull } from 'drizzle-orm';
 import type { SQL } from 'drizzle-orm';
 import { getDb } from './db';
+import { createOrReadOnboardingState } from './services/onboardingStateCreation';
 import { logAudit } from './_core/auditLog';
 
 /**
@@ -104,26 +105,31 @@ export const userRouter = router({
       .limit(1);
 
     if (!state) {
-      await db.insert(userOnboardingState).values({
-        userId,
-        isFirstSession: 1,
-        welcomeOverlayShown: 0,
-        welcomeOverlayDismissed: 0,
-        suggestedTopics: [],
-        tooltipsShown: [],
-        contentViewCount: 0,
-        saveCount: 0,
-        partnerEngagementCount: 0,
-        featuresUnlocked: [],
-        consumerDashboardPreferences: { intent: 'buyer' },
-        sellerPlanningInputs: null,
-      });
-
-      [state] = await db
-        .select()
-        .from(userOnboardingState)
-        .where(eq(userOnboardingState.userId, userId))
-        .limit(1);
+      state = await createOrReadOnboardingState(
+        async () =>
+          db.insert(userOnboardingState).values({
+            userId,
+            isFirstSession: 1,
+            welcomeOverlayShown: 0,
+            welcomeOverlayDismissed: 0,
+            suggestedTopics: [],
+            tooltipsShown: [],
+            contentViewCount: 0,
+            saveCount: 0,
+            partnerEngagementCount: 0,
+            featuresUnlocked: [],
+            consumerDashboardPreferences: { intent: 'buyer' },
+            sellerPlanningInputs: null,
+          }),
+        async () => {
+          const [winner] = await db
+            .select()
+            .from(userOnboardingState)
+            .where(eq(userOnboardingState.userId, userId))
+            .limit(1);
+          return winner;
+        },
+      );
     }
 
     const preferences = consumerDashboardPreferencesSchema.parse(
@@ -159,26 +165,31 @@ export const userRouter = router({
         .limit(1);
 
       if (!state) {
-        await db.insert(userOnboardingState).values({
-          userId,
-          isFirstSession: 1,
-          welcomeOverlayShown: 0,
-          welcomeOverlayDismissed: 0,
-          suggestedTopics: [],
-          tooltipsShown: [],
-          contentViewCount: 0,
-          saveCount: 0,
-          partnerEngagementCount: 0,
-          featuresUnlocked: [],
-          consumerDashboardPreferences: { intent: 'buyer' },
-          sellerPlanningInputs: null,
-        });
-
-        [state] = await db
-          .select()
-          .from(userOnboardingState)
-          .where(eq(userOnboardingState.userId, userId))
-          .limit(1);
+        state = await createOrReadOnboardingState(
+          async () =>
+            db.insert(userOnboardingState).values({
+              userId,
+              isFirstSession: 1,
+              welcomeOverlayShown: 0,
+              welcomeOverlayDismissed: 0,
+              suggestedTopics: [],
+              tooltipsShown: [],
+              contentViewCount: 0,
+              saveCount: 0,
+              partnerEngagementCount: 0,
+              featuresUnlocked: [],
+              consumerDashboardPreferences: { intent: 'buyer' },
+              sellerPlanningInputs: null,
+            }),
+          async () => {
+            const [winner] = await db
+              .select()
+              .from(userOnboardingState)
+              .where(eq(userOnboardingState.userId, userId))
+              .limit(1);
+            return winner;
+          },
+        );
       }
 
       const currentPreferences = consumerDashboardPreferencesSchema.parse(
