@@ -1,4 +1,8 @@
 import assert from 'node:assert/strict';
+import {
+  isPaidSubscriptionRowEntitled,
+  parseEntitlementValue,
+} from '../server/services/planAccessService';
 import { createOrReadOnboardingState } from '../server/services/onboardingStateCreation';
 import type { createAuthorityRehearsalSession } from '../server/_core/databaseAuthority/connectionAuthority';
 
@@ -95,6 +99,41 @@ export async function runAzureRehearsalRegression(
     ],
   );
   passed.push('persisted JSON / CTE / window');
+  await run(0, 'account.insert', [0]);
+  await run(0, 'subscription.insert', [0]);
+  await run(0, 'invoice.insert', [0]);
+  await run(0, 'payment.insert', [0]);
+  assert.equal((await rows(0, 'payment.read', [0]))[0].amount, 49900);
+  await run(0, 'payment.verify', [0]);
+  assert.equal((await rows(0, 'payment.read', [0]))[0].state, 'verified');
+  await run(0, 'subscription.activate', [0]);
+  const subscription = (await rows(0, 'subscription.read', [0]))[0];
+  assert.equal(
+    isPaidSubscriptionRowEntitled(
+      { status: subscription.status, currentPeriodEnd: subscription.current_period_end },
+      new Date('2026-09-28T00:00:00Z'),
+    ),
+    true,
+  );
+  assert.equal(
+    isPaidSubscriptionRowEntitled(
+      { status: subscription.status, currentPeriodEnd: subscription.current_period_end },
+      new Date('2027-01-01T00:00:00Z'),
+    ),
+    false,
+  );
+  const entitlements = await rows(0, 'read.entitlements');
+  assert.equal(entitlements.length, 9);
+  for (const row of entitlements) assert.notEqual(parseEntitlementValue(row.value_json), undefined);
+  await reject('account.delete', [0], 1451);
+  await run(0, 'subscription.delete', [0]);
+  assert.equal((await rows(0, 'payment.read', [0]))[0].subscription_id, null);
+  await run(0, 'invoice.delete', [0]);
+  assert.equal((await rows(0, 'payment.read', [0])).length, 0);
+  await run(0, 'account.delete', [0]);
+  passed.push(
+    'billing/payment database lifecycle / canonical entitlement predicates / SET NULL / CASCADE',
+  );
   await run(0, 'user.delete', [0]);
   assert.equal((await rows(0, 'onboarding.read', [0])).length, 0);
   passed.push('FK CASCADE / synthetic DELETE lifecycle');

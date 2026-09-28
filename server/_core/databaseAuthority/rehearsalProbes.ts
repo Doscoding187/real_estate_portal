@@ -31,6 +31,18 @@ export const REHEARSAL_PROBES = [
   'read.window',
   'read.identity',
   'read.one',
+  'account.insert',
+  'account.delete',
+  'subscription.insert',
+  'subscription.activate',
+  'subscription.read',
+  'subscription.delete',
+  'invoice.insert',
+  'invoice.delete',
+  'payment.insert',
+  'payment.read',
+  'payment.verify',
+  'read.entitlements',
 ] as const;
 export type RehearsalProbe = (typeof REHEARSAL_PROBES)[number];
 const numericId = (slot: number) => 1_900_000_000 + slot;
@@ -59,12 +71,49 @@ export function compileRehearsalProbe(
     'transaction.rollback-savepoint': 'ROLLBACK TO SAVEPOINT rehearsal_probe',
     'read.window':
       'WITH p AS (SELECT 2 n UNION ALL SELECT 1) SELECT n,ROW_NUMBER() OVER (ORDER BY n) AS row_number_result FROM p',
+    'read.entitlements':
+      'SELECT p.name,e.feature_key,e.value_json FROM plans p JOIN plan_entitlements e ON e.plan_id=p.id ORDER BY p.id,e.id',
     'read.one': 'SELECT 1 AS ok',
     'read.identity':
       'SELECT VERSION() version,DATABASE() selected_database,@@session.time_zone time_zone,@@session.transaction_isolation isolation_level',
   };
   if (controls[probe] && slots.length === 0) return { sql: controls[probe], values: [] };
   const statements: Partial<Record<RehearsalProbe, [number, string, unknown[]]>> = {
+    'account.insert': [
+      1,
+      "INSERT INTO billable_accounts(id,account_kind,user_id) VALUES (?,'agent',?)",
+      [id, id],
+    ],
+    'account.delete': [1, 'DELETE FROM billable_accounts WHERE id=?', [id]],
+    'subscription.insert': [
+      1,
+      "INSERT INTO subscriptions(id,owner_type,owner_id,billable_account_id,plan_id,status,current_period_end) SELECT ?,'agent',?,?,id,'pending_payment','2026-12-28 00:00:00' FROM plans WHERE name='agent_launch_access'",
+      [id, id, id],
+    ],
+    'subscription.activate': [1, "UPDATE subscriptions SET status='active' WHERE id=?", [id]],
+    'subscription.read': [
+      1,
+      'SELECT status,current_period_end FROM subscriptions WHERE id=?',
+      [id],
+    ],
+    'subscription.delete': [1, 'DELETE FROM subscriptions WHERE id=?', [id]],
+    'invoice.insert': [
+      1,
+      "INSERT INTO billing_invoices(id,owner_type,owner_id,billable_account_id,subscription_id,invoice_number,payment_reference,amount_due) VALUES (?,'agent',?,?,?,?,?,49900)",
+      [id, id, id, id, key, key],
+    ],
+    'invoice.delete': [1, 'DELETE FROM billing_invoices WHERE id=?', [id]],
+    'payment.insert': [
+      1,
+      "INSERT INTO billing_payments(id,invoice_id,subscription_id,owner_type,owner_id,billable_account_id,amount,payment_reference,idempotency_key) VALUES (?,?,?,'agent',?,?,49900,?,?)",
+      [id, id, id, id, id, key, key],
+    ],
+    'payment.read': [
+      1,
+      'SELECT state,amount,subscription_id FROM billing_payments WHERE id=?',
+      [id],
+    ],
+    'payment.verify': [1, "UPDATE billing_payments SET state='verified' WHERE id=?", [id]],
     'user.insert': [
       1,
       'INSERT INTO users (id,openId,email,name) VALUES (?,?,?,?)',
@@ -156,6 +205,9 @@ export function rehearsalCleanup(nonce: string): Array<{ sql: string; values: un
     for (const table of [
       'transactional_email_attempts',
       'transactional_email_deliveries',
+      'billing_payments',
+      'billing_invoices',
+      'subscriptions',
       'billable_accounts',
       'user_onboarding_state',
       'partner_tiers',
@@ -173,6 +225,9 @@ export function rehearsalCleanup(nonce: string): Array<{ sql: string; values: un
     'content_topics',
     'transactional_email_attempts',
     'transactional_email_deliveries',
+    'billing_payments',
+    'billing_invoices',
+    'subscriptions',
     'billable_accounts',
     'user_onboarding_state',
     'partner_tiers',

@@ -142,3 +142,10 @@ an ambiguous failure, mandatory bounded cleanup remains in force. No protected
 classification, fingerprint, purpose, expiry, migration or reference permission
 is broadened. Preflight is a mode of the existing exact-target authority, not a
 parallel read connection or generic shared-remote exception.
+
+The corridor's bounded catalogue also covers synthetic billable accounts,
+subscriptions, invoices and payments using the same reserved32 slots, only the
+existing agent plan as a read-only reference, and child-before-parent cleanup.
+The driver exercises physical billing FK lifecycle and feeds live rows into the
+canonical paid-entitlement predicate. This does not enable generic application
+pools, payment providers, email sends, seeders or arbitrary integration fixtures.
