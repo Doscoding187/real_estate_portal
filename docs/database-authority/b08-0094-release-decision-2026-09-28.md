@@ -16,6 +16,7 @@ does not change deployed database authority or authorize a database operation.
 - B10 schema provenance: `4a5f985a214c629c027c12c6cc1fb30702d310ab`.
 - Protected registration: `898c89d819d0b0a87c03792edb423f3d28b0b781`.
 - TLS hostname verification: `a40c7df5250ff3caffccde127aa6e73219b1a6ae`.
+- Reconciled implementation/source SHA: `247f4a8506e7efb142304352002986ea83ef5c45`.
 - Candidate branch: `fix/b08-0094-release-reconciliation`.
 - Expected head: `0094_content_topics_primary_key.sql` (95 migrations).
 - Canonical normalized model SHA-256: `a8ca8cf34bb3627594eab1b722b85115c6460225a0165db7992228a8547798e9`.
