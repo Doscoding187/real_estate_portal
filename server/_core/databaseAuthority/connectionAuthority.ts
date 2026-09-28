@@ -353,6 +353,14 @@ export async function createAuthorityRehearsalSession(
         connections[0],
         'SELECT VERSION() version,DATABASE() selected_database,@@version_comment version_comment,@@session.time_zone time_zone,@@system_time_zone system_time_zone,@@sql_mode sql_mode,@@lower_case_table_names lower_case_table_names,@@character_set_server character_set_server,@@collation_server collation_server,@@transaction_isolation transaction_isolation',
       ),
+      checks: await queryRows(
+        connections[0],
+        "SELECT CONSTRAINT_NAME,ENFORCED FROM information_schema.TABLE_CONSTRAINTS WHERE CONSTRAINT_SCHEMA=DATABASE() AND CONSTRAINT_TYPE='CHECK' ORDER BY CONSTRAINT_NAME",
+      ),
+      variables: await queryRows(
+        connections[0],
+        "SHOW VARIABLES WHERE Variable_name IN ('sql_generate_invisible_primary_key','sql_require_primary_key','innodb_default_row_format','innodb_page_size','max_allowed_packet','foreign_key_checks','check_constraint_checks','explicit_defaults_for_timestamp','character_set_connection','collation_connection','time_zone','system_time_zone')",
+      ),
       plans: await queryRows(connections[0], 'SELECT * FROM plans ORDER BY id'),
       entitlements: await queryRows(connections[0], 'SELECT * FROM plan_entitlements ORDER BY id'),
     };

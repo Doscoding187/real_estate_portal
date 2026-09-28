@@ -21,7 +21,8 @@ export async function runAzureRehearsalRegression(
     );
   assert.equal((await rows(0, 'read.one'))[0].ok, 1);
   assert.equal((await rows(0, 'read.identity'))[0].time_zone, '+00:00');
-  passed.push('SELECT1 / UTC');
+  assert.equal((await rows(0, 'read.application-smoke')).length, 0);
+  passed.push('SELECT1 / UTC / property-media read join');
   await run(0, 'user.insert', [0]);
   await reject('user.insert', [0], 1062);
   await reject('onboarding.insert', [31], 1452);

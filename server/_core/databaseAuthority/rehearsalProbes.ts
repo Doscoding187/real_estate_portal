@@ -43,6 +43,7 @@ export const REHEARSAL_PROBES = [
   'payment.read',
   'payment.verify',
   'read.entitlements',
+  'read.application-smoke',
 ] as const;
 export type RehearsalProbe = (typeof REHEARSAL_PROBES)[number];
 const numericId = (slot: number) => 1_900_000_000 + slot;
@@ -71,6 +72,8 @@ export function compileRehearsalProbe(
     'transaction.rollback-savepoint': 'ROLLBACK TO SAVEPOINT rehearsal_probe',
     'read.window':
       'WITH p AS (SELECT 2 n UNION ALL SELECT 1) SELECT n,ROW_NUMBER() OVER (ORDER BY n) AS row_number_result FROM p',
+    'read.application-smoke':
+      'SELECT p.id,p.city,p.province FROM properties p LEFT JOIN propertyImages i ON i.propertyId=p.id WHERE p.id=1900000031 LIMIT 1',
     'read.entitlements':
       'SELECT p.name,e.feature_key,e.value_json FROM plans p JOIN plan_entitlements e ON e.plan_id=p.id ORDER BY p.id,e.id',
     'read.one': 'SELECT 1 AS ok',
