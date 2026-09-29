@@ -15,7 +15,7 @@ import {
   type AdapterEvidence,
 } from './common';
 
-export const CANONICAL_COMMERCIAL_VERSION = 'canonical-commercial-v3' as const;
+export const CANONICAL_COMMERCIAL_VERSION = 'canonical-commercial-v4' as const;
 
 export type LaunchAudience = 'agent' | 'agency' | 'developer';
 
@@ -66,6 +66,9 @@ export const CANONICAL_DEVELOPER_LAUNCH_ACCESS = Object.freeze({
     commercial_price_configured: true,
     commercial_launch_fee_minor: 149900,
     commercial_billing_interval: 'once_off',
+    // B01: Property Listify is not currently VAT registered. The once-off
+    // amount is the total payable; B15 owns the reviewed customer wording.
+    tax_treatment: 'not_vat_registered',
     catalogVisibility: 'public',
   },
   features: [],
@@ -107,6 +110,9 @@ export const CANONICAL_AGENT_LAUNCH_ACCESS: LaunchProductReference = Object.free
     commercial_price_configured: true,
     commercial_launch_fee_minor: 49900,
     commercial_billing_interval: 'once_off',
+    // B01: Property Listify is not currently VAT registered. The once-off
+    // amount is the total payable; B15 owns the reviewed customer wording.
+    tax_treatment: 'not_vat_registered',
     commercial_entitlement_source: 'explicit_launch_capabilities',
     commercial_launch_access_mode: 'full_supported_capability_cohort',
     commercial_feature_access_policy: 'all_supported_canonical_capabilities',
@@ -154,6 +160,9 @@ export const CANONICAL_AGENCY_LAUNCH_ACCESS: LaunchProductReference = Object.fre
     commercial_price_configured: true,
     commercial_launch_fee_minor: 99900,
     commercial_billing_interval: 'once_off',
+    // B01: Property Listify is not currently VAT registered. The once-off
+    // amount is the total payable; B15 owns the reviewed customer wording.
+    tax_treatment: 'not_vat_registered',
     commercial_entitlement_source: 'explicit_launch_capabilities',
     commercial_launch_access_mode: 'full_supported_capability_cohort',
     commercial_feature_access_policy: 'all_supported_canonical_capabilities',
@@ -197,6 +206,7 @@ const REFERENCE_PAYLOAD = Object.freeze({
       price: product.price,
       term: metadata.commercial_term_kind,
       durationDays: metadata.commercial_term_duration_days,
+      taxTreatment: metadata.tax_treatment || null,
       launchAccessMode: metadata.commercial_launch_access_mode || null,
       featureAccessPolicy: metadata.commercial_feature_access_policy || null,
       resourceLimitPolicy: metadata.commercial_resource_limit_policy || null,
