@@ -1,4 +1,15 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+// Positive unit cases model the previously approved window; the live registration is revoked.
+vi.mock(
+  '../../../../docs/database-authority/disposable-rehearsal-authorization.json',
+  async importOriginal => ({
+    default: { ...(await importOriginal<any>()).default, status: 'approved' },
+  }),
+);
+beforeEach(() => {
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date('2026-09-28T12:00:00Z'));
+});
 const recordState = vi.hoisted(() => ({ revoked: false }));
 vi.mock('node:fs', async importOriginal => {
   const actual = await importOriginal<typeof import('node:fs')>();
@@ -6,11 +17,11 @@ vi.mock('node:fs', async importOriginal => {
     ...actual,
     readFileSync: (...args: any[]) => {
       const result = (actual.readFileSync as any)(...args);
-      if (
-        recordState.revoked &&
-        String(args[0]).endsWith('/disposable-rehearsal-authorization.json')
-      ) {
-        return JSON.stringify({ ...JSON.parse(String(result)), status: 'revoked' });
+      if (String(args[0]).endsWith('/disposable-rehearsal-authorization.json')) {
+        return JSON.stringify({
+          ...JSON.parse(String(result)),
+          status: recordState.revoked ? 'revoked' : 'approved',
+        });
       }
       return result;
     },

@@ -149,3 +149,13 @@ existing agent plan as a read-only reference, and child-before-parent cleanup.
 The driver exercises physical billing FK lifecycle and feeds live rows into the
 canonical paid-entitlement predicate. This does not enable generic application
 pools, payment providers, email sends, seeders or arbitrary integration fixtures.
+
+## Completed corridor closure — 2026-09-29
+
+The disposable8.4 rehearsal and synthetic cleanup completed. The live registration
+is now **revoked**, as required by its completion review trigger; the temporary
+local-IP firewall rule and task Railway SSH registration were removed. A later
+write operation requires a new reviewed principal purpose/authorization, not reuse
+of this completed window. Positive unit tests explicitly simulate the historical
+approved window; a separate unmocked closure test proves the actual registration
+refuses the exact target. See azure84-rehearsal-corridor-2026-09-28.md.

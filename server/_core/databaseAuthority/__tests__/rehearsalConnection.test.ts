@@ -1,4 +1,23 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+// Positive unit cases model the previously approved window; the live registration is revoked.
+vi.mock(
+  '../../../../docs/database-authority/disposable-rehearsal-authorization.json',
+  async importOriginal => ({
+    default: { ...(await importOriginal<any>()).default, status: 'approved' },
+  }),
+);
+vi.mock('node:fs', async importOriginal => {
+  const actual = await importOriginal<typeof import('node:fs')>();
+  return {
+    ...actual,
+    readFileSync: (...args: any[]) => {
+      const result = (actual.readFileSync as any)(...args);
+      return String(args[0]).endsWith('/disposable-rehearsal-authorization.json')
+        ? JSON.stringify({ ...JSON.parse(String(result)), status: 'approved' })
+        : result;
+    },
+  };
+});
 const mocks = vi.hoisted(() => ({
   create: vi.fn(),
   arm: vi.fn(),
@@ -48,6 +67,8 @@ function authority() {
   };
 }
 beforeEach(() => {
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date('2026-09-28T12:00:00Z'));
   mocks.dirty = false;
   mocks.sqlVersion = '8.4.8-azure';
   mocks.selected = REHEARSAL.database;
