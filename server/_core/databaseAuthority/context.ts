@@ -1,3 +1,4 @@
+import { RECOVERY_VALIDATION_FINGERPRINT } from './recoveryValidationTarget';
 import { isRegisteredRehearsal } from './rehearsalAuthority';
 import { createHash, randomUUID } from 'node:crypto';
 import { buildMysqlConnectionSecurityConfig } from '../databaseTls';
@@ -25,6 +26,7 @@ const LOCAL_LOOPBACK_PORTS = new Set(['3307']);
 // above remains pinned to 127.0.0.1:3307.
 const TEST_LOOPBACK_PORTS = new Set(['3306', '3307']);
 const REGISTERED_PROTECTED_REMOTE_TARGETS: Readonly<Record<string, 'production'>> = Object.freeze({
+  [RECOVERY_VALIDATION_FINGERPRINT]: 'production',
   'mysql://propertylistify-mysql.mysql.database.azure.com:3306/propertylistify_database':
     'production',
 });

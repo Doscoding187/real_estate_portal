@@ -1,3 +1,5 @@
+import { RECOVERY_VALIDATION_FINGERPRINT } from '../recoveryValidationTarget';
+import { DATABASE_OPERATIONS } from '../types';
 import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
@@ -342,7 +344,13 @@ describe('immutable resolved database context and operation authorization', () =
     const target =
       'mysql://propertylistify-mysql.mysql.database.azure.com:3306/propertylistify_database';
     const resolve = (
-      operation: 'read-only-connect' | 'diagnostics' | 'readiness' | 'release-plan' | 'release-apply' | 'runtime-connect',
+      operation:
+        | 'read-only-connect'
+        | 'diagnostics'
+        | 'readiness'
+        | 'release-plan'
+        | 'release-apply'
+        | 'runtime-connect',
       credentialClass: 'read-only' | 'runtime' | 'lifecycle-admin' = 'read-only',
       databaseUrl = target,
     ) =>
@@ -355,7 +363,12 @@ describe('immutable resolved database context and operation authorization', () =
         processEnv: { NODE_ENV: 'production', APP_ENV: 'production' },
       });
 
-    for (const operation of ['read-only-connect', 'diagnostics', 'readiness', 'release-plan'] as const) {
+    for (const operation of [
+      'read-only-connect',
+      'diagnostics',
+      'readiness',
+      'release-plan',
+    ] as const) {
       const authority = resolve(operation);
       expect(authority.context.targetClass).toBe('production');
       expect(authority.context.targetFingerprint).toBe(target);
@@ -834,5 +847,69 @@ describe('collision-resistant worktree database identity', () => {
     });
     expect(renamed.expectedWorktreeDatabase).toBe(first.expectedWorktreeDatabase);
     expect(renamed.ownershipKey).toBe(first.ownershipKey);
+  });
+});
+
+describe('exact pre-upgrade recovery validation target', () => {
+  it('requires protected approval and read-only credentials; denies every other operation', () => {
+    const identity = fixtureIdentity();
+    for (const operation of DATABASE_OPERATIONS) {
+      const authority = resolveDatabaseAuthority({
+        operation,
+        cwd: identity.worktreePath,
+        gitIdentity: identity,
+        explicitDatabaseUrl: RECOVERY_VALIDATION_FINGERPRINT,
+        credentialClass: 'read-only',
+        processEnv: { NODE_ENV: 'production', APP_ENV: 'production' },
+      });
+      expect(authority.context.targetClass).toBe('production');
+      const approve = () =>
+        authorizeDatabaseOperation(authority, {
+          root: process.cwd(),
+          approval: {
+            actor: 'test-reviewer',
+            reference: '35954afc recovery verification',
+            operation,
+            targetFingerprintHash: authority.context.targetFingerprintHash,
+          },
+        });
+      if (operation === 'read-only-connect' || operation === 'verification') {
+        expect(() => authorizeDatabaseOperation(authority, { root: process.cwd() })).toThrow(
+          'protected target',
+        );
+        expect(approve).not.toThrow();
+      } else expect(approve).toThrow('read-only inspection only');
+    }
+    const runtime = resolveDatabaseAuthority({
+      operation: 'read-only-connect',
+      cwd: identity.worktreePath,
+      gitIdentity: identity,
+      explicitDatabaseUrl: RECOVERY_VALIDATION_FINGERPRINT,
+      credentialClass: 'runtime',
+      processEnv: { NODE_ENV: 'production', APP_ENV: 'production' },
+    });
+    expect(() => authorizeDatabaseOperation(runtime, { root: process.cwd() })).toThrow(
+      'read-only inspection only',
+    );
+  });
+
+  it.each([
+    RECOVERY_VALIDATION_FINGERPRINT.replace('0815', '0816'),
+    RECOVERY_VALIDATION_FINGERPRINT.replace('/propertylistify_database', '/other'),
+    RECOVERY_VALIDATION_FINGERPRINT.replace(':3306/', ':3307/'),
+  ])('leaves other recovery-like identities fail closed: %s', databaseUrl => {
+    const identity = fixtureIdentity();
+    const authority = resolveDatabaseAuthority({
+      operation: 'read-only-connect',
+      cwd: identity.worktreePath,
+      gitIdentity: identity,
+      explicitDatabaseUrl: databaseUrl,
+      credentialClass: 'read-only',
+      processEnv: { NODE_ENV: 'production', APP_ENV: 'production' },
+    });
+    expect(authority.context.targetClass).toBe('shared-remote');
+    expect(() => authorizeDatabaseOperation(authority, { root: process.cwd() })).toThrow(
+      'fails closed',
+    );
   });
 });
