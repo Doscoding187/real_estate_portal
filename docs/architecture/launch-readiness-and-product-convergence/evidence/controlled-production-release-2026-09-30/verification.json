@@ -32,9 +32,20 @@
       "command": "pnpm db:authority:status",
       "result": "PASS: own disposable target disposed/unreachable, no provisioning; authority valid",
       "privateLogSha256": "d9f00c1227735a271e39b22bc50b798da656c719c5e2ffaa35f8b758bb653e85"
+    },
+    {
+      "command": "pnpm lint",
+      "result": "PASS: zero errors, 13,419 existing warnings",
+      "privateLogSha256": "c08ede0a1eebb95344feb1dc56ca6ca4c4c4b612c9e9a552e7092cced6947ec0"
+    },
+    {
+      "command": "Import vercel.ts and assert main=false",
+      "result": "PASS; provider readback still pending"
     }
   ],
   "publicPaidIntake": "closed; no mutation performed",
   "priorEvidenceReuse": "Accepted paid/browser/shared contracts unchanged; prior exact 4b5 GitHub CI separately preserved",
-  "currentPRChecks": "Pending after push; never attributed from prior head"
+  "currentPRChecks": "See exact-head GitHub results; not inferred from prior 4b5 checks.",
+  "verifiedCodeCommit": "84e9229a428d8432f2ed0f7f9aa80fa8972f5cfc",
+  "verifiedCodeTree": "813f246d370d17d78a102bc0ff8477139dd26a1b"
 }
