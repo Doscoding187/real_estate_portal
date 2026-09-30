@@ -1,4 +1,13 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+// This suite owns a mocked connection boundary. Shared runtime initialization
+// must not open a pool before its mocks are configured, including in CI.
+const previousSkipDbInit = process.env.SKIP_DB_INIT;
+process.env.SKIP_DB_INIT = '1';
+afterAll(() => {
+  if (previousSkipDbInit === undefined) delete process.env.SKIP_DB_INIT;
+  else process.env.SKIP_DB_INIT = previousSkipDbInit;
+});
 // Positive unit cases model the previously approved window; the live registration is revoked.
 vi.mock(
   '../../../../docs/database-authority/disposable-rehearsal-authorization.json',

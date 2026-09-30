@@ -69,7 +69,13 @@ reviewed cutover procedure. These artifacts are preliminary evidence only.
 - Full test run: 591 files passed, 50 skipped; two failures in the existing
   listing lifecycle fixture exposed its September 20 confirmation expiry.
   The fixture clock is now pinned to September 1, within its declared window;
-  this changes only test time, not production freshness validation.
+  this changes only test time, not production freshness validation. The subsequent
+  full local run passed: 592 files / 4,096 tests, with 50 files / 238 tests skipped.
+- CI subsequently exposed shared runtime initialization in the two mocked
+  connection suites. Both now use the existing suite-scoped `SKIP_DB_INIT`
+  boundary and restore its prior value afterward. All 15 tests pass under CI
+  flags with initialization otherwise enabled and an unreachable fixture URL;
+  production connection and authorization behavior is unchanged.
 - Migration runner's earlier conditional GIPK session fix remains in
   `dc53b63d`; GitHub DB Contract Verification passed for that commit.
 

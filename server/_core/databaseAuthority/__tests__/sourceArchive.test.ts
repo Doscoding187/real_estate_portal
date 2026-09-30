@@ -1,4 +1,13 @@
-import { describe, expect, it } from 'vitest';
+import { afterAll, describe, expect, it } from 'vitest';
+
+// This suite owns a mocked connection boundary. Shared runtime initialization
+// must not open a pool before its mocks are configured, including in CI.
+const previousSkipDbInit = process.env.SKIP_DB_INIT;
+process.env.SKIP_DB_INIT = '1';
+afterAll(() => {
+  if (previousSkipDbInit === undefined) delete process.env.SKIP_DB_INIT;
+  else process.env.SKIP_DB_INIT = previousSkipDbInit;
+});
 import { randomBytes } from 'node:crypto';
 import {
   openSourceArchive,
