@@ -64,6 +64,7 @@ const agencyPublishingPlan = {
   segment: 'agency',
   isActive: 1,
   metadata: {
+    commercial_product_key: 'agency_launch_access',
     commercial_term_kind: 'paid_launch_access',
     commercial_term_duration_days: 90,
     commercial_requires_verified_payment: true,
@@ -171,6 +172,7 @@ function independentAgentDb(input: {
           segment: 'agent',
           isActive: 1,
           metadata: {
+            commercial_product_key: 'agent_launch_access',
             commercial_term_kind: 'paid_launch_access',
             commercial_term_duration_days: 90,
             commercial_requires_verified_payment: true,
@@ -219,6 +221,7 @@ function independentAgentReadinessDb(input: {
           segment: 'agent',
           isActive: 1,
           metadata: {
+            commercial_product_key: 'agent_launch_access',
             commercial_term_kind: 'paid_launch_access',
             commercial_term_duration_days: 90,
             commercial_requires_verified_payment: true,

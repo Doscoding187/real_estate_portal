@@ -81,6 +81,7 @@ describe('agency invitation delivery (canonical access gate)', () => {
               segment: 'agency',
               isActive: 1,
               metadata: {
+                commercial_product_key: 'agency_launch_access',
                 commercial_term_kind: 'paid_launch_access',
                 commercial_term_duration_days: 90,
                 commercial_requires_verified_payment: true,
