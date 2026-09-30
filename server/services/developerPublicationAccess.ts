@@ -3,11 +3,14 @@ import { and, eq } from 'drizzle-orm';
 import { billableAccounts, plans, subscriptions } from '../../drizzle/schema';
 import { getDb } from '../db';
 import {
-  getCommercialProductKey,
-  isPaidCommercialTermExpired,
-  resolveCommercialTerm,
+  getPaidMvpLaunchAccessProductKey,
+  parseCanonicalCommercialTimestamp,
 } from './commercialTerm';
-import { isPaidSubscriptionEntitled, type SubscriptionStatus } from './planAccessService';
+import { isCommercialActivationAvailable } from './commercialActivationPolicy';
+import {
+  isPaidMvpLaunchAccessSubscriptionEntitled,
+  type SubscriptionStatus,
+} from './planAccessService';
 
 type PublicationAccessDatabase = NonNullable<Awaited<ReturnType<typeof getDb>>>;
 
@@ -16,7 +19,8 @@ export type DeveloperPublicationAccessReason =
   | 'missing_launch_access'
   | 'expired_launch_access'
   | 'inactive_launch_access'
-  | 'invalid_launch_access';
+  | 'invalid_launch_access'
+  | 'commercial_activation_unavailable';
 
 export type DeveloperPublicationAccess = {
   eligible: boolean;
@@ -45,6 +49,12 @@ export async function getDeveloperPublicationAccess(
   organisationId: number,
   options: { db?: PublicationAccessDatabase; now?: Date } = {},
 ): Promise<DeveloperPublicationAccess> {
+  // A stored launch-access term cannot independently reopen developer public
+  // publication while the product-wide release state remains preparation-only.
+  if (!isCommercialActivationAvailable(process.env, 'developer_launch_access')) {
+    return accessResult({ eligible: false, reason: 'commercial_activation_unavailable' });
+  }
+
   const database = options.db ?? (await getDb());
   if (!database) throw new Error('Database not available');
 
@@ -55,6 +65,8 @@ export async function getDeveloperPublicationAccess(
     .innerJoin(plans, eq(subscriptions.planId, plans.id))
     .where(
       and(
+        eq(subscriptions.ownerType, 'developer'),
+        eq(subscriptions.ownerId, organisationId),
         eq(billableAccounts.accountKind, 'developer'),
         eq(billableAccounts.developerOrganisationId, organisationId),
         eq(plans.segment, 'developer'),
@@ -72,8 +84,6 @@ export async function getDeveloperPublicationAccess(
 
   const status = String(row.subscription.status || '') as SubscriptionStatus;
   const expiresAt = row.subscription.currentPeriodEnd || null;
-  const term = resolveCommercialTerm(row.plan);
-  const productKey = getCommercialProductKey(row.plan);
   const shared = {
     status,
     planName: row.plan.name,
@@ -81,22 +91,17 @@ export async function getDeveloperPublicationAccess(
     expiresAt,
   };
 
-  if (term.kind !== 'paid_launch_access' || productKey !== 'developer_launch_access') {
+  if (!getPaidMvpLaunchAccessProductKey(row.plan, 'developer')) {
     return accessResult({ eligible: false, reason: 'invalid_launch_access', ...shared });
   }
 
   const now = options.now ?? new Date();
-  if (isPaidCommercialTermExpired(term, status, expiresAt, now)) {
-    return accessResult({ eligible: false, reason: 'expired_launch_access', ...shared });
-  }
-
-  if (!isPaidSubscriptionEntitled(status)) {
+  if (!isPaidMvpLaunchAccessSubscriptionEntitled(row.subscription, row.plan, 'developer', now)) {
+    const end = parseCanonicalCommercialTimestamp(expiresAt);
+    if (end === null || end <= now.getTime()) {
+      return accessResult({ eligible: false, reason: 'expired_launch_access', ...shared });
+    }
     return accessResult({ eligible: false, reason: 'inactive_launch_access', ...shared });
-  }
-
-  const end = expiresAt ? new Date(expiresAt).getTime() : Number.NaN;
-  if (!Number.isFinite(end) || end <= now.getTime()) {
-    return accessResult({ eligible: false, reason: 'expired_launch_access', ...shared });
   }
 
   return accessResult({ eligible: true, reason: 'active_launch_access', ...shared });

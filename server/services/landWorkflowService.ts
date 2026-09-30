@@ -29,6 +29,7 @@ import {
   type LandClaimCode,
   type LandPublicClassification,
 } from '../../shared/land-domain';
+import { requireLandVerticalAvailable } from '../../shared/landLaunchPolicy';
 import { buildLocalMediaUploadUrl, getMediaStorageAdapter, inspectLocalMediaObject } from '../_core/mediaStorage';
 import { createLandEvidenceDeliveryToken, createLandEvidenceUploadReservation, createPrivateEvidenceS3DeliveryUrl, createPrivateEvidenceS3UploadUrl, inspectPrivateEvidenceS3Object, verifyLandEvidenceUploadReservation } from './landEvidenceStorage';
 import { verifyListingMediaUploadToken } from './listingMediaAuthority';
@@ -369,6 +370,7 @@ export async function landReviewQueue() {
 }
 
 export async function submitLandForReview(input: { listingId: number; userId: number }) {
+  requireLandVerticalAvailable('Land review submission');
   const db = await database(); const snapshot = await landWorkflowSnapshot(input.listingId, input.userId);
   if (!snapshot.readiness.submissionReady) throw new Error(`Land submission is not ready: ${snapshot.readiness.blockers.submission.join(', ') || snapshot.readiness.blockers.draft.join(', ')}`);
   const reviewCase = snapshot.reviewCase; if (!reviewCase) throw new Error('Land review case missing.');
@@ -382,6 +384,7 @@ export async function submitLandForReview(input: { listingId: number; userId: nu
 }
 
 export async function transitionLandReview(input: { listingId: number; reviewerUserId: number; action: 'start' | 'request_changes' | 'reject' | 'approve' | 'suspend'; reasonCode?: string | null; comment?: string | null }) {
+  requireLandVerticalAvailable('Land review transition');
   const db = await database(); const snapshot = await landWorkflowSnapshot(input.listingId); const reviewCase = snapshot.reviewCase; if (!reviewCase) throw new Error('Land review case missing.');
   const map = { start: ['reviewing', 'review_started'], request_changes: ['changes_requested', 'changes_requested'], reject: ['rejected', 'rejected'], approve: ['approved', 'approved'], suspend: ['suspended', 'suspended'] } as const;
   const [nextState, eventType] = map[input.action];

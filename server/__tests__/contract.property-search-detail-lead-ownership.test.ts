@@ -234,7 +234,9 @@ describe('single-property search-detail-lead ownership contract', () => {
             agencyName: 'Canonical Realty',
             slug: 'jane-agent',
             yearsExperience: 7,
-            areasServed: 'Johannesburg',
+            areasServed: JSON.stringify([
+              { canonicalLocationId: 'city:1', label: 'Johannesburg, Gauteng' },
+            ]),
             rating: 4.8,
             reviewCount: 12,
             isVerified: 1,

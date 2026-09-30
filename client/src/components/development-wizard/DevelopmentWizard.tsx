@@ -42,6 +42,11 @@ const parseNumericParam = (value: string | null) => {
   return Number.isFinite(parsed) ? parsed : undefined;
 };
 
+const ownerScopedDevelopmentWizardKey = (baseKey: string, userId: string, publisherId?: number) =>
+  publisherId == null
+    ? `${baseKey}:user-${encodeURIComponent(userId)}`
+    : `${baseKey}:user-${encodeURIComponent(userId)}:publisher-${publisherId}`;
+
 export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
   const [, setLocation] = useLocation();
 
@@ -92,13 +97,22 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
     setListingIdentity,
   } = store;
 
-  const { user } = useAuth();
+  const { user, loading: isAuthLoading } = useAuth();
   const isSuperAdmin = user?.role === 'super_admin';
   const { context: publisherContext } = usePublisherContext();
-  const shouldUsePublisherApi = isSuperAdmin && !!publisherContext?.cataloguePublisherId;
-  const persistStorageKey = shouldUsePublisherApi
-    ? PUBLISHER_DEVELOPMENT_WIZARD_STORAGE_KEY
-    : DEVELOPMENT_WIZARD_STORAGE_KEY;
+  const authenticatedUserId =
+    !isAuthLoading && user?.id != null ? String(user.id) : null;
+  const shouldUsePublisherApi =
+    Boolean(authenticatedUserId) && isSuperAdmin && !!publisherContext?.cataloguePublisherId;
+  const persistStorageKey = authenticatedUserId
+    ? ownerScopedDevelopmentWizardKey(
+        shouldUsePublisherApi
+          ? PUBLISHER_DEVELOPMENT_WIZARD_STORAGE_KEY
+          : DEVELOPMENT_WIZARD_STORAGE_KEY,
+        authenticatedUserId,
+        shouldUsePublisherApi ? publisherContext?.cataloguePublisherId : undefined,
+      )
+    : null;
 
   // Local guard: prevent double-hydration (edit/draft/create)
   const [isHydrated, setIsHydrated] = useState(false);
@@ -244,7 +258,11 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
     });
   }, [shouldUsePublisherApi, publisherContext?.cataloguePublisherId, setListingIdentity]);
 
-  // Isolate persisted wizard state between publisher-emulator and real-developer flows.
+  // Select persistence only after authentication resolves. The old global
+  // browser keys cannot be safely attributed, so discard them instead of
+  // carrying their private draft data into the current account. Suppress the
+  // reset write while switching keys: otherwise an account switch could erase
+  // either account's own persisted state before rehydration completes.
   useEffect(() => {
     const persistApi = useDevelopmentWizard.persist;
     if (!persistApi?.setOptions || !persistApi?.rehydrate) return;
@@ -253,7 +271,26 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
     persistKeyRef.current = persistStorageKey;
     setPersistReady(false);
     setIsHydrated(false);
+
+    const configuredStorage = persistApi.getOptions?.().storage;
+    if (configuredStorage) {
+      persistApi.setOptions({
+        storage: {
+          ...configuredStorage,
+          setItem: () => undefined,
+        },
+      });
+    }
     reset();
+    if (configuredStorage) persistApi.setOptions({ storage: configuredStorage });
+
+    if (!persistStorageKey) return;
+
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem(DEVELOPMENT_WIZARD_STORAGE_KEY);
+      localStorage.removeItem(PUBLISHER_DEVELOPMENT_WIZARD_STORAGE_KEY);
+    }
+
     persistApi.setOptions({ name: persistStorageKey });
 
     Promise.resolve(persistApi.rehydrate())

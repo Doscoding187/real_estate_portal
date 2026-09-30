@@ -188,7 +188,12 @@ export default function SettingsPanel() {
                 {readableValue(membership.status, 'Active')}
               </p>
             </div>
-            <Button variant="outline" onClick={() => setLocation('/contact')}>
+            <Button
+              variant="outline"
+              onClick={() =>
+                setLocation('/contact?area=developer_operations&topic=team-access')
+              }
+            >
               Request controlled team access
             </Button>
           </CardContent>

@@ -21,6 +21,7 @@ import {
   deleteDeveloperTestContext,
   type DeveloperTestContext,
 } from '../test-utils/developerTestContext';
+import { createConfirmedDeveloperTestMedia } from '../test-utils/developerMediaTestFixture';
 
 const hasDb = Boolean(process.env.DATABASE_URL);
 const describeWithDb: typeof describe = hasDb
@@ -113,6 +114,7 @@ describeWithDb('Development Card Data Flow Integration', () => {
       email: `card-flow-${suffix}@example.com`,
     });
     await activateDeveloperTestLaunchAccess(developerContext);
+    const heroImage = await createConfirmedDeveloperTestMedia(developerContext);
 
     const createdDevelopment = await developmentService.createDevelopment(testUserId, {
       name: developmentName,
@@ -126,7 +128,7 @@ describeWithDb('Development Card Data Flow Integration', () => {
       ownershipType: 'sectional-title',
       description,
       highlights,
-      images: [{ url: 'https://placehold.co/600x400/e2e8f0/64748b?text=Card+Flow' }],
+      images: [heroImage],
       unitTypes: [
         {
           name: '2 Bed Apartment',
@@ -202,10 +204,10 @@ describeWithDb('Development Card Data Flow Integration', () => {
     expect(result.sourceCounts.development).toBeGreaterThanOrEqual(1);
     expect(matched?.images).toEqual([
       expect.objectContaining({
-        url: 'https://placehold.co/600x400/e2e8f0/64748b?text=Card+Flow',
+        url: heroImage.url,
       }),
     ]);
-    expect(matched?.image).toBe('https://placehold.co/600x400/e2e8f0/64748b?text=Card+Flow');
+    expect(matched?.image).toBe(heroImage.url);
     expect(matched?.highlights).toEqual([
       expect.objectContaining({ label: '24-hour security', iconKey: 'security' }),
       expect.objectContaining({ label: 'Prime location', iconKey: 'scenic' }),
@@ -239,6 +241,7 @@ describeWithDb('Development Card Data Flow Integration', () => {
       name: `No Description Builder ${suffix}`,
       email: `no-description-${suffix}@example.com`,
     });
+    const heroImage = await createConfirmedDeveloperTestMedia(developerContext);
 
     const createdDevelopment = await developmentService.createDevelopment(testUserId, {
       name: `No Description Development ${suffix}`,
@@ -251,7 +254,7 @@ describeWithDb('Development Card Data Flow Integration', () => {
       status: 'selling',
       ownershipType: 'sectional-title',
       highlights: ['Security', 'Transport', 'Lifestyle'],
-      images: [{ url: 'https://placehold.co/600x400/e2e8f0/64748b?text=No+Description' }],
+      images: [heroImage],
       unitTypes: [
         {
           name: '1 Bed Apartment',

@@ -10,6 +10,7 @@ import { getManualEftBillingAmount } from './billingFoundationService';
 import {
   getCommercialProductKey,
   getConfiguredLaunchFeeMinor,
+  getPaidMvpLaunchAccessProductKey,
   parseCommercialMetadata,
   resolveCommercialTerm,
   type CommercialTerm,
@@ -198,9 +199,10 @@ export function filterCommercialPlans(
     plan =>
       (!audience || plan.segment === audience) &&
       isPublicCommercialPlan(plan) &&
-      !(
-        (plan.segment === 'agent' || plan.segment === 'agency' || plan.segment === 'developer') &&
-        resolveCommercialTerm(plan).kind === 'free_trial'
+      Boolean(
+        plan.segment === 'agent' || plan.segment === 'agency' || plan.segment === 'developer'
+          ? getPaidMvpLaunchAccessProductKey(plan, plan.segment)
+          : false,
       ),
   );
 }

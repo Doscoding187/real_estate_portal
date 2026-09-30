@@ -250,6 +250,9 @@ describe('migration execution authority', () => {
       'start:prod:core',
       'start:server',
       'start:server:prodlike',
+      'start:hosted:api',
+      'email:supervisor',
+      'lead-delivery:worker',
     ];
 
     for (const name of startupScripts) {
@@ -277,7 +280,9 @@ describe('migration execution authority', () => {
       expect(source).not.toContain('db:migrate:test');
     }
 
-    expect(read('railway.json')).toContain('"startCommand": "pnpm start:prod"');
+    expect(read('railway.json')).toContain('"startCommand": "pnpm start:hosted:api"');
+    expect(read('railway.email-worker.json')).toContain('"startCommand": "pnpm email:supervisor"');
+    expect(read('railway.lead-job.json')).toContain('"startCommand": "pnpm lead-delivery:worker"');
   });
 
   it('proves top-level canonical discovery excludes archived SQL', () => {
@@ -457,8 +462,12 @@ describe('migration execution authority', () => {
       '0088_retire_obsolete_billing_families.sql',
       '0089_retire_disconnected_analytics_aggregations.sql',
       '0090_retire_disconnected_boost_campaigns.sql',
+      '0091_transactional_email_deliveries.sql',
+      '0092_transactional_email_attempts.sql',
+      '0093_user_onboarding_state_primary_key.sql',
+      '0094_content_topics_primary_key.sql',
     ]);
-    expect(executionManifest.expectedHead).toBe('0090_retire_disconnected_boost_campaigns.sql');
+    expect(executionManifest.expectedHead).toBe('0094_content_topics_primary_key.sql');
     expect(archivedSqlFiles.length).toBeGreaterThan(0);
     expect(activeSqlFiles.some(file => file.includes('_archived'))).toBe(false);
     expect(executionManifest.historyTable).toBe('sql_migration_history');

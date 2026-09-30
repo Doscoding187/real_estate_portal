@@ -9,6 +9,7 @@ import {
   mysqlEnum,
   tinyint,
   index,
+  primaryKey,
   uniqueIndex,
 } from 'drizzle-orm/mysql-core';
 
@@ -143,6 +144,7 @@ export const contentTopics = mysqlTable(
     createdAt: timestamp('created_at', { mode: 'date' }).defaultNow(),
   },
   t => ({
+    contentTopicPk: primaryKey({ columns: [t.contentId, t.topicId] }),
     topicIdx: index('idx_content_topic').on(t.topicId),
   }),
 );

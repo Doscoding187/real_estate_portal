@@ -117,7 +117,7 @@ describe('agent canonical showings authority', () => {
 
     mockGetDb.mockResolvedValue(
       createSelectDbMock({
-        agents: [{ id: 77, userId: 55 }],
+        agents: [{ id: 77, userId: 55, status: 'approved' }],
         execute,
       }),
     );
@@ -148,7 +148,7 @@ describe('agent canonical showings authority', () => {
 
     mockGetDb.mockResolvedValue(
       createSelectDbMock({
-        agents: [{ id: 77, userId: 55 }],
+        agents: [{ id: 77, userId: 55, status: 'approved' }],
         propertiesCount: 7,
         leadsCount: 4,
         commissionsTotal: 125000,
@@ -173,7 +173,7 @@ describe('agent canonical showings authority', () => {
 
     mockGetDb.mockResolvedValue(
       createSelectDbMock({
-        agents: [{ id: 77, userId: 55 }],
+        agents: [{ id: 77, userId: 55, status: 'approved' }],
         execute,
       }),
     );

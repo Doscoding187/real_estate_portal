@@ -36,6 +36,11 @@ export interface MediaItem {
   displayOrder: number;
   uploadedAt?: Date;
   fileName?: string;
+  /** Server-confirmed Developer media authority for a new attachment. */
+  uploadReceipt?: string;
+  mediaReceipt?: string;
+  storageKey?: string;
+  fileSize?: number;
 }
 
 // Document Interface
@@ -287,8 +292,26 @@ export interface UnitType {
 
   // Base Media (inherited by all specs)
   baseMedia?: {
-    gallery: Array<{ id: string; url: string; isPrimary: boolean }>;
-    floorPlans: Array<{ id: string; url: string; type: 'image' | 'pdf' }>;
+    gallery: Array<{
+      id: string;
+      url: string;
+      isPrimary: boolean;
+      uploadReceipt?: string;
+      mediaReceipt?: string;
+      storageKey?: string;
+      fileName?: string;
+      fileSize?: number;
+    }>;
+    floorPlans: Array<{
+      id: string;
+      url: string;
+      type: 'image' | 'pdf';
+      uploadReceipt?: string;
+      mediaReceipt?: string;
+      storageKey?: string;
+      fileName?: string;
+      fileSize?: number;
+    }>;
     renders: Array<{ id: string; url: string; type: 'image' | 'video' }>;
   };
 
@@ -2373,6 +2396,10 @@ export const useDevelopmentWizard = create<DevelopmentWizardState>()(
     }),
     {
       name: DEVELOPMENT_WIZARD_STORAGE_KEY,
+      // The mounted wizard selects an authenticated, owner-scoped key before
+      // explicitly hydrating. Never hydrate the former global browser state
+      // during module initialization, when no authenticated identity exists.
+      skipHydration: true,
       partialize: state => ({
         // Always persist core state (never return empty object)
         currentPhase: state.currentPhase,

@@ -35,7 +35,6 @@ import {
   getCommercialPricePresentation,
   getCommercialTermPresentation,
 } from '@/lib/commercialCatalog';
-import { onboardingConfig } from '@/lib/config/onboarding';
 import {
   Dialog,
   DialogContent,
@@ -88,7 +87,7 @@ const STEPS = [
   { id: 2, title: 'Agency identity', description: 'Set the business identity' },
   { id: 3, title: 'Team launch', description: 'Invite people who will own work' },
   { id: 4, title: 'Launch Access', description: 'Confirm the Agency workspace' },
-  { id: 5, title: 'Invoice handoff', description: 'Request the EFT invoice' },
+  { id: 5, title: 'Open workspace', description: 'Prepare for activation' },
 ];
 
 const AgencyOnboarding: React.FC = () => {
@@ -113,7 +112,6 @@ const AgencyOnboarding: React.FC = () => {
   const { data: commercialCatalog } = useCommercialCatalog('agency');
   const plans: CommercialProduct[] = commercialCatalog?.products ?? [];
   const createAgencyMutation = trpc.agency.createOnboarding.useMutation();
-  const createCheckoutMutation = trpc.billing.createCheckoutSession.useMutation();
 
   // Load draft on mount
   useEffect(() => {
@@ -162,7 +160,7 @@ const AgencyOnboarding: React.FC = () => {
 
       if (agency.alreadyCreated) {
         toast.info('Resuming agency setup', {
-          description: 'Your agency already exists. Continuing to the existing payment request.',
+          description: 'Your agency already exists. Opening your preparation workspace.',
         });
       }
 
@@ -174,23 +172,9 @@ const AgencyOnboarding: React.FC = () => {
         console.warn('Agency session refresh failed after onboarding:', error);
       });
 
-      // Step 2: Issue a manual EFT invoice and hand off to billing.
-      const checkout = await createCheckoutMutation.mutateAsync({
-        // A retry must use the server-owned subscription plan, not stale form state.
-        planId: agency.alreadyCreated ? agency.planId : planSelection.selectedPlanId,
-        successUrl: `${window.location.origin}/agency/onboarding/success?agency_id=${agency.agencyId}`,
-        cancelUrl: onboardingConfig.urls.cancel(4),
-      });
-
-      // Clear draft after successful agency creation and invoice issue.
+      // Persisted onboarding is independent of invoice/payment activation.
       clearDraft();
-
-      // Redirect to the invoice handoff.
-      if (checkout.url) {
-        window.location.href = checkout.url;
-      } else {
-        throw new Error('No billing handoff URL received');
-      }
+      window.location.href = '/agency/dashboard';
     } catch (error) {
       console.error('Agency setup error:', error);
       toast.error('Setup Failed', {
@@ -276,7 +260,7 @@ const AgencyOnboarding: React.FC = () => {
           <PaymentStep
             onComplete={handleComplete}
             onPrev={prevStep}
-            isSubmitting={createAgencyMutation.isPending || createCheckoutMutation.isPending}
+            isSubmitting={createAgencyMutation.isPending}
           />
         );
       default:
@@ -288,10 +272,12 @@ const AgencyOnboarding: React.FC = () => {
     <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Build your Agency operating workspace</h1>
+          <h1 className="text-3xl font-bold text-gray-900">
+            Build your Agency operating workspace
+          </h1>
           <p className="mt-2 text-gray-600">
-            Establish the business once, then use one connected space to manage the team,
-            inventory, opportunities and commercial progress.
+            Establish the business once, then use one connected space to manage the team, inventory,
+            opportunities and commercial progress.
           </p>
         </div>
 
@@ -299,8 +285,8 @@ const AgencyOnboarding: React.FC = () => {
           <CardHeader>
             <CardTitle>Set up your Agency base</CardTitle>
             <CardDescription>
-              Create the Agency identity, invite your team when ready, then request the once-off
-              Launch Access invoice.
+              Create the Agency identity, invite your team when ready, and save the commercial
+              selection that will guide activation when it becomes available.
             </CardDescription>
           </CardHeader>
           <CardContent className="p-6">
@@ -544,14 +530,8 @@ const BrandingStep: React.FC<StepProps> = ({ onNext, onPrev }) => {
   );
 };
 
-const TeamSetupStep: React.FC<StepProps> = ({ onNext, onPrev }) => {
-  const {
-    register,
-    handleSubmit,
-    watch,
-    setValue,
-    formState: { errors },
-  } = useForm<TeamSetupData>({
+export const TeamSetupStep: React.FC<StepProps> = ({ onNext, onPrev }) => {
+  const { handleSubmit, watch, setValue } = useForm<TeamSetupData>({
     defaultValues: { inviteAgents: false, agentEmails: [] },
   });
 
@@ -592,8 +572,9 @@ const TeamSetupStep: React.FC<StepProps> = ({ onNext, onPrev }) => {
 
       <Alert>
         <AlertDescription>
-          Invite the people who will own Agency inventory, opportunities and follow-up. You can do
-          this now or continue and manage the team from the workspace later.
+          Save the people who will own Agency inventory, opportunities and follow-up. Their
+          invitation links remain queued and no team access is granted until approved commercial
+          activation; you can also manage the team from the workspace later.
         </AlertDescription>
       </Alert>
 
@@ -728,8 +709,9 @@ export const PlanSelectionStep: React.FC<PlanSelectionStepProps> = ({ plans, onN
 
       <Alert>
         <AlertDescription>
-          Select the plan that best fits your agency's needs. Your selection determines the invoice
-          issued at the end of this wizard.
+          Select the plan that best fits your agency's needs. We save this selection with your
+          preparation; this wizard does not issue an invoice, request payment, or activate
+          publishing.
         </AlertDescription>
       </Alert>
 
@@ -777,7 +759,10 @@ export const PlanSelectionStep: React.FC<PlanSelectionStepProps> = ({ plans, onN
                       ) : null}
                     </div>
                     {billing.termNote ? (
-                      <p className="text-xs font-medium text-gray-500 mb-2" data-testid="plan-term-note">
+                      <p
+                        className="text-xs font-medium text-gray-500 mb-2"
+                        data-testid="plan-term-note"
+                      >
                         {billing.termNote}
                       </p>
                     ) : null}
@@ -839,7 +824,7 @@ export const PlanSelectionStep: React.FC<PlanSelectionStepProps> = ({ plans, onN
             Back
           </Button>
           <Button type="submit" disabled={!selectedPlanId || !agreeToTerms}>
-            Continue to Payment
+            Review onboarding
           </Button>
         </div>
       </form>
@@ -847,22 +832,22 @@ export const PlanSelectionStep: React.FC<PlanSelectionStepProps> = ({ plans, onN
   );
 };
 
-const PaymentStep: React.FC<{ onComplete: () => void; onPrev: () => void; isSubmitting?: boolean }> = ({
-  onComplete,
-  onPrev,
-  isSubmitting = false,
-}) => {
+const PaymentStep: React.FC<{
+  onComplete: () => void;
+  onPrev: () => void;
+  isSubmitting?: boolean;
+}> = ({ onComplete, onPrev, isSubmitting = false }) => {
   return (
     <div className="space-y-6">
       <div className="flex items-center space-x-2">
         <CreditCard className="w-5 h-5 text-primary" />
-        <h3 className="text-lg font-semibold">Request your Launch Access invoice</h3>
+        <h3 className="text-lg font-semibold">Prepare your agency for activation</h3>
       </div>
 
       <Alert>
         <AlertDescription>
-          Your Agency profile and Launch Access selection are ready. Issue the invoice, then use
-          Billing to complete manual EFT and submit proof for finance verification.
+          Save your agency profile and plan selection, then continue in your workspace. This step
+          does not request payment or activate publishing.
         </AlertDescription>
       </Alert>
 
@@ -872,28 +857,29 @@ const PaymentStep: React.FC<{ onComplete: () => void; onPrev: () => void; isSubm
           <div className="flex items-start space-x-3">
             <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
             <div>
-              <strong>Invoice issued:</strong> Your EFT invoice and payment reference will be ready
-              immediately
+              <strong>Profile saved:</strong> Your agency identity and branding are retained for
+              review.
             </div>
           </div>
           <div className="flex items-start space-x-3">
             <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
             <div>
-              <strong>Proof upload:</strong> Pay by EFT, then upload proof in the billing workspace
+              <strong>Inventory preparation:</strong> Prepare private drafts and return to continue
+              them.
             </div>
           </div>
           <div className="flex items-start space-x-3">
             <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
             <div>
-              <strong>Activation review:</strong> The supported Agency workspace unlocks after
-              finance approves the payment proof
+              <strong>Commercial activation:</strong> Publishing requires the paid entitlement after
+              finance verification. Payment is a separate step when available.
             </div>
           </div>
           <div className="flex items-start space-x-3">
             <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
             <div>
-              <strong>Team launch:</strong> Bring people into the Agency workspace so inventory,
-              opportunities and follow-up have clear operating owners
+              <strong>Team launch:</strong> Team invitations and commercial capabilities remain
+              subject to their existing approval and activation requirements.
             </div>
           </div>
         </div>
@@ -905,7 +891,7 @@ const PaymentStep: React.FC<{ onComplete: () => void; onPrev: () => void; isSubm
           Back
         </Button>
         <Button onClick={onComplete} size="lg" disabled={isSubmitting}>
-          {isSubmitting ? 'Issuing Invoice...' : 'Issue Invoice'}
+          {isSubmitting ? 'Saving agency...' : 'Save and open workspace'}
           <ChevronRight className="w-4 h-4 ml-2" />
         </Button>
       </div>

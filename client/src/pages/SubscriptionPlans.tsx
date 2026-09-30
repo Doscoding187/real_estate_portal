@@ -13,8 +13,36 @@ import {
 import { useCommercialCatalog } from '@/hooks/useCommercialCatalog';
 import type { CommercialAudience } from '@/hooks/useCommercialCatalog';
 import { Building2, Check, Crown, Loader2, Rocket, User, Zap } from 'lucide-react';
+import { CommercialActivationNotice } from '@/components/commercial/CommercialActivationNotice';
+import { COMMERCIAL_ACTIVATION_STATE } from '@shared/commercialActivation';
 
 const visibleAudiences: CommercialAudience[] = ['agent', 'agency', 'developer'];
+
+const PREPARATION_PATHS: Array<{
+  audience: string;
+  description: string;
+  href: string;
+  label: string;
+}> = [
+  {
+    audience: 'Agents',
+    description: 'Establish your professional presence and prepare private listing drafts.',
+    href: '/advertise/sell/agents',
+    label: 'Start Agent preparation',
+  },
+  {
+    audience: 'Agencies',
+    description: 'Set up your Agency identity and prepare a private inventory workspace.',
+    href: '/advertise/sell/agencies',
+    label: 'Start Agency preparation',
+  },
+  {
+    audience: 'Developers',
+    description: 'Submit your organisation for review and prepare private development drafts.',
+    href: '/advertise/sell/developers',
+    label: 'Start Developer preparation',
+  },
+];
 
 function getPlanIcon(name: string) {
   const normalized = name.toLowerCase();
@@ -35,13 +63,12 @@ function formatLimitValue(value: unknown) {
   return String(value);
 }
 
-export default function SubscriptionPlans() {
+export function CommercialSubscriptionPlans() {
   const [, setLocation] = useLocation();
   const [selectedAudience, setSelectedAudience] = useState<CommercialAudience>('agent');
   const catalog = useCommercialCatalog();
   const products = useMemo(
-    () =>
-      (catalog.data?.products || []).filter(product => product.audience === selectedAudience),
+    () => (catalog.data?.products || []).filter(product => product.audience === selectedAudience),
     [catalog.data?.products, selectedAudience],
   );
 
@@ -64,6 +91,10 @@ export default function SubscriptionPlans() {
             Prices, trial terms, benefits, limits, and next actions are supplied by the canonical
             Property Listify commercial catalog.
           </p>
+        </div>
+
+        <div className="mx-auto mb-8 max-w-3xl">
+          <CommercialActivationNotice />
         </div>
 
         <Tabs
@@ -113,7 +144,8 @@ export default function SubscriptionPlans() {
                   const action = getCommercialActionPresentation(product);
                   const Icon = getPlanIcon(product.name);
                   const limitLines = Object.entries(product.limits).map(
-                    ([key, value]) => `${formatCommercialLimitLabel(key)}: ${formatLimitValue(value)}`,
+                    ([key, value]) =>
+                      `${formatCommercialLimitLabel(key)}: ${formatLimitValue(value)}`,
                   );
 
                   return (
@@ -142,7 +174,9 @@ export default function SubscriptionPlans() {
                       <div className="mb-6 mt-5">
                         <div className="flex items-baseline gap-2">
                           <span className="text-4xl font-bold text-slate-900">{price.label}</span>
-                          {price.period ? <span className="text-slate-600">{price.period}</span> : null}
+                          {price.period ? (
+                            <span className="text-slate-600">{price.period}</span>
+                          ) : null}
                         </div>
                         {product.trial.available ? (
                           <div className="mt-1 text-sm font-medium text-blue-600">
@@ -153,7 +187,10 @@ export default function SubscriptionPlans() {
 
                       <ul className="mb-8 flex-1 space-y-3">
                         {[...product.benefits, ...limitLines].map(feature => (
-                          <li key={feature} className="flex items-start gap-2 text-sm text-slate-700">
+                          <li
+                            key={feature}
+                            className="flex items-start gap-2 text-sm text-slate-700"
+                          >
                             <Check className="mt-0.5 h-5 w-5 shrink-0 text-green-600" />
                             <span>{feature}</span>
                           </li>
@@ -166,7 +203,7 @@ export default function SubscriptionPlans() {
                         disabled={action.disabled}
                         onClick={() => action.href && setLocation(action.href)}
                       >
-                        {action.label}
+                        {COMMERCIAL_ACTIVATION_STATE.enabled ? action.label : 'Prepare workspace'}
                       </Button>
                     </Card>
                   );
@@ -177,5 +214,52 @@ export default function SubscriptionPlans() {
         </Tabs>
       </div>
     </HomeLayout>
+  );
+}
+
+function PreparationSubscriptionPlans() {
+  const [, setLocation] = useLocation();
+
+  return (
+    <HomeLayout>
+      <div
+        className="container mx-auto px-4 py-24 sm:px-6 lg:px-8"
+        data-testid="subscription-plans-preparation"
+      >
+        <div className="mx-auto mb-8 max-w-3xl text-center">
+          <h1 className="mb-4 text-4xl font-bold text-slate-900">
+            Prepare your Property Listify workspace before commercial activation.
+          </h1>
+          <p className="text-lg text-slate-600">
+            Choose a role-specific preparation path. You can establish your presence and prepare
+            private work now; publishing remains available after approved commercial activation.
+          </p>
+        </div>
+
+        <div className="mx-auto mb-10 max-w-3xl">
+          <CommercialActivationNotice />
+        </div>
+
+        <div className="mx-auto grid max-w-5xl grid-cols-1 gap-6 md:grid-cols-3">
+          {PREPARATION_PATHS.map(path => (
+            <Card key={path.audience} className="flex flex-col p-6">
+              <h2 className="text-2xl font-bold text-slate-900">For {path.audience}</h2>
+              <p className="mt-3 flex-1 text-sm leading-6 text-slate-600">{path.description}</p>
+              <Button className="mt-6 w-full" onClick={() => setLocation(path.href)}>
+                {path.label}
+              </Button>
+            </Card>
+          ))}
+        </div>
+      </div>
+    </HomeLayout>
+  );
+}
+
+export default function SubscriptionPlans() {
+  return COMMERCIAL_ACTIVATION_STATE.enabled ? (
+    <CommercialSubscriptionPlans />
+  ) : (
+    <PreparationSubscriptionPlans />
   );
 }

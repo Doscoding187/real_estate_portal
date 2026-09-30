@@ -262,6 +262,12 @@ describe('exploreOptionAEligibilityService', () => {
     ).resolves.toEqual([]);
   });
 
+  it('does not offer deferred Land inventory as a generic Explore candidate', async () => {
+    await expect(
+      resolveCandidates([listing({ propertyType: 'plot' })], [], [property()]),
+    ).resolves.toEqual([]);
+  });
+
   it('uses a fixed number of bounded reads for ten assigned listings and performs no writes', async () => {
     const candidateListings = Array.from({ length: 10 }, (_, index) =>
       listing({ id: 301 + index }),

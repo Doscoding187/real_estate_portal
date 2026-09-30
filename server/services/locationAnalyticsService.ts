@@ -28,6 +28,7 @@ import {
 } from '../../drizzle/schema';
 import { eq, and, sql, gte, desc, asc } from 'drizzle-orm';
 import { redisCache, CacheTTL } from '../lib/redis';
+import { excludeLandFromGenericListingWorkflow } from './landLaunchContainmentService';
 
 // ============================================================================
 // Types and Interfaces
@@ -210,7 +211,13 @@ export const locationAnalyticsService = {
         propertyDetails: listings.propertyDetails,
       })
       .from(listings)
-      .where(and(locationFilter, eq(listings.status, 'published')));
+      .where(
+        and(
+          locationFilter,
+          eq(listings.status, 'published'),
+          excludeLandFromGenericListingWorkflow(),
+        ),
+      );
 
     // Separate sale and rental listings
     const saleListings = activeListings.filter((l: any) => l.action === 'sell' && l.askingPrice);
@@ -324,7 +331,13 @@ export const locationAnalyticsService = {
         createdAt: listings.createdAt,
       })
       .from(listings)
-      .where(and(locationFilter, eq(listings.status, 'published')));
+      .where(
+        and(
+          locationFilter,
+          eq(listings.status, 'published'),
+          excludeLandFromGenericListingWorkflow(),
+        ),
+      );
 
     // Calculate average days on market
     // Property 27: Days on market calculation
@@ -354,6 +367,7 @@ export const locationAnalyticsService = {
           locationFilter,
           eq(listings.status, 'published'),
           gte(listings.createdAt, thirtyDaysAgo.toISOString()),
+          excludeLandFromGenericListingWorkflow(),
         ),
       );
 
@@ -418,7 +432,13 @@ export const locationAnalyticsService = {
         count: sql<number>`count(*)`,
       })
       .from(listings)
-      .where(and(locationFilter, eq(listings.status, 'published')))
+      .where(
+        and(
+          locationFilter,
+          eq(listings.status, 'published'),
+          excludeLandFromGenericListingWorkflow(),
+        ),
+      )
       .groupBy(listings.propertyType);
 
     const result: PropertyTypeStats = {};

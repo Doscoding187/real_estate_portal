@@ -1,6 +1,8 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 
 import type { MediaType } from '../../shared/listing-types';
+import { isStrongRuntimeSecret } from '../_core/securityRuntimeConfiguration';
+import { resolveAppRuntimeEnv } from '../_core/runtimeBootstrap';
 
 const TOKEN_TTL_SECONDS = 60 * 60;
 const DEVELOPMENT_SECRET = 'listing-media-upload-dev-only';
@@ -21,11 +23,18 @@ export type ListingMediaUploadTokenPayload = {
 };
 
 function getSecret(secret?: string | null): string {
+  const runtimeEnv = resolveAppRuntimeEnv();
+  const deployed = runtimeEnv === 'production' || runtimeEnv === 'staging';
+  if (deployed) {
+    const configured = String(process.env.MEDIA_UPLOAD_TOKEN_SECRET ?? '').trim();
+    if (!isStrongRuntimeSecret(configured)) {
+      throw new Error('Listing media upload token secret is not configured securely.');
+    }
+    return configured;
+  }
+
   const configured = secret ?? process.env.MEDIA_UPLOAD_TOKEN_SECRET ?? process.env.JWT_SECRET;
   if (configured && configured.trim()) return configured.trim();
-  if (process.env.NODE_ENV === 'production') {
-    throw new Error('Listing media upload token secret is not configured.');
-  }
   return DEVELOPMENT_SECRET;
 }
 

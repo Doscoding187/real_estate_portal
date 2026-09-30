@@ -29,6 +29,7 @@ describe('GET /api/version smoke', () => {
         gitSha: 'abc123def456',
         buildTime: '2026-03-03T12:00:00Z',
         env: 'test',
+        releaseId: null,
       });
     } finally {
       server.close();

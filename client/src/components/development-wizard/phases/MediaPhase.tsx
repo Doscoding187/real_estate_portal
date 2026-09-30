@@ -22,67 +22,15 @@ import {
   ShieldCheck,
   AlertCircle,
   CheckCircle2,
-  Link as LinkIcon,
-  Plus,
 } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
 import { cn } from '@/lib/utils';
 import { SortableMediaGrid } from '@/components/media/SortableMediaGrid';
 import type { MediaItem as GridMediaItem } from '@/components/media/SortableMediaGrid';
-import { WizardData } from '@/lib/types/wizard-workflows';
-
-// Helper component for Video URL input
-function VideoUrlInput({ onAdd }: { onAdd: (url: string) => void }) {
-  const [url, setUrl] = useState('');
-
-  const isValidVideoUrl = (link: string) => {
-    // Check for YouTube or Vimeo URLs
-    const youtubeRegex =
-      /^(https?:\/\/)?(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)[\w-]+/;
-    const vimeoRegex = /^(https?:\/\/)?(www\.)?vimeo\.com\/\d+/;
-    return youtubeRegex.test(link) || vimeoRegex.test(link);
-  };
-
-  const handleAdd = () => {
-    if (!url.trim()) {
-      toast.error('Please enter a video URL');
-      return;
-    }
-    if (!isValidVideoUrl(url)) {
-      toast.error('Please enter a valid YouTube or Vimeo URL');
-      return;
-    }
-    onAdd(url.trim());
-    setUrl('');
-  };
-
-  return (
-    <div className="flex gap-2">
-      <div className="relative flex-1">
-        <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-        <Input
-          placeholder="https://www.youtube.com/watch?v=..."
-          value={url}
-          onChange={e => setUrl(e.target.value)}
-          onKeyDown={e => {
-            if (e.key === 'Enter') {
-              e.preventDefault();
-              handleAdd();
-            }
-          }}
-          className="pl-9"
-        />
-      </div>
-      <Button onClick={handleAdd} type="button" variant="secondary" className="shrink-0">
-        <Plus className="w-4 h-4 mr-1" />
-        Add
-      </Button>
-    </div>
-  );
-}
 
 export function MediaPhase() {
   const { developmentData, saveWorkflowStepData, stepData: allStepData } = useDevelopmentWizard();
+  const editingDevelopmentId = useDevelopmentWizard(state => state.editingId);
 
   const [activeTab, setActiveTab] = useState('gallery');
 
@@ -129,7 +77,8 @@ export function MediaPhase() {
     hasDocuments ? 30 : 0, // Documents requirement
   ].reduce((a, b) => a + b, 0);
 
-  const presignMutation = trpc.upload.presign.useMutation();
+  const reserveMediaUpload = trpc.developer.reserveMediaUpload.useMutation();
+  const confirmMediaUpload = trpc.developer.confirmMediaUpload.useMutation();
 
   // ACTIONS ------------------------------------------------------------------
 
@@ -287,19 +236,25 @@ export function MediaPhase() {
       // 1. Concurrent Uploads
       const uploadPromises = files.map(async file => {
         const loadingToast = toast.loading(`Uploading ${file.name}...`);
-        const optimisticUrl = URL.createObjectURL(file);
 
         try {
           let type: MediaItem['type'] = 'image';
           if (file.type.startsWith('video')) type = 'video';
           if (file.type === 'application/pdf') type = 'pdf';
-
-          const { url: uploadUrl, publicUrl } = await presignMutation.mutateAsync({
+          const receiptCategory =
+            type === 'video'
+              ? 'development_video'
+              : type === 'pdf'
+                ? 'development_document'
+                : 'development_image';
+          const reservation = await reserveMediaUpload.mutateAsync({
             filename: file.name,
             contentType: file.type,
+            category: receiptCategory,
+            ...(editingDevelopmentId ? { developmentId: editingDevelopmentId } : {}),
           });
 
-          const uploadResponse = await fetch(uploadUrl, {
+          const uploadResponse = await fetch(reservation.uploadUrl, {
             method: 'PUT',
             body: file,
             headers: { 'Content-Type': file.type },
@@ -308,18 +263,24 @@ export function MediaPhase() {
             throw new Error(`Upload failed with status ${uploadResponse.status}.`);
           }
 
-          URL.revokeObjectURL(optimisticUrl);
+          const confirmed = await confirmMediaUpload.mutateAsync({
+            uploadReceipt: reservation.uploadReceipt,
+          });
+
           toast.dismiss(loadingToast);
           toast.success(`Uploaded ${file.name}`);
 
           return {
             id: `media-${Date.now()}-${Math.random()}`,
-            url: publicUrl,
+            url: confirmed.url,
             type,
             category: isHero ? 'hero' : category, // Enforce 'hero' category on new uploads
             isPrimary: isHero,
             displayOrder: 0,
             fileName: file.name,
+            fileSize: confirmed.fileSize,
+            storageKey: confirmed.key,
+            uploadReceipt: confirmed.uploadReceipt,
             uploadedAt: new Date(),
           } as MediaItem;
         } catch (error) {
@@ -497,8 +458,10 @@ export function MediaPhase() {
                 onReorder={reordered => {
                   // Map back to MediaItem
                   const asMediaItems = reordered.map(
-                    r =>
-                      ({
+                    r => {
+                      const existing = items.find(item => item.id === r.id);
+                      return {
+                        ...existing,
                         id: r.id,
                         url: r.url,
                         type: r.type,
@@ -506,7 +469,8 @@ export function MediaPhase() {
                         isPrimary: r.isPrimary,
                         displayOrder: r.displayOrder,
                         fileName: r.fileName,
-                      }) as unknown as MediaItem,
+                      } as unknown as MediaItem;
+                    },
                   );
                   handleReorderMedia(asMediaItems);
                 }}
@@ -668,35 +632,10 @@ export function MediaPhase() {
               </CardContent>
             </Card>
 
-            {/* Video URL Input */}
             <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Video className="w-4 h-4 text-purple-500" />
-                  Add Video Link
-                </CardTitle>
-                <CardDescription>Paste a YouTube or Vimeo URL to embed</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <VideoUrlInput
-                  onAdd={url => {
-                    const newItem: MediaItem = {
-                      id: `video-${Date.now()}`,
-                      url,
-                      type: 'video',
-                      category: 'videos',
-                      isPrimary: false,
-                      displayOrder: videos.length,
-                      fileName: url.includes('youtube')
-                        ? 'YouTube Video'
-                        : url.includes('vimeo')
-                          ? 'Vimeo Video'
-                          : 'Video Link',
-                    };
-                    handleAddMedia(newItem);
-                    toast.success('Video link added!');
-                  }}
-                />
+              <CardContent className="pt-6 text-sm text-slate-600">
+                Developer media accepts verified uploaded files. External video links are not used as
+                attachment authority.
               </CardContent>
             </Card>
           </TabsContent>

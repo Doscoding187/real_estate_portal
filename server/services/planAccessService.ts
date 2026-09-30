@@ -1,6 +1,7 @@
 import { and, asc, eq } from 'drizzle-orm';
 import {
   agencies,
+  agents,
   billableAccounts,
   developerOrganisationMemberships,
   developerOrganisations,
@@ -10,18 +11,31 @@ import {
   users,
 } from '../../drizzle/schema';
 import { getDb } from '../db';
+import { resolveCurrentAgencyMembershipForAgent } from './agencyMembershipService';
+import { resolveDeveloperActorForUser } from './developerActorResolution';
 import {
   calculateCommercialTermEnd,
   getCommercialProductKey,
   getConfiguredLaunchFeeMinor,
+  getPaidMvpLaunchAccessProductKey,
   isPaidCommercialTermExpired,
+  parseCanonicalCommercialTimestamp,
   parseCommercialMetadata,
   resolveCommercialTerm,
   validatePaidLaunchAccessPayment,
 } from './commercialTerm';
+import {
+  requireAnyPaidMvpLaunchAccessActivation,
+  requireCommercialActivation,
+} from './commercialActivationPolicy';
 
 export type PlanSegment = 'agent' | 'agency' | 'enterprise' | 'developer';
 export type SubscriptionOwnerType = 'agent' | 'agency' | 'developer';
+export type PlanAccessOwnerSource =
+  | 'individual_agent'
+  | 'agency_admin'
+  | 'agency_membership'
+  | 'developer_membership';
 export type SubscriptionStatus =
   | 'trial'
   | 'pending_payment'
@@ -87,6 +101,7 @@ export type PlanSnapshot = {
   name: string;
   displayName: string;
   segment: PlanSegment;
+  isActive: number;
   priceMonthly: number;
   trialDays: number;
   metadata: Record<string, unknown> | null;
@@ -115,6 +130,8 @@ export type SubscriptionSnapshot = {
 export type PlanAccessProjection = {
   ownerType: SubscriptionOwnerType;
   ownerId: number;
+  /** The authenticated authority that selected the commercial owner. */
+  ownerSource: PlanAccessOwnerSource;
   currentPlan: PlanSnapshot | null;
   subscription: SubscriptionSnapshot | null;
   entitlements: EntitlementMap;
@@ -169,6 +186,7 @@ function toPlanSnapshot(row: typeof plans.$inferSelect): PlanSnapshot {
     name: row.name,
     displayName: row.displayName,
     segment: (row.segment || 'agent') as PlanSegment,
+    isActive: Number(row.isActive || 0),
     priceMonthly: Number(row.priceMonthly || row.price || 0),
     trialDays: Number(row.trialDays || 0),
     metadata: parseJsonRecord(row.metadata),
@@ -202,15 +220,7 @@ export function isPaidSubscriptionEntitled(status: SubscriptionStatus | null | u
 }
 
 function parseEntitlementTimestamp(value: string | Date): number {
-  if (value instanceof Date) return value.getTime();
-  const normalized = value.trim();
-  // MySQL DATETIME values have no timezone marker; the database authority
-  // treats them as UTC so entitlement decisions are process-timezone safe.
-  const utcValue =
-    /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(?:\.\d+)?$/.test(normalized)
-      ? `${normalized.replace(' ', 'T')}Z`
-      : normalized;
-  return new Date(utcValue).getTime();
+  return parseCanonicalCommercialTimestamp(value) ?? Number.NaN;
 }
 
 /**
@@ -238,6 +248,32 @@ export function isPaidSubscriptionRowEntitled(
   return true;
 }
 
+/**
+ * The public/commercial read paths must not treat a generic active or legacy
+ * subscription as Launch Access. A fixed paid term always requires a valid
+ * UTC end, in addition to the exact approved product and owner segment.
+ */
+export function isPaidMvpLaunchAccessSubscriptionEntitled(
+  row: {
+    status: string | null | undefined;
+    currentPeriodEnd: string | Date | null | undefined;
+    graceEndsAt?: string | Date | null | undefined;
+  },
+  plan: Parameters<typeof getPaidMvpLaunchAccessProductKey>[0],
+  ownerType: SubscriptionOwnerType,
+  now: Date = new Date(),
+): boolean {
+  if (!getPaidMvpLaunchAccessProductKey(plan, ownerType)) return false;
+  // Launch Access is a founder-approved fixed 90-day term.  A generic
+  // grace-period state is intentionally not an entitlement for this product:
+  // expiry removes new paid capability even when an older billing workflow
+  // has left a grace row behind.
+  if (row.status !== 'active') return false;
+  const end = parseCanonicalCommercialTimestamp(row.currentPeriodEnd);
+  if (end === null || end <= now.getTime()) return false;
+  return true;
+}
+
 function deriveTrialState(
   status: SubscriptionStatus | null,
   trialEndsAt: string | null,
@@ -250,8 +286,8 @@ function deriveTrialState(
     };
   }
 
-  const trialEndDate = new Date(trialEndsAt);
-  if (Number.isNaN(trialEndDate.getTime())) {
+  const trialEndDate = parseEntitlementTimestamp(trialEndsAt);
+  if (!Number.isFinite(trialEndDate)) {
     return {
       trialStatus: status === 'trial' ? 'active' : status === 'expired' ? 'expired' : 'none',
       trialEndsAt: trialEndsAt || null,
@@ -260,7 +296,7 @@ function deriveTrialState(
   }
 
   const now = Date.now();
-  const rawDays = Math.ceil((trialEndDate.getTime() - now) / MS_PER_DAY);
+  const rawDays = Math.ceil((trialEndDate - now) / MS_PER_DAY);
   const expired = rawDays <= 0 || status === 'expired' || status === 'cancelled';
 
   if (status !== 'trial' && !expired) {
@@ -284,46 +320,58 @@ async function getOwnerContextForUser(
 ): Promise<{
   ownerType: SubscriptionOwnerType;
   ownerId: number;
+  ownerSource: PlanAccessOwnerSource;
 } | null> {
   if (user.role === 'agency_admin' && user.agencyId) {
     return {
       ownerType: 'agency',
       ownerId: Number(user.agencyId),
+      ownerSource: 'agency_admin',
+    };
+  }
+
+  if (user.role === 'agent') {
+    // Agency attribution is a relationship authority. A stale profile claim,
+    // user.agencyId value, or client-supplied identifier cannot select the
+    // agency's commercial owner. Only the current canonical membership can do
+    // that; an agent without one remains an independent owner.
+    const [agent] = await db
+      .select({ id: agents.id })
+      .from(agents)
+      .where(eq(agents.userId, user.id))
+      .limit(1);
+    if (agent) {
+      const membership = await resolveCurrentAgencyMembershipForAgent(db, Number(agent.id));
+      if (membership) {
+        return {
+          ownerType: 'agency',
+          ownerId: Number(membership.agencyId),
+          ownerSource: 'agency_membership',
+        };
+      }
+    }
+
+    return {
+      ownerType: 'agent',
+      ownerId: user.id,
+      ownerSource: 'individual_agent',
     };
   }
 
   if (user.role === 'property_developer') {
-    const [membership] = await db
-      .select({ organisationId: developerOrganisationMemberships.organisationId })
-      .from(developerOrganisationMemberships)
-      .innerJoin(
-        developerOrganisations,
-        eq(developerOrganisationMemberships.organisationId, developerOrganisations.id),
-      )
-      .where(
-        and(
-          eq(developerOrganisationMemberships.userId, user.id),
-          eq(developerOrganisationMemberships.status, 'active'),
-          eq(developerOrganisations.status, 'approved'),
-        ),
-      )
-      .orderBy(developerOrganisationMemberships.id)
-      .limit(1);
-
     // Commercial access is owned by the Developer Organisation, not the
     // login row. Do not fall back to user.id or the retired developers row.
-    if (!membership) return null;
+    const actor = await resolveDeveloperActorForUser(db, user.id);
+    if (!actor || actor.organisation.status !== 'approved') return null;
 
     return {
       ownerType: 'developer',
-      ownerId: Number(membership.organisationId),
+      ownerId: actor.organisationId,
+      ownerSource: 'developer_membership',
     };
   }
 
-  return {
-    ownerType: 'agent',
-    ownerId: user.id,
-  };
+  return null;
 }
 
 async function getStarterPlan(db: DbHandle, ownerType: SubscriptionOwnerType) {
@@ -364,7 +412,13 @@ async function ensureDefaultSubscriptionForUser(user: UserRow): Promise<Subscrip
   const [existing] = await db
     .select()
     .from(subscriptions)
-    .where(eq(subscriptions.billableAccountId, billableAccountId))
+    .where(
+      and(
+        eq(subscriptions.billableAccountId, billableAccountId),
+        eq(subscriptions.ownerType, ownerType),
+        eq(subscriptions.ownerId, ownerId),
+      ),
+    )
     .limit(1);
 
   return existing || null;
@@ -483,7 +537,13 @@ export async function getPlanAccessProjectionForUserId(
   let [subscriptionRow] = await db
     .select()
     .from(subscriptions)
-    .where(eq(subscriptions.billableAccountId, billableAccountId))
+    .where(
+      and(
+        eq(subscriptions.billableAccountId, billableAccountId),
+        eq(subscriptions.ownerType, ownerType),
+        eq(subscriptions.ownerId, ownerId),
+      ),
+    )
     .limit(1);
 
   const shouldAutoProvision = user.role === 'agency_admin' && ownerType === 'agency';
@@ -514,7 +574,7 @@ export async function getPlanAccessProjectionForUserId(
     : { ...DEFAULT_FEATURE_ENTITLEMENTS };
 
   if (subscriptionRow?.status === 'trial' && subscriptionRow.trialEndsAt) {
-    const trialEndTs = new Date(subscriptionRow.trialEndsAt).getTime();
+    const trialEndTs = parseEntitlementTimestamp(subscriptionRow.trialEndsAt);
 
     if (Number.isFinite(trialEndTs) && trialEndTs <= Date.now()) {
       await db
@@ -558,6 +618,7 @@ export async function getPlanAccessProjectionForUserId(
   return {
     ownerType,
     ownerId,
+    ownerSource: ownerContext.ownerSource,
     currentPlan: planRow ? toPlanSnapshot(planRow) : null,
     subscription: subscriptionRow ? toSubscriptionSnapshot(subscriptionRow) : null,
     entitlements: entitlementMap,
@@ -609,6 +670,9 @@ export async function setSubscriptionPlanForOwner(input: {
   const nextStatus = input.status || 'active';
   const term = resolveCommercialTerm(planRow);
   if (term.kind === 'paid_launch_access') {
+    if (!getPaidMvpLaunchAccessProductKey(planRow, input.ownerType)) {
+      throw new Error('Plan is not an approved paid-MVP Launch Access product.');
+    }
     if (nextStatus === 'pending_payment' && input.allowPendingPayment) {
       // Pending payment is intentionally non-entitled. Activation still
       // requires the verified payment branch below.
@@ -679,7 +743,11 @@ export async function setSubscriptionPlanForOwner(input: {
     .select()
     .from(subscriptions)
     .where(
-      eq(subscriptions.billableAccountId, billableAccountId),
+      and(
+        eq(subscriptions.billableAccountId, billableAccountId),
+        eq(subscriptions.ownerType, input.ownerType),
+        eq(subscriptions.ownerId, input.ownerId),
+      ),
     )
     .limit(1);
 
@@ -713,6 +781,7 @@ export async function activatePaidLaunchAccessForOwner(input: {
   metadata?: Record<string, unknown> | null;
   db?: any;
 }): Promise<SubscriptionSnapshot | null> {
+  requireAnyPaidMvpLaunchAccessActivation('Paid Launch Access activation');
   const db = input.db || (await getDb());
   if (!db) throw new Error('Database not available');
 
@@ -721,6 +790,11 @@ export async function activatePaidLaunchAccessForOwner(input: {
   if (planRow.segment !== input.ownerType) {
     throw new Error('Plan is not eligible for this commercial owner.');
   }
+  const productKey = getPaidMvpLaunchAccessProductKey(planRow, input.ownerType);
+  if (!productKey) {
+    throw new Error('Plan is not an approved paid-MVP Launch Access product.');
+  }
+  requireCommercialActivation('Paid Launch Access activation', productKey);
 
   const term = resolveCommercialTerm(planRow);
   const configuredFee = getConfiguredLaunchFeeMinor(planRow);
@@ -733,7 +807,23 @@ export async function activatePaidLaunchAccessForOwner(input: {
     throw new Error(activationError);
   }
 
-  const start = input.activatedAt || new Date();
+  const activatedAt = input.activatedAt || new Date();
+  const billableAccountId = await ensureBillableAccount(db, input.ownerType, input.ownerId);
+  const [currentSubscription] = await db
+    .select()
+    .from(subscriptions)
+    .where(eq(subscriptions.billableAccountId, billableAccountId))
+    .limit(1);
+  const currentEndTimestamp = parseCanonicalCommercialTimestamp(
+    currentSubscription?.currentPeriodEnd,
+  );
+  const currentEnd = currentEndTimestamp === null ? null : new Date(currentEndTimestamp);
+  const preservesPaidDays =
+    currentSubscription?.status === 'active' &&
+    currentSubscription.planId === input.planId &&
+    currentEnd !== null &&
+    currentEnd.getTime() > activatedAt.getTime();
+  const start = preservesPaidDays ? currentEnd! : activatedAt;
   const end = calculateCommercialTermEnd(start, term);
   if (!end) throw new Error('Paid Launch Access has no valid duration.');
   const metadata = parseCommercialMetadata(planRow.metadata);
@@ -744,7 +834,9 @@ export async function activatePaidLaunchAccessForOwner(input: {
     planId: input.planId,
     status: 'active',
     trialEndsAt: null,
-    currentPeriodStart: toDbDateTime(start),
+    currentPeriodStart: preservesPaidDays
+      ? currentSubscription.currentPeriodStart
+      : toDbDateTime(start),
     currentPeriodEnd: toDbDateTime(end),
     cancelAtPeriodEnd: false,
     billingCycleAnchor: toDbDateTime(end),
@@ -760,7 +852,10 @@ export async function activatePaidLaunchAccessForOwner(input: {
       verified_invoice_id: input.verifiedPayment.invoiceId,
       verified_payment_id: input.verifiedPayment.paymentId,
       verified_payment_amount_minor: input.verifiedPayment.amountMinor,
-      activated_at: toDbDateTime(start),
+      activated_at: toDbDateTime(activatedAt),
+      paid_term_starts_at: toDbDateTime(start),
+      paid_term_ends_at: toDbDateTime(end),
+      renewal_preserved_paid_days: Boolean(preservesPaidDays),
     },
     actorUserId: input.actorUserId,
     verifiedPayment: input.verifiedPayment,

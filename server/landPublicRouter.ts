@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { publicProcedure, router } from './_core/trpc';
 import { LAND_PUBLIC_CLASSIFICATIONS } from '../shared/land-domain';
+import { isLandVerticalAvailable } from '../shared/landLaunchPolicy';
 import { validateLandSearchGeography } from '../shared/landSearchGeography';
 import { publicLandDetail, searchPublicLand } from './services/landPublicService';
 
@@ -26,8 +27,8 @@ export const landPublicSearchInput = z
 export const landPublicRouter = router({
   search: publicProcedure
     .input(landPublicSearchInput)
-    .query(({ input }) => searchPublicLand(input)),
+    .query(({ input }) => (isLandVerticalAvailable() ? searchPublicLand(input) : [])),
   detail: publicProcedure
     .input(z.object({ slug: z.string().min(1) }))
-    .query(({ input }) => publicLandDetail(input.slug)),
+    .query(({ input }) => (isLandVerticalAvailable() ? publicLandDetail(input.slug) : null)),
 });

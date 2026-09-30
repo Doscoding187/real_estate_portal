@@ -9,6 +9,7 @@ import {
   listingApprovalQueue,
   listingMedia,
   listings,
+  agents,
   users,
 } from '../../drizzle/schema';
 import { createListing, getDb, replaceListingMedia } from '../db';
@@ -38,7 +39,7 @@ const describeWithDb: typeof describe = hasDb
   : (((name: string, fn: Parameters<typeof describe>[1]) =>
       describe.skip(`${name} (requires DATABASE_URL)`, fn)) as typeof describe);
 
-const created = { userId: 0, listingId: 0 };
+const created = { userId: 0, agentId: 0, listingId: 0 };
 
 function insertId(result: any) {
   return Number(result?.insertId || result?.[0]?.insertId || 0);
@@ -55,9 +56,10 @@ afterEach(async () => {
     await db.delete(listingAnalytics).where(eq(listingAnalytics.listingId, created.listingId));
     await db.delete(listings).where(eq(listings.id, created.listingId));
   }
+  if (created.agentId) await db.delete(agents).where(eq(agents.id, created.agentId));
   if (created.userId) await db.delete(users).where(eq(users.id, created.userId));
 
-  Object.assign(created, { userId: 0, listingId: 0 });
+  Object.assign(created, { userId: 0, agentId: 0, listingId: 0 });
 });
 
 describeWithDb('listing media reconciliation', () => {
@@ -76,6 +78,20 @@ describeWithDb('listing media reconciliation', () => {
       emailVerified: 1,
     } as any);
     created.userId = insertId(userResult);
+
+    const [agentResult] = await db.insert(agents).values({
+      userId: created.userId,
+      firstName: 'Listing',
+      lastName: 'Media',
+      displayName: 'Listing Media Owner',
+      email: `listing-media-${suffix}@example.com`,
+      phone: '+27110000001',
+      role: 'agent',
+      isVerified: 0,
+      isFeatured: 0,
+      status: 'approved',
+    } as any);
+    created.agentId = insertId(agentResult);
 
     created.listingId = await createListing({
       userId: created.userId,

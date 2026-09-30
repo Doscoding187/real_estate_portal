@@ -12,9 +12,7 @@ type RedisClientStub = {
   isOpen: boolean;
   on: ReturnType<typeof vi.fn>;
   connect: ReturnType<typeof vi.fn>;
-  incr: ReturnType<typeof vi.fn>;
-  pExpire: ReturnType<typeof vi.fn>;
-  pTTL: ReturnType<typeof vi.fn>;
+  eval: ReturnType<typeof vi.fn>;
   get: ReturnType<typeof vi.fn>;
   decr: ReturnType<typeof vi.fn>;
   del: ReturnType<typeof vi.fn>;
@@ -27,9 +25,7 @@ function createRedisClientStub(overrides: Partial<RedisClientStub> = {}): RedisC
     isOpen: true,
     on: vi.fn().mockReturnThis(),
     connect: vi.fn().mockResolvedValue(undefined),
-    incr: vi.fn().mockResolvedValue(1),
-    pExpire: vi.fn().mockResolvedValue(1),
-    pTTL: vi.fn().mockResolvedValue(15 * 60 * 1000),
+    eval: vi.fn().mockResolvedValue([1, 15 * 60 * 1000]),
     get: vi.fn().mockResolvedValue(null),
     decr: vi.fn().mockResolvedValue(1),
     del: vi.fn().mockResolvedValue(1),
@@ -135,7 +131,7 @@ describe('authentication rate-limit store', () => {
   it('bounds stalled Redis commands after a connection has been established', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
     const client = createRedisClientStub({
-      incr: vi.fn(() => new Promise(() => undefined)),
+      eval: vi.fn(() => new Promise(() => undefined)),
     });
     const store = new RedisAuthRateLimitStore('redis://cache.example.test:6379', {
       clientFactory: clientFactory(client),
@@ -157,8 +153,7 @@ describe('authentication rate-limit store', () => {
       connect: vi.fn().mockRejectedValue(new Error('network unavailable')),
     });
     const recoveredClient = createRedisClientStub({
-      incr: vi.fn().mockResolvedValue(2),
-      pTTL: vi.fn().mockResolvedValue(30_000),
+      eval: vi.fn().mockResolvedValue([2, 30_000]),
     });
     const factory = vi
       .fn()
@@ -178,8 +173,12 @@ describe('authentication rate-limit store', () => {
     now += 1_001;
     await expect(store.increment('203.0.113.3')).resolves.toMatchObject({ totalHits: 2 });
     expect(factory).toHaveBeenCalledTimes(2);
-    expect(recoveredClient.incr).toHaveBeenCalledWith(
-      'property-listify:rate-limit:auth:203.0.113.3',
+    expect(recoveredClient.eval).toHaveBeenCalledWith(
+      expect.stringContaining("redis.call('PEXPIRE', KEYS[1], ARGV[1])"),
+      {
+        keys: ['property-listify:rate-limit:auth:203.0.113.3'],
+        arguments: ['900000'],
+      },
     );
   });
 

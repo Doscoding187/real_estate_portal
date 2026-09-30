@@ -117,6 +117,11 @@ async function grantLocalApplicationOwnership(
     await connection.execute(
       `GRANT ALL PRIVILEGES ON \`${databaseName}\`.* TO 'listify_app'@'${host}'`,
     );
+    // The canonical runner must disable GIPK on its own session before any DDL.
+    // This local-only account needs exactly that dynamic capability as well.
+    await connection.execute(
+      `GRANT SESSION_VARIABLES_ADMIN ON *.* TO 'listify_app'@'${host}'`,
+    );
   }
   await connection.execute('FLUSH PRIVILEGES');
 }

@@ -1,0 +1,35 @@
+{
+  "observedAt": "2026-09-25T06:39:53.773853+00:00",
+  "projectId": "8cdd7515-ddd2-4252-bbee-df5a5c209d4b",
+  "environments": [
+    {
+      "id": "63070d99-357a-40ba-99c3-6d1368f61652",
+      "name": "production",
+      "services": [
+        {
+          "name": "Redis",
+          "id": "bb79bb51-7abb-4194-9f62-81e80b410c24",
+          "cronSchedule": null,
+          "deploymentId": "ff97a541-e5b0-4520-920f-3681d18e3c7d",
+          "status": "SUCCESS",
+          "createdAt": "2026-09-05T12:50:33.234Z",
+          "gitSha": null,
+          "branch": null,
+          "image": "redis:8.2.9"
+        },
+        {
+          "name": "real_estate_portal",
+          "id": "db88a720-2d1f-4afc-a3a8-6228b6b08d3e",
+          "cronSchedule": null,
+          "deploymentId": "3996ee58-71f7-4976-b6a4-0cc3bc3c7731",
+          "status": "SUCCESS",
+          "createdAt": "2026-09-13T01:33:53.830Z",
+          "gitSha": "4e012b3044628fc06da7489c0055e9ce01bdc8d9",
+          "branch": "main",
+          "image": null
+        }
+      ]
+    }
+  ],
+  "scope": "read-only status; no variables, credentials or configuration mutations"
+}

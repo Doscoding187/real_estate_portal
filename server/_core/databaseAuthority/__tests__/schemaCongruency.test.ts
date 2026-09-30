@@ -49,11 +49,84 @@ const timestampFacts = mysqlTable('fixture_timestamp_facts', {
     .notNull(),
 });
 
+const caseSensitiveParent = mysqlTable('propertyImages', {
+  id: int('id').notNull().primaryKey(),
+});
+const caseSensitiveChild = mysqlTable('fixture_image_links', {
+  id: int('id').notNull().primaryKey(),
+  imageId: int('image_id').notNull().references(() => caseSensitiveParent.id),
+});
+
+function tableCaseConnection(
+  setting: number,
+  physicalParent = 'propertyimages',
+  extraTable?: string,
+): AuthoritySqlConnection {
+  const tableNames = ['fixture_image_links', physicalParent, ...(extraTable ? [extraTable] : [])];
+  const connection: AuthoritySqlConnection = {
+    async execute(statement: string) {
+      if (statement.includes('@@global.lower_case_table_names')) {
+        return [[{ lower_case_table_names: setting }]];
+      }
+      if (statement.includes('information_schema.tables')) {
+        return [tableNames.map(table_name => ({ table_name }))];
+      }
+      if (statement.includes('information_schema.columns')) {
+        return [[
+          ...tableNames.map(table_name => ({ table_name, column_name: 'id', ordinal_position: 1,
+            column_type: 'int', is_nullable: 'NO', column_default: null, extra: '' })),
+          { table_name: 'fixture_image_links', column_name: 'image_id', ordinal_position: 2,
+            column_type: 'int', is_nullable: 'NO', column_default: null, extra: '' },
+        ]];
+      }
+      if (statement.includes('information_schema.statistics')) {
+        return [tableNames.map(table_name => ({ table_name, index_name: 'PRIMARY', non_unique: 0,
+          sequence_in_index: 1, column_name: 'id' }))];
+      }
+      if (statement.includes('information_schema.KEY_COLUMN_USAGE')) {
+        return [[{ table_name: 'fixture_image_links', constraint_name: 'fixture_image_links_image_fk',
+          column_name: 'image_id', ordinal_position: 1, referenced_table_name: physicalParent,
+          referenced_column_name: 'id', delete_rule: 'NO ACTION', update_rule: 'NO ACTION' }]];
+      }
+      return [[]];
+    },
+    async query(statement: string) { return connection.execute(statement); },
+    async end() {},
+  };
+  return connection;
+}
+
 function clone(schema: NormalizedSchema): NormalizedSchema {
   return JSON.parse(JSON.stringify(schema)) as NormalizedSchema;
 }
 
 describe('normalized schema congruency', () => {
+  it('keeps exact table matching when lower_case_table_names is 0', async () => {
+    const desired = normalizedDesiredSchema({ caseSensitiveParent, caseSensitiveChild });
+    const exact = await normalizedPhysicalSchema(tableCaseConnection(0, 'propertyImages'), 'mysql', desired);
+    expect(compareNormalizedSchemas(desired, exact).congruent).toBe(true);
+    const wrongCase = await normalizedPhysicalSchema(tableCaseConnection(0), 'mysql', desired);
+    expect(compareNormalizedSchemas(desired, wrongCase).congruent).toBe(false);
+  });
+
+  it('reconciles only verified table and FK target casing under setting 1', async () => {
+    const desired = normalizedDesiredSchema({ caseSensitiveParent, caseSensitiveChild });
+    const physical = await normalizedPhysicalSchema(tableCaseConnection(1), 'mysql', desired);
+    expect(physical.tables.map(table => table.name)).toContain('propertyImages');
+    expect(physical.tables.find(table => table.name === 'fixture_image_links')?.foreignKeys[0].referencedTable)
+      .toBe('propertyImages');
+    expect(compareNormalizedSchemas(desired, physical).congruent).toBe(true);
+    expect(physical.digest).toBe(desired.digest);
+  });
+
+  it('fails closed on a physical case-fold collision or unverified setting', async () => {
+    const desired = normalizedDesiredSchema({ caseSensitiveParent, caseSensitiveChild });
+    await expect(normalizedPhysicalSchema(
+      tableCaseConnection(1, 'propertyimages', 'propertyImages'), 'mysql', desired,
+    )).rejects.toThrow('Physical table-name case collision');
+    await expect(normalizedPhysicalSchema(tableCaseConnection(2), 'mysql', desired))
+      .rejects.toThrow('could not be verified as 0 or 1');
+  });
   it('preserves SQL collection parentheses while removing redundant predicate grouping', () => {
     expect(
       normalizeSqlExpression("((`state` NOT IN ('available_confirmed', 'available_upcoming')))"),

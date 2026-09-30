@@ -7,7 +7,11 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useAgentOnboardingStatus } from '@/hooks/useAgentOnboardingStatus';
-import { getAgentJourneyAction, isAgentProfileJourneyStep } from '@/lib/agentJourney';
+import {
+  getAgentJourneyAction,
+  getAgentProfileCompletionDescription,
+  isAgentProfileJourneyStep,
+} from '@/lib/agentJourney';
 import { trpc } from '@/lib/trpc';
 import { cn } from '@/lib/utils';
 import {
@@ -148,6 +152,7 @@ export default function AgentReferrals() {
     isLoading: statusLoading,
     error: statusError,
     retry: retryStatus,
+    agentLaunchAccessAvailable,
   } = useAgentOnboardingStatus({
     requireDashboardUnlocked: true,
   });
@@ -183,7 +188,7 @@ export default function AgentReferrals() {
   const hasFullNetworkAccess = networkStatusQuery.data?.hasAccess === true;
   const activeProgramCount = Number(networkStatusQuery.data?.accessCount || 0);
   const isLoading = opportunitiesQuery.isLoading || referralsQuery.isLoading;
-  const journeyAction = getAgentJourneyAction(status);
+  const journeyAction = getAgentJourneyAction(status, { agentLaunchAccessAvailable });
   const needsProfileCompletion = isAgentProfileJourneyStep(status);
   const journeyLocked = !statusLoading && !status?.fullFeaturesUnlocked;
 
@@ -231,7 +236,7 @@ export default function AgentReferrals() {
             }
             description={
               needsProfileCompletion
-                ? 'Finish your professional profile, then activate Launch Access to work buyer referrals from your agent workspace.'
+                ? getAgentProfileCompletionDescription({ agentLaunchAccessAvailable })
                 : journeyAction.description
             }
             actionLabel={journeyAction.waiting ? 'Return to dashboard' : journeyAction.label}

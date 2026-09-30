@@ -24,6 +24,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { trpc } from '@/lib/trpc';
+import { CommercialActivationNotice } from '@/components/commercial/CommercialActivationNotice';
+import { useCommercialProductAvailability } from '@/hooks/useCommercialProductAvailability';
 import { WORKSPACE_TITLES } from '../workspace/constants';
 import { SectionTitle } from '../workspace/WorkspacePrimitives';
 import { AttentionPanel } from '../workspace/WorkspacePanels';
@@ -45,7 +47,11 @@ export function AgencyAttentionWorkspace(props: WorkspaceContentProps) {
         <CardContent className="space-y-3">
           {[
             { label: 'New leads', value: props.leadSignals.newLeadCount, tone: 'rose' as Tone },
-            { label: 'Unassigned', value: props.leadSignals.unassignedCount, tone: 'amber' as Tone },
+            {
+              label: 'Unassigned',
+              value: props.leadSignals.unassignedCount,
+              tone: 'amber' as Tone,
+            },
             {
               label: 'Overdue follow-ups',
               value: props.leadSignals.contactedFollowUpCount,
@@ -101,7 +107,11 @@ export function AgencyComplianceWorkspace(props: WorkspaceContentProps) {
           <CardContent className="p-4">
             <div className="flex items-center justify-between gap-3">
               <p className="font-semibold text-slate-950">{item.label}</p>
-              <Badge className={item.done ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}>
+              <Badge
+                className={
+                  item.done ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
+                }
+              >
                 {item.done ? 'Ready' : 'Needs action'}
               </Badge>
             </div>
@@ -113,13 +123,106 @@ export function AgencyComplianceWorkspace(props: WorkspaceContentProps) {
   );
 }
 
-export function AgencyBillingWorkspace(_props: WorkspaceContentProps) {
+/**
+ * The normal MVP runtime deliberately permits Agency setup and private
+ * inventory preparation without exposing a payment or entitlement path.
+ * Keep the commercial workspace separate so its queries and mutations are
+ * never mounted until the independently approved commercial release.
+ */
+export function AgencyBillingWorkspace(props: WorkspaceContentProps) {
+  const availability = useCommercialProductAvailability('agency_launch_access');
+
+  if (!availability.isAvailable) {
+    return (
+      <PreparationAgencyBillingWorkspace
+        {...props}
+        availabilityError={availability.isError}
+        onRetry={() => void availability.refetch()}
+      />
+    );
+  }
+
+  return <CommercialAgencyBillingWorkspace {...props} salesPaused={availability.salesPaused} />;
+}
+
+function PreparationAgencyBillingWorkspace({
+  onNavigate,
+  setLocation,
+  availabilityError,
+  onRetry,
+}: Pick<WorkspaceContentProps, 'onNavigate' | 'setLocation'> & {
+  availabilityError?: boolean;
+  onRetry?: () => void;
+}) {
+  return (
+    <section className="space-y-5" data-testid="agency-billing-preparation">
+      <CommercialActivationNotice />
+      <Card className="border-slate-200 bg-white shadow-sm">
+        <CardContent className="p-6 sm:p-8">
+          <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100">
+            Agency preparation
+          </Badge>
+          <h2 className="mt-4 text-2xl font-semibold tracking-tight text-slate-950">
+            Prepare your Agency workspace before commercial activation.
+          </h2>
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">
+            Complete your agency identity and prepare private inventory now. Publishing and
+            commercial activation remain protected until the approved commercial release.
+          </p>
+
+          <div className="mt-6 grid gap-3 md:grid-cols-3">
+            <PreparationTile
+              title="Agency identity"
+              detail="Complete the professional information that establishes your workspace."
+            />
+            <PreparationTile
+              title="Private inventory"
+              detail="Create, save and return to listing drafts while they remain private."
+            />
+            <PreparationTile
+              title="Activation boundary"
+              detail="Publishing becomes available only after approved commercial activation."
+            />
+          </div>
+
+          <div className="mt-6 flex flex-wrap gap-3">
+            <Button onClick={() => setLocation('/agency/setup')}>Continue Agency setup</Button>
+            <Button variant="outline" onClick={() => onNavigate('listings')}>
+              Prepare private inventory
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+      {availabilityError ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+          <span>Agency Launch Access is temporarily unavailable. Paid actions remain closed.</span>
+          <Button variant="outline" onClick={onRetry}>
+            Retry availability check
+          </Button>
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+function PreparationTile({ title, detail }: { title: string; detail: string }) {
+  return (
+    <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+      <p className="font-semibold text-slate-900">{title}</p>
+      <p className="mt-2 text-sm leading-6 text-slate-600">{detail}</p>
+    </div>
+  );
+}
+
+export function CommercialAgencyBillingWorkspace(
+  _props: WorkspaceContentProps & { salesPaused?: boolean },
+) {
+  const salesPaused = _props.salesPaused === true;
   const utils = trpc.useUtils();
   const invoiceIdFromUrl =
     typeof window !== 'undefined'
       ? Number(new URLSearchParams(window.location.search).get('invoiceId') || 0)
       : 0;
-  const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly');
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<number | null>(
     Number.isFinite(invoiceIdFromUrl) && invoiceIdFromUrl > 0 ? invoiceIdFromUrl : null,
   );
@@ -151,26 +254,13 @@ export function AgencyBillingWorkspace(_props: WorkspaceContentProps) {
     },
     onError: error => toast.error(error.message || 'Proof could not be submitted'),
   });
-  const cancelSubscription = trpc.billing.cancelSubscription.useMutation({
-    onSuccess: async () => {
-      await refreshBilling(utils);
-      toast.success('Subscription cancellation scheduled');
-    },
-    onError: error => toast.error(error.message || 'Subscription could not be cancelled'),
-  });
-  const reactivateSubscription = trpc.billing.reactivateSubscription.useMutation({
-    onSuccess: async () => {
-      await refreshBilling(utils);
-      toast.success('Subscription reactivated');
-    },
-    onError: error => toast.error(error.message || 'Subscription could not be reactivated'),
-  });
 
   const billingState = billingStateQuery.data;
   const workspace = workspaceQuery.data;
   const access = billingState?.accessState;
   const currentPlan = workspace?.currentPlan || billingState?.canonicalSubscription?.plan || null;
-  const subscription = workspace?.subscription || billingState?.canonicalSubscription?.subscription || null;
+  const subscription =
+    workspace?.subscription || billingState?.canonicalSubscription?.subscription || null;
   const currentStatus = access?.billingStatus || 'unavailable';
   const invoices = workspace?.invoices || [];
   const payments = workspace?.payments || [];
@@ -178,10 +268,29 @@ export function AgencyBillingWorkspace(_props: WorkspaceContentProps) {
   const eftCanIssueInvoices = Boolean(bankDetails?.canIssueInvoices);
   const proofStorageReady = Boolean(workspace?.proofStorage?.configured);
   const activeInvoice =
-    (selectedInvoiceId ? invoices.find((invoice: any) => invoice.id === selectedInvoiceId) : null) ||
+    (selectedInvoiceId
+      ? invoices.find((invoice: any) => invoice.id === selectedInvoiceId)
+      : null) ||
     workspace?.activeInvoice ||
-    invoices.find((invoice: any) => ['issued', 'submitted', 'partially_paid', 'overdue'].includes(invoice.status)) ||
+    invoices.find((invoice: any) =>
+      ['issued', 'submitted', 'partially_paid', 'overdue'].includes(invoice.status),
+    ) ||
     null;
+  const launchPlans = (workspace?.plans || []).filter(
+    (plan: any) => plan.name === 'agency_launch_access',
+  );
+  const launchStage = getAgencyLaunchStage({ subscription, activeInvoice, currentPlan });
+  const invoiceAcceptsProof = Boolean(
+    activeInvoice && ['issued', 'overdue', 'partially_paid'].includes(String(activeInvoice.status)),
+  );
+
+  const handleStartCheckout = (planId: number) => {
+    if (salesPaused) return;
+    // `startAgencyManualCheckout` recognizes the exact canonical Agency
+    // Launch Access plan and delegates to the fixed once-off invoice authority.
+    // Its legacy cycle parameter is retained at the API boundary only.
+    startCheckout.mutate({ planId, billingCycle: 'monthly' });
+  };
 
   useEffect(() => {
     if (!activeInvoice) return;
@@ -195,8 +304,8 @@ export function AgencyBillingWorkspace(_props: WorkspaceContentProps) {
     { key: 'teamManagement', label: 'Team management' },
     { key: 'reporting', label: 'Reporting' },
   ];
-  const includedCapabilities = capabilityLabels.filter(
-    capability => Boolean((access?.workspaceAccess as any)?.[capability.key]),
+  const includedCapabilities = capabilityLabels.filter(capability =>
+    Boolean((access?.workspaceAccess as any)?.[capability.key]),
   );
   const blockedCapabilities = capabilityLabels.filter(
     capability => !(access?.workspaceAccess as any)?.[capability.key],
@@ -264,15 +373,13 @@ export function AgencyBillingWorkspace(_props: WorkspaceContentProps) {
               <div className="space-y-5">
                 <div className="flex flex-wrap items-start justify-between gap-4">
                   <div>
-                    <p className="text-sm font-medium text-slate-500">Current plan</p>
+                    <p className="text-sm font-medium text-slate-500">Agency Launch Access</p>
                     <h3 className="mt-1 text-2xl font-semibold text-slate-950">
                       {currentPlan?.displayName || currentPlan?.name || 'No canonical plan'}
                     </h3>
-                    <p className="mt-1 text-sm text-slate-500">
-                      Source: {access?.planAccessSource || 'none'}
-                    </p>
+                    <p className="mt-1 text-sm text-slate-500">Agency-managed commercial access</p>
                   </div>
-                  <StatusBadge status={currentStatus} />
+                  <StatusBadge status={launchStage} />
                 </div>
 
                 <div className="rounded-lg border border-slate-200 p-4">
@@ -284,25 +391,46 @@ export function AgencyBillingWorkspace(_props: WorkspaceContentProps) {
                   ) : null}
                 </div>
 
-                {subscription?.currentPeriodEnd ? (
-                  <div className="grid gap-3 md:grid-cols-2">
+                <div className="grid gap-3 md:grid-cols-3">
+                  <InfoTile icon={Receipt} label="Term" value="90 days" />
+                  <InfoTile icon={FileCheck2} label="Renewal" value="No automatic renewal" />
+                  {subscription?.currentPeriodEnd ? (
                     <InfoTile
                       icon={Receipt}
-                      label={subscription.cancelAtPeriodEnd ? 'Access ends' : 'Renews'}
+                      label="Access ends"
                       value={formatDate(subscription.currentPeriodEnd)}
                     />
-                    <InfoTile
-                      icon={FileCheck2}
-                      label="Subscription"
-                      value={subscription.cancelAtPeriodEnd ? 'Cancelling at period end' : String(subscription.status || currentStatus).replace(/_/g, ' ')}
-                    />
-                  </div>
-                ) : null}
+                  ) : null}
+                </div>
+
+                <div
+                  className="rounded-lg border border-slate-200 bg-slate-50 p-4"
+                  data-testid="agency-launch-access-stage"
+                >
+                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
+                    Launch Access stage
+                  </p>
+                  <p className="mt-2 text-sm font-semibold text-slate-900">
+                    {getAgencyLaunchStageLabel(launchStage)}
+                  </p>
+                  <p className="mt-1 text-sm text-slate-600">
+                    {getAgencyLaunchStageDetail(launchStage)}
+                  </p>
+                </div>
 
                 <div className="grid gap-3 md:grid-cols-3">
-                  <AccessTile label="Listings" enabled={Boolean(access?.workspaceAccess.listings)} />
-                  <AccessTile label="Publishing" enabled={Boolean(access?.workspaceAccess.publishing)} />
-                  <AccessTile label="Reporting" enabled={Boolean(access?.workspaceAccess.reporting)} />
+                  <AccessTile
+                    label="Listings"
+                    enabled={Boolean(access?.workspaceAccess.listings)}
+                  />
+                  <AccessTile
+                    label="Publishing"
+                    enabled={Boolean(access?.workspaceAccess.publishing)}
+                  />
+                  <AccessTile
+                    label="Reporting"
+                    enabled={Boolean(access?.workspaceAccess.reporting)}
+                  />
                 </div>
 
                 <div className="grid gap-3 lg:grid-cols-2">
@@ -328,11 +456,6 @@ export function AgencyBillingWorkspace(_props: WorkspaceContentProps) {
                   <p className="mt-2 text-sm font-medium text-slate-700">{nextBillingAction}</p>
                 </div>
 
-                {subscription?.cancelAtPeriodEnd ? (
-                  <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
-                    Subscription cancellation is scheduled for the current period end.
-                  </div>
-                ) : null}
               </div>
             )}
           </CardContent>
@@ -353,7 +476,11 @@ export function AgencyBillingWorkspace(_props: WorkspaceContentProps) {
                 {workspace?.proofStorage?.message || 'Private proof storage is not configured.'}
               </div>
             ) : null}
-            <InfoTile icon={Building2} label="Bank" value={bankDetails?.bankName || 'Not configured'} />
+            <InfoTile
+              icon={Building2}
+              label="Bank"
+              value={bankDetails?.bankName || 'Not configured'}
+            />
             <InfoTile
               icon={Receipt}
               label="Account"
@@ -363,7 +490,15 @@ export function AgencyBillingWorkspace(_props: WorkspaceContentProps) {
                   : 'Not configured'
               }
             />
-            <InfoTile icon={FileText} label="Branch" value={bankDetails?.branchCode || 'Not configured'} />
+            <InfoTile
+              icon={FileText}
+              label="Branch"
+              value={bankDetails?.branchCode || 'Not configured'}
+            />
+            <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
+              <p className="font-semibold text-slate-950">R999 once-off</p>
+              <p className="mt-1">90 days of Agency Launch Access. No automatic renewal.</p>
+            </div>
             {activeInvoice?.paymentReference ? (
               <button
                 type="button"
@@ -381,28 +516,6 @@ export function AgencyBillingWorkspace(_props: WorkspaceContentProps) {
                 <Clipboard className="h-4 w-4 text-slate-400" />
               </button>
             ) : null}
-            {subscription?.cancelAtPeriodEnd ? (
-              <Button
-                disabled={reactivateSubscription.isPending}
-                onClick={() => reactivateSubscription.mutate()}
-                className="w-full"
-              >
-                Reactivate subscription
-              </Button>
-            ) : (
-              <Button
-                variant="outline"
-                disabled={
-                  cancelSubscription.isPending ||
-                  !subscription ||
-                  !['active', 'grace_period'].includes(String(subscription.status))
-                }
-                onClick={() => cancelSubscription.mutate()}
-                className="w-full"
-              >
-                Cancel at period end
-              </Button>
-            )}
             <div className="rounded-lg border border-slate-200 p-3 text-sm text-slate-600">
               Invoices: {numberLabel(invoices.length)}
             </div>
@@ -412,68 +525,55 @@ export function AgencyBillingWorkspace(_props: WorkspaceContentProps) {
 
       <Card className="border-slate-200 bg-white shadow-sm">
         <CardHeader className="pb-2">
-          <SectionTitle icon={CreditCard} title="Available Plans" eyebrow="Agency plans" />
+          <SectionTitle icon={CreditCard} title="Agency Launch Access" eyebrow="Once-off access" />
         </CardHeader>
         <CardContent>
           {workspaceQuery.isLoading ? (
             <div className="h-40 animate-pulse rounded-lg bg-slate-100" />
-          ) : workspace?.plans?.length ? (
-            <div className="grid gap-4 lg:grid-cols-3">
-              {workspace.plans.map((plan: any) => (
+          ) : launchPlans.length ? (
+            <div className="grid gap-4 lg:grid-cols-2">
+              {launchPlans.map((plan: any) => (
                 <div key={plan.id} className="rounded-lg border border-slate-200 bg-white p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="font-semibold text-slate-950">{plan.displayName}</p>
-                        <p className="mt-1 text-sm text-slate-500">
-                          {formatPlanPrice(plan.priceMonthly || plan.price, plan.interval)}
-                        </p>
-                      </div>
-                      {currentPlan?.id === plan.id ? (
-                        <Badge className="bg-emerald-100 text-emerald-700">Current</Badge>
-                      ) : null}
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="font-semibold text-slate-950">{plan.displayName}</p>
+                      <p className="mt-1 text-sm text-slate-500">
+                        {formatCurrency(Number(plan.price || plan.priceMonthly || 0))} once-off
+                      </p>
+                      <p className="mt-1 text-sm text-slate-500">90 days · no automatic renewal</p>
                     </div>
-                    <FeatureList value={plan.features} />
-                      <Button
-                      variant={currentPlan?.id === plan.id ? 'outline' : 'default'}
-                      disabled={
-                        startCheckout.isPending ||
-                        currentPlan?.id === plan.id ||
-                        !eftCanIssueInvoices ||
-                        !proofStorageReady
-                      }
-                      onClick={() =>
-                        startCheckout.mutate({
-                          planId: plan.id,
-                          billingCycle,
-                        })
-                      }
-                      className="mt-4 w-full"
-                    >
-                      {currentPlan?.id === plan.id ? 'Selected' : 'Select plan'}
-                      <ArrowRight className="h-4 w-4" />
-                    </Button>
+                    {currentPlan?.id === plan.id ? (
+                      <Badge className="bg-amber-100 text-amber-700">
+                        {launchStage === 'active' ? 'Active' : 'Selected'}
+                      </Badge>
+                    ) : null}
+                  </div>
+                  <FeatureList value={plan.features} />
+                  <Button
+                    variant={activeInvoice ? 'outline' : 'default'}
+                    disabled={
+                      startCheckout.isPending ||
+                      !eftCanIssueInvoices ||
+                      salesPaused
+                    }
+                    onClick={() => handleStartCheckout(plan.id)}
+                    className="mt-4 w-full"
+                  >
+                    {salesPaused
+                      ? 'New sales paused'
+                      : activeInvoice
+                        ? 'Continue to outstanding invoice'
+                        : 'Request R999 invoice'}
+                    <ArrowRight className="h-4 w-4" />
+                  </Button>
                 </div>
               ))}
             </div>
           ) : (
             <div className="rounded-lg border border-slate-200 p-6 text-sm text-slate-500">
-              No active agency plans are available.
+              Agency Launch Access is not available from the canonical billing catalogue.
             </div>
           )}
-          <div className="mt-4 inline-flex rounded-lg border border-slate-200 bg-slate-50 p-1">
-            {(['monthly', 'annual'] as const).map(cycle => (
-              <button
-                key={cycle}
-                type="button"
-                onClick={() => setBillingCycle(cycle)}
-                className={`rounded-md px-3 py-1.5 text-sm font-medium capitalize transition ${
-                  billingCycle === cycle ? 'bg-white text-slate-950 shadow-sm' : 'text-slate-500'
-                }`}
-              >
-                {cycle}
-              </button>
-            ))}
-          </div>
         </CardContent>
       </Card>
 
@@ -485,9 +585,12 @@ export function AgencyBillingWorkspace(_props: WorkspaceContentProps) {
           {activeInvoice ? (
             <div className="grid gap-4 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1fr)]">
               <div className="rounded-lg border border-slate-200 p-4">
-                <p className="text-sm font-semibold text-slate-950">{activeInvoice.invoiceNumber}</p>
+                <p className="text-sm font-semibold text-slate-950">
+                  {activeInvoice.invoiceNumber}
+                </p>
                 <p className="mt-1 text-sm text-slate-500">
-                  {formatCurrency(Number(activeInvoice.amountDue || 0))} due by {formatDate(activeInvoice.dueAt)}
+                  {formatCurrency(Number(activeInvoice.amountDue || 0))} due by{' '}
+                  {formatDate(activeInvoice.dueAt)}
                 </p>
                 <StatusBadge status={activeInvoice.status} />
               </div>
@@ -537,11 +640,15 @@ export function AgencyBillingWorkspace(_props: WorkspaceContentProps) {
                   />
                 </div>
                 <Button
-                  disabled={submitProof.isPending || !proofStorageReady}
+                  disabled={
+                    submitProof.isPending ||
+                    !proofStorageReady ||
+                    !invoiceAcceptsProof
+                  }
                   onClick={handleProofSubmit}
                   className="md:col-span-2"
                 >
-                  Submit proof
+                  {invoiceAcceptsProof ? 'Submit proof' : 'Proof submitted for finance review'}
                   <UploadCloud className="h-4 w-4" />
                 </Button>
               </div>
@@ -628,7 +735,8 @@ export function AgencyBillingWorkspace(_props: WorkspaceContentProps) {
 
 export function AgencyUtilityWorkspace(props: WorkspaceContentProps) {
   const meta = WORKSPACE_TITLES[props.workspace];
-  const Icon = props.workspace === 'settings' ? Settings : props.workspace === 'help' ? HelpCircle : meta.icon;
+  const Icon =
+    props.workspace === 'settings' ? Settings : props.workspace === 'help' ? HelpCircle : meta.icon;
   return (
     <Card className="border-slate-200 bg-white shadow-sm">
       <CardHeader className="pb-2">
@@ -644,8 +752,21 @@ export function AgencyUtilityWorkspace(props: WorkspaceContentProps) {
 }
 
 function StatusBadge({ status }: { status: string }) {
-  const active = status === 'active' || status === 'grace_period' || status === 'paid' || status === 'verified';
-  const warning = ['pending_payment', 'payment_under_review', 'issued', 'submitted', 'partially_paid', 'overdue', 'past_due'].includes(status);
+  const active =
+    status === 'active' || status === 'grace_period' || status === 'paid' || status === 'verified';
+  const warning = [
+    'selected_pending',
+    'invoice_issued',
+    'proof_submitted',
+    'finance_review',
+    'pending_payment',
+    'payment_under_review',
+    'issued',
+    'submitted',
+    'partially_paid',
+    'overdue',
+    'past_due',
+  ].includes(status);
   const Icon = active ? CheckCircle2 : warning ? AlertTriangle : XCircle;
   return (
     <Badge
@@ -663,6 +784,57 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
+type AgencyLaunchStage =
+  | 'selected_pending'
+  | 'invoice_issued'
+  | 'proof_submitted'
+  | 'finance_review'
+  | 'active'
+  | 'expired';
+
+function getAgencyLaunchStage({
+  subscription,
+  activeInvoice,
+  currentPlan,
+}: {
+  subscription: any;
+  activeInvoice: any;
+  currentPlan: any;
+}): AgencyLaunchStage {
+  const subscriptionStatus = String(subscription?.status || '');
+  const invoiceStatus = String(activeInvoice?.status || '');
+
+  if (subscriptionStatus === 'active' || subscriptionStatus === 'grace_period') return 'active';
+  if (subscriptionStatus === 'expired') return 'expired';
+  if (subscriptionStatus === 'payment_under_review') return 'finance_review';
+  if (invoiceStatus === 'submitted') return 'proof_submitted';
+  if (activeInvoice) return 'invoice_issued';
+  if (subscription || currentPlan) return 'selected_pending';
+  return 'selected_pending';
+}
+
+function getAgencyLaunchStageLabel(stage: AgencyLaunchStage) {
+  return {
+    selected_pending: 'Selected pending product',
+    invoice_issued: 'Invoice issued',
+    proof_submitted: 'Proof submitted',
+    finance_review: 'Finance review',
+    active: 'Active',
+    expired: 'Expired',
+  }[stage];
+}
+
+function getAgencyLaunchStageDetail(stage: AgencyLaunchStage) {
+  return {
+    selected_pending: 'The Agency product is selected. Request the once-off invoice to continue.',
+    invoice_issued: 'Pay the R999 invoice by EFT, then upload private proof of payment.',
+    proof_submitted: 'Proof is recorded. Finance review remains required before access starts.',
+    finance_review: 'Finance is reconciling the EFT payment. Proof alone does not activate access.',
+    active: 'The Agency-owned 90-day term is active. Team members work under this access.',
+    expired: 'This fixed term has ended. Agency identity, memberships, and historical work remain.',
+  }[stage];
+}
+
 function InfoTile({
   icon: Icon,
   label,
@@ -677,7 +849,9 @@ function InfoTile({
       <div className="flex items-start gap-3">
         <Icon className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
         <div className="min-w-0">
-          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">{label}</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
+            {label}
+          </p>
           <p className="mt-1 break-words text-sm font-medium text-slate-800">{value}</p>
         </div>
       </div>
@@ -774,10 +948,6 @@ function formatCurrency(cents: number) {
     currency: 'ZAR',
     maximumFractionDigits: 0,
   }).format(cents / 100);
-}
-
-function formatPlanPrice(cents: number, interval?: string | null) {
-  return `${formatCurrency(Number(cents || 0))} / ${interval || 'month'}`;
 }
 
 function formatDate(value?: string | Date | null) {

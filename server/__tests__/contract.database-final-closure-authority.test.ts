@@ -158,6 +158,7 @@ describe('database final closure residual executor authority', () => {
       .sort();
 
     expect(probeFiles).toEqual([
+      'server/_core/databaseAuthority/' + 'b08AzureInspectionIdentity.ts',
       'server/_core/databaseAuthority/' + 'tidbCheckConstraintCapability.ts',
       'server/services/' + 'runtimeSchemaCapabilities.ts',
     ]);

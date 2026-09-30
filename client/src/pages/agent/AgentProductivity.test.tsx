@@ -78,10 +78,10 @@ beforeEach(() => {
 afterEach(() => cleanup());
 
 describe('AgentProductivity access handoff', () => {
-  it('guides an unactivated agent to Launch Access without fetching operational data', () => {
+  it('guides an unactivated agent to preparation without fetching operational data', () => {
     render(<AgentProductivity />);
 
-    expect(screen.getByText('Activate Launch Access')).toBeInTheDocument();
+    expect(screen.getByText('Continue preparation')).toBeInTheDocument();
     for (const queryMock of [
       getShowingsQueryMock,
       getNotificationsQueryMock,

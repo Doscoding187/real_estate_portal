@@ -7,7 +7,6 @@ import { nowAsDbTimestamp } from '../utils/dbTypeUtils';
 import {
   completePlatformDeliveryInTransaction,
   getCurrentPrimaryDeliveryForUpdateInTransaction,
-  getLeadDeliverySnapshot,
   publicStatusForDelivery,
   supersedePrimaryDeliveryInTransaction,
   type LeadDeliveryRecord,
@@ -481,29 +480,31 @@ export async function completePlatformLeadAction(
       ? `Property Listify operations marked lead ${input.action} — ${note}`
       : `Property Listify operations marked lead ${input.action}`;
 
-    await tx
-      .update(leads)
-      .set({
-        // Operations completion proves custody handling, not a property-sale
-        // conversion. Preserve an advanced CRM state and only advance `new`.
-        status: nextLeadStatus,
-        leadDeliveryMethod: 'manual',
-        updatedAt: nowAsDbTimestamp(),
-      })
-      .where(eq(leads.id, input.leadId));
+    if (!completion.duplicate) {
+      await tx
+        .update(leads)
+        .set({
+          // Operations completion proves custody handling, not a property-sale
+          // conversion. Preserve an advanced CRM state and only advance `new`.
+          status: nextLeadStatus,
+          leadDeliveryMethod: 'manual',
+          updatedAt: nowAsDbTimestamp(),
+        })
+        .where(eq(leads.id, input.leadId));
 
-    await tx.insert(leadActivities).values({
-      leadId: input.leadId,
-      userId: actorUserId,
-      type: input.action === 'contacted' ? 'contact_attempt' : 'status_change',
-      description,
-      metadata: JSON.stringify({
-        authority: 'platform_operations_custody',
-        action: input.action,
-        deliveryId: completion.delivery.id,
-        deliveryAttemptId: actionAttempt.id,
-      }),
-    });
+      await tx.insert(leadActivities).values({
+        leadId: input.leadId,
+        userId: actorUserId,
+        type: input.action === 'contacted' ? 'contact_attempt' : 'status_change',
+        description,
+        metadata: JSON.stringify({
+          authority: 'platform_operations_custody',
+          action: input.action,
+          deliveryId: completion.delivery.id,
+          deliveryAttemptId: actionAttempt.id,
+        }),
+      });
+    }
 
     return {
       id: input.leadId,
@@ -512,6 +513,7 @@ export async function completePlatformLeadAction(
       deliveryStatus: 'delivered' as const,
       deliveryId: completion.delivery.id,
       deliveryAttemptId: actionAttempt.id,
+      duplicate: completion.duplicate,
     };
   });
 }

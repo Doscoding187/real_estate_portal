@@ -7,7 +7,11 @@ import { AgentPresenceProof } from '@/components/agent/AgentPresenceProof';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { AgentOnboardingStatus } from '@/hooks/useAgentOnboardingStatus';
-import { getAgentJourneyAction, isAgentProfileJourneyStep } from '@/lib/agentJourney';
+import {
+  getAgentJourneyAction,
+  getAgentProfileCompletionDescription,
+  isAgentProfileJourneyStep,
+} from '@/lib/agentJourney';
 import {
   ArrowRight,
   Bell,
@@ -326,8 +330,10 @@ function getGuidanceSnoozeMs(mode: DashboardGuidanceMode | null) {
 
 export function AgentDashboardOverview({
   onboardingStatus,
+  agentLaunchAccessAvailable = false,
 }: {
   onboardingStatus: AgentOnboardingStatus;
+  agentLaunchAccessAvailable?: boolean;
 }) {
   const [, setLocation] = useLocation();
   const { user } = useAuth();
@@ -561,7 +567,7 @@ export function AgentDashboardOverview({
   const profileSetupFlags = onboardingStatus?.profileCompletionFlags ?? [];
   const fullFeaturesUnlocked = onboardingStatus?.fullFeaturesUnlocked ?? false;
   const needsProfileCompletion = isAgentProfileJourneyStep(onboardingStatus);
-  const journeyAction = getAgentJourneyAction(onboardingStatus);
+  const journeyAction = getAgentJourneyAction(onboardingStatus, { agentLaunchAccessAvailable });
   const canPublishListings = entitlements?.canPublishListings ?? false;
   const setupPriorityFlags = profileSetupFlags.slice(0, 3).map(formatSetupFlag);
   const guidanceMode: DashboardGuidanceMode | null = needsProfileCompletion ? 'setup' : null;
@@ -688,7 +694,7 @@ export function AgentDashboardOverview({
           ? 'Finish setting up your professional presence.'
           : journeyAction.title,
         description: needsProfileCompletion
-          ? 'Complete the remaining profile details so you can publish inventory and start building your pipeline.'
+          ? getAgentProfileCompletionDescription({ agentLaunchAccessAvailable })
           : journeyAction.description,
         actionLabel: journeyAction.waiting
           ? null
@@ -1370,7 +1376,7 @@ export function AgentDashboardOverview({
                   }
                   description={
                     needsProfileCompletion
-                      ? 'Complete the remaining profile details, then activate Launch Access to publish inventory and open your full listing workflow.'
+                    ? getAgentProfileCompletionDescription({ agentLaunchAccessAvailable })
                       : journeyAction.description
                   }
                   actionLabel={

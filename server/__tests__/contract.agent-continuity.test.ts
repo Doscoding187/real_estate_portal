@@ -105,7 +105,11 @@ describe('activation-to-renewal continuity wiring', () => {
 
   it('routes demand leads only to commercially active recipients', () => {
     const demand = readRepoFile('server/services/demandEngineService.ts');
-    expect(demand).toContain('isPaidSubscriptionRowEntitled');
+    expect(demand).toContain('isPaidMvpLaunchAccessSubscriptionEntitled');
+    expect(demand).toContain("isCommercialActivationAvailable(process.env, 'agent_launch_access')");
+    expect(demand).toContain("isCommercialActivationAvailable(process.env, 'agency_launch_access')");
+    expect(demand).toContain('listCurrentActiveAgencyMembershipsByAgentId');
+    expect(demand).toContain('entitledAgencyIds.has(effectiveAgencyId)');
     expect(demand).toContain('if (!routing?.eligible) continue;');
   });
 

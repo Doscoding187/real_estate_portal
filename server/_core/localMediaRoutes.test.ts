@@ -207,11 +207,15 @@ describe('local listing media storage boundary', () => {
 
   it('does not mount local delivery when S3 is explicitly selected', async () => {
     const { ENV } = await import('./env');
-    ENV.isProduction = true;
+    vi.stubEnv('NODE_ENV', 'staging');
+    vi.stubEnv('APP_ENV', 'staging');
+    ENV.mediaStorageAdapter = '';
+    expect(() => mediaStorage.getMediaStorageAdapter()).toThrow(/MEDIA_STORAGE_ADAPTER=s3/i);
     ENV.mediaStorageAdapter = 'local';
-    expect(() => mediaStorage.getMediaStorageAdapter()).toThrow(/not permitted in production/i);
+    expect(() => mediaStorage.getMediaStorageAdapter()).toThrow(/not permitted|MEDIA_STORAGE_ADAPTER=s3/i);
 
-    ENV.isProduction = false;
+    vi.stubEnv('NODE_ENV', 'production');
+    vi.stubEnv('APP_ENV', 'production');
     ENV.mediaStorageAdapter = 's3';
     ENV.s3BucketName = 'test-media-bucket';
     ENV.awsRegion = 'af-south-1';
@@ -235,7 +239,8 @@ describe('local listing media storage boundary', () => {
       isolatedServer.close(error => (error ? reject(error) : resolve())),
     );
     ENV.mediaStorageAdapter = 'local';
-    ENV.isProduction = false;
+    vi.stubEnv('NODE_ENV', 'test');
+    vi.stubEnv('APP_ENV', 'test');
     ENV.s3BucketName = '';
     ENV.awsRegion = 'us-east-1';
   });

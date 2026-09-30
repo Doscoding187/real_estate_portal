@@ -356,6 +356,8 @@ describeWithDb('agency viewings and My Day persisted workflow', () => {
 
   it('creates canonical agency viewings, enforces tenancy, and allows same-agency agents to view them', async () => {
     const seed = await seedAgencyFixture('tenancy');
+    const scheduledDay = agencyDateKey(new Date(Date.now() + 48 * 60 * 60 * 1000));
+    const scheduledAt = jhbIso(scheduledDay, '00:30:00');
     const adminCaller = createCaller({
       id: seed.adminUserId,
       role: 'agency_admin',
@@ -376,7 +378,7 @@ describeWithDb('agency viewings and My Day persisted workflow', () => {
       leadId: seed.leadId,
       listingId: seed.listingId,
       agentId: seed.agentId,
-      scheduledAt: futureIso(4),
+      scheduledAt,
       status: 'awaiting_confirmation',
       location: 'Show unit',
       notes: 'Bring FICA checklist',
@@ -394,6 +396,8 @@ describeWithDb('agency viewings and My Day persisted workflow', () => {
         location: 'Show unit',
       }),
     );
+    expect(detail.scheduledAt).toBe(scheduledAt);
+    expect(agencyDateKey(new Date(detail.scheduledAt))).toBe(scheduledDay);
     expect(detail.creator).toEqual(expect.objectContaining({ id: seed.adminUserId }));
 
     const agentVisible = await agentCaller.getViewings({ status: 'all', limit: 20 });
@@ -418,6 +422,57 @@ describeWithDb('agency viewings and My Day persisted workflow', () => {
         scheduledAt: futureIso(5),
       }),
     ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+  }, 30_000);
+
+  it('does not let a suspended member retain agency viewing access or mutation authority', async () => {
+    const seed = await seedAgencyFixture('suspended-member');
+    const adminCaller = createCaller({
+      id: seed.adminUserId,
+      role: 'agency_admin',
+      agencyId: seed.agencyId,
+    });
+    const memberCaller = createCaller({
+      id: seed.agentUserId,
+      role: 'agent',
+      agencyId: seed.agencyId,
+    });
+
+    const created = await adminCaller.createViewing({
+      leadId: seed.leadId,
+      listingId: seed.listingId,
+      agentId: seed.agentId,
+      scheduledAt: futureIso(4),
+      status: 'awaiting_confirmation',
+      location: 'Member authority test viewing',
+    });
+    createdState.showingIds.push(created.viewingId);
+
+    await expect(memberCaller.getViewingDetail({ viewingId: created.viewingId })).resolves.toMatchObject({
+      id: created.viewingId,
+      location: 'Member authority test viewing',
+    });
+
+    const db = await getDb();
+    if (!db) throw new Error('Database not available');
+    await maintainAgencyAgentMembership(db, {
+      agencyId: seed.agencyId,
+      agentId: seed.agentId,
+      status: 'suspended',
+      actorUserId: seed.adminUserId,
+    });
+
+    await expect(memberCaller.getViewings({ status: 'all', limit: 20 })).rejects.toMatchObject({
+      code: 'FORBIDDEN',
+    });
+    await expect(memberCaller.getDealWorkspace()).rejects.toMatchObject({
+      code: 'FORBIDDEN',
+    });
+    await expect(memberCaller.getViewingDetail({ viewingId: created.viewingId })).rejects.toMatchObject({
+      code: 'FORBIDDEN',
+    });
+    await expect(
+      memberCaller.updateViewingStatus({ viewingId: created.viewingId, status: 'confirmed' }),
+    ).rejects.toMatchObject({ code: 'FORBIDDEN' });
   }, 30_000);
 
   it('enforces lifecycle transitions, reschedule history, idempotent notifications, reassignment permissions, and feedback follow-up', async () => {
@@ -572,6 +627,42 @@ describeWithDb('agency viewings and My Day persisted workflow', () => {
     expect(ids).toContain(second.viewingId);
     expect(ids).not.toContain(nextDay.viewingId);
     expect(new Set(ids).size).toBe(ids.length);
+  }, 30_000);
+
+  it('interprets browser datetime-local viewing input as Johannesburg time on a UTC host', async () => {
+    const seed = await seedAgencyFixture('datetime-local-timezone');
+    const caller = createCaller({
+      id: seed.adminUserId,
+      role: 'agency_admin',
+      agencyId: seed.agencyId,
+    });
+    const targetDay = agencyDateKey(new Date(Date.now() + 48 * 60 * 60 * 1000));
+    const originalTimeZone = process.env.TZ;
+    let created: Awaited<ReturnType<typeof caller.createViewing>>;
+
+    try {
+      process.env.TZ = 'UTC';
+      expect(Intl.DateTimeFormat().resolvedOptions().timeZone).toBe('UTC');
+      created = await caller.createViewing({
+        leadId: seed.leadId,
+        listingId: seed.listingId,
+        agentId: seed.agentId,
+        scheduledAt: `${targetDay}T00:30`,
+        status: 'confirmed',
+      });
+    } finally {
+      if (originalTimeZone === undefined) {
+        delete process.env.TZ;
+      } else {
+        process.env.TZ = originalTimeZone;
+      }
+    }
+
+    createdState.showingIds.push(created.viewingId);
+    const detail = await caller.getViewingDetail({ viewingId: created.viewingId });
+    expect(detail.scheduledAt).toBe(jhbIso(targetDay, '00:30:00'));
+    const myDay = await caller.getMyDay({ date: targetDay, limit: 20 });
+    expect(myDay.todayViewings.map(viewing => viewing.id)).toContain(created.viewingId);
   }, 30_000);
 
   it('escalates an ignored buyer lead then records a structured first response', async () => {

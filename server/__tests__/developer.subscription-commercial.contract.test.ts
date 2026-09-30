@@ -74,6 +74,14 @@ describe('developer canonical commercial contract', () => {
     expect(access).toContain('verifiedPayment: input.verifiedPayment');
   });
 
+  it('requires the developer subscription owner to match the first-party publisher organisation', () => {
+    const publicEligibility = readRepoFile('server/services/publicDevelopmentEligibility.ts');
+
+    expect(publicEligibility).toContain("s.owner_type = 'developer'");
+    expect(publicEligibility).toContain('s.owner_id = p.developer_organisation_id');
+    expect(publicEligibility).toContain("launch_plan.name = 'developer_launch_access'");
+  });
+
   it('uses the shared catalog and does not preserve hard-coded developer sellable prices', () => {
     const plansPage = readRepoFile('client/src/pages/DeveloperPlans.tsx');
     const billingPanel = readRepoFile('client/src/components/developer/BillingPanel.tsx');
