@@ -1,0 +1,108 @@
+{
+  "evidenceVersion": 1,
+  "date": "2026-09-27",
+  "status": "passed",
+  "source": {
+    "worktree": "/home/edwardspc/Desktop/Dev/worktrees/property-listify-b16-no-spend-convergence",
+    "branch": "prep/b16-converged-candidate",
+    "head": "f3f99f806ea9ae6be3132e093ce1cf1a6f185a32",
+    "baseTree": "b5a3475633ea330469507551574c7e61a73b0900",
+    "acceptedB03ThroughB07Tree": "2600386978a46b29f371c230f05511c81be2465f",
+    "testedCandidateTree": "b21f454e215d8b02129e4daa14ba6f8d338406d1",
+    "pleSpecSha256": "0cc29dad31dd47d26b862c2a44ae3711e1436a42321019b42161f462c7675d7c",
+    "pleConfigSha256": "49b48ae4b07da3ca62e1966fa575752c85761c6adacc023f8d7b556ba527dc39"
+  },
+  "diagnosis": {
+    "class": "browser-test expectation versus governed fixture configuration",
+    "cause": "The PLE config enables the exact agency_launch_access test-only product selector. The Agency landing selects AgencyCommercialLandingPage when that product is available, but the first PLE case asserted the generic preparation-only landing and its preparation CTA.",
+    "productDefectReproduced": false,
+    "environmentDefectReproduced": false,
+    "correction": "Updated only the PLE spec to assert the enabled Agency Launch Access landing and owner-account CTA, and clarified the fixture boundary in the Playwright config. Product runtime code was unchanged.",
+    "commercialBoundary": "The journey still verifies that onboarding issues no invoice or payment request and does not activate publishing before the explicitly marked disposable entitlement fixture. No real payment or hosted provider was used."
+  },
+  "databaseAuthority": {
+    "version": 3,
+    "targetClass": "disposable-worktree",
+    "target": "mysql://127.0.0.1:3307/listify_wt_b16_no_spend_convergence_906d8dd488b8",
+    "targetFingerprintSha256": "af8dc5d6cb434ff5e3abcd89eb43518a4b58017d407a729e2a26df6a168408e8",
+    "worktreeOwnership": "exact",
+    "manifestDigest": "93d871e6f8760477f460b8821685d71d212374eb86ddd53bc6e2ccfc30608efc",
+    "migrationPlanId": "2313cba3cb37e592a37ff86f",
+    "migrationPlanDigest": "2313cba3cb37e592a37ff86fb04c534ea32bde47b4f200992667d479db02e516",
+    "oldHead": null,
+    "newHead": "0094_content_topics_primary_key.sql",
+    "migrationsApplied": 95,
+    "schemaCongruent": true,
+    "schemaDigest": "a8ca8cf34bb3627594eab1b722b85115c6460225a0165db7992228a8547798e9",
+    "referenceFixture": {
+      "version": "canonical-geography-v2",
+      "digest": "6c3fb68b54fd0db64ea7a67a4b30383a3d6c610babf3e1de1aa531f54827093c",
+      "verifiedCounts": { "provinces": 9, "cities": 340, "suburbs": 1089 }
+    },
+    "foundationFixture": {
+      "version": "canonical-launch-foundation-v1",
+      "digest": "aaac24d45d655d2702348aa948ff53742358d9c6af95f8dfcbf7da3ab758a780"
+    },
+    "scenarioFixture": {
+      "version": "search-to-lead-v5",
+      "digest": "a7b62da33e3f416e31728b6306c9b38d46f9b604db9d19b091c98f33ba16165b",
+      "verified": true
+    },
+    "reviewerFixture": {
+      "version": "ple-reviewer-v3",
+      "digest": "ae132fcc7dfa71c38cdf89ca297e1143916beb52cf5beebe39f28bb7878440d6",
+      "verified": true,
+      "unrelatedUsersUntouched": true
+    },
+    "scenarioVerifyInvocation": {
+      "initialDevelopmentModeCall": "refused because governed contained scenarios require test runtime",
+      "resolution": "Read-only test-mode context resolved to the same exact worktree fingerprint; the authorized test-mode invocation passed.",
+      "passingCommand": "pnpm exec cross-env NODE_ENV=test APP_ENV=test pnpm db:scenario:verify"
+    },
+    "readiness": "location-discovery ready; manifest head, schema, canonical reference data and scenario verified",
+    "postRun": {
+      "manifestHeadReady": true,
+      "incompleteMigrationAttempts": 0,
+      "targetOwnership": "exact-worktree-owned",
+      "applicationReadiness": "ready"
+    },
+    "cleanup": {
+      "targetDisposed": true,
+      "disposedTargetFingerprintSha256": "af8dc5d6cb434ff5e3abcd89eb43518a4b58017d407a729e2a26df6a168408e8",
+      "serviceStopped": true,
+      "serviceRecovery": "clean-stop no-op",
+      "finalServiceStatus": "stopped"
+    }
+  },
+  "browserRun": {
+    "command": "pnpm test:browser:authority -- --config=playwright.ple-agency-operating.config.ts",
+    "browser": "Desktop Chrome",
+    "passed": 10,
+    "failed": 0,
+    "notRun": 0,
+    "elapsed": "1.7m",
+    "cases": [
+      { "result": "passed", "seconds": 9.8, "name": "registers and verifies a new owner, saves agency setup, and queues the same journey member without commercial activation" },
+      { "result": "passed", "seconds": 3.3, "name": "verifies the new agency through the authenticated reviewer API while its commercial state remains pending" },
+      { "result": "passed", "seconds": 12.4, "name": "registers and verifies the invitee, rejects queued acceptance, then accepts canonically with an explicit disposable entitlement fixture" },
+      { "result": "passed", "seconds": 7.8, "name": "derives the agency workspace and retains a device-local private listing draft across reload" },
+      { "result": "passed", "seconds": 16.1, "name": "creates a complete, private agency listing with uploaded media and submits it for review" },
+      { "result": "passed", "seconds": 4.8, "name": "returns the submitted listing for correction through the reviewer workspace" },
+      { "result": "passed", "seconds": 8.5, "name": "lets the agency member see feedback, retain the persisted listing, and resubmit it" },
+      { "result": "passed", "seconds": 4.9, "name": "approves the corrected listing through the reviewer workspace and creates one public projection" },
+      { "result": "passed", "seconds": 3.2, "name": "discovers the just-approved inventory through canonical suburb search and public detail" },
+      { "result": "passed", "seconds": 7.4, "name": "captures one public enquiry into canonical agency custody, replays it safely, and lets the assigned agent follow up" }
+    ],
+    "journeyCleanupAssertions": "passed: run-owned listing archived, non-archived source/projection counts zero, disposable entitlement released to pending_payment, no commercial transaction created"
+  },
+  "localSubstitutesAndLimits": [
+    "Email was captured only by the private local test fixture; provider delivery was not tested.",
+    "Local listing media adapter/storage proxy was used; hosted object storage and media authorization were not tested by this PLE journey.",
+    "Redis used an in-memory fallback.",
+    "No hosted ingress, provider, staging, production, payment collection, merge, or deployment was used."
+  ],
+  "sanitization": {
+    "sharedEvidenceContains": "test names, outcomes, durations, source and target hashes only",
+    "rawPasswordsTokensCookiesAndEmailCapture": "not included"
+  }
+}

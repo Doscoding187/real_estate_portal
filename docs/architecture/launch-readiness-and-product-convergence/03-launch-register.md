@@ -2,50 +2,51 @@
 
 | Field | Authority |
 | --- | --- |
-| Status | **NO-GO. September 25 senior reconciliation: 3 CLOSED; 15 remain.** The current package decisions below supersede older summaries and self-declared closure candidates. |
-| Scope | Sole launch-disposition authority for the canonical Paid MVP. B01–B18 are work packages linked to existing LRC findings and release gates, not new issue IDs. Services V1/PR #581 and Explore product work are excluded. |
-| Source | Published main `4e012b3044628fc06da7489c0055e9ce01bdc8d9`; reviewed candidate PR #580 `e8974ec34b919ceab37bdbd7e7379f96f3abce99`, tree `28d63e530449ee7357a5979684aea42ee2077bdc`. Candidate changes and this reconciliation are not merged to main. |
-| Evidence | [Senior review and per-package records](23-paid-mvp-senior-reconciliation-2026-09-25.md), [fresh evidence](evidence/paid-mvp-audit-2026-09-25/), [original package criteria](19-paid-mvp-launch-blocker-audit.md), [provenance contract](06-evidence-sequence-and-provenance-contract.md). |
-| Execution | [Paid MVP launch closure plan — 25 September](24-paid-mvp-launch-closure-execution-plan.md) supplies the binding dependency sequence, founder/agent queues, closure criteria and first B03 instruction. The user accepted the reconciliation; planning changes no blocker status and grants no protected operation or activation. |
+| Status | **NO-GO. September 30 reconciliation: B01–B07 accepted within scope; B08–B18 remain open.** Integration preparation does not grant release acceptance or permission to activate. |
+| Scope | Sole launch-disposition authority for the canonical three-audience Paid MVP. Services V1/PR #581, Explore expansion, Land launch, card payments, recurring billing and unrelated redesigns are excluded. |
+| Source | Published main `4e012b3044628fc06da7489c0055e9ce01bdc8d9`; accepted paid commit `a05868c66f493e3cbc972a119074c91a10797777`, tree `b21f454e215d8b02129e4daa14ba6f8d338406d1`; reviewed database/geography commit `b625a6dd0be7b105e100383dbc8f919a64d8b0bb` / PR #582. Both are incorporated with Git ancestry in this task-owned candidate. |
+| Evidence | [September 30 audit](25-paid-launch-deadline-audit-2026-09-30.md), [later B03–B07 scoped acceptance](evidence/b16-integration-review-packet-2026-09-27.md), [integration provenance](evidence/paid-mvp-integration-2026-09-30/source-provenance.json), [current review packet](26-paid-mvp-integrated-release-review-2026-09-30.md). Historical packets retain their original dated wording. |
+| Release boundary | Draft integration PR and senior review only. No main merge, hosted deployment, protected apply, binding change, writer freeze, live session reset, final archive or payment opening is included. October 5–7 is conditional on the outstanding gates and staffed coverage. |
 
-## Paid MVP working disposition — 2026-09-25
+## Paid MVP working disposition — 2026-09-30
 
-This table is the current working authority. Full risk, evidence, dependencies,
-source applicability and senior decisions are in the linked per-package records.
-**CLOSED is scoped to the package purpose:** B01 is policy, B02 fresh CI, B04 the
-application journey. Their integration/provider acceptance is still required
-under the existing B16/B18 and shared packages. No row authorizes activation.
+B01–B07 acceptance is carried forward from the later recorded scoped decisions;
+it is not new production acceptance. The current integration verification and
+its limits are recorded separately in the review packet. No row authorizes
+activation. The historical September 24–25 records below are superseded where
+this reconciliation identifies later evidence or founder decisions.
 
-| Blocker | Purpose | Previous status | Senior review result | Current status | Remaining action | Launch gating? |
-| --- | --- | --- | --- | --- | --- | --- |
-| [B01](23-paid-mvp-senior-reconciliation-2026-09-25.md#b01--actual-paid-offer-and-launch-boundary) | Agreed paid offer and owner boundary | CLOSED — founder approved | ACCEPT; retain policy closure | CLOSED | Carry approved terms into B15/B18 | No separate B01 gap |
-| [B02](23-paid-mvp-senior-reconciliation-2026-09-25.md#b02--fresh-hosted-ci-contract) | Fresh schema/consumer CI works | Original failed; later fix passed | ACCEPT; exact-tree CI/artifacts verified | CLOSED | B16 owns post-merge checks | No separate B02 gap |
-| [B03](23-paid-mvp-senior-reconciliation-2026-09-25.md#b03--payment-finance-activation-renewal-and-expiry) | Correct money, product, owner and term | EVIDENCE PASS / REVIEW PENDING | REVIEW FAILED; later release gate admits generic legacy paths | OPEN | Reject unsupported persisted plans/owners; production-mode finance negatives | Yes |
-| [B04](23-paid-mvp-senior-reconciliation-2026-09-25.md#b04--independent-agent-paid-value-loop) | Agent paid application journey | EVIDENCE PASS / REVIEW PENDING | ACCEPT application contract; provider/integration limits retained | CLOSED | Refresh with B16/B18 after shared fixes | No separate B04 gap |
-| [B05](23-paid-mvp-senior-reconciliation-2026-09-25.md#b05--agency-paid-value-loop-and-invitation) | Agency/member paid operation | EVIDENCE PASS / REVIEW PENDING | EVIDENCE INCOMPLETE; later joined browser run failed | EVIDENCE INCOMPLETE | Diagnose profile-setup run and retain complete current pass | Yes |
-| [B06](23-paid-mvp-senior-reconciliation-2026-09-25.md#b06--developer-paid-organisation-to-enquiry-loop) | Developer organisation/inventory/enquiry | EVIDENCE PASS / REVIEW PENDING | EVIDENCE INCOMPLETE; later authoring browser run crashed | EVIDENCE INCOMPLETE | Diagnose/rerun full loop; retain independent published-expiry proof | Yes |
-| [B07](23-paid-mvp-senior-reconciliation-2026-09-25.md#b07--security-revocation-and-paid-release-containment) | Security and release containment | Local implementation; release review pending | REVIEW FAILED; same product-less gate finding as B03 | OPEN | Consume B03 correction; final paid-route/role/tenant negatives | Yes |
-| [B08](23-paid-mvp-senior-reconciliation-2026-09-25.md#b08--protected-production-database-admission) | Safe launch database and credentials | Azure established; cutover spend gate | Establishment evidence accepted; launch binding incomplete | BLOCKED BY DEPENDENCY | Founder egress/spend decision, reviewed exact network/credential release | Yes |
-| [B09](23-paid-mvp-senior-reconciliation-2026-09-25.md#b09--source-data-transfer-or-signed-preservation-disposition) | Preserve required source business records | Inventory pending; absent from latest snapshot | EVIDENCE INCOMPLETE; source artifact explicitly not inventoried | MANUAL ACTION REQUIRED | Approved census and signed data disposition; reconcile if transfer needed | Yes |
-| [B10](23-paid-mvp-senior-reconciliation-2026-09-25.md#b10--real-account-invitation-and-billing-email) | Real essential email delivery | Engineering pass; provider pending | Engineering evidence accepted; delivery unproven | HOSTED VERIFICATION REQUIRED | Verified sender, real receipt/reply/bounce, supervised worker | Yes |
-| [B11](23-paid-mvp-senior-reconciliation-2026-09-25.md#b11--durable-public-media-and-private-payment-proof) | Durable media; private financial proof | Guardrails ready; storage/spend gate | EVIDENCE INCOMPLETE for provider | MANUAL ACTION REQUIRED | Dedicated private storage/credential and real access/durability/recovery proof | Yes |
-| [B12](23-paid-mvp-senior-reconciliation-2026-09-25.md#b12--hosted-runtime-sessions-and-shared-abuse-controls) | Usable hosted runtime and sessions | Hosted rehearsal pending | EVIDENCE INCOMPLETE; live readiness 503, preview failure | HOSTED VERIFICATION REQUIRED | Diagnose preview; bind exact artifacts/config/services and rehearse | Yes |
-| [B13](23-paid-mvp-senior-reconciliation-2026-09-25.md#b13--durable-actionable-enquiries-and-supervised-work) | No lost or misdirected accepted enquiries | Local custody/attention proof | EVIDENCE INCOMPLETE for operation | HOSTED VERIFICATION REQUIRED | Lead cron, custody/retry/attention and operator exercise | Yes |
-| [B14](23-paid-mvp-senior-reconciliation-2026-09-25.md#b14--staffed-finance-moderation-support-and-escalation) | Operable finance, moderation and support | Founder-only model prepared; rehearsal pending | Model retained; operational proof incomplete | MANUAL ACTION REQUIRED | Monitored contacts and actual queue/absence/pause/renewal rehearsal | Yes |
-| [B15](23-paid-mvp-senior-reconciliation-2026-09-25.md#b15--approved-disclosures-and-customer-consent) | Approved truthful customer commitments | Founder approval draft prepared | EVIDENCE INCOMPLETE; unresolved facts/final approval | MANUAL ACTION REQUIRED | Approve real facts/copy; implement and prove disclosures/consent | Yes |
-| [B16](23-paid-mvp-senior-reconciliation-2026-09-25.md#b16--independent-whole-candidate-review-and-safe-integration) | One reviewed integrated release | Draft candidate; GitHub green, Vercel failed | REVIEW FAILED; open code/evidence gates | BLOCKED BY DEPENDENCY | Correct findings, current journeys/CI, whole-diff review and approved integration | Yes |
-| [B17](23-paid-mvp-senior-reconciliation-2026-09-25.md#b17--recovery-capacity-and-monitoring) | Recoverable service at launch workload | Probe/runbook ready; restore pending | EVIDENCE INCOMPLETE; no measured restore/capacity proof | HOSTED VERIFICATION REQUIRED | Bind alerts, prove restore/recovery and master-plan capacity thresholds | Yes |
-| [B18](23-paid-mvp-senior-reconciliation-2026-09-25.md#b18--exact-artifact-paid-acceptance-and-go-live) | Exact paid launch acceptance and GO | Checklist prepared; not performed | EVIDENCE INCOMPLETE; NO-GO | BLOCKED BY DEPENDENCY | Close upstream gates; exact three-actor acceptance, cutover, explicit GO | Yes |
+| Package | Current disposition | Incorporated evidence / implementation | Remaining concrete action |
+| --- | --- | --- | --- |
+| B01 | ACCEPTED WITHIN SCOPE | Approved manual-EFT, owner/product and 90-day offer | Carry exact terms into approved customer copy and hosted acceptance. |
+| B02 | ACCEPTED WITHIN SCOPE | Fresh-schema CI correction and canonical 0094 lineage | Check this exact PR's CI and later post-merge identity. |
+| B03 | ACCEPTED WITHIN SCOPE | Product/owner activation containment, payment retries, entitlement and expiry | Refresh combined-candidate contracts; later hosted finance rehearsal. |
+| B04 | ACCEPTED WITHIN SCOPE | Independent Agent paid application journey | Refresh on combined candidate, then real-provider release. |
+| B05 | ACCEPTED WITHIN SCOPE | Agency/member paid journey and invitation/custody/revocation | Refresh on combined candidate, then real invitation delivery. |
+| B06 | ACCEPTED WITHIN SCOPE | Developer organisation/inventory/enquiry and expiry journey | Refresh on combined candidate including reviewed geography. |
+| B07 | ACCEPTED WITHIN SCOPE | Tenant isolation, role/session revocation, media and paid-route containment | Verify affected shared contracts; maintain production activation closed. |
+| B08 | OPEN — RELEASE ADMISSION | Recorded Azure 8.4.9/0094 integrity and runtime-network evidence; governed geography release implementation | Review a fresh geography plan on approved source; protected apply/verify and exact runtime/worker admission in a later authorized release. |
+| B09 | OPEN — ARCHIVE / FRESH ACCOUNTS | Founder chose fresh Azure accounts and TiDB archival; preliminary encrypted archive/readback | Inventory/freeze old writers, take final capture, prove independent custody/recovery, and invalidate old sessions during controlled transition. No legacy-account import. |
+| B10 | OPEN — HOSTED DELIVERY | Transactional outbox, invitation and account-mail implementation, worker supervision | Bind verified sender/worker and prove real receipt, retry/bounce and restart. |
+| B11 | OPEN — HOSTED STORAGE | Private-proof access/storage guards and public media implementation | Configure dedicated private proof storage and durable public media; prove isolation, restart durability and recovery. |
+| B12 | OPEN — HOSTED RUNTIME | Runtime/session/readiness guards and exact-artifact diagnostics | Bind frontend/API/worker identities, Azure target, TLS/origins/cookies/Redis and prove joined hosted behavior. |
+| B13 | OPEN — HOSTED ENQUIRIES | Durable custody, lead scheduling/retry and attention paths | Bind job service/cron and prove correct-recipient delivery, retry, backlog and operator follow-up. |
+| B14 | OPEN — OPERATIONAL REHEARSAL | Accepted weekday 09:00–17:00 SAST operating procedure, finance cadence, pause/resume | Prove monitored contacts, bank/matching/moderation queues and weekend/holiday/absence rehearsal. |
+| B15 | OPEN — EXACT COPY APPROVAL | Later founder facts v0.6 and review copy v0.4 preserved as drafts | Resolve actual provider/retention/cookie/disclosure facts; obtain dated exact-copy approval, implement and prove rendering/consent/invoice consistency. |
+| B16 | OPEN — INTEGRATION REVIEW | Both reviewed inputs composed; local verification and draft PR preparation tracked in current packet | Complete candidate verification, exact-PR checks and independent whole-change review; controlled merge/post-merge verification remains outside this assignment. |
+| B17 | OPEN — RECOVERY / CAPACITY | Existing probes/runbook and recorded Azure engine/recovery-copy evidence | Wire alerts and prove representative 24-hour final-application workload, restart/backlog and independent application recovery against master-plan thresholds. |
+| B18 | OPEN — FINAL ACCEPTANCE / GO | Three-audience and buyer exact-artifact acceptance checklist | Close upstream gates; controlled cutover, writes-closed smoke, Edward's attended GO and first-customer observation. |
 
-**Next single blocker: B03.** Use the [first implementation instruction](24-paid-mvp-launch-closure-execution-plan.md#9-first-implementation-instruction--b03-only).
-Its bounded product/owner containment correction also supplies B07's shared finding. See the review's
-[remaining path](23-paid-mvp-senior-reconciliation-2026-09-25.md#5-exact-remaining-execution-path)
-and [work categories/consolidation](23-paid-mvp-senior-reconciliation-2026-09-25.md#6-reduced-launch-remainder-and-next-assignment).
+**Immediate engineering priority: B16 combined-candidate verification and senior
+review.** Do not restart accepted B03–B07 work from older failed packets. The
+accepted B14 procedure is [here](19-first-customer-operating-procedure.md), with
+[implementation provenance](evidence/b14-schedule-reconciliation-implementation-2026-09-27.md).
+[B15 founder facts v0.6](evidence/b15-copy-approval-preparation-2026-09-27-v0.6.md)
+preserve founder ownership and supplied contact/schedule facts; copy remains
+unapproved. Older B09 census/import requirements are superseded by the
+[fresh-account/archive decision](../../database-authority/azure-fresh-account-transition-2026-09-29.md).
 
-The September 24 snapshots and dated LRC records below remain historical
-support. Their local implementation claims do not override this current table.
-The B01 policy decision is closed; the broader LRC-PAY-001 runtime finding is
-open, including the September 25 supplement below.
+## Historical supporting records (dated, superseded where stated above)
 
 ## B08 protected database disposition — 2026-09-24
 

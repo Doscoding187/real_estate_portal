@@ -1,0 +1,126 @@
+{
+  "sourceHead": "3c72617fe1caa75855ef71bed85dfd45f7f9e372",
+  "runtimeVerificationAnchor": "b1c7f6f7",
+  "fixtureVerificationAnchor": "0e7cd93c",
+  "targetClass": "disposable-worktree",
+  "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+  "checks": [
+    {
+      "name": "typecheck",
+      "command": "pnpm type-check",
+      "exitCode": 0
+    },
+    {
+      "name": "lint",
+      "command": "pnpm lint",
+      "exitCode": 0,
+      "errors": 0,
+      "warnings": 13420
+    },
+    {
+      "name": "frontend build",
+      "command": "pnpm build",
+      "exitCode": 0
+    },
+    {
+      "name": "database static",
+      "command": "pnpm db:authority:check",
+      "exitCode": 0,
+      "filesPassed": 47,
+      "testsPassed": 429
+    },
+    {
+      "name": "migration identity",
+      "result": "95 active SQL files and manifest byte-identical to both anchors"
+    },
+    {
+      "name": "database physical contract",
+      "command": "pnpm db:verify:ci",
+      "exitCode": 0
+    },
+    {
+      "name": "geography",
+      "filesPassed": 5,
+      "testsPassed": 44,
+      "probesPassed": 1705
+    },
+    {
+      "name": "changed client",
+      "filesPassed": 52,
+      "testsPassed": 237
+    },
+    {
+      "name": "shared policy",
+      "filesPassed": 10,
+      "testsPassed": 103
+    },
+    {
+      "name": "shared database contracts",
+      "filesPassed": 12,
+      "testsPassed": 107,
+      "note": "Initial 13-file run passed 110 total including 3 role cases; role file rerun separately passes all 5."
+    },
+    {
+      "name": "role/session/audit clean target",
+      "filesPassed": 1,
+      "testsPassed": 5
+    },
+    {
+      "name": "Agent browser",
+      "casesPassed": 2
+    },
+    {
+      "name": "Agency/member browser",
+      "casesPassed": 1
+    },
+    {
+      "name": "Developer browser",
+      "casesPassed": 1
+    },
+    {
+      "name": "fresh-schema consumer sequence",
+      "command": "DATABASE_CONSUMER_CONTRACT_PHASE=post-migration pnpm db:authority:consumer-contract",
+      "exitCode": 0
+    }
+  ],
+  "inProgress": [
+    "Broader server suite",
+    "Exact draft PR checks"
+  ],
+  "protectedOperationsPerformed": false,
+  "limitations": [
+    "All provider substitutes are local.",
+    "No application capacity/recovery or hosted acceptance claimed.",
+    "No main merge, production activation or provider mutation."
+  ],
+  "rawCommandArtifacts": [
+    {
+      "name": "authority-static-serial.log",
+      "sha256": "8ee10c8f40d3d0042fe4d7a243dcd72b744e182021e4bae28b21e1197d503060"
+    },
+    {
+      "name": "authority-import-regression.log",
+      "sha256": "6aaf563b5bfb536465b042ff8620ec50518218d7d0e3ddf4e69d819b170aa657"
+    },
+    {
+      "name": "location-contracts.log",
+      "sha256": "0337d88f3a3a754beb47d580eb2861de3bf0f530b73c6a6cd96f5e632b062cd3"
+    },
+    {
+      "name": "lint.log",
+      "sha256": "0eb7712f6c98985e3c0da19fe0f28b45bf044077fdbd36840d1d23e2e5d3c647"
+    },
+    {
+      "name": "typecheck-final.log",
+      "sha256": "0ce19d9885b616457bb0c4be0aa773ee62f1b22c651bfc450c8801540b97c003"
+    },
+    {
+      "name": "build.log",
+      "sha256": "bc6fd799bc6d1abd6ff6f65c6fe0ce3478990bc05402f872efcfc065a712bc23"
+    },
+    {
+      "name": "lint-integration-fixes.log",
+      "sha256": "b649057c66c11e5b2207852096f3f56b10446331df2b42f89c983a06ce587ffc"
+    }
+  ]
+}
