@@ -209,12 +209,16 @@ export async function establishFreshMysqlMigrationSession(
   if (requirePrimaryKey !== 0) {
     throw new Error('Fresh MySQL establishment refused: sql_require_primary_key=ON prevents the immutable baseline.');
   }
-  try {
-    await connection.query('SET SESSION sql_generate_invisible_primary_key = OFF');
-  } catch (error) {
-    const code = String((error as { code?: unknown })?.code ?? 'unknown')
-      .replace(/[^A-Z0-9_]/gi, '_').slice(0, 64);
-    throw new Error(`Fresh MySQL establishment refused: generated invisible primary keys could not be disabled for this session (${code}).`);
+  // A restricted CI migration identity need not change a session already OFF.
+  // Re-verify the same connection and required state below in both cases.
+  if (generatedBefore === 1) {
+    try {
+      await connection.query('SET SESSION sql_generate_invisible_primary_key = OFF');
+    } catch (error) {
+      const code = String((error as { code?: unknown })?.code ?? 'unknown')
+        .replace(/[^A-Z0-9_]/gi, '_').slice(0, 64);
+      throw new Error(`Fresh MySQL establishment refused: generated invisible primary keys could not be disabled for this session (${code}).`);
+    }
   }
   const after = (await queryMigrationRows(connection,
     'SELECT CONNECTION_ID() AS connection_id, @@session.sql_generate_invisible_primary_key AS generated_invisible_primary_key, @@session.sql_require_primary_key AS require_primary_key, @@global.lower_case_table_names AS lower_case_table_names, @@session.time_zone AS time_zone',
