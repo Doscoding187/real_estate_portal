@@ -37,6 +37,10 @@ databases. Place Authority remains the only geographic identity source.
 - Sibling worktree `property-listify-gauteng-source-authority-closure` is at
   `4356c0f7` with uncommitted work from another workstream. **Do not touch it.**
   The v0.2 source it holds was copied into this branch and is committed here.
+- The Phase 3 verification target
+  `listify_wt_place_authority_slice0_f2af5b9a6482` was re-created from zero for
+  the Phase 3 physical proof and **disposed again** afterwards. Do not assume it
+  exists.
 
 ## Phase status
 
@@ -179,7 +183,55 @@ Admitted Place package `gauteng-place-admission-v0.1`:
 
 ## Test status
 
-All green after Phase 3:
+All green after Phase 3, and Phase 3 is now **physically proven** rather than
+only statically proven.
+
+### Physical proof on a fresh disposable target
+
+Performed on a target created from zero through the approved lifecycle
+(`db:worktree:create` → `migration:apply --accepted-old-head=none
+--expected-new-head=0099_…` → `db:places:prepare`), then disposed with
+`db:worktree:dispose`. No target was reused to claim a from-zero proof.
+
+- Sanitized target `mysql://127.0.0.1:3307/listify_wt_place_authority_slice0_f2af5b9a6482`
+- Target fingerprint hash
+  `0c822b50ba97506e19b3dcbe822b90a05e8bd3ae13346366b8796de7de4a856d`
+- Target classification `disposable-worktree`; ownership `exact-worktree-owned`
+- Migration head `0099_saved_searches_canonical_place_reference_fk.sql`;
+  `schema-congruent`
+- Materialized **1,466 Places**, 2,476 names, 1,465 relationships, 4,463
+  evidence rows, 2,971 external mappings
+- Materializer content digest
+  `d7859a2e7face1dec4e648bac65a0866b82ef1297178232dbaef2541177adf70`
+  — identical to the committed package
+- `db:places:verify` **passes**, including *after* the behavioural probe and the
+  discovery suite
+- Executable Place behavioural probe **40/40**, including a rerun materialization
+  that is a byte-identical no-op with no Place ID changed
+- Executable discovery suite **36/36**, including "executes every single
+  search-eligible Place deterministically" over all 1,436 searchable Places
+
+The target was disposed after the evidence was captured.
+
+### A third real defect found and fixed
+
+`contract.place-executable-foundation.test.ts` **wrote into the canonical
+reference data role and never cleaned up.** It imported `afterAll` but declared
+no `afterAll`, and three of its tests deliberately call `discoverPlaces` with an
+invented term so that discovery records an `unresolved_query` evidence row. Each
+run left three `place_evidence` rows behind, so `db:places:verify` failed
+afterwards with `place_evidence rows 4466 != expected 4463` — a reference-data
+failure that had nothing to do with the admitted package.
+
+This is pre-existing and was invisible while no database was reachable. The fix
+records every invented subject through `unresolvableTerm()` and deletes those
+rows by canonical primary key in a **file-scoped** `afterAll`. The hook must be
+file-scoped rather than suite-scoped: the subjects are created by the
+"no-result and ambiguity" suite, so a hook inside any single `describe` runs
+before them and cleans up nothing. That was the first attempt, and it was caught
+by re-running `db:places:verify` after the suite.
+
+### Static and regression gates
 
 - Database Authority static gate **364/364** (was 352/352; +12 from the new
   territory-neutrality contract suite)
@@ -191,20 +243,6 @@ All green after Phase 3:
 - Location authority regression **44/44** (5 files)
 - Listing lifecycle + SEO/slug/place-id property regressions **116/116**
 - typecheck clean, lint 0 errors, build clean, `git diff --check` clean
-
-The Database-backed suites — the executable Place behavioural probe and
-`contract.place-executable-foundation` — were **not** re-run, because the
-worktree's disposable target was disposed after the Phase 1/2 gate and the
-local service is currently unreachable (`db:authority:status` reports
-`Service Availability: database-unreachable`). `contract.place-executable-foundation`
-fails 18/36 in this environment **identically at `ad753b3d` with Phase 3 stashed**,
-so it is an environment regression, not a Phase 3 regression. Re-run both on a
-freshly created disposable target before relying on them.
-
-Physical proof is always performed on a freshly created, owned, disposable
-target and the target is disposed afterwards. Never reuse a target to claim a
-from-zero proof. The Phase 1 and 2 proof target
-`listify_wt_place_authority_slice0_f2af5b9a6482` was disposed after the gate.
 
 ## Unresolved research backlog
 

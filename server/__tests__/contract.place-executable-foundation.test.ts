@@ -55,6 +55,37 @@ async function placeByPreferredName(name: string): Promise<string | null> {
   return rows.length > 0 ? String(rows[0].placeId) : null;
 }
 
+/**
+ * Subjects this suite invented to prove discovery records coverage signals for
+ * a term that is not an admitted Place.
+ *
+ * Discovery writes `unresolved_query` evidence into the canonical
+ * `place_evidence` role. Leaving those rows behind would pollute the reference
+ * dataset this suite runs against, so `db:places:verify` would fail afterwards
+ * for reasons that have nothing to do with the admitted package. Every subject
+ * is registered here and removed in `afterAll`, by canonical primary key.
+ */
+const syntheticCoverageSubjects: string[] = [];
+
+function unresolvableTerm(suffix: string): string {
+  const term = `zz${Date.now().toString(36)}${suffix}`;
+  syntheticCoverageSubjects.push(normalizePlaceQuery(term));
+  return term;
+}
+
+/**
+ * File-scoped, not suite-scoped: the subjects are created by the
+ * "no-result and ambiguity" suite, so a hook inside any single `describe` would
+ * run before them and clean up nothing.
+ */
+afterAll(async () => {
+  if (syntheticCoverageSubjects.length === 0) return;
+  const db = await getDb();
+  for (const subject of syntheticCoverageSubjects) {
+    await db.delete(placeEvidence).where(sql`${placeEvidence.subject} = ${subject}`);
+  }
+});
+
 describe('Slice 3: discovery resolves canonical identity', () => {
   beforeAll(async () => {
     // Discovery records coverage signals, so a database must be reachable.
@@ -147,7 +178,7 @@ describe('Slice 3: no-result and ambiguity produce governed evidence', () => {
     const db = await getDb();
     // A term that is not an admitted Place name and not a quarantined candidate
     // admitted anywhere: it must produce evidence, not a Place.
-    const term = `zz${Date.now().toString(36)}unresolvedplace`;
+    const term = unresolvableTerm('unresolvedplace');
     const before = await db
       .select({ id: placeEvidence.id })
       .from(placeEvidence)
@@ -177,14 +208,14 @@ describe('Slice 3: no-result and ambiguity produce governed evidence', () => {
   it('creates no Place when a query resolves to nothing', async () => {
     const db = await getDb();
     const totalBefore = rowsOf(await db.execute(sql`SELECT COUNT(*) AS n FROM place`));
-    await discoverPlaces(`zz${Date.now().toString(36)}anothermissingplace`);
+    await discoverPlaces(unresolvableTerm('anothermissingplace'));
     const totalAfter = rowsOf(await db.execute(sql`SELECT COUNT(*) AS n FROM place`));
     expect(Number(totalAfter[0].n)).toBe(Number(totalBefore[0].n));
   });
 
   it('is idempotent for a repeated query and only raises research priority', async () => {
     const db = await getDb();
-    const term = `zz${Date.now().toString(36)}repeatsignal`;
+    const term = unresolvableTerm('repeatsignal');
     const subject = normalizePlaceQuery(term);
     await discoverPlaces(term);
     const first = await db
