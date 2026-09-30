@@ -324,6 +324,11 @@ jobs:
           ISOLATED_CI_BOOTSTRAP_PHASE: full
         run: pnpm db:ci:identities:bootstrap
 
+      # The last-super-admin contract requires an empty user table. Run all
+      # five role/session/audit cases before the scenario adds its reviewer.
+      - name: Verify role and session authority before reviewer fixtures
+        run: pnpm test:authority -- --project server --minWorkers=1 --maxWorkers=1 --no-file-parallelism server/__tests__/integration.b07-role-session-audit.test.ts
+
       - name: Prepare canonical disposable reference data
         run: pnpm db:reference:prepare
 
@@ -359,7 +364,9 @@ jobs:
             echo "Running client test: ${test_file}"
             pnpm vitest run --project client --minWorkers=1 --maxWorkers=1 --silent "${test_file}"
           done
-          pnpm vitest run --project server --minWorkers=1 --maxWorkers=1 --silent
+          # Already exercised on the fresh unseeded target above; never delete
+          # or demote the canonical reviewer to satisfy a sole-admin fixture.
+          pnpm vitest run --project server --minWorkers=1 --maxWorkers=1 --silent --exclude server/__tests__/integration.b07-role-session-audit.test.ts
 
   build:
     name: Build Application
