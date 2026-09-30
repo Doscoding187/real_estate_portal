@@ -45,7 +45,7 @@ databases. Place Authority remains the only geographic identity source.
 | 0 | Typed Place Authority contract | closed (`52a8ab15`) |
 | 1 | Gauteng scope contract repair | **closed** |
 | 2 | Executable Place foundation | **closed** |
-| 3 | Territory-neutral onboarding proof | **audit done, refactor outstanding** |
+| 3 | Territory-neutral onboarding proof | **closed** (`ad753b3d` + Phase 3 refactor) |
 | 4 | Western Cape (Province 2) | **not started — external blocker** |
 | 5 | Remaining provinces | not started — depends on Phase 4 |
 | 6 | National authority verification | not started |
@@ -53,47 +53,98 @@ databases. Place Authority remains the only geographic identity source.
 
 ## Current phase
 
-Phases 1 and 2 are complete and physically proven. Phase 3 is partially
-complete: the territory-neutrality audit has been performed and its findings are
-recorded, but the code refactor it requires is outstanding.
+Phases 1, 2 and 3 are complete. Phase 3 removed the last territory-specific
+application logic: the admission builder and the Place materializer are both
+driven by one committed territory registry, and a synthetic non-Gauteng
+territory is admitted through the same code with no new engine.
 
-Phase 4 is blocked on governed evidence acquisition. See "Hard blocker" below.
+Phase 4 remains blocked on governed evidence acquisition. See "Hard blocker"
+below.
 
-## Phase 3 audit findings (outstanding work)
+## Phase 3 delivery record — territory neutrality
 
-Territory-specific *data* is permitted and was left alone:
+### What was removed
 
-- `server/data/marketIntelligence.ts` is market reference data keyed by province.
-  That is data, not architecture.
-- `server/_core/databaseAuthority/dataAdapters/searchToLeadScenario.ts` uses
-  Gauteng/Johannesburg/Sandton as a fixed scenario. That is a fixture, not
-  application logic.
+The Phase 3 audit found territory-specific *application logic* in exactly two
+places. Both are gone:
 
-Territory-specific *application logic* was found and must be removed:
+- `tools/place-admission/build-gauteng-admission.mjs` hardcoded `SOURCE_DIR`,
+  `OUT_DIR`, `ADMISSION_VERSION`, `REGISTRY_PATH`, `V01_DIR`, the
+  `gauteng_`-prefixed artifact filenames, and the frozen v0.1 comparison counts
+  (1,480 / 1,414 / 116 / 11 / 8 / 3 / 14).
+- `server/_core/databaseAuthority/dataAdapters/canonicalPlaces.ts` hardcoded
+  `CANONICAL_PLACES_VERSION`, `PACKAGE_DIR`, `MANIFEST_PATH` and `REGISTRY_PATH`.
 
-- `tools/place-admission/build-gauteng-admission.mjs` hardcodes
-  `SOURCE_DIR = data/gauteng-source-authority-v0.2`,
-  `OUT_DIR = data/gauteng-place-admission-v0.1`,
-  `ADMISSION_VERSION = gauteng-place-admission-v0.1`,
-  `REGISTRY_PATH`, `V01_DIR`, and the `gauteng_`-prefixed artifact filenames.
-- `server/_core/databaseAuthority/dataAdapters/canonicalPlaces.ts` hardcodes
-  `CANONICAL_PLACES_VERSION = gauteng-place-admission-v0.1`, `PACKAGE_DIR`,
-  `MANIFEST_PATH` and `REGISTRY_PATH`.
+It is renamed to `tools/place-admission/build-place-admission.mjs`, names no
+province, and accepts `--territory <id>` and `--registry <path>`.
 
-As written, admitting a second province would require a second engine, which
-violates the Phase 3 gate. The required change is to introduce one committed
-territory registry that maps a territory id to its source authority, admission
-version, output directory and artifact filenames, and to drive both the builder
-and the materializer from it. Territory data then differs by registry entry
-alone, with no new application architecture.
+Territory-specific *data* was deliberately left alone.
+`server/data/marketIntelligence.ts` and
+`dataAdapters/searchToLeadScenario.ts` remain, as does the named pressure-case
+list in `tools/place-admission/probe-place-admission.mjs`: that list is evidence
+about what happened to specific real referents in the `za-gp` adjudication, so
+admitting another province extends the list rather than the machinery.
 
-Not yet done. This is the next engineering task and needs no external input.
+### The single authority
+
+`shared/placeAdmissionTerritories.ts` is the one schema, validator and loader.
+`data/place-admission-territories.v0.1/territory-registry.v0.1.json` is the one
+committed registry. A territory entry names its source-authority directory, its
+digest-pinned source manifest, its source artifact filenames, its admission
+version, its coverage-baseline paths and counts, its package directory, and its
+package artifact filenames.
+
+It is deliberately **not** an extension of the Slice 1 projection catalog
+(`data/geography-coverage-v0.1/territory-catalog.v0.1.json`). §12.7 requires the
+neutrality proof to run without adding fictional rows to the real catalog, which
+a single shared file could not satisfy. The two files hold disjoint fields and
+disjoint artifacts: one pins frozen runtime projections, the other names the
+admission pipeline's inputs and outputs.
+
+Every load fails closed on an unregistered territory, a duplicate territory id or
+admission version, a reused filename, a repeated pinned manifest path, a path
+escaping the repository root, or a missing expected count.
+
+### Two real defects found and fixed
+
+1. **The committed admission manifest pointed at a file that does not exist.**
+   `outputs.parent_evidence_classification` recorded
+   `gauteng_parent_evidence_classification_v0.1.json`, while the builder wrote
+   and git tracked `gauteng_parent_evidence_classification.v0.1.json`. Nothing
+   had ever checked a manifest path against the filesystem. The builder now
+   refuses to finish if any path its manifest advertises does not exist.
+2. **The manifest embedded per-run counters.** `ids_minted_this_run` and
+   `ids_reused_this_run` were written into a committed artifact, so
+   `--check` could never pass after any run that minted an ID. This was
+   invisible for `za-gp` only because its Place-ID registry was already complete,
+   so every run was `minted=0 reused=1466`. The first territory to be admitted
+   from scratch would have hit it immediately. The per-run counters are now
+   reported on stdout; the manifest keeps only cumulative registry state.
+
+### The neutrality proof
+
+`pnpm place:admission:territory-neutrality`
+(`tools/place-admission/prove-territory-neutrality.mjs`) writes a synthetic
+province, two municipalities and three suburbs into a throwaway directory and
+drives the real builder and the real materializer against it. It asserts that
+the package is digest-pinned, that regeneration is byte-identical and mints no
+IDs, that the unchanged materializer loads it, that an unregistered territory is
+refused, and that the real registry and the real projection catalog are
+byte-unchanged. Nothing fictional is committed.
 
 ## Authoritative digests
+
+Admission territory registry
+`property-listify-place-admission-territories-v0.1`:
+
+- `data/place-admission-territories.v0.1/territory-registry.v0.1.json`
+  `85046d6b0d2c883f53328bbd9322277ea7fa3db4f8db1f9281d24831fc1fac02`
 
 Gauteng source authority `gauteng-source-authority-v0.2`:
 
 - Source snapshot `14666e91befd11e1aea6b220c520678fbafbfc2c12383392e29c9e727fa0a06e`
+- Source manifest
+  `334b2a6be8a575b677ade9668e61203574f80231a88d63a39fdd64b5d806bf7b`
 - Geography `7bba9cc217b207466916647cb674d637366eb45ed0c7c01b88c62c625e91884e`
 - Names `b5021e21df8728416e0bb7d0f7858c824cb9bca4bd382b8f98cbbeed285d79fd`
 - Source links `23559b7fd42c139aefbad4174fca3eadcfc7f9e717c5fa86b6d2b5888612dba7`
@@ -101,8 +152,11 @@ Gauteng source authority `gauteng-source-authority-v0.2`:
 
 Admitted Place package `gauteng-place-admission-v0.1`:
 
+- Admission manifest
+  `3ea71455b1b54f6f682632b9e1017bd7fae4d097fac20a1f92617f0939d14cea`
 - Materializer content digest
   `d7859a2e7face1dec4e648bac65a0866b82ef1297178232dbaef2541177adf70`
+  (**unchanged by Phase 3**, which proves the admitted rows are byte-identical)
 - 1,488 source identities, **1,466 admitted Places**, 22 merged groups
 - 2,476 names, 1,465 `administratively_contains` edges, 4,463 evidence rows,
   2,971 external mappings, 4,350 disposition ledger rows
@@ -125,16 +179,27 @@ Admitted Place package `gauteng-place-admission-v0.1`:
 
 ## Test status
 
-All green at the Phase 3 gate:
+All green after Phase 3:
 
-- Database Authority static gate **352/352**
-- Executable Place behavioural suite **36/36** (includes an exhaustive
-  determinism proof over all 1,436 searchable Places)
-- Slice 2 admission behavioural probe **39/39**
+- Database Authority static gate **364/364** (was 352/352; +12 from the new
+  territory-neutrality contract suite)
+- **Territory-neutrality proof** — a synthetic non-Gauteng territory admitted
+  through the same builder and materializer, package byte-identical across
+  regeneration, `minted=0`
+- Admission determinism check passes (`place:admission:check`)
 - Geography coverage probes **1705/1705**
-- Admission determinism check passes
-- Regression suites: location contract, listing lifecycle, SEO/slug properties 156/156
+- Location authority regression **44/44** (5 files)
+- Listing lifecycle + SEO/slug/place-id property regressions **116/116**
 - typecheck clean, lint 0 errors, build clean, `git diff --check` clean
+
+The Database-backed suites — the executable Place behavioural probe and
+`contract.place-executable-foundation` — were **not** re-run, because the
+worktree's disposable target was disposed after the Phase 1/2 gate and the
+local service is currently unreachable (`db:authority:status` reports
+`Service Availability: database-unreachable`). `contract.place-executable-foundation`
+fails 18/36 in this environment **identically at `ad753b3d` with Phase 3 stashed**,
+so it is an environment regression, not a Phase 3 regression. Re-run both on a
+freshly created disposable target before relying on them.
 
 Physical proof is always performed on a freshly created, owned, disposable
 target and the target is disposed afterwards. Never reuse a target to claim a
@@ -205,11 +270,10 @@ This is an **EXTERNAL BLOCKER**: progress requires obtaining and governing
 territory source extracts that are not present and that this mission is not
 authorized to synthesize.
 
-Everything reachable without that evidence is either complete or, in the case of
-the Phase 3 refactor, recorded with its exact next step. Phases 1 and 2 are
-closed and proven. Phase 3 needs no external input and can be completed
-immediately; it is blocked only by the Phase 4 evidence gap if the two are
-attempted in the wrong order.
+Phases 1, 2 and 3 are closed and proven. Phase 3 removed the last
+territory-specific application logic, so nothing about admitting another
+province is an engineering problem any more. Phases 4 and 5 are blocked only by
+the evidence gap above.
 
 ## Resolved decisions that must not be reopened silently
 
@@ -230,23 +294,29 @@ attempted in the wrong order.
 
 ## Exact next action
 
-**Complete the Phase 3 refactor first**, because it is unblocked and makes Phase
-4 possible without new architecture:
+**Phase 4, Western Cape, gated on governed evidence.** No engineering work
+remains unblocked; admitting a province is now a registry entry plus evidence,
+not new architecture.
 
-1. Add a committed territory registry mapping territory id to source authority
-   directory, admission version, output directory and artifact filenames.
-2. Drive `tools/place-admission/build-gauteng-admission.mjs` (rename to a
-   territory-neutral name) and `canonicalPlaces.ts` from that registry.
-3. Prove neutrality with a small synthetic non-Gauteng territory that runs
-   through the same code and produces an equivalent, digest-pinned package.
-
-Then Phase 4, Western Cape, gated on evidence:
-
-4. Acquire governed Western Cape source evidence and build the equivalent source
-   authority, following the documented v0.2 shape. Requires an authorized
-   territory extract and a licence/provenance determination.
-5. If evidence cannot be obtained, stop and report the blocker with Phases 1-3
+1. Acquire governed Western Cape source evidence and build the equivalent
+   source authority, following the documented v0.2 shape: geoBoundaries /
+   GeoNames / OSM extracts for the territory, provenance and licence
+   classification recorded per record, an adjudicated candidate catalogue, and a
+   digest-pinned manifest. This requires an authorized territory extract and a
+   licence/provenance determination.
+2. Add a `za-wc` entry to
+   `data/place-admission-territories.v0.1/territory-registry.v0.1.json` naming
+   that source authority, its admission version, its package directory and its
+   artifact filenames. Seed `expected_counts` from the first build's manifest
+   and review them as a deliberate diff.
+3. Run `tsx tools/place-admission/build-place-admission.mjs --territory za-wc`
+   and prove it on a freshly created disposable target.
+4. If evidence cannot be obtained, stop and report the blocker with Phases 1–3
    closed and committed.
 
-No further engineering work is blocked. Do not begin consumer convergence, do not
-switch any runtime, and do not activate a Search Area.
+When a province is admitted, also extend the named pressure-case list in
+`tools/place-admission/probe-place-admission.mjs` with that territory's real
+referents. That list is evidence, and evidence is per territory.
+
+Do not begin consumer convergence, do not switch any runtime, and do not activate
+a Search Area.

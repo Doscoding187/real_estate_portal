@@ -1472,6 +1472,7 @@
   "namespace": "pl-place-01",
   "provenance": {
     "admission_version": "gauteng-place-admission-v0.1",
+    "territory_id": "za-gp",
     "source_snapshot_id": "14666e91befd11e1aea6b220c520678fbafbfc2c12383392e29c9e727fa0a06e",
     "note": "Assigned canonical Place identities. Reused verbatim on every regeneration. Never remap an id."
   }

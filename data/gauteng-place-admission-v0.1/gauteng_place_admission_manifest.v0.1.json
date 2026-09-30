@@ -1,5 +1,11 @@
 {
   "admission_version": "gauteng-place-admission-v0.1",
+  "territory": {
+    "territory_id": "za-gp",
+    "display_name": "Gauteng",
+    "admission_registry_path": "data/place-admission-territories.v0.1/territory-registry.v0.1.json",
+    "admission_registry_sha256": "85046d6b0d2c883f53328bbd9322277ea7fa3db4f8db1f9281d24831fc1fac02"
+  },
   "generated_from": {
     "source_authority_version": "gauteng-source-authority-v0.2",
     "source_snapshot_id": "14666e91befd11e1aea6b220c520678fbafbfc2c12383392e29c9e727fa0a06e",
@@ -143,9 +149,7 @@
   "place_id_registry": {
     "path": "data/gauteng-place-admission-v0.1/gauteng_place_id_registry.v0.1.json",
     "allocated_ids": 1466,
-    "allocation_sequence": 1466,
-    "ids_minted_this_run": 0,
-    "ids_reused_this_run": 1466
+    "allocation_sequence": 1466
   },
   "invariants_asserted": [
     "every source identity maps to exactly one admitted Place",
@@ -169,6 +173,6 @@
     "evidence": "data/gauteng-place-admission-v0.1/gauteng_place_evidence_v0.1.jsonl",
     "external_mappings": "data/gauteng-place-admission-v0.1/gauteng_place_external_mappings_v0.1.jsonl",
     "disposition_ledger": "data/gauteng-place-admission-v0.1/gauteng_place_disposition_ledger_v0.1.jsonl",
-    "parent_evidence_classification": "data/gauteng-place-admission-v0.1/gauteng_parent_evidence_classification_v0.1.json"
+    "parent_evidence_classification": "data/gauteng-place-admission-v0.1/gauteng_parent_evidence_classification.v0.1.json"
   }
 }

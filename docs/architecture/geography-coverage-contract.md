@@ -502,6 +502,7 @@ closes them.
 | `data/geography-coverage-v0.1/output/gauteng_factual_runtime_mapping_v0.2.jsonl` | **CANONICAL** | Frozen current factual-to-runtime disposition bridge. Every factual identity remains distinct, including co-published members. | Superseded only by an activated successor mapping with recorded digests. |
 | `data/geography-coverage-v0.1/output/gauteng_coverage_disposition_v0.1.json` and `gauteng_review_queue_v0.1.jsonl` | **CANONICAL** | Preserve counts, reasons, candidate evidence, and research obligations; never materialize blocked rows publicly. | — |
 | `data/geography-coverage-v0.1/territory-catalog.v0.1.json` | **CANONICAL** | Digest-pinned registry of immutable territory artifacts. It contains no copied geography rows and cannot override a source artifact. | Default until an activation slice repoints `LOCATION_AUTHORITY_CATALOG_INDEX_PATH`. |
+| `data/place-admission-territories.v0.1/territory-registry.v0.1.json` | **CANONICAL** | The single authority for a territory's *admission* inputs and outputs (Section 21): source-authority directory, digest-pinned source manifest, source artifact filenames, admission version, package directory and package artifact filenames. Names locations; holds no geography rows and adjudicates nothing. | — |
 | `shared/factualRuntimeGeographyBridge.ts`, `shared/runtimeGeography.ts`, and the governed runtime reference loader | **CANONICAL** | Validate IDs, projection shape, natural-key hierarchy, and exact governed co-publication. Reject malformed or ambiguous source data. | — |
 | `server/_core/databaseAuthority/dataAdapters/canonicalGeography.ts` | **CANONICAL** | Materialize and verify governed natural keys on authorized targets. Numeric IDs are environment-local handles. The adapter's target **row shape** is transitional (see next row); its upsert-by-natural-key and fail-closed conflict behaviour are canonical. | — |
 | `place`, `place_name`, `place_relationship`, `place_evidence`, `place_external_mapping`, `search_area`, `search_area_member` (migrations 0091–0097) | **CANONICAL** | The minimum V1 Place Authority foundation approved in Section 14, established by Slice 1. Identity is the opaque `place_id` primary key; no numeric surrogate exists. Identity dimensions are separate columns, and every contract invariant is a database CHECK constraint. Empty by design: no Place is populated and no consumer references these tables yet. | — |
@@ -1074,3 +1075,69 @@ The following remain governed gaps, recorded rather than guessed:
 Establishing them requires explicit semantics, such as evidenced settlement
 membership or a governed executable-scope membership projection, or a Search
 Area. None is invented here.
+
+## 21. Place admission territory registry (v0.5)
+
+Slice 2's admission pipeline named one province in application code. The builder
+hardcoded its source directory, output directory, admission version and artifact
+filenames; the materializer hardcoded the same values again. Admitting a second
+province would therefore have required a second engine.
+
+Section 21 removes that. One committed registry is the single authority for
+where a territory's governed admission inputs live and what its admitted package
+is called.
+
+### 21.1 What a territory entry may vary
+
+Exactly these, and nothing else:
+
+- `territory_id` and `display_name`;
+- `admission_version`;
+- `source_authority`: directory, digest-pinned source manifest, and the
+  filenames of the geography, names, source-link and candidate-disposition
+  artifacts;
+- `coverage_baseline`: the frozen v0.1 comparison directory and its recorded
+  counts;
+- `admission_package`: directory, manifest filename, Place-ID registry filename
+  and the package artifact filenames;
+- `expected_counts`: the reviewed counts a build must reproduce.
+
+A registry entry holds no geography rows, adjudicates no Place, and licenses no
+source. Those remain the source authority's and the builder's governed jobs.
+
+### 21.2 Fail-closed rules
+
+Loading refuses an unregistered territory, a duplicate territory id or admission
+version, a filename reused across territories, a source manifest pinned twice,
+an artifact path that is not a bare filename, a path escaping the repository
+root, a missing expected count, and a default territory that is not itself
+registered. The builder additionally refuses to finish when the produced counts
+disagree with `expected_counts`, or when any path its manifest advertises does
+not exist.
+
+### 21.3 Why this is separate from Section 10's projection catalog
+
+`data/geography-coverage-v0.1/territory-catalog.v0.1.json` pins the frozen
+Slice 1 runtime natural-key projections. The admission registry names the
+admission pipeline's inputs and outputs. They hold disjoint fields, name disjoint
+artifacts and have different lifecycles, so neither can override the other.
+
+They are also not merged, because Section 12.7 requires the neutrality proof to
+run a synthetic non-Gauteng territory **without adding fictional rows to the
+real catalog**. A single shared file could not satisfy that. The proof therefore
+writes its synthetic territory into a throwaway directory and removes it
+afterwards; nothing fictional is committed and the real registry never gains an
+entry.
+
+### 21.4 Neutrality is proven, not asserted
+
+`tools/place-admission/prove-territory-neutrality.mjs` admits a synthetic
+province, two municipalities and three suburbs through the real builder and the
+real materializer, and asserts that the package is digest-pinned, that
+regeneration is byte-identical and mints no Place IDs, that the unchanged
+materializer loads it, that an unregistered territory is refused, and that the
+real registry and the real projection catalog are byte-unchanged.
+
+A territory is admitted by adding a registry entry plus its governed source
+evidence. It is never admitted by adding application architecture, and never by
+copying another territory's rows as a template (Section 11).

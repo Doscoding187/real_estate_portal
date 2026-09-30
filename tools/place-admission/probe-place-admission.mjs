@@ -1,13 +1,22 @@
 #!/usr/bin/env node
 /* global console, process */
 /**
- * Behavioural proof for the admitted Gauteng Place dataset on an owned
- * disposable target (Place Authority Slice 2).
+ * Behavioural proof for the admitted Place dataset of the **default registered
+ * territory** on an owned disposable target (Place Authority Slice 2, Phase 3).
+ *
+ * The territory, its admission version and its package paths all come from the
+ * committed admission territory registry, so this probe needs no code change to
+ * run against a newly admitted province.
+ *
+ * The named pressure cases below are that territory's *evidence* — they assert
+ * what happened to specific real referents when that source authority was
+ * adjudicated. They are data, not application logic, and admitting another
+ * province extends this case list rather than the machinery around it.
  *
  * Static validation and physical congruency are necessary but not sufficient, so
  * this exercises the admitted data with real reads and writes:
  *
- *  - every named Gauteng pressure-test case resolves to an explicit outcome;
+ *  - every named pressure-test case resolves to an explicit outcome;
  *  - identity is stable and never derived from a name or a classification;
  *  - same name across distinct Places stays two Places;
  *  - a Place may hold several names, including overlapping roles;
@@ -29,14 +38,31 @@ import {
   protectedDatabaseApprovalFromEnvironment,
 } from '../../server/_core/databaseAuthority/authorization.ts';
 import { queryRows } from '../../server/_core/databaseAuthority/dataAdapters/common.ts';
+import {
+  loadPlaceAdmissionTerritoryRegistry,
+  selectPlaceAdmissionTerritory,
+} from '../../shared/placeAdmissionTerritories.ts';
 
 const authority = resolveDatabaseAuthority({ operation: 'verification', credentialClass: 'read-only' });
 const decision = authorizeDatabaseOperation(authority, { approval: protectedDatabaseApprovalFromEnvironment(authority) });
 const db = await createAuthoritySqlConnection(authority, decision);
 const read = (sql, values = []) => queryRows(db, sql, values);
 
+/**
+ * This probe proves the default registered territory, and says which one it is.
+ * Nothing below names a province's paths.
+ */
+const probedTerritory = selectPlaceAdmissionTerritory(
+  loadPlaceAdmissionTerritoryRegistry(process.cwd()).registry,
+);
+
 const results = [];
 const check = (ok, label, detail = '') => results.push({ ok: Boolean(ok), label, detail });
+
+check(
+  true,
+  `probing registered territory ${probedTerritory.territoryId} (${probedTerritory.admissionVersion})`,
+);
 
 /* ---- dataset fingerprints for the idempotency proof ---- */
 const fingerprint = async () => {

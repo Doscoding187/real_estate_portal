@@ -1,0 +1,64 @@
+{
+  "schema_version": "0.1",
+  "registry_id": "property-listify-place-admission-territories-v0.1",
+  "default_territory_id": "za-gp",
+  "territories": [
+    {
+      "territory_id": "za-gp",
+      "display_name": "Gauteng",
+      "admission_version": "gauteng-place-admission-v0.1",
+      "source_authority": {
+        "authority_version": "gauteng-source-authority-v0.2",
+        "directory": "data/gauteng-source-authority-v0.2",
+        "manifest": {
+          "path": "data/gauteng-source-authority-v0.2/gauteng_source_manifest_v0.2.json",
+          "sha256": "334b2a6be8a575b677ade9668e61203574f80231a88d63a39fdd64b5d806bf7b"
+        },
+        "artifacts": {
+          "geography": "gauteng_factual_canonical_geography_v0.2.jsonl",
+          "names": "gauteng_factual_canonical_names_v0.2.jsonl",
+          "source_links": "gauteng_factual_canonical_source_links_v0.2.jsonl",
+          "candidate_dispositions": "gauteng_candidate_dispositions_v0.2.jsonl"
+        }
+      },
+      "coverage_baseline": {
+        "directory": "data/geography-coverage-v0.1",
+        "territory_manifest": "gauteng-territory-manifest.v0.1.json",
+        "territory_catalog": "territory-catalog.v0.1.json",
+        "counts": {
+          "factual_identity_count": 1480,
+          "runtime_row_count": 1414,
+          "queued_count": 116,
+          "awaiting_accepted_parent_edge": 11,
+          "duplicate_natural_key_within_parent": 8,
+          "natural_key_owned_by_accepted_row": 3,
+          "co_published_natural_keys": 14
+        }
+      },
+      "admission_package": {
+        "directory": "data/gauteng-place-admission-v0.1",
+        "manifest": "gauteng_place_admission_manifest.v0.1.json",
+        "place_id_registry": "gauteng_place_id_registry.v0.1.json",
+        "artifacts": {
+          "places": "gauteng_place_admission_v0.1.jsonl",
+          "names": "gauteng_place_names_v0.1.jsonl",
+          "relationships": "gauteng_place_relationships_v0.1.jsonl",
+          "evidence": "gauteng_place_evidence_v0.1.jsonl",
+          "external_mappings": "gauteng_place_external_mappings_v0.1.jsonl",
+          "disposition_ledger": "gauteng_place_disposition_ledger_v0.1.jsonl",
+          "parent_evidence_classification": "gauteng_parent_evidence_classification.v0.1.json"
+        }
+      },
+      "expected_counts": {
+        "source_identities": 1488,
+        "admitted_places": 1466,
+        "names": 2476,
+        "relationships": 1465,
+        "evidence_rows": 4463,
+        "external_mappings": 2971,
+        "disposition_ledger_rows": 4350,
+        "executable_places": 1436
+      }
+    }
+  ]
+}

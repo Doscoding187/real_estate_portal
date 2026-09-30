@@ -7,6 +7,12 @@
  * speculative adapter, because there was no governed admission source to
  * reference. There is one now.
  *
+ * The adapter is **territory-neutral**. The package directory, its admission
+ * version and its artifact filenames come from the committed admission territory
+ * registry, and the registry itself pins the source-authority manifest by
+ * digest. Materializing a second province is therefore a registry entry plus its
+ * governed evidence, never a code change here.
+ *
  * It is deliberately NOT a public consumer path. Nothing here changes location
  * search, listing authoring, the three-level runtime, or any existing geography
  * resolution. Slice 3 proves executable discovery.
@@ -41,13 +47,28 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import {
+  loadPlaceAdmissionTerritoryRegistry,
+  readVerifiedPlaceAdmissionArtifact,
+  resolvePlaceAdmissionPackagePaths,
+  selectPlaceAdmissionTerritory,
+  PLACE_ADMISSION_TERRITORY_REGISTRY_PATH,
+} from '../../../../shared/placeAdmissionTerritories';
+
+import {
   queryRows,
   requireAcceptedMigrationHead,
   requireReferenceAdapterTarget,
   withTransaction,
 } from './common';
 
-export const CANONICAL_PLACES_VERSION = 'gauteng-place-admission-v0.1' as const;
+/**
+ * The default registered territory's admission version. Derived from the
+ * committed admission territory registry rather than hardcoded, so admitting a
+ * second province is a registry entry and never a code change here.
+ */
+export const CANONICAL_PLACES_VERSION = selectPlaceAdmissionTerritory(
+  loadPlaceAdmissionTerritoryRegistry(process.cwd()).registry,
+).admissionVersion;
 
 /**
  * Digest over the adapter's own governance surface. Recorded so the data-role
@@ -65,11 +86,6 @@ export const CANONICAL_PLACES_DIGEST = createHash('sha256')
     ].join('\n'),
   )
   .digest('hex');
-
-/** Package location and artifact set, all digest-pinned by the manifest. */
-const PACKAGE_DIR = 'data/gauteng-place-admission-v0.1';
-const MANIFEST_PATH = `${PACKAGE_DIR}/gauteng_place_admission_manifest.v0.1.json`;
-const REGISTRY_PATH = `${PACKAGE_DIR}/gauteng_place_id_registry.v0.1.json`;
 
 const ARTIFACT_KEYS = {
   places: 'places',
@@ -103,6 +119,7 @@ const isDisposableTarget = (authority: any) =>
   authority.context.targetClass === 'disposable-test';
 
 export interface CanonicalPlacesExpected {
+  territoryId: string;
   admissionVersion: string;
   sourceSnapshotId: string;
   places: number;
@@ -119,9 +136,43 @@ export interface CanonicalPlacesExpected {
   verifiedDigest: string;
 }
 
+/**
+ * Which territory's admitted package to read, and from which registry.
+ *
+ * `territoryId` defaults to the registry's default territory. `registryPath`
+ * exists so the territory-neutrality proof can drive this adapter from a
+ * synthetic registry without the real one gaining a fictional entry.
+ */
+export interface CanonicalPlacesPackageRef {
+  territoryId?: string;
+  registryPath?: string;
+}
+
+/**
+ * Resolve the admitted package for a territory. The registry names the package
+ * directory, its manifest, its Place-ID registry and its artifact filenames; the
+ * manifest then digest-pins the source authority every row was derived from.
+ */
+function resolveCanonicalPlacesPackage(root: string, ref: CanonicalPlacesPackageRef) {
+  const { registry, registrySha256 } = loadPlaceAdmissionTerritoryRegistry(
+    root,
+    ref.registryPath ?? PLACE_ADMISSION_TERRITORY_REGISTRY_PATH,
+  );
+  const territory = selectPlaceAdmissionTerritory(registry, ref.territoryId);
+  const paths = resolvePlaceAdmissionPackagePaths(territory);
+
+  // The registry pins the source-authority manifest by digest. Verifying it here
+  // means a package can never be loaded from a source authority the reviewed
+  // registry does not name.
+  readVerifiedPlaceAdmissionArtifact(root, territory.sourceAuthority.manifest);
+
+  return { territory, paths, registrySha256 };
+}
+
 /** Read and digest-verify the whole package. Fails closed on any mismatch. */
-export function loadCanonicalPlacePackage(root: string) {
-  const manifest = JSON.parse(readFileSync(resolve(root, MANIFEST_PATH), 'utf8')) as {
+export function loadCanonicalPlacePackage(root: string, ref: CanonicalPlacesPackageRef = {}) {
+  const { territory, paths, registrySha256 } = resolveCanonicalPlacesPackage(root, ref);
+  const manifest = JSON.parse(readFileSync(resolve(root, paths.manifest), 'utf8')) as {
     admission_version: string;
     generated_from: {
       source_snapshot_id: string;
@@ -131,9 +182,9 @@ export function loadCanonicalPlacePackage(root: string) {
     outputs: Record<string, string>;
   };
 
-  if (manifest.admission_version !== CANONICAL_PLACES_VERSION) {
+  if (manifest.admission_version !== territory.admissionVersion) {
     throw new Error(
-      `canonical-places refused: admission version ${manifest.admission_version} is not ${CANONICAL_PLACES_VERSION}`,
+      `canonical-places refused: admission version ${manifest.admission_version} is not ${territory.admissionVersion}`,
     );
   }
 
@@ -157,10 +208,17 @@ export function loadCanonicalPlacePackage(root: string) {
   for (const [key, outputKey] of Object.entries(ARTIFACT_KEYS)) {
     const path = manifest.outputs[outputKey];
     if (!path) throw new Error(`canonical-places refused: manifest has no output for ${outputKey}`);
+    // The manifest must not advertise an artifact the registry did not name.
+    if (path !== paths.artifacts[outputKey as keyof typeof paths.artifacts]) {
+      throw new Error(
+        `canonical-places refused: manifest output ${outputKey} is ${path}, which the admission ` +
+          `territory registry does not register for ${territory.territoryId}`,
+      );
+    }
     rows[key as keyof typeof ARTIFACT_KEYS] = readJsonl(root, path);
   }
 
-  const registry = JSON.parse(readFileSync(resolve(root, REGISTRY_PATH), 'utf8')) as {
+  const registryDocument = JSON.parse(readFileSync(resolve(root, paths.placeIdRegistry), 'utf8')) as {
     allocated: Record<string, string>;
   };
 
@@ -178,11 +236,21 @@ export function loadCanonicalPlacePackage(root: string) {
     )
     .digest('hex');
 
-  return { manifest, rows, registry, verifiedDigest };
+  return {
+    manifest,
+    rows,
+    registry: registryDocument,
+    verifiedDigest,
+    territory,
+    registrySha256,
+  };
 }
 
-export function canonicalPlacesExpected(root: string): CanonicalPlacesExpected {
-  const { manifest, rows, verifiedDigest } = loadCanonicalPlacePackage(root);
+export function canonicalPlacesExpected(
+  root: string,
+  ref: CanonicalPlacesPackageRef = {},
+): CanonicalPlacesExpected {
+  const { manifest, rows, verifiedDigest, territory } = loadCanonicalPlacePackage(root, ref);
   const places = rows.places as {
     verification_status: string;
     search_eligible: number;
@@ -190,6 +258,7 @@ export function canonicalPlacesExpected(root: string): CanonicalPlacesExpected {
     licensing_classification: string;
   }[];
   return {
+    territoryId: territory.territoryId,
     admissionVersion: manifest.admission_version,
     sourceSnapshotId: manifest.generated_from.source_snapshot_id,
     places: places.length,

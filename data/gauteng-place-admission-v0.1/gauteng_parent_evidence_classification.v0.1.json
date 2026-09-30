@@ -1,5 +1,6 @@
 {
   "admission_version": "gauteng-place-admission-v0.1",
+  "territory_id": "za-gp",
   "source_manifest": "data/geography-coverage-v0.1/gauteng-territory-manifest.v0.1.json",
   "governed_input_count": 103,
   "note": "A file existing does not prove an accepted Place relationship. Every edge is classified by what its evidence denotes and none is promoted to administrative containment in Slice 2.",

@@ -1,10 +1,17 @@
 #!/usr/bin/env node
 /* global console, process */
 /**
- * Gauteng Place Admission builder (Place Authority Slice 2).
+ * Place Admission builder (Place Authority Slice 2, Phase 3 territory-neutral).
  *
- * Transforms the reproducible, digest-pinned Gauteng v0.2 source authority into
- * an admitted canonical Place dataset.
+ * Transforms a reproducible, digest-pinned source authority into an admitted
+ * canonical Place dataset. This builder is **territory-neutral**: it contains no
+ * knowledge of any province. Every territory-specific fact — where the source
+ * authority lives, what its artifacts are called, what the admission version is,
+ * and where the admitted package is written — is read from the committed
+ * admission territory registry.
+ *
+ * Admitting a second province must therefore be a new registry entry plus its
+ * governed source evidence. It must never require a second engine.
  *
  * This is an identity-admission tool, not a three-level projection repair. Its
  * central job is the step the old pipeline never performed: deciding how many
@@ -24,21 +31,48 @@
  * already-adjudicated identity, and never remaps an existing ID.
  *
  * Usage:
- *   node tools/place-admission/build-gauteng-admission.mjs            # build
- *   node tools/place-admission/build-gauteng-admission.mjs --check    # verify
+ *   tsx tools/place-admission/build-place-admission.mjs                     # build default territory
+ *   tsx tools/place-admission/build-place-admission.mjs --check             # verify determinism
+ *   tsx tools/place-admission/build-place-admission.mjs --territory <id>  # explicit territory
+ *   tsx tools/place-admission/build-place-admission.mjs --registry <path>   # alternate registry
  */
 
 import { createHash, randomBytes } from 'node:crypto';
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 
-const ROOT = process.cwd();
-const SOURCE_DIR = 'data/gauteng-source-authority-v0.2';
-const V01_DIR = 'data/geography-coverage-v0.1';
-const OUT_DIR = 'data/gauteng-place-admission-v0.1';
-const ADMISSION_VERSION = 'gauteng-place-admission-v0.1';
+import {
+  loadPlaceAdmissionTerritoryRegistry,
+  readVerifiedPlaceAdmissionArtifact,
+  resolvePlaceAdmissionCoverageBaselinePaths,
+  resolvePlaceAdmissionPackagePaths,
+  resolvePlaceAdmissionSourcePaths,
+  selectPlaceAdmissionTerritory,
+  PLACE_ADMISSION_TERRITORY_REGISTRY_PATH,
+} from '../../shared/placeAdmissionTerritories.ts';
 
-const CHECK_ONLY = process.argv.includes('--check');
+const ROOT = process.cwd();
+
+const argv = process.argv.slice(2);
+const flagValue = (name, fallback) => {
+  const index = argv.indexOf(name);
+  return index === -1 || index === argv.length - 1 ? fallback : argv[index + 1];
+};
+const CHECK_ONLY = argv.includes('--check');
+const TERRITORY_ID = flagValue('--territory', undefined);
+const REGISTRY_PATH = flagValue('--registry', PLACE_ADMISSION_TERRITORY_REGISTRY_PATH);
+
+/**
+ * Resolve the governed territory record. Nothing below this point may name a
+ * province: the source directory, artifact filenames, admission version and
+ * output directory all come from here.
+ */
+const registryLoad = loadPlaceAdmissionTerritoryRegistry(ROOT, REGISTRY_PATH);
+const territory = selectPlaceAdmissionTerritory(registryLoad.registry, TERRITORY_ID);
+const ADMISSION_VERSION = territory.admissionVersion;
+const sourcePaths = resolvePlaceAdmissionSourcePaths(territory);
+const packagePaths = resolvePlaceAdmissionPackagePaths(territory);
+const coverageBaselinePaths = resolvePlaceAdmissionCoverageBaselinePaths(territory);
 
 /* ------------------------------------------------------------------ *
  * Governed admission policy. Every constant here is a recorded decision,
@@ -48,10 +82,11 @@ const CHECK_ONLY = process.argv.includes('--check');
 
 /**
  * Administrative container types. A province or municipality is a unique
- * administrative container within a territory: there is one Gauteng, one
- * Ekurhuleni. Two records claiming the same container name are therefore the
- * same referent by construction, and the two v0.2 "Gauteng" province identities
- * (whose representative points fall in different districts) are one Place.
+ * administrative container within a territory: there is exactly one province,
+ * one district municipality, one local municipality per name. Two records
+ * claiming the same container name are therefore the same referent by
+ * construction, so a source that emitted one province identity twice under
+ * differing representative points still admits as a single Place.
  */
 const CONTAINER_TYPES = new Set(['province', 'district_municipality', 'local_municipality']);
 
@@ -60,8 +95,8 @@ const CONTAINER_TYPES = new Set(['province', 'district_municipality', 'local_mun
  * admitted administrative context, and representative points within this
  * distance. Source classification disagreement alone never blocks a merge and
  * never creates a second Place, because providers label the same referent
- * differently (Sandton is a suburb to one source and a populated place to
- * another).
+ * differently (one source may call a settlement a suburb where another calls it
+ * a populated place).
  */
 const SETTLEMENT_MERGE_MAX_KM = 15;
 
@@ -147,7 +182,15 @@ const byIdLex = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
  * 1. Load the governed source and verify every digest
  * ------------------------------------------------------------------ */
 
-const sourceManifest = readJson(`${SOURCE_DIR}/gauteng_source_manifest_v0.2.json`);
+const sourceManifest = JSON.parse(
+  readVerifiedPlaceAdmissionArtifact(ROOT, territory.sourceAuthority.manifest).toString('utf8'),
+);
+if (sourceManifest.authority_version !== territory.sourceAuthority.authorityVersion) {
+  throw new Error(
+    `source authority version ${sourceManifest.authority_version} does not match the registry's ` +
+      `${territory.sourceAuthority.authorityVersion} for territory ${territory.territoryId}`,
+  );
+}
 const sourceDigestMismatches = [];
 for (const artifact of sourceManifest.compact_artifacts ?? []) {
   const actual = sha256(artifact.path);
@@ -159,10 +202,10 @@ if (sourceDigestMismatches.length) {
   throw new Error(`source authority digest verification failed:\n  ${sourceDigestMismatches.join('\n  ')}`);
 }
 
-const identities = readJsonl(`${SOURCE_DIR}/gauteng_factual_canonical_geography_v0.2.jsonl`);
-const nameAssertions = readJsonl(`${SOURCE_DIR}/gauteng_factual_canonical_names_v0.2.jsonl`);
-const sourceLinks = readJsonl(`${SOURCE_DIR}/gauteng_factual_canonical_source_links_v0.2.jsonl`);
-const candidates = readJsonl(`${SOURCE_DIR}/gauteng_candidate_dispositions_v0.2.jsonl`);
+const identities = readJsonl(sourcePaths.artifacts.geography);
+const nameAssertions = readJsonl(sourcePaths.artifacts.names);
+const sourceLinks = readJsonl(sourcePaths.artifacts.source_links);
+const candidates = readJsonl(sourcePaths.artifacts.candidate_dispositions);
 
 const identityIndex = byId(identities, 'canonical_location_id');
 const namesByIdentity = new Map();
@@ -346,9 +389,9 @@ const D1_SCOPE_BY_TYPE = {
  * Place.
  * ------------------------------------------------------------------ */
 
-const REGISTRY_PATH = `${OUT_DIR}/gauteng_place_id_registry.v0.1.json`;
-const registry = existsSync(resolve(ROOT, REGISTRY_PATH))
-  ? readJson(REGISTRY_PATH)
+const PLACE_ID_REGISTRY_PATH = packagePaths.placeIdRegistry;
+const registry = existsSync(resolve(ROOT, PLACE_ID_REGISTRY_PATH))
+  ? readJson(PLACE_ID_REGISTRY_PATH)
   : { registry_version: ADMISSION_VERSION, allocated: {}, allocation_sequence: 0, namespace: 'pl-place-01' };
 
 const allocatedIds = new Set(Object.values(registry.allocated));
@@ -664,11 +707,11 @@ relationshipRows.sort(
  * three-tier ancestry requirement.
  *
  * province / metro_city / locality are derived search-scope **categories**, not
- * mandatory levels in the canonical containment hierarchy. The canonical case is
+ * mandatory levels in the canonical containment hierarchy. The canonical shape is
  *
- *   Gauteng (province) -> City of Johannesburg (municipality) -> Bryanston (locality)
+ *   <province> (province) -> <municipality> (municipality) -> <suburb> (locality)
  *
- * Bryanston is a legitimate locality scope with no city Place anywhere above it.
+ * A suburb is a legitimate locality scope with no city Place anywhere above it.
  * Requiring a metro_city ancestor would force a fake city node into good
  * geography purely so the search abstraction would have three tiers, which is
  * exactly the flattening Place Authority exists to eliminate. The administrative
@@ -922,7 +965,7 @@ ledgerRows.sort((a, b) => byIdLex(a.source_identity_id, b.source_identity_id));
  * administrative containment in Slice 2.
  * ------------------------------------------------------------------ */
 
-const v01Manifest = readJson(`${V01_DIR}/gauteng-territory-manifest.v0.1.json`);
+const v01Manifest = readJson(coverageBaselinePaths.territoryManifest);
 const parentEvidenceInputs = v01Manifest.inputs.researched_parent_edges ?? [];
 
 const NON_GEOGRAPHIC_EVIDENCE_PATTERN =
@@ -1210,11 +1253,17 @@ const groupKindTally = groupRecords.reduce((acc, item) => {
 
 const manifest = {
   admission_version: ADMISSION_VERSION,
+  territory: {
+    territory_id: territory.territoryId,
+    display_name: territory.displayName,
+    admission_registry_path: registryLoad.registryPath,
+    admission_registry_sha256: registryLoad.registrySha256,
+  },
   generated_from: {
     source_authority_version: sourceManifest.authority_version,
     source_snapshot_id: sourceManifest.source_snapshot_id,
-    source_manifest_path: `${SOURCE_DIR}/gauteng_source_manifest_v0.2.json`,
-    source_manifest_sha256: sha256(`${SOURCE_DIR}/gauteng_source_manifest_v0.2.json`),
+    source_manifest_path: sourcePaths.manifest,
+    source_manifest_sha256: sha256(sourcePaths.manifest),
     compact_artifacts: (sourceManifest.compact_artifacts ?? []).map(artifact => ({
       path: artifact.path,
       sha256: artifact.sha256,
@@ -1222,15 +1271,9 @@ const manifest = {
     })),
     comparison_baseline: {
       note: 'The v0.1 committed artifacts are retained as comparison and regression evidence only. Their factual source JSONLs are unrecoverable and were not used as forward authority.',
-      catalogue: `${V01_DIR}/territory-catalog.v0.1.json`,
-      catalogue_sha256: sha256(`${V01_DIR}/territory-catalog.v0.1.json`),
-      factual_identity_count: 1480,
-      runtime_row_count: 1414,
-      queued_count: 116,
-      awaiting_accepted_parent_edge: 11,
-      duplicate_natural_key_within_parent: 8,
-      natural_key_owned_by_accepted_row: 3,
-      co_published_natural_keys: 14,
+      catalogue: coverageBaselinePaths.territoryCatalog,
+      catalogue_sha256: sha256(coverageBaselinePaths.territoryCatalog),
+      ...territory.coverageBaseline.counts,
       parent_evidence_inputs: parentEvidenceInputs.length,
     },
   },
@@ -1284,11 +1327,9 @@ const manifest = {
     parent_evidence_classification: parentEvidenceTally,
   },
   place_id_registry: {
-    path: REGISTRY_PATH,
+    path: PLACE_ID_REGISTRY_PATH,
     allocated_ids: Object.keys(registry.allocated).length,
     allocation_sequence: registry.allocation_sequence,
-    ids_minted_this_run: minted,
-    ids_reused_this_run: reused,
   },
   invariants_asserted: [
     'every source identity maps to exactly one admitted Place',
@@ -1305,24 +1346,40 @@ const manifest = {
     'a Place without a governed executable scope stays admitted but is neither searchable nor publishable',
     'the disposition ledger covers every source candidate',
   ],
-  outputs: {
-    places: `${OUT_DIR}/gauteng_place_admission_v0.1.jsonl`,
-    names: `${OUT_DIR}/gauteng_place_names_v0.1.jsonl`,
-    relationships: `${OUT_DIR}/gauteng_place_relationships_v0.1.jsonl`,
-    evidence: `${OUT_DIR}/gauteng_place_evidence_v0.1.jsonl`,
-    external_mappings: `${OUT_DIR}/gauteng_place_external_mappings_v0.1.jsonl`,
-    disposition_ledger: `${OUT_DIR}/gauteng_place_disposition_ledger_v0.1.jsonl`,
-    parent_evidence_classification: `${OUT_DIR}/gauteng_parent_evidence_classification_v0.1.json`,
+outputs: {
+    places: packagePaths.artifacts.places,
+    names: packagePaths.artifacts.names,
+    relationships: packagePaths.artifacts.relationships,
+    evidence: packagePaths.artifacts.evidence,
+    external_mappings: packagePaths.artifacts.external_mappings,
+    disposition_ledger: packagePaths.artifacts.disposition_ledger,
+    parent_evidence_classification: packagePaths.artifacts.parent_evidence_classification,
   },
 };
+
+/**
+ * The registry holds reviewed expected counts for this territory. A produced
+ * package that disagrees is refused here, so a changed admission outcome is a
+ * reviewed registry diff rather than a silently committed artifact.
+ */
+const expectedCountMismatches = Object.entries(territory.expectedCounts)
+  .filter(([key, expected]) => manifest.counts[key] !== expected)
+  .map(([key, expected]) => `${key}: registry expects ${expected}, produced ${manifest.counts[key]}`);
+if (expectedCountMismatches.length) {
+  throw new Error(
+    `place-admission refused: territory ${territory.territoryId} produced counts that disagree with ` +
+      `the committed admission registry:\n  ${expectedCountMismatches.join('\n  ')}`,
+  );
+}
 
 if (!CHECK_ONLY) {
   registry.provenance = {
     admission_version: ADMISSION_VERSION,
+    territory_id: territory.territoryId,
     source_snapshot_id: sourceManifest.source_snapshot_id,
     note: 'Assigned canonical Place identities. Reused verbatim on every regeneration. Never remap an id.',
   };
-  writeIfChanged(REGISTRY_PATH, JSON.stringify(registry, null, 2) + '\n');
+  writeIfChanged(PLACE_ID_REGISTRY_PATH, JSON.stringify(registry, null, 2) + '\n');
 }
 writeJsonl(manifest.outputs.places, placeRows);
 writeJsonl(manifest.outputs.names, nameRows);
@@ -1331,11 +1388,12 @@ writeJsonl(manifest.outputs.evidence, evidenceRows);
 writeJsonl(manifest.outputs.external_mappings, externalMappingRows);
 writeJsonl(manifest.outputs.disposition_ledger, ledgerRows);
 writeIfChanged(
-  `${OUT_DIR}/gauteng_parent_evidence_classification.v0.1.json`,
+  packagePaths.artifacts.parent_evidence_classification,
   JSON.stringify(
     {
       admission_version: ADMISSION_VERSION,
-      source_manifest: `${V01_DIR}/gauteng-territory-manifest.v0.1.json`,
+      territory_id: territory.territoryId,
+      source_manifest: coverageBaselinePaths.territoryManifest,
       governed_input_count: parentEvidenceInputs.length,
       note: 'A file existing does not prove an accepted Place relationship. Every edge is classified by what its evidence denotes and none is promoted to administrative containment in Slice 2.',
       tally: parentEvidenceTally,
@@ -1345,13 +1403,35 @@ writeIfChanged(
     2,
   ) + '\n',
 );
-writeIfChanged(`${OUT_DIR}/gauteng_place_admission_manifest.v0.1.json`, JSON.stringify(manifest, null, 2) + '\n');
+writeIfChanged(packagePaths.manifest, JSON.stringify(manifest, null, 2) + '\n');
+
+/**
+ * Every path this manifest advertises must exist and must be the path the
+ * registry resolved. A manifest that names a file nobody wrote is how an
+ * artifact silently stops being reproducible, so it is asserted rather than
+ * trusted.
+ */
+const advertisedPaths = [
+  ...Object.values(manifest.outputs),
+  manifest.place_id_registry.path,
+  manifest.generated_from.source_manifest_path,
+  manifest.generated_from.comparison_baseline.catalogue,
+];
+const unresolvable = advertisedPaths.filter(path => !existsSync(resolve(ROOT, path)));
+if (unresolvable.length) {
+  throw new Error(
+    `place-admission refused: the admission manifest advertises paths that do not exist:\n  ${unresolvable.join('\n  ')}`,
+  );
+}
 
 if (CHECK_ONLY) {
-  console.log(`place-admission:check OK admission_version=${ADMISSION_VERSION} places=${placeRows.length}`);
+  console.log(
+    `place-admission:check OK territory=${territory.territoryId} ` +
+      `admission_version=${ADMISSION_VERSION} places=${placeRows.length}`,
+  );
 } else {
   console.log(
-    `place-admission:built admission_version=${ADMISSION_VERSION} ` +
+    `place-admission:built territory=${territory.territoryId} admission_version=${ADMISSION_VERSION} ` +
       `identities=${identities.length} places=${placeRows.length} merged_groups=${manifest.counts.merged_equivalence_groups} ` +
       `names=${nameRows.length} relationships=${relationshipRows.length} evidence=${evidenceRows.length} ` +
       `mappings=${externalMappingRows.length} ledger=${ledgerRows.length} minted=${minted} reused=${reused}`,

@@ -11,8 +11,14 @@ import {
   canonicalPlacesExpected,
   loadCanonicalPlacePackage,
 } from '../_core/databaseAuthority/dataAdapters/canonicalPlaces';
+import {
+  loadPlaceAdmissionTerritoryRegistry,
+  resolvePlaceAdmissionCoverageBaselinePaths,
+  resolvePlaceAdmissionPackagePaths,
+  resolvePlaceAdmissionSourcePaths,
+  selectPlaceAdmissionTerritory,
+} from '../../shared/placeAdmissionTerritories';
 
-const OUT = 'data/gauteng-place-admission-v0.1';
 const readJsonl = (path: string) =>
   readFileSync(path, 'utf8')
     .split('\n')
@@ -20,21 +26,33 @@ const readJsonl = (path: string) =>
     .map(line => JSON.parse(line) as Record<string, any>);
 
 const packageRoot = process.cwd();
+
+/**
+ * The default registered territory, resolved through the admission territory
+ * registry. Nothing in this file names a province's paths directly, so the same
+ * contract holds for any registered territory.
+ */
+const registryLoad = loadPlaceAdmissionTerritoryRegistry(packageRoot);
+const territory = selectPlaceAdmissionTerritory(registryLoad.registry);
+const packagePaths = resolvePlaceAdmissionPackagePaths(territory);
+const sourcePaths = resolvePlaceAdmissionSourcePaths(territory);
+const coverageBaselinePaths = resolvePlaceAdmissionCoverageBaselinePaths(territory);
+
 const loaded = loadCanonicalPlacePackage(packageRoot);
-const places = readJsonl(`${OUT}/gauteng_place_admission_v0.1.jsonl`);
-const names = readJsonl(`${OUT}/gauteng_place_names_v0.1.jsonl`);
-const relationships = readJsonl(`${OUT}/gauteng_place_relationships_v0.1.jsonl`);
-const ledger = readJsonl(`${OUT}/gauteng_place_disposition_ledger_v0.1.jsonl`);
+const places = readJsonl(packagePaths.artifacts.places);
+const names = readJsonl(packagePaths.artifacts.names);
+const relationships = readJsonl(packagePaths.artifacts.relationships);
+const ledger = readJsonl(packagePaths.artifacts.disposition_ledger);
 const parentEvidence = JSON.parse(
-  readFileSync(`${OUT}/gauteng_parent_evidence_classification.v0.1.json`, 'utf8'),
+  readFileSync(packagePaths.artifacts.parent_evidence_classification, 'utf8'),
 ) as { edges: any[]; tally: any; governed_input_count: number };
 const sourceManifest = JSON.parse(
-  readFileSync('data/gauteng-source-authority-v0.2/gauteng_source_manifest_v0.2.json', 'utf8'),
+  readFileSync(sourcePaths.manifest, 'utf8'),
 ) as { compact_artifacts: { path: string; sha256: string }[]; source_snapshot_id: string };
 
 const placeIds = new Set(places.map(p => p.place_id));
 
-describe('Gauteng Place admission: source baseline', () => {
+describe('Place admission: source baseline', () => {
   it('refuses to load unless every source artifact digest matches', () => {
     // loadCanonicalPlacePackage throws on drift, so a successful load is itself
     // the proof that the forward baseline is intact.
@@ -60,7 +78,7 @@ describe('Gauteng Place admission: source baseline', () => {
   });
 });
 
-describe('Gauteng Place admission: source identity is not Place identity', () => {
+describe('Place admission: source identity is not Place identity', () => {
   it('admits fewer Places than source identities, and accounts for every difference', () => {
     const identityCount = 1488;
     const absorbed = places.reduce((sum, place) => sum + (place.source_identity_ids.length - 1), 0);
@@ -81,7 +99,7 @@ describe('Gauteng Place admission: source identity is not Place identity', () =>
     expect(merged.length).toBeGreaterThan(0);
     for (const place of merged) {
       // Two governed bases exist, and neither is "the names matched":
-      //  - a unique administrative container (a territory has one Gauteng), or
+      //  - a unique administrative container (a territory has one province), or
       //  - same name, same admitted administrative context, within distance.
       expect([
         'unique_administrative_container_name',
@@ -94,7 +112,7 @@ describe('Gauteng Place admission: source identity is not Place identity', () =>
       }
       expect(place.adjudication.member_count).toBe(place.source_identity_ids.length);
     }
-    // The two Gauteng province identities are one Place, by container identity.
+    // Two province identities for the same container name are one Place, by container identity.
     const provincePlaces = places.filter(place => place.place_type === 'province');
     expect(provincePlaces).toHaveLength(1);
     expect(provincePlaces[0].source_identity_ids.length).toBe(2);
@@ -138,7 +156,7 @@ describe('Gauteng Place admission: source identity is not Place identity', () =>
   });
 });
 
-describe('Gauteng Place admission: Place identity is assigned and stable', () => {
+describe('Place admission: Place identity is assigned and stable', () => {
   it('assigns governed Place identities that are not derived from the source identity', () => {
     for (const place of places) {
       expect(place.place_id).toMatch(/^pl-place-01-[a-f0-9]{24}$/);
@@ -158,14 +176,14 @@ describe('Gauteng Place admission: Place identity is assigned and stable', () =>
 
   it('regenerates deterministically and asserts it', () => {
     expect(() =>
-      execFileSync('node', ['tools/place-admission/build-gauteng-admission.mjs', '--check'], {
+      execFileSync('npx', ['tsx', 'tools/place-admission/build-place-admission.mjs', '--check'], {
         stdio: 'pipe',
       }),
     ).not.toThrow();
   });
 });
 
-describe('Gauteng Place admission: names follow a governed policy', () => {
+describe('Place admission: names follow a governed policy', () => {
   it('gives every Place exactly one preferred public name', () => {
     const counts = new Map<string, number>();
     for (const name of names.filter(n => n.name_role === 'preferred_public')) {
@@ -218,7 +236,7 @@ describe('Gauteng Place admission: names follow a governed policy', () => {
   });
 });
 
-describe('Gauteng Place admission: relationships use only the V1 vocabulary', () => {
+describe('Place admission: relationships use only the V1 vocabulary', () => {
   it('emits only approved relationship types and no search widening', () => {
     for (const relationship of relationships) {
       expect(PLACE_RELATIONSHIP_TYPES).toContain(relationship.relationship_type);
@@ -261,7 +279,7 @@ describe('Gauteng Place admission: relationships use only the V1 vocabulary', ()
   });
 });
 
-describe('Gauteng Place admission: governed parent evidence is classified, not promoted', () => {
+describe('Place admission: governed parent evidence is classified, not promoted', () => {
   it('classifies all 103 governed inputs and every edge they contain', () => {
     expect(parentEvidence.governed_input_count).toBe(103);
     expect(parentEvidence.edges.length).toBe(parentEvidence.tally.total_edges);
@@ -287,7 +305,7 @@ describe('Gauteng Place admission: governed parent evidence is classified, not p
   });
 });
 
-describe('Gauteng Place admission: schema alignment', () => {
+describe('Place admission: schema alignment', () => {
   it('admits only Place types the schema accepts', () => {
     for (const place of places) expect(PLACE_TYPES).toContain(place.place_type);
   });
