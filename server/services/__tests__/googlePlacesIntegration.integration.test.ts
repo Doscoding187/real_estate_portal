@@ -71,6 +71,12 @@ describe('Google Places Autocomplete Integration - Integration Tests', () => {
   beforeEach(async () => {
     if (!db) return;
 
+    // These hierarchy fixtures use synthetic Place IDs and the supplied
+    // coordinates. Keep provider availability outside this database contract.
+    vi.spyOn(googlePlacesService, 'getPlaceDetails').mockRejectedValue(
+      new Error('Synthetic Place ID has no external provider record'),
+    );
+
     // Clean up test data
     await db.execute(
       sql`DELETE FROM location_searches WHERE location_id IN (SELECT id FROM locations WHERE name LIKE 'TEST:INTEGRATION:%')`,

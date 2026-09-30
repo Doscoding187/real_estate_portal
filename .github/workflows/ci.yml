@@ -269,6 +269,8 @@ jobs:
       CI: 'true'
       APP_ENV: test
       NODE_ENV: test
+      # Synthetic signing key for production-mode session rejection tests.
+      JWT_SECRET: ci-disposable-session-signing-key-not-for-production
 
     services:
       mysql:
