@@ -34,6 +34,7 @@ import {
   requireAnyPaidMvpLaunchAccessActivation,
   requireCommercialActivation,
   requirePaidMvpSalesOpen,
+  requirePaidMvpOwnerAdmission,
 } from './commercialActivationPolicy';
 import {
   getCommercialProductKey,
@@ -1079,6 +1080,7 @@ export async function requestPaidLaunchAccessInvoice(input: {
     throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
 
   const owner = await resolveLaunchBillingOwner(db, input.user);
+  requirePaidMvpOwnerAdmission('Invoice requests', owner);
   const ownerProductKey = `${owner.ownerType}_launch_access` as PaidMvpLaunchAccessProductKey;
   requireCommercialActivation('Invoice requests', ownerProductKey);
   const bankDetails = getManualEftBankDetails(ownerProductKey);
@@ -1337,6 +1339,7 @@ export async function startAgencyManualCheckout(input: {
     throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
 
   const agencyId = assertAgencyAdmin(input.user);
+  requirePaidMvpOwnerAdmission('Manual-EFT checkout', { ownerType: 'agency', ownerId: agencyId });
   const [selectedAgencyPlan] = await db
     .select()
     .from(plans)
@@ -2579,6 +2582,12 @@ export async function reviewManualPayment(input: {
       if (!row) throw new TRPCError({ code: 'NOT_FOUND', message: 'Payment not found.' });
       beforePayment = row.payment;
       invoice = row.invoice;
+    }
+    if (input.decision === 'approve') {
+      requirePaidMvpOwnerAdmission('Payment activation', {
+        ownerType: invoice.ownerType,
+        ownerId: invoice.ownerId,
+      });
     }
     const [reviewPlan] = invoice.planId
       ? await tx.select().from(plans).where(eq(plans.id, invoice.planId)).limit(1)

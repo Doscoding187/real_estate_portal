@@ -16,6 +16,7 @@ export const PAID_MVP_RELEASE_ID_ENV = 'PAID_MVP_RELEASE_ID';
 export const PAID_MVP_APPROVAL_REF_ENV = 'PAID_MVP_APPROVAL_REF';
 export const PAID_MVP_SALES_PAUSED_ENV = 'PAID_MVP_SALES_PAUSED';
 export const PAID_MVP_SALES_OPEN_UNTIL_ENV = 'PAID_MVP_SALES_OPEN_UNTIL';
+export const PAID_MVP_ADMITTED_OWNERS_ENV = 'PAID_MVP_ADMITTED_OWNERS';
 const SALES_WINDOW_DAY_MS = 24 * 60 * 60 * 1000;
 const CONTROLLED_PRODUCT_KEYS_ENV = 'PROPERTY_LISTIFY_GOVERNED_BROWSER_TEST_PRODUCT_KEYS';
 
@@ -27,7 +28,36 @@ export type CommercialActivationConfiguration = {
   approvalRef: string | null;
   salesPaused: boolean;
   salesOpenUntil: string | null;
+  ownerAdmission: OwnerAdmissionConfiguration;
 };
+
+type AdmittedOwner = Readonly<{ ownerType: 'agent' | 'agency' | 'developer'; ownerId: number }>;
+type OwnerAdmissionConfiguration = Readonly<{
+  status: 'closed' | 'invalid' | 'controlled';
+  owners: readonly AdmittedOwner[];
+}>;
+
+function ownerAdmissionConfiguration(value: string | undefined): OwnerAdmissionConfiguration {
+  const denied = (status: 'closed' | 'invalid'): OwnerAdmissionConfiguration =>
+    Object.freeze({ status, owners: Object.freeze([]) });
+  if (value === undefined) return denied('closed');
+  if (!value || value.length > 8192) return denied('invalid');
+  const pairs = value.split(',').map(part => part.trim());
+  if (!pairs.length || pairs.length > 100 || new Set(pairs).size !== pairs.length)
+    return denied('invalid');
+  const owners: AdmittedOwner[] = [];
+  for (const pair of pairs) {
+    const match = /^(agent|agency|developer):([1-9][0-9]*)$/.exec(pair);
+    if (!match || !Number.isSafeInteger(Number(match[2]))) return denied('invalid');
+    owners.push(
+      Object.freeze({
+        ownerType: match[1] as AdmittedOwner['ownerType'],
+        ownerId: Number(match[2]),
+      }),
+    );
+  }
+  return Object.freeze({ status: 'controlled', owners: Object.freeze(owners) });
+}
 
 function isAuthorityWrappedBrowserFixture(environment: RuntimeEnvironment): boolean {
   return (
@@ -86,6 +116,7 @@ function preparationConfiguration(): CommercialActivationConfiguration {
     approvalRef: null,
     salesPaused: false,
     salesOpenUntil: null,
+    ownerAdmission: ownerAdmissionConfiguration(undefined),
   });
 }
 
@@ -141,6 +172,7 @@ export function resolveCommercialActivationConfiguration(
       approvalRef: null,
       salesPaused: rawSalesPause === 'true',
       salesOpenUntil: parseSalesOpenUntil(environment[PAID_MVP_SALES_OPEN_UNTIL_ENV]),
+      ownerAdmission: ownerAdmissionConfiguration(environment[PAID_MVP_ADMITTED_OWNERS_ENV]),
     });
   }
 
@@ -181,6 +213,7 @@ export function resolveCommercialActivationConfiguration(
     // A hosted paid release without a renewed window never opens sales by default.
     salesPaused: rawSalesPause === 'true' || !environment[PAID_MVP_SALES_OPEN_UNTIL_ENV],
     salesOpenUntil: parseSalesOpenUntil(environment[PAID_MVP_SALES_OPEN_UNTIL_ENV]),
+    ownerAdmission: ownerAdmissionConfiguration(environment[PAID_MVP_ADMITTED_OWNERS_ENV]),
   });
 }
 
@@ -270,6 +303,33 @@ export function requirePaidMvpSalesOpen(
   throw new TRPCError({
     code: 'PRECONDITION_FAILED',
     message: `${operation} is paused while the founder is unavailable. Existing customer access remains available.`,
+  });
+}
+
+/** New hosted money/access writes only; never controls an existing paid read. */
+export function requirePaidMvpOwnerAdmission(
+  operation: string,
+  owner: { ownerType: string; ownerId: number },
+  environment: RuntimeEnvironment = process.env,
+): void {
+  requirePaidMvpSalesOpen(operation, environment);
+  const config = getConfiguration(environment);
+  // Preserve the already-governed disposable fixture contract. A hosted
+  // runtime cannot resolve to that mode, even with test selectors present.
+  if (config.mode === 'governed_test_fixture') return;
+  if (
+    config.mode === 'paid_mvp_release' &&
+    config.ownerAdmission.status === 'controlled' &&
+    Number.isSafeInteger(owner.ownerId) &&
+    owner.ownerId > 0 &&
+    config.ownerAdmission.owners.some(
+      pair => pair.ownerType === owner.ownerType && pair.ownerId === owner.ownerId,
+    )
+  )
+    return;
+  throw new TRPCError({
+    code: 'PRECONDITION_FAILED',
+    message: `${operation} is closed to owners outside the controlled release intake.`,
   });
 }
 
