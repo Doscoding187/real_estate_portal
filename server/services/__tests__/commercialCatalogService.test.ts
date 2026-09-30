@@ -233,7 +233,8 @@ describe('commercial catalog projection', () => {
   });
 
   it('filters products by the requested canonical audience', () => {
-    const launchMetadata = (fee: number) => ({
+    const launchMetadata = (productKey: string, fee: number) => ({
+      commercial_product_key: productKey,
       commercial_term_kind: 'paid_launch_access',
       commercial_term_duration_days: 90,
       commercial_requires_verified_payment: true,
@@ -245,20 +246,20 @@ describe('commercial catalog projection', () => {
       id: 41,
       name: 'agency_launch_access',
       displayName: 'Agency Launch Access',
-      metadata: launchMetadata(99_900),
+      metadata: launchMetadata('agency_launch_access', 99_900),
     });
     const developerPlan = plan({
       id: 42,
       segment: 'developer',
       name: 'developer_launch_access',
       displayName: 'Developer Launch Access',
-      metadata: launchMetadata(149_900),
+      metadata: launchMetadata('developer_launch_access', 149_900),
     });
     const inactivePlan = plan({
       id: 43,
       name: 'agent_launch_access',
       segment: 'agent',
-      metadata: launchMetadata(49_900),
+      metadata: launchMetadata('agent_launch_access', 49_900),
       isActive: 0,
     });
 

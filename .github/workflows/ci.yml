@@ -366,7 +366,15 @@ jobs:
           done
           # Already exercised on the fresh unseeded target above; never delete
           # or demote the canonical reviewer to satisfy a sole-admin fixture.
-          pnpm vitest run --project server --minWorkers=1 --maxWorkers=1 --silent --exclude server/__tests__/integration.b07-role-session-audit.test.ts
+          # Vitest 2 workspace projects do not inherit the CLI --exclude
+          # option. Select from its configured inventory explicitly instead.
+          mapfile -t SERVER_TESTS < <(
+            pnpm vitest list --project server --filesOnly \
+              | sed -n 's/^\[server\] //p' \
+              | awk '$0 != "server/__tests__/integration.b07-role-session-audit.test.ts"'
+          )
+          test "${#SERVER_TESTS[@]}" -gt 0
+          pnpm vitest run --project server --minWorkers=1 --maxWorkers=1 --silent "${SERVER_TESTS[@]}"
 
   build:
     name: Build Application
