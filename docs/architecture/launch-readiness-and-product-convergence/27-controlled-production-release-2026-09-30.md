@@ -51,23 +51,9 @@ Each phase records timestamp, operator, exact source SHA/tree, intended action, 
 5. Verify all CI/release hooks. Keep commercial selectors absent or explicitly paused, no open-until window. Sales pause is not the TiDB writer freeze. Required GitHub rules remain active; Vercel was not one of the four required contexts. No bypass or rule weakening is needed for Edward's exception.
 6. Convert only task-owned PR #583 to review-ready and merge using the allowed **merge commit**, after the exact final head's required checks pass. Record merged commit **M** and tree, recheck post-merge CI/source identity, and verify production/Testing/Vercel have not advanced under holds. Do not substitute unreviewed tips from #580/#581/#582.
 
-### 2. Freeze TiDB writers and complete preservation
+### 2. Release canonical Azure geography
 
-1. Announce the maintenance condition through the existing site/operator controls without contacting third parties unasked. Record the normal production source, private variable snapshot and current deployment artifact for recovery. Do not publish a promise to open sales.
-2. Refresh every active API/worker/job instance, CI job, alternate deployment hook, console and ad hoc script that could write exact production TiDB. Edward confirms external/admin writers are closed. Stop/drain the production API including in-process schedulers; verify removed/stopped deployment state, no queued replacement and rejected write traffic. Stop any newly discovered same-target writer. Testing/Staging's different databases are not part of the production archive census.
-3. Create a private mode-0600 freeze record only after the complete census/provider readbacks. The [deliberately invalid template](evidence/controlled-production-release-2026-09-30/writer-freeze.template.json) must be copied outside Git, completed from real observations, and permission-checked; it is not freeze evidence. `source-archive:final` requires exact source, actor/reference matching protected approval, release M, readback/census hashes, every writer stopped/read-only, public/operator writes closed, and verification within 15 minutes (also rechecked after capture). Provider freeze is **operator-attested**, not mechanically proved by JSON or by archive SQL. Hash underlying independent readbacks and preserve them privately.
-4. Run the reviewed merged source command using the existing SELECT-only TiDB source reader, exact fingerprint `68f2582a6dc7af8c54cf6f31a396e8abe4c4030696c923b0ea3b1679ba6f5b5e`, strict TLS, approved read-only operation. Key and archive directories must be separate, owned mode 0700, not symlinks:
-
-   ```text
-   pnpm db:source:archive:final --freeze-evidence=<owned-0600-freeze.json> --archive-dir=<private-archive-dir> --key-dir=<separate-private-key-dir>
-   ```
-
-   Preserve preliminary files unchanged. The final command captures consistent snapshot schemas/rows, exact types, AES-256-GCM, authenticated frozen metadata and persisted readback. It does no TiDB DDL/DML, migration, import or grant mutation. Invalid/stale/unclosed/mismatched evidence refuses the final designation before connection or before archive production.
-5. Independently authenticate/decrypt and structurally verify the persisted final archive; record full ciphertext hash/counts privately and sanitized summary publicly. Copy/retrieve from the agreed off-machine destination with key separately controlled. Keep TiDB preserved, not writable or deleted. Failure stops transition before retiring the old write path.
-
-### 3. Release canonical Azure geography
-
-1. Use **reviewed merged source M**, the separate existing inspector/migrator channels and exact Azure fingerprint `b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced`. Confirm ordinary geography writers are closed; the reference lock does not control unrelated SQL.
+1. **Preserve the known network path:** perform this operation through the still-running old API container's approved backend network, using a temporary exact-M diagnostic/release source and ephemeral credential channels, not a deployment or persistent service variable. Production API still writes TiDB; prove no application/job/operator writes the Azure geography target, and keep that condition until apply/verify completes. Local direct Azure connectivity was unavailable. Do not stop the only known Azure-access container first, widen Azure firewall access, create an unapproved proxy, or later restart a TiDB writer just to regain SSH. Clean up only the task-owned diagnostic directory and close the credential-bearing shell. Use **reviewed merged source M**, the separate existing inspector/migrator channels and exact Azure fingerprint `b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced`. Confirm ordinary geography writers are closed; the reference lock does not control unrelated SQL.
 2. Re-plan against M and current target. The reviewed preparation plan digest is `7cabc434f7ef796cfae742c9a822e24bd16d59d3f01216dc807b683843ae9d6e`, desired digest `516042933ea242cdaeae18b2436172e2c686136174164486dc008163c228fe97`, manifest digest `93d871e6f8760477f460b8821685d71d212374eb86ddd53bc6e2ccfc30608efc`. If target/source-bound inputs change, review the new plan; never force an old digest.
 3. Execute one target-approved `release-reference-apply`, with ephemeral distinct `DATABASE_MIGRATION_URL` selected through connection authority; never persist it in services. Exact operation acknowledgement is `CONFIRM_RELEASE_REFERENCE_APPLY_b23d640cdf242812`:
 
@@ -78,6 +64,20 @@ Each phase records timestamp, operator, exact source SHA/tree, intended action, 
    ```
 
 4. Independently verify 9/340/1089 counts, stable parent/child IDs, zero pending rows, canonical full ledger/checksums through 0094 and unchanged commercial terms. Never reset ledgers, seed application fixtures, retry ambiguous COMMIT, use alternate schema or replay migrations already applied. An ambiguous apply stops for read-only inspection.
+
+### 3. Freeze TiDB writers and complete preservation
+
+1. Announce the maintenance condition through the existing site/operator controls without contacting third parties unasked. Record the normal production source, private variable snapshot and current deployment artifact for recovery. Do not publish a promise to open sales.
+2. Refresh every active API/worker/job instance, CI job, alternate deployment hook, console and ad hoc script that could write exact production TiDB. Edward confirms external/admin writers are closed. Stop/drain the production API including in-process schedulers; verify removed/stopped deployment state, no queued replacement and rejected write traffic. Stop any newly discovered same-target writer. Testing/Staging's different databases are not part of the production archive census.
+3. Create a private mode-0600 freeze record only after the complete census/provider readbacks. The [deliberately invalid template](evidence/controlled-production-release-2026-09-30/writer-freeze.template.json) must be copied outside Git, completed from real observations, and permission-checked; it is not freeze evidence. `source-archive:final` requires exact source, actor/reference matching protected approval, release M, readback/census hashes, every writer stopped/read-only, public/operator writes closed, and verification within 15 minutes (also rechecked after capture). Provider freeze is **operator-attested**, not mechanically proved by JSON or by archive SQL. Hash underlying independent readbacks and preserve them privately.
+4. Use the existing operator/source-reader path that produced the preliminary archive; this does not depend on keeping a stopped API container available. If that read-only path is unavailable, stop for a reviewed non-writing operator path; never restart a frozen TiDB application writer to obtain SSH. Run the reviewed merged source command using the existing SELECT-only TiDB source reader, exact fingerprint `68f2582a6dc7af8c54cf6f31a396e8abe4c4030696c923b0ea3b1679ba6f5b5e`, strict TLS, approved read-only operation. Key and archive directories must be separate, owned mode 0700, not symlinks:
+
+   ```text
+   pnpm db:source:archive:final --freeze-evidence=<owned-0600-freeze.json> --archive-dir=<private-archive-dir> --key-dir=<separate-private-key-dir>
+   ```
+
+   Preserve preliminary files unchanged. The final command captures consistent snapshot schemas/rows, exact types, AES-256-GCM, authenticated frozen metadata and persisted readback. It does no TiDB DDL/DML, migration, import or grant mutation. Invalid/stale/unclosed/mismatched evidence refuses the final designation before connection or before archive production.
+5. Independently authenticate/decrypt and structurally verify the persisted final archive; record full ciphertext hash/counts privately and sanitized summary publicly. Copy/retrieve from the agreed off-machine destination with key separately controlled. Keep TiDB preserved, not writable or deleted. Failure stops transition before retiring the old write path.
 
 ### 4. Bind and deploy backend/workers, then frontend
 
