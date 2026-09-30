@@ -1,3 +1,4 @@
+import { releaseCanonicalGeography } from '../server/_core/databaseAuthority/dataAdapters/geographyRelease';
 import { resolve } from 'node:path';
 import * as schema from '../drizzle/schema';
 import {
@@ -408,6 +409,9 @@ async function run(command: Command): Promise<void> {
     command === 'release-reference:apply' ||
     command === 'release-reference:verify'
   ) {
+    const adapter = option('adapter') ?? 'commercial';
+    if (!['commercial', 'geography'].includes(adapter))
+      throw new Error('Unknown reference adapter.');
     const isPlan = command.endsWith(':plan');
     const isApply = command.endsWith(':apply');
     const operation: DatabaseOperation = isPlan
@@ -419,11 +423,19 @@ async function run(command: Command): Promise<void> {
     const decision = authorizationFor(authority, option('ack'));
     const connection = await createAuthoritySqlConnection(authority, decision);
     try {
-      const evidence = isPlan
-        ? await planCanonicalCommercialReferenceData({ authority, decision, connection })
-        : isApply
-          ? await prepareCanonicalCommercialReferenceData({ authority, decision, connection })
-          : await verifyCanonicalCommercialReference({ authority, decision, connection });
+      const evidence =
+        adapter === 'geography'
+          ? await releaseCanonicalGeography({
+              authority,
+              decision,
+              connection,
+              expectedPlanDigest: isApply ? requiredOption('plan-digest') : undefined,
+            })
+          : isPlan
+            ? await planCanonicalCommercialReferenceData({ authority, decision, connection })
+            : isApply
+              ? await prepareCanonicalCommercialReferenceData({ authority, decision, connection })
+              : await verifyCanonicalCommercialReference({ authority, decision, connection });
       print(evidence);
     } finally {
       await connection.end();
