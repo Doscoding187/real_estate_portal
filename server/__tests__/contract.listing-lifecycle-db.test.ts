@@ -6,7 +6,7 @@
  * fake Drizzle instance. Verifies the actual SQL-level behaviour, not just
  * router dispatch.
  */
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // ---------------------------------------------------------------------------
 // Tracked fake Drizzle builder
@@ -403,6 +403,10 @@ const configureRevisionApproval = (
 const SELECTS_GET_LISTING_BY_ID = 1; // db.select().from(listings).where(id).limit(1)
 
 beforeEach(() => {
+  // Publication fixtures are confirmed August 20 and due September 20.
+  // Pin only Date so these contracts do not expire with the wall clock.
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(new Date('2026-09-01T12:00:00Z'));
   fakeDb.reset();
   vi.clearAllMocks();
   vi.mocked(mockAssertListingPublicationEntitled).mockResolvedValue({
@@ -413,6 +417,8 @@ beforeEach(() => {
   } as any);
   vi.mocked(mockInvalidatePublicSearchCache).mockResolvedValue(undefined);
 });
+
+afterEach(() => vi.useRealTimers());
 
 // ===========================================================================
 // createListing — seller-prospect custody contract
