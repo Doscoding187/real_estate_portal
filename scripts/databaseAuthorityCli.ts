@@ -1,3 +1,16 @@
+import {
+  capturePreliminaryTiDbArchive,
+  openSourceArchive,
+} from '../server/_core/databaseAuthority/sourceArchive';
+import { randomBytes } from 'node:crypto';
+import {
+  mkdirSync,
+  lstatSync,
+  writeFileSync,
+  unlinkSync,
+  readFileSync,
+  realpathSync,
+} from 'node:fs';
 import { releaseCanonicalGeography } from '../server/_core/databaseAuthority/dataAdapters/geographyRelease';
 import { resolve } from 'node:path';
 import * as schema from '../drizzle/schema';
@@ -98,6 +111,7 @@ type Command =
   | 'release-tidb-check-constraint-convergence:apply'
   | 'release:plan'
   | 'release:apply'
+  | 'source-archive:preliminary'
   | 'release-reference:plan'
   | 'release-reference:apply'
   | 'release-reference:verify'
@@ -404,6 +418,59 @@ async function run(command: Command): Promise<void> {
     return;
   }
 
+  if (command === 'source-archive:preliminary') {
+    const archiveDir = resolve(requiredOption('archive-dir'));
+    const keyDir = resolve(requiredOption('key-dir'));
+    if (
+      archiveDir === keyDir ||
+      archiveDir.startsWith(`${keyDir}/`) ||
+      keyDir.startsWith(`${archiveDir}/`)
+    )
+      throw new Error('Archive and key must use separate private directories.');
+    for (const path of [archiveDir, keyDir]) {
+      mkdirSync(path, { recursive: true, mode: 0o700 });
+      const stat = lstatSync(path);
+      if (
+        !stat.isDirectory() ||
+        stat.isSymbolicLink() ||
+        stat.uid !== process.getuid?.() ||
+        (stat.mode & 0o777) !== 0o700
+      )
+        throw new Error('Archive storage must be owned and mode 0700.');
+    }
+    if (realpathSync(archiveDir) !== archiveDir || realpathSync(keyDir) !== keyDir)
+      throw new Error('Archive storage paths must not contain symbolic links.');
+    const authority = authorityFor('read-only-connect', 'read-only');
+    const decision = authorizationFor(authority);
+    const key = randomBytes(32);
+    const captured = await capturePreliminaryTiDbArchive({ authority, decision, key });
+    const stamp = new Date().toISOString().replace(/[^0-9]/g, '');
+    const keyPath = resolve(keyDir, `tidb-preliminary-${stamp}.key`);
+    const archivePath = resolve(archiveDir, `tidb-preliminary-${stamp}.enc`);
+    writeFileSync(keyPath, key, { mode: 0o600, flag: 'wx' });
+    try {
+      writeFileSync(archivePath, captured.encrypted, { mode: 0o600, flag: 'wx' });
+    } catch (error) {
+      unlinkSync(keyPath);
+      throw error;
+    }
+    const persisted = readFileSync(archivePath);
+    if (!persisted.equals(captured.encrypted))
+      throw new Error('Persisted archive differs from capture.');
+    openSourceArchive(persisted, readFileSync(keyPath));
+    writeFileSync(
+      `${archivePath}.evidence.json`,
+      JSON.stringify({ ...captured.evidence, persistedAuthenticatedReadback: true }, null, 2),
+      {
+        mode: 0o600,
+        flag: 'wx',
+      },
+    );
+    key.fill(0);
+    print({ ...captured.evidence, counts: undefined, archivePath, keyPath });
+    return;
+  }
+
   if (
     command === 'release-reference:plan' ||
     command === 'release-reference:apply' ||
@@ -624,6 +691,7 @@ const commands = new Set<Command>([
   'release-tidb-check-constraint-convergence:apply',
   'release:plan',
   'release:apply',
+  'source-archive:preliminary',
   'release-reference:plan',
   'release-reference:apply',
   'release-reference:verify',

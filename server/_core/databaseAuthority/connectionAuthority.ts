@@ -106,15 +106,33 @@ async function verifySelectedTarget(
 export async function createAuthoritySqlConnection(
   authority: ResolvedDatabaseAuthority,
   decision: AuthorizedDatabaseOperation,
+  options: { preserveTiDbArchiveTypes?: true } = {},
 ): Promise<AuthoritySqlConnection> {
   assertAuthorizedDatabaseOperation(authority, decision, SQL_CONNECTION_OPERATIONS);
+  if (
+    options.preserveTiDbArchiveTypes &&
+    (authority.context.operation !== 'read-only-connect' ||
+      authority.context.credentialClass !== 'read-only' ||
+      authority.context.targetFingerprintHash !==
+        '68f2582a6dc7af8c54cf6f31a396e8abe4c4030696c923b0ea3b1679ba6f5b5e')
+  ) {
+    throw new Error(
+      'Source archive connection refused: exact TiDB source and read-only credential required.',
+    );
+  }
   if (authority.context.dialect !== 'mysql') {
     throw new Error('Database connection refused: only the approved MySQL dialect is supported.');
   }
   const databaseUrl = readDatabaseCredentialUrl(authority.credential);
   try {
     const config = buildMysqlConnectionSecurityConfig(databaseUrl, authority.context.runtimeMode);
-    const connection = await mysql.createConnection({ ...config, timezone: 'Z' });
+    const connection = await mysql.createConnection({
+      ...config,
+      timezone: 'Z',
+      ...(options.preserveTiDbArchiveTypes
+        ? { dateStrings: true, supportBigNumbers: true, bigNumberStrings: true, jsonStrings: true }
+        : {}),
+    });
     const wrapped: AuthoritySqlConnection = {
       execute: (statement, values) => connection.execute(statement, values as any),
       query: (statement, values) => connection.query(statement, values as any),

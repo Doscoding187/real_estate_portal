@@ -158,6 +158,8 @@ describe('database final closure residual executor authority', () => {
       .sort();
 
     expect(probeFiles).toEqual([
+      // Bounded source-only preservation, never runtime schema selection.
+      'server/_core/databaseAuthority/' + 'sourceArchive.ts',
       'server/_core/databaseAuthority/' + 'tidbCheckConstraintCapability.ts',
       'server/services/' + 'runtimeSchemaCapabilities.ts',
     ]);
