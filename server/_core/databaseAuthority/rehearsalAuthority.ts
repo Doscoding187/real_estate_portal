@@ -1,7 +1,7 @@
 import { execFile } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { promisify } from 'node:util';
-import registration from '../../../docs/database-authority/disposable-rehearsal-authorization.json';
+import registration from '../../../docs/database-authority/disposable-rehearsal-authorization.json' with { type: 'json' };
 import type { ResolvedDatabaseContext } from './types';
 
 export const REHEARSAL = Object.freeze({ ...registration });
