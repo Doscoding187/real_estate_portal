@@ -1,0 +1,38 @@
+{
+  "status": "PREPARED_NOT_CREATED_NOT_APPROVED",
+  "purpose": "Final application in-region PITR/logical recovery proof; never a public staging app",
+  "source": {
+    "subscriptionId": "384dc69e-9e22-419f-9e3d-83fbac4f58d0",
+    "resourceGroup": "rg-property-listify",
+    "serverName": "propertylistify-mysql",
+    "database": "propertylistify_database",
+    "fingerprint": "b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced"
+  },
+  "proposedTarget": {
+    "resourceGroup": "rg-property-listify",
+    "serverName": "pl-paid-mvp-recovery-20261001",
+    "database": "propertylistify_database",
+    "region": "Same region as independently refreshed source ARM read",
+    "restorePoint": "Exact UTC recovery point recorded immediately before the attended exercise; must meet accepted RPO",
+    "sku": "Existing source B1ms as initial proposal; independently verify restore-supported SKU and current regional quote",
+    "initialStorageGiB": 20,
+    "publicApplicationBindings": false,
+    "credentialPlan": "Separate short-lived read-only verification identity and bounded recovery/app runtime identity; never reuse production migrator as runtime",
+    "authority": "Exact target registration and operation/purpose approval required before any database connection/write; current code must continue to deny unregistered target"
+  },
+  "budget": {
+    "limit": "Include explicit maximum temporary runtime/storage/backup charges in agreed incremental budget",
+    "plannedLifetimeHours": 4,
+    "disposeBy": "End of attended recovery window, after independent evidence/custody verification; cleanup requires exact resource approval and readback",
+    "quote": "Not verified; no resource creation until account allowance/credits, regional unit rates and upper estimate reviewed"
+  },
+  "validation": [
+    "Restore from current Azure recovery point, never from stale TiDB source",
+    "Independently verify canonical 0094 congruency and geography",
+    "Verify controlled owner/payment/enquiry state and durable media/proof retrieval against separately held evidence",
+    "Record actual recovery duration, consistency and RPO/RTO; no public traffic",
+    "Preserve existing pre-upgrade read-only recovery server unchanged",
+    "After production Azure writes never re-enable TiDB writers"
+  ],
+  "providerMutationsPerformed": false
+}

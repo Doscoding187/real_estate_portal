@@ -1,5 +1,7 @@
 # Paid MVP integrated release — senior review packet
 
+**Later admission-control continuation:** Edward authorized implementation of exact server-resolved owner admission while live enablement remains closed. [Packet 28](28-controlled-owner-admission-and-execution-2026-09-30.md) supplies the bounded change review, refreshed checks/cost evidence and short production/recovery checklist. The acceptance and integration evidence below remain dated; no hosted blocker is closed by the admission tests.
+
 **Subsequent founder direction:** [controlled production release packet](27-controlled-production-release-2026-09-30.md) now governs execution. Existing live infrastructure is the validation target; the failed preview is an accepted non-gating exception. The former draft-only/no-deployment assignment below is a dated completion record, not a current prohibition. All required GitHub checks passed at `4b5ef132`; the new bounded release delta must pass its own checks.
 
 **Disposition: READY FOR SENIOR INTEGRATION REVIEW, subject to exact-head PR checks. Paid launch remains NO-GO.** October 5–7 is a conditional staffed opening window. This work composes accepted product and reviewed database/geography engineering; it does not close hosted, operational, independent-review or opening gates.

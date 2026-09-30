@@ -47,6 +47,10 @@
       "DATABASE_MIGRATION_URL in any persistent app service",
       "SKIP_DB_INIT/test fixture selectors/mock email/OTP modes in production",
       "Legacy account import or synthetic entitlement creation"
+    ],
+    "removeVariables": [
+      "PAID_MVP_ADMITTED_OWNERS",
+      "PAID_MVP_SALES_OPEN_UNTIL"
     ]
   },
   "workers": [
@@ -65,5 +69,12 @@
       "restartPolicy": "NEVER",
       "databaseCredentialClass": "worker"
     }
-  ]
+  ],
+  "controlledAdmissionAfterSeparateLiveReview": {
+    "status": "NOT_ENABLED",
+    "configuration": "PAID_MVP_ADMITTED_OWNERS=agent:<resolved-user-id>,agency:<resolved-agency-id>,developer:<resolved-organisation-id>",
+    "resolution": "Normal fresh account, current membership and approved developer publisher context; never browser-supplied owner IDs",
+    "window": "Only an attended expiring normal sales window; absolute pause remains effective",
+    "money": "Actual reconciled bank receipt; no test selectors or seeded entitlements"
+  }
 }
