@@ -768,7 +768,7 @@ export function canonicalGeographyReleaseRows(): GeographyReleaseRow[] {
         longitude: item.longitude ?? null,
       },
     });
-  for (const item of [...CITIES, ...GOVERNED_CITY_REFERENCES]) {
+  for (const item of [...CITIES, ...GOVERNED_CITY_REFERENCES] as readonly CityReference[]) {
     const key = `${item.provinceSlug}/${item.slug}`;
     cities.set(key, key);
     const old = cities.get(item.slug);
@@ -787,7 +787,7 @@ export function canonicalGeographyReleaseRows(): GeographyReleaseRow[] {
       },
     });
   }
-  for (const item of [...SUBURBS, ...GOVERNED_SUBURB_REFERENCES]) {
+  for (const item of [...SUBURBS, ...GOVERNED_SUBURB_REFERENCES] as readonly SuburbReference[]) {
     // Foundation slugs are resolved from the foundation itself, never by choosing
     // an arbitrary member of the multi-territory catalog.
     const foundation = CITIES.filter(city => city.slug === item.citySlug);
