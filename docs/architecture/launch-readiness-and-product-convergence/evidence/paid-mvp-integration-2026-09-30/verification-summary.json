@@ -1,5 +1,5 @@
 {
-  "sourceHead": "3c72617fe1caa75855ef71bed85dfd45f7f9e372",
+  "sourceHead": "fbf8ce2be47032011f34faf77a87176f06eebfb6",
   "runtimeVerificationAnchor": "b1c7f6f7",
   "fixtureVerificationAnchor": "0e7cd93c",
   "targetClass": "disposable-worktree",
@@ -81,17 +81,35 @@
       "name": "fresh-schema consumer sequence",
       "command": "DATABASE_CONSUMER_CONTRACT_PHASE=post-migration pnpm db:authority:consumer-contract",
       "exitCode": 0
+    },
+    {
+      "name": "broader server inventory",
+      "filesExecuted": 417,
+      "testsPassed": 2619,
+      "initialFailures": 5,
+      "existingSkippedTests": 67,
+      "note": "All failures accounted for and affected rechecks pass; no claim of a single green full-suite execution."
+    },
+    {
+      "name": "broader failure rechecks",
+      "filesPassed": 3,
+      "testsPassed": 27
+    },
+    {
+      "name": "final typecheck",
+      "command": "pnpm type-check",
+      "exitCode": 0
     }
   ],
   "inProgress": [
-    "Broader server suite",
-    "Exact draft PR checks"
+    "Exact final draft PR CI"
   ],
   "protectedOperationsPerformed": false,
   "limitations": [
     "All provider substitutes are local.",
     "No application capacity/recovery or hosted acceptance claimed.",
-    "No main merge, production activation or provider mutation."
+    "No main merge, production activation or provider mutation.",
+    "Vercel automatic preview failed; authenticated build logs unavailable, diagnosis remains outstanding. No provider configuration changed."
   ],
   "rawCommandArtifacts": [
     {
@@ -121,6 +139,22 @@
     {
       "name": "lint-integration-fixes.log",
       "sha256": "b649057c66c11e5b2207852096f3f56b10446331df2b42f89c983a06ce587ffc"
+    },
+    {
+      "name": "typecheck-complete.log",
+      "sha256": "0ce19d9885b616457bb0c4be0aa773ee62f1b22c651bfc450c8801540b97c003"
+    },
+    {
+      "name": "broad-failure-rechecks.log",
+      "sha256": "3487479c61e1029359e25b911cbaa7521039035afda2a454a321639210aaea62"
+    },
+    {
+      "name": "broad-fixes-lint.log",
+      "sha256": "03ffe5f6c3df91aefab0eafcc641e4f2bffc64c38d0711df829a8c81cdacf235"
+    },
+    {
+      "name": "full-server.log",
+      "sha256": "1fa357b454c1f572b6b7499d031dfbbc10d2265117b64633daed3cd87dc0820c"
     }
   ]
 }

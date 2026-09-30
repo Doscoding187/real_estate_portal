@@ -15,6 +15,8 @@
 | Bounded integration correction | `b1c7f6f7`: add Node 22 JSON import attribute to rehearsal authorization. |
 | Fixture correction | `0e7cd93c`: four explicit canonical product keys in existing invitation/publication fixtures; no runtime relaxation. |
 | Tested source anchor | `0e7cd93cd36f5f93423d5d0b16530e94775b49e3`; tree `a662fa561a5eed52ce82c25750d3382a491050fa` before final documentation/evidence commit. Browser runs used the same runtime source at `b1c7f6f7`; only test fixtures changed afterward. |
+| Draft PR | [#583](https://github.com/Doscoding187/real_estate_portal/pull/583), task-owned, base `main`; no merge authorized. |
+| Later verification corrections | `0a2d511c`: catalog fixture product keys and explicit configured CI server inventory; `fbf8ce2b`: synthetic CI signing key and contained synthetic Places transport. |
 | Final PR identity | Obtain the final commit/tree from the PR head and `git rev-parse HEAD HEAD^{tree}`; final evidence records the verification source separately to avoid a self-referential commit hash. |
 
 [Source provenance](evidence/paid-mvp-integration-2026-09-30/source-provenance.json) records each imported artifact's original absolute path, source HEAD and SHA-256. All nine staged B16 source files equal their contents in `a05868c6`; they were **not** reapplied. Relevant historical B03–B07/PLE evidence was copied byte-for-byte. The B14 accepted procedure has digest `80545f1092297fb0bf7d634ed54005be45326d49bc634f0fa3d3a610d73b3acf`. B15 founder facts v0.6 and review copy v0.4 are preserved as drafts, including Edward's review ownership and supplied contacts; none is exact-copy approval. The September 30 audit supersedes old B09 import/census planning with fresh Azure accounts and TiDB archival.
@@ -34,11 +36,12 @@ No files in other worktrees were staged, committed, reset, cleaned, moved or del
 
 Automatic merges were inspected at overlapping authorization/connection/readiness/CLI and onboarding paths. They retain exact B08 credentials/grants, newer bounded archive/rehearsal factories, commercial and geography reference adapters, accepted contained fixtures and the database candidate's concurrent fresh-onboarding creation. `userRouter` retains paid billable-account behavior while using canonical race-safe onboarding creation. Search discovery contains reviewed geography resolution and accepted publication eligibility.
 
-Two issues were found by fresh execution:
+Execution found the following runtime and test-setup issues:
 
 - **Node 22 browser import failure:** the rehearsal module's bare JSON import prevented Playwright from discovering any journey. Adding `with { type: 'json' }` fixes module loading. Typecheck and all 429 authority tests pass after this fix, and all three browser journeys run successfully. The authorization record's contents and expiry checks are unchanged.
 - **Stale test fixtures:** two existing unit files supplied named Launch Access plans without mandatory `commercial_product_key`. The strict accepted product check correctly rejected them. Four fixture records now carry the exact product key; all 35 affected tests pass. No name-based fallback or legacy billing behavior was added.
-- **CI role-fixture ordering:** the scenario creates a canonical super-admin. CI now executes all five B07 role/session/audit cases on the fresh unseeded target before reference/scenario preparation, then excludes that already-run file from the seeded server batch. No canonical reviewer is deleted or demoted, and no case is skipped.
+- **Broader test setup:** the catalog audience fixtures also lacked three explicit product keys; these were corrected. The CI test job now supplies a synthetic signing key before module import so production-mode stale-session rejection actually executes. Synthetic Google Place IDs now use a local rejected transport response in the database hierarchy test, avoiding a live provider request and timeout. All 27 affected cases pass; no runtime behavior was relaxed.
+- **CI role-fixture ordering:** the scenario creates a canonical super-admin. CI now executes all five B07 role/session/audit cases on the fresh unseeded target before reference/scenario preparation, then excludes that already-run file from the seeded server batch. Vitest 2 workspace projects ignored the CLI `--exclude` option, so CI now derives the configured server file inventory and removes only the role file already run in full. The 416-file selected inventory was verified locally. No canonical reviewer is deleted or demoted, and no case is skipped.
 
 ## Fresh validation and limits
 
@@ -59,10 +62,13 @@ Two issues were found by fresh execution:
 | Agent browser | 2/2 pass on composed runtime. |
 | Agency/member browser | 1/1 complete joined journey passes, including invitation/membership, publication, enquiry/follow-up and revocation. |
 | Developer browser | 1/1 complete joined journey passes, including reviewed geography selections, organisation/payment/media/unit publication and enquiry/follow-up/expiry. |
-| Shared database contracts | Initial matrix: 12 files / 110 tests pass; last-admin file's two sole-admin assertions fail on a target containing canonical/browser reviewers. Fresh unseeded target: 1 file / 5 tests pass; all shared contracts pass with their correct fixture boundaries. |
+| Shared database contracts | Initial matrix: 12 files / 107 tests pass; last-admin file's two sole-admin assertions fail on a target containing canonical/browser reviewers. Fresh unseeded target: 1 file / 5 tests pass; all shared contracts pass with their correct fixture boundaries. |
+| Broader server inventory | 417 files: initial 2,619 pass, 5 fail, 67 existing skips. All five failures rechecked successfully after the documented setup corrections (27 affected tests plus all 5 isolated role tests). [Broad result](evidence/paid-mvp-integration-2026-09-30/broad-server-result.json) lists file counts and every existing skipped case. This is not claimed as a single green full-suite run. |
 | Exact PR CI | Record check status on the final PR head; earlier #582 checks are historical input evidence and never attributed to this combined tree. |
 
 [Sanitized case results](evidence/paid-mvp-integration-2026-09-30/test-case-results.json) retain titles/statuses and raw-output hashes. Private browser/runtime/mail captures remain outside Git. Initial failed executions are preserved as evidence boundaries: static worker RPC timeouts and a socket-recovery race under machine memory contention passed on rerun; scenario verification initially used development mode and was rerun read-only in required test mode; paid fixture negatives were corrected with canonical metadata; B07 sole-admin tests require a fresh target without reviewer accounts. No failed migration was retried and no ledger/data repair was performed.
+
+The automatic Vercel Preview check failed on the integrated draft. Authenticated Vercel build logs are unavailable in this session, so its cause is unconfirmed; local frontend build and GitHub Frontend Build Guard pass. Before merge, obtain the exact-head preview build logs, resolve the failure or document an independently approved check disposition, and repeat the check. No provider settings were changed and no manual deployment was invoked.
 
 Local mail capture, media proxy/adapter, in-memory Redis and disposable native MySQL prove application composition only. They do not prove Resend receipt, private hosted proof storage, durable production media, routed live enquiries, Azure deployment/cutover, recovery capacity or legal-copy acceptance. B17's 24-hour exercise and recovery objectives remain unchanged. Exact geography regeneration sources remain unavailable in hermetic CI; the approved frozen projection's integrity/probes are verified instead, with source recovery still separately governed.
 
@@ -95,7 +101,7 @@ The [central register](03-launch-register.md) now carries B01–B07 scoped accep
 
 | Packages | Outstanding dependency | Next concrete action |
 | --- | --- | --- |
-| B16 | Independent review, exact-head CI, later controlled merge | Review this combined change/evidence and verify final checks; separately perform the containment checklist before any merge. |
+| B16 | Independent review, exact-head CI, later controlled merge | Review this combined change/evidence, verify final checks and diagnose the failed Vercel preview using authenticated logs; separately perform the containment checklist before any merge. |
 | B08/B09/B12 | Protected geography, bindings, old writers, final archive and sessions | Prepare a fresh geography plan on the approved release; inventory writers and exact Azure runtime/worker target identities; review final capture/custody and session-invalidation sequence. No legacy-account import. |
 | B10/B11/B13 | Real email, public/private media and enquiry delivery | Review required provider variables/permissions and worker/job config (`railway.email-worker.json`, `railway.lead-job.json`); rehearse real recipient delivery, private cross-user denial and restart durability on a controlled hosted candidate. |
 | B14 | Founder queues, monitoring and pause/absence operating proof | Rehearse one bank-match/activation/moderation/support cycle and the accepted weekend/holiday/absence/resumption cases during staffed hours. |

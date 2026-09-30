@@ -2323,5 +2323,134 @@
         ]
       }
     ]
+  },
+  {
+    "label": "broad server failure rechecks",
+    "rawOutputSha256": "e06640b572ab525b10608372cdc77f8a290fb2901a4baf465c6ac9a3e9589d93",
+    "files": [
+      {
+        "path": "server/__tests__/commercial-launch-access-s4.integration.test.ts",
+        "cases": [
+          {
+            "title": "S4 Launch Access catalog selection invariant selects the three required products without treating unrelated disposable plans as a failure",
+            "status": "passed"
+          },
+          {
+            "title": "S4 paid Launch Access disposable runtime provisions the three first-class launch products without assuming exclusive plan inventory",
+            "status": "passed"
+          },
+          {
+            "title": "S4 paid Launch Access disposable runtime rejects unsupported persisted product and owner pairs before commercial writes in production",
+            "status": "passed"
+          },
+          {
+            "title": "S4 paid Launch Access disposable runtime rejects stale sessions before invoice, approval, and restore mutations in production",
+            "status": "passed"
+          },
+          {
+            "title": "S4 paid Launch Access disposable runtime runs Agent and Agency request-proof-finance-activation-expiry with owner isolation",
+            "status": "passed"
+          },
+          {
+            "title": "S4 paid Launch Access disposable runtime preserves existing paid access and blocks new sales while the production release is paused",
+            "status": "passed"
+          },
+          {
+            "title": "S4 paid Launch Access disposable runtime returns a rejected Launch Access proof to the issued state so the owner can resubmit",
+            "status": "passed"
+          },
+          {
+            "title": "S4 paid Launch Access disposable runtime keeps an unreconciled overpayment under review without activating access",
+            "status": "passed"
+          },
+          {
+            "title": "S4 paid Launch Access disposable runtime notifies an agent at every Launch Access billing milestone",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "server/services/__tests__/commercialCatalogService.test.ts",
+        "cases": [
+          {
+            "title": "commercial catalog projection projects canonical agency pricing and entitlements without owning checkout",
+            "status": "passed"
+          },
+          {
+            "title": "commercial catalog projection does not publish an unbounded early-access override as a public offer",
+            "status": "passed"
+          },
+          {
+            "title": "commercial catalog projection honestly projects unsupported paid audiences as assisted contact actions",
+            "status": "passed"
+          },
+          {
+            "title": "commercial catalog projection projects paid Developer Launch Access without a free-trial or zero-price claim",
+            "status": "passed"
+          },
+          {
+            "title": "commercial catalog projection routes canonical Agent Launch Access to the authenticated invoice handoff",
+            "status": "passed"
+          },
+          {
+            "title": "commercial catalog projection routes Agency Launch Access into canonical agency onboarding instead of a contact dead end",
+            "status": "passed"
+          },
+          {
+            "title": "commercial catalog projection excludes inactive and explicitly local/internal plans from a public catalog",
+            "status": "passed"
+          },
+          {
+            "title": "commercial catalog projection filters products by the requested canonical audience",
+            "status": "passed"
+          },
+          {
+            "title": "commercial catalog projection does not publish retired free-trial products for launch audiences",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "server/services/__tests__/googlePlacesIntegration.integration.test.ts",
+        "cases": [
+          {
+            "title": "Google Places Autocomplete Integration - Integration Tests Complete autocomplete flow should handle complete autocomplete workflow from input to form population",
+            "status": "passed"
+          },
+          {
+            "title": "Google Places Autocomplete Integration - Integration Tests Location record creation from listing submission should create location hierarchy and link listing",
+            "status": "passed"
+          },
+          {
+            "title": "Google Places Autocomplete Integration - Integration Tests Location record creation from listing submission should reuse existing location records for duplicate submissions",
+            "status": "passed"
+          },
+          {
+            "title": "Google Places Autocomplete Integration - Integration Tests Location page rendering with static and dynamic content should render location page with merged static and dynamic content",
+            "status": "passed"
+          },
+          {
+            "title": "Google Places Autocomplete Integration - Integration Tests Search flow: autocomplete \u2192 location page \u2192 filtered listings should handle complete search flow from query to filtered results",
+            "status": "passed"
+          },
+          {
+            "title": "Google Places Autocomplete Integration - Integration Tests Search flow: autocomplete \u2192 location page \u2192 filtered listings should support multiple location filters with AND logic",
+            "status": "passed"
+          },
+          {
+            "title": "Google Places Autocomplete Integration - Integration Tests Trending suburbs calculation from search events should calculate trending suburbs from search events",
+            "status": "passed"
+          },
+          {
+            "title": "Google Places Autocomplete Integration - Integration Tests Trending suburbs calculation from search events should weight recent searches higher than older searches",
+            "status": "passed"
+          },
+          {
+            "title": "Google Places Autocomplete Integration - Integration Tests Trending suburbs calculation from search events should limit results to top 10 suburbs",
+            "status": "passed"
+          }
+        ]
+      }
+    ]
   }
 ]
