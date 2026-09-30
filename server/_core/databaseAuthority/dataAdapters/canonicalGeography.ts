@@ -763,6 +763,7 @@ export function canonicalGeographyReleaseRows(): GeographyReleaseRow[] {
       values: {
         name: item.name,
         code: item.code,
+        status: 'verified',
         slug: item.slug,
         latitude: item.latitude ?? null,
         longitude: item.longitude ?? null,

@@ -110,3 +110,31 @@ no stored database credential. Remove it after completing diagnostic work.
 
 This plan is concrete review evidence, not approval to bypass the reviewed
 release-source boundary. Re-plan before any apply if the target or source changes.
+
+
+## Integration review and physical local proof (2026-09-30)
+
+Review added explicit `verified` status admission for provinces, including a
+negative test for retired status. The Database Authority entry and machine
+manifest now point to this geography release path; no skill or agent runtime
+capability changes were introduced. The static authority gate, model inventory
+and lifecycle contract pass; 406 authority tests pass. Typecheck passes and
+touched-code lint reports zero errors (three existing `any` warnings).
+
+The exact task-owned disposable local target was created and established
+through all 95 canonical migrations, then populated by the existing canonical
+geography reference adapter. MySQL 8.0.46 physical inspection agrees with the
+new release planner: 9 provinces / 340 cities / 1,089 suburbs, zero pending
+rows. Re-running the existing adapter preserved every row ID and full row
+value, including timestamps. Schema congruency is unchanged. This proves
+physical local materialization and repeat stability; it is not Azure 8.4
+protected-apply evidence.
+
+Production Railway has an automatic GitHub deployment trigger on `main` with
+`checkSuites=false`. Therefore merging is also a deployment trigger unless the
+trigger is first held through a controlled operation. PR preparation and CI
+may proceed independently; do not describe an unheld merge as code-only work.
+
+The earlier live plan digest is historical: adding province status changed
+the desired reference digest. Generate and review a fresh protected plan
+before apply; do not use the earlier digest.

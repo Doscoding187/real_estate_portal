@@ -111,5 +111,7 @@
   ],
   "acceptanceScenarioAdapter": "server/_core/databaseAuthority/dataAdapters/searchToLeadScenario.ts",
   "plePublicationEntitlementAdapter": "server/_core/databaseAuthority/dataAdapters/plePublicationEntitlement.ts",
-  "pleReviewerFixtureAdapter": "server/_core/databaseAuthority/dataAdapters/pleReviewerFixture.ts"
+  "pleReviewerFixtureAdapter": "server/_core/databaseAuthority/dataAdapters/pleReviewerFixture.ts",
+  "canonicalGeographyReleaseAdapter": "server/_core/databaseAuthority/dataAdapters/geographyRelease.ts",
+  "canonicalGeographyReleaseAdapterOption": "--adapter=geography"
 }

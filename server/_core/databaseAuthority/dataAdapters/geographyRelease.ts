@@ -18,7 +18,7 @@ const TABLES = ['provinces', 'cities', 'suburbs'] as const;
 export type GeographySnapshot = Record<(typeof TABLES)[number], Record<string, unknown>[]>;
 const PARENT = { provinces: null, cities: 'provinceId', suburbs: 'cityId' } as const;
 const COLUMNS = {
-  provinces: ['name', 'code', 'slug', 'latitude', 'longitude'],
+  provinces: ['name', 'code', 'slug', 'latitude', 'longitude', 'status'],
   cities: ['name', 'slug', 'latitude', 'longitude', 'isMetro', 'status'],
   suburbs: ['name', 'slug', 'latitude', 'longitude', 'postalCode', 'status'],
 } as const;

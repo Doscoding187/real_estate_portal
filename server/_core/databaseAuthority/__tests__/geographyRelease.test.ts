@@ -152,7 +152,7 @@ describe('catalog-bound protected geography release', () => {
     expect(plan.pending).toEqual([newCity]);
     expect(snapshot.provinces[0].id).toBe(321);
   });
-  it.each(['unknown', 'duplicate', 'name', 'coordinate', 'orphan'] as const)(
+  it.each(['unknown', 'duplicate', 'name', 'coordinate', 'status', 'orphan'] as const)(
     'rejects %s data before writes',
     kind => {
       const desired = canonicalGeographyReleaseRows();
@@ -166,6 +166,7 @@ describe('catalog-bound protected geography release', () => {
       if (kind === 'duplicate') snapshot.provinces.push({ ...snapshot.provinces[0], id: 2 });
       if (kind === 'name') snapshot.provinces[0].name = 'changed';
       if (kind === 'coordinate') snapshot.provinces[0].latitude = 99;
+      if (kind === 'status') snapshot.provinces[0].status = 'retired';
       if (kind === 'orphan') snapshot.cities.push({ id: 2, slug: 'orphan', provinceId: 99 });
       expect(() => planGeographyRows(desired, snapshot)).toThrow();
     },
