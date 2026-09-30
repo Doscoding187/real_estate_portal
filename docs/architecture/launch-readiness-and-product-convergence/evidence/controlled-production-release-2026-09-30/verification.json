@@ -1,0 +1,40 @@
+{
+  "sourceBase": "4b5ef13255bf5b54ee92eec27969042fa4310f7c",
+  "scope": "Bounded final archive and Vercel main trigger hold; product/SQL/catalog source unchanged",
+  "archiveTests": {
+    "files": 1,
+    "tests": 19,
+    "databaseBoundary": "mocked, no protected contact",
+    "limitations": "Operator freeze record is bound/authenticated, not an automatic provider census or final capture"
+  },
+  "checks": [
+    {
+      "command": "pnpm type-check",
+      "result": "PASS",
+      "privateLogSha256": "0ce19d9885b616457bb0c4be0aa773ee62f1b22c651bfc450c8801540b97c003"
+    },
+    {
+      "command": "pnpm db:authority:check",
+      "result": "PASS: 47 files / 442 tests; static migration/model/lifecycle/utilities gates",
+      "privateLogSha256": "6017fe878f50b2d763a823dc5be2c8373cb5b874127a21fee2fee0f62e4ce2bc"
+    },
+    {
+      "command": "touched-code ESLint",
+      "result": "PASS: zero errors; existing warnings preserved",
+      "privateLogSha256": "99e738637e72f6c3ff488f31c9a4eb1faeb34f4f39ff73ee48bf5ba0a5910f97"
+    },
+    {
+      "command": "pnpm build",
+      "result": "PASS; existing bundle warnings",
+      "privateLogSha256": "0162d09d72f7c108e79fec2fc8da67f4ef1b2d99c86ad35025a7e790b3b553ec"
+    },
+    {
+      "command": "pnpm db:authority:status",
+      "result": "PASS: own disposable target disposed/unreachable, no provisioning; authority valid",
+      "privateLogSha256": "d9f00c1227735a271e39b22bc50b798da656c719c5e2ffaa35f8b758bb653e85"
+    }
+  ],
+  "publicPaidIntake": "closed; no mutation performed",
+  "priorEvidenceReuse": "Accepted paid/browser/shared contracts unchanged; prior exact 4b5 GitHub CI separately preserved",
+  "currentPRChecks": "Pending after push; never attributed from prior head"
+}

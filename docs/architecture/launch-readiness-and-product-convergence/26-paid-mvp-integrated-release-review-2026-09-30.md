@@ -1,5 +1,7 @@
 # Paid MVP integrated release — senior review packet
 
+**Subsequent founder direction:** [controlled production release packet](27-controlled-production-release-2026-09-30.md) now governs execution. Existing live infrastructure is the validation target; the failed preview is an accepted non-gating exception. The former draft-only/no-deployment assignment below is a dated completion record, not a current prohibition. All required GitHub checks passed at `4b5ef132`; the new bounded release delta must pass its own checks.
+
 **Disposition: READY FOR SENIOR INTEGRATION REVIEW, subject to exact-head PR checks. Paid launch remains NO-GO.** October 5–7 is a conditional staffed opening window. This work composes accepted product and reviewed database/geography engineering; it does not close hosted, operational, independent-review or opening gates.
 
 ## Source, ownership and provenance
@@ -68,7 +70,7 @@ Execution found the following runtime and test-setup issues:
 
 [Sanitized case results](evidence/paid-mvp-integration-2026-09-30/test-case-results.json) retain titles/statuses and raw-output hashes. Private browser/runtime/mail captures remain outside Git. Initial failed executions are preserved as evidence boundaries: static worker RPC timeouts and a socket-recovery race under machine memory contention passed on rerun; scenario verification initially used development mode and was rerun read-only in required test mode; paid fixture negatives were corrected with canonical metadata; B07 sole-admin tests require a fresh target without reviewer accounts. No failed migration was retried and no ledger/data repair was performed.
 
-The automatic Vercel Preview check failed on the integrated draft. Authenticated Vercel build logs are unavailable in this session, so its cause is unconfirmed; local frontend build and GitHub Frontend Build Guard pass. Before merge, obtain the exact-head preview build logs, resolve the failure or document an independently approved check disposition, and repeat the check. No provider settings were changed and no manual deployment was invoked.
+The automatic Vercel Preview check failed on the integrated draft. Authenticated Vercel build logs are unavailable in this session, so its cause is unconfirmed; local frontend build and GitHub Frontend Build Guard pass. Edward subsequently accepted the failed preview as non-gating for controlled production validation; see the founder addendum and packet 27. Do not assert a cause or relabel the failed result passed. Production build/serving remains gating. At completion of this original integration assignment, no provider settings were changed and no manual deployment was invoked.
 
 Local mail capture, media proxy/adapter, in-memory Redis and disposable native MySQL prove application composition only. They do not prove Resend receipt, private hosted proof storage, durable production media, routed live enquiries, Azure deployment/cutover, recovery capacity or legal-copy acceptance. B17's 24-hour exercise and recovery objectives remain unchanged. Exact geography regeneration sources remain unavailable in hermetic CI; the approved frozen projection's integrity/probes are verified instead, with source recovery still separately governed.
 
@@ -101,7 +103,7 @@ The [central register](03-launch-register.md) now carries B01–B07 scoped accep
 
 | Packages | Outstanding dependency | Next concrete action |
 | --- | --- | --- |
-| B16 | Independent review, exact-head CI, later controlled merge | Review this combined change/evidence, verify final checks and diagnose the failed Vercel preview using authenticated logs; separately perform the containment checklist before any merge. |
+| B16 | Independent review, exact-head CI, later controlled merge | Review this combined change/evidence, verify final checks and perform the concrete deployment-containment/production sequence in packet 27; preview diagnosis is optional using existing logs and does not gate controlled production. |
 | B08/B09/B12 | Protected geography, bindings, old writers, final archive and sessions | Prepare a fresh geography plan on the approved release; inventory writers and exact Azure runtime/worker target identities; review final capture/custody and session-invalidation sequence. No legacy-account import. |
 | B10/B11/B13 | Real email, public/private media and enquiry delivery | Review required provider variables/permissions and worker/job config (`railway.email-worker.json`, `railway.lead-job.json`); rehearse real recipient delivery, private cross-user denial and restart durability on a controlled hosted candidate. |
 | B14 | Founder queues, monitoring and pause/absence operating proof | Rehearse one bank-match/activation/moderation/support cycle and the accepted weekend/holiday/absence/resumption cases during staffed hours. |

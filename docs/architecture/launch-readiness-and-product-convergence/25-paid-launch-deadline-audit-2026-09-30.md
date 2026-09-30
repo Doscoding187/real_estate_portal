@@ -4,6 +4,18 @@
 
 This report audits the original B01–B18 programme for Edward's deadline-driven revenue objective. It is a product-management recommendation and evidence reconciliation, not a new release authority or permission to merge, spend, cut over or open sales. The central launch register remains the disposition authority. Dates below are proposed execution checkpoints in South Africa time, not guaranteed delivery estimates or assigned staff commitments.
 
+## Subsequent founder decision: validate on the live site
+
+Edward has directed release validation on the existing live site to avoid additional preview/staging cost. This supersedes this report's requirement for a successful Vercel Preview or a separately provisioned staging environment. Do not ask for the same scope decision again or purchase an upgrade to clear preview alone.
+
+The reviewed integration is now PR #583, head `4b5ef13255bf5b54ee92eec27969042fa4310f7c`, tree `02bdcb863e7442392b3ba9d5db1d573b82d64288`. Its GitHub database, geography, lint/typecheck, frontend/application builds and unit/integration checks pass. Vercel Preview remains failed with an unestablished cause. Record that check as **founder-accepted non-gating for controlled production validation**; do not relabel it passed or assert that a plan/budget limit caused it. The candidate itself still needs to build and serve correctly on the production hosting path. Diagnose the preview failure opportunistically if existing logs are accessible; a failure shared by production must be corrected.
+
+Proceed toward a controlled release using the existing infrastructure and costs. The operating sequence is an attended production deployment with paid intake closed, controlled live validation, then a separate paid-opening decision after the remaining customer/data/operating outcomes pass. Use existing sales-pause and publication controls; a sales pause does not freeze every application writer. The database transition still needs its own complete writer freeze, final TiDB archive, old-session invalidation and approved Azure release sequence. Use designated controlled accounts and records, with deliberate external-email/payment handling; do not turn on test-fixture bypasses or synthetic entitlements in production.
+
+The release operator should carry this decision into the owned PR #583 register/review packet, refresh its exact identity, and prepare the concrete merge/deploy/configuration sequence. Coordinate automated frontend/backend deployments so no unreviewed incompatible intermediate state is exposed. Existing target-specific protected database approvals, recovery/capacity obligations and commercial opening criteria remain applicable; this is an environment/preview disposition, not a blanket waiver of unrelated release gates. No new paid environment is required by this decision. Later improvements may ship incrementally with focused verification.
+
+This addendum records the founder's direction and updated directive. It does not claim that a merge, deployment, provider change or paid opening has been executed. Earlier sections below retain their dated audit evidence; this section governs the changed preview/staging recommendation.
+
 ## What is done, and where we actually are
 
 **Seven packages have recorded acceptance within their defined scope: B01–B07. Eleven still need launch closure: B08–B18.** This is not a percentage-complete estimate: one package may be a policy decision while another contains a full deployment or recovery exercise. Recorded local acceptance does not mean those changes are integrated or available to customers.

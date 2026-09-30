@@ -1,5 +1,7 @@
 # B12 hosted runtime contract
 
+**September 30 execution amendment:** Edward directs validation on existing live infrastructure; no new staging app or Vercel upgrade is required. [Packet 27](architecture/launch-readiness-and-product-convergence/27-controlled-production-release-2026-09-30.md) supersedes the earlier staging/rehearsal sequence below while preserving strict hosted origins, credentials, service configuration, storage/privacy and a separate paid GO. Public intake remains closed; the current global pause cannot admit controlled paid invoices/approvals, so the exact owner-admission proposal requires review rather than a production test bypass. Older B08 spend/topology observations below remain dated history, not current release authority.
+
 Status: repository contract only. No hosted rehearsal, DNS change, protected database operation, or Paid MVP activation is authorized by this file.
 
 Execution sequencing follows the accepted reconciliation's

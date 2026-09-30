@@ -4,6 +4,9 @@ const production = process.env.VERCEL_ENV === 'production' &&
   process.env.VITE_DEPLOY_ENV === 'production';
 
 export const config = {
+  // Hold the production Git trigger through the Azure/API transition.
+  // Restore main only in the separately recorded frontend release step.
+  git: { deploymentEnabled: { main: false } },
   buildCommand: 'pnpm build:frontend',
   outputDirectory: 'dist/public',
   framework: null,

@@ -1,0 +1,69 @@
+{
+  "status": "PROPOSED_NOT_APPLIED",
+  "frontend": {
+    "provider": "Existing Vercel project",
+    "target": "production",
+    "source": "Exact approved merged PR583 SHA",
+    "variables": {
+      "VITE_DEPLOY_ENV": "production",
+      "VITE_APP_URL": "https://www.propertylistifysa.co.za",
+      "VITE_API_URL": "https://api.propertylistifysa.co.za"
+    },
+    "release": "Manual production Git-SHA deployment while main autodeploy is held; authenticated project operator required"
+  },
+  "railway": {
+    "projectId": "8cdd7515-ddd2-4252-bbee-df5a5c209d4b",
+    "environmentId": "63070d99-357a-40ba-99c3-6d1368f61652",
+    "apiServiceId": "db88a720-2d1f-4afc-a3a8-6228b6b08d3e",
+    "source": "Exact approved merged PR583 SHA; verify provider build SHA",
+    "variables": {
+      "APP_ENV": "production",
+      "NODE_ENV": "production",
+      "APP_URL": "https://www.propertylistifysa.co.za",
+      "API_URL": "https://api.propertylistifysa.co.za",
+      "CORS_ALLOWED_ORIGINS": "https://www.propertylistifysa.co.za",
+      "SKIP_FRONTEND": "true",
+      "MEDIA_STORAGE_ADAPTER": "s3",
+      "AWS_S3_BUCKET": "Copy existing S3_BUCKET_NAME exactly",
+      "BILLING_PROOF_STORAGE_ADAPTER": "s3",
+      "BILLING_PROOF_S3_BUCKET": "property-listify-private-proofs-pl583-20260930",
+      "BILLING_PROOF_S3_REGION": "eu-north-1",
+      "BILLING_PROOF_S3_PREFIX": "billing-proofs",
+      "SAVED_SEARCH_SCHEDULER_ENABLED": "false",
+      "PAID_MVP_SALES_PAUSED": "true"
+    },
+    "secretActions": {
+      "DATABASE_URL": "API: existing distinct Azure runtime URL; workers: existing distinct Azure worker URL; exact approved fingerprint",
+      "JWT_SECRET": "Generate fresh strong secret once for production API/worker session boundary; never copy old TiDB value",
+      "MEDIA_UPLOAD_TOKEN_SECRET": "Generate independent strong secret",
+      "BILLING_PROOF_AWS_ACCESS_KEY_ID": "New bucket-scoped identity, distinct from public media key",
+      "BILLING_PROOF_AWS_SECRET_ACCESS_KEY": "New scoped key, secret channel only"
+    },
+    "preserve": [
+      "Existing Redis/public media/verified Resend sender/OWNER_OPEN_ID; evaluate each against final source",
+      "Testing pending JWT_SECRET patch remains untouched"
+    ],
+    "forbid": [
+      "DATABASE_MIGRATION_URL in any persistent app service",
+      "SKIP_DB_INIT/test fixture selectors/mock email/OTP modes in production",
+      "Legacy account import or synthetic entitlement creation"
+    ]
+  },
+  "workers": [
+    {
+      "name": "paid-mvp-email-worker",
+      "configFile": "railway.email-worker.json",
+      "startCommand": "pnpm email:supervisor",
+      "restartPolicy": "ALWAYS",
+      "databaseCredentialClass": "worker"
+    },
+    {
+      "name": "paid-mvp-lead-job",
+      "configFile": "railway.lead-job.json",
+      "startCommand": "pnpm lead-delivery:worker",
+      "cronSchedule": "*/5 * * * *",
+      "restartPolicy": "NEVER",
+      "databaseCredentialClass": "worker"
+    }
+  ]
+}

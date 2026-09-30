@@ -1,0 +1,44 @@
+{
+  "observedAt": "2026-09-30T16:39:26.009Z",
+  "operation": "read-only",
+  "sourceHead": "4b5ef13255bf5b54ee92eec27969042fa4310f7c",
+  "configurationIssues": [
+    "MEDIA_STORAGE_ADAPTER must be explicitly set to s3 in deployed runtime.",
+    "MEDIA_UPLOAD_TOKEN_SECRET must be present, non-placeholder, and at least 32 characters.",
+    "Hosted runtime requires explicit APP_ENV and NODE_ENV=production.",
+    "A full 40-character BUILD_SHA or provider commit SHA is required.",
+    "BILLING_PROOF_S3_BUCKET is required.",
+    "AWS_S3_BUCKET must equal S3_BUCKET_NAME for mounted video/media paths.",
+    "BILLING_PROOF_STORAGE_ADAPTER must be s3.",
+    "Private billing proof requires dedicated scoped AWS credentials.",
+    "Set SAVED_SEARCH_SCHEDULER_ENABLED=false, or true with a strong token secret."
+  ],
+  "storage": {
+    "visibleBucketCount": 1,
+    "publicMediaBucketVisible": true,
+    "region": "eu-north-1",
+    "privateProofConfigured": false,
+    "publicAccess": {
+      "BlockPublicAcls": false,
+      "IgnorePublicAcls": false,
+      "BlockPublicPolicy": false,
+      "RestrictPublicBuckets": false
+    },
+    "versioning": {
+      "status": "Disabled"
+    },
+    "encryption": {
+      "algorithms": [
+        "AES256"
+      ]
+    },
+    "policyStatus": {
+      "isPublic": true
+    }
+  },
+  "resend": {
+    "domainReadStatus": 200,
+    "senderConfigured": true,
+    "sendingNotExercised": true
+  }
+}

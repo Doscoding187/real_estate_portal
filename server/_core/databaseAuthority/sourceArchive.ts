@@ -12,6 +12,71 @@ const MAGIC = Buffer.from('PL-TIDB-ARCHIVE-V1\n');
 const MAX_BYTES = 64 * 1024 * 1024;
 const MAX_ROWS = 100000;
 
+/** Operator evidence, not an automatic claim that provider writers were stopped. */
+export interface TiDbWriterFreeze {
+  format: 'property-listify-tidb-writer-freeze-v1';
+  sourceFingerprint: string;
+  actor: string;
+  reference: string;
+  verifiedAt: string;
+  releaseCommit: string;
+  censusSha256: string;
+  readbackSha256: string;
+  publicWritesClosed: true;
+  operatorWritesClosed: true;
+  writers: { id: string; state: 'stopped' | 'read-only'; evidenceSha256: string }[];
+}
+
+export function validateTiDbWriterFreeze(value: unknown): TiDbWriterFreeze {
+  const v = value as Partial<TiDbWriterFreeze> | null;
+  const text = (s: unknown) =>
+    typeof s === 'string' && s.trim() === s && s.length > 0 && s.length <= 256;
+  const hash = (s: unknown) => typeof s === 'string' && /^[a-f0-9]{64}$/.test(s);
+  const verifiedAt = typeof v?.verifiedAt === 'string' ? Date.parse(v.verifiedAt) : NaN;
+  if (
+    !v ||
+    v.format !== 'property-listify-tidb-writer-freeze-v1' ||
+    v.sourceFingerprint !== TIDB_ARCHIVE_SOURCE_FINGERPRINT ||
+    !text(v.actor) ||
+    !text(v.reference) ||
+    typeof v.releaseCommit !== 'string' ||
+    !/^[a-f0-9]{40}$/.test(v.releaseCommit) ||
+    !hash(v.censusSha256) ||
+    !hash(v.readbackSha256) ||
+    !Number.isFinite(verifiedAt) ||
+    verifiedAt > Date.now() ||
+    Date.now() - verifiedAt > 15 * 60 * 1000 ||
+    v.publicWritesClosed !== true ||
+    v.operatorWritesClosed !== true ||
+    !Array.isArray(v.writers) ||
+    !v.writers.length ||
+    v.writers.length > 100 ||
+    v.writers.some(
+      w =>
+        !w || !text(w.id) || !['stopped', 'read-only'].includes(w.state) || !hash(w.evidenceSha256),
+    ) ||
+    new Set(v.writers.map(w => w.id)).size !== v.writers.length
+  )
+    throw new Error(
+      'Final archive requires fresh, exact-source operator evidence of every writer freeze.',
+    );
+  // Copy the validated contract; discard extraneous fields and prevent mutation
+  // while the asynchronous snapshot is being captured.
+  return {
+    format: v.format,
+    sourceFingerprint: v.sourceFingerprint,
+    actor: v.actor!,
+    reference: v.reference!,
+    verifiedAt: v.verifiedAt!,
+    releaseCommit: v.releaseCommit,
+    censusSha256: v.censusSha256!,
+    readbackSha256: v.readbackSha256!,
+    publicWritesClosed: true,
+    operatorWritesClosed: true,
+    writers: v.writers.map(w => ({ id: w.id, state: w.state, evidenceSha256: w.evidenceSha256 })),
+  };
+}
+
 export function sealSourceArchive(payload: Buffer, key: Buffer): Buffer {
   if (key.length !== 32 || payload.length > MAX_BYTES)
     throw new Error('Invalid archive key or payload size.');
@@ -61,12 +126,28 @@ function archiveRows(result: unknown): Record<string, unknown>[] {
 }
 
 /** Source-only encrypted evidence; never an import or database authority change. */
-export async function capturePreliminaryTiDbArchive(input: {
+type SourceArchiveInput = {
   authority: ResolvedDatabaseAuthority;
   decision: AuthorizedDatabaseOperation;
   key: Buffer;
-}) {
+};
+
+export function capturePreliminaryTiDbArchive(input: SourceArchiveInput) {
+  return captureTiDbArchive(input);
+}
+
+export function captureFinalTiDbArchive(input: SourceArchiveInput & { freeze: unknown }) {
+  return captureTiDbArchive(input, validateTiDbWriterFreeze(input.freeze));
+}
+
+async function captureTiDbArchive(input: SourceArchiveInput, freeze?: TiDbWriterFreeze) {
   assertAuthorizedDatabaseOperation(input.authority, input.decision, ['read-only-connect']);
+  if (
+    freeze &&
+    (freeze.actor !== input.decision.approvalActor ||
+      freeze.reference !== input.decision.approvalReference)
+  )
+    throw new Error('Final archive freeze actor and reference must match the protected approval.');
   if (
     input.authority.context.targetFingerprintHash !== TIDB_ARCHIVE_SOURCE_FINGERPRINT ||
     input.authority.context.credentialClass !== 'read-only'
@@ -121,8 +202,11 @@ export async function capturePreliminaryTiDbArchive(input: {
       sourceFingerprint: TIDB_ARCHIVE_SOURCE_FINGERPRINT,
       identity,
       startedAt,
-      frozen: false,
-      purpose: 'preliminary TiDB retirement archive; fresh Azure accounts; no import',
+      frozen: Boolean(freeze),
+      ...(freeze
+        ? { freezeEvidence: freeze, freezeBasis: 'operator-attested provider readback' }
+        : {}),
+      purpose: `${freeze ? 'final' : 'preliminary'} TiDB retirement archive; fresh Azure accounts; no import`,
     });
     const counts: { table: string; rows: number }[] = [];
     for (const table of tables) {
@@ -148,6 +232,7 @@ export async function capturePreliminaryTiDbArchive(input: {
     add({ kind: 'footer', counts, totalRows, completedAt: new Date().toISOString() });
     await c.query('ROLLBACK');
     transaction = false;
+    if (freeze) validateTiDbWriterFreeze(freeze);
     const payload = Buffer.from(frames.join('')),
       encrypted = sealSourceArchive(payload, input.key);
     if (!openSourceArchive(encrypted, input.key).equals(payload))
@@ -163,7 +248,10 @@ export async function capturePreliminaryTiDbArchive(input: {
         plaintextBytes: payload.length,
         archiveSha256: createHash('sha256').update(encrypted).digest('hex'),
         authenticatedReadback: true,
-        frozen: false,
+        frozen: Boolean(freeze),
+        ...(freeze
+          ? { freezeEvidence: freeze, freezeBasis: 'operator-attested provider readback' }
+          : {}),
       },
     };
   } finally {

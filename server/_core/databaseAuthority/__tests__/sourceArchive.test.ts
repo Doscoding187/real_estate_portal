@@ -14,6 +14,8 @@ import {
   sealSourceArchive,
   sourceArchiveCell,
   capturePreliminaryTiDbArchive,
+  captureFinalTiDbArchive,
+  TIDB_ARCHIVE_SOURCE_FINGERPRINT,
 } from '../sourceArchive';
 import { resolveDatabaseAuthority } from '../context';
 import { authorizeDatabaseOperation } from '../authorization';
@@ -152,5 +154,96 @@ describe('preliminary source capture', () => {
       'invalid query result',
     );
     expect(c.end).toHaveBeenCalledOnce();
+  });
+  function freeze() {
+    return {
+      format: 'property-listify-tidb-writer-freeze-v1',
+      sourceFingerprint: TIDB_ARCHIVE_SOURCE_FINGERPRINT,
+      actor: 'test',
+      reference: 'archive-test',
+      verifiedAt: new Date().toISOString(),
+      releaseCommit: 'a'.repeat(40),
+      censusSha256: 'b'.repeat(64),
+      readbackSha256: 'c'.repeat(64),
+      publicWritesClosed: true,
+      operatorWritesClosed: true,
+      writers: [{ id: 'production-api', state: 'stopped', evidenceSha256: 'd'.repeat(64) }],
+    };
+  }
+  it('authenticates the final capture and binds the operator freeze evidence', async () => {
+    connection();
+    const input = sourceAuthority(),
+      record = freeze();
+    const result = await captureFinalTiDbArchive({ ...input, freeze: record });
+    const header = JSON.parse(
+      openSourceArchive(result.encrypted, input.key).toString().split('\n')[0],
+    );
+    expect(header).toMatchObject({
+      frozen: true,
+      freezeEvidence: record,
+      freezeBasis: 'operator-attested provider readback',
+    });
+    expect(result.evidence).toMatchObject({
+      frozen: true,
+      freezeEvidence: record,
+      authenticatedReadback: true,
+    });
+  });
+  it.each([
+    ['missing', undefined],
+    ['wrong source', { sourceFingerprint: 'a'.repeat(64) }],
+    ['stale', { verifiedAt: new Date(Date.now() - 16 * 60_000).toISOString() }],
+    ['future', { verifiedAt: new Date(Date.now() + 60_000).toISOString() }],
+    ['open public writes', { publicWritesClosed: false }],
+    ['open operator writes', { operatorWritesClosed: false }],
+    ['empty census', { writers: [] }],
+    [
+      'running writer',
+      { writers: [{ id: 'api', state: 'running', evidenceSha256: 'd'.repeat(64) }] },
+    ],
+    [
+      'duplicate writer',
+      {
+        writers: [
+          { id: 'api', state: 'stopped', evidenceSha256: 'd'.repeat(64) },
+          { id: 'api', state: 'stopped', evidenceSha256: 'd'.repeat(64) },
+        ],
+      },
+    ],
+    ['missing provider readback', { readbackSha256: '' }],
+  ])('refuses %s evidence before contacting TiDB', async (_name, change) => {
+    const record = change === undefined ? undefined : { ...freeze(), ...change };
+    await expect(async () =>
+      captureFinalTiDbArchive({ ...sourceAuthority(), freeze: record }),
+    ).rejects.toThrow('Final archive requires');
+    expect(createAuthoritySqlConnection).not.toHaveBeenCalled();
+  });
+  it('refuses a freeze record that expires during capture and closes the source', async () => {
+    const c = connection(),
+      record = freeze();
+    const before = Date.now();
+    const original = c.query.getMockImplementation()!;
+    c.query.mockImplementation(async sql => {
+      const result = await original(sql);
+      if (sql.startsWith('SELECT *')) vi.spyOn(Date, 'now').mockReturnValue(before + 16 * 60_000);
+      return result;
+    });
+    try {
+      await expect(
+        captureFinalTiDbArchive({ ...sourceAuthority(), freeze: record }),
+      ).rejects.toThrow('Final archive requires');
+      expect(c.query).toHaveBeenCalledWith('ROLLBACK');
+      expect(c.end).toHaveBeenCalledOnce();
+    } finally {
+      vi.restoreAllMocks();
+    }
+  });
+  it('refuses a different freeze actor or approval reference before connection', async () => {
+    for (const change of [{ actor: 'another-operator' }, { reference: 'another-approval' }]) {
+      await expect(
+        captureFinalTiDbArchive({ ...sourceAuthority(), freeze: { ...freeze(), ...change } }),
+      ).rejects.toThrow('match the protected approval');
+    }
+    expect(createAuthoritySqlConnection).not.toHaveBeenCalled();
   });
 });

@@ -2,43 +2,46 @@
 
 | Field | Authority |
 | --- | --- |
-| Status | **NO-GO. September 30 reconciliation: B01–B07 accepted within scope; B08–B18 remain open.** Integration preparation does not grant release acceptance or permission to activate. |
+| Status | **PAID OPENING NO-GO. B01–B07 accepted within scope; B08–B18 remain open.** Edward now authorizes controlled production release preparation/execution on existing infrastructure with public paid intake closed; exact operational gates and separate paid GO remain. |
 | Scope | Sole launch-disposition authority for the canonical three-audience Paid MVP. Services V1/PR #581, Explore expansion, Land launch, card payments, recurring billing and unrelated redesigns are excluded. |
 | Source | Published main `4e012b3044628fc06da7489c0055e9ce01bdc8d9`; accepted paid commit `a05868c66f493e3cbc972a119074c91a10797777`, tree `b21f454e215d8b02129e4daa14ba6f8d338406d1`; reviewed database/geography commit `b625a6dd0be7b105e100383dbc8f919a64d8b0bb` / PR #582. Both are incorporated with Git ancestry in this task-owned candidate. |
-| Evidence | [September 30 audit](25-paid-launch-deadline-audit-2026-09-30.md), [later B03–B07 scoped acceptance](evidence/b16-integration-review-packet-2026-09-27.md), [integration provenance](evidence/paid-mvp-integration-2026-09-30/source-provenance.json), [current review packet](26-paid-mvp-integrated-release-review-2026-09-30.md). Historical packets retain their original dated wording. |
-| Release boundary | Draft integration PR and senior review only. No main merge, hosted deployment, protected apply, binding change, writer freeze, live session reset, final archive or payment opening is included. October 5–7 is conditional on the outstanding gates and staffed coverage. |
+| Evidence | [September 30 audit](25-paid-launch-deadline-audit-2026-09-30.md), [later B03–B07 scoped acceptance](evidence/b16-integration-review-packet-2026-09-27.md), [integration provenance](evidence/paid-mvp-integration-2026-09-30/source-provenance.json), [integrated review packet](26-paid-mvp-integrated-release-review-2026-09-30.md), [current controlled-production sequence](27-controlled-production-release-2026-09-30.md). Historical packets retain their original dated wording. |
+| Release boundary | Existing production validation replaces preview/staging closure: failed preview is founder-accepted non-gating. Coordinate deployment holds, merge, writer freeze/final archive, protected Azure geography, JWT invalidation and API/worker/frontend release in an attended window. No operation is claimed completed merely by this register. Required resource/custody/admission decisions and source/target review remain; paid opening requires separate GO. October 5–7 is conditional on evidence and staffed coverage. |
 
 ## Paid MVP working disposition — 2026-09-30
 
 B01–B07 acceptance is carried forward from the later recorded scoped decisions;
 it is not new production acceptance. The current integration verification and
-its limits are recorded separately in the review packet. No row authorizes
-activation. The historical September 24–25 records below are superseded where
+its limits are recorded separately in the review packet. No row alone authorizes
+paid activation. Controlled live release is now directed by the founder; the
+[production packet](27-controlled-production-release-2026-09-30.md) records exact
+actions, fresh observations and unresolved operational decisions. The historical September 24–25 records below are superseded where
 this reconciliation identifies later evidence or founder decisions.
 
 | Package | Current disposition | Incorporated evidence / implementation | Remaining concrete action |
 | --- | --- | --- | --- |
 | B01 | ACCEPTED WITHIN SCOPE | Approved manual-EFT, owner/product and 90-day offer | Carry exact terms into approved customer copy and hosted acceptance. |
-| B02 | ACCEPTED WITHIN SCOPE | Fresh-schema CI correction and canonical 0094 lineage | Check this exact PR's CI and later post-merge identity. |
-| B03 | ACCEPTED WITHIN SCOPE | Product/owner activation containment, payment retries, entitlement and expiry | Refresh combined-candidate contracts; later hosted finance rehearsal. |
-| B04 | ACCEPTED WITHIN SCOPE | Independent Agent paid application journey | Refresh on combined candidate, then real-provider release. |
-| B05 | ACCEPTED WITHIN SCOPE | Agency/member paid journey and invitation/custody/revocation | Refresh on combined candidate, then real invitation delivery. |
-| B06 | ACCEPTED WITHIN SCOPE | Developer organisation/inventory/enquiry and expiry journey | Refresh on combined candidate including reviewed geography. |
-| B07 | ACCEPTED WITHIN SCOPE | Tenant isolation, role/session revocation, media and paid-route containment | Verify affected shared contracts; maintain production activation closed. |
-| B08 | OPEN — RELEASE ADMISSION | Recorded Azure 8.4.9/0094 integrity and runtime-network evidence; governed geography release implementation | Review a fresh geography plan on approved source; protected apply/verify and exact runtime/worker admission in a later authorized release. |
+| B02 | ACCEPTED WITHIN SCOPE | Fresh-schema CI correction and canonical 0094 lineage | Integrated 4b5ef132 required CI passed; verify new release-only head and post-merge identity. |
+| B03 | ACCEPTED WITHIN SCOPE | Product/owner activation containment, payment retries, entitlement and expiry | Combined contracts passed; normal real-provider finance rehearsal remains, with reviewed controlled-owner admission required to keep public intake closed. |
+| B04 | ACCEPTED WITHIN SCOPE | Independent Agent paid application journey | Combined browser journey 2/2 passed; real-provider controlled acceptance remains. |
+| B05 | ACCEPTED WITHIN SCOPE | Agency/member paid journey and invitation/custody/revocation | Combined full browser journey 1/1 passed; real invitation delivery and hosted custody/revocation remain. |
+| B06 | ACCEPTED WITHIN SCOPE | Developer organisation/inventory/enquiry and expiry journey | Combined full browser journey 1/1 passed including reviewed geography; hosted organisation/payment/publication/enquiry remains. |
+| B07 | ACCEPTED WITHIN SCOPE | Tenant isolation, role/session revocation, media and paid-route containment | Affected shared contracts passed; verify hosted sessions/private storage and keep public paid intake closed. |
+| B08 | OPEN — RELEASE ADMISSION | Recorded Azure 8.4.9/0094 integrity and runtime-network evidence; governed geography release implementation | Fresh Azure plan: 1,438 inserts, digest 7cabc434… on canonical 0094; review/re-plan merged source, protected apply/verify and exact API/worker admission under controlled release. |
 | B09 | OPEN — ARCHIVE / FRESH ACCOUNTS | Founder chose fresh Azure accounts and TiDB archival; preliminary encrypted archive/readback | Inventory/freeze old writers, take final capture, prove independent custody/recovery, and invalidate old sessions during controlled transition. No legacy-account import. |
-| B10 | OPEN — HOSTED DELIVERY | Transactional outbox, invitation and account-mail implementation, worker supervision | Bind verified sender/worker and prove real receipt, retry/bounce and restart. |
-| B11 | OPEN — HOSTED STORAGE | Private-proof access/storage guards and public media implementation | Configure dedicated private proof storage and durable public media; prove isolation, restart durability and recovery. |
-| B12 | OPEN — HOSTED RUNTIME | Runtime/session/readiness guards and exact-artifact diagnostics | Bind frontend/API/worker identities, Azure target, TLS/origins/cookies/Redis and prove joined hosted behavior. |
+| B10 | OPEN — HOSTED DELIVERY | Transactional outbox, invitation and account-mail implementation, worker supervision | Resend approved domain freshly verified; provision existing-project supervisor and prove real receipt, retry/bounce and restart. |
+| B11 | OPEN — HOSTED STORAGE | Private-proof access/storage guards and public media implementation | Only public S3 exists; exact private bucket/scoped-key proposal awaits incremental-usage authority. Prove isolation, restart durability and independent recovery. |
+| B12 | OPEN — HOSTED RUNTIME | Runtime/session/readiness guards and exact-artifact diagnostics | Fresh API is still main/TiDB, readiness 503. Execute controlled API/worker → frontend sequence, exact identities, Azure target, TLS/origins/cookies/Redis and joined behavior. No preview closure required. |
 | B13 | OPEN — HOSTED ENQUIRIES | Durable custody, lead scheduling/retry and attention paths | Bind job service/cron and prove correct-recipient delivery, retry, backlog and operator follow-up. |
 | B14 | OPEN — OPERATIONAL REHEARSAL | Accepted weekday 09:00–17:00 SAST operating procedure, finance cadence, pause/resume | Prove monitored contacts, bank/matching/moderation queues and weekend/holiday/absence rehearsal. |
 | B15 | OPEN — EXACT COPY APPROVAL | Later founder facts v0.6 and review copy v0.4 preserved as drafts | Resolve actual provider/retention/cookie/disclosure facts; obtain dated exact-copy approval, implement and prove rendering/consent/invoice consistency. |
-| B16 | OPEN — INTEGRATION REVIEW | Both reviewed inputs composed; local verification and draft PR preparation tracked in current packet | Complete candidate verification, exact-PR checks and independent whole-change review; controlled merge/post-merge verification remains outside this assignment. |
+| B16 | OPEN — INTEGRATION REVIEW | Both reviewed inputs composed; local verification and draft PR preparation tracked in current packet | Integrated verification and all required CI passed at 4b5ef132. Review bounded archive/trigger changes at new head, verify new CI, hold exact triggers and perform controlled merge/post-merge verification under current directive. |
 | B17 | OPEN — RECOVERY / CAPACITY | Existing probes/runbook and recorded Azure engine/recovery-copy evidence | Wire alerts and prove representative 24-hour final-application workload, restart/backlog and independent application recovery against master-plan thresholds. |
-| B18 | OPEN — FINAL ACCEPTANCE / GO | Three-audience and buyer exact-artifact acceptance checklist | Close upstream gates; controlled cutover, writes-closed smoke, Edward's attended GO and first-customer observation. |
+| B18 | OPEN — FINAL ACCEPTANCE / GO | Three-audience and buyer exact-artifact acceptance checklist | Close upstream hosted/recovery/operating gates; validate controlled live journeys with public intake closed, then Edward's attended paid GO and observed first founder-assisted customer. |
 
-**Immediate engineering priority: B16 combined-candidate verification and senior
-review.** Do not restart accepted B03–B07 work from older failed packets. The
+**Immediate release priority: the [controlled-production sequence](27-controlled-production-release-2026-09-30.md),
+including exact source review, attended coverage, private proof/workers and
+controlled payment admission.** Do not restart accepted B03–B07 work from older failed packets. The
 accepted B14 procedure is [here](19-first-customer-operating-procedure.md), with
 [implementation provenance](evidence/b14-schedule-reconciliation-implementation-2026-09-27.md).
 [B15 founder facts v0.6](evidence/b15-copy-approval-preparation-2026-09-27-v0.6.md)

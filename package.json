@@ -172,7 +172,8 @@
     "start:server:prodlike": "cross-env NODE_ENV=production APP_ENV=production tsx server/_core/start.ts",
     "start:prod": "cross-env NODE_ENV=production APP_ENV=production tsx server/_core/start.ts",
     "start:prod:core": "cross-env NODE_ENV=production APP_ENV=production tsx server/_core/start.ts",
-    "db:source:archive:preliminary": "tsx scripts/databaseAuthorityCli.ts source-archive:preliminary"
+    "db:source:archive:preliminary": "tsx scripts/databaseAuthorityCli.ts source-archive:preliminary",
+    "db:source:archive:final": "tsx scripts/databaseAuthorityCli.ts source-archive:final"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.693.0",
