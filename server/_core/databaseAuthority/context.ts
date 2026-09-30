@@ -1,3 +1,5 @@
+import { RECOVERY_VALIDATION_FINGERPRINT } from './recoveryValidationTarget';
+import { isRegisteredRehearsal } from './rehearsalAuthority';
 import { createHash, randomUUID } from 'node:crypto';
 import { buildMysqlConnectionSecurityConfig } from '../databaseTls';
 import { storeDatabaseCredentialUrl, readDatabaseCredentialUrl } from './credentialVault';
@@ -24,6 +26,7 @@ const LOCAL_LOOPBACK_PORTS = new Set(['3307']);
 // above remains pinned to 127.0.0.1:3307.
 const TEST_LOOPBACK_PORTS = new Set(['3306', '3307']);
 const REGISTERED_PROTECTED_REMOTE_TARGETS: Readonly<Record<string, 'production'>> = Object.freeze({
+  [RECOVERY_VALIDATION_FINGERPRINT]: 'production',
   'mysql://propertylistify-mysql.mysql.database.azure.com:3306/propertylistify_database':
     'production',
 });
@@ -199,6 +202,7 @@ function deepFreeze<T>(value: T): T {
 }
 
 export function resolveDatabaseAuthority(input: {
+  rehearsal?: { resourceId: string; purpose: string };
   operation: DatabaseOperation;
   cwd?: string;
   processEnv?: NodeJS.ProcessEnv;
@@ -283,7 +287,9 @@ export function resolveDatabaseAuthority(input: {
     }
   } else if (!resolvedLocal) {
     const registeredClass = REGISTERED_PROTECTED_REMOTE_TARGETS[resolvedTargetFingerprint];
-    if (registeredClass) {
+    if (isRegisteredRehearsal(resolvedTargetFingerprint, input.rehearsal)) {
+      targetClass = 'disposable-rehearsal';
+    } else if (registeredClass) {
       targetClass = registeredClass;
     } else if (resolvedDatabaseName === 'listify_property_sa') {
       targetClass = 'production';
@@ -360,6 +366,7 @@ export function resolveDatabaseAuthority(input: {
       : parsed.toString();
   const resolvedAt = input.resolvedAt ?? new Date();
   const context: ResolvedDatabaseContext = deepFreeze({
+    rehearsal: targetClass === 'disposable-rehearsal' ? input.rehearsal : undefined,
     contextVersion: 1,
     contextId: randomUUID(),
     correlationId:

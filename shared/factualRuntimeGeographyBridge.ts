@@ -32,8 +32,7 @@ export const FACTUAL_RUNTIME_MAPPING_STATUSES = [
   'unsupported_type',
 ] as const;
 
-export type FactualRuntimeMappingStatus =
-  (typeof FACTUAL_RUNTIME_MAPPING_STATUSES)[number];
+export type FactualRuntimeMappingStatus = (typeof FACTUAL_RUNTIME_MAPPING_STATUSES)[number];
 
 export const RUNTIME_SEARCH_SCOPE_KINDS = ['province', 'metro_city', 'locality'] as const;
 
@@ -133,6 +132,11 @@ export type FactualRuntimeProjectionResolution =
       message: string;
     };
 
+export interface FactualRuntimeNaturalKeyCoPublication {
+  runtimeNaturalKey: string;
+  factualLocationIds: readonly string[];
+}
+
 export interface FactualRuntimeMappingEntry {
   /** Durable Property Listify-owned factual identity. */
   factualLocationId: string;
@@ -189,10 +193,25 @@ export type FactualRuntimeResolution =
       runtimeScopeLevel: CanonicalLocationLevel;
     };
 
-const FACTUAL_LOCATION_ID_PATTERN = /^pl-gp-v01-[a-f0-9]{20}$/;
+const LEGACY_FACTUAL_LOCATION_ID_PATTERN = /^pl-gp-v01-[a-f0-9]{20}$/;
+const TERRITORY_FACTUAL_LOCATION_ID_PATTERN =
+  /^pl-geo-v01-([a-z0-9]+(?:-[a-z0-9]+)*)-[a-f0-9]{20}$/;
+
+export function factualGeographyIdNamespace(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  if (LEGACY_FACTUAL_LOCATION_ID_PATTERN.test(value)) return 'gp';
+  return TERRITORY_FACTUAL_LOCATION_ID_PATTERN.exec(value)?.[1] ?? null;
+}
 
 export function isFactualGeographyId(value: unknown): value is string {
-  return typeof value === 'string' && FACTUAL_LOCATION_ID_PATTERN.test(value);
+  return factualGeographyIdNamespace(value) !== null;
+}
+
+export function isFactualGeographyIdInNamespace(
+  value: unknown,
+  namespace: string,
+): value is string {
+  return factualGeographyIdNamespace(value) === namespace;
 }
 
 export function isRuntimeResolvableMappingStatus(
@@ -215,17 +234,93 @@ export function isRuntimeNaturalKey(value: unknown): value is string {
 }
 
 function validateProjectionEntry(entry: FactualRuntimeProjectionEntry): void {
+  if (!entry || typeof entry !== 'object' || Array.isArray(entry)) {
+    throw new Error('Factual runtime projection entry must be an object.');
+  }
   if (!isFactualGeographyId(entry.factualLocationId)) {
     throw new Error(`Invalid factual geography identity: ${entry.factualLocationId}`);
   }
-  if (!entry.factualPreferredName.trim()) {
+  if (typeof entry.factualPreferredName !== 'string' || !entry.factualPreferredName.trim()) {
     throw new Error(`Factual geography ${entry.factualLocationId} has no preferred name.`);
   }
-  if (!entry.factualType.trim()) {
+  if (typeof entry.factualType !== 'string' || !entry.factualType.trim()) {
     throw new Error(`Factual geography ${entry.factualLocationId} has no factual type.`);
   }
+  if (
+    !Array.isArray(entry.factualContext) ||
+    !entry.factualContext.every(context => typeof context === 'string' && context.trim())
+  ) {
+    throw new Error(`Factual geography ${entry.factualLocationId} has invalid context.`);
+  }
   if (!RUNTIME_PROJECTION_STATUSES.includes(entry.projectionStatus)) {
-    throw new Error(`Factual geography ${entry.factualLocationId} has an invalid projection status.`);
+    throw new Error(
+      `Factual geography ${entry.factualLocationId} has an invalid projection status.`,
+    );
+  }
+  if (
+    entry.runtimeSearchScopeKind !== undefined &&
+    !RUNTIME_SEARCH_SCOPE_KINDS.includes(entry.runtimeSearchScopeKind)
+  ) {
+    throw new Error(
+      `Factual geography ${entry.factualLocationId} has an invalid runtime search scope.`,
+    );
+  }
+  if (entry.runtimeNaturalKey !== undefined && !isRuntimeNaturalKey(entry.runtimeNaturalKey)) {
+    throw new Error(
+      `Factual geography ${entry.factualLocationId} has an invalid runtime natural key.`,
+    );
+  }
+  if (
+    entry.runtimeParentNaturalKey !== undefined &&
+    !isRuntimeNaturalKey(entry.runtimeParentNaturalKey)
+  ) {
+    throw new Error(
+      `Factual geography ${entry.factualLocationId} has an invalid runtime parent natural key.`,
+    );
+  }
+  if (entry.runtimeNaturalKey !== undefined && entry.runtimeSearchScopeKind === undefined) {
+    throw new Error(
+      `Factual geography ${entry.factualLocationId} has a runtime key without a search scope.`,
+    );
+  }
+  if (entry.runtimeParentNaturalKey !== undefined && entry.runtimeNaturalKey === undefined) {
+    throw new Error(
+      `Factual geography ${entry.factualLocationId} has a runtime parent without a runtime key.`,
+    );
+  }
+  if (
+    entry.runtimeParentRelationship !== undefined &&
+    (typeof entry.runtimeParentRelationship !== 'string' || !entry.runtimeParentRelationship.trim())
+  ) {
+    throw new Error(
+      `Factual geography ${entry.factualLocationId} has an invalid runtime parent relationship.`,
+    );
+  }
+  if (entry.runtimeParentRelationship !== undefined && entry.runtimeNaturalKey === undefined) {
+    throw new Error(
+      `Factual geography ${entry.factualLocationId} has a parent relationship without a runtime key.`,
+    );
+  }
+  if (entry.runtimeNaturalKey !== undefined && entry.runtimeSearchScopeKind !== undefined) {
+    const keySegments = entry.runtimeNaturalKey.split('/');
+    const expectedSegmentCount =
+      entry.runtimeSearchScopeKind === 'province'
+        ? 1
+        : entry.runtimeSearchScopeKind === 'metro_city'
+          ? 2
+          : 3;
+    const expectedParentNaturalKey = keySegments.slice(0, -1).join('/');
+    if (
+      keySegments.length !== expectedSegmentCount ||
+      keySegments.some(segment => !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(segment)) ||
+      (entry.runtimeSearchScopeKind === 'province'
+        ? entry.runtimeParentNaturalKey !== undefined
+        : entry.runtimeParentNaturalKey !== expectedParentNaturalKey)
+    ) {
+      throw new Error(
+        `Factual geography ${entry.factualLocationId} has runtime hierarchy incompatible with its scope.`,
+      );
+    }
   }
   if (
     entry.runtimeReferenceStatus !== undefined &&
@@ -236,11 +331,19 @@ function validateProjectionEntry(entry: FactualRuntimeProjectionEntry): void {
     );
   }
   if (entry.nameOnlyMatch !== false) {
-    throw new Error(`Factual geography ${entry.factualLocationId} cannot use a name-only projection.`);
+    throw new Error(
+      `Factual geography ${entry.factualLocationId} cannot use a name-only projection.`,
+    );
   }
-  if (entry.reconciliationDisposition) {
+  if (entry.reconciliationDisposition !== undefined) {
     const disposition = entry.reconciliationDisposition;
     if (
+      !disposition ||
+      typeof disposition !== 'object' ||
+      typeof disposition.factualDisposition !== 'string' ||
+      typeof disposition.membershipRecommendation !== 'string' ||
+      typeof disposition.currentPlaceStatus !== 'string' ||
+      typeof disposition.sourceIdentityInterpretation !== 'string' ||
       !disposition.factualDisposition.trim() ||
       !disposition.membershipRecommendation.trim() ||
       !disposition.currentPlaceStatus.trim() ||
@@ -251,55 +354,94 @@ function validateProjectionEntry(entry: FactualRuntimeProjectionEntry): void {
       );
     }
   }
-  if (entry.evidenceReferences.length === 0) {
+  if (
+    !Array.isArray(entry.evidenceReferences) ||
+    entry.evidenceReferences.length === 0 ||
+    !entry.evidenceReferences.every(reference => typeof reference === 'string' && reference.trim())
+  ) {
     throw new Error(`Factual geography ${entry.factualLocationId} has no projection evidence.`);
   }
-  if (!entry.decisionReason.trim()) {
+  if (typeof entry.decisionReason !== 'string' || !entry.decisionReason.trim()) {
     throw new Error(`Factual geography ${entry.factualLocationId} has no projection decision.`);
   }
-  if (entry.factualContextDetails) {
+  if (entry.factualContextDetails !== undefined) {
+    const details = entry.factualContextDetails;
+    if (!details || typeof details !== 'object') {
+      throw new Error(`Factual geography ${entry.factualLocationId} has invalid context details.`);
+    }
     if (
-      entry.factualContextDetails.acceptedContextLocationId !== undefined &&
-      !isFactualGeographyId(entry.factualContextDetails.acceptedContextLocationId)
+      details.acceptedContextLocationId !== undefined &&
+      !isFactualGeographyId(details.acceptedContextLocationId)
     ) {
       throw new Error(
         `Factual geography ${entry.factualLocationId} has an invalid accepted context identity.`,
       );
     }
     if (
-      entry.factualContextDetails.acceptedContextLocationId !== undefined &&
-      !entry.factualContextDetails.acceptedContextLocationName?.trim()
+      details.acceptedContextLocationId !== undefined &&
+      (typeof details.acceptedContextLocationName !== 'string' ||
+        !details.acceptedContextLocationName.trim())
     ) {
       throw new Error(
         `Factual geography ${entry.factualLocationId} has an accepted context identity without a name.`,
       );
     }
     if (
-      entry.factualContextDetails.acceptedContextRelationship !== undefined &&
-      !entry.factualContextDetails.acceptedContextRelationship.trim()
+      details.acceptedContextRelationship !== undefined &&
+      (typeof details.acceptedContextRelationship !== 'string' ||
+        !details.acceptedContextRelationship.trim())
     ) {
       throw new Error(
         `Factual geography ${entry.factualLocationId} has an empty accepted context relationship.`,
       );
     }
-  }
-  for (const evidence of entry.evidenceProvenance ?? []) {
     if (
-      !evidence.sourceId.trim() ||
-      !evidence.sourceUrl.trim() ||
-      !evidence.sourceClass.trim() ||
-      !evidence.assertion.trim() ||
-      !evidence.licensingNote.trim()
+      details.hierarchyState !== undefined &&
+      (typeof details.hierarchyState !== 'string' || !details.hierarchyState.trim())
     ) {
-      throw new Error(`Factual geography ${entry.factualLocationId} has incomplete evidence provenance.`);
+      throw new Error(`Factual geography ${entry.factualLocationId} has invalid hierarchy state.`);
+    }
+  }
+  if (entry.evidenceProvenance !== undefined) {
+    if (!Array.isArray(entry.evidenceProvenance)) {
+      throw new Error(
+        `Factual geography ${entry.factualLocationId} has invalid evidence provenance.`,
+      );
+    }
+    for (const evidence of entry.evidenceProvenance) {
+      if (
+        !evidence ||
+        typeof evidence !== 'object' ||
+        typeof evidence.sourceId !== 'string' ||
+        typeof evidence.sourceUrl !== 'string' ||
+        typeof evidence.sourceClass !== 'string' ||
+        typeof evidence.assertion !== 'string' ||
+        typeof evidence.licensingNote !== 'string' ||
+        !evidence.sourceId.trim() ||
+        !evidence.sourceUrl.trim() ||
+        !evidence.sourceClass.trim() ||
+        !evidence.assertion.trim() ||
+        !evidence.licensingNote.trim()
+      ) {
+        throw new Error(
+          `Factual geography ${entry.factualLocationId} has incomplete evidence provenance.`,
+        );
+      }
     }
   }
 
-  for (const runtimeId of entry.environmentRuntimeCompatibilityIds ?? []) {
-    if (!parseCanonicalLocationId(runtimeId)) {
+  if (entry.environmentRuntimeCompatibilityIds !== undefined) {
+    if (!Array.isArray(entry.environmentRuntimeCompatibilityIds)) {
       throw new Error(
-        `Factual geography ${entry.factualLocationId} has an invalid environment runtime identity ${runtimeId}.`,
+        `Factual geography ${entry.factualLocationId} has invalid environment runtime identities.`,
       );
+    }
+    for (const runtimeId of entry.environmentRuntimeCompatibilityIds) {
+      if (!parseCanonicalLocationId(runtimeId)) {
+        throw new Error(
+          `Factual geography ${entry.factualLocationId} has an invalid environment runtime identity ${runtimeId}.`,
+        );
+      }
     }
   }
 
@@ -336,7 +478,8 @@ function validateProjectionEntry(entry: FactualRuntimeProjectionEntry): void {
     }
     const expectedParentNaturalKey = keySegments.slice(0, -1).join('/');
     if (
-      (entry.runtimeSearchScopeKind === 'province' && entry.runtimeParentNaturalKey !== undefined) ||
+      (entry.runtimeSearchScopeKind === 'province' &&
+        entry.runtimeParentNaturalKey !== undefined) ||
       (entry.runtimeSearchScopeKind !== 'province' &&
         entry.runtimeParentNaturalKey !== expectedParentNaturalKey)
     ) {
@@ -357,7 +500,12 @@ export class FactualRuntimeProjectionAuthority {
 
   private readonly byNaturalKey = new Map<string, FactualRuntimeProjectionEntry[]>();
 
-  constructor(entries: readonly FactualRuntimeProjectionEntry[]) {
+  private readonly governedCoPublications = new Map<string, ReadonlySet<string>>();
+
+  constructor(
+    entries: readonly FactualRuntimeProjectionEntry[],
+    governedCoPublications: readonly FactualRuntimeNaturalKeyCoPublication[] = [],
+  ) {
     for (const entry of entries) {
       validateProjectionEntry(entry);
       if (this.byFactualId.has(entry.factualLocationId)) {
@@ -370,6 +518,61 @@ export class FactualRuntimeProjectionAuthority {
         candidates.push(entry);
         this.byNaturalKey.set(entry.runtimeNaturalKey, candidates);
       }
+    }
+
+    for (const group of governedCoPublications) {
+      if (!isRuntimeNaturalKey(group.runtimeNaturalKey)) {
+        throw new Error(`Invalid governed co-publication natural key ${group.runtimeNaturalKey}.`);
+      }
+      if (this.governedCoPublications.has(group.runtimeNaturalKey)) {
+        throw new Error(
+          `Duplicate governed co-publication natural key ${group.runtimeNaturalKey}.`,
+        );
+      }
+      if (group.factualLocationIds.length < 2) {
+        throw new Error(
+          `Governed co-publication ${group.runtimeNaturalKey} requires at least two factual identities.`,
+        );
+      }
+      const factualIds = new Set<string>();
+      for (const factualLocationId of group.factualLocationIds) {
+        if (!isFactualGeographyId(factualLocationId)) {
+          throw new Error(
+            `Governed co-publication ${group.runtimeNaturalKey} has invalid factual identity ${factualLocationId}.`,
+          );
+        }
+        if (factualIds.has(factualLocationId)) {
+          throw new Error(
+            `Governed co-publication ${group.runtimeNaturalKey} repeats factual identity ${factualLocationId}.`,
+          );
+        }
+        factualIds.add(factualLocationId);
+      }
+      const candidates = this.byNaturalKey.get(group.runtimeNaturalKey) ?? [];
+      const candidateIds = new Set(candidates.map(candidate => candidate.factualLocationId));
+      if (
+        candidateIds.size !== factualIds.size ||
+        [...factualIds].some(factualLocationId => !candidateIds.has(factualLocationId)) ||
+        candidates.some(candidate => candidate.projectionStatus !== 'projection_ready')
+      ) {
+        throw new Error(
+          `Governed co-publication ${group.runtimeNaturalKey} does not match its factual projections.`,
+        );
+      }
+      const first = candidates[0];
+      if (
+        !first ||
+        candidates.some(
+          candidate =>
+            candidate.runtimeSearchScopeKind !== first.runtimeSearchScopeKind ||
+            candidate.runtimeParentNaturalKey !== first.runtimeParentNaturalKey,
+        )
+      ) {
+        throw new Error(
+          `Governed co-publication ${group.runtimeNaturalKey} has inconsistent runtime hierarchy.`,
+        );
+      }
+      this.governedCoPublications.set(group.runtimeNaturalKey, factualIds);
     }
   }
 
@@ -402,14 +605,23 @@ export class FactualRuntimeProjectionAuthority {
     return { status: 'resolved', projection: entry };
   }
 
-  resolveNaturalKey(runtimeNaturalKey: unknown): FactualRuntimeProjectionResolution {
-    if (
-      typeof runtimeNaturalKey !== 'string' ||
-      !isRuntimeNaturalKey(runtimeNaturalKey)
-    ) {
+  resolveNaturalKey(
+    runtimeNaturalKey: unknown,
+    expectedFactualLocationId?: unknown,
+  ): FactualRuntimeProjectionResolution {
+    if (typeof runtimeNaturalKey !== 'string' || !isRuntimeNaturalKey(runtimeNaturalKey)) {
       return {
         status: 'invalid',
         message: 'Projection resolution requires a valid runtime natural key.',
+      };
+    }
+    if (
+      expectedFactualLocationId !== undefined &&
+      !isFactualGeographyId(expectedFactualLocationId)
+    ) {
+      return {
+        status: 'invalid',
+        message: 'Projection resolution received an invalid expected factual identity.',
       };
     }
 
@@ -423,15 +635,47 @@ export class FactualRuntimeProjectionAuthority {
       };
     }
     const factualIds = new Set(candidates.map(candidate => candidate.factualLocationId));
-    if (factualIds.size !== 1) {
-      return {
-        status: 'blocked',
-        runtimeNaturalKey,
-        projectionStatus: 'ambiguous_projection',
-        message: 'More than one factual identity claims this runtime natural key.',
-      };
+    if (factualIds.size > 1) {
+      const governedFactualIds = this.governedCoPublications.get(runtimeNaturalKey);
+      if (
+        expectedFactualLocationId === undefined ||
+        !governedFactualIds?.has(expectedFactualLocationId)
+      ) {
+        return {
+          status: 'blocked',
+          runtimeNaturalKey,
+          projectionStatus: 'ambiguous_projection',
+          message:
+            'More than one factual identity claims this runtime natural key; an exact governed member is required.',
+        };
+      }
+      const governedEntry = candidates.find(
+        candidate => candidate.factualLocationId === expectedFactualLocationId,
+      );
+      if (!governedEntry) {
+        return {
+          status: 'blocked',
+          factualLocationId: expectedFactualLocationId,
+          runtimeNaturalKey,
+          projectionStatus: 'ambiguous_projection',
+          message: 'The selected factual identity is not a governed member of this runtime key.',
+        };
+      }
+      return { status: 'resolved', projection: governedEntry };
     }
     const [entry] = candidates;
+    if (
+      expectedFactualLocationId !== undefined &&
+      entry.factualLocationId !== expectedFactualLocationId
+    ) {
+      return {
+        status: 'blocked',
+        factualLocationId: expectedFactualLocationId,
+        runtimeNaturalKey,
+        projectionStatus: 'factual_geography_blocker',
+        message: 'The selected factual identity does not claim this runtime natural key.',
+      };
+    }
     if (entry.projectionStatus !== 'projection_ready') {
       return {
         status: 'blocked',
@@ -480,9 +724,7 @@ function validateEntry(entry: FactualRuntimeMappingEntry): void {
       );
     }
     if (entry.runtimeScopeLevel && parsed.level !== entry.runtimeScopeLevel) {
-      throw new Error(
-        `Factual geography ${entry.factualLocationId} has a runtime level mismatch.`,
-      );
+      throw new Error(`Factual geography ${entry.factualLocationId} has a runtime level mismatch.`);
     }
   }
 

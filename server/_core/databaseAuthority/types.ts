@@ -16,6 +16,7 @@ export const DATABASE_OPERATIONS = [
   'demo-seed',
   'scenario-seed',
   'test-fixture',
+  'rehearsal-regression',
   'verification',
   'browser-verification',
   'readiness',
@@ -38,6 +39,7 @@ export const DATABASE_TARGET_CLASSES = [
   'clean-main-local',
   'disposable-worktree',
   'disposable-test',
+  'disposable-rehearsal',
   'staging',
   'production',
   'shared-remote',
@@ -98,6 +100,7 @@ export type GitWorktreeIdentity = {
 };
 
 export type ResolvedDatabaseContext = {
+  rehearsal?: { resourceId: string; purpose: string };
   contextVersion: 1;
   contextId: string;
   correlationId: string;

@@ -662,6 +662,33 @@ describe('manifest migration planning and durable attempts', () => {
     expect(connection.calls.some(call => call.statement.startsWith('CREATE TABLE'))).toBe(false);
   });
 
+  it('accepts a verified OFF session without requiring restricted variable privileges', async () => {
+    const connection = new FakeMigrationConnection('fixture');
+    connection.generatedInvisiblePrimaryKey = 0;
+    connection.refuseGeneratedKeySetting = true;
+    const evidence = await establishFreshMysqlMigrationSession(connection);
+    expect(evidence.generatedInvisiblePrimaryKeyBefore).toBe(0);
+    expect(evidence.generatedInvisiblePrimaryKeyAfter).toBe(0);
+    expect(connection.calls.filter(call => call.statement.startsWith('SELECT CONNECTION_ID() AS connection_id, @@session.sql_generate_invisible_primary_key'))).toHaveLength(2);
+    expect(connection.calls.some(call => call.statement.startsWith('SET SESSION'))).toBe(false);
+  });
+
+  it.each(['generated key changed', 'connection changed'])('refuses an initially OFF session when %s', async kind => {
+    const connection = new FakeMigrationConnection('fixture');
+    connection.generatedInvisiblePrimaryKey = 0;
+    const execute = connection.execute.bind(connection);
+    let observations = 0;
+    connection.execute = async (statement, values = []) => {
+      if (statement.startsWith('SELECT CONNECTION_ID() AS connection_id, @@session.sql_generate_invisible_primary_key') && ++observations === 2) {
+        if (kind === 'generated key changed') connection.generatedInvisiblePrimaryKey = 1;
+        else connection.connectionId = '315';
+      }
+      return execute(statement, values);
+    };
+    await expect(establishFreshMysqlMigrationSession(connection)).rejects.toThrow('migration session contract changed');
+    expect(connection.calls.some(call => call.statement.startsWith('SET SESSION'))).toBe(false);
+  });
+
   it('rejects a session switch after setting GIPK off', async () => {
     const connection = new FakeMigrationConnection('fixture');
     connection.switchConnectionAfterSetting = true;

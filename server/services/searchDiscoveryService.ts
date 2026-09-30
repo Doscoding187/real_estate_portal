@@ -25,8 +25,10 @@ import {
   type SearchJourneyId,
   type SearchScope,
 } from '../../shared/searchScope';
-import { gautengFactualRuntimeProjectionAuthority } from './governedRuntimeGeographyReference';
-import { GAUTENG_RUNTIME_REFERENCE_PROJECTION } from './governedRuntimeGeographyReference';
+import {
+  LOCATION_AUTHORITY_CATALOG,
+  locationAuthorityProjectionAuthority,
+} from '../locationAuthorityCatalog';
 import {
   locationResolver,
   type PublicLocationResolutionResult,
@@ -185,10 +187,9 @@ function contextLabelForFactualProjection(
   factualContext: readonly string[],
   provinceSlug: string,
 ): string | undefined {
-  return factualContext.find(value => {
-    const normalized = normalizedQuery(value);
-    return normalized !== normalizedQuery(provinceSlug) && normalized !== 'gauteng';
-  });
+  return factualContext.find(
+    value => normalizedQuery(value) !== normalizedQuery(provinceSlug),
+  );
 }
 
 function pathFromRuntimeNaturalKey(runtimeNaturalKey: string): string {
@@ -213,7 +214,7 @@ let cachedGovernedAliasIndex: Map<string, GovernedAliasIndexEntry[]> | null = nu
 function governedAliasIndex(): Map<string, GovernedAliasIndexEntry[]> {
   if (!cachedGovernedAliasIndex) {
     const index = new Map<string, GovernedAliasIndexEntry[]>();
-    for (const row of GAUTENG_RUNTIME_REFERENCE_PROJECTION.rows) {
+    for (const row of LOCATION_AUTHORITY_CATALOG.runtimeRows) {
       for (const alias of row.searchableAliases ?? []) {
         const normalized = normalizedQuery(alias);
         if (!normalized || !row.runtimeParentNaturalKey) continue;
@@ -543,7 +544,7 @@ export class SearchDiscoveryService {
         : 'public';
     this.searchAreaAuthority = options.searchAreaAuthority ?? searchAreaAuthority;
     this.projectionAuthority =
-      options.projectionAuthority ?? gautengFactualRuntimeProjectionAuthority;
+      options.projectionAuthority ?? locationAuthorityProjectionAuthority;
     this.runtimeGeographyAuthority =
       options.runtimeGeographyAuthority ?? governedRuntimeGeographyAuthority;
     this.publicLocationResolver = options.publicLocationResolver ?? locationResolver;
@@ -593,6 +594,7 @@ export class SearchDiscoveryService {
       const runtime = await this.runtimeGeographyAuthority.resolveRuntimeNaturalKey(
         entry.runtimeNaturalKey,
         entry.runtimeSearchScopeKind,
+        entry.factualLocationId,
       );
       if (!runtime) continue;
 
@@ -879,6 +881,7 @@ export class SearchDiscoveryService {
       const runtime = await this.runtimeGeographyAuthority.resolveRuntimeNaturalKey(
         projection.projection.runtimeNaturalKey,
         projection.projection.runtimeSearchScopeKind!,
+        factualLocationId,
       );
       if (!runtime) {
         return {

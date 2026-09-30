@@ -1,7 +1,7 @@
 {
   "policyVersion": 1,
   "denyTargetClasses": ["unknown", "shared-remote"],
-  "protectedTargetClasses": ["staging", "production"],
+  "protectedTargetClasses": ["staging", "production", "disposable-rehearsal"],
   "operations": {
     "runtime-connect": {
       "allowedTargetClasses": ["disposable-worktree", "disposable-test", "staging", "production"],
@@ -274,6 +274,18 @@
       "approval": "protected-target",
       "acknowledgement": "none",
       "evidence": "sanitized-release-reference-verification"
+    },
+    "rehearsal-regression": {
+      "allowedTargetClasses": [
+        "disposable-rehearsal"
+      ],
+      "credentialClasses": [
+        "runtime"
+      ],
+      "ownership": "none",
+      "approval": "protected-target",
+      "acknowledgement": "exact-target",
+      "evidence": "exact-Azure-identity-expiring-purpose-bound-synthetic-probes"
     }
   }
 }

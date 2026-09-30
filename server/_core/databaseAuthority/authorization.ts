@@ -1,3 +1,5 @@
+import { RECOVERY_VALIDATION_FINGERPRINT } from './recoveryValidationTarget';
+import { assertRehearsalAuthorization } from './rehearsalAuthority';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import {
@@ -224,6 +226,19 @@ export function authorizeDatabaseOperation(
   } = {},
 ): AuthorizedDatabaseOperation {
   const context = authority.context;
+  if (
+    context.targetFingerprint === RECOVERY_VALIDATION_FINGERPRINT &&
+    (!['read-only-connect', 'verification'].includes(context.operation) ||
+      context.credentialClass !== 'read-only')
+  ) {
+    throw new Error('Recovery validation target permits read-only inspection only.');
+  }
+  if (
+    context.targetClass === 'disposable-rehearsal' ||
+    context.operation === 'rehearsal-regression'
+  ) {
+    assertRehearsalAuthorization(context, input.approval?.reference);
+  }
   const policy = input.policy ?? loadDatabaseOperationPolicy(input.root ?? context.repository.root);
   const rule = policy.operations[context.operation];
 

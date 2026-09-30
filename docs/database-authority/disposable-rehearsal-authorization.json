@@ -1,0 +1,39 @@
+{
+  "status": "revoked",
+  "approvedBy": "Edward",
+  "createdAt": "2026-09-28T00:00:00Z",
+  "expiresAt": "2026-10-05T00:00:00Z",
+  "purpose": "AZURE MYSQL 8.4 RESTORED-COPY REHEARSAL",
+  "sourceCommit": "a5fa6256f3579b16223586fa579f4ecd28c59ad6",
+  "subscriptionId": "384dc69e-9e22-419f-9e3d-83fbac4f58d0",
+  "resourceGroup": "rg-property-listify",
+  "serverName": "pl-azure84-rehearsal-20260928",
+  "database": "propertylistify_database",
+  "hostname": "pl-azure84-rehearsal-20260928.mysql.database.azure.com",
+  "provider": "Microsoft.DBforMySQL/flexibleServers",
+  "engineFamily": "MySQL",
+  "serverCreatedAt": "2026-09-28T11:24:56.687Z",
+  "expectedHead": "0094_content_topics_primary_key.sql",
+  "manifestDigest": "93d871e6f8760477f460b8821685d71d212374eb86ddd53bc6e2ccfc30608efc",
+  "modelDigest": "a8ca8cf34bb3627594eab1b722b85115c6460225a0165db7992228a8547798e9",
+  "allowed": [
+    "rehearsal-regression:catalogued-synthetic-DML",
+    "transactions-rollback-savepoints",
+    "row-locking",
+    "constraint-rejection",
+    "concurrency",
+    "catalogued-read-probes"
+  ],
+  "denied": [
+    "generic-test-fixture",
+    "runtime-connect",
+    "migration",
+    "DDL",
+    "DROP",
+    "TRUNCATE",
+    "reference-seed",
+    "ledger-edit",
+    "server-settings"
+  ],
+  "reviewTrigger": "Expire at expiresAt; revoke on rehearsal completion or resource recreation; renew only by reviewed principal decision."
+}

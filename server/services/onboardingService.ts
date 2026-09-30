@@ -12,6 +12,7 @@
  */
 
 import { db } from '../db';
+import { createOrReadOnboardingState } from './onboardingStateCreation';
 import { eq } from 'drizzle-orm';
 
 // ============================================================================
@@ -92,6 +93,10 @@ export class OnboardingService {
       return newState;
     }
 
+    return this.mapState(result);
+  }
+
+  private mapState(result: any): UserOnboardingState {
     return {
       userId: result.userId,
       isFirstSession: result.isFirstSession,
@@ -114,33 +119,26 @@ export class OnboardingService {
   private async createInitialState(userId: string): Promise<UserOnboardingState> {
     const suggestedTopics = await this.getSuggestedTopicsForUser(userId);
 
-    await db.insert(db.schema.userOnboardingState).values({
-      userId,
-      isFirstSession: true,
-      welcomeOverlayShown: false,
-      welcomeOverlayDismissed: false,
-      suggestedTopics: JSON.stringify(suggestedTopics),
-      tooltipsShown: JSON.stringify([]),
-      contentViewCount: 0,
-      saveCount: 0,
-      partnerEngagementCount: 0,
-      featuresUnlocked: JSON.stringify([]),
-    });
-
-    return {
-      userId,
-      isFirstSession: true,
-      welcomeOverlayShown: false,
-      welcomeOverlayDismissed: false,
-      suggestedTopics,
-      tooltipsShown: [],
-      contentViewCount: 0,
-      saveCount: 0,
-      partnerEngagementCount: 0,
-      featuresUnlocked: [],
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
+    const state = await createOrReadOnboardingState(
+      async () =>
+        db.insert(db.schema.userOnboardingState).values({
+          userId,
+          isFirstSession: true,
+          welcomeOverlayShown: false,
+          welcomeOverlayDismissed: false,
+          suggestedTopics: JSON.stringify(suggestedTopics),
+          tooltipsShown: JSON.stringify([]),
+          contentViewCount: 0,
+          saveCount: 0,
+          partnerEngagementCount: 0,
+          featuresUnlocked: JSON.stringify([]),
+        }),
+      async () =>
+        db.query.userOnboardingState.findFirst({
+          where: (state, { eq }: any) => eq(state.userId, userId),
+        }),
+    );
+    return this.mapState(state);
   }
 
   /**

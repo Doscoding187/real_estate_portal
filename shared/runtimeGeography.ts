@@ -91,7 +91,10 @@ export function assertGovernedRuntimeReferenceProjection(
     if (!RUNTIME_SEARCH_SCOPE_KINDS.includes(candidate.runtimeSearchScopeKind)) {
       throw new Error(`Unsupported governed runtime scope ${candidate.runtimeSearchScopeKind}.`);
     }
-    if (candidate.runtimeStorageLevel !== runtimeStorageLevelForScopeKind(candidate.runtimeSearchScopeKind)) {
+    if (
+      candidate.runtimeStorageLevel !==
+      runtimeStorageLevelForScopeKind(candidate.runtimeSearchScopeKind)
+    ) {
       throw new Error(
         `Runtime storage level does not match scope ${candidate.runtimeSearchScopeKind}.`,
       );
@@ -125,13 +128,16 @@ export function assertGovernedRuntimeReferenceProjection(
       );
     }
     if (naturalKeys.has(candidate.runtimeNaturalKey)) {
-      throw new Error(
-        `Duplicate governed runtime natural key ${candidate.runtimeNaturalKey}.`,
-      );
+      throw new Error(`Duplicate governed runtime natural key ${candidate.runtimeNaturalKey}.`);
     }
     naturalKeys.add(candidate.runtimeNaturalKey);
     if (!candidate.name?.trim() || !candidate.slug?.trim()) {
       throw new Error('Governed runtime reference rows require a name and slug.');
+    }
+    if (candidate.slug !== keySegments[keySegments.length - 1]) {
+      throw new Error(
+        `Governed runtime row ${candidate.runtimeNaturalKey} has a slug incompatible with its natural key.`,
+      );
     }
     if (candidate.searchableAliases !== undefined) {
       if (!Array.isArray(candidate.searchableAliases)) {
@@ -166,6 +172,11 @@ export function assertGovernedRuntimeReferenceProjection(
     }
     if (!Array.isArray(candidate.factualLocationIds)) {
       throw new Error('Governed runtime reference rows require factual identities.');
+    }
+    if (new Set(candidate.factualLocationIds).size !== candidate.factualLocationIds.length) {
+      throw new Error(
+        `Governed runtime reference row ${candidate.runtimeNaturalKey} repeats a factual identity.`,
+      );
     }
     for (const factualLocationId of candidate.factualLocationIds) {
       if (!isFactualGeographyId(factualLocationId)) {

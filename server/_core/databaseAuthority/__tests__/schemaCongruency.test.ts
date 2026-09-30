@@ -127,6 +127,18 @@ describe('normalized schema congruency', () => {
     await expect(normalizedPhysicalSchema(tableCaseConnection(2), 'mysql', desired))
       .rejects.toThrow('could not be verified as 0 or 1');
   });
+  it('preserves unknown physical tables as drift and rejects canonical folding collisions', async () => {
+    const desired = normalizedDesiredSchema({ caseSensitiveParent, caseSensitiveChild });
+    const physical = await normalizedPhysicalSchema(tableCaseConnection(1, 'propertyimages', 'unexpected_table'), 'mysql', desired);
+    expect(physical.tables.map(table => table.name)).toContain('unexpected_table');
+    expect(compareNormalizedSchemas(desired, physical).congruent).toBe(false);
+    const collision = { ...desired, tables: [...desired.tables, { ...desired.tables.find(table => table.name === 'propertyImages')!, name: 'propertyimages' }] };
+    await expect(normalizedPhysicalSchema(tableCaseConnection(1), 'mysql', collision)).rejects.toThrow('Canonical table-name case collision');
+    for (const setting of [null, undefined, NaN]) {
+      await expect(normalizedPhysicalSchema(tableCaseConnection(setting as unknown as number), 'mysql', desired)).rejects.toThrow('could not be verified as 0 or 1');
+    }
+  });
+
   it('preserves SQL collection parentheses while removing redundant predicate grouping', () => {
     expect(
       normalizeSqlExpression("((`state` NOT IN ('available_confirmed', 'available_upcoming')))"),

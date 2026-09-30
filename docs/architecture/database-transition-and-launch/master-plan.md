@@ -19,6 +19,26 @@ Protected release, import, restore, credential, infrastructure, and cutover
 operations require the existing Database Authority approval and acknowledgement
 paths. No database or infrastructure state was changed for this correction.
 
+## 2026-09-29 data-disposition amendment — fresh Azure accounts
+
+Edward explicitly directed: **“Start all accounts fresh; archive the TiDB
+data.”** The binding record is
+[`azure-fresh-account-transition-2026-09-29.md`](../../database-authority/azure-fresh-account-transition-2026-09-29.md).
+
+For this transition, that decision supersedes the TiDB-to-Azure import and
+transfer requirements below, including cutover step 3 and the import portions
+of WP4, WP7, WP8 and G6. Capture and verify a protected final TiDB archive after
+writer freeze; **do not import TiDB accounts, sessions, business records, schema
+or migration history into Azure**. Azure starts with the canonical schema and
+approved reference data. Invalidate pre-cutover sessions before admitting fresh
+accounts. D-006's carry-over decision is resolved; archive execution and
+verification remain outstanding.
+
+The historical import wording remains evidence of the earlier plan, not an
+instruction to execute an import. This amendment does not waive G5/G6 recovery,
+capacity, security, writer-freeze or release-readiness evidence, authorize
+immediate TiDB deletion, or activate paid-launch workflows.
+
 ## Governing authorities and decisions
 
 The authority chain is repository-native and remains authoritative over this
