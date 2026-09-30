@@ -71,9 +71,42 @@ child, unknown/duplicate/conflicting/orphan data, stale/missing plans,
 connection lock mismatch, rollback/lock release, wrong protected targets and
 fabricated authorization decisions. These are simulated SQL tests, not proof
 of a live Azure transaction. Touched-file lint: zero errors, four existing
-`any` warnings. Physical apply and end-to-end geography journeys remain pending.
+`any` warnings. Typecheck and production build PASS after the optional metadata type correction
+`fb9c9935`; build retains existing large-chunk warnings.
+Physical apply and end-to-end geography journeys remain pending.
 
 A protected apply still follows the repository's reviewed/merged release-source
 boundary. This implementation does not claim that the feature branch is the
 production artifact. Final cutover requires archive, account/session reset,
 application readiness, capacity/recovery and exact release approval evidence.
+
+
+## Materialization inventory
+
+The integrated catalog plus reviewed foundation derive exactly 1,438 rows:
+9 provinces, 340 cities and 1,089 suburbs. This agrees with the existing
+canonical adapter's expected materialization counts. The catalog's 1,414
+runtime rows are not a substitute for this combined foundation/catalog count.
+
+## Live protected read-only plan
+
+Observed from the Railway backend network path using the existing inspector
+credential and strict TLS. MySQL 8.4.9-azure, database
+`propertylistify_database`, UTC `+00:00`. The plan makes no database writes.
+
+- Source implementation: `fb9c9935` (extends `88a23b22`).
+- Existing geography rows: 0.
+- Proposed inserted reference rows: 1438.
+- Plan digest: `c1c325e33759e32e6e2abbb68ecf133f4a2cb751b2067c7c1dcc77966cc6ce77`.
+- Desired reference digest: `2b3faa45623a24d43abae097d2b07df53040ccd2e6a9a2841f952fb0f3af7b6b`.
+- Source index digest: `ad32a26dbaa40d03f63545d5f9af0918cbea2e1d65c8166817b15c52e5d6f8c4`.
+- Exact private plan SHA-256: `9350a93d439c039503f0fa6856b493949d05f2cab95449cfce027630195e1db4`.
+- Restricted evidence: `~/.local/state/property-listify/azure-geography-release-20260930/plan.json`.
+- Production TiDB URL hash comparison remains unchanged.
+
+The temporary diagnostic archive under
+`/tmp/pl-geography-authority-fb9c9935` in Railway is not a deployment and contains
+no stored database credential. Remove it after completing diagnostic work.
+
+This plan is concrete review evidence, not approval to bypass the reviewed
+release-source boundary. Re-plan before any apply if the target or source changes.
