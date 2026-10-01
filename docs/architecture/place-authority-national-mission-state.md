@@ -566,11 +566,41 @@ worktree target, disposed afterwards.
   scope may be published on it without a currency review.
 - **No geospatial wheel is installed.** 64 identities depend on the weaker
   bounding-box selection test. Installing a proper wheel and re-deriving is owed.
-- **The `gauteng-source-authority-v0.2` producer is still not committed.** It
-  exists only as uncommitted work in the sibling worktree this mission is told
-  not to touch, so the Gauteng v0.2 source authority is committed data with no
-  committed generator. Western Cape does not repeat that: its source authority is
-  reproducible from committed code.
+- **The `gauteng-source-authority-v0.2` producer is still not committed, and
+  cannot be made so from what exists.** This is now a recorded finding rather
+  than a deferral, because it was investigated properly.
+
+  The Gauteng v0.2 source authority is committed *data* whose *inputs are not
+  committed at all*. Its own manifest says so: `raw_materialization.committed` is
+  `false` with the reason that the large approved source artifacts "remain
+  digest-pinned and are acquired into disposable storage", and
+  `supersedes.exact_source_status` is `exact_source_unrecoverable`. There is no
+  `data/gauteng-source-acquisition-*` bundle anywhere in the repository; only
+  Western Cape has one. The generator,
+  `tools/geography-coverage/pack-vnext-source.mjs`, exists only as an untracked
+  file in the sibling worktree this mission is told not to touch, and the v0.2
+  authority directory was untracked there too.
+
+  All three routes to a committed generator are closed:
+
+  - **Re-acquiring** Gauteng evidence would produce a *different* source
+    authority, and 1,466 Gauteng Place IDs were assigned from this exact source,
+    so it would break the standing instruction to preserve existing Place IDs.
+  - **Committing the other workstream's untracked tool** copies another stream's
+    uncommitted files, which the worktree-isolation rule forbids.
+  - **Synthesising the missing inputs** is forbidden outright: the mission may not
+    fabricate geographic evidence, and a province cannot be admitted without real
+    evidence.
+
+  So the honest position is that `gauteng-source-authority-v0.2` is
+  digest-pinned, physically proven, admitted, and **not reproducible from
+  committed inputs** — a fact its own manifest already declares. Western Cape does
+  not repeat this: its source authority rebuilds byte-identically from a frozen,
+  committed acquisition bundle. If reproducibility for Gauteng is required, the
+  prerequisite is a governed decision to re-acquire Gauteng evidence and accept
+  that it yields a new authority version, with an explicit Place-ID continuity
+  decision for the 1,466 existing identities. That is an owner decision, not an
+  engineering step.
 - **The production ODbL determination stays founder-owned.** Western Cape has no
   OSM-derived rows, so nothing here is blocked by it, and `permissive_supported`
   is not a claim of obligation-free use: GeoNames CC BY 4.0 attribution and the
