@@ -127,8 +127,9 @@ surfaces (admin coverage dashboard, research queue) expose it.
 ### D3 — Acceptable sources and licences
 
 - Approved evidence classes: official government registers and municipal
-  publications; GeoNames (CC0/attributed); Wikidata (CC0); geoBoundaries
-  gbOpen (CC BY 4.0); OSM/Geofabrik (ODbL 1.0); NGA GNS (no restriction).
+  publications; GeoNames (CC BY 4.0, attribution required); Wikidata (CC0);
+  geoBoundaries gbOpen (CC BY 4.0 distribution; preserve each layer's upstream
+  licence and notices); OSM/Geofabrik (ODbL 1.0); NGA GNS (no restriction).
 - Google Places and any future commercial provider are **evidence and
   enrichment only**. Provider place IDs can never become public identity, and a
   provider observation must never create or promote a public geography row.
