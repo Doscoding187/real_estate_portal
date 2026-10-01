@@ -1,0 +1,464 @@
+{
+  "admission_version": "za-nc-place-admission-v0.1",
+  "territory": {
+    "territory_id": "za-nc",
+    "display_name": "Northern Cape",
+    "admission_registry_path": "data/place-admission-territories.v0.1/territory-registry.v0.1.json",
+    "admission_registry_sha256": "e3dcd6cbfd95dcab78e57f5ffb6a614b06d39899140222b10ecba7eb6415dc64"
+  },
+  "generated_from": {
+    "source_authority_version": "za-nc-source-authority-v0.2",
+    "source_snapshot_id": "df65381a2075ec898db4adf3fca9d341db6bcf7387fcde6afb7215aa9f6a8584",
+    "source_manifest_path": "data/za-nc-source-authority-v0.2/za_nc_source_manifest_v0.2.json",
+    "source_manifest_sha256": "65924b97d82681250dd6756b0efcb7a5ee34574b26a4ad9661879f55e2b71ec7",
+    "compact_artifacts": [
+      {
+        "path": "data/za-nc-source-authority-v0.2/za_nc_candidate_dispositions_v0.2.jsonl",
+        "sha256": "90e688fd3e5cbf1f67c6fc87c60c240bbf5fcd2cc6ea4a2f59b48a17011435cd",
+        "size_bytes": 22891188
+      },
+      {
+        "path": "data/za-nc-source-authority-v0.2/za_nc_factual_canonical_geography_v0.2.jsonl",
+        "sha256": "220e76c21dbc88769a248dba3c193b20ef8116d4c64595b1743a90051f843387",
+        "size_bytes": 5120086
+      },
+      {
+        "path": "data/za-nc-source-authority-v0.2/za_nc_factual_canonical_names_v0.2.jsonl",
+        "sha256": "8d76e2c02f9710c26efa9bac92261ddd0f649f1c505f606eabe4ce746d94d93f",
+        "size_bytes": 2809903
+      },
+      {
+        "path": "data/za-nc-source-authority-v0.2/za_nc_factual_canonical_source_links_v0.2.jsonl",
+        "sha256": "7dbf6080fe9900e9f8a3745261f47cbba2806c463e389229b4ab2ea64f94f4af",
+        "size_bytes": 1663777
+      }
+    ],
+    "comparison_baseline": {
+      "note": "The v0.1 committed artifacts are retained as comparison and regression evidence only. Their factual source JSONLs are unrecoverable and were not used as forward authority.",
+      "catalogue": "data/za-nc-coverage-v0.1/za-nc-territory-catalog.v0.1.json",
+      "catalogue_sha256": "21d315f4f074cbfcad08a3fb1b87d6714f57843ceb2304cb889f17118282674e",
+      "factual_identity_count": 0,
+      "runtime_row_count": 0,
+      "queued_count": 0,
+      "awaiting_accepted_parent_edge": 0,
+      "duplicate_natural_key_within_parent": 0,
+      "natural_key_owned_by_accepted_row": 0,
+      "co_published_natural_keys": 0,
+      "parent_evidence_inputs": 0
+    }
+  },
+  "governed_policy": {
+    "container_types": [
+      "district_municipality",
+      "local_municipality",
+      "province"
+    ],
+    "settlement_merge_max_km": 15,
+    "merge_requires_same_administrative_context": true,
+    "type_disagreement_never_blocks_merge": true,
+    "preferred_public_name_selection": "official role, then source preferred_common; within a class the most independently sourced assertion wins, ties broken by text",
+    "one_containment_parent_per_place": true,
+    "search_scope_authorization_in_slice_2": 0,
+    "place_id_allocation": "assigned from a committed registry; never derived from name, slug, coordinates, parent, classification, natural key or source identity"
+  },
+  "counts": {
+    "source_identities": 1576,
+    "source_name_assertions": 2225,
+    "source_links": 1576,
+    "source_candidates": 16872,
+    "admitted_places": 1552,
+    "merged_equivalence_groups": 23,
+    "absorbed_source_identities": 24,
+    "single_identity_places": 1529,
+    "group_kinds": {
+      "administrative_container": 33,
+      "single_identity": 1496,
+      "merged_same_referent": 23
+    },
+    "verification": {
+      "verified": 916,
+      "provisional": 636
+    },
+    "licensing": {
+      "permissive_supported": 1552
+    },
+    "scope_establishment": {
+      "established": 1520,
+      "not_established": 32,
+      "by_scope": {
+        "locality": {
+          "established": 1493,
+          "not_established": 0
+        },
+        "metro_city": {
+          "established": 26,
+          "not_established": 0
+        },
+        "province": {
+          "established": 1,
+          "not_established": 0
+        }
+      }
+    },
+    "executable_places": 1520,
+    "executable_by_scope": {
+      "locality": 1493,
+      "metro_city": 26,
+      "province": 1
+    },
+    "admitted_without_executable_scope": 32,
+    "names": 2192,
+    "name_roles": {
+      "preferred_public": 1552,
+      "common": 636,
+      "alternate_spelling": 2,
+      "historical": 1,
+      "official": 1
+    },
+    "searchable_names": 1994,
+    "preferred_public_names": 1552,
+    "relationships": 1551,
+    "relationship_types": {
+      "administratively_contains": 1551
+    },
+    "containment_parent_count": 1551,
+    "evidence_rows": 12874,
+    "external_mappings": 1576,
+    "disposition_ledger_rows": 16872,
+    "dispositions": {
+      "quarantined_candidate": 16872
+    },
+    "parent_evidence_inputs": 0,
+    "parent_evidence_classification": {
+      "total_edges": 0,
+      "by_class": {},
+      "by_disposition": {}
+    }
+  },
+  "merge_bases": {
+    "settlement_bound_km": 15,
+    "settlement_rule_enforced": "each admitted member lies within the governed distance of the group anchor (single-linkage clustering)",
+    "administrative_container_rule": "unique administrative container name merges are distance-unbounded by design, because a territory has exactly one province and one municipality per name",
+    "container_merge_groups": 0,
+    "settlement_groups_exceeding_diameter": 0,
+    "note": "Settlement groups whose diameter exceeds the bound satisfy the rule but are listed for review, because the rule compares each member to the anchor rather than to every other member. Moving to complete linkage would split these Places and is a reviewed decision, not a silent fix.",
+    "settlement_groups_over_diameter": []
+  },
+  "collation_suppressed_names": {
+    "basis": "utf8mb4_0900_ai_ci on place_name.name, which is accent- and case-insensitive",
+    "count": 35,
+    "forms": [
+      {
+        "place_id": "pl-place-01-0b27df5e53ecee2959cc6774",
+        "name_role": "common",
+        "kept_spelling": "John Taolo Gaetsewe",
+        "suppressed": "John Taolo Gaetsewe",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-0b27df5e53ecee2959cc6774",
+        "name_role": "common",
+        "kept_spelling": "John Taolo Gaetsewe",
+        "suppressed": "John Taolo Gaetsewe",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-13449a575c54324c85a6c3f5",
+        "name_role": "common",
+        "kept_spelling": "Narrap",
+        "suppressed": "Narrap",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-247ec8a024191cfa69eaf6e9",
+        "name_role": "common",
+        "kept_spelling": "Kleinsee",
+        "suppressed": "Kleinsee",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-26c45e31af5ee57a6ef2c56a",
+        "name_role": "common",
+        "kept_spelling": "Куруман",
+        "suppressed": "Куруман",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-9bac98c67ee48b13232e7188",
+        "name_role": "common",
+        "kept_spelling": "Намаква",
+        "suppressed": "Намаква",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-9bac98c67ee48b13232e7188",
+        "name_role": "common",
+        "kept_spelling": "Namakwa",
+        "suppressed": "Namakwa",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-9bac98c67ee48b13232e7188",
+        "name_role": "common",
+        "kept_spelling": "Namakwa",
+        "suppressed": "Namakwa",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-9bac98c67ee48b13232e7188",
+        "name_role": "common",
+        "kept_spelling": "Namakwa",
+        "suppressed": "Namakwa",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-9bac98c67ee48b13232e7188",
+        "name_role": "common",
+        "kept_spelling": "Namakwa",
+        "suppressed": "Namakwa",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-bd85870dd1c2331ba1900510",
+        "name_role": "common",
+        "kept_spelling": "Kimberli",
+        "suppressed": "Kimberli",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-bd85870dd1c2331ba1900510",
+        "name_role": "common",
+        "kept_spelling": "Кимберли",
+        "suppressed": "Кимберли",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-bd85870dd1c2331ba1900510",
+        "name_role": "common",
+        "kept_spelling": "Кимберли",
+        "suppressed": "Кимберли",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-bd85870dd1c2331ba1900510",
+        "name_role": "common",
+        "kept_spelling": "Кимберли",
+        "suppressed": "Кимберли",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-bd85870dd1c2331ba1900510",
+        "name_role": "common",
+        "kept_spelling": "Кимберли",
+        "suppressed": "Кимберли",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-bd85870dd1c2331ba1900510",
+        "name_role": "common",
+        "kept_spelling": "Кимберли",
+        "suppressed": "Кимберли",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-bd85870dd1c2331ba1900510",
+        "name_role": "common",
+        "kept_spelling": "Кімберлі",
+        "suppressed": "Кімберлі",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-bfa33cdf6f6016a2d6713572",
+        "name_role": "common",
+        "kept_spelling": "Pixley Ka Seme",
+        "suppressed": "Pixley Ka Seme",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-bfa33cdf6f6016a2d6713572",
+        "name_role": "common",
+        "kept_spelling": "Pixley Ka Seme",
+        "suppressed": "Pixley ka Seme",
+        "collision": "target_collation",
+        "reason": "indistinguishable from the kept spelling under utf8mb4_0900_ai_ci, so the target cannot store both"
+      },
+      {
+        "place_id": "pl-place-01-bfa33cdf6f6016a2d6713572",
+        "name_role": "common",
+        "kept_spelling": "Pixley Ka Seme",
+        "suppressed": "Pixley ka Seme",
+        "collision": "target_collation",
+        "reason": "indistinguishable from the kept spelling under utf8mb4_0900_ai_ci, so the target cannot store both"
+      },
+      {
+        "place_id": "pl-place-01-e7be97ff5aaae9fa7ff7d28f",
+        "name_role": "common",
+        "kept_spelling": "北开普省",
+        "suppressed": "北开普省",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-e7be97ff5aaae9fa7ff7d28f",
+        "name_role": "common",
+        "kept_spelling": "北开普省",
+        "suppressed": "北开普省",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-e7be97ff5aaae9fa7ff7d28f",
+        "name_role": "common",
+        "kept_spelling": "Noord-Kaap",
+        "suppressed": "Noord-Kaap",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-e7be97ff5aaae9fa7ff7d28f",
+        "name_role": "common",
+        "kept_spelling": "Cap Septentrional",
+        "suppressed": "Cap Septentrional",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-e7be97ff5aaae9fa7ff7d28f",
+        "name_role": "common",
+        "kept_spelling": "Cabo Setentrional",
+        "suppressed": "Cabo Setentrional",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-e7be97ff5aaae9fa7ff7d28f",
+        "name_role": "common",
+        "kept_spelling": "北開普省",
+        "suppressed": "北開普省",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-e7be97ff5aaae9fa7ff7d28f",
+        "name_role": "common",
+        "kept_spelling": "Северни Кејп",
+        "suppressed": "Северни Кејп",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-e7be97ff5aaae9fa7ff7d28f",
+        "name_role": "common",
+        "kept_spelling": "Nordkap",
+        "suppressed": "Nordkap",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-e7be97ff5aaae9fa7ff7d28f",
+        "name_role": "common",
+        "kept_spelling": "北開普省",
+        "suppressed": "北開普省",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-e7be97ff5aaae9fa7ff7d28f",
+        "name_role": "common",
+        "kept_spelling": "Province of Northern Cape",
+        "suppressed": "Province of Northern Cape",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-e7be97ff5aaae9fa7ff7d28f",
+        "name_role": "common",
+        "kept_spelling": "Cabo Setentrional",
+        "suppressed": "Cabo Setentrional",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-eaf4c3e3e1e8991d068084b9",
+        "name_role": "common",
+        "kept_spelling": "Орания",
+        "suppressed": "Орания",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-f6feac80c2291d8ce308a04c",
+        "name_role": "common",
+        "kept_spelling": "Frances Baard",
+        "suppressed": "Frances Baard",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-f6feac80c2291d8ce308a04c",
+        "name_role": "common",
+        "kept_spelling": "Frances Baard",
+        "suppressed": "Frances Baard",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-f6feac80c2291d8ce308a04c",
+        "name_role": "common",
+        "kept_spelling": "Frances Baard",
+        "suppressed": "Frances Baard",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      }
+    ]
+  },
+  "place_id_registry": {
+    "path": "data/za-nc-place-admission-v0.1/za_nc_place_id_registry.v0.1.json",
+    "allocated_ids": 1552,
+    "allocation_sequence": 1552
+  },
+  "invariants_asserted": [
+    "every source identity maps to exactly one admitted Place",
+    "place count equals distinct assigned ids",
+    "one preferred public name per Place",
+    "every settlement member lies within the governed distance of its group anchor, and any settlement group whose diameter exceeds the bound is listed for review",
+    "administrative container merges are governed by unique name, not by distance",
+    "every name, relationship and evidence row references an admitted Place",
+    "every relationship has evidence and is not self-referential",
+    "containment is a forest: one parent, no cycles",
+    "no relationship-driven search widening in Slice 2",
+    "scope, eligibility and classification combinations satisfy the database invariants",
+    "every scoped Place has an evidenced province context, the only mandatory ancestry requirement",
+    "no artificial settlement parent is introduced to complete a search hierarchy",
+    "no municipality is re-typed or promoted into the metro_city search tier",
+    "a Place without a governed executable scope stays admitted but is neither searchable nor publishable",
+    "the disposition ledger covers every source candidate"
+  ],
+  "outputs": {
+    "places": "data/za-nc-place-admission-v0.1/za_nc_place_admission_v0.1.jsonl",
+    "names": "data/za-nc-place-admission-v0.1/za_nc_place_names_v0.1.jsonl",
+    "relationships": "data/za-nc-place-admission-v0.1/za_nc_place_relationships_v0.1.jsonl",
+    "evidence": "data/za-nc-place-admission-v0.1/za_nc_place_evidence_v0.1.jsonl",
+    "external_mappings": "data/za-nc-place-admission-v0.1/za_nc_place_external_mappings_v0.1.jsonl",
+    "disposition_ledger": "data/za-nc-place-admission-v0.1/za_nc_place_disposition_ledger_v0.1.jsonl",
+    "parent_evidence_classification": "data/za-nc-place-admission-v0.1/za_nc_parent_evidence_classification_v0.1.json"
+  }
+}

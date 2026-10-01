@@ -1,0 +1,13 @@
+{
+  "admission_version": "za-nw-place-admission-v0.1",
+  "territory_id": "za-nw",
+  "source_manifest": "data/za-nw-coverage-v0.1/za-nw-territory-manifest.v0.1.json",
+  "governed_input_count": 0,
+  "note": "A file existing does not prove an accepted Place relationship. Every edge is classified by what its evidence denotes and none is promoted to administrative containment in Slice 2.",
+  "tally": {
+    "total_edges": 0,
+    "by_class": {},
+    "by_disposition": {}
+  },
+  "edges": []
+}

@@ -192,4 +192,16 @@ if (failures.length) {
   console.error(`\ncross-province verification failed:\n  ${failures.join('\n  ')}`);
   process.exit(1);
 }
-console.log(`\ncross-province: OK ${territories.length} provinces, ${idOwner.size} distinct identities`);
+/* `idOwner` is keyed on place_id, so it counts admitted Places, not source
+ * identities. The two differ wherever a merge group absorbed more than one
+ * identity, so reporting the Place count under the name "identities" would
+ * understate the source universe and quietly disagree with every per-province
+ * identity count. Report both, each under the name it actually has. */
+const sourceIdentities = territories.reduce(
+  (total, { manifest }) => total + manifest.counts.source_identities,
+  0,
+);
+console.log(
+  `\ncross-province: OK ${territories.length} provinces, ` +
+    `${idOwner.size} admitted Places, ${sourceIdentities} source identities`,
+);

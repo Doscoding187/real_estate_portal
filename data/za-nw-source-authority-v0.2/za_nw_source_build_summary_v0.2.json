@@ -1,0 +1,2714 @@
+{
+  "boundary_evidence": {
+    "adm1_selected": "North West",
+    "adm2_features_intersecting": 12,
+    "adm3_features_intersecting": 34,
+    "boundary_license": "Creative Commons Attribution 3.0 Intergovernmental Organisations (CC BY 3.0 IGO)",
+    "boundary_source": "OCHA ROSEA, South African Municipal Demarcation Board",
+    "boundary_year_represented": "2020",
+    "build_date": "Dec 12, 2023",
+    "context_feature_selection": {
+      "ADM2": {
+        "bbox_intersecting": 12,
+        "representative_point_inside": 12,
+        "swept_in_and_rejected": [
+          {
+            "decision": "retained_on_weaker_evidence",
+            "point_status": "outside",
+            "polygon_name": "City of Tshwane"
+          },
+          {
+            "decision": "retained_on_weaker_evidence",
+            "point_status": "outside",
+            "polygon_name": "Fezile Dabi"
+          },
+          {
+            "decision": "retained_on_weaker_evidence",
+            "point_status": "outside",
+            "polygon_name": "Frances Baard"
+          },
+          {
+            "decision": "retained_on_weaker_evidence",
+            "point_status": "outside",
+            "polygon_name": "John Taolo Gaetsewe"
+          },
+          {
+            "decision": "retained_on_weaker_evidence",
+            "point_status": "outside",
+            "polygon_name": "Lejweleputswa"
+          },
+          {
+            "decision": "retained_on_weaker_evidence",
+            "point_status": "outside",
+            "polygon_name": "Sedibeng"
+          },
+          {
+            "decision": "retained_on_weaker_evidence",
+            "point_status": "outside",
+            "polygon_name": "Waterberg"
+          },
+          {
+            "decision": "retained_on_weaker_evidence",
+            "point_status": "outside",
+            "polygon_name": "West Rand"
+          }
+        ]
+      },
+      "ADM3": {
+        "bbox_intersecting": 34,
+        "representative_point_inside": 34,
+        "swept_in_and_rejected": [
+          {
+            "decision": "retained_on_weaker_evidence",
+            "point_status": "outside",
+            "polygon_name": "Bela-Bela"
+          },
+          {
+            "decision": "retained_on_weaker_evidence",
+            "point_status": "outside",
+            "polygon_name": "City of Tshwane"
+          },
+          {
+            "decision": "retained_on_weaker_evidence",
+            "point_status": "outside",
+            "polygon_name": "Dikgatlong"
+          },
+          {
+            "decision": "retained_on_weaker_evidence",
+            "point_status": "outside",
+            "polygon_name": "Emfuleni"
+          },
+          {
+            "decision": "retained_on_weaker_evidence",
+            "point_status": "outside",
+            "polygon_name": "Ga-Segonyana"
+          },
+          {
+            "decision": "retained_on_weaker_evidence",
+            "point_status": "outside",
+            "polygon_name": "Joe Morolong"
+          },
+          {
+            "decision": "retained_on_weaker_evidence",
+            "point_status": "outside",
+            "polygon_name": "Magareng"
+          },
+          {
+            "decision": "retained_on_weaker_evidence",
+            "point_status": "outside",
+            "polygon_name": "Merafong City"
+          },
+          {
+            "decision": "retained_on_weaker_evidence",
+            "point_status": "outside",
+            "polygon_name": "Mogale City"
+          },
+          {
+            "decision": "retained_on_weaker_evidence",
+            "point_status": "outside",
+            "polygon_name": "Moqhaka"
+          },
+          {
+            "decision": "retained_on_weaker_evidence",
+            "point_status": "outside",
+            "polygon_name": "Nala"
+          },
+          {
+            "decision": "retained_on_weaker_evidence",
+            "point_status": "outside",
+            "polygon_name": "Ngwathe"
+          },
+          {
+            "decision": "retained_on_weaker_evidence",
+            "point_status": "outside",
+            "polygon_name": "Phokwane"
+          },
+          {
+            "decision": "retained_on_weaker_evidence",
+            "point_status": "outside",
+            "polygon_name": "Thabazimbi"
+          },
+          {
+            "decision": "retained_on_weaker_evidence",
+            "point_status": "outside",
+            "polygon_name": "Tokologo"
+          },
+          {
+            "decision": "retained_on_weaker_evidence",
+            "point_status": "outside",
+            "polygon_name": "Tswelopele"
+          }
+        ]
+      }
+    },
+    "currency_status": "Boundaries represent 2020. This is historical evidence, not a current-boundary certification, and a currency review is owed before any scope is published.",
+    "geometry_backend": {
+      "name": "shapely",
+      "note": "shapely with buffer(0) repair of invalid geometry, true polygon covers/intersects predicates, and representative_point().",
+      "polygon_validity_repair": true,
+      "supports_holes": true,
+      "supports_multipart": true,
+      "version": "2.1.2"
+    },
+    "source_data_update_date": "Thu Jan 19 07:31:04 2023",
+    "spatial_intersection_basis": "polygon_predicate"
+  },
+  "context_resolution": {
+    "administrative_crosswalk": {
+      "ADM2": {
+        "Bojanala": "Bojanala Platinum District Municipality",
+        "Dr Kenneth Kaunda": "Dr Kenneth Kaunda District Municipality",
+        "Dr Ruth Segomotsi Mompati": "Dr Ruth Segomotsi Mompati District Municipality",
+        "Ngaka Modiri Molema": "Ngaka Modiri Molema District Municipality"
+      },
+      "ADM3": {
+        "City of Matlosana": "City of Matlosana",
+        "Ditsobotla": "Ditsobotla",
+        "Greater Taung": "Greater Taung",
+        "Kagisano/Molopo": "Kagisano/Molopo",
+        "Kgetlengrivier": "Kgetlengrivier",
+        "Lekwa-Teemane": "Lekwa-Teemane",
+        "Local Municipality of Madibeng": "Local Municipality of Madibeng",
+        "Mafikeng": "Mafikeng",
+        "Mamusa": "Mamusa",
+        "Maquassi Hills": "Maquassi Hills",
+        "Moretele": "Moretele",
+        "Moses Kotane": "Moses Kotane",
+        "Naledi": "Naledi",
+        "Ramotshere Moiloa": "Ramotshere Moiloa",
+        "Ratlou": "Ratlou",
+        "Rustenburg": "Rustenburg",
+        "Tswaing": "Tswaing"
+      }
+    },
+    "administrative_crosswalk_basis": "geoBoundaries polygon resolved to an admitted administrative identity: by normalized label when the labels agree, otherwise by testing each admitted record's own point against the polygon. The polygon label is kept as provenance; the context name is the admitted identity's name, because identity is joined on name downstream.",
+    "administrative_crosswalk_unresolved": [
+      {
+        "candidates": [],
+        "level": "ADM2",
+        "polygon_name": "City of Tshwane",
+        "reason": "no admitted administrative record falls in this polygon"
+      },
+      {
+        "candidates": [],
+        "level": "ADM2",
+        "polygon_name": "Fezile Dabi",
+        "reason": "no admitted administrative record falls in this polygon"
+      },
+      {
+        "candidates": [],
+        "level": "ADM2",
+        "polygon_name": "Frances Baard",
+        "reason": "no admitted administrative record falls in this polygon"
+      },
+      {
+        "candidates": [],
+        "level": "ADM2",
+        "polygon_name": "John Taolo Gaetsewe",
+        "reason": "no admitted administrative record falls in this polygon"
+      },
+      {
+        "candidates": [],
+        "level": "ADM2",
+        "polygon_name": "Lejweleputswa",
+        "reason": "no admitted administrative record falls in this polygon"
+      },
+      {
+        "candidates": [],
+        "level": "ADM2",
+        "polygon_name": "Sedibeng",
+        "reason": "no admitted administrative record falls in this polygon"
+      },
+      {
+        "candidates": [],
+        "level": "ADM2",
+        "polygon_name": "Waterberg",
+        "reason": "no admitted administrative record falls in this polygon"
+      },
+      {
+        "candidates": [],
+        "level": "ADM2",
+        "polygon_name": "West Rand",
+        "reason": "no admitted administrative record falls in this polygon"
+      },
+      {
+        "candidates": [],
+        "level": "ADM3",
+        "polygon_name": "Bela-Bela",
+        "reason": "no admitted administrative record falls in this polygon"
+      },
+      {
+        "candidates": [],
+        "level": "ADM3",
+        "polygon_name": "City of Tshwane",
+        "reason": "no admitted administrative record falls in this polygon"
+      },
+      {
+        "candidates": [],
+        "level": "ADM3",
+        "polygon_name": "Dikgatlong",
+        "reason": "no admitted administrative record falls in this polygon"
+      },
+      {
+        "candidates": [],
+        "level": "ADM3",
+        "polygon_name": "Emfuleni",
+        "reason": "no admitted administrative record falls in this polygon"
+      },
+      {
+        "candidates": [],
+        "level": "ADM3",
+        "polygon_name": "Ga-Segonyana",
+        "reason": "no admitted administrative record falls in this polygon"
+      },
+      {
+        "candidates": [],
+        "level": "ADM3",
+        "polygon_name": "Joe Morolong",
+        "reason": "no admitted administrative record falls in this polygon"
+      },
+      {
+        "candidates": [],
+        "level": "ADM3",
+        "polygon_name": "Magareng",
+        "reason": "no admitted administrative record falls in this polygon"
+      },
+      {
+        "candidates": [],
+        "level": "ADM3",
+        "polygon_name": "Merafong City",
+        "reason": "no admitted administrative record falls in this polygon"
+      },
+      {
+        "candidates": [],
+        "level": "ADM3",
+        "polygon_name": "Mogale City",
+        "reason": "no admitted administrative record falls in this polygon"
+      },
+      {
+        "candidates": [],
+        "level": "ADM3",
+        "polygon_name": "Moqhaka",
+        "reason": "no admitted administrative record falls in this polygon"
+      },
+      {
+        "candidates": [],
+        "level": "ADM3",
+        "polygon_name": "Nala",
+        "reason": "no admitted administrative record falls in this polygon"
+      },
+      {
+        "candidates": [],
+        "level": "ADM3",
+        "polygon_name": "Ngwathe",
+        "reason": "no admitted administrative record falls in this polygon"
+      },
+      {
+        "candidates": [],
+        "level": "ADM3",
+        "polygon_name": "Phokwane",
+        "reason": "no admitted administrative record falls in this polygon"
+      },
+      {
+        "candidates": [],
+        "level": "ADM3",
+        "polygon_name": "Thabazimbi",
+        "reason": "no admitted administrative record falls in this polygon"
+      },
+      {
+        "candidates": [],
+        "level": "ADM3",
+        "polygon_name": "Tokologo",
+        "reason": "no admitted administrative record falls in this polygon"
+      },
+      {
+        "candidates": [],
+        "level": "ADM3",
+        "polygon_name": "Tswelopele",
+        "reason": "no admitted administrative record falls in this polygon"
+      },
+      {
+        "candidates": [
+          "Tlokwe City Council",
+          "Ventersdorp"
+        ],
+        "level": "ADM3",
+        "polygon_name": "Ventersdorp/Tlokwe",
+        "reason": "multiple admitted records fall in this polygon"
+      }
+    ],
+    "code_geometry_disagreements": 382,
+    "disagreements": [
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Greenwich",
+        "source_record_id": "1000067"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Grantion",
+        "source_record_id": "1000459"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Gosport",
+        "source_record_id": "1000739"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Goedbegin",
+        "source_record_id": "1001422"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Glen Red",
+        "source_record_id": "1001554"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Geelboom",
+        "source_record_id": "1002622"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Gatong",
+        "source_record_id": "1002722"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Gatlalakgomo",
+        "source_record_id": "1002725"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Ga-Tipe",
+        "source_record_id": "1002731"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Ga-Thameng",
+        "source_record_id": "1002735"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Ga-Thameng",
+        "source_record_id": "1002736"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Ga-Tatisi",
+        "source_record_id": "1002755"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Ga-Skawu",
+        "source_record_id": "1002762"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Ga-Sese",
+        "source_record_id": "1002765"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Ga-Sehunelo",
+        "source_record_id": "1002783"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Ga-Sehunelo",
+        "source_record_id": "1002784"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Ga-Sehubane",
+        "source_record_id": "1002785"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Ga-Sebolao",
+        "source_record_id": "1002788"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Gariele",
+        "source_record_id": "1002821"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Ga-Rankuwa",
+        "source_record_id": "1002851"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Ga-Ramotsekwane",
+        "source_record_id": "1002856"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Ga-Ramatale",
+        "source_record_id": "1002875"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Ga-Popo",
+        "source_record_id": "1002891"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Ga-Pitiela",
+        "source_record_id": "1002895"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Ga-Ntatelang",
+        "source_record_id": "1002922"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Ganghae",
+        "source_record_id": "1003091"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Ganap",
+        "source_record_id": "1003100"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Ganap",
+        "source_record_id": "1003101"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Ganap",
+        "source_record_id": "1003102"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Ga-Motsamai",
+        "source_record_id": "1003122"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Ga-Motlogelwa",
+        "source_record_id": "1003125"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Ga-Motlhware",
+        "source_record_id": "1003126"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Ga-Mothibi",
+        "source_record_id": "1003133"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Ga-Mothibi",
+        "source_record_id": "1003134"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Ga-Moseki",
+        "source_record_id": "1003145"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Ga-Morona",
+        "source_record_id": "1003147"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Ga-Mopedi",
+        "source_record_id": "1003149"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Gamollo",
+        "source_record_id": "1003159"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Ga-Mokone",
+        "source_record_id": "1003174"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Ga-Mokomela",
+        "source_record_id": "1003175"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Ga-Moheele",
+        "source_record_id": "1003186"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Ga-Masepa",
+        "source_record_id": "1003276"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Ga-Mamebe",
+        "source_record_id": "1003317"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Ga-Makgatle",
+        "source_record_id": "1003347"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Ga-Madubu",
+        "source_record_id": "1003377"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Ga-Madubu",
+        "source_record_id": "1003378"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Ga-Lotolo",
+        "source_record_id": "1003407"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Ga-Lotlhare",
+        "source_record_id": "1003408"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Galisili",
+        "source_record_id": "1003415"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Ga-Kgwe",
+        "source_record_id": "1003456"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Ga-Jantjie",
+        "source_record_id": "1003467"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Ga-Huhuwe",
+        "source_record_id": "1003477"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Ga-Honyane",
+        "source_record_id": "1003478"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Ga-Disane",
+        "source_record_id": "1003493"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Gadikame",
+        "source_record_id": "1003498"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Ga-Dibove",
+        "source_record_id": "1003499"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Fochville",
+        "source_record_id": "1004109"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Ewbank",
+        "source_record_id": "1004821"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Everton",
+        "source_record_id": "1004831"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Esperanza",
+        "source_record_id": "1004998"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Erfplaas",
+        "source_record_id": "1005161"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Enselspruit",
+        "source_record_id": "1005333"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Elston",
+        "source_record_id": "1005720"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Eldoret",
+        "source_record_id": "1005922"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Egham",
+        "source_record_id": "1006543"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Dutton",
+        "source_record_id": "1007267"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Djdibaneng",
+        "source_record_id": "1009719"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Ditshoswaneng",
+        "source_record_id": "1009726"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Ditshipeng",
+        "source_record_id": "1009728"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Ditshipeng",
+        "source_record_id": "1009729"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Ditshilabeleng",
+        "source_record_id": "1009730"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Ditlolamarumo",
+        "source_record_id": "1009733"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Ditlharepaneng",
+        "source_record_id": "1009735"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Dithakong",
+        "source_record_id": "1009741"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Dirojaneng",
+        "source_record_id": "1009772"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Dilopye",
+        "source_record_id": "1009865"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Dikolobeng",
+        "source_record_id": "1009882"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Dikgwaneng",
+        "source_record_id": "1009896"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Dikgatlon",
+        "source_record_id": "1009900"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Diaz",
+        "source_record_id": "1010510"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Dewar",
+        "source_record_id": "1010600"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Derwent",
+        "source_record_id": "1010724"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Derwent",
+        "source_record_id": "1010725"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Derdepoort",
+        "source_record_id": "1010803"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Deorham",
+        "source_record_id": "1010913"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Deorham",
+        "source_record_id": "1010914"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Deorham",
+        "source_record_id": "1010915"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Deorham",
+        "source_record_id": "1010916"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Deal",
+        "source_record_id": "1011626"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Dawlish",
+        "source_record_id": "1011663"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Darnall",
+        "source_record_id": "1011825"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Crayfield",
+        "source_record_id": "1012536"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Crayfield",
+        "source_record_id": "1012537"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Crayfield",
+        "source_record_id": "1012538"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Cottonend",
+        "source_record_id": "1012655"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Corsham",
+        "source_record_id": "1012679"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Conway",
+        "source_record_id": "1012815"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Colville",
+        "source_record_id": "1013023"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Colston",
+        "source_record_id": "1013029"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Clyde",
+        "source_record_id": "1013207"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Clapham",
+        "source_record_id": "1013429"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Cholang",
+        "source_record_id": "1013574"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Chickenwood",
+        "source_record_id": "1013606"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Charlesdale",
+        "source_record_id": "1013713"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Cassel",
+        "source_record_id": "1013953"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Campden",
+        "source_record_id": "1014183"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Cahar",
+        "source_record_id": "1014346"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Bylfontein",
+        "source_record_id": "1014439"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Bute",
+        "source_record_id": "1014500"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Bushy Park",
+        "source_record_id": "1014520"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Bothithong",
+        "source_record_id": "1016693"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Bothetheletsa",
+        "source_record_id": "1016695"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Bothetheletsa",
+        "source_record_id": "1016696"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Bosra",
+        "source_record_id": "1016868"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Bolelatlou",
+        "source_record_id": "1017744"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Bojalapotsane",
+        "source_record_id": "1017873"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Boetsap",
+        "source_record_id": "1017895"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Boekenhoutfontein",
+        "source_record_id": "1018100"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Berwick",
+        "source_record_id": "1019841"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Berwick",
+        "source_record_id": "1019842"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Bendell",
+        "source_record_id": "1020148"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Battlemound",
+        "source_record_id": "1020837"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Barnet",
+        "source_record_id": "1021019"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Barnaby",
+        "source_record_id": "1021035"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Bareki",
+        "source_record_id": "1021076"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Baratiwa",
+        "source_record_id": "1021100"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Bankdrif",
+        "source_record_id": "1021232"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Bailey Brith",
+        "source_record_id": "1021731"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Ayr",
+        "source_record_id": "1021867"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Avon",
+        "source_record_id": "1021949"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Ashfield",
+        "source_record_id": "1022168"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Ardath",
+        "source_record_id": "1022354"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Ardath",
+        "source_record_id": "1022355"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Albert",
+        "source_record_id": "1023463"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Albanie",
+        "source_record_id": "1023481"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Adderley",
+        "source_record_id": "1023685"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Abbey",
+        "source_record_id": "1023817"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Kekana",
+        "source_record_id": "1105746"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Babelegi",
+        "source_record_id": "1105747"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Morula Sun",
+        "source_record_id": "1105755"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Lebaleng",
+        "source_record_id": "1105760"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Medunsa",
+        "source_record_id": "1105761"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Soshanguve South",
+        "source_record_id": "11204536"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Zaphiri",
+        "source_record_id": "937250"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Worthy",
+        "source_record_id": "937924"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Witputs",
+        "source_record_id": "938727"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Winterveld",
+        "source_record_id": "939336"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Whitby",
+        "source_record_id": "940235"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "West End",
+        "source_record_id": "940377"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "West Derby",
+        "source_record_id": "940383"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Washington",
+        "source_record_id": "941886"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Vlakpan",
+        "source_record_id": "943493"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Vaalpan",
+        "source_record_id": "945262"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Utsili",
+        "source_record_id": "945808"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Uitkoms",
+        "source_record_id": "946803"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Tweed",
+        "source_record_id": "947454"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Tsoe",
+        "source_record_id": "947753"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Tsoe",
+        "source_record_id": "947754"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Tsineng-Kop",
+        "source_record_id": "947777"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Tsineng",
+        "source_record_id": "947778"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Tsilwana",
+        "source_record_id": "947781"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Tshoupane",
+        "source_record_id": "947822"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Tsamarose",
+        "source_record_id": "948035"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Tsaelengwe",
+        "source_record_id": "948049"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Trom",
+        "source_record_id": "948107"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Trassievlakte",
+        "source_record_id": "948216"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Tra Blanca",
+        "source_record_id": "948262"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Tokolwane",
+        "source_record_id": "948543"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Tlapeng",
+        "source_record_id": "948662"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Thotayamoku",
+        "source_record_id": "949056"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Thomasdale",
+        "source_record_id": "949210"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Thamoyantshe",
+        "source_record_id": "949651"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Tenby",
+        "source_record_id": "949849"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Tekort",
+        "source_record_id": "949924"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Tay",
+        "source_record_id": "949979"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Sydney",
+        "source_record_id": "950662"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Sweethome",
+        "source_record_id": "950740"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Sweethome",
+        "source_record_id": "950741"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Suurman",
+        "source_record_id": "951212"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Stinkwater",
+        "source_record_id": "952097"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Stillerus",
+        "source_record_id": "952175"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Soutpomp",
+        "source_record_id": "953850"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Smauswane",
+        "source_record_id": "954521"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Slough",
+        "source_record_id": "954632"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Skitter",
+        "source_record_id": "955053"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Shushulin",
+        "source_record_id": "955888"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Shipton",
+        "source_record_id": "955971"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Shippards Gift",
+        "source_record_id": "955974"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Severn",
+        "source_record_id": "956288"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Setshwatshwaneng",
+        "source_record_id": "956326"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Setlhakeng",
+        "source_record_id": "956331"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Seoding",
+        "source_record_id": "956473"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Sekhurumelo",
+        "source_record_id": "956606"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Sekgwasankwe",
+        "source_record_id": "956612"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Sekampaneng",
+        "source_record_id": "956623"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Segwaneng",
+        "source_record_id": "956640"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Sedibeng",
+        "source_record_id": "956747"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Sark",
+        "source_record_id": "957500"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Salaneng",
+        "source_record_id": "958187"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Salaneng",
+        "source_record_id": "958188"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Sakutswane",
+        "source_record_id": "958196"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Saamwerk",
+        "source_record_id": "958465"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Ruthven",
+        "source_record_id": "958615"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Rusfontein",
+        "source_record_id": "958825"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Rugby",
+        "source_record_id": "958960"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Rowell",
+        "source_record_id": "959013"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Rooiput",
+        "source_record_id": "959493"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Rooibank",
+        "source_record_id": "960252"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Ramokikwana",
+        "source_record_id": "963270"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Ramokabati",
+        "source_record_id": "963271"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Ramatale",
+        "source_record_id": "963316"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Ralitsalibe",
+        "source_record_id": "963342"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Radia Congwa",
+        "source_record_id": "963393"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Piet se Bos",
+        "source_record_id": "965229"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Phomolong",
+        "source_record_id": "965424"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Phomolong",
+        "source_record_id": "965425"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Phomolong",
+        "source_record_id": "965426"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Phomolong",
+        "source_record_id": "965427"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Phitshane",
+        "source_record_id": "965454"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Perth",
+        "source_record_id": "965625"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Penryn",
+        "source_record_id": "965898"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Pender",
+        "source_record_id": "965933"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Pender",
+        "source_record_id": "965934"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Pender",
+        "source_record_id": "965935"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Pender",
+        "source_record_id": "965936"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Palasane",
+        "source_record_id": "966583"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Padstow",
+        "source_record_id": "966601"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Oraredi",
+        "source_record_id": "967506"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Oranje",
+        "source_record_id": "967533"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Oceola",
+        "source_record_id": "968495"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Nuwe Eersterus",
+        "source_record_id": "968934"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Ntsweng",
+        "source_record_id": "969024"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Ntsweng",
+        "source_record_id": "969025"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Ntswelengwe",
+        "source_record_id": "969028"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Ntswaneng",
+        "source_record_id": "969030"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Nkajaneng",
+        "source_record_id": "970502"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Niks",
+        "source_record_id": "970561"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Nevin",
+        "source_record_id": "971464"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Neira",
+        "source_record_id": "971617"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Nchaning",
+        "source_record_id": "971919"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Museva",
+        "source_record_id": "972536"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Mothong",
+        "source_record_id": "973669"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Mosakong",
+        "source_record_id": "973773"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Morpeth",
+        "source_record_id": "973798"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Morotowontshe",
+        "source_record_id": "973805"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Moolagwane",
+        "source_record_id": "974148"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Molomowapitsana",
+        "source_record_id": "974750"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Molatswaneng",
+        "source_record_id": "974801"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Mokalwamakgoa",
+        "source_record_id": "974872"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Mokalamosesane",
+        "source_record_id": "974875"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Mogononong",
+        "source_record_id": "974943"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Moedvernier",
+        "source_record_id": "975027"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Moed",
+        "source_record_id": "975043"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Mmunyaneng",
+        "source_record_id": "975364"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Mmatoro",
+        "source_record_id": "975378"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Mmaipitlwane",
+        "source_record_id": "975423"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Minto Number Two",
+        "source_record_id": "975750"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Mimosa Park Inn",
+        "source_record_id": "975800"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Metswetsaneng",
+        "source_record_id": "976851"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Metsemantsi (6)",
+        "source_record_id": "976862"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Metsemantsi (5)",
+        "source_record_id": "976863"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Metsemantsi (4)",
+        "source_record_id": "976864"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Metsemantsi (3)",
+        "source_record_id": "976865"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Metsemantsi (2)",
+        "source_record_id": "976866"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Metsemantsi (1)",
+        "source_record_id": "976867"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Metsemantsi",
+        "source_record_id": "976868"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Melrose",
+        "source_record_id": "977117"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Melrose",
+        "source_record_id": "977118"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Matuye",
+        "source_record_id": "977951"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Matshaneng",
+        "source_record_id": "978012"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Matlhabanenong",
+        "source_record_id": "978095"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Mathanthanyaneng",
+        "source_record_id": "978302"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Matemeng",
+        "source_record_id": "978312"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Maswehatshe",
+        "source_record_id": "978367"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Masilabetsane",
+        "source_record_id": "978424"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Masilabeleng",
+        "source_record_id": "978426"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Masankong",
+        "source_record_id": "978515"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Martor",
+        "source_record_id": "978590"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Marthasdal",
+        "source_record_id": "978630"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Marotobolo",
+        "source_record_id": "978680"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Marotaneng",
+        "source_record_id": "978684"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Maropeng",
+        "source_record_id": "978685"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Mariba",
+        "source_record_id": "978851"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Maria-Moed",
+        "source_record_id": "978873"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "March",
+        "source_record_id": "978938"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "March",
+        "source_record_id": "978939"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Maputsane",
+        "source_record_id": "979082"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Maputsane",
+        "source_record_id": "979083"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Mapoteng",
+        "source_record_id": "979095"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Maphiniki",
+        "source_record_id": "979127"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Maokantsi",
+        "source_record_id": "979171"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Manyeding",
+        "source_record_id": "979238"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Manyeding",
+        "source_record_id": "979239"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Manaaneng",
+        "source_record_id": "979564"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Mamoratwe",
+        "source_record_id": "979602"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Mamontsane",
+        "source_record_id": "979603"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Makgaladi",
+        "source_record_id": "980061"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Makalaneng",
+        "source_record_id": "980119"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Makadibeng",
+        "source_record_id": "980135"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Majaneng",
+        "source_record_id": "980179"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Maipeeng",
+        "source_record_id": "980204"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Mahukubung",
+        "source_record_id": "980242"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Mahukubung",
+        "source_record_id": "980243"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Mahukubung",
+        "source_record_id": "980244"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Magwagwe",
+        "source_record_id": "980376"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Magwagwe",
+        "source_record_id": "980377"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Magwagwe",
+        "source_record_id": "980378"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Magwagwe",
+        "source_record_id": "980379"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Magonata",
+        "source_record_id": "980432"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Magolaneng",
+        "source_record_id": "980442"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Magobeng",
+        "source_record_id": "980467"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Magobe",
+        "source_record_id": "980469"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Mafikaneng",
+        "source_record_id": "980597"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Madingwane",
+        "source_record_id": "980698"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Madibeng",
+        "source_record_id": "980721"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Lutlake",
+        "source_record_id": "981237"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Lurie",
+        "source_record_id": "981319"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Lotlhakeng",
+        "source_record_id": "981891"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Lotlhakeng",
+        "source_record_id": "981892"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Lotlhakane",
+        "source_record_id": "981894"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Losberg",
+        "source_record_id": "982070"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Lophalaphala",
+        "source_record_id": "982140"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Loopeng",
+        "source_record_id": "982178"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Longhirst",
+        "source_record_id": "982260"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Lokihakane",
+        "source_record_id": "982385"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Lokapane",
+        "source_record_id": "982390"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Lokaleng",
+        "source_record_id": "982392"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Logobate",
+        "source_record_id": "982403"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Logaganeng",
+        "source_record_id": "982409"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Lobutsane",
+        "source_record_id": "982517"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Linopen",
+        "source_record_id": "982677"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Lengwelenowe",
+        "source_record_id": "983189"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Leeudrif",
+        "source_record_id": "984007"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Leeds",
+        "source_record_id": "984060"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Lebonkeng",
+        "source_record_id": "984089"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Leboneng",
+        "source_record_id": "984090"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Laxey",
+        "source_record_id": "984137"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Kubuge",
+        "source_record_id": "986600"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Kubuge",
+        "source_record_id": "986601"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Kubuga",
+        "source_record_id": "986602"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Kruissar",
+        "source_record_id": "986660"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Kruisfontein",
+        "source_record_id": "986721"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Kophou",
+        "source_record_id": "987959"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Kokosi",
+        "source_record_id": "988374"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Kokonye",
+        "source_record_id": "988375"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Kogorwane",
+        "source_record_id": "988405"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Klippan",
+        "source_record_id": "989223"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Klipfontein",
+        "source_record_id": "989537"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Klipdrif",
+        "source_record_id": "989788"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Kliniek",
+        "source_record_id": "989889"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Klein Tsamarose",
+        "source_record_id": "990028"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Klein Harrow",
+        "source_record_id": "990384"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Klein-Corsham",
+        "source_record_id": "990568"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Klaarkom",
+        "source_record_id": "990780"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Kikafela",
+        "source_record_id": "991017"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Khibes Village",
+        "source_record_id": "991112"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Khabetlwane",
+        "source_record_id": "991149"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Kgoroya Ga-Tshekedi",
+        "source_record_id": "991169"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Kgomohute",
+        "source_record_id": "991191"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Kganwane",
+        "source_record_id": "991227"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Kganong",
+        "source_record_id": "991229"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Kelso",
+        "source_record_id": "991448"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Kelso",
+        "source_record_id": "991449"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Kelso",
+        "source_record_id": "991450"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Kelokilwe",
+        "source_record_id": "991451"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Kelokilwe",
+        "source_record_id": "991452"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Kekana",
+        "source_record_id": "991468"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Keang",
+        "source_record_id": "991573"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Kankuru",
+        "source_record_id": "992273"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Kamden",
+        "source_record_id": "992547"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Kakoje",
+        "source_record_id": "992995"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Jan Kempdorp",
+        "source_record_id": "994023"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Jakkalsput",
+        "source_record_id": "994097"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Ilsley",
+        "source_record_id": "994922"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Ilkley",
+        "source_record_id": "994938"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Holbeck",
+        "source_record_id": "996035"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Hobb\u2019s Hope",
+        "source_record_id": "996230"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Hertzog",
+        "source_record_id": "996803"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Heiso",
+        "source_record_id": "997123"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Harrow",
+        "source_record_id": "997742"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Hammanskraal",
+        "source_record_id": "998082"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Halifax",
+        "source_record_id": "998203"
+      }
+    ],
+    "identities_resolved_to_weaker_evidence": {
+      "ADM2": 0,
+      "ADM3": 0,
+      "basis": "Identities whose administrative context came from a polygon retained only on bounding-box evidence, because no geospatial wheel is installed and the representative point is a bounding-box centre. Non-zero means real context depends on the weaker selection test."
+    },
+    "queue": [],
+    "records_queued_for_multiple_context_matches": 0
+  },
+  "counts": {
+    "admitted_identities": 1445,
+    "alternate_name_records": 3158,
+    "alternate_names_not_linked_to_an_identity": 2457,
+    "candidate_dispositions": 5177,
+    "dispositions_by_reason": {
+      "historical feature; a former referent is a name assertion, n": 408,
+      "locality or reserve feature outside the admitted settlement ": 74,
+      "spot feature outside the admitted settlement classes (farm, ": 4085,
+      "terrain or hydrographic feature, not a settlement or adminis": 610
+    },
+    "identities_by_type": {
+      "city": 3,
+      "district_municipality": 4,
+      "local_municipality": 19,
+      "locality": 40,
+      "province": 1,
+      "suburb": 186,
+      "town": 36,
+      "village": 1156
+    },
+    "name_assertions": 2146,
+    "source_links": 1445,
+    "source_universe_records": 6622
+  },
+  "generated_from_acquisition": {
+    "acquisition_limitations": [
+      "Source-native observations only; no canonical identity, factual type or parent has been adjudicated.",
+      "ADM2/ADM3 layers are national; North West spatial selection and current-boundary review are pending.",
+      "GeoNames filtering preserves source admin1 assertions; border/conflicting/00 records require review.",
+      "No OSM data acquired; ODbL founder production gate remains unchanged.",
+      "This is not a complete province catalogue or the v0.2 source-authority manifest expected by admission."
+    ],
+    "bundle_kind": "acquired_evidence_not_admitted_authority",
+    "bundle_manifest_sha256": "7e3cf43408f6e0f03a94085c223a55cf3e845e1bc361abb1bf8c9e2ca29a93de"
+  },
+  "governed_policy": {
+    "administrative_context_basis": "representative point tested against acquired polygons",
+    "city_min_population": 100000,
+    "exact_type_by_source_code": {
+      "A.ADM1": "province",
+      "A.ADM2": "district_municipality",
+      "A.ADM3": "local_municipality",
+      "L.LCTY": "locality",
+      "P.PPLA": "city",
+      "P.PPLA2": "town",
+      "P.PPLA3": "town",
+      "P.PPLX": "suburb",
+      "S.HTL": "locality",
+      "S.RSD": "suburb",
+      "S.TOWR": "town"
+    },
+    "licence_classification": "permissive_supported",
+    "licence_obligations": "GeoNames is CC BY 4.0: attribution required, no share-alike. geoBoundaries gbOpen is distributed CC BY 4.0 with upstream CC BY 3.0 IGO notices and OCHA ROSEA / Municipal Demarcation Board attribution. The permissive_supported label records the absence of ODbL obligations; it does not mean obligation-free.",
+    "populated_place_codes": [
+      "P.PPL"
+    ],
+    "source_admin_code_treated_as": "assertion recorded and compared, never as containment proof",
+    "town_min_population": 10000
+  },
+  "invariants_asserted": [
+    "every source record is either an admitted identity or an explicit candidate disposition",
+    "every name assertion and source link references an admitted identity",
+    "identity is derived from territory and source-native id only, never from a name or coordinate",
+    "administrative context is resolved from geometry, and source admin codes are compared, not trusted",
+    "no record is promoted because of its name",
+    "licence obligations are recorded per identity, not summarised away by the licensing label"
+  ],
+  "province": "North West",
+  "source_authority_version": "za-nw-source-authority-v0.2",
+  "territory_id": "za-nw"
+}

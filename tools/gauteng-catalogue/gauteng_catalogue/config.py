@@ -33,7 +33,7 @@ GAUTENG = TerritoryConfig(
     territory_id="za-gp",
     province="Gauteng",
     province_name_tokens=("gauteng",),
-    province_iso_codes=("GP", "ZA-GP"),
+    province_iso_codes=("GT",),
     source_admin1_code="3",
     catalogue_data_dirname="gauteng-candidate-catalogue-v0.1",
     probe_names=(
@@ -65,7 +65,7 @@ WESTERN_CAPE = TerritoryConfig(
     territory_id="za-wc",
     province="Western Cape",
     province_name_tokens=("western cape",),
-    province_iso_codes=("WC", "ZA-WC"),
+    province_iso_codes=("WC",),
     source_admin1_code="11",
     catalogue_data_dirname="western-cape-candidate-catalogue-v0.1",
     # Research and probe prompts only. Requiring accepted evidence is the point:
@@ -87,7 +87,7 @@ KWA_ZULU_NATAL = TerritoryConfig(
     territory_id="za-kzn",
     province="KwaZulu-Natal",
     province_name_tokens=("kwa zulu-natal", "kwazulu-natal"),
-    province_iso_codes=("ZN", "ZA-ZN"),
+    province_iso_codes=("KZ",),
     source_admin1_code="2",
     catalogue_data_dirname="kwa-zulu-natal-candidate-catalogue-v0.1",
     probe_names=(
@@ -106,9 +106,16 @@ KWA_ZULU_NATAL = TerritoryConfig(
 
 
 #: Provinces admitted after KwaZulu-Natal, in the agreed engineering order.
-#: `province_name_tokens` is what actually selects the ADM1 feature;
-#: `province_iso_codes` is a convenience. Northern Cape carries no `shapeISO` in
-#: the gbOpen layer, so it is matched by name alone and its ISO tuple is empty.
+#:
+#: Both selectors are real, and the ISO codes here are the ones the gbOpen ZAF ADM1
+#: layer actually carries, which are **not** ISO 3166-2: the layer spells Gauteng
+#: `GT`, KwaZulu-Natal `KZ` and Northern Cape `NC`. Earlier entries guessed `GP` and
+#: `ZN`, so selection was silently relying on the name token alone.
+#:
+#: Northern Cape is the case that proves why both are needed: the upstream label is
+#: misspelled **"Nothern Cape"**, so it is matched on ISO `NC`, and the misspelling
+#: is preserved as the polygon label rather than corrected in place. Correcting
+#: source data in a derived artifact would hide a real defect in the evidence.
 _PROVINCES_AFTER_KZN: tuple[TerritoryConfig, ...] = tuple(
     TerritoryConfig(
         territory_id=territory_id,
@@ -163,8 +170,8 @@ _PROVINCES_AFTER_KZN: tuple[TerritoryConfig, ...] = tuple(
         (
             "za-nc",
             "Northern Cape",
-            ("northern cape",),
-            (),
+            ("northern cape", "nothern cape"),
+            ("NC",),
             "08",
             ("Kimberley", "Upington", "Springbok", "De Aar", "Kuruman", "Upington"),
         ),

@@ -1,0 +1,735 @@
+{
+  "admission_version": "za-li-place-admission-v0.1",
+  "territory": {
+    "territory_id": "za-li",
+    "display_name": "Limpopo",
+    "admission_registry_path": "data/place-admission-territories.v0.1/territory-registry.v0.1.json",
+    "admission_registry_sha256": "e3dcd6cbfd95dcab78e57f5ffb6a614b06d39899140222b10ecba7eb6415dc64"
+  },
+  "generated_from": {
+    "source_authority_version": "za-li-source-authority-v0.2",
+    "source_snapshot_id": "46ca6a7e0973c9550d16adb04ecb5f155d6c8dedd0364cdcf99469303a578120",
+    "source_manifest_path": "data/za-li-source-authority-v0.2/za_li_source_manifest_v0.2.json",
+    "source_manifest_sha256": "25116e27cd114745fd9775113896772456224c0974c4938d0bfb0aee0af4001a",
+    "compact_artifacts": [
+      {
+        "path": "data/za-li-source-authority-v0.2/za_li_candidate_dispositions_v0.2.jsonl",
+        "sha256": "7bdf9bbf0f690dd1f18e3d4b9210e7e1277d6a6d128f6f53a350faa503e0507a",
+        "size_bytes": 15438956
+      },
+      {
+        "path": "data/za-li-source-authority-v0.2/za_li_factual_canonical_geography_v0.2.jsonl",
+        "sha256": "df7e71da493d9ffe680650403774d3ac3bdb887d45d4bef266939357ca8e5031",
+        "size_bytes": 5663799
+      },
+      {
+        "path": "data/za-li-source-authority-v0.2/za_li_factual_canonical_names_v0.2.jsonl",
+        "sha256": "240891649c349b1214ecd7c3204e3757b5d8baacd79258719658acfa00815b19",
+        "size_bytes": 3035637
+      },
+      {
+        "path": "data/za-li-source-authority-v0.2/za_li_factual_canonical_source_links_v0.2.jsonl",
+        "sha256": "0fe3722ba4d7ad76f17d18bb1e01c242220b10807b74941574e476b014495de0",
+        "size_bytes": 1839964
+      }
+    ],
+    "comparison_baseline": {
+      "note": "The v0.1 committed artifacts are retained as comparison and regression evidence only. Their factual source JSONLs are unrecoverable and were not used as forward authority.",
+      "catalogue": "data/za-li-coverage-v0.1/za-li-territory-catalog.v0.1.json",
+      "catalogue_sha256": "ac81a92ad99a199e1a655c31ca6f85ca965584a44707da0b3c016617208e2e48",
+      "factual_identity_count": 0,
+      "runtime_row_count": 0,
+      "queued_count": 0,
+      "awaiting_accepted_parent_edge": 0,
+      "duplicate_natural_key_within_parent": 0,
+      "natural_key_owned_by_accepted_row": 0,
+      "co_published_natural_keys": 0,
+      "parent_evidence_inputs": 0
+    }
+  },
+  "governed_policy": {
+    "container_types": [
+      "district_municipality",
+      "local_municipality",
+      "province"
+    ],
+    "settlement_merge_max_km": 15,
+    "merge_requires_same_administrative_context": true,
+    "type_disagreement_never_blocks_merge": true,
+    "preferred_public_name_selection": "official role, then source preferred_common; within a class the most independently sourced assertion wins, ties broken by text",
+    "one_containment_parent_per_place": true,
+    "search_scope_authorization_in_slice_2": 0,
+    "place_id_allocation": "assigned from a committed registry; never derived from name, slug, coordinates, parent, classification, natural key or source identity"
+  },
+  "counts": {
+    "source_identities": 1747,
+    "source_name_assertions": 2428,
+    "source_links": 1747,
+    "source_candidates": 11471,
+    "admitted_places": 1669,
+    "merged_equivalence_groups": 66,
+    "absorbed_source_identities": 78,
+    "single_identity_places": 1603,
+    "group_kinds": {
+      "administrative_container": 31,
+      "single_identity": 1572,
+      "merged_same_referent": 66
+    },
+    "verification": {
+      "provisional": 1428,
+      "verified": 241
+    },
+    "licensing": {
+      "permissive_supported": 1669
+    },
+    "scope_establishment": {
+      "established": 1639,
+      "not_established": 30,
+      "by_scope": {
+        "locality": {
+          "established": 1599,
+          "not_established": 0
+        },
+        "metro_city": {
+          "established": 39,
+          "not_established": 0
+        },
+        "province": {
+          "established": 1,
+          "not_established": 0
+        }
+      }
+    },
+    "executable_places": 1639,
+    "executable_by_scope": {
+      "locality": 1599,
+      "metro_city": 39,
+      "province": 1
+    },
+    "admitted_without_executable_scope": 30,
+    "names": 2359,
+    "name_roles": {
+      "preferred_public": 1669,
+      "common": 684,
+      "historical": 4,
+      "official": 2
+    },
+    "searchable_names": 2152,
+    "preferred_public_names": 1669,
+    "relationships": 1668,
+    "relationship_types": {
+      "administratively_contains": 1668
+    },
+    "containment_parent_count": 1668,
+    "evidence_rows": 9443,
+    "external_mappings": 1747,
+    "disposition_ledger_rows": 11471,
+    "dispositions": {
+      "quarantined_candidate": 11471
+    },
+    "parent_evidence_inputs": 0,
+    "parent_evidence_classification": {
+      "total_edges": 0,
+      "by_class": {},
+      "by_disposition": {}
+    }
+  },
+  "merge_bases": {
+    "settlement_bound_km": 15,
+    "settlement_rule_enforced": "each admitted member lies within the governed distance of the group anchor (single-linkage clustering)",
+    "administrative_container_rule": "unique administrative container name merges are distance-unbounded by design, because a territory has exactly one province and one municipality per name",
+    "container_merge_groups": 0,
+    "settlement_groups_exceeding_diameter": 0,
+    "note": "Settlement groups whose diameter exceeds the bound satisfy the rule but are listed for review, because the rule compares each member to the anchor rather than to every other member. Moving to complete linkage would split these Places and is a reviewed decision, not a silent fix.",
+    "settlement_groups_over_diameter": []
+  },
+  "collation_suppressed_names": {
+    "basis": "utf8mb4_0900_ai_ci on place_name.name, which is accent- and case-insensitive",
+    "count": 69,
+    "forms": [
+      {
+        "place_id": "pl-place-01-003c1ac06c7873146972b974",
+        "name_role": "common",
+        "kept_spelling": "Ga-Mapela",
+        "suppressed": "Ga-Mapela",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-08cc2790c312414092cfa0dc",
+        "name_role": "common",
+        "kept_spelling": "Sebaeng",
+        "suppressed": "Sebaeng",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-08cc2790c312414092cfa0dc",
+        "name_role": "common",
+        "kept_spelling": "Sebaeng",
+        "suppressed": "Sebaeng",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-0a4d509444afdd50bbcfae6c",
+        "name_role": "common",
+        "kept_spelling": "Мопани",
+        "suppressed": "Мопани",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-0a4d509444afdd50bbcfae6c",
+        "name_role": "common",
+        "kept_spelling": "Mopani",
+        "suppressed": "Mopani",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-0a4d509444afdd50bbcfae6c",
+        "name_role": "common",
+        "kept_spelling": "Boma la Mopani",
+        "suppressed": "Boma la Mopani",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-0a4d509444afdd50bbcfae6c",
+        "name_role": "common",
+        "kept_spelling": "Mopani",
+        "suppressed": "Mopani",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-0a4d509444afdd50bbcfae6c",
+        "name_role": "common",
+        "kept_spelling": "Mopani",
+        "suppressed": "Mopani",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-0a4d509444afdd50bbcfae6c",
+        "name_role": "common",
+        "kept_spelling": "Mopani",
+        "suppressed": "Mopani",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-191d11b42d5b13319fa7fca2",
+        "name_role": "common",
+        "kept_spelling": "لیمپوپو",
+        "suppressed": "لیمپوپو",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-191d11b42d5b13319fa7fca2",
+        "name_role": "common",
+        "kept_spelling": "林波波省",
+        "suppressed": "林波波省",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-191d11b42d5b13319fa7fca2",
+        "name_role": "common",
+        "kept_spelling": "林波波省",
+        "suppressed": "林波波省",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-191d11b42d5b13319fa7fca2",
+        "name_role": "common",
+        "kept_spelling": "林波波省",
+        "suppressed": "林波波省",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-191d11b42d5b13319fa7fca2",
+        "name_role": "common",
+        "kept_spelling": "Лимпопо",
+        "suppressed": "Лимпопо",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-191d11b42d5b13319fa7fca2",
+        "name_role": "common",
+        "kept_spelling": "Лимпопо",
+        "suppressed": "Лимпопо",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-191d11b42d5b13319fa7fca2",
+        "name_role": "common",
+        "kept_spelling": "لیمپوپو",
+        "suppressed": "لیمپوپو",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-191d11b42d5b13319fa7fca2",
+        "name_role": "common",
+        "kept_spelling": "Лимпопо",
+        "suppressed": "Лимпопо",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-191d11b42d5b13319fa7fca2",
+        "name_role": "common",
+        "kept_spelling": "Provincia de Limpopo",
+        "suppressed": "Provincia de Limpopo",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-191d11b42d5b13319fa7fca2",
+        "name_role": "common",
+        "kept_spelling": "Лимпопо",
+        "suppressed": "Лимпопо",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-191d11b42d5b13319fa7fca2",
+        "name_role": "common",
+        "kept_spelling": "Лимпопо",
+        "suppressed": "Лимпопо",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-191d11b42d5b13319fa7fca2",
+        "name_role": "common",
+        "kept_spelling": "Provincia de Limpopo",
+        "suppressed": "Província de Limpopo",
+        "collision": "target_collation",
+        "reason": "indistinguishable from the kept spelling under utf8mb4_0900_ai_ci, so the target cannot store both"
+      },
+      {
+        "place_id": "pl-place-01-191d11b42d5b13319fa7fca2",
+        "name_role": "common",
+        "kept_spelling": "Лимпопо",
+        "suppressed": "Лимпопо",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-191d11b42d5b13319fa7fca2",
+        "name_role": "common",
+        "kept_spelling": "Лимпопо",
+        "suppressed": "Лимпопо",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-191d11b42d5b13319fa7fca2",
+        "name_role": "common",
+        "kept_spelling": "Лимпопо",
+        "suppressed": "Лимпопо",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-191d11b42d5b13319fa7fca2",
+        "name_role": "common",
+        "kept_spelling": "林波波省",
+        "suppressed": "林波波省",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-191d11b42d5b13319fa7fca2",
+        "name_role": "common",
+        "kept_spelling": "Limpopo Province",
+        "suppressed": "Limpopo Province",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-19f039722c56250a79fc12d6",
+        "name_role": "common",
+        "kept_spelling": "Messina",
+        "suppressed": "Messina",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-19f039722c56250a79fc12d6",
+        "name_role": "common",
+        "kept_spelling": "Messina",
+        "suppressed": "Messina",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-2fb67dcdf3f294d903c60f2e",
+        "name_role": "common",
+        "kept_spelling": "Polokvane",
+        "suppressed": "Polokvanė",
+        "collision": "target_collation",
+        "reason": "indistinguishable from the kept spelling under utf8mb4_0900_ai_ci, so the target cannot store both"
+      },
+      {
+        "place_id": "pl-place-01-2fb67dcdf3f294d903c60f2e",
+        "name_role": "common",
+        "kept_spelling": "Полокване",
+        "suppressed": "Полокване",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-2fb67dcdf3f294d903c60f2e",
+        "name_role": "common",
+        "kept_spelling": "Полокване",
+        "suppressed": "Полокване",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-2fb67dcdf3f294d903c60f2e",
+        "name_role": "common",
+        "kept_spelling": "Полокване",
+        "suppressed": "Полокване",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-2fb67dcdf3f294d903c60f2e",
+        "name_role": "common",
+        "kept_spelling": "Полокване",
+        "suppressed": "Полокване",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-2fb67dcdf3f294d903c60f2e",
+        "name_role": "common",
+        "kept_spelling": "Pietersburg",
+        "suppressed": "Pietersburg",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-2fb67dcdf3f294d903c60f2e",
+        "name_role": "common",
+        "kept_spelling": "Полокване",
+        "suppressed": "Полокване",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-2fb67dcdf3f294d903c60f2e",
+        "name_role": "common",
+        "kept_spelling": "Polokvane",
+        "suppressed": "Polokvane",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-2fb67dcdf3f294d903c60f2e",
+        "name_role": "common",
+        "kept_spelling": "پولوکوین",
+        "suppressed": "پولوکوین",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-2fb67dcdf3f294d903c60f2e",
+        "name_role": "common",
+        "kept_spelling": "Полокване",
+        "suppressed": "Полокване",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-2fb67dcdf3f294d903c60f2e",
+        "name_role": "common",
+        "kept_spelling": "Полокване",
+        "suppressed": "Полокване",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-2fb67dcdf3f294d903c60f2e",
+        "name_role": "common",
+        "kept_spelling": "Полокване",
+        "suppressed": "Полокване",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-397b77dc6cc020a7a1b61ed2",
+        "name_role": "common",
+        "kept_spelling": "Ellisras",
+        "suppressed": "Ellisras",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-3b5a6c62d9ebbd69cc0d3515",
+        "name_role": "common",
+        "kept_spelling": "https://en.wikipedia.org/wiki/Vaalwater",
+        "suppressed": "https://en.wikipedia.org/wiki/Vaalwater",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-3dac308007f2734f9cd30977",
+        "name_role": "common",
+        "kept_spelling": "Waterval",
+        "suppressed": "Waterval",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-5d22f50fefcb7abc7f79d370",
+        "name_role": "common",
+        "kept_spelling": "Dikgale",
+        "suppressed": "Dikgale",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-65c308eb770903480adacc33",
+        "name_role": "common",
+        "kept_spelling": "Ka-Mininginisi",
+        "suppressed": "Ka-Mininginisi",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-7015905f27e3e0cd29bcb270",
+        "name_role": "common",
+        "kept_spelling": "Тхохояндоу",
+        "suppressed": "Тхохояндоу",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-79a628e1d16705f82bf16552",
+        "name_role": "common",
+        "kept_spelling": "Ga-Mothiba",
+        "suppressed": "Ga-Mothiba",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-7c8afafb86bbd05edb49aed4",
+        "name_role": "common",
+        "kept_spelling": "Каприкорн",
+        "suppressed": "Каприкорн",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-7c8afafb86bbd05edb49aed4",
+        "name_role": "common",
+        "kept_spelling": "Capricorn",
+        "suppressed": "Capricorn",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-7c8afafb86bbd05edb49aed4",
+        "name_role": "common",
+        "kept_spelling": "Capricorn",
+        "suppressed": "Capricorn",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-7c8afafb86bbd05edb49aed4",
+        "name_role": "common",
+        "kept_spelling": "Capricorn",
+        "suppressed": "Capricorn",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-b66c8fc32be1a3f38e708ef2",
+        "name_role": "common",
+        "kept_spelling": "Waterberg",
+        "suppressed": "Waterberg",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-b66c8fc32be1a3f38e708ef2",
+        "name_role": "common",
+        "kept_spelling": "Waterberg",
+        "suppressed": "Waterberg",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-b66c8fc32be1a3f38e708ef2",
+        "name_role": "common",
+        "kept_spelling": "Ватерберг",
+        "suppressed": "Ватерберг",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-b66c8fc32be1a3f38e708ef2",
+        "name_role": "common",
+        "kept_spelling": "Waterberg",
+        "suppressed": "Waterberg",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-b66c8fc32be1a3f38e708ef2",
+        "name_role": "common",
+        "kept_spelling": "Waterberg",
+        "suppressed": "Waterberg",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-b9d00c9abcc1606f17970a9e",
+        "name_role": "common",
+        "kept_spelling": "Makgodu",
+        "suppressed": "Makgodu",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-c9a6637f2ef6a33d6790fae6",
+        "name_role": "common",
+        "kept_spelling": "Ga-Molepo",
+        "suppressed": "Ga-Molepo",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-ce4bce9121fbda839223cb76",
+        "name_role": "common",
+        "kept_spelling": "Vhembe",
+        "suppressed": "Vhembe",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-ce4bce9121fbda839223cb76",
+        "name_role": "common",
+        "kept_spelling": "Вхембе",
+        "suppressed": "Вхембе",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-ce4bce9121fbda839223cb76",
+        "name_role": "common",
+        "kept_spelling": "Vhembe",
+        "suppressed": "Vhembe",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-ce4bce9121fbda839223cb76",
+        "name_role": "common",
+        "kept_spelling": "Vhembe",
+        "suppressed": "Vhembe",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-d2bdc5442d76fc39a99333ae",
+        "name_role": "common",
+        "kept_spelling": "Ga-Mabotsa",
+        "suppressed": "Ga-Mabotsa",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-dfa81511c730cce4b08e2bf6",
+        "name_role": "common",
+        "kept_spelling": "Mhingaslokasie",
+        "suppressed": "Mhingaslokasie",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-e39c1eba9f9bc6d7b2f3177e",
+        "name_role": "common",
+        "kept_spelling": "Steenbokpan",
+        "suppressed": "Steenbokpan",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-eb3618ab7f2856b297ae872d",
+        "name_role": "common",
+        "kept_spelling": "Malokele",
+        "suppressed": "Malokele",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-ef84cc61e144f0b1292943c8",
+        "name_role": "common",
+        "kept_spelling": "Sekhukhune",
+        "suppressed": "Sekhukhune",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-ef84cc61e144f0b1292943c8",
+        "name_role": "common",
+        "kept_spelling": "Sekhukhune",
+        "suppressed": "Sekhukhune",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-ef84cc61e144f0b1292943c8",
+        "name_role": "common",
+        "kept_spelling": "Sekhukhune",
+        "suppressed": "Sekhukhune",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      }
+    ]
+  },
+  "place_id_registry": {
+    "path": "data/za-li-place-admission-v0.1/za_li_place_id_registry.v0.1.json",
+    "allocated_ids": 1669,
+    "allocation_sequence": 1669
+  },
+  "invariants_asserted": [
+    "every source identity maps to exactly one admitted Place",
+    "place count equals distinct assigned ids",
+    "one preferred public name per Place",
+    "every settlement member lies within the governed distance of its group anchor, and any settlement group whose diameter exceeds the bound is listed for review",
+    "administrative container merges are governed by unique name, not by distance",
+    "every name, relationship and evidence row references an admitted Place",
+    "every relationship has evidence and is not self-referential",
+    "containment is a forest: one parent, no cycles",
+    "no relationship-driven search widening in Slice 2",
+    "scope, eligibility and classification combinations satisfy the database invariants",
+    "every scoped Place has an evidenced province context, the only mandatory ancestry requirement",
+    "no artificial settlement parent is introduced to complete a search hierarchy",
+    "no municipality is re-typed or promoted into the metro_city search tier",
+    "a Place without a governed executable scope stays admitted but is neither searchable nor publishable",
+    "the disposition ledger covers every source candidate"
+  ],
+  "outputs": {
+    "places": "data/za-li-place-admission-v0.1/za_li_place_admission_v0.1.jsonl",
+    "names": "data/za-li-place-admission-v0.1/za_li_place_names_v0.1.jsonl",
+    "relationships": "data/za-li-place-admission-v0.1/za_li_place_relationships_v0.1.jsonl",
+    "evidence": "data/za-li-place-admission-v0.1/za_li_place_evidence_v0.1.jsonl",
+    "external_mappings": "data/za-li-place-admission-v0.1/za_li_place_external_mappings_v0.1.jsonl",
+    "disposition_ledger": "data/za-li-place-admission-v0.1/za_li_place_disposition_ledger_v0.1.jsonl",
+    "parent_evidence_classification": "data/za-li-place-admission-v0.1/za_li_parent_evidence_classification_v0.1.json"
+  }
+}

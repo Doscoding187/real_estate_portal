@@ -51,17 +51,23 @@ databases. Place Authority remains the only geographic identity source.
 | 2 | Executable Place foundation | **closed** |
 | 3 | Territory-neutral onboarding proof | **closed** (`ad753b3d` + Phase 3 refactor) |
 | 4 | Western Cape (Province 2) | **admitted and physically proven; not activated** |
-| 5 | Remaining provinces | **Eastern Cape admitted**; five remain |
-| 6 | National authority verification | not started |
+| 5 | Remaining provinces | **closed — all nine admitted and physically proven** |
+| 6 | National authority verification | **package-level green**; single-target national load still blocked |
 | 7 | National consumer handoff | not started |
 
 ## Current phase
 
-Phases 1–4 and the first Phase 5 province are complete. Gauteng, Western Cape and
-KwaZulu-Natal are admitted, reproducible and physically proven on disposable
-targets, and **no consumer reads any of them**. Nothing has been published,
-activated, widened or switched. **Five** provinces remain: Free State, Limpopo,
-Mpumalanga, Northern Cape and North West.
+**All nine provinces are admitted, reproducible and physically proven**, each on
+its own fresh disposable target, and **no consumer reads any of them**. Nothing
+has been published, activated, widened or switched. The territory-neutral pipeline
+is now proven nine times over with no new architecture: the same code produced
+Gauteng's 1,466 Places and Eastern Cape's 5,084, and a Karoo village and a
+Sandton suburb go through identical code.
+
+Zero provinces remain. The next work is no longer admission. It is national
+authority verification, which is now the binding constraint: nine separately
+proven packages exist, but a target may hold only one province at a time, so
+national coverage is still unreachable from what has been proven.
 
 ## Phase 3 delivery record — territory neutrality
 
@@ -456,7 +462,7 @@ claim available, and it is what the three provinces have.
 | Bundle manifest | `358c0642cc76f48335c4e428c9871baf06bee05a5343557205939394b93d5678` |
 | Source authority manifest | `2ee57a0f948b7b955e1b7239cafb665a373968620404cd9800df7a0e9d300af7` |
 | Admission manifest | `8671e784d9275a35f7041b6b9e4df98c6df2deebfc117d1823559ca2ce4e314e` |
-| Admission registry | `81f2f808eb9dddc24c77e26b71d2924751bc6f73e602e6d154015cf6040f57e2` |
+| Admission registry at EC delivery | `81f2f808eb9dddc24c77e26b71d2924751bc6f73e602e6d154015cf6040f57e2` |
 
 Province identity `ZA.05` / geonameid `1085593`, validated against the frozen
 admin register; its own frozen snapshot, verified offline at 16 files and 28,374
@@ -515,6 +521,102 @@ verified, replayed, probed, re-verified, **disposed**.
   so 1,466, 1,862 and 2,090 Place IDs are preserved
 - Cross-province verification green over **4 provinces, 10,502 distinct
   identities**, with the homonym report still non-zero
+
+## Phase 5 delivery record — national completion (Free State, Mpumalanga, Limpopo, North West, Northern Cape)
+
+### Two real source defects found while admitting the last five
+
+**The gbOpen ADM1 layer misspells the province.** The label is **"Nothern Cape"**,
+not "Northern Cape". Every earlier province had been selected by name token, so
+Northern Cape was the first to expose how fragile that was. It is now matched on
+ISO `NC`, and the misspelling is **preserved as the polygon label** rather than
+corrected in the derived artifact: rewriting upstream data would hide a real
+defect in the evidence. The source authority records `adm1_selected: "Nothern
+Cape"`.
+
+**The ISO codes in this repository's own config were guesses, and the layer
+disagrees.** Gauteng is `GT`, not `GP`; KwaZulu-Natal is `KZ`, not `ZN`. Because
+the name tokens happened to match, selection worked for seven provinces while
+silently relying on nothing else. All nine entries are now aligned to what the
+layer actually carries, so both selectors agree.
+
+A third inconsistency was ours too: `za-kzn`'s manifest had been registered as
+`…_manifest.v0.1.json` while all eight others use `…_manifest_v0.1.json`. The
+registry pins paths, so nothing was broken, but the package was rebuilt and
+replays with `minted=0 reused=2090` under the consistent name.
+
+### Admission
+
+| | Free State | Mpumalanga | Limpopo | North West | Northern Cape |
+| --- | --- | --- | --- | --- | --- |
+| Source universe | 10,915 | 6,933 | 13,218 | 6,622 | 18,448 |
+| Admitted identities | 1,572 | 1,078 | 1,747 | 1,445 | 1,576 |
+| Dispositioned | 9,343 | 5,855 | 11,471 | 5,177 | 16,872 |
+| **Places** | **1,544** | **1,045** | **1,669** | **1,352** | **1,552** |
+| Names | 2,138 | 1,607 | 2,359 | 2,086 | 2,192 |
+| Relationships | 1,543 | 1,044 | 1,668 | 1,351 | 1,551 |
+| Evidence rows | 7,300 | 5,059 | 9,443 | 5,113 | 12,874 |
+| Executable | 1,519 | 1,024 | 1,639 | 1,329 | 1,520 |
+| Merge groups | 28 | 31 | 66 | 76 | 23 |
+| Code/geometry queue | 18 | 93 | 68 | 382 | 13 |
+
+Every territory's accounting is total: admitted identities plus dispositioned
+candidates equals the source universe exactly, in all nine provinces. Boundaries
+are **2020** for all five, and every one resolved **0** identities to weaker
+ADM2/ADM3 evidence.
+
+Northern Cape carries 707 localities, the highest count of the five, against only
+25 towns. Its 18,448-record universe is the largest of any province admitted so
+far, ahead of Eastern Cape.
+
+### Merge review: the last five are clean
+
+| | Free State | Mpumalanga | Limpopo | North West | Northern Cape |
+| --- | --- | --- | --- | --- | --- |
+| Container merges with no distance test | 0 | 0 | 0 | 0 | 0 |
+| Settlement groups over the 15 km diameter bound | 0 | 0 | 0 | 0 | 0 |
+
+**Not one** of the five introduces an exception to the enforced merge rule. Across
+all nine provinces the total exposure remains Western Cape's 1 container merge and
+2 settlement groups (Western Cape 3 members / 23.5 km, Eastern Cape 3 members /
+16.82 km), all three-member single-linkage chains listed for review.
+
+### Physical proof
+
+Each of the five ran the full proven lifecycle on its own target created from zero
+and confirmed empty immediately before loading: migrate to
+`0099_saved_searches_canonical_place_reference_fk.sql`, load with an explicit
+`--territory`, independent verify, fingerprint, replay, re-fingerprint, probe,
+re-verify for pollution, dispose. Every territory probe passed **29/29**.
+
+| | Places | Place-ID set digest |
+| --- | --- | --- |
+| Free State | 1,544 | `c57f0196039a5586add005472fbdf721d14f2325086d33538cfee849bfeaaf2c` |
+| Mpumalanga | 1,045 | `db63702a65c8c2a1724de5555ed2bb283726b487cf13594f3ef9dfde5f43da0b` |
+| Limpopo | 1,669 | `039f03aec6ad5970fa5c00be9d4721df1d2754366392263f6314f86a5b244753` |
+| North West | 1,352 | `2e0917c48c9e1b2c7e49255ffd43d3d1e52557f343f2aa7277e2dddb32512aed` |
+| Northern Cape | 1,552 | `43b0be9c554aae241993aae0bcffebe552ed8b175dea443e3a1d16df90f1ab86` |
+
+Replay was a byte-identical no-op for all five. Free State was proven twice, the
+second time from a freshly disposed target, and produced the **same** Place-ID
+digest both times: IDs are derived from the admitted package, not from load order
+or database history.
+
+### Reproducibility and national verification
+
+- All nine packages replay with `minted=0`: **17,664** admitted Place IDs are
+  stable, none re-minted, none dropped. The source universe behind them is
+  **18,309** identities; 645 identities were absorbed into merge groups.
+- Source-authority geography is byte-identical on rebuild for all five.
+- `place:admission:cross-province` is green over **9 provinces, 17,664 admitted
+  Places, 18,309 source identities**, with no Place ID collision, one province
+  root per province, single-parent forests, total accounting per province, and
+  zero relationship-driven search widening in all nine.
+- **828** preferred names occur in more than one province, up from 359 over four
+  provinces. `rieftontein` is a preferred name in **all nine**. This is the
+  practical case for the geography contract: a bare name is never a unique Place
+  and must never be widened.
+- Static database-authority contract gate: **365/365**.
 
 ## Authoritative digests
 
@@ -854,8 +956,10 @@ build followed by the same proven pipeline.
 
 ## Exact next action
 
-**Five provinces remain** — Free State, Limpopo, Mpumalanga, Northern Cape and
-North West — and the per-province sequence is now proven three times.
+**No provinces remain.** The per-province sequence is now proven nine times, and
+the remaining work is national authority verification: the packages are all proven
+but no single target may hold more than one province, so national coverage is
+still not reachable from proven ground.
 build the source authority, admit through the shared pipeline, and prove it on a
 fresh disposable target.
 
