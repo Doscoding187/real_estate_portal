@@ -757,6 +757,31 @@ province. Loading eight further provinces before the identity model is settled
 repeats the per-province parent-evidence and natural-key-collision failure
 observed in the v0.2 candidate, and multiplies the cost of a later cutover.
 
+### 16.1 Province 2 prerequisite reconciliation (v0.5)
+
+Reconciled after the Phase 3 gate and the Western Cape evidence acquisition
+(`docs/architecture/geography-source-acquisition-decision.md`). Recorded as
+satisfied or remaining-open with evidence, so the gate is not assumed.
+
+| # | Prerequisite | State | Evidence |
+| --- | --- | --- | --- |
+| 1 | D0 recorded, versioned, reviewed | **satisfied** | D0 is Section 2 of this v0.5 contract. |
+| 2 | V1 concepts frozen; model declared with digests | **satisfied** | Migrations `0091`–`0097`; all seven tables present in `drizzle/schema/canonical-model-inventory.json`; 39 Place Authority CHECK constraints enforced. |
+| 3 | Gauteng admission repair landed | **satisfied for admission** | `gauteng-place-admission-v0.1` admits 1,466 Places from 1,488 source identities and is physically proven from zero on a fresh disposable target. Section 7 probes resolve **1705/1705**. `Kyalami` stays `quarantined_candidate` with a null `place_id`, so `must_stay_non_public` holds. The v0.1→v0.2 runtime row delta is **0** (1,414 → 1,414), so it is non-negative. |
+| 3 (residual) | Section 13.3 reconciliation | **open, by design** | The figures are reconciled as *different measured states*, not conflicts. The `v0.2 candidate, uncommitted` rows describe the Slice 1 geography-coverage review queue. Regeneration remains fail-closed under Section 11 because the exact v0.1 factual source is unrecoverable: `geography:coverage:check` exits non-zero with "Canonical layer files not found… Restore the approved canonical-root worktree." That is the recorded Section 11 state, not a regression, and the checked-in digests plus generated probes remain the executable evidence. |
+| 4 | D3 violation closed | **satisfied** | `server/services/locationPagesServiceEnhanced.ts` is absent; `saveGooglePlaceLocation` has zero occurrences in `server/locationRouter.ts`; no legacy geography inserts remain in `listingLocationResolver.ts`. Asserted executably by the Slice 3 discovery contract. |
+| 5 | D6.6 unresolved-search evidence reaches a governed queue | **satisfied for persistence** | `placeDiscoveryService.recordCoverageSignal` persists `unresolved_query` and `ambiguous_query` evidence with `researchPriority` 0 or 1. The governed *triage* cadence and queue ownership remain a Phase 6 item; persistence and prioritization are proven. |
+| 6 | TRANSITIONAL rows have exit conditions; Gauteng checkpoint pinned | **satisfied** | Every `TRANSITIONAL` row in Section 10 carries an explicit exit condition naming its slice and observable closure. The Gauteng checkpoint is pinned with recorded digests in Section 13. |
+
+Two qualifications that this reconciliation does **not** remove:
+
+- The Section 11 fail-closed regeneration state means a Western Cape source
+  build cannot copy the Gauteng pipeline's *regeneration* path as a template.
+  It must reproduce the v0.2 shape from the acquired bundle.
+- The Western Cape boundaries represent **2020**. Prerequisite satisfaction is
+  about admission mechanics, not currency. No Western Cape scope may be
+  published on a 2020 boundary vintage.
+
 ## 17. Slice 0 completion record (v0.5)
 
 Slice 0 is decision and checkpoint only. It created no tables, no migrations,
