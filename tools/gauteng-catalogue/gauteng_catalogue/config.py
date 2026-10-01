@@ -104,8 +104,76 @@ KWA_ZULU_NATAL = TerritoryConfig(
     ),
 )
 
+
+#: Provinces admitted after KwaZulu-Natal, in the agreed engineering order.
+#: `province_name_tokens` is what actually selects the ADM1 feature;
+#: `province_iso_codes` is a convenience. Northern Cape carries no `shapeISO` in
+#: the gbOpen layer, so it is matched by name alone and its ISO tuple is empty.
+_PROVINCES_AFTER_KZN: tuple[TerritoryConfig, ...] = tuple(
+    TerritoryConfig(
+        territory_id=territory_id,
+        province=province,
+        province_name_tokens=tokens,
+        province_iso_codes=iso_codes,
+        source_admin1_code=admin1,
+        catalogue_data_dirname=f"{territory_id.split('-')[1]}-candidate-catalogue-v0.1",
+        probe_names=probe_names,
+    )
+    for territory_id, province, tokens, iso_codes, admin1, probe_names in (
+        (
+            "za-ec",
+            "Eastern Cape",
+            ("eastern cape",),
+            ("EC", "ZA-EC"),
+            "05",
+            ("Gqeberha", "Port Elizabeth", "Makhanda", "East London", "Mthatha", "Queenstown", "Somerset East"),
+        ),
+        (
+            "za-fs",
+            "Free State",
+            ("free state",),
+            ("FS", "ZA-FS"),
+            "03",
+            ("Bloemfontein", "Welkom", "Kroonstad", "Sasolburg", "Bethlehem", "Krugersdorp"),
+        ),
+        (
+            "za-mp",
+            "Mpumalanga",
+            ("mpumalanga",),
+            ("MP", "ZA-MP"),
+            "07",
+            ("Mbombela", "Emalahleni", "Secunda", "Middelburg", "Barberton", "Nelspruit"),
+        ),
+        (
+            "za-li",
+            "Limpopo",
+            ("limpopo",),
+            ("LI", "ZA-LI"),
+            "09",
+            ("Polokwane", "Tzaneen", "Thohoyandou", "Mokopane", "Lephalale", "Musina"),
+        ),
+        (
+            "za-nw",
+            "North West",
+            ("north west",),
+            ("NW", "ZA-NW"),
+            "10",
+            ("Mahikeng", "Rustenburg", "Klerksdorp", "Potchefstroom", "Brits", "Vryburg"),
+        ),
+        (
+            "za-nc",
+            "Northern Cape",
+            ("northern cape",),
+            (),
+            "08",
+            ("Kimberley", "Upington", "Springbok", "De Aar", "Kuruman", "Upington"),
+        ),
+    )
+)
+
 TERRITORIES: dict[str, TerritoryConfig] = {
-    config.territory_id: config for config in (GAUTENG, WESTERN_CAPE, KWA_ZULU_NATAL)
+    config.territory_id: config
+    for config in (GAUTENG, WESTERN_CAPE, KWA_ZULU_NATAL) + _PROVINCES_AFTER_KZN
 }
 
 

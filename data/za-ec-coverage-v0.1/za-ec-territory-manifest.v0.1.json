@@ -1,0 +1,12 @@
+{
+  "territory_id": "za-ec",
+  "province": "Eastern Cape",
+  "manifest_version": "0.1",
+  "note": "Eastern Cape has no v0.1 coverage baseline. This territory was never projected through the three-level runtime pipeline, so there is no parent-evidence research queue, no natural-key collision audit and no runtime row count to compare against. The empty researched_parent_edges list is a true statement, not a missing input.",
+  "inputs": {
+    "researched_parent_edges": []
+  },
+  "acquisition": {
+    "bundle_manifest_sha256": "358c0642cc76f48335c4e428c9871baf06bee05a5343557205939394b93d5678"
+  }
+}

@@ -1,0 +1,859 @@
+{
+  "boundary_evidence": {
+    "adm1_selected": "Eastern Cape",
+    "adm2_features_intersecting": 14,
+    "adm3_features_intersecting": 46,
+    "boundary_license": "Creative Commons Attribution 3.0 Intergovernmental Organisations (CC BY 3.0 IGO)",
+    "boundary_source": "OCHA ROSEA, South African Municipal Demarcation Board",
+    "boundary_year_represented": "2020",
+    "build_date": "Dec 12, 2023",
+    "context_feature_selection": {
+      "ADM2": {
+        "bbox_intersecting": 14,
+        "representative_point_inside": 14,
+        "swept_in_and_rejected": [
+          {
+            "decision": "retained_on_weaker_evidence",
+            "point_status": "outside",
+            "polygon_name": "Central Karoo"
+          },
+          {
+            "decision": "retained_on_weaker_evidence",
+            "point_status": "outside",
+            "polygon_name": "Eden"
+          },
+          {
+            "decision": "retained_on_weaker_evidence",
+            "point_status": "outside",
+            "polygon_name": "Pixley ka Seme"
+          },
+          {
+            "decision": "retained_on_weaker_evidence",
+            "point_status": "outside",
+            "polygon_name": "Sisonke"
+          },
+          {
+            "decision": "retained_on_weaker_evidence",
+            "point_status": "outside",
+            "polygon_name": "Ugu"
+          },
+          {
+            "decision": "retained_on_weaker_evidence",
+            "point_status": "outside",
+            "polygon_name": "Xhariep"
+          }
+        ]
+      },
+      "ADM3": {
+        "bbox_intersecting": 46,
+        "representative_point_inside": 46,
+        "swept_in_and_rejected": [
+          {
+            "decision": "retained_on_weaker_evidence",
+            "point_status": "outside",
+            "polygon_name": "Beaufort West"
+          },
+          {
+            "decision": "retained_on_weaker_evidence",
+            "point_status": "outside",
+            "polygon_name": "Bitou"
+          },
+          {
+            "decision": "retained_on_weaker_evidence",
+            "point_status": "outside",
+            "polygon_name": "Emthanjeni"
+          },
+          {
+            "decision": "retained_on_weaker_evidence",
+            "point_status": "outside",
+            "polygon_name": "George"
+          },
+          {
+            "decision": "retained_on_weaker_evidence",
+            "point_status": "outside",
+            "polygon_name": "Greater Kokstad"
+          },
+          {
+            "decision": "retained_on_weaker_evidence",
+            "point_status": "outside",
+            "polygon_name": "Kopanong"
+          },
+          {
+            "decision": "retained_on_weaker_evidence",
+            "point_status": "outside",
+            "polygon_name": "Mohokare"
+          },
+          {
+            "decision": "retained_on_weaker_evidence",
+            "point_status": "outside",
+            "polygon_name": "Oudtshoorn"
+          },
+          {
+            "decision": "retained_on_weaker_evidence",
+            "point_status": "outside",
+            "polygon_name": "Prince Albert"
+          },
+          {
+            "decision": "retained_on_weaker_evidence",
+            "point_status": "outside",
+            "polygon_name": "Ray Nkonyeni"
+          },
+          {
+            "decision": "retained_on_weaker_evidence",
+            "point_status": "outside",
+            "polygon_name": "Ubuntu"
+          },
+          {
+            "decision": "retained_on_weaker_evidence",
+            "point_status": "outside",
+            "polygon_name": "Umsobomvu"
+          },
+          {
+            "decision": "retained_on_weaker_evidence",
+            "point_status": "outside",
+            "polygon_name": "uMuziwabantu"
+          }
+        ]
+      }
+    },
+    "currency_status": "Boundaries represent 2020. This is historical evidence, not a current-boundary certification, and a currency review is owed before any scope is published.",
+    "geometry_backend": {
+      "name": "shapely",
+      "note": "shapely with buffer(0) repair of invalid geometry, true polygon covers/intersects predicates, and representative_point().",
+      "polygon_validity_repair": true,
+      "supports_holes": true,
+      "supports_multipart": true,
+      "version": "2.1.2"
+    },
+    "source_data_update_date": "Thu Jan 19 07:31:04 2023",
+    "spatial_intersection_basis": "polygon_predicate"
+  },
+  "context_resolution": {
+    "administrative_crosswalk": {
+      "ADM2": {
+        "Alfred Nzo": "Alfred Nzo District Municipality",
+        "Amathole": "Amathole District Municipality",
+        "Buffalo City": "Buffalo City Metropolitan Municipality",
+        "Cacadu": "Sarah Baartman District Municipality",
+        "Chris Hani": "Chris Hani District Municipality",
+        "Joe Gqabi": "Joe Gqabi District Municipality",
+        "Nelson Mandela Bay": "Nelson Mandela Bay Metropolitan Municipality",
+        "O.R.Tambo": "OR Tambo District Municipality"
+      },
+      "ADM3": {
+        "Amahlathi": "Amahlathi",
+        "Blue Crane Route": "Blue Crane Route",
+        "Buffalo City": "Buffalo City",
+        "Elundini": "Elundini",
+        "Emalahleni": "Emalahleni",
+        "Engcobo": "Engcobo",
+        "Great Kei": "Great Kei",
+        "Intsika Yethu": "Intsika Yethu",
+        "Inxuba Yethemba": "Inxuba Yethemba",
+        "King Sabata Dalindyebo": "King Sabata Dalindyebo",
+        "Kou-Kamma": "Kou-Kamma",
+        "Kouga": "Kouga",
+        "Makana": "Makana",
+        "Matatiele": "Matatiele",
+        "Mbhashe": "Mbhashe",
+        "Mbizana": "Mbizana",
+        "Mhlontlo": "Mhlontlo",
+        "Mnquma": "Mnquma",
+        "Ndlambe": "Ndlambe",
+        "Nelson Mandela Bay": "Nelson Mandela Bay",
+        "Ngqushwa": "Ngqushwa",
+        "Ngquza Hill": "Ngquza Hill",
+        "Ntabankulu": "Ntabankulu",
+        "Nyandeni": "Nyandeni",
+        "Port St Johns": "Port St Johns",
+        "Sakhisizwe": "Sakhisizwe",
+        "Senqu": "Senqu",
+        "Sundays River Valley": "Sundays River Valley",
+        "Umzimvubu": "Umzimvubu"
+      }
+    },
+    "administrative_crosswalk_basis": "geoBoundaries polygon resolved to an admitted administrative identity: by normalized label when the labels agree, otherwise by testing each admitted record's own point against the polygon. The polygon label is kept as provenance; the context name is the admitted identity's name, because identity is joined on name downstream.",
+    "administrative_crosswalk_unresolved": [
+      {
+        "candidates": [],
+        "level": "ADM2",
+        "polygon_name": "Central Karoo",
+        "reason": "no admitted administrative record falls in this polygon"
+      },
+      {
+        "candidates": [],
+        "level": "ADM2",
+        "polygon_name": "Eden",
+        "reason": "no admitted administrative record falls in this polygon"
+      },
+      {
+        "candidates": [],
+        "level": "ADM2",
+        "polygon_name": "Pixley ka Seme",
+        "reason": "no admitted administrative record falls in this polygon"
+      },
+      {
+        "candidates": [],
+        "level": "ADM2",
+        "polygon_name": "Sisonke",
+        "reason": "no admitted administrative record falls in this polygon"
+      },
+      {
+        "candidates": [],
+        "level": "ADM2",
+        "polygon_name": "Ugu",
+        "reason": "no admitted administrative record falls in this polygon"
+      },
+      {
+        "candidates": [],
+        "level": "ADM2",
+        "polygon_name": "Xhariep",
+        "reason": "no admitted administrative record falls in this polygon"
+      },
+      {
+        "candidates": [],
+        "level": "ADM3",
+        "polygon_name": "Beaufort West",
+        "reason": "no admitted administrative record falls in this polygon"
+      },
+      {
+        "candidates": [],
+        "level": "ADM3",
+        "polygon_name": "Bitou",
+        "reason": "no admitted administrative record falls in this polygon"
+      },
+      {
+        "candidates": [
+          "Baviaans",
+          "Camdeboo",
+          "Ikwezi"
+        ],
+        "level": "ADM3",
+        "polygon_name": "Dr Beyers Naude",
+        "reason": "multiple admitted records fall in this polygon"
+      },
+      {
+        "candidates": [],
+        "level": "ADM3",
+        "polygon_name": "Emthanjeni",
+        "reason": "no admitted administrative record falls in this polygon"
+      },
+      {
+        "candidates": [
+          "Inkwanca",
+          "Lukanji",
+          "Tsolwana"
+        ],
+        "level": "ADM3",
+        "polygon_name": "Enoch Mgijima",
+        "reason": "multiple admitted records fall in this polygon"
+      },
+      {
+        "candidates": [],
+        "level": "ADM3",
+        "polygon_name": "George",
+        "reason": "no admitted administrative record falls in this polygon"
+      },
+      {
+        "candidates": [],
+        "level": "ADM3",
+        "polygon_name": "Greater Kokstad",
+        "reason": "no admitted administrative record falls in this polygon"
+      },
+      {
+        "candidates": [],
+        "level": "ADM3",
+        "polygon_name": "Kopanong",
+        "reason": "no admitted administrative record falls in this polygon"
+      },
+      {
+        "candidates": [],
+        "level": "ADM3",
+        "polygon_name": "Mohokare",
+        "reason": "no admitted administrative record falls in this polygon"
+      },
+      {
+        "candidates": [],
+        "level": "ADM3",
+        "polygon_name": "Oudtshoorn",
+        "reason": "no admitted administrative record falls in this polygon"
+      },
+      {
+        "candidates": [],
+        "level": "ADM3",
+        "polygon_name": "Prince Albert",
+        "reason": "no admitted administrative record falls in this polygon"
+      },
+      {
+        "candidates": [],
+        "level": "ADM3",
+        "polygon_name": "Ray Nkonyeni",
+        "reason": "no admitted administrative record falls in this polygon"
+      },
+      {
+        "candidates": [
+          "Nkonkobe",
+          "Nxuba"
+        ],
+        "level": "ADM3",
+        "polygon_name": "Raymond Mhlaba",
+        "reason": "multiple admitted records fall in this polygon"
+      },
+      {
+        "candidates": [],
+        "level": "ADM3",
+        "polygon_name": "Ubuntu",
+        "reason": "no admitted administrative record falls in this polygon"
+      },
+      {
+        "candidates": [],
+        "level": "ADM3",
+        "polygon_name": "Umsobomvu",
+        "reason": "no admitted administrative record falls in this polygon"
+      },
+      {
+        "candidates": [],
+        "level": "ADM3",
+        "polygon_name": "uMuziwabantu",
+        "reason": "no admitted administrative record falls in this polygon"
+      },
+      {
+        "candidates": [
+          "Gariep",
+          "Maletswai"
+        ],
+        "level": "ADM3",
+        "polygon_name": "Walter Sisulu",
+        "reason": "multiple admitted records fall in this polygon"
+      }
+    ],
+    "code_geometry_disagreements": 74,
+    "disagreements": [
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Gongolula",
+        "source_record_id": "1000946"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Glengarry",
+        "source_record_id": "1001664"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Glen Eden",
+        "source_record_id": "1001699"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Expectations",
+        "source_record_id": "1004732"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Enyanisweni",
+        "source_record_id": "1005285"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Engwaqa",
+        "source_record_id": "1005423"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "eLukolweni",
+        "source_record_id": "1005710"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Edgeton",
+        "source_record_id": "1006822"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Eastlands",
+        "source_record_id": "1006985"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Dumisa",
+        "source_record_id": "1007438"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Dulini",
+        "source_record_id": "1007477"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Dovedale",
+        "source_record_id": "1008594"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Deepdale",
+        "source_record_id": "1011384"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Dabe",
+        "source_record_id": "1012211"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Commonsvale",
+        "source_record_id": "1012966"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Clydesdale",
+        "source_record_id": "1013199"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Cabane",
+        "source_record_id": "1014391"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Cabane",
+        "source_record_id": "1014392"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Bossenfontein",
+        "source_record_id": "1016834"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Bontrand",
+        "source_record_id": "1017567"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Bisi",
+        "source_record_id": "1019323"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Adam",
+        "source_record_id": "1023704"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Hemingways Hotel",
+        "source_record_id": "6491209"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Cape St Francis Resort",
+        "source_record_id": "6521036"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Regent Hotel Suites And Confer",
+        "source_record_id": "6527736"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Upper Bisi",
+        "source_record_id": "945932"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Umzimkulu",
+        "source_record_id": "946016"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Tutu",
+        "source_record_id": "947487"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Tigerhoek",
+        "source_record_id": "948805"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Sneezewood",
+        "source_record_id": "954377"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Singisi",
+        "source_record_id": "955505"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Sihleza",
+        "source_record_id": "955700"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Saint Leonards",
+        "source_record_id": "958279"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Saint Gregorys",
+        "source_record_id": "958320"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "River View",
+        "source_record_id": "961098"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Rietvlei",
+        "source_record_id": "961327"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Rawuka",
+        "source_record_id": "963060"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Ongelegen",
+        "source_record_id": "967988"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Ongelegen",
+        "source_record_id": "967989"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Nzombane",
+        "source_record_id": "968600"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Nzimankulu",
+        "source_record_id": "968611"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Nyaka",
+        "source_record_id": "968773"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Nsikeni",
+        "source_record_id": "969414"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Nqabeni",
+        "source_record_id": "969533"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Nieujaarsfontein",
+        "source_record_id": "970640"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Ngukwe",
+        "source_record_id": "970955"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Ngcizele",
+        "source_record_id": "971182"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Ndawana",
+        "source_record_id": "971812"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Myembe",
+        "source_record_id": "972394"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Mtintanyoni",
+        "source_record_id": "972873"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Mtamvuna",
+        "source_record_id": "972944"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Mountain Home",
+        "source_record_id": "973596"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Mieliefontein",
+        "source_record_id": "975957"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Mhlonga",
+        "source_record_id": "976479"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Malowe",
+        "source_record_id": "979723"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Malenge",
+        "source_record_id": "979826"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Lwandile",
+        "source_record_id": "981174"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Lourdes",
+        "source_record_id": "981815"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Leach Bay",
+        "source_record_id": "984134"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "KwaMagcakini",
+        "source_record_id": "985715"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "KwaHoha",
+        "source_record_id": "985783"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "KwaDulini",
+        "source_record_id": "985936"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "KwaDulathi",
+        "source_record_id": "985938"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Kromhoek",
+        "source_record_id": "987017"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Korenthi",
+        "source_record_id": "987763"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Klipspruit",
+        "source_record_id": "988959"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Kleinemonde",
+        "source_record_id": "990498"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Indawana",
+        "source_record_id": "994830"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Hopevale",
+        "source_record_id": "995504"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Hilltop",
+        "source_record_id": "996438"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Highlands",
+        "source_record_id": "996569"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Hefersdraai",
+        "source_record_id": "997160"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Gume",
+        "source_record_id": "998585"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Gugwini",
+        "source_record_id": "998620"
+      }
+    ],
+    "identities_resolved_to_weaker_evidence": {
+      "ADM2": 0,
+      "ADM3": 0,
+      "basis": "Identities whose administrative context came from a polygon retained only on bounding-box evidence, because no geospatial wheel is installed and the representative point is a bounding-box centre. Non-zero means real context depends on the weaker selection test."
+    },
+    "queue": [],
+    "records_queued_for_multiple_context_matches": 0
+  },
+  "counts": {
+    "admitted_identities": 5328,
+    "alternate_name_records": 10111,
+    "alternate_names_not_linked_to_an_identity": 8430,
+    "candidate_dispositions": 12661,
+    "dispositions_by_reason": {
+      "historical feature; a former referent is a name assertion, n": 2181,
+      "locality or reserve feature outside the admitted settlement ": 185,
+      "populated-place class that did not meet the governed admissi": 115,
+      "religious or structural feature, not a settlement or adminis": 6,
+      "spot feature outside the admitted settlement classes (farm, ": 7355,
+      "terrain or hydrographic feature, not a settlement or adminis": 2743,
+      "vegetation feature, not a settlement or administrative unit": 76
+    },
+    "identities_by_type": {
+      "city": 4,
+      "district_municipality": 8,
+      "local_municipality": 39,
+      "locality": 267,
+      "province": 1,
+      "suburb": 461,
+      "town": 62,
+      "village": 4486
+    },
+    "name_assertions": 7009,
+    "source_links": 5328,
+    "source_universe_records": 17989
+  },
+  "generated_from_acquisition": {
+    "acquisition_limitations": [
+      "Source-native observations only; no canonical identity, factual type or parent has been adjudicated.",
+      "ADM2/ADM3 layers are national; Eastern Cape spatial selection and current-boundary review are pending.",
+      "GeoNames filtering preserves source admin1 assertions; border/conflicting/00 records require review.",
+      "No OSM data acquired; ODbL founder production gate remains unchanged.",
+      "This is not a complete province catalogue or the v0.2 source-authority manifest expected by admission."
+    ],
+    "bundle_kind": "acquired_evidence_not_admitted_authority",
+    "bundle_manifest_sha256": "358c0642cc76f48335c4e428c9871baf06bee05a5343557205939394b93d5678"
+  },
+  "governed_policy": {
+    "administrative_context_basis": "representative point tested against acquired polygons",
+    "city_min_population": 100000,
+    "exact_type_by_source_code": {
+      "A.ADM1": "province",
+      "A.ADM2": "district_municipality",
+      "A.ADM3": "local_municipality",
+      "L.LCTY": "locality",
+      "P.PPLA": "city",
+      "P.PPLA2": "town",
+      "P.PPLA3": "town",
+      "P.PPLX": "suburb",
+      "S.HTL": "locality",
+      "S.RSD": "suburb",
+      "S.TOWR": "town"
+    },
+    "licence_classification": "permissive_supported",
+    "licence_obligations": "GeoNames is CC BY 4.0: attribution required, no share-alike. geoBoundaries gbOpen is distributed CC BY 4.0 with upstream CC BY 3.0 IGO notices and OCHA ROSEA / Municipal Demarcation Board attribution. The permissive_supported label records the absence of ODbL obligations; it does not mean obligation-free.",
+    "populated_place_codes": [
+      "P.PPL"
+    ],
+    "source_admin_code_treated_as": "assertion recorded and compared, never as containment proof",
+    "town_min_population": 10000
+  },
+  "invariants_asserted": [
+    "every source record is either an admitted identity or an explicit candidate disposition",
+    "every name assertion and source link references an admitted identity",
+    "identity is derived from territory and source-native id only, never from a name or coordinate",
+    "administrative context is resolved from geometry, and source admin codes are compared, not trusted",
+    "no record is promoted because of its name",
+    "licence obligations are recorded per identity, not summarised away by the licensing label"
+  ],
+  "province": "Eastern Cape",
+  "source_authority_version": "za-ec-source-authority-v0.2",
+  "territory_id": "za-ec"
+}

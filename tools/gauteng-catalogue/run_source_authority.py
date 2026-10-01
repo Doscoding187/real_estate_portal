@@ -20,12 +20,25 @@ from gauteng_catalogue.territory_source_authority import build_source_authority
 
 
 DEFAULT_BUNDLES = {
-    "za-wc": "data/za-wc-source-acquisition-v0.1/snapshot-20261001",
     "za-kzn": "data/za-kzn-source-acquisition-v0.1/snapshot-20261001",
+    "za-wc": "data/za-wc-source-acquisition-v0.1/snapshot-20261001",
+    "za-ec": "data/za-ec-source-acquisition-v0.1/snapshot-20261001",
+    "za-fs": "data/za-fs-source-acquisition-v0.1/snapshot-20261001",
+    "za-li": "data/za-li-source-acquisition-v0.1/snapshot-20261001",
+    "za-mp": "data/za-mp-source-acquisition-v0.1/snapshot-20261001",
+    "za-nc": "data/za-nc-source-acquisition-v0.1/snapshot-20261001",
+    "za-nw": "data/za-nw-source-acquisition-v0.1/snapshot-20261001",
 }
+
 DEFAULT_OUTPUTS = {
-    "za-wc": "data/za-wc-source-authority-v0.2",
     "za-kzn": "data/za-kzn-source-authority-v0.2",
+    "za-wc": "data/za-wc-source-authority-v0.2",
+    "za-ec": "data/za-ec-source-authority-v0.2",
+    "za-fs": "data/za-fs-source-authority-v0.2",
+    "za-li": "data/za-li-source-authority-v0.2",
+    "za-mp": "data/za-mp-source-authority-v0.2",
+    "za-nc": "data/za-nc-source-authority-v0.2",
+    "za-nw": "data/za-nw-source-authority-v0.2",
 }
 
 

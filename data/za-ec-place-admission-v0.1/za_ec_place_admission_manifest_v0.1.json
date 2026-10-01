@@ -1,0 +1,1127 @@
+{
+  "admission_version": "za-ec-place-admission-v0.1",
+  "territory": {
+    "territory_id": "za-ec",
+    "display_name": "Eastern Cape",
+    "admission_registry_path": "data/place-admission-territories.v0.1/territory-registry.v0.1.json",
+    "admission_registry_sha256": "81f2f808eb9dddc24c77e26b71d2924751bc6f73e602e6d154015cf6040f57e2"
+  },
+  "generated_from": {
+    "source_authority_version": "za-ec-source-authority-v0.2",
+    "source_snapshot_id": "358c0642cc76f48335c4e428c9871baf06bee05a5343557205939394b93d5678",
+    "source_manifest_path": "data/za-ec-source-authority-v0.2/za_ec_source_manifest_v0.2.json",
+    "source_manifest_sha256": "2ee57a0f948b7b955e1b7239cafb665a373968620404cd9800df7a0e9d300af7",
+    "compact_artifacts": [
+      {
+        "path": "data/za-ec-source-authority-v0.2/za_ec_candidate_dispositions_v0.2.jsonl",
+        "sha256": "474d8856adfe415a0aeea563cb01236412872b67ce747b185ca0ebc2d362b3f8",
+        "size_bytes": 17138035
+      },
+      {
+        "path": "data/za-ec-source-authority-v0.2/za_ec_factual_canonical_geography_v0.2.jsonl",
+        "sha256": "bd3caeea048e9a7fc1240cc234304bb558a312c728907fadbc4786ccd33bd505",
+        "size_bytes": 17263394
+      },
+      {
+        "path": "data/za-ec-source-authority-v0.2/za_ec_factual_canonical_names_v0.2.jsonl",
+        "sha256": "144b1d1bbe951c017ea52085e2fc277a75550f735af3d046f6101bffeada017e",
+        "size_bytes": 8807084
+      },
+      {
+        "path": "data/za-ec-source-authority-v0.2/za_ec_factual_canonical_source_links_v0.2.jsonl",
+        "sha256": "b8db089df46a4adb11a89ace6f285e004dddd0c03d9c4ae91f60f5c20f3ee51a",
+        "size_bytes": 5625278
+      }
+    ],
+    "comparison_baseline": {
+      "note": "The v0.1 committed artifacts are retained as comparison and regression evidence only. Their factual source JSONLs are unrecoverable and were not used as forward authority.",
+      "catalogue": "data/za-ec-coverage-v0.1/za-ec-territory-catalog.v0.1.json",
+      "catalogue_sha256": "add9d05e0d4591e8d1d31fd97d9573901e61b447d8662eb591dfea55edaaf312",
+      "factual_identity_count": 0,
+      "runtime_row_count": 0,
+      "queued_count": 0,
+      "awaiting_accepted_parent_edge": 0,
+      "duplicate_natural_key_within_parent": 0,
+      "natural_key_owned_by_accepted_row": 0,
+      "co_published_natural_keys": 0,
+      "parent_evidence_inputs": 0
+    }
+  },
+  "governed_policy": {
+    "container_types": [
+      "district_municipality",
+      "local_municipality",
+      "province"
+    ],
+    "settlement_merge_max_km": 15,
+    "merge_requires_same_administrative_context": true,
+    "type_disagreement_never_blocks_merge": true,
+    "preferred_public_name_selection": "official role, then source preferred_common; within a class the most independently sourced assertion wins, ties broken by text",
+    "one_containment_parent_per_place": true,
+    "search_scope_authorization_in_slice_2": 0,
+    "place_id_allocation": "assigned from a committed registry; never derived from name, slug, coordinates, parent, classification, natural key or source identity"
+  },
+  "counts": {
+    "source_identities": 5328,
+    "source_name_assertions": 7009,
+    "source_links": 5328,
+    "source_candidates": 12661,
+    "admitted_places": 5084,
+    "merged_equivalence_groups": 225,
+    "absorbed_source_identities": 244,
+    "single_identity_places": 4859,
+    "group_kinds": {
+      "administrative_container": 48,
+      "single_identity": 4811,
+      "merged_same_referent": 225
+    },
+    "verification": {
+      "provisional": 4355,
+      "verified": 729
+    },
+    "licensing": {
+      "permissive_supported": 5084
+    },
+    "scope_establishment": {
+      "established": 5037,
+      "not_established": 47,
+      "by_scope": {
+        "locality": {
+          "established": 4971,
+          "not_established": 0
+        },
+        "metro_city": {
+          "established": 65,
+          "not_established": 0
+        },
+        "province": {
+          "established": 1,
+          "not_established": 0
+        }
+      }
+    },
+    "executable_places": 5037,
+    "executable_by_scope": {
+      "locality": 4971,
+      "metro_city": 65,
+      "province": 1
+    },
+    "admitted_without_executable_scope": 47,
+    "names": 6892,
+    "name_roles": {
+      "preferred_public": 5084,
+      "common": 1804,
+      "historical": 3,
+      "official": 1
+    },
+    "searchable_names": 6535,
+    "preferred_public_names": 5084,
+    "relationships": 5083,
+    "relationship_types": {
+      "administratively_contains": 5083
+    },
+    "containment_parent_count": 5083,
+    "evidence_rows": 14951,
+    "external_mappings": 5328,
+    "disposition_ledger_rows": 12661,
+    "dispositions": {
+      "quarantined_candidate": 12661
+    },
+    "parent_evidence_inputs": 0,
+    "parent_evidence_classification": {
+      "total_edges": 0,
+      "by_class": {},
+      "by_disposition": {}
+    }
+  },
+  "merge_bases": {
+    "settlement_bound_km": 15,
+    "settlement_rule_enforced": "each admitted member lies within the governed distance of the group anchor (single-linkage clustering)",
+    "administrative_container_rule": "unique administrative container name merges are distance-unbounded by design, because a territory has exactly one province and one municipality per name",
+    "container_merge_groups": 0,
+    "settlement_groups_exceeding_diameter": 1,
+    "note": "Settlement groups whose diameter exceeds the bound satisfy the rule but are listed for review, because the rule compares each member to the anchor rather than to every other member. Moving to complete linkage would split these Places and is a reviewed decision, not a silent fix.",
+    "settlement_groups_over_diameter": [
+      {
+        "place_id": "pl-place-01-55051c38e3c3f551bc658e57",
+        "members": 3,
+        "max_pairwise_km": 16.82,
+        "governed_bound_km": 15,
+        "basis": "same_normalized_name_same_administrative_context_within_governed_distance"
+      }
+    ]
+  },
+  "collation_suppressed_names": {
+    "basis": "utf8mb4_0900_ai_ci on place_name.name, which is accent- and case-insensitive",
+    "count": 117,
+    "forms": [
+      {
+        "place_id": "pl-place-01-006b63096f2f672099464804",
+        "name_role": "common",
+        "kept_spelling": "Sidwadweni",
+        "suppressed": "Sidwadweni",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-0dabca45376ccbc6e88414d6",
+        "name_role": "common",
+        "kept_spelling": "OR Tambo",
+        "suppressed": "OR Tambo",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-0dabca45376ccbc6e88414d6",
+        "name_role": "common",
+        "kept_spelling": "O.R. Tambo",
+        "suppressed": "O.R. Tambo",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-0dabca45376ccbc6e88414d6",
+        "name_role": "common",
+        "kept_spelling": "O.R. Tambo",
+        "suppressed": "O.R. Tambo",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-123a900a9f56e46df49db4db",
+        "name_role": "common",
+        "kept_spelling": "Umtakatyi",
+        "suppressed": "Umtakatyi",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-1e22279ddd1680b0d68a4271",
+        "name_role": "common",
+        "kept_spelling": "Uitenhage",
+        "suppressed": "Uitenhage",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-1e22279ddd1680b0d68a4271",
+        "name_role": "common",
+        "kept_spelling": "Uitenhage",
+        "suppressed": "Uitenhage",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-1e22279ddd1680b0d68a4271",
+        "name_role": "common",
+        "kept_spelling": "Uitenhage",
+        "suppressed": "Uitenhage",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-1e22279ddd1680b0d68a4271",
+        "name_role": "common",
+        "kept_spelling": "Uitenhage",
+        "suppressed": "Uitenhage",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-1e22279ddd1680b0d68a4271",
+        "name_role": "common",
+        "kept_spelling": "Uitenhage",
+        "suppressed": "Uitenhage",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-1e22279ddd1680b0d68a4271",
+        "name_role": "common",
+        "kept_spelling": "Uitenhage",
+        "suppressed": "Uitenhage",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-1e22279ddd1680b0d68a4271",
+        "name_role": "common",
+        "kept_spelling": "Uitenhage",
+        "suppressed": "Uitenhage",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-1e22279ddd1680b0d68a4271",
+        "name_role": "common",
+        "kept_spelling": "Uitenhage",
+        "suppressed": "Uitenhage",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-1e22279ddd1680b0d68a4271",
+        "name_role": "common",
+        "kept_spelling": "Uitenhage",
+        "suppressed": "Uitenhage",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-1e22279ddd1680b0d68a4271",
+        "name_role": "common",
+        "kept_spelling": "Uitenhage",
+        "suppressed": "Uitenhage",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-1e22279ddd1680b0d68a4271",
+        "name_role": "common",
+        "kept_spelling": "Uitenhage",
+        "suppressed": "Uitenhage",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-1e22279ddd1680b0d68a4271",
+        "name_role": "common",
+        "kept_spelling": "Uitenhage",
+        "suppressed": "Uitenhage",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-1e22279ddd1680b0d68a4271",
+        "name_role": "common",
+        "kept_spelling": "Uitenhage",
+        "suppressed": "Uitenhage",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-1e22279ddd1680b0d68a4271",
+        "name_role": "common",
+        "kept_spelling": "Uitenhage",
+        "suppressed": "Uitenhage",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-1e22279ddd1680b0d68a4271",
+        "name_role": "common",
+        "kept_spelling": "Uitenhage",
+        "suppressed": "Uitenhage",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-1e22279ddd1680b0d68a4271",
+        "name_role": "common",
+        "kept_spelling": "Uitenhage",
+        "suppressed": "Uitenhage",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-1e22279ddd1680b0d68a4271",
+        "name_role": "common",
+        "kept_spelling": "Uitenhage",
+        "suppressed": "Uitenhage",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-1e22279ddd1680b0d68a4271",
+        "name_role": "common",
+        "kept_spelling": "Uitenhage",
+        "suppressed": "Uitenhage",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-1e22279ddd1680b0d68a4271",
+        "name_role": "common",
+        "kept_spelling": "Uitenhage",
+        "suppressed": "Uitenhage",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-1e22279ddd1680b0d68a4271",
+        "name_role": "common",
+        "kept_spelling": "Uitenhage",
+        "suppressed": "Uitenhage",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-1e22279ddd1680b0d68a4271",
+        "name_role": "common",
+        "kept_spelling": "Uitenhage",
+        "suppressed": "Uitenhage",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-1e22279ddd1680b0d68a4271",
+        "name_role": "common",
+        "kept_spelling": "Uitenhage",
+        "suppressed": "Uitenhage",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-1e22279ddd1680b0d68a4271",
+        "name_role": "common",
+        "kept_spelling": "Uitenhage",
+        "suppressed": "Uitenhage",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-1e22279ddd1680b0d68a4271",
+        "name_role": "common",
+        "kept_spelling": "Uitenhage",
+        "suppressed": "Uitenhage",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-352b49f4f15c351f5ccdd728",
+        "name_role": "common",
+        "kept_spelling": "Oesterbaai",
+        "suppressed": "Oesterbaai",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-35622c42c5cc0f3b5bebbceb",
+        "name_role": "common",
+        "kept_spelling": "Amathole",
+        "suppressed": "Amathole",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-35622c42c5cc0f3b5bebbceb",
+        "name_role": "common",
+        "kept_spelling": "Amatole",
+        "suppressed": "Amatole",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-35622c42c5cc0f3b5bebbceb",
+        "name_role": "common",
+        "kept_spelling": "Amatole",
+        "suppressed": "Amatole",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-3663f8e4abc6ccf8e48bb226",
+        "name_role": "common",
+        "kept_spelling": "Mgwalana",
+        "suppressed": "Mgwalana",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-39306606f57bd91d96a8aaf3",
+        "name_role": "common",
+        "kept_spelling": "Komkulu",
+        "suppressed": "Komkulu",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-4390273235721bdd6e9c8a17",
+        "name_role": "common",
+        "kept_spelling": "Emgcwe",
+        "suppressed": "Emgcwe",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-4ea0d04496a40c542495ec50",
+        "name_role": "common",
+        "kept_spelling": "Lalini",
+        "suppressed": "Lalini",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-4f8002363b084a4c6ddb5ca8",
+        "name_role": "common",
+        "kept_spelling": "KwaNgutyana",
+        "suppressed": "KwaNgutyana",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-54f45b9d66cf2d60b492c9cc",
+        "name_role": "common",
+        "kept_spelling": "Walaza",
+        "suppressed": "Walaza",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-55051c38e3c3f551bc658e57",
+        "name_role": "common",
+        "kept_spelling": "Mpindweni",
+        "suppressed": "Mpindweni",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-569b2acb32bf9a62dee290aa",
+        "name_role": "common",
+        "kept_spelling": "Krakeel",
+        "suppressed": "Krakeel",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-56eccb54ded9b1d3e7082820",
+        "name_role": "common",
+        "kept_spelling": "Cebe",
+        "suppressed": "Cebe",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-5901520dde969512a29da3fd",
+        "name_role": "common",
+        "kept_spelling": "Alfred Nzo",
+        "suppressed": "Alfred Nzo",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-5901520dde969512a29da3fd",
+        "name_role": "common",
+        "kept_spelling": "Альфред-Нзо",
+        "suppressed": "Альфред-Нзо",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-5901520dde969512a29da3fd",
+        "name_role": "common",
+        "kept_spelling": "Alfred Nzo",
+        "suppressed": "Alfred Nzo",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-5901520dde969512a29da3fd",
+        "name_role": "common",
+        "kept_spelling": "Alfred Nzo",
+        "suppressed": "Alfred Nzo",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-6642bbbfa74e66b321b21e7e",
+        "name_role": "common",
+        "kept_spelling": "Afsondering",
+        "suppressed": "Afsondering",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-70bfd043efc656061af014bd",
+        "name_role": "common",
+        "kept_spelling": "Kobonqaba",
+        "suppressed": "Kobonqaba",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-7948d44050fca1093221499e",
+        "name_role": "common",
+        "kept_spelling": "Ncora",
+        "suppressed": "Ncora",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-8d7b11c84df8b5818af4f25b",
+        "name_role": "common",
+        "kept_spelling": "Chevy Chase",
+        "suppressed": "Chevy Chase",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-95a40859c42594218dc90b02",
+        "name_role": "common",
+        "kept_spelling": "Bisho",
+        "suppressed": "Bisho",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-95a40859c42594218dc90b02",
+        "name_role": "common",
+        "kept_spelling": "Bisho",
+        "suppressed": "Bisho",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-95a40859c42594218dc90b02",
+        "name_role": "common",
+        "kept_spelling": "Bisho",
+        "suppressed": "Bisho",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-95a40859c42594218dc90b02",
+        "name_role": "common",
+        "kept_spelling": "Bisho",
+        "suppressed": "Bisho",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-95a40859c42594218dc90b02",
+        "name_role": "common",
+        "kept_spelling": "Bisho",
+        "suppressed": "Bisho",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-95a40859c42594218dc90b02",
+        "name_role": "common",
+        "kept_spelling": "Bisho",
+        "suppressed": "Bisho",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-95a40859c42594218dc90b02",
+        "name_role": "common",
+        "kept_spelling": "Bisho",
+        "suppressed": "Bisho",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-95a40859c42594218dc90b02",
+        "name_role": "common",
+        "kept_spelling": "Bisho",
+        "suppressed": "Bisho",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-95a40859c42594218dc90b02",
+        "name_role": "common",
+        "kept_spelling": "Бишо",
+        "suppressed": "Бишо",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-95a40859c42594218dc90b02",
+        "name_role": "common",
+        "kept_spelling": "بيشو",
+        "suppressed": "بيشو",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-95a40859c42594218dc90b02",
+        "name_role": "common",
+        "kept_spelling": "Бишо",
+        "suppressed": "Бишо",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-95a40859c42594218dc90b02",
+        "name_role": "common",
+        "kept_spelling": "Бишо",
+        "suppressed": "Бишо",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-95a40859c42594218dc90b02",
+        "name_role": "common",
+        "kept_spelling": "Бишо",
+        "suppressed": "Бишо",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-95a40859c42594218dc90b02",
+        "name_role": "common",
+        "kept_spelling": "Bisho",
+        "suppressed": "Bisho",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-95a40859c42594218dc90b02",
+        "name_role": "common",
+        "kept_spelling": "Бишо",
+        "suppressed": "Бишо",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-95a40859c42594218dc90b02",
+        "name_role": "common",
+        "kept_spelling": "Бишо",
+        "suppressed": "Бишо",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-9892b872a77f27e90c5cf091",
+        "name_role": "common",
+        "kept_spelling": "東開普省",
+        "suppressed": "東開普省",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-9892b872a77f27e90c5cf091",
+        "name_role": "common",
+        "kept_spelling": "东开普省",
+        "suppressed": "东开普省",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-9892b872a77f27e90c5cf091",
+        "name_role": "common",
+        "kept_spelling": "Источни Кејп",
+        "suppressed": "Источни Кејп",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-9892b872a77f27e90c5cf091",
+        "name_role": "common",
+        "kept_spelling": "东开普省",
+        "suppressed": "东开普省",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-9892b872a77f27e90c5cf091",
+        "name_role": "common",
+        "kept_spelling": "東開普省",
+        "suppressed": "東開普省",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-9892b872a77f27e90c5cf091",
+        "name_role": "common",
+        "kept_spelling": "Cape Timur",
+        "suppressed": "Cape Timur",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-9892b872a77f27e90c5cf091",
+        "name_role": "common",
+        "kept_spelling": "Cabo Oriental",
+        "suppressed": "Cabo Oriental",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-9f06b0a61b44728a4f40603d",
+        "name_role": "common",
+        "kept_spelling": "Умтата",
+        "suppressed": "Умтата",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-9f06b0a61b44728a4f40603d",
+        "name_role": "historical",
+        "kept_spelling": "Umtata",
+        "suppressed": "Umtata",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-a423982ba7460102a5833296",
+        "name_role": "common",
+        "kept_spelling": "Saint Mark’s",
+        "suppressed": "Saint Mark’s",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-ab7327f5801f949854361f88",
+        "name_role": "common",
+        "kept_spelling": "Chris Hani",
+        "suppressed": "Chris Hani",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-ab7327f5801f949854361f88",
+        "name_role": "common",
+        "kept_spelling": "Chris Hani",
+        "suppressed": "Chris Hani",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-ab80899147108efcf54ca890",
+        "name_role": "common",
+        "kept_spelling": "Gqunqe",
+        "suppressed": "Gqunqe",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-ac826ee0a4e6b23f974d0b7a",
+        "name_role": "common",
+        "kept_spelling": "پورٹ الزبتھ",
+        "suppressed": "پورٹ الزبتھ",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-ac826ee0a4e6b23f974d0b7a",
+        "name_role": "common",
+        "kept_spelling": "Port Elizabeth",
+        "suppressed": "Port Elizabeth",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-ac826ee0a4e6b23f974d0b7a",
+        "name_role": "common",
+        "kept_spelling": "Port Elizabeth",
+        "suppressed": "Port Elizabeth",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-ac826ee0a4e6b23f974d0b7a",
+        "name_role": "common",
+        "kept_spelling": "Port Elizabeth",
+        "suppressed": "Port Elizabeth",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-ac826ee0a4e6b23f974d0b7a",
+        "name_role": "common",
+        "kept_spelling": "Port Elizabeth",
+        "suppressed": "Port Elizabeth",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-ac826ee0a4e6b23f974d0b7a",
+        "name_role": "common",
+        "kept_spelling": "Porto Elizabeth",
+        "suppressed": "Porto Elizabeth",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-ac826ee0a4e6b23f974d0b7a",
+        "name_role": "common",
+        "kept_spelling": "Port Elizabeth",
+        "suppressed": "Port Elizabeth",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-ac826ee0a4e6b23f974d0b7a",
+        "name_role": "common",
+        "kept_spelling": "Port Elizabeth",
+        "suppressed": "Port Elizabeth",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-ac826ee0a4e6b23f974d0b7a",
+        "name_role": "common",
+        "kept_spelling": "Port Elizabeth",
+        "suppressed": "Port Elizabeth",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-ac826ee0a4e6b23f974d0b7a",
+        "name_role": "common",
+        "kept_spelling": "Порт Елизабет",
+        "suppressed": "Порт Елизабет",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-ac826ee0a4e6b23f974d0b7a",
+        "name_role": "common",
+        "kept_spelling": "Порт Елизабет",
+        "suppressed": "Порт Елизабет",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-ac826ee0a4e6b23f974d0b7a",
+        "name_role": "common",
+        "kept_spelling": "Ibhayi",
+        "suppressed": "IBhayi",
+        "collision": "target_collation",
+        "reason": "indistinguishable from the kept spelling under utf8mb4_0900_ai_ci, so the target cannot store both"
+      },
+      {
+        "place_id": "pl-place-01-b7036c0fb46d915ba5ed4a78",
+        "name_role": "common",
+        "kept_spelling": "Graaff-Reinet",
+        "suppressed": "Graaff-Reinet",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-b7036c0fb46d915ba5ed4a78",
+        "name_role": "common",
+        "kept_spelling": "Graaff-Reinet",
+        "suppressed": "Graaff-Reinet",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-b863ebf1193b062b328daebf",
+        "name_role": "common",
+        "kept_spelling": "Какаду",
+        "suppressed": "Какаду",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-b863ebf1193b062b328daebf",
+        "name_role": "common",
+        "kept_spelling": "Sarah Baartman",
+        "suppressed": "Sarah Baartman",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-b863ebf1193b062b328daebf",
+        "name_role": "common",
+        "kept_spelling": "Какаду",
+        "suppressed": "Какаду",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-b863ebf1193b062b328daebf",
+        "name_role": "common",
+        "kept_spelling": "Cacadu",
+        "suppressed": "Cacadu",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-b8a3380fe8851d9085a8ff94",
+        "name_role": "common",
+        "kept_spelling": "Joe Gqabi",
+        "suppressed": "Joe Gqabi",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-c60570a38e03b85909337a55",
+        "name_role": "common",
+        "kept_spelling": "KwaDlomo",
+        "suppressed": "KwaDlomo",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-ca25a4d28967d1062d0d5576",
+        "name_role": "common",
+        "kept_spelling": "Mtingwevu",
+        "suppressed": "Mtingwevu",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-d0306c3fb85b4111f3a1a7c9",
+        "name_role": "common",
+        "kept_spelling": "Makhanda",
+        "suppressed": "Makhanda",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-d0306c3fb85b4111f3a1a7c9",
+        "name_role": "common",
+        "kept_spelling": "Makhanda",
+        "suppressed": "Makhanda",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-d0306c3fb85b4111f3a1a7c9",
+        "name_role": "common",
+        "kept_spelling": "Makhanda",
+        "suppressed": "Makhanda",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-d1ef1b79118ecd0f8f1ffce3",
+        "name_role": "common",
+        "kept_spelling": "Munyu",
+        "suppressed": "Munyu",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-d561d199ad1bf90b8a97444b",
+        "name_role": "common",
+        "kept_spelling": "Ntibani",
+        "suppressed": "Ntibani",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-d561d199ad1bf90b8a97444b",
+        "name_role": "common",
+        "kept_spelling": "Ntibane",
+        "suppressed": "Ntibane",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-da9960b68468d9c88a0918eb",
+        "name_role": "common",
+        "kept_spelling": "KuGompo City",
+        "suppressed": "KuGompo City",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-da9960b68468d9c88a0918eb",
+        "name_role": "common",
+        "kept_spelling": "KuGompo City",
+        "suppressed": "KuGompo City",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-da9960b68468d9c88a0918eb",
+        "name_role": "common",
+        "kept_spelling": "KuGompo City",
+        "suppressed": "KuGompo City",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-da9960b68468d9c88a0918eb",
+        "name_role": "common",
+        "kept_spelling": "KuGompo City",
+        "suppressed": "KuGompo City",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-da9960b68468d9c88a0918eb",
+        "name_role": "common",
+        "kept_spelling": "KuGompo City",
+        "suppressed": "KuGompo City",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-df07bedb637814d010df157d",
+        "name_role": "common",
+        "kept_spelling": "Mpozola",
+        "suppressed": "Mpozola",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-df6cd60e652cbb28f36e66ec",
+        "name_role": "common",
+        "kept_spelling": "KwaZulu",
+        "suppressed": "KwaZulu",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-e9f7f5276689a281c278aab2",
+        "name_role": "common",
+        "kept_spelling": "Buffalo City",
+        "suppressed": "Buffalo City",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-e9f7f5276689a281c278aab2",
+        "name_role": "common",
+        "kept_spelling": "Buffalo City",
+        "suppressed": "Buffalo City",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-e9f7f5276689a281c278aab2",
+        "name_role": "common",
+        "kept_spelling": "Buffalo City",
+        "suppressed": "Buffalo City",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-e9f7f5276689a281c278aab2",
+        "name_role": "common",
+        "kept_spelling": "Buffalo City",
+        "suppressed": "Buffalo City",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      }
+    ]
+  },
+  "place_id_registry": {
+    "path": "data/za-ec-place-admission-v0.1/za_ec_place_id_registry_v0.1.json",
+    "allocated_ids": 5084,
+    "allocation_sequence": 5084
+  },
+  "invariants_asserted": [
+    "every source identity maps to exactly one admitted Place",
+    "place count equals distinct assigned ids",
+    "one preferred public name per Place",
+    "every settlement member lies within the governed distance of its group anchor, and any settlement group whose diameter exceeds the bound is listed for review",
+    "administrative container merges are governed by unique name, not by distance",
+    "every name, relationship and evidence row references an admitted Place",
+    "every relationship has evidence and is not self-referential",
+    "containment is a forest: one parent, no cycles",
+    "no relationship-driven search widening in Slice 2",
+    "scope, eligibility and classification combinations satisfy the database invariants",
+    "every scoped Place has an evidenced province context, the only mandatory ancestry requirement",
+    "no artificial settlement parent is introduced to complete a search hierarchy",
+    "no municipality is re-typed or promoted into the metro_city search tier",
+    "a Place without a governed executable scope stays admitted but is neither searchable nor publishable",
+    "the disposition ledger covers every source candidate"
+  ],
+  "outputs": {
+    "places": "data/za-ec-place-admission-v0.1/za_ec_place_admission_v0.1.jsonl",
+    "names": "data/za-ec-place-admission-v0.1/za_ec_place_names_v0.1.jsonl",
+    "relationships": "data/za-ec-place-admission-v0.1/za_ec_place_relationships_v0.1.jsonl",
+    "evidence": "data/za-ec-place-admission-v0.1/za_ec_place_evidence_v0.1.jsonl",
+    "external_mappings": "data/za-ec-place-admission-v0.1/za_ec_place_external_mappings_v0.1.jsonl",
+    "disposition_ledger": "data/za-ec-place-admission-v0.1/za_ec_place_disposition_ledger_v0.1.jsonl",
+    "parent_evidence_classification": "data/za-ec-place-admission-v0.1/za_ec_parent_evidence_classification_v0.1.json"
+  }
+}

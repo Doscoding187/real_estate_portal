@@ -1306,6 +1306,52 @@ const groupKindTally = groupRecords.reduce((acc, item) => {
   return acc;
 }, {});
 
+/**
+ * Settlement groups whose *diameter* exceeds the governed bound.
+ *
+ * Two different merge bases exist and only one is distance-bounded:
+ *
+ * - **settlement** groups merge on same name, same admitted context, and a member
+ *   within `SETTLEMENT_MERGE_MAX_KM` of the group's **anchor**. That is
+ *   single-linkage, so two records 14 km apart can share a Place with a third
+ *   16 km from the first: every member is inside the bound of the anchor while
+ *   the group's diameter is not. Such groups are listed for review.
+ * - **administrative container** groups merge on unique container name alone, with
+ *   no distance test at all, because a territory has exactly one province and one
+ *   municipality per name. Their members can legitimately be far apart, so they
+ *   are counted and reported separately rather than flagged as a bound breach.
+ *
+ * The rule is not changed here, because changing it would split an admitted Place
+ * and that is a reviewed decision. What changes is that the recorded claim can no
+ * longer be read as a group-diameter bound it never was.
+ */
+const wideSettlementMergeGroups = [];
+let containerMergeGroups = 0;
+for (const { record, group } of groupRecords) {
+  if (group.members.length < 2) continue;
+  if (record.adjudication.basis === 'unique_administrative_container_name') {
+    containerMergeGroups += 1;
+    continue;
+  }
+  let diameter = 0;
+  for (let i = 0; i < group.members.length; i += 1) {
+    for (let j = i + 1; j < group.members.length; j += 1) {
+      const distance = haversineKm(group.members[i], group.members[j]);
+      if (distance != null && distance > diameter) diameter = distance;
+    }
+  }
+  if (diameter > SETTLEMENT_MERGE_MAX_KM) {
+    wideSettlementMergeGroups.push({
+      place_id: record.place_id,
+      members: group.members.length,
+      max_pairwise_km: Math.round(diameter * 100) / 100,
+      governed_bound_km: SETTLEMENT_MERGE_MAX_KM,
+      basis: record.adjudication.basis,
+    });
+  }
+}
+wideSettlementMergeGroups.sort((a, b) => b.max_pairwise_km - a.max_pairwise_km);
+
 const manifest = {
   admission_version: ADMISSION_VERSION,
   territory: {
@@ -1381,6 +1427,26 @@ const manifest = {
     parent_evidence_inputs: parentEvidenceInputs.length,
     parent_evidence_classification: parentEvidenceTally,
   },
+  merge_bases: {
+    settlement_bound_km: SETTLEMENT_MERGE_MAX_KM,
+    settlement_rule_enforced: (
+      'each admitted member lies within the governed distance of the group anchor ' +
+      '(single-linkage clustering)'
+    ),
+    administrative_container_rule: (
+      'unique administrative container name merges are distance-unbounded by design, ' +
+      'because a territory has exactly one province and one municipality per name'
+    ),
+    container_merge_groups: containerMergeGroups,
+    settlement_groups_exceeding_diameter: wideSettlementMergeGroups.length,
+    note: (
+      'Settlement groups whose diameter exceeds the bound satisfy the rule but are ' +
+      'listed for review, because the rule compares each member to the anchor rather ' +
+      'than to every other member. Moving to complete linkage would split these Places ' +
+      'and is a reviewed decision, not a silent fix.'
+    ),
+    settlement_groups_over_diameter: wideSettlementMergeGroups,
+  },
   collation_suppressed_names: {
     basis: 'utf8mb4_0900_ai_ci on place_name.name, which is accent- and case-insensitive',
     count: collationSuppressedNames.length,
@@ -1395,6 +1461,8 @@ const manifest = {
     'every source identity maps to exactly one admitted Place',
     'place count equals distinct assigned ids',
     'one preferred public name per Place',
+    'every settlement member lies within the governed distance of its group anchor, and any settlement group whose diameter exceeds the bound is listed for review',
+    'administrative container merges are governed by unique name, not by distance',
     'every name, relationship and evidence row references an admitted Place',
     'every relationship has evidence and is not self-referential',
     'containment is a forest: one parent, no cycles',

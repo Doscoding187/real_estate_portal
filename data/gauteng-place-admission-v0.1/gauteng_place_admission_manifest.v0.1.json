@@ -4,7 +4,7 @@
     "territory_id": "za-gp",
     "display_name": "Gauteng",
     "admission_registry_path": "data/place-admission-territories.v0.1/territory-registry.v0.1.json",
-    "admission_registry_sha256": "8bbdf08e474d9e1de3977c5cb3b78be307f8c992e2b35080b2fdb1c07007bb21"
+    "admission_registry_sha256": "81f2f808eb9dddc24c77e26b71d2924751bc6f73e602e6d154015cf6040f57e2"
   },
   "generated_from": {
     "source_authority_version": "gauteng-source-authority-v0.2",
@@ -146,6 +146,15 @@
       }
     }
   },
+  "merge_bases": {
+    "settlement_bound_km": 15,
+    "settlement_rule_enforced": "each admitted member lies within the governed distance of the group anchor (single-linkage clustering)",
+    "administrative_container_rule": "unique administrative container name merges are distance-unbounded by design, because a territory has exactly one province and one municipality per name",
+    "container_merge_groups": 1,
+    "settlement_groups_exceeding_diameter": 0,
+    "note": "Settlement groups whose diameter exceeds the bound satisfy the rule but are listed for review, because the rule compares each member to the anchor rather than to every other member. Moving to complete linkage would split these Places and is a reviewed decision, not a silent fix.",
+    "settlement_groups_over_diameter": []
+  },
   "collation_suppressed_names": {
     "basis": "utf8mb4_0900_ai_ci on place_name.name, which is accent- and case-insensitive",
     "count": 1,
@@ -169,6 +178,8 @@
     "every source identity maps to exactly one admitted Place",
     "place count equals distinct assigned ids",
     "one preferred public name per Place",
+    "every settlement member lies within the governed distance of its group anchor, and any settlement group whose diameter exceeds the bound is listed for review",
+    "administrative container merges are governed by unique name, not by distance",
     "every name, relationship and evidence row references an admitted Place",
     "every relationship has evidence and is not self-referential",
     "containment is a forest: one parent, no cycles",

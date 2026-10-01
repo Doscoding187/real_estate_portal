@@ -173,6 +173,63 @@
         "disposition_ledger_rows": 9176,
         "executable_places": 2028
       }
+    },
+    {
+      "territory_id": "za-ec",
+      "display_name": "Eastern Cape",
+      "admission_version": "za-ec-place-admission-v0.1",
+      "source_authority": {
+        "authority_version": "za-ec-source-authority-v0.2",
+        "directory": "data/za-ec-source-authority-v0.2",
+        "manifest": {
+          "path": "data/za-ec-source-authority-v0.2/za_ec_source_manifest_v0.2.json",
+          "sha256": "2ee57a0f948b7b955e1b7239cafb665a373968620404cd9800df7a0e9d300af7"
+        },
+        "artifacts": {
+          "geography": "za_ec_factual_canonical_geography_v0.2.jsonl",
+          "names": "za_ec_factual_canonical_names_v0.2.jsonl",
+          "source_links": "za_ec_factual_canonical_source_links_v0.2.jsonl",
+          "candidate_dispositions": "za_ec_candidate_dispositions_v0.2.jsonl"
+        }
+      },
+      "coverage_baseline": {
+        "directory": "data/za-ec-coverage-v0.1",
+        "territory_manifest": "za-ec-territory-manifest.v0.1.json",
+        "territory_catalog": "za-ec-territory-catalog.v0.1.json",
+        "counts": {
+          "factual_identity_count": 0,
+          "runtime_row_count": 0,
+          "queued_count": 0,
+          "awaiting_accepted_parent_edge": 0,
+          "duplicate_natural_key_within_parent": 0,
+          "natural_key_owned_by_accepted_row": 0,
+          "co_published_natural_keys": 0
+        }
+      },
+      "admission_package": {
+        "directory": "data/za-ec-place-admission-v0.1",
+        "manifest": "za_ec_place_admission_manifest_v0.1.json",
+        "place_id_registry": "za_ec_place_id_registry_v0.1.json",
+        "artifacts": {
+          "places": "za_ec_place_admission_v0.1.jsonl",
+          "names": "za_ec_place_names_v0.1.jsonl",
+          "relationships": "za_ec_place_relationships_v0.1.jsonl",
+          "evidence": "za_ec_place_evidence_v0.1.jsonl",
+          "external_mappings": "za_ec_place_external_mappings_v0.1.jsonl",
+          "disposition_ledger": "za_ec_place_disposition_ledger_v0.1.jsonl",
+          "parent_evidence_classification": "za_ec_parent_evidence_classification_v0.1.json"
+        }
+      },
+      "expected_counts": {
+        "source_identities": 5328,
+        "admitted_places": 5084,
+        "names": 6892,
+        "relationships": 5083,
+        "evidence_rows": 14951,
+        "external_mappings": 5328,
+        "disposition_ledger_rows": 12661,
+        "executable_places": 5037
+      }
     }
   ]
 }

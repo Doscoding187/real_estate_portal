@@ -51,7 +51,7 @@ databases. Place Authority remains the only geographic identity source.
 | 2 | Executable Place foundation | **closed** |
 | 3 | Territory-neutral onboarding proof | **closed** (`ad753b3d` + Phase 3 refactor) |
 | 4 | Western Cape (Province 2) | **admitted and physically proven; not activated** |
-| 5 | Remaining provinces | **KwaZulu-Natal admitted**; six remain |
+| 5 | Remaining provinces | **Eastern Cape admitted**; five remain |
 | 6 | National authority verification | not started |
 | 7 | National consumer handoff | not started |
 
@@ -60,8 +60,8 @@ databases. Place Authority remains the only geographic identity source.
 Phases 1–4 and the first Phase 5 province are complete. Gauteng, Western Cape and
 KwaZulu-Natal are admitted, reproducible and physically proven on disposable
 targets, and **no consumer reads any of them**. Nothing has been published,
-activated, widened or switched. Six provinces remain: Eastern Cape, Free State,
-Limpopo, Mpumalanga, Northern Cape and North West.
+activated, widened or switched. **Five** provinces remain: Free State, Limpopo,
+Mpumalanga, Northern Cape and North West.
 
 ## Phase 3 delivery record — territory neutrality
 
@@ -447,6 +447,75 @@ territories in one transaction or remain a per-territory command driven by a
 coordinating step. Until that is decided, per-province physical proof is the only
 claim available, and it is what the three provinces have.
 
+## Phase 5 delivery record — Eastern Cape
+
+### Evidence and admission
+
+| | |
+| --- | --- |
+| Bundle manifest | `358c0642cc76f48335c4e428c9871baf06bee05a5343557205939394b93d5678` |
+| Source authority manifest | `2ee57a0f948b7b955e1b7239cafb665a373968620404cd9800df7a0e9d300af7` |
+| Admission manifest | `8671e784d9275a35f7041b6b9e4df98c6df2deebfc117d1823559ca2ce4e314e` |
+| Admission registry | `81f2f808eb9dddc24c77e26b71d2924751bc6f73e602e6d154015cf6040f57e2` |
+
+Province identity `ZA.05` / geonameid `1085593`, validated against the frozen
+admin register; its own frozen snapshot, verified offline at 16 files and 28,374
+source-native records, boundaries **2020**, licence CC BY 3.0 IGO upstream.
+
+`17,989` source records → **5,328 admitted** and **12,661 dispositioned**;
+`5,328 + 12,661 = 17,989`, total accounting. **5,084 Places**, 6,892 names,
+5,083 containment edges, 14,951 evidence rows, 5,328 external mappings, **zero
+OSM-only**. 5,037 searchable, 47 context-only municipalities. Heavily rural:
+4,271 `village`, 444 `suburb`, 256 `locality`, 61 `town`, 4 `city`, 39 local and
+8 district municipalities. 117 name suppressions recorded.
+
+### A real governance defect found: the recorded merge invariant overstated the rule
+
+Reviewing Eastern Cape's 225 merges surfaced that the manifest claimed a bound the
+engine never enforced. Two distinct merge bases exist and only one is
+distance-bounded:
+
+- **Settlement** merges compare each member to the group's **anchor**, which is
+  single-linkage. Two records 14 km apart can therefore share a Place with a third
+  16 km from the first: every member is inside the bound of the anchor while the
+  group's diameter is not.
+- **Administrative container** merges are on unique container name alone, with
+  **no distance test at all**, because a territory has exactly one province and one
+  municipality per name. Their members can legitimately be far apart.
+
+The recorded invariant could be read as a group-diameter bound, which it never was.
+The rule is **unchanged**, because moving to complete linkage would split admitted
+Places and that is a reviewed decision. What changed is that the claim is now
+accurate and the exceptions are visible: `merge_bases` in each manifest records
+the rule actually enforced, the count of distance-unbounded container merges, and
+every settlement group whose diameter exceeds the bound.
+
+Current exposure: **Gauteng 0, KwaZulu-Natal 0, Western Cape 1** (3 members,
+23.5 km), **Eastern Cape 1** (3 members, 16.82 km). Both are three-member
+single-linkage chains and are listed for review. The previously proven Gauteng
+package is unaffected.
+
+All 225 Eastern Cape merges include at least one member with coarse rounded
+coordinates, the same duplicate-record signature found in KwaZulu-Natal.
+
+### Physical proof
+
+Fresh target from zero, migrated to `0099`, loaded with explicit `--territory=za-ec`,
+verified, replayed, probed, re-verified, **disposed**.
+
+- Target fingerprint `0c822b50ba97506e19b3dcbe822b90a05e8bd3ae13346366b8796de7de4a856d`,
+  `disposable-worktree`, `exact-worktree-owned`, `local-owner`, `127.0.0.1:3307`
+- Content digest `b77ef58e9b648e01797a8502be5edffd16a04525cc2d41549b519229f936c1d4`
+- Replay byte-identical no-op; Place-ID set digest
+  `ab87cb944e323d4090ad61fac171f15245515302c2b30f6bdc829c2e79a8b399`
+- Build replays `minted=0 reused=5084`; first build minted 5,084
+- Eastern Cape territory probe **29/29**; reference role re-verified with no
+  pollution
+- Regression: Gauteng, Western Cape and KwaZulu-Natal re-admit with `minted=0`,
+  so 1,466, 1,862 and 2,090 Place IDs are preserved
+- Cross-province verification green over **4 provinces, 10,502 distinct
+  identities**, with the homonym report still non-zero
+
 ## Authoritative digests
 
 Admission territory registry
@@ -785,15 +854,15 @@ build followed by the same proven pipeline.
 
 ## Exact next action
 
-**Six provinces remain** — Eastern Cape, Free State, Limpopo, Mpumalanga,
-Northern Cape and North West — and the per-province sequence is now proven twice.
+**Five provinces remain** — Free State, Limpopo, Mpumalanga, Northern Cape and
+North West — and the per-province sequence is now proven three times.
 build the source authority, admit through the shared pipeline, and prove it on a
 fresh disposable target.
 
-Remaining: **Eastern Cape, Free State, Limpopo, Mpumalanga, Northern Cape and
-North West** — six, since KwaZulu-Natal is admitted. The suggested order is
-Eastern Cape → Free State → Mpumalanga → Limpopo → North West → Northern Cape,
-and evidence readiness may justify changing it.
+Remaining: **Free State, Limpopo, Mpumalanga, Northern Cape and North West** —
+five, since Eastern Cape is admitted. The order continues
+Free State → Mpumalanga → Limpopo → North West → Northern Cape, and evidence
+readiness may justify changing it.
 
 Each province repeats, unchanged:
 
