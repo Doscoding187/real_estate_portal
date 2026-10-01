@@ -320,14 +320,19 @@ export async function prepareCanonicalPlaces(input: {
   decision: any;
   connection: any;
   root?: string;
+  /** Explicit territory selection. Defaults to the registry's default territory. */
+  territoryId?: string;
 }) {
   const { authority, decision, connection } = input;
   requireReferenceAdapterTarget(authority);
   await requireAcceptedMigrationHead({ authority, connection });
   const root = input.root ?? process.cwd();
+  const ref: CanonicalPlacesPackageRef = input.territoryId
+    ? { territoryId: input.territoryId }
+    : {};
 
-  const { manifest, rows, verifiedDigest } = loadCanonicalPlacePackage(root);
-  const expected = canonicalPlacesExpected(root);
+  const { manifest, rows, verifiedDigest } = loadCanonicalPlacePackage(root, ref);
+  const expected = canonicalPlacesExpected(root, ref);
   const disposable = isDisposableTarget(authority);
 
   // Guard 1: OSM-only materialization is disposable-only (contract D3).
@@ -517,11 +522,45 @@ export async function prepareCanonicalPlaces(input: {
     }
   });
 
+  /**
+   * A row the database refused to store must never be reported as a successful
+   * load. Every insert above uses `ON DUPLICATE KEY UPDATE`, so a row whose
+   * `(place_id, role, name)` key the target's collation already holds is dropped
+   * silently, and `place_name.name` is `utf8mb4_0900_ai_ci` — accent- *and*
+   * case-insensitive — so ordinary accented evidence reaches this.
+   *
+   * The check compares the target's resulting state against the package, not the
+   * number of rows written by this run. A replay legitimately writes nothing, so
+   * counting writes would report a correct idempotent no-op as a defect.
+   */
+  const storedAfter = await readStored(connection);
+  const dropped: string[] = [];
+  const compare = (label: string, actual: number, expectedCount: number) => {
+    if (actual !== expectedCount) dropped.push(`${label} ${actual} != package ${expectedCount}`);
+  };
+  compare('places', storedAfter.place.length, expected.places);
+  compare('names', storedAfter.placeName.length, expected.names);
+  compare('relationships', storedAfter.placeRelationship.length, expected.relationships);
+  compare('evidence', storedAfter.placeEvidence.length, expected.evidence);
+  compare(
+    'external mappings',
+    storedAfter.placeExternalMapping.length,
+    expected.externalMappings,
+  );
+  if (dropped.length > 0) {
+    throw new Error(
+      `canonical-places refused: the target does not hold exactly the admission package, so a ` +
+        `row was rejected as a duplicate key under the target collation. This is a data or ` +
+        `collation defect, not a successful load:\n  ${dropped.join('\n  ')}`,
+    );
+  }
+
   return {
     adapter: 'canonical-places',
     version: CANONICAL_PLACES_VERSION,
     admissionVersion: manifest.admission_version,
     sourceSnapshotId: manifest.generated_from.source_snapshot_id,
+    territoryId: expected.territoryId,
     digest: verifiedDigest,
     targetClassDisposable: disposable,
     expected,
@@ -535,11 +574,16 @@ export async function verifyCanonicalPlaces(input: {
   decision: any;
   connection: any;
   root?: string;
+  /** Explicit territory selection. Defaults to the registry's default territory. */
+  territoryId?: string;
 }) {
   const { authority, decision, connection } = input;
   requireReferenceAdapterTarget(authority);
   const root = input.root ?? process.cwd();
-  const expected = canonicalPlacesExpected(root);
+  const expected = canonicalPlacesExpected(
+    root,
+    input.territoryId ? { territoryId: input.territoryId } : {},
+  );
   const disposable = isDisposableTarget(authority);
 
   if (expected.osmOnlyPlaces > 0 && !disposable) {
@@ -576,7 +620,10 @@ export async function verifyCanonicalPlaces(input: {
   // Identity stability: every stored Place must belong to the package, with the
   // same identity-bearing values. A Place the package does not know is a failure,
   // not a tolerated extra.
-  const { rows } = loadCanonicalPlacePackage(root);
+  const { rows } = loadCanonicalPlacePackage(
+    root,
+    input.territoryId ? { territoryId: input.territoryId } : {},
+  );
   const packageIdentities = new Map(
     (rows.places as any[]).map(place => [
       String(place.place_id),

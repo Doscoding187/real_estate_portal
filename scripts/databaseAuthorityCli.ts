@@ -451,11 +451,16 @@ async function run(command: Command): Promise<void> {
     const authority = authorityFor(operation, isPrepare ? 'local-owner' : undefined);
     const decision = authorizationFor(authority);
     const connection = await createAuthoritySqlConnection(authority, decision);
+    // Explicit territory selection. Without it a second province's load is
+    // indistinguishable from the default territory's, and a Gauteng pass would be
+    // reported as Western Cape proof.
+    const territoryId = option('territory');
+    const territory = territoryId ? { territoryId } : {};
     try {
       print(
         isPrepare
-          ? await prepareCanonicalPlaces({ authority, decision, connection })
-          : await verifyCanonicalPlaces({ authority, decision, connection }),
+          ? await prepareCanonicalPlaces({ authority, decision, connection, ...territory })
+          : await verifyCanonicalPlaces({ authority, decision, connection, ...territory }),
       );
     } finally {
       await connection.end();

@@ -109,7 +109,7 @@
       "expected_counts": {
         "source_identities": 1905,
         "admitted_places": 1862,
-        "names": 3252,
+        "names": 3246,
         "relationships": 1861,
         "evidence_rows": 11062,
         "external_mappings": 1905,

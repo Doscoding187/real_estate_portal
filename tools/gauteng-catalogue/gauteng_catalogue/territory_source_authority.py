@@ -957,7 +957,7 @@ def build_source_authority(
     compact_artifacts = [
         {
             "kind": kind,
-            "path": str(path.relative_to(REPO_ROOT)),
+            "path": _repo_path(path),
             "sha256": sha256_file(path),
             "size_bytes": path.stat().st_size,
         }
@@ -1091,7 +1091,7 @@ def build_source_authority(
         "acquisition_limitations": bundle.limitations,
         "compact_artifacts": compact_artifacts,
         "build_summary": {
-            "path": str(summary_path.relative_to(REPO_ROOT)),
+            "path": _repo_path(summary_path),
             "sha256": sha256_file(summary_path),
         },
     }
@@ -1130,6 +1130,19 @@ def _fallback_contains(geometry: dict[str, Any], longitude: float | None, latitu
     if longitude is None or latitude is None:
         return False
     return _fallback_point_in_geometry(float(longitude), float(latitude), geometry)
+
+
+def _repo_path(path: Path) -> str:
+    """Repo-relative when the artifact is inside the repository, else absolute.
+
+    A rebuild written to a scratch directory outside the repository still has to
+    produce a manifest, so the relativisation is a convenience rather than a
+    precondition.
+    """
+    try:
+        return str(path.relative_to(REPO_ROOT))
+    except ValueError:
+        return str(path)
 
 
 def _write_jsonl(path: Path, rows: Iterable[dict[str, Any]]) -> None:

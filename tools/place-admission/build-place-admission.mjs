@@ -500,6 +500,32 @@ placeRows.sort((a, b) => byIdLex(a.place_id, b.place_id));
 
 const nameRows = [];
 const nameKeySeen = new Set();
+/** The exact spelling behind each emitted key, so a suppression can say which it was. */
+const nameSpellingByKey = new Map();
+
+/**
+ * The key the target database actually enforces.
+ *
+ * `place_name` carries `UNIQUE(place_id, name_role, name)` and its text columns
+ * are `utf8mb4_0900_ai_ci` — accent-insensitive, case-insensitive, whitespace
+ * insensitive. Two source assertions that differ only in case or accents are
+ * distinct strings here but the same key there, so the materializer's
+ * `ON DUPLICATE KEY UPDATE` drops the loser and the load silently stores fewer
+ * names than the package holds. Deduplicating on the target's own comparison
+ * keeps the package loadable, and the surviving spelling is chosen
+ * deterministically rather than by whichever assertion happened to be seen first.
+ */
+const collationKey = value =>
+  String(value ?? '')
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .trim()
+    .replace(/\s+/g, ' ')
+    .toLowerCase();
+const nameKey = (placeId, role, name) => `${placeId}|${role}|${collationKey(name)}`;
+
+/** Name forms dropped because the target collation cannot hold both. */
+const collationSuppressedNames = [];
 /**
  * Normalized names that a source assertion already gives to some Place. A
  * generated surface form may never claim one of these, so normalization can
@@ -551,9 +577,29 @@ for (const placeRow of placeRows) {
     // 'superseded'/'withdrawn', which the database forbids being searchable.
     const nameState = 'active';
     const isSearchable = searchable(assertion) ? 1 : 0;
-    const key = `${placeRow.place_id}|${role}|${assertion.name}`;
-    if (nameKeySeen.has(key)) continue;
+    const key = nameKey(placeRow.place_id, role, assertion.name);
+    if (nameKeySeen.has(key)) {
+      // Kept: the first spelling in the deterministic ranked order. Which kind of
+      // collision this is matters to a reviewer, so it is recorded rather than
+      // hidden: an exact repeat is a duplicate source assertion, while a
+      // collation-only collision means the target genuinely cannot store both
+      // spellings and one form of the name is being lost.
+      const kept = nameSpellingByKey.get(key);
+      collationSuppressedNames.push({
+        place_id: placeRow.place_id,
+        name_role: role,
+        kept_spelling: kept ?? null,
+        suppressed: assertion.name,
+        collision: kept === assertion.name ? 'exact_duplicate_assertion' : 'target_collation',
+        reason:
+          kept === assertion.name
+            ? 'the source asserted this exact spelling more than once'
+            : 'indistinguishable from the kept spelling under utf8mb4_0900_ai_ci, so the target cannot store both',
+      });
+      continue;
+    }
     nameKeySeen.add(key);
+    nameSpellingByKey.set(key, assertion.name);
     if (assertion === preferred) preferredNamesTaken.add(normalizedName(assertion.name));
     nameRows.push({
       admission_version: ADMISSION_VERSION,
@@ -580,7 +626,7 @@ for (const placeRow of placeRows) {
   for (const form of preferredName ? extensionSurfaceForms(preferredName) : []) {
     if (form === preferredName) continue;
     if (IDENTIFIER_LIKE.test(form)) continue;
-    const key = `${placeRow.place_id}|alternate_spelling|${form}`;
+    const key = nameKey(placeRow.place_id, 'alternate_spelling', form);
     if (nameKeySeen.has(key)) continue;
     if (preferredNamesTaken.has(normalizedName(form))) continue;
     nameKeySeen.add(key);
@@ -1334,6 +1380,11 @@ const manifest = {
     dispositions: dispositionTally,
     parent_evidence_inputs: parentEvidenceInputs.length,
     parent_evidence_classification: parentEvidenceTally,
+  },
+  collation_suppressed_names: {
+    basis: 'utf8mb4_0900_ai_ci on place_name.name, which is accent- and case-insensitive',
+    count: collationSuppressedNames.length,
+    forms: collationSuppressedNames,
   },
   place_id_registry: {
     path: PLACE_ID_REGISTRY_PATH,

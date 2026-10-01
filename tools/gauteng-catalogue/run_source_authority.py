@@ -50,9 +50,13 @@ def main() -> int:
     )
     summary = result["summary"]
     counts = summary["counts"]
+    try:
+        manifest_display = str(result["manifest_path"].relative_to(REPO_ROOT))
+    except ValueError:
+        manifest_display = str(result["manifest_path"])
     print(f"source-authority:built territory={territory.territory_id}")
     print(f"  authority_version   {result['authority_version']}")
-    print(f"  manifest            {result['manifest_path'].relative_to(REPO_ROOT)}")
+    print(f"  manifest            {manifest_display}")
     print(f"  source_universe     {counts['source_universe_records']}")
     print(f"  admitted_identities {counts['admitted_identities']}")
     print(f"  name_assertions     {counts['name_assertions']}")

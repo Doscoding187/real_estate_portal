@@ -4,7 +4,7 @@
     "territory_id": "za-gp",
     "display_name": "Gauteng",
     "admission_registry_path": "data/place-admission-territories.v0.1/territory-registry.v0.1.json",
-    "admission_registry_sha256": "309a7431beba6205e376419f40daab50d4bcec4be27669e06b7e4dec665afa97"
+    "admission_registry_sha256": "79e3580c38803fd8e77ed3cb33e9210d50eba75b75e1ab9abaabcd62eddaa4c6"
   },
   "generated_from": {
     "source_authority_version": "gauteng-source-authority-v0.2",
@@ -145,6 +145,20 @@
         "not_admitted_in_slice_2": 478
       }
     }
+  },
+  "collation_suppressed_names": {
+    "basis": "utf8mb4_0900_ai_ci on place_name.name, which is accent- and case-insensitive",
+    "count": 1,
+    "forms": [
+      {
+        "place_id": "pl-place-01-4f15722c47d173e149e10718",
+        "name_role": "common",
+        "kept_spelling": "https://en.wikipedia.org/wiki/Springs,_Gauteng",
+        "suppressed": "https://en.wikipedia.org/wiki/Springs,_Gauteng",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      }
+    ]
   },
   "place_id_registry": {
     "path": "data/gauteng-place-admission-v0.1/gauteng_place_id_registry.v0.1.json",
