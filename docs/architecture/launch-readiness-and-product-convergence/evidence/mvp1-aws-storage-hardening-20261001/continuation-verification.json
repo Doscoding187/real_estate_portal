@@ -71,7 +71,10 @@
     "privateCredentialDeliveredOnlyOverSshStdin": true,
     "guardedTaskDiagnosticCleanup": true,
     "databaseMutationPerformed": false,
-    "applicationConfigurationChanged": false
+    "applicationConfigurationChanged": false,
+    "networkPrerequisiteReadback": "media-network-prerequisites.json",
+    "currentLocalAndExistingTestingTcpReachable": false,
+    "observedTestingEgressMatchesCurrentFirewall": false
   },
   "containment": {
     "productionAndTestingApiGitTriggers": "absent in authenticated CLI queries",
@@ -82,7 +85,7 @@
     "limitation": "Bounded observations, not a complete writer census or fresh Vercel hold proof"
   },
   "pending": [
-    "AWS cost-alert operator application/readback and mailbox receipt",
+    "AWS alert email delivery and aggregate provider monitoring",
     "current Azure media inventory and authenticated frontend build configuration",
     "final media policy/public-access blocks/scoped IAM/CORS application",
     "worker provisioning and exact production bindings/session-secret application",
@@ -91,11 +94,17 @@
     "physical USB disconnection custody"
   ],
   "validation": {
-    "pythonSecurityContractTests": 9,
+    "pythonSecurityContractTests": 14,
     "nodeTransferRuntimeSecurityContractTests": 6,
     "lint": "pass; new CJS files",
     "format": "pass; new CJS files",
-    "whitespace": "pass"
+    "whitespace": "pass",
+    "previousHeadGitHubCi": {
+      "head": "03562b134170f5e129d82e2f75dd07e742867c2c",
+      "runId": 36919847197,
+      "requiredJobsPassed": 5,
+      "certifiesCurrentFollowupHead": false
+    }
   },
   "mutationsThisContinuation": {
     "privateS3TaskObjectWritten": true,
@@ -112,5 +121,12 @@
     "azure-media-inventory-existing-network-result.json": "f75f2a6d7360d2dda6ab7c3302689ccd9670c61b2c1d814a64179a7aedcc1f40",
     "azure-media-inventory-diagnostic-cleanup.json": "5cfcadf7b4ec1c94a619949f44566a88beb40a6598cb67e112d836b788ef02a5",
     "continuation-containment-readback.json": "9eca2c9a2714269b17c07e0d4e0b6ca7393a05ffb07946044ad638e64d56eaf3"
+  },
+  "costAlerts": {
+    "configurationReadback": "PASS",
+    "verificationSource": "Edward operator report; see cost-alert-configuration-verification.json",
+    "recipientReadbacksPassed": 3,
+    "alertDeliveryVerified": false,
+    "budgetRecreatedByAgent": false
   }
 }

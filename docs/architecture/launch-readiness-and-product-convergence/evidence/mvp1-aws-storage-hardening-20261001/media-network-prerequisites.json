@@ -1,0 +1,47 @@
+{
+  "recordedAt": "2026-10-01T21:05:07.254725+00:00",
+  "targetFingerprintHash": "b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced",
+  "purpose": "Resolve current Azure media-inventory network prerequisite without SQL or credentials",
+  "localTcp": {
+    "observedAt": "2026-10-01T21:00:19.296Z",
+    "purpose": "TCP connectivity only; no SQL/credentials transmitted",
+    "tcpReachable": false,
+    "mutationPerformed": false,
+    "code": "TIMEOUT"
+  },
+  "existingTestingTcp": {
+    "observedAt": "2026-10-01T21:03:41.645Z",
+    "purpose": "Existing Testing service TCP diagnostic only; no SQL/credentials transmitted",
+    "tcpReachable": false,
+    "mutationPerformed": false,
+    "code": "TIMEOUT",
+    "observedEgressMatchesExistingFirewall": false,
+    "noCredentialDelivered": true
+  },
+  "azureFirewall": {
+    "readbackComplete": true,
+    "ruleCount": 4,
+    "fullIpv4RangeAllowed": false,
+    "changed": false
+  },
+  "limitations": [
+    "TCP failure and nonmatching observed egress do not establish the sole cause of all prior connection failures",
+    "No SQL executed or current media rows inventoried",
+    "No authenticated Vercel production build configuration obtained",
+    "No final media IAM/policy/CORS application or hosted acceptance performed"
+  ],
+  "containment": {
+    "oldProductionApiStatus": "REMOVED",
+    "latestProductionApiDeployment": "5045030c-f115-429e-af15-2b2c410a6cb1",
+    "observedLatestDeploymentCount": 5,
+    "allObservedDeploymentsRemoved": true,
+    "productionBindingChanged": false,
+    "TiDbWriterRestarted": false,
+    "paymentIntakeOpened": false
+  },
+  "privateEvidenceSha256": {
+    "azure-local-connectivity-refresh.json": "fbf3d1503bb780eb1bdc06740c3db96233c09be8a706ddd6ca7f7eee42ec5988",
+    "azure-testing-connectivity-refresh.json": "410496bd10a3ca57868402f1195f5b8727e54d70ca6cb3ed6749e54ba1d6f074",
+    "azure-production-firewall-refresh.private.json": "297905736086288011c51f48f63529ac4878e4fa85b109e7d7c0ed96cc8ca854"
+  }
+}

@@ -138,7 +138,7 @@ containment limits and the remaining gates without credential values.
 | Private proof bucket/user provisioning                             | Complete; encryption, ownership, blocks, versioning and scoped policy readbacks.                                                                   |
 | Private proof recovery and encrypted key export                    | Complete through operator verification; independent ciphertext checksum and local decryption passed.                                               |
 | Dedicated proof runtime permissions                                | Complete for live bounded positive/negative operations described above; credentials remain local.                                                  |
-| Cost alerts and notification receipt                               | Pending operator alert application/readback and mailbox receipt.                                                                                   |
+| Cost-alert configuration                                           | Complete per Edward’s operator report: budget creation and all three recipient readbacks passed. Email delivery remains unverified. |
 | Current media URL dependencies                                     | Pending exact Azure inventory and frontend build-setting readback.                                                                                 |
 | Final media policy, public-access blocks, scoped identity and CORS | Pending dependency completion and operator application/readback.                                                                                   |
 | Production binding/deployment and hosted journeys                  | Pending checklist 28 containment, exact artifacts, attended operator and hosted upload/display plus proof-owner isolation.                         |
@@ -226,7 +226,7 @@ containment limits and the remaining gates without credential values.
    upload/display and proof owner authorization, wrong-owner rejection and
    anonymous rejection. SDK and local tests do not satisfy hosted journeys.
    Keep intake closed and retired TiDB writers stopped throughout.
-10. **Pending alert configuration/receipt.** Record configuration readbacks, cost assumptions, alert configuration and
+10. **Alert configuration complete; receipt/aggregate monitoring pending.** Budget creation and all three recipient readbacks passed per Edward’s operator report. Do not recreate the budget. Record cost assumptions and
     monitoring. Alerts notify; they do not prevent spending. AWS alerts alone
     do not monitor Railway/Azure aggregate usage. Platform recovery remains
     separate from the already completed encrypted source archive.
@@ -247,9 +247,9 @@ Do not delete a provisioned proof bucket or its retained evidence as rollback.
 
 Anonymous-write containment, fresh authenticated CloudFront origin access,
 private-proof provisioning, version recovery, encrypted key transfer and
-bounded dedicated proof runtime permissions have passed. Hardened anonymous
+bounded dedicated proof runtime permissions have passed. S3 cost-warning configuration and all three recipient readbacks also passed per Edward’s operator report. Hardened anonymous
 denial across the complete media bucket, scoped media runtime IAM, production
-CORS, current URL dependency readbacks, cost alerts/receipt, production
+CORS, current URL dependency readbacks, alert email delivery/aggregate monitoring, production
 bindings and hosted browser/owner checks remain unverified. The previous USB physical-removal custody item
 remains outstanding without repeating completed archive capture/readback.
 Storage acceptance alone cannot close the release register or open payments.
@@ -266,13 +266,13 @@ services. This is a stated usage example, not a billing promise or limit.
 More retained versions and traffic increase cost. Workers and recovery are
 part of the same US$15 aggregate approval and must be included in monitoring.
 Edward selected `finances@propertylistifysa.co.za` as the notification
-recipient. Mailbox creation/receipt and alert configuration remain pending.
+recipient. Budget creation and all three recipient readbacks passed per Edward’s operator report. Email delivery remains unverified.
 No new AWS account is required. Alerts do not
 enforce a cap; CloudFront allowance monitoring and other-provider spending
 must be reconciled with the aggregate operating ledger.
 
-`aws-storage-cost-monitor.py --apply-alerts` is prepared for operator execution.
-It creates only a new monthly S3 cost-warning budget with a US$1 notification
+`aws-storage-cost-monitor.py --apply-alerts` has already created the monthly
+S3 cost-warning budget; do not run it again. The budget has a US$1 notification
 threshold, actual notifications at 80%/100% and forecast at 100%. This includes
 existing S3 usage across the account and excludes credits/refunds/discounts
 from its conservative cost measurement. The threshold is an early warning,
@@ -285,7 +285,27 @@ in us-east-1. Missing points are reported as missing evidence, not verified
 zero usage. Metric lag and the billing/plan dashboard remain explicit limits.
 Minimum operator permissions are CloudWatch GetMetricStatistics and the
 budget creation/read/notification/subscriber operations for this new warning;
-do not add these rights to runtime identities. Configuration is still pending.
+do not add these rights to runtime identities. Configuration verification is complete.
+
+The [operator configuration record](evidence/mvp1-aws-storage-hardening-20261001/cost-alert-configuration-verification.json)
+distinguishes Edward’s successful operator readback report from downloaded raw
+CloudShell evidence and from email delivery. `--verify-alerts` reads the existing
+budget and all three subscriber lists without creating or modifying a budget.
+It accepts omitted `ThresholdType` for these percentage notifications, preserves
+the omission in subscriber lookups, and rejects explicit absolute/null types or
+changed thresholds/recipients. Five regression tests cover this behavior and
+the read-only command boundary. This local fix does not repeat budget creation.
+
+The subsequent [network prerequisite readback](evidence/mvp1-aws-storage-hardening-20261001/media-network-prerequisites.json)
+records TCP timeouts from this machine and the existing Testing container.
+Testing’s observed egress address does not match the four current production
+Azure firewall rules. These probes sent no database credentials or SQL.
+This supports a network prerequisite failure, without claiming it is the sole
+cause of every earlier connection error. Azure media inventory remains pending
+an approved read-only access path. No firewall, Testing configuration or service
+restart was performed. Authenticated Vercel production settings, final operator
+media application/readbacks and joined deployment remain prerequisites for
+hosted upload/display and proof-owner isolation tests.
 
 ## Validation and review status
 
@@ -294,7 +314,8 @@ from merged accepted release `cbc18c8fdfb0a900c7255ca695da56bd9a7660c3`.
 The existing accepted release code-check evidence applies to those unchanged
 sources; it is not evidence for new hosted storage behavior.
 
-Fresh local validation passed nine operator security-contract tests:
+Fresh local validation passed fourteen Python operator/readback security-contract tests
+and six Node transfer/runtime security-contract tests:
 
 ```sh
 PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s scripts/storage/tests -v

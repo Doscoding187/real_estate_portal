@@ -19,7 +19,10 @@ encrypted key export/retrieval/decryption and bounded dedicated proof runtime
 permission tests are complete. The US$15/month aggregate incremental usage
 approval is recorded; it is neither a forecast nor an enforced cap.
 
-Remaining: cost alerts/receipt, current Azure/frontend media dependencies,
+S3 budget configuration and all three recipient readbacks are complete per
+Edward’s operator report; email delivery remains unverified.
+
+Remaining: alert receipt/aggregate monitoring, current Azure/frontend media dependencies,
 final media identity/policy/CORS application, worker provisioning, production
 secret/runtime bindings, exact joined deployment and hosted customer/security
 journeys under checklist 28. Keep TiDB writers stopped and intake closed.
