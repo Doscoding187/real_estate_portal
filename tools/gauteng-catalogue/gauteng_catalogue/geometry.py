@@ -19,6 +19,46 @@ except ImportError:  # pragma: no cover - exercised only in minimal environments
     SHAPELY_AVAILABLE = False
 
 
+def geometry_backend() -> dict[str, Any]:
+    """The geometry engine actually in use, named and versioned.
+
+    This is a **declared input, not an ambient capability**. A source authority
+    derived with shapely and one derived from the standard-library fallback are
+    different datasets, and which one produced a committed artifact must be
+    readable from the artifact itself. The name and version are recorded in the
+    build summary and the source manifest, so installing a wheel changes the
+    manifest digest and therefore surfaces as a reviewed pin change instead of
+    silently altering committed rows.
+    """
+    if not SHAPELY_AVAILABLE:
+        return {
+            "name": "stdlib_ray_casting",
+            "version": None,
+            "supports_holes": True,
+            "supports_multipart": True,
+            "polygon_validity_repair": False,
+            "note": (
+                "Standard-library ray casting over source GeoJSON rings. Holes and "
+                "multipart features are honoured by construction, but polygon "
+                "validity is not repaired and no true polygon intersection is "
+                "computed."
+            ),
+        }
+    import shapely
+
+    return {
+        "name": "shapely",
+        "version": str(getattr(shapely, "__version__", "unknown")),
+        "supports_holes": True,
+        "supports_multipart": True,
+        "polygon_validity_repair": True,
+        "note": (
+            "shapely with buffer(0) repair of invalid geometry, true polygon "
+            "covers/intersects predicates, and representative_point()."
+        ),
+    }
+
+
 def load_geojson(path: Path) -> dict[str, Any]:
     with path.open("r", encoding="utf-8") as handle:
         value = json.load(handle)
@@ -148,6 +188,26 @@ class TerritorySpatialGate:
         self._context_shapes: dict[str, list[tuple[dict[str, Any], Any]]] = {"ADM2": [], "ADM3": []}
         if SHAPELY_AVAILABLE:
             self._province_shape = self._safe_shape(self.province_geometry)
+            for level, features in self.context_features.items():
+                self._context_shapes[level] = [
+                    (feature, self._safe_shape(feature.get("geometry") or {}))
+                    for feature in features
+                ]
+
+    def attach_context_features(
+        self, context_features: dict[str, list[dict[str, Any]]]
+    ) -> None:
+        """Set the context features and (re)build the shapely index.
+
+        The shapely path resolves context from a prebuilt shape index, while the
+        standard-library path reads the raw geometries. Assigning
+        `context_features` alone therefore leaves the shapely index stale and every
+        context lookup silently returns nothing — a failure that looks like "no
+        administrative context exists" rather than like a bug. Context must always
+        be attached through here.
+        """
+        self.context_features = context_features or {"ADM2": [], "ADM3": []}
+        if SHAPELY_AVAILABLE:
             for level, features in self.context_features.items():
                 self._context_shapes[level] = [
                     (feature, self._safe_shape(feature.get("geometry") or {}))

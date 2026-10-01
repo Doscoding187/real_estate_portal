@@ -51,7 +51,7 @@ databases. Place Authority remains the only geographic identity source.
 | 2 | Executable Place foundation | **closed** |
 | 3 | Territory-neutral onboarding proof | **closed** (`ad753b3d` + Phase 3 refactor) |
 | 4 | Western Cape (Province 2) | **admitted and physically proven; not activated** |
-| 5 | Remaining provinces | not started — depends on the Phase 4 pattern |
+| 5 | Remaining seven provinces | not started — depends on the Phase 4 pattern |
 | 6 | National authority verification | not started |
 | 7 | National consumer handoff | not started |
 
@@ -631,7 +631,9 @@ build followed by the same proven pipeline.
 
 **Phase 4 is complete. Phase 5 needs a decision that is not mine to take.**
 
-Phase 5 is the remaining six provinces, and the machinery is now proven
+**Seven** provinces remain. South Africa has nine; Gauteng and Western Cape are
+admitted. The remainder is Eastern Cape, Free State, Limpopo, Mpumalanga,
+Northern Cape, North West and KwaZulu-Natal. The machinery is now proven
 territory-neutral: a province is a registry entry plus a governed source
 authority, admitted by the same builder and materialized by the same adapter.
 For each province:

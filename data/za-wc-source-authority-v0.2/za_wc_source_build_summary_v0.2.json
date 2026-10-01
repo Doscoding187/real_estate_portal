@@ -2,7 +2,7 @@
   "boundary_evidence": {
     "adm1_selected": "Western Cape",
     "adm2_features_intersecting": 9,
-    "adm3_features_intersecting": 34,
+    "adm3_features_intersecting": 31,
     "boundary_license": "Creative Commons Attribution 3.0 Intergovernmental Organisations (CC BY 3.0 IGO)",
     "boundary_source": "OCHA ROSEA, South African Municipal Demarcation Board",
     "boundary_year_represented": "2020",
@@ -30,18 +30,13 @@
         ]
       },
       "ADM3": {
-        "bbox_intersecting": 34,
-        "representative_point_inside": 34,
+        "bbox_intersecting": 31,
+        "representative_point_inside": 31,
         "swept_in_and_rejected": [
           {
             "decision": "retained_on_weaker_evidence",
             "point_status": "outside",
             "polygon_name": "Dr Beyers Naude"
-          },
-          {
-            "decision": "retained_on_weaker_evidence",
-            "point_status": "outside",
-            "polygon_name": "Emthanjeni"
           },
           {
             "decision": "retained_on_weaker_evidence",
@@ -56,11 +51,6 @@
           {
             "decision": "retained_on_weaker_evidence",
             "point_status": "outside",
-            "polygon_name": "Kareeberg"
-          },
-          {
-            "decision": "retained_on_weaker_evidence",
-            "point_status": "outside",
             "polygon_name": "Karoo Hoogland"
           },
           {
@@ -71,24 +61,22 @@
           {
             "decision": "retained_on_weaker_evidence",
             "point_status": "outside",
-            "polygon_name": "Overstrand"
-          },
-          {
-            "decision": "retained_on_weaker_evidence",
-            "point_status": "outside",
-            "polygon_name": "Renosterberg"
-          },
-          {
-            "decision": "retained_on_weaker_evidence",
-            "point_status": "outside",
             "polygon_name": "Ubuntu"
           }
         ]
       }
     },
     "currency_status": "Boundaries represent 2020. This is historical evidence, not a current-boundary certification, and a currency review is owed before any scope is published.",
+    "geometry_backend": {
+      "name": "shapely",
+      "note": "shapely with buffer(0) repair of invalid geometry, true polygon covers/intersects predicates, and representative_point().",
+      "polygon_validity_repair": true,
+      "supports_holes": true,
+      "supports_multipart": true,
+      "version": "2.1.2"
+    },
     "source_data_update_date": "Thu Jan 19 07:31:04 2023",
-    "spatial_intersection_basis": "bounding_box_fallback"
+    "spatial_intersection_basis": "polygon_predicate"
   },
   "context_resolution": {
     "administrative_crosswalk": {
@@ -157,12 +145,6 @@
       {
         "candidates": [],
         "level": "ADM3",
-        "polygon_name": "Emthanjeni",
-        "reason": "no admitted administrative record falls in this polygon"
-      },
-      {
-        "candidates": [],
-        "level": "ADM3",
         "polygon_name": "Hantam",
         "reason": "no admitted administrative record falls in this polygon"
       },
@@ -175,12 +157,6 @@
       {
         "candidates": [],
         "level": "ADM3",
-        "polygon_name": "Kareeberg",
-        "reason": "no admitted administrative record falls in this polygon"
-      },
-      {
-        "candidates": [],
-        "level": "ADM3",
         "polygon_name": "Karoo Hoogland",
         "reason": "no admitted administrative record falls in this polygon"
       },
@@ -188,12 +164,6 @@
         "candidates": [],
         "level": "ADM3",
         "polygon_name": "Kou-Kamma",
-        "reason": "no admitted administrative record falls in this polygon"
-      },
-      {
-        "candidates": [],
-        "level": "ADM3",
-        "polygon_name": "Renosterberg",
         "reason": "no admitted administrative record falls in this polygon"
       },
       {
@@ -322,7 +292,7 @@
     ],
     "identities_resolved_to_weaker_evidence": {
       "ADM2": 0,
-      "ADM3": 64,
+      "ADM3": 0,
       "basis": "Identities whose administrative context came from a polygon retained only on bounding-box evidence, because no geospatial wheel is installed and the representative point is a bounding-box centre. Non-zero means real context depends on the weaker selection test."
     },
     "queue": [],

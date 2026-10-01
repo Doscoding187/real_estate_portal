@@ -4,7 +4,7 @@
     "territory_id": "za-gp",
     "display_name": "Gauteng",
     "admission_registry_path": "data/place-admission-territories.v0.1/territory-registry.v0.1.json",
-    "admission_registry_sha256": "79e3580c38803fd8e77ed3cb33e9210d50eba75b75e1ab9abaabcd62eddaa4c6"
+    "admission_registry_sha256": "cc777a66186d65091d2d94233628f081a3886162eb40611c681ce1039506c9e7"
   },
   "generated_from": {
     "source_authority_version": "gauteng-source-authority-v0.2",

@@ -37,6 +37,7 @@ from .config import REPO_ROOT, TerritoryConfig
 from .geometry import (
     TerritorySpatialGate,
     _fallback_point_in_geometry,
+    geometry_backend,
     load_geojson,
     select_overlapping_features,
     select_territory_feature,
@@ -359,7 +360,7 @@ def resolve_territory_boundaries(
     # The gate resolves administrative context from the features it is given, so
     # they must be attached before any context is read. Without this every
     # identity silently loses its municipality.
-    gate.context_features = context
+    gate.attach_context_features(context)
 
     return province, context, {
         "province_gate": gate,
@@ -369,9 +370,15 @@ def resolve_territory_boundaries(
 
 
 def _intersection_basis() -> str:
+    """How a feature was tested against the province polygon.
+
+    With shapely this is a true polygon test. Without it, the outer selection test
+    can only compare bounding boxes, which is strictly weaker and is named as
+    such rather than presented as a geometric result.
+    """
     from . import geometry as geometry_module
 
-    return "shapely" if geometry_module.SHAPELY_AVAILABLE else "bounding_box_fallback"
+    return "polygon_predicate" if geometry_module.SHAPELY_AVAILABLE else "bounding_box_fallback"
 
 
 # --------------------------------------------------------------------------- #
@@ -982,6 +989,7 @@ def build_source_authority(
             "boundary_source": adm1_metadata.get("boundarySource"),
             "boundary_license": adm1_metadata.get("boundaryLicense"),
             "spatial_intersection_basis": gate_info["intersection_basis"],
+            "geometry_backend": geometry_backend(),
             "context_feature_selection": gate_info["selection"],
             "adm1_selected": _shape_name(province_feature),
             "adm2_features_intersecting": len(context_features.get("ADM2", [])),
@@ -1089,6 +1097,7 @@ def build_source_authority(
             },
         },
         "acquisition_limitations": bundle.limitations,
+        "geometry_backend": geometry_backend(),
         "compact_artifacts": compact_artifacts,
         "build_summary": {
             "path": _repo_path(summary_path),

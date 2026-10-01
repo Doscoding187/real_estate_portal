@@ -4,31 +4,31 @@
     "territory_id": "za-wc",
     "display_name": "Western Cape",
     "admission_registry_path": "data/place-admission-territories.v0.1/territory-registry.v0.1.json",
-    "admission_registry_sha256": "79e3580c38803fd8e77ed3cb33e9210d50eba75b75e1ab9abaabcd62eddaa4c6"
+    "admission_registry_sha256": "cc777a66186d65091d2d94233628f081a3886162eb40611c681ce1039506c9e7"
   },
   "generated_from": {
     "source_authority_version": "za-wc-source-authority-v0.2",
     "source_snapshot_id": "f16907c92b55431f66496d1ffe0abc453be8e11b855d5ec2f262fceb58a005eb",
     "source_manifest_path": "data/za-wc-source-authority-v0.2/za_wc_source_manifest_v0.2.json",
-    "source_manifest_sha256": "b3979264d784b4249e5e0692a913feccbac65a8a43ceebb38f56a7a8e3fbd74c",
+    "source_manifest_sha256": "80225b78a8590ea116c7bd15e7c762770b7045ece43071d6fd394d4c45c968f5",
     "compact_artifacts": [
       {
-        "path": "data/za-wc-source-authority-v0.2/za_wc_candidate_dispositions_v0.2.jsonl",
+        "path": "/tmp/opencode/wc-shapely/za_wc_candidate_dispositions_v0.2.jsonl",
         "sha256": "19f4b8261f06bb063c6f4a2ac7dda52715d75feee40e6c1fdfca5848705cc712",
         "size_bytes": 17646802
       },
       {
-        "path": "data/za-wc-source-authority-v0.2/za_wc_factual_canonical_geography_v0.2.jsonl",
-        "sha256": "a5cc0b7fab743295ba82808750e0c4c7f36ba4086225cef0300fa04d83e697e0",
-        "size_bytes": 6271324
+        "path": "/tmp/opencode/wc-shapely/za_wc_factual_canonical_geography_v0.2.jsonl",
+        "sha256": "b36aa7e1c3b0efd91028cdb8bdfaec4ba4f146272280d716f3a9f8d0a83e21a2",
+        "size_bytes": 6263704
       },
       {
-        "path": "data/za-wc-source-authority-v0.2/za_wc_factual_canonical_names_v0.2.jsonl",
+        "path": "/tmp/opencode/wc-shapely/za_wc_factual_canonical_names_v0.2.jsonl",
         "sha256": "851a68098f956f50453cea3eb9e4100c64270116b9ef78a6ab7ec49385b39f3d",
         "size_bytes": 4217072
       },
       {
-        "path": "data/za-wc-source-authority-v0.2/za_wc_factual_canonical_source_links_v0.2.jsonl",
+        "path": "/tmp/opencode/wc-shapely/za_wc_factual_canonical_source_links_v0.2.jsonl",
         "sha256": "0269ebd16c75c8cc03a1323cc63cb92337f210d83ad537bb92e3a1cd28daea7e",
         "size_bytes": 2023044
       }
