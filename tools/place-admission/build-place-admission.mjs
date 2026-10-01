@@ -1191,6 +1191,15 @@ for (const row of nameRows) {
 for (const [placeId, count] of preferredCount) {
   assertInvariant(count === 1, `Place ${placeId} has ${count} preferred public names`);
 }
+// Every admitted Place must actually *have* one. The loop above only visits
+// Places that already have a preferred public name, so a Place whose source
+// identity carried no name assertion would pass with none at all.
+for (const row of placeRows) {
+  assertInvariant(
+    preferredCount.get(row.place_id) === 1,
+    `Place ${row.place_id} has no preferred public name`,
+  );
+}
 
 // Column-width guard. The builder must never emit a value the physical schema
 // cannot hold; a silent overflow would surface only at materialization time.

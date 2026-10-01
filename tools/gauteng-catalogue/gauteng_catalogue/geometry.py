@@ -114,12 +114,35 @@ def geometry_point(geometry: dict[str, Any]) -> tuple[float, float] | None:
     return None
 
 
-class GautengSpatialGate:
-    """Small, explicit spatial gate around the approved geoBoundaries province."""
+class TerritorySpatialGate:
+    """Small, explicit spatial gate around one approved geoBoundaries province.
 
-    def __init__(self, province_feature: dict[str, Any], context_features: dict[str, list[dict[str, Any]]] | None = None):
+    The gate is territory-neutral: the province it defends is supplied by the
+    caller and every context value it reports is read from the source feature.
+    Nothing here may name a province, because admitting a second province must
+    be a configuration change and never a code change.
+    """
+
+    def __init__(
+        self,
+        province_feature: dict[str, Any],
+        context_features: dict[str, list[dict[str, Any]]] | None = None,
+        province_name: str | None = None,
+    ):
         self.province_feature = province_feature
         self.context_features = context_features or {"ADM2": [], "ADM3": []}
+        province_properties = province_feature.get("properties") or {}
+        resolved_name = province_name or next(
+            (
+                str(province_properties.get(key))
+                for key in ("shapeName", "NAME_1", "name", "NAME")
+                if province_properties.get(key)
+            ),
+            None,
+        )
+        if not resolved_name:
+            raise ValueError("Territory spatial gate requires an explicit province name.")
+        self.province_name = resolved_name
         self.province_geometry = province_feature.get("geometry") or {}
         self._province_shape = None
         self._context_shapes: dict[str, list[tuple[dict[str, Any], Any]]] = {"ADM2": [], "ADM3": []}
@@ -183,7 +206,7 @@ class GautengSpatialGate:
 
     def administrative_context(self, latitude: float | None, longitude: float | None) -> dict[str, Any]:
         context: dict[str, Any] = {
-            "province": {"name": "Gauteng", "source": "geoBoundaries", "level": "ADM1"},
+            "province": {"name": self.province_name, "source": "geoBoundaries", "level": "ADM1"},
             "adm2": [],
             "adm3": [],
         }
@@ -237,23 +260,49 @@ class GautengSpatialGate:
         }
 
 
-def select_gauteng_feature(features: Iterable[dict[str, Any]]) -> dict[str, Any]:
+def select_territory_feature(
+    features: Iterable[dict[str, Any]],
+    name_tokens: Iterable[str],
+    iso_codes: Iterable[str] = (),
+) -> dict[str, Any]:
+    """Select exactly one province ADM1 feature by declared tokens or ISO code.
+
+    A territory is identified by configuration, never by a province name written
+    into this module. More than one match is an error rather than a preference.
+    """
+    tokens = tuple(str(token).casefold() for token in name_tokens if str(token).strip())
+    codes = {str(code).upper() for code in iso_codes if str(code).strip()}
     candidates = []
     for feature in features:
         properties = feature.get("properties") or {}
-        values = " ".join(str(properties.get(key, "")) for key in ("shapeName", "shapeISO", "name", "NAME_1"))
-        if "gauteng" in values.casefold() or str(properties.get("shapeISO", "")).upper() in {"GP", "ZA-GP"}:
+        values = " ".join(
+            str(properties.get(key, "")) for key in ("shapeName", "shapeISO", "name", "NAME_1")
+        ).casefold()
+        iso = str(properties.get("shapeISO", "")).upper()
+        if (tokens and any(token in values for token in tokens)) or (codes and iso in codes):
             candidates.append(feature)
     if len(candidates) != 1:
-        raise ValueError(f"Expected one Gauteng ADM1 feature, found {len(candidates)}")
+        raise ValueError(
+            f"Expected exactly one province ADM1 feature for tokens {tokens} / iso {codes}, "
+            f"found {len(candidates)}"
+        )
     return candidates[0]
 
 
-def select_gauteng_overlapping_features(
-    features: Iterable[dict[str, Any]], gate: GautengSpatialGate
+def select_overlapping_features(
+    features: Iterable[dict[str, Any]], gate: TerritorySpatialGate
 ) -> list[dict[str, Any]]:
     selected: list[dict[str, Any]] = []
     for feature in features:
         if gate.geometry_status(feature.get("geometry")) == "intersects":
             selected.append(feature)
     return selected
+
+
+# Retained so an existing Gauteng-only caller keeps working. New code should use
+# the neutral names above and pass the territory it is admitting.
+GautengSpatialGate = TerritorySpatialGate
+select_gauteng_feature = lambda features: select_territory_feature(  # noqa: E731
+    features, ("gauteng",), ("GP", "ZA-GP")
+)
+select_gauteng_overlapping_features = select_overlapping_features

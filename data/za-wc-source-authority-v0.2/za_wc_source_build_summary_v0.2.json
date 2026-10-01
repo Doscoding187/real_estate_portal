@@ -1,0 +1,405 @@
+{
+  "boundary_evidence": {
+    "adm1_selected": "Western Cape",
+    "adm2_features_intersecting": 9,
+    "adm3_features_intersecting": 34,
+    "boundary_license": "Creative Commons Attribution 3.0 Intergovernmental Organisations (CC BY 3.0 IGO)",
+    "boundary_source": "OCHA ROSEA, South African Municipal Demarcation Board",
+    "boundary_year_represented": "2020",
+    "build_date": "Dec 12, 2023",
+    "context_feature_selection": {
+      "ADM2": {
+        "bbox_intersecting": 9,
+        "representative_point_inside": 9,
+        "swept_in_and_rejected": [
+          {
+            "decision": "retained_on_weaker_evidence",
+            "point_status": "outside",
+            "polygon_name": "Cacadu"
+          },
+          {
+            "decision": "retained_on_weaker_evidence",
+            "point_status": "outside",
+            "polygon_name": "Namakwa"
+          },
+          {
+            "decision": "retained_on_weaker_evidence",
+            "point_status": "outside",
+            "polygon_name": "Pixley ka Seme"
+          }
+        ]
+      },
+      "ADM3": {
+        "bbox_intersecting": 34,
+        "representative_point_inside": 34,
+        "swept_in_and_rejected": [
+          {
+            "decision": "retained_on_weaker_evidence",
+            "point_status": "outside",
+            "polygon_name": "Dr Beyers Naude"
+          },
+          {
+            "decision": "retained_on_weaker_evidence",
+            "point_status": "outside",
+            "polygon_name": "Emthanjeni"
+          },
+          {
+            "decision": "retained_on_weaker_evidence",
+            "point_status": "outside",
+            "polygon_name": "Hantam"
+          },
+          {
+            "decision": "retained_on_weaker_evidence",
+            "point_status": "outside",
+            "polygon_name": "Kamiesberg"
+          },
+          {
+            "decision": "retained_on_weaker_evidence",
+            "point_status": "outside",
+            "polygon_name": "Kareeberg"
+          },
+          {
+            "decision": "retained_on_weaker_evidence",
+            "point_status": "outside",
+            "polygon_name": "Karoo Hoogland"
+          },
+          {
+            "decision": "retained_on_weaker_evidence",
+            "point_status": "outside",
+            "polygon_name": "Kou-Kamma"
+          },
+          {
+            "decision": "retained_on_weaker_evidence",
+            "point_status": "outside",
+            "polygon_name": "Overstrand"
+          },
+          {
+            "decision": "retained_on_weaker_evidence",
+            "point_status": "outside",
+            "polygon_name": "Renosterberg"
+          },
+          {
+            "decision": "retained_on_weaker_evidence",
+            "point_status": "outside",
+            "polygon_name": "Ubuntu"
+          }
+        ]
+      }
+    },
+    "currency_status": "Boundaries represent 2020. This is historical evidence, not a current-boundary certification, and a currency review is owed before any scope is published.",
+    "source_data_update_date": "Thu Jan 19 07:31:04 2023",
+    "spatial_intersection_basis": "bounding_box_fallback"
+  },
+  "context_resolution": {
+    "administrative_crosswalk": {
+      "ADM2": {
+        "Cape Winelands": "Cape Winelands District Municipality",
+        "Central Karoo": "Central Karoo District Municipality",
+        "City of Cape Town": "City of Cape Town",
+        "Eden": "Eden District Municipality",
+        "Overberg": "Overberg District Municipality",
+        "West Coast": "West Coast District Municipality"
+      },
+      "ADM3": {
+        "Beaufort West": "Beaufort West",
+        "Bergrivier": "Bergrivier",
+        "Bitou": "Bitou",
+        "Breede Valley": "Breede Valley",
+        "Cape Agulhas": "Cape Agulhas",
+        "Cederberg": "Cederberg",
+        "City of Cape Town": "City of Cape Town",
+        "Drakenstein": "Drakenstein",
+        "George": "George",
+        "Hessequa": "Hessequa",
+        "Kannaland": "Kannaland",
+        "Knysna": "Knysna",
+        "Laingsburg": "Laingsburg",
+        "Langeberg": "Langeberg",
+        "Matzikama": "Matzikama",
+        "Mossel Bay": "Mossel Bay",
+        "Oudtshoorn": "Oudtshoorn",
+        "Overstrand": "Overstrand",
+        "Prince Albert": "Prince Albert",
+        "Saldanha Bay": "Saldanha Bay",
+        "Stellenbosch": "Stellenbosch",
+        "Swartland": "Swartland",
+        "Swellendam": "Swellendam",
+        "Theewaterskloof": "Theewaterskloof",
+        "Witzenberg": "Witzenberg"
+      }
+    },
+    "administrative_crosswalk_basis": "geoBoundaries polygon resolved to an admitted administrative identity: by normalized label when the labels agree, otherwise by testing each admitted record's own point against the polygon. The polygon label is kept as provenance; the context name is the admitted identity's name, because identity is joined on name downstream.",
+    "administrative_crosswalk_unresolved": [
+      {
+        "candidates": [],
+        "level": "ADM2",
+        "polygon_name": "Cacadu",
+        "reason": "no admitted administrative record falls in this polygon"
+      },
+      {
+        "candidates": [],
+        "level": "ADM2",
+        "polygon_name": "Namakwa",
+        "reason": "no admitted administrative record falls in this polygon"
+      },
+      {
+        "candidates": [],
+        "level": "ADM2",
+        "polygon_name": "Pixley ka Seme",
+        "reason": "no admitted administrative record falls in this polygon"
+      },
+      {
+        "candidates": [],
+        "level": "ADM3",
+        "polygon_name": "Dr Beyers Naude",
+        "reason": "no admitted administrative record falls in this polygon"
+      },
+      {
+        "candidates": [],
+        "level": "ADM3",
+        "polygon_name": "Emthanjeni",
+        "reason": "no admitted administrative record falls in this polygon"
+      },
+      {
+        "candidates": [],
+        "level": "ADM3",
+        "polygon_name": "Hantam",
+        "reason": "no admitted administrative record falls in this polygon"
+      },
+      {
+        "candidates": [],
+        "level": "ADM3",
+        "polygon_name": "Kamiesberg",
+        "reason": "no admitted administrative record falls in this polygon"
+      },
+      {
+        "candidates": [],
+        "level": "ADM3",
+        "polygon_name": "Kareeberg",
+        "reason": "no admitted administrative record falls in this polygon"
+      },
+      {
+        "candidates": [],
+        "level": "ADM3",
+        "polygon_name": "Karoo Hoogland",
+        "reason": "no admitted administrative record falls in this polygon"
+      },
+      {
+        "candidates": [],
+        "level": "ADM3",
+        "polygon_name": "Kou-Kamma",
+        "reason": "no admitted administrative record falls in this polygon"
+      },
+      {
+        "candidates": [],
+        "level": "ADM3",
+        "polygon_name": "Renosterberg",
+        "reason": "no admitted administrative record falls in this polygon"
+      },
+      {
+        "candidates": [],
+        "level": "ADM3",
+        "polygon_name": "Ubuntu",
+        "reason": "no admitted administrative record falls in this polygon"
+      }
+    ],
+    "code_geometry_disagreements": 19,
+    "disagreements": [
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "The Clarendon Fresnaye",
+        "source_record_id": "10301844"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "O On Kloof Boutique Hotel and Spa",
+        "source_record_id": "10301863"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Nu Rock Inn",
+        "source_record_id": "10301864"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Grande Kloof Boutique",
+        "source_record_id": "10301877"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "40 Winks Sea Point Lodge",
+        "source_record_id": "10301911"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Swartklip",
+        "source_record_id": "3360797"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Schusterskraal",
+        "source_record_id": "3361725"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Kootjiesfontein",
+        "source_record_id": "3365213"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Kobrakamp",
+        "source_record_id": "3365383"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Kalkoond",
+        "source_record_id": "3366284"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Goudiniweg",
+        "source_record_id": "3367547"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Clovelly",
+        "source_record_id": "3369082"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Boesak",
+        "source_record_id": "3369782"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Biesiesfontein",
+        "source_record_id": "3370063"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Baard se Bult",
+        "source_record_id": "3370315"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Victoria Bay",
+        "source_record_id": "8643437"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Balloon Tower",
+        "source_record_id": "9180925"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Fairbairn Settlement",
+        "source_record_id": "9180927"
+      },
+      {
+        "kind": "province_containment",
+        "point_status": "outside",
+        "preferred_name": "Ou-Matjiesfontein",
+        "source_record_id": "967049"
+      }
+    ],
+    "identities_resolved_to_weaker_evidence": {
+      "ADM2": 0,
+      "ADM3": 64,
+      "basis": "Identities whose administrative context came from a polygon retained only on bounding-box evidence, because no geospatial wheel is installed and the representative point is a bounding-box centre. Non-zero means real context depends on the weaker selection test."
+    },
+    "queue": [],
+    "records_queued_for_multiple_context_matches": 0
+  },
+  "counts": {
+    "admitted_identities": 1905,
+    "alternate_name_records": 11889,
+    "alternate_names_not_linked_to_an_identity": 10460,
+    "candidate_dispositions": 13025,
+    "dispositions_by_reason": {
+      "historical feature; a former referent is a name assertion, n": 2597,
+      "locality or reserve feature outside the admitted settlement ": 96,
+      "populated-place class that did not meet the governed admissi": 2,
+      "religious or structural feature, not a settlement or adminis": 5,
+      "spot feature outside the admitted settlement classes (farm, ": 6568,
+      "terrain or hydrographic feature, not a settlement or adminis": 3698,
+      "vegetation feature, not a settlement or administrative unit": 59
+    },
+    "identities_by_type": {
+      "city": 2,
+      "district_municipality": 6,
+      "local_municipality": 25,
+      "locality": 762,
+      "province": 1,
+      "suburb": 398,
+      "town": 65,
+      "village": 646
+    },
+    "name_assertions": 3334,
+    "source_links": 1905,
+    "source_universe_records": 14930
+  },
+  "generated_from_acquisition": {
+    "acquisition_limitations": [
+      "Source-native observations only; no canonical identity, factual type or parent has been adjudicated.",
+      "ADM2/ADM3 layers are national; Western Cape spatial selection and current-boundary review are pending.",
+      "GeoNames filtering preserves source admin1 assertions; border/conflicting/00 records require review.",
+      "No OSM data acquired; ODbL founder production gate remains unchanged.",
+      "This is not a complete province catalogue or the v0.2 source-authority manifest expected by admission."
+    ],
+    "bundle_kind": "acquired_evidence_not_admitted_authority",
+    "bundle_manifest_sha256": "f16907c92b55431f66496d1ffe0abc453be8e11b855d5ec2f262fceb58a005eb"
+  },
+  "governed_policy": {
+    "administrative_context_basis": "representative point tested against acquired polygons",
+    "city_min_population": 100000,
+    "exact_type_by_source_code": {
+      "A.ADM1": "province",
+      "A.ADM2": "district_municipality",
+      "A.ADM3": "local_municipality",
+      "L.LCTY": "locality",
+      "P.PPLA": "city",
+      "P.PPLA2": "town",
+      "P.PPLA3": "town",
+      "P.PPLX": "suburb",
+      "S.HTL": "locality",
+      "S.RSD": "suburb",
+      "S.TOWR": "town"
+    },
+    "licence_classification": "permissive_supported",
+    "licence_obligations": "GeoNames is CC BY 4.0: attribution required, no share-alike. geoBoundaries gbOpen is distributed CC BY 4.0 with upstream CC BY 3.0 IGO notices and OCHA ROSEA / Municipal Demarcation Board attribution. The permissive_supported label records the absence of ODbL obligations; it does not mean obligation-free.",
+    "populated_place_codes": [
+      "P.PPL"
+    ],
+    "source_admin_code_treated_as": "assertion recorded and compared, never as containment proof",
+    "town_min_population": 10000
+  },
+  "invariants_asserted": [
+    "every source record is either an admitted identity or an explicit candidate disposition",
+    "every name assertion and source link references an admitted identity",
+    "identity is derived from territory and source-native id only, never from a name or coordinate",
+    "administrative context is resolved from geometry, and source admin codes are compared, not trusted",
+    "no record is promoted because of its name",
+    "licence obligations are recorded per identity, not summarised away by the licensing label"
+  ],
+  "province": "Western Cape",
+  "source_authority_version": "za-wc-source-authority-v0.2",
+  "territory_id": "za-wc"
+}

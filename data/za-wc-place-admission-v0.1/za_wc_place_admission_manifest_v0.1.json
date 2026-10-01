@@ -1,0 +1,166 @@
+{
+  "admission_version": "za-wc-place-admission-v0.1",
+  "territory": {
+    "territory_id": "za-wc",
+    "display_name": "Western Cape",
+    "admission_registry_path": "data/place-admission-territories.v0.1/territory-registry.v0.1.json",
+    "admission_registry_sha256": "309a7431beba6205e376419f40daab50d4bcec4be27669e06b7e4dec665afa97"
+  },
+  "generated_from": {
+    "source_authority_version": "za-wc-source-authority-v0.2",
+    "source_snapshot_id": "f16907c92b55431f66496d1ffe0abc453be8e11b855d5ec2f262fceb58a005eb",
+    "source_manifest_path": "data/za-wc-source-authority-v0.2/za_wc_source_manifest_v0.2.json",
+    "source_manifest_sha256": "b3979264d784b4249e5e0692a913feccbac65a8a43ceebb38f56a7a8e3fbd74c",
+    "compact_artifacts": [
+      {
+        "path": "data/za-wc-source-authority-v0.2/za_wc_candidate_dispositions_v0.2.jsonl",
+        "sha256": "19f4b8261f06bb063c6f4a2ac7dda52715d75feee40e6c1fdfca5848705cc712",
+        "size_bytes": 17646802
+      },
+      {
+        "path": "data/za-wc-source-authority-v0.2/za_wc_factual_canonical_geography_v0.2.jsonl",
+        "sha256": "a5cc0b7fab743295ba82808750e0c4c7f36ba4086225cef0300fa04d83e697e0",
+        "size_bytes": 6271324
+      },
+      {
+        "path": "data/za-wc-source-authority-v0.2/za_wc_factual_canonical_names_v0.2.jsonl",
+        "sha256": "851a68098f956f50453cea3eb9e4100c64270116b9ef78a6ab7ec49385b39f3d",
+        "size_bytes": 4217072
+      },
+      {
+        "path": "data/za-wc-source-authority-v0.2/za_wc_factual_canonical_source_links_v0.2.jsonl",
+        "sha256": "0269ebd16c75c8cc03a1323cc63cb92337f210d83ad537bb92e3a1cd28daea7e",
+        "size_bytes": 2023044
+      }
+    ],
+    "comparison_baseline": {
+      "note": "The v0.1 committed artifacts are retained as comparison and regression evidence only. Their factual source JSONLs are unrecoverable and were not used as forward authority.",
+      "catalogue": "data/za-wc-coverage-v0.1/za-wc-territory-catalog.v0.1.json",
+      "catalogue_sha256": "a9aa752607314c8b637031d2210a0f137c3762a05faa26dbe64a631af968b96e",
+      "factual_identity_count": 0,
+      "runtime_row_count": 0,
+      "queued_count": 0,
+      "awaiting_accepted_parent_edge": 0,
+      "duplicate_natural_key_within_parent": 0,
+      "natural_key_owned_by_accepted_row": 0,
+      "co_published_natural_keys": 0,
+      "parent_evidence_inputs": 0
+    }
+  },
+  "governed_policy": {
+    "container_types": [
+      "district_municipality",
+      "local_municipality",
+      "province"
+    ],
+    "settlement_merge_max_km": 15,
+    "merge_requires_same_administrative_context": true,
+    "type_disagreement_never_blocks_merge": true,
+    "preferred_public_name_selection": "official role, then source preferred_common; within a class the most independently sourced assertion wins, ties broken by text",
+    "one_containment_parent_per_place": true,
+    "search_scope_authorization_in_slice_2": 0,
+    "place_id_allocation": "assigned from a committed registry; never derived from name, slug, coordinates, parent, classification, natural key or source identity"
+  },
+  "counts": {
+    "source_identities": 1905,
+    "source_name_assertions": 3334,
+    "source_links": 1905,
+    "source_candidates": 13025,
+    "admitted_places": 1862,
+    "merged_equivalence_groups": 42,
+    "absorbed_source_identities": 43,
+    "single_identity_places": 1820,
+    "group_kinds": {
+      "administrative_container": 31,
+      "single_identity": 1790,
+      "merged_same_referent": 41
+    },
+    "verification": {
+      "verified": 1167,
+      "provisional": 695
+    },
+    "licensing": {
+      "permissive_supported": 1862
+    },
+    "scope_establishment": {
+      "established": 1832,
+      "not_established": 30,
+      "by_scope": {
+        "locality": {
+          "established": 1766,
+          "not_established": 0
+        },
+        "metro_city": {
+          "established": 65,
+          "not_established": 0
+        },
+        "province": {
+          "established": 1,
+          "not_established": 0
+        }
+      }
+    },
+    "executable_places": 1832,
+    "executable_by_scope": {
+      "locality": 1766,
+      "metro_city": 65,
+      "province": 1
+    },
+    "admitted_without_executable_scope": 30,
+    "names": 3252,
+    "name_roles": {
+      "preferred_public": 1862,
+      "common": 1383,
+      "official": 5,
+      "historical": 2
+    },
+    "searchable_names": 2751,
+    "preferred_public_names": 1862,
+    "relationships": 1861,
+    "relationship_types": {
+      "administratively_contains": 1861
+    },
+    "containment_parent_count": 1861,
+    "evidence_rows": 11062,
+    "external_mappings": 1905,
+    "disposition_ledger_rows": 13025,
+    "dispositions": {
+      "quarantined_candidate": 13025
+    },
+    "parent_evidence_inputs": 0,
+    "parent_evidence_classification": {
+      "total_edges": 0,
+      "by_class": {},
+      "by_disposition": {}
+    }
+  },
+  "place_id_registry": {
+    "path": "data/za-wc-place-admission-v0.1/za_wc_place_id_registry.v0.1.json",
+    "allocated_ids": 1862,
+    "allocation_sequence": 1862
+  },
+  "invariants_asserted": [
+    "every source identity maps to exactly one admitted Place",
+    "place count equals distinct assigned ids",
+    "one preferred public name per Place",
+    "every name, relationship and evidence row references an admitted Place",
+    "every relationship has evidence and is not self-referential",
+    "containment is a forest: one parent, no cycles",
+    "no relationship-driven search widening in Slice 2",
+    "scope, eligibility and classification combinations satisfy the database invariants",
+    "every scoped Place has an evidenced province context, the only mandatory ancestry requirement",
+    "no artificial settlement parent is introduced to complete a search hierarchy",
+    "no municipality is re-typed or promoted into the metro_city search tier",
+    "a Place without a governed executable scope stays admitted but is neither searchable nor publishable",
+    "the disposition ledger covers every source candidate"
+  ],
+  "outputs": {
+    "places": "data/za-wc-place-admission-v0.1/za_wc_place_admission_v0.1.jsonl",
+    "names": "data/za-wc-place-admission-v0.1/za_wc_place_names_v0.1.jsonl",
+    "relationships": "data/za-wc-place-admission-v0.1/za_wc_place_relationships_v0.1.jsonl",
+    "evidence": "data/za-wc-place-admission-v0.1/za_wc_place_evidence_v0.1.jsonl",
+    "external_mappings": "data/za-wc-place-admission-v0.1/za_wc_place_external_mappings_v0.1.jsonl",
+    "disposition_ledger": "data/za-wc-place-admission-v0.1/za_wc_place_disposition_ledger_v0.1.jsonl",
+    "parent_evidence_classification": "data/za-wc-place-admission-v0.1/za_wc_parent_evidence_classification_v0.1.json"
+  }
+}

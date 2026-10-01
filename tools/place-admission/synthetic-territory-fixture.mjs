@@ -122,7 +122,7 @@ function nameAssertion({ slug, canonicalLocationId, name, role, searchable }) {
     name_type: role,
     name_roles: [role],
     status: 'active',
-    searchable: searchable ? 1 : 0,
+    searchable: Boolean(searchable),
     source_record_ids: [`synthetic:node/${slug}`],
     source_names: ['synthetic'],
     derived_from_candidate: false,
