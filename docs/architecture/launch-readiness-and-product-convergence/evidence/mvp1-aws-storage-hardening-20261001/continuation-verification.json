@@ -1,0 +1,116 @@
+{
+  "recordedAt": "2026-10-01T20:09:26.706501+00:00",
+  "releaseSource": "cbc18c8fdfb0a900c7255ca695da56bd9a7660c3",
+  "classification": "protected release inspection and storage verification; no schema-authority change",
+  "privateProof": {
+    "bucket": "listify-paid-proofs-914683204061-eun1-290496c0",
+    "runtimeUser": "listify-paid-proof-runtime-290496c0",
+    "configurationAndRecoveryEvidenceOrigin": "Edward CloudShell verification plus downloaded result",
+    "operatorRecoveryPassed": true,
+    "encryptedCredentialsSha256": "b148fcd0e5085fc868531c4655f12ce6863222d7f8bf58e2da753f96ba60236f",
+    "transfer": {
+      "encryptedCredentialsSha256": "b148fcd0e5085fc868531c4655f12ce6863222d7f8bf58e2da753f96ba60236f",
+      "checksumVerified": true,
+      "transferKeyVerified": true,
+      "decryptionVerified": true,
+      "verifiedAt": "2026-10-01T19:43:14.887Z"
+    },
+    "liveRuntimePermissions": {
+      "outcome": "PASS",
+      "results": [
+        {
+          "operation": "PutObject/GetObject",
+          "outcome": "PASS"
+        },
+        {
+          "operation": "bucket-list",
+          "status": 403,
+          "code": "AccessDenied"
+        },
+        {
+          "operation": "bucket-config",
+          "status": 403,
+          "code": "AccessDenied"
+        },
+        {
+          "operation": "version-read",
+          "status": 403,
+          "code": "AccessDenied"
+        },
+        {
+          "operation": "cross-media-write",
+          "status": 403,
+          "code": "AccessDenied"
+        },
+        {
+          "operation": "outside-prefix-write",
+          "status": 403,
+          "code": "AccessDenied"
+        },
+        {
+          "operation": "object-delete",
+          "status": 403,
+          "code": "AccessDenied"
+        }
+      ],
+      "retainedTestObject": true,
+      "productionBindingsChanged": false,
+      "hostedOwnerIsolationVerified": false,
+      "infrastructureWritePermissionsTested": false
+    }
+  },
+  "azureMediaDependencies": {
+    "operation": "read-only-connect",
+    "targetClass": "production",
+    "targetFingerprintHash": "b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced",
+    "credentialClass": "read-only",
+    "complete": false,
+    "inventoriedTables": 0,
+    "localInspectionFailed": true,
+    "existingTestingNetworkInspectionFailed": true,
+    "privateCredentialDeliveredOnlyOverSshStdin": true,
+    "guardedTaskDiagnosticCleanup": true,
+    "databaseMutationPerformed": false,
+    "applicationConfigurationChanged": false
+  },
+  "containment": {
+    "productionAndTestingApiGitTriggers": "absent in authenticated CLI queries",
+    "latestProductionDeployment": "5045030c-f115-429e-af15-2b2c410a6cb1",
+    "latestProductionDeploymentStatus": "REMOVED",
+    "activeOrQueuedAmongLatest20ProductionApiDeployments": false,
+    "remoteMcpMetadataInconsistentWithCli": true,
+    "limitation": "Bounded observations, not a complete writer census or fresh Vercel hold proof"
+  },
+  "pending": [
+    "AWS cost-alert operator application/readback and mailbox receipt",
+    "current Azure media inventory and authenticated frontend build configuration",
+    "final media policy/public-access blocks/scoped IAM/CORS application",
+    "worker provisioning and exact production bindings/session-secret application",
+    "joined API/worker/frontend deployment under checklist 28",
+    "hosted upload/display and private proof owner/wrong-owner/anonymous checks",
+    "physical USB disconnection custody"
+  ],
+  "validation": {
+    "pythonSecurityContractTests": 9,
+    "nodeTransferRuntimeSecurityContractTests": 6,
+    "lint": "pass; new CJS files",
+    "format": "pass; new CJS files",
+    "whitespace": "pass"
+  },
+  "mutationsThisContinuation": {
+    "privateS3TaskObjectWritten": true,
+    "credentialsPersistedInPrivateLocalStateOnly": true,
+    "productionBindingsChanged": false,
+    "TiDbWritersRestarted": false,
+    "paymentIntakeOpened": false,
+    "protectedDatabaseDataChanged": false
+  },
+  "privateEvidenceSha256": {
+    "proof-runtime-verified/transfer-verification.json": "94f324c3bfa3754a84c9cad3091a59d984e18e9c13664e27308d76d2a4002747",
+    "proof-runtime-verified/runtime-verification.json": "13d4d7a015a5c1cf7e48794d25881bdb1c5a6eec6af8488c4735abab973978a7",
+    "operator-private-proof-verified-20261001.json": "e6846276ee876d87bc9bce37a381c93787e1cade9cc35239f73d528dd491e4be",
+    "azure-media-inventory-existing-network-result.json": "f75f2a6d7360d2dda6ab7c3302689ccd9670c61b2c1d814a64179a7aedcc1f40",
+    "azure-media-inventory-diagnostic-cleanup.json": "5cfcadf7b4ec1c94a619949f44566a88beb40a6598cb67e112d836b788ef02a5",
+    "continuation-containment-readback.json": "9eca2c9a2714269b17c07e0d4e0b6ca7393a05ffb07946044ad638e64d56eaf3"
+  }
+}

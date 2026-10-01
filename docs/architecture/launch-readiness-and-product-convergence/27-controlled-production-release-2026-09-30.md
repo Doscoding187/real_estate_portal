@@ -1,6 +1,30 @@
 # PR #583 controlled production release
 
-**Current disposition: preparation complete enough for operational review; production transition NOT EXECUTED; paid opening NO-GO.** This packet supersedes the draft-PR-only assignment and the successful-preview/separate-staging milestone. Edward directed controlled validation on the existing live infrastructure. No Vercel upgrade or new application staging environment is required. October 5–7 remains conditional.
+**Current disposition: controlled transition partially executed; application cutover pending; paid opening NO-GO.** This packet supersedes the draft-PR-only assignment and the successful-preview/separate-staging milestone. Edward directed controlled validation on the existing live infrastructure. No Vercel upgrade or new application staging environment is required. October 5–7 remains conditional.
+
+## Current execution checkpoint — 1 October
+
+PR #583 is merged as `cbc18c8fdfb0a900c7255ca695da56bd9a7660c3`, tree
+`fde4200b59a2adfb65fe85d550e45dc970b3d52e`, matching its accepted head.
+The merged PR's operational checkpoint records geography applied once and
+verified (9 provinces / 340 cities / 1,089 suburbs), old production API
+REMOVED, final frozen TiDB capture and independent USB authenticated retrieval
+(218 tables / 152 rows). Physical USB disconnection remains pending.
+Do not repeat those completed provisioning/capture/apply operations.
+
+[Storage packet 29](29-mvp1-aws-storage-hardening.md) is the current storage
+checkpoint: anonymous media write containment, authenticated CloudFront origin
+access, private-proof bucket/user provisioning, proof-version recovery,
+encrypted key export/retrieval/decryption and bounded dedicated proof runtime
+permission tests are complete. The US$15/month aggregate incremental usage
+approval is recorded; it is neither a forecast nor an enforced cap.
+
+Remaining: cost alerts/receipt, current Azure/frontend media dependencies,
+final media identity/policy/CORS application, worker provisioning, production
+secret/runtime bindings, exact joined deployment and hosted customer/security
+journeys under checklist 28. Keep TiDB writers stopped and intake closed.
+The dated preparation observations and reusable procedure below are retained
+as history; their pending provisioning wording does not supersede this checkpoint.
 
 ## Recorded decision and exact source
 
@@ -29,7 +53,7 @@ Provider observations are dated reads, not lasting guarantees. Refresh at each e
 ## Concrete operational decisions still required
 
 | Decision | Exact proposed action ready for review | Why required |
-| --- | --- | --- |
+| --- | --- |
 | Attended execution and Vercel operator | Proposed first window: **Thursday 1 October, 09:00–13:00 SAST**, Edward attending, with an authenticated operator for existing Vercel project `edwards-projects-29c395d1/real-estate-portal`. Verify production origins/configuration and deploy the exact approved merged Git SHA after API readiness. No Vercel admin credential/connector is available in this session. Enter credentials through existing private provider access, never chat. | Existing accepted coverage is weekdays 09:00–17:00 SAST. September 30 preparation is outside those hours; do not assume after-hours/weekend coverage or infer attendance from an unanswered question. |
 | Necessary incremental usage | Provision **one private S3 bucket + bucket-scoped identity**, and **two services in the existing Railway production environment**. [Exact S3 controls/IAM proposal](evidence/controlled-production-release-2026-09-30/private-proof-resources.proposed.json), [exact service/configuration delta](evidence/controlled-production-release-2026-09-30/production-config.proposed.json). No plan upgrade or new application environment. Agree the metered-usage budget before creation; US$15/month remains an unverified budget target. See [measured credits, incremental assumptions and monitoring](28-controlled-owner-admission-and-execution-2026-09-30.md#incremental-usage-review); alerts are not an enforced cap. | Existing [B11 disposition](evidence/b11-private-proof-readiness-2026-09-24.md) says: “Treat any unapproved incremental cost as a `FOUNDER SPEND GATE`.” None of these required private-proof/worker resources exists yet. |
 | Independent archive/recovery custody | Name an **existing private off-machine destination** under Edward's custody; store encrypted final TiDB archive independently and the key through a separate protected channel, record hashes and authenticated retrieval. Do not use the public media bucket, runtime-delete authority, or another directory on this same machine as independent custody. Azure has no existing storage account exposed in this subscription. | Final preservation is incomplete without retrievable independent custody. Keep TiDB retained/read-only; no retirement deletion is authorized. |
@@ -76,6 +100,7 @@ Each phase records timestamp, operator, exact source SHA/tree, intended action, 
    ```
 
    Preserve preliminary files unchanged. The final command captures consistent snapshot schemas/rows, exact types, AES-256-GCM, authenticated frozen metadata and persisted readback. It does no TiDB DDL/DML, migration, import or grant mutation. Invalid/stale/unclosed/mismatched evidence refuses the final designation before connection or before archive production.
+
 5. Independently authenticate/decrypt and structurally verify the persisted final archive; record full ciphertext hash/counts privately and sanitized summary publicly. Copy/retrieve from the agreed off-machine destination with key separately controlled. Keep TiDB preserved, not writable or deleted. Failure stops transition before retiring the old write path.
 
 ### 4. Bind and deploy backend/workers, then frontend
@@ -121,4 +146,4 @@ Restore production Railway autodeploy only after stable acceptance, using [prepa
 
 Final-archive focused contract checks pass: **19 cases**, original preliminary/type/encryption cases plus frozen metadata, wrong/stale/future/open/duplicate/empty writer evidence, expiry during capture and approval actor/reference mismatch. No protected database was contacted by these tests. Full authority gate passes **47 files / 442 tests**, typecheck/build pass, full lint passes with **zero errors / 13,419 existing warnings**, and touched-code lint has zero errors. [Verification hashes and limits](evidence/controlled-production-release-2026-09-30/verification.json) record the tested release-code commit `84e9229a428d8432f2ed0f7f9aa80fa8972f5cfc` / tree `813f246d370d17d78a102bc0ff8477139dd26a1b`; subsequent continuation edits are documentation/evidence only. Importing `vercel.ts` confirms main=false; authenticated provider readback remains pending. Exact new-head CI is tracked separately. That earlier verification changed no schema, migration SQL/checksum, canonical catalog, or customer money/access policy. The later owner-admission change is separately verified in packet 28; it restricts new invoices/activations without changing products or entitlement terms.
 
-Prepared trigger mutations, resource proposals, configuration deltas and a read-only geography plan are **not execution evidence**. No merge, provider mutation, geography apply, writer stop, final capture, secret rotation, binding switch, deployment, real email or paid opening has been performed in this continuation. No existing worktree files beyond the owned PR were modified. The next action is the attended bounded production sequence after the specific unresolved decisions above are resolved; it is not another preview-versus-live decision.
+Prepared trigger mutations, resource proposals, configuration deltas and a read-only geography plan are **not execution evidence**. The preceding verification paragraph describes the September 30 preparation. Completed October 1 execution is distinguished in the current checkpoint above and storage packet 29. Secret application, binding switch, joined deployment, real hosted journeys and paid opening remain pending. Continue from the remaining phase under the existing containment checklist; do not replay completed geography, writer stop, final capture or proof provisioning.

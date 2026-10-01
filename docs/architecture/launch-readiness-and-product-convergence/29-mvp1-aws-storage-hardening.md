@@ -81,13 +81,32 @@ bucket `listify-paid-proofs-914683204061-eun1-290496c0` and IAM user
 `/home/cloudshell-user/property-listify-private-proof-provision-20261001`.
 AES256 encryption, public-access blocks and versioning were read back; no
 lifecycle expiry or runtime key was created, and existing media/production
-bindings were preserved. Recovery, runtime access and hosted authorization
-are pending the separate verification phase.
+bindings were preserved. Recovery and runtime access subsequently passed the
+separate verification and local transfer phases below; hosted authorization
+remains pending.
 
 Private evidence is in
 `~/.local/state/property-listify/mvp1-aws-storage-hardening-20261001/`.
 Keep raw inventories, credentials, signed URLs and document contents outside
 the repository. Record sanitized hashes and outcomes here after execution.
+
+The subsequent operator `--verify` phase passed private configuration,
+historical-version recovery, restored-current hash verification and anonymous
+403 denial. The dedicated access key was exported encrypted; independent local
+retrieval matched the operator-supplied SHA256
+`b148fcd0e5085fc868531c4655f12ce6863222d7f8bf58e2da753f96ba60236f`.
+Decryption used the existing local transfer key, whose derived public key
+matched the provisioning key. The private key remained local.
+
+Independent live tests authenticated the exact dedicated proof IAM user,
+conditionally wrote one unique task-owned versioned object, and read back its
+payload hash and AES256 encryption. Bucket listing, bucket-versioning
+configuration reads, historical-version reads, media-bucket writes,
+outside-prefix writes and task-object deletion each returned
+AccessDenied/403. The task object remained intact and is retained. These are
+bounded runtime permission tests, not infrastructure-write permission
+simulation or hosted customer-owner isolation. Credentials and object/version
+identifiers remain in mode-0600 private files; no production binding occurred.
 
 Independent agent readback after containment matched the operator's policy
 hash. All 2,258 original object metadata records were unchanged and none were
@@ -102,19 +121,39 @@ published-frontend static inspection did not establish its CDN build setting;
 that setting and current Azure media references remain specific dependencies
 before full public-read removal.
 
-## Controlled execution order
+## Completed prerequisites and remaining execution order
 
-1. Finish IAM permission capture through the operator path. Capture any
+The numbered phases retain their original dependency order. Completed operator
+phases must not be rerun as provisioning tasks.
+
+[Sanitized continuation evidence](evidence/mvp1-aws-storage-hardening-20261001/continuation-verification.json)
+records transfer/runtime results, private evidence hashes, inspection failures,
+containment limits and the remaining gates without credential values.
+
+| Action                                                             | Current evidence / disposition                                                                                                                     |
+| ------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Existing media IAM/configuration capture                           | Complete for the recorded uploader baseline, group absence, managed policy and private operator backups. Dedicated media identity remains pending. |
+| Anonymous media write containment                                  | Complete; independent valid unsigned PUT returned 403 and the canary hash was unchanged.                                                           |
+| Authenticated CloudFront origin probe                              | Complete; direct S3 403, fresh CloudFront miss 200, matching hash and policy restoration.                                                          |
+| Private proof bucket/user provisioning                             | Complete; encryption, ownership, blocks, versioning and scoped policy readbacks.                                                                   |
+| Private proof recovery and encrypted key export                    | Complete through operator verification; independent ciphertext checksum and local decryption passed.                                               |
+| Dedicated proof runtime permissions                                | Complete for live bounded positive/negative operations described above; credentials remain local.                                                  |
+| Cost alerts and notification receipt                               | Pending operator alert application/readback and mailbox receipt.                                                                                   |
+| Current media URL dependencies                                     | Pending exact Azure inventory and frontend build-setting readback.                                                                                 |
+| Final media policy, public-access blocks, scoped identity and CORS | Pending dependency completion and operator application/readback.                                                                                   |
+| Production binding/deployment and hosted journeys                  | Pending checklist 28 containment, exact artifacts, attended operator and hosted upload/display plus proof-owner isolation.                         |
+
+1. **Recorded baseline complete.** Keep IAM permission capture current through the operator path. Capture any
    identity/group managed and inline policies and relevant boundaries; retain
    immutable private copies of all prior configurations. Verify account and
    bucket identity before every mutation.
-2. Reconcile active application configuration and any retained direct-S3 URLs.
+2. **Pending.** Reconcile active application configuration and any retained direct-S3 URLs.
    Existing MVP1 upload code uses signed S3 PUT, then CloudFront delivery when
    configured. Browser upload calls set Content-Type; the proposed production
    CORS file therefore permits PUT from the two explicit production origins.
    Image display through CloudFront does not require PUT on CloudFront.
    Confirm actual browser preflight before accepting this CORS configuration.
-3. Remove the anonymous-write statement while preserving the remaining policy
+3. **Complete; do not repeat removal.** The bounded removal removed the anonymous-write statement while preserving the remaining policy
    during dependency verification. Compare the latest policy with the captured
    baseline before writing; stop if an unrelated concurrent change appears.
    `scripts/storage/aws-media-remove-public-write.py --apply` prepares private
@@ -122,8 +161,8 @@ before full public-read removal.
    expected account and bucket owner, and performs only this policy removal.
    It refuses execution through the application uploader identity. Without
    `--apply`, it prepares backups and the proposed policy without mutation.
-   Its local transformation checks passed; operator execution is outstanding.
-4. Create a unique task-owned media test object without replacing an existing
+   Operator application and independent policy/object-preservation readbacks passed.
+4. **Complete; retain the recorded prerequisite evidence.** The origin test created a unique task-owned media test object without replacing an existing
    key. For an authenticated-origin test while public read remains, restrict
    **only that exact test object** to the distribution SourceArn. Require
    unsigned S3 denial and a fresh CloudFront miss with matching payload hash.
@@ -134,16 +173,16 @@ before full public-read removal.
    the prerequisite test against the exact recorded post-containment policy,
    restores that policy immediately afterward using guarded readback, and
    retains the harmless task-owned object. It leaves existing media unchanged.
-5. Once URL dependencies and the origin test pass, apply
+5. **Pending URL dependencies.** Once URL dependencies and the origin test pass, apply
    `media-bucket-policy.json` and `block-public-access.json`. Read back both,
    then repeat unsigned S3 denial, unauthorized upload denial and CloudFront
    retrieval. Keep media object ownership and encryption intact.
-6. Bind a dedicated runtime identity with only the media operations in
+6. **Pending.** Bind a dedicated runtime identity with only the media operations in
    `media-runtime-policy.json`. It grants no infrastructure provisioning,
    bucket administration, listing, version deletion, or Explore writes.
    Use an isolated identity if changing the existing uploader would affect
    another consumer. Do not broaden application credentials for provisioning.
-7. Provision a separate private proof bucket and dedicated runtime identity.
+7. **Complete; do not provision another bucket/user.** Provisioning created a separate private proof bucket and dedicated runtime identity.
    Require AES256 encryption, BucketOwnerEnforced, all public-access blocks,
    TLS, versioning, no CloudFront access, and PutObject/GetObject only on
    `billing-proofs/*`. No browser CORS is needed for accepted server-side proof
@@ -162,14 +201,14 @@ before full public-read removal.
    on the new bucket. An assumed-role operator additionally needs GetRole
    for its own role to resolve the policy's canonical PrincipalArn.
    Readbacks require the corresponding S3 reads and GetUserPolicy.
-8. Recover a unique task-owned versioned object through an operator identity,
+8. **Complete, including export retrieval/decryption and live runtime tests. Do not rerun `--verify`.** Verification recovered a unique task-owned versioned object through an operator identity,
    recording hashes/version metadata privately. No existing object may be
    overwritten or deleted. Versioning incurs retained-version storage charges.
-   Wait 15 minutes after first enabling versioning, as AWS recommends, then
-   run the same provision program with `--verify` instead of `--apply`.
-   It checks the saved configuration before task-object writes, verifies
+   The completed verification followed the 15-minute versioning propagation
+   wait and used the provision program with `--verify` instead of `--apply`.
+   It checked the saved configuration before task-object writes, verified
    historical and restored-current hashes plus anonymous denial, and only
-   then creates the dedicated access key. Key material is exported encrypted
+   then created the dedicated access key. Key material was exported encrypted
    with the task public RSA key using OAEP/SHA256. The private transfer key
    remains on the local machine; do not upload it or either archive key.
    CreateAccessKey requires permission only on the new proof user; recovery
@@ -178,12 +217,16 @@ before full public-read removal.
    If provisioning or verification is interrupted, preserve the recorded
    directory and reconcile the exact last operation before resuming. A
    completed or partially attempted verification refuses an automatic rerun.
-9. Coordinate runtime credentials and application deployment under checklist
+   `aws-proof-runtime-verify.cjs` verifies the independent operator checksum,
+   existing local transfer key, exact bucket/user, decrypted envelope and live
+   bounded permissions before persisting local runtime credentials. It never
+   binds a hosting service. Preserve its private output directory.
+9. **Pending.** Coordinate runtime credentials and application deployment under checklist
    28 containment. Verify actual authenticated production-domain browser
    upload/display and proof owner authorization, wrong-owner rejection and
    anonymous rejection. SDK and local tests do not satisfy hosted journeys.
    Keep intake closed and retired TiDB writers stopped throughout.
-10. Record configuration readbacks, cost assumptions, alert configuration and
+10. **Pending alert configuration/receipt.** Record configuration readbacks, cost assumptions, alert configuration and
     monitoring. Alerts notify; they do not prevent spending. AWS alerts alone
     do not monitor Railway/Azure aggregate usage. Platform recovery remains
     separate from the already completed encrypted source archive.
@@ -202,13 +245,12 @@ Do not delete a provisioned proof bucket or its retained evidence as rollback.
 
 ## Acceptance still outstanding
 
-Only the known anonymous-write grant has been removed and read back through
-the operator path; fresh authenticated CloudFront origin access has passed
-through that path. Private-proof bucket configuration and its scoped IAM
-user have also passed the operator provisioning phase. Hardened anonymous
-denial across the complete media bucket, scoped media runtime IAM,
-proof runtime credentials/recovery, cost alerts and hosted browser/owner
-checks remain unverified. The previous USB physical-removal custody item
+Anonymous-write containment, fresh authenticated CloudFront origin access,
+private-proof provisioning, version recovery, encrypted key transfer and
+bounded dedicated proof runtime permissions have passed. Hardened anonymous
+denial across the complete media bucket, scoped media runtime IAM, production
+CORS, current URL dependency readbacks, cost alerts/receipt, production
+bindings and hosted browser/owner checks remain unverified. The previous USB physical-removal custody item
 remains outstanding without repeating completed archive capture/readback.
 Storage acceptance alone cannot close the release register or open payments.
 
@@ -257,6 +299,7 @@ Fresh local validation passed nine operator security-contract tests:
 ```sh
 PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s scripts/storage/tests -v
 node --check scripts/storage/aws-storage-snapshot.cjs
+node --test scripts/storage/tests/proof-runtime-verify.test.cjs
 ```
 
 Additional local checks covered provision/verify sequencing with mocked AWS,
@@ -267,6 +310,42 @@ readbacks without paid alarms/actions or existing-budget edits. These are
 local evidence only. Python programs parse and configuration JSON parses;
 format and whitespace checks are included in preparation. The insecure
 historical policy fixture is test input only and must never be applied.
+
+The new local transfer/runtime-verification helper passed six Node
+security-contract tests covering tampered ciphertext, incomplete recovery,
+a different transfer key, wrong AWS principal, false permission-denial evidence
+and unexpectedly broad access. Live permission results are recorded separately
+above. The authorized local Azure dependency inventory attempt used the
+existing inspector and canonical connection authority with exact production
+fingerprint
+`b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced`.
+The local inspection failed before inventory. A second inspection used a
+task-owned, checksum-verified copy of exact merged source through the existing
+Testing container network, with the separate inspector supplied only over SSH
+stdin. The diagnostic child isolated its target from the container's Testing
+database configuration while retaining genuine Railway artifact metadata;
+the canonical target and approval checks were retained. That inspection also
+failed before any table was inventoried. No zero-reference result is claimed.
+Its exact task directory was removed after sanitized evidence retrieval;
+no remote credential file, application configuration, pending Testing patch,
+database data, schema, firewall or TiDB writer was changed.
+
+Fresh authenticated Railway CLI readbacks show production and Testing API
+Git triggers absent, no active/queued deployment among the latest 20 production
+API deployments, and production deployment
+`5045030c-f115-429e-af15-2b2c410a6cb1` still REMOVED. The remote MCP returned
+older, inconsistent deployment metadata; it is not used as current deployment
+evidence. These bounded reads do not constitute a complete writer census or
+Vercel hold verification. No provider configuration or production binding was
+changed by these reads.
+
+Fresh production-variable readback independently matches the retained media
+bucket, region and CloudFront URL. No proof credential variables, admitted
+owners or sales deadline are present. The absolute pause variable is absent
+from this stopped historical service; this is not presented as an explicit
+configured pause. No API is running to accept intake. Set
+`PAID_MVP_SALES_PAUSED=true` and keep admission/deadline absent in the approved
+replacement configuration before any production deployment.
 
 An initial independent anonymous PUT probe returned HTTP 400/InvalidRequest:
 AWS requires SigV4 for conditional writes. That result was retained and was
@@ -280,7 +359,7 @@ not production browser upload, whole-bucket unsigned-read denial, or customer
 owner authorization.
 
 Ready for bounded configuration/script review. Storage acceptance remains
-open pending proof recovery/key verification, scoped media binding, current
+open pending scoped media binding, current
 URL dependencies, full media hardening, hosted browser/proof-owner checks and
 monitoring readbacks. Nothing here authorizes paid opening or another writer.
 
