@@ -679,11 +679,16 @@ For each province:
 Before that sequence can start, three things need owner decisions or external
 input, and none is mine to take:
 
-- **The migration renumber plan.** `origin/main` is at
-  `0094_content_topics_primary_key` and this branch claims `0091`–`0099` for
-   Place Authority. Integrating them is a reviewed rebase, not a merge. Until
-   that plan exists, the two histories must not be conflated and this branch's
-  target is evidence only about this branch.
+- **The migration renumber plan — now drafted, awaiting review.** See
+  `docs/architecture/place-authority-migration-reconciliation-plan.md`. It
+  proposes renumbering Place Authority from `0091`–`0099` to `0095`–`0103` after
+  the integration head's `0094`, and records that the two sets are semantically
+  independent: none of the integration head's `0091`–`0094` touches a table Place
+  Authority depends on, so this is a pure renumbering with no DDL rewrite and no
+  checksum invalidation. It also records the applied-history hazard and asks four
+  review questions. **It is not implemented**, and until it is reviewed the two
+  histories must not be conflated and this branch's target remains evidence only
+  about this branch.
 - **The 2020 boundary currency review**, before any province's scope is
   published.
 - **The founder ODbL determination**, before any OSM-derived Place may reach a
