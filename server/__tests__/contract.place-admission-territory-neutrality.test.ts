@@ -15,8 +15,8 @@
 import { describe, expect, it } from 'vitest';
 import { execFileSync } from 'node:child_process';
 import { mkdtempSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { tmpdir } from 'node:os';
 
 import {
   PLACE_ADMISSION_TERRITORY_REGISTRY_PATH,
@@ -163,6 +163,21 @@ describe('Place admission territory registry: a second territory needs no new en
     } finally {
       rmSync(scratch, { recursive: true, force: true });
     }
+  }, 300_000);
+});
+
+describe('Place admission: national verification across registered provinces', () => {
+  it('keeps province identities distinct and reports national homonyms', () => {
+    const output = execFileSync(
+      'npx',
+      ['tsx', 'tools/place-admission/verify-cross-province.mjs'],
+      { cwd: repositoryRoot, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] },
+    );
+    expect(output).toContain('cross-province: OK');
+    expect(output).not.toContain('FAIL');
+    // A bare name is never a unique Place in South Africa. The probe must
+    // actually find shared names, or it is not testing the national case.
+    expect(output).toMatch(/names preferred in more than one province/);
   }, 300_000);
 });
 

@@ -51,7 +51,7 @@ databases. Place Authority remains the only geographic identity source.
 | 2 | Executable Place foundation | **closed** |
 | 3 | Territory-neutral onboarding proof | **closed** (`ad753b3d` + Phase 3 refactor) |
 | 4 | Western Cape (Province 2) | **admitted and physically proven; not activated** |
-| 5 | Remaining six provinces | **KwaZulu-Natal admitted**; five remain |
+| 5 | Remaining provinces | **KwaZulu-Natal admitted**; six remain |
 | 6 | National authority verification | not started |
 | 7 | National consumer handoff | not started |
 
@@ -785,13 +785,13 @@ build followed by the same proven pipeline.
 
 ## Exact next action
 
-**Five provinces remain, and the per-province sequence is now proven twice.**
-KwaZulu-Natal followed the same gates as Western Cape: acquire, verify offline,
+**Six provinces remain** — Eastern Cape, Free State, Limpopo, Mpumalanga,
+Northern Cape and North West — and the per-province sequence is now proven twice.
 build the source authority, admit through the shared pipeline, and prove it on a
 fresh disposable target.
 
-Remaining: **Eastern Cape, Free State, Limpopo, Mpumalanga, Northern Cape,
-North West** — five, since KwaZulu-Natal is admitted. The suggested order is
+Remaining: **Eastern Cape, Free State, Limpopo, Mpumalanga, Northern Cape and
+North West** — six, since KwaZulu-Natal is admitted. The suggested order is
 Eastern Cape → Free State → Mpumalanga → Limpopo → North West → Northern Cape,
 and evidence readiness may justify changing it.
 

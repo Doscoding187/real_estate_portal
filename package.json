@@ -117,6 +117,7 @@
     "place:admission:check": "tsx tools/place-admission/build-place-admission.mjs --check",
     "place:admission:probe": "tsx tools/place-admission/probe-place-admission.mjs",
     "place:admission:territory-neutrality": "tsx tools/place-admission/prove-territory-neutrality.mjs",
+    "place:admission:cross-province": "tsx tools/place-admission/verify-cross-province.mjs",
     "geography:coverage:generate": "node tools/geography-coverage/generate.mjs --manifest data/geography-coverage-v0.1/gauteng-territory-manifest.v0.1.json",
     "geography:coverage:check": "node tools/geography-coverage/generate.mjs --manifest data/geography-coverage-v0.1/gauteng-territory-manifest.v0.1.json --check",
     "geography:coverage:probes": "node tools/geography-coverage/probes.mjs",
