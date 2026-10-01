@@ -102,6 +102,38 @@ describe('agent pre-activation journey truth', () => {
     ).toEqual({ fullFeaturesUnlocked: false, recommendedNextStep: 'select_package' });
   });
 
+  it('keeps a current agency member in the agency activation path', () => {
+    const common = {
+      onboardingComplete: true,
+      onboardingStep: 4,
+      coreContactReady: true,
+      emailVerified: true,
+      approvalStatus: 'approved' as const,
+      agencyMember: true,
+    };
+
+    expect(
+      deriveAgentJourneyAccessState({
+        ...common,
+        subscriptionStatus: 'unassigned',
+      }),
+    ).toEqual({ fullFeaturesUnlocked: false, recommendedNextStep: 'await_agency_activation' });
+
+    expect(
+      deriveAgentJourneyAccessState({
+        ...common,
+        subscriptionStatus: 'pending_payment',
+      }),
+    ).toEqual({ fullFeaturesUnlocked: false, recommendedNextStep: 'await_agency_activation' });
+
+    expect(
+      deriveAgentJourneyAccessState({
+        ...common,
+        subscriptionStatus: 'payment_under_review',
+      }),
+    ).toEqual({ fullFeaturesUnlocked: false, recommendedNextStep: 'await_agency_activation' });
+  });
+
   it('does not call the workspace ready before email and profile approval are complete', () => {
     expect(
       deriveAgentJourneyAccessState({

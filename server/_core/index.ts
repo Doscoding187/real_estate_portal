@@ -20,8 +20,20 @@ import developmentSupersessionRedirectRouter from '../routes/developmentSuperses
 import agentOnboardingRouter from '../routes/agentOnboarding';
 import { ENV } from './env';
 import { registerLocalMediaRoutes } from './localMediaRoutes';
-import { createAuthRateLimitStore } from './authRateLimitStore';
+import { createAuthRateLimitStore, RedisAuthRateLimitStore } from './authRateLimitStore';
+import { shutdownDb } from '../db-connection';
 import { handleAuthRateLimitStoreUnavailable } from './authRateLimitBoundary';
+import {
+  configurePublicLeadRateLimitStore,
+  shutdownPublicLeadRateLimitStore,
+} from '../services/publicLeadRateLimitService';
+import {
+  getCommercialActivationOperatorStatus,
+  initializeCommercialActivationPolicy,
+} from '../services/commercialActivationPolicy';
+import { assertDeployedSecurityConfiguration } from './securityRuntimeConfiguration';
+import { assertHostedRuntimeConfiguration, resolveHostedBuildSha } from './hostedRuntimeConfiguration';
+import { registerRequestBodyBoundary } from './requestBodyBoundary';
 import {
   applyApiSecurityHeaders,
   assertBrowserSecurityPolicy,
@@ -31,6 +43,7 @@ import {
 } from './browserSecurity';
 import {
   assertDeployedTrustProxyConfiguration,
+  resolveAppRuntimeEnv,
   resolveTrustProxySetting,
 } from './runtimeBootstrap';
 
@@ -65,19 +78,25 @@ async function mountOptionalRouter(app: express.Express, mountPath: string, impo
   }
 }
 
+let activeServer: ReturnType<typeof createServer> | null = null;
+let activeAuthStore: RedisAuthRateLimitStore | null = null;
+let shuttingDown = false;
+
 async function startServer() {
+  const runtimeEnvironment = resolveAppRuntimeEnv();
+  assertDeployedSecurityConfiguration(process.env, runtimeEnvironment);
+  assertHostedRuntimeConfiguration(process.env, runtimeEnvironment);
+  initializeCommercialActivationPolicy();
+
   console.log('[Server] startServer() called');
   console.log('[BUILD_MARKER][SERVER]', {
-    commit: process.env.RAILWAY_GIT_COMMIT_SHA ?? process.env.GITHUB_SHA ?? 'unknown',
-    env: process.env.NODE_ENV,
+    commit: resolveHostedBuildSha() ?? 'local-dev',
+    env: runtimeEnvironment,
     startedAt: new Date().toISOString(),
   });
-
-  if (!process.env.JWT_SECRET) {
-    console.error('\n❌ CRITICAL ERROR: JWT_SECRET is not defined in environment variables.');
-    console.error('   Login functionality will fail with HTTP 500 errors.');
-    console.error('   Please set JWT_SECRET in your .env file or deployment configuration.\n');
-  }
+  console.info('[CommercialActivation] Resolved release configuration',
+    getCommercialActivationOperatorStatus(),
+  );
 
   console.log('[Server] Initializing cache...');
   await initializeCache();
@@ -109,6 +128,7 @@ async function startServer() {
   const app = express();
   app.set('trust proxy', resolveTrustProxySetting());
   const server = createServer(app);
+  activeServer = server;
 
   const isDeployedRuntime =
     browserSecurityPolicy.runtimeEnv === 'production' ||
@@ -118,6 +138,8 @@ async function startServer() {
   const authRateLimitStore = createAuthRateLimitStore({
     runtimeEnv: browserSecurityPolicy.runtimeEnv,
   });
+  activeAuthStore = authRateLimitStore instanceof RedisAuthRateLimitStore ? authRateLimitStore : null;
+  configurePublicLeadRateLimitStore({ runtimeEnv: browserSecurityPolicy.runtimeEnv });
   const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: Number.isFinite(authRateLimitMax) && authRateLimitMax > 0 ? authRateLimitMax : 5,
@@ -178,8 +200,7 @@ async function startServer() {
     app.use(authPath, authLimiter, handleAuthRateLimitStoreUnavailable);
   }
 
-  app.use(express.json({ limit: '50mb' }));
-  app.use(express.urlencoded({ limit: '50mb', extended: true }));
+  registerRequestBodyBoundary(app);
   registerLocalMediaRoutes(app);
 
   // Force WWW redirect for the main production domain.
@@ -268,18 +289,43 @@ async function startServer() {
   });
 }
 
-startServer().catch(console.error);
-
-process.on('SIGTERM', async () => {
-  console.log('SIGTERM received, shutting down...');
-  await savedSearchDeliveryScheduler.stop();
-  await shutdownCache();
-  process.exit(0);
+startServer().catch(error => {
+  console.error('[Startup] Application initialization failed.', {
+    message: error instanceof Error ? error.message : 'Unknown startup error.',
+  });
+  process.exitCode = 1;
 });
 
-process.on('SIGINT', async () => {
-  console.log('SIGINT received, shutting down...');
-  await savedSearchDeliveryScheduler.stop();
-  await shutdownCache();
-  process.exit(0);
-});
+async function shutdown(signal: string): Promise<void> {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  console.log(`[Shutdown] ${signal} received; draining HTTP and stopping local schedulers.`);
+  const deadline = setTimeout(() => {
+    console.error('[Shutdown] Drain deadline exceeded.');
+    activeServer?.closeAllConnections();
+    process.exit(1);
+  }, 20_000);
+  try {
+    if (activeServer?.listening) {
+      const server = activeServer;
+      await new Promise<void>((resolve, reject) => {
+        server.close(error => error ? reject(error) : resolve());
+      });
+    }
+    savedSearchDeliveryScheduler.stop();
+    commercialTermNoticeScheduler.stop();
+    await activeAuthStore?.shutdown();
+    await shutdownPublicLeadRateLimitStore();
+    await shutdownCache();
+    await shutdownDb();
+    process.exitCode = 0;
+  } catch (error) {
+    console.error('[Shutdown] Failed to close cleanly.', error);
+    process.exitCode = 1;
+  } finally {
+    clearTimeout(deadline);
+  }
+}
+
+process.on('SIGTERM', () => { void shutdown('SIGTERM'); });
+process.on('SIGINT', () => { void shutdown('SIGINT'); });

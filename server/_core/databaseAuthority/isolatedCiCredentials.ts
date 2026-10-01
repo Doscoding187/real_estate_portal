@@ -160,7 +160,13 @@ export type IsolatedCiGrantPlan = {
  * boundary, so only migration receives database-wide DDL/DML privileges.
  */
 export function buildIsolatedCiGrantPlan(
-  input: { root?: string; tables?: readonly string[] } = {},
+  input: {
+    root?: string;
+    tables?: readonly string[];
+    databaseName?: string;
+    roleUsers?: { runtime: string; worker: string; 'read-only': string; migration: string };
+    runtimeLedgerRead?: boolean;
+  } = {},
 ): IsolatedCiGrantPlan {
   const root = input.root ?? process.cwd();
   const inventory = input.tables
@@ -183,34 +189,77 @@ export function buildIsolatedCiGrantPlan(
     );
   }
 
-  const database = quotedIdentifier(ISOLATED_CI_DATABASE_NAME);
+  const databaseName = input.databaseName ?? ISOLATED_CI_DATABASE_NAME;
+  const roleUsers = input.roleUsers ?? ISOLATED_CI_ROLE_USERS;
+  const database = quotedIdentifier(databaseName);
   const runtime = applicationTables.map(
     table =>
-      `GRANT SELECT, INSERT, UPDATE, DELETE ON ${database}.${quotedIdentifier(table)} TO ${quotedAccount(ISOLATED_CI_ROLE_USERS.runtime)}`,
+      `GRANT SELECT, INSERT, UPDATE, DELETE ON ${database}.${quotedIdentifier(table)} TO ${quotedAccount(roleUsers.runtime)}`,
   );
+  if (input.runtimeLedgerRead) {
+    runtime.push(
+      `GRANT SELECT ON ${database}.\`sql_migration_history\` TO ${quotedAccount(roleUsers.runtime)}`,
+      `GRANT SELECT ON ${database}.\`sql_migration_attempts\` TO ${quotedAccount(roleUsers.runtime)}`,
+    );
+  }
   const workerTables = [
+    'billable_accounts',
+    'billing_audit_events',
+    'billing_invoices',
     'billing_provider_events',
     'catalogue_publishers',
+    'developer_organisation_memberships',
+    'invitations',
     'lead_deliveries',
     'lead_delivery_attempts',
     'leads',
+    'notifications',
+    'plans',
+    'subscriptions',
+    'transactional_email_attempts',
+    'transactional_email_deliveries',
+    'users',
   ] as const;
   const worker = [
-    `GRANT SELECT, UPDATE ON ${database}.${quotedIdentifier('billing_provider_events')} TO ${quotedAccount(ISOLATED_CI_ROLE_USERS.worker)}`,
-    `GRANT SELECT ON ${database}.${quotedIdentifier('catalogue_publishers')} TO ${quotedAccount(ISOLATED_CI_ROLE_USERS.worker)}`,
-    `GRANT SELECT, UPDATE ON ${database}.${quotedIdentifier('lead_deliveries')} TO ${quotedAccount(ISOLATED_CI_ROLE_USERS.worker)}`,
-    `GRANT SELECT, INSERT, UPDATE ON ${database}.${quotedIdentifier('lead_delivery_attempts')} TO ${quotedAccount(ISOLATED_CI_ROLE_USERS.worker)}`,
-    `GRANT SELECT, UPDATE ON ${database}.${quotedIdentifier('leads')} TO ${quotedAccount(ISOLATED_CI_ROLE_USERS.worker)}`,
+    `GRANT SELECT ON ${database}.${quotedIdentifier('billable_accounts')} TO ${quotedAccount(roleUsers.worker)}`,
+    `GRANT SELECT ON ${database}.${quotedIdentifier('billing_audit_events')} TO ${quotedAccount(roleUsers.worker)}`,
+    `GRANT SELECT ON ${database}.${quotedIdentifier('billing_invoices')} TO ${quotedAccount(roleUsers.worker)}`,
+    `GRANT SELECT, UPDATE ON ${database}.${quotedIdentifier('billing_provider_events')} TO ${quotedAccount(roleUsers.worker)}`,
+    `GRANT SELECT ON ${database}.${quotedIdentifier('catalogue_publishers')} TO ${quotedAccount(roleUsers.worker)}`,
+    `GRANT SELECT ON ${database}.${quotedIdentifier('developer_organisation_memberships')} TO ${quotedAccount(roleUsers.worker)}`,
+    `GRANT SELECT ON ${database}.${quotedIdentifier('invitations')} TO ${quotedAccount(roleUsers.worker)}`,
+    `GRANT SELECT, UPDATE ON ${database}.${quotedIdentifier('lead_deliveries')} TO ${quotedAccount(roleUsers.worker)}`,
+    `GRANT SELECT, INSERT, UPDATE ON ${database}.${quotedIdentifier('lead_delivery_attempts')} TO ${quotedAccount(roleUsers.worker)}`,
+    `GRANT SELECT, UPDATE ON ${database}.${quotedIdentifier('leads')} TO ${quotedAccount(roleUsers.worker)}`,
+    `GRANT SELECT ON ${database}.${quotedIdentifier('notifications')} TO ${quotedAccount(roleUsers.worker)}`,
+    `GRANT SELECT ON ${database}.${quotedIdentifier('plans')} TO ${quotedAccount(roleUsers.worker)}`,
+    `GRANT SELECT ON ${database}.${quotedIdentifier('subscriptions')} TO ${quotedAccount(roleUsers.worker)}`,
+    `GRANT SELECT, INSERT, UPDATE ON ${database}.${quotedIdentifier('transactional_email_attempts')} TO ${quotedAccount(roleUsers.worker)}`,
+    `GRANT SELECT, INSERT, UPDATE ON ${database}.${quotedIdentifier('transactional_email_deliveries')} TO ${quotedAccount(roleUsers.worker)}`,
+    `GRANT SELECT ON ${database}.${quotedIdentifier('users')} TO ${quotedAccount(roleUsers.worker)}`,
   ];
   const verifier = [
-    `GRANT SELECT ON ${database}.* TO ${quotedAccount(ISOLATED_CI_ROLE_USERS['read-only'])}`,
+    `GRANT SELECT ON ${database}.* TO ${quotedAccount(roleUsers['read-only'])}`,
   ];
   const migration = [
-    `GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, ALTER, DROP, INDEX, REFERENCES ON ${database}.* TO ${quotedAccount(ISOLATED_CI_ROLE_USERS.migration)}`,
+    `GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, ALTER, DROP, INDEX, REFERENCES ON ${database}.* TO ${quotedAccount(roleUsers.migration)}`,
   ];
+  if (
+    databaseName === ISOLATED_CI_DATABASE_NAME &&
+    roleUsers.migration === ISOLATED_CI_ROLE_USERS.migration
+  ) {
+    // The fresh-chain runner disables GIPK on its own session before DDL.
+    // Keep this global dynamic grant on the exact disposable CI migrator.
+    migration.push(
+      `GRANT SESSION_VARIABLES_ADMIN ON *.* TO ${quotedAccount(roleUsers.migration)}`,
+      // The isolated PK precondition integration test shadows canonical tables
+      // on its own connection. Production migration authority does not need this.
+      `GRANT CREATE TEMPORARY TABLES ON ${database}.* TO ${quotedAccount(roleUsers.migration)}`,
+    );
+  }
   const statementsByCredential = { runtime, worker, 'read-only': verifier, migration } as const;
   return {
-    databaseName: ISOLATED_CI_DATABASE_NAME,
+    databaseName,
     applicationTables,
     workerTables,
     statementsByCredential,

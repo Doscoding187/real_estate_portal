@@ -3827,6 +3827,33 @@ const adminDistributionRouter = router({
         return { success: true, registrationId: input.registrationId, status: 'rejected' as const };
       }
 
+      // Assisted onboarding requests are a review queue, not an authority
+      // grant. Only the explicitly manager-scoped registration is allowed to
+      // create a Distribution identity. The other registered areas let a
+      // super-admin record that an incoming request was reviewed without
+      // requiring an account that may not exist yet and without changing any
+      // membership, role, commercial, or lead-custody state.
+      if (registration.requestedArea !== 'distribution_manager') {
+        await db
+          .update(platformTeamRegistrations)
+          .set({
+            status: 'approved',
+            reviewedBy: ctx.user.id,
+            reviewedAt: sql`CURRENT_TIMESTAMP`,
+            reviewNotes: input.notes ?? null,
+          })
+          .where(eq(platformTeamRegistrations.id, input.registrationId));
+
+        return {
+          success: true,
+          registrationId: input.registrationId,
+          status: 'approved' as const,
+          reviewOutcome: 'reviewed' as const,
+          userId: null,
+          identityCreated: false,
+        };
+      }
+
       const [user] = await db
         .select({ id: users.id })
         .from(users)
@@ -3875,6 +3902,7 @@ const adminDistributionRouter = router({
         success: true,
         registrationId: input.registrationId,
         status: 'approved' as const,
+        reviewOutcome: 'provisioned' as const,
         userId: Number(user.id),
         identityCreated,
       };

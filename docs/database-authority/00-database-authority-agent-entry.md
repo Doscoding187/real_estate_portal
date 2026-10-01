@@ -114,7 +114,7 @@ pnpm db:foundation:verify
 pnpm db:scenario:verify
 ```
 
-Canonical commercial Launch Access reference data uses a separate protected
+Canonical commercial and Azure geography reference data use a protected
 release authority. The generic `db:reference:prepare` operation remains
 restricted to disposable targets and `productionSeedAuthority` remains `none`.
 For staging or production, the supported sequence is explicit:
@@ -128,7 +128,7 @@ release:plan
 → readiness/deployment smoke checks
 ```
 
-The release-reference plan and verify commands are read-only. The apply command
+`--adapter=geography` selects the catalog-bound Azure path documented in `azure-geography-reference-release-2026-09-30.md`. Plan and verify are read-only. The commercial apply command
 uses the canonical commercial adapter, requires protected release approval and
 an exact target acknowledgement, runs transactionally under a named MySQL
 lock, and is idempotent. Missing approved products or entitlements are inserted;

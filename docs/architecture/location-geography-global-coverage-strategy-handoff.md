@@ -505,3 +505,31 @@ with Mamelodi, township/locality depth, extensions, aliases, and ambiguous-name
 handling as acceptance cases. Once that pipeline passes, adding the rest of the
 world becomes a governed data and operations program instead of an endless
 sequence of city-by-city code changes.
+
+## 13. Slice 1 authority addendum (2026-09-25)
+
+The active authority and legacy dispositions are now recorded in
+`docs/architecture/geography-coverage-contract.md` Version 0.3. The governed
+model is:
+
+```text
+factual evidence and manifest
+  -> immutable generated projection and mapping
+  -> digest-pinned territory source index
+  -> one aggregate runtime/factual catalog
+  -> Database Authority materialization and typed runtime resolution
+```
+
+Slice 1 does not begin Western Cape or another territory. It also does not
+activate Search Areas, redesign geography tables, migrate a protected
+database, or converge Developments, Agents, Agencies, Services, Canvassing,
+Demand, Saved Searches, Explore, authoring, or location-page consumers. Their
+current states and removal conditions are classified in the contract rather
+than being silently rewritten.
+
+The exact Gauteng geography and names source JSONLs remain unrecoverable. Their
+required SHA-256 values and the last authoritative checkpoint are recorded in
+`data/geography-coverage-v0.1/source-recovery.v0.1.json`. Full regeneration must
+remain blocked until those exact bytes are restored. Checked-in projection,
+mapping, disposition, queue, and probes remain frozen evidence; synthetic or
+provider-derived replacements are prohibited.

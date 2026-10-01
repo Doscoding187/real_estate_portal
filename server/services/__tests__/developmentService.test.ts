@@ -250,7 +250,10 @@ describe('Development Service - Property Tests', { timeout: 30000 }, () => {
       fc
         .record({
           name: fc.string({ minLength: 2, maxLength: 100 }),
-          developmentType: fc.constantFrom('residential', 'commercial', 'mixed_use', 'land'),
+          // Generic Development authoring deliberately excludes Land while the
+          // dedicated Land journey is deferred. Its rejection is covered by
+          // the explicit Land-containment integration contracts.
+          developmentType: fc.constantFrom('residential', 'commercial', 'mixed_use'),
           city: fc.string({ minLength: 2, maxLength: 50 }),
           province: fc.string({ minLength: 2, maxLength: 50 }),
           description: fc.option(fc.string({ minLength: 10, maxLength: 500 })),

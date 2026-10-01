@@ -88,7 +88,9 @@ describe('SettingsPanel identity truth', () => {
     expect(screen.queryByRole('button', { name: /save changes/i })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Request controlled team access' }));
-    expect(state.setLocation).toHaveBeenCalledWith('/contact');
+    expect(state.setLocation).toHaveBeenCalledWith(
+      '/contact?area=developer_operations&topic=team-access',
+    );
   });
 
   it('does not disguise an unavailable profile as editable settings', () => {

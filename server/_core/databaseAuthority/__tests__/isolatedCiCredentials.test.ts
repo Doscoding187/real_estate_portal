@@ -27,7 +27,7 @@ describe('isolated CI physical credential boundary', () => {
 
   it('builds explicit application and worker grants without control-table DML', () => {
     const plan = buildIsolatedCiGrantPlan();
-    expect(plan.applicationTables).toHaveLength(212);
+    expect(plan.applicationTables).toHaveLength(214);
     expect(plan.statementsByCredential.runtime.every(statement => !statement.includes('.*'))).toBe(
       true,
     );
@@ -37,13 +37,45 @@ describe('isolated CI physical credential boundary', () => {
     expect(plan.statementsByCredential.migration[0]).toContain(
       'CREATE, ALTER, DROP, INDEX, REFERENCES',
     );
+    expect(plan.statementsByCredential.migration[1]).toBe(
+      "GRANT SESSION_VARIABLES_ADMIN ON *.* TO 'listify_ci_migration'@'%'",
+    );
+    expect(plan.statementsByCredential.migration[2]).toBe(
+      "GRANT CREATE TEMPORARY TABLES ON `listify_test`.* TO 'listify_ci_migration'@'%'",
+    );
+    expect(plan.statementsByCredential.runtime.join(' ')).not.toContain('SESSION_VARIABLES_ADMIN');
+    expect(plan.statementsByCredential.worker.join(' ')).not.toContain('SESSION_VARIABLES_ADMIN');
     expect(plan.workerTables).toEqual([
+      'billable_accounts',
+      'billing_audit_events',
+      'billing_invoices',
       'billing_provider_events',
       'catalogue_publishers',
+      'developer_organisation_memberships',
+      'invitations',
       'lead_deliveries',
       'lead_delivery_attempts',
       'leads',
+      'notifications',
+      'plans',
+      'subscriptions',
+      'transactional_email_attempts',
+      'transactional_email_deliveries',
+      'users',
     ]);
+  });
+
+  it('adds only SELECT on both migration ledgers for protected runtime readiness', () => {
+    const baseline = buildIsolatedCiGrantPlan();
+    const readiness = buildIsolatedCiGrantPlan({ runtimeLedgerRead: true });
+    const added = readiness.statementsByCredential.runtime.filter(
+      statement => !baseline.statementsByCredential.runtime.includes(statement),
+    );
+    expect(added).toEqual([
+      "GRANT SELECT ON `listify_test`.`sql_migration_history` TO 'listify_ci_app'@'%'",
+      "GRANT SELECT ON `listify_test`.`sql_migration_attempts` TO 'listify_ci_app'@'%'",
+    ]);
+    expect(readiness.statementsByCredential.worker).toEqual(baseline.statementsByCredential.worker);
   });
 
   it('binds a role to the operation and exact target identity', () => {

@@ -14,6 +14,8 @@ export type ListingContentActor = {
   userId: number;
   role: string | null | undefined;
   agencyId: number | string | null | undefined;
+  /** Resolved server-side from the one current canonical membership. */
+  currentAgencyId: number | null;
   agent: {
     id: number | string | null | undefined;
     userId: number | string | null | undefined;
@@ -48,8 +50,8 @@ function agencyAssignmentsAreCoherent(
  * Returns whether an actor may read or edit private generic Listing content,
  * issue/confirm its media reservation, or inspect its performance data.
  *
- * An assigned agent must still be an approved profile and must have an exact,
- * coherent agency claim with the Listing.  An agency administrator only gets
+ * An agency author or assigned agent must have an approved profile and a
+ * current canonical membership in the Listing's agency. An administrator gets
  * access through the exact materialized Listing agency.  Those constraints
  * prevent assignment or membership drift from widening across tenants.
  */
@@ -63,9 +65,11 @@ export function canManageListingContent(
   const actorRole = role(actor.role);
   if (actorRole === 'super_admin') return true;
 
-  if (positiveId(listing.ownerId) === actorUserId) return true;
-
   const listingAgencyId = positiveId(listing.agencyId);
+  const isOwner = positiveId(listing.ownerId) === actorUserId;
+  // Personal drafts remain the author's private preparation, including after
+  // leaving a team. Historical authorship never authorizes agency inventory.
+  if (listingAgencyId === null && isOwner) return true;
   const actorAgencyId = positiveId(actor.agencyId);
   if (
     actorRole === 'agency_admin' &&
@@ -83,11 +87,11 @@ export function canManageListingContent(
   const agentId = positiveId(agent.id);
   if (
     agentId === null ||
-    agentId !== positiveId(listing.agentId) ||
+    (!isOwner && agentId !== positiveId(listing.agentId)) ||
     positiveId(agent.userId) !== actorUserId
   ) {
     return false;
   }
 
-  return agencyAssignmentsAreCoherent(listingAgencyId, positiveId(agent.agencyId));
+  return agencyAssignmentsAreCoherent(listingAgencyId, positiveId(actor.currentAgencyId));
 }

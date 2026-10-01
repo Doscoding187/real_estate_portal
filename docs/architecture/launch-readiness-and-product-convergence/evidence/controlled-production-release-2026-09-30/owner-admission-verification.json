@@ -1,0 +1,143 @@
+{
+  "recordedAt": "2026-09-30T20:46:29.303613+00:00",
+  "codeCommit": "4f19ddbbc64ce56c86b81030fa1e449e43d8f0a1",
+  "codeTree": "fac6c3bff0aa5074b97f527e0534c081ef585cea",
+  "priorHead": "81208185b3c0d7c82123357a55d2e3faadb7bf42",
+  "targetClass": "disposable-worktree",
+  "targetFingerprint": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+  "manifestDigest": "93d871e6f8760477f460b8821685d71d212374eb86ddd53bc6e2ccfc30608efc",
+  "migrationHead": "0094_content_topics_primary_key.sql",
+  "sourceSha256": {
+    "server/services/commercialActivationPolicy.ts": "104439ed9cde6a2443dbb30be3d7ae658b451f9904963fb8c5f0427979bd2f83",
+    "server/services/billingFoundationService.ts": "e5ae2dc69f6260d82033abda69d27c11706172d39075ebdaf3cbc3b1038fc339",
+    "server/services/planAccessService.ts": "402f7f2d558d8ce6e358bfc99ce764fa071faaeaff860e1ea63057f5dd620004",
+    "server/services/__tests__/paidMvpOwnerAdmission.test.ts": "ed79d089c52289a204b24b886cd3f554d7d9303e6f23a29b2745ad5a43633d6b",
+    "server/__tests__/commercial-launch-access-s4.integration.test.ts": "917582ceeebbfaad75da56086dc9ca9ce55f8b4aaaf2268d9b49ea0e67d4d271"
+  },
+  "verification": [
+    {
+      "check": "typecheck",
+      "command": "pnpm type-check",
+      "result": "PASS",
+      "rawOutputSha256": "0ce19d9885b616457bb0c4be0aa773ee62f1b22c651bfc450c8801540b97c003",
+      "summary": []
+    },
+    {
+      "check": "lint",
+      "command": "pnpm lint",
+      "result": "PASS",
+      "rawOutputSha256": "d0fecc157897736bb60e61f4fffe3eadb791e8a646611e9c03e297643d415b27",
+      "summary": [
+        "\u2716 13408 problems (0 errors, 13408 warnings)"
+      ]
+    },
+    {
+      "check": "touchedLint",
+      "command": "pnpm exec eslint <five touched TypeScript files>",
+      "result": "PASS",
+      "rawOutputSha256": "d825f638ae096de0a2a8052800498583c67f4d97adf946fa1e25571c3eb00649",
+      "summary": [
+        "\u2716 46 problems (0 errors, 46 warnings)"
+      ]
+    },
+    {
+      "check": "build",
+      "command": "pnpm build",
+      "result": "PASS",
+      "rawOutputSha256": "2fa98f232888774cc2de0b385c75e209dc8b8f05caf6e882255f1a31a9865a56",
+      "summary": [
+        "\u2713 built in 3m 18s"
+      ]
+    },
+    {
+      "check": "databaseAuthority",
+      "command": "pnpm db:authority:check",
+      "result": "PASS",
+      "rawOutputSha256": "d4f9b81a359757587f00d0e1f2228e797869cdc68627202e047409791f3f5d41",
+      "summary": [
+        "Test Files  47 passed (47)",
+        "Tests  442 passed (442)",
+        "Database authority static gate passed."
+      ]
+    },
+    {
+      "check": "governedPaymentAdmission",
+      "command": "JWT_SECRET=<local disposable fixture secret> pnpm test:authority --project server <S4/admission/pause/policy files>",
+      "result": "PASS",
+      "rawOutputSha256": "80e108266eaf92fff1f63afde9f9f33bb50bbfe95f81b0b6b7216da1c9068eed",
+      "summary": [
+        "Test Files  4 passed (4)",
+        "Tests  54 passed (54)"
+      ]
+    },
+    {
+      "check": "governedMembership",
+      "command": "JWT_SECRET=<local disposable fixture secret> pnpm test:authority --project server --hookTimeout=60000 server/__tests__/integration.agency-membership-authority.test.ts",
+      "result": "PASS",
+      "rawOutputSha256": "42d9e594f01c94c09db3c7bf1d8070f75b1c5eddda128488ee8e60ffe2fa101f",
+      "summary": [
+        "Test Files  1 passed (1)",
+        "Tests  32 passed (32)"
+      ]
+    },
+    {
+      "check": "referenceVerify",
+      "command": "pnpm db:reference:verify",
+      "result": "PASS",
+      "rawOutputSha256": "0894261c42f03abd212b8b1593d79e1a8fcd7af1ff4b333099449540afc213db",
+      "summary": [
+        "\"migrationHead\": \"0094_content_topics_primary_key.sql\""
+      ]
+    },
+    {
+      "check": "foundationVerify",
+      "command": "pnpm db:foundation:verify",
+      "result": "PASS",
+      "rawOutputSha256": "ed2cc6a5bbc2ad1d1f128f27ba608643df88df4e63077ed2fcd9025f3d239689",
+      "summary": [
+        "\"migrationHead\": \"0094_content_topics_primary_key.sql\""
+      ]
+    },
+    {
+      "check": "finalDatabaseStatus",
+      "command": "pnpm db:authority:status",
+      "result": "PASS",
+      "rawOutputSha256": "4147271be527ec6d674efd8cfea40ee00309649de0bcaa58c40b1b8c04661c7c",
+      "summary": [
+        "Schema Congruency: schema-congruent",
+        "Application Readiness: ready"
+      ]
+    }
+  ],
+  "initialAttemptsPreserved": [
+    {
+      "file": "admission-service-start.log",
+      "result": "stale PID refused; exact governed service recovery succeeded",
+      "sha256": "f6ab251a46af517562ff4facc89ca1b372d2b7df2cf1730976b0061e8b46b062"
+    },
+    {
+      "file": "admission-governed.log",
+      "result": "52 pass / 2 fail: local JWT input absent and invalid retained API cycle in new test; setup corrected, no runtime guard weakened",
+      "sha256": "759bf447e03e9aed97aa910a6580cd37c012aa577d58959ca3affefec97d8ceb"
+    },
+    {
+      "file": "admission-membership.log",
+      "result": "10-second dynamic-import setup timeout / 32 skipped; separately rerun with 60-second hook timeout, all 32 passed; assertions unchanged",
+      "sha256": "a104dcfa61a7da2d7e90a53e29b000570c9b9d83b077c9884fd1e9ecb8b504e0"
+    },
+    {
+      "file": "admission-typecheck.log",
+      "result": "nonexistent script name refused; correct pnpm type-check passed",
+      "sha256": "b34d6f2342b8fea5b8846b8cc5bbe6e3ddf79884ddc80c495b290ff9b3afb28e"
+    }
+  ],
+  "limits": [
+    "Local native MySQL only, ordinary production commercial policy selected inside disposable tests",
+    "Private proof objects mocked in memory; local bank instructions are not payable",
+    "Local email substitutes do not establish real provider receipt",
+    "No live admission/provider/resource mutation, merge, deployment or protected database writes",
+    "Old GitHub green head snapshot retained; admission head requires independent fresh CI",
+    "Existing isolated fixture mode preserved; production fixture selectors cannot bypass admission"
+  ],
+  "recommendation": "READY_FOR_SENIOR_ADMISSION_AND_INTEGRATION_REVIEW; fresh PR-head CI is a pre-merge gate"
+}

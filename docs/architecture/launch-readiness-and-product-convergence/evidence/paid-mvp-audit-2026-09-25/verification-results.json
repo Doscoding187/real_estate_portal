@@ -1,0 +1,281 @@
+{
+  "observedAt": "2026-09-25T06:39:53.773853+00:00",
+  "testEnvironment": {
+    "SKIP_DB_INIT": "1",
+    "NODE_ENV": "test",
+    "APP_ENV": "test",
+    "DATABASE_URL": "unset",
+    "DATABASE_MIGRATION_URL": "unset"
+  },
+  "databaseCreated": false,
+  "results": [
+    {
+      "sourceSha": "4e012b3044628fc06da7489c0055e9ce01bdc8d9",
+      "boundary": "registered clean-main source before audit edits",
+      "success": true,
+      "passed": 26,
+      "failed": 0,
+      "skipped": 0,
+      "fileCount": 4,
+      "files": [
+        {
+          "file": "server/__tests__/launch-preflight.contract.test.ts",
+          "status": "passed",
+          "tests": 6,
+          "failedTests": []
+        },
+        {
+          "file": "server/services/__tests__/commercialTerm.test.ts",
+          "status": "passed",
+          "tests": 5,
+          "failedTests": []
+        },
+        {
+          "file": "server/services/__tests__/publicPropertyEligibilityBatch.test.ts",
+          "status": "passed",
+          "tests": 1,
+          "failedTests": []
+        },
+        {
+          "file": "server/services/__tests__/publicPropertyEligibilityService.test.ts",
+          "status": "passed",
+          "tests": 14,
+          "failedTests": []
+        }
+      ]
+    },
+    {
+      "sourceSha": "e8974ec34b919ceab37bdbd7e7379f96f3abce99",
+      "boundary": "archive diagnostic; preflight failed outside registered Git worktree",
+      "success": false,
+      "passed": 73,
+      "failed": 1,
+      "skipped": 0,
+      "fileCount": 11,
+      "files": [
+        {
+          "file": "server/__tests__/launch-preflight.contract.test.ts",
+          "status": "failed",
+          "tests": 11,
+          "failedTests": [
+            "launch preflight contract passes with production revenue-critical environment configured"
+          ]
+        },
+        {
+          "file": "server/services/__tests__/billingProofStorage.hosted.test.ts",
+          "status": "passed",
+          "tests": 2,
+          "failedTests": []
+        },
+        {
+          "file": "server/services/__tests__/commercialActivationPolicy.test.ts",
+          "status": "passed",
+          "tests": 16,
+          "failedTests": []
+        },
+        {
+          "file": "server/services/__tests__/commercialTerm.test.ts",
+          "status": "passed",
+          "tests": 9,
+          "failedTests": []
+        },
+        {
+          "file": "server/services/__tests__/commercialTermNoticeScheduler.test.ts",
+          "status": "passed",
+          "tests": 1,
+          "failedTests": []
+        },
+        {
+          "file": "server/services/__tests__/developerMediaAuthority.test.ts",
+          "status": "passed",
+          "tests": 3,
+          "failedTests": []
+        },
+        {
+          "file": "server/services/__tests__/paidMvpSalesPause.test.ts",
+          "status": "passed",
+          "tests": 4,
+          "failedTests": []
+        },
+        {
+          "file": "server/services/__tests__/publicPropertyEligibilityBatch.test.ts",
+          "status": "passed",
+          "tests": 1,
+          "failedTests": []
+        },
+        {
+          "file": "server/services/__tests__/publicPropertyEligibilityService.test.ts",
+          "status": "passed",
+          "tests": 15,
+          "failedTests": []
+        },
+        {
+          "file": "server/services/__tests__/superAdminRoleAuthority.test.ts",
+          "status": "passed",
+          "tests": 5,
+          "failedTests": []
+        },
+        {
+          "file": "server/services/__tests__/transactionalEmailPolicy.test.ts",
+          "status": "passed",
+          "tests": 7,
+          "failedTests": []
+        }
+      ]
+    },
+    {
+      "sourceSha": "e8974ec34b919ceab37bdbd7e7379f96f3abce99",
+      "boundary": "exact source archive; no database",
+      "success": true,
+      "passed": 47,
+      "failed": 0,
+      "skipped": 0,
+      "fileCount": 11,
+      "files": [
+        {
+          "file": "client/src/lib/agentJourney.test.ts",
+          "status": "passed",
+          "tests": 4,
+          "failedTests": []
+        },
+        {
+          "file": "client/src/lib/agentListingActionIds.test.ts",
+          "status": "passed",
+          "tests": 3,
+          "failedTests": []
+        },
+        {
+          "file": "client/src/components/agent/AgentSetupWizard.test.tsx",
+          "status": "passed",
+          "tests": 4,
+          "failedTests": []
+        },
+        {
+          "file": "client/src/components/dashboard/EntityStatusCard.agentIds.test.tsx",
+          "status": "passed",
+          "tests": 2,
+          "failedTests": []
+        },
+        {
+          "file": "client/src/components/developer/BillingPanel.preparation.test.tsx",
+          "status": "passed",
+          "tests": 1,
+          "failedTests": []
+        },
+        {
+          "file": "client/src/components/development-wizard/DevelopmentWizard.test.tsx",
+          "status": "passed",
+          "tests": 7,
+          "failedTests": []
+        },
+        {
+          "file": "client/src/hooks/__tests__/useListingWizard.ownerIsolation.test.ts",
+          "status": "passed",
+          "tests": 3,
+          "failedTests": []
+        },
+        {
+          "file": "client/src/pages/admin/AgentApprovals.reconsideration.test.tsx",
+          "status": "passed",
+          "tests": 2,
+          "failedTests": []
+        },
+        {
+          "file": "client/src/pages/advertise/AgentProductLandingPage.commercialTruth.test.tsx",
+          "status": "passed",
+          "tests": 6,
+          "failedTests": []
+        },
+        {
+          "file": "client/src/pages/agent/AgentPackageSelection.test.tsx",
+          "status": "passed",
+          "tests": 8,
+          "failedTests": []
+        },
+        {
+          "file": "client/src/components/developer/__tests__/DeveloperSetupWizardEnhanced.states.test.tsx",
+          "status": "passed",
+          "tests": 7,
+          "failedTests": []
+        }
+      ]
+    },
+    {
+      "sourceSha": "e8974ec34b919ceab37bdbd7e7379f96f3abce99",
+      "boundary": "registered audit worktree; no database",
+      "success": true,
+      "passed": 74,
+      "failed": 0,
+      "skipped": 0,
+      "fileCount": 11,
+      "files": [
+        {
+          "file": "server/__tests__/launch-preflight.contract.test.ts",
+          "status": "passed",
+          "tests": 11,
+          "failedTests": []
+        },
+        {
+          "file": "server/services/__tests__/billingProofStorage.hosted.test.ts",
+          "status": "passed",
+          "tests": 2,
+          "failedTests": []
+        },
+        {
+          "file": "server/services/__tests__/commercialActivationPolicy.test.ts",
+          "status": "passed",
+          "tests": 16,
+          "failedTests": []
+        },
+        {
+          "file": "server/services/__tests__/commercialTerm.test.ts",
+          "status": "passed",
+          "tests": 9,
+          "failedTests": []
+        },
+        {
+          "file": "server/services/__tests__/commercialTermNoticeScheduler.test.ts",
+          "status": "passed",
+          "tests": 1,
+          "failedTests": []
+        },
+        {
+          "file": "server/services/__tests__/developerMediaAuthority.test.ts",
+          "status": "passed",
+          "tests": 3,
+          "failedTests": []
+        },
+        {
+          "file": "server/services/__tests__/paidMvpSalesPause.test.ts",
+          "status": "passed",
+          "tests": 4,
+          "failedTests": []
+        },
+        {
+          "file": "server/services/__tests__/publicPropertyEligibilityBatch.test.ts",
+          "status": "passed",
+          "tests": 1,
+          "failedTests": []
+        },
+        {
+          "file": "server/services/__tests__/publicPropertyEligibilityService.test.ts",
+          "status": "passed",
+          "tests": 15,
+          "failedTests": []
+        },
+        {
+          "file": "server/services/__tests__/superAdminRoleAuthority.test.ts",
+          "status": "passed",
+          "tests": 5,
+          "failedTests": []
+        },
+        {
+          "file": "server/services/__tests__/transactionalEmailPolicy.test.ts",
+          "status": "passed",
+          "tests": 7,
+          "failedTests": []
+        }
+      ]
+    }
+  ]
+}

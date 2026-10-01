@@ -9,38 +9,82 @@ const priorJwtSecret = vi.hoisted(() => {
   return prior;
 });
 import { randomUUID } from 'node:crypto';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, inArray, ne } from 'drizzle-orm';
+import { encodeCanonicalLocationId } from '../../shared/locationAuthority';
 
 const describeWithDb: typeof describe = process.env.DATABASE_URL
   ? describe
-  : ((name: string, fn: Parameters<typeof describe>[1]) =>
-      describe.skip(`${name} (requires DATABASE_URL disposable DB)`, fn)) as typeof describe;
+  : (((name: string, fn: Parameters<typeof describe>[1]) =>
+      describe.skip(`${name} (requires DATABASE_URL disposable DB)`, fn)) as typeof describe);
 
 import { db } from '../db';
 import {
   agencies,
   agencyAgentMemberships,
   agents,
+  billableAccounts,
+  cities,
+  commissions,
+  commercialAssets,
+  commercialAvailabilities,
+  commercialAvailabilityEconomics,
+  commercialAvailabilityListingLinks,
+  commercialSpaces,
   invitations,
+  listingAnalytics,
+  listings,
+  leads,
+  notifications,
+  plans,
+  properties,
+  provinces,
+  showings,
+  suburbs,
+  subscriptions,
   users,
 } from '../../drizzle/schema';
 import {
+  isCurrentActiveAgencyMembership,
   listCurrentAgencyMembershipsForAgent,
   maintainAgencyAgentMembership,
 } from '../services/agencyMembershipService';
-import { resolveCurrentAgencyAffiliation } from '../services/agentPublicProfileService';
+import {
+  findAgentsServingLocation,
+  resolveCurrentAgencyAffiliation,
+} from '../services/agentPublicProfileService';
+import { agentOnboardingService } from '../services/agentOnboardingService';
+import { agentProfileSchema } from '../routes/agentOnboarding';
 import { createListing } from '../db';
+import { createListingMediaUploadToken } from '../services/listingMediaAuthority';
+import { requireAgencyAssignableAgent } from '../services/sellerProspectAccessService';
+import { searchPublicCommercial } from '../services/commercialOfficeService';
 
 const created = {
   userIds: [] as number[],
   agencyIds: [] as number[],
   agentIds: [] as number[],
   invitationIds: [] as number[],
+  listingIds: [] as number[],
+  propertyIds: [] as number[],
+  leadIds: [] as number[],
+  commercialAssetIds: [] as number[],
+  commercialSpaceIds: [] as number[],
+  commercialAvailabilityIds: [] as number[],
 };
 
-let acceptanceCallerFor: (
-  user: { id: number; role: string; agencyId?: number | null; email?: string | null },
-) => { invitation: { accept: (input: { token: string }) => Promise<unknown> } };
+let acceptanceCallerFor: (user: {
+  id: number;
+  role: string;
+  agencyId?: number | null;
+  email?: string | null;
+}) => { invitation: { accept: (input: { token: string }) => Promise<unknown> } };
+let applicationCallerFor: (user: {
+  id: number;
+  role: string;
+  agencyId?: number | null;
+  email?: string | null;
+}) => any;
+let publicCallerFor: () => any;
 
 /**
  * Acceptance mints a fresh session token through the real auth service.
@@ -51,7 +95,14 @@ let acceptanceCallerFor: (
  */
 async function ensureTestAuthEnvironmentAndRouter() {
   const { appRouter } = await import('../routers');
-  acceptanceCallerFor = user =>
+  const createApplicationCaller = (
+    user: {
+      id: number;
+      role: string;
+      agencyId?: number | null;
+      email?: string | null;
+    } | null,
+  ) =>
     appRouter.createCaller({
       req: {
         hostname: 'localhost',
@@ -63,6 +114,9 @@ async function ensureTestAuthEnvironmentAndRouter() {
       res: { cookie: () => undefined },
       user,
     } as any);
+  applicationCallerFor = user => createApplicationCaller(user);
+  publicCallerFor = () => createApplicationCaller(null);
+  acceptanceCallerFor = user => applicationCallerFor(user);
 }
 
 function acceptanceCaller(user: {
@@ -74,24 +128,35 @@ function acceptanceCaller(user: {
   return acceptanceCallerFor!(user);
 }
 
+function applicationCaller(user: {
+  id: number;
+  role: string;
+  agencyId?: number | null;
+  email?: string | null;
+}) {
+  return applicationCallerFor!(user);
+}
+
+function publicCaller() {
+  return publicCallerFor!();
+}
+
 async function insertId(result: any): Promise<number> {
   return Number(result?.[0]?.insertId ?? result?.insertId ?? 0);
 }
 
 async function insertAgency(label: string) {
   const suffix = `${Date.now()}-${randomUUID().slice(0, 8)}`;
-  const [result] = await db
-    .insert(agencies)
-    .values({
-      name: `${label} Agency`,
-      slug: `${label.toLowerCase()}-${suffix}`,
-      email: `${label}-${suffix}@example.test`,
-      city: 'Johannesburg',
-      province: 'Gauteng',
-      subscriptionPlan: 'free',
-      subscriptionStatus: 'pending_payment',
-      isVerified: 1,
-    } as any);
+  const [result] = await db.insert(agencies).values({
+    name: `${label} Agency`,
+    slug: `${label.toLowerCase()}-${suffix}`,
+    email: `${label}-${suffix}@example.test`,
+    city: 'Johannesburg',
+    province: 'Gauteng',
+    subscriptionPlan: 'free',
+    subscriptionStatus: 'pending_payment',
+    isVerified: 1,
+  } as any);
   const id = await insertId(result);
   created.agencyIds.push(id);
   return id;
@@ -99,14 +164,12 @@ async function insertAgency(label: string) {
 
 async function insertUser(label: string, role: 'agent' | 'agency_admin' | 'visitor') {
   const suffix = `${Date.now()}-${randomUUID().slice(0, 8)}`;
-  const [result] = await db
-    .insert(users)
-    .values({
-      email: `${label}-${suffix}@example.test`,
-      name: label,
-      role,
-      emailVerified: 1,
-    } as any);
+  const [result] = await db.insert(users).values({
+    email: `${label}-${suffix}@example.test`,
+    name: label,
+    role,
+    emailVerified: 1,
+  } as any);
   const id = await insertId(result);
   created.userIds.push(id);
   return id;
@@ -117,29 +180,78 @@ async function getUser(id: number) {
   return row;
 }
 
+async function getInvitation(id: number) {
+  const [row] = await db.select().from(invitations).where(eq(invitations.id, id)).limit(1);
+  if (!row) throw new Error(`Expected invitation ${id}`);
+  return row;
+}
+
+async function createActivatedAgencyOwner(label: string) {
+  const agencyId = await insertAgency(label);
+  const ownerUserId = await insertUser(`${label} Owner`, 'agency_admin');
+  await db.update(users).set({ agencyId }).where(eq(users.id, ownerUserId));
+  await createActiveAgencyInvitationAccess(agencyId, ownerUserId);
+  const owner = await getUser(ownerUserId);
+  if (!owner?.email) throw new Error('Expected agency owner email');
+
+  return {
+    agencyId,
+    ownerUserId,
+    ownerCaller: applicationCaller({
+      id: ownerUserId,
+      role: 'agency_admin',
+      agencyId,
+      email: owner.email,
+    }),
+  };
+}
+
+async function insertVerifiedInvitee(label: string, role: 'agent' | 'visitor' = 'visitor') {
+  const userId = await insertUser(label, role);
+  const user = await getUser(userId);
+  if (!user?.email) throw new Error('Expected invitee email');
+  return { userId, email: user.email };
+}
+
+function inviteeCaller(input: { userId: number; role?: 'agent' | 'visitor'; email: string }) {
+  return acceptanceCaller({
+    id: input.userId,
+    role: input.role ?? 'visitor',
+    agencyId: null,
+    email: input.email,
+  });
+}
+
+async function currentMembershipsForUser(userId: number) {
+  const [profile] = await db.select().from(agents).where(eq(agents.userId, userId)).limit(1);
+  if (!profile) return [];
+  return db
+    .select()
+    .from(agencyAgentMemberships)
+    .where(eq(agencyAgentMemberships.agentId, profile.id));
+}
+
 async function insertAgentProfile(
   userId: number,
   agencyId: number | null,
   overrides: Record<string, unknown> = {},
 ) {
   const suffix = randomUUID().slice(0, 8);
-  const [result] = await db
-    .insert(agents)
-    .values({
-      userId,
-      agencyId,
-      firstName: 'Fixture',
-      lastName: 'Agent',
-      displayName: `Fixture Agent ${suffix}`,
-      email: `agent-${suffix}@example.test`,
-      role: 'agent',
-      isVerified: 0,
-      isFeatured: 0,
-      status: 'approved',
-      approvedAt: new Date(),
-      profileCompletionScore: 60,
-      ...overrides,
-    } as any);
+  const [result] = await db.insert(agents).values({
+    userId,
+    agencyId,
+    firstName: 'Fixture',
+    lastName: 'Agent',
+    displayName: `Fixture Agent ${suffix}`,
+    email: `agent-${suffix}@example.test`,
+    role: 'agent',
+    isVerified: 0,
+    isFeatured: 0,
+    status: 'approved',
+    approvedAt: new Date(),
+    profileCompletionScore: 60,
+    ...overrides,
+  } as any);
   const id = await insertId(result);
   created.agentIds.push(id);
   return id;
@@ -151,20 +263,184 @@ async function insertPendingInvitation(input: {
   email: string;
   role: 'agent' | 'agency_admin';
 }) {
-  const [result] = await db
-    .insert(invitations)
-    .values({
-      agencyId: input.agencyId,
-      email: input.email,
-      role: input.role,
-      token: `token-${randomUUID()}`,
-      status: 'pending',
-      invitedBy: input.invitedBy,
-      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-    } as any);
+  const [result] = await db.insert(invitations).values({
+    agencyId: input.agencyId,
+    email: input.email,
+    role: input.role,
+    token: `token-${randomUUID()}`,
+    status: 'pending',
+    invitedBy: input.invitedBy,
+    expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+  } as any);
   const id = await insertId(result);
   created.invitationIds.push(id);
   return id;
+}
+
+/**
+ * Isolated paid-state fixture only. Invitation acceptance is intentionally
+ * unavailable while an agency is in the normal pre-payment state; this
+ * fixture establishes the canonical agency owner and live term needed to
+ * exercise the post-activation membership path without invoking a payment
+ * provider or enabling normal runtime activation.
+ */
+async function createActiveAgencyInvitationAccess(agencyId: number, actorUserId: number) {
+  const [plan] = await db
+    .select({ id: plans.id })
+    .from(plans)
+    .where(eq(plans.name, 'agency_launch_access'))
+    .limit(1);
+  if (!plan) throw new Error('Canonical agency Launch Access reference data is unavailable.');
+
+  const [accountResult] = await db.insert(billableAccounts).values({
+    accountKind: 'agency',
+    agencyId,
+  } as any);
+  const accountId = await insertId(accountResult);
+  if (!accountId) throw new Error('Could not create agency billable-account fixture.');
+
+  const now = new Date();
+  await db.insert(subscriptions).values({
+    ownerType: 'agency',
+    ownerId: agencyId,
+    billableAccountId: accountId,
+    planId: plan.id,
+    status: 'active',
+    currentPeriodStart: now,
+    currentPeriodEnd: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000),
+    cancelAtPeriodEnd: 0,
+    createdBy: actorUserId,
+    updatedBy: actorUserId,
+  } as any);
+}
+
+function asMySqlTimestamp(value: Date) {
+  return value.toISOString().slice(0, 19).replace('T', ' ');
+}
+
+/**
+ * Builds the canonical Asset → Space → Availability → Listing graph directly
+ * for a public-custody acceptance case. The commercial authoring workflow is
+ * separately governed; this fixture isolates the already-published public
+ * record needed to prove recipient eligibility without enabling runtime
+ * commercial activation.
+ */
+async function insertPublishedCommercialListing(input: {
+  ownerUserId: number;
+  agencyId: number;
+  agentId: number;
+}) {
+  const [location] = await db
+    .select({
+      provinceId: provinces.id,
+      provinceName: provinces.name,
+      cityId: cities.id,
+      cityName: cities.name,
+      suburbId: suburbs.id,
+      suburbName: suburbs.name,
+    })
+    .from(suburbs)
+    .innerJoin(cities, eq(suburbs.cityId, cities.id))
+    .innerJoin(provinces, eq(cities.provinceId, provinces.id))
+    .where(ne(suburbs.status, 'retired'))
+    .limit(1);
+  if (!location) throw new Error('Canonical active Commercial fixture location is unavailable.');
+
+  const suffix = randomUUID().slice(0, 8);
+  const now = new Date();
+  const due = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+  const [assetResult] = await db.insert(commercialAssets).values({
+    assetKind: 'office_building',
+    name: `Commercial custody asset ${suffix}`,
+    address: '1 Canonical Commercial Way',
+    provinceId: Number(location.provinceId),
+    cityId: Number(location.cityId),
+    suburbId: Number(location.suburbId),
+    lifecycleStatus: 'active',
+    createdByUserId: input.ownerUserId,
+    latitude: '-26.1076000',
+    longitude: '28.0567000',
+    coordinateSource: 'manual_confirmed',
+    locationConfirmationState: 'confirmed',
+    publicLocationPrecision: 'approximate',
+    locationConfirmedByUserId: input.ownerUserId,
+    locationConfirmedAt: asMySqlTimestamp(now),
+  } as any);
+  const commercialAssetId = await insertId(assetResult);
+  created.commercialAssetIds.push(commercialAssetId);
+
+  const [spaceResult] = await db.insert(commercialSpaces).values({
+    commercialAssetId,
+    spaceClass: 'office',
+    spaceKind: 'office_suite',
+    identifier: `Suite ${suffix}`,
+    rentableAreaM2: '120.00',
+    lifecycleStatus: 'active',
+  } as any);
+  const commercialSpaceId = await insertId(spaceResult);
+  created.commercialSpaceIds.push(commercialSpaceId);
+
+  const [availabilityResult] = await db.insert(commercialAvailabilities).values({
+    commercialSpaceId,
+    transactionType: 'lease',
+    pricingMode: 'componentised',
+    vatTreatment: 'excluded',
+    availabilityState: 'available_confirmed',
+    lastConfirmedAt: asMySqlTimestamp(now),
+    confirmationSource: 'broker',
+    confirmationSourceLabel: 'Fixture broker',
+    confirmedByUserId: input.ownerUserId,
+    reconfirmationDueAt: asMySqlTimestamp(due),
+  } as any);
+  const commercialAvailabilityId = await insertId(availabilityResult);
+  created.commercialAvailabilityIds.push(commercialAvailabilityId);
+
+  await db.insert(commercialAvailabilityEconomics).values({
+    commercialAvailabilityId,
+    componentCode: 'base_rent',
+    valueState: 'supplied',
+    chargeBasis: 'per_m2_month',
+    amountMinor: 15000,
+    vatTreatment: 'excluded',
+    sourceLabel: 'Fixture lease schedule',
+    suppliedAt: asMySqlTimestamp(now),
+  } as any);
+
+  const [listingResult] = await db.insert(listings).values({
+    ownerId: input.ownerUserId,
+    agentId: input.agentId,
+    agencyId: input.agencyId,
+    action: 'rent',
+    propertyType: 'commercial',
+    title: `Commercial custody suite ${suffix}`,
+    description: 'A canonical public Commercial fixture used only for custody verification.',
+    address: '1 Canonical Commercial Way',
+    city: location.cityName,
+    suburb: location.suburbName,
+    province: location.provinceName,
+    provinceId: Number(location.provinceId),
+    cityId: Number(location.cityId),
+    suburbId: Number(location.suburbId),
+    latitude: '-26.1076000',
+    longitude: '28.0567000',
+    coordinateSource: 'manual_confirmed',
+    locationConfirmationState: 'confirmed',
+    publicLocationPrecision: 'approximate',
+    status: 'published',
+    approvalStatus: 'approved',
+    publishedAt: asMySqlTimestamp(now),
+    slug: `commercial-custody-${suffix}`,
+  } as any);
+  const listingId = await insertId(listingResult);
+  created.listingIds.push(listingId);
+
+  await db.insert(commercialAvailabilityListingLinks).values({
+    commercialAvailabilityId,
+    listingId,
+    linkStatus: 'active',
+  } as any);
+
+  return { listingId, commercialAvailabilityId };
 }
 
 beforeAll(async () => {
@@ -177,17 +453,95 @@ afterAll(async () => {
   if (priorJwtSecret === undefined) delete process.env.JWT_SECRET;
   else process.env.JWT_SECRET = priorJwtSecret;
   if (!process.env.DATABASE_URL) return;
+  if (created.leadIds.length) {
+    await db
+      .delete(leads)
+      .where(inArray(leads.id, created.leadIds))
+      .catch(() => undefined);
+  }
+  if (created.listingIds.length) {
+    await db
+      .delete(commercialAvailabilityListingLinks)
+      .where(inArray(commercialAvailabilityListingLinks.listingId, created.listingIds))
+      .catch(() => undefined);
+  }
+  if (created.commercialAvailabilityIds.length) {
+    await db
+      .delete(commercialAvailabilities)
+      .where(inArray(commercialAvailabilities.id, created.commercialAvailabilityIds))
+      .catch(() => undefined);
+  }
+  if (created.commercialSpaceIds.length) {
+    await db
+      .delete(commercialSpaces)
+      .where(inArray(commercialSpaces.id, created.commercialSpaceIds))
+      .catch(() => undefined);
+  }
+  if (created.commercialAssetIds.length) {
+    await db
+      .delete(commercialAssets)
+      .where(inArray(commercialAssets.id, created.commercialAssetIds))
+      .catch(() => undefined);
+  }
+  if (created.propertyIds.length) {
+    await db.delete(properties).where(inArray(properties.id, created.propertyIds));
+  }
+  for (const id of created.listingIds) {
+    await db
+      .delete(listingAnalytics)
+      .where(eq(listingAnalytics.listingId, id))
+      .catch(() => undefined);
+    await db
+      .delete(listings)
+      .where(eq(listings.id, id))
+      .catch(() => undefined);
+  }
+  if (created.agencyIds.length) {
+    await db
+      .delete(subscriptions)
+      .where(
+        and(
+          eq(subscriptions.ownerType, 'agency'),
+          inArray(subscriptions.ownerId, created.agencyIds),
+        ),
+      )
+      .catch(() => undefined);
+    await db
+      .delete(billableAccounts)
+      .where(inArray(billableAccounts.agencyId, created.agencyIds))
+      .catch(() => undefined);
+  }
   for (const id of created.invitationIds) {
-    await db.delete(invitations).where(eq(invitations.id, id)).catch(() => undefined);
+    await db
+      .delete(invitations)
+      .where(eq(invitations.id, id))
+      .catch(() => undefined);
   }
   for (const id of created.agentIds) {
-    await db.delete(agents).where(eq(agents.id, id)).catch(() => undefined);
+    await db
+      .delete(agencyAgentMemberships)
+      .where(eq(agencyAgentMemberships.agentId, id))
+      .catch(() => undefined);
+    await db
+      .delete(agents)
+      .where(eq(agents.id, id))
+      .catch(() => undefined);
   }
   for (const id of created.userIds) {
-    await db.delete(users).where(eq(users.id, id)).catch(() => undefined);
+    await db
+      .delete(notifications)
+      .where(eq(notifications.userId, id))
+      .catch(() => undefined);
+    await db
+      .delete(users)
+      .where(eq(users.id, id))
+      .catch(() => undefined);
   }
   for (const id of created.agencyIds) {
-    await db.delete(agencies).where(eq(agencies.id, id)).catch(() => undefined);
+    await db
+      .delete(agencies)
+      .where(eq(agencies.id, id))
+      .catch(() => undefined);
   }
 });
 
@@ -272,7 +626,8 @@ describeWithDb('canonical membership maintenance (atomic unique-pair authority)'
   });
 
   it('establishing a new affiliation closes competing current memberships', async () => {
-    const { establishCanonicalAgencyMembership } = await import('../services/agencyMembershipService');
+    const { establishCanonicalAgencyMembership } =
+      await import('../services/agencyMembershipService');
     const agencyA = await insertAgency('CompeteA');
     const agencyB = await insertAgency('CompeteB');
     const agentUserId = await insertUser('Nomad', 'agent');
@@ -323,6 +678,261 @@ describeWithDb('canonical membership maintenance (atomic unique-pair authority)'
     expect(rows).toHaveLength(1);
     expect(rows[0].status).toBe('active');
     expect(await listCurrentAgencyMembershipsForAgent(db, agentId)).toHaveLength(1);
+  });
+
+  it('rejects profile-supplied agency affiliation and leaves direct service callers unaffiliated', async () => {
+    const agencyId = await insertAgency('ForgedProfile');
+    const userId = await insertUser('ForgedProfileAgent', 'agent');
+    const agentId = await insertAgentProfile(userId, null);
+
+    expect(
+      agentProfileSchema.safeParse({
+        displayName: 'Forged Profile Agent',
+        phone: '+27110000000',
+        agencyId,
+      }).success,
+    ).toBe(false);
+
+    const result = await agentOnboardingService.saveProfile(userId, {
+      displayName: 'Forged Profile Agent',
+      phone: '+27110000000',
+      agencyId,
+    } as any);
+
+    const [profile] = await db.select().from(agents).where(eq(agents.id, agentId)).limit(1);
+    expect(profile.agencyId).toBeNull();
+    expect(result.profile?.agencyId).toBeNull();
+    expect(await listCurrentAgencyMembershipsForAgent(db, agentId)).toHaveLength(0);
+  });
+
+  it('does not recommend a suspended member through retained agency profile affiliation', async () => {
+    const agencyId = await insertAgency('PublicRecommendation');
+    const memberUserId = await insertUser('PublicRecommendationMember', 'agent');
+    const [location] = await db
+      .select({ id: suburbs.id })
+      .from(suburbs)
+      .where(ne(suburbs.status, 'retired'))
+      .limit(1);
+    if (!location) throw new Error('Canonical active suburb reference data is required.');
+
+    const agentId = await insertAgentProfile(memberUserId, agencyId, {
+      areasServed: JSON.stringify([
+        {
+          canonicalLocationId: encodeCanonicalLocationId('suburb', Number(location.id)),
+          label: 'Canonical public recommendation fixture',
+        },
+      ]),
+    });
+    await maintainAgencyAgentMembership(db, { agencyId, agentId, status: 'active' });
+    // Public recommendations are commercially actionable discovery. Establish
+    // the same canonical Agency Launch Access term that a live agency would
+    // have; membership alone must not substitute for paid entitlement.
+    await createActiveAgencyInvitationAccess(agencyId, memberUserId);
+
+    await expect(findAgentsServingLocation(db, 'suburb', Number(location.id))).resolves.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: agentId, agencyName: expect.stringContaining('Agency') }),
+      ]),
+    );
+
+    await maintainAgencyAgentMembership(db, { agencyId, agentId, status: 'suspended' });
+
+    // Suspension deliberately retains historical projection fields. Public
+    // recommendations must derive agency eligibility from current canonical
+    // membership, just like public-property lead custody does.
+    const [retainedProfile] = await db.select().from(agents).where(eq(agents.id, agentId)).limit(1);
+    expect(retainedProfile.agencyId).toBe(agencyId);
+
+    const recommendations = await findAgentsServingLocation(db, 'suburb', Number(location.id));
+    expect(recommendations.map(recommendation => recommendation.id)).not.toContain(agentId);
+  });
+
+  it('delivers a public Commercial enquiry to a current unbadged agency member through the agency term', async () => {
+    const agencyId = await insertAgency('CommercialAgencyEntitlement');
+    const ownerUserId = await insertUser('CommercialAgencyOwner', 'agency_admin');
+    await db.update(users).set({ agencyId }).where(eq(users.id, ownerUserId));
+    await createActiveAgencyInvitationAccess(agencyId, ownerUserId);
+
+    const memberUserId = await insertUser('CommercialAgencyMember', 'agent');
+    await db.update(users).set({ agencyId, isSubaccount: 1 }).where(eq(users.id, memberUserId));
+    const agentId = await insertAgentProfile(memberUserId, agencyId, { isVerified: 0 });
+    await maintainAgencyAgentMembership(db, { agencyId, agentId, status: 'active' });
+    expect(
+      await db
+        .select({ id: subscriptions.id })
+        .from(subscriptions)
+        .where(and(eq(subscriptions.ownerType, 'agent'), eq(subscriptions.ownerId, memberUserId))),
+    ).toHaveLength(0);
+
+    const commercial = await insertPublishedCommercialListing({
+      ownerUserId,
+      agencyId,
+      agentId,
+    });
+    await expect(searchPublicCommercial()).resolves.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          listingId: commercial.listingId,
+          availability: expect.objectContaining({ id: commercial.commercialAvailabilityId }),
+        }),
+      ]),
+    );
+
+    const captured = await publicCaller().leads.create({
+      listingId: commercial.listingId,
+      commercialAvailabilityId: commercial.commercialAvailabilityId,
+      name: 'Commercial prospect',
+      email: `commercial-prospect-${randomUUID()}@example.test`,
+      message: 'Please contact me about this office suite.',
+      source: 'commercial',
+      sourceSurface: 'commercial_detail',
+      leadSource: 'commercial',
+      captureRequestId: `commercial-custody-${randomUUID()}`,
+      consent: {
+        accepted: true,
+        version: 'launch-privacy-1',
+        source: 'commercial_detail',
+      },
+    });
+    expect(captured).toMatchObject({
+      success: true,
+      delivered: true,
+      deliveryStatus: 'delivered',
+      deliveryMethod: 'crm_export',
+      leadCustody: 'verified_customer_recipient',
+      recipientType: 'agent',
+      recipientId: agentId,
+    });
+    const leadId = Number(captured.leadId);
+    created.leadIds.push(leadId);
+    await expect(
+      db
+        .select({ listingId: leads.listingId, agencyId: leads.agencyId, agentId: leads.agentId })
+        .from(leads)
+        .where(eq(leads.id, leadId))
+        .limit(1),
+    ).resolves.toEqual([
+      expect.objectContaining({
+        listingId: commercial.listingId,
+        agencyId,
+        agentId,
+      }),
+    ]);
+
+    // A historical profile association and materialized Listing custody must
+    // not keep granting new Commercial opportunities after canonical removal.
+    await maintainAgencyAgentMembership(db, { agencyId, agentId, status: 'suspended' });
+    const [retainedProfile] = await db.select().from(agents).where(eq(agents.id, agentId)).limit(1);
+    expect(retainedProfile.agencyId).toBe(agencyId);
+    const suspendedResult = await publicCaller().leads.create({
+      listingId: commercial.listingId,
+      commercialAvailabilityId: commercial.commercialAvailabilityId,
+      name: 'Suspended Commercial prospect',
+      email: `commercial-suspended-${randomUUID()}@example.test`,
+      message: 'Please contact me about this office suite.',
+      source: 'commercial',
+      sourceSurface: 'commercial_detail',
+      leadSource: 'commercial',
+      captureRequestId: `commercial-suspended-${randomUUID()}`,
+      consent: {
+        accepted: true,
+        version: 'launch-privacy-1',
+        source: 'commercial_detail',
+      },
+    });
+    expect(suspendedResult).toMatchObject({
+      success: true,
+      delivered: false,
+      deliveryStatus: 'attention_required',
+      leadCustody: 'attention_required',
+      recipientType: 'manual',
+      recipientId: null,
+    });
+    created.leadIds.push(Number(suspendedResult.leadId));
+  });
+
+  it('delivers a direct profile enquiry to a current unbadged agency member with agency Launch Access', async () => {
+    const agencyId = await insertAgency('DirectProfileAgencyEntitlement');
+    const ownerUserId = await insertUser('DirectProfileAgencyOwner', 'agency_admin');
+    await db.update(users).set({ agencyId }).where(eq(users.id, ownerUserId));
+    await createActiveAgencyInvitationAccess(agencyId, ownerUserId);
+
+    const memberUserId = await insertUser('DirectProfileAgencyMember', 'agent');
+    await db.update(users).set({ agencyId, isSubaccount: 1 }).where(eq(users.id, memberUserId));
+    const agentId = await insertAgentProfile(memberUserId, agencyId, { isVerified: 0 });
+    await maintainAgencyAgentMembership(db, { agencyId, agentId, status: 'active' });
+    expect(
+      await db
+        .select({ id: subscriptions.id })
+        .from(subscriptions)
+        .where(and(eq(subscriptions.ownerType, 'agent'), eq(subscriptions.ownerId, memberUserId))),
+    ).toHaveLength(0);
+
+    // This is the intended post-activation agency case: no optional badge
+    // and no second personal purchase. Public eligibility comes from current
+    // canonical membership plus the agency's own billable entitlement.
+    const captured = await publicCaller().leads.create({
+      agentId,
+      name: 'Direct profile prospect',
+      email: `direct-profile-${randomUUID()}@example.test`,
+      message: 'Please contact me about your services.',
+      source: 'agent_profile',
+      sourceSurface: 'agent_profile_enquiry',
+      leadSource: 'agent_profile',
+      captureRequestId: `direct-profile-${randomUUID()}`,
+      consent: {
+        accepted: true,
+        version: 'launch-privacy-1',
+        source: 'agent_profile_enquiry',
+      },
+    });
+    expect(captured).toMatchObject({
+      success: true,
+      delivered: true,
+      deliveryStatus: 'delivered',
+      deliveryMethod: 'crm_export',
+      leadCustody: 'verified_customer_recipient',
+      recipientType: 'agent',
+      recipientId: agentId,
+    });
+    const leadId = Number(captured.leadId);
+    created.leadIds.push(leadId);
+
+    const [storedLead] = await db
+      .select({
+        agencyId: leads.agencyId,
+        agentId: leads.agentId,
+        captureRequestId: leads.captureRequestId,
+      })
+      .from(leads)
+      .where(eq(leads.id, leadId))
+      .limit(1);
+    expect(storedLead).toMatchObject({ agencyId: null, agentId });
+    expect(storedLead.captureRequestId).toMatch(/^direct-profile-/);
+
+    // The profile's historical agency field remains set after a membership
+    // suspension, but it can no longer use the agency commercial term to
+    // receive a new public enquiry.
+    await maintainAgencyAgentMembership(db, { agencyId, agentId, status: 'suspended' });
+    const [retainedProfile] = await db.select().from(agents).where(eq(agents.id, agentId)).limit(1);
+    expect(retainedProfile.agencyId).toBe(agencyId);
+    await expect(
+      publicCaller().leads.create({
+        agentId,
+        name: 'Suspended membership prospect',
+        email: `suspended-profile-${randomUUID()}@example.test`,
+        message: 'Please contact me about your services.',
+        source: 'agent_profile',
+        sourceSurface: 'agent_profile_enquiry',
+        leadSource: 'agent_profile',
+        captureRequestId: `suspended-profile-${randomUUID()}`,
+        consent: {
+          accepted: true,
+          version: 'launch-privacy-1',
+          source: 'agent_profile_enquiry',
+        },
+      }),
+    ).rejects.toMatchObject({ code: 'NOT_FOUND' });
   });
 });
 
@@ -376,16 +986,226 @@ describeWithDb('team operations on canonical membership', () => {
     expect(assignable.map((a: { id: number }) => Number(a.id))).not.toContain(agentId);
   });
 
-  it('blocks inventory attribution for members whose membership is no longer current', async () => {
+  it('does not let a retained agency profile outlive canonical seller-prospect or analytics authority', async () => {
+    const agencyId = await insertAgency('PrivateWorkspace');
+    const ownerUserId = await insertUser('PrivateWorkspaceOwner', 'agency_admin');
+    await db.update(users).set({ agencyId }).where(eq(users.id, ownerUserId));
+
+    const memberUserId = await insertUser('PrivateWorkspaceMember', 'agent');
+    await db.update(users).set({ agencyId, isSubaccount: 1 }).where(eq(users.id, memberUserId));
+    const agentId = await insertAgentProfile(memberUserId, agencyId);
+    await maintainAgencyAgentMembership(db, {
+      agencyId,
+      agentId,
+      status: 'active',
+      actorUserId: ownerUserId,
+    });
+
+    const managerCaller = applicationCaller({
+      id: ownerUserId,
+      role: 'agency_admin',
+      agencyId,
+    });
+    const memberCaller = applicationCaller({
+      id: memberUserId,
+      role: 'agent',
+      agencyId,
+    });
+
+    await expect(memberCaller.canvassing.getWorkspaceAccess()).resolves.toMatchObject({
+      mode: 'agency_team',
+      scope: 'agent',
+      agencyId,
+    });
+    await expect(requireAgencyAssignableAgent(db, agencyId, agentId)).resolves.toMatchObject({
+      id: agentId,
+    });
+    await expect(managerCaller.canvassing.listAssignableAgents()).resolves.toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: agentId })]),
+    );
+
+    await maintainAgencyAgentMembership(db, {
+      agencyId,
+      agentId,
+      status: 'suspended',
+      actorUserId: ownerUserId,
+    });
+
+    const [retainedUser] = await db.select().from(users).where(eq(users.id, memberUserId)).limit(1);
+    const [retainedProfile] = await db.select().from(agents).where(eq(agents.id, agentId)).limit(1);
+    expect(retainedUser.agencyId).toBe(agencyId);
+    expect(retainedProfile.agencyId).toBe(agencyId);
+
+    await expect(memberCaller.canvassing.getWorkspaceAccess()).resolves.toMatchObject({
+      mode: 'agency_profile_required',
+    });
+    await expect(memberCaller.canvassing.list({})).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    await expect(requireAgencyAssignableAgent(db, agencyId, agentId)).rejects.toMatchObject({
+      code: 'FORBIDDEN',
+    });
+    await expect(
+      memberCaller.exploreApi.getAgencyAnalytics({ agencyId, dateRange: '7d' }),
+    ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    await expect(managerCaller.canvassing.listAssignableAgents()).resolves.not.toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: agentId })]),
+    );
+  });
+
+  it.each(['suspended', 'left'] as const)(
+    'denies every generic private-listing entry after membership becomes %s',
+    async status => {
+      const agencyId = await insertAgency(`ListingCustody-${status}`);
+      const managerId = await insertUser('CustodyManager', 'agency_admin');
+      await db.update(users).set({ agencyId }).where(eq(users.id, managerId));
+      const authorId = await insertUser('CustodyAuthor', 'agent');
+      await db.update(users).set({ agencyId }).where(eq(users.id, authorId));
+      const agentId = await insertAgentProfile(authorId, agencyId);
+      await maintainAgencyAgentMembership(db, { agencyId, agentId, status: 'active' });
+      const listingId = await createListing({
+        userId: authorId,
+        action: 'sell',
+        propertyType: 'house',
+        title: 'Private agency custody regression',
+        description: 'Private agency draft.',
+        pricing: { askingPrice: 1_900_000 },
+        propertyDetails: { bedrooms: 3, bathrooms: 2, houseAreaM2: 160 },
+        address: '10 Membership Authority Road',
+        city: 'Johannesburg',
+        province: 'Gauteng',
+        slug: `private-custody-${randomUUID()}`,
+        media: [],
+      } as any);
+      created.listingIds.push(listingId);
+      const [propertyInsert] = await db.insert(properties).values({
+        sourceListingId: listingId,
+        title: 'Custody projection',
+        description: 'Custody fixture',
+        propertyType: 'house',
+        listingType: 'sale',
+        transactionType: 'sale',
+        price: 1_900_000,
+        area: 160,
+        bedrooms: 3,
+        bathrooms: 2,
+        address: '10 Membership Authority Road',
+        city: 'Johannesburg',
+        province: 'Gauteng',
+        status: 'available',
+        featured: 0,
+        views: 0,
+        enquiries: 0,
+        ownerId: authorId,
+        agentId,
+      } as any);
+      const propertyId = Number(propertyInsert.insertId);
+      created.propertyIds.push(propertyId);
+      const author = applicationCaller({ id: authorId, role: 'agent', agencyId });
+      await expect(author.listing.getById({ id: listingId })).resolves.toMatchObject({
+        property: { id: listingId },
+      });
+      const uploadToken = createListingMediaUploadToken({
+        key: `properties/${listingId}/before-revocation.jpg`,
+        mediaType: 'image',
+        contentType: 'image/jpeg',
+        fileName: 'before-revocation.jpg',
+        userId: authorId,
+        listingId,
+      });
+      await maintainAgencyAgentMembership(db, { agencyId, agentId, status });
+
+      // Retain the approved profile and both historical agency projections.
+      // Each direct API must independently consult canonical membership.
+      for (const attempt of [
+        () => author.listing.getById({ id: listingId }),
+        () => author.listing.update({ id: listingId, title: 'Unauthorized change' }),
+        () => author.listing.getAnalytics({ listingId }),
+        () => author.listing.getLeads({ listingId }),
+        () => author.listing.getLeads({ propertyId }),
+        () => author.properties.delete({ id: propertyId }),
+        () =>
+          author.listing.uploadMedia({
+            listingId,
+            type: 'image',
+            filename: 'denied.jpg',
+            contentType: 'image/jpeg',
+          }),
+        () => author.listing.confirmMediaUpload({ uploadToken }),
+        () => author.listing.archive({ id: listingId }),
+        () => author.listing.delete({ id: listingId }),
+        () => author.listing.submitForReview({ listingId }),
+        () => author.listing.promote({ listingId, featured: false }),
+      ])
+        await expect(attempt()).rejects.toMatchObject({ code: 'FORBIDDEN' });
+      await expect(
+        author.listing.myListings({ status: 'draft', limit: 1, offset: 0 }),
+      ).resolves.toEqual([]);
+
+      const visitor = applicationCaller({ id: authorId, role: 'visitor', agencyId });
+      await expect(visitor.listing.getById({ id: listingId })).rejects.toMatchObject({
+        code: 'FORBIDDEN',
+      });
+
+      const replacementId = await insertUser('CustodyReplacement', 'agent');
+      await db.update(users).set({ agencyId }).where(eq(users.id, replacementId));
+      const replacementAgentId = await insertAgentProfile(replacementId, agencyId);
+      await maintainAgencyAgentMembership(db, {
+        agencyId,
+        agentId: replacementAgentId,
+        status: 'active',
+      });
+      await db
+        .update(listings)
+        .set({ agentId: replacementAgentId })
+        .where(eq(listings.id, listingId));
+      const replacement = applicationCaller({ id: replacementId, role: 'agent', agencyId });
+      await expect(replacement.listing.getById({ id: listingId })).resolves.toMatchObject({
+        property: { id: listingId },
+      });
+      const manager = applicationCaller({ id: managerId, role: 'agency_admin', agencyId });
+      await expect(manager.listing.getById({ id: listingId })).resolves.toMatchObject({
+        property: { id: listingId },
+      });
+      await expect(author.listing.getById({ id: listingId })).rejects.toMatchObject({
+        code: 'FORBIDDEN',
+      });
+
+      // The non-author assignment path must also lose access on revocation.
+      await maintainAgencyAgentMembership(db, { agencyId, agentId: replacementAgentId, status });
+      await expect(replacement.listing.getById({ id: listingId })).rejects.toMatchObject({
+        code: 'FORBIDDEN',
+      });
+      const [unchanged] = await db.select().from(listings).where(eq(listings.id, listingId));
+      expect(unchanged.title).toBe('Private agency custody regression');
+      expect(unchanged.status).toBe('draft');
+    },
+  );
+
+  it('keeps an unaffiliated former member draft private from their former agency', async () => {
     const agencyId = await insertAgency('Attribution');
+    const ownerUserId = await insertUser('AttributionOwner', 'agency_admin');
+    await db.update(users).set({ agencyId }).where(eq(users.id, ownerUserId));
     const memberUserId = await insertUser('AttrMember', 'agent');
-    await db
-      .update(users)
-      .set({ agencyId, isSubaccount: 1 })
-      .where(eq(users.id, memberUserId));
+    await db.update(users).set({ agencyId, isSubaccount: 1 }).where(eq(users.id, memberUserId));
     const agentId = await insertAgentProfile(memberUserId, agencyId);
 
     await maintainAgencyAgentMembership(db, { agencyId, agentId, status: 'active' });
+    const agencyOwnedListingId = await createListing({
+      userId: memberUserId,
+      action: 'sell',
+      propertyType: 'house',
+      title: 'Agency-owned draft before membership suspension',
+      description: 'This draft remains agency inventory after its author later leaves the team.',
+      pricing: { askingPrice: 2_100_000 },
+      propertyDetails: { bedrooms: 3, bathrooms: 2, houseAreaM2: 170 },
+      address: '8 Membership Authority Road',
+      city: 'Johannesburg',
+      suburb: 'Sandton',
+      province: 'Gauteng',
+      slug: `active-membership-${randomUUID().slice(0, 8)}`,
+      media: [],
+    } as any);
+    created.listingIds.push(agencyOwnedListingId);
+
     await maintainAgencyAgentMembership(db, {
       agencyId,
       agentId,
@@ -393,18 +1213,337 @@ describeWithDb('team operations on canonical membership', () => {
       actorUserId: memberUserId,
     });
 
-    // Suspended member attempts to mint an agency-attributed listing.
+    const listingId = await createListing({
+      userId: memberUserId,
+      action: 'sell',
+      propertyType: 'house',
+      title: 'Unaffiliated private draft after membership suspension',
+      description: 'This draft proves stale profile affiliation cannot mint agency inventory.',
+      pricing: { askingPrice: 1_900_000 },
+      propertyDetails: { bedrooms: 3, bathrooms: 2, houseAreaM2: 160 },
+      address: '10 Membership Authority Road',
+      city: 'Johannesburg',
+      suburb: 'Sandton',
+      province: 'Gauteng',
+      slug: `suspended-membership-${randomUUID().slice(0, 8)}`,
+      media: [],
+    } as any);
+    created.listingIds.push(listingId);
+
+    const [draft] = await db
+      .select({
+        agentId: listings.agentId,
+        agencyId: listings.agencyId,
+        status: listings.status,
+      })
+      .from(listings)
+      .where(eq(listings.id, listingId))
+      .limit(1);
+    expect(Number(draft.agentId)).toBe(agentId);
+    expect(draft.agencyId).toBeNull();
+    expect(draft.status).toBe('draft');
+
+    const formerMember = applicationCaller({ id: memberUserId, role: 'agent', agencyId });
+    await expect(formerMember.listing.getById({ id: listingId })).resolves.toMatchObject({
+      property: { id: listingId },
+    });
     await expect(
-      createListing({ userId: memberUserId, title: 'Should not exist' } as any),
-    ).rejects.toThrow(/membership is no longer active/i);
+      formerMember.listing.myListings({ status: 'draft', limit: 1, offset: 0 }),
+    ).resolves.toEqual([expect.objectContaining({ id: listingId })]);
+
+    const ownerCaller = applicationCaller({
+      id: ownerUserId,
+      role: 'agency_admin',
+      agencyId,
+    });
+    const inventory = await ownerCaller.agency.getListingInventory();
+    const visibleListingIds = inventory.listings.map((listing: { id: number }) => listing.id);
+    expect(visibleListingIds).toContain(agencyOwnedListingId);
+    expect(visibleListingIds).not.toContain(listingId);
+    await expect(
+      ownerCaller.agency.getListingDetail({ listingId: agencyOwnedListingId }),
+    ).resolves.toMatchObject({ id: agencyOwnedListingId, agencyId });
+    await expect(ownerCaller.agency.getListingDetail({ listingId })).rejects.toMatchObject({
+      code: 'NOT_FOUND',
+    });
+  });
+
+  it('does not let a suspended member retain agency performance, commission, or daily-work access', async () => {
+    const agencyId = await insertAgency('OperationalWorkspace');
+    const ownerUserId = await insertUser('OperationalWorkspaceOwner', 'agency_admin');
+    await db.update(users).set({ agencyId }).where(eq(users.id, ownerUserId));
+
+    const memberUserId = await insertUser('OperationalWorkspaceMember', 'agent');
+    await db.update(users).set({ agencyId, isSubaccount: 1 }).where(eq(users.id, memberUserId));
+    const agentId = await insertAgentProfile(memberUserId, agencyId);
+    await maintainAgencyAgentMembership(db, { agencyId, agentId, status: 'active' });
+
+    const listingId = await createListing({
+      userId: memberUserId,
+      action: 'sell',
+      propertyType: 'house',
+      title: 'Agency performance listing before membership suspension',
+      description: 'This private inventory exercises agency operational workspace authority.',
+      pricing: { askingPrice: 2_300_000 },
+      propertyDetails: { bedrooms: 3, bathrooms: 2, houseAreaM2: 175 },
+      address: '12 Operational Authority Road',
+      city: 'Johannesburg',
+      suburb: 'Sandton',
+      province: 'Gauteng',
+      slug: `operational-membership-${randomUUID().slice(0, 8)}`,
+      media: [],
+    } as any);
+    created.listingIds.push(listingId);
+
+    const memberCaller = applicationCaller({
+      id: memberUserId,
+      role: 'agent',
+      agencyId,
+    });
+    await expect(memberCaller.agency.getListingPerformance({ listingId })).resolves.toMatchObject({
+      listingId,
+    });
+
+    await maintainAgencyAgentMembership(db, { agencyId, agentId, status: 'suspended' });
+
+    // Suspension intentionally retains user/agent affiliation projections for
+    // audit. Every private agency workspace must use the canonical membership
+    // window instead of granting continuing access through those projections.
+    const [retainedUser] = await db.select().from(users).where(eq(users.id, memberUserId)).limit(1);
+    const [retainedProfile] = await db.select().from(agents).where(eq(agents.id, agentId)).limit(1);
+    expect(retainedUser.agencyId).toBe(agencyId);
+    expect(retainedProfile.agencyId).toBe(agencyId);
+
+    await expect(memberCaller.agency.getListingPerformance({ listingId })).rejects.toMatchObject({
+      code: 'FORBIDDEN',
+    });
+    await expect(memberCaller.agency.getListingPerformanceQueue()).rejects.toMatchObject({
+      code: 'FORBIDDEN',
+    });
+    await expect(memberCaller.agency.getCommissionSettlements()).rejects.toMatchObject({
+      code: 'FORBIDDEN',
+    });
+    await expect(memberCaller.agency.getMyDay({ limit: 1 })).rejects.toMatchObject({
+      code: 'FORBIDDEN',
+    });
+  });
+
+  it('does not let a suspended member retain Agent Home inventory, commission, or property-work authority', async () => {
+    const agencyId = await insertAgency('AgentHomeWorkspace');
+    const ownerUserId = await insertUser('AgentHomeWorkspaceOwner', 'agency_admin');
+    await db.update(users).set({ agencyId }).where(eq(users.id, ownerUserId));
+
+    const memberUserId = await insertUser('AgentHomeWorkspaceMember', 'agent');
+    await db.update(users).set({ agencyId, isSubaccount: 1 }).where(eq(users.id, memberUserId));
+    const agentId = await insertAgentProfile(memberUserId, agencyId);
+    await maintainAgencyAgentMembership(db, { agencyId, agentId, status: 'active' });
+
+    const [propertyInsert] = await db.insert(properties).values({
+      title: 'Agent Home authority property',
+      description: 'Private agency inventory used to prove current membership is required.',
+      propertyType: 'house',
+      listingType: 'sale',
+      transactionType: 'sale',
+      price: 2_650_000,
+      bedrooms: 3,
+      bathrooms: 2,
+      area: 180,
+      address: '27 Agent Home Authority Road',
+      city: 'Johannesburg',
+      province: 'Gauteng',
+      status: 'available',
+      featured: 0,
+      views: 0,
+      enquiries: 0,
+      ownerId: memberUserId,
+      agentId,
+    } as any);
+    const propertyId = Number((propertyInsert as any).insertId);
+    if (!propertyId) throw new Error('Expected Agent Home authority property');
+
+    const scheduledAt = new Date();
+    scheduledAt.setHours(12, 0, 0, 0);
+    const [showingInsert] = await db.insert(showings).values({
+      propertyId,
+      agentId,
+      scheduledAt: scheduledAt.toISOString().slice(0, 19).replace('T', ' '),
+      status: 'confirmed',
+      visitorName: 'Suspended member authority probe',
+    } as any);
+    const showingId = Number((showingInsert as any).insertId);
+
+    const [commissionInsert] = await db.insert(commissions).values({
+      agentId,
+      propertyId,
+      amount: 53_000,
+      status: 'pending',
+    } as any);
+    const commissionId = Number((commissionInsert as any).insertId);
+
+    try {
+      const memberCaller = applicationCaller({
+        id: memberUserId,
+        role: 'agent',
+        agencyId,
+      });
+
+      await expect(memberCaller.agent.getMyListings({ status: 'all' })).resolves.toEqual(
+        expect.arrayContaining([expect.objectContaining({ id: propertyId })]),
+      );
+      await expect(memberCaller.agent.getMyCommissions({ status: 'pending' })).resolves.toEqual(
+        expect.arrayContaining([expect.objectContaining({ id: commissionId })]),
+      );
+
+      await maintainAgencyAgentMembership(db, { agencyId, agentId, status: 'suspended' });
+
+      // Membership suspension deliberately retains these profile projections
+      // for history. Agent Home must not treat them as present workspace authority.
+      const [retainedUser] = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, memberUserId))
+        .limit(1);
+      const [retainedProfile] = await db
+        .select()
+        .from(agents)
+        .where(eq(agents.id, agentId))
+        .limit(1);
+      expect(retainedUser.agencyId).toBe(agencyId);
+      expect(retainedProfile.agencyId).toBe(agencyId);
+
+      await expect(memberCaller.agent.getMyListings({ status: 'all' })).rejects.toMatchObject({
+        code: 'FORBIDDEN',
+      });
+      await expect(memberCaller.agent.getDashboardStats()).rejects.toMatchObject({
+        code: 'FORBIDDEN',
+      });
+      await expect(memberCaller.agent.getShowingListingOptions()).rejects.toMatchObject({
+        code: 'FORBIDDEN',
+      });
+      await expect(
+        memberCaller.agent.getMyCommissions({ status: 'pending' }),
+      ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+      await expect(
+        memberCaller.agent.exportCommissionsCSV({ status: 'pending' }),
+      ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+      await expect(
+        memberCaller.agent.quickUpdateProperty({ propertyId, updates: { price: 2_700_000 } }),
+      ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+      await expect(memberCaller.agent.archiveProperty({ id: propertyId })).rejects.toMatchObject({
+        code: 'FORBIDDEN',
+      });
+    } finally {
+      if (commissionId) await db.delete(commissions).where(eq(commissions.id, commissionId));
+      if (showingId) await db.delete(showings).where(eq(showings.id, showingId));
+      await db.delete(properties).where(eq(properties.id, propertyId));
+    }
   });
 });
 
 describeWithDb('invitation acceptance (production path)', () => {
+  it('requires a verified invitee before creating canonical agency membership', async () => {
+    const agencyId = await insertAgency('Unverified invitee');
+    const ownerUserId = await insertUser('UnverifiedOwner', 'agency_admin');
+    await db.update(users).set({ agencyId }).where(eq(users.id, ownerUserId));
+
+    const inviteeEmail = `unverified-joiner-${randomUUID().slice(0, 8)}@example.test`;
+    const inviteeUserId = await insertUser('UnverifiedJoiner', 'visitor');
+    await db
+      .update(users)
+      .set({ email: inviteeEmail, emailVerified: 0 })
+      .where(eq(users.id, inviteeUserId));
+
+    const invitationId = await insertPendingInvitation({
+      agencyId,
+      invitedBy: ownerUserId,
+      email: inviteeEmail,
+      role: 'agent',
+    });
+    const [invitation] = await db
+      .select()
+      .from(invitations)
+      .where(eq(invitations.id, invitationId))
+      .limit(1);
+    if (!invitation) throw new Error('Expected pending invitation');
+
+    await expect(
+      acceptanceCaller({
+        id: inviteeUserId,
+        role: 'visitor',
+        agencyId: null,
+        email: inviteeEmail,
+      }).invitation.accept({ token: invitation.token }),
+    ).rejects.toMatchObject({ code: 'PRECONDITION_FAILED' });
+
+    const [unchangedUser] = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, inviteeUserId))
+      .limit(1);
+    expect(unchangedUser).toMatchObject({
+      role: 'visitor',
+      agencyId: null,
+      emailVerified: 0,
+    });
+    expect(await db.select().from(agents).where(eq(agents.userId, inviteeUserId))).toHaveLength(0);
+    const [stillPending] = await db
+      .select()
+      .from(invitations)
+      .where(eq(invitations.id, invitationId))
+      .limit(1);
+    expect(stillPending?.status).toBe('pending');
+  });
+
+  it('does not turn a queued pre-payment invitation into agency membership', async () => {
+    const agencyId = await insertAgency('Queued pre-payment invitee');
+    const ownerUserId = await insertUser('QueuedPrePaymentOwner', 'agency_admin');
+    await db.update(users).set({ agencyId }).where(eq(users.id, ownerUserId));
+
+    const inviteeEmail = `queued-joiner-${randomUUID().slice(0, 8)}@example.test`;
+    const inviteeUserId = await insertUser('QueuedJoiner', 'visitor');
+    await db.update(users).set({ email: inviteeEmail }).where(eq(users.id, inviteeUserId));
+    const invitationId = await insertPendingInvitation({
+      agencyId,
+      invitedBy: ownerUserId,
+      email: inviteeEmail,
+      role: 'agent',
+    });
+    const [invitation] = await db
+      .select()
+      .from(invitations)
+      .where(eq(invitations.id, invitationId))
+      .limit(1);
+    if (!invitation) throw new Error('Expected queued invitation');
+
+    await expect(
+      acceptanceCaller({
+        id: inviteeUserId,
+        role: 'visitor',
+        agencyId: null,
+        email: inviteeEmail,
+      }).invitation.accept({ token: invitation.token }),
+    ).rejects.toMatchObject({ code: 'PRECONDITION_FAILED' });
+
+    const [unchangedUser] = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, inviteeUserId))
+      .limit(1);
+    expect(unchangedUser).toMatchObject({ role: 'visitor', agencyId: null, emailVerified: 1 });
+    expect(await db.select().from(agents).where(eq(agents.userId, inviteeUserId))).toHaveLength(0);
+    const [stillQueued] = await db
+      .select()
+      .from(invitations)
+      .where(eq(invitations.id, invitationId))
+      .limit(1);
+    expect(stillQueued?.status).toBe('pending');
+  });
+
   it('accepting an agent invitation creates consistent identity, profile, and canonical membership', async () => {
     const agencyId = await insertAgency('Production');
     const ownerUserId = await insertUser('ProdOwner', 'agency_admin');
     await db.update(users).set({ agencyId }).where(eq(users.id, ownerUserId));
+    await createActiveAgencyInvitationAccess(agencyId, ownerUserId);
 
     const inviteeEmail = `prod-joiner-${randomUUID().slice(0, 8)}@example.test`;
     const inviteeUserId = await insertUser('ProdJoiner', 'visitor');
@@ -436,23 +1575,25 @@ describeWithDb('invitation acceptance (production path)', () => {
     expect(updatedUser.isSubaccount).toBe(1);
 
     // Agent profile approved and affiliated.
-    const [profile] = await db.select().from(agents).where(eq(agents.userId, inviteeUserId)).limit(1);
+    const [profile] = await db
+      .select()
+      .from(agents)
+      .where(eq(agents.userId, inviteeUserId))
+      .limit(1);
     expect(profile.status).toBe('approved');
     expect(Number(profile.agencyId)).toBe(agencyId);
 
     // Canonical membership row active with an open window.
-    const membership = (
-      await db
-        .select()
-        .from(agencyAgentMemberships)
-        .where(
-          and(
-            eq(agencyAgentMemberships.agencyId, agencyId),
-            eq(agencyAgentMemberships.agentId, Number(profile.id)),
-          ),
-        )
-        .limit(1)
-    );
+    const membership = await db
+      .select()
+      .from(agencyAgentMemberships)
+      .where(
+        and(
+          eq(agencyAgentMemberships.agencyId, agencyId),
+          eq(agencyAgentMemberships.agentId, Number(profile.id)),
+        ),
+      )
+      .limit(1);
     expect(membership).toHaveLength(1);
     expect(membership[0].status).toBe('active');
     expect(membership[0].effectiveTo).toBeNull();
@@ -468,12 +1609,38 @@ describeWithDb('invitation acceptance (production path)', () => {
     // Public web presence resolves the new affiliation.
     const affiliation = await resolveCurrentAgencyAffiliation(db, Number(profile.id));
     expect(affiliation?.name).toContain('Production Agency');
+
+    const listingId = await createListing({
+      userId: inviteeUserId,
+      action: 'sell',
+      propertyType: 'house',
+      title: 'Invited member canonical agency draft',
+      description: 'An invited member can create a private draft through canonical membership.',
+      pricing: { askingPrice: 2_100_000 },
+      propertyDetails: { bedrooms: 3, bathrooms: 2, houseAreaM2: 180 },
+      address: '11 Invitation Authority Road',
+      city: 'Johannesburg',
+      suburb: 'Sandton',
+      province: 'Gauteng',
+      slug: `invited-membership-${randomUUID().slice(0, 8)}`,
+      media: [],
+    } as any);
+    created.listingIds.push(listingId);
+
+    const [draft] = await db
+      .select({ agencyId: listings.agencyId, agentId: listings.agentId })
+      .from(listings)
+      .where(eq(listings.id, listingId))
+      .limit(1);
+    expect(Number(draft.agencyId)).toBe(agencyId);
+    expect(Number(draft.agentId)).toBe(Number(profile.id));
   });
 
   it('rejects principal conversion for an account carrying an agent identity with no partial writes', async () => {
     const targetAgencyId = await insertAgency('ConflationTarget');
     const ownerUserId = await insertUser('ConflOwner', 'agency_admin');
     await db.update(users).set({ agencyId: targetAgencyId }).where(eq(users.id, ownerUserId));
+    await createActiveAgencyInvitationAccess(targetAgencyId, ownerUserId);
 
     const otherAgencyId = await insertAgency('ConflationOther');
 
@@ -496,9 +1663,7 @@ describeWithDb('invitation acceptance (production path)', () => {
 
     const before = {
       user: await getUser(agentUserId),
-      profile: (
-        await db.select().from(agents).where(eq(agents.id, originalProfileId)).limit(1)
-      )[0],
+      profile: (await db.select().from(agents).where(eq(agents.id, originalProfileId)).limit(1))[0],
     };
 
     const caller = acceptanceCaller({
@@ -540,5 +1705,337 @@ describeWithDb('invitation acceptance (production path)', () => {
       .where(eq(invitations.id, invitationId))
       .limit(1);
     expect(stillPending.status).toBe('pending');
+  });
+});
+
+describeWithDb('invitation terminal state and concurrency authority', () => {
+  it('rejects a verified account with the wrong email without changing affiliation', async () => {
+    const { agencyId, ownerUserId } = await createActivatedAgencyOwner('Wrong identity');
+    const invitee = await insertVerifiedInvitee('WrongIdentityInvitee');
+    const invitationId = await insertPendingInvitation({
+      agencyId,
+      invitedBy: ownerUserId,
+      email: `different-${randomUUID().slice(0, 8)}@example.test`,
+      role: 'agent',
+    });
+    const invitation = await getInvitation(invitationId);
+
+    await expect(inviteeCaller(invitee).invitation.accept({ token: invitation.token })).rejects.toThrow(
+      /different email address/i,
+    );
+
+    expect(await getUser(invitee.userId)).toMatchObject({ role: 'visitor', agencyId: null });
+    expect(await currentMembershipsForUser(invitee.userId)).toHaveLength(0);
+    expect((await getInvitation(invitationId)).status).toBe('pending');
+  });
+
+  it('commits expiry as a terminal state and never grants membership from the expired token', async () => {
+    const { agencyId, ownerUserId } = await createActivatedAgencyOwner('Expired invitation');
+    const invitee = await insertVerifiedInvitee('ExpiredInvitee');
+    const invitationId = await insertPendingInvitation({
+      agencyId,
+      invitedBy: ownerUserId,
+      email: invitee.email,
+      role: 'agent',
+    });
+    await db
+      .update(invitations)
+      .set({ expiresAt: new Date(Date.now() - 1_000) })
+      .where(eq(invitations.id, invitationId));
+    const invitation = await getInvitation(invitationId);
+
+    await expect(inviteeCaller(invitee).invitation.accept({ token: invitation.token })).rejects.toThrow(
+      /expired/i,
+    );
+
+    expect((await getInvitation(invitationId)).status).toBe('expired');
+    expect(await currentMembershipsForUser(invitee.userId)).toHaveLength(0);
+  });
+
+  it('rejects a cancelled invitation and leaves its terminal history intact', async () => {
+    const { agencyId, ownerUserId, ownerCaller } = await createActivatedAgencyOwner(
+      'Cancelled invitation',
+    );
+    const invitee = await insertVerifiedInvitee('CancelledInvitee');
+    const invitationId = await insertPendingInvitation({
+      agencyId,
+      invitedBy: ownerUserId,
+      email: invitee.email,
+      role: 'agent',
+    });
+    const invitation = await getInvitation(invitationId);
+
+    await ownerCaller.invitation.cancel({ invitationId });
+    await expect(publicCaller().invitation.getByToken({ token: invitation.token })).rejects.toThrow(
+      /cancelled/i,
+    );
+    await expect(inviteeCaller(invitee).invitation.accept({ token: invitation.token })).rejects.toThrow(
+      /cancelled/i,
+    );
+
+    expect((await getInvitation(invitationId)).status).toBe('cancelled');
+    expect(await currentMembershipsForUser(invitee.userId)).toHaveLength(0);
+  });
+
+  it('rotates a pending token atomically so the old token cannot be replayed', async () => {
+    const { agencyId, ownerUserId, ownerCaller } = await createActivatedAgencyOwner('Rotation');
+    const invitee = await insertVerifiedInvitee('RotationInvitee');
+    const invitationId = await insertPendingInvitation({
+      agencyId,
+      invitedBy: ownerUserId,
+      email: invitee.email,
+      role: 'agent',
+    });
+    const oldInvitation = await getInvitation(invitationId);
+
+    await ownerCaller.invitation.resend({ invitationId });
+    const rotatedInvitation = await getInvitation(invitationId);
+    expect(rotatedInvitation.token).not.toBe(oldInvitation.token);
+    expect(rotatedInvitation.status).toBe('pending');
+
+    await expect(
+      inviteeCaller(invitee).invitation.accept({ token: oldInvitation.token }),
+    ).rejects.toThrow(/invitation not found/i);
+    await inviteeCaller(invitee).invitation.accept({ token: rotatedInvitation.token });
+
+    expect((await getInvitation(invitationId)).status).toBe('accepted');
+    expect((await currentMembershipsForUser(invitee.userId)).filter(membership => isCurrentActiveAgencyMembership(membership))).toHaveLength(
+      1,
+    );
+  });
+
+  it('consumes an accepted token once and cannot create a second canonical membership on replay', async () => {
+    const { agencyId, ownerUserId } = await createActivatedAgencyOwner('Replay');
+    const invitee = await insertVerifiedInvitee('ReplayInvitee');
+    const invitationId = await insertPendingInvitation({
+      agencyId,
+      invitedBy: ownerUserId,
+      email: invitee.email,
+      role: 'agent',
+    });
+    const invitation = await getInvitation(invitationId);
+    const caller = inviteeCaller(invitee);
+
+    await caller.invitation.accept({ token: invitation.token });
+    await expect(publicCaller().invitation.getByToken({ token: invitation.token })).rejects.toThrow(
+      /accepted/i,
+    );
+    await expect(caller.invitation.accept({ token: invitation.token })).rejects.toThrow(/accepted/i);
+
+    const memberships = await currentMembershipsForUser(invitee.userId);
+    expect(memberships.filter(membership => isCurrentActiveAgencyMembership(membership))).toHaveLength(1);
+    expect((await getInvitation(invitationId)).status).toBe('accepted');
+  });
+
+  it('serializes two simultaneous accepts of one invitation to one membership grant', async () => {
+    const { agencyId, ownerUserId } = await createActivatedAgencyOwner('Concurrent accept');
+    const invitee = await insertVerifiedInvitee('ConcurrentAcceptInvitee');
+    const invitationId = await insertPendingInvitation({
+      agencyId,
+      invitedBy: ownerUserId,
+      email: invitee.email,
+      role: 'agent',
+    });
+    const invitation = await getInvitation(invitationId);
+
+    const outcomes = await Promise.allSettled([
+      inviteeCaller(invitee).invitation.accept({ token: invitation.token }),
+      inviteeCaller(invitee).invitation.accept({ token: invitation.token }),
+    ]);
+
+    expect(outcomes.filter(outcome => outcome.status === 'fulfilled')).toHaveLength(1);
+    expect((await getInvitation(invitationId)).status).toBe('accepted');
+    expect((await currentMembershipsForUser(invitee.userId)).filter(membership => isCurrentActiveAgencyMembership(membership))).toHaveLength(
+      1,
+    );
+  });
+
+  it('serializes cancellation against acceptance without rewriting a consumed invitation', async () => {
+    const { agencyId, ownerUserId, ownerCaller } = await createActivatedAgencyOwner('Cancel race');
+    const invitee = await insertVerifiedInvitee('CancelRaceInvitee');
+    const invitationId = await insertPendingInvitation({
+      agencyId,
+      invitedBy: ownerUserId,
+      email: invitee.email,
+      role: 'agent',
+    });
+    const invitation = await getInvitation(invitationId);
+
+    const outcomes = await Promise.allSettled([
+      ownerCaller.invitation.cancel({ invitationId }),
+      inviteeCaller(invitee).invitation.accept({ token: invitation.token }),
+    ]);
+    expect(outcomes.filter(outcome => outcome.status === 'fulfilled')).toHaveLength(1);
+
+    const terminal = await getInvitation(invitationId);
+    expect(['accepted', 'cancelled']).toContain(terminal.status);
+    expect((await currentMembershipsForUser(invitee.userId)).filter(membership => isCurrentActiveAgencyMembership(membership))).toHaveLength(
+      terminal.status === 'accepted' ? 1 : 0,
+    );
+  });
+
+  it('serializes resend rotation against acceptance and leaves no stale token usable', async () => {
+    const { agencyId, ownerUserId, ownerCaller } = await createActivatedAgencyOwner('Resend race');
+    const invitee = await insertVerifiedInvitee('ResendRaceInvitee');
+    const invitationId = await insertPendingInvitation({
+      agencyId,
+      invitedBy: ownerUserId,
+      email: invitee.email,
+      role: 'agent',
+    });
+    const beforeRace = await getInvitation(invitationId);
+
+    const outcomes = await Promise.allSettled([
+      ownerCaller.invitation.resend({ invitationId }),
+      inviteeCaller(invitee).invitation.accept({ token: beforeRace.token }),
+    ]);
+    expect(outcomes.filter(outcome => outcome.status === 'fulfilled')).toHaveLength(1);
+
+    const afterRace = await getInvitation(invitationId);
+    if (afterRace.status === 'pending') {
+      expect(afterRace.token).not.toBe(beforeRace.token);
+      await expect(
+        inviteeCaller(invitee).invitation.accept({ token: beforeRace.token }),
+      ).rejects.toThrow(/invitation not found/i);
+      await inviteeCaller(invitee).invitation.accept({ token: afterRace.token });
+    }
+
+    expect((await getInvitation(invitationId)).status).toBe('accepted');
+    expect((await currentMembershipsForUser(invitee.userId)).filter(membership => isCurrentActiveAgencyMembership(membership))).toHaveLength(
+      1,
+    );
+  });
+
+  it('admits one unaffiliated user through at most one competing Agency invitation', async () => {
+    const first = await createActivatedAgencyOwner('Competing first');
+    const second = await createActivatedAgencyOwner('Competing second');
+    const invitee = await insertVerifiedInvitee('CompetingInvitee');
+    const firstInvitationId = await insertPendingInvitation({
+      agencyId: first.agencyId,
+      invitedBy: first.ownerUserId,
+      email: invitee.email,
+      role: 'agent',
+    });
+    const secondInvitationId = await insertPendingInvitation({
+      agencyId: second.agencyId,
+      invitedBy: second.ownerUserId,
+      email: invitee.email,
+      role: 'agent',
+    });
+    const firstInvitation = await getInvitation(firstInvitationId);
+    const secondInvitation = await getInvitation(secondInvitationId);
+
+    const outcomes = await Promise.allSettled([
+      inviteeCaller(invitee).invitation.accept({ token: firstInvitation.token }),
+      inviteeCaller(invitee).invitation.accept({ token: secondInvitation.token }),
+    ]);
+
+    expect(outcomes.filter(outcome => outcome.status === 'fulfilled')).toHaveLength(1);
+    const memberships = (await currentMembershipsForUser(invitee.userId)).filter(membership =>
+      isCurrentActiveAgencyMembership(membership),
+    );
+    expect(memberships).toHaveLength(1);
+    expect([first.agencyId, second.agencyId]).toContain(Number(memberships[0].agencyId));
+    expect([
+      (await getInvitation(firstInvitationId)).status,
+      (await getInvitation(secondInvitationId)).status,
+    ].filter(status => status === 'accepted')).toHaveLength(1);
+  });
+
+  it.each(['suspended', 'left'] as const)(
+    'does not revive a member after a newer %s membership transition',
+    async terminalStatus => {
+      const { agencyId, ownerUserId, ownerCaller } = await createActivatedAgencyOwner(
+        `Stale ${terminalStatus}`,
+      );
+      const invitee = await insertVerifiedInvitee(`Stale${terminalStatus}Invitee`, 'agent');
+      const agentId = await insertAgentProfile(invitee.userId, agencyId);
+      await maintainAgencyAgentMembership(db, {
+        agencyId,
+        agentId,
+        status: 'active',
+        actorUserId: ownerUserId,
+      });
+      const invitationId = await insertPendingInvitation({
+        agencyId,
+        invitedBy: ownerUserId,
+        email: invitee.email,
+        role: 'agent',
+      });
+      // Make the causal order unambiguous even on a database configured with
+      // second-granularity timestamps.
+      await db
+        .update(invitations)
+        .set({
+          createdAt: new Date(Date.now() - 20_000),
+          updatedAt: new Date(Date.now() - 20_000),
+        })
+        .where(eq(invitations.id, invitationId));
+      await maintainAgencyAgentMembership(db, {
+        agencyId,
+        agentId,
+        status: terminalStatus,
+        actorUserId: ownerUserId,
+      });
+      // Rotation is delivery/token maintenance, not a new invitation
+      // authority. It cannot revive a member transition that happened after
+      // the invitation was originally issued.
+      await ownerCaller.invitation.resend({ invitationId });
+      const invitation = await getInvitation(invitationId);
+
+      await expect(
+        inviteeCaller({ ...invitee, role: 'agent' }).invitation.accept({ token: invitation.token }),
+      ).rejects.toThrow(/newer agency membership transition/i);
+
+      expect((await getInvitation(invitationId)).status).toBe('pending');
+      expect((await currentMembershipsForUser(invitee.userId))[0]).toMatchObject({
+        status: terminalStatus,
+      });
+    },
+  );
+
+  it('accepts an existing verified visitor through the canonical membership path', async () => {
+    const { agencyId, ownerUserId } = await createActivatedAgencyOwner('Existing verified');
+    const existingUser = await insertVerifiedInvitee('ExistingVerifiedInvitee');
+    const invitationId = await insertPendingInvitation({
+      agencyId,
+      invitedBy: ownerUserId,
+      email: existingUser.email,
+      role: 'agent',
+    });
+    const invitation = await getInvitation(invitationId);
+
+    await inviteeCaller(existingUser).invitation.accept({ token: invitation.token });
+
+    expect((await getInvitation(invitationId)).status).toBe('accepted');
+    expect((await currentMembershipsForUser(existingUser.userId)).filter(membership => isCurrentActiveAgencyMembership(membership))).toHaveLength(
+      1,
+    );
+  });
+
+  it('rolls back identity writes when canonical profile and membership creation cannot complete', async () => {
+    const { agencyId, ownerUserId } = await createActivatedAgencyOwner('Rollback');
+    const invitee = await insertVerifiedInvitee('RollbackInvitee');
+    // `ensureApprovedAgencyAgentProfile` derives firstName from this value.
+    // It exceeds the canonical agents.firstName bound only after the locked
+    // user affiliation update has begun, so a failed profile/membership
+    // segment proves the transaction leaves no partial acceptance state.
+    await db
+      .update(users)
+      .set({ name: `${'x'.repeat(101)} Last` })
+      .where(eq(users.id, invitee.userId));
+    const invitationId = await insertPendingInvitation({
+      agencyId,
+      invitedBy: ownerUserId,
+      email: invitee.email,
+      role: 'agent',
+    });
+    const invitation = await getInvitation(invitationId);
+
+    await expect(inviteeCaller(invitee).invitation.accept({ token: invitation.token })).rejects.toThrow();
+
+    expect(await getUser(invitee.userId)).toMatchObject({ role: 'visitor', agencyId: null });
+    expect(await currentMembershipsForUser(invitee.userId)).toHaveLength(0);
+    expect((await getInvitation(invitationId)).status).toBe('pending');
   });
 });

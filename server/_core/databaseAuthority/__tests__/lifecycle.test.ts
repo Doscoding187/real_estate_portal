@@ -88,6 +88,10 @@ describe('owned disposable worktree lifecycle', () => {
     });
     expect(created).toMatchObject({ operation: 'create', changed: true });
     expect(connection.schemas).toContain(gitIdentity.expectedWorktreeDatabase);
+    expect(connection.statements.filter(statement => statement.startsWith('GRANT SESSION_VARIABLES_ADMIN'))).toEqual([
+      "GRANT SESSION_VARIABLES_ADMIN ON *.* TO 'listify_app'@'127.0.0.1'",
+      "GRANT SESSION_VARIABLES_ADMIN ON *.* TO 'listify_app'@'localhost'",
+    ]);
 
     const disposeAuthority = resolveDatabaseAuthority({
       operation: 'database-dispose',

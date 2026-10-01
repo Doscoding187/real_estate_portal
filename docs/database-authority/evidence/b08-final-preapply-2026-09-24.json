@@ -1,0 +1,783 @@
+{
+  "collectedAt": "2026-09-24T06:11:18.164Z",
+  "source": {
+    "sha": "0ed5d253568552d7b4492893c77ebc6850158220",
+    "tree": "4fca21e5b739a5abcc453964d16dba94c7887f2e"
+  },
+  "targetFingerprintHash": "b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced",
+  "manifest": {
+    "head": "0094_content_topics_primary_key.sql",
+    "digest": "93d871e6f8760477f460b8821685d71d212374eb86ddd53bc6e2ccfc30608efc",
+    "orderedCount": 95
+  },
+  "desiredModelDigest": "a8ca8cf34bb3627594eab1b722b85115c6460225a0165db7992228a8547798e9",
+  "firewall": {
+    "server": "propertylistify-mysql.mysql.database.azure.com",
+    "rule": "b08-final-preapply-20260924",
+    "startIp": "197.79.59.199",
+    "endIp": "197.79.59.199",
+    "removedAt": "2026-09-24T06:12:47.843Z",
+    "removalVerified": true,
+    "createdAt": "2026-09-24T06:02:47.4283068Z",
+    "verificationWindowUtc": {
+      "from": "2026-09-24T06:03:06Z",
+      "to": "2026-09-24T06:03:17Z"
+    }
+  },
+  "inspection": {
+    "targetFingerprintHash": "b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced",
+    "server": "8.0.46-azure",
+    "selectedDatabase": "propertylistify_database",
+    "inspectorIdentityVerified": true,
+    "tls": {
+      "cipherPresent": true,
+      "version": "TLSv1.3",
+      "certificateVerificationRequired": true,
+      "secureTransportRequired": 1
+    },
+    "session": {
+      "sqlMode": "IGNORE_SPACE,ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO",
+      "timezone": "+00:00",
+      "transactionIsolation": "REPEATABLE-READ",
+      "characterSet": "utf8mb4",
+      "collation": "utf8mb4_unicode_ci",
+      "lowerCaseTableNames": 1,
+      "generateInvisiblePrimaryKey": 1,
+      "requirePrimaryKey": 0
+    },
+    "tableInventory": {
+      "count": 0,
+      "names": [],
+      "estimatedNonempty": [],
+      "engines": [],
+      "collations": []
+    },
+    "propertyImagesPhysicalNames": [],
+    "specialColumns": [],
+    "migrationLedgerPresent": false,
+    "migrationAttemptLedgerPresent": false,
+    "foreignKeyCount": 0,
+    "checks": [],
+    "indexCount": 0,
+    "jsonColumnCount": null,
+    "microsecondTimestampCount": null,
+    "grants": {
+      "count": 2,
+      "onlyUsageAndDatabaseSelect": true,
+      "selectOnApprovedDatabase": true,
+      "mutationPrivilegesPresent": false
+    }
+  },
+  "releasePlan": {
+    "mode": "plan",
+    "planId": "632f66e7eb10a16a4642a73f",
+    "planDigest": "632f66e7eb10a16a4642a73fb4d2d8c0ebe15d4736ba17209141fa8dbab373ec",
+    "targetFingerprintHash": "b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced",
+    "acceptedOldHead": null,
+    "pending": [
+      {
+        "sequence": 0,
+        "filename": "0000_canonical_launch_baseline.sql",
+        "checksum": "19362611af5751c60bbb6e041e9f456c09aa1cc8ef77f9f5c62fbc92fa8e8e88",
+        "kind": "establishment",
+        "statementCount": 948
+      },
+      {
+        "sequence": 1,
+        "filename": "0001_public_search_to_lead_reliability_sequenced.sql",
+        "checksum": "510ae023e9c3bc04a7d92f7a533843939412f82d4f04cd1bf11c312fb89bc4a3",
+        "kind": "exceptional",
+        "statementCount": 2
+      },
+      {
+        "sequence": 2,
+        "filename": "0002_canonical_property_taxonomy.sql",
+        "checksum": "a0ac7ae582fa0b1910211bc20d99ba13064e74ac00d3413681b77a1476808801",
+        "kind": "exceptional",
+        "statementCount": 1
+      },
+      {
+        "sequence": 3,
+        "filename": "0003_canonical_property_measurements.sql",
+        "checksum": "e0b199683c211064257cc8b1b518ab2323120c48140e55d4e1df2dee43761aa7",
+        "kind": "exceptional",
+        "statementCount": 4
+      },
+      {
+        "sequence": 4,
+        "filename": "0004_canonical_listing_location.sql",
+        "checksum": "10a1ab6089c2b066e3565b8c5d061d4f7a70bf577974db8d2ce9388139cf8a6e",
+        "kind": "exceptional",
+        "statementCount": 15
+      },
+      {
+        "sequence": 5,
+        "filename": "0005_manual_location_without_coordinates.sql",
+        "checksum": "8f1e3c8481dc606a89d3fc8e01ffc72fecd02e7aa15cfb4b889a7a78d4abf51b",
+        "kind": "exceptional",
+        "statementCount": 1
+      },
+      {
+        "sequence": 6,
+        "filename": "0006_development_supersessions.sql",
+        "checksum": "9171fe61ba526321847ef9615fe0121cd1e89812f4e8ef71c26350db37ae5655",
+        "kind": "ddl",
+        "statementCount": 1
+      },
+      {
+        "sequence": 7,
+        "filename": "0007_paid_launch_access_invoice_term.sql",
+        "checksum": "84565313674a13833cf033e16a91ee8785bc722d412ae02aecb6a2a19200ab46",
+        "kind": "ddl",
+        "statementCount": 1
+      },
+      {
+        "sequence": 8,
+        "filename": "0008_developer_organisations.sql",
+        "checksum": "5981c18752fd575f5ab9cdfcab306626ff411c597e8585df3efa1211d4677e5f",
+        "kind": "ddl",
+        "statementCount": 1
+      },
+      {
+        "sequence": 9,
+        "filename": "0009_developer_organisation_memberships.sql",
+        "checksum": "ce46bfeb92f005cf3661e877b7757cafdd27b3fee68a2251b310dd71cc9dd9ee",
+        "kind": "ddl",
+        "statementCount": 1
+      },
+      {
+        "sequence": 10,
+        "filename": "0010_catalogue_publishers.sql",
+        "checksum": "85615de8976ceda3a3099d87659ee39e9bd83016a0da8b33c2d5a9ff78cfdb90",
+        "kind": "ddl",
+        "statementCount": 1
+      },
+      {
+        "sequence": 11,
+        "filename": "0011_catalogue_publisher_developments.sql",
+        "checksum": "f06441ca010c12dba136a94674a18c787e02ed70cc8057423a437955a47be88e",
+        "kind": "exceptional",
+        "statementCount": 3
+      },
+      {
+        "sequence": 12,
+        "filename": "0012_catalogue_publisher_properties.sql",
+        "checksum": "460e85e804d8ba329f944e904fbb007eae040635517d101fee2c23d58ab55bac",
+        "kind": "exceptional",
+        "statementCount": 3
+      },
+      {
+        "sequence": 13,
+        "filename": "0013_catalogue_publisher_leads.sql",
+        "checksum": "ea8301469107b5c21acfad99038a68c157b80de98124936970e84492e3c9e3ef",
+        "kind": "exceptional",
+        "statementCount": 3
+      },
+      {
+        "sequence": 14,
+        "filename": "0014_catalogue_publisher_drafts.sql",
+        "checksum": "577a3f6f13555b5c8c31118d911f2e1a0d85878f9976772dd48358437d7453df",
+        "kind": "exceptional",
+        "statementCount": 4
+      },
+      {
+        "sequence": 15,
+        "filename": "0015_catalogue_publisher_distribution_partnerships.sql",
+        "checksum": "914bbd9cdeafbd14e2a26e7875d1c73f97ece4d8680790a0b4a3ed9ff2a55468",
+        "kind": "exceptional",
+        "statementCount": 3
+      },
+      {
+        "sequence": 16,
+        "filename": "0016_catalogue_publisher_distribution_access.sql",
+        "checksum": "20efcd11ae3b307bdb54c72cc846c0151644f9f0edc6f7a11a678198e4607531",
+        "kind": "exceptional",
+        "statementCount": 3
+      },
+      {
+        "sequence": 17,
+        "filename": "0017_distribution_publisher_authority.sql",
+        "checksum": "b8ffe0ccb705b7f88196b944869539be7fb9976f7536fa2c84a7e92f868daa45",
+        "kind": "exceptional",
+        "statementCount": 1
+      },
+      {
+        "sequence": 18,
+        "filename": "0018_distribution_access_publisher_authority.sql",
+        "checksum": "efe50cf94bf0b39c34a9e1ef1ee99ed884ab4d88cc64509ce90f792d50c5d0a8",
+        "kind": "exceptional",
+        "statementCount": 1
+      },
+      {
+        "sequence": 19,
+        "filename": "0019_development_launch_date.sql",
+        "checksum": "95b176ddb52a0b11d141c4b7d503d4f9afc8f6452d0786bc7b8468ea7f707433",
+        "kind": "ddl",
+        "statementCount": 1
+      },
+      {
+        "sequence": 20,
+        "filename": "0020_land_parcels.sql",
+        "checksum": "10995d7308edeea2031c166eb4d8ed58a6e8191af42ade67483169381d329c23",
+        "kind": "ddl",
+        "statementCount": 1
+      },
+      {
+        "sequence": 21,
+        "filename": "0021_land_assets.sql",
+        "checksum": "4576082a197b1187e7da7c90c00361429c77c922d6409339c3f748f1791479ec",
+        "kind": "ddl",
+        "statementCount": 1
+      },
+      {
+        "sequence": 22,
+        "filename": "0022_land_asset_parcels.sql",
+        "checksum": "be568ce8e10574599141a1fc14bc8bf41f16c0f134742b7fbca6387a8ed2bd04",
+        "kind": "ddl",
+        "statementCount": 1
+      },
+      {
+        "sequence": 23,
+        "filename": "0023_land_listing_links.sql",
+        "checksum": "d574b96ba6dc3c073a16b935eda0ad3db75e1b3073a11fda3333c91141b70c22",
+        "kind": "ddl",
+        "statementCount": 1
+      },
+      {
+        "sequence": 24,
+        "filename": "0024_land_claims.sql",
+        "checksum": "ad4445c707e3734a3a5974c135f27b9a915cc64e0e77c62e9dde6a4bf725eb21",
+        "kind": "ddl",
+        "statementCount": 1
+      },
+      {
+        "sequence": 25,
+        "filename": "0025_land_evidence_documents.sql",
+        "checksum": "1bcdac872ed7efb1836498663cf6f51e6ff7dc8aa15c75e7c28d37f7669545f9",
+        "kind": "ddl",
+        "statementCount": 1
+      },
+      {
+        "sequence": 26,
+        "filename": "0026_land_marketing_authorities.sql",
+        "checksum": "1a0f586a44e9f71a0d189dbaeaeda30242518da17b7f39edaa16f68c275a7671",
+        "kind": "ddl",
+        "statementCount": 1
+      },
+      {
+        "sequence": 27,
+        "filename": "0027_land_verification_assertions.sql",
+        "checksum": "2813802b1da5347ab8e1e4910e1630aae6e10cb20354bd08ef6d94af79c6105c",
+        "kind": "ddl",
+        "statementCount": 1
+      },
+      {
+        "sequence": 28,
+        "filename": "0028_land_assertion_evidence.sql",
+        "checksum": "fd1b8d8a4416812c5f14b770c694679ce336354f5e89e11a20d11604c2dfd5b9",
+        "kind": "ddl",
+        "statementCount": 1
+      },
+      {
+        "sequence": 29,
+        "filename": "0029_land_verification_events.sql",
+        "checksum": "e761aa322b4b84477435a7e72839dcb63c3232bf9fa4fde1892b02b79bc0413a",
+        "kind": "ddl",
+        "statementCount": 1
+      },
+      {
+        "sequence": 30,
+        "filename": "0030_land_conflict_cases.sql",
+        "checksum": "5a803eb27a0e29d9e1e33259a86b3495c28f116c4938bca79b1e7057f97c27f8",
+        "kind": "ddl",
+        "statementCount": 1
+      },
+      {
+        "sequence": 31,
+        "filename": "0031_land_review_cases.sql",
+        "checksum": "96f580f1166d3531c35e72b933f56f20d0e9f27d9e67715dc530c5363790e9c5",
+        "kind": "ddl",
+        "statementCount": 1
+      },
+      {
+        "sequence": 32,
+        "filename": "0032_land_review_events.sql",
+        "checksum": "258e70a1465e3bc2d29727ace498ec45608245c5562e4baa7df0a3c24968dad9",
+        "kind": "ddl",
+        "statementCount": 1
+      },
+      {
+        "sequence": 33,
+        "filename": "0033_land_evidence_access_audit.sql",
+        "checksum": "92515db6c2f291b5aed0674a242e25ac4e0c3950e83cf519cb1ba59cf470be9f",
+        "kind": "ddl",
+        "statementCount": 1
+      },
+      {
+        "sequence": 34,
+        "filename": "0034_listing_lead_association.sql",
+        "checksum": "e78443e685cc860a42095c47c51e5f3cdb5ec87c93136c5d9f98047b7d65dca5",
+        "kind": "exceptional",
+        "statementCount": 3
+      },
+      {
+        "sequence": 35,
+        "filename": "0035_commercial_assets.sql",
+        "checksum": "93145dd09355fb3d7b86e5ad91abe6f5c76edfd2a547864e369493842a32dff2",
+        "kind": "ddl",
+        "statementCount": 1
+      },
+      {
+        "sequence": 36,
+        "filename": "0036_commercial_spaces.sql",
+        "checksum": "b24ac0399a67072703f01a19b7853a24db5772865b64bccd29a4cac001b20d1f",
+        "kind": "ddl",
+        "statementCount": 1
+      },
+      {
+        "sequence": 37,
+        "filename": "0037_commercial_space_specifications.sql",
+        "checksum": "7d931ab25b6974e08bc7f03a2654677f66c436afb46a168ebd95e9b45c475d83",
+        "kind": "ddl",
+        "statementCount": 1
+      },
+      {
+        "sequence": 38,
+        "filename": "0038_commercial_availabilities.sql",
+        "checksum": "35461c25ffb5103986e46652a98274605b38d600630e407923426a6d6ad667a8",
+        "kind": "ddl",
+        "statementCount": 1
+      },
+      {
+        "sequence": 39,
+        "filename": "0039_commercial_availability_economics.sql",
+        "checksum": "528fe2e6256d5ed921188914e1e7a793729266b6740356d15cc53623aea5be43",
+        "kind": "ddl",
+        "statementCount": 1
+      },
+      {
+        "sequence": 40,
+        "filename": "0040_commercial_availability_listing_links.sql",
+        "checksum": "447c614c25b926b303fc07ce1ac25f163e1d5a118488922d6923160c7dc2f8b5",
+        "kind": "ddl",
+        "statementCount": 1
+      },
+      {
+        "sequence": 41,
+        "filename": "0041_commercial_availability_freshness_semantics.sql",
+        "checksum": "d0842886e989edcf5638ab505fb02a0be0441f6fa5e477212f9e3227885b1d2d",
+        "kind": "exceptional",
+        "statementCount": 1
+      },
+      {
+        "sequence": 42,
+        "filename": "0042_commercial_economics_value_state_semantics.sql",
+        "checksum": "f9e5f11438428c29cb66a74cbc7befe9c9bef845857240b6b937f547afaed40e",
+        "kind": "exceptional",
+        "statementCount": 1
+      },
+      {
+        "sequence": 43,
+        "filename": "0043_commercial_specification_value_state_integrity.sql",
+        "checksum": "765d4f8ea7cf27c39e136849bce22e5a67f0d3856db342d1cf1621809ba6d422",
+        "kind": "exceptional",
+        "statementCount": 1
+      },
+      {
+        "sequence": 44,
+        "filename": "0044_commercial_positive_availability_provenance.sql",
+        "checksum": "eb2f5f1c354eaf32c76c04617cac17445abb5db1e97bdbc9359585b3a923be28",
+        "kind": "exceptional",
+        "statementCount": 1
+      },
+      {
+        "sequence": 45,
+        "filename": "0045_commercial_space_positive_area_integrity.sql",
+        "checksum": "f3708a6df7c6ec47d0665f4b9d012cc7004b4f01cc63c4d8864b9c2475636a28",
+        "kind": "exceptional",
+        "statementCount": 1
+      },
+      {
+        "sequence": 46,
+        "filename": "0046_commercial_office_quote_terms_sequenced.sql",
+        "checksum": "827c59f6e441fa0d9cbaacd0ff9411fa19eb525b8b7938856c3f14d1a5f1046c",
+        "kind": "exceptional",
+        "statementCount": 2
+      },
+      {
+        "sequence": 47,
+        "filename": "0047_commercial_gross_rental_component.sql",
+        "checksum": "d773c7fc0be6fd271315b53f030c63d3b6cb24d363447452d4ce23baf51f3d71",
+        "kind": "exceptional",
+        "statementCount": 1
+      },
+      {
+        "sequence": 48,
+        "filename": "0048_commercial_lease_terms.sql",
+        "checksum": "5f694662d29ab35c799c99e6f8ed988a88cc9dd90f26aed98f405f03940edb8e",
+        "kind": "ddl",
+        "statementCount": 1
+      },
+      {
+        "sequence": 49,
+        "filename": "0049_commercial_lead_contexts.sql",
+        "checksum": "ff17f3d19065138ae82a94ecb4c8e6ff7904439c25f095e1cc552e0560055df5",
+        "kind": "ddl",
+        "statementCount": 1
+      },
+      {
+        "sequence": 50,
+        "filename": "0050_commercial_asset_physical_location.sql",
+        "checksum": "131b4cbb8f785d401d905a6becde2afc8c716604bf2bc25e07c51c7ef6bf0c64",
+        "kind": "exceptional",
+        "statementCount": 3
+      },
+      {
+        "sequence": 51,
+        "filename": "0051_sl_places.sql",
+        "checksum": "47fe0393ff7d3bf8badbe6b115baf0179641b1319a05468314d0aa6514d2369c",
+        "kind": "ddl",
+        "statementCount": 1
+      },
+      {
+        "sequence": 52,
+        "filename": "0052_sl_spaces.sql",
+        "checksum": "1885484c640c9f307d2be3e49e086f065a8cb09a1bf6e6afcad1d3ce50ffe313",
+        "kind": "ddl",
+        "statementCount": 1
+      },
+      {
+        "sequence": 53,
+        "filename": "0053_sl_space_availability.sql",
+        "checksum": "1980bbf400a5cc15e8d1a16e3d5bfaa51905924cf23416a094d6b971aeb9386f",
+        "kind": "ddl",
+        "statementCount": 1
+      },
+      {
+        "sequence": 54,
+        "filename": "0054_sl_space_specifications.sql",
+        "checksum": "223b4a5921dd450be14d487843c2fbbc1bd71458f28d6f25341648ffb0ab7211",
+        "kind": "ddl",
+        "statementCount": 1
+      },
+      {
+        "sequence": 55,
+        "filename": "0055_sl_place_household.sql",
+        "checksum": "d7de050ba1ab640ac003c58cd99ac3e57982f44d67819cc7892e5ef5e1e4a74e",
+        "kind": "ddl",
+        "statementCount": 1
+      },
+      {
+        "sequence": 56,
+        "filename": "0056_sl_verifications.sql",
+        "checksum": "37cb90eeaacd4179a4848562566437b0f3ddcb6a911adfc6f3ae3babd53fc409",
+        "kind": "ddl",
+        "statementCount": 1
+      },
+      {
+        "sequence": 57,
+        "filename": "0057_sl_lead_contexts.sql",
+        "checksum": "d7602b7400cd895f92e3ec0606b931e642f40c8f63907788aa556cc577c64a4a",
+        "kind": "ddl",
+        "statementCount": 1
+      },
+      {
+        "sequence": 58,
+        "filename": "0058_sl_messages.sql",
+        "checksum": "41e231a34a7fa4208e170832a62fec50dd213e7520e955b5b53205edfb5826a8",
+        "kind": "ddl",
+        "statementCount": 1
+      },
+      {
+        "sequence": 59,
+        "filename": "0059_sl_moderation_queue.sql",
+        "checksum": "4fd50ae49db32cca9b12ecf487b24bdf5f4f48fa146ba7259e05ed4722bfc599",
+        "kind": "ddl",
+        "statementCount": 1
+      },
+      {
+        "sequence": 60,
+        "filename": "0060_sl_space_availability_bills.sql",
+        "checksum": "3b713fa8949d72ca3d3f013eadaed769034eaad32befa685cf776e5ef1a56f16",
+        "kind": "ddl",
+        "statementCount": 1
+      },
+      {
+        "sequence": 61,
+        "filename": "0061_sl_messages_authorship.sql",
+        "checksum": "4b07ca2038c51683b573f9ed780a58efd1817e27ea75460364c6f80d14cd4109",
+        "kind": "exceptional",
+        "statementCount": 1
+      },
+      {
+        "sequence": 62,
+        "filename": "0062_agent_launch_access_full_capabilities.sql",
+        "checksum": "de1e31655ebb152af383c18197bf299cacee4b365ee9639f35c0ec3257915eff",
+        "kind": "transactional-data",
+        "statementCount": 1
+      },
+      {
+        "sequence": 63,
+        "filename": "0063_agent_launch_access_earnings_feature.sql",
+        "checksum": "b3e8227ba6224de1b7d7426fdafbd8e872dd53f9191a77b271ed1a61dae44cef",
+        "kind": "transactional-data",
+        "statementCount": 1
+      },
+      {
+        "sequence": 64,
+        "filename": "0064_auth_session_security.sql",
+        "checksum": "8c5add9fe3c7cc2739738975c2067a73a5c6db7a4c160d40f260988ae72eac5d",
+        "kind": "ddl",
+        "statementCount": 1
+      },
+      {
+        "sequence": 65,
+        "filename": "0065_auth_verification_token_cleanup.sql",
+        "checksum": "0cd1523e5467f73dd0534a04116d25a974e9e2b9a900692e6c3933a67a3182eb",
+        "kind": "transactional-data",
+        "statementCount": 1
+      },
+      {
+        "sequence": 66,
+        "filename": "0066_favorites_user_property_deduplicate.sql",
+        "checksum": "0f9ca1b08bd1cb43ec80f4d29060d6aa71477b2d2d54686a1d2c18fd9c403039",
+        "kind": "transactional-data",
+        "statementCount": 1
+      },
+      {
+        "sequence": 67,
+        "filename": "0067_favorites_user_property_unique.sql",
+        "checksum": "c9b35e914772a6de5ca77ecd314d383f69d5f9872c9b36dbf10f2682c4e1ad44",
+        "kind": "ddl",
+        "statementCount": 1
+      },
+      {
+        "sequence": 68,
+        "filename": "0068_recently_viewed_activity_cleanup.sql",
+        "checksum": "6279d3b18308df140f6abdf7158df9fd5acebc0434e2fe3eb5478de474bcef26",
+        "kind": "transactional-data",
+        "statementCount": 1
+      },
+      {
+        "sequence": 69,
+        "filename": "0069_recently_viewed_listing_required.sql",
+        "checksum": "738fb1816e5ddb5283b340fe03531c5cf2767e07b6a611a42bfc0c422f2e1fc7",
+        "kind": "exceptional",
+        "statementCount": 1
+      },
+      {
+        "sequence": 70,
+        "filename": "0070_recently_viewed_user_listing_unique.sql",
+        "checksum": "70709963fc73af8ad314fd983bfb9382e036d7a7373e908a8b278ae2c8fcb0d2",
+        "kind": "ddl",
+        "statementCount": 1
+      },
+      {
+        "sequence": 71,
+        "filename": "0071_recently_viewed_user_recency_index.sql",
+        "checksum": "39102d96623ac8290038d5e3887fe3bcbc8960607b6e56b35065a0684023e19c",
+        "kind": "ddl",
+        "statementCount": 1
+      },
+      {
+        "sequence": 72,
+        "filename": "0072_retire_legacy_prospect_favorites.sql",
+        "checksum": "43c302a00bd00051ecf770d3b1bd04501b2c6c3ce6ef90a31fe093b2da23f3bc",
+        "kind": "exceptional",
+        "statementCount": 1
+      },
+      {
+        "sequence": 73,
+        "filename": "0073_retire_legacy_scheduled_viewings.sql",
+        "checksum": "e0e29c8c21c45564434833f0e84debbd4b0b8a3bedb6d15398ba91cc1ea537fc",
+        "kind": "exceptional",
+        "statementCount": 1
+      },
+      {
+        "sequence": 74,
+        "filename": "0074_retire_legacy_prospects.sql",
+        "checksum": "b0d6cbab8f0ac521d478a371dab62e0e23a7c0e35f8d304a42394eb43cefed14",
+        "kind": "exceptional",
+        "statementCount": 1
+      },
+      {
+        "sequence": 75,
+        "filename": "0075_recently_viewed_microsecond_recency.sql",
+        "checksum": "e205efe19a742dced7bd1e18cf4dd75f4f37074cae62e8373e7e6b9687d30938",
+        "kind": "exceptional",
+        "statementCount": 1
+      },
+      {
+        "sequence": 76,
+        "filename": "0076_lead_delivery_relational_authority.sql",
+        "checksum": "1dd8bcedad1517191b4f1701ce11dd6c9ca8c58cc45a9fe44361a36f35472a39",
+        "kind": "exceptional",
+        "statementCount": 3
+      },
+      {
+        "sequence": 77,
+        "filename": "0077_bundle_attribution_relational_authority.sql",
+        "checksum": "ceb4873a45f054f426ba7f12d12fe4dbf96754e65dd5c826b2411b40683ef4c5",
+        "kind": "exceptional",
+        "statementCount": 1
+      },
+      {
+        "sequence": 78,
+        "filename": "0078_retire_unreachable_partner_leads.sql",
+        "checksum": "f990ce8953e28746b4ab9555603b3a0cbbdb530d983f9ac49bf03e1cb2a7ae45",
+        "kind": "exceptional",
+        "statementCount": 1
+      },
+      {
+        "sequence": 79,
+        "filename": "0079_explore_engagement_event_identity.sql",
+        "checksum": "56135df6ebdf7098815524d995561bd1b1e0fa53802c756418cf805b3363cc09",
+        "kind": "exceptional",
+        "statementCount": 2
+      },
+      {
+        "sequence": 80,
+        "filename": "0080_service_lead_request_idempotency.sql",
+        "checksum": "d23c0d5e5c527c09d116bbf390424cf0e5559cd583c8d284f1d1ef0e265f220e",
+        "kind": "exceptional",
+        "statementCount": 2
+      },
+      {
+        "sequence": 81,
+        "filename": "0081_explore_analytics_query_index.sql",
+        "checksum": "7a88bc44b45d58655b9f36b62450277093080481feb447d795c41c7612c71ac3",
+        "kind": "exceptional",
+        "statementCount": 1
+      },
+      {
+        "sequence": 82,
+        "filename": "0082_explore_engagement_retention_indexes.sql",
+        "checksum": "e7fed7481e2c5471731fcc22b7f7917ec0316bf05235cd040ae592f06bd8f60e",
+        "kind": "exceptional",
+        "statementCount": 1
+      },
+      {
+        "sequence": 83,
+        "filename": "0083_billing_provider_event_identity.sql",
+        "checksum": "da15119312017f652c2353aa972c5046cdab622f2fa086b92866955635f6fdde",
+        "kind": "exceptional",
+        "statementCount": 2
+      },
+      {
+        "sequence": 84,
+        "filename": "0084_billing_provider_event_retry_budget.sql",
+        "checksum": "d1268fd0d268d8205c50cba3b3416613a00ba20af24d4c42daf011e7638a38e4",
+        "kind": "exceptional",
+        "statementCount": 1
+      },
+      {
+        "sequence": 85,
+        "filename": "0085_billing_billable_accounts.sql",
+        "checksum": "b2f5af1567af3b4813406feec6a22bafb3e96cb510f397ba56f84f035226ece9",
+        "kind": "exceptional",
+        "statementCount": 20
+      },
+      {
+        "sequence": 86,
+        "filename": "0086_billing_billable_accounts_not_null.sql",
+        "checksum": "e3352b8aa270f840c7bd028b9466546fbf130c5aa01647a9e862b67221b6e8ea",
+        "kind": "exceptional",
+        "statementCount": 5
+      },
+      {
+        "sequence": 87,
+        "filename": "0087_billing_provider_event_leases.sql",
+        "checksum": "2f2ac4999fa614ecc391f85b5b8bc4aac11b6c60559a634e72d7f222a478059c",
+        "kind": "exceptional",
+        "statementCount": 1
+      },
+      {
+        "sequence": 88,
+        "filename": "0088_retire_obsolete_billing_families.sql",
+        "checksum": "5dcb3481e8b1b772196b6e8cf9057457744ebde2586c7c7d2b302f7df7f54a7f",
+        "kind": "exceptional",
+        "statementCount": 3
+      },
+      {
+        "sequence": 89,
+        "filename": "0089_retire_disconnected_analytics_aggregations.sql",
+        "checksum": "a550f1c7c64c8f97e72accd21aeeed1abfe33a4ac298e4d11c7818864f58c207",
+        "kind": "exceptional",
+        "statementCount": 1
+      },
+      {
+        "sequence": 90,
+        "filename": "0090_retire_disconnected_boost_campaigns.sql",
+        "checksum": "767f3767f3a7f69d947ba150598cee45194ebfb64a11f52d7b3114c2b5467421",
+        "kind": "exceptional",
+        "statementCount": 1
+      },
+      {
+        "sequence": 91,
+        "filename": "0091_transactional_email_deliveries.sql",
+        "checksum": "f449f6485d7bc3bdbf53b83988cc9d92b1fa844a7f3079cc12dee5bdabcef813",
+        "kind": "ddl",
+        "statementCount": 1
+      },
+      {
+        "sequence": 92,
+        "filename": "0092_transactional_email_attempts.sql",
+        "checksum": "74217052481a7ad26dfddf4ac0f66e9b0c93e4c9dfdf9e20818b2ce45b2cc927",
+        "kind": "ddl",
+        "statementCount": 1
+      },
+      {
+        "sequence": 93,
+        "filename": "0093_user_onboarding_state_primary_key.sql",
+        "checksum": "fec12311f637e143f36d540e1faf07155c2035fdfeaa159466b14817dc990882",
+        "kind": "ddl",
+        "statementCount": 1
+      },
+      {
+        "sequence": 94,
+        "filename": "0094_content_topics_primary_key.sql",
+        "checksum": "0645a178f556e24fa170d41b07a8ac73cff4e9404beedf1660a2bf54e72b4124",
+        "kind": "ddl",
+        "statementCount": 1
+      }
+    ],
+    "expectedNewHead": "0094_content_topics_primary_key.sql",
+    "lock": null,
+    "applied": [],
+    "freshSessionEvidence": null
+  },
+  "migrationIdentity": {
+    "provisioned": "propertylistify_release_migrator",
+    "privilegeSet": "propertylistify_database.*:SELECT,INSERT,UPDATE,DELETE,CREATE,ALTER,DROP,INDEX,REFERENCES;*.*:SESSION_VARIABLES_ADMIN",
+    "secureLocalCredentialFile": "~/.config/property-listify/b08-migrator.env",
+    "mode": "0600",
+    "verification": {
+      "identity": "propertylistify_release_migrator",
+      "targetFingerprintHash": "b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced",
+      "selectedDatabase": "propertylistify_database",
+      "tls": {
+        "cipherPresent": true,
+        "version": "TLSv1.3",
+        "hostnameVerificationRequired": true
+      },
+      "grantsExact": true,
+      "session": {
+        "connectionId": 27,
+        "generateInvisiblePrimaryKeyBefore": 1,
+        "generateInvisiblePrimaryKeyAfter": 0,
+        "requirePrimaryKey": 0,
+        "timezone": "+00:00"
+      }
+    }
+  },
+  "preconditions": {
+    "oldHead": null,
+    "noApplicationTables": true,
+    "noApplicationData": true,
+    "noIncompleteAttempts": true,
+    "expectedNewHead": "0094_content_topics_primary_key.sql",
+    "orderedMigrationCount": 95,
+    "releaseApplyExecuted": false,
+    "applicationDdlExecuted": false
+  }
+}

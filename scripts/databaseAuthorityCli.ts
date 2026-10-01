@@ -1,3 +1,18 @@
+import {
+  capturePreliminaryTiDbArchive,
+  captureFinalTiDbArchive,
+  openSourceArchive,
+} from '../server/_core/databaseAuthority/sourceArchive';
+import { randomBytes } from 'node:crypto';
+import {
+  mkdirSync,
+  lstatSync,
+  writeFileSync,
+  unlinkSync,
+  readFileSync,
+  realpathSync,
+} from 'node:fs';
+import { releaseCanonicalGeography } from '../server/_core/databaseAuthority/dataAdapters/geographyRelease';
 import { resolve } from 'node:path';
 import * as schema from '../drizzle/schema';
 import {
@@ -6,6 +21,23 @@ import {
   protectedDatabaseApprovalFromEnvironment,
 } from '../server/_core/databaseAuthority/authorization';
 import { createAuthoritySqlConnection } from '../server/_core/databaseAuthority/connectionAuthority';
+import { provisionB08AzureInspectionIdentity } from '../server/_core/databaseAuthority/b08AzureInspectionIdentity';
+import { provisionB08TidbSourceReader } from '../server/_core/databaseAuthority/b08TidbSourceReader';
+import { inventoryB08TidbV1 } from '../server/_core/databaseAuthority/b08TidbV1Inventory';
+import { assessB08TidbV1ReadOnly } from '../server/_core/databaseAuthority/b08TidbV1Assessment';
+import {
+  provisionB08AzureMigrationIdentity,
+  verifyB08AzureMigrationIdentity,
+} from '../server/_core/databaseAuthority/b08AzureMigrationIdentity';
+import {
+  grantB08AzureRuntimeLedgerRead,
+  provisionB08AzureRuntimeIdentities,
+  verifyB08AzureRuntimeIdentities,
+} from '../server/_core/databaseAuthority/b08AzureRuntimeIdentities';
+import {
+  verifyB08AzureBehavior,
+  verifyB08AzureEstablishment,
+} from '../server/_core/databaseAuthority/b08AzurePostApplyVerification';
 import { resolveDatabaseAuthority } from '../server/_core/databaseAuthority/context';
 import {
   createOwnedWorktreeDatabase,
@@ -82,6 +114,18 @@ type Command =
   | 'context'
   | 'manifest'
   | 'data:manifest'
+  | 'b08:inspector:provision'
+  | 'b08:tidb-reader:provision'
+  | 'b08:tidb-v1:inventory'
+  | 'b08:tidb-v1:assess'
+  | 'b08:inspect-metadata'
+  | 'b08:migrator:provision'
+  | 'b08:migrator:verify'
+  | 'b08:runtime:provision'
+  | 'b08:runtime:verify'
+  | 'b08:runtime:grant-ledger-read'
+  | 'b08:verify-establishment'
+  | 'b08:verify-behavior'
   | 'worktree:create'
   | 'worktree:dispose'
   | 'worktree:ack'
@@ -97,6 +141,8 @@ type Command =
   | 'release-tidb-check-constraint-convergence:apply'
   | 'release:plan'
   | 'release:apply'
+  | 'source-archive:preliminary'
+  | 'source-archive:final'
   | 'release-reference:plan'
   | 'release-reference:apply'
   | 'release-reference:verify'
@@ -245,6 +291,178 @@ async function run(command: Command): Promise<void> {
   if (command === 'data:manifest') {
     assertDataRoleManifest();
     print(DATA_ROLE_MANIFEST);
+    return;
+  }
+
+  if (command === 'b08:inspector:provision') {
+    print(await provisionB08AzureInspectionIdentity());
+    return;
+  }
+
+  if (command === 'b08:tidb-reader:provision') {
+    print(await provisionB08TidbSourceReader(requiredOption('ack')));
+    return;
+  }
+
+  if (command === 'b08:tidb-v1:inventory') {
+    print(await inventoryB08TidbV1());
+    return;
+  }
+
+  if (command === 'b08:tidb-v1:assess') {
+    print(await assessB08TidbV1ReadOnly());
+    return;
+  }
+
+  if (command === 'b08:migrator:provision') {
+    print(await provisionB08AzureMigrationIdentity());
+    return;
+  }
+
+  if (command === 'b08:migrator:verify') {
+    print(await verifyB08AzureMigrationIdentity());
+    return;
+  }
+
+  if (command === 'b08:runtime:provision') {
+    print(await provisionB08AzureRuntimeIdentities(requiredOption('ack')));
+    return;
+  }
+
+  if (command === 'b08:runtime:verify') {
+    print(await verifyB08AzureRuntimeIdentities());
+    return;
+  }
+
+  if (command === 'b08:runtime:grant-ledger-read') {
+    print(await grantB08AzureRuntimeLedgerRead(requiredOption('ack')));
+    return;
+  }
+
+  if (command === 'b08:verify-establishment') {
+    print(await verifyB08AzureEstablishment());
+    return;
+  }
+
+  if (command === 'b08:verify-behavior') {
+    print(await verifyB08AzureBehavior(requiredOption('ack')));
+    return;
+  }
+
+  if (command === 'b08:inspect-metadata') {
+    const authority = authorityFor('read-only-connect', 'read-only');
+    const decision = authorizationFor(authority);
+    if (
+      authority.context.targetFingerprintHash !==
+        'b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced' ||
+      authority.context.credentialClass !== 'read-only'
+    ) {
+      throw new Error('B08 metadata inspection refused: exact Azure read-only target required.');
+    }
+    const connection = await createAuthoritySqlConnection(authority, decision);
+    const rows = async (statement: string): Promise<Array<Record<string, unknown>>> => {
+      const result = await connection.query(statement);
+      return Array.isArray(result) && Array.isArray(result[0])
+        ? (result[0] as Array<Record<string, unknown>>)
+        : [];
+    };
+    try {
+      const session = (await rows(`SELECT VERSION() AS version, DATABASE() AS selected_database,
+        CURRENT_USER() AS current_identity, @@session.sql_mode AS sql_mode,
+        @@session.time_zone AS session_time_zone,
+        @@session.transaction_isolation AS transaction_isolation,
+        @@session.character_set_connection AS character_set_connection,
+        @@session.collation_connection AS collation_connection,
+        @@global.lower_case_table_names AS lower_case_table_names,
+        @@global.sql_generate_invisible_primary_key AS sql_generate_invisible_primary_key,
+        @@session.sql_require_primary_key AS sql_require_primary_key,
+        @@global.require_secure_transport AS require_secure_transport`))[0];
+      if (
+        session?.selected_database !== 'propertylistify_database' ||
+        !String(session.current_identity).startsWith('propertylistify_b08_inspector@')
+      ) {
+        throw new Error('B08 metadata inspection refused: selected database or identity differs.');
+      }
+      const tlsCipher = (await rows("SHOW SESSION STATUS LIKE 'Ssl_cipher'"))[0];
+      const tlsVersion = (await rows("SHOW SESSION STATUS LIKE 'Ssl_version'"))[0];
+      const tables = await rows(`SELECT TABLE_NAME AS table_name, TABLE_TYPE AS table_type,
+        TABLE_ROWS AS estimated_rows, ENGINE AS engine, TABLE_COLLATION AS table_collation
+        FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = DATABASE() ORDER BY TABLE_NAME`);
+      const specialColumns = await rows(`SELECT TABLE_NAME AS table_name, COLUMN_NAME AS column_name,
+        EXTRA AS extra, COLUMN_KEY AS column_key, DATA_TYPE AS data_type
+        FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE()
+        AND TABLE_NAME IN ('content_topics', 'user_onboarding_state') ORDER BY TABLE_NAME, ORDINAL_POSITION`);
+      const foreignKeys = await rows(`SELECT COUNT(*) AS total FROM INFORMATION_SCHEMA.REFERENTIAL_CONSTRAINTS
+        WHERE CONSTRAINT_SCHEMA = DATABASE()`);
+      const checks = await rows(`SELECT CONSTRAINT_NAME AS name, ENFORCED AS enforced
+        FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS WHERE TABLE_SCHEMA = DATABASE()
+        AND CONSTRAINT_TYPE = 'CHECK' ORDER BY CONSTRAINT_NAME`);
+      const indexes = await rows(`SELECT COUNT(DISTINCT CONCAT(TABLE_NAME, '.', INDEX_NAME)) AS total
+        FROM INFORMATION_SCHEMA.STATISTICS WHERE TABLE_SCHEMA = DATABASE()`);
+      const features = await rows(`SELECT
+        SUM(DATA_TYPE = 'json') AS json_columns,
+        SUM(DATA_TYPE IN ('timestamp', 'datetime') AND DATETIME_PRECISION = 6) AS microsecond_timestamps
+        FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE()`);
+      const grantRows = await rows('SHOW GRANTS');
+      const grants = grantRows.flatMap(row => Object.values(row)).map(String);
+      const usageOnly = grants.filter(grant => /^GRANT USAGE ON \*\.\*/i.test(grant)).length === 1;
+      const selectOnly = grants.filter(grant =>
+        /^GRANT SELECT ON [`']?propertylistify_database[`']?\.\* TO /i.test(grant),
+      ).length === 1;
+      print({
+        targetFingerprintHash: authority.context.targetFingerprintHash,
+        server: session.version,
+        selectedDatabase: session.selected_database,
+        inspectorIdentityVerified: true,
+        tls: {
+          cipherPresent: Boolean(tlsCipher?.Value),
+          version: tlsVersion?.Value ?? null,
+          certificateVerificationRequired: authority.context.tls.certificateVerificationRequired,
+          secureTransportRequired: session.require_secure_transport,
+        },
+        session: {
+          sqlMode: session.sql_mode,
+          timezone: session.session_time_zone,
+          transactionIsolation: session.transaction_isolation,
+          characterSet: session.character_set_connection,
+          collation: session.collation_connection,
+          lowerCaseTableNames: session.lower_case_table_names,
+          generateInvisiblePrimaryKey: session.sql_generate_invisible_primary_key,
+          requirePrimaryKey: session.sql_require_primary_key,
+        },
+        tableInventory: {
+          count: tables.length,
+          names: tables.map(table => table.table_name),
+          estimatedNonempty: tables.filter(table => Number(table.estimated_rows) > 0).map(table => ({
+            table: table.table_name,
+            estimatedRows: table.estimated_rows,
+          })),
+          engines: [...new Set(tables.map(table => table.engine))],
+          collations: [...new Set(tables.map(table => table.table_collation))],
+        },
+        propertyImagesPhysicalNames: tables.filter(table =>
+          String(table.table_name).toLowerCase() === 'propertyimages',
+        ).map(table => table.table_name),
+        specialColumns,
+        migrationLedgerPresent: tables.some(table => table.table_name === 'sql_migration_history'),
+        migrationAttemptLedgerPresent: tables.some(table => table.table_name === 'sql_migration_attempts'),
+        foreignKeyCount: foreignKeys[0]?.total ?? null,
+        checks,
+        indexCount: indexes[0]?.total ?? null,
+        jsonColumnCount: features[0]?.json_columns ?? null,
+        microsecondTimestampCount: features[0]?.microsecond_timestamps ?? null,
+        grants: {
+          count: grants.length,
+          onlyUsageAndDatabaseSelect: usageOnly && selectOnly && grants.length === 2,
+          selectOnApprovedDatabase: selectOnly,
+          mutationPrivilegesPresent: grants.some(grant =>
+            /\b(?:INSERT|UPDATE|DELETE|CREATE|ALTER|DROP|INDEX|TRIGGER|GRANT OPTION)\b/i.test(grant),
+          ),
+        },
+      });
+    } finally {
+      await connection.end();
+    }
     return;
   }
 
@@ -398,7 +616,83 @@ async function run(command: Command): Promise<void> {
       expectedNewHead: result.plan.expectedNewHead,
       lock: result.lock,
       applied: result.applied,
+      freshSessionEvidence: result.freshSessionEvidence,
     });
+    return;
+  }
+
+  if (command === 'source-archive:preliminary' || command === 'source-archive:final') {
+    const final = command === 'source-archive:final';
+    let freeze: unknown;
+    if (final) {
+      const path = resolve(requiredOption('freeze-evidence'));
+      const stat = lstatSync(path);
+      if (
+        !stat.isFile() ||
+        stat.isSymbolicLink() ||
+        realpathSync(path) !== path ||
+        stat.uid !== process.getuid?.() ||
+        (stat.mode & 0o777) !== 0o600 ||
+        stat.size > 65536
+      )
+        throw new Error('Freeze evidence must be an owned, mode 0600 file without symbolic links.');
+      freeze = JSON.parse(readFileSync(path, 'utf8'));
+    }
+    const archiveDir = resolve(requiredOption('archive-dir'));
+    const keyDir = resolve(requiredOption('key-dir'));
+    if (
+      archiveDir === keyDir ||
+      archiveDir.startsWith(`${keyDir}/`) ||
+      keyDir.startsWith(`${archiveDir}/`)
+    )
+      throw new Error('Archive and key must use separate private directories.');
+    for (const path of [archiveDir, keyDir]) {
+      mkdirSync(path, { recursive: true, mode: 0o700 });
+      const stat = lstatSync(path);
+      if (
+        !stat.isDirectory() ||
+        stat.isSymbolicLink() ||
+        stat.uid !== process.getuid?.() ||
+        (stat.mode & 0o777) !== 0o700
+      )
+        throw new Error('Archive storage must be owned and mode 0700.');
+    }
+    if (realpathSync(archiveDir) !== archiveDir || realpathSync(keyDir) !== keyDir)
+      throw new Error('Archive storage paths must not contain symbolic links.');
+    const authority = authorityFor('read-only-connect', 'read-only');
+    const decision = authorizationFor(authority);
+    const key = randomBytes(32);
+    try {
+      const captured = final
+        ? await captureFinalTiDbArchive({ authority, decision, key, freeze })
+        : await capturePreliminaryTiDbArchive({ authority, decision, key });
+      const stamp = new Date().toISOString().replace(/[^0-9]/g, '');
+      const label = final ? 'final' : 'preliminary';
+      const keyPath = resolve(keyDir, `tidb-${label}-${stamp}.key`);
+      const archivePath = resolve(archiveDir, `tidb-${label}-${stamp}.enc`);
+      writeFileSync(keyPath, key, { mode: 0o600, flag: 'wx' });
+      try {
+        writeFileSync(archivePath, captured.encrypted, { mode: 0o600, flag: 'wx' });
+      } catch (error) {
+        unlinkSync(keyPath);
+        throw error;
+      }
+      const persisted = readFileSync(archivePath);
+      if (!persisted.equals(captured.encrypted))
+        throw new Error('Persisted archive differs from capture.');
+      openSourceArchive(persisted, readFileSync(keyPath));
+      writeFileSync(
+        `${archivePath}.evidence.json`,
+        JSON.stringify({ ...captured.evidence, persistedAuthenticatedReadback: true }, null, 2),
+        {
+          mode: 0o600,
+          flag: 'wx',
+        },
+      );
+      print({ ...captured.evidence, counts: undefined, archivePath, keyPath });
+    } finally {
+      key.fill(0);
+    }
     return;
   }
 
@@ -407,6 +701,9 @@ async function run(command: Command): Promise<void> {
     command === 'release-reference:apply' ||
     command === 'release-reference:verify'
   ) {
+    const adapter = option('adapter') ?? 'commercial';
+    if (!['commercial', 'geography'].includes(adapter))
+      throw new Error('Unknown reference adapter.');
     const isPlan = command.endsWith(':plan');
     const isApply = command.endsWith(':apply');
     const operation: DatabaseOperation = isPlan
@@ -418,11 +715,19 @@ async function run(command: Command): Promise<void> {
     const decision = authorizationFor(authority, option('ack'));
     const connection = await createAuthoritySqlConnection(authority, decision);
     try {
-      const evidence = isPlan
-        ? await planCanonicalCommercialReferenceData({ authority, decision, connection })
-        : isApply
-          ? await prepareCanonicalCommercialReferenceData({ authority, decision, connection })
-          : await verifyCanonicalCommercialReference({ authority, decision, connection });
+      const evidence =
+        adapter === 'geography'
+          ? await releaseCanonicalGeography({
+              authority,
+              decision,
+              connection,
+              expectedPlanDigest: isApply ? requiredOption('plan-digest') : undefined,
+            })
+          : isPlan
+            ? await planCanonicalCommercialReferenceData({ authority, decision, connection })
+            : isApply
+              ? await prepareCanonicalCommercialReferenceData({ authority, decision, connection })
+              : await verifyCanonicalCommercialReference({ authority, decision, connection });
       print(evidence);
     } finally {
       await connection.end();
@@ -563,7 +868,7 @@ async function run(command: Command): Promise<void> {
   const connection = await createAuthoritySqlConnection(authority, decision);
   try {
     const desired = normalizedDesiredSchema(schema);
-    const actual = await normalizedPhysicalSchema(connection, authority.context.provider);
+    const actual = await normalizedPhysicalSchema(connection, authority.context.provider, desired);
     const report = compareNormalizedSchemas(desired, actual);
     const physicalCheckEnforcement = summarizeCheckConstraintEnforcement(actual);
     const checkConstraintEnforcement = await readTiDbCheckConstraintCapability(
@@ -596,6 +901,18 @@ const commands = new Set<Command>([
   'context',
   'manifest',
   'data:manifest',
+  'b08:inspector:provision',
+  'b08:tidb-reader:provision',
+  'b08:tidb-v1:inventory',
+  'b08:tidb-v1:assess',
+  'b08:inspect-metadata',
+  'b08:migrator:provision',
+  'b08:migrator:verify',
+  'b08:runtime:provision',
+  'b08:runtime:verify',
+  'b08:runtime:grant-ledger-read',
+  'b08:verify-establishment',
+  'b08:verify-behavior',
   'worktree:create',
   'worktree:dispose',
   'worktree:ack',
@@ -611,6 +928,8 @@ const commands = new Set<Command>([
   'release-tidb-check-constraint-convergence:apply',
   'release:plan',
   'release:apply',
+  'source-archive:preliminary',
+  'source-archive:final',
   'release-reference:plan',
   'release-reference:apply',
   'release-reference:verify',

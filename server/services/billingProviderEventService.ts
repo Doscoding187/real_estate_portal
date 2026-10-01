@@ -2,6 +2,7 @@ import { and, eq, sql } from 'drizzle-orm';
 import { randomUUID } from 'node:crypto';
 import { billingProviderEvents } from '../../drizzle/schema';
 import { getDb } from '../db-connection';
+import { requireCommercialActivation } from './commercialActivationPolicy';
 
 function mysqlTimestamp(value = new Date()): string {
   return value.toISOString().slice(0, 19).replace('T', ' ');
@@ -30,6 +31,7 @@ export async function recordBillingProviderEvent(input: {
   occurredAt?: string | null;
   maxAttempts?: number;
 }) {
+  requireCommercialActivation('Billing provider event intake');
   const provider = normalizeIdentity(input.provider, 'name', 40);
   const providerEventId = normalizeIdentity(input.providerEventId, 'event identity', 255);
   const eventType = normalizeIdentity(input.eventType, 'event type', 120);
@@ -43,7 +45,8 @@ export async function recordBillingProviderEvent(input: {
   let occurredAt: string | null = null;
   if (input.occurredAt != null) {
     const parsed = new Date(input.occurredAt);
-    if (Number.isNaN(parsed.getTime())) throw new Error('Invalid billing provider event timestamp.');
+    if (Number.isNaN(parsed.getTime()))
+      throw new Error('Invalid billing provider event timestamp.');
     occurredAt = mysqlTimestamp(parsed);
   }
   const db = await getDb();
@@ -83,6 +86,7 @@ export async function recordBillingProviderEvent(input: {
 
 /** Claims an event exactly once; failed events may be retried by a supervisor. */
 export async function claimBillingProviderEvent(eventId: number) {
+  requireCommercialActivation('Billing provider event processing');
   const db = await getDb();
   if (!db) throw new Error('Database not available');
   return db.transaction(async tx => {
@@ -131,18 +135,30 @@ export async function completeBillingProviderEvent(
   claimToken: string,
   status: 'applied' | 'ignored',
 ) {
+  requireCommercialActivation('Billing provider event processing');
   const db = await getDb();
   if (!db) throw new Error('Database not available');
   const result = await db
     .update(billingProviderEvents)
     .set({ status, processedAt: mysqlTimestamp(), claimToken: null, claimExpiresAt: null })
-    .where(and(eq(billingProviderEvents.id, eventId), eq(billingProviderEvents.status, 'processing'), eq(billingProviderEvents.claimToken, claimToken)));
+    .where(
+      and(
+        eq(billingProviderEvents.id, eventId),
+        eq(billingProviderEvents.status, 'processing'),
+        eq(billingProviderEvents.claimToken, claimToken),
+      ),
+    );
   if (Number(result[0]?.affectedRows ?? result.affectedRows ?? 0) !== 1) {
     throw new Error('Provider event is not owned by a processing worker');
   }
 }
 
-export async function failBillingProviderEvent(eventId: number, claimToken: string, reason: string) {
+export async function failBillingProviderEvent(
+  eventId: number,
+  claimToken: string,
+  reason: string,
+) {
+  requireCommercialActivation('Billing provider event processing');
   const db = await getDb();
   if (!db) throw new Error('Database not available');
   const result = await db
@@ -154,7 +170,13 @@ export async function failBillingProviderEvent(eventId: number, claimToken: stri
       claimExpiresAt: null,
       nextAttemptAt: mysqlTimestamp(new Date(Date.now() + Math.min(60, 2 ** 1) * 60_000)),
     })
-    .where(and(eq(billingProviderEvents.id, eventId), eq(billingProviderEvents.status, 'processing'), eq(billingProviderEvents.claimToken, claimToken)));
+    .where(
+      and(
+        eq(billingProviderEvents.id, eventId),
+        eq(billingProviderEvents.status, 'processing'),
+        eq(billingProviderEvents.claimToken, claimToken),
+      ),
+    );
   if (Number(result[0]?.affectedRows ?? result.affectedRows ?? 0) !== 1) {
     throw new Error('Provider event is not owned by a processing worker');
   }

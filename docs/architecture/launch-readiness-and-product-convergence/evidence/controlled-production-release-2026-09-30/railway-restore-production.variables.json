@@ -1,0 +1,11 @@
+{
+  "input": {
+    "projectId": "8cdd7515-ddd2-4252-bbee-df5a5c209d4b",
+    "environmentId": "63070d99-357a-40ba-99c3-6d1368f61652",
+    "serviceId": "db88a720-2d1f-4afc-a3a8-6228b6b08d3e",
+    "branch": "main",
+    "repository": "Doscoding187/real_estate_portal",
+    "provider": "github",
+    "checkSuites": true
+  }
+}

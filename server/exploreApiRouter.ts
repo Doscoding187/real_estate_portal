@@ -22,6 +22,7 @@ import { recommendationEngineService } from './services/recommendationEngineServ
 import { exploreFeedService } from './services/exploreFeedService';
 import { exploreAgencyService } from './services/exploreAgencyService';
 import { requireUser } from './_core/requireUser';
+import { resolveCurrentAgencyMembershipForAgent } from './services/agencyMembershipService';
 
 /**
  * Helper function to verify agency access
@@ -49,14 +50,18 @@ async function verifyAgencyAccess(userId: number, agencyId: number): Promise<voi
     return;
   }
 
-  // Check if user is an agent in the agency
-  const agentResult = await db
-    .select()
+  // An agent's profile projection is not agency authority. Private analytics
+  // require a current canonical membership for this exact tenant.
+  const [agent] = await db
+    .select({ id: agents.id })
     .from(agents)
-    .where(and(eq(agents.userId, userId), eq(agents.agencyId, agencyId)))
+    .where(and(eq(agents.userId, userId), eq(agents.status, 'approved')))
     .limit(1);
 
-  if (agentResult[0]) {
+  const membership = agent
+    ? await resolveCurrentAgencyMembershipForAgent(db, Number(agent.id))
+    : null;
+  if (membership && Number(membership.agencyId) === agencyId) {
     return;
   }
 

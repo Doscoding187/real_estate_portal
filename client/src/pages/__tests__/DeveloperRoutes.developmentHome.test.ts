@@ -26,6 +26,14 @@ vi.mock('@/hooks/useDeveloperOnboardingStatus', () => ({
   }),
 }));
 
+vi.mock('@/hooks/useCommercialProductAvailability', () => ({
+  useCommercialProductAvailability: () => ({
+    isAvailable: false,
+    isError: false,
+    refetch: vi.fn(),
+  }),
+}));
+
 vi.mock('@/components/developer/DeveloperLayout', () => ({
   DeveloperLayout: ({ children }: { children: ReactNode }) => children,
 }));

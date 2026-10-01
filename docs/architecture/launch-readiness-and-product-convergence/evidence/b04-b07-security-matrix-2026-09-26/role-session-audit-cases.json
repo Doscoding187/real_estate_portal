@@ -1,0 +1,73 @@
+{
+  "runDate": "2026-09-27",
+  "source": {
+    "branch": "verify/b04-b07-security-matrix-b5a347",
+    "head": "f3f99f806ea9ae6be3132e093ce1cf1a6f185a32",
+    "acceptedBaseTree": "b5a3475633ea330469507551574c7e61a73b0900",
+    "candidateImplementationTree": "2600386978a46b29f371c230f05511c81be2465f",
+    "sevenFileSourceDiffSha256": "aeea344252f553d0f05babe0958f2d1a441acfc6e97c05dcbfab7c7b088a672c",
+    "roleSessionAuditTestSha256": "6b69d0beb855f700e2d0e79bad30927673c67d256842279cb871c11c066f4c28"
+  },
+  "target": {
+    "class": "disposable-worktree",
+    "databaseName": "listify_wt_b04_b07_security_matrix_b5a347_843c043861ee",
+    "fingerprintSha256": "9db48aa2c8f2962e9fa34c579157f92f8ab6816ecec6a8035dd3fb715f4f11fd",
+    "ownershipKey": "843c043861ee049d73764e0f",
+    "migrationHead": "0094_content_topics_primary_key.sql",
+    "schemaDigest": "a8ca8cf34bb3627594eab1b722b85115c6460225a0165db7992228a8547798e9",
+    "roleFixtures": "not prepared; test-owned users only",
+    "unrelatedAdministratorsChangedOrRemoved": 0,
+    "disposed": true,
+    "localServiceStopped": true
+  },
+  "command": "pnpm test:authority -- --no-file-parallelism server/__tests__/integration.b07-role-session-audit.test.ts --reporter=verbose",
+  "suite": { "filesPassed": 1, "testsPassed": 5, "failed": 0, "durationSeconds": 6.4 },
+  "cases": [
+    {
+      "name": "routes both mounted role endpoints through atomic audit and revokes old sessions",
+      "result": "PASS",
+      "multipleAdminSuccess": {
+        "superAdminCountBeforeDemotion": "greater than one (asserted)",
+        "targetAfterDemotion": { "role": "visitor", "sessionVersion": 12 },
+        "roleChangeAuditRows": 2,
+        "anotherSuperAdminRemained": true,
+        "oldSessionRejected": true
+      }
+    },
+    {
+      "name": "denies non-super-admin, unsupported role, and missing target requests",
+      "result": "PASS",
+      "assertions": ["FORBIDDEN", "BAD_REQUEST", "NOT_FOUND", "target unchanged", "no target audit event"]
+    },
+    {
+      "name": "rolls back the mounted user route role change when required audit insertion fails",
+      "result": "PASS",
+      "assertions": ["role unchanged", "sessionVersion unchanged", "no audit event"]
+    },
+    {
+      "name": "rejects last-super-admin removal through user.updateRole with exactly one canonical admin",
+      "result": "PASS",
+      "endpoint": "user.updateRole",
+      "superAdminCountBefore": 1,
+      "expectedErrorCode": "PRECONDITION_FAILED",
+      "superAdminCountAfter": 1,
+      "subjectBefore": { "role": "super_admin", "sessionVersion": 10 },
+      "subjectAfter": { "role": "super_admin", "sessionVersion": 10 },
+      "auditEventsBefore": 0,
+      "auditEventsAfter": 0
+    },
+    {
+      "name": "rejects last-super-admin removal through admin.updateUserRole with exactly one canonical admin",
+      "result": "PASS",
+      "endpoint": "admin.updateUserRole",
+      "superAdminCountBefore": 1,
+      "expectedErrorCode": "PRECONDITION_FAILED",
+      "superAdminCountAfter": 1,
+      "subjectBefore": { "role": "super_admin", "sessionVersion": 10 },
+      "subjectAfter": { "role": "super_admin", "sessionVersion": 10 },
+      "auditEventsBefore": 0,
+      "auditEventsAfter": 0
+    }
+  ],
+  "sanitization": "No user identifiers, emails, credentials, cookies, tokens, raw SQL, or private payloads are recorded."
+}

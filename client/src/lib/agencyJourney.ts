@@ -15,7 +15,34 @@ export type AgencyJourneyAction = {
  */
 export function getAgencyJourneyAction(
   status: { recommendedNextStep?: AgencyRecommendedNextStep } | null | undefined,
+  options: { commercialActivationEnabled?: boolean } = {},
 ): AgencyJourneyAction {
+  // Availability belongs to the exact Agency product and is supplied by the
+  // mounted surface. An omitted or loading decision stays closed instead of
+  // inheriting a build-time/global commercial flag.
+  const commercialActivationEnabled = options.commercialActivationEnabled === true;
+
+  // A selected commercial product is retained during pre-payment onboarding,
+  // but it is not an invoice or an entitlement. Keep every workspace surface
+  // out of the payment path until the separate commercial release enables it.
+  if (
+    !commercialActivationEnabled &&
+    [
+      'activate_launch_access',
+      'complete_payment',
+      'await_payment_review',
+      'renew_launch_access',
+    ].includes(status?.recommendedNextStep ?? 'workspace')
+  ) {
+    return {
+      href: '/agency/listings',
+      label: 'Prepare inventory',
+      title: 'Commercial activation is not available yet',
+      description:
+        'Continue preparing your agency profile and private inventory. Publishing becomes available after approved commercial activation.',
+    };
+  }
+
   switch (status?.recommendedNextStep) {
     case 'create_agency_profile':
       return {
@@ -76,7 +103,7 @@ export function getAgencyJourneyAction(
       };
     case 'contact_support':
       return {
-        href: '/contact',
+        href: '/contact?area=agency_operations&topic=agency-workspace',
         label: 'Contact Property Listify',
         title: 'Your Agency Launch Access needs support',
         description:

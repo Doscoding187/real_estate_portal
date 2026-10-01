@@ -1,7 +1,8 @@
-import { and, desc, eq, gte, inArray, lte, sql } from 'drizzle-orm';
+import { and, desc, eq, gte, inArray, lte, or, sql } from 'drizzle-orm';
 import {
   agencies,
   agents,
+  billableAccounts,
   demandCampaigns,
   demandLeads,
   demandLeadAssignments,
@@ -9,15 +10,18 @@ import {
   demandUnmatchedLeads,
   leads,
   notifications,
+  plans,
   properties,
+  subscriptions,
 } from '../../drizzle/schema';
 import { getDb } from '../db';
 import {
   getPlanAccessProjectionForUserId,
-  isPaidSubscriptionRowEntitled,
+  isPaidMvpLaunchAccessSubscriptionEntitled,
   type EntitlementMap,
 } from './planAccessService';
-import { listCurrentActiveMembershipAgentIds } from './agencyMembershipService';
+import { listCurrentActiveAgencyMembershipsByAgentId } from './agencyMembershipService';
+import { isCommercialActivationAvailable } from './commercialActivationPolicy';
 import { getRuntimeSchemaCapabilities, warnSchemaCapabilityOnce } from './runtimeSchemaCapabilities';
 
 type DemandOwnerType = 'agent' | 'agency' | 'developer' | 'private';
@@ -374,39 +378,134 @@ export async function captureDemandLeadFromCampaign(
       displayName: agents.displayName,
       firstName: agents.firstName,
       lastName: agents.lastName,
-      agencyVerified: agencies.isVerified,
     })
     .from(agents)
-    .leftJoin(agencies, eq(agents.agencyId, agencies.id))
     .where(inArray(agents.id, agentIds));
   const rawAgentRows = agentRowsRaw.map(row => ({
     id: Number(row.id),
     userId: row.userId ? Number(row.userId) : null,
     agencyId: row.agencyId ? Number(row.agencyId) : null,
     status: row.status || null,
-    agencyVerified: row.agencyVerified == null ? null : Number(row.agencyVerified),
     profileCompletionScore: Number(row.profileCompletionScore || 0),
     displayName: row.displayName || null,
     firstName: row.firstName || null,
     lastName: row.lastName || null,
   }));
 
-  // Routing currency: agency-affiliated agents must hold a current canonical
-  // membership to receive demand leads. Independent agents (no agency) are
-  // unaffected.
-  const affiliatedAgentIds = rawAgentRows
-    .filter(row => row.agencyId !== null)
-    .map(row => row.id);
-  const currentMembershipAgentIds = await listCurrentActiveMembershipAgentIds(
+  // Routing currency: agency-affiliated agents must hold one current
+  // canonical membership and the Agency itself must hold the exact active
+  // Agency Launch Access term. Independent agents must hold the exact active
+  // Agent Launch Access term. A verified/badged profile or a generic legacy
+  // subscription is never sufficient to generate a new demand enquiry.
+  const currentMembershipsByAgentId = await listCurrentActiveAgencyMembershipsByAgentId(
     tx,
-    affiliatedAgentIds,
+    rawAgentRows.map(row => row.id),
   );
-  const agentRows = rawAgentRows.filter(
-    row => row.agencyId === null || currentMembershipAgentIds.has(row.id),
-  );
+  const agentRows = rawAgentRows.filter(row => {
+    // A stale profile affiliation is not allowed to silently become an
+    // independent commercial owner after membership expiry/termination.
+    if (row.agencyId !== null && !currentMembershipsByAgentId.has(row.id)) return false;
+    return true;
+  });
   const agentById = new Map<number, (typeof agentRows)[number]>(
     agentRows.map(row => [row.id, row]),
   );
+
+  const effectiveAgencyIds: number[] = [
+    ...new Set<number>(
+      [...currentMembershipsByAgentId.values()]
+        .map(membership => Number(membership.agencyId))
+        .filter(agencyId => Number.isSafeInteger(agencyId) && agencyId > 0),
+    ),
+  ];
+  const agencyRows =
+    effectiveAgencyIds.length > 0
+      ? await tx
+          .select({ id: agencies.id, isVerified: agencies.isVerified })
+          .from(agencies)
+          .where(inArray(agencies.id, effectiveAgencyIds))
+      : [];
+  const agencyVerifiedById = new Map(
+    agencyRows.map(row => [Number(row.id), Number(row.isVerified || 0)]),
+  );
+
+  const canonicalUserIds: number[] = [
+    ...new Set<number>(
+      agentRows
+        .map(row => Number(row.userId || 0))
+        .filter(userId => Number.isSafeInteger(userId) && userId > 0),
+    ),
+  ];
+  const commercialSubscriptionRows =
+    canonicalUserIds.length > 0 || effectiveAgencyIds.length > 0
+      ? await tx
+          .select({ subscription: subscriptions, plan: plans })
+          .from(subscriptions)
+          .innerJoin(plans, eq(subscriptions.planId, plans.id))
+          .where(
+            or(
+              ...(canonicalUserIds.length > 0
+                ? [
+                    and(
+                      eq(subscriptions.ownerType, 'agent'),
+                      inArray(subscriptions.ownerId, canonicalUserIds),
+                      sql`EXISTS (
+                        SELECT 1
+                        FROM ${billableAccounts} account
+                        WHERE account.id = ${subscriptions.billableAccountId}
+                          AND account.account_kind = 'agent'
+                          AND account.user_id = ${subscriptions.ownerId}
+                      )`,
+                    ),
+                  ]
+                : []),
+              ...(effectiveAgencyIds.length > 0
+                ? [
+                    and(
+                      eq(subscriptions.ownerType, 'agency'),
+                      inArray(subscriptions.ownerId, effectiveAgencyIds),
+                      sql`EXISTS (
+                        SELECT 1
+                        FROM ${billableAccounts} account
+                        WHERE account.id = ${subscriptions.billableAccountId}
+                          AND account.account_kind = 'agency'
+                          AND account.agency_id = ${subscriptions.ownerId}
+                      )`,
+                    ),
+                  ]
+                : []),
+            ),
+          )
+      : [];
+  const now = new Date();
+  const entitledAgentUserIds = new Set<number>();
+  const entitledAgencyIds = new Set<number>();
+  for (const row of commercialSubscriptionRows) {
+    if (
+      row.subscription.ownerType === 'agent' &&
+      isCommercialActivationAvailable(process.env, 'agent_launch_access') &&
+      isPaidMvpLaunchAccessSubscriptionEntitled(
+        row.subscription,
+        row.plan,
+        'agent',
+        now,
+      )
+    ) {
+      entitledAgentUserIds.add(Number(row.subscription.ownerId));
+    }
+    if (
+      row.subscription.ownerType === 'agency' &&
+      isCommercialActivationAvailable(process.env, 'agency_launch_access') &&
+      isPaidMvpLaunchAccessSubscriptionEntitled(
+        row.subscription,
+        row.plan,
+        'agency',
+        now,
+      )
+    ) {
+      entitledAgencyIds.add(Number(row.subscription.ownerId));
+    }
+  }
 
   const assignmentWindowStart = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
   const recentAssignments = await tx
@@ -437,14 +536,9 @@ export async function captureDemandLeadFromCampaign(
     agentRows.map(async row => {
       let tierWeight = 1;
       let maxRecipientsPerLead = 3;
-      let personallyEntitled = false;
       try {
         if (row.userId) {
           const planAccess = await getPlanAccessProjectionForUserId(Number(row.userId));
-          personallyEntitled = isPaidSubscriptionRowEntitled({
-            status: planAccess?.subscription?.status ?? null,
-            currentPeriodEnd: planAccess?.subscription?.currentPeriodEnd ?? null,
-          });
           tierWeight = resolveTierWeight(planAccess?.entitlements, planAccess?.currentPlan?.name || null);
           maxRecipientsPerLead = resolveMaxRecipientsPerLead(planAccess?.entitlements, tierWeight);
         }
@@ -454,11 +548,20 @@ export async function captureDemandLeadFromCampaign(
       }
 
       // Commercial-activity gate: only approved agents who remain receivable
-      // (active paid entitlement, or affiliation with a verified agency) may
-      // receive demand-routed leads. Mirrors lead-custody eligibility truth.
+      // under the canonical owner term may receive demand-routed leads.
+      const membership = currentMembershipsByAgentId.get(Number(row.id));
+      const effectiveAgencyId = membership ? Number(membership.agencyId) : null;
+      const agencyCommerciallyEligible = Boolean(
+        effectiveAgencyId &&
+          agencyVerifiedById.get(effectiveAgencyId) === 1 &&
+          entitledAgencyIds.has(effectiveAgencyId),
+      );
+      const independentCommerciallyEligible = Boolean(
+        row.agencyId === null && row.userId && entitledAgentUserIds.has(Number(row.userId)),
+      );
       const eligible =
         row.status === 'approved' &&
-        (personallyEntitled || Number(row.agencyVerified || 0) === 1);
+        (effectiveAgencyId ? agencyCommerciallyEligible : independentCommerciallyEligible);
 
       routingConfigByAgentId.set(Number(row.id), {
         tierWeight,
@@ -497,8 +600,9 @@ export async function captureDemandLeadFromCampaign(
     const fairnessMultiplier = computeFairnessMultiplier(assignmentCountByAgentId.get(agentId) || 0);
     const score = tierWeight * fairnessMultiplier * qualityMultiplier;
     const confidence = confidenceFromScore(score);
-    const ownerType: 'agent' | 'agency' = agent.agencyId ? 'agency' : 'agent';
-    const ownerId = agent.agencyId ? Number(agent.agencyId) : agentId;
+    const membership = currentMembershipsByAgentId.get(agentId);
+    const ownerType: 'agent' | 'agency' = membership ? 'agency' : 'agent';
+    const ownerId = membership ? Number(membership.agencyId) : agentId;
 
     rankedAgents.push({
       agentId,

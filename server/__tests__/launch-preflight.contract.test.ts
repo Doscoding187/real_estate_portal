@@ -18,6 +18,8 @@ function productionEnv(overrides: NodeJS.ProcessEnv = {}): NodeJS.ProcessEnv {
     VITE_APP_URL: 'https://propertylistifysa.co.za',
     VITE_API_URL: 'https://api.propertylistifysa.co.za',
     TRUST_PROXY: '1',
+    MEDIA_STORAGE_ADAPTER: 's3',
+    MEDIA_UPLOAD_TOKEN_SECRET: 'strong-production-media-token-secret-with-unique-material',
     AWS_REGION: 'af-south-1',
     AWS_ACCESS_KEY_ID: 'AKIAPRODUCTIONKEY',
     AWS_SECRET_ACCESS_KEY: 'production-media-secret',
@@ -36,6 +38,10 @@ function productionEnv(overrides: NodeJS.ProcessEnv = {}): NodeJS.ProcessEnv {
     RESEND_API_KEY: 're_live_launch_ready',
     RESEND_FROM_EMAIL: 'Listify Billing <billing@propertylistifysa.co.za>',
     REDIS_URL: 'rediss://cache.propertylistifysa.co.za:6379',
+    PAID_MVP_ENABLED_PRODUCT_KEYS:
+      'agent_launch_access,agency_launch_access,developer_launch_access',
+    PAID_MVP_RELEASE_ID: 'paid-mvp-rc-1',
+    PAID_MVP_APPROVAL_REF: 'b16-approval-1',
     GOOGLE_MAPS_API_KEY: 'maps-server-key',
     VITE_GOOGLE_MAPS_API_KEY: 'maps-browser-key',
     SAVED_SEARCH_ACTION_TOKEN_SECRET: 'saved-search-action-token-secret',
@@ -82,6 +88,53 @@ describe('launch preflight contract', () => {
     expect(failedIds).toContain('transactional-email');
   });
 
+  it('rejects the documented JWT example even though it exceeds the minimum length', () => {
+    const result = runLaunchPreflight({
+      runtimeEnv: 'production',
+      env: productionEnv({ JWT_SECRET: 'your-super-secret-key-at-least-32-chars-long' }),
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.checks.find(check => check.id === 'auth-secret')).toMatchObject({ ok: false });
+    expect(result.checks.find(check => check.id === 'deployed-security-configuration')).toMatchObject({
+      ok: false,
+    });
+  });
+
+  it('rejects placeholder transactional-email credentials before a release', () => {
+    const result = runLaunchPreflight({
+      runtimeEnv: 'production',
+      env: productionEnv({
+        RESEND_API_KEY: 'replace-with-resend-api-key',
+        RESEND_FROM_EMAIL: 'Listify Local <onboarding@resend.dev>',
+      }),
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.checks.find(check => check.id === 'transactional-email')).toMatchObject({
+      ok: false,
+      missing: ['RESEND_API_KEY (placeholder)', 'RESEND_FROM_EMAIL (invalid or placeholder)'],
+    });
+  });
+
+  it('rejects proof storage sharing the public media credentials or bucket', () => {
+    const result = runLaunchPreflight({
+      runtimeEnv: 'production',
+      env: productionEnv({
+        BILLING_PROOF_AWS_ACCESS_KEY_ID: 'AKIAPRODUCTIONKEY',
+        BILLING_PROOF_S3_BUCKET: 'listify-public-media-prod',
+      }),
+    });
+
+    expect(result.checks.find(check => check.id === 'billing-proof-storage')).toMatchObject({
+      ok: false,
+      missing: [
+        'BILLING_PROOF_AWS_ACCESS_KEY_ID (distinct from public media)',
+        'BILLING_PROOF_S3_BUCKET (distinct from public media)',
+      ],
+    });
+  });
+
   it('refuses a production browser boundary with a wildcard-like origin or missing proxy topology', () => {
     const result = runLaunchPreflight({
       runtimeEnv: 'production',
@@ -118,6 +171,48 @@ describe('launch preflight contract', () => {
         'AUTH_RATE_LIMIT_STORE_TIMEOUT_MS (integer 250-5000)',
         'AUTH_RATE_LIMIT_STORE_COOLDOWN_MS (integer 1000-60000)',
       ],
+    });
+  });
+
+  it('blocks production launch until the exact paid product set and approval metadata are present', () => {
+    const disabled = runLaunchPreflight({
+      runtimeEnv: 'production',
+      env: productionEnv({
+        PAID_MVP_ENABLED_PRODUCT_KEYS: undefined,
+        PAID_MVP_RELEASE_ID: undefined,
+        PAID_MVP_APPROVAL_REF: undefined,
+      }),
+    });
+    expect(disabled.ok).toBe(false);
+    expect(disabled.checks.find(check => check.id === 'paid-mvp-commercial-activation')).toMatchObject({
+      ok: false,
+      missing: [
+        'PAID_MVP_ENABLED_PRODUCT_KEYS=agent_launch_access,agency_launch_access,developer_launch_access',
+        'PAID_MVP_RELEASE_ID',
+        'PAID_MVP_APPROVAL_REF',
+      ],
+    });
+
+    const subset = runLaunchPreflight({
+      runtimeEnv: 'production',
+      env: productionEnv({ PAID_MVP_ENABLED_PRODUCT_KEYS: 'agent_launch_access' }),
+    });
+    expect(subset.checks.find(check => check.id === 'paid-mvp-commercial-activation')).toMatchObject({
+      ok: false,
+    });
+  });
+
+  it('rejects test capture selectors and deployed local media during preflight', () => {
+    const result = runLaunchPreflight({
+      runtimeEnv: 'production',
+      env: productionEnv({
+        PROPERTY_LISTIFY_GOVERNED_B05_EMAIL_CAPTURE_PATH: '/tmp/property-listify-b05-test.jsonl',
+        MEDIA_STORAGE_ADAPTER: 'local',
+      }),
+    });
+    expect(result.ok).toBe(false);
+    expect(result.checks.find(check => check.id === 'deployed-security-configuration')).toMatchObject({
+      ok: false,
     });
   });
 

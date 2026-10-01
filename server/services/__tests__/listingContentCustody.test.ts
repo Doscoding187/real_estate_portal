@@ -9,14 +9,18 @@ const listing = {
 };
 
 describe('generic Listing content custody', () => {
-  it('keeps direct ownership and the super-admin break-glass path', () => {
+  it('keeps personal draft ownership and the super-admin break-glass path', () => {
     expect(
-      canManageListingContent(listing, {
-        userId: 10,
-        role: 'agent',
-        agencyId: null,
-        agent: null,
-      }),
+      canManageListingContent(
+        { ...listing, agencyId: null },
+        {
+          userId: 10,
+          role: 'agent',
+          agencyId: null,
+          agent: null,
+          currentAgencyId: null,
+        },
+      ),
     ).toBe(true);
     expect(
       canManageListingContent(listing, {
@@ -24,6 +28,7 @@ describe('generic Listing content custody', () => {
         role: 'super_admin',
         agencyId: null,
         agent: null,
+        currentAgencyId: null,
       }),
     ).toBe(true);
   });
@@ -35,6 +40,7 @@ describe('generic Listing content custody', () => {
         role: 'agency_admin',
         agencyId: 30,
         agent: null,
+        currentAgencyId: null,
       }),
     ).toBe(true);
     expect(
@@ -43,15 +49,17 @@ describe('generic Listing content custody', () => {
         role: 'agency_admin',
         agencyId: 31,
         agent: null,
+        currentAgencyId: null,
       }),
     ).toBe(false);
   });
 
-  it('requires an approved, exactly assigned agent with a coherent agency claim', () => {
+  it('requires an approved, exactly assigned agent with current canonical membership', () => {
     const actor = {
       userId: 50,
       role: 'agent',
       agencyId: 30,
+      currentAgencyId: 30,
       agent: { id: 20, userId: 50, agencyId: 30, status: 'approved' },
     };
 
@@ -59,7 +67,7 @@ describe('generic Listing content custody', () => {
     expect(
       canManageListingContent(listing, {
         ...actor,
-        agent: { ...actor.agent, agencyId: 31 },
+        currentAgencyId: 31,
       }),
     ).toBe(false);
     expect(
@@ -84,9 +92,49 @@ describe('generic Listing content custody', () => {
           userId: 50,
           role: 'agent',
           agencyId: 30,
+          currentAgencyId: 30,
           agent: { id: 20, userId: 50, agencyId: 30, status: 'approved' },
         },
       ),
+    ).toBe(false);
+  });
+
+  it.each(['agent', 'visitor'])(
+    'denies historical agency authorship for a %s without membership',
+    role => {
+      expect(
+        canManageListingContent(listing, {
+          userId: 10,
+          role,
+          agencyId: 30,
+          currentAgencyId: null,
+          agent: { id: 20, userId: 10, agencyId: 30, status: 'approved' },
+        }),
+      ).toBe(false);
+    },
+  );
+
+  it('uses canonical membership even when profile affiliation is stale', () => {
+    expect(
+      canManageListingContent(listing, {
+        userId: 10,
+        role: 'agent',
+        agencyId: 31,
+        currentAgencyId: 30,
+        agent: { id: 20, userId: 10, agencyId: 31, status: 'approved' },
+      }),
+    ).toBe(true);
+  });
+
+  it('does not let an agency administrator use historical authorship across agencies', () => {
+    expect(
+      canManageListingContent(listing, {
+        userId: 10,
+        role: 'agency_admin',
+        agencyId: 31,
+        currentAgencyId: null,
+        agent: null,
+      }),
     ).toBe(false);
   });
 });

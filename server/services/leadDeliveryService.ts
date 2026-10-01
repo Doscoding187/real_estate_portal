@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { and, asc, desc, eq, inArray, lte, ne, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, inArray, lte, ne, sql } from 'drizzle-orm';
 
 import { leadDeliveries, leadDeliveryAttempts, leads } from '../../drizzle/schema';
 import { db } from '../db';
@@ -864,6 +864,13 @@ export type LeadDeliveryDispatcher = (claim: ClaimedLeadDeliveryAttempt) => Prom
   | { status: 'delivered' | 'pending'; providerReference?: string | null }
   | { status: 'failed' | 'attention_required'; error: string; providerReference?: string | null }
 >;
+
+/** Read-only backlog counts for the scheduled worker's operational summary. */
+export async function getLeadDeliveryBacklog(database: LeadDatabase = db): Promise<Record<string, number>> {
+  const rows = await database.select({ state: leadDeliveries.state, total: count() })
+    .from(leadDeliveries).groupBy(leadDeliveries.state);
+  return Object.fromEntries(rows.map(row => [row.state, Number(row.total)]));
+}
 
 /** Runnable worker primitive: recover, claim, call provider outside tx, fence completion. */
 export async function runLeadDeliveryWorker(input: {

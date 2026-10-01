@@ -39,6 +39,28 @@ function collectErrorMessages(...errors: Array<{ message?: string } | null | und
   );
 }
 
+function registrationAreaLabel(area: unknown): string {
+  switch (area) {
+    case 'distribution_manager':
+      return 'Distribution manager';
+    case 'agent':
+      return 'Agent account or profile';
+    case 'agency_operations':
+      return 'Agency workspace or team';
+    case 'developer_operations':
+      return 'Developer organisation or team';
+    default:
+      return 'Other onboarding or platform question';
+  }
+}
+
+function registrationStatusLabel(registration: { requestedArea?: unknown; status?: unknown }): string {
+  if (registration.status === 'approved' && registration.requestedArea !== 'distribution_manager') {
+    return 'reviewed';
+  }
+  return String(registration.status || 'pending');
+}
+
 function openInviteShareWindow(url: string) {
   window.open(url, '_blank', 'noopener,noreferrer');
 }
@@ -167,7 +189,7 @@ export default function DistributionNetworkPage() {
     { enabled: submoduleSlug === 'agent-network' },
   );
   const teamRegistrationsQuery = trpc.distribution.admin.listTeamRegistrations.useQuery(
-    { limit: 200, requestedArea: 'distribution_manager' },
+    { limit: 200 },
     {
       enabled:
         submoduleSlug === 'distribution-managers' || submoduleSlug === 'partner-developments',
@@ -344,8 +366,19 @@ export default function DistributionNetworkPage() {
     ],
   );
   const managerErrorMessages = useMemo(
-    () => collectErrorMessages(teamRegistrationsQuery.error, createManagerInviteMutation.error),
-    [createManagerInviteMutation.error, teamRegistrationsQuery.error],
+    () =>
+      collectErrorMessages(
+        teamRegistrationsQuery.error,
+        createManagerInviteMutation.error,
+        resendManagerInviteMutation.error,
+        reviewTeamRegistrationMutation.error,
+      ),
+    [
+      createManagerInviteMutation.error,
+      resendManagerInviteMutation.error,
+      reviewTeamRegistrationMutation.error,
+      teamRegistrationsQuery.error,
+    ],
   );
   const copyLatestInviteUrl = async () => {
     if (!latestInviteUrl) return;
@@ -366,7 +399,10 @@ export default function DistributionNetworkPage() {
   };
   const managerOptions = useMemo(() => {
     return (teamRegistrationsQuery.data || [])
-      .filter((row: any) => row.status === 'approved' && row.userId)
+      .filter(
+        (row: any) =>
+          row.requestedArea === 'distribution_manager' && row.status === 'approved' && row.userId,
+      )
       .map((row: any) => ({
         userId: Number(row.userId),
         label: `${row.fullName || row.email} (${row.email})`,
@@ -861,108 +897,161 @@ export default function DistributionNetworkPage() {
           </Card>
           <Card>
             <CardHeader>
-              <CardTitle>Manager Registration Queue</CardTitle>
-              <CardDescription>Pending and approved manager registrations.</CardDescription>
+              <CardTitle>Assisted onboarding and manager queue</CardTitle>
+              <CardDescription>
+                Manager invitations may provision a Distribution identity after account
+                verification. Other requests are review records only: this queue never grants
+                membership, role, lead, publishing, payment, or entitlement access.
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-2">
-              {(teamRegistrationsQuery.data || []).map((registration: any) => (
-                <div key={registration.id} className="rounded border p-3">
-                  <div className="flex flex-wrap items-start justify-between gap-2">
-                    <div>
-                      <p className="font-medium">{registration.fullName}</p>
-                      <p className="text-xs text-slate-500">{registration.email}</p>
-                      <div className="mt-2 flex flex-wrap gap-2">
-                        <Badge
-                          variant={registration.status === 'approved' ? 'default' : 'secondary'}
-                        >
-                          {registration.status}
-                        </Badge>
-                        {registration.status === 'approved' ? (
+              {(teamRegistrationsQuery.data || []).map((registration: any) => {
+                const isManagerRegistration = registration.requestedArea === 'distribution_manager';
+                const statusLabel = registrationStatusLabel(registration);
+
+                return (
+                  <div key={registration.id} className="rounded border p-3">
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="font-medium">{registration.fullName}</p>
+                        <p className="text-xs text-slate-500">{registration.email}</p>
+                        <div className="mt-2 flex flex-wrap gap-2">
                           <Badge variant="outline">
-                            {registration.approvalSource === 'manager_invite_completion'
-                              ? 'self-approved via invite'
-                              : registration.approvalSource === 'admin_review'
-                                ? 'approved by admin'
-                                : 'approval source unknown'}
+                            {registrationAreaLabel(registration.requestedArea)}
                           </Badge>
+                          <Badge variant={registration.status === 'approved' ? 'default' : 'secondary'}>
+                            {statusLabel}
+                          </Badge>
+                          {isManagerRegistration && registration.status === 'approved' ? (
+                            <Badge variant="outline">
+                              {registration.approvalSource === 'manager_invite_completion'
+                                ? 'self-approved via invite'
+                                : registration.approvalSource === 'admin_review'
+                                  ? 'approved by admin'
+                                  : 'approval source unknown'}
+                            </Badge>
+                          ) : null}
+                          {isManagerRegistration && registration.status === 'approved' ? (
+                            <Badge variant={registration.managerAccessActive ? 'default' : 'outline'}>
+                              {registration.managerAccessActive ? 'access active' : 'access revoked'}
+                            </Badge>
+                          ) : null}
+                        </div>
+                        {registration.company || registration.currentRole ? (
+                          <p className="mt-2 text-xs text-slate-600">
+                            {[registration.company, registration.currentRole].filter(Boolean).join(' · ')}
+                          </p>
                         ) : null}
-                        {registration.status === 'approved' ? (
-                          <Badge variant={registration.managerAccessActive ? 'default' : 'outline'}>
-                            {registration.managerAccessActive ? 'access active' : 'access revoked'}
-                          </Badge>
+                        {registration.notes ? (
+                          <p className="mt-2 whitespace-pre-wrap break-words text-sm text-slate-700">
+                            {registration.notes}
+                          </p>
+                        ) : null}
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {registration.status === 'pending' && isManagerRegistration ? (
+                          <>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() =>
+                                reviewTeamRegistrationMutation.mutate({
+                                  registrationId: Number(registration.id),
+                                  decision: 'approved',
+                                  notes: 'Approved from Distribution Managers queue',
+                                })
+                              }
+                              disabled={reviewTeamRegistrationMutation.isPending}
+                            >
+                              Approve and provision
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() =>
+                                resendManagerInviteMutation.mutate({
+                                  registrationId: Number(registration.id),
+                                })
+                              }
+                              disabled={resendManagerInviteMutation.isPending}
+                            >
+                              Resend invite
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() =>
+                                reviewTeamRegistrationMutation.mutate({
+                                  registrationId: Number(registration.id),
+                                  decision: 'rejected',
+                                  notes: 'Rejected from Distribution Managers queue',
+                                })
+                              }
+                              disabled={reviewTeamRegistrationMutation.isPending}
+                            >
+                              Reject
+                            </Button>
+                          </>
+                        ) : null}
+                        {registration.status === 'pending' && !isManagerRegistration ? (
+                          <>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() =>
+                                reviewTeamRegistrationMutation.mutate({
+                                  registrationId: Number(registration.id),
+                                  decision: 'approved',
+                                  notes:
+                                    'Reviewed from Assisted Onboarding queue; no access provisioning performed',
+                                })
+                              }
+                              disabled={reviewTeamRegistrationMutation.isPending}
+                            >
+                              Mark reviewed
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() =>
+                                reviewTeamRegistrationMutation.mutate({
+                                  registrationId: Number(registration.id),
+                                  decision: 'rejected',
+                                  notes:
+                                    'Closed from Assisted Onboarding queue; no access or entitlement change',
+                                })
+                              }
+                              disabled={reviewTeamRegistrationMutation.isPending}
+                            >
+                              Close request
+                            </Button>
+                          </>
+                        ) : null}
+                        {isManagerRegistration && registration.status === 'approved' && registration.userId ? (
+                          <Button
+                            size="sm"
+                            variant={registration.managerAccessActive ? 'destructive' : 'outline'}
+                            onClick={() =>
+                              setManagerAccessMutation.mutate({
+                                userId: Number(registration.userId),
+                                active: !registration.managerAccessActive,
+                                notes: registration.managerAccessActive
+                                  ? 'Revoked in Distribution Managers queue'
+                                  : 'Restored in Distribution Managers queue',
+                              })
+                            }
+                            disabled={setManagerAccessMutation.isPending}
+                          >
+                            {registration.managerAccessActive ? 'Revoke access' : 'Restore access'}
+                          </Button>
                         ) : null}
                       </div>
                     </div>
-                    <div className="flex flex-wrap gap-2">
-                      {registration.status === 'pending' ? (
-                        <>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() =>
-                              reviewTeamRegistrationMutation.mutate({
-                                registrationId: Number(registration.id),
-                                decision: 'approved',
-                                notes: 'Approved from Distribution Managers queue',
-                              })
-                            }
-                            disabled={reviewTeamRegistrationMutation.isPending}
-                          >
-                            Approve
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() =>
-                              resendManagerInviteMutation.mutate({
-                                registrationId: Number(registration.id),
-                              })
-                            }
-                            disabled={resendManagerInviteMutation.isPending}
-                          >
-                            Resend Invite
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            onClick={() =>
-                              reviewTeamRegistrationMutation.mutate({
-                                registrationId: Number(registration.id),
-                                decision: 'rejected',
-                                notes: 'Rejected from Distribution Managers queue',
-                              })
-                            }
-                            disabled={reviewTeamRegistrationMutation.isPending}
-                          >
-                            Reject
-                          </Button>
-                        </>
-                      ) : null}
-
-                      {registration.status === 'approved' && registration.userId ? (
-                        <Button
-                          size="sm"
-                          variant={registration.managerAccessActive ? 'destructive' : 'outline'}
-                          onClick={() =>
-                            setManagerAccessMutation.mutate({
-                              userId: Number(registration.userId),
-                              active: !registration.managerAccessActive,
-                              notes: registration.managerAccessActive
-                                ? 'Revoked in Distribution Managers queue'
-                                : 'Restored in Distribution Managers queue',
-                            })
-                          }
-                          disabled={setManagerAccessMutation.isPending}
-                        >
-                          {registration.managerAccessActive ? 'Revoke Access' : 'Restore Access'}
-                        </Button>
-                      ) : null}
-                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
               {!teamRegistrationsQuery.isLoading && !(teamRegistrationsQuery.data || []).length && (
-                <p className="text-sm text-slate-500">No manager registrations found.</p>
+                <p className="text-sm text-slate-500">No registrations found.</p>
               )}
             </CardContent>
           </Card>

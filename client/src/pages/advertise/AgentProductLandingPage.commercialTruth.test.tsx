@@ -1,7 +1,21 @@
 import { cleanup, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CommercialProduct } from '@/hooks/useCommercialCatalog';
-import AgentProductLandingPage from './AgentProductLandingPage';
+const { commercialActivationMock } = vi.hoisted(() => ({
+  commercialActivationMock: vi.fn(),
+}));
+
+vi.mock('@/lib/trpc', () => ({
+  trpc: {
+    billing: {
+      commercialActivation: {
+        useQuery: (...args: unknown[]) => commercialActivationMock(...args),
+      },
+    },
+  },
+}));
+
+import AgentProductLandingPage, { AgentCommercialLandingPage } from './AgentProductLandingPage';
 
 vi.mock('@/hooks/useCommercialCatalog', () => ({
   useCommercialCatalog: vi.fn(),
@@ -68,6 +82,18 @@ const agentProduct = {
 } as unknown as CommercialProduct;
 
 beforeEach(() => {
+  commercialActivationMock.mockReturnValue({
+    data: {
+      enabled: false,
+      productAvailability: {
+        agent_launch_access: false,
+        agency_launch_access: false,
+        developer_launch_access: false,
+      },
+    },
+    isError: false,
+    refetch: vi.fn(),
+  });
   useCatalogMock.mockReturnValue({
     data: {
       authority: {
@@ -91,31 +117,55 @@ afterEach(() => {
 });
 
 describe('public Agent product landing page', () => {
-  it('leads with the Agent product story before the canonical commercial decision', () => {
+  it('shows the approved preparation path while normal runtime commercial activation is disabled', () => {
     render(<AgentProductLandingPage />);
 
     expect(
       screen.getByRole('heading', {
-        name: 'Run your listings, enquiries and follow-ups from one place.',
+        name: 'Establish your Agent presence and prepare private inventory.',
         level: 1,
       }),
     ).toBeInTheDocument();
-    expect(screen.getAllByTestId('agent-workspace-preview')).toHaveLength(2);
+    expect(screen.getByText('Preparation-only onboarding')).toBeInTheDocument();
     expect(
-      screen.getByRole('heading', {
-        name: 'There is more work behind every listing than publishing it.',
-      }),
+      screen.getByText(
+        'Commercial activation is not available yet. Complete your profile and prepare private drafts; publishing becomes available after approved commercial activation.',
+      ),
     ).toBeInTheDocument();
-    expect(screen.getByText('Keep interest connected')).toBeInTheDocument();
-    expect(screen.getByText('Keep follow-up visible')).toBeInTheDocument();
+    expect(screen.getAllByText('Prepare private listing drafts')).toHaveLength(1);
     expect(
-      screen.getByRole('heading', { name: 'Experience the complete supported Agent workspace.' }),
+      screen.getByText(
+        'Publication and marketplace participation follow approved commercial activation.',
+      ),
     ).toBeInTheDocument();
-    expect(screen.getByText('Keep commissions in view.')).toBeInTheDocument();
+
+    const preparationLinks = screen.getAllByRole('link', { name: /Start Agent preparation/i });
+    expect(preparationLinks).toHaveLength(2);
+    preparationLinks.forEach(link => {
+      expect(link).toHaveAttribute('href', '/login?mode=register&next=%2Fagent%2Fsetup&role=agent');
+    });
+    expect(screen.getByRole('link', { name: /See agent presences/i })).toHaveAttribute(
+      'href',
+      '/agents',
+    );
+
+    expect(useCatalogMock).not.toHaveBeenCalled();
   });
 
-  it('renders canonical Agent Launch Access truth and a direct account-start action', () => {
+  it('does not advertise a paid offer, invoice request, or activation period while activation is disabled', () => {
     render(<AgentProductLandingPage />);
+
+    expect(screen.queryByText('R499')).not.toBeInTheDocument();
+    expect(screen.queryByText(/90 days/i)).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('link', { name: /Get Agent Launch Access/i }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/Request an invoice/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/manual EFT/i)).not.toBeInTheDocument();
+  });
+
+  it('retains the catalog-driven commercial presentation for a separately enabled runtime', () => {
+    render(<AgentCommercialLandingPage />);
 
     expect(screen.getAllByText('R499').length).toBeGreaterThan(0);
     expect(screen.getAllByText('90 days').length).toBeGreaterThan(0);
@@ -123,10 +173,6 @@ describe('public Agent product landing page', () => {
     expect(screen.getByRole('link', { name: /Get Agent Launch Access/i })).toHaveAttribute(
       'href',
       '/agent/select-package',
-    );
-    expect(screen.getByRole('link', { name: /See agent presences/i })).toHaveAttribute(
-      'href',
-      '/agents',
     );
     const accountStartLinks = screen.getAllByRole('link', { name: /Create your Agent account/i });
     expect(accountStartLinks).toHaveLength(2);
@@ -136,15 +182,51 @@ describe('public Agent product landing page', () => {
         '/login?mode=register&next=%2Fagent%2Fselect-package&role=agent',
       );
     });
-    expect(screen.getByRole('link', { name: /Explore the Agent workspace/i })).toHaveAttribute(
-      'href',
-      '#agent-workspace',
-    );
-    expect(screen.getAllByRole('link', { name: /Contact Property Listify/i })).toHaveLength(2);
-    expect(screen.queryByText(/free trial|\/month/i)).not.toBeInTheDocument();
   });
 
-  it('keeps account creation primary when commercial details are unavailable', () => {
+  it('uses the effective Agent product decision rather than another product availability', () => {
+    commercialActivationMock.mockReturnValue({
+      data: {
+        enabled: true,
+        productAvailability: {
+          agent_launch_access: true,
+          agency_launch_access: false,
+          developer_launch_access: false,
+        },
+      },
+      isError: false,
+      refetch: vi.fn(),
+    });
+
+    render(<AgentProductLandingPage />);
+
+    expect(screen.getByRole('link', { name: /Get Agent Launch Access/i })).toHaveAttribute(
+      'href',
+      '/agent/select-package',
+    );
+  });
+
+  it('keeps the Agent landing in preparation when only another product is available', () => {
+    commercialActivationMock.mockReturnValue({
+      data: {
+        enabled: true,
+        productAvailability: {
+          agent_launch_access: false,
+          agency_launch_access: true,
+          developer_launch_access: false,
+        },
+      },
+      isError: false,
+      refetch: vi.fn(),
+    });
+
+    render(<AgentProductLandingPage />);
+
+    expect(screen.queryByTestId('agent-launch-access-unavailable-card')).not.toBeInTheDocument();
+    expect(screen.getByText('Preparation-only onboarding')).toBeInTheDocument();
+  });
+
+  it('keeps account creation primary when the separately enabled commercial catalog is unavailable', () => {
     useCatalogMock.mockReturnValue({
       data: {
         authority: {
@@ -161,7 +243,7 @@ describe('public Agent product landing page', () => {
       refetch: vi.fn(),
     } as unknown as ReturnType<typeof useCommercialCatalog>);
 
-    render(<AgentProductLandingPage />);
+    render(<AgentCommercialLandingPage />);
 
     const unavailableCard = screen.getByTestId('agent-launch-access-unavailable-card');
     expect(

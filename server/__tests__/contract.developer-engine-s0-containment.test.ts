@@ -2,7 +2,11 @@ import { existsSync, readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { throwAuctionPublicationDisabled } from '../services/developerEngineContainment';
+import {
+  assertLandDevelopmentDraftOperationAvailable,
+  assertLandDevelopmentOperationAvailable,
+  throwAuctionPublicationDisabled,
+} from '../services/developerEngineContainment';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 
@@ -14,6 +18,55 @@ describe('Developer Engine S0 containment contracts', () => {
   it('returns an explicit precondition failure for unsupported auction publication', () => {
     expect(() => throwAuctionPublicationDisabled()).toThrow(
       /Auction developments are not part of the supported public MVP contract/,
+    );
+  });
+
+  it('contains generic Land development authoring, review, publication, and public discovery', () => {
+    expect(
+      () => assertLandDevelopmentOperationAvailable('land', 'Land development publication'),
+    ).toThrow(
+      /Land development publication is unavailable while Land is deferred/,
+    );
+    expect(
+      () => assertLandDevelopmentOperationAvailable('residential', 'Development publication'),
+    ).not.toThrow();
+
+    const developmentService = source('server/services/developmentService.ts');
+    const eligibility = source('server/services/publicDevelopmentEligibility.ts');
+
+    expect(developmentService).toContain("'Land development authoring'");
+    expect(developmentService).toContain("'Land development submission'");
+    expect(developmentService).toContain("'Land development approval'");
+    expect(developmentService).toContain("'Land development publication'");
+    expect(eligibility).toContain("'land_vertical_deferred'");
+    expect(eligibility).toContain("ne(developments.developmentType, 'land')");
+  });
+
+  it('contains generic Land drafts in both supported wizard payload shapes', () => {
+    expect(() =>
+      assertLandDevelopmentDraftOperationAvailable(
+        { developmentType: 'land' },
+        'Land development draft preparation',
+      ),
+    ).toThrow(/Land development draft preparation is unavailable while Land is deferred/);
+    expect(() =>
+      assertLandDevelopmentDraftOperationAvailable(
+        { developmentData: { developmentType: 'land' } },
+        'Land development draft preparation',
+      ),
+    ).toThrow(/Land development draft preparation is unavailable while Land is deferred/);
+    expect(() =>
+      assertLandDevelopmentDraftOperationAvailable(
+        { developmentType: 'residential' },
+        'Development draft preparation',
+      ),
+    ).not.toThrow();
+
+    expect(source('server/developerRouter.ts')).toContain(
+      'assertLandDevelopmentDraftOperationAvailable',
+    );
+    expect(source('server/superAdminPublisherRouter.ts')).toContain(
+      'assertLandDevelopmentDraftOperationAvailable',
     );
   });
 

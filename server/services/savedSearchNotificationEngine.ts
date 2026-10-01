@@ -1030,7 +1030,14 @@ export class SavedSearchNotificationEngine {
     const [manualResults, developmentResults] = await Promise.all([
       listingSource === 'development'
         ? Promise.resolve(null)
-        : propertySearchService.searchProperties(propertyFilters, 'date_desc', 1, PREVIEW_QUERY_LIMIT),
+        : propertySearchService.searchProperties(
+            propertyFilters,
+            'date_desc',
+            1,
+            PREVIEW_QUERY_LIMIT,
+            undefined,
+            { publicOnly: true },
+          ),
       listingSource === 'manual'
         ? Promise.resolve(null)
         : developmentDerivedListingService.searchListings(propertyFilters, 'date_desc', 1, PREVIEW_QUERY_LIMIT),

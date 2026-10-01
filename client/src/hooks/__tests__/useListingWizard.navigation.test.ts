@@ -1,6 +1,10 @@
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { useListingWizardStore } from '../useListingWizard';
+import {
+  getLocationEvidenceValidationIssues,
+  getLocationValidationIssues,
+  useListingWizardStore,
+} from '../useListingWizard';
 
 describe('useListingWizardStore navigation contract', () => {
   beforeEach(() => {
@@ -200,6 +204,32 @@ describe('useListingWizardStore navigation contract', () => {
       });
     });
     expect(result.current.canAdvanceFromStep(6)).toBe(true);
+  });
+
+  it('keeps confirmation separate from the valid manual-location evidence needed to enable it', () => {
+    const state = {
+      propertyType: 'house' as const,
+      location: {
+        address: '12 Katherine Street',
+        latitude: null,
+        longitude: null,
+        city: 'Johannesburg',
+        suburb: 'Sandton',
+        province: 'Gauteng',
+        provinceId: 1,
+        cityId: 2,
+        suburbId: 3,
+        privateAddress: { streetNumber: '12', streetName: 'Katherine Street' },
+        locationConfirmationState: 'needs_confirmation' as const,
+        coordinateSource: null,
+        publicLocationPrecision: 'approximate' as const,
+      },
+    };
+
+    expect(getLocationEvidenceValidationIssues(state)).toEqual([]);
+    expect(getLocationValidationIssues(state)).toEqual([
+      'Confirm the current location before continuing.',
+    ]);
   });
 
   it('rejects a suburb-only urban location with an actionable contract failure', () => {

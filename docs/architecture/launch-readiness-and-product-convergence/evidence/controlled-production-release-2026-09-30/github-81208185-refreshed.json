@@ -1,0 +1,83 @@
+{
+  "headRefOid": "81208185b3c0d7c82123357a55d2e3faadb7bf42",
+  "isDraft": true,
+  "statusCheckRollup": [
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-09-30T17:42:06Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/Doscoding187/real_estate_portal/actions/runs/36752943273/job/110015891929",
+      "name": "DB Contract Verification",
+      "startedAt": "2026-09-30T17:39:25Z",
+      "status": "COMPLETED",
+      "workflowName": "CI Pipeline"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-09-30T17:40:21Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/Doscoding187/real_estate_portal/actions/runs/36752943235/job/110015892248",
+      "name": "Build Frontend",
+      "startedAt": "2026-09-30T17:39:25Z",
+      "status": "COMPLETED",
+      "workflowName": "Frontend Build Guard"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-09-30T17:39:55Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/Doscoding187/real_estate_portal/actions/runs/36752943273/job/110015892380",
+      "name": "Location Authority",
+      "startedAt": "2026-09-30T17:39:25Z",
+      "status": "COMPLETED",
+      "workflowName": "CI Pipeline"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-09-30T17:45:41Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/Doscoding187/real_estate_portal/actions/runs/36752943273/job/110017013631",
+      "name": "Lint & TypeCheck",
+      "startedAt": "2026-09-30T17:42:10Z",
+      "status": "COMPLETED",
+      "workflowName": "CI Pipeline"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-09-30T17:59:54Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/Doscoding187/real_estate_portal/actions/runs/36752943273/job/110017013538",
+      "name": "Unit & Integration Tests",
+      "startedAt": "2026-09-30T17:42:08Z",
+      "status": "COMPLETED",
+      "workflowName": "CI Pipeline"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-09-30T17:46:34Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/Doscoding187/real_estate_portal/actions/runs/36752943273/job/110018467390",
+      "name": "Build Application",
+      "startedAt": "2026-09-30T17:45:43Z",
+      "status": "COMPLETED",
+      "workflowName": "CI Pipeline"
+    },
+    {
+      "__typename": "StatusContext",
+      "context": "Vercel",
+      "startedAt": "2026-09-30T17:39:45Z",
+      "state": "FAILURE",
+      "targetUrl": "https://vercel.com/edwards-projects-29c395d1/real-estate-portal/8RjY4PBVtXCReDnqpnPrNxVsggG4"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-09-30T17:39:46Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://vercel.com/github",
+      "name": "Vercel Preview Comments",
+      "startedAt": "2026-09-30T17:39:46Z",
+      "status": "COMPLETED",
+      "workflowName": ""
+    }
+  ]
+}

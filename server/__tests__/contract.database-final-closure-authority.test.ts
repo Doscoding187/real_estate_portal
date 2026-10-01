@@ -158,6 +158,9 @@ describe('database final closure residual executor authority', () => {
       .sort();
 
     expect(probeFiles).toEqual([
+      'server/_core/databaseAuthority/' + 'b08AzureInspectionIdentity.ts',
+      // Bounded source-only preservation, never runtime schema selection.
+      'server/_core/databaseAuthority/' + 'sourceArchive.ts',
       'server/_core/databaseAuthority/' + 'tidbCheckConstraintCapability.ts',
       'server/services/' + 'runtimeSchemaCapabilities.ts',
     ]);

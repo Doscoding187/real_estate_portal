@@ -3,6 +3,12 @@ export const DATABASE_OPERATIONS = [
   'worker-connect',
   'read-only-connect',
   'ci-identity-bootstrap',
+  'inspection-identity-provision',
+  'tidb-source-reader-provision',
+  'migration-identity-provision',
+  'runtime-identities-provision',
+  'runtime-ledger-read-grant',
+  'b08-behavior-verify',
   'migration-plan',
   'migration-apply',
   'reference-seed',
@@ -10,6 +16,7 @@ export const DATABASE_OPERATIONS = [
   'demo-seed',
   'scenario-seed',
   'test-fixture',
+  'rehearsal-regression',
   'verification',
   'browser-verification',
   'readiness',
@@ -32,6 +39,7 @@ export const DATABASE_TARGET_CLASSES = [
   'clean-main-local',
   'disposable-worktree',
   'disposable-test',
+  'disposable-rehearsal',
   'staging',
   'production',
   'shared-remote',
@@ -92,6 +100,7 @@ export type GitWorktreeIdentity = {
 };
 
 export type ResolvedDatabaseContext = {
+  rehearsal?: { resourceId: string; purpose: string };
   contextVersion: 1;
   contextId: string;
   correlationId: string;

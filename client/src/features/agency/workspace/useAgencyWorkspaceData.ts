@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { useAgencyOnboardingStatus } from '@/hooks/useAgencyOnboardingStatus';
+import { useCommercialProductAvailability } from '@/hooks/useCommercialProductAvailability';
 import { getAgencyJourneyAction } from '@/lib/agencyJourney';
 import { trpc } from '@/lib/trpc';
 import {
@@ -66,6 +67,7 @@ export function useAgencyWorkspaceData(workspace: WorkspaceId) {
   } = useAgencyOnboardingStatus({
     requireDashboardUnlocked: true,
   });
+  const agencyLaunchAvailability = useCommercialProductAvailability('agency_launch_access');
 
   const dashboardReady = Boolean(status?.dashboardUnlocked);
   const needsDetailedLeads = DETAIL_WORKSPACES.has(workspace);
@@ -141,13 +143,14 @@ export function useAgencyWorkspaceData(workspace: WorkspaceId) {
     status?.hasAgency && status.recommendedNextStep !== 'workspace',
   );
   const billingJourneyNeedsAttention = Boolean(
+    agencyLaunchAvailability.isAvailable &&
     status &&
-      [
-        'activate_launch_access',
-        'complete_payment',
-        'await_payment_review',
-        'renew_launch_access',
-      ].includes(status.recommendedNextStep),
+    [
+      'activate_launch_access',
+      'complete_payment',
+      'await_payment_review',
+      'renew_launch_access',
+    ].includes(status.recommendedNextStep),
   );
   const teamCoverageNeedsAttention = Boolean(
     status?.billingActivated && (teamNeedsAttention || stats.totalAgents === 0),
@@ -210,7 +213,9 @@ export function useAgencyWorkspaceData(workspace: WorkspaceId) {
     const items: WorkspaceDataProps['attentionItems'] = [];
 
     if (billingJourneyNeedsAttention) {
-      const action = getAgencyJourneyAction(status);
+      const action = getAgencyJourneyAction(status, {
+        commercialActivationEnabled: agencyLaunchAvailability.isAvailable,
+      });
       items.push({
         title: action.title,
         detail: action.description,
@@ -331,6 +336,7 @@ export function useAgencyWorkspaceData(workspace: WorkspaceId) {
     }
     return items;
   }, [
+    agencyLaunchAvailability.isAvailable,
     billingJourneyNeedsAttention,
     leadSignals,
     stats.pendingListings,

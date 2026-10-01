@@ -96,7 +96,7 @@ describe('developer.createLead contract', () => {
       route: 'brand',
     });
     expect(mockGetClientIp).toHaveBeenCalledOnce();
-    expect(mockCheckRateLimit).toHaveBeenCalledWith('198.51.100.20');
+    expect(mockCheckRateLimit).toHaveBeenCalledWith('198.51.100.20', expect.any(Object));
     expect(mockCapturePublicLead).toHaveBeenCalledWith({
       developmentId: 77,
       cataloguePublisherId: 13,
@@ -153,7 +153,7 @@ describe('developer.createLead contract', () => {
     );
 
     expect(mockGetClientIp).toHaveBeenCalledOnce();
-    expect(mockCheckRateLimit).toHaveBeenCalledWith('198.51.100.20');
+    expect(mockCheckRateLimit).toHaveBeenCalledWith('198.51.100.20', expect.any(Object));
     expect(mockCapturePublicLead).not.toHaveBeenCalled();
   });
 

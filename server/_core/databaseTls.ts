@@ -1,5 +1,6 @@
 type MysqlSslOptions = Record<string, any> & {
   rejectUnauthorized?: boolean;
+  verifyIdentity?: boolean;
   minVersion?: string;
 };
 
@@ -136,6 +137,9 @@ export function buildMysqlConnectionSecurityConfig(
       `Certificate verification cannot be disabled for ${runtimeEnv} database connections.`,
     );
   }
+  if (protectedRuntime && sslObject.verifyIdentity === false) {
+    throw new Error(`Hostname verification cannot be disabled for ${runtimeEnv} database connections.`);
+  }
 
   parsedUrl.searchParams.delete('ssl');
   parsedUrl.searchParams.delete('rejectUnauthorized');
@@ -168,6 +172,7 @@ export function buildMysqlConnectionSecurityConfig(
   const ssl: MysqlSslOptions = {
     ...sslObject,
     rejectUnauthorized,
+    verifyIdentity: rejectUnauthorized,
   };
 
   if (rejectUnauthorized && ssl.minVersion == null) {

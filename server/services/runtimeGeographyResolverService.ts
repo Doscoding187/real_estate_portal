@@ -6,8 +6,11 @@ import {
 } from '../../shared/factualRuntimeGeographyBridge';
 import { encodeCanonicalLocationId } from '../../shared/locationAuthority';
 import { locationResolver, type PublicLocationResolutionResult } from './locationResolverService';
-import type { RuntimeGeographyAuthority, RuntimeGeographyAuthorityRecord } from './runtimeGeographyAuthority';
-import { gautengFactualRuntimeProjectionAuthority } from './governedRuntimeGeographyReference';
+import type {
+  RuntimeGeographyAuthority,
+  RuntimeGeographyAuthorityRecord,
+} from './runtimeGeographyAuthority';
+import { locationAuthorityProjectionAuthority } from '../locationAuthorityCatalog';
 
 interface ExactPublicLocationResolver {
   resolvePublicLocation(options: {
@@ -35,10 +38,14 @@ export function createRuntimeGeographyAuthority(options: {
     async resolveRuntimeNaturalKey(
       runtimeNaturalKey: string,
       scopeKind: RuntimeSearchScopeKind,
+      expectedFactualLocationId?: string,
     ): Promise<RuntimeGeographyAuthorityRecord | null> {
       if (!isRuntimeNaturalKey(runtimeNaturalKey)) return null;
 
-      const projection = options.projectionAuthority.resolveNaturalKey(runtimeNaturalKey);
+      const projection = options.projectionAuthority.resolveNaturalKey(
+        runtimeNaturalKey,
+        expectedFactualLocationId,
+      );
       if (projection.status !== 'resolved') return null;
       if (projection.projection.runtimeSearchScopeKind !== scopeKind) return null;
 
@@ -137,6 +144,6 @@ export function createRuntimeGeographyAuthority(options: {
 }
 
 export const governedRuntimeGeographyAuthority = createRuntimeGeographyAuthority({
-  projectionAuthority: gautengFactualRuntimeProjectionAuthority,
+  projectionAuthority: locationAuthorityProjectionAuthority,
   publicLocationResolver: locationResolver,
 });

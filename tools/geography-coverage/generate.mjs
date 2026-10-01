@@ -9,7 +9,6 @@ const SCRIPT_DIRECTORY = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(SCRIPT_DIRECTORY, '../..');
 
 const PROJECTION_SCHEMA_VERSION = '0.2';
-const PROJECTION_VERSION = 'gauteng-runtime-reference-projection-v0.3';
 
 function loadResearchedEdges(ROOT, rawManifest) {
   const edgeFiles = rawManifest.inputs.researched_parent_edges ?? [];
@@ -39,6 +38,10 @@ const CONTEXT_ONLY_TYPES = new Set(['district_municipality', 'local_municipality
 
 function sha256File(filePath) {
   return createHash('sha256').update(fs.readFileSync(filePath)).digest('hex');
+}
+
+function sha256Content(value) {
+  return createHash('sha256').update(value).digest('hex');
 }
 
 function readJson(filePath) {
@@ -115,15 +118,67 @@ function loadInputs(ROOT, manifest) {
     );
   }
 
+  const dispositionPath = path.join(
+    ROOT,
+    manifest.outputs.output_dir,
+    manifest.outputs.disposition,
+  );
+  const recordedInputs = manifest.inputs.expected_sha256 ?? readJson(dispositionPath).inputs;
+  const geographyDigest = sha256File(geographyPath);
+  const namesDigest = sha256File(namesPath);
+  const carriedDigest = sha256File(carriedProjectionPath);
+  for (const [label, actual, expected] of [
+    ['geography', geographyDigest, recordedInputs.factual_geography_sha256],
+    ['names', namesDigest, recordedInputs.factual_names_sha256],
+    ['carried projection', carriedDigest, recordedInputs.carried_projection_sha256],
+  ]) {
+    if (actual !== expected) {
+      throw new Error(
+        `Canonical ${label} digest ${actual} does not match the approved checkpoint ${expected}.`,
+      );
+    }
+  }
+
   const carriedMappingPath = path.join(ROOT, manifest.inputs.carried_mapping);
   return {
     carriedRows: carriedProjectionRaw.rows,
-    carriedDigest: sha256File(carriedProjectionPath),
+    carriedDigest,
     geography: readJsonl(geographyPath),
     names: readJsonl(namesPath),
-    geographyDigest: sha256File(geographyPath),
-    namesDigest: sha256File(namesPath),
+    geographyDigest,
+    namesDigest,
     carriedMapping: readJsonl(carriedMappingPath),
+  };
+}
+
+function projectionVersionFor(ROOT, manifest) {
+  if (typeof manifest.outputs.projection_version === 'string') {
+    return manifest.outputs.projection_version;
+  }
+  const projectionPath = path.join(
+    ROOT,
+    manifest.outputs.output_dir,
+    manifest.outputs.projection,
+  );
+  if (fs.existsSync(projectionPath)) {
+    const existingVersion = readJson(projectionPath).projection_version;
+    if (typeof existingVersion === 'string' && existingVersion) return existingVersion;
+  }
+  throw new Error('Territory manifest outputs.projection_version is required for a new source.');
+}
+
+function carriedProvinceDisposition(rootNaturalKey) {
+  if (rootNaturalKey === 'gauteng') {
+    return {
+      reason: 'province_scope_owned_by_carried_gauteng_row',
+      nextAction:
+        'No additional province scope is released; lineage retained in disposition artifacts.',
+    };
+  }
+  return {
+    reason: 'province_scope_owned_by_carried_territory_row',
+    nextAction:
+      'No additional province scope is released; lineage retained in disposition artifacts.',
   };
 }
 
@@ -183,6 +238,9 @@ function collectCandidates(state, inputs, manifest) {
   const registryByContext = manifest.registryByContext;
   const excludedContexts = manifest.excludedContexts;
   const researchedEdges = manifest.researchedEdges;
+  const rootNaturalKey = manifest.rootNaturalKey;
+  const provinceName = manifest.provinceName;
+  const provinceDisposition = manifest.carriedProvinceDisposition;
   const carriedByFactualId = new Map(
     inputs.carriedMapping.map(entry => [entry.factual_location_id, entry]),
   );
@@ -194,8 +252,8 @@ function collectCandidates(state, inputs, manifest) {
       queueRecord(
         state,
         record,
-        'province_scope_owned_by_carried_gauteng_row',
-        'No additional province scope is released; lineage retained in disposition artifacts.',
+        provinceDisposition.reason,
+        provinceDisposition.nextAction,
       );
       continue;
     }
@@ -236,7 +294,7 @@ function collectCandidates(state, inputs, manifest) {
         state,
         record,
         'outside_territory_adm2_context',
-        'Representative context falls outside Gauteng districts; route to the owning territory wave.',
+        `Representative context falls outside ${provinceName}; route to the owning territory wave.`,
       );
       continue;
     }
@@ -263,8 +321,8 @@ function collectCandidates(state, inputs, manifest) {
         record,
         scopeKind: 'metro_city',
         storageLevel: 'city',
-        naturalKey: `gauteng/${slug}`,
-        parentKey: 'gauteng',
+        naturalKey: `${rootNaturalKey}/${slug}`,
+        parentKey: rootNaturalKey,
         publicationStatus:
           record.type_state === 'supported' &&
           record.licensing_classification !== 'osm_only_odbl_provisional'
@@ -283,13 +341,13 @@ function collectCandidates(state, inputs, manifest) {
       .filter(row => row.runtime_storage_level === 'city')
       .map(row => row.runtime_natural_key),
   );
-  acceptedMetroKeys.add('gauteng');
+  acceptedMetroKeys.add(rootNaturalKey);
   for (const candidate of candidates) acceptedMetroKeys.add(candidate.naturalKey);
   researchedEdges.hydrate(acceptedMetroKeys);
 
   for (const candidate of candidates) {
     const edge = researchedEdges.byFactualId.get(candidate.record.canonical_location_id);
-    if (!edge || edge.parent_natural_key !== 'gauteng') continue;
+    if (!edge || edge.parent_natural_key !== rootNaturalKey) continue;
     candidate.allowDuplicateNaturalKeyGrouping = edge.allowDuplicateNaturalKeyGrouping === true;
     candidate.decisionNote = `researched edge (${edge.evidence_class})`;
   }
@@ -302,7 +360,7 @@ function collectCandidates(state, inputs, manifest) {
     if (registryEntry) {
       parentKey = registryEntry.parent_natural_key;
       decisionNote = null;
-    } else if (edge && edge.parent_natural_key !== 'gauteng') {
+    } else if (edge && edge.parent_natural_key !== rootNaturalKey) {
       parentKey = edge.parent_natural_key;
       decisionNote = `researched edge (${edge.evidence_class})`;
     } else {
@@ -466,14 +524,14 @@ function emitRows(state, survivors) {
   return rows;
 }
 
-function buildPromotedMappingEntry(entry) {
+function buildPromotedMappingEntry(entry, manifest) {
   const { record, row } = entry;
   return {
     factual_location_id: record.canonical_location_id,
     factual_preferred_name: record.preferred_name,
     factual_type: record.canonical_type,
     factual_context: {
-      province_slug: 'gauteng',
+      province_slug: manifest.provinceSlug,
       administrative_context_names:
         record.administrative_context?.adm2?.map(item => item.name) ?? [],
     },
@@ -485,7 +543,7 @@ function buildPromotedMappingEntry(entry) {
     runtime_reference_status: 'reference_data_expansion_required',
     environment_runtime_compatibility_ids: [],
     evidence_references: [
-      'data/geography-coverage-v0.1/gauteng-territory-manifest.v0.1.json#parent_context_registry',
+      `${manifest.manifestPath}#parent_context_registry`,
     ],
     decision_reason: `Territory coverage pipeline promotion (${row.publication_status}); licensing ${record.licensing_classification}.${entry.decisionNote ? ` Parent via ${entry.decisionNote}.` : ''}`,
     name_only_match: false,
@@ -503,6 +561,7 @@ function projectionStatusForReason(reason) {
     case 'context_only_type_municipality':
     case 'unsupported_factual_type_for_release_1':
     case 'province_scope_owned_by_carried_gauteng_row':
+    case 'province_scope_owned_by_carried_territory_row':
       return 'unsupported_search_scope';
     case 'outside_territory_adm2_context':
     case 'estate_discovery_entity_deferred':
@@ -513,13 +572,13 @@ function projectionStatusForReason(reason) {
   }
 }
 
-function buildBlockedMappingEntry(record, queueEntry) {
+function buildBlockedMappingEntry(record, queueEntry, manifest) {
   return {
     factual_location_id: record.canonical_location_id,
     factual_preferred_name: record.preferred_name,
     factual_type: record.canonical_type,
     factual_context: {
-      province_slug: 'gauteng',
+      province_slug: manifest.provinceSlug,
       administrative_context_names:
         record.administrative_context?.adm2?.map(item => item.name) ?? [],
     },
@@ -530,7 +589,7 @@ function buildBlockedMappingEntry(record, queueEntry) {
     projection_status: projectionStatusForReason(queueEntry.reason),
     runtime_reference_status: null,
     environment_runtime_compatibility_ids: [],
-    evidence_references: ['data/geography-coverage-v0.1/gauteng-territory-manifest.v0.1.json'],
+    evidence_references: [manifest.manifestPath],
     decision_reason: `Coverage pipeline queue: ${queueEntry.reason}. Next: ${queueEntry.suggested_next_action}`,
     name_only_match: false,
   };
@@ -539,7 +598,13 @@ function buildBlockedMappingEntry(record, queueEntry) {
 async function main() {
   const options = parseArguments(process.argv.slice(2));
   const manifestPath = path.resolve(ROOT, options.manifest);
+  const manifestRepositoryPath = path.relative(ROOT, manifestPath).split(path.sep).join('/');
   const rawManifest = readJson(manifestPath);
+  const rootNaturalKey = rawManifest.territory?.province_slug;
+  const provinceName = rawManifest.territory?.province_name ?? rawManifest.territory?.province;
+  if (typeof rootNaturalKey !== 'string' || typeof provinceName !== 'string') {
+    throw new Error('Territory manifest must declare province_slug and province_name.');
+  }
 
   const inputs = loadInputs(ROOT, rawManifest);
   const state = createState(inputs);
@@ -555,7 +620,16 @@ async function main() {
   const excludedContexts = new Set(
     rawManifest.parent_context_registry?.excluded_non_territory_contexts ?? [],
   );
-  const manifest = { registryByContext, excludedContexts, researchedEdges };
+  const manifest = {
+    registryByContext,
+    excludedContexts,
+    researchedEdges,
+    rootNaturalKey,
+    provinceName,
+    provinceSlug: rootNaturalKey,
+    manifestPath: manifestRepositoryPath,
+    carriedProvinceDisposition: carriedProvinceDisposition(rootNaturalKey),
+  };
 
   const candidates = collectCandidates(state, inputs, manifest);
   const survivors = resolveCollisions(state, candidates);
@@ -570,11 +644,13 @@ async function main() {
 
   const mappingEntries = [
     ...inputs.carriedMapping.map(entry => ({ ...entry })),
-    ...state.runtimeRecords.map(buildPromotedMappingEntry),
+    ...state.runtimeRecords.map(entry => buildPromotedMappingEntry(entry, manifest)),
     ...[...state.queueById.keys()]
       .filter(factualId => !promotedIds.has(factualId))
       .filter(factualId => !inputs.carriedMapping.some(entry => entry.factual_location_id === factualId))
-      .map(factualId => buildBlockedMappingEntry(recordsById.get(factualId), state.queueById.get(factualId))),
+      .map(factualId =>
+        buildBlockedMappingEntry(recordsById.get(factualId), state.queueById.get(factualId), manifest),
+      ),
   ].sort((left, right) => left.factual_location_id.localeCompare(right.factual_location_id));
 
   const queueReasonCounts = {};
@@ -584,7 +660,7 @@ async function main() {
 
   const projection = {
     schema_version: PROJECTION_SCHEMA_VERSION,
-    projection_version: PROJECTION_VERSION,
+    projection_version: projectionVersionFor(ROOT, rawManifest),
     source_factual_projection_artifact: `${rawManifest.outputs.output_dir}/${rawManifest.outputs.mapping}`,
     numeric_runtime_ids_are_durable_authority: false,
     checkpoints: {
@@ -597,7 +673,7 @@ async function main() {
   };
 
   const disposition = {
-    disposition_version: 'gauteng-coverage-disposition-v0.1',
+    disposition_version: `${rootNaturalKey}-coverage-disposition-v${rawManifest.manifest_version}`,
     contract: 'docs/architecture/geography-coverage-contract.md',
     manifest: options.manifest,
     inputs: {
@@ -652,17 +728,37 @@ async function main() {
       .sort((left, right) => left.factual_location_id.localeCompare(right.factual_location_id))
       .map(entry => JSON.stringify(entry))
       .join('\n')}\n`;
+  disposition.outputs = {
+    projection: `${rawManifest.outputs.output_dir}/${rawManifest.outputs.projection}`,
+    projection_sha256: sha256Content(serializeProjection()),
+    mapping: `${rawManifest.outputs.output_dir}/${rawManifest.outputs.mapping}`,
+    review_queue: `${rawManifest.outputs.output_dir}/${rawManifest.outputs.review_queue}`,
+  };
+  const serializeDisposition = () => {
+    const value = options.check
+      ? {
+          ...disposition,
+          inputs: {
+            ...disposition.inputs,
+            canonical_root: readJson(dispositionPath).inputs.canonical_root,
+          },
+        }
+      : disposition;
+    return `${JSON.stringify(value, null, 2)}\n`;
+  };
 
   if (options.check) {
     const expected = {
       projection: fs.readFileSync(projectionPath, 'utf8'),
       mapping: fs.readFileSync(mappingPath, 'utf8'),
       queue: fs.readFileSync(queuePath, 'utf8'),
+      disposition: fs.readFileSync(dispositionPath, 'utf8'),
     };
     const actual = {
       projection: serializeProjection(),
       mapping: serializeMapping(),
       queue: serializeQueue(),
+      disposition: serializeDisposition(),
     };
     for (const key of Object.keys(actual)) {
       if (expected[key] !== actual[key]) {
@@ -676,14 +772,7 @@ async function main() {
   fs.writeFileSync(projectionPath, serializeProjection());
   fs.writeFileSync(mappingPath, serializeMapping());
   fs.writeFileSync(queuePath, serializeQueue());
-
-  disposition.outputs = {
-    projection: `${rawManifest.outputs.output_dir}/${rawManifest.outputs.projection}`,
-    projection_sha256: sha256File(projectionPath),
-    mapping: `${rawManifest.outputs.output_dir}/${rawManifest.outputs.mapping}`,
-    review_queue: `${rawManifest.outputs.output_dir}/${rawManifest.outputs.review_queue}`,
-  };
-  fs.writeFileSync(dispositionPath, `${JSON.stringify(disposition, null, 2)}\n`);
+  fs.writeFileSync(dispositionPath, serializeDisposition());
 
   console.log(
     `coverage-generate: ${finalRows.length} runtime rows (${newRows.length} new), ${state.queueById.size} queued identities`,

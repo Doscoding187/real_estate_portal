@@ -1,14 +1,18 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { and, eq, inArray, isNull } from 'drizzle-orm';
+import { encodeCanonicalLocationId } from '../../shared/locationAuthority';
 import {
   agencies,
   agencyBranding,
   agents,
   billableAccounts,
+  cities,
   listingApprovalQueue,
   listings,
   plans,
+  provinces,
   properties,
+  suburbs,
   subscriptions,
   users,
 } from '../../drizzle/schema';
@@ -40,6 +44,30 @@ function timestampFromNow(days: number) {
     .toISOString()
     .slice(0, 19)
     .replace('T', ' ');
+}
+
+async function canonicalJohannesburgCoverage() {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  const [location] = await db
+    .select({
+      provinceName: provinces.name,
+      cityId: cities.id,
+      cityName: cities.name,
+    })
+    .from(provinces)
+    .innerJoin(cities, eq(cities.provinceId, provinces.id))
+    .where(and(eq(provinces.slug, 'gauteng'), eq(cities.slug, 'johannesburg')))
+    .limit(1);
+  if (!location) {
+    throw new Error('Canonical Gauteng/Johannesburg data is required by this fixture.');
+  }
+  return JSON.stringify([
+    {
+      canonicalLocationId: encodeCanonicalLocationId('city', Number(location.cityId)),
+      label: [location.cityName, location.provinceName].join(', '),
+    },
+  ]);
 }
 
 async function insertUser(
@@ -96,6 +124,7 @@ async function insertAgent(userId: number, agencyId: number | null, label: strin
   const db = await getDb();
   if (!db) throw new Error('Database not available');
   const suffix = `${Date.now()}-${label}`.toLowerCase().replace(/[^a-z0-9-]/g, '-');
+  const areasServed = await canonicalJohannesburgCoverage();
   const [result] = await db.insert(agents).values({
     userId,
     agencyId,
@@ -109,7 +138,7 @@ async function insertAgent(userId: number, agencyId: number | null, label: strin
     email: `${suffix}@example.test`,
     focus: 'sales',
     propertyTypes: 'house',
-    areasServed: 'Johannesburg',
+    areasServed,
     isVerified: 1,
     isFeatured: 0,
     status: 'approved',

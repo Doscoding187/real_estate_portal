@@ -1,0 +1,45 @@
+{
+  "observedAt": "2026-09-30T20:35:10.971777+00:00",
+  "readOnly": true,
+  "workspaceId": "84ae38a5-5e81-4bdb-bc8a-bacf177648b7",
+  "plan": "PRO",
+  "billingPeriod": {
+    "end": "2026-10-03T09:22:15+00:00",
+    "start": "2026-09-03T09:22:15+00:00"
+  },
+  "currentUsageDollars": 6.7370130017479015,
+  "cliReturnedCurrentBillDollars": 6.7370130017479015,
+  "cliEstimatedBillDollars": 7.376866243806119,
+  "customerCreditFields": {
+    "appliedCredits": 0,
+    "creditBalance": 0,
+    "remainingUsageCreditBalance": 1,
+    "state": "ACTIVE"
+  },
+  "computeUsageLimit": null,
+  "projectId": "8cdd7515-ddd2-4252-bbee-df5a5c209d4b",
+  "serviceUsage": [
+    {
+      "id": "db88a720-2d1f-4afc-a3a8-6228b6b08d3e",
+      "name": "real_estate_portal",
+      "totalDollars": 6.594399295880557
+    },
+    {
+      "id": "bb79bb51-7abb-4194-9f62-81e80b410c24",
+      "name": "Redis",
+      "totalDollars": 0.10220923635399834
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000000000",
+      "name": "deleted service",
+      "totalDollars": 0.04073779763199999
+    }
+  ],
+  "limitations": [
+    "Different reads have small timing differences",
+    "Returned usage-credit balance is recorded literally; do not substitute expected Pro included credit or infer final invoice offset",
+    "Subscription/tax/credit applicability require billing-console reconciliation before claiming incremental spend is covered",
+    "AWS/Azure/Resend credits and remaining included allowances not independently verified in this session",
+    "No billing setting, spending limit, resource or provider variable changed"
+  ]
+}

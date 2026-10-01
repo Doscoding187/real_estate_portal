@@ -1,7 +1,7 @@
 {
   "policyVersion": 1,
   "denyTargetClasses": ["unknown", "shared-remote"],
-  "protectedTargetClasses": ["staging", "production"],
+  "protectedTargetClasses": ["staging", "production", "disposable-rehearsal"],
   "operations": {
     "runtime-connect": {
       "allowedTargetClasses": ["disposable-worktree", "disposable-test", "staging", "production"],
@@ -40,6 +40,54 @@
       "approval": "none",
       "acknowledgement": "none",
       "evidence": "sanitized-ci-identity-provisioning"
+    },
+    "inspection-identity-provision": {
+      "allowedTargetClasses": ["production"],
+      "credentialClasses": ["bootstrap-admin"],
+      "ownership": "none",
+      "approval": "protected-target",
+      "acknowledgement": "none",
+      "evidence": "exact-b08-azure-inspector-identity-and-read-only-grants"
+    },
+    "tidb-source-reader-provision": {
+      "allowedTargetClasses": ["production"],
+      "credentialClasses": ["bootstrap-admin"],
+      "ownership": "none",
+      "approval": "protected-target",
+      "acknowledgement": "exact-target",
+      "evidence": "exact-b08-tidb-source-cluster-reader-and-select-only-grant"
+    },
+    "migration-identity-provision": {
+      "allowedTargetClasses": ["production"],
+      "credentialClasses": ["bootstrap-admin"],
+      "ownership": "none",
+      "approval": "protected-target",
+      "acknowledgement": "none",
+      "evidence": "exact-b08-azure-migration-identity-and-approved-grants"
+    },
+    "runtime-identities-provision": {
+      "allowedTargetClasses": ["production"],
+      "credentialClasses": ["bootstrap-admin"],
+      "ownership": "none",
+      "approval": "protected-target",
+      "acknowledgement": "exact-target",
+      "evidence": "exact-b08-azure-application-and-worker-identities-with-table-grants"
+    },
+    "runtime-ledger-read-grant": {
+      "allowedTargetClasses": ["production"],
+      "credentialClasses": ["bootstrap-admin"],
+      "ownership": "none",
+      "approval": "protected-target",
+      "acknowledgement": "exact-target",
+      "evidence": "exact-b08-runtime-ledger-select-only-grant"
+    },
+    "b08-behavior-verify": {
+      "allowedTargetClasses": ["production"],
+      "credentialClasses": ["migration"],
+      "ownership": "none",
+      "approval": "protected-target",
+      "acknowledgement": "exact-target",
+      "evidence": "exact-b08-azure-transactional-behavior-and-rollback-proof"
     },
     "migration-plan": {
       "allowedTargetClasses": ["clean-main-local", "disposable-worktree", "disposable-test"],
@@ -226,6 +274,18 @@
       "approval": "protected-target",
       "acknowledgement": "none",
       "evidence": "sanitized-release-reference-verification"
+    },
+    "rehearsal-regression": {
+      "allowedTargetClasses": [
+        "disposable-rehearsal"
+      ],
+      "credentialClasses": [
+        "runtime"
+      ],
+      "ownership": "none",
+      "approval": "protected-target",
+      "acknowledgement": "exact-target",
+      "evidence": "exact-Azure-identity-expiring-purpose-bound-synthetic-probes"
     }
   }
 }

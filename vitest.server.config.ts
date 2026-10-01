@@ -23,9 +23,8 @@ export default defineConfig({
       '**/dist/**',
       '**/cypress/**',
       '**/.{idea,git,cache,output,temp}/**',
-      // Known-red orphans pending triage; excluding keeps them visible here
-      // instead of silently failing CI. Triaged in the shared/scripts contracts PR.
-      'shared/__tests__/factualRuntimeGeographyBridge.test.ts',
+      // Known-red orphan pending triage; excluding keeps it visible here
+      // instead of silently failing CI. Triaged in the scripts contracts PR.
       'scripts/__tests__/localServiceRecovery.test.ts',
     ],
     globals: true,

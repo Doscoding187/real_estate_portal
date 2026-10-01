@@ -1,0 +1,1769 @@
+{
+  "success": true,
+  "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+  "targetClass": "disposable-worktree",
+  "total": 88,
+  "passed": 88,
+  "failed": 0,
+  "checks": [
+    {
+      "name": "Table: developments",
+      "passed": true
+    },
+    {
+      "name": "Table: unit_types",
+      "passed": true
+    },
+    {
+      "name": "Table: developers",
+      "passed": true
+    },
+    {
+      "name": "Table: agent_memory",
+      "passed": true
+    },
+    {
+      "name": "Table: agent_tasks",
+      "passed": true
+    },
+    {
+      "name": "Table: agent_knowledge",
+      "passed": true
+    },
+    {
+      "name": "Table: development_drafts",
+      "passed": true
+    },
+    {
+      "name": "Table: agency_agent_memberships",
+      "passed": true
+    },
+    {
+      "name": "Column: developments.id",
+      "passed": true,
+      "details": {
+        "expected": "int",
+        "actual": "int"
+      }
+    },
+    {
+      "name": "Column: developments.name",
+      "passed": true,
+      "details": {
+        "expected": "varchar",
+        "actual": "varchar(255)"
+      }
+    },
+    {
+      "name": "Column: developments.slug",
+      "passed": true,
+      "details": {
+        "expected": "varchar",
+        "actual": "varchar(255)"
+      }
+    },
+    {
+      "name": "Column: developments.developmentType",
+      "passed": true,
+      "details": {
+        "expected": "enum",
+        "actual": "enum('residential','commercial','mixed_use','land')"
+      }
+    },
+    {
+      "name": "Column: developments.status",
+      "passed": true,
+      "details": {
+        "expected": "enum",
+        "actual": "enum('launching-soon','selling','sold-out')"
+      }
+    },
+    {
+      "name": "Column: developments.city",
+      "passed": true,
+      "details": {
+        "expected": "varchar",
+        "actual": "varchar(100)"
+      }
+    },
+    {
+      "name": "Column: developments.province",
+      "passed": true,
+      "details": {
+        "expected": "varchar",
+        "actual": "varchar(100)"
+      }
+    },
+    {
+      "name": "Column: developments.dev_owner_type",
+      "passed": true,
+      "details": {
+        "expected": "enum",
+        "actual": "enum('platform','developer')"
+      }
+    },
+    {
+      "name": "Column: developments.isPublished",
+      "passed": true,
+      "details": {
+        "expected": "int",
+        "actual": "tinyint"
+      }
+    },
+    {
+      "name": "Column: developments.approval_status",
+      "passed": true,
+      "details": {
+        "expected": "enum",
+        "actual": "enum('draft','pending','approved','rejected')"
+      }
+    },
+    {
+      "name": "Column: unit_types.id",
+      "passed": true,
+      "details": {
+        "expected": "varchar",
+        "actual": "varchar(36)"
+      }
+    },
+    {
+      "name": "Column: unit_types.development_id",
+      "passed": true,
+      "details": {
+        "expected": "int",
+        "actual": "int"
+      }
+    },
+    {
+      "name": "Column: unit_types.name",
+      "passed": true,
+      "details": {
+        "expected": "varchar",
+        "actual": "varchar(255)"
+      }
+    },
+    {
+      "name": "Column: unit_types.bedrooms",
+      "passed": true,
+      "details": {
+        "expected": "int",
+        "actual": "int"
+      }
+    },
+    {
+      "name": "Column: unit_types.bathrooms",
+      "passed": true,
+      "details": {
+        "expected": "decimal",
+        "actual": "decimal(3,1)"
+      }
+    },
+    {
+      "name": "Column: unit_types.parking_type",
+      "passed": true,
+      "details": {
+        "expected": "varchar",
+        "actual": "varchar(50)"
+      }
+    },
+    {
+      "name": "Column: unit_types.parking_bays",
+      "passed": true,
+      "details": {
+        "expected": "int",
+        "actual": "int"
+      }
+    },
+    {
+      "name": "Column: unit_types.ownership_type",
+      "passed": true,
+      "details": {
+        "expected": "enum",
+        "actual": "enum('full-title','sectional-title','leasehold','life-rights')"
+      }
+    },
+    {
+      "name": "Column: unit_types.structural_type",
+      "passed": true,
+      "details": {
+        "expected": "enum",
+        "actual": "enum('apartment','freestanding-house','simplex','duplex','penthouse','plot-and-plan','townhouse','studio')"
+      }
+    },
+    {
+      "name": "Column: unit_types.base_price_from",
+      "passed": true,
+      "details": {
+        "expected": "decimal",
+        "actual": "decimal(15,2)"
+      }
+    },
+    {
+      "name": "Column: agent_memory.id",
+      "passed": true,
+      "details": {
+        "expected": "int",
+        "actual": "int"
+      }
+    },
+    {
+      "name": "Column: agent_memory.session_id",
+      "passed": true,
+      "details": {
+        "expected": "varchar",
+        "actual": "varchar(100)"
+      }
+    },
+    {
+      "name": "Column: agent_memory.conversation_id",
+      "passed": true,
+      "details": {
+        "expected": "varchar",
+        "actual": "varchar(100)"
+      }
+    },
+    {
+      "name": "Column: agent_memory.user_id",
+      "passed": true,
+      "details": {
+        "expected": "int",
+        "actual": "int"
+      }
+    },
+    {
+      "name": "Column: agent_memory.user_input",
+      "passed": true,
+      "details": {
+        "expected": "text",
+        "actual": "text"
+      }
+    },
+    {
+      "name": "Column: agent_memory.agent_response",
+      "passed": true,
+      "details": {
+        "expected": "text",
+        "actual": "text"
+      }
+    },
+    {
+      "name": "Column: agent_tasks.id",
+      "passed": true,
+      "details": {
+        "expected": "int",
+        "actual": "int"
+      }
+    },
+    {
+      "name": "Column: agent_tasks.task_id",
+      "passed": true,
+      "details": {
+        "expected": "varchar",
+        "actual": "varchar(100)"
+      }
+    },
+    {
+      "name": "Column: agent_tasks.session_id",
+      "passed": true,
+      "details": {
+        "expected": "varchar",
+        "actual": "varchar(100)"
+      }
+    },
+    {
+      "name": "Column: agent_tasks.user_id",
+      "passed": true,
+      "details": {
+        "expected": "int",
+        "actual": "int"
+      }
+    },
+    {
+      "name": "Column: agent_tasks.task_type",
+      "passed": true,
+      "details": {
+        "expected": "varchar",
+        "actual": "varchar(50)"
+      }
+    },
+    {
+      "name": "Column: agent_tasks.status",
+      "passed": true,
+      "details": {
+        "expected": "enum",
+        "actual": "enum('pending','running','completed','failed')"
+      }
+    },
+    {
+      "name": "Column: agent_knowledge.id",
+      "passed": true,
+      "details": {
+        "expected": "int",
+        "actual": "int"
+      }
+    },
+    {
+      "name": "Column: agent_knowledge.category",
+      "passed": true,
+      "details": {
+        "expected": "varchar",
+        "actual": "varchar(100)"
+      }
+    },
+    {
+      "name": "Column: agent_knowledge.content",
+      "passed": true,
+      "details": {
+        "expected": "text",
+        "actual": "text"
+      }
+    },
+    {
+      "name": "Column: agency_agent_memberships.id",
+      "passed": true,
+      "details": {
+        "expected": "int",
+        "actual": "int"
+      }
+    },
+    {
+      "name": "Column: agency_agent_memberships.agency_id",
+      "passed": true,
+      "details": {
+        "expected": "int",
+        "actual": "int"
+      }
+    },
+    {
+      "name": "Column: agency_agent_memberships.agent_id",
+      "passed": true,
+      "details": {
+        "expected": "int",
+        "actual": "int"
+      }
+    },
+    {
+      "name": "Column: agency_agent_memberships.status",
+      "passed": true,
+      "details": {
+        "expected": "enum",
+        "actual": "enum('invited','active','suspended','left')"
+      }
+    },
+    {
+      "name": "Column: agency_agent_memberships.governance_mode",
+      "passed": true,
+      "details": {
+        "expected": "enum",
+        "actual": "enum('affiliated','managed')"
+      }
+    },
+    {
+      "name": "Column: agency_agent_memberships.role",
+      "passed": true,
+      "details": {
+        "expected": "enum",
+        "actual": "enum('agent','team_lead','manager')"
+      }
+    },
+    {
+      "name": "Column: agency_agent_memberships.permissions_overrides",
+      "passed": true,
+      "details": {
+        "expected": "json",
+        "actual": "json"
+      }
+    },
+    {
+      "name": "Column: agency_agent_memberships.effective_from",
+      "passed": true,
+      "details": {
+        "expected": "timestamp",
+        "actual": "timestamp"
+      }
+    },
+    {
+      "name": "Column: agency_agent_memberships.effective_to",
+      "passed": true,
+      "details": {
+        "expected": "timestamp",
+        "actual": "timestamp"
+      }
+    },
+    {
+      "name": "Column: agency_agent_memberships.created_by",
+      "passed": true,
+      "details": {
+        "expected": "int",
+        "actual": "int"
+      }
+    },
+    {
+      "name": "Column: agency_agent_memberships.updated_by",
+      "passed": true,
+      "details": {
+        "expected": "int",
+        "actual": "int"
+      }
+    },
+    {
+      "name": "Column: agency_agent_memberships.created_at",
+      "passed": true,
+      "details": {
+        "expected": "timestamp",
+        "actual": "timestamp"
+      }
+    },
+    {
+      "name": "Column: agency_agent_memberships.updated_at",
+      "passed": true,
+      "details": {
+        "expected": "timestamp",
+        "actual": "timestamp"
+      }
+    },
+    {
+      "name": "Enum: developments.status",
+      "passed": true,
+      "details": {
+        "expected": [
+          "launching-soon",
+          "selling",
+          "sold-out"
+        ],
+        "actual": [
+          "launching-soon",
+          "selling",
+          "sold-out"
+        ],
+        "missing": [],
+        "extra": []
+      }
+    },
+    {
+      "name": "Enum: developments.developmentType",
+      "passed": true,
+      "details": {
+        "expected": [
+          "residential",
+          "commercial",
+          "mixed_use",
+          "land"
+        ],
+        "actual": [
+          "residential",
+          "commercial",
+          "mixed_use",
+          "land"
+        ],
+        "missing": [],
+        "extra": []
+      }
+    },
+    {
+      "name": "Enum: developments.dev_owner_type",
+      "passed": true,
+      "details": {
+        "expected": [
+          "platform",
+          "developer"
+        ],
+        "actual": [
+          "platform",
+          "developer"
+        ],
+        "missing": [],
+        "extra": []
+      }
+    },
+    {
+      "name": "Enum: unit_types.ownership_type",
+      "passed": true,
+      "details": {
+        "expected": [
+          "full-title",
+          "sectional-title",
+          "leasehold",
+          "life-rights"
+        ],
+        "actual": [
+          "full-title",
+          "sectional-title",
+          "leasehold",
+          "life-rights"
+        ],
+        "missing": [],
+        "extra": []
+      }
+    },
+    {
+      "name": "Enum: unit_types.structural_type",
+      "passed": true,
+      "details": {
+        "expected": [
+          "apartment",
+          "freestanding-house",
+          "simplex",
+          "duplex",
+          "penthouse",
+          "plot-and-plan",
+          "townhouse",
+          "studio"
+        ],
+        "actual": [
+          "apartment",
+          "freestanding-house",
+          "simplex",
+          "duplex",
+          "penthouse",
+          "plot-and-plan",
+          "townhouse",
+          "studio"
+        ],
+        "missing": [],
+        "extra": []
+      }
+    },
+    {
+      "name": "Enum: agent_tasks.status",
+      "passed": true,
+      "details": {
+        "expected": [
+          "pending",
+          "running",
+          "completed",
+          "failed"
+        ],
+        "actual": [
+          "pending",
+          "running",
+          "completed",
+          "failed"
+        ],
+        "missing": [],
+        "extra": []
+      }
+    },
+    {
+      "name": "Enum: agency_agent_memberships.status",
+      "passed": true,
+      "details": {
+        "expected": [
+          "invited",
+          "active",
+          "suspended",
+          "left"
+        ],
+        "actual": [
+          "invited",
+          "active",
+          "suspended",
+          "left"
+        ],
+        "missing": [],
+        "extra": []
+      }
+    },
+    {
+      "name": "Enum: agency_agent_memberships.governance_mode",
+      "passed": true,
+      "details": {
+        "expected": [
+          "affiliated",
+          "managed"
+        ],
+        "actual": [
+          "affiliated",
+          "managed"
+        ],
+        "missing": [],
+        "extra": []
+      }
+    },
+    {
+      "name": "Enum: agency_agent_memberships.role",
+      "passed": true,
+      "details": {
+        "expected": [
+          "agent",
+          "team_lead",
+          "manager"
+        ],
+        "actual": [
+          "agent",
+          "team_lead",
+          "manager"
+        ],
+        "missing": [],
+        "extra": []
+      }
+    },
+    {
+      "name": "Column shape: agency_agent_memberships.id",
+      "passed": true,
+      "details": {
+        "expected": {
+          "nullable": false
+        },
+        "actual": {
+          "nullable": false,
+          "defaultValue": null,
+          "extra": "auto_increment"
+        }
+      }
+    },
+    {
+      "name": "Column shape: agency_agent_memberships.agency_id",
+      "passed": true,
+      "details": {
+        "expected": {
+          "nullable": false
+        },
+        "actual": {
+          "nullable": false,
+          "defaultValue": null,
+          "extra": ""
+        }
+      }
+    },
+    {
+      "name": "Column shape: agency_agent_memberships.agent_id",
+      "passed": true,
+      "details": {
+        "expected": {
+          "nullable": false
+        },
+        "actual": {
+          "nullable": false,
+          "defaultValue": null,
+          "extra": ""
+        }
+      }
+    },
+    {
+      "name": "Column shape: agency_agent_memberships.status",
+      "passed": true,
+      "details": {
+        "expected": {
+          "nullable": false,
+          "defaultValue": "invited"
+        },
+        "actual": {
+          "nullable": false,
+          "defaultValue": "invited",
+          "extra": ""
+        }
+      }
+    },
+    {
+      "name": "Column shape: agency_agent_memberships.governance_mode",
+      "passed": true,
+      "details": {
+        "expected": {
+          "nullable": false,
+          "defaultValue": "affiliated"
+        },
+        "actual": {
+          "nullable": false,
+          "defaultValue": "affiliated",
+          "extra": ""
+        }
+      }
+    },
+    {
+      "name": "Column shape: agency_agent_memberships.role",
+      "passed": true,
+      "details": {
+        "expected": {
+          "nullable": false,
+          "defaultValue": "agent"
+        },
+        "actual": {
+          "nullable": false,
+          "defaultValue": "agent",
+          "extra": ""
+        }
+      }
+    },
+    {
+      "name": "Column shape: agency_agent_memberships.permissions_overrides",
+      "passed": true,
+      "details": {
+        "expected": {
+          "nullable": true,
+          "defaultValue": null
+        },
+        "actual": {
+          "nullable": true,
+          "defaultValue": null,
+          "extra": ""
+        }
+      }
+    },
+    {
+      "name": "Column shape: agency_agent_memberships.effective_from",
+      "passed": true,
+      "details": {
+        "expected": {
+          "nullable": true,
+          "defaultValue": null
+        },
+        "actual": {
+          "nullable": true,
+          "defaultValue": null,
+          "extra": ""
+        }
+      }
+    },
+    {
+      "name": "Column shape: agency_agent_memberships.effective_to",
+      "passed": true,
+      "details": {
+        "expected": {
+          "nullable": true,
+          "defaultValue": null
+        },
+        "actual": {
+          "nullable": true,
+          "defaultValue": null,
+          "extra": ""
+        }
+      }
+    },
+    {
+      "name": "Column shape: agency_agent_memberships.created_by",
+      "passed": true,
+      "details": {
+        "expected": {
+          "nullable": true,
+          "defaultValue": null
+        },
+        "actual": {
+          "nullable": true,
+          "defaultValue": null,
+          "extra": ""
+        }
+      }
+    },
+    {
+      "name": "Column shape: agency_agent_memberships.updated_by",
+      "passed": true,
+      "details": {
+        "expected": {
+          "nullable": true,
+          "defaultValue": null
+        },
+        "actual": {
+          "nullable": true,
+          "defaultValue": null,
+          "extra": ""
+        }
+      }
+    },
+    {
+      "name": "Column shape: agency_agent_memberships.created_at",
+      "passed": true,
+      "details": {
+        "expected": {
+          "nullable": false,
+          "defaultValues": [
+            "CURRENT_TIMESTAMP",
+            "CURRENT_TIMESTAMP()"
+          ]
+        },
+        "actual": {
+          "nullable": false,
+          "defaultValue": "now()",
+          "extra": "DEFAULT_GENERATED"
+        }
+      }
+    },
+    {
+      "name": "Column shape: agency_agent_memberships.updated_at",
+      "passed": true,
+      "details": {
+        "expected": {
+          "nullable": false,
+          "defaultValues": [
+            "CURRENT_TIMESTAMP",
+            "CURRENT_TIMESTAMP()"
+          ],
+          "extraIncludes": "on update current_timestamp"
+        },
+        "actual": {
+          "nullable": false,
+          "defaultValue": "now()",
+          "extra": "DEFAULT_GENERATED on update CURRENT_TIMESTAMP"
+        }
+      }
+    },
+    {
+      "name": "Primary key: agency_agent_memberships.id",
+      "passed": true,
+      "details": {
+        "INDEX_NAME": "PRIMARY",
+        "NON_UNIQUE": 0,
+        "SEQ_IN_INDEX": 1,
+        "COLUMN_NAME": "id"
+      }
+    },
+    {
+      "name": "Identity: agency_agent_memberships.id",
+      "passed": true,
+      "details": {
+        "extra": "auto_increment"
+      }
+    },
+    {
+      "name": "Index: agency_agent_memberships.unique agency/agent pair",
+      "passed": true,
+      "details": {
+        "indexName": "uq_agency_agent_memberships_pair",
+        "columns": [
+          "agency_id",
+          "agent_id"
+        ],
+        "unique": true
+      }
+    },
+    {
+      "name": "Index: agency_agent_memberships.agency/status",
+      "passed": true,
+      "details": {
+        "indexName": "idx_agency_agent_memberships_agency",
+        "columns": [
+          "agency_id",
+          "status"
+        ],
+        "unique": false
+      }
+    },
+    {
+      "name": "Index: agency_agent_memberships.agent/status",
+      "passed": true,
+      "details": {
+        "indexName": "idx_agency_agent_memberships_agent",
+        "columns": [
+          "agent_id",
+          "status"
+        ],
+        "unique": false
+      }
+    },
+    {
+      "name": "Foreign key: agency_agent_memberships.agency_id",
+      "passed": true,
+      "details": {
+        "CONSTRAINT_NAME": "agency_agent_memberships_agency_id_agencies_id_fk",
+        "REFERENCED_TABLE_NAME": "agencies",
+        "REFERENCED_COLUMN_NAME": "id",
+        "DELETE_RULE": "CASCADE"
+      }
+    },
+    {
+      "name": "Foreign key: agency_agent_memberships.agent_id",
+      "passed": true,
+      "details": {
+        "CONSTRAINT_NAME": "agency_agent_memberships_agent_id_agents_id_fk",
+        "REFERENCED_TABLE_NAME": "agents",
+        "REFERENCED_COLUMN_NAME": "id",
+        "DELETE_RULE": "CASCADE"
+      }
+    },
+    {
+      "name": "Foreign key: agency_agent_memberships.created_by",
+      "passed": true,
+      "details": {
+        "CONSTRAINT_NAME": "agency_agent_memberships_created_by_users_id_fk",
+        "REFERENCED_TABLE_NAME": "users",
+        "REFERENCED_COLUMN_NAME": "id",
+        "DELETE_RULE": "SET NULL"
+      }
+    },
+    {
+      "name": "Foreign key: agency_agent_memberships.updated_by",
+      "passed": true,
+      "details": {
+        "CONSTRAINT_NAME": "agency_agent_memberships_updated_by_users_id_fk",
+        "REFERENCED_TABLE_NAME": "users",
+        "REFERENCED_COLUMN_NAME": "id",
+        "DELETE_RULE": "SET NULL"
+      }
+    },
+    {
+      "name": "Migrations: Canonical SQL ledger",
+      "passed": true,
+      "details": {
+        "activeFiles": [
+          "0000_canonical_launch_baseline.sql",
+          "0001_public_search_to_lead_reliability_sequenced.sql",
+          "0002_canonical_property_taxonomy.sql",
+          "0003_canonical_property_measurements.sql",
+          "0004_canonical_listing_location.sql",
+          "0005_manual_location_without_coordinates.sql",
+          "0006_development_supersessions.sql",
+          "0007_paid_launch_access_invoice_term.sql",
+          "0008_developer_organisations.sql",
+          "0009_developer_organisation_memberships.sql",
+          "0010_catalogue_publishers.sql",
+          "0011_catalogue_publisher_developments.sql",
+          "0012_catalogue_publisher_properties.sql",
+          "0013_catalogue_publisher_leads.sql",
+          "0014_catalogue_publisher_drafts.sql",
+          "0015_catalogue_publisher_distribution_partnerships.sql",
+          "0016_catalogue_publisher_distribution_access.sql",
+          "0017_distribution_publisher_authority.sql",
+          "0018_distribution_access_publisher_authority.sql",
+          "0019_development_launch_date.sql",
+          "0020_land_parcels.sql",
+          "0021_land_assets.sql",
+          "0022_land_asset_parcels.sql",
+          "0023_land_listing_links.sql",
+          "0024_land_claims.sql",
+          "0025_land_evidence_documents.sql",
+          "0026_land_marketing_authorities.sql",
+          "0027_land_verification_assertions.sql",
+          "0028_land_assertion_evidence.sql",
+          "0029_land_verification_events.sql",
+          "0030_land_conflict_cases.sql",
+          "0031_land_review_cases.sql",
+          "0032_land_review_events.sql",
+          "0033_land_evidence_access_audit.sql",
+          "0034_listing_lead_association.sql",
+          "0035_commercial_assets.sql",
+          "0036_commercial_spaces.sql",
+          "0037_commercial_space_specifications.sql",
+          "0038_commercial_availabilities.sql",
+          "0039_commercial_availability_economics.sql",
+          "0040_commercial_availability_listing_links.sql",
+          "0041_commercial_availability_freshness_semantics.sql",
+          "0042_commercial_economics_value_state_semantics.sql",
+          "0043_commercial_specification_value_state_integrity.sql",
+          "0044_commercial_positive_availability_provenance.sql",
+          "0045_commercial_space_positive_area_integrity.sql",
+          "0046_commercial_office_quote_terms_sequenced.sql",
+          "0047_commercial_gross_rental_component.sql",
+          "0048_commercial_lease_terms.sql",
+          "0049_commercial_lead_contexts.sql",
+          "0050_commercial_asset_physical_location.sql",
+          "0051_sl_places.sql",
+          "0052_sl_spaces.sql",
+          "0053_sl_space_availability.sql",
+          "0054_sl_space_specifications.sql",
+          "0055_sl_place_household.sql",
+          "0056_sl_verifications.sql",
+          "0057_sl_lead_contexts.sql",
+          "0058_sl_messages.sql",
+          "0059_sl_moderation_queue.sql",
+          "0060_sl_space_availability_bills.sql",
+          "0061_sl_messages_authorship.sql",
+          "0062_agent_launch_access_full_capabilities.sql",
+          "0063_agent_launch_access_earnings_feature.sql",
+          "0064_auth_session_security.sql",
+          "0065_auth_verification_token_cleanup.sql",
+          "0066_favorites_user_property_deduplicate.sql",
+          "0067_favorites_user_property_unique.sql",
+          "0068_recently_viewed_activity_cleanup.sql",
+          "0069_recently_viewed_listing_required.sql",
+          "0070_recently_viewed_user_listing_unique.sql",
+          "0071_recently_viewed_user_recency_index.sql",
+          "0072_retire_legacy_prospect_favorites.sql",
+          "0073_retire_legacy_scheduled_viewings.sql",
+          "0074_retire_legacy_prospects.sql",
+          "0075_recently_viewed_microsecond_recency.sql",
+          "0076_lead_delivery_relational_authority.sql",
+          "0077_bundle_attribution_relational_authority.sql",
+          "0078_retire_unreachable_partner_leads.sql",
+          "0079_explore_engagement_event_identity.sql",
+          "0080_service_lead_request_idempotency.sql",
+          "0081_explore_analytics_query_index.sql",
+          "0082_explore_engagement_retention_indexes.sql",
+          "0083_billing_provider_event_identity.sql",
+          "0084_billing_provider_event_retry_budget.sql",
+          "0085_billing_billable_accounts.sql",
+          "0086_billing_billable_accounts_not_null.sql",
+          "0087_billing_provider_event_leases.sql",
+          "0088_retire_obsolete_billing_families.sql",
+          "0089_retire_disconnected_analytics_aggregations.sql",
+          "0090_retire_disconnected_boost_campaigns.sql",
+          "0091_transactional_email_deliveries.sql",
+          "0092_transactional_email_attempts.sql",
+          "0093_user_onboarding_state_primary_key.sql",
+          "0094_content_topics_primary_key.sql"
+        ],
+        "expectedHead": "0094_content_topics_primary_key.sql",
+        "manifestDigest": "93d871e6f8760477f460b8821685d71d212374eb86ddd53bc6e2ccfc30608efc",
+        "appliedFiles": [
+          "0000_canonical_launch_baseline.sql",
+          "0001_public_search_to_lead_reliability_sequenced.sql",
+          "0002_canonical_property_taxonomy.sql",
+          "0003_canonical_property_measurements.sql",
+          "0004_canonical_listing_location.sql",
+          "0005_manual_location_without_coordinates.sql",
+          "0006_development_supersessions.sql",
+          "0007_paid_launch_access_invoice_term.sql",
+          "0008_developer_organisations.sql",
+          "0009_developer_organisation_memberships.sql",
+          "0010_catalogue_publishers.sql",
+          "0011_catalogue_publisher_developments.sql",
+          "0012_catalogue_publisher_properties.sql",
+          "0013_catalogue_publisher_leads.sql",
+          "0014_catalogue_publisher_drafts.sql",
+          "0015_catalogue_publisher_distribution_partnerships.sql",
+          "0016_catalogue_publisher_distribution_access.sql",
+          "0017_distribution_publisher_authority.sql",
+          "0018_distribution_access_publisher_authority.sql",
+          "0019_development_launch_date.sql",
+          "0020_land_parcels.sql",
+          "0021_land_assets.sql",
+          "0022_land_asset_parcels.sql",
+          "0023_land_listing_links.sql",
+          "0024_land_claims.sql",
+          "0025_land_evidence_documents.sql",
+          "0026_land_marketing_authorities.sql",
+          "0027_land_verification_assertions.sql",
+          "0028_land_assertion_evidence.sql",
+          "0029_land_verification_events.sql",
+          "0030_land_conflict_cases.sql",
+          "0031_land_review_cases.sql",
+          "0032_land_review_events.sql",
+          "0033_land_evidence_access_audit.sql",
+          "0034_listing_lead_association.sql",
+          "0035_commercial_assets.sql",
+          "0036_commercial_spaces.sql",
+          "0037_commercial_space_specifications.sql",
+          "0038_commercial_availabilities.sql",
+          "0039_commercial_availability_economics.sql",
+          "0040_commercial_availability_listing_links.sql",
+          "0041_commercial_availability_freshness_semantics.sql",
+          "0042_commercial_economics_value_state_semantics.sql",
+          "0043_commercial_specification_value_state_integrity.sql",
+          "0044_commercial_positive_availability_provenance.sql",
+          "0045_commercial_space_positive_area_integrity.sql",
+          "0046_commercial_office_quote_terms_sequenced.sql",
+          "0047_commercial_gross_rental_component.sql",
+          "0048_commercial_lease_terms.sql",
+          "0049_commercial_lead_contexts.sql",
+          "0050_commercial_asset_physical_location.sql",
+          "0051_sl_places.sql",
+          "0052_sl_spaces.sql",
+          "0053_sl_space_availability.sql",
+          "0054_sl_space_specifications.sql",
+          "0055_sl_place_household.sql",
+          "0056_sl_verifications.sql",
+          "0057_sl_lead_contexts.sql",
+          "0058_sl_messages.sql",
+          "0059_sl_moderation_queue.sql",
+          "0060_sl_space_availability_bills.sql",
+          "0061_sl_messages_authorship.sql",
+          "0062_agent_launch_access_full_capabilities.sql",
+          "0063_agent_launch_access_earnings_feature.sql",
+          "0064_auth_session_security.sql",
+          "0065_auth_verification_token_cleanup.sql",
+          "0066_favorites_user_property_deduplicate.sql",
+          "0067_favorites_user_property_unique.sql",
+          "0068_recently_viewed_activity_cleanup.sql",
+          "0069_recently_viewed_listing_required.sql",
+          "0070_recently_viewed_user_listing_unique.sql",
+          "0071_recently_viewed_user_recency_index.sql",
+          "0072_retire_legacy_prospect_favorites.sql",
+          "0073_retire_legacy_scheduled_viewings.sql",
+          "0074_retire_legacy_prospects.sql",
+          "0075_recently_viewed_microsecond_recency.sql",
+          "0076_lead_delivery_relational_authority.sql",
+          "0077_bundle_attribution_relational_authority.sql",
+          "0078_retire_unreachable_partner_leads.sql",
+          "0079_explore_engagement_event_identity.sql",
+          "0080_service_lead_request_idempotency.sql",
+          "0081_explore_analytics_query_index.sql",
+          "0082_explore_engagement_retention_indexes.sql",
+          "0083_billing_provider_event_identity.sql",
+          "0084_billing_provider_event_retry_budget.sql",
+          "0085_billing_billable_accounts.sql",
+          "0086_billing_billable_accounts_not_null.sql",
+          "0087_billing_provider_event_leases.sql",
+          "0088_retire_obsolete_billing_families.sql",
+          "0089_retire_disconnected_analytics_aggregations.sql",
+          "0090_retire_disconnected_boost_campaigns.sql",
+          "0091_transactional_email_deliveries.sql",
+          "0092_transactional_email_attempts.sql",
+          "0093_user_onboarding_state_primary_key.sql",
+          "0094_content_topics_primary_key.sql"
+        ],
+        "missingLedgerFiles": [],
+        "retiredLedgerFiles": [],
+        "checksumMismatches": [],
+        "incompleteAttempts": [],
+        "successfulAttempts": [
+          {
+            "attemptId": "0bb6f7721434970aebf7608e-0000",
+            "migrationFilename": "0000_canonical_launch_baseline.sql",
+            "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+            "lockOwnerConnectionId": "27",
+            "completedStatementCount": 948
+          },
+          {
+            "attemptId": "0bb6f7721434970aebf7608e-0001",
+            "migrationFilename": "0001_public_search_to_lead_reliability_sequenced.sql",
+            "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+            "lockOwnerConnectionId": "27",
+            "completedStatementCount": 2
+          },
+          {
+            "attemptId": "0bb6f7721434970aebf7608e-0002",
+            "migrationFilename": "0002_canonical_property_taxonomy.sql",
+            "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+            "lockOwnerConnectionId": "27",
+            "completedStatementCount": 1
+          },
+          {
+            "attemptId": "0bb6f7721434970aebf7608e-0003",
+            "migrationFilename": "0003_canonical_property_measurements.sql",
+            "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+            "lockOwnerConnectionId": "27",
+            "completedStatementCount": 4
+          },
+          {
+            "attemptId": "0bb6f7721434970aebf7608e-0004",
+            "migrationFilename": "0004_canonical_listing_location.sql",
+            "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+            "lockOwnerConnectionId": "27",
+            "completedStatementCount": 15
+          },
+          {
+            "attemptId": "0bb6f7721434970aebf7608e-0005",
+            "migrationFilename": "0005_manual_location_without_coordinates.sql",
+            "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+            "lockOwnerConnectionId": "27",
+            "completedStatementCount": 1
+          },
+          {
+            "attemptId": "0bb6f7721434970aebf7608e-0006",
+            "migrationFilename": "0006_development_supersessions.sql",
+            "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+            "lockOwnerConnectionId": "27",
+            "completedStatementCount": 1
+          },
+          {
+            "attemptId": "0bb6f7721434970aebf7608e-0007",
+            "migrationFilename": "0007_paid_launch_access_invoice_term.sql",
+            "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+            "lockOwnerConnectionId": "27",
+            "completedStatementCount": 1
+          },
+          {
+            "attemptId": "0bb6f7721434970aebf7608e-0008",
+            "migrationFilename": "0008_developer_organisations.sql",
+            "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+            "lockOwnerConnectionId": "27",
+            "completedStatementCount": 1
+          },
+          {
+            "attemptId": "0bb6f7721434970aebf7608e-0009",
+            "migrationFilename": "0009_developer_organisation_memberships.sql",
+            "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+            "lockOwnerConnectionId": "27",
+            "completedStatementCount": 1
+          },
+          {
+            "attemptId": "0bb6f7721434970aebf7608e-0010",
+            "migrationFilename": "0010_catalogue_publishers.sql",
+            "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+            "lockOwnerConnectionId": "27",
+            "completedStatementCount": 1
+          },
+          {
+            "attemptId": "0bb6f7721434970aebf7608e-0011",
+            "migrationFilename": "0011_catalogue_publisher_developments.sql",
+            "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+            "lockOwnerConnectionId": "27",
+            "completedStatementCount": 3
+          },
+          {
+            "attemptId": "0bb6f7721434970aebf7608e-0012",
+            "migrationFilename": "0012_catalogue_publisher_properties.sql",
+            "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+            "lockOwnerConnectionId": "27",
+            "completedStatementCount": 3
+          },
+          {
+            "attemptId": "0bb6f7721434970aebf7608e-0013",
+            "migrationFilename": "0013_catalogue_publisher_leads.sql",
+            "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+            "lockOwnerConnectionId": "27",
+            "completedStatementCount": 3
+          },
+          {
+            "attemptId": "0bb6f7721434970aebf7608e-0014",
+            "migrationFilename": "0014_catalogue_publisher_drafts.sql",
+            "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+            "lockOwnerConnectionId": "27",
+            "completedStatementCount": 4
+          },
+          {
+            "attemptId": "0bb6f7721434970aebf7608e-0015",
+            "migrationFilename": "0015_catalogue_publisher_distribution_partnerships.sql",
+            "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+            "lockOwnerConnectionId": "27",
+            "completedStatementCount": 3
+          },
+          {
+            "attemptId": "0bb6f7721434970aebf7608e-0016",
+            "migrationFilename": "0016_catalogue_publisher_distribution_access.sql",
+            "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+            "lockOwnerConnectionId": "27",
+            "completedStatementCount": 3
+          },
+          {
+            "attemptId": "0bb6f7721434970aebf7608e-0017",
+            "migrationFilename": "0017_distribution_publisher_authority.sql",
+            "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+            "lockOwnerConnectionId": "27",
+            "completedStatementCount": 1
+          },
+          {
+            "attemptId": "0bb6f7721434970aebf7608e-0018",
+            "migrationFilename": "0018_distribution_access_publisher_authority.sql",
+            "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+            "lockOwnerConnectionId": "27",
+            "completedStatementCount": 1
+          },
+          {
+            "attemptId": "0bb6f7721434970aebf7608e-0019",
+            "migrationFilename": "0019_development_launch_date.sql",
+            "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+            "lockOwnerConnectionId": "27",
+            "completedStatementCount": 1
+          },
+          {
+            "attemptId": "0bb6f7721434970aebf7608e-0020",
+            "migrationFilename": "0020_land_parcels.sql",
+            "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+            "lockOwnerConnectionId": "27",
+            "completedStatementCount": 1
+          },
+          {
+            "attemptId": "0bb6f7721434970aebf7608e-0021",
+            "migrationFilename": "0021_land_assets.sql",
+            "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+            "lockOwnerConnectionId": "27",
+            "completedStatementCount": 1
+          },
+          {
+            "attemptId": "0bb6f7721434970aebf7608e-0022",
+            "migrationFilename": "0022_land_asset_parcels.sql",
+            "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+            "lockOwnerConnectionId": "27",
+            "completedStatementCount": 1
+          },
+          {
+            "attemptId": "0bb6f7721434970aebf7608e-0023",
+            "migrationFilename": "0023_land_listing_links.sql",
+            "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+            "lockOwnerConnectionId": "27",
+            "completedStatementCount": 1
+          },
+          {
+            "attemptId": "0bb6f7721434970aebf7608e-0024",
+            "migrationFilename": "0024_land_claims.sql",
+            "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+            "lockOwnerConnectionId": "27",
+            "completedStatementCount": 1
+          },
+          {
+            "attemptId": "0bb6f7721434970aebf7608e-0025",
+            "migrationFilename": "0025_land_evidence_documents.sql",
+            "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+            "lockOwnerConnectionId": "27",
+            "completedStatementCount": 1
+          },
+          {
+            "attemptId": "0bb6f7721434970aebf7608e-0026",
+            "migrationFilename": "0026_land_marketing_authorities.sql",
+            "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+            "lockOwnerConnectionId": "27",
+            "completedStatementCount": 1
+          },
+          {
+            "attemptId": "0bb6f7721434970aebf7608e-0027",
+            "migrationFilename": "0027_land_verification_assertions.sql",
+            "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+            "lockOwnerConnectionId": "27",
+            "completedStatementCount": 1
+          },
+          {
+            "attemptId": "0bb6f7721434970aebf7608e-0028",
+            "migrationFilename": "0028_land_assertion_evidence.sql",
+            "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+            "lockOwnerConnectionId": "27",
+            "completedStatementCount": 1
+          },
+          {
+            "attemptId": "0bb6f7721434970aebf7608e-0029",
+            "migrationFilename": "0029_land_verification_events.sql",
+            "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+            "lockOwnerConnectionId": "27",
+            "completedStatementCount": 1
+          },
+          {
+            "attemptId": "0bb6f7721434970aebf7608e-0030",
+            "migrationFilename": "0030_land_conflict_cases.sql",
+            "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+            "lockOwnerConnectionId": "27",
+            "completedStatementCount": 1
+          },
+          {
+            "attemptId": "0bb6f7721434970aebf7608e-0031",
+            "migrationFilename": "0031_land_review_cases.sql",
+            "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+            "lockOwnerConnectionId": "27",
+            "completedStatementCount": 1
+          },
+          {
+            "attemptId": "0bb6f7721434970aebf7608e-0032",
+            "migrationFilename": "0032_land_review_events.sql",
+            "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+            "lockOwnerConnectionId": "27",
+            "completedStatementCount": 1
+          },
+          {
+            "attemptId": "0bb6f7721434970aebf7608e-0033",
+            "migrationFilename": "0033_land_evidence_access_audit.sql",
+            "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+            "lockOwnerConnectionId": "27",
+            "completedStatementCount": 1
+          },
+          {
+            "attemptId": "0bb6f7721434970aebf7608e-0034",
+            "migrationFilename": "0034_listing_lead_association.sql",
+            "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+            "lockOwnerConnectionId": "27",
+            "completedStatementCount": 3
+          },
+          {
+            "attemptId": "0bb6f7721434970aebf7608e-0035",
+            "migrationFilename": "0035_commercial_assets.sql",
+            "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+            "lockOwnerConnectionId": "27",
+            "completedStatementCount": 1
+          },
+          {
+            "attemptId": "0bb6f7721434970aebf7608e-0036",
+            "migrationFilename": "0036_commercial_spaces.sql",
+            "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+            "lockOwnerConnectionId": "27",
+            "completedStatementCount": 1
+          },
+          {
+            "attemptId": "0bb6f7721434970aebf7608e-0037",
+            "migrationFilename": "0037_commercial_space_specifications.sql",
+            "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+            "lockOwnerConnectionId": "27",
+            "completedStatementCount": 1
+          },
+          {
+            "attemptId": "0bb6f7721434970aebf7608e-0038",
+            "migrationFilename": "0038_commercial_availabilities.sql",
+            "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+            "lockOwnerConnectionId": "27",
+            "completedStatementCount": 1
+          },
+          {
+            "attemptId": "0bb6f7721434970aebf7608e-0039",
+            "migrationFilename": "0039_commercial_availability_economics.sql",
+            "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+            "lockOwnerConnectionId": "27",
+            "completedStatementCount": 1
+          },
+          {
+            "attemptId": "0bb6f7721434970aebf7608e-0040",
+            "migrationFilename": "0040_commercial_availability_listing_links.sql",
+            "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+            "lockOwnerConnectionId": "27",
+            "completedStatementCount": 1
+          },
+          {
+            "attemptId": "0bb6f7721434970aebf7608e-0041",
+            "migrationFilename": "0041_commercial_availability_freshness_semantics.sql",
+            "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+            "lockOwnerConnectionId": "27",
+            "completedStatementCount": 1
+          },
+          {
+            "attemptId": "0bb6f7721434970aebf7608e-0042",
+            "migrationFilename": "0042_commercial_economics_value_state_semantics.sql",
+            "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+            "lockOwnerConnectionId": "27",
+            "completedStatementCount": 1
+          },
+          {
+            "attemptId": "0bb6f7721434970aebf7608e-0043",
+            "migrationFilename": "0043_commercial_specification_value_state_integrity.sql",
+            "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+            "lockOwnerConnectionId": "27",
+            "completedStatementCount": 1
+          },
+          {
+            "attemptId": "0bb6f7721434970aebf7608e-0044",
+            "migrationFilename": "0044_commercial_positive_availability_provenance.sql",
+            "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+            "lockOwnerConnectionId": "27",
+            "completedStatementCount": 1
+          },
+          {
+            "attemptId": "0bb6f7721434970aebf7608e-0045",
+            "migrationFilename": "0045_commercial_space_positive_area_integrity.sql",
+            "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+            "lockOwnerConnectionId": "27",
+            "completedStatementCount": 1
+          },
+          {
+            "attemptId": "0bb6f7721434970aebf7608e-0046",
+            "migrationFilename": "0046_commercial_office_quote_terms_sequenced.sql",
+            "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+            "lockOwnerConnectionId": "27",
+            "completedStatementCount": 2
+          },
+          {
+            "attemptId": "0bb6f7721434970aebf7608e-0047",
+            "migrationFilename": "0047_commercial_gross_rental_component.sql",
+            "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+            "lockOwnerConnectionId": "27",
+            "completedStatementCount": 1
+          },
+          {
+            "attemptId": "0bb6f7721434970aebf7608e-0048",
+            "migrationFilename": "0048_commercial_lease_terms.sql",
+            "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+            "lockOwnerConnectionId": "27",
+            "completedStatementCount": 1
+          },
+          {
+            "attemptId": "0bb6f7721434970aebf7608e-0049",
+            "migrationFilename": "0049_commercial_lead_contexts.sql",
+            "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+            "lockOwnerConnectionId": "27",
+            "completedStatementCount": 1
+          },
+          {
+            "attemptId": "0bb6f7721434970aebf7608e-0050",
+            "migrationFilename": "0050_commercial_asset_physical_location.sql",
+            "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+            "lockOwnerConnectionId": "27",
+            "completedStatementCount": 3
+          },
+          {
+            "attemptId": "0bb6f7721434970aebf7608e-0051",
+            "migrationFilename": "0051_sl_places.sql",
+            "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+            "lockOwnerConnectionId": "27",
+            "completedStatementCount": 1
+          },
+          {
+            "attemptId": "0bb6f7721434970aebf7608e-0052",
+            "migrationFilename": "0052_sl_spaces.sql",
+            "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+            "lockOwnerConnectionId": "27",
+            "completedStatementCount": 1
+          },
+          {
+            "attemptId": "0bb6f7721434970aebf7608e-0053",
+            "migrationFilename": "0053_sl_space_availability.sql",
+            "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+            "lockOwnerConnectionId": "27",
+            "completedStatementCount": 1
+          },
+          {
+            "attemptId": "0bb6f7721434970aebf7608e-0054",
+            "migrationFilename": "0054_sl_space_specifications.sql",
+            "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+            "lockOwnerConnectionId": "27",
+            "completedStatementCount": 1
+          },
+          {
+            "attemptId": "0bb6f7721434970aebf7608e-0055",
+            "migrationFilename": "0055_sl_place_household.sql",
+            "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+            "lockOwnerConnectionId": "27",
+            "completedStatementCount": 1
+          },
+          {
+            "attemptId": "0bb6f7721434970aebf7608e-0056",
+            "migrationFilename": "0056_sl_verifications.sql",
+            "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+            "lockOwnerConnectionId": "27",
+            "completedStatementCount": 1
+          },
+          {
+            "attemptId": "0bb6f7721434970aebf7608e-0057",
+            "migrationFilename": "0057_sl_lead_contexts.sql",
+            "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+            "lockOwnerConnectionId": "27",
+            "completedStatementCount": 1
+          },
+          {
+            "attemptId": "0bb6f7721434970aebf7608e-0058",
+            "migrationFilename": "0058_sl_messages.sql",
+            "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+            "lockOwnerConnectionId": "27",
+            "completedStatementCount": 1
+          },
+          {
+            "attemptId": "0bb6f7721434970aebf7608e-0059",
+            "migrationFilename": "0059_sl_moderation_queue.sql",
+            "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+            "lockOwnerConnectionId": "27",
+            "completedStatementCount": 1
+          },
+          {
+            "attemptId": "0bb6f7721434970aebf7608e-0060",
+            "migrationFilename": "0060_sl_space_availability_bills.sql",
+            "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+            "lockOwnerConnectionId": "27",
+            "completedStatementCount": 1
+          },
+          {
+            "attemptId": "0bb6f7721434970aebf7608e-0061",
+            "migrationFilename": "0061_sl_messages_authorship.sql",
+            "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+            "lockOwnerConnectionId": "27",
+            "completedStatementCount": 1
+          },
+          {
+            "attemptId": "0bb6f7721434970aebf7608e-0062",
+            "migrationFilename": "0062_agent_launch_access_full_capabilities.sql",
+            "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+            "lockOwnerConnectionId": "27",
+            "completedStatementCount": 1
+          },
+          {
+            "attemptId": "0bb6f7721434970aebf7608e-0063",
+            "migrationFilename": "0063_agent_launch_access_earnings_feature.sql",
+            "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+            "lockOwnerConnectionId": "27",
+            "completedStatementCount": 1
+          },
+          {
+            "attemptId": "0bb6f7721434970aebf7608e-0064",
+            "migrationFilename": "0064_auth_session_security.sql",
+            "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+            "lockOwnerConnectionId": "27",
+            "completedStatementCount": 1
+          },
+          {
+            "attemptId": "0bb6f7721434970aebf7608e-0065",
+            "migrationFilename": "0065_auth_verification_token_cleanup.sql",
+            "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+            "lockOwnerConnectionId": "27",
+            "completedStatementCount": 1
+          },
+          {
+            "attemptId": "0bb6f7721434970aebf7608e-0066",
+            "migrationFilename": "0066_favorites_user_property_deduplicate.sql",
+            "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+            "lockOwnerConnectionId": "27",
+            "completedStatementCount": 1
+          },
+          {
+            "attemptId": "0bb6f7721434970aebf7608e-0067",
+            "migrationFilename": "0067_favorites_user_property_unique.sql",
+            "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+            "lockOwnerConnectionId": "27",
+            "completedStatementCount": 1
+          },
+          {
+            "attemptId": "0bb6f7721434970aebf7608e-0068",
+            "migrationFilename": "0068_recently_viewed_activity_cleanup.sql",
+            "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+            "lockOwnerConnectionId": "27",
+            "completedStatementCount": 1
+          },
+          {
+            "attemptId": "0bb6f7721434970aebf7608e-0069",
+            "migrationFilename": "0069_recently_viewed_listing_required.sql",
+            "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+            "lockOwnerConnectionId": "27",
+            "completedStatementCount": 1
+          },
+          {
+            "attemptId": "0bb6f7721434970aebf7608e-0070",
+            "migrationFilename": "0070_recently_viewed_user_listing_unique.sql",
+            "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+            "lockOwnerConnectionId": "27",
+            "completedStatementCount": 1
+          },
+          {
+            "attemptId": "0bb6f7721434970aebf7608e-0071",
+            "migrationFilename": "0071_recently_viewed_user_recency_index.sql",
+            "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+            "lockOwnerConnectionId": "27",
+            "completedStatementCount": 1
+          },
+          {
+            "attemptId": "0bb6f7721434970aebf7608e-0072",
+            "migrationFilename": "0072_retire_legacy_prospect_favorites.sql",
+            "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+            "lockOwnerConnectionId": "27",
+            "completedStatementCount": 1
+          },
+          {
+            "attemptId": "0bb6f7721434970aebf7608e-0073",
+            "migrationFilename": "0073_retire_legacy_scheduled_viewings.sql",
+            "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+            "lockOwnerConnectionId": "27",
+            "completedStatementCount": 1
+          },
+          {
+            "attemptId": "0bb6f7721434970aebf7608e-0074",
+            "migrationFilename": "0074_retire_legacy_prospects.sql",
+            "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+            "lockOwnerConnectionId": "27",
+            "completedStatementCount": 1
+          },
+          {
+            "attemptId": "0bb6f7721434970aebf7608e-0075",
+            "migrationFilename": "0075_recently_viewed_microsecond_recency.sql",
+            "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+            "lockOwnerConnectionId": "27",
+            "completedStatementCount": 1
+          },
+          {
+            "attemptId": "0bb6f7721434970aebf7608e-0076",
+            "migrationFilename": "0076_lead_delivery_relational_authority.sql",
+            "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+            "lockOwnerConnectionId": "27",
+            "completedStatementCount": 3
+          },
+          {
+            "attemptId": "0bb6f7721434970aebf7608e-0077",
+            "migrationFilename": "0077_bundle_attribution_relational_authority.sql",
+            "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+            "lockOwnerConnectionId": "27",
+            "completedStatementCount": 1
+          },
+          {
+            "attemptId": "0bb6f7721434970aebf7608e-0078",
+            "migrationFilename": "0078_retire_unreachable_partner_leads.sql",
+            "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+            "lockOwnerConnectionId": "27",
+            "completedStatementCount": 1
+          },
+          {
+            "attemptId": "0bb6f7721434970aebf7608e-0079",
+            "migrationFilename": "0079_explore_engagement_event_identity.sql",
+            "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+            "lockOwnerConnectionId": "27",
+            "completedStatementCount": 2
+          },
+          {
+            "attemptId": "0bb6f7721434970aebf7608e-0080",
+            "migrationFilename": "0080_service_lead_request_idempotency.sql",
+            "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+            "lockOwnerConnectionId": "27",
+            "completedStatementCount": 2
+          },
+          {
+            "attemptId": "0bb6f7721434970aebf7608e-0081",
+            "migrationFilename": "0081_explore_analytics_query_index.sql",
+            "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+            "lockOwnerConnectionId": "27",
+            "completedStatementCount": 1
+          },
+          {
+            "attemptId": "0bb6f7721434970aebf7608e-0082",
+            "migrationFilename": "0082_explore_engagement_retention_indexes.sql",
+            "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+            "lockOwnerConnectionId": "27",
+            "completedStatementCount": 1
+          },
+          {
+            "attemptId": "0bb6f7721434970aebf7608e-0083",
+            "migrationFilename": "0083_billing_provider_event_identity.sql",
+            "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+            "lockOwnerConnectionId": "27",
+            "completedStatementCount": 2
+          },
+          {
+            "attemptId": "0bb6f7721434970aebf7608e-0084",
+            "migrationFilename": "0084_billing_provider_event_retry_budget.sql",
+            "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+            "lockOwnerConnectionId": "27",
+            "completedStatementCount": 1
+          },
+          {
+            "attemptId": "0bb6f7721434970aebf7608e-0085",
+            "migrationFilename": "0085_billing_billable_accounts.sql",
+            "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+            "lockOwnerConnectionId": "27",
+            "completedStatementCount": 20
+          },
+          {
+            "attemptId": "0bb6f7721434970aebf7608e-0086",
+            "migrationFilename": "0086_billing_billable_accounts_not_null.sql",
+            "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+            "lockOwnerConnectionId": "27",
+            "completedStatementCount": 5
+          },
+          {
+            "attemptId": "0bb6f7721434970aebf7608e-0087",
+            "migrationFilename": "0087_billing_provider_event_leases.sql",
+            "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+            "lockOwnerConnectionId": "27",
+            "completedStatementCount": 1
+          },
+          {
+            "attemptId": "0bb6f7721434970aebf7608e-0088",
+            "migrationFilename": "0088_retire_obsolete_billing_families.sql",
+            "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+            "lockOwnerConnectionId": "27",
+            "completedStatementCount": 3
+          },
+          {
+            "attemptId": "0bb6f7721434970aebf7608e-0089",
+            "migrationFilename": "0089_retire_disconnected_analytics_aggregations.sql",
+            "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+            "lockOwnerConnectionId": "27",
+            "completedStatementCount": 1
+          },
+          {
+            "attemptId": "0bb6f7721434970aebf7608e-0090",
+            "migrationFilename": "0090_retire_disconnected_boost_campaigns.sql",
+            "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+            "lockOwnerConnectionId": "27",
+            "completedStatementCount": 1
+          },
+          {
+            "attemptId": "0bb6f7721434970aebf7608e-0091",
+            "migrationFilename": "0091_transactional_email_deliveries.sql",
+            "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+            "lockOwnerConnectionId": "27",
+            "completedStatementCount": 1
+          },
+          {
+            "attemptId": "0bb6f7721434970aebf7608e-0092",
+            "migrationFilename": "0092_transactional_email_attempts.sql",
+            "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+            "lockOwnerConnectionId": "27",
+            "completedStatementCount": 1
+          },
+          {
+            "attemptId": "0bb6f7721434970aebf7608e-0093",
+            "migrationFilename": "0093_user_onboarding_state_primary_key.sql",
+            "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+            "lockOwnerConnectionId": "27",
+            "completedStatementCount": 1
+          },
+          {
+            "attemptId": "0bb6f7721434970aebf7608e-0094",
+            "migrationFilename": "0094_content_topics_primary_key.sql",
+            "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+            "lockOwnerConnectionId": "27",
+            "completedStatementCount": 1
+          }
+        ],
+        "missingSuccessfulAttemptEvidence": [],
+        "invalidSuccessfulAttemptEvidence": []
+      }
+    }
+  ]
+}

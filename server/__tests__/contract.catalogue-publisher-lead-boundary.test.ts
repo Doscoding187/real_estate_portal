@@ -44,10 +44,12 @@ const validInput = () => ({
   },
 });
 
+const response = { setHeader: vi.fn() };
+
 const callerForAnonymous = () =>
   cataloguePublisherRouter.createCaller({
     req: { headers: {} },
-    res: {},
+    res: response,
     user: null,
   } as any);
 
@@ -55,7 +57,7 @@ describe('catalogue publisher public lead boundary', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockGetClientIp.mockReturnValue('198.51.100.42');
-    mockCheckRateLimit.mockReturnValue(true);
+    mockCheckRateLimit.mockResolvedValue(true);
     mockCapturePublicLead.mockResolvedValue({
       success: true,
       leadId: 901,
@@ -78,6 +80,17 @@ describe('catalogue publisher public lead boundary', () => {
     });
     expect(mockGetClientIp).not.toHaveBeenCalled();
     expect(mockCheckRateLimit).not.toHaveBeenCalled();
+    expect(mockCapturePublicLead).not.toHaveBeenCalled();
+  });
+
+  it('awaits the shared limiter and stops persistence when it denies the request', async () => {
+    mockCheckRateLimit.mockResolvedValue(false);
+
+    await expect(callerForAnonymous().captureLead(validInput())).rejects.toMatchObject({
+      code: 'TOO_MANY_REQUESTS',
+    });
+
+    expect(mockCheckRateLimit).toHaveBeenCalledWith('198.51.100.42', response);
     expect(mockCapturePublicLead).not.toHaveBeenCalled();
   });
 

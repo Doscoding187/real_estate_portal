@@ -168,6 +168,63 @@ jobs:
           S2_DB_TESTS: '1'
         run: pnpm test:authority -- server/__tests__/integration.developer-engine-s2-supersession.test.ts server/__tests__/integration.billing-billable-account.test.ts --reporter=basic
 
+  location-authority:
+    name: Location Authority
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.22.3'
+          cache: 'pnpm'
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Record exact source recovery status
+        run: pnpm geography:coverage:source-status -- --json
+
+      - name: Require missing exact sources to fail closed
+        run: |
+          if pnpm geography:coverage:source-status -- --strict; then
+            echo "Exact geography sources unexpectedly available in hermetic CI." >&2
+            exit 1
+          fi
+
+      - name: Require full regeneration to fail closed without exact sources
+        run: |
+          set +e
+          output="$(pnpm geography:coverage:check 2>&1)"
+          status=$?
+          set -e
+          printf '%s\n' "${output}"
+          test "${status}" -ne 0
+          case "${output}" in
+            *"Canonical layer files not found"*) ;;
+            *) exit 1 ;;
+          esac
+
+      - name: Verify aggregate location authority
+        run: pnpm location:authority:check
+
+      - name: Run checked-in geography artifact probes
+        run: pnpm geography:coverage:probes
+
+      - name: Run focused location authority contracts
+        run: pnpm location:authority:test
+
   lint-and-typecheck:
     name: Lint & TypeCheck
     runs-on: ubuntu-latest
@@ -212,6 +269,8 @@ jobs:
       CI: 'true'
       APP_ENV: test
       NODE_ENV: test
+      # Synthetic signing key for production-mode session rejection tests.
+      JWT_SECRET: ci-disposable-session-signing-key-not-for-production
 
     services:
       mysql:
@@ -267,6 +326,11 @@ jobs:
           ISOLATED_CI_BOOTSTRAP_PHASE: full
         run: pnpm db:ci:identities:bootstrap
 
+      # The last-super-admin contract requires an empty user table. Run all
+      # five role/session/audit cases before the scenario adds its reviewer.
+      - name: Verify role and session authority before reviewer fixtures
+        run: pnpm test:authority -- --project server --minWorkers=1 --maxWorkers=1 --no-file-parallelism server/__tests__/integration.b07-role-session-audit.test.ts
+
       - name: Prepare canonical disposable reference data
         run: pnpm db:reference:prepare
 
@@ -302,7 +366,17 @@ jobs:
             echo "Running client test: ${test_file}"
             pnpm vitest run --project client --minWorkers=1 --maxWorkers=1 --silent "${test_file}"
           done
-          pnpm vitest run --project server --minWorkers=1 --maxWorkers=1 --silent
+          # Already exercised on the fresh unseeded target above; never delete
+          # or demote the canonical reviewer to satisfy a sole-admin fixture.
+          # Vitest 2 workspace projects do not inherit the CLI --exclude
+          # option. Select from its configured inventory explicitly instead.
+          mapfile -t SERVER_TESTS < <(
+            pnpm vitest list --project server --filesOnly \
+              | sed -n 's/^\[server\] //p' \
+              | awk '$0 != "server/__tests__/integration.b07-role-session-audit.test.ts"'
+          )
+          test "${#SERVER_TESTS[@]}" -gt 0
+          pnpm vitest run --project server --minWorkers=1 --maxWorkers=1 --silent "${SERVER_TESTS[@]}"
 
   build:
     name: Build Application

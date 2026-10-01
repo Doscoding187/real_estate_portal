@@ -25,4 +25,15 @@ describe('similar-property history authority boundary', () => {
     expect(service).toContain('canonical engagement authority');
     expect(service).not.toContain('For now, just log it');
   });
+
+  it('rechecks current public eligibility for the reference and candidates', () => {
+    const service = readFileSync(
+      path.resolve(process.cwd(), 'server/services/similarPropertiesService.ts'),
+      'utf8',
+    );
+
+    expect(service).toContain('resolvePublicPropertyEligibilityIds([propertyId])');
+    expect(service).toContain('filterEligibleCandidates');
+    expect(service).toContain('resolvePublicPropertyEligibilityIds(rows.map');
+  });
 });

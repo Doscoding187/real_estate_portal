@@ -1,0 +1,10 @@
+{
+  "sourcePath": "/home/edwardspc/Desktop/Dev/worktrees/property-listify-paid-launch-deadline-audit-20260930/docs/architecture/launch-readiness-and-product-convergence/25-paid-launch-deadline-audit-2026-09-30.md",
+  "sourceSha256": "eb4066f45205d1b3f2eb760d9af55991a95e071148c168d9cb47ad44558b72fc",
+  "sectionTitle": "Subsequent founder decision: validate on the live site",
+  "sectionSha256": "0efb7c5e4c4a0f38fe3b74b04825cf18d719693bbc01e26da42895e23c4005ae",
+  "incorporated": "25-paid-launch-deadline-audit-2026-09-30.md (only this addendum imported)",
+  "priorAcceptedHead": "4b5ef13255bf5b54ee92eec27969042fa4310f7c",
+  "priorAcceptedTree": "02bdcb863e7442392b3ba9d5db1d573b82d64288",
+  "scope": "Existing infrastructure, failed preview non-gating exception, controlled live validation; separate paid GO after gates."
+}

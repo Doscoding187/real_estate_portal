@@ -85,7 +85,7 @@ function toAuthMeUser(user: User) {
   };
 }
 
-import { listingRouter } from './listingRouter';
+import { listingRouter, assertListingContentCustody } from './listingRouter';
 import { uploadRouter } from './uploadRouter';
 import { savedSearchRouter } from './savedSearchRouter';
 import { guestMigrationRouter } from './guestMigrationRouter';
@@ -963,6 +963,10 @@ const appRouterConfig = {
         if (property.sourceListingId != null) {
           const sourceListing = await db.getListingById(Number(property.sourceListingId));
           rejectGenericCommercialPropertyWorkflow(sourceListing?.propertyType);
+          if (!sourceListing) {
+            throw new TRPCError({ code: 'NOT_FOUND', message: 'Source listing not found' });
+          }
+          await assertListingContentCustody(sourceListing, user, 'Not authorized to archive this listing');
           // A public property is a projection of its authored listing. Preserve
           // the source and durable history by routing removal through the
           // canonical archive lifecycle instead of deleting the projection.

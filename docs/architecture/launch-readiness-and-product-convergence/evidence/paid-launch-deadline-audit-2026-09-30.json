@@ -1,0 +1,132 @@
+{
+  "auditDate": "2026-09-30",
+  "method": "Document/source reconciliation; live GitHub reads; no repeated product or protected-provider verification",
+  "sources": [
+    {
+      "ref": "E02",
+      "path": "/home/edwardspc/Desktop/Dev/worktrees/property-listify-paid-mvp-audit-20260925/docs/architecture/launch-readiness-and-product-convergence/19-paid-mvp-launch-blocker-audit.md",
+      "sha256": "f3178bc0e71f32fed6f26115eb7deea0f1521f5c17348e5a95a0178e59335f3b",
+      "worktreeHead": "32b141270235f755cb7bb99ce269f671ef194848",
+      "fileStatus": "clean-tracked"
+    },
+    {
+      "ref": "E02",
+      "path": "/home/edwardspc/Desktop/Dev/worktrees/property-listify-paid-mvp-audit-20260925/docs/architecture/launch-readiness-and-product-convergence/23-paid-mvp-senior-reconciliation-2026-09-25.md",
+      "sha256": "533142bb1ea98a120d9c375e6eec6d44cf5487d9d85482e1ecb089f98a123d6b",
+      "worktreeHead": "32b141270235f755cb7bb99ce269f671ef194848",
+      "fileStatus": "clean-tracked"
+    },
+    {
+      "ref": "E03",
+      "path": "/home/edwardspc/Desktop/Dev/worktrees/property-listify-b16-no-spend-convergence/docs/architecture/launch-readiness-and-product-convergence/evidence/b16-integration-review-packet-2026-09-27.md",
+      "sha256": "01879bfea040befb20ab1b5b4de7a4a8a40c2a6968e44f1c6c432a58abcbc104",
+      "worktreeHead": "f3f99f806ea9ae6be3132e093ce1cf1a6f185a32",
+      "fileStatus": "?? docs/architecture/launch-readiness-and-product-convergence/evidence/b16-integration-review-packet-2026-09-27.md"
+    },
+    {
+      "ref": "E04",
+      "path": "/home/edwardspc/Desktop/Dev/worktrees/property-listify-b16-no-spend-convergence/docs/architecture/launch-readiness-and-product-convergence/evidence/b04-b07-security-matrix-2026-09-26/review-packet.md",
+      "sha256": "2cdf36a7ea1e29f894d1aa522eae750915dff2d114a8c2424161c819546dd727",
+      "worktreeHead": "f3f99f806ea9ae6be3132e093ce1cf1a6f185a32",
+      "fileStatus": "?? docs/architecture/launch-readiness-and-product-convergence/evidence/b04-b07-security-matrix-2026-09-26/review-packet.md"
+    },
+    {
+      "ref": "E04",
+      "path": "/home/edwardspc/Desktop/Dev/worktrees/property-listify-b16-no-spend-convergence/docs/architecture/launch-readiness-and-product-convergence/evidence/b04-b07-security-matrix-2026-09-26/security-matrix.json",
+      "sha256": "d585cd7db57817c6190d9cf10d7fb89569009e3dfe37d62f4738896aefc36995",
+      "worktreeHead": "f3f99f806ea9ae6be3132e093ce1cf1a6f185a32",
+      "fileStatus": "?? docs/architecture/launch-readiness-and-product-convergence/evidence/b04-b07-security-matrix-2026-09-26/security-matrix.json"
+    },
+    {
+      "ref": "E05",
+      "path": "/home/edwardspc/Desktop/Dev/worktrees/property-listify-b14-schedule-reconciliation-review/docs/architecture/launch-readiness-and-product-convergence/evidence/b14-schedule-reconciliation-implementation-2026-09-27.md",
+      "sha256": "13cc6bc91d16e56a14732e87c13f540c06540cbc978f45af9fc3c9c119231d1f",
+      "worktreeHead": "a05868c66f493e3cbc972a119074c91a10797777",
+      "fileStatus": "?? docs/architecture/launch-readiness-and-product-convergence/evidence/b14-schedule-reconciliation-implementation-2026-09-27.md"
+    },
+    {
+      "ref": "E06",
+      "path": "/home/edwardspc/Desktop/Dev/worktrees/property-listify-b15-founder-privacy-input-2026-09-27/docs/architecture/launch-readiness-and-product-convergence/evidence/b15-copy-approval-preparation-2026-09-27-v0.6.md",
+      "sha256": "05c67f7d4e31a0fc6bc182e697f055bd560c00b50f89969c5ef1170c23f4a2a6",
+      "worktreeHead": "a05868c66f493e3cbc972a119074c91a10797777",
+      "fileStatus": "?? docs/architecture/launch-readiness-and-product-convergence/evidence/b15-copy-approval-preparation-2026-09-27-v0.6.md"
+    },
+    {
+      "ref": "E07",
+      "path": "/home/edwardspc/Desktop/Dev/worktrees/property-listify-b16-no-spend-convergence/docs/architecture/launch-readiness-and-product-convergence/evidence/b12-public-diagnostics-2026-09-27.json",
+      "sha256": "a7a1fcfc07a5b067691cc8257639745ef3afb3d3980ce8918ab8b557013a7387",
+      "worktreeHead": "f3f99f806ea9ae6be3132e093ce1cf1a6f185a32",
+      "fileStatus": "?? docs/architecture/launch-readiness-and-product-convergence/evidence/b12-public-diagnostics-2026-09-27.json"
+    },
+    {
+      "ref": "E08",
+      "path": "/home/edwardspc/Desktop/Dev/worktrees/property-listify-retained-azure84-upgrade-packet/docs/database-authority/azure-fresh-account-transition-2026-09-29.md",
+      "sha256": "e4eb16425e84033431ba42e72820febc12b271f77bc2f637471c5e76f4df5420",
+      "worktreeHead": "b625a6dd0be7b105e100383dbc8f919a64d8b0bb",
+      "fileStatus": "clean-tracked"
+    },
+    {
+      "ref": "E09",
+      "path": "/home/edwardspc/Desktop/Dev/worktrees/property-listify-retained-azure84-upgrade-packet/docs/database-authority/azure-fresh-transition-readiness-2026-09-29.md",
+      "sha256": "c14b2afc7a1805b3b5521e646f821494a95eeedc9cc90888e0749ada4af02d4d",
+      "worktreeHead": "b625a6dd0be7b105e100383dbc8f919a64d8b0bb",
+      "fileStatus": "clean-tracked"
+    },
+    {
+      "ref": "E10",
+      "path": "/home/edwardspc/Desktop/Dev/worktrees/property-listify-retained-azure84-upgrade-packet/docs/database-authority/tidb-preliminary-archive-2026-09-30.md",
+      "sha256": "abde5dc98589246d21a00662862394ddfc2fc5532e4f1c09981e5f0e86f6d784",
+      "worktreeHead": "b625a6dd0be7b105e100383dbc8f919a64d8b0bb",
+      "fileStatus": "clean-tracked"
+    },
+    {
+      "ref": "E11",
+      "path": "/home/edwardspc/Desktop/Dev/worktrees/property-listify-retained-azure84-upgrade-packet/docs/database-authority/azure-geography-reference-release-2026-09-30.md",
+      "sha256": "1ff94f4a15dbce9b5bfa662210c463898b2e38e79c99947c9fdadb1e6830faba",
+      "worktreeHead": "b625a6dd0be7b105e100383dbc8f919a64d8b0bb",
+      "fileStatus": "clean-tracked"
+    },
+    {
+      "ref": "E11",
+      "path": "/home/edwardspc/Desktop/Dev/worktrees/property-listify-retained-azure84-upgrade-packet/docs/database-authority/azure-geography-catalog-integration-2026-09-29.md",
+      "sha256": "63bb78ded0b1a825e5a10634babd3482e14cbe46f7ddede15542c50483962aaf",
+      "worktreeHead": "b625a6dd0be7b105e100383dbc8f919a64d8b0bb",
+      "fileStatus": "clean-tracked"
+    },
+    {
+      "ref": "E13",
+      "path": "/home/edwardspc/Desktop/Dev/worktrees/property-listify-retained-azure84-upgrade-packet/docs/architecture/database-transition-and-launch/master-plan.md",
+      "sha256": "5c56c78338547c0e356ed52aef5aada1f7293d58a0c2bfd35c81a153baad3313",
+      "worktreeHead": "b625a6dd0be7b105e100383dbc8f919a64d8b0bb",
+      "fileStatus": "clean-tracked"
+    }
+  ],
+  "localGit": {
+    "publishedMain": "4e012b3044628fc06da7489c0055e9ce01bdc8d9",
+    "acceptedPaidCommit": "a05868c66f493e3cbc972a119074c91a10797777",
+    "acceptedPaidTree": "b21f454e215d8b02129e4daa14ba6f8d338406d1",
+    "databaseCandidate": "b625a6dd0be7b105e100383dbc8f919a64d8b0bb",
+    "commonBase": "4e012b3044628fc06da7489c0055e9ce01bdc8d9"
+  },
+  "databaseStatus": {
+    "worktree": "property-listify-b16-no-spend-convergence",
+    "command": "pnpm db:authority:status",
+    "exitCode": 0,
+    "targetClass": "disposable-worktree",
+    "ownership": "exact",
+    "fingerprint": "af8dc5d6cb434ff5e3abcd89eb43518a4b58017d407a729e2a26df6a168408e8",
+    "expectedHead": "0094_content_topics_primary_key.sql",
+    "service": "database-unreachable",
+    "ledger": "not-evaluated",
+    "schema": "not-evaluated",
+    "protectedTargetContacted": false
+  },
+  "limitations": [
+    "Git shell fetch failed DNS resolution; GitHub connector independently confirmed main/PR/check state.",
+    "Public web refresh failed to access health/readiness/version/apex URLs; latest inspected public observations are dated 2026-09-27.",
+    "Local/browser test counts are prior recorded evidence, not newly run by this audit.",
+    "Acceptance is recorded scoped workstream acceptance, not production launch approval.",
+    "No source archive bytes, keys, customer data or credentials were accessed."
+  ],
+  "githubSnapshot": "paid-launch-github-state-2026-09-30.json"
+}

@@ -45,7 +45,7 @@ function exactWorktreeTarget() {
 
 describe('listing-preview Database Authority fixture', () => {
   it('publishes deterministic identities without Search-to-Lead ownership', () => {
-    expect(LISTING_PREVIEW_FIXTURE_VERSION).toBe('listing-preview-auth-v1');
+    expect(LISTING_PREVIEW_FIXTURE_VERSION).toBe('listing-preview-auth-v2');
     expect(LISTING_PREVIEW_FIXTURE_DIGEST).toMatch(/^[a-f0-9]{64}$/);
     expect(LISTING_PREVIEW_FIXTURE_IDENTITIES.agentEmail).toBe('agent@listify.local');
     expect(LISTING_PREVIEW_FIXTURE_IDENTITIES.agencyAdminEmail).toBe('agency@listify.local');

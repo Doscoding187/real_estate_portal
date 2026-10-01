@@ -21,6 +21,7 @@ import {
   getCommercialTermPresentation,
 } from '@/lib/commercialCatalog';
 import { useCommercialCatalog, type CommercialProduct } from '@/hooks/useCommercialCatalog';
+import { useCommercialProductAvailability } from '@/hooks/useCommercialProductAvailability';
 import type { AgentOnboardingStatus } from '@/hooks/useAgentOnboardingStatus';
 import {
   ArrowRight,
@@ -34,6 +35,7 @@ import {
   UploadCloud,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { CommercialActivationNotice } from '@/components/commercial/CommercialActivationNotice';
 
 type RouterOutputs = inferRouterOutputs<AppRouter>;
 type AgentBillingWorkspace = RouterOutputs['billing']['agentWorkspace'];
@@ -337,20 +339,28 @@ function AgentManualEftPanel({
   );
 }
 
-export default function AgentPackageSelection() {
+export function CommercialAgentPackageSelection({
+  agentLaunchAccessAvailable,
+}: {
+  agentLaunchAccessAvailable: boolean;
+}) {
   const [, setLocation] = useLocation();
   const search = useSearch();
   const { user, loading } = useAuth({ redirectOnUnauthenticated: true });
   const catalog = useCommercialCatalog('agent');
+  const [status, setStatus] = useState<AgentOnboardingStatus | null>(null);
+  const [statusLoading, setStatusLoading] = useState(true);
+  const agencyManagedCommercialAccess = status?.commercial?.ownerSource === 'agency_membership';
   const workspaceQuery = trpc.billing.agentWorkspace.useQuery(undefined, {
-    enabled: user?.role === 'agent',
+    // Wait for the server-owned commercial projection. A current agency
+    // member must never open an individual billing workspace merely by
+    // visiting this route while the redirect is resolving.
+    enabled: user?.role === 'agent' && Boolean(status) && !agencyManagedCommercialAccess,
     retry: false,
     staleTime: 0,
     refetchOnMount: true,
   });
   const submitProof = trpc.billing.submitLaunchAccessPaymentProof.useMutation();
-  const [, setStatus] = useState<AgentOnboardingStatus | null>(null);
-  const [statusLoading, setStatusLoading] = useState(true);
   const [invoiceResponse, setInvoiceResponse] = useState<AgentInvoiceResponse | null>(null);
   const [isRequestingInvoice, setIsRequestingInvoice] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState('');
@@ -389,7 +399,7 @@ export default function AgentPackageSelection() {
         if (cancelled) return;
 
         setStatus(result);
-        const journeyAction = getAgentJourneyAction(result);
+        const journeyAction = getAgentJourneyAction(result, { agentLaunchAccessAvailable });
         if (journeyAction.href !== '/agent/select-package') {
           setLocation(journeyAction.href);
         }
@@ -408,7 +418,7 @@ export default function AgentPackageSelection() {
     return () => {
       cancelled = true;
     };
-  }, [loading, setLocation, user?.role]);
+  }, [agentLaunchAccessAvailable, loading, setLocation, user?.role]);
 
   const activeInvoice = invoiceResponse?.invoice ?? workspaceQuery.data?.activeInvoice ?? null;
   const bankDetails = invoiceResponse?.bankDetails ?? workspaceQuery.data?.bankDetails;
@@ -478,6 +488,10 @@ export default function AgentPackageSelection() {
   const action = getCommercialActionPresentation(launchProduct);
 
   const handleRequestInvoice = async () => {
+    if (!agentLaunchAccessAvailable) {
+      setLocation('/agent/dashboard');
+      return;
+    }
     const planId = launchProduct.source?.planId;
     if (!planId) {
       toast.error('The canonical Agent Launch Access product is not requestable right now.');
@@ -508,6 +522,10 @@ export default function AgentPackageSelection() {
   };
 
   const handleProofSubmit = async () => {
+    if (!agentLaunchAccessAvailable) {
+      toast.info('Agent Launch Access is unavailable while commercial availability is being verified.');
+      return;
+    }
     if (!activeInvoice) {
       toast.error('Request an invoice before submitting payment proof.');
       return;
@@ -587,8 +605,8 @@ export default function AgentPackageSelection() {
               You selected Agent Launch Access.
             </h1>
             <p className="mt-6 max-w-xl text-base leading-8 text-slate-600 sm:text-lg">
-              The public Agent page explains the product. This step confirms the canonical product
-              and takes you into the assisted invoice and activation process.
+              The public Agent page explains the product. This step lets you confirm your
+              professional presence and prepare for the assisted commercial activation process.
             </p>
             <a
               href="/advertise/sell/agents"
@@ -617,8 +635,9 @@ export default function AgentPackageSelection() {
                 <ActivationSteps />
               </div>
               <div className="mt-6 rounded-2xl bg-slate-950 px-5 py-4 text-sm leading-6 text-white">
-                Requesting an invoice, receiving an invoice or uploading payment proof does not
-                activate access. Finance verification starts the fixed 90-day term.
+                Your profile and private preparation work can continue now. Commercial activation,
+                payment proof and the fixed 90-day term become available only after the approved
+                payment workflow is opened.
               </div>
               <div className="mt-6 flex flex-col gap-3 sm:flex-row">
                 <Button
@@ -626,11 +645,13 @@ export default function AgentPackageSelection() {
                   disabled={isRequestingInvoice}
                   onClick={() => void handleRequestInvoice()}
                 >
-                  {isRequestingInvoice
-                    ? 'Preparing invoice…'
-                    : activeInvoice
-                      ? 'Refresh invoice'
-                      : action.label}{' '}
+                  {!agentLaunchAccessAvailable
+                    ? 'Return to preparation workspace'
+                    : isRequestingInvoice
+                      ? 'Preparing invoice…'
+                      : activeInvoice
+                        ? 'Refresh invoice'
+                        : action.label}{' '}
                   <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" />
                 </Button>
                 <Button
@@ -641,7 +662,7 @@ export default function AgentPackageSelection() {
                   Talk to Property Listify
                 </Button>
               </div>
-              {activeInvoice ? (
+              {activeInvoice && agentLaunchAccessAvailable ? (
                 <AgentManualEftPanel
                   invoice={activeInvoice}
                   bankDetails={bankDetails}
@@ -695,5 +716,81 @@ export default function AgentPackageSelection() {
         </section>
       </main>
     </div>
+  );
+}
+
+function PreparationAgentPackageSelection({
+  availabilityError,
+  onRetry,
+}: {
+  availabilityError?: boolean;
+  onRetry?: () => void;
+}) {
+  const [, setLocation] = useLocation();
+
+  return (
+    <div
+      className="min-h-screen bg-[#f7f9fc] px-6 py-12 text-slate-950 sm:px-8 lg:px-10"
+      data-testid="agent-package-preparation"
+    >
+      <main className="mx-auto w-full max-w-3xl">
+        <div className="rounded-[28px] border border-slate-200 bg-white p-7 shadow-sm sm:p-10">
+          <Badge className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-blue-700 hover:bg-blue-50">
+            <Briefcase className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />
+            Agent preparation
+          </Badge>
+          <h1 className="mt-6 font-serif text-4xl font-semibold tracking-[-0.04em] text-slate-950 sm:text-5xl">
+            Prepare your Agent workspace before commercial activation.
+          </h1>
+          <p className="mt-5 max-w-2xl text-base leading-8 text-slate-600 sm:text-lg">
+            Complete your professional presence and prepare private inventory now. Commercial
+            products, invoices, payment proof, and marketplace publishing remain unavailable until
+            approved commercial activation.
+          </p>
+
+          <div className="mt-7 max-w-2xl">
+            <CommercialActivationNotice />
+          </div>
+
+          {availabilityError ? (
+            <div className="mt-5 flex flex-wrap items-center gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+              <span>Agent Launch Access could not be verified, so paid actions remain unavailable.</span>
+              <Button type="button" variant="outline" onClick={onRetry}>
+                Retry
+              </Button>
+            </div>
+          ) : null}
+
+          <Card className="mt-8 border-slate-200 shadow-none">
+            <CardContent className="p-6">
+              <h2 className="text-xl font-semibold text-slate-950">Continue private preparation</h2>
+              <p className="mt-2 text-sm leading-6 text-slate-600">
+                Update your Agent setup or return to your workspace to continue preparing work for
+                the later commercial activation step.
+              </p>
+              <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+                <Button onClick={() => setLocation('/agent/setup')}>Continue Agent setup</Button>
+                <Button variant="outline" onClick={() => setLocation('/agent/dashboard')}>
+                  Open preparation workspace
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </main>
+    </div>
+  );
+}
+
+export default function AgentPackageSelection() {
+  const availability = useCommercialProductAvailability('agent_launch_access');
+
+  return availability.isAvailable ? (
+    <CommercialAgentPackageSelection agentLaunchAccessAvailable={availability.isAvailable} />
+  ) : (
+    <PreparationAgentPackageSelection
+      availabilityError={availability.isError}
+      onRetry={() => void availability.refetch()}
+    />
   );
 }

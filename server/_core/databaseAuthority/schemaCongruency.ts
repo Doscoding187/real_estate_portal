@@ -710,7 +710,20 @@ function normalizedCheckEnforcement(value: unknown): boolean | null {
 export async function normalizedPhysicalSchema(
   connection: AuthoritySqlConnection,
   provider: 'mysql' | 'tidb' | 'unknown' = 'unknown',
+  desired?: NormalizedSchema,
 ): Promise<NormalizedSchema> {
+  let lowerCaseTableNames = 0;
+  if (provider === 'mysql' && desired) {
+    const settingRows = await queryRows(
+      connection,
+      'SELECT @@global.lower_case_table_names AS lower_case_table_names',
+    );
+    const observed = rowValue(settingRows[0] ?? {}, 'lower_case_table_names');
+    if (settingRows.length !== 1 || (String(observed) !== '0' && String(observed) !== '1')) {
+      throw new Error('MySQL table-name case setting could not be verified as 0 or 1.');
+    }
+    lowerCaseTableNames = Number(observed);
+  }
   const excluded = new Set<string>(RUNNER_CONTROL_TABLES);
   const tableRows = await queryRows(
     connection,
@@ -906,6 +919,37 @@ export async function normalizedPhysicalSchema(
     table.indexes.sort((left, right) => left.name.localeCompare(right.name));
     table.foreignKeys.sort((left, right) => left.name.localeCompare(right.name));
     table.checks.sort((left, right) => left.name.localeCompare(right.name));
+  }
+  if (lowerCaseTableNames === 1 && desired) {
+    const desiredByFold = new Map<string, string>();
+    const actualByFold = new Map<string, string>();
+    for (const table of desired.tables) {
+      const folded = table.name.toLowerCase();
+      if (desiredByFold.has(folded)) {
+        throw new Error(`Canonical table-name case collision: ${table.name}.`);
+      }
+      desiredByFold.set(folded, table.name);
+    }
+    for (const table of tables.values()) {
+      const folded = table.name.toLowerCase();
+      if (actualByFold.has(folded)) {
+        throw new Error(`Physical table-name case collision: ${table.name}.`);
+      }
+      actualByFold.set(folded, table.name);
+    }
+    for (const table of tables.values()) {
+      table.name = desiredByFold.get(table.name.toLowerCase()) ?? table.name;
+      for (const foreignKey of table.foreignKeys) {
+        foreignKey.referencedTable =
+          desiredByFold.get(foreignKey.referencedTable.toLowerCase()) ??
+          foreignKey.referencedTable;
+        foreignKey.name = canonicalForeignKeyName(
+          foreignKey.columns,
+          foreignKey.referencedTable,
+          foreignKey.referencedColumns,
+        );
+      }
+    }
   }
   return finishSchema([...tables.values()]);
 }
