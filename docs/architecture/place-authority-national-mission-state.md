@@ -51,15 +51,17 @@ databases. Place Authority remains the only geographic identity source.
 | 2 | Executable Place foundation | **closed** |
 | 3 | Territory-neutral onboarding proof | **closed** (`ad753b3d` + Phase 3 refactor) |
 | 4 | Western Cape (Province 2) | **admitted and physically proven; not activated** |
-| 5 | Remaining seven provinces | not started — depends on the Phase 4 pattern |
+| 5 | Remaining six provinces | **KwaZulu-Natal admitted**; five remain |
 | 6 | National authority verification | not started |
 | 7 | National consumer handoff | not started |
 
 ## Current phase
 
-Phases 1–4 are complete. Western Cape is admitted, reproducible and physically
-proven on a disposable target, and **no consumer reads it**. Nothing has been
-published, activated, widened or switched.
+Phases 1–4 and the first Phase 5 province are complete. Gauteng, Western Cape and
+KwaZulu-Natal are admitted, reproducible and physically proven on disposable
+targets, and **no consumer reads any of them**. Nothing has been published,
+activated, widened or switched. Six provinces remain: Eastern Cape, Free State,
+Limpopo, Mpumalanga, Northern Cape and North West.
 
 ## Phase 3 delivery record — territory neutrality
 
@@ -321,6 +323,130 @@ The local service stopped mid-session with a stale PID file and was restored
 through the governed `db:authority:service:recover` path, which removed only the
 stale metadata. The target, its ledger and its data survived the bounce intact.
 
+## Phase 5 delivery record — KwaZulu-Natal
+
+### Evidence, acquired and verified
+
+`data/za-kzn-source-acquisition-v0.1/snapshot-20261001/`, its own frozen snapshot
+rather than a reuse of the Western Cape bundle, so KwaZulu-Natal provenance does
+not depend on a Western-Cape-named directory. Province identity `ZA.02` /
+geonameid `972062`, validated against the frozen `admin1CodesASCII.txt`.
+
+| | |
+| --- | --- |
+| Bundle manifest | `8700a40784ae3cb208e8f9320c93b241f715c80d20eae56a78fe67545cad99ff` |
+| Source authority manifest | `6c8ddb9c74b7d0ced4178e5018f16183b1b171a39b7a93511b06d08f0ab42888` |
+| Admission manifest | `af8d09ae309300b15b1c7de00449c8a2913ea633d32f70f6da6543f1b28ad3ae` |
+| Admission registry | `8bbdf08e474d9e1de3977c5cb3b78be307f8c992e2b35080b2fdb1c07007bb21` |
+
+`11,346` province-coded GeoNames records and `8,208` alternate-name assertions,
+from the same `103,212`-record national extract, verified offline: 16 files and
+19,828 source-native records, plus the 7 acquisition integrity tests. Boundaries
+represent **2020**, licence CC BY 3.0 IGO upstream, recorded as limitations.
+
+A real defect was fixed in the acquisition tooling on the way: the recorded
+limitation hardcoded "Western Cape spatial selection ... pending", so a
+KwaZulu-Natal bundle misnamed its own territory in its provenance. It now reads
+the province from the plan.
+
+### Admission
+
+- `11,346` source records → **2,170 admitted**, **9,176 dispositioned**;
+  `2,170 + 9,176 = 11,346`, so accounting is total.
+- **2,090 Places**, 3,429 names, 2,089 containment edges, 9,660 evidence rows,
+  2,170 external mappings.
+- 2,028 searchable, 62 context-only municipalities, 5 `city`, 67 `town`,
+  1,276 `village`, 510 `suburb`, 11 district and 51 local municipalities.
+- **Zero OSM-only**, so the founder ODbL gate is not engaged.
+- shapely 2.1.2 `polygon_predicate` throughout, **0 weaker-evidence reliance**.
+  Out-of-province neighbours were correctly rejected: Alfred Nzo, Gert Sibande and
+  Thabo Mofutsanyane at ADM2; Dr Pixley Ka Isaka Seme, Maluti a Phofung,
+  Matatiele, Mbizana, Mkhondo, Phumelela and Umzimvubu at ADM3.
+- The administrative crosswalk again earned its place: `Umgungundlovu` →
+  `uMgungundlovu District Municipality`, and `eThekwini` → `eThekwini
+  Metropolitan Municipality`, whose Place type stays `district_municipality` and
+  is never promoted into a search tier.
+- All 2,136 `adm2` links resolve to an admitted identity name.
+- 78 name suppressions recorded: 68 exact duplicate source assertions and **10
+  genuine target-collation collisions**.
+- 382 identities have no `adm3`, which is geographically right: large rural
+  KwaZulu-Natal areas belong to a district municipality and to no local
+  municipality. Containment still resolves through `adm2`.
+
+### Merge review — 79 merges, all reviewed
+
+Every merge is `same_normalized_name_same_administrative_context_within_governed_distance`.
+Distribution: 47 at ≤2 km, 16 at 2–5 km, 8 at 5–8 km, 8 beyond 8 km, the widest
+being Umzumbe at 12.08 km. 52 merges combine members of different ranks, e.g.
+`Inanda` as both a `town` of population 10,032 and a `village`.
+
+**The decisive corroboration: all 79 merges include at least one member carrying
+coarse rounded coordinates**, the signature of a secondary or administrative
+source record for a referent that also has a precisely-placed record. That is
+evidence of a duplicate record rather than of two distinct settlements.
+
+The 8 merges beyond 8 km are nonetheless recorded as a **research queue**, not
+accepted silently, because the 15 km governed bound was derived from urban
+Gauteng and its evidence base does not transfer to rural KwaZulu-Natal. The bound
+was **not** changed, because that would change admissions and is a reviewed
+decision.
+
+### Physical proof
+
+Fresh target created from zero, migrated to `0099`, loaded with explicit
+`--territory=za-kzn`, verified, replayed, probed, re-verified, and **disposed**.
+
+- Target fingerprint `0c822b50ba97506e19b3dcbe822b90a05e8bd3ae13346366b8796de7de4a856d`,
+  classification `disposable-worktree`, ownership `exact-worktree-owned`,
+  credential class `local-owner`, host `127.0.0.1:3307`
+- Materialized content digest
+  `41b7668c1e8ef7df7d953d0445750f0cde46f8cdf2fbf529a7de1284d0a03db5`
+- Replay is a byte-identical no-op: identical table fingerprints and Place-ID set
+  digest `f0e63281c4ac390ca2507b5b45bcc9a1df460504f82dbdb3f8b31b4f99d1a092`
+- Build replays `minted=0 reused=2090`; first build minted 2,090
+- KwaZulu-Natal territory probe **29/29**; reference role re-verified afterwards
+  with no test pollution
+- Regression: Gauteng and Western Cape re-admitted with `minted=0`, so their
+  1,466 and 1,862 Place IDs are preserved and their package rows are untouched;
+  only the registry digest each manifest records changes
+
+### National verification completed so far
+
+Run against the three committed packages, without combined loading:
+
+- **Zero Place ID collisions** across provinces. Identity is territory-scoped by
+  construction.
+- Zero province rows inconsistent with their own territory; each province has
+  exactly one province root.
+- **95 names are the preferred public name of a Place in more than one province**,
+  including Kenilworth, Brooklyn, Newlands, Riversdale and Rietfontein in all
+  three. These are genuinely distinct referents, and the per-province identity
+  design keeps them apart. The consequence is a hard constraint on Phase 7: a
+  national consumer must resolve a name within a province and must never treat a
+  bare name as a unique Place. The Gauteng suite already proves the in-province
+  ambiguity case, where `Diepkloof` resolves to two Places.
+
+### Blocker: combined loading needs a reviewed decision
+
+Loading a second province into a target that already holds Places is refused:
+
+> `canonical-places refused: target already holds Places but not
+> pl-place-01-…; an admitted Place may not be added to a loaded authority without
+> a reviewed decision`
+
+This is a deliberate guard, not a bug. It means **the current materializer admits
+exactly one province per target**, which cannot become national coverage: Place
+Authority is meant to be the single geographic identity source for the whole
+country, and national deployment needs all provinces in one `place` table.
+
+The guard is **not** weakened here. A decision would need to cover at least:
+per-territory identity verification during a multi-territory load; cross-territory
+Place ID uniqueness as an explicit assertion; the case where two territories claim
+the same natural key; and whether `canonical-places` should load all registered
+territories in one transaction or remain a per-territory command driven by a
+coordinating step. Until that is decided, per-province physical proof is the only
+claim available, and it is what the three provinces have.
+
 ## Authoritative digests
 
 Admission territory registry
@@ -486,7 +612,7 @@ a governed executable-scope membership projection, or a Search Area).
 - No consumer has been switched to Place Authority. Runtime convergence is a
   separate, bounded Phase 7 handoff.
 
-## Phase 4 review packet
+## Review packet — defects, boundaries and gates
 
 ### A fourth real defect: silent multilingual name loss
 
@@ -659,52 +785,51 @@ build followed by the same proven pipeline.
 
 ## Exact next action
 
-**Phase 4 is complete. Phase 5 needs a decision that is not mine to take.**
+**Five provinces remain, and the per-province sequence is now proven twice.**
+KwaZulu-Natal followed the same gates as Western Cape: acquire, verify offline,
+build the source authority, admit through the shared pipeline, and prove it on a
+fresh disposable target.
 
-**Seven** provinces remain. South Africa has nine; Gauteng and Western Cape are
-admitted. The remainder is Eastern Cape, Free State, Limpopo, Mpumalanga,
-Northern Cape, North West and KwaZulu-Natal. The machinery is now proven
-territory-neutral: a province is a registry entry plus a governed source
-authority, admitted by the same builder and materialized by the same adapter.
-For each province:
+Remaining: **Eastern Cape, Free State, Limpopo, Mpumalanga, Northern Cape,
+North West** — five, since KwaZulu-Natal is admitted. The suggested order is
+Eastern Cape → Free State → Mpumalanga → Limpopo → North West → Northern Cape,
+and evidence readiness may justify changing it.
 
-1. Acquire governed source evidence on the pattern of
-   `data/za-wc-source-acquisition-v0.1`, recorded in a snapshot manifest with
-   per-record provenance and licence classification, and verified offline.
-2. Build the v0.2 source authority with
+Each province repeats, unchanged:
+
+1. Acquire a frozen snapshot in its **own** directory on the
+   `data/za-<cc>-source-acquisition-v0.1` pattern, with per-record provenance and
+   licence classification, verified offline plus the integrity tests.
+2. Add a `TerritoryConfig` and run
    `tools/gauteng-catalogue/run_source_authority.py --territory <id>`.
-3. Add the registry entry, build with `--territory <id>`, and prove it on a fresh
+3. Add the registry entry, build with `--territory <id>`, and prove on a fresh
    disposable target with explicit territory selection, then dispose it.
+4. Review every merge, and queue rather than accept any whose distance or rank
+   disagreement exceeds the case that evidence supports.
 
-Before that sequence can start, three things need owner decisions or external
-input, and none is mine to take:
+Before the remaining provinces, three things need an owner decision and are not
+mine to take:
 
-- **The migration renumber plan — now drafted, awaiting review.** See
-  `docs/architecture/place-authority-migration-reconciliation-plan.md`. It
-  proposes renumbering Place Authority from `0091`–`0099` to `0095`–`0103` after
-  the integration head's `0094`, and records that the two sets are semantically
-  independent: none of the integration head's `0091`–`0094` touches a table Place
-  Authority depends on, so this is a pure renumbering with no DDL rewrite and no
-  checksum invalidation. It also records the applied-history hazard and asks four
-  review questions. **It is not implemented**, and until it is reviewed the two
-  histories must not be conflated and this branch's target remains evidence only
-  about this branch.
-- **The 2020 boundary currency review**, before any province's scope is
-  published.
-- **The founder ODbL determination**, before any OSM-derived Place may reach a
+- **Combined loading.** The materializer admits one province per target by
+  deliberate design. National coverage needs a reviewed decision; see the
+  KwaZulu-Natal delivery record for what that decision must cover.
+- **The migration renumber plan**, drafted and awaiting review in
+  `docs/architecture/place-authority-migration-reconciliation-plan.md`. It is not
+  implemented, and this branch's target is evidence only about this branch.
+- **The 2020 boundary currency review**, before any province's scope is published,
+  and the **founder ODbL determination** before any OSM-derived Place reaches a
   non-disposable target.
 
-Engineering work that is unblocked and does not need any of those:
+Engineering that is unblocked and needs no decision:
 
-- Install a geospatial wheel and re-derive both territories' administrative
-  context, so the 64 identities relying on the weaker bounding-box selection
-  test are re-proven on real geometry.
+- Re-prove the 2020-vintage currency question per province as evidence arrives.
+- Extend the cross-province duplicate check into an executable contract once
+  combined loading is decided, so the 95 cross-province homonyms are guarded
+  rather than merely reported.
 - Commit a generator for `gauteng-source-authority-v0.2`, or record formally that
-  the Gauteng v0.2 source authority is unreproducible from committed code.
-- Extend the Western Cape pressure-case list with further real referents as
-  coverage questions are triaged.
+  it is unreproducible from committed inputs. It currently is the latter, by its
+  own manifest.
 
-Still forbidden, regardless of how complete the evidence looks: activating
-consumers, publishing an SEO scope, inferring a Search Area, widening a search,
-or claiming national coverage. The 2020 boundary vintage must be stated wherever
-Western Cape geography is presented, and no consumer currently reads any of it.
+Still forbidden: activating consumers, publishing an SEO scope, inferring a Search
+Area, widening a search, or claiming national coverage. Boundary currency and ODbL
+remain explicit publication gates.

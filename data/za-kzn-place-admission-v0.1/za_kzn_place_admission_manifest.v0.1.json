@@ -1,0 +1,795 @@
+{
+  "admission_version": "za-kzn-place-admission-v0.1",
+  "territory": {
+    "territory_id": "za-kzn",
+    "display_name": "KwaZulu-Natal",
+    "admission_registry_path": "data/place-admission-territories.v0.1/territory-registry.v0.1.json",
+    "admission_registry_sha256": "8bbdf08e474d9e1de3977c5cb3b78be307f8c992e2b35080b2fdb1c07007bb21"
+  },
+  "generated_from": {
+    "source_authority_version": "za-kzn-source-authority-v0.2",
+    "source_snapshot_id": "8700a40784ae3cb208e8f9320c93b241f715c80d20eae56a78fe67545cad99ff",
+    "source_manifest_path": "data/za-kzn-source-authority-v0.2/za_kzn_source_manifest_v0.2.json",
+    "source_manifest_sha256": "6c8ddb9c74b7d0ced4178e5018f16183b1b171a39b7a93511b06d08f0ab42888",
+    "compact_artifacts": [
+      {
+        "path": "data/za-kzn-source-authority-v0.2/za_kzn_candidate_dispositions_v0.2.jsonl",
+        "sha256": "2917c4c6b7117cb0f338493e302e1b3b096e46d7602f1c512b1962a0cb066364",
+        "size_bytes": 12439999
+      },
+      {
+        "path": "data/za-kzn-source-authority-v0.2/za_kzn_factual_canonical_geography_v0.2.jsonl",
+        "sha256": "4fc3b1e0233d235c55540b27265ffe56b4ee724e70441e4cfc21891182d0e432",
+        "size_bytes": 7031272
+      },
+      {
+        "path": "data/za-kzn-source-authority-v0.2/za_kzn_factual_canonical_names_v0.2.jsonl",
+        "sha256": "f90b018c822a4b6b4cdc7a6b302616f73ccd5bec3ff5abd48f9631d2789f6ee1",
+        "size_bytes": 4434931
+      },
+      {
+        "path": "data/za-kzn-source-authority-v0.2/za_kzn_factual_canonical_source_links_v0.2.jsonl",
+        "sha256": "7320a80a65af2378dd5d3634db7fef02ce5f61eeb8c3af391f7dd3bf2143117c",
+        "size_bytes": 2305931
+      }
+    ],
+    "comparison_baseline": {
+      "note": "The v0.1 committed artifacts are retained as comparison and regression evidence only. Their factual source JSONLs are unrecoverable and were not used as forward authority.",
+      "catalogue": "data/za-kzn-coverage-v0.1/za-kzn-territory-catalog.v0.1.json",
+      "catalogue_sha256": "a2be4a55343944bcb16e06a5bbd9d14c1a471d2a173d72f4d6d6ac0d910a5685",
+      "factual_identity_count": 0,
+      "runtime_row_count": 0,
+      "queued_count": 0,
+      "awaiting_accepted_parent_edge": 0,
+      "duplicate_natural_key_within_parent": 0,
+      "natural_key_owned_by_accepted_row": 0,
+      "co_published_natural_keys": 0,
+      "parent_evidence_inputs": 0
+    }
+  },
+  "governed_policy": {
+    "container_types": [
+      "district_municipality",
+      "local_municipality",
+      "province"
+    ],
+    "settlement_merge_max_km": 15,
+    "merge_requires_same_administrative_context": true,
+    "type_disagreement_never_blocks_merge": true,
+    "preferred_public_name_selection": "official role, then source preferred_common; within a class the most independently sourced assertion wins, ties broken by text",
+    "one_containment_parent_per_place": true,
+    "search_scope_authorization_in_slice_2": 0,
+    "place_id_allocation": "assigned from a committed registry; never derived from name, slug, coordinates, parent, classification, natural key or source identity"
+  },
+  "counts": {
+    "source_identities": 2170,
+    "source_name_assertions": 3507,
+    "source_links": 2170,
+    "source_candidates": 9176,
+    "admitted_places": 2090,
+    "merged_equivalence_groups": 79,
+    "absorbed_source_identities": 80,
+    "single_identity_places": 2011,
+    "group_kinds": {
+      "administrative_container": 63,
+      "single_identity": 1948,
+      "merged_same_referent": 79
+    },
+    "verification": {
+      "provisional": 1301,
+      "verified": 789
+    },
+    "licensing": {
+      "permissive_supported": 2090
+    },
+    "scope_establishment": {
+      "established": 2028,
+      "not_established": 62,
+      "by_scope": {
+        "locality": {
+          "established": 1956,
+          "not_established": 0
+        },
+        "metro_city": {
+          "established": 71,
+          "not_established": 0
+        },
+        "province": {
+          "established": 1,
+          "not_established": 0
+        }
+      }
+    },
+    "executable_places": 2028,
+    "executable_by_scope": {
+      "locality": 1956,
+      "metro_city": 71,
+      "province": 1
+    },
+    "admitted_without_executable_scope": 62,
+    "names": 3429,
+    "name_roles": {
+      "preferred_public": 2090,
+      "common": 1334,
+      "historical": 5
+    },
+    "searchable_names": 3014,
+    "preferred_public_names": 2090,
+    "relationships": 2089,
+    "relationship_types": {
+      "administratively_contains": 2089
+    },
+    "containment_parent_count": 2089,
+    "evidence_rows": 9660,
+    "external_mappings": 2170,
+    "disposition_ledger_rows": 9176,
+    "dispositions": {
+      "quarantined_candidate": 9176
+    },
+    "parent_evidence_inputs": 0,
+    "parent_evidence_classification": {
+      "total_edges": 0,
+      "by_class": {},
+      "by_disposition": {}
+    }
+  },
+  "collation_suppressed_names": {
+    "basis": "utf8mb4_0900_ai_ci on place_name.name, which is accent- and case-insensitive",
+    "count": 78,
+    "forms": [
+      {
+        "place_id": "pl-place-01-0e431b905ed70afe8046e208",
+        "name_role": "common",
+        "kept_spelling": "Umsinsini",
+        "suppressed": "Umsinsini",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-153d9daaed02608619c762aa",
+        "name_role": "common",
+        "kept_spelling": "KwaZulu-Natali",
+        "suppressed": "KwaZulu-Natali",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-153d9daaed02608619c762aa",
+        "name_role": "common",
+        "kept_spelling": "Квазулу-Натал",
+        "suppressed": "Квазулу-Натал",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-153d9daaed02608619c762aa",
+        "name_role": "common",
+        "kept_spelling": "夸祖鲁-纳塔尔省",
+        "suppressed": "夸祖鲁-纳塔尔省",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-153d9daaed02608619c762aa",
+        "name_role": "common",
+        "kept_spelling": "Квазулу-Натал",
+        "suppressed": "Квазулу-Натал",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-153d9daaed02608619c762aa",
+        "name_role": "common",
+        "kept_spelling": "Квазулу-Натал",
+        "suppressed": "Квазулу-Натал",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-153d9daaed02608619c762aa",
+        "name_role": "common",
+        "kept_spelling": "Квазулу-Натал",
+        "suppressed": "Квазулу-Натал",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-153d9daaed02608619c762aa",
+        "name_role": "common",
+        "kept_spelling": "Квазулу-Натал",
+        "suppressed": "Квазулу-Натал",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-153d9daaed02608619c762aa",
+        "name_role": "common",
+        "kept_spelling": "کوازولو-ناتال",
+        "suppressed": "کوازولو-ناتال",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-153d9daaed02608619c762aa",
+        "name_role": "common",
+        "kept_spelling": "Квазулу-Натал",
+        "suppressed": "КваЗулу-Натал",
+        "collision": "target_collation",
+        "reason": "indistinguishable from the kept spelling under utf8mb4_0900_ai_ci, so the target cannot store both"
+      },
+      {
+        "place_id": "pl-place-01-153d9daaed02608619c762aa",
+        "name_role": "common",
+        "kept_spelling": "Province of KwaZulu-Natal",
+        "suppressed": "Province of KwaZulu-Natal",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-178659f4ce772b2b413a22b1",
+        "name_role": "common",
+        "kept_spelling": "Dlebe",
+        "suppressed": "Dlebe",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-1cc3df6f0826bf0841f78c3b",
+        "name_role": "common",
+        "kept_spelling": "Umhlanga Rocks",
+        "suppressed": "Umhlanga Rocks",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-1cc3df6f0826bf0841f78c3b",
+        "name_role": "common",
+        "kept_spelling": "Umhlanga",
+        "suppressed": "Umhlanga",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-2df398651d1ac5447c246db0",
+        "name_role": "common",
+        "kept_spelling": "Пиетермарицбург",
+        "suppressed": "Пиетермарицбург",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-2df398651d1ac5447c246db0",
+        "name_role": "common",
+        "kept_spelling": "Пиетермарицбург",
+        "suppressed": "Пиетермарицбург",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-2df398651d1ac5447c246db0",
+        "name_role": "common",
+        "kept_spelling": "Пиетермарицбург",
+        "suppressed": "Пиетермарицбург",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-2df398651d1ac5447c246db0",
+        "name_role": "common",
+        "kept_spelling": "Питермарицбург",
+        "suppressed": "Питермарицбург",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-2df398651d1ac5447c246db0",
+        "name_role": "common",
+        "kept_spelling": "Питермарицбург",
+        "suppressed": "Питермарицбург",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-31857016fcd4852a4b02a1d7",
+        "name_role": "common",
+        "kept_spelling": "Umlazi",
+        "suppressed": "Umlazi",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-31857016fcd4852a4b02a1d7",
+        "name_role": "common",
+        "kept_spelling": "Umlazi",
+        "suppressed": "Umlazi",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-31857016fcd4852a4b02a1d7",
+        "name_role": "common",
+        "kept_spelling": "Umlazi",
+        "suppressed": "Umlazi",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-31857016fcd4852a4b02a1d7",
+        "name_role": "common",
+        "kept_spelling": "Umlazi",
+        "suppressed": "Umlazi",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-31857016fcd4852a4b02a1d7",
+        "name_role": "common",
+        "kept_spelling": "Umlazi",
+        "suppressed": "Umlazi",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-31857016fcd4852a4b02a1d7",
+        "name_role": "common",
+        "kept_spelling": "Umlazi",
+        "suppressed": "Umlazi",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-31857016fcd4852a4b02a1d7",
+        "name_role": "common",
+        "kept_spelling": "Umlazi",
+        "suppressed": "Umlazi",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-31857016fcd4852a4b02a1d7",
+        "name_role": "common",
+        "kept_spelling": "Umlazi",
+        "suppressed": "Umlazi",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-31857016fcd4852a4b02a1d7",
+        "name_role": "common",
+        "kept_spelling": "Umlazi",
+        "suppressed": "Umlazi",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-31857016fcd4852a4b02a1d7",
+        "name_role": "common",
+        "kept_spelling": "Umlazi",
+        "suppressed": "Umlazi",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-31857016fcd4852a4b02a1d7",
+        "name_role": "common",
+        "kept_spelling": "Umlazi",
+        "suppressed": "Umlazi",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-31857016fcd4852a4b02a1d7",
+        "name_role": "common",
+        "kept_spelling": "Umlazi",
+        "suppressed": "Umlazi",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-31857016fcd4852a4b02a1d7",
+        "name_role": "common",
+        "kept_spelling": "Umlazi",
+        "suppressed": "Umlazi",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-31857016fcd4852a4b02a1d7",
+        "name_role": "common",
+        "kept_spelling": "Umlazi",
+        "suppressed": "Umlazi",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-4fcceff8e1b2a92caa7d1449",
+        "name_role": "common",
+        "kept_spelling": "UThukela",
+        "suppressed": "Uthukela",
+        "collision": "target_collation",
+        "reason": "indistinguishable from the kept spelling under utf8mb4_0900_ai_ci, so the target cannot store both"
+      },
+      {
+        "place_id": "pl-place-01-4fcceff8e1b2a92caa7d1449",
+        "name_role": "common",
+        "kept_spelling": "UThukela",
+        "suppressed": "Uthukela",
+        "collision": "target_collation",
+        "reason": "indistinguishable from the kept spelling under utf8mb4_0900_ai_ci, so the target cannot store both"
+      },
+      {
+        "place_id": "pl-place-01-4fcceff8e1b2a92caa7d1449",
+        "name_role": "common",
+        "kept_spelling": "UThukela",
+        "suppressed": "Uthukela",
+        "collision": "target_collation",
+        "reason": "indistinguishable from the kept spelling under utf8mb4_0900_ai_ci, so the target cannot store both"
+      },
+      {
+        "place_id": "pl-place-01-64b4aab651d573698cb257be",
+        "name_role": "common",
+        "kept_spelling": "Дурбан",
+        "suppressed": "Дурбан",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-64b4aab651d573698cb257be",
+        "name_role": "common",
+        "kept_spelling": "Дурбан",
+        "suppressed": "Дурбан",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-64b4aab651d573698cb257be",
+        "name_role": "common",
+        "kept_spelling": "Дурбан",
+        "suppressed": "Дурбан",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-64b4aab651d573698cb257be",
+        "name_role": "common",
+        "kept_spelling": "Дурбан",
+        "suppressed": "Дурбан",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-64b4aab651d573698cb257be",
+        "name_role": "common",
+        "kept_spelling": "ڈربن",
+        "suppressed": "ڈربن",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-64b4aab651d573698cb257be",
+        "name_role": "common",
+        "kept_spelling": "Дурбан",
+        "suppressed": "Дурбан",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-64b4aab651d573698cb257be",
+        "name_role": "common",
+        "kept_spelling": "डरबन",
+        "suppressed": "डर्बन",
+        "collision": "target_collation",
+        "reason": "indistinguishable from the kept spelling under utf8mb4_0900_ai_ci, so the target cannot store both"
+      },
+      {
+        "place_id": "pl-place-01-64b4aab651d573698cb257be",
+        "name_role": "common",
+        "kept_spelling": "Дурбан",
+        "suppressed": "Дурбан",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-64b4aab651d573698cb257be",
+        "name_role": "common",
+        "kept_spelling": "Дурбан",
+        "suppressed": "Дурбан",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-64b4aab651d573698cb257be",
+        "name_role": "common",
+        "kept_spelling": "Дурбан",
+        "suppressed": "Дурбан",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-78d8fb25347104bb0b91ff18",
+        "name_role": "common",
+        "kept_spelling": "Amajuba",
+        "suppressed": "Amajuba",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-78d8fb25347104bb0b91ff18",
+        "name_role": "common",
+        "kept_spelling": "Амаджуба",
+        "suppressed": "Амаджуба",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-78d8fb25347104bb0b91ff18",
+        "name_role": "common",
+        "kept_spelling": "Amajuba",
+        "suppressed": "Amajuba",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-78d8fb25347104bb0b91ff18",
+        "name_role": "common",
+        "kept_spelling": "Amajuba",
+        "suppressed": "Amajuba",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-78d8fb25347104bb0b91ff18",
+        "name_role": "common",
+        "kept_spelling": "Amajuba",
+        "suppressed": "Amajuba",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-7d0e13a475183be9c540e496",
+        "name_role": "common",
+        "kept_spelling": "ILembe",
+        "suppressed": "ILembe",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-7d0e13a475183be9c540e496",
+        "name_role": "common",
+        "kept_spelling": "ILembe",
+        "suppressed": "Ilembe",
+        "collision": "target_collation",
+        "reason": "indistinguishable from the kept spelling under utf8mb4_0900_ai_ci, so the target cannot store both"
+      },
+      {
+        "place_id": "pl-place-01-7d0e13a475183be9c540e496",
+        "name_role": "common",
+        "kept_spelling": "ILembe",
+        "suppressed": "İlembe",
+        "collision": "target_collation",
+        "reason": "indistinguishable from the kept spelling under utf8mb4_0900_ai_ci, so the target cannot store both"
+      },
+      {
+        "place_id": "pl-place-01-7d0e13a475183be9c540e496",
+        "name_role": "common",
+        "kept_spelling": "ILembe",
+        "suppressed": "ILembe",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-7d0e13a475183be9c540e496",
+        "name_role": "common",
+        "kept_spelling": "ILembe",
+        "suppressed": "ILembe",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-7d0e13a475183be9c540e496",
+        "name_role": "common",
+        "kept_spelling": "ILembe",
+        "suppressed": "iLembe",
+        "collision": "target_collation",
+        "reason": "indistinguishable from the kept spelling under utf8mb4_0900_ai_ci, so the target cannot store both"
+      },
+      {
+        "place_id": "pl-place-01-8034842d569747397c8bb540",
+        "name_role": "common",
+        "kept_spelling": "KwaDukuza",
+        "suppressed": "KwaDukuza",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-8a0700b7089cd2c17ce5b5c5",
+        "name_role": "common",
+        "kept_spelling": "https://en.wikipedia.org/wiki/Ifafa_Beach",
+        "suppressed": "https://en.wikipedia.org/wiki/Ifafa_Beach",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-9dc309418565b2e5ab5c7825",
+        "name_role": "common",
+        "kept_spelling": "eThekwini",
+        "suppressed": "EThekwini",
+        "collision": "target_collation",
+        "reason": "indistinguishable from the kept spelling under utf8mb4_0900_ai_ci, so the target cannot store both"
+      },
+      {
+        "place_id": "pl-place-01-9dc309418565b2e5ab5c7825",
+        "name_role": "common",
+        "kept_spelling": "eThekwini",
+        "suppressed": "eThekwini",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-9dc309418565b2e5ab5c7825",
+        "name_role": "common",
+        "kept_spelling": "eThekwini",
+        "suppressed": "Ethekwini",
+        "collision": "target_collation",
+        "reason": "indistinguishable from the kept spelling under utf8mb4_0900_ai_ci, so the target cannot store both"
+      },
+      {
+        "place_id": "pl-place-01-9dc309418565b2e5ab5c7825",
+        "name_role": "common",
+        "kept_spelling": "eThekwini",
+        "suppressed": "eThekwini",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-9dc309418565b2e5ab5c7825",
+        "name_role": "common",
+        "kept_spelling": "eThekwini",
+        "suppressed": "eThekwini",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-9dc309418565b2e5ab5c7825",
+        "name_role": "common",
+        "kept_spelling": "eThekwini",
+        "suppressed": "eThekwini",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-9dc309418565b2e5ab5c7825",
+        "name_role": "common",
+        "kept_spelling": "eThekwini",
+        "suppressed": "eThekwini",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-ab1bb40175eed8e2fe9d4281",
+        "name_role": "common",
+        "kept_spelling": "Угу",
+        "suppressed": "Угу",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-ab1bb40175eed8e2fe9d4281",
+        "name_role": "common",
+        "kept_spelling": "Ugu",
+        "suppressed": "Ugu",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-ab1bb40175eed8e2fe9d4281",
+        "name_role": "common",
+        "kept_spelling": "Ugu",
+        "suppressed": "Ugu",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-ab1bb40175eed8e2fe9d4281",
+        "name_role": "common",
+        "kept_spelling": "Ugu",
+        "suppressed": "Ugu",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-ab1bb40175eed8e2fe9d4281",
+        "name_role": "common",
+        "kept_spelling": "Ugu",
+        "suppressed": "Ugu",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-ab1bb40175eed8e2fe9d4281",
+        "name_role": "common",
+        "kept_spelling": "Ugu",
+        "suppressed": "Ugu",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-ab1bb40175eed8e2fe9d4281",
+        "name_role": "common",
+        "kept_spelling": "Ugu",
+        "suppressed": "Ugu",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-d3ae7c59a912a89bea321bcf",
+        "name_role": "common",
+        "kept_spelling": "https://en.wikipedia.org/wiki/Nottingham_Road",
+        "suppressed": "https://en.wikipedia.org/wiki/Nottingham_Road",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-da04cb56336c4b76e779ac34",
+        "name_role": "common",
+        "kept_spelling": "Ihluku",
+        "suppressed": "Ihluku",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-e0ef2fd083b70cf63ae2d692",
+        "name_role": "common",
+        "kept_spelling": "Epumalanga",
+        "suppressed": "Epumalanga",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-e0ef2fd083b70cf63ae2d692",
+        "name_role": "common",
+        "kept_spelling": "Epumalanga",
+        "suppressed": "Epumalanga",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-e0ef2fd083b70cf63ae2d692",
+        "name_role": "common",
+        "kept_spelling": "Epumalanga",
+        "suppressed": "Epumalanga",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      }
+    ]
+  },
+  "place_id_registry": {
+    "path": "data/za-kzn-place-admission-v0.1/za_kzn_place_id_registry.v0.1.json",
+    "allocated_ids": 2090,
+    "allocation_sequence": 2090
+  },
+  "invariants_asserted": [
+    "every source identity maps to exactly one admitted Place",
+    "place count equals distinct assigned ids",
+    "one preferred public name per Place",
+    "every name, relationship and evidence row references an admitted Place",
+    "every relationship has evidence and is not self-referential",
+    "containment is a forest: one parent, no cycles",
+    "no relationship-driven search widening in Slice 2",
+    "scope, eligibility and classification combinations satisfy the database invariants",
+    "every scoped Place has an evidenced province context, the only mandatory ancestry requirement",
+    "no artificial settlement parent is introduced to complete a search hierarchy",
+    "no municipality is re-typed or promoted into the metro_city search tier",
+    "a Place without a governed executable scope stays admitted but is neither searchable nor publishable",
+    "the disposition ledger covers every source candidate"
+  ],
+  "outputs": {
+    "places": "data/za-kzn-place-admission-v0.1/za_kzn_place_admission_v0.1.jsonl",
+    "names": "data/za-kzn-place-admission-v0.1/za_kzn_place_names_v0.1.jsonl",
+    "relationships": "data/za-kzn-place-admission-v0.1/za_kzn_place_relationships_v0.1.jsonl",
+    "evidence": "data/za-kzn-place-admission-v0.1/za_kzn_place_evidence_v0.1.jsonl",
+    "external_mappings": "data/za-kzn-place-admission-v0.1/za_kzn_place_external_mappings_v0.1.jsonl",
+    "disposition_ledger": "data/za-kzn-place-admission-v0.1/za_kzn_place_disposition_ledger_v0.1.jsonl",
+    "parent_evidence_classification": "data/za-kzn-place-admission-v0.1/za_kzn_parent_evidence_classification_v0.1.json"
+  }
+}

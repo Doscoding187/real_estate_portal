@@ -230,3 +230,6 @@ docker/mysql-local/mysql-data/
 .env.vercel
 .env.vercel.*
 !.env.vercel.example
+
+# Python bytecode from the standalone geography source-evidence tooling.
+/tools/geography-source-evidence/__pycache__/

@@ -116,6 +116,63 @@
         "disposition_ledger_rows": 13025,
         "executable_places": 1832
       }
+    },
+    {
+      "territory_id": "za-kzn",
+      "display_name": "KwaZulu-Natal",
+      "admission_version": "za-kzn-place-admission-v0.1",
+      "source_authority": {
+        "authority_version": "za-kzn-source-authority-v0.2",
+        "directory": "data/za-kzn-source-authority-v0.2",
+        "manifest": {
+          "path": "data/za-kzn-source-authority-v0.2/za_kzn_source_manifest_v0.2.json",
+          "sha256": "6c8ddb9c74b7d0ced4178e5018f16183b1b171a39b7a93511b06d08f0ab42888"
+        },
+        "artifacts": {
+          "geography": "za_kzn_factual_canonical_geography_v0.2.jsonl",
+          "names": "za_kzn_factual_canonical_names_v0.2.jsonl",
+          "source_links": "za_kzn_factual_canonical_source_links_v0.2.jsonl",
+          "candidate_dispositions": "za_kzn_candidate_dispositions_v0.2.jsonl"
+        }
+      },
+      "coverage_baseline": {
+        "directory": "data/za-kzn-coverage-v0.1",
+        "territory_manifest": "za-kzn-territory-manifest.v0.1.json",
+        "territory_catalog": "za-kzn-territory-catalog.v0.1.json",
+        "counts": {
+          "factual_identity_count": 0,
+          "runtime_row_count": 0,
+          "queued_count": 0,
+          "awaiting_accepted_parent_edge": 0,
+          "duplicate_natural_key_within_parent": 0,
+          "natural_key_owned_by_accepted_row": 0,
+          "co_published_natural_keys": 0
+        }
+      },
+      "admission_package": {
+        "directory": "data/za-kzn-place-admission-v0.1",
+        "manifest": "za_kzn_place_admission_manifest.v0.1.json",
+        "place_id_registry": "za_kzn_place_id_registry.v0.1.json",
+        "artifacts": {
+          "places": "za_kzn_place_admission_v0.1.jsonl",
+          "names": "za_kzn_place_names_v0.1.jsonl",
+          "relationships": "za_kzn_place_relationships_v0.1.jsonl",
+          "evidence": "za_kzn_place_evidence_v0.1.jsonl",
+          "external_mappings": "za_kzn_place_external_mappings_v0.1.jsonl",
+          "disposition_ledger": "za_kzn_place_disposition_ledger_v0.1.jsonl",
+          "parent_evidence_classification": "za_kzn_parent_evidence_classification_v0.1.json"
+        }
+      },
+      "expected_counts": {
+        "source_identities": 2170,
+        "admitted_places": 2090,
+        "names": 3429,
+        "relationships": 2089,
+        "evidence_rows": 9660,
+        "external_mappings": 2170,
+        "disposition_ledger_rows": 9176,
+        "executable_places": 2028
+      }
     }
   ]
 }

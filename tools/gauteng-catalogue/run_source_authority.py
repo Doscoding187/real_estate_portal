@@ -21,9 +21,11 @@ from gauteng_catalogue.territory_source_authority import build_source_authority
 
 DEFAULT_BUNDLES = {
     "za-wc": "data/za-wc-source-acquisition-v0.1/snapshot-20261001",
+    "za-kzn": "data/za-kzn-source-acquisition-v0.1/snapshot-20261001",
 }
 DEFAULT_OUTPUTS = {
     "za-wc": "data/za-wc-source-authority-v0.2",
+    "za-kzn": "data/za-kzn-source-authority-v0.2",
 }
 
 

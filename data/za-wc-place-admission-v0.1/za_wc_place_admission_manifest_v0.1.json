@@ -4,7 +4,7 @@
     "territory_id": "za-wc",
     "display_name": "Western Cape",
     "admission_registry_path": "data/place-admission-territories.v0.1/territory-registry.v0.1.json",
-    "admission_registry_sha256": "cc777a66186d65091d2d94233628f081a3886162eb40611c681ce1039506c9e7"
+    "admission_registry_sha256": "8bbdf08e474d9e1de3977c5cb3b78be307f8c992e2b35080b2fdb1c07007bb21"
   },
   "generated_from": {
     "source_authority_version": "za-wc-source-authority-v0.2",

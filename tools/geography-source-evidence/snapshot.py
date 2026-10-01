@@ -222,7 +222,7 @@ def acquire(plan_path, root, frozen=None):
                    "province_alternate_name_assertions": alias_count, "all_source_records": len(records)},
         "limitations": [
             "Source-native observations only; no canonical identity, factual type or parent has been adjudicated.",
-            "ADM2/ADM3 layers are national; Western Cape spatial selection and current-boundary review are pending.",
+            f"ADM2/ADM3 layers are national; {plan['province_name']} spatial selection and current-boundary review are pending.",
             "GeoNames filtering preserves source admin1 assertions; border/conflicting/00 records require review.",
             "No OSM data acquired; ODbL founder production gate remains unchanged.",
             "This is not a complete province catalogue or the v0.2 source-authority manifest expected by admission.",

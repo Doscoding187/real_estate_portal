@@ -83,8 +83,29 @@ WESTERN_CAPE = TerritoryConfig(
     ),
 )
 
+KWA_ZULU_NATAL = TerritoryConfig(
+    territory_id="za-kzn",
+    province="KwaZulu-Natal",
+    province_name_tokens=("kwa zulu-natal", "kwazulu-natal"),
+    province_iso_codes=("ZN", "ZA-ZN"),
+    source_admin1_code="2",
+    catalogue_data_dirname="kwa-zulu-natal-candidate-catalogue-v0.1",
+    probe_names=(
+        "Durban",
+        "Pietermaritzburg",
+        "Newcastle",
+        "Richards Bay",
+        "Mombasa",
+        "KwaMashu",
+        "Umlazi",
+        "Vryheid",
+        "Empangeni",
+        "Howick",
+    ),
+)
+
 TERRITORIES: dict[str, TerritoryConfig] = {
-    config.territory_id: config for config in (GAUTENG, WESTERN_CAPE)
+    config.territory_id: config for config in (GAUTENG, WESTERN_CAPE, KWA_ZULU_NATAL)
 }
 
 
