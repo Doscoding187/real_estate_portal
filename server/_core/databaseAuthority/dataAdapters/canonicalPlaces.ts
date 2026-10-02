@@ -321,6 +321,12 @@ const rowKey = (values: unknown[]) => JSON.stringify(values);
  * rows through a second implementation would be a second definition of what a Place
  * is, and the two would disagree the first time one was changed.
  *
+ * `written` counts rows this run actually CREATED, not rows it touched. That
+ * distinction is load-bearing: `INSERT ... ON DUPLICATE KEY UPDATE` against an
+ * existing row reports affectedRows 1 with insertId 0, so counting affectedRows
+ * reported a complete no-op replay as a full write of 17,664 Places. An idempotency
+ * claim that its own counter contradicts is not an idempotency claim.
+ *
  * Every insert is idempotent, so a replay writes nothing and reports zero.
  */
 async function writePackageRows(connection: any, rows: any, written: WrittenCounts) {
@@ -348,7 +354,7 @@ async function writePackageRows(connection: any, rows: any, written: WrittenCoun
         place.licensing_classification ?? null,
       ],
     );
-    written.places += result.affectedRows ?? 0;
+    written.places += result.insertId ? 1 : 0;
   }
 
   for (const name of rows.names as any[]) {
@@ -369,7 +375,7 @@ async function writePackageRows(connection: any, rows: any, written: WrittenCoun
         name.valid_to ?? null,
       ],
     );
-    written.names += result.affectedRows ?? 0;
+    written.names += result.insertId ? 1 : 0;
   }
 
   for (const relationship of rows.relationships as any[]) {
@@ -388,7 +394,7 @@ async function writePackageRows(connection: any, rows: any, written: WrittenCoun
         relationship.valid_to ?? null,
       ],
     );
-    written.relationships += result.affectedRows ?? 0;
+    written.relationships += result.insertId ? 1 : 0;
   }
 
   // place_evidence has no natural unique key: `place_id` is nullable by design
@@ -448,7 +454,7 @@ async function writePackageRows(connection: any, rows: any, written: WrittenCoun
         mapping.observed_at ?? null,
       ],
     );
-    written.externalMappings += result.affectedRows ?? 0;
+    written.externalMappings += result.insertId ? 1 : 0;
   }
 }
 
