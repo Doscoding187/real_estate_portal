@@ -124,6 +124,7 @@
     "place:admission:collision-surface": "tsx tools/place-admission/measure-national-collision-surface.mjs",
     "place:admission:national-provenance": "tsx tools/place-admission/national-provenance.mjs",
     "place:boundary-currency": "tsx tools/geography-source-evidence/boundary-currency.mjs",
+    "place:gauteng-provenance": "tools/gauteng-catalogue/.venv/bin/python tools/geography-source-evidence/gauteng_provenance_investigation.py",
     "place:boundary-currency:check": "tsx tools/geography-source-evidence/boundary-currency.mjs --check",
     "geography:coverage:generate": "node tools/geography-coverage/generate.mjs --manifest data/geography-coverage-v0.1/gauteng-territory-manifest.v0.1.json",
     "geography:coverage:check": "node tools/geography-coverage/generate.mjs --manifest data/geography-coverage-v0.1/gauteng-territory-manifest.v0.1.json --check",

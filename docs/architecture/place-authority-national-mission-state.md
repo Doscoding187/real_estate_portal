@@ -680,7 +680,7 @@ is a reviewed decision. The only permitted output is a gate.
 | `place_id` is identity; reject `UNIQUE(parent, normalized_name)`; adding type does not establish uniqueness either | Rejected constraints carried in the load's own output and measured by the collision gate |
 | Preserve provincial disposition ledgers, with a national report tracing every source identity | `place:admission:national-provenance`; ledgers untouched |
 | Allow storage proof with Gauteng's provenance gap recorded; keep activation and publication gated | Gap recorded by `place:boundary-currency:check`; no consumer touched |
-| Investigate Gauteng's boundary provenance before re-acquisition, preserving its IDs | Noted as the next step; re-acquisition remains refused, 1,466 IDs untouched |
+| Investigate Gauteng's boundary provenance before re-acquisition, preserving its IDs | Investigated. 33/33 shapeIDs match release `9469f09`, 1,466/1,466 points inside their named polygons. Vintage still unrecoverable; re-acquisition refused; 1,466 IDs untouched |
 
 ### The national load
 
@@ -753,6 +753,58 @@ every source identity resolves to either its Place or its disposition. 83,583
 identities remain flagged for human review, which is the honest count of adjudication
 still owed a person — total accounting proves nothing leaked, not that every call was
 right.
+
+## Gauteng boundary provenance investigation
+
+Decision of record: investigate Gauteng's existing boundary provenance **before**
+considering re-acquisition, and preserve its Place IDs during the investigation.
+Re-run with `pnpm place:gauteng-provenance`. No evidence was re-acquired and no
+Place ID was touched.
+
+### What was recoverable
+
+**Per-record provenance is committed.** Every Gauteng Place records provider
+`geoBoundaries`, level `ADM1`/`ADM2`/`ADM3`, and a stable upstream `shapeID` — **33**
+distinct pairs. That is real, verifiable provenance. What is missing is only its
+*aggregation* into the `boundary_evidence` block the other eight carry.
+
+### What is not recoverable
+
+**The vintage.** Demarcation year, build date, upstream source-data date and licence
+all live in geoBoundaries' `-metadata.json` sidecars. Gauteng's raw bundle was
+deliberately never committed (`raw_materialization.committed = false`), so no sidecar
+exists for it. **The currency review still cannot quantify Gauteng's gap.**
+
+### What corroborates, and what it does not prove
+
+The eight committed bundles pin exactly one geoBoundaries release, git **`9469f09`**,
+with per-file digests. Against that release:
+
+- **33 of 33** Gauteng shapeIDs are present.
+- **1,466 of 1,466** admitted Places have a representative point **inside** the
+  polygon their own administrative context names.
+- **0** points outside, **0** context names absent.
+
+So Gauteng's administrative context is **consistent with** release `9469f09`. It is
+**not shown to have been built from it**, and must never be read that way: South
+African boundaries change slowly, so an older release would very likely contain the
+same points. This is corroboration, not a vintage record.
+
+### Conclusion
+
+Re-acquisition remains **refused**, and Gauteng's **1,466 Place IDs are untouched**.
+The honest position is unchanged in substance and much better specified: Gauteng's
+boundary *provenance* is committed and consistent with the release the other eight
+used; its boundary *vintage* is unrecoverable from committed inputs. Closing that
+would require either the metadata sidecar for its original release, or an accepted
+re-acquisition with an explicit Place-ID continuity decision.
+
+Two of my own checks were wrong while building this. The first collected candidate
+shapeIDs from ADM2 files only, so Gauteng's 22 local-municipality IDs were never
+looked up and 11 of 33 came back unaccounted for. The second, in the currency tool,
+had described Gauteng as recording "no boundary provenance at all", which is wrong —
+it records provenance per record and lacks only the aggregation. Both are corrected
+rather than left to stand.
 
 ## Authoritative digests
 
