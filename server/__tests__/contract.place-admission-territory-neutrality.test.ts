@@ -225,6 +225,39 @@ describe('Place admission: national identity is enforced, not merely reported', 
   }, 300_000);
 });
 
+describe('Place admission: national provenance closes for every source identity', () => {
+  it('traces every source identity to a Place or a disposition, per province and nationally', () => {
+    const output = execFileSync(
+      'npx',
+      ['tsx', 'tools/place-admission/national-provenance.mjs'],
+      { cwd: repositoryRoot, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] },
+    );
+    const { registry } = loadPlaceAdmissionTerritoryRegistry(repositoryRoot);
+    // Nine provinces, and the national view must cover all nine or its totals mean
+    // less than the per-province ones they are built from.
+    expect(output).toContain(`national-provenance: ${registry.territories.length} provinces`);
+    // Every identity resolves and every province closes its own accounting.
+    expect(output).toContain('national-provenance: OK');
+    expect(output).not.toContain('FAIL');
+    // The ledgers are preserved, so their row count must be reported, not summarised
+    // away. 87,930 rows across nine provinces.
+    expect(output).toMatch(/87930 ledger rows preserved/);
+  }, 300_000);
+
+  it('states that the eight disposition-only ledgers are not self-contained', () => {
+    const output = execFileSync(
+      'npx',
+      ['tsx', 'tools/place-admission/national-provenance.mjs'],
+      { cwd: repositoryRoot, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] },
+    );
+    // Only Gauteng's ledger carries admitted identities. A report that quietly
+    // presented all nine ledgers as equivalent would let a reader audit provenance
+    // from a ledger that contains none of it.
+    expect(output).toContain('DISPOSITION-ONLY');
+    expect(output).toContain('not self-contained');
+  }, 300_000);
+});
+
 describe('Place admission: boundary currency is a gate, not a claim', () => {
   it('refuses to let any province claim currency it cannot evidence', () => {
     const output = execFileSync(

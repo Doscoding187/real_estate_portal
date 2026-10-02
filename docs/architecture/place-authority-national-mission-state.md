@@ -52,8 +52,8 @@ databases. Place Authority remains the only geographic identity source.
 | 3 | Territory-neutral onboarding proof | **closed** (`ad753b3d` + Phase 3 refactor) |
 | 4 | Western Cape (Province 2) | **admitted and physically proven; not activated** |
 | 5 | Remaining provinces | **closed — all nine admitted and physically proven** |
-| 6 | National authority verification | **package-level green**; single-target national load still blocked |
-| 7 | National consumer handoff | not started |
+| 6 | National authority verification | **national storage proven**; activation still gated |
+| 7 | National consumer handoff | not started; forbidden until activation is decided |
 
 ## Current phase
 
@@ -670,6 +670,90 @@ The tool deliberately does not fetch, evaluate or substitute newer boundaries.
 Ingesting current demarcation would change admitted packages and Place IDs, which
 is a reviewed decision. The only permitted output is a gate.
 
+## Phase 6 delivery record — national storage proven, decisions applied
+
+### The decision set, applied
+
+| Decision | Applied as |
+| --- | --- |
+| Disposable national proof target, all nine in one transaction, with rollback, replay and per-province verification | `places:prepare-national` / `places:verify-national` |
+| `place_id` is identity; reject `UNIQUE(parent, normalized_name)`; adding type does not establish uniqueness either | Rejected constraints carried in the load's own output and measured by the collision gate |
+| Preserve provincial disposition ledgers, with a national report tracing every source identity | `place:admission:national-provenance`; ledgers untouched |
+| Allow storage proof with Gauteng's provenance gap recorded; keep activation and publication gated | Gap recorded by `place:boundary-currency:check`; no consumer touched |
+| Investigate Gauteng's boundary provenance before re-acquisition, preserving its IDs | Noted as the next step; re-acquisition remains refused, 1,466 IDs untouched |
+
+### The national load
+
+**17,664 Places in one `place` table** — 26,425 names, 17,655 containment edges,
+79,925 evidence rows, 19,792 external mappings — loaded from zero in **one
+transaction** on a disposable target, then disposed. Nine province roots. No consumer
+activated, no scope published, no search widened.
+
+**Rollback is proven, not asserted.** A deliberately injected mid-load fault, thrown
+from inside the `place` insert loop partway through the ninth province, left the
+target holding **zero** Places. That is the one unacceptable outcome, tested directly:
+seven provinces present and one missing reads as complete to any caller that does not
+recount. Replay is a byte-identical no-op on both count and content digest.
+
+The load refuses **before writing anything** if two provinces claim the same Place
+identity, so a package change cannot introduce a collision the static report has not
+seen. It also refuses a target holding a *partial* set of provinces rather than
+extending it, because extending launders a broken prior load into a healthy one.
+
+Per-province verification needed its own verifier. The per-territory verifier compares
+against one province's counts, so against a national target it correctly refuses for
+all nine — the guard working. `places:verify-national` instead checks each province's
+Places, identity fields and counts inside the shared target, then the properties that
+exist only when provinces are together: total accounting, nine distinct roots, and a
+containment forest with no second parent and no cycle. That last check exists because
+a shared forest is a hazard that does not exist one province at a time. Result:
+**9/9 complete, zero identity drift**, every national total exact.
+
+### Two defects found while proving it
+
+**A committed authority pointed at `/tmp`.** `za_wc_source_manifest_v0.2.json` and
+Western Cape's admission manifest both resolved their artifacts through
+`/tmp/opencode/wc-shapely/`, which no longer exists. Every other province uses
+repo-relative paths. Western Cape had been loading and verifying only because that
+temp directory happened to survive — the authority was not self-contained. Rebuilding
+from its frozen committed bundle produced artifacts **byte-identical** to the digests
+already pinned, all four matching exactly, with only the paths corrected. The
+admission package replays `minted=0 reused=1862`, so Western Cape's 1,862 Place IDs
+are untouched. A repository-wide scan confirms no committed authority file references
+an absolute `/tmp` path.
+
+**The disposition ledgers are not uniform, and eight of nine are not
+self-contained.** Only **Gauteng's** ledger records admitted identities. The eight
+provinces admitted by this mission have **disposition-only** ledgers, so their 16,821
+admitted identities are absent from their ledgers entirely.
+
+The national report therefore derives the identity → Place trace from the geography
+artifact's own `source_identity_ids`, which every province records, and uses the
+ledgers for dispositions. The ledgers themselves are preserved unchanged, as decided,
+and the report states each one's coverage rather than presenting all nine as
+equivalent. The consequence is worth stating plainly: **a reader auditing provenance
+from a ledger alone would find nothing for 16,821 admitted Places.** Bringing the
+ledgers to parity is a real, recorded gap, not a silent one.
+
+### National accounting
+
+| | Value |
+| --- | --- |
+| Provinces | 9 |
+| Source identities | **18,309** |
+| Admitted Places | **17,664** |
+| Identities absorbed into merge groups | 645 |
+| Disposition ledger rows preserved | **87,930** |
+| Places absorbing more than one identity | 0 |
+| Identities still awaiting human review | **83,583** |
+| Dangling Place references | 0 |
+
+Every province closes its own accounting before the national sum means anything, and
+every source identity resolves to either its Place or its disposition. 83,583
+identities remain flagged for human review, which is the honest count of adjudication
+still owed a person — total accounting proves nothing leaked, not that every call was
+right.
+
 ## Authoritative digests
 
 Admission territory registry
@@ -1040,10 +1124,11 @@ synthesising inputs is forbidden outright.
 
 ### What needs an owner decision
 
-**Combined loading.** This is the binding constraint on national coverage. The
-decision surface is now written up in
-`docs/architecture/place-authority-national-coverage-plan.md`, with the collision
-surface measured by `pnpm place:admission:collision-surface`.
+**Combined loading is decided and proven.** National storage is closed: one
+transaction, rollback proven, replay a no-op, 9/9 per-province verification on a
+disposable target. What remains is not storage but the two questions the storage
+proof deliberately cannot answer — whether a **national target may be
+non-disposable**, and whether activation may follow.
 
 Measuring it changed what the decision actually is. **Place ID collisions across
 provinces are 0, and cross-province (parent, name) collisions are 0** — parents are
