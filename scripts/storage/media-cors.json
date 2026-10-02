@@ -1,0 +1,10 @@
+{
+  "CORSRules": [
+    {
+      "AllowedOrigins": ["https://www.propertylistifysa.co.za", "https://propertylistifysa.co.za"],
+      "AllowedMethods": ["PUT"],
+      "AllowedHeaders": ["Content-Type"],
+      "MaxAgeSeconds": 300
+    }
+  ]
+}

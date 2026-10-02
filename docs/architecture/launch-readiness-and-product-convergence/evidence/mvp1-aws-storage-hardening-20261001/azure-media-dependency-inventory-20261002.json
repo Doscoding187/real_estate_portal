@@ -1,0 +1,48 @@
+{
+  "observedAt": "2026-10-02T08:29:03.243Z",
+  "classification": "protected production read-only media dependency inspection; no schema or data change",
+  "operation": "read-only-connect",
+  "targetFingerprintHash": "b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced",
+  "credentialClass": "read-only",
+  "canonicalAuthority": "0094",
+  "canonicalAuthorityManifestSha256": "93d871e6f8760477f460b8821685d71d212374eb86ddd53bc6e2ccfc30608efc",
+  "complete": true,
+  "inventoriedCanonicalTables": 214,
+  "totalRows": 1450,
+  "referenceCounts": {
+    "bucketReferences": 0,
+    "cdnReferences": 0,
+    "relativeMediaReferences": 0
+  },
+  "scope": "Counts matching bucket/domain or properties/ and videos/ substrings in canonical string/JSON columns, in a consistent read-only transaction; no row values emitted",
+  "nonemptyTableRowCounts": {
+    "cities": 340,
+    "plan_entitlements": 9,
+    "plans": 3,
+    "provinces": 9,
+    "suburbs": 1089
+  },
+  "limitations": [
+    "No claim about external consumers or a production frontend build",
+    "Canonical table count excludes runner-control tables and is not the retired TiDB archive count"
+  ],
+  "temporaryNetworkException": {
+    "authorizedBy": "Edward continuation after bounded single-computer rule proposal",
+    "singleIpv4Only": true,
+    "existingRulesPreserved": true,
+    "firstCliTimeoutReconciledBeforeContinuation": true,
+    "temporaryRuleRemoved": true,
+    "originalRulesMatchAfterCleanup": true,
+    "cleanupVerifiedAt": "2026-10-02T08:30:44.997332+00:00",
+    "publicOrBroadFirewallRuleAdded": false
+  },
+  "databaseMutationPerformed": false,
+  "testingConfigurationChanged": false,
+  "TiDbWritersRestarted": false,
+  "paymentIntakeOpened": false,
+  "supersedesFailedInventoryPrerequisite": "media-network-prerequisites.json",
+  "privateEvidenceSha256": {
+    "azure-media-inventory-authorized-local-result.json": "33fd4d40e3ba35d51300089fbed6fa00324dc2b631ad8d6336b48a8979b9eab7",
+    "azure-media-route2-task-rule-cleanup.json": "258a32615bdb0ae24ecdf3bd273c19746b0f745fadc36cb20ad8126d1ac3d3f1"
+  }
+}

@@ -1,0 +1,202 @@
+{
+  "recordedAt": "2026-10-01T20:09:26.706501+00:00",
+  "releaseSource": "cbc18c8fdfb0a900c7255ca695da56bd9a7660c3",
+  "classification": "protected release inspection and storage verification; no schema-authority change",
+  "privateProof": {
+    "bucket": "listify-paid-proofs-914683204061-eun1-290496c0",
+    "runtimeUser": "listify-paid-proof-runtime-290496c0",
+    "configurationAndRecoveryEvidenceOrigin": "Edward CloudShell verification plus downloaded result",
+    "operatorRecoveryPassed": true,
+    "encryptedCredentialsSha256": "b148fcd0e5085fc868531c4655f12ce6863222d7f8bf58e2da753f96ba60236f",
+    "transfer": {
+      "encryptedCredentialsSha256": "b148fcd0e5085fc868531c4655f12ce6863222d7f8bf58e2da753f96ba60236f",
+      "checksumVerified": true,
+      "transferKeyVerified": true,
+      "decryptionVerified": true,
+      "verifiedAt": "2026-10-01T19:43:14.887Z"
+    },
+    "liveRuntimePermissions": {
+      "outcome": "PASS",
+      "results": [
+        {
+          "operation": "PutObject/GetObject",
+          "outcome": "PASS"
+        },
+        {
+          "operation": "bucket-list",
+          "status": 403,
+          "code": "AccessDenied"
+        },
+        {
+          "operation": "bucket-config",
+          "status": 403,
+          "code": "AccessDenied"
+        },
+        {
+          "operation": "version-read",
+          "status": 403,
+          "code": "AccessDenied"
+        },
+        {
+          "operation": "cross-media-write",
+          "status": 403,
+          "code": "AccessDenied"
+        },
+        {
+          "operation": "outside-prefix-write",
+          "status": 403,
+          "code": "AccessDenied"
+        },
+        {
+          "operation": "object-delete",
+          "status": 403,
+          "code": "AccessDenied"
+        }
+      ],
+      "retainedTestObject": true,
+      "productionBindingsChanged": false,
+      "hostedOwnerIsolationVerified": false,
+      "infrastructureWritePermissionsTested": false
+    }
+  },
+  "azureMediaDependencies": {
+    "operation": "read-only-connect",
+    "targetClass": "production",
+    "targetFingerprintHash": "b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced",
+    "credentialClass": "read-only",
+    "complete": true,
+    "inventoriedTables": 214,
+    "totalRows": 1450,
+    "referenceCounts": {
+      "bucketReferences": 0,
+      "cdnReferences": 0,
+      "relativeMediaReferences": 0
+    },
+    "databaseMutationPerformed": false,
+    "applicationConfigurationChanged": false,
+    "temporarySingleAddressRuleAuthorizedCreatedAndRemoved": true,
+    "originalFirewallRulesMatchAfterCleanup": true,
+    "evidence": "azure-media-dependency-inventory-20261002.json",
+    "earlierFailedNetworkDiagnostics": "media-network-prerequisites.json; superseded for inventory completion, retained as dated history"
+  },
+  "containment": {
+    "productionAndTestingApiGitTriggers": "absent in authenticated CLI queries",
+    "latestProductionDeployment": "5045030c-f115-429e-af15-2b2c410a6cb1",
+    "latestProductionDeploymentStatus": "REMOVED",
+    "activeOrQueuedAmongLatest20ProductionApiDeployments": false,
+    "remoteMcpMetadataInconsistentWithCli": true,
+    "limitation": "Bounded observations, not a complete writer census or fresh Vercel hold proof",
+    "latest5ProductionApiReadbackAt": "2026-10-02T09:15:09.348600+00:00",
+    "latest5ProductionApiAllRemoved": true
+  },
+  "pending": [
+    "storage delta review and fresh exact-head required CI before production binding",
+    "AWS alert email delivery and aggregate provider monitoring",
+    "exact production-build/hosted verification of the saved frontend media setting and refreshed deployment hold",
+    "remaining worker provisioning and prepared production bindings/session-secret application",
+    "joined API/worker/frontend deployment at accepted M under checklist 28",
+    "hosted upload/display and private proof owner/wrong-owner/anonymous checks; no production fixture or intake bypass"
+  ],
+  "validation": {
+    "pythonSecurityContractTests": 31,
+    "nodeTransferRuntimeSecurityContractTests": 20,
+    "lint": "pass; new CJS files",
+    "format": "pass; new CJS files",
+    "whitespace": "pass",
+    "previousHeadGitHubCi": {
+      "head": "03562b134170f5e129d82e2f75dd07e742867c2c",
+      "runId": 36919847197,
+      "requiredJobsPassed": 5,
+      "certifiesCurrentFollowupHead": false
+    },
+    "latestVerifiedGitHubCi": {
+      "head": "967a7afd6f3416e83b47d87c7dca194ecf6c7253",
+      "runId": 36990128437,
+      "requiredJobsPassed": 5,
+      "certifiesNewMediaVerifierFollowupHead": false
+    }
+  },
+  "mutationsThisContinuation": {
+    "privateS3TaskObjectWritten": true,
+    "credentialsPersistedInPrivateLocalStateOnly": true,
+    "productionBindingsChanged": false,
+    "TiDbWritersRestarted": false,
+    "paymentIntakeOpened": false,
+    "protectedDatabaseDataChanged": false,
+    "temporaryAzureSingleAddressRuleCreatedAndRemoved": true,
+    "productionFrontendMediaSettingSavedByOperator": true,
+    "finalMediaConfigurationAppliedByOperator": true,
+    "dedicatedMediaRuntimeUserProvisionedByOperator": true,
+    "agentMediaTaskObjectPutAndDeleted": true
+  },
+  "privateEvidenceSha256": {
+    "proof-runtime-verified/transfer-verification.json": "94f324c3bfa3754a84c9cad3091a59d984e18e9c13664e27308d76d2a4002747",
+    "proof-runtime-verified/runtime-verification.json": "13d4d7a015a5c1cf7e48794d25881bdb1c5a6eec6af8488c4735abab973978a7",
+    "operator-private-proof-verified-20261001.json": "e6846276ee876d87bc9bce37a381c93787e1cade9cc35239f73d528dd491e4be",
+    "azure-media-inventory-existing-network-result.json": "f75f2a6d7360d2dda6ab7c3302689ccd9670c61b2c1d814a64179a7aedcc1f40",
+    "azure-media-inventory-diagnostic-cleanup.json": "5cfcadf7b4ec1c94a619949f44566a88beb40a6598cb67e112d836b788ef02a5",
+    "continuation-containment-readback.json": "9eca2c9a2714269b17c07e0d4e0b6ca7393a05ffb07946044ad638e64d56eaf3",
+    "azure-media-inventory-authorized-local-result.json": "33fd4d40e3ba35d51300089fbed6fa00324dc2b631ad8d6336b48a8979b9eab7",
+    "azure-media-route2-task-rule-cleanup.json": "258a32615bdb0ae24ecdf3bd273c19746b0f745fadc36cb20ad8126d1ac3d3f1",
+    "production-containment-after-media-inventory-20261002.json": "969c6a0e9d64b1f8b39f3cf3e52296baeafa4697881c0d51d095366a4dd9e7df",
+    "media-runtime-inputs-20261002/result.json": "0122516d90eeea29b3f8b1193d5e5317e387a2bdf2a887dbf27390435a08be2d",
+    "operator-media-hardening-pass-20261002.json": "454a87054717c965713090bccba1453057e6f9c0f8456fb589336285452e13e0",
+    "media-hardening-independent-readback-20261002.json": "fc66fc6b8d9ec844e0f925b3b797fb4e0792811ac6182cf83a6e6d09d1cd8f8a",
+    "media-runtime-verified/transfer-verification.json": "7d5ba2cda252940f369488407d15dcd1b85f016066f7bdc1e9f55adeff823bb4",
+    "media-runtime-verified/runtime-verification.json": "5f5ca1aabc138c2606532cbd822f1f9dd3307f8897e166f2777d65661e455536",
+    "media-runtime-task-object-deletion-readback-20261002.json": "3f3ea3f103139af4c9b16c23c203e236d5209603883916d3919f8924fd31cf10",
+    "cross-proof-read-correction-20261002/cross-proof-read.json": "bbf4617d4ac3c68d799d12a09ce145a04975f6979a4850537cef3b0eb15ee6d1"
+  },
+  "costAlerts": {
+    "configurationReadback": "PASS",
+    "verificationSource": "Edward operator report; see cost-alert-configuration-verification.json",
+    "recipientReadbacksPassed": 3,
+    "alertDeliveryVerified": false,
+    "budgetRecreatedByAgent": false
+  },
+  "frontendMediaConfiguration": {
+    "evidence": "vercel-production-media-setting.json",
+    "productionViteCloudFrontSettingSavedByOperator": true,
+    "activeFrontendBuildVerified": false
+  },
+  "updatedAt": "2026-10-02T11:15:33.765181+00:00",
+  "mediaHardeningPreparation": "media-hardening-operator-preparation-20261002.json",
+  "mediaHardening": {
+    "executionEvidence": "media-hardening-execution-20261002.json",
+    "operatorConfigurationPassed": true,
+    "independentConfigurationAndObjectsVerified": true,
+    "encryptedTransferChecksumAndDecryptionPassed": true,
+    "dedicatedRuntimeUser": "listify-media-runtime-07394cfd",
+    "independentLocalRuntimePermissions": "PASS with specific cross-proof denial replaced by existing-canary 200/403/200 read-only verification",
+    "localRuntimeTaskObjectDeletionIndependentlyVerified": true,
+    "productionBindingsChanged": false,
+    "hostedAcceptanceVerified": false,
+    "oldBroadUploaderRetired": false,
+    "crossProofReadCorrectionEvidence": "cross-proof-read-correction-20261002.json"
+  },
+  "productionBindingPreparation": "production-binding-preparation-20261002.json",
+  "protectedReleasePreparation": {
+    "phase": "plan/review only",
+    "canonicalHead": "0094",
+    "manifestSha256": "93d871e6f8760477f460b8821685d71d212374eb86ddd53bc6e2ccfc30608efc",
+    "localDatabaseStoppedAndNotInitialized": true,
+    "staticApiWorkerConfigurationsPass": true,
+    "protectedRoleApprovalFieldConsistencyPass": true,
+    "protectedDatabaseConnected": false,
+    "providerBindingsChanged": false
+  },
+  "archiveCustody": {
+    "disposition": "operator-confirmed secure retention consistent with fresh disconnected-device readback",
+    "evidence": "usb-current-disconnected-custody-20261002.json",
+    "selectedUsbPartitionAbsent": true,
+    "usbStorageDeviceCount": 0,
+    "previousContradictoryAttachmentSuperseded": true,
+    "archiveCaptureOrRetrievalRepeated": false
+  },
+  "reviewGate": {
+    "status": "PAUSED",
+    "reviewedHead": "abfa798169ca84ff185dca70f2276117b4983561",
+    "reviewOutcome": "Changes requested: one P2 evidence gap; correction and targeted live read-only check completed, independent re-review and fresh correction-head checks pending",
+    "evidence": "cross-proof-read-correction-20261002.json"
+  }
+}

@@ -1,6 +1,56 @@
 # PR #583 controlled production release
 
-**Current disposition: preparation complete enough for operational review; production transition NOT EXECUTED; paid opening NO-GO.** This packet supersedes the draft-PR-only assignment and the successful-preview/separate-staging milestone. Edward directed controlled validation on the existing live infrastructure. No Vercel upgrade or new application staging environment is required. October 5–7 remains conditional.
+**Current disposition: controlled transition partially executed; application cutover pending; paid opening NO-GO.** This packet supersedes the draft-PR-only assignment and the successful-preview/separate-staging milestone. Edward directed controlled validation on the existing live infrastructure. No Vercel upgrade or new application staging environment is required. October 5–7 remains conditional.
+
+## Current execution checkpoint — 1 October
+
+PR #583 is merged as `cbc18c8fdfb0a900c7255ca695da56bd9a7660c3`, tree
+`fde4200b59a2adfb65fe85d550e45dc970b3d52e`, matching its accepted head.
+The merged PR's operational checkpoint records geography applied once and
+verified (9 provinces / 340 cities / 1,089 suburbs), old production API
+REMOVED, final frozen TiDB capture and independent USB authenticated retrieval
+(218 tables / 152 rows). Edward’s stored/unplugged custody confirmation is now
+consistent with fresh October 2 readback: selected USB partition absent and
+zero USB storage devices enumerated. The previous attachment conflict is
+superseded; no capture/retrieval was repeated. [Custody reconciliation](evidence/mvp1-aws-storage-hardening-20261001/usb-current-disconnected-custody-20261002.json).
+Do not repeat those completed provisioning/capture/apply operations.
+
+[Storage packet 29](29-mvp1-aws-storage-hardening.md) is the current storage
+checkpoint: anonymous media write containment, authenticated CloudFront origin
+access, private-proof bucket/user provisioning, proof-version recovery,
+encrypted key export/retrieval/decryption and bounded dedicated proof runtime
+permission tests are complete. The US$15/month aggregate incremental usage
+approval is recorded; it is neither a forecast nor an enforced cap.
+
+S3 budget configuration and all three recipient readbacks are complete per
+Edward’s operator report; email delivery remains unverified.
+
+Edward subsequently confirmed saving Production `VITE_CLOUDFRONT_URL` at the
+expected distribution; exact production-build/hosted verification is pending.
+
+The protected Azure media dependency inventory is complete: 214 canonical
+tables / 1,450 rows, zero matched media URL/path references. The authorized
+temporary single-computer firewall rule was removed, with all original rules
+unchanged. [Inventory and cleanup evidence](evidence/mvp1-aws-storage-hardening-20261001/azure-media-dependency-inventory-20261002.json).
+
+Final media policy/public-access blocks/CORS and the isolated media identity
+are complete. Encrypted media-key retrieval/checksum/decryption and independent
+local runtime checks passed; the 2,260 original object metadata records are
+unchanged. [Execution evidence](evidence/mvp1-aws-storage-hardening-20261001/media-hardening-execution-20261002.json).
+
+Senior review at `abfa79816` requested a P2 cross-proof evidence correction.
+Both verifiers are corrected and the specific live check passed against the
+retained existing harmless canary (independent proof 200 / media 403 / proof
+200, matching hash/version). Original cross-proof evidence is superseded;
+provisioning was not repeated. [Correction evidence](evidence/mvp1-aws-storage-hardening-20261001/cross-proof-read-correction-20261002.json).
+Checklist 28 binding stays paused pending independent re-review and fresh checks.
+
+Remaining: storage-delta re-review and fresh correction-head CI, alert receipt/aggregate monitoring, exact frontend
+build verification, worker provisioning, production
+secret/runtime bindings, exact joined deployment and hosted customer/security
+journeys under checklist 28. Keep TiDB writers stopped and intake closed.
+The dated preparation observations and reusable procedure below are retained
+as history; their pending provisioning wording does not supersede this checkpoint.
 
 ## Recorded decision and exact source
 
@@ -12,7 +62,7 @@ This continuation adds a version-controlled frontend deployment hold, a bounded 
 
 No legacy accounts, password hashes, sessions, listing/business data or TiDB ledger are imported. No fixture selector, synthetic entitlement, schema fallback, disabled guard, card billing, Services #581, Explore or Land expansion is part of this release.
 
-## Fresh observations and reuse
+## Historical September 30 observations and reuse
 
 | Item | Evidence and consequence |
 | --- | --- |
@@ -26,14 +76,14 @@ No legacy accounts, password hashes, sessions, listing/business data or TiDB led
 
 Provider observations are dated reads, not lasting guarantees. Refresh at each execution boundary. No secret values, private account rows, object keys or archives are committed.
 
-## Concrete operational decisions still required
+## Operational decisions and current disposition
 
-| Decision | Exact proposed action ready for review | Why required |
+| Item | Completed evidence / remaining action | Boundary |
 | --- | --- | --- |
-| Attended execution and Vercel operator | Proposed first window: **Thursday 1 October, 09:00–13:00 SAST**, Edward attending, with an authenticated operator for existing Vercel project `edwards-projects-29c395d1/real-estate-portal`. Verify production origins/configuration and deploy the exact approved merged Git SHA after API readiness. No Vercel admin credential/connector is available in this session. Enter credentials through existing private provider access, never chat. | Existing accepted coverage is weekdays 09:00–17:00 SAST. September 30 preparation is outside those hours; do not assume after-hours/weekend coverage or infer attendance from an unanswered question. |
-| Necessary incremental usage | Provision **one private S3 bucket + bucket-scoped identity**, and **two services in the existing Railway production environment**. [Exact S3 controls/IAM proposal](evidence/controlled-production-release-2026-09-30/private-proof-resources.proposed.json), [exact service/configuration delta](evidence/controlled-production-release-2026-09-30/production-config.proposed.json). No plan upgrade or new application environment. Agree the metered-usage budget before creation; US$15/month remains an unverified budget target. See [measured credits, incremental assumptions and monitoring](28-controlled-owner-admission-and-execution-2026-09-30.md#incremental-usage-review); alerts are not an enforced cap. | Existing [B11 disposition](evidence/b11-private-proof-readiness-2026-09-24.md) says: “Treat any unapproved incremental cost as a `FOUNDER SPEND GATE`.” None of these required private-proof/worker resources exists yet. |
-| Independent archive/recovery custody | Name an **existing private off-machine destination** under Edward's custody; store encrypted final TiDB archive independently and the key through a separate protected channel, record hashes and authenticated retrieval. Do not use the public media bucket, runtime-delete authority, or another directory on this same machine as independent custody. Azure has no existing storage account exposed in this subscription. | Final preservation is incomplete without retrievable independent custody. Keep TiDB retained/read-only; no retirement deletion is authorized. |
-| Recovery exercise resource and coverage | Prepare any required temporary isolated PITR/logical restore target with exact target registration, purpose, grants, budget and disposal; retained old recovery copies stay read-only. Use existing application hosts, not a new staging app. Arrange alert coverage for the 24-hour exercise before starting it. | Existing engine/recovery-copy evidence is reused but does not demonstrate final application recovery/capacity. A new write-capable protected recovery target requires its own approval; no old permission may be revived. |
+| Attended execution and Vercel operator | October 1 execution and archive attendance are recorded. Edward used the existing Vercel dashboard and confirmed the Production media setting. Refresh the attended cutover window, provider hold and exact production build inputs before joined deployment. | Do not infer ongoing after-hours coverage or a CLI login from a dashboard session. |
+| Necessary incremental usage | Edward approved US$15/month aggregate incremental usage. The private-proof bucket/identity, recovery and transfer/runtime verification are complete. The final isolated media identity/application is complete; only the reviewed remaining workers remain in this resource sequence; do not recreate the proof resources or budget. [Current storage checkpoint](29-mvp1-aws-storage-hardening.md), [reviewed service/configuration delta](evidence/controlled-production-release-2026-09-30/production-config.proposed.json). | No plan upgrade or new application environment. Approval is not a forecast, free-tier claim or enforced spending cap. Unapproved additions remain a founder spend gate. |
+| Independent archive custody | The existing USB destination, encrypted final archive copy, independent authenticated retrieval and separate local key custody are complete. Fresh disconnected-device readback now supports Edward’s previous secure-custody confirmation. Do not request another destination or repeat capture/retrieval as provisioning. | Preserve TiDB read-only. No archive/key exposure or retirement deletion is authorized. |
+| Recovery exercise resource and coverage | The prepared isolated recovery proposal still needs its own exact target registration, grants, measured usage and coverage before a new write-capable recovery target is created. Existing retained recovery copies remain read-only. | Existing engine/copy evidence does not demonstrate final application recovery/capacity. No new staging app or inferred recovery-target authority. |
 
 B15 exact-copy approval, final bank configuration and retention/customer disclosure remain paid-opening decisions, not new requests for already supplied founder/contact/schedule facts. The provider schedule can now use measured AWS eu-north-1 / Resend eu-west-1 / Railway asia-southeast1; resolve Azure and OAuth/analytics processing from actual configuration. Draft customer copy is not published as approved.
 
@@ -41,47 +91,53 @@ B15 exact-copy approval, final bank configuration and retention/customer disclos
 
 Each phase records timestamp, operator, exact source SHA/tree, intended action, actual readback and stop result. No automated command is permission to skip a phase. The user authorized controlled production work; the operations below remain bounded to their named targets and reviewed release source.
 
-### 1. Contain deployment triggers before merge
+### 1. Merge and original trigger containment — complete
 
-1. Refresh published main, PR head/checks, unresolved threads, active deployments and staged provider work. Independently review the final integration and release-only delta. Preserve other worktrees and the Testing pending JWT patch; do not use a blanket accept-deploy.
-2. Production Railway: project `8cdd7515-ddd2-4252-bbee-df5a5c209d4b`, environment `63070d99-357a-40ba-99c3-6d1368f61652`, API `db88a720-2d1f-4afc-a3a8-6228b6b08d3e`. The current main trigger is `ecf474c5-5bcc-4d4c-a477-706d10b6865b`, `checkSuites=false`. Disable that exact GitHub trigger; [prepared mutation](evidence/controlled-production-release-2026-09-30/railway-hold.graphql) and [variables](evidence/controlled-production-release-2026-09-30/railway-hold-production.variables.json) remove only the trigger, not a service, deployment, database or domain. Verify trigger absence and no new queued deployment. CLI introspection confirmed a delete/create API, not an enabled field. Do not execute without a freshly matching trigger readback.
-3. Hold Testing's separate main trigger `c463cbaa-56a2-42a4-a79d-10b9d1b32703` so this merge cannot unexpectedly deploy paid source against legacy test schema. Preserve the active Testing service/database and pending patch. [Exact trigger snapshot](evidence/controlled-production-release-2026-09-30/testing-triggers.json), [hold variables](evidence/controlled-production-release-2026-09-30/railway-hold-testing.variables.json). Staging follows `post-baseline-work`; do not alter it as unrelated work.
-4. Candidate `vercel.ts` sets `git.deploymentEnabled.main=false` using [Vercel's documented branch control](https://vercel.com/docs/project-configuration/git-configuration). Confirm the existing project tracks `main` and no alternate production deploy hook bypasses it. Preview checks may remain failed/non-gating. This repository hold is prepared; it is not evidence of an already changed live provider setting. Authenticated provider readback is required before merge/promotion.
-5. Verify all CI/release hooks. Keep commercial selectors absent or explicitly paused, no open-until window. Sales pause is not the TiDB writer freeze. Required GitHub rules remain active; Vercel was not one of the four required contexts. No bypass or rule weakening is needed for Edward's exception.
-6. Convert only task-owned PR #583 to review-ready and merge using the allowed **merge commit**, after the exact final head's required checks pass. Record merged commit **M** and tree, recheck post-merge CI/source identity, and verify production/Testing/Vercel have not advanced under holds. Do not substitute unreviewed tips from #580/#581/#582.
+PR #583 merged as M `cbc18c8fdfb0a900c7255ca695da56bd9a7660c3`, tree
+`fde4200b59a2adfb65fe85d550e45dc970b3d52e`, after accepted review/checks.
+Production and Testing API Git triggers were removed before merge and are read
+back absent. The old trigger IDs in September 30 preparation evidence are
+retired; do not delete them again or attempt another #583 merge. Edward's
+Vercel hold report remains recorded; refresh live hold evidence before promotion.
 
-### 2. Release canonical Azure geography
+Before the remaining cutover, refresh exact provider deployments/queued work,
+required checks and unresolved review for the separate #584 storage delta.
+Preserve other worktrees and the unrelated Testing pending patch. Do not use a
+blanket accept-deploy or substitute another branch tip for M.
 
-1. **Preserve the known network path:** perform this operation through the still-running old API container's approved backend network, using a temporary exact-M diagnostic/release source and ephemeral credential channels, not a deployment or persistent service variable. Production API still writes TiDB; prove no application/job/operator writes the Azure geography target, and keep that condition until apply/verify completes. Local direct Azure connectivity was unavailable. Do not stop the only known Azure-access container first, widen Azure firewall access, create an unapproved proxy, or later restart a TiDB writer just to regain SSH. Clean up only the task-owned diagnostic directory and close the credential-bearing shell. Use **reviewed merged source M**, the separate existing inspector/migrator channels and exact Azure fingerprint `b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced`. Confirm ordinary geography writers are closed; the reference lock does not control unrelated SQL.
-2. Re-plan against M and current target. The reviewed preparation plan digest is `7cabc434f7ef796cfae742c9a822e24bd16d59d3f01216dc807b683843ae9d6e`, desired digest `516042933ea242cdaeae18b2436172e2c686136174164486dc008163c228fe97`, manifest digest `93d871e6f8760477f460b8821685d71d212374eb86ddd53bc6e2ccfc30608efc`. If target/source-bound inputs change, review the new plan; never force an old digest.
-3. Execute one target-approved `release-reference-apply`, with ephemeral distinct `DATABASE_MIGRATION_URL` selected through connection authority; never persist it in services. Exact operation acknowledgement is `CONFIRM_RELEASE_REFERENCE_APPLY_b23d640cdf242812`:
+### 2. Canonical Azure geography — complete
 
-   ```text
-   pnpm db:release:reference:plan --adapter=geography
-   pnpm db:release:reference:apply --adapter=geography --plan-digest=7cabc434f7ef796cfae742c9a822e24bd16d59d3f01216dc807b683843ae9d6e --ack=CONFIRM_RELEASE_REFERENCE_APPLY_b23d640cdf242812
-   pnpm db:release:reference:verify --adapter=geography
-   ```
+Geography was applied once from M and independently verified at canonical 0094:
+9 provinces / 340 cities / 1,089 suburbs, 1,438 existing rows and zero pending.
+The ambiguous launcher timeout was reconciled by later readback, not replayed.
+Do not run the historical reference-apply recipe again. Exact production target
+fingerprint remains
+`b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced`.
 
-4. Independently verify 9/340/1089 counts, stable parent/child IDs, zero pending rows, canonical full ledger/checksums through 0094 and unchanged commercial terms. Never reset ledgers, seed application fixtures, retry ambiguous COMMIT, use alternate schema or replay migrations already applied. An ambiguous apply stops for read-only inspection.
+The later media dependency inspection also completed through the canonical
+read-only inspector. Its authorized single-computer firewall exception was
+removed with original rules unchanged. The old API remains stopped; never
+restart a TiDB writer to regain a diagnostic route. Hosted geography journeys
+remain pending on the exact joined deployment.
 
-### 3. Freeze TiDB writers and complete preservation
+### 3. Writer freeze and final TiDB preservation — complete
 
-1. Announce the maintenance condition through the existing site/operator controls without contacting third parties unasked. Record the normal production source, private variable snapshot and current deployment artifact for recovery. Do not publish a promise to open sales.
-2. Refresh every active API/worker/job instance, CI job, alternate deployment hook, console and ad hoc script that could write exact production TiDB. Edward confirms external/admin writers are closed. Stop/drain the production API including in-process schedulers; verify removed/stopped deployment state, no queued replacement and rejected write traffic. Stop any newly discovered same-target writer. Testing/Staging's different databases are not part of the production archive census.
-3. Create a private mode-0600 freeze record only after the complete census/provider readbacks. The [deliberately invalid template](evidence/controlled-production-release-2026-09-30/writer-freeze.template.json) must be copied outside Git, completed from real observations, and permission-checked; it is not freeze evidence. `source-archive:final` requires exact source, actor/reference matching protected approval, release M, readback/census hashes, every writer stopped/read-only, public/operator writes closed, and verification within 15 minutes (also rechecked after capture). Provider freeze is **operator-attested**, not mechanically proved by JSON or by archive SQL. Hash underlying independent readbacks and preserve them privately.
-4. Use the existing operator/source-reader path that produced the preliminary archive; this does not depend on keeping a stopped API container available. If that read-only path is unavailable, stop for a reviewed non-writing operator path; never restart a frozen TiDB application writer to obtain SSH. Run the reviewed merged source command using the existing SELECT-only TiDB source reader, exact fingerprint `68f2582a6dc7af8c54cf6f31a396e8abe4c4030696c923b0ea3b1679ba6f5b5e`, strict TLS, approved read-only operation. Key and archive directories must be separate, owned mode 0700, not symlinks:
+The old production API was removed after geography verification. Independent
+writer/session readbacks and the governed final frozen capture passed, followed
+by independent USB retrieval and authenticated decryption: 218 tables / 152 rows.
+The archive key remains separate in protected local custody. No TiDB import,
+reverse replication or retirement deletion is authorized.
 
-   ```text
-   pnpm db:source:archive:final --freeze-evidence=<owned-0600-freeze.json> --archive-dir=<private-archive-dir> --key-dir=<separate-private-key-dir>
-   ```
-
-   Preserve preliminary files unchanged. The final command captures consistent snapshot schemas/rows, exact types, AES-256-GCM, authenticated frozen metadata and persisted readback. It does no TiDB DDL/DML, migration, import or grant mutation. Invalid/stale/unclosed/mismatched evidence refuses the final designation before connection or before archive production.
-5. Independently authenticate/decrypt and structurally verify the persisted final archive; record full ciphertext hash/counts privately and sanitized summary publicly. Copy/retrieve from the agreed off-machine destination with key separately controlled. Keep TiDB preserved, not writable or deleted. Failure stops transition before retiring the old write path.
+Keep writers stopped and TiDB read-only. The subsequent disconnected-device readback resolves the prior custody
+attachment conflict; do not rerun final capture or ask for a new archive destination.
+Historical freeze templates and preparation recipes are retained in Git history
+and are not fresh writer attestations or instructions to recapture. New protected
+operations require their own current authority/readback evidence.
 
 ### 4. Bind and deploy backend/workers, then frontend
 
-1. Complete the private bucket/scoped-key provisioning and readback under the agreed usage authority. Apply only the [prepared configuration delta](evidence/controlled-production-release-2026-09-30/production-config.proposed.json) to production services. API uses existing distinct Azure runtime identity; both new workers use existing distinct Azure worker identity. No migrator in application variables. Redis and existing durable public media are retained and independently verified; aliases must agree.
-2. Generate a fresh strong production JWT secret, invalidate old sessions by removing the old signing secret from all authentication runtimes, and generate an independent media-upload signing secret. Snapshot rollback custody privately; do not restore the old TiDB JWT on Azure. Test an old session is rejected before fresh numeric IDs can grant access. Retain the founder's existing `OWNER_OPEN_ID` and prove normal OAuth owner login; no seeded admin or direct role update.
+1. Private proof provisioning, key transfer and bounded live permissions are complete; do not replay them. Media hardening and encrypted dedicated-key transfer/testing in packet 29 are also complete. Review the storage delta and exact private binding proposal before applying either identity; do not replay the operator program. Apply only the [prepared configuration delta](evidence/controlled-production-release-2026-09-30/production-config.proposed.json) to production services. API uses existing distinct Azure runtime identity; both new workers use existing distinct Azure worker identity. No migrator in application variables. Redis and existing durable public media are retained and independently verified; aliases must agree.
+2. Fresh production JWT and independent media-upload signing secrets are prepared privately; application remains pending. Apply those reviewed secrets and invalidate old sessions by removing the old signing secret from all authentication runtimes, and replace the upload signing secret in the reviewed runtimes. Snapshot rollback custody privately; do not restore the old TiDB JWT on Azure. Test an old session is rejected before fresh numeric IDs can grant access. Retain the founder's existing `OWNER_OPEN_ID` and prove normal OAuth owner login; no seeded admin or direct role update.
 3. Keep general paid intake closed: `PAID_MVP_SALES_PAUSED=true`, no expiring sales window, ordinary canonical billing configuration only. Candidate startup/readiness must pass strict environment/origin/storage/Redis/email requirements. The nine fresh preflight issues are actionable, not waived. A provider-injected exact Git SHA can satisfy identity; do not persist a stale BUILD_SHA across later deploys.
 4. Build/deploy exact M for API using `railway.json` (`pnpm start:hosted:api`, `/api/readiness`); configure explicit required start/healthcheck because the old live service uses `pnpm run start:prod` without the reviewed readiness check. Provision email supervisor and 5-minute lead cron in existing production using their checked-in configs, distinct worker DB credentials, same source/approved origins and release identity. No startup migration/reference apply. Record deployment IDs, source SHA, strict readiness, recent scheduler lease, worker health, cron due-work and configured target fingerprint.
 5. After API/worker admission, the authenticated existing Vercel operator verifies production `VITE_DEPLOY_ENV`, www/API origins and ordinary build inputs, then triggers **manual production deployment of M**, keeping repository main autodeploy held. A dashboard Git-SHA deployment is the proposed path; no failed preview promotion or upgrade. Record successful build/deployment ID, domains/TLS/redirects and frontend `/version.json` exact SHA, then joined browser behavior. Production build failures are gating and repaired within launch scope.
@@ -121,4 +177,4 @@ Restore production Railway autodeploy only after stable acceptance, using [prepa
 
 Final-archive focused contract checks pass: **19 cases**, original preliminary/type/encryption cases plus frozen metadata, wrong/stale/future/open/duplicate/empty writer evidence, expiry during capture and approval actor/reference mismatch. No protected database was contacted by these tests. Full authority gate passes **47 files / 442 tests**, typecheck/build pass, full lint passes with **zero errors / 13,419 existing warnings**, and touched-code lint has zero errors. [Verification hashes and limits](evidence/controlled-production-release-2026-09-30/verification.json) record the tested release-code commit `84e9229a428d8432f2ed0f7f9aa80fa8972f5cfc` / tree `813f246d370d17d78a102bc0ff8477139dd26a1b`; subsequent continuation edits are documentation/evidence only. Importing `vercel.ts` confirms main=false; authenticated provider readback remains pending. Exact new-head CI is tracked separately. That earlier verification changed no schema, migration SQL/checksum, canonical catalog, or customer money/access policy. The later owner-admission change is separately verified in packet 28; it restricts new invoices/activations without changing products or entitlement terms.
 
-Prepared trigger mutations, resource proposals, configuration deltas and a read-only geography plan are **not execution evidence**. No merge, provider mutation, geography apply, writer stop, final capture, secret rotation, binding switch, deployment, real email or paid opening has been performed in this continuation. No existing worktree files beyond the owned PR were modified. The next action is the attended bounded production sequence after the specific unresolved decisions above are resolved; it is not another preview-versus-live decision.
+Prepared trigger mutations, resource proposals, configuration deltas and a read-only geography plan are **not execution evidence**. The preceding verification paragraph describes the September 30 preparation. Completed October 1 execution is distinguished in the current checkpoint above and storage packet 29. Secret application, binding switch, joined deployment, real hosted journeys and paid opening remain pending. Continue from the remaining phase under the existing containment checklist; do not replay completed geography, writer stop, final capture or proof provisioning.

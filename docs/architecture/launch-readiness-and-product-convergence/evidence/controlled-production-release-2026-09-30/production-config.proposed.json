@@ -7,9 +7,11 @@
     "variables": {
       "VITE_DEPLOY_ENV": "production",
       "VITE_APP_URL": "https://www.propertylistifysa.co.za",
-      "VITE_API_URL": "https://api.propertylistifysa.co.za"
+      "VITE_API_URL": "https://api.propertylistifysa.co.za",
+      "VITE_CLOUDFRONT_URL": "https://d3fz99u3go2cmn.cloudfront.net"
     },
-    "release": "Manual production Git-SHA deployment while main autodeploy is held; authenticated project operator required"
+    "release": "Manual production Git-SHA deployment while main autodeploy is held; authenticated project operator required",
+    "mediaSettingEvidence": "Edward reported saving Production setting; exact build/hosted effect pending"
   },
   "railway": {
     "projectId": "8cdd7515-ddd2-4252-bbee-df5a5c209d4b",
@@ -24,20 +26,31 @@
       "CORS_ALLOWED_ORIGINS": "https://www.propertylistifysa.co.za",
       "SKIP_FRONTEND": "true",
       "MEDIA_STORAGE_ADAPTER": "s3",
-      "AWS_S3_BUCKET": "Copy existing S3_BUCKET_NAME exactly",
+      "AWS_S3_BUCKET": "listify-properties-sa",
       "BILLING_PROOF_STORAGE_ADAPTER": "s3",
-      "BILLING_PROOF_S3_BUCKET": "property-listify-private-proofs-pl583-20260930",
+      "BILLING_PROOF_S3_BUCKET": "listify-paid-proofs-914683204061-eun1-290496c0",
       "BILLING_PROOF_S3_REGION": "eu-north-1",
       "BILLING_PROOF_S3_PREFIX": "billing-proofs",
       "SAVED_SEARCH_SCHEDULER_ENABLED": "false",
-      "PAID_MVP_SALES_PAUSED": "true"
+      "PAID_MVP_SALES_PAUSED": "true",
+      "S3_BUCKET_NAME": "listify-properties-sa",
+      "AWS_REGION": "eu-north-1",
+      "CLOUDFRONT_URL": "https://d3fz99u3go2cmn.cloudfront.net",
+      "DATABASE_CREDENTIAL_CLASS": "runtime",
+      "DATABASE_AUTHORITY_APPROVAL_REFERENCE": "edward-controlled-azure-runtime-cutover-20261002",
+      "DATABASE_AUTHORITY_APPROVAL_ACTOR": "Edward",
+      "DATABASE_AUTHORITY_APPROVED_FINGERPRINT": "b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced",
+      "DATABASE_AUTHORITY_APPROVED_CREDENTIAL_CLASS": "runtime",
+      "TRUST_PROXY": "1"
     },
     "secretActions": {
-      "DATABASE_URL": "API: existing distinct Azure runtime URL; workers: existing distinct Azure worker URL; exact approved fingerprint",
-      "JWT_SECRET": "Generate fresh strong secret once for production API/worker session boundary; never copy old TiDB value",
-      "MEDIA_UPLOAD_TOKEN_SECRET": "Generate independent strong secret",
-      "BILLING_PROOF_AWS_ACCESS_KEY_ID": "New bucket-scoped identity, distinct from public media key",
-      "BILLING_PROOF_AWS_SECRET_ACCESS_KEY": "New scoped key, secret channel only"
+      "DATABASE_URL": "API: existing canonical b08-runtime channel; workers: distinct canonical b08-worker channel; both resolved at exact approved Azure fingerprint. No migrator/bypass.",
+      "JWT_SECRET": "Apply the existing privately prepared strong production secret; invalidate historical signing sessions; do not generate another as a provisioning task",
+      "MEDIA_UPLOAD_TOKEN_SECRET": "Apply existing independently prepared media-upload secret",
+      "BILLING_PROOF_AWS_ACCESS_KEY_ID": "Verified proof identity listify-paid-proof-runtime-290496c0; distinct from media identity; private local credential source only",
+      "BILLING_PROOF_AWS_SECRET_ACCESS_KEY": "Verified dedicated proof runtime key; private secret channel only",
+      "AWS_ACCESS_KEY_ID": "Verified media identity listify-media-runtime-07394cfd; private local credential source only",
+      "AWS_SECRET_ACCESS_KEY": "Verified dedicated media runtime key; private secret channel only"
     },
     "preserve": [
       "Existing Redis/public media/verified Resend sender/OWNER_OPEN_ID; evaluate each against final source",
@@ -50,8 +63,15 @@
     ],
     "removeVariables": [
       "PAID_MVP_ADMITTED_OWNERS",
-      "PAID_MVP_SALES_OPEN_UNTIL"
-    ]
+      "PAID_MVP_SALES_OPEN_UNTIL",
+      "DATABASE_MIGRATION_URL",
+      "DATABASE_BOOTSTRAP_URL",
+      "DATABASE_AUTHORITY_PARENT_FINGERPRINT",
+      "DATABASE_AUTHORITY_CORRELATION_ID",
+      "BUILD_SHA"
+    ],
+    "bindingPreparationEvidence": "../mvp1-aws-storage-hardening-20261001/production-binding-preparation-20261002.json",
+    "approvalProvenance": "The proposed runtime/worker approval fields document Edward\u2019s existing explicit controlled Azure cutover directive under checklist 28; canonical field consistency checked without opening a connection. Review storage delta and refresh release gates before application."
   },
   "workers": [
     {
@@ -59,7 +79,11 @@
       "configFile": "railway.email-worker.json",
       "startCommand": "pnpm email:supervisor",
       "restartPolicy": "ALWAYS",
-      "databaseCredentialClass": "worker"
+      "databaseCredentialClass": "worker",
+      "roleVariableOverrides": {
+        "DATABASE_CREDENTIAL_CLASS": "worker",
+        "DATABASE_AUTHORITY_APPROVED_CREDENTIAL_CLASS": "worker"
+      }
     },
     {
       "name": "paid-mvp-lead-job",
@@ -67,14 +91,20 @@
       "startCommand": "pnpm lead-delivery:worker",
       "cronSchedule": "*/5 * * * *",
       "restartPolicy": "NEVER",
-      "databaseCredentialClass": "worker"
+      "databaseCredentialClass": "worker",
+      "roleVariableOverrides": {
+        "DATABASE_CREDENTIAL_CLASS": "worker",
+        "DATABASE_AUTHORITY_APPROVED_CREDENTIAL_CLASS": "worker"
+      }
     }
   ],
   "controlledAdmissionAfterSeparateLiveReview": {
     "status": "NOT_ENABLED",
-    "configuration": "PAID_MVP_ADMITTED_OWNERS=agent:<resolved-user-id>,agency:<resolved-agency-id>,developer:<resolved-organisation-id>",
+    "configuration": "Remain absent during this fully paused cutover; any later admitted-owner configuration is a separately reviewed normal-flow scope",
     "resolution": "Normal fresh account, current membership and approved developer publisher context; never browser-supplied owner IDs",
     "window": "Only an attended expiring normal sales window; absolute pause remains effective",
     "money": "Actual reconciled bank receipt; no test selectors or seeded entitlements"
-  }
+  },
+  "updatedAt": "2026-10-02T10:41:16.795347+00:00",
+  "storageProvisioningAndIndependentCredentialVerification": "COMPLETE; see storage packet 29; bindings remain proposed/not applied"
 }

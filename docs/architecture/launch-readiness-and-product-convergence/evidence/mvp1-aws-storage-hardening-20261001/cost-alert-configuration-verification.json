@@ -1,0 +1,29 @@
+{
+  "recordedAt": "2026-10-01T20:58:20.778404+00:00",
+  "verificationSource": "Edward operator report in this conversation",
+  "account": "914683204061",
+  "budgetName": "PropertyListify-MVP1-S3-warning-20261001",
+  "configurationReadback": "PASS",
+  "budgetCreationPassed": true,
+  "recipientReadbacksPassed": 3,
+  "recipient": "finances@propertylistifysa.co.za",
+  "monthlyS3WarningUsd": 1,
+  "notifications": [
+    {
+      "kind": "ACTUAL",
+      "thresholdPercent": 80
+    },
+    {
+      "kind": "ACTUAL",
+      "thresholdPercent": 100
+    },
+    {
+      "kind": "FORECASTED",
+      "thresholdPercent": 100
+    }
+  ],
+  "alertDeliveryVerified": false,
+  "rawCloudShellReadbacksRetrievedLocally": false,
+  "budgetRecreatedByAgent": false,
+  "aggregateIncrementalBudgetUsdMonthlyUnchanged": 15
+}
