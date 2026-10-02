@@ -309,5 +309,36 @@
       "controlled-mailbox-b"
     ],
     "accountsCreated": false
+  },
+  "sourceCorrectionReview": {
+    "pullRequest": "https://github.com/Doscoding187/real_estate_portal/pull/585",
+    "reviewedHead": "aa9519b4d7a22deb8355866c957fe7e882aefa92",
+    "seniorVerdictAtReviewedHead": "changes requested",
+    "severity": "P2",
+    "finding": "Lifetime Redis errors permanently prevented readiness recovery after eleven failed PINGs.",
+    "correction": "Cache health uses current connection/fallback state; lifetime connectionErrors remain telemetry.",
+    "mockedTransportRegression": {
+      "preFixRecoveryHttpStatus": 503,
+      "postFixRecoveryHttpStatus": 200,
+      "outageHttpStatus": 503,
+      "failedPingsBeforeRecovery": 11,
+      "sameServerCacheAndClientInstance": true,
+      "cumulativeErrorsPreservedAfterRecovery": 11,
+      "secondOutageErrorsPreserved": 12,
+      "secondOutageAlsoBlocksAndRecovers": true
+    },
+    "freshLocalValidation": {
+      "focusedTestsPassed": 16,
+      "typeScript": "passed",
+      "touchedLintErrors": 0,
+      "touchedLintExistingWarnings": 6
+    },
+    "replacementSourceAccepted": false,
+    "correctionDeployed": false,
+    "requiredNext": [
+      "Fresh CI on the correction head",
+      "Independent senior re-review",
+      "Explicit replacement source acceptance before deployment"
+    ]
   }
 }

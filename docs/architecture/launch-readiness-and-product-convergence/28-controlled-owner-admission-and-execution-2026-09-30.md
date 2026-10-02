@@ -33,6 +33,8 @@ Source remains the integrated paid `a05868c66f493e3cbc972a119074c91a10797777` / 
 
 All protected commands use exact authority approval, fingerprint, current plan digest and acknowledgment where required by their operation. Provider proposals are not mutation evidence. After any Azure writes, use compatible Azure artifacts or Azure recovery; never reopen TiDB writers.
 
+**Correction review checkpoint:** senior review of #585 at `aa9519b4d` requested the P2 Redis recovery fix. Current connection/fallback state now determines cache health while lifetime errors remain telemetry. A mocked-transport HTTP regression reproduced the old failure and verifies recovery after eleven 503 responses on the same server/cache instance, with no restart or counter reset. All 16 focused tests and TypeScript pass; fresh correction-head CI, independent re-review and explicit replacement-source acceptance remain required. No correction is deployed and frontend promotion remains held.
+
 ## Unpaid hosted checks
 
 Keep `PAID_MVP_SALES_PAUSED=true`, no admitted owner configuration and no sales-open deadline throughout. Use the normal website and API, with separately controlled mailboxes and private evidence:

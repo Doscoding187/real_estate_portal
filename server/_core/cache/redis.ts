@@ -725,9 +725,8 @@ export async function getCacheHealth(): Promise<{
   const totalRequests = stats.hits + stats.misses;
   const hitRate = totalRequests > 0 ? stats.hits / totalRequests : 0;
 
-  let status: 'healthy' | 'degraded' | 'unhealthy' = 'healthy';
-  if (manager['fallbackMode']) status = 'degraded';
-  if (stats.connectionErrors > 10) status = 'unhealthy';
+  // Historical errors remain telemetry; current connection health can recover.
+  const status = manager['isConnected'] && !manager['fallbackMode'] ? 'healthy' : 'degraded';
 
   return {
     status,

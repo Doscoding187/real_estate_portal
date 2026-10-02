@@ -30,12 +30,28 @@ assessment before closing the database. Hosted cache uses the reviewed
 fails readiness. No schema, migration, geography, role grant, storage policy,
 credential payload or admission setting changes.
 
-Local validation: 15 focused readiness/cache/liveness regressions passed;
+Initial validation at `aa9519b4d`: 15 focused readiness/cache/liveness regressions passed;
 11 canonical readiness tests passed; the full database authority static gate
 passed 442 tests and its utility/schema/inventory/lifecycle checks. TypeScript
 passed. The Railway backend build command passed but is a documented no-op
 because the backend runs directly through tsx. Fresh CI must certify the new PR
 head; prior storage CI cannot certify this source correction.
+
+Senior review at `aa9519b4d` requested a P2 correction: lifetime Redis error
+telemetry made health permanently unhealthy after eleven failures, including
+after a successful PING. The added mocked-transport HTTP regression reproduced
+503 after recovery before the fix. Cache status now reflects current connection
+and fallback state; the cumulative error counter is retained unchanged for
+telemetry. On one server and one cache/client instance, the regression verifies
+ready → eleven outage responses (503) → recovered Redis (200), then a second
+outage/recovery. The counter remains eleven after recovery and twelve after the
+second outage; no process/cache restart or telemetry reset is used.
+
+After this correction, all 16 focused readiness/cache/liveness tests and
+TypeScript passed. Touched ESLint passed with zero errors and six existing
+warnings. Canonical SQL checks and their test sources are unchanged; the prior
+11/442-test evidence is retained rather than attributed to the correction head.
+Fresh exact-head CI and independent re-review are required.
 
 This correction is not deployed or an accepted replacement for
 `cbc18c8fdfb0a900c7255ca695da56bd9a7660c3`. Independent review and explicit acceptance
