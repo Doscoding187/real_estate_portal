@@ -1041,18 +1041,38 @@ synthesising inputs is forbidden outright.
 ### What needs an owner decision
 
 **Combined loading.** This is the binding constraint on national coverage. The
-materializer admits one province per target on purpose, so the decision must cover
-per-territory identity verification inside a shared transaction, cross-province
-Place ID uniqueness, natural-key collisions between provinces, and how a partial
-multi-province load is either completed or refused rather than left half-loaded.
+decision surface is now written up in
+`docs/architecture/place-authority-national-coverage-plan.md`, with the collision
+surface measured by `pnpm place:admission:collision-surface`.
 
-Once that is decided the cross-province duplicate check becomes an executable
-contract instead of a report, and the **828** cross-province homonyms become
-guarded rather than merely observed.
+Measuring it changed what the decision actually is. **Place ID collisions across
+provinces are 0, and cross-province (parent, name) collisions are 0** — parents are
+province-scoped, so both properties already hold and neither needs inventing or
+repairing.
+
+What the measurement surfaced instead is that **614 admitted pairs share a parent
+and a normalized name**, so a national table **cannot** enforce
+`UNIQUE(parent, normalized_name)`. None of these are merge misses: 32 sit under the
+15 km bound and every one differs in place type — Oudtshoorn is both a local
+municipality and a town 2.2 km from its own seat, and Mandeni, Nkandla, Nongoma
+and Umvoti follow the same pattern. The remaining 582 are at or past the bound and
+are correctly separate Places, 310 of them more than 50 km apart. A town and the
+municipality containing it sharing a name is ordinary South African geography, and
+the merge rule is type-aware precisely so it is not collapsed.
+
+The plan's requirements are therefore about transactionality and reprovenance, not
+about identity repair: atomicity across all nine provinces with no half-loaded
+target, global ID and natural-key enforcement on the loaded rows rather than the
+packages, and no consumer activation.
 
 **The migration renumber plan**, drafted and awaiting review in
 `docs/architecture/place-authority-migration-reconciliation-plan.md`. Not
 implemented; this branch's evidence is evidence about this branch only.
+
+The national coverage plan raises a question that outranks both: **is a national
+target disposable or durable?** Every proof so far ran on a `disposable-worktree`
+target. Whether the national target is disposable changes the blast radius of every
+load, replay and probe, and it is not an engineering choice.
 
 **The boundary currency review** and the **founder ODbL determination**, both
 before anything is published. No admitted province currently carries OSM-derived
