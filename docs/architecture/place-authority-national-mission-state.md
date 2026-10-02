@@ -806,6 +806,110 @@ had described Gauteng as recording "no boundary provenance at all", which is wro
 it records provenance per record and lacks only the aggregation. Both are corrected
 rather than left to stand.
 
+## Integration readiness and the reconciled-schema proof
+
+**This is a new proof against a changed schema. It does not replace the historical
+per-province proofs above, which were run against the pre-reconciliation head `0099`**
+and remain the record of those runs.
+
+### Integration base, pinned not assumed
+
+`git fetch --all --prune` then pinned `origin/main` =
+**`cbc18c8fdfb0a900c7255ca695da56bd9a7660c3`**, manifest `expectedHead`
+`0094_content_topics_primary_key.sql`, 95 migrations. Verified rather than assumed; the
+value held. Local `main` remains 600 commits behind at `0065` and is **not** the
+integration base.
+
+The branch was not merely renumbering against that base — it was **missing four of its
+migrations**, which now claim sequence 0091–0094 for transactional email,
+user_onboarding_state and content_topics. Those were integrated from the pinned base
+verbatim, and Place Authority renumbered `0091`–`0099` → `0095`–`0103`. Reconciled
+head: **`0103_saved_searches_canonical_place_reference_fk.sql`**, 104 manifest entries,
+contiguous `0..103`, every checksum verified against the file on disk, **no migration
+body rewritten and no ledger edited**.
+
+Authority: the Database Change Protocol's pre-adoption migration correction,
+`PLACE-S1-PREADOPTION-MIGRATION-AMENDMENT-2026-09-25-Edward`. Its conditions are
+demonstrable: unmerged; `pnpm place:admission:audit-retained-targets` enumerated **94
+databases** on the governed local service and found **none** carrying the old
+numbering, so no persistent or shared environment adopted it; every target that
+applied it was disposable and destroyed; and a sequence correction is not a behavioural
+change. **Nothing required stopping.**
+
+### Two engineering defects fixed at the cause
+
+**TS2802 in `canonicalPlaces.ts`.** `tsconfig.json` set `module: ESNext`, `lib: esnext`
+and a vite toolchain but **never set `target`**, so TypeScript silently applied its ES5
+default, under which a direct `for...of` over a `Map` is an error without
+`downlevelIteration`. Declaring `"target": "ES2022"` corrects the misconfiguration
+rather than loosening anything — `strict` and `noEmit` untouched, no code changed — and
+takes the repository from **332 errors to 262**, because all 70 TS2802 errors were the
+ES5 default calling valid modern code invalid.
+
+The second finding is why `pnpm typecheck` passes `--incremental false`.
+`tsconfig.json` sets `incremental: true` with a shared `tsbuildinfo`, so a plain
+`tsc --noEmit` answered from cache and reported an identical 332 across three attempts
+to change the target. A typecheck that can report stale results is worse than none. The
+262 remaining are pre-existing — 210 client, 52 server — and none are in a file this
+workstream touched.
+
+**The intermittent regeneration failure was not a flaky test.** It was the mission's
+central invariant, one `stat` result away from destruction. The builder chose between
+the committed Place ID registry and a fresh empty one with
+`existsSync(...) ? readJson(...) : empty`, so a single false negative — observed on this
+filesystem — selected the empty registry and re-minted every Place from `randomBytes`.
+Captured rather than described: `minted=1466 reused=0`, **all 1,466 Gauteng identities
+changed with zero shared**, seven of nine artifacts diverged, and only `--check` noticed.
+
+Fixed by reading first and classifying the failure: `ENOENT` means absent, a corrupt
+registry fails closed rather than parsing as empty, and registry-absent-while-artifacts-
+exist is refused as lost allocations rather than treated as a first build. The first
+version of that last guard read `packagePaths.places` instead of
+`packagePaths.artifacts.places` and never fired — caught by testing the failure path,
+not by trusting the guard's presence.
+
+### Reconciled-schema national storage proof
+
+Repeatable via `pnpm place:admission:national-storage`. Fresh owned disposable target
+from zero, migrated with explicit `--accepted-old-head=none --expected-new-head=0103`,
+104 migrations applied, schema congruency **true**.
+
+| Claim | Result |
+| --- | --- |
+| Target empty before the load | 0 rows in all five authority tables |
+| Injected fault after 6,000 of 17,664 inserts | all five tables **unchanged and empty**, by content digest |
+| Atomic load of nine provinces | 17,664 Places, 26,425 names, 17,655 relationships, 79,925 evidence, 19,792 mappings |
+| Source identities | 18,309 = 17,664 Places + 645 absorbed by merge groups |
+| Place identities | loaded set digest `75745dac494a0d49…` equals the committed packages; none missing |
+| Per-province verification | **9/9 complete, zero drift, exactly 9 province roots** |
+| Replay | zero rows written, every table digest unchanged |
+| Partial target | refused, not extended; partial state left untouched |
+| Consumer activation | none |
+
+The write counters were also corrected: they counted `affectedRows`, and
+`ON DUPLICATE KEY UPDATE` against an existing row reports `affectedRows 1` with
+`insertId 0`, so a complete no-op replay was reported as a full write of 17,664 Places.
+The digests already proved the replay was a no-op; the counter contradicted that
+evidence. It now counts rows actually created.
+
+### Target lifecycle
+
+Created from zero, proven, and disposed through the governed acknowledgement
+`CONFIRM_DATABASE_DISPOSE_0c822b50ba97506e`, target
+`0c822b50ba97506e19b3dcbe822b90a05e8bd3ae13346366b8796de7de4a856d`,
+classification `disposable-worktree`, credential class `local-owner`, host
+`127.0.0.1:3307`. The service was stopped and recovered through the validated socket
+path after an abnormal termination left stale PID/socket/lock metadata, which the
+governed `db:authority:service:recover` classified and removed. **No protected, remote,
+shared or durable target was accessed at any point in this task.**
+
+### Still outside this task
+
+Durable loading, consumer activation, boundary currency review and the ODbL
+determination remain undecided and untouched. The boundary check still proves only the
+**absence of unsupported currency claims**; it does not certify current boundaries for
+any province, and Gauteng's vintage remains unrecoverable from committed inputs.
+
 ## Authoritative digests
 
 Admission territory registry

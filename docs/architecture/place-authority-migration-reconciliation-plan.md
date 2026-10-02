@@ -1,10 +1,18 @@
 # Migration reconciliation plan — Place Authority onto the integration head
 
-**Status: PROPOSED FOR REVIEW. Not implemented.**
+**Status: APPLIED AND PROVEN on a disposable target. Not merged.**
 
-This document proposes a migration renumbering so that Place Authority can sit on
-the current integration head. It is a schema-authority change and therefore needs
-review before any code is written. Nothing here has been applied.
+Applied on `feat/place-authority-slice0-decision` against pinned base
+`origin/main` = `cbc18c8fdfb0a900c7255ca695da56bd9a7660c3`, verified by a fresh
+`git fetch --all --prune` rather than assumed. Proven by
+`pnpm place:admission:national-storage`; full evidence in
+`docs/architecture/place-authority-national-mission-state.md`.
+
+This document proposed a migration renumbering so that Place Authority could sit on
+the current integration head. It has since been applied and proven on a disposable
+target; the mapping below is preserved unchanged as the reviewed decision, and §2a
+records what was actually done. It is **not merged**, so it remains unadopted and
+therefore still amendable under the pre-adoption correction clause.
 
 - Author: Place Authority geography workstream
 - Date: 2026-10-01
@@ -13,6 +21,28 @@ review before any code is written. Nothing here has been applied.
   request #583: integrated Paid MVP controlled release")
 - Authority: `docs/architecture/database-authority-policy.md`,
   `docs/database-authority/database-change-protocol.md`
+
+### Applied record
+
+| | |
+| --- | --- |
+| Pinned base | `origin/main` = `cbc18c8fdfb0a900c7255ca695da56bd9a7660c3`, head `0094_content_topics_primary_key.sql` |
+| Four migrations this branch was **missing** | `0091_transactional_email_deliveries`, `0092_transactional_email_attempts`, `0093_user_onboarding_state_primary_key`, `0094_content_topics_primary_key` |
+| Place Authority renumbered | `0091`–`0099` → `0095`–`0103` |
+| Reconciled head | `0103_saved_searches_canonical_place_reference_fk.sql` |
+| Manifest | 104 entries, contiguous `0..103`, every checksum verified against the file on disk |
+| Desired model | `transactionalEmail.ts` restored, both primary keys restored, inventory regenerated to 221 tables |
+| Retained-target audit | 94 databases on the governed local service; **none** carries the old numbering, so no workflow was stopped |
+| Proof | 104 migrations applied, schema congruency true, 17,664 Places loaded atomically, all identities unchanged, replay a byte-identical no-op |
+
+The renumbering is authorised by the Database Change Protocol's **pre-adoption
+migration correction**, approval reference
+`PLACE-S1-PREADOPTION-MIGRATION-AMENDMENT-2026-09-25-Edward`. Its five conditions are
+demonstrable rather than assumed: the series is unmerged; the audit above proves no
+persistent, shared or protected environment adopted it; the only targets that applied
+it were disposable and destroyed; the branch is still establishing its initial
+canonical series; and a sequence correction is not a behavioural change. **No migration
+body was rewritten and no ledger was edited.**
 
 ### Pin the integration commit, and note that "main" is ambiguous here
 
@@ -65,7 +95,20 @@ None references `place`, `place_name`, `place_relationship`, `place_evidence`,
 `saved_searches`. So the reconciliation is a pure renumbering with **no semantic
 rebase and no DDL rewrite**.
 
-## 3. Proposed mapping
+## 2a. What was applied
+
+Four migrations the branch was missing were integrated from the pinned base, Place
+Authority was renumbered as mapped below, and the lineage was derived from disk
+rather than transcribed: `sequence` equals each filename's four-digit identity, and
+`parent` and `parentChecksum` were rebuilt in sequence order. Migration bodies are
+untouched — each checksum is a content digest, verified identical before and after the
+rename and against the file on disk — so no DDL was rewritten.
+
+The desired model was integrated alongside the migrations, because migrations alone
+would have left the model disagreeing with the chain. §8's per-province proof still
+applies unchanged and is unaffected.
+
+## 3. Mapping as reviewed
 
 Place Authority renumbers from `0091`–`0099` to `0095`–`0103`, after the
 integration head's `0094`.
