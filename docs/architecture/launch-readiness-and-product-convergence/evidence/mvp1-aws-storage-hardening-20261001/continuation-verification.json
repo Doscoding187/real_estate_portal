@@ -95,8 +95,7 @@
     "exact production-build/hosted verification of the saved frontend media setting and refreshed deployment hold",
     "remaining worker provisioning and prepared production bindings/session-secret application",
     "joined API/worker/frontend deployment at accepted M under checklist 28",
-    "hosted upload/display and private proof owner/wrong-owner/anonymous checks; no production fixture or intake bypass",
-    "physical USB disconnection custody"
+    "hosted upload/display and private proof owner/wrong-owner/anonymous checks; no production fixture or intake bypass"
   ],
   "validation": {
     "pythonSecurityContractTests": 25,
@@ -183,5 +182,13 @@
     "protectedRoleApprovalFieldConsistencyPass": true,
     "protectedDatabaseConnected": false,
     "providerBindingsChanged": false
+  },
+  "archiveCustody": {
+    "disposition": "operator-confirmed secure retention consistent with fresh disconnected-device readback",
+    "evidence": "usb-current-disconnected-custody-20261002.json",
+    "selectedUsbPartitionAbsent": true,
+    "usbStorageDeviceCount": 0,
+    "previousContradictoryAttachmentSuperseded": true,
+    "archiveCaptureOrRetrievalRepeated": false
   }
 }

@@ -9,7 +9,10 @@ PR #583 is merged as `cbc18c8fdfb0a900c7255ca695da56bd9a7660c3`, tree
 The merged PR's operational checkpoint records geography applied once and
 verified (9 provinces / 340 cities / 1,089 suburbs), old production API
 REMOVED, final frozen TiDB capture and independent USB authenticated retrieval
-(218 tables / 152 rows). Physical USB disconnection remains pending.
+(218 tables / 152 rows). Edward’s stored/unplugged custody confirmation is now
+consistent with fresh October 2 readback: selected USB partition absent and
+zero USB storage devices enumerated. The previous attachment conflict is
+superseded; no capture/retrieval was repeated. [Custody reconciliation](evidence/mvp1-aws-storage-hardening-20261001/usb-current-disconnected-custody-20261002.json).
 Do not repeat those completed provisioning/capture/apply operations.
 
 [Storage packet 29](29-mvp1-aws-storage-hardening.md) is the current storage
@@ -72,7 +75,7 @@ Provider observations are dated reads, not lasting guarantees. Refresh at each e
 | --- | --- | --- |
 | Attended execution and Vercel operator | October 1 execution and archive attendance are recorded. Edward used the existing Vercel dashboard and confirmed the Production media setting. Refresh the attended cutover window, provider hold and exact production build inputs before joined deployment. | Do not infer ongoing after-hours coverage or a CLI login from a dashboard session. |
 | Necessary incremental usage | Edward approved US$15/month aggregate incremental usage. The private-proof bucket/identity, recovery and transfer/runtime verification are complete. The final isolated media identity/application is complete; only the reviewed remaining workers remain in this resource sequence; do not recreate the proof resources or budget. [Current storage checkpoint](29-mvp1-aws-storage-hardening.md), [reviewed service/configuration delta](evidence/controlled-production-release-2026-09-30/production-config.proposed.json). | No plan upgrade or new application environment. Approval is not a forecast, free-tier claim or enforced spending cap. Unapproved additions remain a founder spend gate. |
-| Independent archive custody | The existing USB destination, encrypted final archive copy, independent authenticated retrieval and separate local key custody are complete. Physical USB disconnection remains pending. Do not request another destination or repeat capture/retrieval as provisioning. | Preserve TiDB read-only. No archive/key exposure or retirement deletion is authorized. |
+| Independent archive custody | The existing USB destination, encrypted final archive copy, independent authenticated retrieval and separate local key custody are complete. Fresh disconnected-device readback now supports Edward’s previous secure-custody confirmation. Do not request another destination or repeat capture/retrieval as provisioning. | Preserve TiDB read-only. No archive/key exposure or retirement deletion is authorized. |
 | Recovery exercise resource and coverage | The prepared isolated recovery proposal still needs its own exact target registration, grants, measured usage and coverage before a new write-capable recovery target is created. Existing retained recovery copies remain read-only. | Existing engine/copy evidence does not demonstrate final application recovery/capacity. No new staging app or inferred recovery-target authority. |
 
 B15 exact-copy approval, final bank configuration and retention/customer disclosure remain paid-opening decisions, not new requests for already supplied founder/contact/schedule facts. The provider schedule can now use measured AWS eu-north-1 / Resend eu-west-1 / Railway asia-southeast1; resolve Azure and OAuth/analytics processing from actual configuration. Draft customer copy is not published as approved.
@@ -110,7 +113,7 @@ removed with original rules unchanged. The old API remains stopped; never
 restart a TiDB writer to regain a diagnostic route. Hosted geography journeys
 remain pending on the exact joined deployment.
 
-### 3. Writer freeze and final TiDB preservation — complete except physical custody
+### 3. Writer freeze and final TiDB preservation — complete
 
 The old production API was removed after geography verification. Independent
 writer/session readbacks and the governed final frozen capture passed, followed
@@ -118,8 +121,8 @@ by independent USB retrieval and authenticated decryption: 218 tables / 152 rows
 The archive key remains separate in protected local custody. No TiDB import,
 reverse replication or retirement deletion is authorized.
 
-Keep writers stopped and TiDB read-only. Physical USB disconnection remains the
-custody follow-up; do not rerun final capture or ask for a new archive destination.
+Keep writers stopped and TiDB read-only. The subsequent disconnected-device readback resolves the prior custody
+attachment conflict; do not rerun final capture or ask for a new archive destination.
 Historical freeze templates and preparation recipes are retained in Git history
 and are not fresh writer attestations or instructions to recapture. New protected
 operations require their own current authority/readback evidence.

@@ -248,8 +248,10 @@ private-proof provisioning, version recovery, encrypted key transfer and
 bounded dedicated proof and media runtime permissions have passed. S3 cost-warning configuration and all three recipient readbacks also passed per Edward’s operator report. The canonical Azure inventory and operator-confirmed frontend setting are complete. Hardened anonymous
 read/write denial, scoped media runtime IAM and production
 CORS have passed the operator and independent readback checks recorded below. Exact frontend build verification, alert email delivery/aggregate monitoring, production
-bindings and hosted browser/owner checks remain unverified. The previous USB physical-removal custody item
-remains outstanding without repeating completed archive capture/readback.
+bindings and hosted browser/owner checks remain unverified. Edward’s previous unplugged/secure-custody report is now consistent with
+fresh readback: selected USB partition absent and no USB storage device
+enumerated. The prior attachment conflict is reconciled; archive capture/readback
+was not repeated. [Current custody evidence](evidence/mvp1-aws-storage-hardening-20261001/usb-current-disconnected-custody-20261002.json).
 Storage acceptance alone cannot close the release register or open payments.
 
 ## Incremental storage estimate
@@ -402,8 +404,8 @@ that review, refresh provider holds and the attended exact-M cutover, then apply
 through existing private secret channels with deployment held and independent
 readback. Hosted tests still require normal consenting customer/owner records;
 no production fixtures or invoice/intake bypass are introduced to manufacture a
-proof-owner pass. Alert receipt/aggregate monitoring and USB physical custody
-remain separate pending items.
+proof-owner pass. Alert receipt/aggregate monitoring remain pending. USB disconnection custody
+is now reconciled against fresh device absence and Edward’s prior report.
 
 ## Validation and review status
 

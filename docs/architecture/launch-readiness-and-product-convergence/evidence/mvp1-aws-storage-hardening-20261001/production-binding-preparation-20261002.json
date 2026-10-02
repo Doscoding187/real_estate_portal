@@ -87,6 +87,7 @@
     "Deploy exact accepted M and verify Azure target/readiness, sessions, worker lease/health",
     "Existing authenticated Vercel operator confirms hold/build inputs and manually deploys exact M",
     "Hosted browser upload/display and owner/wrong-owner/anonymous proof tests with legitimate normal-flow records; no production fixtures or intake bypass",
-    "Alert email delivery/aggregate monitoring and physical USB disconnection custody"
-  ]
+    "Alert email delivery/aggregate monitoring"
+  ],
+  "archiveCustodyCurrentEvidence": "usb-current-disconnected-custody-20261002.json"
 }
