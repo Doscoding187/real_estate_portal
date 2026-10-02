@@ -390,9 +390,77 @@ const D1_SCOPE_BY_TYPE = {
  * ------------------------------------------------------------------ */
 
 const PLACE_ID_REGISTRY_PATH = packagePaths.placeIdRegistry;
-const registry = existsSync(resolve(ROOT, PLACE_ID_REGISTRY_PATH))
-  ? readJson(PLACE_ID_REGISTRY_PATH)
-  : { registry_version: ADMISSION_VERSION, allocated: {}, allocation_sequence: 0, namespace: 'pl-place-01' };
+
+/**
+ * Read the Place ID registry, distinguishing "absent" from "unreadable".
+ *
+ * This was `existsSync(...) ? readJson(...) : empty`, and that is the whole bug. The
+ * decision to reuse prior allocations was made from a stat result, so a single false
+ * negative -- and this worktree's filesystem has been observed returning one for a
+ * file that is present -- silently selected the empty registry. Every Place was then
+ * re-minted from `randomBytes`, so all 1,466 Gauteng identities changed with **zero**
+ * shared, seven artifacts diverged, and `--check` failed with "would change". It
+ * surfaced as an intermittent test failure because the underlying stat was
+ * intermittent, and it was invisible to every assertion except that one.
+ *
+ * Reading first and classifying the error removes the race: ENOENT means absent, and
+ * anything else is a real fault that must stop the build rather than be reinterpreted
+ * as a first build.
+ */
+function readPlaceIdRegistry() {
+  const absolute = resolve(ROOT, PLACE_ID_REGISTRY_PATH);
+  let raw;
+  try {
+    raw = readFileSync(absolute, 'utf8');
+  } catch (error) {
+    if (error.code === 'ENOENT') return null;
+    throw new Error(
+      `place-admission refused: the Place ID registry at ${PLACE_ID_REGISTRY_PATH} could not be read ` +
+        `(${error.code ?? error.message}). Refusing to continue, because continuing without it would ` +
+        `re-mint every Place identity from a fresh random source.`,
+    );
+  }
+  try {
+    return JSON.parse(raw);
+  } catch (error) {
+    throw new Error(
+      `place-admission refused: the Place ID registry at ${PLACE_ID_REGISTRY_PATH} is not valid JSON ` +
+        `(${error.message}). A corrupt registry must never be read as an empty one, because that ` +
+        `re-mints every Place identity.`,
+    );
+  }
+}
+
+const registryPresent = readPlaceIdRegistry();
+
+/**
+ * Defence in depth. Even a correct absence must not silently re-mint a package that
+ * already exists: if the admitted artifacts are present but the registry that assigns
+ * their identities is not, allocations were lost, and that is a stop condition, not a
+ * first build.
+ */
+if (registryPresent === null) {
+  // Under `artifacts`, not at the top level. Reading `packagePaths.places` here yields
+  // undefined, so this guard silently never fired -- verified by test, not assumed.
+  const alreadyAdmitted = [packagePaths.artifacts.places, packagePaths.artifacts.names].some(path =>
+    existsSync(resolve(ROOT, path)),
+  );
+  if (alreadyAdmitted) {
+    throw new Error(
+      `place-admission refused: ${PLACE_ID_REGISTRY_PATH} is absent while this territory's admitted ` +
+        `artifacts already exist. The registry holds the allocations that give those Places their ` +
+        `identity; without it every Place would be re-minted with a new random ID. Restore the ` +
+        `registry, or remove the whole package deliberately if this really is a first build.`,
+    );
+  }
+}
+
+const registry = registryPresent ?? {
+  registry_version: ADMISSION_VERSION,
+  allocated: {},
+  allocation_sequence: 0,
+  namespace: 'pl-place-01',
+};
 
 const allocatedIds = new Set(Object.values(registry.allocated));
 let minted = 0;

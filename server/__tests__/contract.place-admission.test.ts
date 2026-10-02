@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 
 import { normalizedDesiredSchema } from '../_core/databaseAuthority/schemaCongruency';
 import { auditTidbStructuralAdmission } from '../_core/databaseAuthority/tidbStructuralAdmission';
@@ -179,6 +180,54 @@ describe('Place admission: Place identity is assigned and stable', () => {
       execFileSync('npx', ['tsx', 'tools/place-admission/build-place-admission.mjs', '--check'], {
         stdio: 'pipe',
       }),
+    ).not.toThrow();
+  });
+
+  it('refuses to re-mint identities when the Place ID registry cannot be read', () => {
+    // The determinism assertion above passed intermittently, and the cause was a
+    // single false-negative stat: the builder chose an empty registry, re-minted
+    // every Place from randomBytes, and `--check` failed with "would change". All
+    // 1,466 Gauteng identities changed with zero shared.
+    //
+    // That failure mode is guarded by refusing rather than re-minting, so this test
+    // pins the guard. It is a real failure to provoke, not a mock: a corrupt registry
+    // is the cheapest faithful way to reach the same refusal path, and it must stop
+    // the build instead of being reinterpreted as a first build.
+    const repositoryRoot = process.cwd();
+    const registryRelative =
+      'data/gauteng-place-admission-v0.1/gauteng_place_id_registry.v0.1.json';
+    const registryPath = join(repositoryRoot, registryRelative);
+    const original = readFileSync(registryPath, 'utf8');
+
+    try {
+      writeFileSync(registryPath, '{ not json', 'utf8');
+      let message = '';
+      try {
+        execFileSync(
+          'npx',
+          ['tsx', 'tools/place-admission/build-place-admission.mjs', '--territory=za-gp'],
+          { cwd: repositoryRoot, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] },
+        );
+      } catch (error) {
+        message = `${(error as { stderr?: string }).stderr ?? ''}${(error as { stdout?: string }).stdout ?? ''}`;
+      }
+      expect(message).toContain('place-admission refused');
+      // And it must name the reason, so an operator is not left guessing whether the
+      // build failed on the registry or on geography.
+      expect(message).toMatch(/Place ID registry/);
+      expect(message).toMatch(/not valid JSON/);
+    } finally {
+      writeFileSync(registryPath, original, 'utf8');
+    }
+
+    // The registry is intact and the package still replays with zero re-minting.
+    expect(readFileSync(registryPath, 'utf8')).toBe(original);
+    expect(() =>
+      execFileSync(
+        'npx',
+        ['tsx', 'tools/place-admission/build-place-admission.mjs', '--territory=za-gp'],
+        { cwd: repositoryRoot, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] },
+      ),
     ).not.toThrow();
   });
 });
