@@ -64,17 +64,20 @@
     "targetClass": "production",
     "targetFingerprintHash": "b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced",
     "credentialClass": "read-only",
-    "complete": false,
-    "inventoriedTables": 0,
-    "localInspectionFailed": true,
-    "existingTestingNetworkInspectionFailed": true,
-    "privateCredentialDeliveredOnlyOverSshStdin": true,
-    "guardedTaskDiagnosticCleanup": true,
+    "complete": true,
+    "inventoriedTables": 214,
+    "totalRows": 1450,
+    "referenceCounts": {
+      "bucketReferences": 0,
+      "cdnReferences": 0,
+      "relativeMediaReferences": 0
+    },
     "databaseMutationPerformed": false,
     "applicationConfigurationChanged": false,
-    "networkPrerequisiteReadback": "media-network-prerequisites.json",
-    "currentLocalAndExistingTestingTcpReachable": false,
-    "observedTestingEgressMatchesCurrentFirewall": false
+    "temporarySingleAddressRuleAuthorizedCreatedAndRemoved": true,
+    "originalFirewallRulesMatchAfterCleanup": true,
+    "evidence": "azure-media-dependency-inventory-20261002.json",
+    "earlierFailedNetworkDiagnostics": "media-network-prerequisites.json; superseded for inventory completion, retained as dated history"
   },
   "containment": {
     "productionAndTestingApiGitTriggers": "absent in authenticated CLI queries",
@@ -82,19 +85,21 @@
     "latestProductionDeploymentStatus": "REMOVED",
     "activeOrQueuedAmongLatest20ProductionApiDeployments": false,
     "remoteMcpMetadataInconsistentWithCli": true,
-    "limitation": "Bounded observations, not a complete writer census or fresh Vercel hold proof"
+    "limitation": "Bounded observations, not a complete writer census or fresh Vercel hold proof",
+    "latest5ProductionApiReadbackAt": "2026-10-02T09:15:09.348600+00:00",
+    "latest5ProductionApiAllRemoved": true
   },
   "pending": [
     "AWS alert email delivery and aggregate provider monitoring",
-    "current Azure media inventory and authenticated frontend build configuration",
-    "final media policy/public-access blocks/scoped IAM/CORS application",
+    "exact production-build/hosted verification of the saved frontend media setting",
+    "prepared final media operator application/readback, encrypted media-key transfer/decryption and independent runtime verification before binding",
     "worker provisioning and exact production bindings/session-secret application",
     "joined API/worker/frontend deployment under checklist 28",
     "hosted upload/display and private proof owner/wrong-owner/anonymous checks",
     "physical USB disconnection custody"
   ],
   "validation": {
-    "pythonSecurityContractTests": 14,
+    "pythonSecurityContractTests": 25,
     "nodeTransferRuntimeSecurityContractTests": 6,
     "lint": "pass; new CJS files",
     "format": "pass; new CJS files",
@@ -104,7 +109,14 @@
       "runId": 36919847197,
       "requiredJobsPassed": 5,
       "certifiesCurrentFollowupHead": false
-    }
+    },
+    "latestVerifiedGitHubCi": {
+      "head": "ff2b125f0069c8ada556669572ccb6995c48dcdc",
+      "runId": 36926327628,
+      "requiredJobsPassed": 5,
+      "laterDocumentationFollowupNeedsItsOwnChecks": true
+    },
+    "nodeTestsUnchangedSincePreviousPassingRun": true
   },
   "mutationsThisContinuation": {
     "privateS3TaskObjectWritten": true,
@@ -112,7 +124,9 @@
     "productionBindingsChanged": false,
     "TiDbWritersRestarted": false,
     "paymentIntakeOpened": false,
-    "protectedDatabaseDataChanged": false
+    "protectedDatabaseDataChanged": false,
+    "temporaryAzureSingleAddressRuleCreatedAndRemoved": true,
+    "productionFrontendMediaSettingSavedByOperator": true
   },
   "privateEvidenceSha256": {
     "proof-runtime-verified/transfer-verification.json": "94f324c3bfa3754a84c9cad3091a59d984e18e9c13664e27308d76d2a4002747",
@@ -120,7 +134,10 @@
     "operator-private-proof-verified-20261001.json": "e6846276ee876d87bc9bce37a381c93787e1cade9cc35239f73d528dd491e4be",
     "azure-media-inventory-existing-network-result.json": "f75f2a6d7360d2dda6ab7c3302689ccd9670c61b2c1d814a64179a7aedcc1f40",
     "azure-media-inventory-diagnostic-cleanup.json": "5cfcadf7b4ec1c94a619949f44566a88beb40a6598cb67e112d836b788ef02a5",
-    "continuation-containment-readback.json": "9eca2c9a2714269b17c07e0d4e0b6ca7393a05ffb07946044ad638e64d56eaf3"
+    "continuation-containment-readback.json": "9eca2c9a2714269b17c07e0d4e0b6ca7393a05ffb07946044ad638e64d56eaf3",
+    "azure-media-inventory-authorized-local-result.json": "33fd4d40e3ba35d51300089fbed6fa00324dc2b631ad8d6336b48a8979b9eab7",
+    "azure-media-route2-task-rule-cleanup.json": "258a32615bdb0ae24ecdf3bd273c19746b0f745fadc36cb20ad8126d1ac3d3f1",
+    "production-containment-after-media-inventory-20261002.json": "969c6a0e9d64b1f8b39f3cf3e52296baeafa4697881c0d51d095366a4dd9e7df"
   },
   "costAlerts": {
     "configurationReadback": "PASS",
@@ -128,5 +145,12 @@
     "recipientReadbacksPassed": 3,
     "alertDeliveryVerified": false,
     "budgetRecreatedByAgent": false
-  }
+  },
+  "frontendMediaConfiguration": {
+    "evidence": "vercel-production-media-setting.json",
+    "productionViteCloudFrontSettingSavedByOperator": true,
+    "activeFrontendBuildVerified": false
+  },
+  "updatedAt": "2026-10-02T09:22:30.072873+00:00",
+  "mediaHardeningPreparation": "media-hardening-operator-preparation-20261002.json"
 }

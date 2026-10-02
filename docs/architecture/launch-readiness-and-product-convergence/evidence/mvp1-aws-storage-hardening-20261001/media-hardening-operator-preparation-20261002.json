@@ -1,0 +1,26 @@
+{
+  "observedAt": "2026-10-02T08:28:20.467Z",
+  "phase": "prepared operator application; not executed",
+  "bucket": "listify-properties-sa",
+  "region": "eu-north-1",
+  "objectCount": 2260,
+  "totalObjectBytes": 1493411221,
+  "inventorySha256": "616a1b0540a1dab4d78697360eae0fdbfe9223a586536089acee30d517dfe5e2",
+  "readOnlySnapshot": true,
+  "operatorProgram": "scripts/storage/aws-media-hardening.py",
+  "proposedChanges": [
+    "Reviewed CloudFront-only TLS-required bucket policy",
+    "All four bucket public-access blocks enabled",
+    "PUT/Content-Type CORS limited to the two production origins",
+    "New isolated properties/* media runtime user; existing IAM users unchanged"
+  ],
+  "currentReviewedPolicySha256": "b537cdf44d7ad58e8840ecc0f58f77121c9c6d78eceabb5de116ba6aebd3a508",
+  "currentReviewedCorsSha256": "a4fa612732d10cc3c40ae748f51ce83115da6ab71be34a32d3dbb75b852ba01b",
+  "azureDependencyInventorySha256": "33fd4d40e3ba35d51300089fbed6fa00324dc2b631ad8d6336b48a8979b9eab7",
+  "awsMutationsPerformedByPreparation": false,
+  "productionBindingsChanged": false,
+  "finalMediaConfigurationVerified": false,
+  "hostedAcceptanceVerified": false,
+  "existingUploaderRetired": false,
+  "privateSnapshotSummarySha256": "e119f1d1ea2d5fd622f0110e84647f5b8a1eb77106e6ee85ac8b3fd7eefac67c"
+}

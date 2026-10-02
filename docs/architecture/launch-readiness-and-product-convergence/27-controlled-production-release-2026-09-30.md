@@ -22,7 +22,15 @@ approval is recorded; it is neither a forecast nor an enforced cap.
 S3 budget configuration and all three recipient readbacks are complete per
 Edward’s operator report; email delivery remains unverified.
 
-Remaining: alert receipt/aggregate monitoring, current Azure/frontend media dependencies,
+Edward subsequently confirmed saving Production `VITE_CLOUDFRONT_URL` at the
+expected distribution; exact production-build/hosted verification is pending.
+
+The protected Azure media dependency inventory is complete: 214 canonical
+tables / 1,450 rows, zero matched media URL/path references. The authorized
+temporary single-computer firewall rule was removed, with all original rules
+unchanged. [Inventory and cleanup evidence](evidence/mvp1-aws-storage-hardening-20261001/azure-media-dependency-inventory-20261002.json).
+
+Remaining: alert receipt/aggregate monitoring, exact frontend build verification,
 final media identity/policy/CORS application, worker provisioning, production
 secret/runtime bindings, exact joined deployment and hosted customer/security
 journeys under checklist 28. Keep TiDB writers stopped and intake closed.
@@ -108,7 +116,7 @@ Each phase records timestamp, operator, exact source SHA/tree, intended action, 
 
 ### 4. Bind and deploy backend/workers, then frontend
 
-1. Complete the private bucket/scoped-key provisioning and readback under the agreed usage authority. Apply only the [prepared configuration delta](evidence/controlled-production-release-2026-09-30/production-config.proposed.json) to production services. API uses existing distinct Azure runtime identity; both new workers use existing distinct Azure worker identity. No migrator in application variables. Redis and existing durable public media are retained and independently verified; aliases must agree.
+1. Private proof provisioning, key transfer and bounded live permissions are complete; do not replay them. Complete the remaining media operator application and encrypted dedicated-key transfer/testing in packet 29 before binding either identity. Apply only the [prepared configuration delta](evidence/controlled-production-release-2026-09-30/production-config.proposed.json) to production services. API uses existing distinct Azure runtime identity; both new workers use existing distinct Azure worker identity. No migrator in application variables. Redis and existing durable public media are retained and independently verified; aliases must agree.
 2. Generate a fresh strong production JWT secret, invalidate old sessions by removing the old signing secret from all authentication runtimes, and generate an independent media-upload signing secret. Snapshot rollback custody privately; do not restore the old TiDB JWT on Azure. Test an old session is rejected before fresh numeric IDs can grant access. Retain the founder's existing `OWNER_OPEN_ID` and prove normal OAuth owner login; no seeded admin or direct role update.
 3. Keep general paid intake closed: `PAID_MVP_SALES_PAUSED=true`, no expiring sales window, ordinary canonical billing configuration only. Candidate startup/readiness must pass strict environment/origin/storage/Redis/email requirements. The nine fresh preflight issues are actionable, not waived. A provider-injected exact Git SHA can satisfy identity; do not persist a stale BUILD_SHA across later deploys.
 4. Build/deploy exact M for API using `railway.json` (`pnpm start:hosted:api`, `/api/readiness`); configure explicit required start/healthcheck because the old live service uses `pnpm run start:prod` without the reviewed readiness check. Provision email supervisor and 5-minute lead cron in existing production using their checked-in configs, distinct worker DB credentials, same source/approved origins and release identity. No startup migration/reference apply. Record deployment IDs, source SHA, strict readiness, recent scheduler lease, worker health, cron due-work and configured target fingerprint.
