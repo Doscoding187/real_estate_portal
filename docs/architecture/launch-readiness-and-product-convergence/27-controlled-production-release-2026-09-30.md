@@ -38,7 +38,14 @@ are complete. Encrypted media-key retrieval/checksum/decryption and independent
 local runtime checks passed; the 2,260 original object metadata records are
 unchanged. [Execution evidence](evidence/mvp1-aws-storage-hardening-20261001/media-hardening-execution-20261002.json).
 
-Remaining: storage-delta review, alert receipt/aggregate monitoring, exact frontend
+Senior review at `abfa79816` requested a P2 cross-proof evidence correction.
+Both verifiers are corrected and the specific live check passed against the
+retained existing harmless canary (independent proof 200 / media 403 / proof
+200, matching hash/version). Original cross-proof evidence is superseded;
+provisioning was not repeated. [Correction evidence](evidence/mvp1-aws-storage-hardening-20261001/cross-proof-read-correction-20261002.json).
+Checklist 28 binding stays paused pending independent re-review and fresh checks.
+
+Remaining: storage-delta re-review and fresh correction-head CI, alert receipt/aggregate monitoring, exact frontend
 build verification, worker provisioning, production
 secret/runtime bindings, exact joined deployment and hosted customer/security
 journeys under checklist 28. Keep TiDB writers stopped and intake closed.

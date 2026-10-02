@@ -175,7 +175,7 @@ containment limits and the remaining gates without credential values.
    restores that policy immediately afterward using guarded readback, and
    retains the harmless task-owned object. It leaves existing media unchanged.
 5. **Complete; do not replay the application.** The reviewed CloudFront-only policy, all four public-access blocks and production CORS were applied and read back. Operator fresh CloudFront miss/hash, unsigned S3 read/write rejection and allowed/denied preflights passed. Independent agent configuration/object readback matches, with unchanged encryption, ownership and versioning.
-6. **Provisioning, transfer and independent runtime tests complete; binding pending review.** The isolated identity is `listify-media-runtime-07394cfd`. Existing IAM users are unchanged; do not provision another. Its encrypted export matches the pasted SHA256, decryption used the existing transfer key and live local PUT/GET/DELETE plus six real AccessDenied checks passed. Bind only after checklist 28 review, using the media operations in
+6. **Provisioning, transfer and independent runtime tests complete; binding pending review.** The isolated identity is `listify-media-runtime-07394cfd`. Existing IAM users are unchanged; do not provision another. Its encrypted export matches the pasted SHA256, decryption used the existing transfer key and live local PUT/GET/DELETE plus five unaffected AccessDenied checks passed. The cross-proof denial was corrected using the retained existing canary; see the P2 checkpoint below. Bind only after checklist 28 review, using the media operations in
    `media-runtime-policy.json`. It grants no infrastructure provisioning,
    bucket administration, listing, version deletion, or Explore writes.
    Use an isolated identity if changing the existing uploader would affect
@@ -365,9 +365,11 @@ and checked against Edward’s separately pasted ciphertext SHA256
 Decryption with the existing local transfer key passed. The isolated user
 `listify-media-runtime-07394cfd` was independently verified by STS before a
 task-owned object was written. Media PUT/GET/hash and DELETE passed; bucket
-listing, CORS/encryption/policy reads, cross-proof read and outside-prefix write
-returned actual AccessDenied/403. Missing objects or expired credentials are
-not accepted as denials. An independent authenticated HEAD confirms the local
+listing, CORS/encryption/policy reads and outside-prefix write returned actual
+AccessDenied/403. The original cross-proof check used a nonexistent key and did
+not establish isolation; only that evidence is superseded by the targeted
+existing-canary readback below. Expired credentials are not accepted as denials.
+An independent authenticated HEAD confirms the local
 canary was deleted (NotFound/404). Credentials are local mode-0600 files only.
 
 The [execution record](evidence/mvp1-aws-storage-hardening-20261001/media-hardening-execution-20261002.json)
@@ -399,8 +401,10 @@ sales deadline. These are configuration checks, not protected database readiness
 or deployed artifact evidence.
 
 Checklist 28 step 1 requires storage-delta review and fresh checks before
-production binding. PR #584 had no recorded review at this inspection. Complete
-that review, refresh provider holds and the attended exact-M cutover, then apply
+production binding. Senior review at `abfa79816` requested one P2 correction
+to cross-proof denial evidence. The correction and targeted live readback are
+complete; independent re-review and fresh correction-head checks remain pending.
+Complete that re-review, refresh provider holds and the attended exact-M cutover, then apply
 through existing private secret channels with deployment held and independent
 readback. Hosted tests still require normal consenting customer/owner records;
 no production fixtures or invoice/intake bypass are introduced to manufacture a
@@ -414,8 +418,9 @@ from merged accepted release `cbc18c8fdfb0a900c7255ca695da56bd9a7660c3`.
 The existing accepted release code-check evidence applies to those unchanged
 sources; it is not evidence for new hosted storage behavior.
 
-Fresh local validation passed twenty-five Python operator/readback security-contract tests
-and fourteen Node transfer/runtime security-contract tests:
+After the P2 correction, fresh local validation passed thirty-one Python
+operator/readback security-contract tests and twenty Node transfer/runtime
+security-contract tests (51 total):
 
 ```sh
 PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s scripts/storage/tests -v
@@ -428,7 +433,7 @@ the versioning wait preventing object/key writes, recovery preceding runtime
 key creation, RSA-OAEP dummy credential roundtrip, private output permissions,
 plaintext transfer-file cleanup, refusal of repeated verification, and alert
 readbacks without paid alarms/actions or existing-budget edits. These are
-local evidence only. Eleven final-media tests additionally cover drift-before-write, exact readback, isolated IAM grants, encrypted-only export and bounded new-key readiness. Explicit authentication rejection may be retried briefly for positive probes; ambiguous writes/conflicts and resource creation are never replayed. [AWS documents IAM propagation delay](https://docs.aws.amazon.com/IAM/latest/UserGuide/troubleshoot.html). Python programs parse and configuration JSON parses;
+local evidence only. Seventeen final-media Python tests cover drift-before-write, exact readback, isolated IAM grants, encrypted-only export and bounded new-key readiness. Explicit authentication rejection may be retried briefly for positive probes; ambiguous writes/conflicts and resource creation are never replayed. [AWS documents IAM propagation delay](https://docs.aws.amazon.com/IAM/latest/UserGuide/troubleshoot.html). Python programs parse and configuration JSON parses;
 format and whitespace checks are included in preparation. The insecure
 historical policy fixture is test input only and must never be applied.
 
@@ -436,7 +441,7 @@ The proof transfer/runtime-verification helper passed six Node
 security-contract tests covering tampered ciphertext, incomplete recovery,
 a different transfer key, wrong AWS principal, false permission-denial evidence
 and unexpectedly broad access. Live permission results are recorded separately
-above. Eight additional media transfer/runtime cases cover exact target/user/envelope, incomplete metadata, checksum/key mismatch, wrong principal, false denials and unexpectedly broad access. The authorized local Azure dependency inventory attempt used the
+above. Fourteen media transfer/runtime cases cover exact target/user/envelope, incomplete metadata, checksum/key mismatch, wrong principals, false denials and unexpectedly broad access, including missing-key 403, existing-proof readable access, post-denial disappearance, changed canary metadata/content and the read-only correction mode. The authorized local Azure dependency inventory attempt used the
 existing inspector and canonical connection authority with exact production
 fingerprint
 `b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced`.
@@ -491,3 +496,51 @@ Pricing and propagation references:
 - [AWS Budgets pricing](https://aws.amazon.com/aws-cost-management/aws-budgets/pricing/)
 - [CloudFront default metrics and alarm costs](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/monitoring-using-cloudwatch.html)
 - [S3 versioning propagation wait](https://docs.aws.amazon.com/AmazonS3/latest/userguide/manage-versioning-examples.html)
+
+## P2 cross-proof denial correction — 2 October
+
+Senior review at `abfa79816` correctly identified that both media verifiers
+requested a nonexistent proof key. With no listing permission, S3 can return
+403 for a missing key even when object reads are allowed. The original 403
+therefore did not establish cross-proof read isolation. This was an evidence
+gap, not a demonstrated exposure. [AWS GetObject permissions documentation](https://docs.aws.amazon.com/AmazonS3/latest/API/API_GetObject.html).
+
+Both verifiers now require the retained harmless proof runtime canary's private
+descriptor. An independent identity must successfully GET its current version
+and verify its expected harmless content and AES256 encryption before the media
+identity requests that exact same key. A second independent GET must still
+match after the media AccessDenied response. Missing keys (including 403),
+readable existing proofs, changed versions/content and disappearance stop the
+check. The Python operator uses its independent operator identity and validates
+the canary before any provider mutation; `--apply` requires `--proof-canary`.
+Its provisioning operation was not rerun.
+
+The local verifier's `--cross-proof-only` mode refreshed just the affected
+check using the existing dedicated credentials. STS verified both exact users;
+proof GET/hash/version was 200 before and after the media user's
+AccessDenied/403 on the same retained object. No provider write, new object,
+credential, policy, binding or service start occurred. The [replacement evidence](evidence/mvp1-aws-storage-hardening-20261001/cross-proof-read-correction-20261002.json)
+records key/version hashes and the private evidence checksum. Original private
+records and their hashes remain intact; the original operator/local cross-proof
+entry is explicitly superseded. The prepared binding payload hashes are unchanged.
+
+For a future authorized evidence refresh only, use existing owned mode-0600
+inputs and a new output directory under an owned mode-0700 private parent:
+
+```sh
+node scripts/storage/aws-media-runtime-verify.cjs --cross-proof-only \
+  <verified-media-runtime-credentials.private.json> \
+  <verified-proof-runtime-credentials.private.json> \
+  <retained-proof-probe-object.private.json> <new-private-output-directory>
+```
+
+The full transfer verifier additionally requires the verified proof credential
+file and retained proof descriptor after its original six arguments. Do not
+replay completed hardening or provisioning to collect this evidence.
+
+The CI Unit & Integration Tests job now runs all 51 isolated storage contracts
+before database setup. These mocks require no AWS credentials or provider calls.
+
+Checklist 28's binding gate stays paused for independent re-review and fresh
+correction-head checks. Hosted upload/display and proof owner/wrong-owner/anonymous
+journeys remain pending. TiDB writers stay stopped and payment intake stays closed.

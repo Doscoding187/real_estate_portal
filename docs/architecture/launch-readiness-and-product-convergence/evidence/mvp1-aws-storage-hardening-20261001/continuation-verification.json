@@ -98,8 +98,8 @@
     "hosted upload/display and private proof owner/wrong-owner/anonymous checks; no production fixture or intake bypass"
   ],
   "validation": {
-    "pythonSecurityContractTests": 25,
-    "nodeTransferRuntimeSecurityContractTests": 14,
+    "pythonSecurityContractTests": 31,
+    "nodeTransferRuntimeSecurityContractTests": 20,
     "lint": "pass; new CJS files",
     "format": "pass; new CJS files",
     "whitespace": "pass",
@@ -144,7 +144,8 @@
     "media-hardening-independent-readback-20261002.json": "fc66fc6b8d9ec844e0f925b3b797fb4e0792811ac6182cf83a6e6d09d1cd8f8a",
     "media-runtime-verified/transfer-verification.json": "7d5ba2cda252940f369488407d15dcd1b85f016066f7bdc1e9f55adeff823bb4",
     "media-runtime-verified/runtime-verification.json": "5f5ca1aabc138c2606532cbd822f1f9dd3307f8897e166f2777d65661e455536",
-    "media-runtime-task-object-deletion-readback-20261002.json": "3f3ea3f103139af4c9b16c23c203e236d5209603883916d3919f8924fd31cf10"
+    "media-runtime-task-object-deletion-readback-20261002.json": "3f3ea3f103139af4c9b16c23c203e236d5209603883916d3919f8924fd31cf10",
+    "cross-proof-read-correction-20261002/cross-proof-read.json": "bbf4617d4ac3c68d799d12a09ce145a04975f6979a4850537cef3b0eb15ee6d1"
   },
   "costAlerts": {
     "configurationReadback": "PASS",
@@ -158,7 +159,7 @@
     "productionViteCloudFrontSettingSavedByOperator": true,
     "activeFrontendBuildVerified": false
   },
-  "updatedAt": "2026-10-02T10:39:18.437847+00:00",
+  "updatedAt": "2026-10-02T11:15:33.765181+00:00",
   "mediaHardeningPreparation": "media-hardening-operator-preparation-20261002.json",
   "mediaHardening": {
     "executionEvidence": "media-hardening-execution-20261002.json",
@@ -166,11 +167,12 @@
     "independentConfigurationAndObjectsVerified": true,
     "encryptedTransferChecksumAndDecryptionPassed": true,
     "dedicatedRuntimeUser": "listify-media-runtime-07394cfd",
-    "independentLocalRuntimePermissions": "PASS",
+    "independentLocalRuntimePermissions": "PASS with specific cross-proof denial replaced by existing-canary 200/403/200 read-only verification",
     "localRuntimeTaskObjectDeletionIndependentlyVerified": true,
     "productionBindingsChanged": false,
     "hostedAcceptanceVerified": false,
-    "oldBroadUploaderRetired": false
+    "oldBroadUploaderRetired": false,
+    "crossProofReadCorrectionEvidence": "cross-proof-read-correction-20261002.json"
   },
   "productionBindingPreparation": "production-binding-preparation-20261002.json",
   "protectedReleasePreparation": {
@@ -190,5 +192,11 @@
     "usbStorageDeviceCount": 0,
     "previousContradictoryAttachmentSuperseded": true,
     "archiveCaptureOrRetrievalRepeated": false
+  },
+  "reviewGate": {
+    "status": "PAUSED",
+    "reviewedHead": "abfa798169ca84ff185dca70f2276117b4983561",
+    "reviewOutcome": "Changes requested: one P2 evidence gap; correction and targeted live read-only check completed, independent re-review and fresh correction-head checks pending",
+    "evidence": "cross-proof-read-correction-20261002.json"
   }
 }

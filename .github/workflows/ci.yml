@@ -307,6 +307,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Verify isolated storage permission contracts
+        run: |
+          node --test scripts/storage/tests/proof-runtime-verify.test.cjs scripts/storage/tests/media-runtime-verify.test.cjs
+          PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s scripts/storage/tests -p 'test_*.py'
+
       - name: Provision isolated CI migration identity
         env:
           DATABASE_URL: ''

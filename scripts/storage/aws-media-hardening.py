@@ -8,6 +8,7 @@ from pathlib import Path
 import re
 import subprocess
 import time
+import tempfile
 import urllib.error
 import urllib.request
 import uuid
@@ -17,6 +18,7 @@ BUCKET = "listify-properties-sa"
 REGION = "eu-north-1"
 DOMAIN = "d3fz99u3go2cmn.cloudfront.net"
 PROOF_BUCKET = "listify-paid-proofs-914683204061-eun1-290496c0"
+PROOF_PAYLOAD = b"Property Listify dedicated runtime permission probe; no customer proof.\n"
 SOURCE_ARN = f"arn:aws:cloudfront::{ACCOUNT}:distribution/E3JNW2EP3Z3JSP"
 PUBLIC_KEY_HASH = "5f27118e24bc7cc78ec4b0e49d6102e85815c006fd9fb64eeab7138dc9eb6066"
 BEFORE_POLICY_HASH = "b537cdf44d7ad58e8840ecc0f58f77121c9c6d78eceabb5de116ba6aebd3a508"
@@ -209,7 +211,40 @@ def check_delivery(directory, key, payload):
         "actualHostedBrowserJourneyVerified": False})
 
 
-def provision_runtime(directory, public_key, payload_path):
+def validate_proof_canary(canary):
+    if (not re.fullmatch(r"billing-proofs/runtime-permission-verification-[a-f0-9-]{36}\.txt", canary.get("key", ""))
+            or not canary.get("versionId") or canary["versionId"] == "null"
+            or canary.get("sha256") != hashlib.sha256(PROOF_PAYLOAD).hexdigest()):
+        raise RuntimeError("Existing harmless proof canary descriptor is required; no changes made.")
+
+
+def proof_canary_exists(canary):
+    validate_proof_canary(canary)
+    # Independent operator identity, never the media runtime under test. GET current
+    # contents/version before and after: a missing object's 403 must stop the check.
+    with tempfile.TemporaryDirectory(prefix="listify-proof-canary-") as temporary:
+        downloaded = Path(temporary) / "harmless-proof.txt"
+        result = aws("s3api", "get-object", "--bucket", PROOF_BUCKET, "--region", REGION,
+                     "--expected-bucket-owner", ACCOUNT, "--key", canary["key"], str(downloaded))
+        if (result.get("VersionId") != canary["versionId"] or result.get("ServerSideEncryption") != "AES256"
+                or downloaded.read_bytes() != PROOF_PAYLOAD):
+            raise RuntimeError("Independent existing proof canary read differs; denial cannot count.")
+    return {"status": 200, "payloadSha256": canary["sha256"],
+            "versionIdSha256": hashlib.sha256(canary["versionId"].encode()).hexdigest()}
+
+
+def cross_proof_read(directory, access, canary):
+    before = proof_canary_exists(canary)
+    denial = aws("s3api", "get-object", "--bucket", PROOF_BUCKET, "--region", REGION,
+                 "--expected-bucket-owner", ACCOUNT, "--key", canary["key"],
+                 str(directory / "unexpected-proof.txt"), credentials=access, denied=True)
+    after = proof_canary_exists(canary)
+    return {**denial, "canaryKeySha256": hashlib.sha256(canary["key"].encode()).hexdigest(),
+            "independentExistenceBefore": before, "independentExistenceAfter": after}
+
+
+def provision_runtime(directory, public_key, payload_path, canary):
+    proof_canary_exists(canary)
     _, _, _, policy = desired()
     user = "listify-media-runtime-" + uuid.uuid4().hex[:8]
     arn = f"arn:aws:iam::{ACCOUNT}:user/{user}"
@@ -253,10 +288,9 @@ def provision_runtime(directory, public_key, payload_path):
         ("s3api", "get-bucket-cors", "--bucket", BUCKET, "--region", REGION),
         ("s3api", "get-bucket-encryption", "--bucket", BUCKET, "--region", REGION),
         ("s3api", "put-object", "--bucket", BUCKET, "--region", REGION, "--key", "videos/storage-denial-" + uuid.uuid4().hex,
-         "--body", str(payload_path), "--if-none-match", "*"),
-        ("s3api", "get-object", "--bucket", PROOF_BUCKET, "--region", REGION,
-         "--key", "billing-proofs/storage-denial-" + uuid.uuid4().hex, str(directory / "unexpected-proof.txt"))]
+         "--body", str(payload_path), "--if-none-match", "*")]
     results = [aws(*operation, credentials=access, denied=True) for operation in negatives]
+    results.append(cross_proof_read(directory, access, canary))
     aws("s3api", "delete-object", "--bucket", BUCKET, "--region", REGION, "--key", key, credentials=access)
     return {"runtimeUser": user, "runtimeArn": arn, "encryptedCredentialsSha256": hashlib.sha256(encrypted).hexdigest(),
             "runtimePutGetPayloadAndDeletePassed": True, "runtimeNegativeChecks": results,
@@ -267,7 +301,10 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--apply", action="store_true")
     parser.add_argument("--public-key", type=Path, required=True)
+    parser.add_argument("--proof-canary", type=Path, help="Owned mode-0600 retained proof probe-object.private.json; required for --apply")
     args = parser.parse_args()
+    if args.apply and not args.proof_canary:
+        parser.error("--apply requires --proof-canary; do not rerun completed provisioning")
     os.umask(0o077)
     if hashlib.sha256(args.public_key.read_bytes()).hexdigest() != PUBLIC_KEY_HASH:
         raise RuntimeError("Transfer public key differs; no changes made.")
@@ -281,6 +318,11 @@ def main():
     if not args.apply:
         print("PREPARED ONLY: operator, transfer key and reviewed media baseline verified; no changes made.")
         return
+    stat = args.proof_canary.lstat()
+    if not args.proof_canary.is_file() or args.proof_canary.is_symlink() or stat.st_uid != os.getuid() or stat.st_mode & 0o777 != 0o600:
+        raise RuntimeError("Proof canary descriptor must be an owned mode-0600 regular file.")
+    canary = json.loads(args.proof_canary.read_text())
+    proof_canary_exists(canary)  # Fail before any provider mutation or provisioning.
     directory = Path.home() / "property-listify-media-hardening-20261002"
     directory.mkdir(mode=0o700, exist_ok=False)
     print("Private hardening state:", directory, flush=True)
@@ -299,7 +341,7 @@ def main():
         "--body", str(payload_path), "--if-none-match", "*", "--server-side-encryption", "AES256",
         "--content-type", "text/plain", "--cache-control", "no-store")
     check_delivery(directory, key, payload)
-    runtime = provision_runtime(directory, args.public_key, payload_path)
+    runtime = provision_runtime(directory, args.public_key, payload_path, canary)
     current = inventory()
     if [item for item in current if item["Key"] != key] != retained:
         raise RuntimeError("Retained media inventory differs; hold cutover and preserve evidence.")

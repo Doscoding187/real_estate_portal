@@ -77,8 +77,8 @@
   },
   "previousVariableSnapshotSha256": "5ea9e01c5a0a565a759235a742dc0f12ab9551c28a571a8feba340d575506509",
   "readbackAndHostedChecksPassed": false,
-  "reviewGate": "Checklist 28 step 1 requires review/fresh checks for storage delta before binding; no reviews present at inspection",
-  "reviewEvidenceAt": "2026-10-02T10:41:16.794847+00:00",
+  "reviewGate": "PAUSED: senior changes requested at abfa79816; P2 correction/live check complete, independent re-review and fresh correction-head checks required before binding",
+  "reviewEvidenceAt": "2026-10-02T11:15:33.765181+00:00",
   "commercialSelectors": "preparation_only, absolute pause true, no admitted owners or sales deadline; no product opening",
   "remaining": [
     "Storage-delta review and fresh exact-head required CI",
@@ -89,5 +89,6 @@
     "Hosted browser upload/display and owner/wrong-owner/anonymous proof tests with legitimate normal-flow records; no production fixtures or intake bypass",
     "Alert email delivery/aggregate monitoring"
   ],
-  "archiveCustodyCurrentEvidence": "usb-current-disconnected-custody-20261002.json"
+  "archiveCustodyCurrentEvidence": "usb-current-disconnected-custody-20261002.json",
+  "crossProofReadCorrectionEvidence": "cross-proof-read-correction-20261002.json"
 }

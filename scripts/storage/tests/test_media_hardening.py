@@ -14,6 +14,10 @@ media = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(media)
 
 
+CANARY = {"key": "billing-proofs/runtime-permission-verification-00000000-0000-0000-0000-000000000000.txt",
+          "versionId": "retained-version", "sha256": media.hashlib.sha256(media.PROOF_PAYLOAD).hexdigest()}
+
+
 class MediaHardening(unittest.TestCase):
     def baseline(self):
         original = json.loads((ROOT / "tests/fixtures/media-policy-before.insecure.json").read_text())
@@ -123,9 +127,9 @@ class MediaHardening(unittest.TestCase):
             if args[1] == "get-user": return {"User": {"Arn": f"arn:aws:iam::{media.ACCOUNT}:user/{user}"}}
             if args[1] == "list-attached-user-policies": return {"AttachedPolicies": [{"PolicyArn": "broad"}]}
             return {}
-        with tempfile.TemporaryDirectory() as directory, patch.object(media, "aws", fake):
+        with tempfile.TemporaryDirectory() as directory, patch.object(media, "aws", fake), patch.object(media, "proof_canary_exists", return_value={"status": 200}):
             with self.assertRaisesRegex(RuntimeError, "unexpected grants"):
-                media.provision_runtime(Path(directory), Path("public.pem"), Path("harmless.txt"))
+                media.provision_runtime(Path(directory), Path("public.pem"), Path("harmless.txt"), CANARY)
         self.assertNotIn("create-access-key", [c[1] for c in calls])
 
     def test_failed_export_disables_only_its_new_key_without_plaintext_file(self):
@@ -141,9 +145,10 @@ class MediaHardening(unittest.TestCase):
             if args[1] == "create-access-key": return {"AccessKey": {"AccessKeyId": "fake-key", "SecretAccessKey": "fake-secret"}}
             return {}
         with tempfile.TemporaryDirectory() as directory, patch.object(media, "aws", fake), \
-                patch.object(media, "transfer", side_effect=RuntimeError("Failed encrypted export")):
+                patch.object(media, "transfer", side_effect=RuntimeError("Failed encrypted export")), \
+                patch.object(media, "proof_canary_exists", return_value={"status": 200}):
             with self.assertRaisesRegex(RuntimeError, "Failed encrypted export"):
-                media.provision_runtime(Path(directory), Path("public.pem"), Path("harmless.txt"))
+                media.provision_runtime(Path(directory), Path("public.pem"), Path("harmless.txt"), CANARY)
             self.assertTrue(all("fake-secret" not in p.read_text() for p in Path(directory).iterdir()))
         self.assertEqual(calls[-1][:2], ("iam", "update-access-key"))
         self.assertEqual(calls[-1][-4:], ("--access-key-id", "fake-key", "--status", "Inactive"))
@@ -160,6 +165,62 @@ class MediaHardening(unittest.TestCase):
                     patch("sys.argv", ["media", "--public-key", str(key)]), patch("builtins.print"):
                 media.main()
                 self.assertEqual([c.args[:2] for c in aws.call_args_list], [("sts", "get-caller-identity")])
+
+    def test_existing_canary_is_read_by_operator_before_and_after_media_denial(self):
+        calls = []
+        def fake(*args, **kwargs):
+            calls.append((args, kwargs))
+            self.assertEqual(args[args.index("--key") + 1], CANARY["key"])
+            if kwargs.get("denied"):
+                return {"operation": "get-object", "outcome": "AccessDenied"}
+            Path(args[-1]).write_bytes(media.PROOF_PAYLOAD)
+            return {"VersionId": CANARY["versionId"], "ServerSideEncryption": "AES256"}
+        with tempfile.TemporaryDirectory() as directory, patch.object(media, "aws", fake):
+            result = media.cross_proof_read(Path(directory), {"fake": True}, CANARY)
+        self.assertEqual([bool(kwargs.get("credentials")) for _, kwargs in calls], [False, True, False])
+        self.assertEqual(result["independentExistenceBefore"]["status"], 200)
+        self.assertEqual(result["independentExistenceAfter"]["status"], 200)
+
+    def test_missing_canary_403_stops_before_media_denial_or_provisioning(self):
+        with tempfile.TemporaryDirectory() as directory, patch.object(media, "aws", side_effect=media.AwsFailure("s3api", "get-object", "AccessDenied")) as aws:
+            with self.assertRaises(media.AwsFailure):
+                media.cross_proof_read(Path(directory), {"proofReadsAllowed": True}, CANARY)
+            self.assertEqual(aws.call_count, 1)
+            self.assertNotIn("credentials", aws.call_args.kwargs)
+            aws.reset_mock()
+            with self.assertRaises(media.AwsFailure):
+                media.provision_runtime(Path(directory), Path("public.pem"), Path("harmless.txt"), CANARY)
+            self.assertEqual(aws.call_count, 1)
+            self.assertEqual(aws.call_args.args[:2], ("s3api", "get-object"))
+
+    def test_allowed_read_of_existing_proof_canary_does_not_pass(self):
+        with tempfile.TemporaryDirectory() as directory, \
+                patch.object(media, "proof_canary_exists", return_value={"status": 200}), \
+                patch.object(media.subprocess, "run", return_value=subprocess.CompletedProcess([], 0, "{}", "")):
+            with self.assertRaisesRegex(RuntimeError, "Expected actual AccessDenied"):
+                media.cross_proof_read(Path(directory), {"AccessKeyId": "fake", "SecretAccessKey": "fake"}, CANARY)
+
+    def test_canary_disappearance_after_denial_does_not_pass(self):
+        with tempfile.TemporaryDirectory() as directory, \
+                patch.object(media, "proof_canary_exists", side_effect=[{"status": 200}, media.AwsFailure("s3api", "get-object", "AccessDenied")]), \
+                patch.object(media, "aws", return_value={"outcome": "AccessDenied"}):
+            with self.assertRaises(media.AwsFailure):
+                media.cross_proof_read(Path(directory), {"fake": True}, CANARY)
+
+    def test_existing_canary_must_match_version_payload_and_encryption(self):
+        for version, payload, encryption in [("changed", media.PROOF_PAYLOAD, "AES256"),
+                (CANARY["versionId"], b"changed", "AES256"), (CANARY["versionId"], media.PROOF_PAYLOAD, "aws:kms")]:
+            def fake(*args, **kwargs):
+                Path(args[-1]).write_bytes(payload)
+                return {"VersionId": version, "ServerSideEncryption": encryption}
+            with self.subTest(version=version, payload=payload, encryption=encryption), patch.object(media, "aws", fake):
+                with self.assertRaisesRegex(RuntimeError, "read differs"):
+                    media.proof_canary_exists(CANARY)
+
+    def test_apply_without_existing_canary_stops_before_provider_calls(self):
+        with patch("sys.argv", ["media", "--apply", "--public-key", "public.pem"]), patch.object(media, "aws") as aws, patch("sys.stderr"):
+            with self.assertRaises(SystemExit): media.main()
+            aws.assert_not_called()
 
 
 if __name__ == "__main__":
