@@ -24,6 +24,8 @@
     "lint": "pnpm run lint:check",
     "agent:skills:check": "node scripts/check-agent-skill-governance.mjs",
     "lint:check": "eslint client/src/**/*.{ts,tsx} server/**/*.{ts,tsx} shared/**/*.{ts,tsx}",
+    "typecheck": "tsc --noEmit --incremental false -p .",
+    "typecheck:count": "tsc --noEmit --incremental false -p . || true",
     "lint:fix": "eslint client/src/**/*.{ts,tsx} server/**/*.{ts,tsx} shared/**/*.{ts,tsx} --fix",
     "lint:tsnocheck-baseline": "node scripts/check-ts-nocheck-allowlist.mjs",
     "format": "prettier --write client/src/**/*.{ts,tsx,json} server/**/*.{ts,tsx,json} shared/**/*.{ts,tsx,json}",
