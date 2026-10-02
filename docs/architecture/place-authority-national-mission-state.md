@@ -923,6 +923,123 @@ determination remain undecided and untouched. The boundary check still proves on
 **absence of unsupported currency claims**; it does not certify current boundaries for
 any province, and Gauteng's vintage remains unrecoverable from committed inputs.
 
+## Integration and invariant closure
+
+### What review rejected, and what replaced it
+
+An earlier revision of this branch was refused as integration-ready. The blocking
+findings were verified and each was fixed at the cause.
+
+**Place identities could still be silently replaced.** Reading the Place ID registry
+correctly was necessary but not sufficient: a registry that is valid JSON with an empty
+allocation map reads without complaint, so every group looks unallocated and every Place
+is re-minted. Measured at `minted=1466 reused=0`, zero identities retained, exit 0. The
+registry is now cross-checked against the committed package before anything is written,
+so every published identity must be allocated. Verified for total loss (1,466 refused)
+and partial loss (10 refused), with the package byte-identical afterwards.
+
+**National loading did not meet its atomic-refusal contract.** Acceptance compared row
+counts, so any target holding the right *number* of Places was adopted — and it computed
+the stored identity set and never read it, which was the tell. Acceptance now requires
+exact identity agreement in both directions. Post-write verification moved inside the
+transaction, because running it after commit left committed rows behind on failure: a
+refusal that mutates is not a refusal.
+
+**The proof continued after failed preconditions.** One assertion recorded failures and
+carried on, so a run that had already found the target in an unexpected state could still
+delete all five authority tables to build its partial-target case. Preconditions now
+abort immediately, and the destructive refusal scenarios run first, followed by an
+explicit governed dispose/create/migrate so the main proof always describes a pristine
+target.
+
+**The audit could conclude safety without reading a ledger.** An unreadable ledger was
+recorded with an empty migration list, indistinguishable from clean, so the audit printed
+"no retained target carries the old numbering" and exited zero. Completeness is now
+assessed by a dependency-free module — a target counts as inspected only when that was
+positively established — and an incomplete audit exits non-zero and blocks the
+conclusion.
+
+**The write counter was still wrong.** `insertId` is 0 for every statement because
+`place` has a string primary key and no auto-increment column, so the previous
+"correction" made a genuine first load report zero created Places too. Neither driver
+signal is usable: `affectedRows` is 1 for a matched row, `insertId` is always 0. Counts
+are now measured from the target either side of the transaction. Verified in both
+directions — first load exactly 17,664 / 26,425 / 17,655 / 79,925 / 19,792, replay zero.
+
+### Integration was never actually done
+
+The merge base with `origin/main` was `4e012b304`, not the `cbc18c8fd` this workstream
+had been pinning. The earlier task integrated four migrations but never merged upstream's
+code. Sixteen files conflicted, in canonical contracts and database authority files.
+All are resolved, and the resolution was per-file by what each side changed.
+
+`origin/main` is now `51802b7d3`. It added **no migrations**, so the `0095`–`0103`
+renumbering stands unchanged and the reconciled head remains
+`0103_saved_searches_canonical_place_reference_fk.sql`, 104 entries, contiguous.
+
+Two resolutions are worth naming because they are judgement calls, not merges:
+
+- **`googlePlacesIntegration.integration.test.ts` deletion kept.** This branch removed
+  969 lines of it to close provider writes, where a provider result may no longer create
+  canonical geography. Upstream's subsequent six-line change mocks provider lookups to
+  *reject* synthetic Place IDs, which agrees with that contract — but restoring the file
+  would reinstate a test asserting the opposite. Recorded as an intentional divergence
+  rather than dropped silently.
+- **`canonicalGeography.ts` took upstream's.** The only hunk was formatting; the logic
+  was identical on both sides.
+
+### Integration invalidates the B08 Azure rehearsal authority, and that is not repinned here
+
+It pins four values as one coherent set — expected head `0094`, manifest digest
+`93d871e6`, model digest `a8ca8cf3`, apply-plan digest `632f66e7` — and
+`disposable-rehearsal-authorization.json` is a dated approval for an AZURE MYSQL 8.4
+RESTORED-COPY REHEARSAL against exactly those. Place Authority adds seven tables, so all
+four change and the approved subject no longer exists. Rewriting them would extend an
+Azure approval to a model nobody rehearsed and contradict roughly twenty historical
+evidence files. That is a protected-release decision.
+
+Consequently **six tests fail and are left failing**: two in
+`contract.b08-release-reconciliation.test.ts`, four in `rehearsalConnection.test.ts`. All
+six assert only the stale Azure pins. Independently verified: the four established
+migration byte identities are **unchanged**, which is the evidence those tests exist to
+protect.
+
+### Reconciled-schema proof, repeatable
+
+`pnpm place:admission:national-storage` on a fresh owned disposable target, migrated to
+head `0103` with 104 migrations and schema congruency true:
+
+| Claim | Result |
+| --- | --- |
+| Empty before the load | 0 rows in all five authority tables |
+| Injected fault after 6,000 of 17,664 inserts | all five tables unchanged and empty, by digest |
+| Partial target (1,544 Places) | refused, digests unchanged |
+| Same-count identity drift (17,664 foreign Places) | refused, digests unchanged |
+| Post-write validation failure | refused, every table left empty |
+| Owned lifecycle reset | disposed, recreated, migrated, confirmed empty |
+| Atomic load | 17,664 Places, 26,425 names, 17,655 relationships, 79,925 evidence, 19,792 mappings |
+| First-load counters | exact, in both directions |
+| Source identities | 18,309 = 17,664 + 645 absorbed |
+| Place identities | set digest equals the committed packages; none missing |
+| Per-province verification | 9/9 complete, zero drift, exactly 9 province roots |
+| Replay | zero rows written, every digest unchanged |
+
+Target disposed through the governed acknowledgement
+`CONFIRM_DATABASE_DISPOSE_0c822b50ba97506e`; service stopped and recovered through the
+validated socket path. **No protected, remote, shared or durable target was accessed.**
+
+### Gate state at the reviewed commit
+
+Manifest valid, schema sanity 221 canonical tables across 104 active SQL migrations,
+inventory deterministic and current, utility authority 121 classified surfaces, lint 0
+errors, collision surface OK, national provenance OK, boundary-claim check reporting no
+unsupported claims and certifying no province's currency, Gauteng provenance reporting
+consistency with release `9469f09` and an unrecoverable vintage.
+
+Static suite: 48 of 50 files, 515 of 521 tests. Typecheck 263 errors, one more than
+before integration; the new one is upstream's own
+`EnhancedHero.journey-selection.test.tsx`, not a file this workstream touched.
+
 ## Authoritative digests
 
 Admission territory registry
