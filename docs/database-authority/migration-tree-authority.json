@@ -1242,75 +1242,107 @@
       ]
     },
     {
-      "path": "server/migrations/0091_place_authority_place.sql",
+      "path": "server/migrations/0091_transactional_email_deliveries.sql",
       "classification": "canonical active",
-      "purpose": "Place Authority Slice 1: additive canonical DDL for the typed Place foundation approved by geography contract v0.5 Section 14. Creates one table per migration; changes no existing table, resolver, or consumer.",
+      "purpose": "B10 durable transactional email intent, recipient, idempotency and claim authority",
       "approvedFiles": [
-        "server/migrations/0091_place_authority_place.sql"
+        "server/migrations/0091_transactional_email_deliveries.sql"
       ]
     },
     {
-      "path": "server/migrations/0092_place_authority_place_name.sql",
+      "path": "server/migrations/0092_transactional_email_attempts.sql",
       "classification": "canonical active",
-      "purpose": "Place Authority Slice 1: additive canonical DDL for the typed Place foundation approved by geography contract v0.5 Section 14. Creates one table per migration; changes no existing table, resolver, or consumer.",
+      "purpose": "B10 fenced provider attempt history for safe retry and ambiguous-outcome reconciliation",
       "approvedFiles": [
-        "server/migrations/0092_place_authority_place_name.sql"
+        "server/migrations/0092_transactional_email_attempts.sql"
       ]
     },
     {
-      "path": "server/migrations/0093_place_authority_place_relationship.sql",
+      "path": "server/migrations/0093_user_onboarding_state_primary_key.sql",
       "classification": "canonical active",
-      "purpose": "Place Authority Slice 1: additive canonical DDL for the typed Place foundation approved by geography contract v0.5 Section 14. Creates one table per migration; changes no existing table, resolver, or consumer.",
+      "purpose": "B08 explicit user onboarding state identity before Azure establishment",
       "approvedFiles": [
-        "server/migrations/0093_place_authority_place_relationship.sql"
+        "server/migrations/0093_user_onboarding_state_primary_key.sql"
       ]
     },
     {
-      "path": "server/migrations/0094_place_authority_place_evidence.sql",
+      "path": "server/migrations/0094_content_topics_primary_key.sql",
       "classification": "canonical active",
-      "purpose": "Place Authority Slice 1: additive canonical DDL for the typed Place foundation approved by geography contract v0.5 Section 14. Creates one table per migration; changes no existing table, resolver, or consumer.",
+      "purpose": "B08 explicit content topic mapping identity before Azure establishment",
       "approvedFiles": [
-        "server/migrations/0094_place_authority_place_evidence.sql"
+        "server/migrations/0094_content_topics_primary_key.sql"
       ]
     },
     {
-      "path": "server/migrations/0095_place_authority_place_external_mapping.sql",
+      "path": "server/migrations/0095_place_authority_place.sql",
       "classification": "canonical active",
       "purpose": "Place Authority Slice 1: additive canonical DDL for the typed Place foundation approved by geography contract v0.5 Section 14. Creates one table per migration; changes no existing table, resolver, or consumer.",
       "approvedFiles": [
-        "server/migrations/0095_place_authority_place_external_mapping.sql"
+        "server/migrations/0095_place_authority_place.sql"
       ]
     },
     {
-      "path": "server/migrations/0096_place_authority_search_area.sql",
+      "path": "server/migrations/0096_place_authority_place_name.sql",
       "classification": "canonical active",
       "purpose": "Place Authority Slice 1: additive canonical DDL for the typed Place foundation approved by geography contract v0.5 Section 14. Creates one table per migration; changes no existing table, resolver, or consumer.",
       "approvedFiles": [
-        "server/migrations/0096_place_authority_search_area.sql"
+        "server/migrations/0096_place_authority_place_name.sql"
       ]
     },
     {
-      "path": "server/migrations/0097_place_authority_search_area_member.sql",
+      "path": "server/migrations/0097_place_authority_place_relationship.sql",
       "classification": "canonical active",
       "purpose": "Place Authority Slice 1: additive canonical DDL for the typed Place foundation approved by geography contract v0.5 Section 14. Creates one table per migration; changes no existing table, resolver, or consumer.",
       "approvedFiles": [
-        "server/migrations/0097_place_authority_search_area_member.sql"
+        "server/migrations/0097_place_authority_place_relationship.sql"
       ]
     },
     {
-      "path": "server/migrations/0098_saved_searches_canonical_place_reference.sql",
+      "path": "server/migrations/0098_place_authority_place_evidence.sql",
+      "classification": "canonical active",
+      "purpose": "Place Authority Slice 1: additive canonical DDL for the typed Place foundation approved by geography contract v0.5 Section 14. Creates one table per migration; changes no existing table, resolver, or consumer.",
+      "approvedFiles": [
+        "server/migrations/0098_place_authority_place_evidence.sql"
+      ]
+    },
+    {
+      "path": "server/migrations/0099_place_authority_place_external_mapping.sql",
+      "classification": "canonical active",
+      "purpose": "Place Authority Slice 1: additive canonical DDL for the typed Place foundation approved by geography contract v0.5 Section 14. Creates one table per migration; changes no existing table, resolver, or consumer.",
+      "approvedFiles": [
+        "server/migrations/0099_place_authority_place_external_mapping.sql"
+      ]
+    },
+    {
+      "path": "server/migrations/0100_place_authority_search_area.sql",
+      "classification": "canonical active",
+      "purpose": "Place Authority Slice 1: additive canonical DDL for the typed Place foundation approved by geography contract v0.5 Section 14. Creates one table per migration; changes no existing table, resolver, or consumer.",
+      "approvedFiles": [
+        "server/migrations/0100_place_authority_search_area.sql"
+      ]
+    },
+    {
+      "path": "server/migrations/0101_place_authority_search_area_member.sql",
+      "classification": "canonical active",
+      "purpose": "Place Authority Slice 1: additive canonical DDL for the typed Place foundation approved by geography contract v0.5 Section 14. Creates one table per migration; changes no existing table, resolver, or consumer.",
+      "approvedFiles": [
+        "server/migrations/0101_place_authority_search_area_member.sql"
+      ]
+    },
+    {
+      "path": "server/migrations/0102_saved_searches_canonical_place_reference.sql",
       "classification": "canonical active",
       "purpose": "Place Authority Slice 3: one additive nullable canonical Place reference on saved_searches, the existing governed home of a versioned geographic query intent. ON DELETE RESTRICT; no existing row is rewritten.",
       "approvedFiles": [
-        "server/migrations/0098_saved_searches_canonical_place_reference.sql"
+        "server/migrations/0102_saved_searches_canonical_place_reference.sql"
       ]
     },
     {
-      "path": "server/migrations/0099_saved_searches_canonical_place_reference_fk.sql",
+      "path": "server/migrations/0103_saved_searches_canonical_place_reference_fk.sql",
       "classification": "canonical active",
       "purpose": "Place Authority Slice 3: adds the ON DELETE RESTRICT foreign key for saved_searches.place_id, sequenced after 0098 because TiDB refuses a single ALTER that both introduces a column and adds a dependent constraint.",
       "approvedFiles": [
-        "server/migrations/0099_saved_searches_canonical_place_reference_fk.sql"
+        "server/migrations/0103_saved_searches_canonical_place_reference_fk.sql"
       ]
     }
   ],

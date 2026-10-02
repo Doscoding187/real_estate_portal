@@ -457,17 +457,21 @@ describe('migration execution authority', () => {
       '0088_retire_obsolete_billing_families.sql',
       '0089_retire_disconnected_analytics_aggregations.sql',
       '0090_retire_disconnected_boost_campaigns.sql',
-      '0091_place_authority_place.sql',
-      '0092_place_authority_place_name.sql',
-      '0093_place_authority_place_relationship.sql',
-      '0094_place_authority_place_evidence.sql',
-      '0095_place_authority_place_external_mapping.sql',
-      '0096_place_authority_search_area.sql',
-      '0097_place_authority_search_area_member.sql',
-        '0098_saved_searches_canonical_place_reference.sql',
-        '0099_saved_searches_canonical_place_reference_fk.sql',
+      '0091_transactional_email_deliveries.sql',
+      '0092_transactional_email_attempts.sql',
+      '0093_user_onboarding_state_primary_key.sql',
+      '0094_content_topics_primary_key.sql',
+      '0095_place_authority_place.sql',
+      '0096_place_authority_place_name.sql',
+      '0097_place_authority_place_relationship.sql',
+      '0098_place_authority_place_evidence.sql',
+      '0099_place_authority_place_external_mapping.sql',
+      '0100_place_authority_search_area.sql',
+      '0101_place_authority_search_area_member.sql',
+      '0102_saved_searches_canonical_place_reference.sql',
+      '0103_saved_searches_canonical_place_reference_fk.sql',
     ]);
-    expect(executionManifest.expectedHead).toBe('0099_saved_searches_canonical_place_reference_fk.sql');
+    expect(executionManifest.expectedHead).toBe('0103_saved_searches_canonical_place_reference_fk.sql');
     expect(archivedSqlFiles.length).toBeGreaterThan(0);
     expect(activeSqlFiles.some(file => file.includes('_archived'))).toBe(false);
     expect(executionManifest.historyTable).toBe('sql_migration_history');

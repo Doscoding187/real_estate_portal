@@ -1,4 +1,5 @@
 export * from './core';
+export * from './transactionalEmail';
 export * from './agencies';
 export * from './locations';
 export * from './placeAuthority';
@@ -31,3 +32,5 @@ export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 export type AuditLog = typeof auditLogs.$inferSelect;
 export type InsertAuditLog = typeof auditLogs.$inferInsert;
+
+export * from './transactionalEmail';
