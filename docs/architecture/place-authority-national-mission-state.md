@@ -424,9 +424,8 @@ Run against the three committed packages, without combined loading:
   construction.
 - Zero province rows inconsistent with their own territory; each province has
   exactly one province root.
-- **95 names are the preferred public name of a Place in more than one province**,
-  including Kenilworth, Brooklyn, Newlands, Riversdale and Rietfontein in all
-  three. These are genuinely distinct referents, and the per-province identity
+- **Shared preferred names across provinces** are common and genuinely distinct
+  referents, and the per-province identity
   design keeps them apart. The consequence is a hard constraint on Phase 7: a
   national consumer must resolve a name within a province and must never treat a
   bare name as a unique Place. The Gauteng suite already proves the in-province
@@ -617,6 +616,59 @@ or database history.
   practical case for the geography contract: a bare name is never a unique Place
   and must never be widened.
 - Static database-authority contract gate: **365/365**.
+
+## Phase 5 delivery record — boundary currency, now executable per province
+
+The currency question was one blanket sentence across the whole country: boundaries
+represent **2020**. That was adequate when three provinces existed and actively
+misleading at nine, because it implied a uniform gap that no reader could check.
+
+`tools/geography-source-evidence/boundary-currency.mjs` now emits a per-province
+ledger and gates on it. Run `pnpm place:boundary-currency:check`.
+
+### It immediately found a gap nobody had recorded
+
+**Gauteng records no boundary provenance at all.** Its source authority predates
+the shared builder and has no `boundary_evidence` block, so its demarcation year
+is not merely old, it is **unknown**. The other eight all record 2020 with an
+upstream source-data date of 19 January 2023 and a geoBoundaries build date of 12
+December 2023 — 1,352 and 1,025 days old respectively at the time of writing.
+
+This matters more than it looks. Gauteng is the originally proven province, the one
+whose 1,466 Place IDs the whole continuity argument rests on, and it is the only
+province whose administrative geometry has **no recorded vintage**. Its admitted
+package is not wrong — it was built from real evidence and is digest-pinned — but
+its evidence is weaker than the other eight, and until now nothing in the
+repository said so.
+
+The tool reports this as a **gap**, not a failure. A province that makes no
+currency claim is not making a false one, and a gate that is permanently red gets
+ignored, which protects nothing. The gate fails only on an unsupported claim; the
+real blocker remains the owner's currency review.
+
+| Territory | Province | Represents | Upstream age | Built | Places |
+| --- | --- | --- | --- | --- | --- |
+| za-gp | Gauteng | **unrecorded** | unrecorded | unrecorded | 1,466 |
+| za-wc | Western Cape | 2020 | 1,352 d | 1,025 d | 1,862 |
+| za-kzn | KwaZulu-Natal | 2020 | 1,352 d | 1,025 d | 2,090 |
+| za-ec | Eastern Cape | 2020 | 1,352 d | 1,025 d | 5,084 |
+| za-fs | Free State | 2020 | 1,352 d | 1,025 d | 1,544 |
+| za-mp | Mpumalanga | 2020 | 1,352 d | 1,025 d | 1,045 |
+| za-li | Limpopo | 2020 | 1,352 d | 1,025 d | 1,669 |
+| za-nw | North West | 2020 | 1,352 d | 1,025 d | 1,352 |
+| za-nc | Northern Cape | 2020 | 1,352 d | 1,025 d | 1,552 |
+
+The ledger is written to
+`data/place-admission-territories.v0.1/boundary-currency-ledger.v0.1.json`, and two
+contract tests in
+`server/__tests__/contract.place-admission-territory-neutrality.test.ts` keep it
+honest: one refuses any province claiming currency it cannot evidence, the other
+requires the ledger to cover **every** registered province and certify **none** of
+them.
+
+The tool deliberately does not fetch, evaluate or substitute newer boundaries.
+Ingesting current demarcation would change admitted packages and Place IDs, which
+is a reviewed decision. The only permitted output is a gate.
 
 ## Authoritative digests
 
@@ -956,53 +1008,55 @@ build followed by the same proven pipeline.
 
 ## Exact next action
 
-**No provinces remain.** The per-province sequence is now proven nine times, and
-the remaining work is national authority verification: the packages are all proven
-but no single target may hold more than one province, so national coverage is
-still not reachable from proven ground.
-build the source authority, admit through the shared pipeline, and prove it on a
-fresh disposable target.
+**No provinces remain.** The per-province sequence is proven nine times over, and
+it is finished. The next work is no longer admission.
 
-Remaining: **Free State, Limpopo, Mpumalanga, Northern Cape and North West** —
-five, since Eastern Cape is admitted. The order continues
-Free State → Mpumalanga → Limpopo → North West → Northern Cape, and evidence
-readiness may justify changing it.
+Admission is not national coverage. Nine separately proven packages exist, and a
+target may hold **exactly one province** by deliberate design, so no single proven
+target contains the country. Phase 6 therefore cannot be closed by proving more
+provinces; it is blocked on one reviewed decision, described below.
 
-Each province repeats, unchanged:
+### What is unblocked and needs no decision
 
-1. Acquire a frozen snapshot in its **own** directory on the
-   `data/za-<cc>-source-acquisition-v0.1` pattern, with per-record provenance and
-   licence classification, verified offline plus the integrity tests.
-2. Add a `TerritoryConfig` and run
-   `tools/gauteng-catalogue/run_source_authority.py --territory <id>`.
-3. Add the registry entry, build with `--territory <id>`, and prove on a fresh
-   disposable target with explicit territory selection, then dispose it.
-4. Review every merge, and queue rather than accept any whose distance or rank
-   disagreement exceeds the case that evidence supports.
+**The 2020 boundary currency question, re-proved per province.** Every province's
+boundary evidence represents **2020**, from OCHA ROSEA / Municipal Demarcation
+Board via geoBoundaries, with an upstream source-data date of 19 January 2023 and
+a build date of 12 December 2023. That was a single blanket sentence when only
+three provinces existed. With nine, the gap is per-province evidence a publication
+gate can check mechanically, instead of prose a reader has to trust.
+`tools/geography-source-evidence/boundary-currency.mjs` emits that ledger and
+fails if any province claims currency it cannot evidence.
 
-Before the remaining provinces, three things need an owner decision and are not
-mine to take:
+Nothing may follow from it except a gate. Substituting newer boundaries would
+change admitted packages and Place IDs, which is a reviewed decision, not an
+engineering step.
 
-- **Combined loading.** The materializer admits one province per target by
-  deliberate design. National coverage needs a reviewed decision; see the
-  KwaZulu-Natal delivery record for what that decision must cover.
-- **The migration renumber plan**, drafted and awaiting review in
-  `docs/architecture/place-authority-migration-reconciliation-plan.md`. It is not
-  implemented, and this branch's target is evidence only about this branch.
-- **The 2020 boundary currency review**, before any province's scope is published,
-  and the **founder ODbL determination** before any OSM-derived Place reaches a
-  non-disposable target.
+**Record that `gauteng-source-authority-v0.2` is unreproducible from committed
+inputs.** That is already the honest position its own manifest declares. The three
+routes to a committed generator are closed: re-acquiring would yield a different
+authority and break Place-ID continuity for 1,466 identities, copying the sibling
+workstream's untracked tool is forbidden by the worktree-isolation rule, and
+synthesising inputs is forbidden outright.
 
-Engineering that is unblocked and needs no decision:
+### What needs an owner decision
 
-- Re-prove the 2020-vintage currency question per province as evidence arrives.
-- Extend the cross-province duplicate check into an executable contract once
-  combined loading is decided, so the 95 cross-province homonyms are guarded
-  rather than merely reported.
-- Commit a generator for `gauteng-source-authority-v0.2`, or record formally that
-  it is unreproducible from committed inputs. It currently is the latter, by its
-  own manifest.
+**Combined loading.** This is the binding constraint on national coverage. The
+materializer admits one province per target on purpose, so the decision must cover
+per-territory identity verification inside a shared transaction, cross-province
+Place ID uniqueness, natural-key collisions between provinces, and how a partial
+multi-province load is either completed or refused rather than left half-loaded.
 
-Still forbidden: activating consumers, publishing an SEO scope, inferring a Search
-Area, widening a search, or claiming national coverage. Boundary currency and ODbL
-remain explicit publication gates.
+Once that is decided the cross-province duplicate check becomes an executable
+contract instead of a report, and the **828** cross-province homonyms become
+guarded rather than merely observed.
+
+**The migration renumber plan**, drafted and awaiting review in
+`docs/architecture/place-authority-migration-reconciliation-plan.md`. Not
+implemented; this branch's evidence is evidence about this branch only.
+
+**The boundary currency review** and the **founder ODbL determination**, both
+before anything is published. No admitted province currently carries OSM-derived
+rows, so ODbL blocks nothing that exists today.
+
+Still forbidden: activating consumers, publishing an SEO scope, inferring a
+Search Area, widening a search, or claiming national coverage.

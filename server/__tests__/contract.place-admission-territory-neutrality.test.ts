@@ -195,3 +195,31 @@ describe('Place admission territory registry: materializer is driven by the regi
     ).toThrow(/is not registered/);
   });
 });
+describe('Place admission: boundary currency is a gate, not a claim', () => {
+  it('refuses to let any province claim currency it cannot evidence', () => {
+    const output = execFileSync(
+      'npx',
+      ['tsx', 'tools/geography-source-evidence/boundary-currency.mjs', '--check'],
+      { cwd: repositoryRoot, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] },
+    );
+    expect(output).toContain('boundary-currency: OK');
+    expect(output).not.toContain('FAIL');
+  }, 300_000);
+
+  it('covers every registered province and certifies none of them', () => {
+    const output = execFileSync(
+      'npx',
+      ['tsx', 'tools/geography-source-evidence/boundary-currency.mjs'],
+      { cwd: repositoryRoot, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] },
+    );
+    const { registry } = loadPlaceAdmissionTerritoryRegistry(repositoryRoot);
+    // Nine provinces are admitted. A ledger that quietly covers fewer would let a
+    // province publish on currency nobody ever checked.
+    expect(output).toMatch(new RegExp(`boundary-currency: ${registry.territories.length} provinces`));
+    expect(output).not.toContain('certified=true');
+    // Boundaries represent 2020 and are not a current certification. If this ever
+    // stops being true the gate has been satisfied by a real currency review, which
+    // is an owner decision and must be visible here rather than pass silently.
+    expect(output).toContain('none certified');
+  }, 300_000);
+});
