@@ -50,9 +50,9 @@ databases. Place Authority remains the only geographic identity source.
 | 1 | Gauteng scope contract repair | **closed** |
 | 2 | Executable Place foundation | **closed** |
 | 3 | Territory-neutral onboarding proof | **closed** (`ad753b3d` + Phase 3 refactor) |
-| 4 | Western Cape (Province 2) | **admitted and physically proven; not activated** |
+| 4 | Western Cape (Province 2) | **admitted and physically proven; not activated** (superseded as a milestone by row 5) |
 | 5 | Remaining provinces | **closed — all nine admitted and physically proven** |
-| 6 | National authority verification | **national storage proven**; activation still gated |
+| 6 | National authority verification | **national storage proven against the reconciled schema; branch integrated with `origin/main`** |
 | 7 | National consumer handoff | not started; forbidden until activation is decided |
 
 ## Current phase
@@ -64,10 +64,23 @@ is now proven nine times over with no new architecture: the same code produced
 Gauteng's 1,466 Places and Eastern Cape's 5,084, and a Karoo village and a
 Sandton suburb go through identical code.
 
-Zero provinces remain. The next work is no longer admission. It is national
-authority verification, which is now the binding constraint: nine separately
-proven packages exist, but a target may hold only one province at a time, so
-national coverage is still unreachable from what has been proven.
+Zero provinces remain, and **national coverage is now proven**: all nine provinces
+load into one target in one transaction, atomically, with every identity unchanged.
+An earlier revision of this file still said a target may hold only one province and
+that national coverage was "unreachable from what has been proven". That was true
+when it was written and stopped being true once combined loading was decided; it is
+corrected here rather than left to contradict its own Phase 6 record below.
+
+The binding constraints are now these, and none of them is admission:
+
+- **Consumer activation** is closed, deliberately. Nothing reads any Place.
+- **The B08 Azure rehearsal authority is invalidated by integration.** It pins four
+  values as one coherent set and was approved against the pre-integration model;
+  Place Authority's seven tables change all four. Re-establishing it is a
+  protected-release decision and is not repinned on this branch.
+- **Boundary currency** is unproven for all nine provinces, and Gauteng's vintage is
+  unrecoverable from committed inputs.
+- **The ODbL determination** remains founder-owned.
 
 ## Phase 3 delivery record — territory neutrality
 
@@ -1248,13 +1261,15 @@ build followed by the same proven pipeline.
 
 ## Exact next action
 
-**No provinces remain.** The per-province sequence is proven nine times over, and
-it is finished. The next work is no longer admission.
+**No provinces remain**, and the per-province sequence is proven nine times over.
+Combined loading was decided and is proven: a single target holds all nine provinces,
+atomically, with every Place identity unchanged. Phase 6's storage question is
+closed.
 
-Admission is not national coverage. Nine separately proven packages exist, and a
-target may hold **exactly one province** by deliberate design, so no single proven
-target contains the country. Phase 6 therefore cannot be closed by proving more
-provinces; it is blocked on one reviewed decision, described below.
+What remains is closed deliberately rather than outstanding by accident. Consumer
+activation, boundary currency review, the ODbL determination, and re-establishing the
+B08 Azure rehearsal authority against the integrated model are all decisions for
+someone other than this workstream.
 
 ### What is unblocked and needs no decision
 

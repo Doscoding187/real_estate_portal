@@ -19,6 +19,7 @@ import {
   protectedDatabaseApprovalFromEnvironment,
 } from '../../server/_core/databaseAuthority/authorization.ts';
 import { queryRows } from '../../server/_core/databaseAuthority/dataAdapters/common.ts';
+import { assessAuditCompleteness } from './audit-completeness.mjs';
 
 /**
  * The pre-reconciliation numbering, which is what this audit exists to detect.
@@ -28,30 +29,6 @@ import { queryRows } from '../../server/_core/databaseAuthority/dataAdapters/com
  * quiet about exactly the stale targets it was written to catch.
  */
 
-/**
- * Decide whether the audit actually inspected every target it found.
- *
- * Extracted so the decision can be tested directly rather than by breaking a live
- * database. The bug it prevents is specific: an unreadable ledger was recorded with an
- * empty migration list, which is indistinguishable from a clean target, so the audit
- * could print "no retained target carries the old numbering" and exit zero while a
- * target's actual state was unknown.
- *
- * A finding counts as inspected only when it was positively established. Absence of a
- * ledger table is a positive, established fact; a ledger that exists but cannot be read
- * is not.
- */
-export function assessAuditCompleteness(findings) {
-  const uninspected = findings.filter(finding => finding.inspected !== true);
-  return {
-    complete: uninspected.length === 0,
-    inspected: findings.length - uninspected.length,
-    uninspected: uninspected.map(finding => ({
-      database: finding.database,
-      reason: finding.note ?? 'not inspected',
-    })),
-  };
-}
 
 const OLD_PLACE_AUTHORITY = [
   '0091_place_authority_place.sql',

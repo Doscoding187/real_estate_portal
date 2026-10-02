@@ -3,6 +3,8 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
+import { assessAuditCompleteness } from '../../tools/place-admission/audit-completeness.mjs';
+
 import { normalizedDesiredSchema } from '../_core/databaseAuthority/schemaCongruency';
 import { auditTidbStructuralAdmission } from '../_core/databaseAuthority/tidbStructuralAdmission';
 import * as schema from '../../drizzle/schema';
@@ -515,5 +517,113 @@ describe('Place admission: schema alignment', () => {
     expect(expected.dispositionLedger).toBe(ledger.length);
     expect(expected.osmOnlyPlaces).toBeGreaterThan(0);
     expect(expected.verifiedDigest).toMatch(/^[a-f0-9]{64}$/);
+  });
+});
+
+describe('Place admission: the identity guard, on the failure paths that lose allocations', () => {
+  const registryRelative = 'data/gauteng-place-admission-v0.1/gauteng_place_id_registry.v0.1.json';
+  const placesRelative = 'data/gauteng-place-admission-v0.1/gauteng_place_admission_v0.1.jsonl';
+
+  const runBuilder = () => {
+    try {
+      execFileSync('npx', ['tsx', 'tools/place-admission/build-place-admission.mjs', '--territory=za-gp'], {
+        cwd: process.cwd(),
+        encoding: 'utf8',
+        stdio: ['ignore', 'pipe', 'pipe'],
+      });
+      return '';
+    } catch (error) {
+      const failure = error as { stderr?: string; stdout?: string };
+      return `${failure.stderr ?? ''}${failure.stdout ?? ''}`;
+    }
+  };
+
+  it('refuses a VALID registry whose allocation map is empty, without touching the package', () => {
+    // Reading the registry correctly is not enough. A valid registry with an empty
+    // allocation map reads without complaint, so every group looks unallocated and
+    // every Place is re-minted. Measured before the guard: `minted=1466 reused=0`,
+    // zero identities retained, exit status 0.
+    const registryPath = join(process.cwd(), registryRelative);
+    const placesPath = join(process.cwd(), placesRelative);
+    const originalRegistry = readFileSync(registryPath, 'utf8');
+    const originalPlaces = readFileSync(placesPath, 'utf8');
+
+    try {
+      const emptied = { ...JSON.parse(originalRegistry), allocated: {}, allocation_sequence: 0 };
+      writeFileSync(registryPath, JSON.stringify(emptied, null, 2), 'utf8');
+
+      const output = runBuilder();
+      expect(output).toContain('place-admission refused');
+      expect(output).toMatch(/already published in/);
+      expect(output).toMatch(/has lost allocations/);
+      // The package must be byte-identical: a refusal that rewrote the very identities
+      // it was protecting would be worse than the bug.
+      expect(readFileSync(placesPath, 'utf8')).toBe(originalPlaces);
+    } finally {
+      writeFileSync(registryPath, originalRegistry, 'utf8');
+    }
+  });
+
+  it('refuses a PARTIAL allocation loss and names how many identities are unallocated', () => {
+    const registryPath = join(process.cwd(), registryRelative);
+    const originalRegistry = readFileSync(registryPath, 'utf8');
+
+    try {
+      const damaged = JSON.parse(originalRegistry);
+      const keys = Object.keys(damaged.allocated);
+      for (const key of keys.slice(0, 10)) delete damaged.allocated[key];
+      writeFileSync(registryPath, JSON.stringify(damaged, null, 2), 'utf8');
+
+      const output = runBuilder();
+      expect(output).toContain('place-admission refused');
+      expect(output).toMatch(/10 Place identities/);
+    } finally {
+      writeFileSync(registryPath, originalRegistry, 'utf8');
+    }
+  });
+
+  it('leaves the registry and package reusable after every refusal', () => {
+    const registryPath = join(process.cwd(), registryRelative);
+    const originalRegistry = readFileSync(registryPath, 'utf8');
+    expect(readFileSync(registryPath, 'utf8')).toBe(originalRegistry);
+    expect(() =>
+      execFileSync(
+        'npx',
+        ['tsx', 'tools/place-admission/build-place-admission.mjs', '--territory=za-gp'],
+        { cwd: process.cwd(), encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] },
+      ),
+    ).not.toThrow();
+  });
+});
+
+describe('National storage proof: the audit cannot conclude safety from a target it could not read', () => {
+  it('treats an unreadable ledger as unknown rather than clean', () => {
+    const complete = assessAuditCompleteness([
+      { database: 'a', inspected: true },
+      { database: 'b', inspected: true, note: 'no migration ledger' },
+    ]);
+    expect(complete.complete).toBe(true);
+    expect(complete.inspected).toBe(2);
+
+    // The reported failure: an unreadable ledger was recorded with an empty migration
+    // list, indistinguishable from clean, so the audit printed a clean conclusion and
+    // exited zero while a target's state was unknown.
+    const incomplete = assessAuditCompleteness([
+      { database: 'a', inspected: true },
+      { database: 'b', inspected: false, note: 'ledger present but UNREADABLE' },
+      { database: 'c', inspected: false, note: 'ledger present but UNREADABLE' },
+    ]);
+    expect(incomplete.complete).toBe(false);
+    expect(incomplete.uninspected.map(entry => entry.database)).toEqual(['b', 'c']);
+    expect(incomplete.uninspected[0].reason).toMatch(/UNREADABLE/);
+  });
+
+  it('does not accept a finding that merely has no migrations recorded', () => {
+    // A ledger table that is positively absent IS an established fact; a ledger that
+    // exists but cannot be read is not. Only the second blocks the conclusion.
+    const noLedger = assessAuditCompleteness([{ database: 'a', inspected: true, note: 'no migration ledger' }]);
+    expect(noLedger.complete).toBe(true);
+    const bare = assessAuditCompleteness([{ database: 'a' }]);
+    expect(bare.complete).toBe(false);
   });
 });
