@@ -195,6 +195,36 @@ describe('Place admission territory registry: materializer is driven by the regi
     ).toThrow(/is not registered/);
   });
 });
+describe('Place admission: national identity is enforced, not merely reported', () => {
+  it('fails when two provinces claim the same Place identity', () => {
+    const output = execFileSync(
+      'npx',
+      ['tsx', 'tools/place-admission/measure-national-collision-surface.mjs'],
+      { cwd: repositoryRoot, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] },
+    );
+    // place_id is the identity, so its uniqueness is the one property a national
+    // load cannot compromise.
+    expect(output).toContain('place id collisions            0');
+    expect(output).toContain('cross-province (parent, name)  0');
+    expect(output).toContain('national-collision-surface: OK');
+  }, 300_000);
+
+  it('shows UNIQUE(parent, name) is unenforceable, and that adding type does not fix it', () => {
+    const output = execFileSync(
+      'npx',
+      ['tsx', 'tools/place-admission/measure-national-collision-surface.mjs'],
+      { cwd: repositoryRoot, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] },
+    );
+    // A town and the municipality containing it share a parent and a name. These
+    // are correct admitted Places, so a uniqueness constraint would reject real data.
+    expect(output).toMatch(/pairs enumerated in full\s+614/);
+    // Every pair close enough to merge differs in place type, so none is a merge miss.
+    expect(output).toMatch(/under bound AND same type\s+0/);
+    // And widening the key with place_type does not rescue it either.
+    expect(output).toMatch(/UNIQUE\(parent, name, type\)\s+would still be violated by 500/);
+  }, 300_000);
+});
+
 describe('Place admission: boundary currency is a gate, not a claim', () => {
   it('refuses to let any province claim currency it cannot evidence', () => {
     const output = execFileSync(
@@ -202,8 +232,12 @@ describe('Place admission: boundary currency is a gate, not a claim', () => {
       ['tsx', 'tools/geography-source-evidence/boundary-currency.mjs', '--check'],
       { cwd: repositoryRoot, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] },
     );
-    expect(output).toContain('boundary-currency: OK');
+    expect(output).toContain('boundary-currency: NO UNSUPPORTED CLAIMS');
     expect(output).not.toContain('FAIL');
+    // The check proves only that nobody overclaimed. It cannot compare against a
+    // current demarcation, so the run must say so, or a reader will treat a passing
+    // gate as a currency certification. That word "OK" was the problem.
+    expect(output).toMatch(/does NOT certify/);
   }, 300_000);
 
   it('covers every registered province and certifies none of them', () => {

@@ -9,10 +9,28 @@ review before any code is written. Nothing here has been applied.
 - Author: Place Authority geography workstream
 - Date: 2026-10-01
 - Branch: `feat/place-authority-slice0-decision`
-- Integration head reviewed: `origin/main` = `cbc18c8f` ("integrated Paid MVP
-  controlled release")
+- **Integration head, pinned by commit: `origin/main` = `cbc18c8fd`** ("Merge pull
+  request #583: integrated Paid MVP controlled release")
 - Authority: `docs/architecture/database-authority-policy.md`,
   `docs/database-authority/database-change-protocol.md`
+
+### Pin the integration commit, and note that "main" is ambiguous here
+
+There are **three** different migration heads reachable in this repository, not two.
+Naming one without pinning its commit is how this plan was previously misread.
+
+| Ref | Commit | Migration head | `*.sql` count |
+| --- | --- | --- | --- |
+| `origin/main` (**the integration base for this plan**) | `cbc18c8fd` | `0094_content_topics_primary_key.sql` | 95 |
+| `main` (local, **not** the integration base) | `ad0c42474` | `0065_auth_verification_token_cleanup.sql` | 66 |
+| `feat/place-authority-slice0-decision` (this branch) | branch head | `0099_saved_searches_canonical_place_reference_fk.sql` | 100 |
+
+The local `main` branch is **600 commits behind** the cached `origin/main`, so it
+stops at `0065` and shares nothing near the Place Authority sequence. Every
+reference in this plan to "the integration head" means `origin/main` at
+`cbc18c8fd`. If `origin/main` moves, this plan's numbering is void and must be
+re-derived: it is a function of `cbc18c8fd`'s head, not of a branch name that will
+keep moving underneath it.
 
 ## 1. The problem
 
@@ -132,9 +150,11 @@ Consequences to decide before implementation:
   runtime for Place Authority.
 - **No data migration.** Every Place Authority migration is additive; the
   `saved_searches.place_id` column is nullable so no existing row is rewritten.
-- **No change to the 1,466 Gauteng or 1,862 Western Cape Place IDs.** Renaming a
-  migration does not touch rows, and identity is content-derived from the
-  admission package, not from migration numbering.
+- **No change to any of the 17,664 Place IDs.** Renaming a migration does not
+  touch rows, and identity is content-derived from the admission package, not from
+  migration numbering. All nine provinces were proven replaying with `minted=0`
+  before this plan was written, and that is the property a renumbering must
+  preserve.
 - **No geography changes.** This plan is about schema sequence only.
 
 ## 8. Proof required before the reconciliation is called done
@@ -145,11 +165,17 @@ Consequences to decide before implementation:
    manifest, and record the actual head and target fingerprint.
 4. Confirm the reconciled schema is congruent and that the 39 Place Authority
    CHECK constraints are all enforced and not merely declared.
-5. Materialize **both** admitted provinces against the reconciled schema with
-   explicit `--territory` selection, verify, replay as a no-op, and confirm Place
-   IDs are unchanged.
-6. Re-run the Western Cape and Gauteng territory probes.
-7. Dispose that exact target and record the disposal.
+5. Materialize **all nine** admitted provinces against the reconciled schema. Each
+   province is proven individually on its own fresh disposable target with explicit
+   `--territory` selection: verify, replay as a no-op, confirm Place IDs unchanged.
+   This is the per-province proof and it does **not** require combined loading.
+6. Re-run the nine territory probes.
+7. Separately, run the national **storage** proof
+   (`docs/architecture/place-authority-national-coverage-plan.md`): all nine
+   packages into one disposable target in a single transaction, with rollback and
+   replay. That is a storage question and is deliberately independent of this
+   schema reconciliation.
+8. Dispose that exact target and record the disposal.
 
 ## 9. Review questions
 

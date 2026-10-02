@@ -6,11 +6,20 @@
  * fact that a publication gate should be able to check mechanically instead of
  * trusting prose for.
  *
- * This tool emits that ledger and, in `--check` mode, refuses to let a province
- * claim currency it cannot evidence. It deliberately does not fetch, substitute
- * or evaluate newer boundaries: doing so would change admitted packages and Place
- * IDs, which is a reviewed decision rather than an engineering step. The only
- * output is a gate.
+ * WHAT THIS TOOL ESTABLISHES, PRECISELY:
+ *   no province asserts a boundary currency it cannot evidence.
+ *
+ * WHAT IT DOES NOT ESTABLISH:
+ *   that any province's boundaries are current. It never compares against a current
+ *   demarcation, never fetches one, and cannot tell you whether 2020 boundaries are
+ *   still correct. A passing run means nobody overclaimed, not that the boundaries
+ *   are right. Currency remains unproven for all nine provinces and is an owner
+ *   review. The word "OK" below therefore reports the absence of an unsupported
+ *   claim, and the run says so in as many words.
+ *
+ * It deliberately does not fetch, substitute or evaluate newer boundaries: doing so
+ * would change admitted packages and Place IDs, which is a reviewed decision rather
+ * than an engineering step. The only output is a gate.
  *
  * Usage:
  *   node tools/geography-source-evidence/boundary-currency.mjs            # print the ledger
@@ -122,6 +131,11 @@ const ledger = {
     'evidence is and refuses to certify currency. It is a publication gate, not a ' +
     'currency assessment, and it never substitutes newer boundaries.',
   all_provinces_uncertified: withGaps.every(row => row.currency_certified === false),
+  establishes: 'No province asserts a boundary currency it cannot evidence.',
+  does_not_establish:
+    'That any province\'s boundaries are current. No comparison against a current ' +
+    'demarcation is performed and none can be, so boundary currency is UNPROVEN for ' +
+    'all nine provinces. A passing check means nobody overclaimed.',
   provinces_with_unrecorded_boundary_provenance: unrecorded.map(row => ({
     territory_id: row.territory_id,
     province: row.province,
@@ -164,7 +178,10 @@ if (check) {
     process.exit(1);
   }
   console.log(
-    `boundary-currency: OK ${withGaps.length} provinces, none claiming currency they cannot evidence`,
+    `boundary-currency: NO UNSUPPORTED CLAIMS across ${withGaps.length} provinces`,
+  );
+  console.log(
+    '  this does NOT certify any province\'s boundaries as current; currency is unproven',
   );
   for (const row of unrecorded) {
     console.log(
