@@ -27,6 +27,32 @@ import { queryRows } from '../../server/_core/databaseAuthority/dataAdapters/com
  * current numbering would report every healthy target as a violation, and would go
  * quiet about exactly the stale targets it was written to catch.
  */
+
+/**
+ * Decide whether the audit actually inspected every target it found.
+ *
+ * Extracted so the decision can be tested directly rather than by breaking a live
+ * database. The bug it prevents is specific: an unreadable ledger was recorded with an
+ * empty migration list, which is indistinguishable from a clean target, so the audit
+ * could print "no retained target carries the old numbering" and exit zero while a
+ * target's actual state was unknown.
+ *
+ * A finding counts as inspected only when it was positively established. Absence of a
+ * ledger table is a positive, established fact; a ledger that exists but cannot be read
+ * is not.
+ */
+export function assessAuditCompleteness(findings) {
+  const uninspected = findings.filter(finding => finding.inspected !== true);
+  return {
+    complete: uninspected.length === 0,
+    inspected: findings.length - uninspected.length,
+    uninspected: uninspected.map(finding => ({
+      database: finding.database,
+      reason: finding.note ?? 'not inspected',
+    })),
+  };
+}
+
 const OLD_PLACE_AUTHORITY = [
   '0091_place_authority_place.sql',
   '0092_place_authority_place_name.sql',
@@ -71,6 +97,7 @@ try {
 
   const findings = [];
   const quarantined = [];
+  // A database whose ledger could not be read is an unknown, not a clean target.
   for (const { name } of schemas) {
     const hasHistory = await queryRows(
       connection,
@@ -79,7 +106,17 @@ try {
       [name],
     );
     if (!Number(hasHistory[0]?.n)) {
-      findings.push({ database: name, placeAuthorityMigrations: [], head: null, note: 'no migration ledger' });
+      findings.push({
+        database: name,
+        placeAuthorityMigrations: [],
+        reconciledPlaceAuthorityMigrations: [],
+        oldNumbering: false,
+        reconciledNumbering: false,
+        migrationCount: 0,
+        head: null,
+        inspected: true,
+        note: 'no migration ledger',
+      });
       continue;
     }
     let history;
@@ -108,6 +145,7 @@ try {
       reconciledPlaceAuthorityMigrations: reconciled,
       oldNumbering: old.length > 0,
       reconciledNumbering: reconciled.length > 0,
+      inspected: true,
       head,
     });
     // The quarantined evidence database may legitimately carry history. It is
@@ -116,9 +154,16 @@ try {
   }
 
   const carriers = findings.filter(f => f.oldNumbering);
+  const completeness = assessAuditCompleteness(findings);
   console.log(`retained-target-audit: ${schemas.length} databases on the governed local service`);
   for (const finding of findings) {
-    const marker = finding.oldNumbering ? 'OLD NUMBERING' : finding.note ? 'no ledger' : 'clean';
+    const marker = finding.oldNumbering
+      ? 'OLD NUMBERING'
+      : finding.inspected === false
+        ? 'UNREADABLE LEDGER'
+        : finding.note
+          ? 'no ledger'
+          : 'clean';
     console.log(
       `  ${String(finding.database).padEnd(46)} ${marker.padEnd(14)} ` +
         `migrations=${String(finding.migrationCount ?? 0).padStart(3)}  head=${finding.head ?? '-'}`,
@@ -139,6 +184,17 @@ try {
     console.log('  filenames the reconciled manifest will not contain, and rewriting that history');
     console.log('  is prohibited. They must be disposed and rebuilt from the reconciled schema.');
     process.exit(2);
+  }
+  if (!completeness.complete) {
+    console.log('');
+    console.log(`AUDIT INCOMPLETE: ${completeness.uninspected.length} target(s) could not be inspected:`);
+    for (const entry of completeness.uninspected) console.log(`  ${entry.database}  (${entry.reason})`);
+    console.log('');
+    console.log('  The absence of the old Place Authority numbering CANNOT be concluded for those');
+    console.log('  targets. An unreadable ledger is an unknown, and reporting an unknown as clean is');
+    console.log('  how a safety check becomes a false assurance. This audit exits non-zero and');
+    console.log('  blocks the reconciliation conclusion until every target is readable.');
+    process.exit(3);
   }
   console.log('  no retained target carries the old Place Authority numbering; nothing to stop.');
 } finally {

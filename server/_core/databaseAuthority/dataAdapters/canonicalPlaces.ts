@@ -315,28 +315,63 @@ async function readStored(sql: any) {
 
 const rowKey = (values: unknown[]) => JSON.stringify(values);
 
+/** Row counts for every table the write body touches, for before/after differencing. */
+const WRITTEN_TABLES = {
+  places: 'place',
+  names: 'place_name',
+  relationships: 'place_relationship',
+  evidence: 'place_evidence',
+  externalMappings: 'place_external_mapping',
+} as const;
+
+async function snapshotRowCounts(connection: any): Promise<Record<string, number>> {
+  const counts: Record<string, number> = {};
+  for (const [field, table] of Object.entries(WRITTEN_TABLES)) {
+    const rows = await queryRows(connection, `SELECT COUNT(*) AS n FROM \`${table}\``);
+    counts[field] = Number(rows[0]?.n ?? 0);
+  }
+  return counts;
+}
+
+/** Rows created by a run, measured rather than inferred from a driver's return value. */
+function createdByDiff(before: Record<string, number>, after: Record<string, number>): WrittenCounts {
+  const created = {} as WrittenCounts;
+  for (const field of Object.keys(WRITTEN_TABLES)) {
+    created[field] = Math.max(0, (after[field] ?? 0) - (before[field] ?? 0));
+  }
+  return created;
+}
+
 /**
  * The row-writing body, shared by the per-territory and the national load so the
  * two cannot drift. Extracted rather than duplicated: a national load that wrote
  * rows through a second implementation would be a second definition of what a Place
  * is, and the two would disagree the first time one was changed.
  *
- * `written` counts rows this run actually CREATED, not rows it touched. That
- * distinction is load-bearing: `INSERT ... ON DUPLICATE KEY UPDATE` against an
- * existing row reports affectedRows 1 with insertId 0, so counting affectedRows
- * reported a complete no-op replay as a full write of 17,664 Places. An idempotency
- * claim that its own counter contradicts is not an idempotency claim.
+ * `written` is deliberately NOT derived from any driver's per-statement return value.
+ * Both available signals are wrong here, and each was wrong in a way that looked
+ * plausible:
+ *
+ *   - `affectedRows` is 1 for `ON DUPLICATE KEY UPDATE` whether the row was created or
+ *     merely matched, so a complete no-op replay reported a full write of 17,664 Places.
+ *   - `insertId` is 0 for every statement, because `place` has a string primary key and
+ *     no auto-increment column at all. Switching to it "fixed" the replay count by
+ *     making a genuine first load report zero created Places as well.
+ *
+ * So counts are measured, not inferred: `snapshotRowCounts` reads the target before the
+ * transaction and `written` is the difference after it. That is schema-independent and
+ * cannot disagree with the table it describes.
  *
  * Every insert is idempotent, so a replay writes nothing and reports zero.
  */
-async function writePackageRows(connection: any, rows: any, written: WrittenCounts) {
+async function writePackageRows(connection: any, rows: any) {
   for (const place of rows.places as any[]) {
     if (!PLACE_ID_PATTERN.test(String(place.place_id))) {
       throw new Error(
         `canonical-places refused: ${place.place_id} is not a governed Place identity`,
       );
     }
-    const [result] = await connection.query(
+    await connection.query(
       `INSERT INTO \`place\`
          (place_id, place_type, place_classification, verification_status, lifecycle_status,
           publication_eligible, search_eligible, search_scope, licensing_classification)
@@ -354,11 +389,11 @@ async function writePackageRows(connection: any, rows: any, written: WrittenCoun
         place.licensing_classification ?? null,
       ],
     );
-    written.places += result.insertId ? 1 : 0;
+    
   }
 
   for (const name of rows.names as any[]) {
-    const [result] = await connection.query(
+    await connection.query(
       `INSERT INTO \`place_name\`
          (place_id, name, normalized_name, name_role, name_state, is_searchable, evidence_source, valid_from, valid_to)
        VALUES (?,?,?,?,?,?,?,?,?)
@@ -375,11 +410,11 @@ async function writePackageRows(connection: any, rows: any, written: WrittenCoun
         name.valid_to ?? null,
       ],
     );
-    written.names += result.insertId ? 1 : 0;
+    
   }
 
   for (const relationship of rows.relationships as any[]) {
-    const [result] = await connection.query(
+    await connection.query(
       `INSERT INTO \`place_relationship\`
          (from_place_id, to_place_id, relationship_type, search_scope_authorized, evidence_source, valid_from, valid_to)
        VALUES (?,?,?,?,?,?,?)
@@ -394,7 +429,7 @@ async function writePackageRows(connection: any, rows: any, written: WrittenCoun
         relationship.valid_to ?? null,
       ],
     );
-    written.relationships += result.insertId ? 1 : 0;
+    
   }
 
   // place_evidence has no natural unique key: `place_id` is nullable by design
@@ -436,11 +471,10 @@ async function writePackageRows(connection: any, rows: any, written: WrittenCoun
         evidence.research_priority ?? 0,
       ],
     );
-    written.evidence += 1;
   }
 
   for (const mapping of rows.external_mappings as any[]) {
-    const [result] = await connection.query(
+    await connection.query(
       `INSERT INTO \`place_external_mapping\`
          (place_id, provider, provider_record_id, provider_label, normalized_alias, observed_at)
        VALUES (?,?,?,?,?,?)
@@ -454,7 +488,7 @@ async function writePackageRows(connection: any, rows: any, written: WrittenCoun
         mapping.observed_at ?? null,
       ],
     );
-    written.externalMappings += result.insertId ? 1 : 0;
+    
   }
 }
 
@@ -542,11 +576,14 @@ export async function prepareCanonicalPlaces(input: {
     }
   }
 
-  const written = { places: 0, names: 0, relationships: 0, evidence: 0, externalMappings: 0 };
-
+  // Counts are measured either side of the transaction rather than inferred from any
+  // driver's return value. See writePackageRows for why both available signals lie.
+  const countsBefore = await snapshotRowCounts(connection);
   await withTransaction(connection, async () => {
-    await writePackageRows(connection, rows, written);
+    await writePackageRows(connection, rows);
   });
+  const countsAfter = await snapshotRowCounts(connection);
+  const written = createdByDiff(countsBefore, countsAfter);
 
   /**
    * A row the database refused to store must never be reported as a successful
@@ -682,19 +719,39 @@ export async function prepareNationalCanonicalPlaces(input: {
     );
   }
 
-  // (4) Refuse a partial target rather than extending it.
+  /**
+   * (4) A non-empty target is accepted only on EXACT identity agreement.
+   *
+   * This used to compare row counts: `alreadyStored === expectedIds.size`. That accepts
+   * any target holding the right NUMBER of Places, including one whose identities are
+   * entirely different, so a target that had been loaded from other data would be
+   * adopted as national. It also computed `storedIds` and never read it, which is the
+   * tell that the check was not doing what its variable name claimed.
+   *
+   * Both directions are now required. A stored identity the packages do not claim is a
+   * foreign Place; a claimed identity the target lacks is a partial load. Count
+   * equality proves neither, and same-count identity drift is exactly the case that has
+   * to be refused.
+   */
   const storedBefore = await readStored(connection);
   const alreadyStored = storedBefore.place.length;
   if (alreadyStored > 0) {
     const storedIds = new Set(storedBefore.place.map((row: any) => String(row.place_id)));
     const expectedIds = new Set(Array.from(owner.keys()));
-    const matchesNational = alreadyStored === expectedIds.size;
-    if (!matchesNational) {
+    const foreign = [...storedIds].filter(placeId => !expectedIds.has(placeId));
+    const missing = [...expectedIds].filter(placeId => !storedIds.has(placeId));
+
+    if (foreign.length || missing.length) {
+      const describe = (label: string, ids: string[]) =>
+        ids.length ? `${label}: ${ids.length} (for example ${ids.slice(0, 3).join(', ')})` : null;
+      const detail = [describe('stored identities the packages do not claim', foreign), describe('claimed identities the target lacks', missing)]
+        .filter(Boolean)
+        .join('; ');
       throw new Error(
         `canonical-places national refused: the target already holds ${alreadyStored} Places, which is ` +
-          `not the ${expectedIds.size} of a national load. A partially loaded target is refused rather ` +
-          `than extended, so a broken prior load cannot be laundered into a healthy one. Dispose the ` +
-          `target and load from zero.`,
+          `not the exact identity set of a national load. ${detail}. A target is accepted only when ` +
+          `every identity agrees, so a partially loaded or foreign target is refused rather than ` +
+          `extended or adopted. Dispose the target and load from zero.`,
       );
     }
   }
@@ -712,35 +769,51 @@ export async function prepareNationalCanonicalPlaces(input: {
   );
 
   // (3) One transaction for all nine. Any throw below rolls the whole load back.
-  const written: WrittenCounts = { places: 0, names: 0, relationships: 0, evidence: 0, externalMappings: 0 };
-  await withTransaction(connection, async () => {
-    for (const pkg of packages) {
-      await writePackageRows(connection, pkg.rows, written);
-    }
-  });
+  const countsBefore = await snapshotRowCounts(connection);
 
   /**
-   * Verified against the loaded state, not against this run's write counts. A replay
-   * legitimately writes nothing, so counting writes would report a correct idempotent
-   * no-op as a defect -- the same trap the per-territory path documents.
+   * The post-write verification runs INSIDE the transaction.
+   *
+   * It used to run after it, which meant a validation failure discovered there left the
+   * already-committed rows in place: the load reported failure while the target kept the
+   * changes. A refusal that mutates is not a refusal. Any throw from inside the
+   * transaction rolls the whole nine-province load back, so a failed national load
+   * leaves the target exactly as it was.
+   */
+  await withTransaction(connection, async () => {
+    for (const pkg of packages) {
+      await writePackageRows(connection, pkg.rows);
+    }
+    const inside = await readStored(connection);
+    const drift: string[] = [];
+    const assertTotal = (label: string, actual: number, expectedCount: number) => {
+      if (actual !== expectedCount) drift.push(`${label} ${actual} != national total ${expectedCount}`);
+    };
+    assertTotal('places', inside.place.length, totals.places);
+    assertTotal('names', inside.placeName.length, totals.names);
+    assertTotal('relationships', inside.placeRelationship.length, totals.relationships);
+    assertTotal('evidence', inside.placeEvidence.length, totals.evidence);
+    assertTotal('external mappings', inside.placeExternalMapping.length, totals.externalMappings);
+    const insideIds = new Set(inside.place.map((row: any) => String(row.place_id)));
+    const absent = [...owner.keys()].filter(placeId => !insideIds.has(placeId));
+    if (absent.length) drift.push(`${absent.length} claimed identities are absent (for example ${absent.slice(0, 3).join(', ')})`);
+    if (drift.length) {
+      throw new Error(
+        `canonical-places national refused: the target does not hold the national total, so a row was ` +
+          `rejected as a duplicate key under the target collation. This is a data or collation defect, ` +
+          `not a successful load, and the transaction is rolled back:\n  ${drift.join('\n  ')}`,
+      );
+    }
+  });
+  const countsAfter = await snapshotRowCounts(connection);
+  const written = createdByDiff(countsBefore, countsAfter);
+
+  /**
+   * Re-read after the commit purely to report what the target now holds. Verification
+   * already happened inside the transaction; this cannot fail the load, so it cannot
+   * leave a committed-but-unverified state behind.
    */
   const storedAfter = await readStored(connection);
-  const dropped: string[] = [];
-  const compare = (label: string, actual: number, expectedCount: number) => {
-    if (actual !== expectedCount) dropped.push(`${label} ${actual} != national total ${expectedCount}`);
-  };
-  compare('places', storedAfter.place.length, totals.places);
-  compare('names', storedAfter.placeName.length, totals.names);
-  compare('relationships', storedAfter.placeRelationship.length, totals.relationships);
-  compare('evidence', storedAfter.placeEvidence.length, totals.evidence);
-  compare('external mappings', storedAfter.placeExternalMapping.length, totals.externalMappings);
-  if (dropped.length > 0) {
-    throw new Error(
-      `canonical-places national refused: the target does not hold the national total, so a row was ` +
-        `rejected as a duplicate key under the target collation. This is a data or collation defect, not ` +
-        `a successful load:\n  ${dropped.join('\n  ')}`,
-    );
-  }
 
   return {
     adapter: 'canonical-places-national',

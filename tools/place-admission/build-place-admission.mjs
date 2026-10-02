@@ -462,6 +462,69 @@ const registry = registryPresent ?? {
   namespace: 'pl-place-01',
 };
 
+/**
+ * The identity guard: an admitted package's Place identities must still be allocated.
+ *
+ * Reading the registry correctly is necessary but not sufficient. A registry that is
+ * perfectly valid JSON with a complete-looking shape can still have lost its
+ * allocations -- and a valid registry with an EMPTY allocation map does exactly that:
+ * the builder reads it without complaint, treats every group as unallocated, mints a
+ * fresh random identity for each, and reports success. Measured: `minted=1466
+ * reused=0` with zero of the original identities retained and exit status 0.
+ *
+ * So the registry is cross-checked against the committed package before anything is
+ * written. Every Place the package already publishes must be present in the
+ * registry's allocations. A mismatch means allocations were lost, and the only
+ * correct response is to refuse: regenerating would silently replace published
+ * identities, which is the one outcome this whole mechanism exists to prevent.
+ *
+ * This runs BEFORE any artifact write, so a refusal leaves the package untouched.
+ */
+function assertExistingIdentitiesAreAllocated() {
+  const placesPath = resolve(ROOT, packagePaths.artifacts.places);
+  if (!existsSync(placesPath)) return; // genuinely a first build: nothing to protect
+
+  let published;
+  try {
+    published = readJsonlIfPresent(placesPath);
+  } catch (error) {
+    throw new Error(
+      `place-admission refused: the existing package ${packagePaths.artifacts.places} could not be read ` +
+        `(${error.code ?? error.message}). Refusing before any write, because the identities it holds ` +
+        `cannot be compared against the registry.`,
+    );
+  }
+  if (published.length === 0) return;
+
+  const allocated = new Set(Object.values(registry.allocated).map(String));
+  const unallocated = published
+    .map(place => String(place.place_id))
+    .filter(placeId => !allocated.has(placeId));
+
+  if (unallocated.length) {
+    const sample = unallocated.slice(0, 3).join(', ');
+    throw new Error(
+      `place-admission refused: ${unallocated.length} Place identities already published in ` +
+        `${packagePaths.artifacts.places} are absent from ${PLACE_ID_REGISTRY_PATH} (for example ` +
+        `${sample}). The registry has lost allocations, so continuing would re-mint those identities ` +
+        `from a fresh random source and silently replace published Places. Restore the registry, or ` +
+        `remove the whole package deliberately. Nothing has been written.`,
+    );
+  }
+}
+
+/** Read a JSONL artifact, treating a zero-byte file as empty rather than as an error. */
+function readJsonlIfPresent(path) {
+  const raw = readFileSync(path, 'utf8');
+  if (!raw.trim()) return [];
+  return raw
+    .split('\n')
+    .filter(Boolean)
+    .map(line => JSON.parse(line));
+}
+
+assertExistingIdentitiesAreAllocated();
+
 const allocatedIds = new Set(Object.values(registry.allocated));
 let minted = 0;
 let reused = 0;

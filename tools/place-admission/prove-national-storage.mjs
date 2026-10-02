@@ -12,23 +12,32 @@
  *
  *   1. the target is at the reconciled migration head with the authority tables empty
  *   2. a fault injected mid-load leaves ALL FIVE authority tables unchanged and empty
- *   3. all nine provinces load atomically and match the required counts exactly
- *   4. all 17,664 Place identities match the committed packages exactly
- *   5. each province verifies individually inside the shared target
- *   6. a cross-province identity collision is refused
- *   7. a partial target is refused rather than extended
+ *   3. every refused load leaves the target byte-identical: a partial target, a
+ *      same-count identity drift, and a post-write validation failure
+ *   4. the target is recreated through its own governed lifecycle
+ *   5. all nine provinces load atomically and match the required counts exactly
+ *   6. all 17,664 Place identities match the committed packages exactly
+ *   7. each province verifies individually inside the shared target
  *   8. a replay is a byte-identical no-op
  *
- * Step 2 comes before step 3 on purpose. A rollback that is only described is not a
- * rollback, and a half-loaded target is the one unacceptable outcome: seven
- * provinces present and one missing reads as complete to every caller that does not
- * recount.
+ * Two orderings are deliberate and both were corrections.
+ *
+ * Step 2 precedes the load because a rollback that is only described is not a rollback.
+ * A half-loaded target is the one unacceptable outcome: seven provinces present and one
+ * missing reads as complete to every caller that does not recount.
+ *
+ * Step 3 precedes step 4 because the refusal scenarios wipe and repopulate the target on
+ * purpose. They used to run last, which meant a run that had already failed a
+ * precondition could still erase a populated target before reporting failure. Running
+ * them first, then recreating the target through its own governed lifecycle, means the
+ * main proof is always a statement about a pristine target.
  *
  * Usage:
  *   npx tsx tools/place-admission/prove-national-storage.mjs
  */
 
 import { createHash } from 'node:crypto';
+import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
@@ -74,12 +83,37 @@ const REQUIRED = {
 
 const failures = [];
 const evidence = [];
+let checksRun = 0;
+
+/**
+ * Record a check. `check` records and continues; `require` records and STOPS.
+ *
+ * The distinction is the whole point of this tool after review. It previously used one
+ * function for both, so a failed precondition was recorded and the run continued -- and
+ * a later step deleted all five authority tables to construct its partial-target case.
+ * That means a run which had already established the target was not in the expected
+ * state could erase it and only report failure at the end. A precondition that fails
+ * must stop the run before anything destructive can happen.
+ */
 function check(ok, label, detail = '') {
+  checksRun += 1;
   const line = `${ok ? 'PASS' : 'FAIL'}  ${label}${detail ? `  ${detail}` : ''}`;
   console.log(`  ${line}`);
   evidence.push(line);
   if (!ok) failures.push(label);
   return ok;
+}
+
+/** A precondition. Failing one aborts the whole run immediately. */
+function require(ok, label, detail = '') {
+  if (!check(ok, label, detail)) {
+    console.error('');
+    console.error(`national storage proof: ABORTED on a failed precondition: ${label}`);
+    console.error('  Nothing further was run. No destructive step was reached, and no existing');
+    console.error('  target evidence was altered.');
+    process.exit(1);
+  }
+  return true;
 }
 
 const readJsonl = path =>
@@ -239,9 +273,243 @@ console.log('2. a fault injected mid-load leaves ALL FIVE authority tables uncha
   check(unchanged, 'all five authority tables are unchanged and empty after the fault', describeState(after));
 }
 
-// ------------------------------------------------------- 3. atomic load of all nine
+// ------------------------------------- 8. refusal scenarios, each digest-guarded
 console.log('');
-console.log('3. all nine provinces load atomically');
+console.log('3. refused loads leave the target byte-identical (destructive; runs before the main proof)');
+console.log('   These scenarios wipe and repopulate the target on purpose. They run FIRST, and the');
+console.log('   target is then recreated through its own owned lifecycle, so the main proof is never');
+console.log('   built on a target whose evidence an earlier step erased.');
+{
+  const seedAuthority = () => resolveDatabaseAuthority({ operation: 'reference-seed', credentialClass: 'local-owner' });
+
+  /** Digest every authority table, the unit of "unchanged" for every refusal below. */
+  const snapshot = async () => {
+    const c = await connect();
+    try {
+      return await tableState(c);
+    } finally {
+      await c.end();
+    }
+  };
+
+  /**
+   * (a) Partial target. Built by loading a single province, which is how a partial
+   * state actually arises. No rows are deleted to fake one: the foreign keys correctly
+   * refuse to delete a Place that evidence still references, and faking it by deletion
+   * is what made the previous version of this tool capable of erasing a populated
+   * target's evidence.
+   */
+  {
+    const authority = seedAuthority();
+    const decision = authorizeDatabaseOperation(authority, {
+      approval: protectedDatabaseApprovalFromEnvironment(authority),
+    });
+    const { prepareCanonicalPlaces } = await import(
+      '../../server/_core/databaseAuthority/dataAdapters/canonicalPlaces.ts'
+    );
+    const single = await createAuthoritySqlConnection(authority, decision);
+    try {
+      await prepareCanonicalPlaces({ authority, decision, connection: single, territoryId: 'za-fs', root: ROOT });
+    } finally {
+      await single.end();
+    }
+    const probe = await connect();
+    const partial = (await queryRows(probe, 'SELECT COUNT(*) AS n FROM `place`'))[0].n;
+    await probe.end();
+    require(partial > 0 && partial < REQUIRED.places, 'target holds exactly one province', `${partial} places`);
+
+    const before = await snapshot();
+    const attempt = await createAuthoritySqlConnection(authority, decision);
+    let refusal = '';
+    try {
+      await prepareNationalCanonicalPlaces({ authority, decision, connection: attempt, root: ROOT });
+    } catch (error) {
+      refusal = String(error.message).split('\n')[0];
+    } finally {
+      await attempt.end();
+    }
+    require(/not the exact identity set|already holds/.test(refusal), 'a partial target is refused, not extended', refusal.slice(0, 120));
+    const after = await snapshot();
+    require(
+      Object.keys(after).every(t => after[t].digest === before[t].digest),
+      'the partial-target refusal changed nothing',
+      describeState(after),
+    );
+  }
+
+  /**
+   * (b) Same-count identity drift. The case a count-based acceptance check cannot see:
+   * the target holds exactly the right number of Places but one of them is not the
+   * Place the packages claim. Acceptance now compares identity sets in both directions,
+   * so this must be refused.
+   */
+  {
+    const authority = seedAuthority();
+    const decision = authorizeDatabaseOperation(authority, {
+      approval: protectedDatabaseApprovalFromEnvironment(authority),
+    });
+
+    // A wholly foreign target of the right size is the strongest form: same count,
+    // zero shared identities.
+    const c = await createAuthoritySqlConnection(authority, decision);
+    try {
+      for (const table of ['place_external_mapping', 'place_evidence', 'place_relationship', 'place_name', 'place']) {
+        await c.query(`DELETE FROM \`${table}\``);
+      }
+      // Re-insert the correct number of rows under foreign identities.
+      const ids = Array.from({ length: REQUIRED.places }, (_, i) =>
+        `pl-place-01-${String(i).padStart(24, '0')}`,
+      );
+      for (const id of ids) {
+        await c.query(
+          `INSERT INTO \`place\` (place_id, place_type, place_classification, verification_status,
+             lifecycle_status, publication_eligible, search_eligible) VALUES (?,?,?,?,?,?,?)`,
+          [id, 'locality', 'statutory', 'verified', 'active', 1, 1],
+        );
+      }
+      const drifted = (await queryRows(c, 'SELECT COUNT(*) AS n FROM `place`'))[0].n;
+      require(drifted === REQUIRED.places, 'the drifted target holds exactly 17,664 Places', `${drifted}`);
+    } finally {
+      await c.end();
+    }
+
+    const before = await snapshot();
+    const attempt = await createAuthoritySqlConnection(authority, decision);
+    let refusal = '';
+    try {
+      await prepareNationalCanonicalPlaces({ authority, decision, connection: attempt, root: ROOT });
+    } catch (error) {
+      refusal = String(error.message).split('\n')[0];
+    } finally {
+      await attempt.end();
+    }
+    require(
+      /not the exact identity set|already holds/.test(refusal),
+      'same-count identity drift is refused, not adopted',
+      refusal.slice(0, 120) || 'NO REFUSAL RAISED',
+    );
+    const after = await snapshot();
+    require(
+      Object.keys(after).every(t => after[t].digest === before[t].digest),
+      'the drift refusal changed nothing',
+      describeState(after),
+    );
+  }
+
+  /**
+   * (c) Post-write validation failure rolls the whole load back.
+   *
+   * The load must verify inside its transaction, so a validation failure cannot leave
+   * committed rows behind. The trigger is a row the database silently refuses to store:
+   * one `place` insert is intercepted and reported as successful without executing, so
+   * the stored total comes up short by exactly one and the in-transaction check fires.
+   */
+  {
+    const authority = seedAuthority();
+    const decision = authorizeDatabaseOperation(authority, {
+      approval: protectedDatabaseApprovalFromEnvironment(authority),
+    });
+    const c = await createAuthoritySqlConnection(authority, decision);
+    try {
+      for (const table of ['place_external_mapping', 'place_evidence', 'place_relationship', 'place_name', 'place']) {
+        await c.query(`DELETE FROM \`${table}\``);
+      }
+    } finally {
+      await c.end();
+    }
+
+    const before = await snapshot();
+    const attempt = await createAuthoritySqlConnection(authority, decision);
+    const realQuery = attempt.query.bind(attempt);
+    let inserts = 0;
+    let swallowedAt = 0;
+    attempt.query = async (sql, values) => {
+      if (/^\s*INSERT INTO `place_external_mapping`/.test(sql)) {
+        inserts += 1;
+        if (inserts === 19000) {
+          swallowedAt = inserts;
+          return [{ affectedRows: 1, insertId: 0, warningStatus: 0 }];
+        }
+      }
+      return realQuery(sql, values);
+    };
+    let refusal = '';
+    try {
+      await prepareNationalCanonicalPlaces({ authority, decision, connection: attempt, root: ROOT });
+    } catch (error) {
+      refusal = String(error.message).split('\n')[0];
+    } finally {
+      await attempt.end();
+    }
+    require(swallowedAt === 19000, 'the swallowed insert fired mid-load', `at mapping insert ${swallowedAt}`);
+    require(
+      /does not hold the national total|rolled back/.test(refusal),
+      'a post-write validation failure refuses the load',
+      refusal.slice(0, 120) || 'NO REFUSAL RAISED',
+    );
+    const after = await snapshot();
+    require(
+      Object.keys(after).every(t => after[t].digest === before[t].digest && after[t].rows === 0),
+      'the rolled-back load left every authority table empty',
+      describeState(after),
+    );
+  }
+}
+
+
+// ---------------------------------- 3. owned lifecycle: recreate the target from zero
+console.log('');
+console.log('4. the target is recreated through its own owned lifecycle');
+{
+  // Explicit, governed, and owned: dispose the exact target, create it again, migrate
+  // it to the reconciled head, and confirm empty. The refusal scenarios above erased and
+  // repopulated this target deliberately; this step is what makes the proof that follows
+  // a statement about a pristine target rather than about whatever they left behind.
+  const cli = (...args) =>
+    execFileSync('npx', ['cross-env', 'NODE_ENV=development', 'APP_ENV=development', 'tsx', 'scripts/databaseAuthorityCli.ts', ...args], {
+      cwd: ROOT,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+
+  const context = JSON.parse(
+    execFileSync(
+      'npx',
+      ['cross-env', 'NODE_ENV=development', 'APP_ENV=development', 'tsx', 'scripts/databaseAuthorityCli.ts', 'context'],
+      { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] },
+    ),
+  );
+  const fingerprint = context.targetFingerprintHash;
+  require(/^[a-f0-9]{64}$/.test(fingerprint), 'resolved an exact target fingerprint', fingerprint.slice(0, 16));
+  require(context.targetClass === 'disposable-worktree', 'target class is disposable-worktree', context.targetClass);
+
+  cli('worktree:dispose', `--ack=CONFIRM_DATABASE_DISPOSE_${fingerprint.slice(0, 16)}`);
+  check(true, 'disposed the exact owned target', fingerprint.slice(0, 16));
+  cli('worktree:create');
+  check(true, 'created a fresh owned target');
+  cli(
+    'migration:apply',
+    '--accepted-old-head=none',
+    `--expected-new-head=${RECONCILED_HEAD}`,
+  );
+  check(true, 'migrated the fresh target to the reconciled head');
+
+  const c = await connect();
+  try {
+    const fresh = await tableState(c);
+    require(
+      Object.values(fresh).every(entry => entry.rows === 0),
+      'the recreated target is empty',
+      describeState(fresh),
+    );
+  } finally {
+    await c.end();
+  }
+}
+
+// ------------------------------------------------------- 4. atomic load of all nine
+console.log('');
+console.log('5. all nine provinces load atomically');
 let loaded;
 {
   const seed = resolveDatabaseAuthority({ operation: 'reference-seed', credentialClass: 'local-owner' });
@@ -261,6 +529,20 @@ let loaded;
   }
   check(loaded.provinceCount === 9, 'all nine provinces loaded', `${loaded.provinceCount} provinces`);
   check(loaded.consumerActivated === false, 'no consumer was activated');
+  // Accurate first-load counts. The counter was wrong twice before: `affectedRows`
+  // reported a full replay as a full write, and switching to `insertId` made a genuine
+  // first load report zero as well, because `place` has a string primary key and no
+  // auto-increment column. Counts are now measured from the target either side of the
+  // transaction, so both directions are asserted here.
+  check(
+    loaded.written.places === REQUIRED.places &&
+      loaded.written.names === REQUIRED.names &&
+      loaded.written.relationships === REQUIRED.relationships &&
+      loaded.written.evidence === REQUIRED.evidence &&
+      loaded.written.externalMappings === 19792,
+    'first load reports the exact number of rows created',
+    JSON.stringify(loaded.written),
+  );
   check(
     loaded.identity === 'place_id' && loaded.rejectedConstraints.length === 2,
     'identity is place_id and the rejected constraints are recorded',
@@ -270,7 +552,7 @@ let loaded;
 
 // ------------------------------------------------------------- 4. required counts
 console.log('');
-console.log('4. required national totals');
+console.log('6. required national totals');
 {
   const stored = loaded.stored;
   check(stored.places === REQUIRED.places, '17,664 Places', `${stored.places}`);
@@ -305,7 +587,7 @@ console.log('4. required national totals');
 
 // ----------------------------------------------------- 5. Place identities unchanged
 console.log('');
-console.log('5. all 17,664 Place identities match the committed packages exactly');
+console.log('7. all 17,664 Place identities match the committed packages exactly');
 {
   const c = await connect();
   const rows = await queryRows(c, 'SELECT place_id FROM `place` ORDER BY place_id');
@@ -324,7 +606,7 @@ console.log('5. all 17,664 Place identities match the committed packages exactly
 
 // --------------------------------------------- 6. per-province verification in target
 console.log('');
-console.log('6. each province verifies individually inside the shared target');
+console.log('8. each province verifies individually inside the shared target');
 {
   const authority = resolveDatabaseAuthority({ operation: 'verification', credentialClass: 'read-only' });
   const decision = authorizeDatabaseOperation(authority, {
@@ -354,7 +636,7 @@ console.log('6. each province verifies individually inside the shared target');
 
 // ------------------------------------------------- 7. byte-identical replay
 console.log('');
-console.log('7. replay is a byte-identical no-op');
+console.log('9. replay is a byte-identical no-op');
 {
   const before = await (async () => {
     const c = await connect();
@@ -398,64 +680,6 @@ console.log('7. replay is a byte-identical no-op');
   check(identical, 'every authority table digest is unchanged by the replay', describeState(after));
 }
 
-
-// ------------------------------- 8. partial-target refusal, from a real partial state
-console.log('');
-console.log('8. a partially loaded target is refused, not extended');
-{
-  // A partial state is produced the way one actually arises: a target holding a single
-  // province. Deleting rows to fake one is not available here and should not be: the
-  // foreign keys correctly refuse to delete a Place that evidence still references.
-  const seed = resolveDatabaseAuthority({ operation: 'reference-seed', credentialClass: 'local-owner' });
-  const decision = authorizeDatabaseOperation(seed, {
-    approval: protectedDatabaseApprovalFromEnvironment(seed),
-  });
-
-  // Start from a genuinely empty target for this step.
-  const reset = await createAuthoritySqlConnection(seed, decision);
-  try {
-    for (const table of ['place_external_mapping', 'place_evidence', 'place_relationship', 'place_name', 'place']) {
-      await reset.query(`DELETE FROM \`${table}\``);
-    }
-  } finally {
-    await reset.end();
-  }
-
-  const single = await createAuthoritySqlConnection(seed, decision);
-  try {
-    const { prepareCanonicalPlaces } = await import(
-      '../../server/_core/databaseAuthority/dataAdapters/canonicalPlaces.ts'
-    );
-    await prepareCanonicalPlaces({ authority: seed, decision, connection: single, territoryId: 'za-fs', root: ROOT });
-  } finally {
-    await single.end();
-  }
-
-  const probe = await connect();
-  const partialCount = (await queryRows(probe, 'SELECT COUNT(*) AS n FROM `place`'))[0].n;
-  await probe.end();
-  check(partialCount > 0 && partialCount < REQUIRED.places, 'the target now holds exactly one province', `${partialCount} places`);
-
-  const attempt = await createAuthoritySqlConnection(seed, decision);
-  let refusal = '';
-  try {
-    await prepareNationalCanonicalPlaces({ authority: seed, decision, connection: attempt, root: ROOT });
-  } catch (error) {
-    refusal = String(error.message).split('\n')[0];
-  } finally {
-    await attempt.end();
-  }
-  check(
-    /already holds|partially loaded|not the/.test(refusal),
-    'the national load refuses a partial target instead of extending it',
-    refusal.slice(0, 130) || 'NO REFUSAL RAISED',
-  );
-
-  const after = await connect();
-  const stillPartial = (await queryRows(after, 'SELECT COUNT(*) AS n FROM `place`'))[0].n;
-  await after.end();
-  check(stillPartial === partialCount, 'the refusal left the partial state untouched', `${partialCount} -> ${stillPartial}`);
-}
 
 console.log('');
 console.log('evidence:');
